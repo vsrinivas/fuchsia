@@ -123,7 +123,7 @@ zx_status_t UsbRootHub::HandleRequest(usb::BorrowedRequest<> req) {
   }
 
   if (ep_addr == 0) {  // Endpoint-0 control transfers.
-    switch (req.request()->setup.bRequest) {
+    switch (req.request()->setup.b_request) {
       case USB_REQ_GET_DESCRIPTOR:
         return GetDescriptor(std::move(req));
       case USB_REQ_SET_CONFIGURATION:
@@ -135,7 +135,7 @@ zx_status_t UsbRootHub::HandleRequest(usb::BorrowedRequest<> req) {
       case USB_REQ_CLEAR_FEATURE:
         return ClearFeature(std::move(req));
       default:
-        zxlogf(ERROR, "unsupported device request: 0x%02x", req.request()->setup.bRequest);
+        zxlogf(ERROR, "unsupported device request: 0x%02x", req.request()->setup.b_request);
         req.Complete(ZX_ERR_NOT_SUPPORTED, 0);
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -171,14 +171,14 @@ zx_status_t UsbRootHub::PortReset() {
 }
 
 zx_status_t UsbRootHub::ClearFeature(usb::BorrowedRequest<> req) {
-  uint16_t index = le16toh(req.request()->setup.wIndex);
+  uint16_t index = le16toh(req.request()->setup.w_index);
   if (index != 1) {
     zxlogf(ERROR, "unsupported ClearFeature() index: %d", index);
     req.Complete(ZX_ERR_OUT_OF_RANGE, 0);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  uint8_t bm_req_type = req.request()->setup.bmRequestType;
+  uint8_t bm_req_type = req.request()->setup.bm_request_type;
   switch (bm_req_type) {
     case 0x20:  // See: 11.24.2 (USB 2.0 spec)
       return ClearHubFeature(std::move(req));
@@ -200,7 +200,7 @@ zx_status_t UsbRootHub::ClearHubFeature(usb::BorrowedRequest<> req) {
 }
 
 zx_status_t UsbRootHub::ClearPortFeature(usb::BorrowedRequest<> req) {
-  uint16_t feature = static_cast<uint16_t>(letoh16(req.request()->setup.wValue));
+  uint16_t feature = static_cast<uint16_t>(letoh16(req.request()->setup.w_value));
 
   switch (feature) {
     case USB_FEATURE_PORT_ENABLE:
@@ -238,7 +238,7 @@ zx_status_t UsbRootHub::ClearPortFeature(usb::BorrowedRequest<> req) {
 }
 
 zx_status_t UsbRootHub::GetDescriptor(usb::BorrowedRequest<> req) {
-  uint8_t type = static_cast<uint8_t>(req.request()->setup.wValue >> 8);
+  uint8_t type = static_cast<uint8_t>(req.request()->setup.w_value >> 8);
 
   switch (type) {
     case USB_DT_DEVICE:
@@ -258,7 +258,7 @@ zx_status_t UsbRootHub::GetDescriptor(usb::BorrowedRequest<> req) {
 }
 
 zx_status_t UsbRootHub::GetDeviceDescriptor(usb::BorrowedRequest<> req) {
-  uint16_t len = le16toh(req.request()->setup.wLength);
+  uint16_t len = le16toh(req.request()->setup.w_length);
   ZX_ASSERT(len <= sizeof(usb_device_descriptor_t));
   ssize_t actual = req.CopyTo(&device_descriptor_, len, 0);
   req.Complete(ZX_OK, actual);
@@ -266,8 +266,8 @@ zx_status_t UsbRootHub::GetDeviceDescriptor(usb::BorrowedRequest<> req) {
 }
 
 zx_status_t UsbRootHub::GetConfigDescriptor(usb::BorrowedRequest<> req) {
-  uint8_t index = static_cast<uint8_t>(req.request()->setup.wValue & 0xff);
-  size_t len = static_cast<size_t>(le16toh(req.request()->setup.wLength));
+  uint8_t index = static_cast<uint8_t>(req.request()->setup.w_value & 0xff);
+  size_t len = static_cast<size_t>(le16toh(req.request()->setup.w_length));
 
   if (index > 0) {
     req.Complete(ZX_ERR_OUT_OF_RANGE, 0);
@@ -283,8 +283,8 @@ zx_status_t UsbRootHub::GetConfigDescriptor(usb::BorrowedRequest<> req) {
 }
 
 zx_status_t UsbRootHub::GetStringDescriptor(usb::BorrowedRequest<> req) {
-  uint8_t index = static_cast<uint8_t>(req.request()->setup.wValue & 0xff);
-  size_t len = static_cast<size_t>(le16toh(req.request()->setup.wLength));
+  uint8_t index = static_cast<uint8_t>(req.request()->setup.w_value & 0xff);
+  size_t len = static_cast<size_t>(le16toh(req.request()->setup.w_length));
 
   if (index >= countof(string_descriptor_)) {
     req.Complete(ZX_ERR_OUT_OF_RANGE, 0);
@@ -300,7 +300,7 @@ zx_status_t UsbRootHub::GetStringDescriptor(usb::BorrowedRequest<> req) {
 }
 
 zx_status_t UsbRootHub::GetHubDescriptor(usb::BorrowedRequest<> req) {
-  uint16_t len = le16toh(req.request()->setup.wLength);
+  uint16_t len = le16toh(req.request()->setup.w_length);
   ZX_ASSERT(len <= sizeof(usb_hub_descriptor_t));
   ssize_t actual = req.CopyTo(&hub_descriptor_, len, 0);
   req.Complete(ZX_OK, actual);
@@ -308,7 +308,7 @@ zx_status_t UsbRootHub::GetHubDescriptor(usb::BorrowedRequest<> req) {
 }
 
 zx_status_t UsbRootHub::GetStatus(usb::BorrowedRequest<> req) {
-  uint8_t bm_req_type = req.request()->setup.bmRequestType;
+  uint8_t bm_req_type = req.request()->setup.bm_request_type;
   switch (bm_req_type) {
     case 0xa0:  // See: 11.24.2 (USB 2.0 spec)
       return GetHubStatus(std::move(req));
@@ -338,7 +338,7 @@ zx_status_t UsbRootHub::GetHubStatus(usb::BorrowedRequest<> req) {
 }
 
 zx_status_t UsbRootHub::SetConfiguration(usb::BorrowedRequest<> req) {
-  uint8_t index = static_cast<uint8_t>(req.request()->setup.wValue & 0xff);
+  uint8_t index = static_cast<uint8_t>(req.request()->setup.w_value & 0xff);
   if (index != 1) {
     zxlogf(ERROR, "unsupported SetConfiguration() index: %d", index);
     req.Complete(ZX_ERR_OUT_OF_RANGE, 0);
@@ -351,14 +351,14 @@ zx_status_t UsbRootHub::SetConfiguration(usb::BorrowedRequest<> req) {
 }
 
 zx_status_t UsbRootHub::SetFeature(usb::BorrowedRequest<> req) {
-  uint16_t index = le16toh(req.request()->setup.wIndex);
+  uint16_t index = le16toh(req.request()->setup.w_index);
   if (index != 1) {
     zxlogf(ERROR, "unsupported SetFeature() index: %d", index);
     req.Complete(ZX_ERR_OUT_OF_RANGE, 0);
     return ZX_ERR_OUT_OF_RANGE;
   }
 
-  uint8_t bm_req_type = req.request()->setup.bmRequestType;
+  uint8_t bm_req_type = req.request()->setup.bm_request_type;
   switch (bm_req_type) {
     case 0x20:  // See: 11.24.2 (USB 2.0 spec)
       return SetHubFeature(std::move(req));
@@ -381,7 +381,7 @@ zx_status_t UsbRootHub::SetHubFeature(usb::BorrowedRequest<> req) {
 }
 
 zx_status_t UsbRootHub::SetPortFeature(usb::BorrowedRequest<> req) {
-  uint16_t feature = static_cast<uint16_t>(letoh16(req.request()->setup.wValue));
+  uint16_t feature = static_cast<uint16_t>(letoh16(req.request()->setup.w_value));
 
   switch (feature) {
     case USB_FEATURE_PORT_RESET:

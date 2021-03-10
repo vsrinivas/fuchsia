@@ -16,11 +16,11 @@ fit::promise<uint8_t, zx_status_t> GetMaxPacketSize(UsbXhci* hci, uint8_t slot_i
   request->direct = true;
   request->header.device_id = slot_id - 1;
   request->header.ep_address = 0;
-  request->setup.bmRequestType = USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE;
-  request->setup.wValue = USB_DT_DEVICE << 8;
-  request->setup.wIndex = 0;
-  request->setup.bRequest = USB_REQ_GET_DESCRIPTOR;
-  request->setup.wLength = 8;
+  request->setup.bm_request_type = USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE;
+  request->setup.w_value = USB_DT_DEVICE << 8;
+  request->setup.w_index = 0;
+  request->setup.b_request = USB_REQ_GET_DESCRIPTOR;
+  request->setup.w_length = 8;
   request->direct = true;
   return hci->UsbHciRequestQueue(std::move(*request_wrapper))
       .then([=](fit::result<OwnedRequest, void>& result) -> fit::result<uint8_t, zx_status_t> {
@@ -33,10 +33,10 @@ fit::promise<uint8_t, zx_status_t> GetMaxPacketSize(UsbXhci* hci, uint8_t slot_i
         if (usb_request_mmap(request, reinterpret_cast<void**>(&descriptor)) != ZX_OK) {
           return fit::error(ZX_ERR_IO);
         }
-        if (descriptor->bDescriptorType != USB_DT_DEVICE) {
+        if (descriptor->b_descriptor_type != USB_DT_DEVICE) {
           return fit::error(ZX_ERR_IO);
         }
-        return fit::ok(descriptor->bMaxPacketSize0);
+        return fit::ok(descriptor->b_max_packet_size0);
       })
       .box();
 }

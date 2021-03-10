@@ -289,7 +289,7 @@ zx_status_t CreateUsbBus(zx_device_t* bus_device, std::unique_ptr<Bus>* bus) {
     zxlogf(INFO,
            "rtl88xx: CreateUsbBus() vid=%04x pid=%04x interface=%d alternate=%d class=%d "
            "subclass=%d protocol=%d id=\"%s\"\n",
-           usb_device_desc.idVendor, usb_device_desc.idProduct, usb_iface_desc->bInterfaceNumber,
+           usb_device_desc.id_vendor, usb_device_desc.id_product, usb_iface_desc->bInterfaceNumber,
            usb_iface_desc->bAlternateSetting, usb_iface_desc->bInterfaceClass,
            usb_iface_desc->bInterfaceSubClass, usb_iface_desc->bInterfaceProtocol, id_buf);
 

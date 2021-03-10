@@ -183,11 +183,11 @@ class RndisFunctionTest : public zxtest::Test {
 
   void WriteCommand(const void* data, size_t length) {
     const usb_setup_t setup{
-        .bmRequestType = USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-        .bRequest = USB_CDC_SEND_ENCAPSULATED_COMMAND,
-        .wValue = 0,
-        .wIndex = 0,
-        .wLength = 0,
+        .bm_request_type = USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+        .b_request = USB_CDC_SEND_ENCAPSULATED_COMMAND,
+        .w_value = 0,
+        .w_index = 0,
+        .w_length = 0,
     };
 
     size_t actual;
@@ -199,11 +199,11 @@ class RndisFunctionTest : public zxtest::Test {
 
   void ReadResponse(void* data, size_t length) {
     const usb_setup_t setup{
-        .bmRequestType = USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-        .bRequest = USB_CDC_GET_ENCAPSULATED_RESPONSE,
-        .wValue = 0,
-        .wIndex = 0,
-        .wLength = 0,
+        .bm_request_type = USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+        .b_request = USB_CDC_GET_ENCAPSULATED_RESPONSE,
+        .w_value = 0,
+        .w_index = 0,
+        .w_length = 0,
     };
 
     size_t actual;

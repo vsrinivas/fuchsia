@@ -4,48 +4,8 @@
 
 library zircon.hw.usb;
 
-enum UsbSpeed : uint32 {
-
-};
-
-[Packed]
-struct UsbSetup {
-    uint8 bmRequestType;
-    uint8 bRequest;
-    uint16 wValue;
-    uint16 wIndex;
-    uint16 wLength;
-};
-
-[Packed]
-struct UsbDeviceDescriptor {
-    uint8 bLength;
-    uint8 bDescriptorType;
-    uint16 bcdUSB;
-    uint8 bDeviceClass;
-    uint8 bDeviceSubClass;
-    uint8 bDeviceProtocol;
-    uint8 bMaxPacketSize0;
-    uint16 idVendor;
-    uint16 idProduct;
-    uint16 bcdDevice;
-    uint8 iManufacturer;
-    uint8 iProduct;
-    uint8 iSerialNumber;
-    uint8 bNumConfigurations;
-};
-
-[Packed]
-struct UsbConfigurationDescriptor {
-    uint8 bLength;
-    uint8 bDescriptorType;
-    uint16 wTotalLength;
-    uint8 bNumInterfaces;
-    uint8 bConfigurationValue;
-    uint8 iConfiguration;
-    uint8 bmAttributes;
-    uint8 bMaxPower;
-};
+// TODO(fxb/68228): Move the remaining structs to
+// fuchsia.hardware.usb.descriptor and delete this library.
 
 [Packed]
 struct UsbInterfaceDescriptor {
@@ -67,13 +27,4 @@ struct UsbEndpointDescriptor {
     uint8 bInterfaceSubClass;
     uint8 bInterfaceProtocol;
     uint8 iInterface;
-};
-
-[Packed]
-struct UsbSsEpCompDescriptor {
-    uint8 bLength;
-    uint8 bDescriptorType;
-    uint8 bMaxBurst;
-    uint8 bmAttributes;
-    uint16 wBytesPerInterval;
 };

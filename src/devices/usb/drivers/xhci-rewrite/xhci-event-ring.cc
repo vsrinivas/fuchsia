@@ -450,8 +450,8 @@ std::variant<bool, std::unique_ptr<TRBContext>> EventRing::StallWorkaroundForDef
     std::unique_ptr<TRBContext> context) {
   // Workaround for full-speed hub issue in Gateway keyboard
   auto request = context->request->request();
-  if ((request->header.ep_address == 0) && (request->setup.bRequest == USB_REQ_GET_DESCRIPTOR) &&
-      (request->setup.wIndex == 0) && (request->setup.wValue == (USB_DT_DEVICE_QUALIFIER << 8))) {
+  if ((request->header.ep_address == 0) && (request->setup.b_request == USB_REQ_GET_DESCRIPTOR) &&
+      (request->setup.w_index == 0) && (request->setup.w_value == (USB_DT_DEVICE_QUALIFIER << 8))) {
     usb_device_qualifier_descriptor_t* desc;
     if ((context->request->Mmap(reinterpret_cast<void**>(&desc)) == ZX_OK) &&
         (request->header.length >= sizeof(desc))) {

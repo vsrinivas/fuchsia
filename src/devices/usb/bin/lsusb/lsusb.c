@@ -60,7 +60,7 @@ static const char* usb_speeds[] = {
 
 static int do_list_device(zx_handle_t svc, int configuration, bool verbose, const char* devname,
                           int depth, int max_depth) {
-  usb_device_descriptor_t device_desc;
+  usb_device_descriptor_info_t device_desc;
   char manufacturer[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
   char product[fuchsia_hardware_usb_device_MAX_STRING_DESC_SIZE];
   ssize_t ret = 0;
@@ -226,7 +226,7 @@ static int do_list_device(zx_handle_t svc, int configuration, bool verbose, cons
           printf("          wDescriptorLength       %d\n", le16toh(entry->wDescriptorLength));
         }
       } else if (header->bDescriptorType == USB_DT_SS_EP_COMPANION) {
-        usb_ss_ep_comp_descriptor_t* desc = (usb_ss_ep_comp_descriptor_t*)header;
+        usb_ss_ep_comp_descriptor_info_t* desc = (usb_ss_ep_comp_descriptor_info_t*)header;
         printf("        SuperSpeed Endpoint Companion Descriptor:\n");
         printf("          bLength                 %d\n", desc->bLength);
         printf("          bDescriptorType         %d\n", desc->bDescriptorType);

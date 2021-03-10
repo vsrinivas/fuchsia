@@ -36,11 +36,11 @@ constexpr usb_endpoint_descriptor_t kTestUsbEndpointDescriptor = {
 };
 
 constexpr usb_ss_ep_comp_descriptor_t kTestUsbSsEpCompDescriptor = {
-    .bLength = sizeof(usb_ss_ep_comp_descriptor_t),
-    .bDescriptorType = USB_DT_SS_EP_COMPANION,
-    .bMaxBurst = 3,
-    .bmAttributes = 0,
-    .wBytesPerInterval = 0,
+    .b_length = sizeof(usb_ss_ep_comp_descriptor_t),
+    .b_descriptor_type = USB_DT_SS_EP_COMPANION,
+    .b_max_burst = 3,
+    .bm_attributes = 0,
+    .w_bytes_per_interval = 0,
 };
 
 class UsbLibTest : public zxtest::Test {

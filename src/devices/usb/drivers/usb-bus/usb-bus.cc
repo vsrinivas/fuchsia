@@ -137,8 +137,8 @@ zx_status_t UsbBus::UsbBusInterfaceReinitializeDevice(uint32_t device_id) {
     bool descriptors_changed =
         memcmp(&old_desc, &updated_desc, sizeof(usb_device_descriptor_t)) != 0;
     if (descriptors_changed) {
-      zxlogf(INFO, "device updated from VID 0x%x PID 0x%x to VID 0x%x PID 0x%x", old_desc.idVendor,
-             old_desc.idProduct, updated_desc.idVendor, updated_desc.idProduct);
+      zxlogf(INFO, "device updated from VID 0x%x PID 0x%x to VID 0x%x PID 0x%x", old_desc.id_vendor,
+             old_desc.id_product, updated_desc.id_vendor, updated_desc.id_product);
 
       status = UsbBusInterfaceRemoveDevice(device_id);
       if (status != ZX_OK) {

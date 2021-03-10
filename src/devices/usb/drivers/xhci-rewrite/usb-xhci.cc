@@ -632,14 +632,14 @@ TRBPromise UsbXhci::ConfigureHubAsync(uint32_t device_id, usb_speed_t speed,
           request->direct = true;
           request->header.device_id = device_id;
           request->header.ep_address = 0;
-          request->setup.bmRequestType = USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE;
+          request->setup.bm_request_type = USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_DEVICE;
           {
             fbl::AutoLock _(&state->transaction_lock());
-            request->setup.wValue = state->GetHubLocked()->hub_depth;
+            request->setup.w_value = state->GetHubLocked()->hub_depth;
           }
-          request->setup.wIndex = 0;
-          request->setup.bRequest = USB_HUB_SET_DEPTH;
-          request->setup.wLength = 0;
+          request->setup.w_index = 0;
+          request->setup.b_request = USB_HUB_SET_DEPTH;
+          request->setup.w_length = 0;
           return USBRequestToTRBPromise(UsbHciRequestQueue(std::move(*request_wrapper)).box());
         }
         return fit::make_result_promise(result);
@@ -1127,7 +1127,8 @@ void UsbXhci::ControlRequestStatusPhase(UsbRequestState* state) {
   state->interrupter = 0;
   bool status_in = true;
   // See table 4-7 in section 4.11.2.2
-  if (state->first_trb && (state->context->request->request()->setup.bmRequestType & USB_DIR_IN)) {
+  if (state->first_trb &&
+      (state->context->request->request()->setup.bm_request_type & USB_DIR_IN)) {
     status_in = false;
   }
   zx_status_t status = state->transfer_ring->AllocateTRB(&state->status_trb_ptr, nullptr);
@@ -1166,8 +1167,8 @@ void UsbXhci::ControlRequestDataPhase(UsbRequestState* state) {
         // TODO (fxbug.dev/34068): Change bus snooping options based on input from higher-level
         // drivers.
         data->set_CHAIN(next != nullptr)
-            .set_DIRECTION((state->context->request->request()->setup.bmRequestType & USB_DIR_IN) !=
-                           0)
+            .set_DIRECTION(
+                (state->context->request->request()->setup.bm_request_type & USB_DIR_IN) != 0)
             .set_INTERRUPTER(0)
             .set_LENGTH(static_cast<uint16_t>(len))
             .set_SIZE(static_cast<uint32_t>(state->packet_count))
@@ -1198,7 +1199,7 @@ void UsbXhci::ControlRequestSetupPhase(UsbRequestState* state) {
   setup_trb->set_INTERRUPTER(state->interrupter)
       .set_length(8)
       .set_IDT(1)
-      .set_TRT(((state->context->request->request()->setup.bmRequestType & USB_DIR_IN) != 0)
+      .set_TRT(((state->context->request->request()->setup.bm_request_type & USB_DIR_IN) != 0)
                    ? Setup::IN
                    : Setup::OUT);
   hw_mb();
@@ -1313,7 +1314,7 @@ TRBPromise UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
     // Section 6.2.3.4
     uint32_t max_burst = 0;
     if (ss_com_desc) {
-      max_burst = ss_com_desc->bMaxBurst;
+      max_burst = ss_com_desc->b_max_burst;
     } else {
       // TODO: Handle special case for interrupt/isochronous endpoints
       if ((slot_context->SPEED() == USB_SPEED_HIGH) && (ep_type == USB_ENDPOINT_ISOCHRONOUS)) {

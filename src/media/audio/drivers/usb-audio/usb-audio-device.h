@@ -39,8 +39,8 @@ class UsbAudioDevice : public UsbAudioDeviceBase, public fbl::RefCounted<UsbAudi
   const usb_device_descriptor_t& desc() const { return usb_dev_desc_; }
   const fbl::RefPtr<DescriptorListMemory>& desc_list() const { return desc_list_; }
   const usb_protocol_t& usb_proto() const { return usb_proto_; }
-  uint16_t vid() const { return usb_dev_desc_.idVendor; }
-  uint16_t pid() const { return usb_dev_desc_.idProduct; }
+  uint16_t vid() const { return usb_dev_desc_.id_vendor; }
+  uint16_t pid() const { return usb_dev_desc_.id_product; }
   const fbl::Array<uint8_t>& mfr_name() const { return mfr_name_; }
   const fbl::Array<uint8_t>& prod_name() const { return prod_name_; }
   const fbl::Array<uint8_t>& serial_num() const { return serial_num_; }

@@ -124,11 +124,11 @@ constexpr alt_ss_config kTestSSInterface = {
         },
     .ss_companion1 =
         {
-            .bLength = sizeof(usb_ss_ep_comp_descriptor_t),
-            .bDescriptorType = USB_DT_SS_EP_COMPANION,
-            .bMaxBurst = 3,
-            .bmAttributes = 0,
-            .wBytesPerInterval = 0,
+            .b_length = sizeof(usb_ss_ep_comp_descriptor_t),
+            .b_descriptor_type = USB_DT_SS_EP_COMPANION,
+            .b_max_burst = 3,
+            .bm_attributes = 0,
+            .w_bytes_per_interval = 0,
         },
     .ep2 =
         {
@@ -141,11 +141,11 @@ constexpr alt_ss_config kTestSSInterface = {
         },
     .ss_companion2 =
         {
-            .bLength = sizeof(usb_ss_ep_comp_descriptor_t),
-            .bDescriptorType = USB_DT_SS_EP_COMPANION,
-            .bMaxBurst = 3,
-            .bmAttributes = 0,
-            .wBytesPerInterval = 0,
+            .b_length = sizeof(usb_ss_ep_comp_descriptor_t),
+            .b_descriptor_type = USB_DT_SS_EP_COMPANION,
+            .b_max_burst = 3,
+            .bm_attributes = 0,
+            .w_bytes_per_interval = 0,
         },
     .alt_interface =
         {
@@ -183,11 +183,11 @@ static void EXPECT_ENDPOINT_EQ(usb_endpoint_descriptor_t a, usb_endpoint_descrip
 }
 
 static void EXPECT_SS_EP_COMP_EQ(usb_ss_ep_comp_descriptor_t a, usb_ss_ep_comp_descriptor_t b) {
-  EXPECT_EQ(a.bLength, b.bLength);
-  EXPECT_EQ(a.bDescriptorType, b.bDescriptorType);
-  EXPECT_EQ(a.bMaxBurst, b.bMaxBurst);
-  EXPECT_EQ(a.bmAttributes, b.bmAttributes);
-  EXPECT_EQ(a.wBytesPerInterval, b.wBytesPerInterval);
+  EXPECT_EQ(a.b_length, b.b_length);
+  EXPECT_EQ(a.b_descriptor_type, b.b_descriptor_type);
+  EXPECT_EQ(a.b_max_burst, b.b_max_burst);
+  EXPECT_EQ(a.bm_attributes, b.bm_attributes);
+  EXPECT_EQ(a.w_bytes_per_interval, b.w_bytes_per_interval);
 }
 
 static void EXPECT_DESCRIPTOR_EQ(const usb_descriptor_header_t* a,

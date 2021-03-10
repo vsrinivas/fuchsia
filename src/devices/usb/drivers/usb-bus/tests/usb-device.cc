@@ -113,21 +113,21 @@ class FakeHci : public ddk::UsbHciProtocol<FakeHci> {
       return;
     }
     if ((request.request()->header.ep_address == 0) && !custom_control_) {
-      if ((request.request()->setup.bmRequestType ==
+      if ((request.request()->setup.bm_request_type ==
            (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) &&
-          (request.request()->setup.bRequest == USB_REQ_GET_DESCRIPTOR)) {
-        uint8_t type = static_cast<uint8_t>(request.request()->setup.wValue >> 8);
-        uint8_t index = static_cast<uint8_t>(request.request()->setup.wValue);
+          (request.request()->setup.b_request == USB_REQ_GET_DESCRIPTOR)) {
+        uint8_t type = static_cast<uint8_t>(request.request()->setup.w_value >> 8);
+        uint8_t index = static_cast<uint8_t>(request.request()->setup.w_value);
         switch (type) {
           case USB_DT_DEVICE: {
             usb_device_descriptor_t* descriptor;
             request.Mmap(reinterpret_cast<void**>(&descriptor));
-            descriptor->bNumConfigurations = 2;
-            descriptor->idVendor = kVendorId;
-            descriptor->idProduct = kProductId;
-            descriptor->bDeviceClass = kDeviceClass;
-            descriptor->bDeviceSubClass = kDeviceSubclass;
-            descriptor->bDeviceProtocol = kDeviceProtocol;
+            descriptor->b_num_configurations = 2;
+            descriptor->id_vendor = kVendorId;
+            descriptor->id_product = kProductId;
+            descriptor->b_device_class = kDeviceClass;
+            descriptor->b_device_sub_class = kDeviceSubclass;
+            descriptor->b_device_protocol = kDeviceProtocol;
             request.Complete(ZX_OK, sizeof(*descriptor));
           }
             return;
@@ -151,7 +151,7 @@ class FakeHci : public ddk::UsbHciProtocol<FakeHci> {
               return;
             }
             index--;
-            uint16_t lang = request.request()->setup.wIndex;
+            uint16_t lang = request.request()->setup.w_index;
             switch (lang) {
               case MakeConstant<uint16_t, 2>("EN"):
                 lang = 0;
@@ -173,10 +173,10 @@ class FakeHci : public ddk::UsbHciProtocol<FakeHci> {
           }
         }
       }
-      if ((request.request()->setup.bmRequestType ==
+      if ((request.request()->setup.bm_request_type ==
            (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) &&
-          (request.request()->setup.bRequest == USB_REQ_SET_CONFIGURATION)) {
-        selected_configuration_ = static_cast<uint8_t>(request.request()->setup.wValue);
+          (request.request()->setup.b_request == USB_REQ_SET_CONFIGURATION)) {
+        selected_configuration_ = static_cast<uint8_t>(request.request()->setup.w_value);
         request.Complete(ZX_OK, 0);
         return;
       }
@@ -359,10 +359,10 @@ TEST_F(DeviceTest, ControlOut) {
     void* mapped_data;
     request->Mmap(&mapped_data);
     EXPECT_EQ(0, memcmp(data, data, sizeof(data)));
-    EXPECT_EQ(request->request()->setup.bmRequestType, 5);
-    EXPECT_EQ(request->request()->setup.bRequest, 97);
-    EXPECT_EQ(request->request()->setup.wValue, 8);
-    EXPECT_EQ(request->request()->setup.wIndex, 12);
+    EXPECT_EQ(request->request()->setup.bm_request_type, 5);
+    EXPECT_EQ(request->request()->setup.b_request, 97);
+    EXPECT_EQ(request->request()->setup.w_value, 8);
+    EXPECT_EQ(request->request()->setup.w_index, 12);
 
     request->Complete(ZX_OK, sizeof(data));
     return sync_completion_wait(completion, ZX_TIME_INFINITE);
@@ -385,10 +385,10 @@ TEST_F(DeviceTest, ControlIn) {
     void* mapped_data;
     request->Mmap(&mapped_data);
     memcpy(mapped_data, data, sizeof(data));
-    EXPECT_EQ(request->request()->setup.bmRequestType, 5 | USB_DIR_IN);
-    EXPECT_EQ(request->request()->setup.bRequest, 97);
-    EXPECT_EQ(request->request()->setup.wValue, 8);
-    EXPECT_EQ(request->request()->setup.wIndex, 12);
+    EXPECT_EQ(request->request()->setup.bm_request_type, 5 | USB_DIR_IN);
+    EXPECT_EQ(request->request()->setup.b_request, 97);
+    EXPECT_EQ(request->request()->setup.w_value, 8);
+    EXPECT_EQ(request->request()->setup.w_index, 12);
 
     request->Complete(ZX_OK, sizeof(data));
     return sync_completion_wait(completion, ZX_TIME_INFINITE);
@@ -430,11 +430,11 @@ TEST_F(DeviceTest, SetInterface) {
     auto requests = get_pending_requests();
     auto request = requests.pop();
     EXPECT_EQ(request->request()->header.ep_address, 0);
-    EXPECT_EQ(request->request()->setup.bmRequestType,
+    EXPECT_EQ(request->request()->setup.bm_request_type,
               USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE);
-    EXPECT_EQ(request->request()->setup.bRequest, USB_REQ_SET_INTERFACE);
-    EXPECT_EQ(request->request()->setup.wValue, 5);
-    EXPECT_EQ(request->request()->setup.wIndex, 98);
+    EXPECT_EQ(request->request()->setup.b_request, USB_REQ_SET_INTERFACE);
+    EXPECT_EQ(request->request()->setup.w_value, 5);
+    EXPECT_EQ(request->request()->setup.w_index, 98);
     request->Complete(ZX_OK, 0);
     return sync_completion_wait(completion, ZX_TIME_INFINITE);
   });
@@ -493,11 +493,11 @@ TEST_F(DeviceTest, GetDeviceDescriptor) {
   auto usb = get_usb_protocol();
   usb_device_descriptor_t descriptor;
   usb.GetDeviceDescriptor(&descriptor);
-  ASSERT_EQ(descriptor.idVendor, kVendorId);
-  ASSERT_EQ(descriptor.idProduct, kProductId);
-  ASSERT_EQ(descriptor.bDeviceClass, kDeviceClass);
-  ASSERT_EQ(descriptor.bDeviceSubClass, kDeviceSubclass);
-  ASSERT_EQ(descriptor.bDeviceProtocol, kDeviceProtocol);
+  ASSERT_EQ(descriptor.id_vendor, kVendorId);
+  ASSERT_EQ(descriptor.id_product, kProductId);
+  ASSERT_EQ(descriptor.b_device_class, kDeviceClass);
+  ASSERT_EQ(descriptor.b_device_sub_class, kDeviceSubclass);
+  ASSERT_EQ(descriptor.b_device_protocol, kDeviceProtocol);
 }
 
 TEST_F(DeviceTest, GetConfigurationDescriptorLength) {
@@ -555,11 +555,11 @@ TEST_F(DeviceTest, FidlGetDescriptor) {
   auto result = fidl.GetDeviceDescriptor();
   usb_device_descriptor_t* descriptor =
       reinterpret_cast<usb_device_descriptor_t*>(result->desc.data());
-  ASSERT_EQ(descriptor->idVendor, kVendorId);
-  ASSERT_EQ(descriptor->idProduct, kProductId);
-  ASSERT_EQ(descriptor->bDeviceClass, kDeviceClass);
-  ASSERT_EQ(descriptor->bDeviceSubClass, kDeviceSubclass);
-  ASSERT_EQ(descriptor->bDeviceProtocol, kDeviceProtocol);
+  ASSERT_EQ(descriptor->id_vendor, kVendorId);
+  ASSERT_EQ(descriptor->id_product, kProductId);
+  ASSERT_EQ(descriptor->b_device_class, kDeviceClass);
+  ASSERT_EQ(descriptor->b_device_sub_class, kDeviceSubclass);
+  ASSERT_EQ(descriptor->b_device_protocol, kDeviceProtocol);
 }
 
 TEST_F(DeviceTest, FidlGetConfigurationDescriptorSize) {
@@ -674,11 +674,11 @@ TEST_F(DeviceTest, FidlSetInterface) {
     auto requests = get_pending_requests();
     auto request = requests.pop();
     EXPECT_EQ(request->request()->header.ep_address, 0);
-    EXPECT_EQ(request->request()->setup.bmRequestType,
+    EXPECT_EQ(request->request()->setup.bm_request_type,
               USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_INTERFACE);
-    EXPECT_EQ(request->request()->setup.bRequest, USB_REQ_SET_INTERFACE);
-    EXPECT_EQ(request->request()->setup.wValue, 5);
-    EXPECT_EQ(request->request()->setup.wIndex, 98);
+    EXPECT_EQ(request->request()->setup.b_request, USB_REQ_SET_INTERFACE);
+    EXPECT_EQ(request->request()->setup.w_value, 5);
+    EXPECT_EQ(request->request()->setup.w_index, 98);
     request->Complete(ZX_OK, 0);
     return sync_completion_wait(completion, ZX_TIME_INFINITE);
   });
@@ -773,26 +773,26 @@ class EvilFakeHci : public ddk::UsbHciProtocol<EvilFakeHci> {
   void UsbHciRequestQueue(usb_request_t* usb_request_, const usb_request_complete_t* complete_cb_) {
     usb::BorrowedRequest<void> request(usb_request_, *complete_cb_, sizeof(usb_request_t));
     EXPECT_EQ(request.request()->header.ep_address, 0);
-    EXPECT_EQ(request.request()->setup.bmRequestType,
+    EXPECT_EQ(request.request()->setup.bm_request_type,
               USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE);
-    EXPECT_EQ(request.request()->setup.bRequest, USB_REQ_GET_DESCRIPTOR);
+    EXPECT_EQ(request.request()->setup.b_request, USB_REQ_GET_DESCRIPTOR);
 
     if (request.request()->header.ep_address == 0) {
-      if ((request.request()->setup.bmRequestType ==
+      if ((request.request()->setup.bm_request_type ==
            (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) &&
-          (request.request()->setup.bRequest == USB_REQ_GET_DESCRIPTOR)) {
-        uint8_t type = static_cast<uint8_t>(request.request()->setup.wValue >> 8);
-        uint8_t index = static_cast<uint8_t>(request.request()->setup.wValue);
+          (request.request()->setup.b_request == USB_REQ_GET_DESCRIPTOR)) {
+        uint8_t type = static_cast<uint8_t>(request.request()->setup.w_value >> 8);
+        uint8_t index = static_cast<uint8_t>(request.request()->setup.w_value);
         switch (type) {
           case USB_DT_DEVICE: {
             usb_device_descriptor_t* descriptor;
             request.Mmap(reinterpret_cast<void**>(&descriptor));
-            descriptor->bNumConfigurations = 2;
-            descriptor->idVendor = kVendorId;
-            descriptor->idProduct = kProductId;
-            descriptor->bDeviceClass = kDeviceClass;
-            descriptor->bDeviceSubClass = kDeviceSubclass;
-            descriptor->bDeviceProtocol = kDeviceProtocol;
+            descriptor->b_num_configurations = 2;
+            descriptor->id_vendor = kVendorId;
+            descriptor->id_product = kProductId;
+            descriptor->b_device_class = kDeviceClass;
+            descriptor->b_device_sub_class = kDeviceSubclass;
+            descriptor->b_device_protocol = kDeviceProtocol;
             request.Complete(ZX_OK, sizeof(*descriptor));
           }
             return;

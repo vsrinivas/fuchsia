@@ -1,0 +1,51 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.usb.descriptor;
+
+// USB standard descriptor specifications.
+enum UsbSpeed : uint32 {
+    undefined = 0;
+    full = 1;
+    low = 2;
+    high = 3;
+    super = 4;
+};
+
+[Packed]
+struct UsbSetup {
+    uint8 bmRequestType;
+    uint8 bRequest;
+    uint16 wValue;
+    uint16 wIndex;
+    uint16 wLength;
+};
+
+[Packed]
+struct UsbDeviceDescriptor {
+    uint8 bLength;
+    uint8 bDescriptorType;
+    uint16 bcdUsb;
+    uint8 bDeviceClass;
+    uint8 bDeviceSubClass;
+    uint8 bDeviceProtocol;
+    uint8 bMaxPacketSize0;
+    uint16 idVendor;
+    uint16 idProduct;
+    uint16 bcdDevice;
+    uint8 iManufacturer;
+    uint8 iProduct;
+    uint8 iSerialNumber;
+    uint8 bNumConfigurations;
+};
+
+[Packed]
+struct UsbSsEpCompDescriptor {
+    uint8 bLength;
+    uint8 bDescriptorType;
+    uint8 bMaxBurst;
+    uint8 bmAttributes;
+    uint16 wBytesPerInterval;
+};
+

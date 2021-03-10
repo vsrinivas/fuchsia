@@ -597,8 +597,8 @@ static zx_status_t cdc_control(void* ctx, const usb_setup_t* setup, const uint8_
   zxlogf(DEBUG, "%s", __func__);
 
   // USB_CDC_SET_ETHERNET_PACKET_FILTER is the only control request required by the spec
-  if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
-      setup->bRequest == USB_CDC_SET_ETHERNET_PACKET_FILTER) {
+  if (setup->bm_request_type == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
+      setup->b_request == USB_CDC_SET_ETHERNET_PACKET_FILTER) {
     zxlogf(DEBUG, "%s: USB_CDC_SET_ETHERNET_PACKET_FILTER", __func__);
     // TODO(voydanoff) implement the requested packet filtering
     return ZX_OK;

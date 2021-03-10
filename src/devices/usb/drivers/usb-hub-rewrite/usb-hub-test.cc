@@ -349,9 +349,9 @@ TEST_F(SyntheticHarness, SetFeature) {
   auto dev = device();
   bool ran = false;
   SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
-    ASSERT_EQ(request->setup.bmRequestType, 3);
-    ASSERT_EQ(request->setup.bRequest, USB_REQ_SET_FEATURE);
-    ASSERT_EQ(request->setup.wIndex, 2);
+    ASSERT_EQ(request->setup.bm_request_type, 3);
+    ASSERT_EQ(request->setup.b_request, USB_REQ_SET_FEATURE);
+    ASSERT_EQ(request->setup.w_index, 2);
     ran = true;
     usb_request_complete(request, ZX_OK, 0, &completion);
   });
@@ -363,9 +363,9 @@ TEST_F(SyntheticHarness, ClearFeature) {
   auto dev = device();
   bool ran = false;
   SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
-    ASSERT_EQ(request->setup.bmRequestType, 3);
-    ASSERT_EQ(request->setup.bRequest, USB_REQ_CLEAR_FEATURE);
-    ASSERT_EQ(request->setup.wIndex, 2);
+    ASSERT_EQ(request->setup.bm_request_type, 3);
+    ASSERT_EQ(request->setup.b_request, USB_REQ_CLEAR_FEATURE);
+    ASSERT_EQ(request->setup.w_index, 2);
     ran = true;
     usb_request_complete(request, ZX_OK, 0, &completion);
   });
@@ -381,7 +381,7 @@ TEST_F(SyntheticHarness, GetPortStatus) {
     bool ran = false;
     uint16_t features_cleared = 0;
     SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
-      switch (request->setup.bmRequestType) {
+      switch (request->setup.bm_request_type) {
         case USB_RECIP_PORT | USB_DIR_IN: {
           usb_port_status_t* stat;
           usb_request_mmap(request, reinterpret_cast<void**>(&stat));
@@ -390,7 +390,7 @@ TEST_F(SyntheticHarness, GetPortStatus) {
           return;
         } break;
         case USB_RECIP_PORT | USB_DIR_OUT: {
-          switch (request->setup.wValue) {
+          switch (request->setup.w_value) {
             case USB_FEATURE_C_PORT_CONNECTION:
               features_cleared |= USB_C_PORT_CONNECTION;
               break;
@@ -437,7 +437,7 @@ TEST_F(SyntheticHarness, BadDescriptorTest) {
   SetRequestCallback([&](usb_request_t* request, usb_request_complete_t completion) {
     usb_device_descriptor_t* devdesc;
     usb_request_mmap(request, reinterpret_cast<void**>(&devdesc));
-    devdesc->bLength = sizeof(usb_device_descriptor_t);
+    devdesc->b_length = sizeof(usb_device_descriptor_t);
     usb_request_complete(request, ZX_OK, sizeof(usb_descriptor_header_t), &completion);
   });
   ASSERT_EQ(

@@ -290,11 +290,11 @@ zx_status_t UsbDevice::Control(uint8_t request_type, uint8_t request, uint16_t v
 
   // fill in protocol data
   usb_setup_t* setup = &req->request()->setup;
-  setup->bmRequestType = request_type;
-  setup->bRequest = request;
-  setup->wValue = value;
-  setup->wIndex = index;
-  setup->wLength = static_cast<uint16_t>(length);
+  setup->bm_request_type = request_type;
+  setup->b_request = request;
+  setup->w_value = value;
+  setup->w_index = index;
+  setup->w_length = static_cast<uint16_t>(length);
 
   if (out) {
     if (length > 0 && write_buffer == nullptr) {
@@ -834,7 +834,7 @@ zx_status_t UsbDevice::Init() {
     return status;
   }
 
-  uint8_t num_configurations = device_desc_.bNumConfigurations;
+  uint8_t num_configurations = device_desc_.b_num_configurations;
   fbl::AllocChecker ac;
   config_descs_.reset(new (&ac) fbl::Array<uint8_t>[num_configurations], num_configurations);
   if (!ac.check()) {
@@ -905,8 +905,8 @@ zx_status_t UsbDevice::Init() {
   uint8_t configuration = 1;
   const UsbConfigOverride* override = config_overrides;
   while (override->configuration) {
-    if (override->vid == le16toh(device_desc_.idVendor) &&
-        override->pid == le16toh(device_desc_.idProduct)) {
+    if (override->vid == le16toh(device_desc_.id_vendor) &&
+        override->pid == le16toh(device_desc_.id_product)) {
       configuration = override->configuration;
       break;
     }
@@ -928,8 +928,8 @@ zx_status_t UsbDevice::Init() {
     zxlogf(ERROR, "%s: USB_REQ_SET_CONFIGURATION failed", __func__);
     return status;
   }
-  zxlogf(INFO, "* found USB device (0x%04x:0x%04x, USB %x.%x) config %u", device_desc_.idVendor,
-         device_desc_.idProduct, device_desc_.bcdUSB >> 8, device_desc_.bcdUSB & 0xff,
+  zxlogf(INFO, "* found USB device (0x%04x:0x%04x, USB %x.%x) config %u", device_desc_.id_vendor,
+         device_desc_.id_product, device_desc_.bcd_usb >> 8, device_desc_.bcd_usb & 0xff,
          configuration);
 
   // Callback thread must be started before device_add() since it will recursively
@@ -940,11 +940,11 @@ zx_status_t UsbDevice::Init() {
   snprintf(name, sizeof(name), "%03d", device_id_);
 
   zx_device_prop_t props[] = {
-      {BIND_USB_VID, 0, device_desc_.idVendor},
-      {BIND_USB_PID, 0, device_desc_.idProduct},
-      {BIND_USB_CLASS, 0, device_desc_.bDeviceClass},
-      {BIND_USB_SUBCLASS, 0, device_desc_.bDeviceSubClass},
-      {BIND_USB_PROTOCOL, 0, device_desc_.bDeviceProtocol},
+      {BIND_USB_VID, 0, device_desc_.id_vendor},
+      {BIND_USB_PID, 0, device_desc_.id_product},
+      {BIND_USB_CLASS, 0, device_desc_.b_device_class},
+      {BIND_USB_SUBCLASS, 0, device_desc_.b_device_sub_class},
+      {BIND_USB_PROTOCOL, 0, device_desc_.b_device_protocol},
   };
   status = DdkAdd(ddk::DeviceAddArgs(name).set_props(props).set_proto_id(ZX_PROTOCOL_USB_DEVICE));
   if (status != ZX_OK) {

@@ -175,11 +175,11 @@ int UsbVirtualBus::DeviceThread() {
 void UsbVirtualBus::HandleControl(Request request) {
   const usb_setup_t* setup = &request.request()->setup;
   zx_status_t status;
-  size_t length = le16toh(setup->wLength);
+  size_t length = le16toh(setup->w_length);
   size_t actual = 0;
 
   zxlogf(DEBUG, "%s type: 0x%02X req: %d value: %d index: %d length: %zu", __func__,
-         setup->bmRequestType, setup->bRequest, le16toh(setup->wValue), le16toh(setup->wIndex),
+         setup->bm_request_type, setup->b_request, le16toh(setup->w_value), le16toh(setup->w_index),
          length);
 
   if (dci_intf_.is_valid()) {
@@ -194,7 +194,7 @@ void UsbVirtualBus::HandleControl(Request request) {
       }
     }
 
-    if ((setup->bmRequestType & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
+    if ((setup->bm_request_type & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_IN) {
       status =
           dci_intf_.Control(setup, nullptr, 0, reinterpret_cast<uint8_t*>(buffer), length, &actual);
     } else {

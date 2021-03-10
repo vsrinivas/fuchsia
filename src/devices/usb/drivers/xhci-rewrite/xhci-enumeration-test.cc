@@ -613,17 +613,17 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceUponCompletion) {
   ASSERT_EQ(get_max_packet_size_request->request()->header.device_id, 0);
   ASSERT_EQ(get_max_packet_size_request->request()->header.ep_address, 0);
   ASSERT_EQ(get_max_packet_size_request->request()->header.length, 8);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.bmRequestType,
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.bm_request_type,
             USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.wValue, USB_DT_DEVICE << 8);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.wIndex, 0);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.bRequest, USB_REQ_GET_DESCRIPTOR);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.wLength, 8);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.w_value, USB_DT_DEVICE << 8);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.w_index, 0);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.b_request, USB_REQ_GET_DESCRIPTOR);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.w_length, 8);
   ASSERT_TRUE(get_max_packet_size_request->request()->direct);
   usb_device_descriptor_t* descriptor;
   ASSERT_OK(get_max_packet_size_request->Mmap(reinterpret_cast<void**>(&descriptor)));
-  descriptor->bDescriptorType = USB_DT_DEVICE;
-  descriptor->bMaxPacketSize0 = 42;
+  descriptor->b_descriptor_type = USB_DT_DEVICE;
+  descriptor->b_max_packet_size0 = 42;
   get_max_packet_size_request->Complete(ZX_OK, 8);
   controller().RunUntilIdle();
 
@@ -749,17 +749,17 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   ASSERT_EQ(get_max_packet_size_request->request()->header.device_id, 1);
   ASSERT_EQ(get_max_packet_size_request->request()->header.ep_address, 0);
   ASSERT_EQ(get_max_packet_size_request->request()->header.length, 8);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.bmRequestType,
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.bm_request_type,
             USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.wValue, USB_DT_DEVICE << 8);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.wIndex, 0);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.bRequest, USB_REQ_GET_DESCRIPTOR);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.wLength, 8);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.w_value, USB_DT_DEVICE << 8);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.w_index, 0);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.b_request, USB_REQ_GET_DESCRIPTOR);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.w_length, 8);
   ASSERT_TRUE(get_max_packet_size_request->request()->direct);
   usb_device_descriptor_t* descriptor;
   ASSERT_OK(get_max_packet_size_request->Mmap(reinterpret_cast<void**>(&descriptor)));
-  descriptor->bDescriptorType = USB_DT_DEVICE;
-  descriptor->bMaxPacketSize0 = 42;
+  descriptor->b_descriptor_type = USB_DT_DEVICE;
+  descriptor->b_max_packet_size0 = 42;
   get_max_packet_size_request->Complete(ZX_OK, 8);
   controller().RunUntilIdle();
 
@@ -797,16 +797,16 @@ TEST_F(EnumerationTests, AddressDeviceCommandShouldOnlineDeviceAfterSuccessfulRe
   ASSERT_EQ(get_max_packet_size_request->request()->header.device_id, 1);
   ASSERT_EQ(get_max_packet_size_request->request()->header.ep_address, 0);
   ASSERT_EQ(get_max_packet_size_request->request()->header.length, 8);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.bmRequestType,
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.bm_request_type,
             USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.wValue, USB_DT_DEVICE << 8);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.wIndex, 0);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.bRequest, USB_REQ_GET_DESCRIPTOR);
-  ASSERT_EQ(get_max_packet_size_request->request()->setup.wLength, 8);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.w_value, USB_DT_DEVICE << 8);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.w_index, 0);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.b_request, USB_REQ_GET_DESCRIPTOR);
+  ASSERT_EQ(get_max_packet_size_request->request()->setup.w_length, 8);
   ASSERT_TRUE(get_max_packet_size_request->request()->direct);
   ASSERT_OK(get_max_packet_size_request->Mmap(reinterpret_cast<void**>(&descriptor)));
-  descriptor->bDescriptorType = USB_DT_DEVICE;
-  descriptor->bMaxPacketSize0 = 32;
+  descriptor->b_descriptor_type = USB_DT_DEVICE;
+  descriptor->b_max_packet_size0 = 32;
   get_max_packet_size_request->Complete(ZX_OK, 8);
   controller().RunUntilIdle();
 

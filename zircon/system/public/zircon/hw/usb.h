@@ -138,14 +138,6 @@ __BEGIN_CDECLS
 
 #define USB_ENDPOINT_HALT                  0x00
 
-// Values in this set match those used in XHCI and other parts of the USB specification
-#define USB_SPEED_UNDEFINED 0
-#define USB_SPEED_FULL 1
-#define USB_SPEED_LOW 2
-#define USB_SPEED_HIGH 3
-#define USB_SPEED_SUPER 4
-typedef uint32_t usb_speed_t;
-
 /* general USB defines */
 typedef struct {
     uint8_t bmRequestType;
@@ -153,7 +145,7 @@ typedef struct {
     uint16_t wValue;
     uint16_t wIndex;
     uint16_t wLength;
-} __attribute__ ((packed)) usb_setup_t;
+} __attribute__ ((packed)) usb_setup_info_t;
 
 typedef struct {
     uint8_t bLength;
@@ -175,7 +167,7 @@ typedef struct {
     uint8_t iProduct;
     uint8_t iSerialNumber;
     uint8_t bNumConfigurations;
-} __attribute__ ((packed)) usb_device_descriptor_t;
+} __attribute__ ((packed)) usb_device_descriptor_info_t;
 
 typedef struct {
     uint8_t bLength;
@@ -244,7 +236,7 @@ typedef struct {
     uint8_t bMaxBurst;
     uint8_t bmAttributes;
     uint16_t wBytesPerInterval;
-} __attribute__ ((packed)) usb_ss_ep_comp_descriptor_t;
+} __attribute__ ((packed)) usb_ss_ep_comp_descriptor_info_t;
 #define usb_ss_ep_comp_isoc_mult(ep) ((ep)->bmAttributes & 0x3)
 #define usb_ss_ep_comp_isoc_comp(ep) (!!((ep)->bmAttributes & 0x80))
 

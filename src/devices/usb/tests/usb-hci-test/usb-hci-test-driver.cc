@@ -280,7 +280,7 @@ void HciTest::EnumerationThread(ddk::InitTxn txn) {
           case InterruptIn:
             // Interrupt endpoint
             irq_in_ = ep.descriptor;
-            irq_in_3_.bDescriptorType = 0;
+            irq_in_3_.b_descriptor_type = 0;
             if (ep.has_companion) {
               irq_in_3_ = ep.ss_companion;
               usb_.EnableEndpoint(&ep.descriptor, &irq_in_3_, true);
@@ -290,7 +290,7 @@ void HciTest::EnumerationThread(ddk::InitTxn txn) {
             break;
           case IsochIn:
             isoch_in_ = ep.descriptor;
-            isoch_in_3_.bDescriptorType = 0;
+            isoch_in_3_.b_descriptor_type = 0;
             if (ep.has_companion) {
               isoch_in_3_ = ep.ss_companion;
               usb_.EnableEndpoint(&ep.descriptor, &isoch_in_3_, true);
@@ -300,7 +300,7 @@ void HciTest::EnumerationThread(ddk::InitTxn txn) {
             break;
           case BulkOut:
             bulk_out_ = ep.descriptor;
-            bulk_out_3_.bDescriptorType = 0;
+            bulk_out_3_.b_descriptor_type = 0;
             if (ep.has_companion) {
               bulk_out_3_ = ep.ss_companion;
               usb_.EnableEndpoint(&ep.descriptor, &bulk_out_3_, true);
@@ -311,7 +311,7 @@ void HciTest::EnumerationThread(ddk::InitTxn txn) {
           case BulkIn:
             configured = true;
             bulk_in_ = ep.descriptor;
-            bulk_in_3_.bDescriptorType = 0;
+            bulk_in_3_.b_descriptor_type = 0;
             if (ep.has_companion) {
               bulk_in_3_ = ep.ss_companion;
               usb_.EnableEndpoint(&ep.descriptor, &bulk_in_3_, true);

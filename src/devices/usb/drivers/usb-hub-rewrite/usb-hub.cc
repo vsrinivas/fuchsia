@@ -503,11 +503,11 @@ fit::promise<std::vector<uint8_t>, zx_status_t> UsbHubDevice::ControlIn(
   ZX_ASSERT(read_size <= kMaxRequestLength);
   std::optional<Request> usb_request = AllocRequest();
   usb_request->request()->header.length = read_size;
-  usb_request->request()->setup.bmRequestType = request_type;
-  usb_request->request()->setup.bRequest = request;
-  usb_request->request()->setup.wIndex = index;
-  usb_request->request()->setup.wValue = value;
-  usb_request->request()->setup.wLength = static_cast<uint16_t>(read_size);
+  usb_request->request()->setup.bm_request_type = request_type;
+  usb_request->request()->setup.b_request = request;
+  usb_request->request()->setup.w_index = index;
+  usb_request->request()->setup.w_value = value;
+  usb_request->request()->setup.w_length = static_cast<uint16_t>(read_size);
 
   return RequestQueue(*std::move(usb_request))
       .then([this, read_size](fit::result<Request, void>& value)
@@ -540,11 +540,11 @@ fit::promise<void, zx_status_t> UsbHubDevice::ControlOut(uint8_t request_type, u
   ZX_ASSERT(write_size <= kMaxRequestLength);
   std::optional<Request> usb_request = AllocRequest();
   usb_request->request()->header.length = write_size;
-  usb_request->request()->setup.bmRequestType = request_type;
-  usb_request->request()->setup.bRequest = request;
-  usb_request->request()->setup.wIndex = index;
-  usb_request->request()->setup.wValue = value;
-  usb_request->request()->setup.wLength = static_cast<uint16_t>(write_size);
+  usb_request->request()->setup.bm_request_type = request_type;
+  usb_request->request()->setup.b_request = request;
+  usb_request->request()->setup.w_index = index;
+  usb_request->request()->setup.w_value = value;
+  usb_request->request()->setup.w_length = static_cast<uint16_t>(write_size);
   size_t result = usb_request->CopyTo(write_buffer, write_size, 0);
   ZX_ASSERT(result == write_size);
   return RequestQueue(*std::move(usb_request))

@@ -122,8 +122,8 @@ zx_status_t ControlQueue::GetDeviceDescriptor(usb_device_descriptor_t* out) {
   TRACE();
   usb_setup_t req = {
       // GET_DESCRIPTOR request, see: USB 2.0 spec. section 9.4.3.
-      .bmRequestType = 0x80, .bRequest = 0x6,         .wValue = 0x0100,
-      .wIndex = 0,           .wLength = sizeof(*out),
+      .bm_request_type = 0x80,  .b_request = 0x6, .w_value = 0x0100, .w_index = 0,
+      .w_length = sizeof(*out),
   };
 
   transaction_ = std::make_unique<Control>(ControlType::READ, usb_.View(0), req, out, sizeof(*out),
@@ -136,14 +136,14 @@ zx_status_t ControlQueue::GetDeviceDescriptor(usb_device_descriptor_t* out) {
     return ZX_ERR_INTERNAL;
   }
 
-  max_pkt_sz_ = static_cast<size_t>(out->bMaxPacketSize0);
+  max_pkt_sz_ = static_cast<size_t>(out->b_max_packet_size0);
   return ZX_OK;
 }
 
 zx_status_t ControlQueue::SetAddress(uint8_t addr) {
   usb_setup_t req = {
       // SET_ADDRESS request, see: USB 2.0 spec. section 9.4.6.
-      .bmRequestType = 0, .bRequest = 0x5, .wValue = addr, .wIndex = 0, .wLength = 0,
+      .bm_request_type = 0, .b_request = 0x5, .w_value = addr, .w_index = 0, .w_length = 0,
   };
 
   transaction_ = std::make_unique<Control>(ControlType::ZERO, usb_.View(0), req, nullptr, 0,
@@ -168,7 +168,7 @@ zx_status_t ControlQueue::DispatchRequest(usb::BorrowedRequest<> req) {
   zx_status_t status;
   usb_setup_t setup = req.request()->setup;
 
-  if (setup.wLength == 0) {  // See: USB 2.0 spec. section 9.3.5.
+  if (setup.w_length == 0) {  // See: USB 2.0 spec. section 9.3.5.
     transaction_ = std::make_unique<Control>(ControlType::ZERO, usb_.View(0), setup, nullptr, 0,
                                              max_pkt_sz_, faddr_);
   } else {
@@ -181,7 +181,7 @@ zx_status_t ControlQueue::DispatchRequest(usb::BorrowedRequest<> req) {
     }
 
     size_t size = req.request()->header.length;
-    if ((setup.bmRequestType & USB_DIR_MASK) == USB_DIR_IN) {
+    if ((setup.bm_request_type & USB_DIR_MASK) == USB_DIR_IN) {
       transaction_ = std::make_unique<Control>(ControlType::READ, usb_.View(0), setup, vmo_addr,
                                                size, max_pkt_sz_, faddr_);
     } else {  // USB_DIR_OUT

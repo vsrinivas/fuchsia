@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_TRANSACTION_H_
 #define SRC_DEVICES_USB_DRIVERS_MT_MUSB_HOST_USB_TRANSACTION_H_
 
+#include <fuchsia/hardware/usb/descriptor/c/banjo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>

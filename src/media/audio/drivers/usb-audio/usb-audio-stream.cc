@@ -171,8 +171,8 @@ void UsbAudioStream::ComputePersistentUniqueId() {
   // saving and restoring driver settings (as it does in some operating
   // systems today).
   //
-  uint16_t vid = parent_.desc().idVendor;
-  uint16_t pid = parent_.desc().idProduct;
+  uint16_t vid = parent_.desc().id_vendor;
+  uint16_t pid = parent_.desc().id_product;
   audio_stream_unique_id_t fallback_id{
       .data = {'U', 'S', 'B', ' ', static_cast<uint8_t>(vid >> 8), static_cast<uint8_t>(vid),
                static_cast<uint8_t>(pid >> 8), static_cast<uint8_t>(pid), ifc_->iid()}};

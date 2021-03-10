@@ -77,32 +77,32 @@ zx_status_t FakeUsbHidFunction::UsbFunctionInterfaceControl(
     uint8_t* out_read_buffer, size_t read_size, size_t* out_read_actual) {
   FakeUsbHidFunction* func = static_cast<FakeUsbHidFunction*>(ctx);
 
-  if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE)) {
-    if (setup->bRequest == USB_REQ_GET_DESCRIPTOR) {
+  if (setup->bm_request_type == (USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_INTERFACE)) {
+    if (setup->b_request == USB_REQ_GET_DESCRIPTOR) {
       memcpy(out_read_buffer, func->report_desc_.data(), func->report_desc_.size());
       *out_read_actual = func->report_desc_.size();
       return ZX_OK;
     }
   }
-  if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {
-    if (setup->bRequest == USB_HID_GET_REPORT) {
+  if (setup->bm_request_type == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {
+    if (setup->b_request == USB_HID_GET_REPORT) {
       memcpy(out_read_buffer, func->report_.data(), func->report_.size());
       *out_read_actual = func->report_.size();
       return ZX_OK;
     }
-    if (setup->bRequest == USB_HID_GET_PROTOCOL) {
+    if (setup->b_request == USB_HID_GET_PROTOCOL) {
       memcpy(out_read_buffer, &func->hid_protocol_, sizeof(func->hid_protocol_));
       *out_read_actual = sizeof(func->hid_protocol_);
       return ZX_OK;
     }
   }
-  if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {
-    if (setup->bRequest == USB_HID_SET_REPORT) {
+  if (setup->bm_request_type == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {
+    if (setup->b_request == USB_HID_SET_REPORT) {
       memcpy(func->report_.data(), write_buffer, func->report_.size());
       return ZX_OK;
     }
-    if (setup->bRequest == USB_HID_SET_PROTOCOL) {
-      func->hid_protocol_ = static_cast<uint8_t>(setup->wValue);
+    if (setup->b_request == USB_HID_SET_PROTOCOL) {
+      func->hid_protocol_ = static_cast<uint8_t>(setup->w_value);
       return ZX_OK;
     }
   }

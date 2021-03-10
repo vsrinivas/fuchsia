@@ -554,8 +554,8 @@ zx_status_t RndisFunction::UsbFunctionInterfaceControl(const usb_setup_t* setup,
                                                        const uint8_t* write_buffer,
                                                        size_t write_size, uint8_t* out_read_buffer,
                                                        size_t read_size, size_t* out_read_actual) {
-  if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
-      setup->bRequest == USB_CDC_SEND_ENCAPSULATED_COMMAND) {
+  if (setup->bm_request_type == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
+      setup->b_request == USB_CDC_SEND_ENCAPSULATED_COMMAND) {
     if (out_read_actual) {
       *out_read_actual = 0;
     }
@@ -565,8 +565,8 @@ zx_status_t RndisFunction::UsbFunctionInterfaceControl(const usb_setup_t* setup,
       return status;
     }
     return ZX_OK;
-  } else if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
-             setup->bRequest == USB_CDC_GET_ENCAPSULATED_RESPONSE) {
+  } else if (setup->bm_request_type == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
+             setup->b_request == USB_CDC_GET_ENCAPSULATED_RESPONSE) {
     size_t actual;
     zx_status_t status = HandleResponse(out_read_buffer, read_size, &actual);
     if (out_read_actual) {
@@ -575,8 +575,8 @@ zx_status_t RndisFunction::UsbFunctionInterfaceControl(const usb_setup_t* setup,
     return status;
   }
 
-  zxlogf(WARNING, "Unrecognised control interface transfer: bmRequestType %x bRequest %x",
-         setup->bmRequestType, setup->bRequest);
+  zxlogf(WARNING, "Unrecognised control interface transfer: bm_request_type %x b_request %x",
+         setup->bm_request_type, setup->b_request);
   return ZX_ERR_NOT_SUPPORTED;
 }
 

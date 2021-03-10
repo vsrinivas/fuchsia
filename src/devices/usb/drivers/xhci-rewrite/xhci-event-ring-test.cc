@@ -467,9 +467,9 @@ TEST_F(EventRingHarness, BadHubStallOnDtDeviceQualifier) {
                     request.Mmap(reinterpret_cast<void**>(&result));
                     memcpy(&descriptor, result, sizeof(usb_device_qualifier_descriptor_t));
                   });
-  request->request()->setup.bRequest = USB_REQ_GET_DESCRIPTOR;
-  request->request()->setup.wIndex = 0;
-  request->request()->setup.wValue = USB_DT_DEVICE_QUALIFIER << 8;
+  request->request()->setup.b_request = USB_REQ_GET_DESCRIPTOR;
+  request->request()->setup.w_index = 0;
+  request->request()->setup.w_value = USB_DT_DEVICE_QUALIFIER << 8;
   request->request()->header.length = sizeof(usb_device_qualifier_descriptor_t);
 
   ctx->request = Borrow(std::move(*request));

@@ -168,20 +168,20 @@ class UsbRootHub : public UsbDevice {
 
   // USB root hub device descriptors.
   static constexpr usb_device_descriptor_t device_descriptor_ = {
-      .bLength = sizeof(usb_device_descriptor_t),
-      .bDescriptorType = USB_DT_DEVICE,
-      .bcdUSB = htole16(0x0200),
-      .bDeviceClass = USB_CLASS_HUB,
-      .bDeviceSubClass = 0,
-      .bDeviceProtocol = 1,
-      .bMaxPacketSize0 = 64,
-      .idVendor = htole16(0x18d1),
-      .idProduct = htole16(0xa001),
-      .bcdDevice = htole16(0x0100),
-      .iManufacturer = 1,
-      .iProduct = 2,
-      .iSerialNumber = 0,
-      .bNumConfigurations = 1,
+      .b_length = sizeof(usb_device_descriptor_t),
+      .b_descriptor_type = USB_DT_DEVICE,
+      .bcd_usb = htole16(0x0200),
+      .b_device_class = USB_CLASS_HUB,
+      .b_device_sub_class = 0,
+      .b_device_protocol = 1,
+      .b_max_packet_size0 = 64,
+      .id_vendor = htole16(0x18d1),
+      .id_product = htole16(0xa001),
+      .bcd_device = htole16(0x0100),
+      .i_manufacturer = 1,
+      .i_product = 2,
+      .i_serial_number = 0,
+      .b_num_configurations = 1,
   };
 
   static constexpr pvt_configuration_descriptor_t config_descriptor_ = {

@@ -86,16 +86,16 @@ zx_status_t UsbAudioDevice::Bind() {
 
   // Attempt to cache the string descriptors for our manufacturer name,
   // product name, and serial number.
-  if (usb_dev_desc_.iManufacturer) {
-    mfr_name_ = FetchStringDescriptor(usb_proto_, usb_dev_desc_.iManufacturer);
+  if (usb_dev_desc_.i_manufacturer) {
+    mfr_name_ = FetchStringDescriptor(usb_proto_, usb_dev_desc_.i_manufacturer);
   }
 
-  if (usb_dev_desc_.iProduct) {
-    prod_name_ = FetchStringDescriptor(usb_proto_, usb_dev_desc_.iProduct);
+  if (usb_dev_desc_.i_product) {
+    prod_name_ = FetchStringDescriptor(usb_proto_, usb_dev_desc_.i_product);
   }
 
-  if (usb_dev_desc_.iSerialNumber) {
-    serial_num_ = FetchStringDescriptor(usb_proto_, usb_dev_desc_.iSerialNumber);
+  if (usb_dev_desc_.i_serial_number) {
+    serial_num_ = FetchStringDescriptor(usb_proto_, usb_dev_desc_.i_serial_number);
   }
 
   // Our top level binding script has only claimed audio interfaces with a

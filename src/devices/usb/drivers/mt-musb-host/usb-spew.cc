@@ -15,7 +15,7 @@ void SpewUsbDeviceDescriptor(const usb_device_descriptor_t& d) {
   char buf[100];
 
   // clang-format off
-    switch (d.bDeviceClass) {
+    switch (d.b_device_class) {
     case USB_CLASS_AUDIO:                snprintf(buf, 100, "AUDIO"); break;
     case USB_CLASS_COMM:                 snprintf(buf, 100, "COMM"); break;
     case USB_CLASS_HID:                  snprintf(buf, 100, "HID"); break;
@@ -38,20 +38,20 @@ void SpewUsbDeviceDescriptor(const usb_device_descriptor_t& d) {
     }
 
     zxlogf(TRACE, "            ===  usb_device_descriptor_t ===");
-    zxlogf(TRACE, "               .bLength = %d", d.bLength);
-    zxlogf(TRACE, "               .bDescriptorType = <DEVICE_DESCRIPTOR>");
-    zxlogf(TRACE, "               .bcdUSB = 0x%04x", d.bcdUSB);
-    zxlogf(TRACE, "               .bDeviceClass = 0x%02x <%s>", d.bDeviceClass, buf);
-    zxlogf(TRACE, "               .bDeviceSubClass = 0x%02x", d.bDeviceSubClass);
-    zxlogf(TRACE, "               .bDeviceProtocol = 0x%02x", d.bDeviceProtocol);
-    zxlogf(TRACE, "               .bMaxPacketSize0 = %d", d.bMaxPacketSize0);
-    zxlogf(TRACE, "               .idVendor = 0x%04x", d.idVendor);
-    zxlogf(TRACE, "               .idProduct = 0x%04x", d.idProduct);
-    zxlogf(TRACE, "               .bcdDevice = 0x%04x", d.bcdDevice);
-    zxlogf(TRACE, "               .iManufacturer = 0x%02x", d.iManufacturer);
-    zxlogf(TRACE, "               .iProduct = 0x%02x", d.iProduct);
-    zxlogf(TRACE, "               .iSerialNumber = 0x%02x", d.iSerialNumber);
-    zxlogf(TRACE, "               .bNumConfigurations = %d", d.bNumConfigurations);
+    zxlogf(TRACE, "               .b_length = %d", d.b_length);
+    zxlogf(TRACE, "               .b_descriptor_type = <DEVICE_DESCRIPTOR>");
+    zxlogf(TRACE, "               .bcd_usb = 0x%04x", d.bcd_usb);
+    zxlogf(TRACE, "               .b_device_class = 0x%02x <%s>", d.b_device_class, buf);
+    zxlogf(TRACE, "               .b_device_sub_class = 0x%02x", d.b_device_sub_class);
+    zxlogf(TRACE, "               .b_device_protocol = 0x%02x", d.b_device_protocol);
+    zxlogf(TRACE, "               .b_max_packet_size0 = %d", d.b_max_packet_size0);
+    zxlogf(TRACE, "               .id_vendor = 0x%04x", d.id_vendor);
+    zxlogf(TRACE, "               .id_product = 0x%04x", d.id_product);
+    zxlogf(TRACE, "               .bcd_device = 0x%04x", d.bcd_device);
+    zxlogf(TRACE, "               .i_manufacturer = 0x%02x", d.i_manufacturer);
+    zxlogf(TRACE, "               .i_product = 0x%02x", d.i_product);
+    zxlogf(TRACE, "               .i_serial_number = 0x%02x", d.i_serial_number);
+    zxlogf(TRACE, "               .b_num_configurations = %d", d.b_num_configurations);
   // clang-format on
 }
 
@@ -88,7 +88,7 @@ void SpewUsbRequest(const usb_request_t& req) {
   char buf[100];
 
   // clang-format off
-    switch (req.setup.bRequest) {
+    switch (req.setup.b_request) {
     case USB_REQ_GET_STATUS:        snprintf(buf, 100, "GET_STATUS"); break;
     case USB_REQ_CLEAR_FEATURE:     snprintf(buf, 100, "CLEAR_FEATURE"); break;
     case USB_REQ_SET_FEATURE:       snprintf(buf, 100, "SET_FEATURE"); break;
@@ -110,11 +110,11 @@ void SpewUsbRequest(const usb_request_t& req) {
     zxlogf(TRACE, "               .length = %ld", req.header.length);
     zxlogf(TRACE, "               .send_zlp = %d", req.header.send_zlp);
     zxlogf(TRACE, "            ===  usb_setup_t ===");
-    zxlogf(TRACE, "               .bmRequestType = 0x%02x", req.setup.bmRequestType);
-    zxlogf(TRACE, "               .bRequest = %d <%s>", req.setup.bRequest, buf);
-    zxlogf(TRACE, "               .wValue = 0x%04x", req.setup.wValue);
-    zxlogf(TRACE, "               .wIndex = 0x%04x", req.setup.wIndex);
-    zxlogf(TRACE, "               .wLength = %d", req.setup.wLength);
+    zxlogf(TRACE, "               .bmRequestType = 0x%02x", req.setup.bm_request_type);
+    zxlogf(TRACE, "               .bRequest = %d <%s>", req.setup.b_request, buf);
+    zxlogf(TRACE, "               .wValue = 0x%04x", req.setup.w_value);
+    zxlogf(TRACE, "               .wIndex = 0x%04x", req.setup.w_index);
+    zxlogf(TRACE, "               .wLength = %d", req.setup.w_length);
   // clang-format on
 }
 

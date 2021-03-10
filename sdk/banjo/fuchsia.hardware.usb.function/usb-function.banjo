@@ -21,7 +21,7 @@ protocol UsbFunction {
 
     /// Configures an endpoint based on provided descriptors.
     ConfigEp(zircon.hw.usb.UsbEndpointDescriptor ep_desc,
-                zircon.hw.usb.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);
+                fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);
 
     /// Disables the specified endpoint.
     DisableEp(uint8 address) -> (zx.status s);
@@ -60,7 +60,7 @@ protocol UsbFunctionInterface {
     GetDescriptors() -> ([Buffer] vector<uint8> descriptors);
 
     /// Callback for handling ep0 control requests.
-    Control(zircon.hw.usb.UsbSetup setup, [Buffer] vector<uint8> write) -> (zx.status status,
+    Control(fuchsia.hardware.usb.descriptor.UsbSetup setup, [Buffer] vector<uint8> write) -> (zx.status status,
                                                                      [Buffer] vector<uint8> read);
     /// Called to inform the function driver when the USB device configured state changes.
     /// Called with configured == true in response to a SET_CONFIGURATION control request
@@ -68,7 +68,7 @@ protocol UsbFunctionInterface {
     /// should call usb_function_config_ep() to configure its endpoints.
     /// Called with configured == false when configuration is disabled or USB is disconnected.
     /// The function driver should then call usb_function_disable_ep() to disable its endpoints.
-    SetConfigured(bool configured, zircon.hw.usb.UsbSpeed speed) -> (zx.status s);
+    SetConfigured(bool configured, fuchsia.hardware.usb.descriptor.UsbSpeed speed) -> (zx.status s);
 
     /// Called to set an alternate setting for an interface due to a SET_INTERFACE control request.
     /// The function driver should call usb_function_config_ep() and/or usb_function_config_ep()

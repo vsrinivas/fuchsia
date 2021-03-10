@@ -40,7 +40,7 @@ struct UsbRequest {
     UsbHeader header;
 
     /// For control transactions.
-    zircon.hw.usb.UsbSetup setup;
+    fuchsia.hardware.usb.descriptor.UsbSetup setup;
 
     /// VMO handle for payload.
     zx.handle:VMO vmo_handle;

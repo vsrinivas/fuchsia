@@ -37,9 +37,9 @@ zx_status_t UsbInterface::Create(zx_device_t* parent, UsbComposite* composite,
   uint8_t usb_class, usb_subclass, usb_protocol;
 
   if (interface_desc->bInterfaceClass == 0) {
-    usb_class = device_desc->bDeviceClass;
-    usb_subclass = device_desc->bDeviceSubClass;
-    usb_protocol = device_desc->bDeviceProtocol;
+    usb_class = device_desc->b_device_class;
+    usb_subclass = device_desc->b_device_sub_class;
+    usb_protocol = device_desc->b_device_protocol;
   } else {
     // class/subclass/protocol defined per-interface
     usb_class = interface_desc->bInterfaceClass;
@@ -77,9 +77,9 @@ zx_status_t UsbInterface::Create(zx_device_t* parent, UsbComposite* composite,
   uint8_t usb_class, usb_subclass, usb_protocol;
 
   if (assoc_desc->bFunctionClass == 0) {
-    usb_class = device_desc->bDeviceClass;
-    usb_subclass = device_desc->bDeviceSubClass;
-    usb_protocol = device_desc->bDeviceProtocol;
+    usb_class = device_desc->b_device_class;
+    usb_subclass = device_desc->b_device_sub_class;
+    usb_protocol = device_desc->b_device_protocol;
   } else {
     // class/subclass/protocol defined per-interface
     usb_class = assoc_desc->bFunctionClass;

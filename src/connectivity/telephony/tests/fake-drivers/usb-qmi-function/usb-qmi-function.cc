@@ -74,9 +74,9 @@ zx_status_t FakeUsbQmiFunction::UsbFunctionInterfaceControl(
     const usb_setup_t* setup, const uint8_t* write_buffer, size_t write_size,
     uint8_t* out_read_buffer, size_t read_size, size_t* out_read_actual) {
   zxlogf(INFO, "FakeUsbQmiFunction: received write buffer in endpoint, req_type:x%X",
-         setup->bmRequestType);
-  if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {
-    if (setup->bRequest == 0) {
+         setup->bm_request_type);
+  if (setup->bm_request_type == (USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {
+    if (setup->b_request == 0) {
       ReplyQmiMsg(write_buffer, write_size, tx_data_, 256, &tx_size_);
       if (usb_int_req_) {
         usb_request_complete_t complete = {
@@ -99,7 +99,7 @@ zx_status_t FakeUsbQmiFunction::UsbFunctionInterfaceControl(
       return ZX_OK;
     }
   }
-  if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {
+  if (setup->bm_request_type == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE)) {
     memcpy(out_read_buffer, tx_data_, tx_size_);
     *out_read_actual = tx_size_;
     zxlogf(INFO, "FakeUsbQmiFunction: successfully txed data");

@@ -811,8 +811,8 @@ zx_status_t hci_bind(void* ctx, zx_device_t* device) {
   usb_get_device_descriptor(&usb, &dev_desc);
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_BT_TRANSPORT},
-      {BIND_USB_VID, 0, dev_desc.idVendor},
-      {BIND_USB_PID, 0, dev_desc.idProduct},
+      {BIND_USB_VID, 0, dev_desc.id_vendor},
+      {BIND_USB_PID, 0, dev_desc.id_product},
   };
 
   device_add_args_t args = {

@@ -216,10 +216,10 @@ void Dwc2::HandleOutEpInterrupt() {
 
         memcpy(&cur_setup_, ep0_buffer_.virt(), sizeof(cur_setup_));
         zxlogf(SERIAL,
-               "SETUP bmRequestType: 0x%02x bRequest: %u wValue: %u wIndex: %u "
-               "wLength: %u\n",
-               cur_setup_.bmRequestType, cur_setup_.bRequest, cur_setup_.wValue, cur_setup_.wIndex,
-               cur_setup_.wLength);
+               "SETUP bm_request_type: 0x%02x b_request: %u w_value: %u w_index: %u "
+               "w_length: %u\n",
+               cur_setup_.bm_request_type, cur_setup_.b_request, cur_setup_.w_value,
+               cur_setup_.w_index, cur_setup_.w_length);
 
         HandleEp0Setup();
       }
@@ -257,12 +257,12 @@ zx_status_t Dwc2::HandleSetupRequest(size_t* out_actual) {
   auto* buffer = ep0_buffer_.virt();
   zx::duration elapsed;
   zx::time now;
-  if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) {
+  if (setup->bm_request_type == (USB_DIR_OUT | USB_TYPE_STANDARD | USB_RECIP_DEVICE)) {
     // Handle some special setup requests in this driver
-    switch (setup->bRequest) {
+    switch (setup->b_request) {
       case USB_REQ_SET_ADDRESS:
-        zxlogf(SERIAL, "SET_ADDRESS %d", setup->wValue);
-        SetAddress(static_cast<uint8_t>(setup->wValue));
+        zxlogf(SERIAL, "SET_ADDRESS %d", setup->w_value);
+        SetAddress(static_cast<uint8_t>(setup->w_value));
         now = zx::clock::get_monotonic();
         elapsed = now - irq_timestamp_;
         zxlogf(
@@ -277,14 +277,14 @@ zx_status_t Dwc2::HandleSetupRequest(size_t* out_actual) {
         *out_actual = 0;
         return ZX_OK;
       case USB_REQ_SET_CONFIGURATION:
-        zxlogf(SERIAL, "SET_CONFIGURATION %d", setup->wValue);
+        zxlogf(SERIAL, "SET_CONFIGURATION %d", setup->w_value);
         configured_ = true;
         if (dci_intf_) {
           status = dci_intf_->Control(setup, nullptr, 0, nullptr, 0, out_actual);
         } else {
           status = ZX_ERR_NOT_SUPPORTED;
         }
-        if (status == ZX_OK && setup->wValue) {
+        if (status == ZX_OK && setup->w_value) {
           StartEndpoints();
         } else {
           configured_ = false;
@@ -296,8 +296,8 @@ zx_status_t Dwc2::HandleSetupRequest(size_t* out_actual) {
     }
   }
 
-  bool is_in = ((setup->bmRequestType & USB_DIR_MASK) == USB_DIR_IN);
-  auto length = le16toh(setup->wLength);
+  bool is_in = ((setup->bm_request_type & USB_DIR_MASK) == USB_DIR_IN);
+  auto length = le16toh(setup->w_length);
 
   if (dci_intf_) {
     if (length == 0) {
@@ -514,8 +514,8 @@ void Dwc2::EnableEp(uint8_t ep_num, bool enable) {
 void Dwc2::HandleEp0Setup() {
   auto* setup = &cur_setup_;
 
-  auto length = letoh16(setup->wLength);
-  bool is_in = ((setup->bmRequestType & USB_DIR_MASK) == USB_DIR_IN);
+  auto length = letoh16(setup->w_length);
+  bool is_in = ((setup->bm_request_type & USB_DIR_MASK) == USB_DIR_IN);
   size_t actual = 0;
 
   // No data to read, can handle setup now

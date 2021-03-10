@@ -17,7 +17,7 @@ protocol UsbDci {
     SetInterface(UsbDciInterface @interface) -> (zx.status s);
     /// Configures an endpoint based on provided descriptors.
     ConfigEp(zircon.hw.usb.UsbEndpointDescriptor ep_desc,
-                zircon.hw.usb.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);
+                fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_comp_desc) -> (zx.status s);
     /// Disables the specified endpoint.
     DisableEp(uint8 ep_address) -> (zx.status s);
     /// Stalls the specified endpoint.
@@ -35,10 +35,10 @@ protocol UsbDci {
 [BanjoLayout = "ddk-interface"]
 protocol UsbDciInterface {
     /// Callback for handling ep0 control requests.
-    Control(zircon.hw.usb.UsbSetup setup, [Buffer] vector<uint8> write) -> (zx.status status,
+    Control(fuchsia.hardware.usb.descriptor.UsbSetup setup, [Buffer] vector<uint8> write) -> (zx.status status,
                                                                      [Buffer] vector<uint8> read);
     /// Notifies change in USB connected state.
     SetConnected(bool connected) -> ();
     /// Notifies current USB speed..
-    SetSpeed(zircon.hw.usb.UsbSpeed speed) -> ();
+    SetSpeed(fuchsia.hardware.usb.descriptor.UsbSpeed speed) -> ();
 };

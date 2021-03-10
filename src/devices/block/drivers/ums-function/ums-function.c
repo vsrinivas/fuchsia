@@ -496,9 +496,9 @@ static void ums_get_descriptors(void* ctx, uint8_t* buffer, size_t buffer_size,
 static zx_status_t ums_control(void* ctx, const usb_setup_t* setup, const uint8_t* write_buffer,
                                size_t write_size, uint8_t* out_read_buffer, size_t read_size,
                                size_t* out_read_actual) {
-  if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
-      setup->bRequest == USB_REQ_GET_MAX_LUN && setup->wValue == 0 && setup->wIndex == 0 &&
-      setup->wLength >= sizeof(uint8_t)) {
+  if (setup->bm_request_type == (USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE) &&
+      setup->b_request == USB_REQ_GET_MAX_LUN && setup->w_value == 0 && setup->w_index == 0 &&
+      setup->w_length >= sizeof(uint8_t)) {
     *((uint8_t*)out_read_buffer) = 0;
     *out_read_actual = sizeof(uint8_t);
     return ZX_OK;

@@ -590,23 +590,23 @@ class FakeDevice : public ddk::UsbBusProtocol<FakeDevice>, public ddk::UsbProtoc
     auto usb_request = entry->request;
     if (usb_request->header.ep_address == 0) {
       // Control request
-      if (usb_request->setup.bmRequestType & USB_DIR_IN) {
+      if (usb_request->setup.bm_request_type & USB_DIR_IN) {
         void* buffer;
         usb_request_mmap(usb_request, &buffer);
         size_t size = 0;
         zx_status_t status =
-            ControlIn(usb_request->setup.bmRequestType, usb_request->setup.bRequest,
-                      usb_request->setup.wValue, usb_request->setup.wIndex, ZX_TIME_INFINITE,
-                      buffer, usb_request->setup.wLength, &size);
+            ControlIn(usb_request->setup.bm_request_type, usb_request->setup.b_request,
+                      usb_request->setup.w_value, usb_request->setup.w_index, ZX_TIME_INFINITE,
+                      buffer, usb_request->setup.w_length, &size);
         CompleteRequest(std::move(entry), status, size);
       } else {
         void* buffer;
         usb_request_mmap(usb_request, &buffer);
-        size_t size = usb_request->setup.wLength;
+        size_t size = usb_request->setup.w_length;
         zx_status_t status =
-            ControlOut(usb_request->setup.bmRequestType, usb_request->setup.bRequest,
-                       usb_request->setup.wValue, usb_request->setup.wIndex, ZX_TIME_INFINITE,
-                       buffer, usb_request->setup.wLength);
+            ControlOut(usb_request->setup.bm_request_type, usb_request->setup.b_request,
+                       usb_request->setup.w_value, usb_request->setup.w_index, ZX_TIME_INFINITE,
+                       buffer, usb_request->setup.w_length);
         CompleteRequest(std::move(entry), status, size);
       }
       return;

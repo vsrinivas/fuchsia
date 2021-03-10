@@ -8,6 +8,7 @@ banjo("fuchsia.hardware.usb.request") {
   sources = [ "usb-request.banjo" ]
   deps = [
     "//sdk/banjo/ddk.hw.physiter",
+    "//sdk/banjo/fuchsia.hardware.usb.descriptor",
     "//sdk/banjo/zircon.hw.usb",
     "//sdk/banjo/zx",
   ]

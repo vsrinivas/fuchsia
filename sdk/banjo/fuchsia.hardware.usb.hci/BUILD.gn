@@ -9,6 +9,7 @@ banjo("fuchsia.hardware.usb.hci") {
   deps = [
     "//sdk/banjo/ddk.hw.physiter",
     "//sdk/banjo/fuchsia.hardware.usb.bus",
+    "//sdk/banjo/fuchsia.hardware.usb.descriptor",
     "//sdk/banjo/fuchsia.hardware.usb.hub",
     "//sdk/banjo/fuchsia.hardware.usb.hubdescriptor",
     "//sdk/banjo/fuchsia.hardware.usb.request",

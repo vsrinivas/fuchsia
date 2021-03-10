@@ -704,10 +704,10 @@ TEST_F(XhciMmioHarness, QueueControlRequest) {
     request.Mmap(reinterpret_cast<void**>(&parameters));
     EXPECT_EQ(*parameters, parameters);
   });
-  request->request()->setup.bmRequestType = USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE;
-  request->request()->setup.bRequest = USB_REQ_GET_DESCRIPTOR;
-  request->request()->setup.wValue = USB_DT_DEVICE << 8;
-  request->request()->setup.wLength = ZX_PAGE_SIZE * 2;
+  request->request()->setup.bm_request_type = USB_DIR_IN | USB_TYPE_STANDARD | USB_RECIP_DEVICE;
+  request->request()->setup.b_request = USB_REQ_GET_DESCRIPTOR;
+  request->request()->setup.w_value = USB_DT_DEVICE << 8;
+  request->request()->setup.w_length = ZX_PAGE_SIZE * 2;
   RequestQueue(std::move(*request));
   ASSERT_TRUE(rang);
   // Find slot context pointer in address device command

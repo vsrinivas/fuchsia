@@ -137,18 +137,18 @@ zx_status_t UsbPeripheral::Init() {
   if (status != ZX_OK) {
     return ZX_OK;
   }
-  device_desc_.idVendor = config->vid;
-  device_desc_.idProduct = config->pid;
+  device_desc_.id_vendor = config->vid;
+  device_desc_.id_product = config->pid;
 
   size_t max_str_len = strnlen(config->manufacturer, sizeof(config->manufacturer));
   status =
-      AllocStringDesc(fbl::String(config->manufacturer, max_str_len), &device_desc_.iManufacturer);
+      AllocStringDesc(fbl::String(config->manufacturer, max_str_len), &device_desc_.i_manufacturer);
   if (status != ZX_OK) {
     return status;
   }
 
   max_str_len = strnlen(config->product, sizeof(config->product));
-  status = AllocStringDesc(fbl::String(config->product, max_str_len), &device_desc_.iProduct);
+  status = AllocStringDesc(fbl::String(config->product, max_str_len), &device_desc_.i_product);
   if (status != ZX_OK) {
     return status;
   }
@@ -182,9 +182,10 @@ zx_status_t UsbPeripheral::Init() {
     buffer[actual] = 0;
   }
   if ((status != ZX_OK) || (actual == 0)) {
-    status = AllocStringDesc(fbl::String(config->serial, max_str_len), &device_desc_.iSerialNumber);
+    status =
+        AllocStringDesc(fbl::String(config->serial, max_str_len), &device_desc_.i_serial_number);
   } else {
-    status = AllocStringDesc(fbl::String(buffer, actual), &device_desc_.iSerialNumber);
+    status = AllocStringDesc(fbl::String(buffer, actual), &device_desc_.i_serial_number);
   }
   if (status != ZX_OK) {
     return status;
@@ -409,7 +410,7 @@ zx_status_t UsbPeripheral::GetDescriptor(uint8_t request_type, uint16_t value, u
 
   auto desc_type = static_cast<uint8_t>(value >> 8);
   if (desc_type == USB_DT_DEVICE && index == 0) {
-    if (device_desc_.bLength == 0) {
+    if (device_desc_.b_length == 0) {
       zxlogf(ERROR, "%s: device descriptor not set", __func__);
       return ZX_ERR_INTERNAL;
     }
@@ -535,7 +536,7 @@ zx_status_t UsbPeripheral::BindFunctions() {
     return ZX_ERR_BAD_STATE;
   }
 
-  if (device_desc_.bLength == 0) {
+  if (device_desc_.b_length == 0) {
     zxlogf(ERROR, "%s: device descriptor not set", __func__);
     return ZX_ERR_BAD_STATE;
   }
@@ -635,8 +636,8 @@ zx_status_t UsbPeripheral::AddFunctionDevices() {
           {BIND_USB_CLASS, 0, desc.interface_class},
           {BIND_USB_SUBCLASS, 0, desc.interface_subclass},
           {BIND_USB_PROTOCOL, 0, desc.interface_protocol},
-          {BIND_USB_VID, 0, device_desc_.idVendor},
-          {BIND_USB_PID, 0, device_desc_.idProduct},
+          {BIND_USB_VID, 0, device_desc_.id_vendor},
+          {BIND_USB_PID, 0, device_desc_.id_product},
       };
 
       auto status = function->DdkAdd(ddk::DeviceAddArgs(name).set_props(props));
@@ -701,12 +702,12 @@ zx_status_t UsbPeripheral::UsbDciInterfaceControl(const usb_setup_t* setup,
                                                   const uint8_t* write_buffer, size_t write_size,
                                                   uint8_t* read_buffer, size_t read_size,
                                                   size_t* out_read_actual) {
-  uint8_t request_type = setup->bmRequestType;
+  uint8_t request_type = setup->bm_request_type;
   uint8_t direction = request_type & USB_DIR_MASK;
-  uint8_t request = setup->bRequest;
-  uint16_t value = le16toh(setup->wValue);
-  uint16_t index = le16toh(setup->wIndex);
-  uint16_t length = le16toh(setup->wLength);
+  uint8_t request = setup->b_request;
+  uint16_t value = le16toh(setup->w_value);
+  uint16_t index = le16toh(setup->w_index);
+  uint16_t length = le16toh(setup->w_length);
 
   if (direction == USB_DIR_IN && length > read_size) {
     return ZX_ERR_BUFFER_TOO_SMALL;
@@ -878,33 +879,33 @@ zx_status_t UsbPeripheral::SetDeviceDescriptor(DeviceDescriptor desc) {
     zxlogf(ERROR, "usb_device_ioctl: bNumConfigurations must be non-zero");
     return ZX_ERR_INVALID_ARGS;
   } else {
-    device_desc_.bLength = sizeof(usb_device_descriptor_t);
-    device_desc_.bDescriptorType = USB_DT_DEVICE;
-    device_desc_.bcdUSB = desc.bcd_usb;
-    device_desc_.bDeviceClass = desc.b_device_class;
-    device_desc_.bDeviceSubClass = desc.b_device_sub_class;
-    device_desc_.bDeviceProtocol = desc.b_device_protocol;
-    device_desc_.bMaxPacketSize0 = desc.b_max_packet_size0;
-    device_desc_.idVendor = desc.id_vendor;
-    device_desc_.idProduct = desc.id_product;
-    device_desc_.bcdDevice = desc.bcd_device;
+    device_desc_.b_length = sizeof(usb_device_descriptor_t);
+    device_desc_.b_descriptor_type = USB_DT_DEVICE;
+    device_desc_.bcd_usb = desc.bcd_usb;
+    device_desc_.b_device_class = desc.b_device_class;
+    device_desc_.b_device_sub_class = desc.b_device_sub_class;
+    device_desc_.b_device_protocol = desc.b_device_protocol;
+    device_desc_.b_max_packet_size0 = desc.b_max_packet_size0;
+    device_desc_.id_vendor = desc.id_vendor;
+    device_desc_.id_product = desc.id_product;
+    device_desc_.bcd_device = desc.bcd_device;
     zx_status_t status =
         AllocStringDesc(fbl::String(desc.manufacturer.data(), desc.manufacturer.size()),
-                        &device_desc_.iManufacturer);
+                        &device_desc_.i_manufacturer);
     if (status != ZX_OK) {
       return status;
     }
     status = AllocStringDesc(fbl::String(desc.product.data(), desc.product.size()),
-                             &device_desc_.iProduct);
+                             &device_desc_.i_product);
     if (status != ZX_OK) {
       return status;
     }
     status = AllocStringDesc(fbl::String(desc.serial.data(), desc.serial.size()),
-                             &device_desc_.iSerialNumber);
+                             &device_desc_.i_serial_number);
     if (status != ZX_OK) {
       return status;
     }
-    device_desc_.bNumConfigurations = desc.b_num_configurations;
+    device_desc_.b_num_configurations = desc.b_num_configurations;
     return ZX_OK;
   }
 }
@@ -1000,15 +1001,15 @@ void UsbPeripheral::DdkRelease() {
 zx_status_t UsbPeripheral::SetDefaultConfig(FunctionDescriptor* descriptors, size_t length) {
   auto descriptor = fbl::MakeRefCounted<UsbConfiguration>();
   configurations_.push_back(descriptor);
-  device_desc_.bLength = sizeof(usb_device_descriptor_t),
-  device_desc_.bDescriptorType = USB_DT_DEVICE;
-  device_desc_.bcdUSB = htole16(0x0200);
-  device_desc_.bDeviceClass = 0;
-  device_desc_.bDeviceSubClass = 0;
-  device_desc_.bDeviceProtocol = 0;
-  device_desc_.bMaxPacketSize0 = 64;
-  device_desc_.bcdDevice = htole16(0x0100);
-  device_desc_.bNumConfigurations = 1;
+  device_desc_.b_length = sizeof(usb_device_descriptor_t),
+  device_desc_.b_descriptor_type = USB_DT_DEVICE;
+  device_desc_.bcd_usb = htole16(0x0200);
+  device_desc_.b_device_class = 0;
+  device_desc_.b_device_sub_class = 0;
+  device_desc_.b_device_protocol = 0;
+  device_desc_.b_max_packet_size0 = 64;
+  device_desc_.bcd_device = htole16(0x0100);
+  device_desc_.b_num_configurations = 1;
 
   zx_status_t status = ZX_OK;
   for (size_t i = 0; i < length; i++) {

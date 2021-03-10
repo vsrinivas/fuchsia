@@ -23,7 +23,7 @@ protocol Usb {
                  [InOut] fuchsia.hardware.usb.request.UsbRequestComplete complete_cb) -> ();
 
     /// Returns the speed of the device.
-    GetSpeed() -> (zircon.hw.usb.UsbSpeed s);
+    GetSpeed() -> (fuchsia.hardware.usb.descriptor.UsbSpeed s);
 
     /// Selects an alternate setting for a USB interface.
     SetInterface(uint8 interface_number, uint8 alt_setting) -> (zx.status s);
@@ -36,7 +36,7 @@ protocol Usb {
 
     /// Enables a USB endpoint, configuring it as specified by the provided descriptors.
     EnableEndpoint(zircon.hw.usb.UsbEndpointDescriptor ep_desc,
-                   zircon.hw.usb.UsbSsEpCompDescriptor ss_com_desc,
+                   fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_com_desc,
                    bool enable) -> (zx.status s);
 
     /// Resets an endpoint that is in a halted or error state.
@@ -58,7 +58,7 @@ protocol Usb {
     GetDeviceId() -> (uint32 dev_id);
 
     /// Returns the device's device descriptor.
-    GetDeviceDescriptor() -> (zircon.hw.usb.UsbDeviceDescriptor desc);
+    GetDeviceDescriptor() -> (fuchsia.hardware.usb.descriptor.UsbDeviceDescriptor desc);
 
     /// Returns the length of the configuration descriptor for the specified configuration.
     GetConfigurationDescriptorLength(uint8 configuration) -> (zx.status s, uint64 length);

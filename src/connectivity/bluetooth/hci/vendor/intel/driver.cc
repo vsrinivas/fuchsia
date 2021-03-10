@@ -37,7 +37,7 @@ zx_status_t btintel_bind(void* ctx, zx_device_t* device) {
   // Whether this device uses the "secure" firmware method.
   bool secure = false;
   for (uint16_t id : sfi_product_ids) {
-    if (dev_desc.idProduct == id) {
+    if (dev_desc.id_product == id) {
       secure = true;
       break;
     }

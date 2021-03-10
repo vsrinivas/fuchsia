@@ -191,27 +191,27 @@ zx_status_t UsbTest::UsbFunctionInterfaceControl(const usb_setup_t* setup,
                                                  const uint8_t* write_buffer, size_t write_size,
                                                  uint8_t* read_buffer, size_t read_size,
                                                  size_t* out_read_actual) {
-  size_t length = le16toh(setup->wLength);
+  size_t length = le16toh(setup->w_length);
 
   zxlogf(DEBUG, "%s", __func__);
-  if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
-      setup->bRequest == USB_PERIPHERAL_TEST_SET_DATA) {
+  if (setup->bm_request_type == (USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
+      setup->b_request == USB_PERIPHERAL_TEST_SET_DATA) {
     if (length > sizeof(test_data_)) {
       length = sizeof(test_data_);
     }
     memcpy(test_data_, write_buffer, length);
     test_data_length_ = length;
     return ZX_OK;
-  } else if (setup->bmRequestType == (USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
-             setup->bRequest == USB_PERIPHERAL_TEST_GET_DATA) {
+  } else if (setup->bm_request_type == (USB_DIR_IN | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
+             setup->b_request == USB_PERIPHERAL_TEST_GET_DATA) {
     if (length > test_data_length_) {
       length = test_data_length_;
     }
     memcpy(read_buffer, test_data_, length);
     *out_read_actual = length;
     return ZX_OK;
-  } else if (setup->bmRequestType == (USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
-             setup->bRequest == USB_PERIPHERAL_TEST_SEND_INTERUPT) {
+  } else if (setup->bm_request_type == (USB_DIR_OUT | USB_TYPE_VENDOR | USB_RECIP_INTERFACE) &&
+             setup->b_request == USB_PERIPHERAL_TEST_SEND_INTERUPT) {
     lock_.Acquire();
     std::optional<usb::Request<void>> req = intr_reqs_.pop();
     lock_.Release();

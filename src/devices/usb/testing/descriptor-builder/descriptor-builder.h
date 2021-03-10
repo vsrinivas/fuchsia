@@ -118,9 +118,9 @@ class ConfigurationBuilder {
 class DeviceDescriptorBuilder {
  public:
   explicit DeviceDescriptorBuilder() {
-    base_desc_.bNumConfigurations = 0;
-    base_desc_.bLength = sizeof(base_desc_);
-    base_desc_.bDescriptorType = USB_DT_DEVICE;
+    base_desc_.b_num_configurations = 0;
+    base_desc_.b_length = sizeof(base_desc_);
+    base_desc_.b_descriptor_type = USB_DT_DEVICE;
   }
 
   void AddConfiguration(const ConfigurationBuilder& builder) {
@@ -129,7 +129,7 @@ class DeviceDescriptorBuilder {
   }
   void AddConfiguration(void* config_desc, size_t config_desc_length) {
     VectorAppend(descriptors_, config_desc, config_desc_length);
-    base_desc_.bNumConfigurations++;
+    base_desc_.b_num_configurations++;
   }
 
   std::vector<uint8_t> Generate() {

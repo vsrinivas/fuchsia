@@ -155,10 +155,10 @@ class UsbPeripheralHarness : public zxtest::Test {
 TEST_F(UsbPeripheralHarness, AddsCorrectSerialNumberMetadata) {
   char serial[256];
   usb_setup_t setup;
-  setup.wLength = sizeof(serial);
-  setup.wValue = 0x3 | (USB_DT_STRING << 8);
-  setup.bmRequestType = USB_DIR_IN | USB_RECIP_DEVICE | USB_TYPE_STANDARD;
-  setup.bRequest = USB_REQ_GET_DESCRIPTOR;
+  setup.w_length = sizeof(serial);
+  setup.w_value = 0x3 | (USB_DT_STRING << 8);
+  setup.bm_request_type = USB_DIR_IN | USB_RECIP_DEVICE | USB_TYPE_STANDARD;
+  setup.b_request = USB_REQ_GET_DESCRIPTOR;
   size_t actual;
   ASSERT_OK(client_.Control(&setup, nullptr, 0, reinterpret_cast<uint8_t*>(&serial), sizeof(serial),
                             &actual));
@@ -173,10 +173,10 @@ TEST_F(UsbPeripheralHarness, AddsCorrectSerialNumberMetadata) {
 TEST_F(UsbPeripheralHarness, WorksWithVendorSpecificCommandWhenConfigurationIsZero) {
   char serial[256];
   usb_setup_t setup;
-  setup.wLength = sizeof(serial);
-  setup.wValue = 0x3 | (USB_DT_STRING << 8);
-  setup.bmRequestType = USB_DIR_IN | USB_RECIP_DEVICE | USB_TYPE_VENDOR;
-  setup.bRequest = USB_REQ_GET_DESCRIPTOR;
+  setup.w_length = sizeof(serial);
+  setup.w_value = 0x3 | (USB_DT_STRING << 8);
+  setup.bm_request_type = USB_DIR_IN | USB_RECIP_DEVICE | USB_TYPE_VENDOR;
+  setup.b_request = USB_REQ_GET_DESCRIPTOR;
   size_t actual;
   ASSERT_EQ(client_.Control(&setup, nullptr, 0, reinterpret_cast<uint8_t*>(&serial), sizeof(serial),
                             &actual),

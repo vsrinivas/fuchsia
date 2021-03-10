@@ -21,14 +21,14 @@ protocol UsbHci {
     GetMaxDeviceCount() -> (uint64 count);
     /// Enables or disables an endpoint using parameters derived from |ep_desc|.
     EnableEndpoint(uint32 device_id, zircon.hw.usb.UsbEndpointDescriptor ep_desc,
-                   zircon.hw.usb.UsbSsEpCompDescriptor ss_com_desc, bool enable) -> (zx.status s);
+                   fuchsia.hardware.usb.descriptor.UsbSsEpCompDescriptor ss_com_desc, bool enable) -> (zx.status s);
     /// Returns the current frame (in milliseconds), used for isochronous transfers.
     GetCurrentFrame() -> (uint64 frame);
     /// Used by the USB hub driver to configure a newly enumerated USB hub.
-    ConfigureHub(uint32 device_id, zircon.hw.usb.UsbSpeed speed,
+    ConfigureHub(uint32 device_id, fuchsia.hardware.usb.descriptor.UsbSpeed speed,
                  fuchsia.hardware.usb.hubdescriptor.UsbHubDescriptor desc, bool multi_tt) -> (zx.status s);
     /// Used by the USB hub driver to notify the HCI driver when a new device is attached.
-    HubDeviceAdded(uint32 device_id, uint32 port, zircon.hw.usb.UsbSpeed speed) -> (zx.status s);
+    HubDeviceAdded(uint32 device_id, uint32 port, fuchsia.hardware.usb.descriptor.UsbSpeed speed) -> (zx.status s);
     /// Used by the USB hub driver to notify the HCI driver when a device has been removed.
     HubDeviceRemoved(uint32 device_id, uint32 port) -> (zx.status s);
     /// Used by the USB hub driver to notify the HCI driver when a device has been reset.

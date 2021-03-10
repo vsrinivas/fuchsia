@@ -336,9 +336,9 @@ static int usb_hub_thread(void* arg) {
   }
 
   // Determine whether the hub supports a single or multiple transaction-translators.  For
-  // low or full-speed devices, this information is encoded in the bDeviceProtocol field of a
+  // low or full-speed devices, this information is encoded in the b_device_protocol field of a
   // DEVICE_QUALIFIER descriptor.  For high-speed devices, this information is encoded in the
-  // bDeviceProtocol field of a DEVICE descriptor.  See: USB 2.0 spec. 11.23.
+  // b_device_protocol field of a DEVICE descriptor.  See: USB 2.0 spec. 11.23.
   bool multi_tt = false;
   if (hub->hub_speed == USB_SPEED_LOW || hub->hub_speed == USB_SPEED_FULL) {
     usb_device_qualifier_descriptor_t qual_desc;
@@ -360,7 +360,7 @@ static int usb_hub_thread(void* arg) {
       device_init_reply(hub->zxdev, result, NULL);
       return result;
     }
-    multi_tt = qual_desc.bDeviceProtocol == 2;
+    multi_tt = qual_desc.b_device_protocol == 2;
   } else if (hub->hub_speed == USB_SPEED_HIGH) {
     usb_device_descriptor_t dev_desc;
     result = usb_get_descriptor(&hub->usb, USB_TYPE_STANDARD, USB_DT_DEVICE, 0, &dev_desc,
@@ -381,7 +381,7 @@ static int usb_hub_thread(void* arg) {
       device_init_reply(hub->zxdev, result, NULL);
       return result;
     }
-    multi_tt = dev_desc.bDeviceProtocol == 2;
+    multi_tt = dev_desc.b_device_protocol == 2;
   } else {  // super-speed
     // USB 3.x devices do not support the concept of transaction-translators.
     multi_tt = false;

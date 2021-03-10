@@ -34,7 +34,7 @@ zx_status_t HardwareDevice::Enumerate() {
   }
 
   // TODO(hansens) add support for multipoint devices (i.e. downstream hubs).
-  if (desc.bDeviceClass == USB_CLASS_HUB) {
+  if (desc.b_device_class == USB_CLASS_HUB) {
     zxlogf(ERROR, "usb host does not currently support downstream hubs");
     return ZX_ERR_NOT_SUPPORTED;
   }

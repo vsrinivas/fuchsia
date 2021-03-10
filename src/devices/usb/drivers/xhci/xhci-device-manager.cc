@@ -61,8 +61,8 @@ static uint32_t xhci_get_route_string(xhci_t* xhci, uint32_t hub_address, uint32
 
 static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t hub_address,
                                        uint32_t port, usb_speed_t speed) {
-  zxlogf(DEBUG, "xhci_address_device slot_id: %d port: %d hub_address: %d speed: %d", slot_id,
-         port, hub_address, speed);
+  zxlogf(DEBUG, "xhci_address_device slot_id: %d port: %d hub_address: %d speed: %d", slot_id, port,
+         hub_address, speed);
 
   int rh_index = xhci_get_root_hub_index(xhci, hub_address);
   if (rh_index >= 0) {
@@ -225,7 +225,7 @@ static zx_status_t xhci_address_device(xhci_t* xhci, uint32_t slot_id, uint32_t 
         case 32:
         case 64:
         case 255:
-          if (device_desc.bDescriptorType != USB_DT_DEVICE) {
+          if (device_desc.b_descriptor_type != USB_DT_DEVICE) {
             status = ZX_ERR_IO;
           }
           break;

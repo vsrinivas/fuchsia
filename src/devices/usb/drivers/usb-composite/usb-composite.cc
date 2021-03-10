@@ -69,8 +69,8 @@ zx_status_t UsbComposite::AddInterface(const usb_interface_descriptor_t* interfa
 
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_USB_INTERFACE},
-      {BIND_USB_VID, 0, device_desc_.idVendor},
-      {BIND_USB_PID, 0, device_desc_.idProduct},
+      {BIND_USB_VID, 0, device_desc_.id_vendor},
+      {BIND_USB_PID, 0, device_desc_.id_product},
       {BIND_USB_CLASS, 0, interface->usb_class()},
       {BIND_USB_SUBCLASS, 0, interface->usb_subclass()},
       {BIND_USB_PROTOCOL, 0, interface->usb_protocol()},
@@ -107,8 +107,8 @@ zx_status_t UsbComposite::AddInterfaceAssoc(const usb_interface_assoc_descriptor
 
   zx_device_prop_t props[] = {
       {BIND_PROTOCOL, 0, ZX_PROTOCOL_USB_INTERFACE},
-      {BIND_USB_VID, 0, device_desc_.idVendor},
-      {BIND_USB_PID, 0, device_desc_.idProduct},
+      {BIND_USB_VID, 0, device_desc_.id_vendor},
+      {BIND_USB_PID, 0, device_desc_.id_product},
       {BIND_USB_CLASS, 0, interface->usb_class()},
       {BIND_USB_SUBCLASS, 0, interface->usb_subclass()},
       {BIND_USB_PROTOCOL, 0, interface->usb_protocol()},
