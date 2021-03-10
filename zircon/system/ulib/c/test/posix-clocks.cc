@@ -128,7 +128,7 @@ zx_time_t unpack_timeval(const struct timeval& tv) {
 constexpr inline zx_time_t round_to_usec(zx_time_t val) { return (val / ZX_USEC(1)) * ZX_USEC(1); }
 
 template <typename Fixture>
-void TestGetTime(const Fixture& fixture) {
+void TestGetValidClock(const Fixture& fixture) {
   // When the test starts, we expect the clock to not be running yet, and to
   // report only its backstop time when read, even if we put some reasonably
   // significant delays in the observations.
@@ -169,68 +169,60 @@ void TestGetTime(const Fixture& fixture) {
 
   ASSERT_NO_FATAL_FAILURES(observe_clocks());
 
-  if constexpr (Fixture::Type == FixtureType::kNoClock) {
-    // The NoClock version of this test cannot rely on any backstop behavior, nor will it ever be
-    // able to set the clock.  All we can do is assert an ordering to our observations.  Both the
-    // clock_gettime and the gettimeofday observations should exist between the before/after range
-    ASSERT_NO_FATAL_FAILURES(check_ordering());
-  } else {
-    ASSERT_EQ(Fixture::kBackstopTime, before);
-    ASSERT_EQ(Fixture::kBackstopTime, unpacked_clock_gettime);
-    ASSERT_EQ(round_to_usec(Fixture::kBackstopTime), unpacked_gettimeofday);
-    ASSERT_EQ(Fixture::kBackstopTime, after);
+  ASSERT_EQ(Fixture::kBackstopTime, before);
+  ASSERT_EQ(Fixture::kBackstopTime, unpacked_clock_gettime);
+  ASSERT_EQ(round_to_usec(Fixture::kBackstopTime), unpacked_gettimeofday);
+  ASSERT_EQ(Fixture::kBackstopTime, after);
 
-    // OK, now start our test clock.  We'll put it at a point which is 2x ahead of
-    // our arbitrary backstop.
-    zx::time start_time{Fixture::kBackstopTime * 2};
-    ASSERT_OK(fixture.test_clock_set_value(start_time));
+  // OK, now start our test clock.  We'll put it at a point which is 2x ahead of
+  // our arbitrary backstop.
+  zx::time start_time{Fixture::kBackstopTime * 2};
+  ASSERT_OK(fixture.test_clock_set_value(start_time));
 
-    // Now observe the clock via clock_gettime and make sure it all makes sense.
-    ASSERT_NO_FATAL_FAILURES(observe_clocks());
+  // Now observe the clock via clock_gettime and make sure it all makes sense.
+  ASSERT_NO_FATAL_FAILURES(observe_clocks());
 
-    // No observations can come before start_time
-    ASSERT_LE(start_time.get(), before);
-    ASSERT_LE(start_time.get(), unpacked_clock_gettime);
-    ASSERT_LE(round_to_usec(start_time.get()), unpacked_gettimeofday);
-    ASSERT_LE(start_time.get(), after);
+  // No observations can come before start_time
+  ASSERT_LE(start_time.get(), before);
+  ASSERT_LE(start_time.get(), unpacked_clock_gettime);
+  ASSERT_LE(round_to_usec(start_time.get()), unpacked_gettimeofday);
+  ASSERT_LE(start_time.get(), after);
 
-    // Ordering should match the order of query.
-    ASSERT_NO_FATAL_FAILURES(check_ordering());
+  // Ordering should match the order of query.
+  ASSERT_NO_FATAL_FAILURES(check_ordering());
 
-    // Jump the clock ahead by an absurd amount (let's use 7 days) and observe
-    // again.  Make sure that clock_gettime is following along with us.  Same
-    // checks as before, different start time.
-    start_time += zx::sec(86400 * 7);
-    ASSERT_OK(fixture.test_clock_set_value(start_time));
+  // Jump the clock ahead by an absurd amount (let's use 7 days) and observe
+  // again.  Make sure that clock_gettime is following along with us.  Same
+  // checks as before, different start time.
+  start_time += zx::sec(86400 * 7);
+  ASSERT_OK(fixture.test_clock_set_value(start_time));
 
-    ASSERT_NO_FATAL_FAILURES(observe_clocks());
+  ASSERT_NO_FATAL_FAILURES(observe_clocks());
 
-    ASSERT_LE(start_time.get(), before);
-    ASSERT_LE(start_time.get(), unpacked_clock_gettime);
-    ASSERT_LE(round_to_usec(start_time.get()), unpacked_gettimeofday);
-    ASSERT_LE(start_time.get(), after);
-    ASSERT_NO_FATAL_FAILURES(check_ordering());
-  }
+  ASSERT_LE(start_time.get(), before);
+  ASSERT_LE(start_time.get(), unpacked_clock_gettime);
+  ASSERT_LE(round_to_usec(start_time.get()), unpacked_gettimeofday);
+  ASSERT_LE(start_time.get(), after);
+  ASSERT_NO_FATAL_FAILURES(check_ordering());
 }
 
 TEST_F(NoUtcClockTestCase, GetTime) {
-  // With no clock at all, we currently expect to just get what the kernel UTC
-  // reports.  In the future, we expect some form of reasonable failure.
-  //
-  // :: FLAKE-ALERT ::
-  //
-  // If something adjusts the kernel wide UTC clock while this test is running,
-  // it might cause the test to flake.  This problem will go away once we move
-  // to handle based clocks.  All of the other tests in this file inject a test
-  // clock into the runtime, which not only gives them control of the clock for
-  // testing purposes, but also prevents any chance of flake as the test clock
-  // is exclusively controlled by the test environment.
-  ASSERT_NO_FAILURES(TestGetTime(*this));
+  // With no clock at all, we expect attempts to read time to fail.
+  struct timespec clock_gettime_ts;
+  struct timeval gettimeofday_tv;
+
+  errno = 0;
+  ASSERT_EQ(-1, clock_gettime(CLOCK_REALTIME, &clock_gettime_ts));
+  ASSERT_EQ(ENOTSUP, errno);
+
+  errno = 0;
+  ASSERT_EQ(-1, gettimeofday(&gettimeofday_tv, nullptr));
+  ASSERT_EQ(ENOTSUP, errno);
 }
 
-TEST_F(ReadOnlyUtcClockTestCase, GetTime) { ASSERT_NO_FAILURES(TestGetTime(*this)); }
+TEST_F(ReadOnlyUtcClockTestCase, GetTime) { ASSERT_NO_FAILURES(TestGetValidClock(*this)); }
 
-TEST_F(ReadWriteUtcClockTestCase, GetTime) { ASSERT_NO_FAILURES(TestGetTime(*this)); }
+TEST_F(ReadWriteUtcClockTestCase, GetTime) { ASSERT_NO_FAILURES(TestGetValidClock(*this)); }
 
 // Zircon will always report a clock resolution based on the underlying tick
 // resolution, since all time-keeping in the kernel is based on the underlying

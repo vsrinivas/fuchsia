@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <inttypes.h>
+#include <lib/zx/clock.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -11,10 +12,13 @@
 #include <time.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
+#include <zircon/utc.h>
 
 #include <atomic>
 
 #include <zxtest/zxtest.h>
+
+namespace {
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
@@ -143,7 +147,7 @@ static bool poll_waked_threads(int expected_count) {
 
 // Poll |var| until it has reached or exceeded |value|, then acquire and release |mutex|.
 //
-// The purose of this function is to allow the caller to wait until |value| threads have entered a
+// The purpose of this function is to allow the caller to wait until |value| threads have entered a
 // condition wait protected by |mutex|. For this to work, |var| must be incremented while holding
 // the |mutex| before issuing the cond wait.
 static void wait_for_count(const std::atomic_int& var, int value, pthread_mutex_t* mutex) {
@@ -154,7 +158,39 @@ static void wait_for_count(const std::atomic_int& var, int value, pthread_mutex_
   pthread_mutex_unlock(mutex);
 }
 
-TEST(Pthread, Basic) {
+class PthreadTest : public zxtest::Test {
+ public:
+  static constexpr int64_t kBackstopTime = 123456789;
+
+  static void SetUpTestCase() {
+    // pthread_cond_timedwait relies on the system UTC clock which might not have been set or might
+    // not have been started when these tests are run. Install a new test clock for the duration of
+    // the test case.
+    ASSERT_FALSE(clock_installed_);
+    zx::clock test_clock;
+    zx_clock_create_args_v1_t create_args{.backstop_time = kBackstopTime};
+    ASSERT_OK(zx::clock::create(ZX_CLOCK_OPT_AUTO_START, &create_args, &test_clock));
+    ASSERT_OK(zx_utc_reference_swap(test_clock.release(), runtime_clock_.reset_and_get_address()));
+    clock_installed_ = true;
+  }
+
+  static void TearDownTestCase() {
+    // If we replaced the UTC clock reference, restore it back to the original.
+    if (clock_installed_) {
+      zx::clock release_me;
+      zx_utc_reference_swap(runtime_clock_.release(), release_me.reset_and_get_address());
+      clock_installed_ = false;
+    } else {
+      runtime_clock_.reset();
+    }
+  }
+
+ private:
+  inline static zx::clock runtime_clock_;
+  inline static bool clock_installed_ = false;
+};
+
+TEST_F(PthreadTest, Basic) {
   pthread_t thread1, thread2, thread3;
 
   log("testing uncontested case\n");
@@ -201,12 +237,11 @@ TEST(Pthread, Basic) {
   pthread_mutex_lock(&mutex);
   log("waiting on condition with 2 second timeout\n");
   struct timespec delay;
-  clock_gettime(CLOCK_REALTIME, &delay);
+  ASSERT_EQ(clock_gettime(CLOCK_REALTIME, &delay), 0);
   delay.tv_sec += 2;
   int result = pthread_cond_timedwait(&cond, &mutex, &delay);
   pthread_mutex_unlock(&mutex);
   log("pthread_cond_timedwait returned\n");
-  printf("pthread_cond_timedwait result: %d\n", result);
 
   EXPECT_EQ(result, ETIMEDOUT, "Lock should have timeout");
 
@@ -224,7 +259,7 @@ TEST(Pthread, Basic) {
   log("thread 3 joined\n");
 }
 
-TEST(Pthread, SelfMainThread) {
+TEST_F(PthreadTest, SelfMainThread) {
   pthread_t self = pthread_self();
   pthread_t null = 0;
   ASSERT_NE(self, null, "pthread_self() was NULL");
@@ -256,7 +291,7 @@ static void* bigger_stack_thread(void* unused) {
   return nullptr;
 }
 
-TEST(Pthread, BigStackSize) {
+TEST_F(PthreadTest, BigStackSize) {
   pthread_t thread;
   pthread_attr_t attr;
   int result = pthread_attr_init(&attr);
@@ -296,7 +331,7 @@ static void pthread_getstack_check() {
   ASSERT_GT(high, here, "reported stack end not above actual SP");
 }
 
-TEST(Pthread, GetstackMainThread) { pthread_getstack_check(); }
+TEST_F(PthreadTest, GetstackMainThread) { pthread_getstack_check(); }
 
 static void* getstack_thread(void*) {
   pthread_getstack_check();
@@ -315,9 +350,9 @@ static void pthread_getstack_on_new_thread(const pthread_attr_t* attr) {
   ASSERT_TRUE(ok, "pthread_attr_getstack on another thread");
 }
 
-TEST(Pthread, GetstackOtherThread) { pthread_getstack_on_new_thread(nullptr); }
+TEST_F(PthreadTest, GetstackOtherThread) { pthread_getstack_on_new_thread(nullptr); }
 
-TEST(Pthread, GetstackOtherThreadExplicitSize) {
+TEST_F(PthreadTest, GetstackOtherThreadExplicitSize) {
   pthread_attr_t attr;
   int result = pthread_attr_init(&attr);
   ASSERT_EQ(result, 0, "pthread_attr_init failed");
@@ -326,3 +361,5 @@ TEST(Pthread, GetstackOtherThreadExplicitSize) {
 
   pthread_getstack_on_new_thread(&attr);
 }
+
+}  // namespace

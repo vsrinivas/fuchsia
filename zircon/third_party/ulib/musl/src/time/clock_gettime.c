@@ -20,12 +20,6 @@ static int gettime_finish(zx_status_t syscall_status, zx_time_t now, struct time
   return 0;
 }
 
-static int gettime_via_get(zx_clock_t clock_id, struct timespec* ts) {
-  zx_time_t now;
-  zx_status_t syscall_status = _zx_clock_get(clock_id, &now);
-  return gettime_finish(syscall_status, now, ts);
-}
-
 static int gettime_via_utc(struct timespec* ts) {
   zx_handle_t utc_clock = _zx_utc_reference_get();
 
@@ -35,10 +29,8 @@ static int gettime_via_utc(struct timespec* ts) {
     zx_status_t syscall_status = _zx_clock_read(utc_clock, &now);
     return gettime_finish(syscall_status, now, ts);
   } else {
-    // TODO(johngro): When UTC time eventually completely leaves the kernel,
-    // lack of a UTC reference will result in an ENOTSUP error instead of
-    // falling back on the kernel UTC representation.
-    return gettime_via_get(ZX_CLOCK_UTC, ts);
+    errno = ENOTSUP;
+    return -1;
   }
 }
 

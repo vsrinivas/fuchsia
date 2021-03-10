@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/zx/clock.h>
 #include <sched.h>
 #include <threads.h>
+#include <zircon/utc.h>
 
 #include <zxtest/zxtest.h>
 
@@ -21,7 +23,39 @@ struct CondThreadArgs {
   std::atomic<bool> wait_condition;
 };
 
-TEST(ConditionalVariableTest, BroadcastSignalThreadWait) {
+class ConditionalVariableTest : public zxtest::Test {
+ public:
+  static constexpr int64_t kBackstopTime = 123456789;
+
+  static void SetUpTestCase() {
+    // cnd_timedwait relies on the system UTC clock which might not have been set or might not have
+    // been started when these tests are run. Install a new test clock for the duration of the test
+    // case.
+    ASSERT_FALSE(clock_installed_);
+    zx::clock test_clock;
+    zx_clock_create_args_v1_t create_args{.backstop_time = kBackstopTime};
+    ASSERT_OK(zx::clock::create(ZX_CLOCK_OPT_AUTO_START, &create_args, &test_clock));
+    ASSERT_OK(zx_utc_reference_swap(test_clock.release(), runtime_clock_.reset_and_get_address()));
+    clock_installed_ = true;
+  }
+
+  static void TearDownTestCase() {
+    // If we replaced the UTC clock reference, restore it back to the original.
+    if (clock_installed_) {
+      zx::clock release_me;
+      zx_utc_reference_swap(runtime_clock_.release(), release_me.reset_and_get_address());
+      clock_installed_ = false;
+    } else {
+      runtime_clock_.reset();
+    }
+  }
+
+ private:
+  inline static zx::clock runtime_clock_;
+  inline static bool clock_installed_ = false;
+};
+
+TEST_F(ConditionalVariableTest, BroadcastSignalThreadWait) {
   auto CondWaitHelper = [](void* arg) -> int {
     CondThreadArgs* args = static_cast<CondThreadArgs*>(arg);
 
@@ -75,7 +109,7 @@ TEST(ConditionalVariableTest, BroadcastSignalThreadWait) {
   }
 }
 
-TEST(ConditionalVariableTest, SignalThreadWait) {
+TEST_F(ConditionalVariableTest, SignalThreadWait) {
   auto CondWaitHelper = [](void* arg) -> int {
     CondThreadArgs* args = static_cast<CondThreadArgs*>(arg);
 
@@ -146,13 +180,18 @@ void TimeAddNsec(struct timespec* ts, int nsec) {
   }
 }
 
-TEST(ConditionalVariableTest, ConditionalVariablesTimeout) {
+TEST_F(ConditionalVariableTest, ConditionalVariablesTimeout) {
   cnd_t cond = CND_INIT;
   mtx_t mutex = MTX_INIT;
 
   mtx_lock(&mutex);
   struct timespec delay;
-  clock_gettime(CLOCK_REALTIME, &delay);
+  if (clock_gettime(CLOCK_REALTIME, &delay) != 0) {
+    mtx_unlock(&mutex);
+    FAIL("clock_gettime failed, clock might not be installed");
+    return;
+  }
+
   TimeAddNsec(&delay, zx::msec(1).get());
   int result = cnd_timedwait(&cond, &mutex, &delay);
   mtx_unlock(&mutex);
