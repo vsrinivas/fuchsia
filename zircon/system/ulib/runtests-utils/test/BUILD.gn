@@ -12,15 +12,19 @@ group("test") {
 
 test("service-proxy-dir") {
   output_name = "service-proxy-dir-test"
-  if (is_fuchsia) {
-    configs += [ "//build/unification/config:zircon-migrated" ]
+
+  configs += [ "//build/unification/config:zircon-migrated" ]
+
+  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
+  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
+  # See linked bug for details.
+  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+
+  fdio_config = [ "//build/config/fuchsia:fdio_config" ]
+  if (configs + fdio_config - fdio_config != configs) {
+    configs -= fdio_config
   }
-  if (is_fuchsia) {
-    fdio_config = [ "//build/config/fuchsia:fdio_config" ]
-    if (configs + fdio_config - fdio_config != configs) {
-      configs -= fdio_config
-    }
-  }
+
   sources = [ "service-proxy-dir.cc" ]
   deps = [
     ":fidl.test.echo_c",
@@ -35,11 +39,6 @@ test("service-proxy-dir") {
     "//zircon/system/ulib/fidl-utils",
     "//zircon/system/ulib/runtests-utils",
   ]
-
-  # TODO(fxbug.dev/69585): This target uses raw zx::channel with LLCPP which is deprecated.
-  # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
-  # See linked bug for details.
-  configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
 fidl("fidl.test.echo") {
