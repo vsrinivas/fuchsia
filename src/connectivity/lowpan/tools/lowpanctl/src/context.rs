@@ -11,6 +11,7 @@ use fidl_fuchsia_lowpan_device::{
     LookupMarker, LookupProxy, Protocols,
 };
 use fidl_fuchsia_lowpan_test::{DeviceTestMarker, DeviceTestProxy};
+use fidl_fuchsia_lowpan_thread::{LegacyJoiningMarker, LegacyJoiningProxy};
 use fuchsia_component::client::connect_to_service;
 use futures::prelude::*;
 
@@ -111,6 +112,30 @@ impl LowpanCtlContext {
             client_extra.into_proxy().context("into_proxy() failed")?,
             client_test.into_proxy().context("into_proxy() failed")?,
         ))
+    }
+
+    pub async fn get_default_legacy_joining_proxy(&self) -> Result<LegacyJoiningProxy, Error> {
+        let lookup = &self.lookup;
+
+        let (client, server) = create_endpoints::<LegacyJoiningMarker>()?;
+
+        lookup
+            .lookup_device(
+                &self.device_name,
+                Protocols { thread_legacy_joining: Some(server), ..Protocols::EMPTY },
+            )
+            .map(|x| match x {
+                Ok(Ok(())) => Ok(()),
+                Ok(Err(x)) => Err(format_err!("Service Error: {:?}", x)),
+                Err(x) => Err(x.into()),
+            })
+            .await
+            .context(format!(
+                "Unable to get legacy joining interface for {:?}",
+                &self.device_name
+            ))?;
+
+        client.into_proxy().context("into_proxy() failed")
     }
 
     pub async fn get_default_device_counters(&self) -> Result<CountersProxy, Error> {

@@ -7,6 +7,7 @@ use super::{Correlated, CorrelatedBox, NetFlags, RouteFlags};
 use anyhow::{format_err, Context as _};
 use core::convert::{TryFrom, TryInto};
 use fidl_fuchsia_lowpan_device::{AllCounters, MacCounters};
+use net_types::ip::IpAddress;
 use spinel_pack::*;
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -174,6 +175,14 @@ pub struct Subnet {
     pub prefix_len: u8,
 }
 
+impl Subnet {
+    pub fn contains(&self, addr: &std::net::Ipv6Addr) -> bool {
+        let addr_a = net_types::ip::Ipv6Addr::from(self.addr.octets()).mask(self.prefix_len);
+        let addr_b = net_types::ip::Ipv6Addr::from(addr.octets()).mask(self.prefix_len);
+        addr_a == addr_b
+    }
+}
+
 impl std::fmt::Debug for Subnet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}/{}", self.addr, self.prefix_len)
@@ -183,6 +192,18 @@ impl std::fmt::Debug for Subnet {
 impl std::fmt::Display for Subnet {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}/{}", self.addr, self.prefix_len)
+    }
+}
+
+impl std::default::Default for Subnet {
+    fn default() -> Self {
+        Subnet { addr: std::net::Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0), prefix_len: 0 }
+    }
+}
+
+impl From<std::net::Ipv6Addr> for Subnet {
+    fn from(addr: std::net::Ipv6Addr) -> Self {
+        Self { addr, prefix_len: 128 }
     }
 }
 

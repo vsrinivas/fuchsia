@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
+use crate::prelude::*;
 use crate::spinel::*;
 
 use crate::spinel::Subnet;
@@ -16,13 +17,27 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
             // Get the outbound network packet from netstack
             let packet = self.net_if.outbound_packet_from_stack().await?;
 
-            fx_log_info!("Outbound packet from netstack: {}", hex::encode(&packet));
+            traceln!("Outbound packet from netstack: {}", hex::encode(&packet));
+
+            let target_stream = {
+                let driver_state = self.driver_state.lock();
+                if driver_state.assisting_state.should_route_to_insecure(packet.as_slice()) {
+                    fx_log_info!(
+                        "outbound_packet_pump: Forwarding commissioning packet to OpenThread stack: {:?}",
+                        Ipv6PacketDebug(packet.as_slice())
+                    );
+                    PropStream::NetInsecure
+                } else {
+                    PropStream::Net
+                }
+            }
+            .into();
 
             // Send the outbound network packet to the NCP.
             let _ = self
                 .frame_handler
                 .send_request_ignore_response(CmdPropValueSet(
-                    PropStream::Net.into(),
+                    target_stream,
                     NetworkPacket { packet: &packet, metadata: &[] },
                 ))
                 .await;
@@ -327,9 +342,7 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
         self.wait_for_state(|x| x.connectivity_state != ConnectivityState::Attaching).await;
 
-        let connectivity_state = self.get_connectivity_state();
-
-        if connectivity_state.is_online() {
+        if self.get_connectivity_state().is_online() {
             // Mark the network interface as online.
             self.net_if.set_online(true).await.context("Marking network interface as online")?;
 
@@ -337,13 +350,15 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
 
             fx_log_info!("online_loop: We are online, starting outbound packet pump");
 
-            // Run the pump that pulls outbound data from netstack to the NCP.
-            // This will run indefinitely.
-            self.outbound_packet_pump()
+            // The pump that pulls outbound data from netstack to the NCP.
+            let outbound_packet_pump = self
+                .outbound_packet_pump()
                 .into_stream()
                 .try_collect::<()>()
-                .await
-                .context("outbound_packet_pump")?;
+                .map(|x| x.context("outbound_packet_pump"));
+
+            // This will run indefinitely, unless there is an error.
+            outbound_packet_pump.await?;
         }
 
         Ok(())

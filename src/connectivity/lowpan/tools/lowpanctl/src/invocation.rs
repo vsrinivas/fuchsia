@@ -17,6 +17,7 @@ pub use crate::get_supported_network_types::*;
 pub use crate::join_command::*;
 pub use crate::leave_command::*;
 pub use crate::list_command::*;
+pub use crate::make_joinable_command::*;
 pub use crate::mfg_command::*;
 pub use crate::network_scan_command::*;
 pub use crate::provision_command::*;
@@ -76,6 +77,7 @@ pub enum CommandEnumWithRepeat {
     GetMacFilterSettings(GetMacFilterSettingsCommand),
     GetNeighborTable(GetNeighborTableCommand),
     GetCounters(GetCountersCommand),
+    MakeJoinable(MakeJoinableCommand),
 }
 
 impl CommandEnumWithRepeat {
@@ -100,6 +102,7 @@ impl CommandEnumWithRepeat {
             CommandEnumWithRepeat::GetMacFilterSettings(x) => x.exec(context).await,
             CommandEnumWithRepeat::GetNeighborTable(x) => x.exec(context).await,
             CommandEnumWithRepeat::GetCounters(x) => x.exec(context).await,
+            CommandEnumWithRepeat::MakeJoinable(x) => x.exec(context).await,
         }
     }
 }

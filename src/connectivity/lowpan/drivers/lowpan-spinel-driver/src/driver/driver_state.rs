@@ -60,6 +60,10 @@ pub(super) struct DriverState {
     /// MAC address currently used by this interface.
     /// This is the EUI64 to used for SLAAC.
     pub(super) mac_addr: EUI64,
+
+    /// Contains the state associated with assisting/commissioning
+    /// new devices onto the network.
+    pub(super) assisting_state: AssistingState,
 }
 
 impl Clone for DriverState {
@@ -77,6 +81,7 @@ impl Clone for DriverState {
             link_local_addr: self.link_local_addr.clone(),
             mesh_local_addr: self.mesh_local_addr.clone(),
             mac_addr: self.mac_addr.clone(),
+            assisting_state: self.assisting_state.clone(),
         }
     }
 }
@@ -99,6 +104,7 @@ impl PartialEq for DriverState {
             && self.link_local_addr.eq(&other.link_local_addr)
             && self.mesh_local_addr.eq(&other.mesh_local_addr)
             && self.mac_addr.eq(&self.mac_addr)
+            && self.assisting_state.eq(&self.assisting_state)
     }
 }
 
@@ -119,6 +125,7 @@ impl Default for DriverState {
             link_local_addr: std::net::Ipv6Addr::UNSPECIFIED,
             mesh_local_addr: std::net::Ipv6Addr::UNSPECIFIED,
             mac_addr: Default::default(),
+            assisting_state: Default::default(),
         }
     }
 }
@@ -144,6 +151,10 @@ impl DriverState {
     #[allow(dead_code)]
     pub fn is_active(&self) -> bool {
         self.connectivity_state.is_active()
+    }
+
+    pub fn is_active_and_ready(&self) -> bool {
+        self.connectivity_state.is_active_and_ready()
     }
 
     /// Convenience method for checking if a cap is set.

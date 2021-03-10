@@ -42,6 +42,28 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> SpinelDriver<DS, NI> {
                     let network_packet = NetworkPacket::try_unpack_from_slice(prop_value.value)
                         .context("on_inbound_frame:parsing_net_packet")?;
                     self.net_if.inbound_packet_to_stack(network_packet.packet).await?;
+                } else if prop_value.prop == Prop::Stream(PropStream::NetInsecure) {
+                    let network_packet = NetworkPacket::try_unpack_from_slice(prop_value.value)
+                        .context("on_inbound_frame:parsing_insecure_net_packet")?;
+
+                    fx_log_info!(
+                        "on_inbound_frame: Commissioning packet: {:?}",
+                        Ipv6PacketDebug(network_packet.packet)
+                    );
+
+                    let should_allow_from_insecure = {
+                        let mut driver_state = self.driver_state.lock();
+                        driver_state
+                            .assisting_state
+                            .should_allow_from_insecure(network_packet.packet)
+                    };
+
+                    if should_allow_from_insecure {
+                        fx_log_info!("on_inbound_frame: Commissioning packet routed to stack");
+                        self.net_if.inbound_packet_to_stack(network_packet.packet).await?;
+                    } else {
+                        fx_log_info!("on_inbound_frame: Dropping commissioning packet packet");
+                    }
                 } else {
                     self.on_prop_value_is(prop_value.prop, prop_value.value)?;
                 }

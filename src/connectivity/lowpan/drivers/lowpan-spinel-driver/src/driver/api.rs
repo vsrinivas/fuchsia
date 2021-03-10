@@ -8,6 +8,7 @@ use crate::spinel::*;
 
 use anyhow::Error;
 use async_trait::async_trait;
+use core::num::NonZeroU16;
 use fasync::Time;
 use fidl_fuchsia_lowpan::BeaconInfo;
 use fidl_fuchsia_lowpan::*;
@@ -1095,6 +1096,55 @@ impl<DS: SpinelDeviceClient, NI: NetworkInterface> LowpanDriver for SpinelDriver
 
     async fn make_joinable(&self, duration: fuchsia_zircon::Duration, port: u16) -> ZxResult<()> {
         fx_log_info!("make_joinable: duration: {} port: {}", duration.into_seconds(), port);
+
+        // Convert the duration parameter into a `std::time::Duration`.
+        let duration = std::time::Duration::from_nanos(
+            duration.into_nanos().try_into().ok().ok_or(ZxStatus::INVALID_ARGS)?,
+        );
+
+        // Wait until we are ready.
+        self.wait_for_state(DriverState::is_initialized).await;
+
+        {
+            let mut driver_state = self.driver_state.lock();
+
+            if !driver_state.is_active_and_ready() {
+                return Err(ZxStatus::BAD_STATE);
+            }
+
+            match (duration.as_nanos() > 0, NonZeroU16::new(port)) {
+                (true, Some(port)) => {
+                    driver_state.assisting_state.prepare_to_assist(duration, port)
+                }
+                (false, _) => driver_state.assisting_state.clear(),
+                (true, None) => return Err(ZxStatus::INVALID_ARGS),
+            }
+
+            std::mem::drop(driver_state);
+            self.driver_state_change.trigger();
+        }
+
+        self.apply_standard_combinators(
+            async move {
+                if duration.as_nanos() > 0 {
+                    // Specify the assisting ports.
+                    self.frame_handler
+                        .send_request(
+                            CmdPropValueSet(PropThread::AssistingPorts.into(), port).verify(),
+                        )
+                        .await
+                } else {
+                    // Clear the assisting ports.
+                    self.frame_handler
+                        .send_request(
+                            CmdPropValueSet(PropThread::AssistingPorts.into(), ()).verify(),
+                        )
+                        .await
+                }
+            }
+            .boxed(),
+        )
+        .await?;
 
         Ok(())
     }

@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 mod api;
+mod assisting_state;
 mod driver_state;
 mod error_adapter;
 mod inbound;
 mod init;
+mod ipv6_packet_matcher;
 mod misc;
 mod network;
 mod tasks;
@@ -15,11 +17,13 @@ mod tasks;
 mod tests;
 
 use crate::spinel::*;
+use assisting_state::*;
 use driver_state::*;
 use error_adapter::*;
 use fidl_fuchsia_lowpan::{ConnectivityState, Role};
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon::Duration;
+use ipv6_packet_matcher::*;
 use lowpan_driver_common::AsyncCondition;
 
 const DEFAULT_SCAN_DWELL_TIME_MS: u16 = 100;
