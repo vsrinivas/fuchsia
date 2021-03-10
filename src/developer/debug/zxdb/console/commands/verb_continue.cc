@@ -82,7 +82,7 @@ Examples
 )";
 
 Err RunVerbContinue(ConsoleContext* context, const Command& cmd) {
-  if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread}); err.has_error())
+  if (Err err = cmd.ValidateNouns({Noun::kGlobal, Noun::kProcess, Noun::kThread}); err.has_error())
     return err;
 
   bool forward = cmd.HasSwitch(kForwardSwitchID);

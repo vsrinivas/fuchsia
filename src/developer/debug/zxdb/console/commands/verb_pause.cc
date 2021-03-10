@@ -123,22 +123,25 @@ Err PauseTarget(ConsoleContext* context, Target* target, Thread* current_thread)
   return Err();
 }
 
-// Source information on this thread will be printed out on completion. The current thread may be
-// null.
-Err PauseSystem(System* system, Thread* current_thread) {
+// Source information on this thread will be printed out on completion.
+Err PauseSystem(System* system) {
   if (Err err = VerifySystemHasRunningProcess(system); err.has_error())
     return err;
 
-  fxl::WeakPtr<Thread> weak_thread;
-  if (current_thread)
-    weak_thread = current_thread->GetWeakPtr();
-
-  system->Pause([weak_system = system->GetWeakPtr(), weak_thread]() {
+  system->Pause([weak_system = system->GetWeakPtr()]() {
     // Provide messaging about the system pause.
     if (!weak_system)
       return;
     OutputBuffer out;
     Console* console = Console::get();
+
+    // Find the current thread for outputting context. The current thread may have changed from
+    // when the command was initiated so always use the current one. In addition, pausing a program
+    // immediately after starting or attaching to it won't always sync the threads so there might
+    // be no thread context on the original "pause" command.
+    Thread* thread = nullptr;
+    if (const Target* target = console->context().GetActiveTarget())
+      thread = console->context().GetActiveThreadForTarget(target);  // May be null if not running.
 
     // Collect the status of all running processes.
     int paused_process_count = 0;
@@ -152,28 +155,28 @@ Err PauseSystem(System* system, Thread* current_thread) {
     }
     // Skip the process list if there's only one and we're showing the thread info below. Otherwise
     // the one thing paused is duplicated twice and this is the most common case.
-    if (paused_process_count > 1 || !weak_thread) {
+    if (paused_process_count > 1 || !thread) {
       console->Output("Paused:\n");
       console->Output(out);
       console->Output("\n");
     }
 
     // Follow with the source context of the current thread if there is one.
-    if (weak_thread)
-      console->context().OutputThreadContext(weak_thread.get(), StopInfo());
+    if (thread)
+      console->context().OutputThreadContext(thread, StopInfo());
   });
   return Err();
 }
 
 Err RunVerbPause(ConsoleContext* context, const Command& cmd) {
-  if (Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread}); err.has_error())
+  if (Err err = cmd.ValidateNouns({Noun::kGlobal, Noun::kProcess, Noun::kThread}); err.has_error())
     return err;
 
   if (cmd.HasNoun(Noun::kThread))
     return PauseThread(context, cmd.thread());
   if (cmd.HasNoun(Noun::kProcess))
     return PauseTarget(context, cmd.target(), cmd.thread());
-  return PauseSystem(&context->session()->system(), cmd.thread());
+  return PauseSystem(&context->session()->system());
 }
 
 }  // namespace
