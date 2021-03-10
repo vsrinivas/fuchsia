@@ -108,22 +108,6 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
               queue.push(id_pair.present_id);
             }));
 
-    ON_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_))
-        .WillByDefault(::testing::Invoke(
-            [&](scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback) {
-              // The requested_prediction_span should be at least one frame.
-
-              // Give back at least one info.
-              flatland::Flatland::FuturePresentationInfos presentation_infos;
-
-              fuchsia::scenic::scheduling::PresentationInfo info;
-              info.set_latch_point(5);
-              info.set_presentation_time(10);
-              presentation_infos.push_back(std::move(info));
-
-              callback(std::move(presentation_infos));
-            }));
-
     ON_CALL(*mock_flatland_presenter_, RemoveSession(_))
         .WillByDefault(::testing::Invoke(
             [&](scheduling::SessionId session_id) { removed_sessions_.insert(session_id); }));
@@ -168,15 +152,6 @@ class FlatlandManagerTest : public gtest::RealLoopFixture {
     flatland_presenter_.reset();
 
     gtest::RealLoopFixture::TearDown();
-  }
-
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> CreateFlatland() {
-    fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
-    // Since GetFuturePresentationInfos() happens when a Flatland instance is created,
-    // EXPECT it here.
-    EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
-    manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
-    return flatland;
   }
 
   // Returns the number of currently pending session updates for |session_id|.
@@ -230,9 +205,11 @@ namespace test {
 TEST_F(FlatlandManagerTest, CreateFlatlands) {
   InitializeManagerWithDisplay();
 
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1 = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
+  manager_->CreateFlatland(flatland1.NewRequest(dispatcher()));
 
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2 = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2;
+  manager_->CreateFlatland(flatland2.NewRequest(dispatcher()));
 
   RunLoopUntilIdle();
 
@@ -242,8 +219,6 @@ TEST_F(FlatlandManagerTest, CreateFlatlands) {
 }
 
 TEST_F(FlatlandManagerTest, CreateFlatlandsWithDeferredInitialization) {
-  // In order to prevent one EXPECT_CALL(GetFuturePresentationInfos()) to get matched twice, and the
-  // other to get matched 0 times, manually EXPECT_CALL for this test.
   fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
   manager_->CreateFlatland(flatland1.NewRequest(dispatcher()));
 
@@ -258,7 +233,6 @@ TEST_F(FlatlandManagerTest, CreateFlatlandsWithDeferredInitialization) {
 
   // It's only after initializing the FlatlandManager with a display that pending
   // connections are processed.
-  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_)).Times(2);
   InitializeManagerWithDisplay();
 
   EXPECT_TRUE(flatland1.is_bound());
@@ -271,7 +245,8 @@ TEST_F(FlatlandManagerTest, ClientDiesBeforeManager) {
 
   scheduling::SessionId id;
   {
-    fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+    fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
+    manager_->CreateFlatland(flatland.NewRequest());
     id = uber_struct_system_->GetLatestInstanceId();
 
     RunLoopUntilIdle();
@@ -292,7 +267,8 @@ TEST_F(FlatlandManagerTest, ClientDiesBeforeManager) {
 TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
   InitializeManagerWithDisplay();
 
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
+  manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   RunLoopUntilIdle();
@@ -316,16 +292,15 @@ TEST_F(FlatlandManagerTest, ManagerDiesBeforeClients) {
 TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
   InitializeManagerWithDisplay();
 
-  // Set up a Flatland instance with an OnPresentProcessed() callback.
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+  // Setup a Flatland instance with an OnPresentTokensReturned() callback.
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
+  manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens = 0;
-  flatland.events().OnPresentProcessed =
-      [&returned_tokens](uint32_t present_tokens,
-                         Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens = present_tokens;
-      };
+  flatland.events().OnPresentTokensReturned = [&returned_tokens](uint32_t present_tokens) {
+    returned_tokens = present_tokens;
+  };
 
   // Run until the instance receives the initial allotment of tokens.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&returned_tokens]() { return returned_tokens != 0; }));
@@ -336,30 +311,26 @@ TEST_F(FlatlandManagerTest, ManagerImmediatelySendsPresentTokens) {
 TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
   InitializeManagerWithDisplay();
 
-  // Setup two Flatland instances with OnPresentProcessed() callbacks.
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1 = CreateFlatland();
+  // Setup two Flatland instances with OnPresentTokensReturned() callbacks.
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
+  manager_->CreateFlatland(flatland1.NewRequest(dispatcher()));
   const scheduling::SessionId id1 = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens1 = 0;
-  flatland1.events().OnPresentProcessed =
-      [&returned_tokens1](uint32_t present_tokens,
-                          Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens1 = present_tokens;
-        EXPECT_FALSE(future_presentation_infos.empty());
-      };
+  flatland1.events().OnPresentTokensReturned = [&returned_tokens1](uint32_t present_tokens) {
+    returned_tokens1 = present_tokens;
+  };
 
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2 = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2;
+  manager_->CreateFlatland(flatland2.NewRequest(dispatcher()));
   const scheduling::SessionId id2 = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t returned_tokens2 = 0;
-  flatland2.events().OnPresentProcessed =
-      [&returned_tokens2](uint32_t present_tokens,
-                          Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens2 = present_tokens;
-        EXPECT_FALSE(future_presentation_infos.empty());
-      };
+  flatland2.events().OnPresentTokensReturned = [&returned_tokens2](uint32_t present_tokens) {
+    returned_tokens2 = present_tokens;
+  };
 
-  // Both instances receive their initial allotment of tokens, then forget those tokens.
+  // Run both instances receive their initial allotment of tokens, then forget those tokens.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&returned_tokens1]() { return returned_tokens1 != 0; }));
   returned_tokens1 = 0;
 
@@ -384,9 +355,6 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
   auto next_present_id1 = PopPendingPresent(id1);
   manager_->UpdateSessions({{id1, next_present_id1}}, /*trace_id=*/0);
 
-  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
-  manager_->OnCpuWorkDone();
-
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_EQ(snapshot.size(), 1u);
   EXPECT_TRUE(snapshot.count(id1));
@@ -409,9 +377,6 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
 
   manager_->UpdateSessions({{id2, next_present_id2}}, /*trace_id=*/0);
 
-  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
-  manager_->OnCpuWorkDone();
-
   snapshot = uber_struct_system_->Snapshot();
   EXPECT_EQ(snapshot.size(), 2u);
   EXPECT_TRUE(snapshot.count(id1));
@@ -426,73 +391,18 @@ TEST_F(FlatlandManagerTest, UpdateSessionsReturnsPresentTokens) {
   EXPECT_EQ(GetNumPendingSessionUpdates(id2), 0ul);
 }
 
-// It is possible for the session to update multiple times in a row before OnCpuWorkDone() is
-// called. If that's the case, we need to ensure that present tokens returned from the first
-// update are not lost.
-TEST_F(FlatlandManagerTest, ConsecutiveUpdateSessions_ReturnsCorrectPresentTokens) {
-  InitializeManagerWithDisplay();
-
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
-  const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
-
-  uint32_t returned_tokens = 0;
-  flatland.events().OnPresentProcessed =
-      [&returned_tokens](uint32_t present_tokens,
-                         Flatland::FuturePresentationInfos future_presentation_infos) {
-        returned_tokens = present_tokens;
-        EXPECT_FALSE(future_presentation_infos.empty());
-      };
-
-  // Receive the initial allotment of tokens, then forget those tokens.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&returned_tokens]() { return returned_tokens != 0; }));
-  returned_tokens = 0;
-
-  // Present twice, but don't update the session yet.
-  PRESENT(flatland, id, true);
-  PRESENT(flatland, id, true);
-
-  auto snapshot = uber_struct_system_->Snapshot();
-  EXPECT_TRUE(snapshot.empty());
-
-  EXPECT_EQ(GetNumPendingSessionUpdates(id), 2ul);
-
-  // Update the session, but only with the first PresentId, which should push an UberStruct
-  // and return one token to the first instance.
-  auto next_present_id = PopPendingPresent(id);
-  manager_->UpdateSessions({{id, next_present_id}}, /*trace_id=*/0);
-
-  // Update again.
-  next_present_id = PopPendingPresent(id);
-  manager_->UpdateSessions({{id, next_present_id}}, /*trace_id=*/0);
-
-  // Finally, the work is done according to the frame scheduler.
-  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
-  manager_->OnCpuWorkDone();
-
-  snapshot = uber_struct_system_->Snapshot();
-  EXPECT_EQ(snapshot.size(), 1u);
-  EXPECT_TRUE(snapshot.count(id));
-
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&returned_tokens]() { return returned_tokens != 0; }));
-
-  EXPECT_EQ(returned_tokens, 2u);
-
-  EXPECT_EQ(GetNumPendingSessionUpdates(id), 0ul);
-}
-
 TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   InitializeManagerWithDisplay();
 
-  // Setup a Flatland instance with an OnPresentProcessed() callback.
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
+  // Setup a Flatland instance with an OnPresentTokensReturned() callback.
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland;
+  manager_->CreateFlatland(flatland.NewRequest(dispatcher()));
   const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
 
   uint32_t tokens_remaining = 1;
-  flatland.events().OnPresentProcessed =
-      [&tokens_remaining](uint32_t present_tokens,
-                          Flatland::FuturePresentationInfos future_presentation_infos) {
-        tokens_remaining += present_tokens;
-      };
+  flatland.events().OnPresentTokensReturned = [&tokens_remaining](uint32_t present_tokens) {
+    tokens_remaining += present_tokens;
+  };
 
   // Run until the instance receives the initial allotment of tokens.
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&tokens_remaining]() { return tokens_remaining > 1; }));
@@ -515,56 +425,20 @@ TEST_F(FlatlandManagerTest, PresentWithoutTokensClosesSession) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&flatland]() { return !flatland.is_bound(); }));
 }
 
-TEST_F(FlatlandManagerTest, TokensAreReplenishedAfterRunningOut) {
-  InitializeManagerWithDisplay();
-
-  // Setup a Flatland instance with an OnPresentProcessed() callback.
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland = CreateFlatland();
-  const scheduling::SessionId id = uber_struct_system_->GetLatestInstanceId();
-
-  uint32_t tokens_remaining = 1;
-  flatland.events().OnPresentProcessed =
-      [&tokens_remaining](uint32_t present_tokens,
-                          Flatland::FuturePresentationInfos future_presentation_infos) {
-        tokens_remaining += present_tokens;
-      };
-
-  // Run until the instance receives the initial allotment of tokens.
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&tokens_remaining]() { return tokens_remaining > 1; }));
-
-  // Present until no tokens remain.
-  while (tokens_remaining > 0) {
-    PRESENT(flatland, id, true);
-    --tokens_remaining;
-  }
-
-  // Process the first present.
-  auto next_present_id = PopPendingPresent(id);
-  manager_->UpdateSessions({{id, next_present_id}}, /*trace_id=*/0);
-
-  // Signal that the work is done, which should return present tokens to the client.
-  EXPECT_CALL(*mock_flatland_presenter_, GetFuturePresentationInfos(_));
-  manager_->OnCpuWorkDone();
-
-  EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&tokens_remaining]() { return tokens_remaining != 0; }));
-
-  // Present once more which should succeed.
-  PRESENT(flatland, id, true);
-  EXPECT_TRUE(flatland.is_bound());
-}
-
 TEST_F(FlatlandManagerTest, OnFramePresentedEvent) {
   InitializeManagerWithDisplay();
 
   // Setup two Flatland instances with OnFramePresented() callbacks.
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1 = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland1;
+  manager_->CreateFlatland(flatland1.NewRequest(dispatcher()));
   const scheduling::SessionId id1 = uber_struct_system_->GetLatestInstanceId();
 
   std::optional<fuchsia::scenic::scheduling::FramePresentedInfo> info1;
   flatland1.events().OnFramePresented =
       [&info1](fuchsia::scenic::scheduling::FramePresentedInfo info) { info1 = std::move(info); };
 
-  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2 = CreateFlatland();
+  fidl::InterfacePtr<fuchsia::ui::scenic::internal::Flatland> flatland2;
+  manager_->CreateFlatland(flatland2.NewRequest(dispatcher()));
   const scheduling::SessionId id2 = uber_struct_system_->GetLatestInstanceId();
 
   std::optional<fuchsia::scenic::scheduling::FramePresentedInfo> info2;

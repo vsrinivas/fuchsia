@@ -41,9 +41,6 @@ class SessionUpdater {
   virtual UpdateResults UpdateSessions(
       const std::unordered_map<SessionId, PresentId>& sessions_to_update, uint64_t trace_id) = 0;
 
-  // Signaled after FrameRenderer::RenderFrame() completes.
-  virtual void OnCpuWorkDone() = 0;
-
   // Called whenever a new set of presents have been presented to the screen. |latched_times| gives
   // information about when each individual update was latched.
   virtual void OnFramePresented(

@@ -44,7 +44,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   using TransformId = uint64_t;
   using BufferCollectionId = uint64_t;
   using ContentId = uint64_t;
-  using FuturePresentationInfos = std::vector<fuchsia::scenic::scheduling::PresentationInfo>;
 
   // Binds this Flatland object to serve |request| on |dispatcher|. The |destroy_instance_function|
   // will be invoked from the Looper that owns |dispatcher| when this object is ready to be cleaned
@@ -125,7 +124,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
 
   // Called just before the FIDL client receives the event of the same name, indicating that this
   // Flatland instance should allow an additional |num_present_tokens| calls to Present().
-  void OnPresentProcessed(uint32_t num_present_tokens, FuturePresentationInfos presentation_infos);
+  void OnPresentTokensReturned(uint32_t num_present_tokens);
 
   // Called when this Flatland instance should send the OnFramePresented() event to the FIDL
   // client.
@@ -197,7 +196,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   bool failure_since_previous_present_ = false;
 
   // The number of Present() calls remaining before the client runs out. Incremented when
-  // OnPresentProcessed() is called, decremented by 1 for each Present() call.
+  // OnPresentTokensReturned() is called, decremented by 1 for each Present() call.
   uint32_t present_tokens_remaining_ = 1;
 
   // Must be managed by a shared_ptr because the implementation uses weak_from_this().

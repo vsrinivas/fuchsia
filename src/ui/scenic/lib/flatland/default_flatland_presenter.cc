@@ -5,7 +5,6 @@
 #include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
 
 #include <lib/async/cpp/task.h>
-#include <lib/async/default.h>
 
 namespace flatland {
 
@@ -56,39 +55,6 @@ void DefaultFlatlandPresenter::ScheduleUpdateForSession(zx::time requested_prese
   } else {
     // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
     FX_LOGS(WARNING) << "Cannot schedule update for session due to missing FrameScheduler.";
-  }
-}
-
-void DefaultFlatlandPresenter::GetFuturePresentationInfos(
-    scheduling::FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) {
-  auto flatland_thread_dispatcher = async_get_default_dispatcher();
-  FX_DCHECK(flatland_thread_dispatcher);
-
-  if (auto scheduler = frame_scheduler_.lock()) {
-    // TODO(fxbug.dev/61178): The FrameScheduler is not thread-safe, but a lock is not sufficient
-    // since GFX sessions may access the FrameScheduler without passing through this object. Post a
-    // task to the main thread, which is where GFX runs, to account for thread safety.
-    async::PostTask(
-        main_dispatcher_,
-        [flatland_thread_dispatcher, requested_prediction_span = kDefaultPredictionSpan, scheduler,
-         presentation_infos_callback = std::move(presentation_infos_callback)]() mutable {
-          scheduler->GetFuturePresentationInfos(
-              requested_prediction_span,
-              [flatland_thread_dispatcher,
-               presentation_infos_callback =
-                   std::move(presentation_infos_callback)](auto presentation_infos) mutable {
-                // Post the frame scheduler's response back on the instance thread for dispatch.
-                async::PostTask(
-                    flatland_thread_dispatcher,
-                    [presentation_infos_callback = std::move(presentation_infos_callback),
-                     presentation_infos = std::move(presentation_infos)]() mutable {
-                      presentation_infos_callback(std::move(presentation_infos));
-                    });
-              });
-        });
-  } else {
-    // TODO(fxbug.dev/56290): Account for missing FrameScheduler case.
-    FX_LOGS(WARNING) << "Cannot get future presentation infos due to missing FrameScheduler.";
   }
 }
 

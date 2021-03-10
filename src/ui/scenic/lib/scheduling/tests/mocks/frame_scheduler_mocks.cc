@@ -49,9 +49,8 @@ void MockFrameScheduler::GetFuturePresentationInfos(
     FrameScheduler::GetFuturePresentationInfosCallback presentation_infos_callback) {
   if (get_future_presentation_infos_callback_) {
     presentation_infos_callback(get_future_presentation_infos_callback_(requested_prediction_span));
-  } else {
-    presentation_infos_callback({});
   }
+  presentation_infos_callback({});
 }
 
 void MockFrameScheduler::RemoveSession(SessionId session_id) {

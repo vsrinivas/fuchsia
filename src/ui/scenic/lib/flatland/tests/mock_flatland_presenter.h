@@ -21,8 +21,6 @@ class MockFlatlandPresenter : public FlatlandPresenter {
   MOCK_METHOD3(ScheduleUpdateForSession,
                void(zx::time requested_presentation_time, scheduling::SchedulingIdPair id_pair,
                     bool squashable));
-  MOCK_METHOD1(GetFuturePresentationInfos,
-               void(scheduling::FrameScheduler::GetFuturePresentationInfosCallback callback));
   MOCK_METHOD1(RemoveSession, void(scheduling::SessionId session_id));
 };
 

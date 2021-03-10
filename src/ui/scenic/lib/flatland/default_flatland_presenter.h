@@ -29,23 +29,11 @@ class DefaultFlatlandPresenter final : public FlatlandPresenter {
                                 scheduling::SchedulingIdPair id_pair, bool squashable) override;
 
   // |FlatlandPresenter|
-  void GetFuturePresentationInfos(scheduling::FrameScheduler::GetFuturePresentationInfosCallback
-                                      presentation_infos_callback) override;
-
-  // |FlatlandPresenter|
   void RemoveSession(scheduling::SessionId session_id) override;
 
  private:
   async_dispatcher_t* main_dispatcher_;
   std::weak_ptr<scheduling::FrameScheduler> frame_scheduler_;
-
-  // Ask for 8 frames of information for GetFuturePresentationInfos().
-  const int64_t kDefaultPredictionInfos = 8;
-
-  // The default frame interval assumes a 60Hz display.
-  const zx::duration kDefaultFrameInterval = zx::usec(16'667);
-
-  const zx::duration kDefaultPredictionSpan = kDefaultFrameInterval * kDefaultPredictionInfos;
 };
 
 }  // namespace flatland

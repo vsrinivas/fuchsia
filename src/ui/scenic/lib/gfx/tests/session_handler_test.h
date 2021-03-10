@@ -66,8 +66,6 @@ class SessionHandlerTest : public ErrorReportingTest {
                                  std::map<scheduling::PresentId, /*latched_time*/ zx::time>>&
             latched_times,
         scheduling::PresentTimestamps present_times) override {}
-    // |scheduling::SessionUpdater|
-    void OnCpuWorkDone() override {}
 
    private:
     Engine* engine_;

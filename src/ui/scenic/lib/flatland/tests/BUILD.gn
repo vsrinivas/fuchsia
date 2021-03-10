@@ -29,12 +29,10 @@ executable("unittests") {
     "//garnet/public/lib/gtest:gtest",
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/testing/loop_fixture",
     "//src/ui/scenic/lib/flatland",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gmock",
-    "//zircon/system/ulib/fit",
   ]
 }

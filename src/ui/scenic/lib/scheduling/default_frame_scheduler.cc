@@ -238,13 +238,6 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
 
   ++frame_number_;
 
-  // Let all Session Updaters know of the timing of the end of RenderFrame().
-  for (auto updater : session_updaters_) {
-    if (auto locked = updater.lock()) {
-      locked->OnCpuWorkDone();
-    }
-  }
-
   // Schedule next frame if any unhandled presents are left.
   HandleNextFrameRequest();
 }
