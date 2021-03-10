@@ -301,6 +301,7 @@ class Encoder {
 const size_t kMaxTags = 4;  // Legacy from ulib/syslog. Might be worth rethinking.
 // Compiler thinks this is unused even though WriteLogToSocket uses it.
 __UNUSED const char kMessageFieldName[] = "message";
+const char kVerbosityFieldName[] = "verbosity";
 const char kPidFieldName[] = "pid";
 const char kTidFieldName[] = "tid";
 const char kDroppedLogsFieldName[] = "dropped_logs";
@@ -347,6 +348,11 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
                          zx_handle_t socket) {
   // Ensure we have log state
   auto& log_state = LogState::Get();
+  cpp17::optional<int8_t> raw_severity;
+  if ((severity % 0x10) || (severity > 0x60) || (severity < 0x10)) {
+    raw_severity = severity;
+    severity = syslog::LOG_DEBUG;
+  }
   if (log_state.fd() != -1) {
     BeginRecordLegacy(buffer, severity, file_name, line, msg, condition);
     return;
@@ -376,6 +382,10 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
 
   auto dropped_count = GetAndResetDropped();
   record.dropped_count = dropped_count;
+  if (raw_severity) {
+    encoder.AppendArgumentKey(record, SliceFromString(kVerbosityFieldName));
+    encoder.AppendArgumentValue(record, static_cast<int64_t>(raw_severity.value()));
+  }
   if (dropped_count) {
     encoder.AppendArgumentKey(record, SliceFromString(kDroppedLogsFieldName));
     encoder.AppendArgumentValue(record, static_cast<uint64_t>(dropped_count));

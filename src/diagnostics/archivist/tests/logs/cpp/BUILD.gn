@@ -41,3 +41,42 @@ fuchsia_test("test-spec") {
     max_severity = "ERROR"
   }
 }
+
+group("cpp-structured") {
+  testonly = true
+  deps = [ ":cpp-logs-test-structured" ]
+}
+
+executable("logs_integration_structured_cpp_tests") {
+  testonly = true
+
+  sources = [ "logs_tests.cc" ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.logger",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
+    "//sdk/lib/syslog/cpp:backend_fuchsia_compat",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/system/ulib/syslog",
+  ]
+}
+
+fuchsia_component("cpp-logs-test-structured") {
+  testonly = true
+  manifest = "meta/cpp-logs-structured.cmx"
+  deps = [ ":logs_integration_structured_cpp_tests" ]
+}
+
+fuchsia_test("test-spec-structured") {
+  package = "//src/diagnostics/archivist/tests:archivist-integration-tests"
+  component = ":cpp-logs-test-structured"
+  log_settings = {
+    # this test emits trace through error logs to ensure verbosity round-trips correctly
+    max_severity = "ERROR"
+  }
+}

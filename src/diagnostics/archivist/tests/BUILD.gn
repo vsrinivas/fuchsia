@@ -23,6 +23,7 @@ group("tests") {
     "logs-stop",
     "logs-unattributed-sinks",
     "logs/cpp:test-spec",
+    "logs/cpp:test-spec-structured",
     "unified_reader:test-spec",
     "v2:tests",
   ]
@@ -36,6 +37,7 @@ fuchsia_package("archivist-integration-tests") {
     "archive_path",
     "feedback_reader",
     "logs/cpp",
+    "logs/cpp:cpp-structured",
     "unified_reader",
   ]
 }

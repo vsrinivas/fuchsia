@@ -175,7 +175,7 @@ TEST_F(LoggerIntegrationTest, ListenFiltered) {
     EXPECT_EQ(sorted_by_severity[i].tags[0], tag);
     EXPECT_EQ(sorted_by_severity[i].severity, expected_severities[i]);
     EXPECT_EQ(sorted_by_severity[i].pid, pid);
-    EXPECT_THAT(sorted_by_severity[i].msg, testing::EndsWith(message));
+    EXPECT_TRUE(sorted_by_severity[i].msg.find(message) != std::string::npos);
   }
 }
 

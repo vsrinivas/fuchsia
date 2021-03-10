@@ -235,6 +235,8 @@ impl Message {
 
         let mut properties = vec![];
         let mut dropped_logs = 0;
+        // Raw value from the client that we don't trust (not yet sanitized)
+        let mut severity_untrusted: Option<i64> = None;
         for a in record.arguments {
             let label = LogsField::from(a.name);
 
@@ -252,24 +254,50 @@ impl Message {
                     }
                 }?
             } else {
-                properties.push(match a.value {
-                    Value::SignedInt(v) => LogsProperty::Int(label, v),
-                    Value::UnsignedInt(v) => LogsProperty::Uint(label, v),
-                    Value::Floating(v) => LogsProperty::Double(label, v),
-                    Value::Text(v) => LogsProperty::String(label, v),
-                    ValueUnknown!() => return Err(StreamError::UnrecognizedValue),
-                })
+                if matches!(label, LogsField::Verbosity) {
+                    match a.value {
+                        Value::SignedInt(v) => {
+                            severity_untrusted = Some(v);
+                            Ok(())
+                        }
+                        Value::Text(t) => {
+                            Err(StreamError::ExpectedInteger { value: t, found: "text" })
+                        }
+                        ValueUnknown!() => {
+                            Err(StreamError::ExpectedInteger { value: "".into(), found: "unknown" })
+                        }
+                    }?
+                } else {
+                    properties.push(match a.value {
+                        Value::SignedInt(v) => LogsProperty::Int(label, v),
+                        Value::UnsignedInt(v) => LogsProperty::Uint(label, v),
+                        Value::Floating(v) => LogsProperty::Double(label, v),
+                        Value::Text(v) => LogsProperty::String(label, v),
+                        ValueUnknown!() => return Err(StreamError::UnrecognizedValue),
+                    })
+                }
             }
         }
 
-        Ok(Message::new(
+        let raw_severity = if severity_untrusted.is_some() {
+            let transcoded_i32: i32 = severity_untrusted.unwrap().to_string().parse().unwrap();
+            LegacySeverity::try_from(transcoded_i32)?
+        } else {
+            LegacySeverity::try_from(record.severity).unwrap()
+        };
+        let (severity, verbosity) = raw_severity.for_structured();
+        let mut ret = Message::new(
             record.timestamp,
-            record.severity,
+            severity,
             bytes.len(),
             dropped_logs,
             source,
             LogsHierarchy::new("root", properties, vec![]),
-        ))
+        );
+        if severity_untrusted.is_some() && verbosity.is_some() {
+            ret.set_legacy_verbosity(verbosity.unwrap())
+        }
+        Ok(ret)
     }
 
     /// The message's severity.
