@@ -16,16 +16,16 @@ use {
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum ParseUpdateModeError {
-    #[error("while opening the file: {0}")]
-    OpenFile(#[from] io_util::node::OpenError),
+    #[error("while opening the file")]
+    OpenFile(#[source] io_util::node::OpenError),
 
-    #[error("while reading the file: {0}")]
-    ReadFile(#[from] io_util::file::ReadError),
+    #[error("while reading the file")]
+    ReadFile(#[source] io_util::file::ReadError),
 
-    #[error("while deserializing the json: {0}")]
-    Deserialize(#[from] serde_json::Error),
+    #[error("while deserializing: '{0:?}'")]
+    Deserialize(String, #[source] serde_json::Error),
 
-    #[error("update mode not supported: {0}")]
+    #[error("update mode not supported: '{0}'")]
     UpdateModeNotSupported(String),
 }
 
@@ -83,10 +83,15 @@ pub(crate) async fn update_mode(
     }
 
     // Read the update-mode file.
-    let contents = io_util::file::read_to_string(&fopen_res?).await?;
+    let contents =
+        io_util::file::read_to_string(&fopen_res.map_err(ParseUpdateModeError::OpenFile)?)
+            .await
+            .map_err(ParseUpdateModeError::ReadFile)?;
 
     // Parse the json string to extract UpdateMode.
-    match serde_json::from_str(&contents)? {
+    match serde_json::from_str(&contents)
+        .map_err(|e| ParseUpdateModeError::Deserialize(contents, e))?
+    {
         UpdateModeFile::Version1 { update_mode } => update_mode.parse().map(Some),
     }
 }
@@ -167,6 +172,9 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn parse_update_mode_fail_deserialize() {
         let p = TestUpdatePackage::new().add_file("update-mode", "oh no! this isn't json.").await;
-        assert_matches!(p.update_mode().await, Err(ParseUpdateModeError::Deserialize(_)));
+        assert_matches!(
+            p.update_mode().await,
+            Err(ParseUpdateModeError::Deserialize(s,_)) if s == "oh no! this isn't json."
+        );
     }
 }

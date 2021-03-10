@@ -72,7 +72,8 @@ impl UpdatePackage {
         board::verify_board(&self.proxy, contents).await
     }
 
-    /// Parses the update-mode file to obtain update mode.
+    /// Parses the update-mode file to obtain update mode. Returns `Ok(None)` if the update-mode
+    /// file is not present in the update package.
     pub async fn update_mode(&self) -> Result<Option<UpdateMode>, ParseUpdateModeError> {
         update_mode::update_mode(&self.proxy).await
     }

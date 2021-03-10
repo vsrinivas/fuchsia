@@ -19,11 +19,11 @@ use {
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum ReadVersionError {
-    #[error("while opening the file: {0}")]
-    OpenFile(#[from] io_util::node::OpenError),
+    #[error("while opening the file")]
+    OpenFile(#[source] io_util::node::OpenError),
 
-    #[error("while reading the file: {0}")]
-    ReadFile(#[from] io_util::file::ReadError),
+    #[error("while reading the file")]
+    ReadFile(#[source] io_util::file::ReadError),
 }
 
 struct SystemVersionVisitor;
@@ -128,8 +128,10 @@ pub(crate) async fn read_version(
 ) -> Result<SystemVersion, ReadVersionError> {
     let file =
         io_util::directory::open_file(proxy, "version", fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .await?;
-    let version_str = io_util::file::read_to_string(&file).await?;
+            .await
+            .map_err(ReadVersionError::OpenFile)?;
+    let version_str =
+        io_util::file::read_to_string(&file).await.map_err(ReadVersionError::ReadFile)?;
 
     Ok(SystemVersion::from_str(&version_str).unwrap())
 }

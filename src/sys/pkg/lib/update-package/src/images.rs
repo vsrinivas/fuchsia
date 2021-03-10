@@ -13,8 +13,8 @@ use {
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum ResolveImagesError {
-    #[error("while listing files in the update package: {0}")]
-    ListCandidates(#[from] files_async::Error),
+    #[error("while listing files in the update package")]
+    ListCandidates(#[source] files_async::Error),
 }
 
 /// An error encountered while verifying an [`UnverifiedImageList`].
@@ -74,7 +74,7 @@ impl UnverifiedImageList {
 }
 
 async fn list_dir_files(proxy: &DirectoryProxy) -> Result<BTreeSet<String>, ResolveImagesError> {
-    let entries = files_async::readdir(proxy).await?;
+    let entries = files_async::readdir(proxy).await.map_err(ResolveImagesError::ListCandidates)?;
 
     let names = entries
         .into_iter()

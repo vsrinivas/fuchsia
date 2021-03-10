@@ -16,7 +16,7 @@ pub enum ParseEpochError {
     #[error("while reading the file")]
     ReadFile(#[source] io_util::file::ReadError),
 
-    #[error("while deserializing the json")]
+    #[error("while deserializing: `{0:?}`")]
     Deserialize(String, #[source] serde_json::Error),
 }
 

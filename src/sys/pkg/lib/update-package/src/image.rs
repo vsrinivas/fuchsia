@@ -13,10 +13,10 @@ use {
 #[derive(Debug, Error)]
 #[allow(missing_docs)]
 pub enum OpenImageError {
-    #[error("while opening the file: {0}")]
-    OpenFile(#[from] io_util::node::OpenError),
+    #[error("while opening the file")]
+    OpenFile(#[source] io_util::node::OpenError),
 
-    #[error("while calling get_buffer: {0}")]
+    #[error("while calling get_buffer")]
     FidlGetBuffer(#[source] fidl::Error),
 
     #[error("while obtaining vmo of file: {0}")]
@@ -189,7 +189,8 @@ impl ImageClass {
 pub(crate) async fn open(proxy: &DirectoryProxy, image: &Image) -> Result<Buffer, OpenImageError> {
     let file =
         io_util::directory::open_file(proxy, &image.name(), fidl_fuchsia_io::OPEN_RIGHT_READABLE)
-            .await?;
+            .await
+            .map_err(OpenImageError::OpenFile)?;
 
     let (status, buffer) = file
         .get_buffer(fidl_fuchsia_io::VMO_FLAG_READ)

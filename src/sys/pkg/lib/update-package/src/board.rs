@@ -31,9 +31,11 @@ pub(crate) async fn verify_board(
             Ok(file) => Ok(file),
             Err(io_util::node::OpenError::OpenError(Status::NOT_FOUND)) => return Ok(()),
             Err(e) => Err(e),
-        }?;
+        }
+        .map_err(VerifyBoardError::OpenFile)?;
 
-    let contents = io_util::file::read_to_string(&file).await?;
+    let contents =
+        io_util::file::read_to_string(&file).await.map_err(VerifyBoardError::ReadFile)?;
 
     if expected_contents != contents {
         return Err(VerifyBoardError::VerifyContents {
