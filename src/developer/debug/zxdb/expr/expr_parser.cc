@@ -101,6 +101,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kInteger
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kFloat
     {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kStringLiteral
+    {&ExprParser::LiteralPrefix,     nullptr,                      -1},                             // kCharLiteral
     {&ExprParser::BadToken,          nullptr,                      -1},                             // kCommentBlockEnd
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kEquals
     {nullptr,                        &ExprParser::BinaryOpInfix,   kPrecedenceEquality},            // kEquality

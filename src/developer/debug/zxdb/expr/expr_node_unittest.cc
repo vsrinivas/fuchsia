@@ -110,6 +110,37 @@ TEST_F(ExprNodeTest, EvalIdentifier) {
   EXPECT_TRUE(called);
 }
 
+TEST_F(ExprNodeTest, LiteralChar) {
+  ExprToken char_token(ExprTokenType::kCharLiteral, "a", 0);
+  auto char_node = fxl::MakeRefCounted<LiteralExprNode>(char_token);
+
+  // C character.
+  auto c_context = fxl::MakeRefCounted<MockEvalContext>();
+  c_context->set_language(ExprLanguage::kC);
+  bool called = false;
+  char_node->Eval(c_context, [&called](ErrOrValue value) {
+    called = true;
+    EXPECT_FALSE(value.has_error());
+
+    // Should be one byte = 'a'.
+    EXPECT_EQ(1u, value.value().data().size());
+    EXPECT_EQ('a', value.value().GetAs<int8_t>());
+  });
+
+  // Rust character.
+  auto rust_context = fxl::MakeRefCounted<MockEvalContext>();
+  rust_context->set_language(ExprLanguage::kRust);
+  called = false;
+  char_node->Eval(rust_context, [&called](ErrOrValue value) {
+    called = true;
+    EXPECT_FALSE(value.has_error());
+
+    // Should be four bytes.
+    EXPECT_EQ(4u, value.value().data().size());
+    EXPECT_EQ(static_cast<uint32_t>('a'), value.value().GetAs<uint32_t>());
+  });
+}
+
 // This test mocks at the SymbolDataProvider level because most of the dereference logic is in the
 // EvalContextImpl.
 TEST_F(ExprNodeTest, DereferenceReferencePointer) {

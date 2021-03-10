@@ -536,9 +536,9 @@ Err TokenizeCommand(const std::string& input, std::vector<CommandToken>* result)
     // Skip to end of token.
     while (cur < input.size() && !IsTokenSeparator(input[cur])) {
       // Allow quoting.
-      if (auto string_info = DoesBeginStringLiteral(ExprLanguage::kC, input, cur)) {
+      if (auto string_info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, input, cur)) {
         size_t error_location = 0;
-        auto str = ParseStringLiteral(input, *string_info, &cur, &error_location);
+        auto str = ParseStringOrCharLiteral(input, *string_info, &cur, &error_location);
         if (str.has_error())
           return str.err();
 

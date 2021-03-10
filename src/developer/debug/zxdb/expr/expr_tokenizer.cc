@@ -74,17 +74,16 @@ bool ExprTokenizer::Tokenize() {
     if (HandleComment())
       continue;
 
-    // Strings.
-    if (auto string_info = DoesBeginStringLiteral(language_, input_, cur_)) {
+    // Strings and characters.
+    if (auto string_info = DoesBeginStringOrCharLiteral(language_, input_, cur_)) {
       // String literals are handled specially by the string parser.
-      auto result = ParseStringLiteral(input_, *string_info, &cur_, &error_location_);
+      auto result = ParseStringOrCharLiteral(input_, *string_info, &cur_, &error_location_);
       if (result.has_error()) {
         err_ = result.err();
         break;
       }
 
-      tokens_.emplace_back(ExprTokenType::kStringLiteral, result.value(),
-                           string_info->string_begin);
+      tokens_.emplace_back(string_info->token_type, result.value(), string_info->string_begin);
       continue;
     }
 

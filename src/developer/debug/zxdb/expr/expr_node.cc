@@ -433,6 +433,26 @@ void LiteralExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback
       cb(ExprValue(MakeStringLiteralType(token_.value().size() + 1), std::move(string_as_array)));
       break;
     }
+    case ExprTokenType::kCharLiteral: {
+      FX_DCHECK(token_.value().size() == 1);
+      switch (context->GetLanguage()) {
+        case ExprLanguage::kC: {
+          int8_t value8 = token_.value()[0];
+          cb(ExprValue(value8,
+                       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char")));
+          break;
+        }
+        case ExprLanguage::kRust: {
+          // Rust character literals are 32-bit unsigned words even though we only support 8-bit for
+          // now. Promote to 32-bits.
+          uint32_t value32 = token_.value()[0];
+          cb(ExprValue(value32,
+                       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 4, "char")));
+          break;
+        }
+      }
+      break;
+    }
     case ExprTokenType::kTrue: {
       cb(ExprValue(true));
       break;

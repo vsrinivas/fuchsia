@@ -56,6 +56,7 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kInteger,          kLangAll},
     {ExprTokenType::kFloat,            kLangAll},
     {ExprTokenType::kStringLiteral,    kLangAll},
+    {ExprTokenType::kCharLiteral,      kLangAll},
     {ExprTokenType::kCommentBlockEnd,  kLangAll,  "*/"},
     {ExprTokenType::kEquals,           kLangAll,  "="},
     {ExprTokenType::kEquality,         kLangAll,  "=="},

@@ -15,7 +15,8 @@ namespace {
 // A character sequence made of any source character except for parentheses, backslash and spaces.
 bool IsValidCRawStringDelimeter(char c) { return c != '(' && c != ')' && c != '\\' && !isspace(c); }
 
-std::optional<StringLiteralBegin> DoesBeginRawCStringLiteral(std::string_view input, size_t begin) {
+std::optional<StringOrCharLiteralBegin> DoesBeginRawCStringLiteral(std::string_view input,
+                                                                   size_t begin) {
   // This only supports raw string literals and not the various flavors of Unicode prefixes.
   if (input.size() <= begin + 2 || input[begin] != 'R' || input[begin + 1] != '"')
     return std::nullopt;
@@ -29,8 +30,9 @@ std::optional<StringLiteralBegin> DoesBeginRawCStringLiteral(std::string_view in
   if (cur == input.size() || input[cur] != '(')
     return std::nullopt;
 
-  StringLiteralBegin info;
+  StringOrCharLiteralBegin info;
   info.language = ExprLanguage::kC;
+  info.token_type = ExprTokenType::kStringLiteral;
   info.is_raw = true;
   info.raw_marker = input.substr(begin + 2, cur - begin - 2);
   info.string_begin = begin;
@@ -40,8 +42,8 @@ std::optional<StringLiteralBegin> DoesBeginRawCStringLiteral(std::string_view in
 }
 
 // Rust raw strings start with 'r', some number of '#' characters, and a quote.
-std::optional<StringLiteralBegin> DoesBeginRawRustStringLiteral(std::string_view input,
-                                                                size_t begin) {
+std::optional<StringOrCharLiteralBegin> DoesBeginRawRustStringLiteral(std::string_view input,
+                                                                      size_t begin) {
   // This only supports "raw" strings, not "byte" strings. It could be enhanced in the future.
   if (input.size() <= begin + 2 || input[begin] != 'r' || input[begin + 1] != '#')
     return std::nullopt;
@@ -53,8 +55,9 @@ std::optional<StringLiteralBegin> DoesBeginRawRustStringLiteral(std::string_view
   if (cur == input.size() || input[cur] != '"')
     return std::nullopt;
 
-  StringLiteralBegin info;
+  StringOrCharLiteralBegin info;
   info.language = ExprLanguage::kRust;
+  info.token_type = ExprTokenType::kStringLiteral;
   info.is_raw = true;
   info.raw_marker = input.substr(begin + 1, cur - begin - 1);
   info.string_begin = begin;
@@ -66,11 +69,14 @@ std::optional<StringLiteralBegin> DoesBeginRawRustStringLiteral(std::string_view
 // Determines if the current index marks the beginning of the end of the string. If it does,
 // returns the index of the character immediately following the string (which might point to
 // one-past-the-end of the input). Otherwise returns 0.
-size_t EndsStringLiteral(std::string_view input, const StringLiteralBegin& info, size_t cur) {
+size_t EndsStringOrCharLiteral(std::string_view input, const StringOrCharLiteralBegin& info,
+                               size_t cur) {
   FX_DCHECK(cur < input.size());
 
   if (!info.is_raw) {
-    if (input[cur] == '"')
+    if (info.token_type == ExprTokenType::kStringLiteral && input[cur] == '"')
+      return cur + 1;
+    if (info.token_type == ExprTokenType::kCharLiteral && input[cur] == '\'')
       return cur + 1;
     return 0;
   }
@@ -100,7 +106,7 @@ bool IsOctalDigit(char c) { return c >= '0' && c <= '7'; }
 
 // See HandleEscaped() below for the parameter description. |*cur| should point to the first hex
 // digit.
-Err HandleHexEscaped(std::string_view input, const StringLiteralBegin& info, size_t* cur,
+Err HandleHexEscaped(std::string_view input, const StringOrCharLiteralBegin& info, size_t* cur,
                      size_t* error_location, std::string* result) {
   if (!IsHexDigit(input[*cur])) {
     *error_location = *cur;
@@ -139,7 +145,7 @@ Err HandleHexEscaped(std::string_view input, const StringLiteralBegin& info, siz
 
 // See HandleEscaped() below for the parameter description. |*cur| should point to the first octal
 // digit.
-Err HandleOctalEscaped(std::string_view input, const StringLiteralBegin& info, size_t* cur,
+Err HandleOctalEscaped(std::string_view input, const StringOrCharLiteralBegin& info, size_t* cur,
                        size_t* error_location, std::string* result) {
   if (!IsOctalDigit(input[*cur])) {
     *error_location = *cur;
@@ -164,7 +170,7 @@ Err HandleOctalEscaped(std::string_view input, const StringLiteralBegin& info, s
 
 // On input, |*cur| should point to a valid character in |input| immediately following a backslash.
 // On success, |*cur| will be updated to point to the character immediately following the escape.
-Err HandleEscaped(std::string_view input, const StringLiteralBegin& info, size_t* cur,
+Err HandleEscaped(std::string_view input, const StringOrCharLiteralBegin& info, size_t* cur,
                   size_t* error_location, std::string* result) {
   // Shared C/Rust escape sequences.
   switch (input[*cur]) {
@@ -230,16 +236,25 @@ Err HandleEscaped(std::string_view input, const StringLiteralBegin& info, size_t
 
 }  // namespace
 
-std::optional<StringLiteralBegin> DoesBeginStringLiteral(ExprLanguage lang, std::string_view input,
-                                                         size_t cur) {
+std::optional<StringOrCharLiteralBegin> DoesBeginStringOrCharLiteral(ExprLanguage lang,
+                                                                     std::string_view input,
+                                                                     size_t cur) {
   if (cur >= input.size())
     return std::nullopt;  // No room.
 
-  StringLiteralBegin info;
+  StringOrCharLiteralBegin info;
   info.language = lang;
 
   if (input[cur] == '"') {
     // Regular literal string. Leave the raw string marker empty.
+    info.token_type = ExprTokenType::kStringLiteral;
+    info.string_begin = cur;
+    info.contents_begin = cur + 1;
+    return info;
+  }
+  if (input[cur] == '\'') {
+    // Regular literal character.
+    info.token_type = ExprTokenType::kCharLiteral;
     info.string_begin = cur;
     info.contents_begin = cur + 1;
     return info;
@@ -256,15 +271,21 @@ std::optional<StringLiteralBegin> DoesBeginStringLiteral(ExprLanguage lang, std:
   return std::nullopt;
 }
 
-ErrOr<std::string> ParseStringLiteral(std::string_view input, const StringLiteralBegin& info,
-                                      size_t* in_out_cur, size_t* error_location) {
+ErrOr<std::string> ParseStringOrCharLiteral(std::string_view input,
+                                            const StringOrCharLiteralBegin& info,
+                                            size_t* in_out_cur, size_t* error_location) {
   FX_DCHECK(info.contents_begin <= input.size());
 
   std::string result;
   size_t cur = info.contents_begin;
 
   while (cur < input.size()) {
-    if (size_t end = EndsStringLiteral(input, info, cur)) {
+    if (size_t end = EndsStringOrCharLiteral(input, info, cur)) {
+      if (info.token_type == ExprTokenType::kCharLiteral && result.size() > 1) {
+        // Characters can't have more than one byte.
+        *error_location = cur;
+        return Err("Too much data in character literal.");
+      }
       *in_out_cur = end;
       return result;
     }
@@ -288,6 +309,8 @@ ErrOr<std::string> ParseStringLiteral(std::string_view input, const StringLitera
 
   // Hit the end without an end-of-string.
   *error_location = info.string_begin;
+  if (info.token_type == ExprTokenType::kCharLiteral)
+    return Err("Hit end of input before the end of the character literal.");
   return Err("Hit end of input before the end of the string.");
 }
 

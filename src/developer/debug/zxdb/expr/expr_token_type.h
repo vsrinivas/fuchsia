@@ -18,7 +18,8 @@ enum class ExprTokenType : size_t {
   kComment,          // "// ..." or "/* ... */" (token value will include the //, /*, */).
   kInteger,          // 123, 0x89ab
   kFloat,            // 0.23e12  1.  2.3f  (never including a leading sign).
-  kStringLiteral,    // "foo" (token value will be the decoded contents between the quotes).
+  kStringLiteral,    // "foo" (token value will be the 8-bit decoded contents between the quotes).
+  kCharLiteral,      // 'a' (8-bit char literal, decoded char will be in Token::value_[0]).
   kCommentBlockEnd,  // */ (emitted only when no opening comment token is found)
   kEquals,           // =
   kEquality,         // ==

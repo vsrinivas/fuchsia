@@ -12,54 +12,57 @@ namespace {
 
 ErrOr<std::string> Parse(ExprLanguage lang, std::string_view input, size_t* in_out_cur,
                          size_t* error_location) {
-  std::optional<StringLiteralBegin> info = DoesBeginStringLiteral(lang, input, *in_out_cur);
+  std::optional<StringOrCharLiteralBegin> info =
+      DoesBeginStringOrCharLiteral(lang, input, *in_out_cur);
   if (!info)
     return Err("Test harness says this does not begin a string.");
 
-  return ParseStringLiteral(input, *info, in_out_cur, error_location);
+  return ParseStringOrCharLiteral(input, *info, in_out_cur, error_location);
 }
 
 }  // namespace
 
 TEST(ParseString, DoesBeginStringLiteral_C) {
-  std::optional<StringLiteralBegin> info = DoesBeginStringLiteral(ExprLanguage::kC, "", 0);
+  std::optional<StringOrCharLiteralBegin> info =
+      DoesBeginStringOrCharLiteral(ExprLanguage::kC, "", 0);
   EXPECT_FALSE(info);
 
-  info = DoesBeginStringLiteral(ExprLanguage::kC, "hello", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, "hello", 0);
   EXPECT_FALSE(info);
 
-  info = DoesBeginStringLiteral(ExprLanguage::kC, "\"", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, "\"", 0);
   ASSERT_TRUE(info);
+  EXPECT_EQ(ExprTokenType::kStringLiteral, info->token_type);
   EXPECT_FALSE(info->is_raw);
   EXPECT_EQ(0u, info->string_begin);
   EXPECT_EQ(1u, info->contents_begin);
 
-  info = DoesBeginStringLiteral(ExprLanguage::kC, "  \"string", 2);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, "  \"string", 2);
   ASSERT_TRUE(info);
   EXPECT_FALSE(info->is_raw);
   EXPECT_EQ(3u, info->contents_begin);
 
   // Incomplete raw prefix.
-  info = DoesBeginStringLiteral(ExprLanguage::kC, "R\"", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, "R\"", 0);
   EXPECT_FALSE(info);
-  info = DoesBeginStringLiteral(ExprLanguage::kC, "R\"foo \"", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, "R\"foo \"", 0);
   EXPECT_FALSE(info);
 
   // Delimiters can not include some characters.
-  info = DoesBeginStringLiteral(ExprLanguage::kC, "R\" () \"", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, "R\" () \"", 0);
   EXPECT_FALSE(info);
-  info = DoesBeginStringLiteral(ExprLanguage::kC, "R\"\\a()\\a\"", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, "R\"\\a()\\a\"", 0);
   EXPECT_FALSE(info);
 
   // Valid raw prefix.
-  info = DoesBeginStringLiteral(ExprLanguage::kC, "R\"(", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, "R\"(", 0);
   ASSERT_TRUE(info);
   EXPECT_TRUE(info->is_raw);
   EXPECT_EQ("", info->raw_marker);
   EXPECT_EQ(0u, info->string_begin);
   EXPECT_EQ(3u, info->contents_begin);
 
-  info = DoesBeginStringLiteral(ExprLanguage::kC, "  R\"delimiter( ", 2);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kC, "  R\"delimiter( ", 2);
   ASSERT_TRUE(info);
   EXPECT_TRUE(info->is_raw);
   EXPECT_EQ("delimiter", info->raw_marker);
@@ -68,37 +71,39 @@ TEST(ParseString, DoesBeginStringLiteral_C) {
 }
 
 TEST(ParseString, DoesBeginStringLiteral_Rust) {
-  std::optional<StringLiteralBegin> info = DoesBeginStringLiteral(ExprLanguage::kRust, "", 0);
+  std::optional<StringOrCharLiteralBegin> info =
+      DoesBeginStringOrCharLiteral(ExprLanguage::kRust, "", 0);
   EXPECT_FALSE(info);
 
-  info = DoesBeginStringLiteral(ExprLanguage::kRust, "hello", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kRust, "hello", 0);
   EXPECT_FALSE(info);
 
-  info = DoesBeginStringLiteral(ExprLanguage::kRust, "\"", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kRust, "\"", 0);
   ASSERT_TRUE(info);
+  EXPECT_EQ(ExprTokenType::kStringLiteral, info->token_type);
   EXPECT_FALSE(info->is_raw);
   EXPECT_EQ(1u, info->contents_begin);
 
-  info = DoesBeginStringLiteral(ExprLanguage::kRust, "  \"string", 2);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kRust, "  \"string", 2);
   ASSERT_TRUE(info);
   EXPECT_FALSE(info->is_raw);
   EXPECT_EQ(3u, info->contents_begin);
 
   // Incomplete raw prefix.
-  info = DoesBeginStringLiteral(ExprLanguage::kRust, "r#", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kRust, "r#", 0);
   EXPECT_FALSE(info);
-  info = DoesBeginStringLiteral(ExprLanguage::kRust, "r#### ", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kRust, "r#### ", 0);
   EXPECT_FALSE(info);
 
   // Valid raw prefix.
-  info = DoesBeginStringLiteral(ExprLanguage::kRust, "r#\"", 0);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kRust, "r#\"", 0);
   ASSERT_TRUE(info);
   EXPECT_TRUE(info->is_raw);
   EXPECT_EQ("#", info->raw_marker);
   EXPECT_EQ(0u, info->string_begin);
   EXPECT_EQ(3u, info->contents_begin);
 
-  info = DoesBeginStringLiteral(ExprLanguage::kRust, "  r####\" hello", 2);
+  info = DoesBeginStringOrCharLiteral(ExprLanguage::kRust, "  r####\" hello", 2);
   ASSERT_TRUE(info);
   EXPECT_TRUE(info->is_raw);
   EXPECT_EQ("####", info->raw_marker);
@@ -264,6 +269,55 @@ TEST(ParseString, RawRust) {
   ASSERT_TRUE(result.ok());
   EXPECT_EQ(10u, cur);
   EXPECT_EQ("#\"#", result.value());
+}
+
+TEST(ParseString, Char) {
+  // Normal character begin.
+  std::optional<StringOrCharLiteralBegin> info =
+      DoesBeginStringOrCharLiteral(ExprLanguage::kC, "'a'", 0);
+  EXPECT_TRUE(info);
+  EXPECT_EQ(ExprTokenType::kCharLiteral, info->token_type);
+  EXPECT_FALSE(info->is_raw);
+  EXPECT_EQ(0u, info->string_begin);
+  EXPECT_EQ(1u, info->contents_begin);
+
+  // Normal character parse.
+  size_t cur = 0;
+  size_t error_location = 1234;
+  ErrOr<std::string> result = Parse(ExprLanguage::kRust, "'a'", &cur, &error_location);
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(3u, cur);
+  EXPECT_EQ("a", result.value());
+
+  // Escaped character.
+  cur = 0;
+  result = Parse(ExprLanguage::kRust, R"('\n')", &cur, &error_location);
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(4u, cur);
+  EXPECT_EQ("\n", result.value());
+
+  // Hex escaped character.
+  cur = 0;
+  result = Parse(ExprLanguage::kC, R"('\x01')", &cur, &error_location);
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ(6u, cur);
+  EXPECT_EQ("\x01", result.value());
+
+  // Too long character.
+  cur = 0;
+  result = Parse(ExprLanguage::kC, R"('abc')", &cur, &error_location);
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(0u, cur);
+  EXPECT_EQ(4u, error_location);
+  EXPECT_EQ("Too much data in character literal.", result.err().msg());
+
+  // Unterminated character.
+  cur = 0;
+  result = Parse(ExprLanguage::kC, R"('a)", &cur, &error_location);
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ(0u, cur);
+  EXPECT_EQ(0u, error_location);
+  EXPECT_EQ("Hit end of input before the end of the character literal.", result.err().msg());
 }
 
 }  // namespace zxdb
