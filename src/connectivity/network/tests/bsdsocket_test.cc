@@ -2668,6 +2668,14 @@ TEST_P(IOMethodTest, NullptrFaultSTREAM) {
   doNullPtrIO(client, server, GetParam(), false);
 }
 
+INSTANTIATE_TEST_SUITE_P(IOMethodTests, IOMethodTest,
+                         ::testing::Values(IOMethod::Op::READ, IOMethod::Op::READV,
+                                           IOMethod::Op::RECV, IOMethod::Op::RECVFROM,
+                                           IOMethod::Op::RECVMSG, IOMethod::Op::WRITE,
+                                           IOMethod::Op::WRITEV, IOMethod::Op::SEND,
+                                           IOMethod::Op::SENDTO, IOMethod::Op::SENDMSG),
+                         [](const auto info) { return info.param.IOMethodToString(); });
+
 using connectingIOParams = std::tuple<IOMethod, bool>;
 
 class ConnectingIOTest : public ::testing::TestWithParam<connectingIOParams> {};
