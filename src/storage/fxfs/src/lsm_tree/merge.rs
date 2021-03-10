@@ -510,6 +510,55 @@ impl<
         }
         Ok(())
     }
+
+    /// Advances the iterator to the next item, but will stop querying iterators when a key is
+    /// encountered that is <= |hint|, so it will not necessarily perform a merge with all base
+    /// layers.  This function exists to allow more efficient point and range queries; if only the
+    /// top layer needs to be consulted, you will not pay the price of seeking in lower layers.  If
+    /// new iterators need to be consulted, a search is done using std::cmp::Ord, so the hint should
+    /// be set accordingly i.e. if your keys are range based and you want to search for a key that
+    /// covers, say, 100..200, the hint should be ?..101 so that you find a key that is, say,
+    /// 50..101.  Calling advance after calling advance_with_hint is undefined.
+    pub async fn advance_with_hint(&mut self, hint: &K) -> Result<(), Error> {
+        // Push the iterator for the current item (if we have one) onto the heap.
+        if let Some(mut iterator) = self.item.take_iterator() {
+            iterator.advance().await?;
+            if iterator.is_some() {
+                self.heap.push(iterator);
+            }
+        }
+        // If the lower bound of the next item is > hint, add more iterators.
+        while self.iterators_initialized < self.iterators.len()
+            && (self.heap.is_empty()
+                || self.heap.peek().unwrap().key().cmp_lower_bound(&hint) == Ordering::Greater)
+        {
+            let index = self.iterators_initialized;
+            let iter = &mut self.iterators[index];
+            iter.iter_mut().seek(std::ops::Bound::Included(hint)).await?;
+            iter.set_item_from_iter();
+            if iter.is_some() {
+                self.heap.push(MergeIteratorRef::new(iter));
+            }
+            self.iterators_initialized += 1;
+        }
+        // Call advance to do the merge.
+        self.advance().await
+    }
+
+    /// Positions the iterator on the first item with key >= |key|.  Like advance_with_hint, this
+    /// only calls on iterators that it needs to, so this won't necessarily perform a full merge.
+    /// An Unbounded seek will necessarily involve all iterators.  Calling advance after calling
+    /// seek is undefined; use advance_with_hint (or fix advance so that it works if you need it
+    /// to).
+    pub async fn seek(&mut self, bound: Bound<&K>) -> Result<(), Error> {
+        self.heap.clear();
+        self.iterators_initialized = 0;
+        match bound {
+            Bound::Unbounded => self.advance().await,
+            Bound::Included(key) => self.advance_with_hint(key).await,
+            Bound::Excluded(_) => panic!("Excluded bounds not supported!"),
+        }
+    }
 }
 
 #[cfg(test)]
@@ -525,6 +574,7 @@ mod tests {
         },
         fuchsia_async as fasync,
         rand::Rng,
+        std::ops::Bound,
     };
 
     #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
@@ -963,5 +1013,136 @@ mod tests {
         assert_eq!((key, value), (&TestKey(2..2), &2));
         iter.advance().await.unwrap();
         assert!(iter.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_seek_uses_minimum_number_of_iterators() {
+        let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
+        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(1..1), 2)];
+        skip_lists[0].insert(items[0].clone()).await;
+        skip_lists[1].insert(items[1].clone()).await;
+        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
+        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
+            emit: None,
+            left: Discard,
+            right: Keep,
+        });
+        merger.seek(Bound::Included(&items[0].key)).await.expect("seek failed");
+
+        // Seek should only search in the first skip list, so no merge should take place, and we'll
+        // know if it has because we'll see a different value (2 rather than 1).
+        let ItemRef { key, value } = merger.get().expect("missing item");
+        assert_eq!((key, value), (&items[0].key, &items[0].value));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_advance_with_hint() {
+        let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
+        let items =
+            [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2), Item::new(TestKey(3..3), 3)];
+        skip_lists[0].insert(items[0].clone()).await;
+        skip_lists[0].insert(items[1].clone()).await;
+        skip_lists[1].insert(items[2].clone()).await;
+        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
+        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::EmitLeft);
+        merger.seek(Bound::Included(&items[0].key)).await.expect("seek failed");
+        // This should still find the 2..2 key.
+        merger.advance_with_hint(&items[2].key).await.expect("advance_with_hint failed");
+        let ItemRef { key, value } = merger.get().expect("missing item");
+        assert_eq!((key, value), (&items[1].key, &items[1].value));
+        merger.advance_with_hint(&items[2].key).await.expect("advance_with_hint failed");
+        let ItemRef { key, value } = merger.get().expect("missing item");
+        assert_eq!((key, value), (&items[2].key, &items[2].value));
+        merger.advance_with_hint(&TestKey(4..4)).await.expect("advance_with_hint failed");
+        assert!(merger.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_advance_with_hint_no_more() {
+        let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
+        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
+        skip_lists[0].insert(items[0].clone()).await;
+        skip_lists[1].insert(items[1].clone()).await;
+        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
+        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::EmitLeft);
+        merger.seek(Bound::Included(&items[0].key)).await.expect("seek failed");
+        // This should skip over the 2..2 key.
+        merger.advance_with_hint(&TestKey(100..100)).await.expect("advance_with_hint failed");
+        assert!(merger.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_two_seeks() {
+        let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
+        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
+        skip_lists[0].insert(items[0].clone()).await;
+        skip_lists[1].insert(items[1].clone()).await;
+        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
+        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
+            emit: None,
+            left: Discard,
+            right: Keep,
+        });
+        merger.seek(Bound::Included(&items[1].key)).await.expect("seek failed");
+
+        let ItemRef { key, value } = merger.get().expect("missing item");
+        assert_eq!((key, value), (&items[1].key, &items[1].value));
+
+        merger.seek(Bound::Included(&items[0].key)).await.expect("seek failed");
+
+        let ItemRef { key, value } = merger.get().expect("missing item");
+        assert_eq!((key, value), (&items[0].key, &items[0].value));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_seek_less_than() {
+        let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
+        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
+        skip_lists[0].insert(items[0].clone()).await;
+        skip_lists[1].insert(items[1].clone()).await;
+        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
+        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
+            emit: None,
+            left: Discard,
+            right: Keep,
+        });
+        // Search for a key before 1..1.
+        merger.seek(Bound::Included(&TestKey(0..0))).await.expect("seek failed");
+
+        // This should find the 2..2 key because of our merge function.
+        let ItemRef { key, value } = merger.get().expect("missing item");
+        assert_eq!((key, value), (&items[1].key, &items[1].value));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_seek_to_end() {
+        let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
+        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
+        skip_lists[0].insert(items[0].clone()).await;
+        skip_lists[1].insert(items[1].clone()).await;
+        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
+        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
+            emit: None,
+            left: Discard,
+            right: Keep,
+        });
+        merger.seek(Bound::Included(&TestKey(3..3))).await.expect("seek failed");
+
+        assert!(merger.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_seek_unbounded() {
+        let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
+        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
+        skip_lists[0].insert(items[0].clone()).await;
+        skip_lists[1].insert(items[1].clone()).await;
+        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
+        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::EmitLeft);
+        merger.seek(Bound::Included(&items[1].key)).await.expect("seek failed");
+        merger.seek(Bound::Unbounded).await.expect("seek failed");
+
+        let ItemRef { key, value } = merger.get().expect("missing item");
+        assert_eq!((key, value), (&items[0].key, &items[0].value));
     }
 }
