@@ -7,8 +7,6 @@
 #ifndef ZIRCON_KERNEL_LIB_LOCKUP_DETECTOR_INCLUDE_LIB_LOCKUP_DETECTOR_STATE_H_
 #define ZIRCON_KERNEL_LIB_LOCKUP_DETECTOR_INCLUDE_LIB_LOCKUP_DETECTOR_STATE_H_
 
-#include <lib/relaxed_atomic.h>
-
 #include <kernel/event_limiter.h>
 #include <kernel/timer.h>
 #include <ktl/atomic.h>
@@ -73,21 +71,22 @@ struct LockupDetectorState {
   //
   /////////////////////////////////////////////////////////////////////////////
   struct {
-    // The name of the active critical section, if any.  May be nullptr.
-    ktl::atomic<const char*> name{nullptr};
-
-    // The time (tick count) at which the CPU entered the critical section.
-    ktl::atomic<zx_ticks_t> begin_ticks{0};
-
-    // State variable used to de-dupe the critical section lockup events for the
-    // purposes of updating kcounters.
-    zx_ticks_t last_counted_begin_ticks{0};
-
     // Critical sections may be nested, so lockup_begin and lockup_end (called
     // as code enters and exits critical sections) must keep track of the depth.
     // This variable is only ever accessed by the code entering and exiting the
     // CS, and always on the same CPU, so there is no need for it to be atomic.
+    // However, because an interrupt may fire as a thread enters a critical
+    // section and the interrupt handler itself my enter a critical section,
+    // compiler fences must be used when accessing to ensure that compiler
+    // reordering does not lead to problem.
+    //
+    // Accessed only by this CPU.
     uint32_t depth = 0;
+
+    // The name of the active critical section, if any.  May be nullptr.
+    //
+    // Accessed by both this CPU and observers.
+    ktl::atomic<const char*> name{nullptr};
 
     // The worst case CS time ever observed by the critical section thread as it
     // exits the critical section. This variable is written only by the CPU
@@ -96,21 +95,43 @@ struct LockupDetectorState {
     // reports the worst cast time via this variable, only the threads
     // performing heartbeat sanity checks will ever report issues (via an OOPS)
     // as a result of a new worst case value.
+    //
+    // Accessed by both this CPU and observers.
     ktl::atomic<zx_ticks_t> worst_case_ticks{0};
+
+    // The time (tick count) at which the CPU entered the critical section.
+    //
+    // This field is used to establish Release-Acquire ordering of changes made
+    // by critical section threads and observed by observers.
+    //
+    // Accessed by both this CPU and observers.
+    ktl::atomic<zx_ticks_t> begin_ticks{0};
+
+    // State variable used to de-dupe the critical section lockup events for the
+    // purposes of updating kcounters.
+    //
+    // Accessed only by observers.
+    zx_ticks_t last_counted_begin_ticks{0};
 
     // The largest worst case value ever _reported_ by a heartbeat checker.
     // This variable is only ever used by the current checker, and the
     // acquire/release semantics of the current_checker_id variable should
     // ensure that it is coherent on architectures with weak memory ordering.
+    //
+    // Accessed only by observers.
     zx_ticks_t reported_worst_case_ticks{0};
 
     // The alert limiter used to rate limit warnings printed for ongoing
     // critical section times (eg; CPUs which enter critical sections, but don't
     // exit them for so long that a heartbeat checker notices them)
+    //
+    // Accessed only by observers.
     EventLimiter<ZX_SEC(1)> ongoing_call_alert_limiter;
 
     // The alert limiter used to rate limit warnings printed when the heartbeat
     // monitor notices new, unreported, worst case values.
+    //
+    // Accessed only by observers.
     EventLimiter<ZX_SEC(1)> worst_case_alert_limiter;
   } critical_section;
 };
