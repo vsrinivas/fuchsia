@@ -38,7 +38,12 @@ namespace fake_display {
 
 namespace {
 // List of supported pixel formats
-zx_pixel_format_t kSupportedPixelFormats[] = {ZX_PIXEL_FORMAT_RGB_x888};
+zx_pixel_format_t kSupportedPixelFormats[] = {
+  ZX_PIXEL_FORMAT_RGB_x888,
+  ZX_PIXEL_FORMAT_ARGB_8888,
+  ZX_PIXEL_FORMAT_BGR_888x,
+  ZX_PIXEL_FORMAT_ABGR_8888
+};
 // Arbitrary dimensions - the same as astro.
 constexpr uint32_t kWidth = 1024;
 constexpr uint32_t kHeight = 600;
@@ -97,6 +102,10 @@ static bool IsAcceptableImageType(uint32_t image_type) {
   return image_type == IMAGE_TYPE_PREFERRED_SCANOUT || image_type == IMAGE_TYPE_SIMPLE;
 }
 
+static bool IsAcceptablePixelFormat(zx_pixel_format_t pixel_format) {
+  return true;
+}
+
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 zx_status_t FakeDisplay::DisplayControllerImplImportImage(image_t* image,
                                                           zx_unowned_handle_t handle,
@@ -113,7 +122,7 @@ zx_status_t FakeDisplay::DisplayControllerImplImportImage(image_t* image,
     return ZX_ERR_INVALID_ARGS;
   }
 
-  if (image->pixel_format != kSupportedPixelFormats[0]) {
+  if (!IsAcceptablePixelFormat(image->pixel_format)) {
     DISP_INFO("Pixel format is unsupported (%u).\n", image->pixel_format);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -240,37 +249,45 @@ zx_status_t FakeDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.ram_domain_supported = true;
   buffer_constraints.cpu_domain_supported = true;
   buffer_constraints.inaccessible_domain_supported = true;
-  constraints.image_format_constraints_count = 1;
-  fuchsia_sysmem_ImageFormatConstraints& image_constraints =
-      constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-  image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
-  if (config->type == IMAGE_TYPE_CAPTURE) {
-    image_constraints.min_coded_width = kWidth;
-    image_constraints.max_coded_width = kWidth;
-    image_constraints.min_coded_height = kHeight;
-    image_constraints.max_coded_height = kHeight;
-    image_constraints.min_bytes_per_row = kWidth * 4;
-    image_constraints.max_bytes_per_row = kWidth * 4;
-    image_constraints.max_coded_width_times_coded_height = kWidth * kHeight;
-  } else {
-    image_constraints.min_coded_width = 0;
-    image_constraints.max_coded_width = 0xffffffff;
-    image_constraints.min_coded_height = 0;
-    image_constraints.max_coded_height = 0xffffffff;
-    image_constraints.min_bytes_per_row = 0;
-    image_constraints.max_bytes_per_row = 0xffffffff;
-    image_constraints.max_coded_width_times_coded_height = 0xffffffff;
-  }
+  constraints.image_format_constraints_count = 4;
+  for (size_t i = 0; i < constraints.image_format_constraints_count; i++) {
+    fuchsia_sysmem_ImageFormatConstraints& image_constraints =
+        constraints.image_format_constraints[i];
+    image_constraints.pixel_format.type =
+        i & 0b01 ? fuchsia_sysmem_PixelFormatType_R8G8B8A8
+                 : fuchsia_sysmem_PixelFormatType_BGRA32;
+    image_constraints.pixel_format.has_format_modifier = true;
+    image_constraints.pixel_format.format_modifier.value =
+        i & 0b10 ? fuchsia_sysmem_FORMAT_MODIFIER_LINEAR
+                 : fuchsia_sysmem_FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL;
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
+    if (config->type == IMAGE_TYPE_CAPTURE) {
+      image_constraints.min_coded_width = kWidth;
+      image_constraints.max_coded_width = kWidth;
+      image_constraints.min_coded_height = kHeight;
+      image_constraints.max_coded_height = kHeight;
+      image_constraints.min_bytes_per_row = kWidth * 4;
+      image_constraints.max_bytes_per_row = kWidth * 4;
+      image_constraints.max_coded_width_times_coded_height = kWidth * kHeight;
+    } else {
+      image_constraints.min_coded_width = 0;
+      image_constraints.max_coded_width = 0xffffffff;
+      image_constraints.min_coded_height = 0;
+      image_constraints.max_coded_height = 0xffffffff;
+      image_constraints.min_bytes_per_row = 0;
+      image_constraints.max_bytes_per_row = 0xffffffff;
+      image_constraints.max_coded_width_times_coded_height = 0xffffffff;
+    }
+    image_constraints.layers = 1;
+    image_constraints.coded_width_divisor = 1;
+    image_constraints.coded_height_divisor = 1;
+    image_constraints.bytes_per_row_divisor = 1;
+    image_constraints.start_offset_divisor = 1;
+    image_constraints.display_width_divisor = 1;
+    image_constraints.display_height_divisor = 1;
 
-  image_constraints.layers = 1;
-  image_constraints.coded_width_divisor = 1;
-  image_constraints.coded_height_divisor = 1;
-  image_constraints.bytes_per_row_divisor = 1;
-  image_constraints.start_offset_divisor = 1;
-  image_constraints.display_width_divisor = 1;
-  image_constraints.display_height_divisor = 1;
+  }
 
   zx_status_t status =
       fuchsia_sysmem_BufferCollectionSetConstraints(collection, true, &constraints);
