@@ -15,13 +15,11 @@ import 'ermine_driver.dart';
 void main() {
   Sl4f sl4f;
   ErmineDriver ermine;
-  // TODO(http://fxbug.dev/69242): Uncomment once text injection is fixed.
-  //Input input;
+  Input input;
 
   // USB HID code for ENTER key.
   // See <https://www.usb.org/sites/default/files/documents/hut1_12v2.pdf>
-  // TODO(http://fxbug.dev/69242): Uncomment once text injection is fixed.
-  //const kEnterKey = 40;
+  const kEnterKey = 40;
 
   setUpAll(() async {
     sl4f = Sl4f.fromEnvironment();
@@ -30,8 +28,7 @@ void main() {
     ermine = ErmineDriver(sl4f);
     await ermine.setUp();
 
-    // TODO(http://fxbug.dev/69242): Uncomment once text injection is fixed.
-    // input = Input(sl4f);
+    input = Input(sl4f);
   });
 
   tearDownAll(() async {
@@ -107,12 +104,10 @@ void main() {
     print('Closed second instance');
 
     // Close the third instance by injecting 'exit\n'.
-    // TODO(http://fxbug.dev/69242): Uncomment once text injection is fixed.
-    // await Future.delayed(Duration(seconds: 1));
-    // await input.text('exit');
-    // await input.keyPress(kEnterKey);
-    // await Future.delayed(Duration(seconds: 1));
-    await ermine.driver.requestData('close');
+    await Future.delayed(Duration(seconds: 1));
+    await input.text('exit');
+    await input.keyPress(kEnterKey);
+    await Future.delayed(Duration(seconds: 1));
     await _waitForViews(componentUrl, 0);
     expect(await _waitForInstances(componentUrl, 0), isTrue);
 
