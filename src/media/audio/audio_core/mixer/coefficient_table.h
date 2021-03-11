@@ -64,7 +64,7 @@ class CoefficientTable {
   auto begin() { return table_.begin(); }
   auto end() { return table_.end(); }
 
-  ssize_t PhysicalIndex(int64_t offset) const {
+  size_t PhysicalIndex(int64_t offset) const {
     auto integer = offset >> frac_bits_;
     auto fraction = offset & frac_mask_;
     return fraction * stride_ + integer;

@@ -191,9 +191,9 @@ fit::result<zx::time, zx_status_t> ReferenceTimeFromReferenceTime(const zx::cloc
 }
 
 affine::Transform ToAffineTransform(TimelineFunction& tl_function) {
-  return affine::Transform(
-      tl_function.reference_time(), tl_function.subject_time(),
-      affine::Ratio(tl_function.subject_delta(), tl_function.reference_delta()));
+  return affine::Transform(tl_function.reference_time(), tl_function.subject_time(),
+                           affine::Ratio(static_cast<uint32_t>(tl_function.subject_delta()),
+                                         static_cast<uint32_t>(tl_function.reference_delta())));
 }
 
 TimelineFunction ToTimelineFunction(affine::Transform affine_trans) {

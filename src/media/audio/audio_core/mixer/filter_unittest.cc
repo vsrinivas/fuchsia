@@ -312,7 +312,7 @@ TEST(SincFilterTest, ComputeSample) {
   source_rate = 24000u;
   dest_rate = 48000u;
   num_taps = 3;
-  num_frac_bits = 2u;
+  num_frac_bits = 2;
   side_width = (num_taps + 1) << num_frac_bits;
   ValidateSincComputeSample(source_rate, dest_rate, side_width, num_frac_bits);
 

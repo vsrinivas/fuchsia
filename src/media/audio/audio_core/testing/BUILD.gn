@@ -45,9 +45,6 @@ source_set("testing") {
     "//zircon/system/ulib/async-testing",
     "//zircon/system/ulib/audio-proto-utils",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("unittest_bin") {

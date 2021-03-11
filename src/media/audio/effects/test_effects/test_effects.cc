@@ -80,7 +80,7 @@ class TestEffect {
       } else if (effect.action == TEST_EFFECTS_ACTION_ASSIGN) {
         audio_buff_in_out[i] = effect.value;
       } else if (effect.action == TEST_EFFECTS_ACTION_ASSIGN_CONFIG_SIZE) {
-        audio_buff_in_out[i] = config_.size();
+        audio_buff_in_out[i] = static_cast<float>(config_.size());
       } else {
         return false;
       }

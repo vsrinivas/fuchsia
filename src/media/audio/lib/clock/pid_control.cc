@@ -30,7 +30,7 @@ void PidControl::TuneForError(zx::time time_of_error, double error) {
 
   // TODO(fxbug.dev/47778): normalize from 1ns units to 10ns, if accum_error_ becomes so large that
   // lost precision impacts accuracy (as a double, accum_error_ has 54 bits of precision).
-  auto duration = (time_of_error - tune_time_).get();
+  auto duration = static_cast<double>((time_of_error - tune_time_).get());
   tune_time_ = time_of_error;
 
   delta_error_ = (error - current_error_) / duration;

@@ -35,8 +35,9 @@ zx_status_t MessageTransceiver::SendMessage(Message message) {
     return ZX_ERR_NOT_CONNECTED;
   }
 
-  zx_status_t status = channel_.write(0, message.bytes_.data(), message.bytes_.size(),
-                                      message.handles_.data(), message.handles_.size());
+  zx_status_t status =
+      channel_.write(0, message.bytes_.data(), static_cast<uint32_t>(message.bytes_.size()),
+                     message.handles_.data(), static_cast<uint32_t>(message.handles_.size()));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "zx::channel::write failed";
     OnError(status);
@@ -84,8 +85,10 @@ zx_status_t MessageTransceiver::ReadMessage() {
   }
 
   Message message(actual_byte_count, actual_handle_count);
-  status = channel_.read(0, message.bytes_.data(), message.handles_.data(), message.bytes_.size(),
-                         message.handles_.size(), &actual_byte_count, &actual_handle_count);
+  status = channel_.read(0, message.bytes_.data(), message.handles_.data(),
+                         static_cast<uint32_t>(message.bytes_.size()),
+                         static_cast<uint32_t>(message.handles_.size()), &actual_byte_count,
+                         &actual_handle_count);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "zx::channel::read failed";
     OnError(status);

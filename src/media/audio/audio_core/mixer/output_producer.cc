@@ -37,9 +37,11 @@ template <typename DType>
 class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, uint8_t>>> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return std::clamp<int32_t>(round(sample * kFloatToInt8), std::numeric_limits<int8_t>::min(),
-                               std::numeric_limits<int8_t>::max()) +
-           kOffsetInt8ToUint8;
+    return static_cast<uint8_t>(
+        std::clamp<int16_t>(static_cast<int16_t>(round(sample * kFloatToInt8)),
+                            std::numeric_limits<int8_t>::min(),
+                            std::numeric_limits<int8_t>::max()) +
+        kOffsetInt8ToUint8);
   }
 };
 
@@ -47,8 +49,9 @@ template <typename DType>
 class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, int16_t>>> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return std::clamp<int32_t>(round(sample * kFloatToInt16), std::numeric_limits<int16_t>::min(),
-                               std::numeric_limits<int16_t>::max());
+    return static_cast<int16_t>(std::clamp<int32_t>(
+        static_cast<int32_t>(round(sample * kFloatToInt16)), std::numeric_limits<int16_t>::min(),
+        std::numeric_limits<int16_t>::max()));
   }
 };
 
@@ -56,7 +59,8 @@ template <typename DType>
 class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, int32_t>>> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return std::clamp<int64_t>(round(sample * kFloatToInt24In32), kMinInt24In32, kMaxInt24In32);
+    return static_cast<int32_t>(std::clamp<int64_t>(
+        static_cast<int64_t>(round(sample * kFloatToInt24In32)), kMinInt24In32, kMaxInt24In32));
   }
 };
 

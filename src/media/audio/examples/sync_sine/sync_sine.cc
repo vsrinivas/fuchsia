@@ -16,19 +16,19 @@
 
 namespace {
 // Set the audio stream_type to: 44.1 kHz, stereo, 16-bit LPCM (signed integer).
-constexpr double kFrameRate = 44100.0;
+constexpr uint32_t kFrameRate = 44100;
 constexpr size_t kNumChannels = 2;
 
 // For this example, feed audio to the system in payloads of 10 milliseconds.
 constexpr size_t kMSecsPerPayload = 10;
-constexpr size_t kFramesPerPayload = kMSecsPerPayload * kFrameRate / 1000;
+constexpr size_t kFramesPerPayload = kFrameRate * kMSecsPerPayload / 1000;
 constexpr size_t kTotalMappingFrames = kFrameRate;
 constexpr size_t kNumPayloads = kTotalMappingFrames / kFramesPerPayload;
 
 // Play a sine wave that is 439 Hz, at 1/8 of full-scale volume.
 constexpr double kFrequency = 439.0;
 constexpr double kAmplitudeScalar = 0.125;
-constexpr double kFrequencyScalar = 2 * M_PI * kFrequency / kFrameRate;
+constexpr double kFrequencyScalar = 2 * M_PI * kFrequency / static_cast<double>(kFrameRate);
 
 // Loop for 2 seconds.
 constexpr size_t kTotalDurationSecs = 2;
@@ -97,15 +97,15 @@ zx_status_t MediaApp::Run() {
 
   if ((min_lead_time > 0) && verbose_) {
     printf("Adjusted high and low water marks by min lead time %.3lfms\n",
-           min_lead_time / 1000000.0);
+           static_cast<double>(min_lead_time) / 1000000.0);
 
     printf("Low water mark: %ldms\n", low_water_mark_ / 1000000);
     printf("High water mark: %ldms\n", high_water_mark_ / 1000000);
   }
 
   constexpr zx_duration_t nsec_per_payload = ZX_MSEC(kMSecsPerPayload);
-  uint32_t initial_payloads = std::min<uint32_t>(
-      (high_water_mark_ + nsec_per_payload - 1) / nsec_per_payload, kNumPacketsToSend);
+  uint32_t initial_payloads = static_cast<uint32_t>(std::min<size_t>(
+      (high_water_mark_ + nsec_per_payload - 1) / nsec_per_payload, kNumPacketsToSend));
 
   while (num_packets_sent_ < initial_payloads) {
     status = SendAudioPacket(CreateAudioPacket(num_packets_sent_));
@@ -232,7 +232,8 @@ zx_status_t MediaApp::CreateMemoryMapping() {
 // Write a sine wave into our audio buffer. We'll continuously loop/resubmit it.
 void MediaApp::WriteAudioIntoBuffer(void* buffer, size_t num_frames) {
   for (size_t frame = 0; frame < num_frames; ++frame) {
-    float val = kAmplitudeScalar * sin(static_cast<double>(frame) * kFrequencyScalar);
+    auto val =
+        static_cast<float>(kAmplitudeScalar * sin(static_cast<double>(frame) * kFrequencyScalar));
 
     for (size_t chan_num = 0; chan_num < kNumChannels; ++chan_num) {
       if (use_float_) {
@@ -300,8 +301,8 @@ zx_status_t MediaApp::RefillBuffer() {
   }
 
   const zx_duration_t time_data_needed = now - std::min(now, clock_start_time_) + high_water_mark_;
-  size_t num_payloads_needed =
-      ceil(static_cast<float>(time_data_needed) / ZX_MSEC(kMSecsPerPayload));
+  auto num_payloads_needed = static_cast<size_t>(ceil(
+      static_cast<double>(time_data_needed) / static_cast<double>(kMSecsPerPayload * 1'000'000.0)));
   num_payloads_needed = std::min(kNumPacketsToSend, num_payloads_needed);
 
   if (verbose_) {

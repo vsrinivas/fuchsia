@@ -62,7 +62,7 @@ class Mixer {
 
     // From current values, advance the long-running positions by dest_frames.
     // "Advancing" negatively should be infrequent, but we support it.
-    void AdvanceRunningPositionsBy(int32_t dest_frames, Bookkeeping& bookkeeping) {
+    void AdvanceRunningPositionsBy(int64_t dest_frames, Bookkeeping& bookkeeping) {
       int64_t frac_source_frame_delta = bookkeeping.step_size.raw_value() * dest_frames;
 
       if (bookkeeping.rate_modulo()) {

@@ -27,9 +27,6 @@ source_set("effects_loader") {
     "//src/media/audio/lib/timeline",
     "//zircon/system/ulib/trace",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  public_configs = [ "//build/config:Wno-conversion" ]
 }
 
 executable("test") {
@@ -48,9 +45,6 @@ executable("test") {
     "testing",
     "//src/lib/fxl/test:gtest_main",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 fuchsia_unittest_package("audio_effects_loader_unittests") {

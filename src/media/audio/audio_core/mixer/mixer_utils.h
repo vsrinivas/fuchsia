@@ -41,7 +41,8 @@ class SampleNormalizer<SourceSampleType,
                        typename std::enable_if_t<std::is_same_v<SourceSampleType, uint8_t>>> {
  public:
   static inline float Read(const SourceSampleType* source_ptr) {
-    return kInt8ToFloat * (static_cast<int32_t>(*source_ptr) - kOffsetInt8ToUint8);
+    return kInt8ToFloat *
+           static_cast<float>(static_cast<int32_t>(*source_ptr) - kOffsetInt8ToUint8);
   }
 };
 
@@ -59,7 +60,7 @@ class SampleNormalizer<SourceSampleType,
                        typename std::enable_if_t<std::is_same_v<SourceSampleType, int32_t>>> {
  public:
   static inline float Read(const SourceSampleType* source_ptr) {
-    return kInt24In32ToFloat * (*source_ptr);
+    return static_cast<float>(kInt24In32ToFloat * (*source_ptr));
   }
 };
 
@@ -147,8 +148,8 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
  public:
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
     return (dest_chan < 2 ? SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan)
-                          : 0.5 * (SampleNormalizer<SourceSampleType>::Read(source_ptr) +
-                                   SampleNormalizer<SourceSampleType>::Read(source_ptr + 1)));
+                          : 0.5f * (SampleNormalizer<SourceSampleType>::Read(source_ptr) +
+                                    SampleNormalizer<SourceSampleType>::Read(source_ptr + 1)));
   }
 };
 
@@ -180,8 +181,12 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
 };
 
 // 3->2 mapper
-constexpr float kOnePlusRootHalf = M_SQRT1_2 + 1;                  // 1.70710678118654752
-constexpr float kInverseOnePlusRootHalf = 1.0 / kOnePlusRootHalf;  // 0.58578643762690495
+constexpr auto kOnePlusRootHalf = static_cast<float>(M_SQRT1_2 + 1.0);
+// 1.70710678118654752
+constexpr auto kInverseOnePlusRootHalf = static_cast<float>(1.0 / (M_SQRT1_2 + 1.0));
+// 0.58578643762690495
+constexpr auto kInverseRootTwoPlusOne = static_cast<float>(1.0 / (M_SQRT2 + 1.0));
+
 template <typename SourceSampleType, size_t SourceChanCount, size_t DestChanCount>
 class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
                    typename std::enable_if_t<((SourceChanCount == 3) && (DestChanCount == 2))>> {
@@ -190,12 +195,12 @@ class SourceReader<SourceSampleType, SourceChanCount, DestChanCount,
   // in each 3-chan source frame and 2-chan dest frame, we mix source chans 0+2 to dest chan 0, and
   // source chans 1+2 to dest chan 1. Because we mix it equally into two dest channels, we multiply
   // source chan2 by sqr(.5) to maintain an equal-power contribution compared to source chans 0&1.
-  // Finally, normalize both dest chans (divide by max possible value) to keep result within bounds.
+  // Finally, normalize both dest chans (divide by max possible value) to keep result within bounds:
+  // "divide by 1+sqr(0.5)" is optimized to "multiply by kInverseOnePlusRootHalf".
   static inline float Read(const SourceSampleType* source_ptr, size_t dest_chan) {
     return kInverseOnePlusRootHalf *
                SampleNormalizer<SourceSampleType>::Read(source_ptr + dest_chan) +
-           (kInverseOnePlusRootHalf * M_SQRT1_2) *
-               SampleNormalizer<SourceSampleType>::Read(source_ptr + 2);
+           kInverseRootTwoPlusOne * SampleNormalizer<SourceSampleType>::Read(source_ptr + 2);
   }
 };
 
@@ -238,7 +243,7 @@ constexpr float kFramesPerPtsSubframe = 1.0f / (1 << kPtsFractionalBits);
 
 // First-order Linear Interpolation formula (Position-fraction):
 //   out = Pf(S' - S) + S
-inline float LinearInterpolateF(float A, float B, float alpha) { return ((B - A) * alpha) + A; }
+inline float LinearInterpolate(float A, float B, float alpha) { return ((B - A) * alpha) + A; }
 
 //
 // DestMixer

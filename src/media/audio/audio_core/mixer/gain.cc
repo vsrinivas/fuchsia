@@ -61,12 +61,11 @@ void Gain::Advance(int64_t num_frames, const TimelineRate& destination_frames_pe
   float source_gain_db;
 
   if (source_ramp_duration_ > advance_duration) {
-    AScale source_scale =
-        start_source_scale_ + (static_cast<double>(end_source_scale_ - start_source_scale_) *
-                               advance_duration.to_nsecs()) /
-                                  source_ramp_duration_.to_nsecs();
+    auto scale_from_ramp = static_cast<double>(advance_duration.to_nsecs()) /
+                           static_cast<double>(source_ramp_duration_.to_nsecs()) *
+                           (end_source_scale_ - start_source_scale_);
+    AScale source_scale = static_cast<AScale>(scale_from_ramp + start_source_scale_);
     source_gain_db = ScaleToDb(source_scale);
-
   } else {
     source_ramp_duration_ = zx::nsec(0);
     frames_ramped_ = 0;
@@ -112,15 +111,15 @@ void Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
     AScale dest_scale = DbToScale(target_dest_gain_db_);
     AScale start_scale = start_source_scale_ * dest_scale;
     AScale end_scale = end_source_scale_ * dest_scale;
+    const float kInverseRampDuration = 1.0f / static_cast<float>(source_ramp_duration_.to_nsecs());
 
     for (int64_t idx = 0; idx < num_frames; ++idx) {
       zx::duration frame_time = zx::nsec(output_to_local.Scale(frames_ramped_ + idx));
       if (frame_time >= source_ramp_duration_) {
         scale_arr[idx] = end_scale;
       } else {
-        scale_arr[idx] =
-            start_scale + (static_cast<double>(end_scale - start_scale) * frame_time.to_nsecs()) /
-                              source_ramp_duration_.to_nsecs();
+        auto ramp_fraction = static_cast<float>(frame_time.to_nsecs()) * kInverseRampDuration;
+        scale_arr[idx] = start_scale + (end_scale - start_scale) * ramp_fraction;
       }
     }
   }

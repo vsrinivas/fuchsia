@@ -77,15 +77,15 @@ class SincSamplerImpl : public SincSampler {
                   const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr);
 
   static inline void PopulateFramesToChannelStrip(const void* source_void_ptr,
-                                                  int32_t next_source_idx_to_copy,
-                                                  const int32_t frames_needed,
+                                                  int64_t next_source_idx_to_copy,
+                                                  const int64_t frames_needed,
                                                   ChannelStrip* channel_strip,
-                                                  int32_t next_cache_idx_to_fill);
+                                                  int64_t next_cache_idx_to_fill);
 
   uint32_t source_rate_;
   uint32_t dest_rate_;
-  int32_t num_prev_frames_needed_;
-  int32_t total_frames_needed_;
+  int64_t num_prev_frames_needed_;
+  int64_t total_frames_needed_;
 
   PositionManager position_;
   ChannelStrip working_data_;
@@ -98,13 +98,13 @@ class SincSamplerImpl : public SincSampler {
 template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
 inline void
 SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::PopulateFramesToChannelStrip(
-    const void* source_void_ptr, int32_t next_source_idx_to_copy, const int32_t frames_needed,
-    ChannelStrip* channel_strip, int32_t next_cache_idx_to_fill) {
+    const void* source_void_ptr, int64_t next_source_idx_to_copy, const int64_t frames_needed,
+    ChannelStrip* channel_strip, int64_t next_cache_idx_to_fill) {
   using SR = SourceReader<SourceSampleType, SourceChanCount, DestChanCount>;
 
   const SourceSampleType* source_ptr = static_cast<const SourceSampleType*>(source_void_ptr);
 
-  for (int32_t source_idx = next_source_idx_to_copy;
+  for (int64_t source_idx = next_source_idx_to_copy;
        source_idx < next_source_idx_to_copy + frames_needed;
        ++source_idx, ++next_cache_idx_to_fill) {
     auto current_source_ptr = source_ptr + (source_idx * SourceChanCount);
@@ -139,12 +139,12 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
   position_.SetRateValues(info->step_size.raw_value(), info->rate_modulo(), info->denominator(),
                           &info->source_pos_modulo);
 
-  auto next_cache_idx_to_fill = 0u;
+  int64_t next_cache_idx_to_fill = 0;
   auto next_source_idx_to_copy = Ceiling(frac_source_offset - frac_neg_width);
 
   // Do we need previously-cached values?
   if (next_source_idx_to_copy < 0) {
-    next_cache_idx_to_fill = 0 - next_source_idx_to_copy;
+    next_cache_idx_to_fill = -next_source_idx_to_copy;
     next_source_idx_to_copy = 0;
   }
 
@@ -177,8 +177,8 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
     while (position_.FrameCanBeMixed()) {
       // Can't left-shift the potentially-negative result of Ceiling (undefined behavior)
       auto frac_source_offset_to_cache = Ceiling(frac_source_offset - frac_neg_width) * kFracFrame;
-      const auto frames_needed = std::min<int64_t>(source_frames - next_source_idx_to_copy,
-                                                   kDataCacheLength - next_cache_idx_to_fill);
+      const auto frames_needed = std::min(source_frames - next_source_idx_to_copy,
+                                          kDataCacheLength - next_cache_idx_to_fill);
 
       // Bring in as much as a channel strip of source data (while channel/format-converting).
       PopulateFramesToChannelStrip(source_void_ptr, next_source_idx_to_copy, frames_needed,

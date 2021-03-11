@@ -116,8 +116,6 @@ TEST(Position, Position_Basic_Point) { TestBasicPosition(Resampler::SampleAndHol
 // Ensure it doesn't touch other buffer sections, regardless of 'accumulate'
 // flag. Check when supply > demand and vice versa (we already know = works).
 // This test uses fractional lengths/offsets, still with a step_size of ONE.
-// TODO(mpuryear): Change source_frames parameter to be (integer) source_frames,
-// as number of frames was never intended to be fractional.
 TEST(Position, Position_Fractional_Point) {
   auto mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1, 44100, 1, 44100,
                            Resampler::SampleAndHold);

@@ -84,7 +84,7 @@ float VolumeCurve::VolumeToDb(float volume) const {
 
   const auto alpha = (x - x0) / (x1 - x0);
 
-  return mixer::LinearInterpolateF(a, b, alpha);
+  return mixer::LinearInterpolate(a, b, alpha);
 }
 
 float VolumeCurve::DbToVolume(float gain_dbfs) const {
@@ -109,7 +109,7 @@ float VolumeCurve::DbToVolume(float gain_dbfs) const {
 
   const auto alpha = (x - x0) / (x1 - x0);
 
-  return mixer::LinearInterpolateF(a, b, alpha);
+  return mixer::LinearInterpolate(a, b, alpha);
 }
 
 std::optional<std::pair<VolumeCurve::VolumeMapping, VolumeCurve::VolumeMapping>>

@@ -32,7 +32,7 @@ TEST(CoefficientTableTest, IntegralStrideHasPhysicallyContiguousIndicies) {
     auto block_index = fraction * width.Ceiling();
     for (int64_t integer = 0; integer < width.Ceiling(); ++integer) {
       auto fixed_value = (integer << Fixed::Format::FractionalBits) + fraction;
-      ASSERT_EQ(block_index + integer, table.PhysicalIndex(fixed_value));
+      ASSERT_EQ(block_index + integer, static_cast<int64_t>(table.PhysicalIndex(fixed_value)));
     }
   }
 }

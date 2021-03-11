@@ -37,7 +37,7 @@ std::optional<DelayConfig> ParseConfig(std::string_view config_json) {
   return {{delay_frames}};
 }
 
-constexpr uint32_t ComputeDelaySamples(uint16_t channels_in, uint16_t delay_frames) {
+constexpr uint32_t ComputeDelaySamples(uint16_t channels_in, uint32_t delay_frames) {
   return channels_in * delay_frames;
 }
 

@@ -41,9 +41,6 @@ executable("aml-g12-tdm-test-bin") {
     "//zircon/system/ulib/audio-proto-utils",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 executable("aml-g12-tdm-dai-test-bin") {

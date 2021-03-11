@@ -57,9 +57,6 @@ driver_module("virtual_audio_driver") {
     "//zircon/system/ulib/closure-queue",
     "//zircon/system/ulib/fzl",
   ]
-
-  # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 kernel_cmdline("kernel-logging") {

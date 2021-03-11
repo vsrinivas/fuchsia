@@ -47,7 +47,7 @@ template <bool enabled = true>
 class WavWriter {
  public:
   bool Initialize(const char* const file_name, fuchsia::media::AudioSampleFormat sample_format,
-                  uint32_t channel_count, uint32_t frame_rate, uint32_t bits_per_sample);
+                  uint16_t channel_count, uint32_t frame_rate, uint16_t bits_per_sample);
 
   bool Write(void* const buffer, uint32_t num_bytes);
   bool UpdateHeader();
@@ -57,9 +57,9 @@ class WavWriter {
 
  private:
   fuchsia::media::AudioSampleFormat sample_format_;
-  uint32_t channel_count_ = 0;
+  uint16_t channel_count_ = 0;
   uint32_t frame_rate_ = 0;
-  uint32_t bits_per_sample_ = 0;
+  uint16_t bits_per_sample_ = 0;
 
   std::string file_name_;
   fbl::unique_fd file_;
@@ -68,14 +68,15 @@ class WavWriter {
   static std::atomic<uint32_t> instance_count_;
 };
 
+// A near-zero-cost stub implementation, if template parameter enabled is false
 template <>
 class WavWriter<false> {
  public:
-  bool Initialize(const char* const, fuchsia::media::AudioSampleFormat, uint32_t, uint32_t,
-                  uint32_t) {
+  bool Initialize(const char* const file_name, fuchsia::media::AudioSampleFormat sample_format,
+                  uint16_t channel_count, uint32_t frame_rate, uint16_t bits_per_sample) {
     return true;
   };
-  bool Write(void* const, uint32_t) { return true; };
+  bool Write(void* const buffer, uint32_t num_bytes) { return true; };
   bool UpdateHeader() { return true; };
   bool Reset() { return true; };
   bool Close() { return true; };

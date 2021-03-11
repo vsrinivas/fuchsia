@@ -41,7 +41,7 @@ const auto kCaptureFormat =
 // see different values. Also, on some devices, the microphone picks up sounds at
 // a much lower volume than the output. Empirically, the following threshold works
 // well on an Astro device at full volume.
-constexpr double kNoiseFloor = 0.01;
+constexpr float kNoiseFloor = 0.01f;
 
 bool verbose = false;
 zx::time global_start_time_mono;
@@ -90,8 +90,10 @@ class Capture {
           Barrier& barrier)
       : filename_(filename), format_(kCaptureFormat), barrier_(barrier), buffer_(format_, 0) {
     // Create the WAV file writer.
-    CLI_CHECK(wav_writer_.Initialize(filename_.c_str(), format_.sample_format(), format_.channels(),
-                                     format_.frames_per_second(), format_.bytes_per_sample() * 8),
+    CLI_CHECK(wav_writer_.Initialize(filename_.c_str(), format_.sample_format(),
+                                     static_cast<uint16_t>(format_.channels()),
+                                     format_.frames_per_second(),
+                                     static_cast<uint16_t>(format_.bytes_per_sample() * 8)),
               "Could not create " << filename);
 
     // Create the capturer.
@@ -207,7 +209,8 @@ class Capture {
       }
 
       std::vector<char> buffer(num_silent_frames * format_.bytes_per_frame());
-      if (!wav_writer_.Write(reinterpret_cast<void*>(&buffer[0]), buffer.size())) {
+      if (!wav_writer_.Write(reinterpret_cast<void*>(&buffer[0]),
+                             static_cast<uint32_t>(buffer.size()))) {
         printf("First write failed.\n");
         CLI_CHECK(wav_writer_.Close(), "File close failed as well.");
         Shutdown();
@@ -228,7 +231,8 @@ class Capture {
 
     // Append this packet to the WAV file.
     auto first_byte = PayloadStart() + pkt.payload_offset;
-    if (!wav_writer_.Write(reinterpret_cast<void*>(first_byte), pkt.payload_size)) {
+    if (!wav_writer_.Write(reinterpret_cast<void*>(first_byte),
+                           static_cast<uint32_t>(pkt.payload_size))) {
       printf("File write failed. Trying to save any already-written data.\n");
       CLI_CHECK(wav_writer_.Close(), "File close failed as well.");
       Shutdown();

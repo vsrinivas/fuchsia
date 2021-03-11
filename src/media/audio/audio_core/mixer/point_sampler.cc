@@ -140,7 +140,7 @@ inline bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
   // Either way, update all our returned in-out parameters
   frac_source_offset += (frames_to_mix << Fixed::Format::FractionalBits);
   *source_offset_ptr = Fixed::FromRaw(frac_source_offset);
-  *dest_offset_ptr = dest_offset + frames_to_mix;
+  *dest_offset_ptr = dest_offset + static_cast<uint32_t>(frames_to_mix);
 
   // If we passed the last valid source subframe, then we exhausted this source.
   return (frac_source_offset >= frac_source_end);
@@ -253,7 +253,7 @@ inline bool NxNPointSamplerImpl<SourceSampleType>::Mix(
   // Either way, update all our returned in-out parameters
   frac_source_offset += (frames_to_mix << Fixed::Format::FractionalBits);
   *source_offset_ptr = Fixed::FromRaw(frac_source_offset);
-  *dest_offset_ptr = dest_offset + frames_to_mix;
+  *dest_offset_ptr = dest_offset + static_cast<uint32_t>(frames_to_mix);
 
   // If we passed the last valid source subframe, then we exhausted this source.
   return (frac_source_offset >= frac_source_end);

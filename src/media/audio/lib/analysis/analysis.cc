@@ -172,8 +172,8 @@ void RectangularToPolar(const double* reals, const double* imags, uint32_t buf_s
 }
 
 // Perform the Discrete Fourier Transform, converting time-domain reals[] (len buf_size) into
-// freq-domain real_freq[] & imag_freq[], both (buf_size/2 + 1). This is a simple, unoptimized
-// (N^2)/2 implementation.
+// freq-domain real_freq[] & imag_freq[], both of length (buf_size/2 + 1).
+// This is a naive, unoptimized (N^2)/2 implementation.
 void RealDFT(const double* reals, uint32_t buf_size, double* real_freq, double* imag_freq) {
   FX_DCHECK((buf_size & 1u) == 0) << "DFT buffer size must be even";
 
@@ -196,7 +196,7 @@ void RealDFT(const double* reals, uint32_t buf_size, double* real_freq, double* 
 }
 
 // Converts frequency-domain arrays real_freq & imag_freq (len buf_size/2 + 1) into time-domain
-// array reals (len buf_size). This is a simple, unoptimized (N^2)/2 implementation.
+// array reals (len buf_size). This is a naive, unoptimized (N^2)/2 implementation.
 void InverseDFT(double* real_freq, double* imag_freq, uint32_t buf_size, double* reals) {
   uint32_t buf_sz_2 = buf_size >> 1;
 
@@ -261,7 +261,7 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
     reals[frame] = internal::SampleToDouble(slice.SampleAt(frame, 0));
     imags[frame] = 0.0;
   }
-  internal::FFT(reals.data(), imags.data(), buf_size);
+  internal::FFT(reals.data(), imags.data(), static_cast<uint32_t>(buf_size));
 
   // Convert real FFT results from frequency domain into sinusoid amplitudes
   //
@@ -270,14 +270,14 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
   // either add in the identical "negative" (beyond buf_size/2) frequency vals, or multiply by two
   // (with upcoming div-by-buf_size, this becomes div-by-buf_sz_2 for those elements).
   for (uint32_t bin = 1; bin < buf_sz_2; ++bin) {
-    reals[bin] /= buf_sz_2;
-    imags[bin] /= buf_sz_2;
+    reals[bin] /= static_cast<double>(buf_sz_2);
+    imags[bin] /= static_cast<double>(buf_sz_2);
   }
-  // Frequencies 0 & buf_sz_2 are 'half-width' bins, so these bins get reduced
-  reals[0] /= buf_size;         // by half during the normalization process.
-  imags[0] /= buf_size;         // Specifically compared to the other indices,
-  reals[buf_sz_2] /= buf_size;  // we divide the real and imag values by
-  imags[buf_sz_2] /= buf_size;  // buf_size instead of buf_sz_2.
+  // Frequencies 0 & buf_sz_2 are 'half-width' bins, so these bins get reduced by half during
+  reals[0] /= static_cast<double>(buf_size);         // the normalization step. Specifically,
+  imags[0] /= static_cast<double>(buf_size);         // compared to the other indices, we
+  reals[buf_sz_2] /= static_cast<double>(buf_size);  // divide the real and imag values
+  imags[buf_sz_2] /= static_cast<double>(buf_size);  // by buf_size instead of buf_sz_2.
 
   AudioFreqResult out;
 
@@ -315,7 +315,8 @@ AudioBuffer<SampleFormat> MultiplyByTukeyWindow(AudioBufferSlice<SampleFormat> s
   FX_CHECK(alpha <= 1);
 
   auto out = slice.Clone();
-  size_t ramp_length_frames = static_cast<size_t>(alpha * slice.NumFrames() / 2);
+  size_t ramp_length_frames =
+      static_cast<size_t>(alpha * static_cast<double>(slice.NumFrames()) / 2);
 
   for (size_t frame = 0; frame < ramp_length_frames; ++frame) {
     double x = static_cast<double>(frame) / static_cast<double>(ramp_length_frames);

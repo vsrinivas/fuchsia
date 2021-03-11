@@ -52,11 +52,7 @@ constexpr const uint32_t kWavHeaderOverhead =
 // to write any audio samples we are given.
 // This private function assumes the given file_desc is valid.
 zx_status_t WriteNewHeader(int file_desc, fuchsia::media::AudioSampleFormat sample_format,
-                           uint32_t channel_count, uint32_t frame_rate, uint16_t bits_per_sample) {
-  if (channel_count > std::numeric_limits<uint16_t>::max()) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
+                           uint16_t channel_count, uint32_t frame_rate, uint16_t bits_per_sample) {
   lseek(file_desc, 0, SEEK_SET);
   RiffChunkHeader riff_header;
   riff_header.four_cc = RIFF_FOUR_CC;
@@ -154,8 +150,8 @@ std::atomic<uint32_t> WavWriter<true>::instance_count_(0u);
 template <bool enabled>
 bool WavWriter<enabled>::Initialize(const char* const file_name,
                                     fuchsia::media::AudioSampleFormat sample_format,
-                                    uint32_t channel_count, uint32_t frame_rate,
-                                    uint32_t bits_per_sample) {
+                                    uint16_t channel_count, uint32_t frame_rate,
+                                    uint16_t bits_per_sample) {
   // Open our output file.
   uint32_t instance_count = instance_count_.fetch_add(1);
   if (file_name == nullptr || strlen(file_name) == 0) {

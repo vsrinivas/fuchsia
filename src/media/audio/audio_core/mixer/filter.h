@@ -197,9 +197,10 @@ class SincFilter : public Filter {
       return Fixed::FromRaw(kSincFilterSideLength - 1);
     }
 
-    int64_t width =
-        std::ceil(static_cast<double>(kSincFilterSideLength * source_frame_rate) / dest_frame_rate);
-    return Fixed::FromRaw(width - 1);
+    // We want the ceiling of this quotient (thus -1 before integer div, +1 after integer div)
+    // The width returned includes filter index 0, so finally -1 -- this "+1 -1" can be dropped.
+    return Fixed::FromRaw((kSincFilterSideLength * source_frame_rate - 1) / dest_frame_rate
+                          /* + 1 - 1 */);
   }
 
   float ComputeSample(int64_t frac_offset, float* center) override {

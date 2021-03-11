@@ -500,8 +500,9 @@ void MediaApp::InitializeWavWriter() {
   // 24-bit buffers use 32-bit samples (lowest byte zero), and when this particular utility saves to
   // .wav file, we save the entire 32 bits.
   if (file_name_) {
-    wav_writer_initialized_ = wav_writer_.Initialize(file_name_.value().c_str(), sample_format_,
-                                                     num_channels_, frame_rate_, sample_size_ * 8);
+    wav_writer_initialized_ = wav_writer_.Initialize(
+        file_name_.value().c_str(), sample_format_, static_cast<uint16_t>(num_channels_),
+        frame_rate_, static_cast<uint16_t>(sample_size_ * 8));
     CLI_CHECK(wav_writer_initialized_, "WavWriter::Initialize() failed");
   }
 }

@@ -52,7 +52,7 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
   FX_DCHECK(frac_offset <= frac_size_) << frac_offset;
   if constexpr (kTraceComputation) {
     FX_LOGS(INFO) << "For frac_offset " << std::hex << frac_offset << " ("
-                  << (static_cast<float>(frac_offset) / frac_size_) << "):";
+                  << (static_cast<double>(frac_offset) / static_cast<double>(frac_size_)) << "):";
   }
 
   float result = 0.0f;
@@ -66,9 +66,9 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
   //
   // Negative side first
   float* sample_ptr = center;
-  size_t source_frames = (side_width_ + (frac_size_ - 1) - frac_offset) >> num_frac_bits_;
+  int64_t source_frames = (side_width_ + (frac_size_ - 1) - frac_offset) >> num_frac_bits_;
   const float* coefficient_ptr = filter_coefficients.ReadSlice(frac_offset, source_frames);
-  for (size_t source_idx = 0; source_idx < source_frames; ++source_idx) {
+  for (int64_t source_idx = 0; source_idx < source_frames; ++source_idx) {
     FX_CHECK(coefficient_ptr != nullptr);
     auto contribution = (*sample_ptr) * coefficient_ptr[source_idx];
     if constexpr (kTraceComputation) {
@@ -86,7 +86,7 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
   //   side_width_ + (frac_size_ - 1) - (frac_size_ - frac_offset)
   source_frames = (side_width_ + frac_offset - 1) >> num_frac_bits_;
   coefficient_ptr = filter_coefficients.ReadSlice(frac_size_ - frac_offset, source_frames);
-  for (size_t source_idx = 0; source_idx < source_frames; ++source_idx) {
+  for (ssize_t source_idx = 0; source_idx < source_frames; ++source_idx) {
     FX_CHECK(coefficient_ptr != nullptr);
     auto contribution = sample_ptr[source_idx] * coefficient_ptr[source_idx];
     if constexpr (kTraceComputation) {
@@ -111,21 +111,22 @@ CoefficientTable* CreatePointFilterTable(PointFilter::Inputs inputs) {
   auto width = inputs.side_width;
   auto frac_size = 1 << inputs.num_frac_bits;
 
-  auto transition_idx = frac_size >> 1;
+  const int64_t kTransitionIdx = frac_size >> 1;
 
   // We know that transition_idx will always be the last idx in the filter table, because our ctor
-  // sets side_width to (1u << (num_frac_bits - 1u)) + 1u, which == (frac_size >> 1u) + 1u
-  FX_CHECK(transition_idx + 1u == width);
+  // sets side_width to (1 << (num_frac_bits - 1)) + 1, which == (frac_size >> 1) + 1
+  FX_CHECK(kTransitionIdx + 1 == width)
+      << "Transition idx " << kTransitionIdx << ", width " << width;
 
   // Just a rectangular window, actually.
-  for (auto idx = 0; idx < transition_idx; ++idx) {
+  for (auto idx = 0; idx < kTransitionIdx; ++idx) {
     table[idx] = 1.0f;
   }
 
   // Here we average, so that we are zero-phase
-  table[transition_idx] = 0.5f;
+  table[kTransitionIdx] = 0.5f;
 
-  for (auto idx = transition_idx + 1; idx < width; ++idx) {
+  for (auto idx = kTransitionIdx + 1; idx < width; ++idx) {
     table[idx] = 0.0f;
   }
 
@@ -142,11 +143,12 @@ CoefficientTable* CreateLinearFilterTable(LinearFilter::Inputs inputs) {
   auto width = inputs.side_width;
   auto frac_size = 1 << inputs.num_frac_bits;
 
-  int64_t transition_idx = frac_size;
+  const int64_t kTransitionIdx = frac_size;
+  const float kTransitionFactor = 1.0f / static_cast<float>(frac_size);
 
   // Just a Bartlett (triangular) window, actually.
-  for (auto idx = 0; idx < transition_idx; ++idx) {
-    auto factor = static_cast<float>(transition_idx - idx) / transition_idx;
+  for (auto idx = 0; idx < kTransitionIdx; ++idx) {
+    auto factor = static_cast<float>(kTransitionIdx - idx) * kTransitionFactor;
 
     if (factor >= std::numeric_limits<float>::epsilon() ||
         factor <= -std::numeric_limits<float>::epsilon()) {
@@ -155,7 +157,7 @@ CoefficientTable* CreateLinearFilterTable(LinearFilter::Inputs inputs) {
       table[idx] = 0.0f;
     }
   }
-  for (auto idx = transition_idx; idx < width; ++idx) {
+  for (auto idx = kTransitionIdx; idx < width; ++idx) {
     table[idx] = 0.0f;
   }
 
@@ -181,7 +183,7 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
   const double theta_factor = conversion_rate / frac_one;
 
   // Concurrently, calculate a VonHann window function. These form the windowed-sinc filter.
-  const double normalize_width_factor = M_PI / width;
+  const double normalize_width_factor = M_PI / static_cast<double>(width);
 
   table[0] = 1.0f;
   for (auto idx = 1; idx < width; ++idx) {
@@ -191,7 +193,7 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
     // TODO(mpuryear): Pre-populate a static VonHann|Blackman|Kaiser window; don't recalc each one.
     const double raised_cosine = cos(normalize_width_factor * idx) * 0.5 + 0.5;
 
-    table[idx] = sinc_theta * raised_cosine;
+    table[idx] = static_cast<float>(sinc_theta * raised_cosine);
   }
 
   // Normalize our filter so that it doesn't change amplitude for DC (0 hz).
@@ -211,7 +213,7 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
                    if (sample < pre_normalized_epsilon && sample > -pre_normalized_epsilon) {
                      return 0.0f;
                    }
-                   return sample * normalize_factor;
+                   return static_cast<float>(sample * normalize_factor);
                  });
 
   auto end_time = zx::clock::get_monotonic();
