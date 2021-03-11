@@ -58,26 +58,23 @@ ZirconRebootReason ExtractZirconRebootReason(const std::string_view line) {
   return ZirconRebootReason::kNotParseable;
 }
 
-void ExtractZirconRebootInfo(const std::string& path, ZirconRebootReason* reason,
-                             std::optional<std::string>* content,
-                             std::optional<zx::duration>* uptime) {
+ZirconRebootReason ExtractZirconRebootInfo(const std::string& path,
+                                           std::optional<std::string>* content,
+                                           std::optional<zx::duration>* uptime) {
   if (!files::IsFile(path)) {
     FX_LOGS(INFO) << "No reboot reason found, assuming cold boot";
-    *reason = ZirconRebootReason::kCold;
-    return;
+    return ZirconRebootReason::kCold;
   }
 
   std::string file_content;
   if (!files::ReadFileToString(path, &file_content)) {
     FX_LOGS(ERROR) << "Failed to read Zircon reboot log from " << path;
-    *reason = ZirconRebootReason::kNotParseable;
-    return;
+    return ZirconRebootReason::kNotParseable;
   }
 
   if (file_content.empty()) {
     FX_LOGS(ERROR) << "Found empty Zircon reboot log at " << path;
-    *reason = ZirconRebootReason::kNotParseable;
-    return;
+    return ZirconRebootReason::kNotParseable;
   }
 
   *content = file_content;
@@ -88,7 +85,7 @@ void ExtractZirconRebootInfo(const std::string& path, ZirconRebootReason* reason
 
   if (lines.size() == 0) {
     FX_LOGS(INFO) << "Zircon reboot log has no content";
-    return;
+    return ZirconRebootReason::kNotSet;
   }
 
   // We expect the format to be:
@@ -97,19 +94,17 @@ void ExtractZirconRebootInfo(const std::string& path, ZirconRebootReason* reason
   // <empty>
   // UPTIME (ms)
   // <SOME UPTIME>
-  *reason = ExtractZirconRebootReason(lines[0]);
+  const auto reason = ExtractZirconRebootReason(lines[0]);
 
   if (lines.size() < 3) {
     FX_LOGS(ERROR) << "Zircon reboot log is missing uptime information";
-    return;
-  }
-
-  if (lines[1] != "UPTIME (ms)") {
+  } else if (lines[1] != "UPTIME (ms)") {
     FX_LOGS(ERROR) << "'UPTIME(ms)' not present, found '" << lines[1] << "'";
-    return;
+  } else {
+    *uptime = ExtractUptime(lines[2]);
   }
 
-  *uptime = ExtractUptime(lines[2]);
+  return reason;
 }
 
 void ExtractGracefulRebootInfo(const std::string& graceful_reboot_log_path,
@@ -227,11 +222,10 @@ std::optional<std::string> MakeRebootLog(const std::optional<std::string>& zirco
 RebootLog RebootLog::ParseRebootLog(const std::string& zircon_reboot_log_path,
                                     const std::string& graceful_reboot_log_path,
                                     const std::string& not_a_fdr_path) {
-  ZirconRebootReason zircon_reason = ZirconRebootReason::kNotSet;
   std::optional<std::string> zircon_reboot_log;
   std::optional<zx::duration> last_boot_uptime;
-  ExtractZirconRebootInfo(zircon_reboot_log_path, &zircon_reason, &zircon_reboot_log,
-                          &last_boot_uptime);
+  const auto zircon_reason =
+      ExtractZirconRebootInfo(zircon_reboot_log_path, &zircon_reboot_log, &last_boot_uptime);
 
   GracefulRebootReason graceful_reason = GracefulRebootReason::kNotSet;
   std::optional<std::string> graceful_reboot_log;
