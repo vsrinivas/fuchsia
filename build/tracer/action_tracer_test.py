@@ -188,12 +188,6 @@ class ParseFsatraceOutputTests(unittest.TestCase):
             [action_tracer.Read("README.md")],
         )
 
-    def test_stat(self):
-        self.assertEqual(
-            list(action_tracer.parse_fsatrace_output(["q|README.md"])),
-            [action_tracer.Read("README.md")],
-        )
-
     def test_write(self):
         self.assertEqual(
             list(action_tracer.parse_fsatrace_output(["w|main.o"])),

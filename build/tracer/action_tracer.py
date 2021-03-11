@@ -200,12 +200,10 @@ def _parse_fsatrace_line(fsatrace_line: str) -> Iterable[FSAccess]:
     if sep != "|":
         return
 
-    # op: operation code in [rwdtmq]
-    if op in {"r", "q"}:
-        # Treat "q" stat() like a read operation.
+    # op: operation code in [rwdtm]
+    if op == "r":
         yield Read(path)
     elif op in {"w", "t"}:
-        # Treat "t" touch like a write operation.
         yield Write(path)
     elif op == "d":
         yield Delete(path)
@@ -764,11 +762,11 @@ def main():
     trace_output_dir = os.path.dirname(args.trace_output)
     os.makedirs(trace_output_dir, exist_ok=True)
 
-    os.environ["FSAT_BUF_SIZE"] = "8000000"
+    os.environ["FSAT_BUF_SIZE"] = "5000000"
     retval = subprocess.call(
         [
             args.fsatrace_path,
-            "erwmdtq",
+            "erwmdt",
             args.trace_output,
             "--",
         ] + command.tokens)
