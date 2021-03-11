@@ -1055,7 +1055,7 @@ mod tests {
         let test_batch_iterator_stats2 =
             Arc::new(diagnostics::ConnectionStats::for_inspect(test_accessor_stats.clone()));
 
-        inspect_repo.write().remove(&identity.unique_key);
+        inspect_repo.write().mark_stopped(&identity.unique_key);
         pipeline_wrapper.write().remove(&identity.relative_moniker);
         {
             let result_json = read_snapshot(

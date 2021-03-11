@@ -191,7 +191,7 @@ mod tests {
             assert_eq!(result_array.len(), 2, "Expect only two schemas to be returned.");
         }
 
-        diagnostics_repo.write().remove(&identity.unique_key);
+        diagnostics_repo.write().mark_stopped(&identity.unique_key);
         pipeline_wrapper.write().remove(&identity.relative_moniker);
 
         let test_batch_iterator_stats2 =

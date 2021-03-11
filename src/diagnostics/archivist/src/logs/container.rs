@@ -6,15 +6,16 @@ use crate::{
     container::ComponentIdentity,
     logs::{
         budget::BudgetHandle,
-        buffer::ArcList,
+        buffer::{ArcList, LazyItem},
         error::StreamError,
+        multiplex::PinStream,
         socket::{Encoding, LogMessageSocket},
         stats::LogStreamStats,
         Message,
     },
 };
 use fidl::endpoints::RequestStream;
-use fidl_fuchsia_diagnostics::{Interest, Selector};
+use fidl_fuchsia_diagnostics::{Interest, Selector, StreamMode};
 use fidl_fuchsia_logger::{
     LogInterestSelector, LogSinkControlHandle, LogSinkRequest, LogSinkRequestStream,
 };
@@ -31,7 +32,8 @@ pub struct LogsArtifactsContainer {
     /// Inspect instrumentation.
     pub stats: Arc<LogStreamStats>,
 
-    /// Handle to the overall budget for log retention.
+    /// Our handle to the budget manager, used to request space in the overall budget before storing
+    /// messages in our cache.
     budget: BudgetHandle,
 
     /// Buffer for all log messages.
@@ -42,6 +44,15 @@ pub struct LogsArtifactsContainer {
 }
 
 struct ContainerState {
+    /// Whether we think the component is currently running.
+    is_live: bool,
+
+    /// Number of sockets currently being drained for this component.
+    num_active_sockets: u64,
+
+    /// Number of LogSink channels currently being listened to for this component.
+    num_active_channels: u64,
+
     /// Current interest for this component.
     interest: Interest,
 
@@ -54,14 +65,16 @@ impl LogsArtifactsContainer {
         identity: Arc<ComponentIdentity>,
         interest_selectors: &[LogInterestSelector],
         stats: LogStreamStats,
-        buffer: ArcList<Message>,
         budget: BudgetHandle,
     ) -> Self {
         let new = Self {
-            budget,
-            buffer,
             identity,
+            budget,
+            buffer: Default::default(),
             state: Mutex::new(ContainerState {
+                is_live: true,
+                num_active_channels: 0,
+                num_active_sockets: 0,
                 control_handles: vec![],
                 interest: Interest::EMPTY,
             }),
@@ -72,6 +85,30 @@ impl LogsArtifactsContainer {
         new.update_interest(interest_selectors);
 
         new
+    }
+
+    /// Returns a stream of this component's log messages.
+    ///
+    /// # Dropped logs
+    ///
+    /// When messages are evicted from our internal buffers before a client can read them, they
+    /// are surfaced here as an `LazyItem::ItemsDropped` variant. We report these as synthesized
+    /// messages with the timestamp populated as the most recent timestamp from the stream.
+    pub fn cursor(&self, mode: StreamMode) -> PinStream<Arc<Message>> {
+        let identity = self.identity.clone();
+        let earliest_timestamp =
+            self.buffer.peek_front().map(|f| *f.metadata.timestamp as i64).unwrap_or(0);
+        Box::pin(self.buffer.cursor(mode).scan(earliest_timestamp, move |last_timestamp, item| {
+            futures::future::ready(Some(match item {
+                LazyItem::Next(m) => {
+                    *last_timestamp = m.metadata.timestamp.into();
+                    m
+                }
+                LazyItem::ItemsDropped(n) => {
+                    Arc::new(Message::for_dropped(n, &identity, *last_timestamp))
+                }
+            }))
+        }))
     }
 
     /// Handle `LogSink` protocol on `stream`. Each socket received from the `LogSink` client is
@@ -86,6 +123,7 @@ impl LogsArtifactsContainer {
         stream: LogSinkRequestStream,
         sender: mpsc::UnboundedSender<Task<()>>,
     ) {
+        self.state.lock().num_active_channels += 1;
         let task = Task::spawn(self.clone().actually_handle_log_sink(stream, sender.clone()));
         sender.unbounded_send(task).expect("channel is live for whole program");
     }
@@ -108,6 +146,7 @@ impl LogsArtifactsContainer {
             ($ctor:ident($socket:ident, $control_handle:ident)) => {{
                 match LogMessageSocket::$ctor($socket, self.identity.clone(), self.stats.clone()) {
                     Ok(log_stream) => {
+                        self.state.lock().num_active_sockets += 1;
                         let task = Task::spawn(self.clone().drain_messages(log_stream));
                         sender.unbounded_send(task).expect("channel alive for whole program");
                     }
@@ -131,6 +170,7 @@ impl LogsArtifactsContainer {
             }
         }
         debug!(%self.identity, "LogSink channel closed.");
+        self.state.lock().num_active_channels -= 1;
     }
 
     /// Drain a `LogMessageSocket` which wraps a socket from a component
@@ -153,6 +193,7 @@ impl LogsArtifactsContainer {
             }
         }
         debug!(%self.identity, "Socket closed.");
+        self.state.lock().num_active_sockets -= 1;
     }
 
     /// Updates log stats in inspect and push the message onto the container's buffer.
@@ -190,5 +231,39 @@ impl LogsArtifactsContainer {
                 .retain(|handle| handle.send_on_register_interest(new_interest.clone()).is_ok());
             state.interest = new_interest;
         }
+    }
+
+    pub fn mark_started(&self) {
+        self.state.lock().is_live = true;
+    }
+
+    pub fn mark_stopped(&self) {
+        self.state.lock().is_live = false;
+    }
+
+    /// Remove the oldest message from this buffer, returning it.
+    pub fn pop(&self) -> Option<Arc<Message>> {
+        self.buffer.pop_front()
+    }
+
+    /// Returns `true` if this container corresponds to a running component, still has log messages
+    /// or still has pending objects to drain.
+    pub fn should_retain(&self) -> bool {
+        let state = self.state.lock();
+        state.is_live
+            || state.num_active_sockets > 0
+            || state.num_active_channels > 0
+            || !self.buffer.is_empty()
+    }
+
+    /// Returns the timestamp of the earliest log message in this container's buffer, if any.
+    pub fn oldest_timestamp(&self) -> Option<i64> {
+        self.buffer.peek_front().map(|m| m.metadata.timestamp.into())
+    }
+
+    /// Stop accepting new messages, ensuring that pending Cursors return Poll::Ready(None) after
+    /// consuming any messages received before this call.
+    pub fn terminate(&self) {
+        self.buffer.terminate();
     }
 }
