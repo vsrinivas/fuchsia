@@ -436,7 +436,7 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
 
   // We can leave the bootimage in place unless we've been asked to move it to
   // high memory.
-  if (force_high_mem) {
+  if (new_bootimage_addr != final_bootimage_addr) {
     ops[ops_idx].src = (void*)new_bootimage_addr;
     ops[ops_idx].dst = (void*)final_bootimage_addr;
     ops[ops_idx].len = bootimage_len;
