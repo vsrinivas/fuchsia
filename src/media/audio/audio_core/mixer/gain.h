@@ -135,10 +135,10 @@ class Gain {
   // Calculate the stream's gain-scale, from cached source and dest values.
   AScale GetGainScale() { return GetGainScale(target_source_gain_db_, target_dest_gain_db_); }
 
-  void GetScaleArray(AScale* scale_arr, uint32_t num_frames, const TimelineRate& rate);
+  void GetScaleArray(AScale* scale_arr, int64_t num_frames, const TimelineRate& rate);
 
   // Advance the state of any gain ramp by the specified number of frames.
-  void Advance(uint32_t num_frames, const TimelineRate& rate);
+  void Advance(int64_t num_frames, const TimelineRate& rate);
 
   // Convenience functions to aid in performance optimization.
   // NOTE: These methods expect the caller to use SetDestGain, NOT the
@@ -180,7 +180,7 @@ class Gain {
   float end_source_scale_ = kUnityScale;
   float end_source_gain_db_ = kUnityGainDb;
   zx::duration source_ramp_duration_;
-  uint32_t frames_ramped_;
+  int64_t frames_ramped_;
 };
 
 }  // namespace media::audio

@@ -52,7 +52,7 @@ void PositionManager::DisplayUpdate(const PositionManager& pos_mgr) {
 }
 
 // static
-void PositionManager::CheckPositions(uint32_t dest_frames, uint32_t* dest_offset_ptr,
+void PositionManager::CheckPositions(int64_t dest_frames, int64_t* dest_offset_ptr,
                                      int64_t source_frames, int64_t frac_source_offset,
                                      int64_t frac_pos_filter_width, Mixer::Bookkeeping* info) {
   CheckDestPositions(dest_frames, dest_offset_ptr);
@@ -63,8 +63,8 @@ void PositionManager::CheckPositions(uint32_t dest_frames, uint32_t* dest_offset
                   &info->source_pos_modulo);
 }
 
-void PositionManager::SetDestValues(float* dest_ptr, uint32_t dest_frames,
-                                    uint32_t* dest_offset_ptr) {
+void PositionManager::SetDestValues(float* dest_ptr, int64_t dest_frames,
+                                    int64_t* dest_offset_ptr) {
   CheckDestPositions(dest_frames, dest_offset_ptr);
 
   dest_ptr_ = dest_ptr;
@@ -74,7 +74,7 @@ void PositionManager::SetDestValues(float* dest_ptr, uint32_t dest_frames,
 }
 
 // static
-void PositionManager::CheckDestPositions(uint32_t dest_frames, uint32_t* dest_offset_ptr) {
+void PositionManager::CheckDestPositions(int64_t dest_frames, int64_t* dest_offset_ptr) {
   // Location of first dest frame to produce must be within the provided buffer.
   FX_CHECK(*dest_offset_ptr < dest_frames)
       << "dest_offset (" << *dest_offset_ptr << ") must be less than dest_frames (" << dest_frames
@@ -148,7 +148,7 @@ int64_t PositionManager::AdvanceToEnd() {
   // Number of source steps available, if no rate_modulo effect.
   const int64_t est_dest_frames_produced =
       (frac_source_end_ - frac_source_offset_ - 1) / frac_step_size_ + 1;
-  const int64_t dest_frames_space_avail = static_cast<int64_t>(dest_frames_ - dest_offset_);
+  const int64_t dest_frames_space_avail = dest_frames_ - dest_offset_;
   const auto avail = std::min(est_dest_frames_produced, dest_frames_space_avail);
 
   const auto prev_source_frame_consumed =

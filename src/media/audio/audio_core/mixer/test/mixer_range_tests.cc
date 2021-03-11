@@ -25,7 +25,7 @@ void MeasureSummaryDynamicRange(float gain_db, double* level_db, double* sinad_d
   auto source = GenerateCosineAudio(format, kFreqTestBufSize, FrequencySet::kReferenceFreq);
   AudioBuffer accum(format, kFreqTestBufSize);
 
-  uint32_t dest_offset = 0;
+  int64_t dest_offset = 0;
   auto source_offset = Fixed(0);
 
   auto& info = mixer->bookkeeping();
@@ -128,7 +128,7 @@ TEST(DynamicRange, MonoToStereo) {
   AudioBuffer accum(stereo_format, kFreqTestBufSize);
   AudioBuffer left(mono_format, kFreqTestBufSize);
 
-  uint32_t dest_offset = 0;
+  int64_t dest_offset = 0;
   auto source_offset = Fixed(0);
 
   mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
@@ -137,7 +137,7 @@ TEST(DynamicRange, MonoToStereo) {
   EXPECT_EQ(source_offset, Fixed(kFreqTestBufSize));
 
   // Copy left result to double-float buffer, FFT (freq-analyze) it at high-res
-  for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
+  for (auto idx = 0; idx < kFreqTestBufSize; ++idx) {
     EXPECT_FLOAT_EQ(accum.samples()[idx * 2], accum.samples()[(idx * 2) + 1]);
     left.samples()[idx] = accum.samples()[idx * 2];
   }
@@ -169,7 +169,7 @@ TEST(DynamicRange, StereoToMono) {
   AudioBuffer source(stereo_format, kFreqTestBufSize);
   AudioBuffer accum(mono_format, kFreqTestBufSize);
 
-  for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
+  for (auto idx = 0; idx < kFreqTestBufSize; ++idx) {
     source.samples()[idx * 2] = mono.samples()[idx];
   }
 
@@ -177,11 +177,11 @@ TEST(DynamicRange, StereoToMono) {
   // shifted by PI/2 (1/4 of a cycle); copy it into right side of stereo buffer.
   mono = GenerateCosineAudio(mono_format, kFreqTestBufSize, FrequencySet::kReferenceFreq,
                              kFullScaleFloatInputAmplitude, M_PI / 2);
-  for (uint32_t idx = 0; idx < kFreqTestBufSize; ++idx) {
+  for (auto idx = 0; idx < kFreqTestBufSize; ++idx) {
     source.samples()[(idx * 2) + 1] = mono.samples()[idx];
   }
 
-  uint32_t dest_offset = 0;
+  int64_t dest_offset = 0;
   auto source_offset = Fixed(0);
 
   mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset, &source.samples()[0],
@@ -239,7 +239,7 @@ void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
       GenerateCosineAudio(format, kFreqTestBufSize, FrequencySet::kReferenceFreq, amplitude);
   AudioBuffer accum(float_format, kFreqTestBufSize);
 
-  uint32_t dest_offset = 0;
+  int64_t dest_offset = 0;
   auto source_offset = Fixed(0);
 
   // -6.0206 dB leads to 0.500 scale (exactly 50%), to be mixed with itself

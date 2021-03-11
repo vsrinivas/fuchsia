@@ -67,7 +67,7 @@ const fuchsia::media::AudioSampleFormat kFormats[] = {
 
 const fuchsia::media::AudioSampleFormat kInvalidFormat =
     static_cast<fuchsia::media::AudioSampleFormat>(
-        static_cast<uint64_t>(kFormats[std::size(kFormats) - 1]) + 1);
+        static_cast<int64_t>(kFormats[std::size(kFormats) - 1]) + 1);
 
 // These formats are supported
 TEST(SincSamplerTest, Construction) {
@@ -95,13 +95,13 @@ TEST(SincSamplerTest, Construction_UnsupportedRates) {
 
       SCOPED_TRACE(testing::Message()
                    << "Chans " << channel_config.first << ">" << channel_config.second << ", rates "
-                   << good_rate << ":" << bad_rate << ", format " << static_cast<uint64_t>(format));
+                   << good_rate << ":" << bad_rate << ", format " << static_cast<int64_t>(format));
       EXPECT_EQ(nullptr, SelectSincSampler(channel_config.first, channel_config.second, good_rate,
                                            bad_rate, format));
 
       SCOPED_TRACE(testing::Message()
                    << "Chans " << channel_config.first << ">" << channel_config.second << ", rates "
-                   << bad_rate << ":" << good_rate << ", format " << static_cast<uint64_t>(format));
+                   << bad_rate << ":" << good_rate << ", format " << static_cast<int64_t>(format));
       EXPECT_EQ(nullptr, SelectSincSampler(channel_config.first, channel_config.second, bad_rate,
                                            good_rate, format));
 
@@ -110,13 +110,13 @@ TEST(SincSamplerTest, Construction_UnsupportedRates) {
 
       SCOPED_TRACE(testing::Message()
                    << "Chans " << channel_config.first << ">" << channel_config.second << ", rates "
-                   << good_rate << ":" << bad_rate << ", format " << static_cast<uint64_t>(format));
+                   << good_rate << ":" << bad_rate << ", format " << static_cast<int64_t>(format));
       EXPECT_EQ(nullptr, SelectSincSampler(channel_config.first, channel_config.second, good_rate,
                                            bad_rate, format));
 
       SCOPED_TRACE(testing::Message()
                    << "Chans " << channel_config.first << ">" << channel_config.second << ", rates "
-                   << bad_rate << ":" << good_rate << ", format " << static_cast<uint64_t>(format));
+                   << bad_rate << ":" << good_rate << ", format " << static_cast<int64_t>(format));
       EXPECT_EQ(nullptr, SelectSincSampler(channel_config.first, channel_config.second, bad_rate,
                                            good_rate, format));
     }
@@ -132,7 +132,7 @@ TEST(SincSamplerTest, Construction_UnsupportedChannelConfig) {
 
     SCOPED_TRACE(testing::Message() << "Chans " << bad_channel_config.first << ">"
                                     << bad_channel_config.second << ", rates " << source_rate << ":"
-                                    << dest_rate << ", format " << static_cast<uint64_t>(format));
+                                    << dest_rate << ", format " << static_cast<int64_t>(format));
     EXPECT_EQ(nullptr, SelectSincSampler(bad_channel_config.first, bad_channel_config.second,
                                          source_rate, dest_rate, format));
 
@@ -142,7 +142,7 @@ TEST(SincSamplerTest, Construction_UnsupportedChannelConfig) {
 
     SCOPED_TRACE(testing::Message() << "Chans " << bad_channel_config.first << ">"
                                     << bad_channel_config.second << ", rates " << source_rate << ":"
-                                    << dest_rate << ", format " << static_cast<uint64_t>(format));
+                                    << dest_rate << ", format " << static_cast<int64_t>(format));
     EXPECT_EQ(nullptr, SelectSincSampler(bad_channel_config.first, bad_channel_config.second,
                                          source_rate, dest_rate, format));
   }
@@ -158,7 +158,7 @@ TEST(SincSamplerTest, Construction_UnsupportedFormat) {
   auto bad_format = kInvalidFormat;
   SCOPED_TRACE(testing::Message() << "Chans " << channel_config.first << ">"
                                   << channel_config.second << ", rates " << source_rate << ":"
-                                  << dest_rate << ", format " << static_cast<uint64_t>(bad_format));
+                                  << dest_rate << ", format " << static_cast<int64_t>(bad_format));
   EXPECT_EQ(nullptr, SelectSincSampler(channel_config.first, channel_config.second, source_rate,
                                        dest_rate, bad_format));
 }
@@ -178,8 +178,8 @@ TEST(SincSamplerTest, SamplingPosition_Basic) {
   Fixed source_offset = ffl::FromRatio(3, 4);
 
   float dest[40];
-  const uint32_t dest_frames = std::size(dest);
-  uint32_t dest_offset = 0;
+  const int64_t dest_frames = std::size(dest);
+  int64_t dest_offset = 0;
 
   // Pass in 20 frames
   source_is_consumed = mixer->Mix(dest, dest_frames, &dest_offset, source, source_frames,
@@ -199,11 +199,11 @@ TEST(SincSamplerTest, SamplingValues_DC_Unity) {
   bool do_not_accum = false;
   bool source_is_consumed;
 
-  constexpr uint32_t kDestLen = 512;
-  uint32_t dest_offset = 0;
+  constexpr int32_t kDestLen = 512;
+  int64_t dest_offset = 0;
   auto dest = std::make_unique<float[]>(kDestLen);
 
-  constexpr uint32_t kSourceLen = kDestLen / 2;
+  constexpr int32_t kSourceLen = kDestLen / 2;
   auto source_offset = Fixed(0);
   auto source = std::make_unique<float[]>(kSourceLen);
   for (auto idx = 0u; idx < kSourceLen; ++idx) {
@@ -244,11 +244,11 @@ TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
   bool do_not_accum = false;
   bool source_is_consumed;
 
-  constexpr uint32_t kDestLen = 512;
-  uint32_t dest_offset = 0;
+  constexpr int32_t kDestLen = 512;
+  int64_t dest_offset = 0;
   auto dest = std::make_unique<float[]>(kDestLen);
 
-  constexpr uint32_t kSourceLen = kDestLen / 2;
+  constexpr int32_t kSourceLen = kDestLen / 2;
   auto source_offset = Fixed(0);
   auto source = std::make_unique<float[]>(kSourceLen);
   for (auto idx = 0u; idx < kSourceLen; ++idx) {
@@ -291,11 +291,11 @@ TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
   bool do_not_accum = false;
   bool source_is_consumed;
 
-  constexpr uint32_t kDestLen = 1024;
-  uint32_t dest_offset = 0;
+  constexpr int32_t kDestLen = 1024;
+  int64_t dest_offset = 0;
   auto dest = std::make_unique<float[]>(kDestLen);
 
-  constexpr uint32_t kSourceLen = kDestLen / 8;
+  constexpr int32_t kSourceLen = kDestLen / 8;
   auto source_offset = Fixed(0);
   auto source = std::make_unique<float[]>(kSourceLen);
   for (auto idx = 0u; idx < kSourceLen; ++idx) {
@@ -355,7 +355,7 @@ float MixOneFrame(std::unique_ptr<Mixer>& mixer, Fixed source_offset) {
          "fraction";
 
   float dest;
-  uint32_t dest_offset = 0;
+  int64_t dest_offset = 0;
   int64_t source_frames = pos_width + 1;
 
   bool source_is_consumed = mixer->Mix(&dest, 1, &dest_offset, &(kSource[neg_width]), source_frames,
@@ -387,7 +387,7 @@ TEST(SincSamplerTest, SamplingValues_MixOne_WithCache) {
   // The outparam value of source_offset tells us the cache is populated with neg_width frames,
   // which is ideal for mixing a subsequent source buffer starting at source position [0].
   float dest;
-  uint32_t dest_offset = 0;
+  int64_t dest_offset = 0;
   auto source_frames = neg_width;
   Fixed source_offset = Fixed(source_frames) - kMixOneFrameSourceOffset;
 
@@ -414,7 +414,7 @@ TEST(SincSamplerTest, SamplingValues_MixOne_CachedFrameByFrame) {
 
   // Now, populate the cache with previous data, one frame at a time.
   float dest;
-  uint32_t dest_offset = 0;
+  int64_t dest_offset = 0;
   const auto source_frames = 1;
   Fixed source_offset = Fixed(source_frames) - kMixOneFrameSourceOffset;
 

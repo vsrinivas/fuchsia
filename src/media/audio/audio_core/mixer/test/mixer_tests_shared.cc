@@ -61,8 +61,8 @@ std::unique_ptr<OutputProducer> SelectOutputProducer(fuchsia::media::AudioSample
 // purposes it wants "int28" inputs, hence this function's unexpected name. The
 // test-data-width of 28 bits was chosen to accommodate float32 precision.
 constexpr float kInt28ToFloat = 1.0 / (1 << 27);  // Why 27? Remember sign bit.
-void NormalizeInt28ToPipelineBitwidth(float* source, uint32_t source_len) {
-  for (uint32_t idx = 0; idx < source_len; ++idx) {
+void NormalizeInt28ToPipelineBitwidth(float* source, int32_t source_len) {
+  for (int32_t idx = 0; idx < source_len; ++idx) {
     source[idx] *= kInt28ToFloat;
   }
 }
@@ -71,10 +71,10 @@ void NormalizeInt28ToPipelineBitwidth(float* source, uint32_t source_len) {
 // specific buffer size, with no SRC, starting at the beginning of each buffer.
 // By default, does not gain-scale or accumulate (both can be overridden).
 void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumulate,
-           int32_t num_frames, float gain_db) {
+           int64_t num_frames, float gain_db) {
   ASSERT_NE(mixer, nullptr);
 
-  uint32_t dest_offset = 0;
+  int64_t dest_offset = 0;
   auto source_offset = Fixed(0);
 
   auto& info = mixer->bookkeeping();
@@ -84,7 +84,7 @@ void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumula
                                &source_offset, accumulate);
 
   EXPECT_TRUE(mix_result);
-  EXPECT_EQ(dest_offset, static_cast<uint32_t>(num_frames));
+  EXPECT_EQ(dest_offset, num_frames);
   EXPECT_EQ(source_offset, Fixed(dest_offset));
 }
 

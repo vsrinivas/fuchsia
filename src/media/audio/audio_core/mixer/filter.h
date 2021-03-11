@@ -27,7 +27,7 @@ static constexpr int64_t kSincFilterSideLength = (kSincFilterSideTaps + 1)
 class Filter {
  public:
   Filter(uint32_t source_rate, uint32_t dest_rate, int64_t side_width = kSincFilterSideLength,
-         uint32_t num_frac_bits = Fixed::Format::FractionalBits)
+         int32_t num_frac_bits = Fixed::Format::FractionalBits)
       : source_rate_(source_rate),
         dest_rate_(dest_rate),
         side_width_(side_width),
@@ -40,20 +40,20 @@ class Filter {
     FX_DCHECK(num_frac_bits_ > 0);
   }
 
-  virtual float ComputeSample(uint32_t frac_offset, float* center) = 0;
+  virtual float ComputeSample(int64_t frac_offset, float* center) = 0;
 
   // used for debugging purposes only
   virtual void Display() = 0;
 
   void DisplayTable(const CoefficientTable& filter_coefficients);
-  float ComputeSampleFromTable(const CoefficientTable& filter_coefficients, uint32_t frac_offset,
+  float ComputeSampleFromTable(const CoefficientTable& filter_coefficients, int64_t frac_offset,
                                float* center);
 
   uint32_t source_rate() const { return source_rate_; }
   uint32_t dest_rate() const { return dest_rate_; }
   int64_t side_width() const { return side_width_; }
-  uint32_t num_frac_bits() const { return num_frac_bits_; }
-  uint32_t frac_size() const { return frac_size_; }
+  int32_t num_frac_bits() const { return num_frac_bits_; }
+  int64_t frac_size() const { return frac_size_; }
   double rate_conversion_ratio() const { return rate_conversion_ratio_; };
 
   // Eagerly precompute any needed data. If not called, that data should be lazily computed
@@ -66,8 +66,8 @@ class Filter {
   uint32_t dest_rate_;
   int64_t side_width_;
 
-  uint32_t num_frac_bits_;
-  uint32_t frac_size_;
+  int32_t num_frac_bits_;
+  int64_t frac_size_;
 
   double rate_conversion_ratio_;
 };
@@ -94,7 +94,7 @@ class Filter {
 class PointFilter : public Filter {
  public:
   PointFilter(uint32_t source_rate, uint32_t dest_rate,
-              uint32_t num_frac_bits = Fixed::Format::FractionalBits)
+              int32_t num_frac_bits = Fixed::Format::FractionalBits)
       : Filter(source_rate, dest_rate,
                /* side_width= */ (1 << (num_frac_bits - 1)) + 1, num_frac_bits),
         filter_coefficients_(cache_, Inputs{
@@ -103,7 +103,7 @@ class PointFilter : public Filter {
                                      }) {}
   PointFilter() : PointFilter(48000, 48000){};
 
-  float ComputeSample(uint32_t frac_offset, float* center) override {
+  float ComputeSample(int64_t frac_offset, float* center) override {
     return ComputeSampleFromTable(*filter_coefficients_, frac_offset, center);
   }
 
@@ -116,7 +116,7 @@ class PointFilter : public Filter {
  private:
   struct Inputs {
     int64_t side_width;
-    uint32_t num_frac_bits;
+    int32_t num_frac_bits;
 
     bool operator<(const Inputs& rhs) const {
       return std::tie(side_width, num_frac_bits) < std::tie(rhs.side_width, rhs.num_frac_bits);
@@ -143,7 +143,7 @@ class PointFilter : public Filter {
 class LinearFilter : public Filter {
  public:
   LinearFilter(uint32_t source_rate, uint32_t dest_rate,
-               uint32_t num_frac_bits = Fixed::Format::FractionalBits)
+               int32_t num_frac_bits = Fixed::Format::FractionalBits)
       : Filter(source_rate, dest_rate,
                /* side_width= */ (1 << num_frac_bits), num_frac_bits),
         filter_coefficients_(cache_, Inputs{
@@ -152,7 +152,7 @@ class LinearFilter : public Filter {
                                      }) {}
   LinearFilter() : LinearFilter(48000, 48000){};
 
-  float ComputeSample(uint32_t frac_offset, float* center) override {
+  float ComputeSample(int64_t frac_offset, float* center) override {
     return ComputeSampleFromTable(*filter_coefficients_, frac_offset, center);
   }
 
@@ -165,7 +165,7 @@ class LinearFilter : public Filter {
  private:
   struct Inputs {
     int64_t side_width;
-    uint32_t num_frac_bits;
+    int32_t num_frac_bits;
 
     bool operator<(const Inputs& rhs) const {
       return std::tie(side_width, num_frac_bits) < std::tie(rhs.side_width, rhs.num_frac_bits);
@@ -183,7 +183,7 @@ class LinearFilter : public Filter {
 class SincFilter : public Filter {
  public:
   SincFilter(uint32_t source_rate, uint32_t dest_rate, int64_t side_width = kSincFilterSideLength,
-             uint32_t num_frac_bits = Fixed::Format::FractionalBits)
+             int32_t num_frac_bits = Fixed::Format::FractionalBits)
       : Filter(source_rate, dest_rate, side_width, num_frac_bits),
         filter_coefficients_(cache_, Inputs{
                                          .side_width = this->side_width(),
@@ -202,7 +202,7 @@ class SincFilter : public Filter {
     return Fixed::FromRaw(width - 1);
   }
 
-  float ComputeSample(uint32_t frac_offset, float* center) override {
+  float ComputeSample(int64_t frac_offset, float* center) override {
     return ComputeSampleFromTable(*filter_coefficients_, frac_offset, center);
   }
 
@@ -215,7 +215,7 @@ class SincFilter : public Filter {
  private:
   struct Inputs {
     int64_t side_width;
-    uint32_t num_frac_bits;
+    int32_t num_frac_bits;
     double rate_conversion_ratio;
 
     bool operator<(const Inputs& rhs) const {

@@ -31,7 +31,7 @@ class PointSamplerTest : public testing::Test {
   static const std::vector<fuchsia::media::AudioSampleFormat> kFormats;
   const fuchsia::media::AudioSampleFormat kInvalidFormat =
       static_cast<fuchsia::media::AudioSampleFormat>(
-          static_cast<uint64_t>(kFormats[std::size(kFormats) - 1]) + 1);
+          static_cast<int64_t>(kFormats[std::size(kFormats) - 1]) + 1);
 
   std::unique_ptr<Mixer> SelectPointSampler(
       uint32_t source_channels, uint32_t dest_channels, uint32_t source_frame_rate,
@@ -66,10 +66,10 @@ class PointSamplerTest : public testing::Test {
 
   // Use the supplied mixer to mix without SRC. Assumes no accumulation, but can be overridden.
   void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumulate,
-             int32_t num_frames, float gain_db = Gain::kUnityGainDb) {
+             int64_t num_frames, float gain_db = Gain::kUnityGainDb) {
     ASSERT_NE(mixer, nullptr);
 
-    uint32_t dest_offset = 0;
+    int64_t dest_offset = 0;
     auto source_offset = Fixed(0);
 
     auto& info = mixer->bookkeeping();
@@ -79,7 +79,7 @@ class PointSamplerTest : public testing::Test {
                                  &source_offset, accumulate);
 
     EXPECT_TRUE(mix_result);
-    EXPECT_EQ(dest_offset, static_cast<uint32_t>(num_frames));
+    EXPECT_EQ(dest_offset, num_frames);
     EXPECT_EQ(source_offset, Fixed(dest_offset));
   }
 };
@@ -127,7 +127,7 @@ TEST_F(PointSamplerTest, Construction) {
 
         SCOPED_TRACE(testing::Message() << "Chans " << channel_config.first << ">"
                                         << channel_config.second << ", rates " << rate << ":"
-                                        << rate << ", format " << static_cast<uint64_t>(format));
+                                        << rate << ", format " << static_cast<int64_t>(format));
         EXPECT_NE(mixer, nullptr);
       }
     }
@@ -148,7 +148,7 @@ TEST_F(PointSamplerTest, ConstructionDifferingRates) {
 
       SCOPED_TRACE(testing::Message() << "Chans " << channel_config.first << ">"
                                       << channel_config.second << ", rates " << source_rate << ":"
-                                      << dest_rate << ", format " << static_cast<uint64_t>(format));
+                                      << dest_rate << ", format " << static_cast<int64_t>(format));
       EXPECT_EQ(nullptr, SelectPointSampler(channel_config.first, channel_config.second,
                                             source_rate, dest_rate, format));
 
@@ -157,7 +157,7 @@ TEST_F(PointSamplerTest, ConstructionDifferingRates) {
 
       SCOPED_TRACE(testing::Message() << "Chans " << channel_config.first << ">"
                                       << channel_config.second << ", rates " << source_rate << ":"
-                                      << dest_rate << ", format " << static_cast<uint64_t>(format));
+                                      << dest_rate << ", format " << static_cast<int64_t>(format));
       EXPECT_EQ(nullptr, SelectPointSampler(channel_config.first, channel_config.second,
                                             source_rate, dest_rate, format));
     }
@@ -173,7 +173,7 @@ TEST_F(PointSamplerTest, ConstructionUnsupportedRate) {
 
     SCOPED_TRACE(testing::Message()
                  << "Chans " << channel_config.first << ">" << channel_config.second << ", rates "
-                 << bad_rate << ":" << bad_rate << ", format " << static_cast<uint64_t>(format));
+                 << bad_rate << ":" << bad_rate << ", format " << static_cast<int64_t>(format));
     EXPECT_EQ(nullptr, SelectPointSampler(channel_config.first, channel_config.second, bad_rate,
                                           bad_rate, format));
 
@@ -182,7 +182,7 @@ TEST_F(PointSamplerTest, ConstructionUnsupportedRate) {
 
     SCOPED_TRACE(testing::Message()
                  << "Chans " << channel_config.first << ">" << channel_config.second << ", rates "
-                 << bad_rate << ":" << bad_rate << ", format " << static_cast<uint64_t>(format));
+                 << bad_rate << ":" << bad_rate << ", format " << static_cast<int64_t>(format));
     EXPECT_EQ(nullptr, SelectPointSampler(channel_config.first, channel_config.second, bad_rate,
                                           bad_rate, format));
   }
@@ -197,7 +197,7 @@ TEST_F(PointSamplerTest, ConstructionUnsupportedChannelConfig) {
 
     SCOPED_TRACE(testing::Message() << "Chans " << bad_channel_config.first << ">"
                                     << bad_channel_config.second << ", rates " << rate << ":"
-                                    << rate << ", format " << static_cast<uint64_t>(format));
+                                    << rate << ", format " << static_cast<int64_t>(format));
     EXPECT_EQ(nullptr, SelectPointSampler(bad_channel_config.first, bad_channel_config.second, rate,
                                           rate, format));
 
@@ -206,7 +206,7 @@ TEST_F(PointSamplerTest, ConstructionUnsupportedChannelConfig) {
 
     SCOPED_TRACE(testing::Message() << "Chans " << bad_channel_config.first << ">"
                                     << bad_channel_config.second << ", rates " << rate << ":"
-                                    << rate << ", format " << static_cast<uint64_t>(format));
+                                    << rate << ", format " << static_cast<int64_t>(format));
     EXPECT_EQ(nullptr, SelectPointSampler(bad_channel_config.first, bad_channel_config.second, rate,
                                           rate, format));
   }

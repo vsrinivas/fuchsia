@@ -13,7 +13,7 @@
 
 namespace media::audio {
 
-constexpr uint32_t Mixer::Bookkeeping::kScaleArrLen;
+constexpr int64_t Mixer::Bookkeeping::kScaleArrLen;
 
 Mixer::Mixer(Fixed pos_filter_width, Fixed neg_filter_width)
     : pos_filter_width_(pos_filter_width), neg_filter_width_(neg_filter_width) {}
@@ -68,7 +68,7 @@ std::unique_ptr<Mixer> Mixer::Select(const fuchsia::media::AudioStreamType& sour
       source_format.sample_format != fuchsia::media::AudioSampleFormat::SIGNED_24_IN_32 &&
       source_format.sample_format != fuchsia::media::AudioSampleFormat::FLOAT) {
     FX_LOGS(WARNING) << "Unsupported mixer sample format "
-                     << static_cast<uint64_t>(source_format.sample_format);
+                     << static_cast<int64_t>(source_format.sample_format);
     return nullptr;
   }
 

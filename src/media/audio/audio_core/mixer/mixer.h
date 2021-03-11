@@ -100,8 +100,8 @@ class Mixer {
 
     // From current values, advance long-running positions to the specified absolute dest frame num.
     // "Advancing" negatively should be infrequent, but we support it.
-    void AdvanceRunningPositionsTo(int32_t dest_target_frame, Bookkeeping& bookkeeping) {
-      int32_t dest_frames = static_cast<int32_t>(dest_target_frame - next_dest_frame);
+    void AdvanceRunningPositionsTo(int64_t dest_target_frame, Bookkeeping& bookkeeping) {
+      int64_t dest_frames = dest_target_frame - next_dest_frame;
       AdvanceRunningPositionsBy(dest_frames, bookkeeping);
     }
 
@@ -118,8 +118,7 @@ class Mixer {
     TimelineFunction dest_frames_to_frac_source_frames;
 
     // Per-job state, used by the MixStage around a loop of potentially multiple calls to Mix().
-    // 32 bits is adequate: even at 192kHz the MixJob could be 6+ hours (is generally 10 ms).
-    uint32_t frames_produced;
+    int64_t frames_produced;
 
     // Maintained since the stream started, relative to dest or source reference clocks.
     //
@@ -174,7 +173,7 @@ class Mixer {
     // level in dB, and provides gainscale as float multiplier.
     Gain gain;
 
-    static constexpr uint32_t kScaleArrLen = 960;
+    static constexpr int64_t kScaleArrLen = 960;
     std::unique_ptr<Gain::AScale[]> scale_arr = std::make_unique<Gain::AScale[]>(kScaleArrLen);
 
     // Bookkeeping should contain the rechannel matrix eventually. Mapping from one channel
@@ -220,13 +219,14 @@ class Mixer {
       }
 
       if (denom != denominator_) {
-        __uint128_t temp = (static_cast<__uint128_t>(source_pos_modulo) * denom) / denominator_;
-        source_pos_modulo = static_cast<uint64_t>(temp);
+        __uint128_t temp_source_pos_mod =
+            (static_cast<__uint128_t>(source_pos_modulo) * denom) / denominator_;
+        source_pos_modulo = static_cast<uint64_t>(temp_source_pos_mod);
 
         if (info != nullptr) {
-          __uint128_t temp =
+          __uint128_t temp_next_source_pos_mod =
               (static_cast<__uint128_t>(info->next_source_pos_modulo) * denom) / denominator_;
-          info->next_source_pos_modulo = static_cast<uint64_t>(temp);
+          info->next_source_pos_modulo = static_cast<uint64_t>(temp_next_source_pos_mod);
         }
 
         denominator_ = denom;
@@ -319,7 +319,7 @@ class Mixer {
   //  * rate_modulo             must be either zero or less than denominator
   //  * source_position_modulo  must be either zero or less than denominator
   //
-  virtual bool Mix(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr,
+  virtual bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
                    const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
                    bool accumulate) = 0;
   //

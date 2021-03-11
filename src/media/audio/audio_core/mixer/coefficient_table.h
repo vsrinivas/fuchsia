@@ -30,15 +30,17 @@ class CoefficientTable {
   // |width| is the filter width of this table, in fixed point format with |frac_bits| of fractional
   // precision. The |width| will determine the number of entries in the table, which will be |width|
   // rounded up to the nearest integer in the same fixed-point format.
-  CoefficientTable(uint32_t width, uint32_t frac_bits)
+  CoefficientTable(int64_t width, int32_t frac_bits)
       : stride_(ComputeStride(width, frac_bits)),
         frac_filter_width_(width),
         frac_bits_(frac_bits),
         frac_mask_((1 << frac_bits_) - 1),
-        table_(stride_ * (1 << frac_bits)) {}
+        table_(stride_ * (1 << frac_bits)) {
+    FX_DCHECK(frac_filter_width_ >= 0) << "CoefficientTable width cannot be negative";
+  }
 
-  float& operator[](uint32_t offset) { return table_[PhysicalIndex(offset)]; }
-  const float& operator[](uint32_t offset) const { return table_[PhysicalIndex(offset)]; }
+  float& operator[](int64_t offset) { return table_[PhysicalIndex(offset)]; }
+  const float& operator[](int64_t offset) const { return table_[PhysicalIndex(offset)]; }
 
   // Reads |num_coefficients| coefficients starting at |offset|. The result is a pointer to
   // |num_coefficients| coefficients with the following semantics:
@@ -49,10 +51,12 @@ class CoefficientTable {
   // ASSERT_EQ(f[1], c[off + 1 << frac_bits]);
   //  ...
   // ASSERT_EQ(f[size], c[off + size << frac_bits]);
-  const float* ReadSlice(uint32_t offset, size_t num_coefficients) const {
-    if (offset + ((num_coefficients - 1) << frac_bits_) > frac_filter_width_) {
+  const float* ReadSlice(int64_t offset, int64_t num_coefficients) const {
+    if (num_coefficients <= 0 ||
+        offset + ((num_coefficients - 1) << frac_bits_) > frac_filter_width_) {
       return nullptr;
     }
+
     // The underlying table already stores these consecutively.
     return &table_[PhysicalIndex(offset)];
   }
@@ -60,21 +64,21 @@ class CoefficientTable {
   auto begin() { return table_.begin(); }
   auto end() { return table_.end(); }
 
-  size_t PhysicalIndex(uint32_t offset) const {
+  ssize_t PhysicalIndex(int64_t offset) const {
     auto integer = offset >> frac_bits_;
     auto fraction = offset & frac_mask_;
     return fraction * stride_ + integer;
   }
 
  private:
-  static uint32_t ComputeStride(uint32_t filter_width, uint32_t frac_bits) {
+  static int64_t ComputeStride(int64_t filter_width, int32_t frac_bits) {
     return (filter_width + ((1 << frac_bits) - 1)) / (1 << frac_bits);
   }
 
-  const uint32_t stride_;
-  const uint32_t frac_filter_width_;
-  const uint32_t frac_bits_;
-  const uint32_t frac_mask_;
+  const int64_t stride_;
+  const int64_t frac_filter_width_;
+  const int32_t frac_bits_;
+  const int64_t frac_mask_;
   std::vector<float> table_;
 };
 

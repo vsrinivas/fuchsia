@@ -51,7 +51,7 @@ class MixStage : public ReadableStream {
     // Job state set up once by an output implementation, used by all renderers.
     // TODO(fxbug.dev/13415): Integrate it into the Mixer class itself.
     float* buf;
-    uint32_t buf_frames;
+    int64_t buf_frames;
     int64_t dest_start_frame;
     TimelineFunction dest_ref_clock_to_frac_dest_frame;
     bool accumulate;
@@ -80,7 +80,7 @@ class MixStage : public ReadableStream {
   // State used by the mix task.
   MixJob cur_mix_job_;
 
-  const size_t output_buffer_frames_;
+  const int64_t output_buffer_frames_;
   std::vector<float> output_buffer_;
   AudioClock& output_ref_clock_;
   fbl::RefPtr<VersionedTimelineFunction> output_ref_clock_to_fractional_frame_;

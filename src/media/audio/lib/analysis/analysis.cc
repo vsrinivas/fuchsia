@@ -288,7 +288,8 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
   // Calculate magnitude and phase of primary signal.
   double sum_sq_magn_signal = 0.0;
   for (auto freq : freqs) {
-    FX_CHECK(freq <= buf_sz_2);
+    FX_CHECK(freq <= buf_sz_2) << "Frequency " << freq << " cannot be measured in a buffer of size "
+                               << buf_sz_2;
     auto mag2 = out.all_square_magnitudes[freq];
     sum_sq_magn_signal += mag2;
     out.magnitudes[freq] = std::sqrt(mag2);

@@ -60,12 +60,12 @@ class GainTest : public testing::Test {
   }
 
   // Used for debugging purposes.
-  static void DisplayScaleVals(const Gain::AScale* scale_arr, uint32_t buf_size) {
+  static void DisplayScaleVals(const Gain::AScale* scale_arr, int64_t buf_size) {
     printf("\n    ********************************************************");
     printf("\n **************************************************************");
-    printf("\n ***    Displaying raw scale array data for length %5d    ***", buf_size);
+    printf("\n ***    Displaying raw scale array data for length %5ld    ***", buf_size);
     printf("\n **************************************************************");
-    for (uint32_t idx = 0; idx < buf_size; ++idx) {
+    for (auto idx = 0; idx < buf_size; ++idx) {
       if (idx % 10 == 0) {
         printf("\n [%d]  ", idx);
       }
@@ -452,7 +452,7 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
   EXPECT_TRUE(gain_.IsRamping());
 
   // Advance only partially through the duration of the ramp.
-  const uint32_t kFramesToAdvance = 2;
+  const auto kFramesToAdvance = 2;
   gain_.Advance(kFramesToAdvance, rate_1khz_output_);
   gain_.GetScaleArray(scale_arr, std::size(scale_arr), rate_1khz_output_);
   // DisplayScaleVals(scale_arr, std::size(scale_arr));

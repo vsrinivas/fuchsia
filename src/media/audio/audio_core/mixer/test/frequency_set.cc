@@ -17,7 +17,7 @@ bool FrequencySet::UseFullFrequencySet = false;
 // of sinusoid's period, rather than hitting the same few locations on the wave.
 //
 // The extended audio analysis tests use this large set of standard frequencies.
-constexpr uint32_t FrequencySet::kNumReferenceFreqs;
+constexpr int32_t FrequencySet::kNumReferenceFreqs;
 const std::array<uint32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kReferenceFreqs = {
     // clang-format off
     0,     18,    23,    27,    34,    41,    53,    67,    85,    109,
@@ -48,13 +48,13 @@ const std::array<uint32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kRefF
 
 // Certain tests (such as noise floor and sinad) are evaluated with a sinusoidal
 // input at a single reference frequency (usually close to 1 kHz).
-constexpr uint32_t FrequencySet::kRefFreqIdx;  // 1kHz reference tone
+constexpr int32_t FrequencySet::kRefFreqIdx;  // 1kHz reference tone
 const uint32_t FrequencySet::kReferenceFreq = kReferenceFreqs[kRefFreqIdx];
 
 //
 // Summary audio tests use a small set of frequencies, taken from the full set.
-constexpr uint32_t FrequencySet::kNumSummaryIdxs;
-const std::array<uint32_t, FrequencySet::kNumSummaryIdxs> FrequencySet::kSummaryIdxs = {
+constexpr int32_t FrequencySet::kNumSummaryIdxs;
+const std::array<int32_t, FrequencySet::kNumSummaryIdxs> FrequencySet::kSummaryIdxs = {
     6,   //  kReferenceFreqs[6] == 53, which translates => 40 Hz
     17,  //  kReferenceFreqs[17] == 683, => 500 Hz
     20,  //  1353, translates => 1000 Hz

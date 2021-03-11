@@ -32,7 +32,8 @@ std::string AsfToString(const ASF& sample_format, bool abbreviate) {
   } else if (sample_format == ASF::FLOAT) {
     return abbreviate ? "f32" : "Float";
   } else {
-    FX_LOGS(FATAL) << "Unknown sample format for creation profiling";
+    FX_LOGS(FATAL) << "Unknown sample format for creation profiling: "
+                   << static_cast<int64_t>(sample_format);
     return "";
   }
 }
@@ -387,16 +388,17 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   FX_CHECK(SampleFormat == cfg.sample_format);
 
   double amplitude;
-  if constexpr (SampleFormat == ASF::UNSIGNED_8) {
+  if (SampleFormat == ASF::UNSIGNED_8) {
     amplitude = std::numeric_limits<int8_t>::max();
-  } else if constexpr (SampleFormat == ASF::SIGNED_16) {
+  } else if (SampleFormat == ASF::SIGNED_16) {
     amplitude = std::numeric_limits<int16_t>::max();
-  } else if constexpr (SampleFormat == ASF::SIGNED_24_IN_32) {
+  } else if (SampleFormat == ASF::SIGNED_24_IN_32) {
     amplitude = std::numeric_limits<int32_t>::max() & ~0x0FF;
-  } else if constexpr (SampleFormat == ASF::FLOAT) {
+  } else if (SampleFormat == ASF::FLOAT) {
     amplitude = 1.0;
   } else {
-    FX_LOGS(FATAL) << "Unknown sample format for mix profiling";
+    FX_LOGS(FATAL) << "Unknown sample format for mix profiling: "
+                   << static_cast<int64_t>(SampleFormat);
     return;
   }
 
@@ -426,7 +428,7 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
   auto source = GenerateCosineAudio(source_format, source_frames, periods, amplitude);
 
   auto accum = std::make_unique<float[]>(dest_frame_count * cfg.num_output_chans);
-  uint32_t dest_offset, previous_dest_offset;
+  int64_t dest_offset, previous_dest_offset;
 
   auto& info = mixer->bookkeeping();
   info.step_size = Fixed(cfg.source_rate) / cfg.dest_rate;
@@ -601,7 +603,7 @@ void AudioPerformance::ProfileOutputProducer(const OutputProducerConfig& cfg, co
         break;
       }
       default:
-        FX_LOGS(FATAL) << "Unknown output type: " << static_cast<int>(cfg.output_range);
+        FX_LOGS(FATAL) << "Unknown output range: " << static_cast<int64_t>(cfg.output_range);
         return;
     }
 

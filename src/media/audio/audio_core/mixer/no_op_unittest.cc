@@ -24,7 +24,7 @@ TEST(NoOpMixer, PassThru) {
   float accum[] = {-1, 42};
   float expect[] = {-1, 42};
 
-  uint32_t dest_offset = 0;
+  int64_t dest_offset = 0;
   auto source_offset = Fixed(0);
 
   bool mix_result = no_op_mixer->Mix(accum, std::size(accum), &dest_offset, source,

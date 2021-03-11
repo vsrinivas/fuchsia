@@ -49,9 +49,9 @@ class OutputProducerTest : public testing::Test {
   //
   // Note: 'shift_by' values must be 1 less than might seem obvious, to account for the sign bit.
   // E.g.: to shift int16 values -0x8000 and 0x7FFF into float range, shift_by must be 15 (not 16).
-  void ShiftRightBy(std::vector<float>& floats, uint32_t shift_by) {
+  void ShiftRightBy(std::vector<float>& floats, int32_t shift_by) {
     for (float& val : floats) {
-      for (auto shift_num = 0u; shift_num < shift_by; ++shift_num) {
+      for (auto shift_num = 0; shift_num < shift_by; ++shift_num) {
         val *= 0.5f;
       }
     }

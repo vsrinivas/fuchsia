@@ -55,7 +55,7 @@ void TestBasicPosition(Resampler samplerType) {
   int16_t source[] = {1, 0xC, 0x7B, 0x4D2, 0x3039};
   auto source_frames = 5;
   auto source_offset = Fixed(2);
-  uint32_t dest_frames = 4, dest_offset = 1;
+  int64_t dest_frames = 4, dest_offset = 1;
 
   // Mix will add source[2,3,4] to accum[1,2,3]
   float accum[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000, -0x05BA0000};
@@ -67,7 +67,7 @@ void TestBasicPosition(Resampler samplerType) {
       mixer->Mix(accum, dest_frames, &dest_offset, source, source_frames, &source_offset, true);
 
   EXPECT_TRUE(mix_result);
-  EXPECT_EQ(4u, dest_offset);
+  EXPECT_EQ(4, dest_offset);
   EXPECT_EQ(Fixed(5), source_offset) << std::hex << source_offset.raw_value();
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
@@ -88,7 +88,7 @@ void TestBasicPosition(Resampler samplerType) {
       mixer->Mix(accum2, dest_frames, &dest_offset, source, source_frames, &source_offset, true);
 
   EXPECT_FALSE(mix_result);
-  EXPECT_EQ(4u, dest_offset);
+  EXPECT_EQ(4, dest_offset);
   EXPECT_EQ(Fixed(2), source_offset) << std::hex << source_offset.raw_value();
   EXPECT_THAT(accum2, Pointwise(FloatEq(), expect2));
 
@@ -104,7 +104,7 @@ void TestBasicPosition(Resampler samplerType) {
   mix_result = mixer->Mix(accum2, 4, &dest_offset, source, 3, &source_offset, false);
 
   EXPECT_TRUE(mix_result);
-  EXPECT_EQ(1u, dest_offset);
+  EXPECT_EQ(1, dest_offset);
   EXPECT_EQ(Fixed(3), source_offset) << std::hex << source_offset.raw_value();
   EXPECT_THAT(accum2, Pointwise(FloatEq(), expect3));
 }
@@ -127,7 +127,7 @@ TEST(Position, Position_Fractional_Point) {
   // Check: source supply exceeds destination demand
   // Source (offset 1.5 of 5) has 3.5. Destination (offset 1 of 3) wants 2.
   Fixed source_offset = ffl::FromRatio(3, 2);
-  uint32_t dest_offset = 1;
+  int64_t dest_offset = 1;
   int16_t source[] = {1, 0xC, 0x7B, 0x4D2, 0x3039};
   // Mix will accumulate source[1:2,2:3] into accum[1,2]
   float accum[] = {-0x00002000, -0x00017000, -0x000EA000, -0x00929000, -0x05BA0000};
@@ -138,7 +138,7 @@ TEST(Position, Position_Fractional_Point) {
   bool mix_result = mixer->Mix(accum, 3, &dest_offset, source, 5, &source_offset, true);
 
   EXPECT_FALSE(mix_result);
-  EXPECT_EQ(3u, dest_offset);
+  EXPECT_EQ(3, dest_offset);
   EXPECT_EQ(Fixed(ffl::FromRatio(7, 2)), source_offset) << std::hex << source_offset.raw_value();
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect));
 
@@ -154,7 +154,7 @@ TEST(Position, Position_Fractional_Point) {
   mix_result = mixer->Mix(accum, 4, &dest_offset, source, 4, &source_offset, false);
 
   EXPECT_TRUE(mix_result);
-  EXPECT_EQ(3u, dest_offset);
+  EXPECT_EQ(3, dest_offset);
   EXPECT_EQ(Fixed(ffl::FromRatio(9, 2) - Fixed::FromRaw(1)), source_offset)
       << std::hex << source_offset.raw_value();
   EXPECT_THAT(accum, Pointwise(FloatEq(), expect2));
@@ -171,7 +171,7 @@ void TestRateModulo(Resampler sampler_type) {
 
   // Without rate_modulo, we expect source_offset to be less than [2/3 * 3].
   auto source_offset = Fixed(0);
-  uint32_t dest_offset = 0;
+  int64_t dest_offset = 0;
 
   auto& info = mixer->bookkeeping();
   info.step_size = (kOneFrame * 2) / 3;
@@ -179,7 +179,7 @@ void TestRateModulo(Resampler sampler_type) {
   mixer->Mix(accum, std::size(accum), &dest_offset, source, std::size(source), &source_offset,
              false);
 
-  EXPECT_EQ(std::size(accum), dest_offset);
+  EXPECT_TRUE(std::size(accum) == dest_offset);
   EXPECT_LT(source_offset, expected_source_offset);
 
   // With rate_modulo, source_offset should be exactly 2 (i.e. 2/3 * 3).
@@ -188,13 +188,13 @@ void TestRateModulo(Resampler sampler_type) {
 
   info.SetRateModuloAndDenominator(Fixed(2).raw_value() - info.step_size.raw_value() * 3, 3);
   info.source_pos_modulo = 0;
-  ASSERT_EQ(static_cast<int64_t>(info.rate_modulo()),
-            Fixed(Fixed(2) - (info.step_size * 3)).raw_value());
+  ASSERT_EQ(info.rate_modulo(),
+            static_cast<uint64_t>(Fixed(Fixed(2) - (info.step_size * 3)).raw_value()));
 
   mixer->Mix(accum, std::size(accum), &dest_offset, source, std::size(source), &source_offset,
              false);
 
-  EXPECT_EQ(std::size(accum), dest_offset);
+  EXPECT_TRUE(std::size(accum) == dest_offset);
   EXPECT_EQ(source_offset, expected_source_offset);
 }
 
@@ -206,7 +206,7 @@ void TestPositionModuloNoRollover(Resampler sampler_type, bool mute = false) {
   ASSERT_NE(mixer, nullptr);
 
   float accum[3];
-  uint32_t dest_offset;
+  int64_t dest_offset;
   Fixed source_offset;
   float source[4] = {0.0f};
 
@@ -229,7 +229,7 @@ void TestPositionModuloNoRollover(Resampler sampler_type, bool mute = false) {
 
   mixer->Mix(accum, std::size(accum), &dest_offset, source, std::size(source), &source_offset,
              false);
-  EXPECT_EQ(std::size(accum), dest_offset);
+  EXPECT_TRUE(std::size(accum) == dest_offset);
   EXPECT_EQ(Fixed(3), source_offset) << std::hex << source_offset.raw_value();
   EXPECT_EQ(9999u, info.source_pos_modulo);
 
@@ -246,7 +246,7 @@ void TestPositionModuloNoRollover(Resampler sampler_type, bool mute = false) {
 
   mixer->Mix(accum, std::size(accum), &dest_offset, source, std::size(source), &source_offset,
              false);
-  EXPECT_EQ(std::size(accum), dest_offset);
+  EXPECT_TRUE(std::size(accum) == dest_offset);
   EXPECT_EQ(Fixed(3), source_offset) << std::hex << source_offset.raw_value();
   EXPECT_EQ(9999u, info.source_pos_modulo);
 }
@@ -259,7 +259,7 @@ void TestPositionModuloRollover(Resampler sampler_type, bool mute = false) {
   ASSERT_NE(mixer, nullptr);
 
   float accum[3];
-  uint32_t dest_offset;
+  int64_t dest_offset;
   Fixed source_offset;
   float source[4] = {0.0f};
 
@@ -280,7 +280,7 @@ void TestPositionModuloRollover(Resampler sampler_type, bool mute = false) {
 
   mixer->Mix(accum, std::size(accum), &dest_offset, source, std::size(source), &source_offset,
              false);
-  EXPECT_EQ(std::size(accum), dest_offset);
+  EXPECT_TRUE(std::size(accum) == dest_offset);
   EXPECT_EQ(Fixed(3), source_offset) << std::hex << source_offset.raw_value();
   EXPECT_EQ(0u, info.source_pos_modulo);
 
@@ -297,7 +297,7 @@ void TestPositionModuloRollover(Resampler sampler_type, bool mute = false) {
 
   mixer->Mix(accum, std::size(accum), &dest_offset, source, std::size(source), &source_offset,
              false);
-  EXPECT_EQ(std::size(accum), dest_offset);
+  EXPECT_TRUE(std::size(accum) == dest_offset);
   EXPECT_EQ(Fixed(3), source_offset) << std::hex << source_offset.raw_value();
   EXPECT_EQ(0u, info.source_pos_modulo);
 }
@@ -310,7 +310,7 @@ void TestPositionModuloEarlyRollover(Resampler sampler_type, bool mute = false) 
   ASSERT_NE(mixer, nullptr);
 
   float accum[3];
-  uint32_t dest_offset;
+  int64_t dest_offset;
   Fixed source_offset;
   float source[3] = {0.0f};
 
@@ -329,7 +329,7 @@ void TestPositionModuloEarlyRollover(Resampler sampler_type, bool mute = false) 
 
   mixer->Mix(accum, std::size(accum), &dest_offset, source, std::size(source), &source_offset,
              false);
-  EXPECT_EQ(2u, dest_offset);
+  EXPECT_EQ(2, dest_offset);
   EXPECT_EQ(Fixed(3), source_offset) << std::hex << source_offset.raw_value();
   EXPECT_EQ(0u, info.source_pos_modulo);
 }
@@ -348,14 +348,14 @@ void TestLateSourceOffset(Resampler sampler_type) {
     const auto initial_source_offset = source_offset;
 
     float accum[4] = {0.0f};
-    uint32_t dest_offset = 0;
+    int64_t dest_offset = 0;
 
     auto& info = mixer->bookkeeping();
     info.step_size = kOneFrame;
 
     EXPECT_TRUE(mixer->Mix(accum, std::size(accum), &dest_offset, source, std::size(source),
                            &source_offset, false));
-    EXPECT_EQ(dest_offset, 0u);
+    EXPECT_EQ(dest_offset, 0);
     EXPECT_EQ(source_offset, initial_source_offset);
     EXPECT_FLOAT_EQ(accum[0], 0.0f);
   }

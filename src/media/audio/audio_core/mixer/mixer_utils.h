@@ -238,10 +238,6 @@ constexpr float kFramesPerPtsSubframe = 1.0f / (1 << kPtsFractionalBits);
 
 // First-order Linear Interpolation formula (Position-fraction):
 //   out = Pf(S' - S) + S
-inline float LinearInterpolate(float A, float B, uint32_t alpha) {
-  return ((B - A) * kFramesPerPtsSubframe * alpha) + A;
-}
-
 inline float LinearInterpolateF(float A, float B, float alpha) { return ((B - A) * alpha) + A; }
 
 //

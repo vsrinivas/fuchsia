@@ -27,10 +27,10 @@ void Filter::DisplayTable(const CoefficientTable& filter_coefficients) {
   char str[256];
   str[0] = 0;
   int n;
-  for (uint32_t idx = 0; idx < side_width_; ++idx) {
+  for (int64_t idx = 0; idx < side_width_; ++idx) {
     if (idx % 16 == 0) {
       FX_LOGS(INFO) << str;
-      n = sprintf(str, " [%5x] ", idx);
+      n = sprintf(str, " [%5lx] ", idx);
     }
     if (filter_coefficients[idx] < std::numeric_limits<float>::epsilon() &&
         filter_coefficients[idx] > -std::numeric_limits<float>::epsilon() &&
@@ -48,7 +48,7 @@ void Filter::DisplayTable(const CoefficientTable& filter_coefficients) {
 constexpr bool kTraceComputation = false;
 
 float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients,
-                                     uint32_t frac_offset, float* center) {
+                                     int64_t frac_offset, float* center) {
   FX_DCHECK(frac_offset <= frac_size_) << frac_offset;
   if constexpr (kTraceComputation) {
     FX_LOGS(INFO) << "For frac_offset " << std::hex << frac_offset << " ("
@@ -109,16 +109,16 @@ CoefficientTable* CreatePointFilterTable(PointFilter::Inputs inputs) {
   auto out = new CoefficientTable(inputs.side_width, inputs.num_frac_bits);
   auto& table = *out;
   auto width = inputs.side_width;
-  auto frac_size = 1u << inputs.num_frac_bits;
+  auto frac_size = 1 << inputs.num_frac_bits;
 
-  auto transition_idx = frac_size >> 1u;
+  auto transition_idx = frac_size >> 1;
 
   // We know that transition_idx will always be the last idx in the filter table, because our ctor
   // sets side_width to (1u << (num_frac_bits - 1u)) + 1u, which == (frac_size >> 1u) + 1u
   FX_CHECK(transition_idx + 1u == width);
 
   // Just a rectangular window, actually.
-  for (auto idx = 0u; idx < transition_idx; ++idx) {
+  for (auto idx = 0; idx < transition_idx; ++idx) {
     table[idx] = 1.0f;
   }
 
@@ -140,12 +140,12 @@ CoefficientTable* CreateLinearFilterTable(LinearFilter::Inputs inputs) {
   auto out = new CoefficientTable(inputs.side_width, inputs.num_frac_bits);
   auto& table = *out;
   auto width = inputs.side_width;
-  auto frac_size = 1u << inputs.num_frac_bits;
+  auto frac_size = 1 << inputs.num_frac_bits;
 
-  uint32_t transition_idx = frac_size;
+  int64_t transition_idx = frac_size;
 
   // Just a Bartlett (triangular) window, actually.
-  for (auto idx = 0u; idx < transition_idx; ++idx) {
+  for (auto idx = 0; idx < transition_idx; ++idx) {
     auto factor = static_cast<float>(transition_idx - idx) / transition_idx;
 
     if (factor >= std::numeric_limits<float>::epsilon() ||
@@ -172,7 +172,7 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
   auto& table = *out;
 
   const auto width = inputs.side_width;
-  const auto frac_one = 1u << inputs.num_frac_bits;
+  const auto frac_one = 1 << inputs.num_frac_bits;
 
   // By capping this at 1.0, we set our low-pass filter to the lower of [source_rate, dest_rate].
   const double conversion_rate = M_PI * fmin(inputs.rate_conversion_ratio, 1.0);
@@ -184,7 +184,7 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
   const double normalize_width_factor = M_PI / width;
 
   table[0] = 1.0f;
-  for (auto idx = 1u; idx < width; ++idx) {
+  for (auto idx = 1; idx < width; ++idx) {
     const double theta = theta_factor * idx;
     const double sinc_theta = sin(theta) / theta;
 

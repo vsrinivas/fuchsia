@@ -97,19 +97,20 @@ class OutputProducerImpl : public OutputProducer {
   explicit OutputProducerImpl(const fuchsia::media::AudioStreamType& format)
       : OutputProducer(format, sizeof(DType)) {}
 
-  void ProduceOutput(const float* source_ptr, void* dest_void_ptr, uint32_t frames) const override {
+  void ProduceOutput(const float* source_ptr, void* dest_void_ptr, int64_t frames) const override {
     TRACE_DURATION("audio", "OutputProducerImpl::ProduceOutput");
     using DC = DestConverter<DType>;
     auto* dest_ptr = static_cast<DType*>(dest_void_ptr);
 
     // Previously we clamped here; because of rounding, this is different for
     // each output type, so it is now handled in Convert() specializations.
-    for (size_t i = 0; i < (static_cast<size_t>(frames) * channels_); ++i) {
+    const size_t kNumSamples = frames * channels_;
+    for (size_t i = 0; i < kNumSamples; ++i) {
       dest_ptr[i] = DC::Convert(source_ptr[i]);
     }
   }
 
-  void FillWithSilence(void* dest_void_ptr, uint32_t frames) const override {
+  void FillWithSilence(void* dest_void_ptr, int64_t frames) const override {
     TRACE_DURATION("audio", "OutputProducerImpl::FillWithSilence");
     SilenceMaker<DType>::Fill(dest_void_ptr, frames * channels_);
   }
@@ -143,7 +144,7 @@ std::unique_ptr<OutputProducer> OutputProducer::Select(
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return std::make_unique<OutputProducerImpl<float>>(format);
     default:
-      FX_LOGS(ERROR) << "Unsupported output format " << (uint32_t)format.sample_format;
+      FX_LOGS(ERROR) << "Unsupported output format " << (int64_t)format.sample_format;
       return nullptr;
   }
 }

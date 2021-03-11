@@ -24,7 +24,7 @@ class PointSamplerImpl : public PointSampler {
       : PointSampler(Fixed::FromRaw(kFracPositiveFilterWidth),
                      Fixed::FromRaw(kFracNegativeFilterWidth)) {}
 
-  bool Mix(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr,
+  bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
            const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
            bool accumulate) override;
 
@@ -42,7 +42,7 @@ class PointSamplerImpl : public PointSampler {
   }
 
   template <ScalerType ScaleType, bool DoAccumulate>
-  static inline bool Mix(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr,
+  static inline bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
                          const void* source_void_ptr, int64_t source_frames,
                          Fixed* source_offset_ptr, Bookkeeping* info);
 };
@@ -57,7 +57,7 @@ class NxNPointSamplerImpl : public PointSampler {
                      Fixed::FromRaw(kFracNegativeFilterWidth)),
         chan_count_(chan_count) {}
 
-  bool Mix(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr,
+  bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
            const void* source_void_ptr, int64_t source_frames, Fixed* source_offset_ptr,
            bool accumulate) override;
 
@@ -73,7 +73,7 @@ class NxNPointSamplerImpl : public PointSampler {
   }
 
   template <ScalerType ScaleType, bool DoAccumulate>
-  static inline bool Mix(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr,
+  static inline bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
                          const void* source_void_ptr, int64_t source_frames,
                          Fixed* source_offset_ptr, Bookkeeping* info, uint32_t chan_count);
   uint32_t chan_count_ = 0;
@@ -84,7 +84,7 @@ class NxNPointSamplerImpl : public PointSampler {
 template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
 template <ScalerType ScaleType, bool DoAccumulate>
 inline bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
-    float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr, const void* source_void_ptr,
+    float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr, Bookkeeping* info) {
   TRACE_DURATION("audio", "PointSamplerImpl::MixInternal");
   static_assert(ScaleType != ScalerType::MUTED || DoAccumulate == true,
@@ -154,7 +154,7 @@ inline bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
 //
 template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
 bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
-    float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr, const void* source_void_ptr,
+    float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr, bool accumulate) {
   TRACE_DURATION("audio", "PointSamplerImpl::Mix");
 
@@ -199,7 +199,7 @@ bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
 template <typename SourceSampleType>
 template <ScalerType ScaleType, bool DoAccumulate>
 inline bool NxNPointSamplerImpl<SourceSampleType>::Mix(
-    float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr, const void* source_void_ptr,
+    float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr, Bookkeeping* info, uint32_t chan_count) {
   TRACE_DURATION("audio", "NxNPointSamplerImpl::MixInternal");
   static_assert(ScaleType != ScalerType::MUTED || DoAccumulate == true,
@@ -260,8 +260,8 @@ inline bool NxNPointSamplerImpl<SourceSampleType>::Mix(
 }
 
 template <typename SourceSampleType>
-bool NxNPointSamplerImpl<SourceSampleType>::Mix(float* dest_ptr, uint32_t dest_frames,
-                                                uint32_t* dest_offset_ptr,
+bool NxNPointSamplerImpl<SourceSampleType>::Mix(float* dest_ptr, int64_t dest_frames,
+                                                int64_t* dest_offset_ptr,
                                                 const void* source_void_ptr, int64_t source_frames,
                                                 Fixed* source_offset_ptr, bool accumulate) {
   TRACE_DURATION("audio", "NxNPointSamplerImpl::Mix");

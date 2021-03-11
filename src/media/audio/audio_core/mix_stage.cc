@@ -135,13 +135,13 @@ std::optional<ReadableStream::Buffer> MixStage::ReadLock(Fixed dest_frame, size_
   auto snapshot = ref_time_to_frac_presentation_frame();
 
   cur_mix_job_.buf = &output_buffer_[0];
-  cur_mix_job_.buf_frames = std::min<uint32_t>(frame_count, output_buffer_frames_);
+  cur_mix_job_.buf_frames = std::min(static_cast<int64_t>(frame_count), output_buffer_frames_);
   cur_mix_job_.dest_start_frame = dest_frame.Floor();
   cur_mix_job_.dest_ref_clock_to_frac_dest_frame = snapshot.timeline_function;
   cur_mix_job_.applied_gain_db = fuchsia::media::audio::MUTED_GAIN_DB;
 
   // Fill the output buffer with silence.
-  size_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
+  ssize_t bytes_to_zero = cur_mix_job_.buf_frames * format().bytes_per_frame();
   std::memset(cur_mix_job_.buf, 0, bytes_to_zero);
   ForEachSource(TaskType::Mix, dest_frame);
 
@@ -235,7 +235,7 @@ void MixStage::MixStream(Mixer& mixer, ReadableStream& stream) {
     // At this point we know we need to consume some source data, but we don't yet know how much.
     // Here is how many destination frames we still need to produce, for this mix job.
     FX_DCHECK(cur_mix_job_.buf_frames >= info.frames_produced);
-    uint32_t dest_frames_left = cur_mix_job_.buf_frames - info.frames_produced;
+    int64_t dest_frames_left = cur_mix_job_.buf_frames - info.frames_produced;
     if (dest_frames_left == 0) {
       break;
     }
@@ -305,7 +305,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
 
   // At this point we know we need to consume some source data, but we don't yet know how much.
   // Here is how many destination frames we still need to produce, for this mix job.
-  uint32_t dest_frames_left = cur_mix_job_.buf_frames - info.frames_produced;
+  int64_t dest_frames_left = cur_mix_job_.buf_frames - info.frames_produced;
   float* buf = cur_mix_job_.buf + (info.frames_produced * format().channels());
 
   // Determine this job's first and last sampling points, in source sub-frames. Use the next
@@ -364,7 +364,7 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
   // If neither of the above, then evidently this source packet intersects our mixer's filter.
   // Compute the offset into the dest buffer where our first generated sample should land, and the
   // offset into the source packet where we should start sampling.
-  int64_t dest_offset_64 = 0;
+  int64_t dest_offset = 0;
   Fixed source_offset = source_for_first_mix_job_frame - source_for_first_packet_frame;
   Fixed source_pos_edge_first_mix_frame = source_for_first_mix_job_frame + pos_width;
 
@@ -385,11 +385,9 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // backward), we "round up" when translating from source (fractional) to dest (integral).
     auto first_source_mix_point =
         Fixed(source_for_first_packet_frame - source_pos_edge_first_mix_frame);
-    dest_offset_64 = dest_to_raw_source.Inverse().Scale(first_source_mix_point.raw_value(),
-                                                        TimelineRate::RoundingMode::Ceiling);
-    FX_DCHECK(dest_offset_64 > 0);
-
-    source_offset += Fixed::FromRaw(dest_to_raw_source.Scale(dest_offset_64));
+    dest_offset = dest_to_raw_source.Inverse().Scale(first_source_mix_point.raw_value(),
+                                                     TimelineRate::RoundingMode::Ceiling);
+    source_offset += Fixed::FromRaw(dest_to_raw_source.Scale(dest_offset));
 
     // Packet is within the mix window but starts after mix start. MixStream breaks mix jobs into
     // multiple pieces so that each packet gets its own ProcessMix call; this means there was no
@@ -402,9 +400,8 @@ bool MixStage::ProcessMix(Mixer& mixer, ReadableStream& stream,
     // Renderer/PacketQueue, and remove PartialUnderflow reporting and the metric altogether.
   }
 
-  FX_DCHECK(dest_offset_64 >= 0);
-  FX_DCHECK(dest_offset_64 <= static_cast<int64_t>(dest_frames_left));
-  auto dest_offset = static_cast<uint32_t>(dest_offset_64);
+  FX_DCHECK(dest_offset >= 0);
+  FX_DCHECK(dest_offset <= dest_frames_left);
 
   // Looks like we are ready to go. Mix.
   FX_DCHECK(source_offset + mixer.pos_filter_width() >= Fixed(0));

@@ -116,7 +116,7 @@ TEST(PositionManagerTest, CurrentDestFrame) {
 
   constexpr auto dest_frames = 2;
   float dest[dest_frames * dest_chans];
-  auto dest_offset = 1u;
+  int64_t dest_offset = 1;
 
   auto expected_dest_frame = dest + (dest_offset * dest_chans);
   pos_mgr.SetDestValues(dest, dest_frames, &dest_offset);
@@ -143,8 +143,8 @@ TEST(PositionManagerTest, UpdateOffsets) {
 
   float data;
   float* dest = &data;
-  auto dest_frames = 1u;
-  uint32_t dest_offset = 0u;
+  auto dest_frames = 1;
+  int64_t dest_offset = 0;
   pos_mgr.SetDestValues(dest, dest_frames, &dest_offset);
 
   auto step_size = kFracFrame;
@@ -154,12 +154,12 @@ TEST(PositionManagerTest, UpdateOffsets) {
   pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &source_position_modulo);
 
   source_offset = Fixed::FromRaw(27);
-  dest_offset = 42u;
+  dest_offset = 42;
   source_position_modulo = 72;
   pos_mgr.UpdateOffsets();
 
   EXPECT_EQ(source_offset, Fixed(0));
-  EXPECT_EQ(dest_offset, 0u);
+  EXPECT_EQ(dest_offset, 0);
   EXPECT_EQ(source_position_modulo, 72ul);
 
   // Now that rate_modulo and denominator are non-zero, source_position_modulo should be updated
@@ -169,12 +169,12 @@ TEST(PositionManagerTest, UpdateOffsets) {
   pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &source_position_modulo);
 
   source_offset = Fixed::FromRaw(27);
-  dest_offset = 42u;
+  dest_offset = 42;
   source_position_modulo = 72;
   pos_mgr.UpdateOffsets();
 
   EXPECT_EQ(source_offset, Fixed(0));
-  EXPECT_EQ(dest_offset, 0u);
+  EXPECT_EQ(dest_offset, 0);
   EXPECT_EQ(source_position_modulo, 0ul);
 }
 
@@ -190,7 +190,7 @@ TEST(PositionManagerTest, FrameCanBeMixed) {
   pos_mgr.SetSourceValues(source_void, std::size(source), &source_offset);
 
   float dest[2u * dest_chans];
-  auto dest_offset = 1u;
+  int64_t dest_offset = 1;
   pos_mgr.SetDestValues(dest, 2, &dest_offset);
   EXPECT_TRUE(pos_mgr.FrameCanBeMixed());
   EXPECT_FALSE(pos_mgr.SourceIsConsumed());
@@ -209,7 +209,7 @@ TEST(PositionManagerTest, AdvanceFrame_Basic) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), std::size(source), &source_offset);
 
   float dest[3];
-  auto dest_offset = 1u;
+  int64_t dest_offset = 1;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   auto source_position_modulo = 0ul;
@@ -231,7 +231,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceReachesEnd) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), std::size(source), &source_offset);
 
   float dest[3u];
-  auto dest_offset = 2u;
+  int64_t dest_offset = 2;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   auto source_position_modulo = 0ul;
@@ -254,7 +254,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloReachesEnd) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), std::size(source), &source_offset);
 
   float dest[3];
-  auto dest_offset = 1u;
+  int64_t dest_offset = 1;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   constexpr auto step_size = kFracFrame;
@@ -289,7 +289,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloAlmostReachesEnd) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), std::size(source), &source_offset);
 
   float dest[3];
-  auto dest_offset = 1u;
+  int64_t dest_offset = 1;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   constexpr auto step_size = kFracFrame;
@@ -325,8 +325,8 @@ TEST(PositionManagerTest, AdvanceFrame_DestReachesEnd) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), std::size(source), &source_offset);
 
   float dest[2];
-  const uint32_t dest_frames = std::size(dest);
-  auto dest_offset = 1u;
+  const int64_t dest_frames = std::size(dest);
+  int64_t dest_offset = 1;
   pos_mgr.SetDestValues(dest, dest_frames, &dest_offset);
 
   constexpr auto step_size = kFracFrame;
@@ -351,7 +351,7 @@ TEST(PositionManagerTest, AdvanceFrame_NoRateValues) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), std::size(source), &source_offset);
 
   float dest[3];
-  auto dest_offset = 1u;
+  int64_t dest_offset = 1;
   pos_mgr.SetDestValues(dest, 3, &dest_offset);
 
   Fixed expected_source_offset = Fixed(2) - Fixed::FromRaw(1);
@@ -380,7 +380,7 @@ TEST(PositionManagerTest, AdvanceToEnd_Dest) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), std::size(source), &source_offset);
 
   float dest[5];
-  auto dest_offset = 0u;
+  int64_t dest_offset = 0;
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   constexpr auto step_size = kFracFrame * 2 - 1;
@@ -389,12 +389,12 @@ TEST(PositionManagerTest, AdvanceToEnd_Dest) {
   pos_mgr.SetRateValues(step_size, 0, denominator, &source_position_modulo);
 
   auto num_source_frames_skipped = pos_mgr.AdvanceToEnd();
-  EXPECT_EQ(num_source_frames_skipped, 10u);
+  EXPECT_EQ(num_source_frames_skipped, 10);
 
   pos_mgr.UpdateOffsets();
 
   EXPECT_EQ(source_offset, Fixed(11) - Fixed::FromRaw(6));
-  EXPECT_EQ(dest_offset, 5u);
+  EXPECT_EQ(dest_offset, 5);
   EXPECT_EQ(source_position_modulo, 1ul);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_FALSE(pos_mgr.SourceIsConsumed());
@@ -409,21 +409,21 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceBasic) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), std::size(source), &source_offset);
 
   float dest[13];
-  auto dest_offset = 0u;
+  int64_t dest_offset = 0;
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   auto source_position_modulo = 0ul;
   pos_mgr.SetRateValues(kFracHalfFrame, 0, 1, &source_position_modulo);
 
   auto num_source_frames_skipped = pos_mgr.AdvanceToEnd();
-  EXPECT_EQ(num_source_frames_skipped, 5u);
+  EXPECT_EQ(num_source_frames_skipped, 5);
 
   Fixed expect_source_offset = Fixed(ffl::FromRatio(11, 2));
   pos_mgr.UpdateOffsets();
 
   EXPECT_EQ(source_offset, expect_source_offset)
       << std::hex << source_offset.raw_value() << " != " << expect_source_offset.raw_value();
-  EXPECT_EQ(dest_offset, 9u);
+  EXPECT_EQ(dest_offset, 9);
   EXPECT_EQ(source_position_modulo, 0u);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
@@ -438,7 +438,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExactModulo) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), std::size(source), &source_offset);
 
   float dest[6];
-  auto dest_offset = 0u;
+  int64_t dest_offset = 0;
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   constexpr auto step_size = 2 * kFracFrame;
@@ -448,12 +448,12 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExactModulo) {
   pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &source_position_modulo);
 
   auto num_source_frames_skipped = pos_mgr.AdvanceToEnd();
-  EXPECT_EQ(num_source_frames_skipped, 11u);
+  EXPECT_EQ(num_source_frames_skipped, 11);
 
   pos_mgr.UpdateOffsets();
 
   EXPECT_EQ(source_offset, Fixed(11));
-  EXPECT_EQ(dest_offset, 5u);
+  EXPECT_EQ(dest_offset, 5);
   EXPECT_EQ(source_position_modulo, 0ul);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
@@ -468,7 +468,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExtraModulo) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), std::size(source), &source_offset);
 
   float dest[6];
-  auto dest_offset = 0u;
+  int64_t dest_offset = 0;
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   constexpr auto step_size = kFracFrame * 2;
@@ -478,12 +478,12 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExtraModulo) {
   pos_mgr.SetRateValues(step_size, rate_modulo, denominator, &source_position_modulo);
 
   auto num_source_frames_skipped = pos_mgr.AdvanceToEnd();
-  EXPECT_EQ(num_source_frames_skipped, 11u);
+  EXPECT_EQ(num_source_frames_skipped, 11);
 
   pos_mgr.UpdateOffsets();
 
   EXPECT_EQ(source_offset, Fixed(11));
-  EXPECT_EQ(dest_offset, 5u);
+  EXPECT_EQ(dest_offset, 5);
   EXPECT_EQ(source_position_modulo, 4ul);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
@@ -495,7 +495,7 @@ TEST(PositionManagerTest, AdvanceToEndExtremeRatesAndWidths) {
                                  (336 << Fixed::Format::FractionalBits));
 
   float dest[10];
-  auto dest_offset = 0u;
+  int64_t dest_offset = 0;
   pos_mgr.SetDestValues(dest, std::size(dest), &dest_offset);
 
   auto step_size = (24 << Fixed::Format::FractionalBits);
@@ -509,11 +509,11 @@ TEST(PositionManagerTest, AdvanceToEndExtremeRatesAndWidths) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), 336, &source_offset);
 
   auto num_source_frames_skipped = pos_mgr.AdvanceToEnd();
-  EXPECT_EQ(num_source_frames_skipped, 24u);
+  EXPECT_EQ(num_source_frames_skipped, 24);
 
   pos_mgr.UpdateOffsets();
   EXPECT_EQ(source_offset.raw_value(), (24 << Fixed::Format::FractionalBits) - 1);
-  EXPECT_EQ(dest_offset, 1u);
+  EXPECT_EQ(dest_offset, 1);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
 
@@ -522,11 +522,11 @@ TEST(PositionManagerTest, AdvanceToEndExtremeRatesAndWidths) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), 336, &source_offset);
 
   num_source_frames_skipped = pos_mgr.AdvanceToEnd();
-  EXPECT_EQ(num_source_frames_skipped, 0u);
+  EXPECT_EQ(num_source_frames_skipped, 0);
 
   pos_mgr.UpdateOffsets();
   EXPECT_EQ(source_offset, Fixed(0));
-  EXPECT_EQ(dest_offset, 1u);
+  EXPECT_EQ(dest_offset, 1);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
 
@@ -535,11 +535,11 @@ TEST(PositionManagerTest, AdvanceToEndExtremeRatesAndWidths) {
   pos_mgr.SetSourceValues(static_cast<void*>(source), 335, &source_offset);
 
   num_source_frames_skipped = pos_mgr.AdvanceToEnd();
-  EXPECT_EQ(num_source_frames_skipped, 0u);
+  EXPECT_EQ(num_source_frames_skipped, 0);
 
   pos_mgr.UpdateOffsets();
   EXPECT_EQ(source_offset, Fixed::FromRaw(-1));
-  EXPECT_EQ(dest_offset, 1u);
+  EXPECT_EQ(dest_offset, 1);
   EXPECT_FALSE(pos_mgr.FrameCanBeMixed());
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
 }

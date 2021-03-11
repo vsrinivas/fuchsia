@@ -35,7 +35,7 @@ class OutputProducer {
    * @param frames The number of frames to produce.
    */
   virtual void ProduceOutput(const float* source_ptr, void* dest_void_ptr,
-                             uint32_t frames) const = 0;
+                             int64_t frames) const = 0;
 
   /**
    * Fill a destination buffer with silence.
@@ -45,7 +45,7 @@ class OutputProducer {
    *
    * @param frames The number of frames to produce.
    */
-  virtual void FillWithSilence(void* dest_void_ptr, uint32_t frames) const = 0;
+  virtual void FillWithSilence(void* dest_void_ptr, int64_t frames) const = 0;
 
   const fuchsia::media::AudioStreamType& format() const { return format_; }
   uint32_t channels() const { return channels_; }

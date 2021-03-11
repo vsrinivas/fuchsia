@@ -47,7 +47,7 @@ double MeasureSourceNoiseFloor(double* sinad_db) {
       GenerateCosineAudio(format, kFreqTestBufSize, FrequencySet::kReferenceFreq, amplitude);
   AudioBuffer accum(accum_format, kFreqTestBufSize);
 
-  uint32_t dest_offset = 0;
+  int64_t dest_offset = 0;
   auto source_frames = kFreqTestBufSize;
   auto source_offset = Fixed(0);
   auto source_is_consumed = mixer->Mix(&accum.samples()[0], kFreqTestBufSize, &dest_offset,
@@ -205,7 +205,7 @@ TEST(NoiseFloor, Output_Float) {
 // to a value 2_PI less. Zero phase is ideal; constant phase is very good; linear is reasonable.
 //
 // If UseFullFrequencySet is false, we test at only three summary frequencies.
-void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t source_frames, double* level_db,
+void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* level_db,
                                double* sinad_db, double* phase_rad) {
   if (!std::isnan(level_db[0])) {
     // This run already has frequency response/SINAD/phase results for this sampler and resampling
@@ -245,7 +245,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t source_frames, double* lev
   // Generate signal, rate-convert, and measure level and phase responses -- for each frequency.
   for (auto idx = first_idx; idx < last_idx; ++idx) {
     // If full-spectrum, test at all kReferenceFreqs[] values; else only use those in kSummaryIdxs[]
-    uint32_t freq_idx = idx;
+    int32_t freq_idx = idx;
     if (!use_full_set) {
       freq_idx = FrequencySet::kSummaryIdxs[idx];
     }
@@ -253,7 +253,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t source_frames, double* lev
 
     // If frequency is too high to be characterized in this buffer, skip it. Per Nyquist limit,
     // buffer length must be at least 2x the frequency we want to measure.
-    if (frequency_to_measure * 2 >= source_frames) {
+    if (frequency_to_measure * 2 >= static_cast<uint64_t>(source_frames)) {
       if (freq_idx < FrequencySet::kFirstOutBandRefFreqIdx) {
         level_db[freq_idx] = -INFINITY;
         phase_rad[freq_idx] = -INFINITY;
@@ -269,7 +269,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, uint32_t source_frames, double* lev
     // each time we start testing a new input signal frequency.
     info.source_pos_modulo = 0;
 
-    uint32_t dest_frames, dest_offset = 0;
+    int64_t dest_frames, dest_offset = 0;
     auto source_frames = source.NumFrames();
 
     // First "prime" the resampler by sending a mix command exactly at the end of the source buffer.
@@ -870,7 +870,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
       num_dest_frames);
   info.source_pos_modulo = 0;
 
-  uint32_t dest_frames, dest_offset = 0;
+  int64_t dest_frames, dest_offset = 0;
 
   // First "prime" the resampler by sending a mix command exactly at the end of the source buffer.
   // This allows it to cache the frames at buffer's end. For our testing, buffers are periodic, so
@@ -924,8 +924,8 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
   auto mono = AudioBuffer(mono_format, num_dest_frames);
 
   // Copy-deinterleave each accum[] channel into mono[] and frequency-analyze.
-  for (uint32_t idx = 0; idx < num_chans; ++idx) {
-    uint32_t freq_idx = FrequencySet::kSummaryIdxs[idx];
+  for (auto idx = 0; idx < num_chans; ++idx) {
+    auto freq_idx = FrequencySet::kSummaryIdxs[idx];
 
     auto frequency_to_measure = FrequencySet::kReferenceFreqs[freq_idx];
     // If frequency is too high to be characterized in this buffer length, skip it.
@@ -938,7 +938,7 @@ void TestNxNEquivalence(Resampler sampler_type, double* level_db, double* sinad_
       continue;
     }
 
-    for (uint32_t i = 0; i < num_dest_frames; ++i) {
+    for (auto i = 0; i < num_dest_frames; ++i) {
       mono.samples()[i] = accum.samples()[i * num_chans + idx];
     }
 

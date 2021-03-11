@@ -32,12 +32,12 @@ class PositionManager {
   // Establish the parameters for this source and dest
   void SetSourceValues(const void* source_void_ptr, int64_t source_frames,
                        Fixed* source_offset_ptr);
-  void SetDestValues(float* dest_ptr, uint32_t dest_frames, uint32_t* dest_offset_ptr);
+  void SetDestValues(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr);
   // Specify the rate parameters. If not called, a unity rate (1:1) is assumed.
   void SetRateValues(int64_t step_size, uint64_t rate_modulo, uint64_t denominator,
                      uint64_t* source_pos_mod);
 
-  static void CheckPositions(uint32_t dest_frames, uint32_t* dest_offset_ptr, int64_t source_frames,
+  static void CheckPositions(int64_t dest_frames, int64_t* dest_offset_ptr, int64_t source_frames,
                              int64_t source_offset, int64_t pos_filter_width,
                              Mixer::Bookkeeping* info);
   // Convenience method to retrieve the pointer to the first available source frame in this buffer.
@@ -84,10 +84,10 @@ class PositionManager {
   bool SourceIsConsumed() const { return (frac_source_offset_ >= frac_source_end_); }
 
   Fixed source_offset() const { return Fixed::FromRaw(frac_source_offset_); }
-  uint32_t dest_offset() const { return dest_offset_; }
+  int64_t dest_offset() const { return dest_offset_; }
 
  private:
-  static void CheckDestPositions(uint32_t dest_frames, uint32_t* dest_offset_ptr);
+  static void CheckDestPositions(int64_t dest_frames, int64_t* dest_offset_ptr);
   static void CheckSourcePositions(int64_t source_frames, int64_t frac_source_offset,
                                    int64_t frac_pos_filter_width);
   static void CheckRateValues(int64_t frac_step_size, uint64_t rate_modulo, uint64_t denominator,
@@ -105,9 +105,9 @@ class PositionManager {
   int64_t frac_source_end_ = 0;
 
   float* dest_ptr_ = nullptr;
-  uint32_t dest_frames_ = 0;
-  uint32_t* dest_offset_ptr_ = nullptr;
-  uint32_t dest_offset_ = 0;
+  int64_t dest_frames_ = 0;
+  int64_t* dest_offset_ptr_ = nullptr;
+  int64_t dest_offset_ = 0;
 
   // If SetRateValues is never called, we successfully operate at 1:1 (without rate change).
   int64_t frac_step_size_ = kOneFrame.raw_value();

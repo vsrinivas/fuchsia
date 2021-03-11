@@ -33,7 +33,7 @@ namespace media::audio::test {
 // 65536) this translation ratio is 65536/48000. In other words, the 'freq' value that we should
 // send to GenerateCosine in order to simulate a 1 kHz sinusoid would be 1363.
 //
-static constexpr uint32_t kFreqTestBufSize = 65536;
+static constexpr int64_t kFreqTestBufSize = 65536;
 //
 // To better model how our resamplers are used by the rest of the system, when testing our
 // resamplers, we use multiple smaller jobs rather than mixing the entire 64k samples at one go.
@@ -56,12 +56,12 @@ class FrequencySet {
   static bool UseFullFrequencySet;
 
   // The full-spectrum audio tests use a broad set of standard frequencies.
-  static constexpr uint32_t kNumReferenceFreqs = 52;
+  static constexpr int32_t kNumReferenceFreqs = 52;
 
   // A subset of these frequencies are within the guaranteed in-band range, wrt output frequency.
   // In other words, [39] translates into 24kHz, and these tests assume a 48kHz output frequency.
-  static constexpr uint32_t kFirstOutBandRefFreqIdx = 39;
-  static constexpr uint32_t kFirstInBandRefFreqIdx = 0;
+  static constexpr int32_t kFirstOutBandRefFreqIdx = 39;
+  static constexpr int32_t kFirstInBandRefFreqIdx = 0;
 
   // Each val represents a standard frequency within the broad set.
   static const std::array<uint32_t, kNumReferenceFreqs> kReferenceFreqs;
@@ -72,14 +72,14 @@ class FrequencySet {
 
   // Certain tests (such as noise floor and sinad) are evaluated with a
   // sinusoidal input at a single reference frequency (usually close to 1 kHz).
-  static constexpr uint32_t kRefFreqIdx = 20;  // [20] is 1kHz reference tone.
+  static constexpr int32_t kRefFreqIdx = 20;  // [20] is 1kHz reference tone.
   static const uint32_t kReferenceFreq;
 
   // Summary audio tests use a small frequency set taken from the full list.
-  static constexpr uint32_t kNumSummaryIdxs = 4;
+  static constexpr int32_t kNumSummaryIdxs = 4;
 
   // Each val is a kReferenceFreqs index, pointing to a summary freq.
-  static const std::array<uint32_t, kNumSummaryIdxs> kSummaryIdxs;
+  static const std::array<int32_t, kNumSummaryIdxs> kSummaryIdxs;
 
   // class is static only - prevent attempts to instantiate it
   FrequencySet() = delete;

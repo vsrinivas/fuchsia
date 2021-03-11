@@ -44,7 +44,7 @@ void Gain::SetSourceGainWithRamp(float source_gain_db, zx::duration duration,
   }
 }
 
-void Gain::Advance(uint32_t num_frames, const TimelineRate& destination_frames_per_reference_tick) {
+void Gain::Advance(int64_t num_frames, const TimelineRate& destination_frames_per_reference_tick) {
   TRACE_DURATION("audio", "Gain::Advance");
   if (!IsRamping() || num_frames == 0) {
     return;
@@ -85,7 +85,7 @@ void Gain::Advance(uint32_t num_frames, const TimelineRate& destination_frames_p
 }
 
 // Populate an array of gain scales. Currently we handle only SCALE_LINEAR ramps
-void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
+void Gain::GetScaleArray(AScale* scale_arr, int64_t num_frames,
                          const TimelineRate& destination_frames_per_reference_tick) {
   TRACE_DURATION("audio", "Gain::GetScaleArray");
   if (num_frames == 0) {
@@ -98,7 +98,7 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
   if (!IsRamping()) {
     // Gain is flat for this mix job; retrieve gainscale once and set them all.
     scale = GetGainScale();
-    for (uint32_t idx = 0; idx < num_frames; ++idx) {
+    for (int64_t idx = 0; idx < num_frames; ++idx) {
       scale_arr[idx] = scale;
     }
   } else {
@@ -113,7 +113,7 @@ void Gain::GetScaleArray(AScale* scale_arr, uint32_t num_frames,
     AScale start_scale = start_source_scale_ * dest_scale;
     AScale end_scale = end_source_scale_ * dest_scale;
 
-    for (uint32_t idx = 0; idx < num_frames; ++idx) {
+    for (int64_t idx = 0; idx < num_frames; ++idx) {
       zx::duration frame_time = zx::nsec(output_to_local.Scale(frames_ramped_ + idx));
       if (frame_time >= source_ramp_duration_) {
         scale_arr[idx] = end_scale;

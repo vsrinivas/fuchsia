@@ -45,7 +45,7 @@ std::unique_ptr<OutputProducer> SelectOutputProducer(fuchsia::media::AudioSample
 // This shared function, then, normalizes data arrays into our float32 pipeline.
 // Because inputs must be in the range of [-2^27 , 2^27 ], for all practical
 // purposes it wants "int28" inputs, hence this function's unexpected name.
-void NormalizeInt28ToPipelineBitwidth(float* source, uint32_t source_len);
+void NormalizeInt28ToPipelineBitwidth(float* source, int32_t source_len);
 
 // Related to the conversions discussed above, these constants are the expected
 // amplitudes in the accumulator of full-scale signals in various input types.
@@ -75,7 +75,7 @@ constexpr double kFullScaleFloatAccumAmplitude = 1.0f;
 // Use supplied mixer to mix (w/out rate conversion) from source to accumulator.
 // TODO(mpuryear): refactor this so that tests just call mixer->Mix directly.
 void DoMix(Mixer* mixer, const void* source_buf, float* accum_buf, bool accumulate,
-           int32_t num_frames, float gain_db = 0.0f);
+           int64_t num_frames, float gain_db = 0.0f);
 
 // Returns a pair of (format_amplitude, double_amplitude) where
 // |format_amplitude| is the amplitude that should be applied in the given format |f|, and
