@@ -107,6 +107,16 @@ If set to `reboot`, when encountering OOM, the kernel signals an out-of-memory
 event (see `zx_system_get_event()`), delays briefly, and then reboots the system.
 )""")
 
+DEFINE_OPTION("kernel.mexec-force-high-ramdisk", bool, mexec_force_high_ramdisk, {false}, R"""(
+This option is intended for test use only. When set to `true` it forces the
+mexec syscall to place the ramdisk for the following kernel in high memory
+(64-bit address space, >= 4GiB offset).
+)""")
+
+DEFINE_OPTION("kernel.mexec-pci-shutdown", bool, mexec_pci_shutdown, {true}, R"""(
+If false, this option leaves PCI devices running when calling mexec.
+)""")
+
 DEFINE_OPTION("kernel.oom.enable", bool, oom_enabled, {true}, R"""(
 This option turns on the out-of-memory (OOM) kernel thread, which kills
 processes or reboots the system (per `kernel.oom.behavior`), when the PMM has

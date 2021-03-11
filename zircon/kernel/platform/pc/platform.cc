@@ -591,7 +591,7 @@ void platform_mexec_prep(uintptr_t final_bootimage_addr, size_t final_bootimage_
   // corruption after boot.
   // Disabling PCI may cause devices to fail to enumerate after boot.
 #ifdef WITH_KERNEL_PCIE
-  if (gCmdline.GetBool(kernel_option::kMexecPciShutdown, true)) {
+  if (gBootOptions->mexec_pci_shutdown) {
     PcieBusDriver::GetDriver()->DisableBus();
   }
 #endif

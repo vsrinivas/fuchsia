@@ -63,6 +63,7 @@ if (is_kernel) {
       ":dispatch",
       ":headers",
       "//zircon/kernel/dev/udisplay",
+      "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/cmdline",
       "//zircon/kernel/lib/console",
       "//zircon/kernel/lib/counters",

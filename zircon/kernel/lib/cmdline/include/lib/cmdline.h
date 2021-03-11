@@ -149,13 +149,13 @@ static constexpr const char kLockupDetectorHeartbeatPeriodMs[] =
     "kernel.lockup-detector.heartbeat-period-ms";
 static constexpr const char kMemoryLimitDbg[] = "kernel.memory-limit-dbg";
 static constexpr const char kMemoryLimitMb[] = "kernel.memory-limit-mb";
-static constexpr const char kMexecForceHighRamdisk[] = "kernel.mexec-force-high-ramdisk";
-static constexpr const char kMexecPciShutdown[] = "kernel.mexec-pci-shutdown";
 static constexpr const char kPageScannerEnableEviction[] = "kernel.page-scanner.enable-eviction";
 static constexpr const char kPageScannerDiscardableEvictionsPercent[] =
     "kernel.page-scanner.discardable-evictions-percent";
 static constexpr const char kPageScannerPageTableEvictionPolicy[] =
     "kernel.page-scanner.page-table-eviction-policy";
+static constexpr const char kPageScannerEnableUserPagerEviction[] =
+    "kernel.page-scanner.enable-user-pager-eviction";
 static constexpr const char kPageScannerPromoteNoClones[] = "kernel.page-scanner.promote-no-clones";
 static constexpr const char kPageScannerStartAtBoot[] = "kernel.page-scanner.start-at-boot";
 static constexpr const char kPageScannerZeroPageScansPerSecond[] =

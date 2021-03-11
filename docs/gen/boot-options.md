@@ -107,6 +107,18 @@ have the `ZX_PROP_JOB_KILL_ON_OOM` bit set to recover memory.
 If set to `reboot`, when encountering OOM, the kernel signals an out-of-memory
 event (see `zx_system_get_event()`), delays briefly, and then reboots the system.
 
+### kernel.mexec-force-high-ramdisk=\<bool>
+**Default:** `false`
+
+This option is intended for test use only. When set to `true` it forces the
+mexec syscall to place the ramdisk for the following kernel in high memory
+(64-bit address space, >= 4GiB offset).
+
+### kernel.mexec-pci-shutdown=\<bool>
+**Default:** `true`
+
+If false, this option leaves PCI devices running when calling mexec.
+
 ### kernel.oom.enable=\<bool>
 **Default:** `true`
 

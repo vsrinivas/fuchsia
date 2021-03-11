@@ -464,12 +464,6 @@ This option tells the kernel to limit system memory to the MB value specified
 by 'num'. Using this effectively allows a user to simulate the system having
 less physical memory than physically present.
 
-## kernel.mexec-force-high-ramdisk=\<bool>
-
-This option is intended for test use only. When set to `true` it forces the
-mexec syscall to place the ramdisk for the following kernel in high memory
-(64-bit address space, >= 4GiB offset). The default value is `false`.
-
 ## kernel.oom.behavior=\<string>
 
 This option can be used to configure the behavior of the kernel when
@@ -642,11 +636,6 @@ before being aborted. For a hardware page fault, the faulting thread will
 terminate with a fatal page fault exception. For a software page fault
 triggered by a syscall, the syscall will fail with `ZX_ERR_TIMED_OUT`. A value
 of 0 indicates a page fault is never aborted due to a time out.
-## kernel.mexec-pci-shutdown=\<bool>
-
-If false, this option leaves PCI devices running when calling mexec. Defaults
-to true.
-
 ## kernel.serial=\<string>
 
 This controls what serial port is used.  If provided, it overrides the serial

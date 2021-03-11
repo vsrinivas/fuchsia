@@ -6,7 +6,7 @@
 
 #include <align.h>
 #include <debug.h>
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/crashlog.h>
 #include <lib/debuglog.h>
 #include <lib/instrumentation/asan.h>
@@ -330,8 +330,6 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
   if (result != ZX_OK)
     return result;
 
-  const bool force_high_mem = gCmdline.GetBool(kernel_option::kMexecForceHighRamdisk, false);
-
   paddr_t new_kernel_addr;
   size_t new_kernel_len;
   result = vmo_coalesce_pages(kernel_vmo, 0, &new_kernel_addr, NULL, &new_kernel_len);
@@ -361,7 +359,7 @@ NO_ASAN zx_status_t sys_system_mexec(zx_handle_t resource, zx_handle_t kernel_vm
   // For testing purposes, we may want the bootdata at a high address. Alternatively if our
   // coalesced VMO should overlap into the target kernel range then we also need to move it, and
   // placing it high is as good as anywhere else.
-  if (force_high_mem ||
+  if (gBootOptions->mexec_force_high_ramdisk ||
       Intersects(final_bootimage_addr, bootimage_len, get_kernel_base_phys(), kernel_image_end)) {
     const size_t page_count = bootimage_len / PAGE_SIZE + 1;
     fbl::AllocChecker ac;
