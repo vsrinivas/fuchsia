@@ -18,6 +18,6 @@ async fn connect_to_wpa2_network() {
     let () = loop_until_iface_is_found().await;
 
     let phy = helper.proxy();
-    let () = connect(&phy, &mut helper, SSID, &BSS, Some(&"wpa2good")).await;
+    let () = connect_wpa2(&phy, &mut helper, SSID, &BSS, "wpa2good").await;
     helper.stop().await;
 }

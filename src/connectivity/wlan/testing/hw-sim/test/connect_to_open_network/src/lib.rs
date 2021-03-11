@@ -17,6 +17,6 @@ async fn connect_to_open_network() {
     let () = loop_until_iface_is_found().await;
 
     let proxy = helper.proxy();
-    let () = connect(&proxy, &mut helper, SSID, &BSS, None).await;
+    let () = connect_open(&proxy, &mut helper, SSID, &BSS).await;
     helper.stop().await;
 }

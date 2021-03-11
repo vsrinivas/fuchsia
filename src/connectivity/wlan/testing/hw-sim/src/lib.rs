@@ -736,46 +736,13 @@ async fn connect_to_network(
     .await;
 }
 
-pub async fn connect_wpa3(
-    phy: &WlantapPhyProxy,
-    helper: &mut test_utils::TestHelper,
-    ssid: &[u8],
-    bssid: &mac::Bssid,
-    passphrase: &str,
-) {
-    let connect_fut = connect_to_network(ssid, wlan_policy::SecurityType::Wpa3, Some(passphrase));
-    pin_mut!(connect_fut);
-
-    // Validate the connect request.
-    let mut authenticator = Some(create_wpa3_authenticator(bssid, passphrase));
-    let mut update_sink = Some(wlan_rsn::rsna::UpdateSink::default());
-
-    helper
-        .run_until_complete_or_timeout(
-            30.seconds(),
-            format!("connecting to {} ({:02X?})", String::from_utf8_lossy(ssid), bssid),
-            |event| {
-                handle_connect_events(
-                    &event,
-                    &phy,
-                    ssid,
-                    bssid,
-                    &Protection::Wpa3Personal,
-                    &mut authenticator,
-                    &mut update_sink,
-                );
-            },
-            connect_fut,
-        )
-        .await
-}
-
-pub async fn connect(
+async fn connect(
     phy: &WlantapPhyProxy,
     helper: &mut test_utils::TestHelper,
     ssid: &[u8],
     bssid: &mac::Bssid,
     passphrase: Option<&str>,
+    security_type: wlan_policy::SecurityType,
 ) {
     let connect_fut = connect_to_network(
         ssid,
@@ -788,11 +755,26 @@ pub async fn connect(
     pin_mut!(connect_fut);
 
     // Validate the connect request.
-    let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p));
-    let mut update_sink = Some(wlan_rsn::rsna::UpdateSink::default());
-    let protection = match passphrase {
-        Some(_) => Protection::Wpa2Personal,
-        None => Protection::Open,
+    let (mut authenticator, mut update_sink, protection) = match security_type {
+        wlan_policy::SecurityType::Wpa3 => (
+            passphrase.map(|p| create_wpa3_authenticator(bssid, p)),
+            Some(wlan_rsn::rsna::UpdateSink::default()),
+            Protection::Wpa3Personal,
+        ),
+        wlan_policy::SecurityType::Wpa2 => (
+            passphrase.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p)),
+            Some(wlan_rsn::rsna::UpdateSink::default()),
+            Protection::Wpa2Personal,
+        ),
+        wlan_policy::SecurityType::Wpa => (
+            passphrase.map(|p| create_deprecated_wpa1_psk_authenticator(bssid, ssid, p)),
+            Some(wlan_rsn::rsna::UpdateSink::default()),
+            Protection::Wpa1,
+        ),
+        wlan_policy::SecurityType::Wep => {
+            panic!("hw-sim does not support connecting to a AP with WEP security type")
+        }
+        wlan_policy::SecurityType::None => (None, None, Protection::Open),
     };
 
     helper
@@ -813,6 +795,35 @@ pub async fn connect(
             connect_fut,
         )
         .await
+}
+
+pub async fn connect_wpa3(
+    phy: &WlantapPhyProxy,
+    helper: &mut test_utils::TestHelper,
+    ssid: &[u8],
+    bssid: &mac::Bssid,
+    passphrase: &str,
+) {
+    connect(phy, helper, ssid, bssid, Some(passphrase), wlan_policy::SecurityType::Wpa3).await;
+}
+
+pub async fn connect_wpa2(
+    phy: &WlantapPhyProxy,
+    helper: &mut test_utils::TestHelper,
+    ssid: &[u8],
+    bssid: &mac::Bssid,
+    passphrase: &str,
+) {
+    connect(phy, helper, ssid, bssid, Some(passphrase), wlan_policy::SecurityType::Wpa2).await;
+}
+
+pub async fn connect_open(
+    phy: &WlantapPhyProxy,
+    helper: &mut test_utils::TestHelper,
+    ssid: &[u8],
+    bssid: &mac::Bssid,
+) {
+    connect(phy, helper, ssid, bssid, None, wlan_policy::SecurityType::None).await;
 }
 
 pub fn rx_wlan_data_frame(

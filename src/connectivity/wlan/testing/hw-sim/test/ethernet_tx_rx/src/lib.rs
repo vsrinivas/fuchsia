@@ -96,7 +96,7 @@ async fn ethernet_tx_rx() {
     let () = loop_until_iface_is_found().await;
 
     let proxy = helper.proxy();
-    connect(&proxy, &mut helper, SSID, &BSS, None).await;
+    connect_open(&proxy, &mut helper, SSID, &BSS).await;
 
     let mut client = create_eth_client(&CLIENT_MAC_ADDR)
         .await

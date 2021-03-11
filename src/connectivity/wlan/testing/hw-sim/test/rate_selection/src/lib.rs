@@ -146,7 +146,7 @@ async fn rate_selection() {
     let () = loop_until_iface_is_found().await;
 
     let phy = helper.proxy();
-    let () = connect(&phy, &mut helper, SSID_MINSTREL, &BSS_MINSTL, None).await;
+    let () = connect_open(&phy, &mut helper, SSID_MINSTREL, &BSS_MINSTL).await;
 
     let phy = helper.proxy();
     let (sender, mut receiver) = mpsc::channel(1);
