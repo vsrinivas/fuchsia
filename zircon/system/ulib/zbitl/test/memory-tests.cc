@@ -8,20 +8,7 @@
 
 namespace {
 
-using FblByteSpanTestTraits = FblSpanTestTraits<std::byte>;
 using FblUint64ArrayTestTraits = FblArrayTestTraits<uint64_t>;
-
-TEST(ZbitlViewFblByteSpanTests, DefaultConstructed) {
-  ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<FblByteSpanTestTraits>());
-}
-
-TEST_ITERATION(ZbitlViewFblByteSpanTests, FblByteSpanTestTraits)
-
-TEST_MUTATION(ZbitlViewFblByteSpanTests, FblByteSpanTestTraits)
-
-TEST(ZbitlImageFblByteSpanTests, Appending) {
-  ASSERT_NO_FATAL_FAILURE(TestAppending<FblByteSpanTestTraits>());
-}
 
 TEST(ZbitlViewFblByteArrayTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<FblByteArrayTestTraits>());
@@ -61,7 +48,7 @@ TEST(ZbitlViewFblByteArrayTests, BoundsChecking) {
   // Byte-range, direct copy: offset + length exceeds ZBI size
   {
     std::byte buff[kOneItemZbiSize];
-    fbl::Span to{buff, kOneItemZbiSize};
+    cpp20::span to{buff, kOneItemZbiSize};
     auto result = view.Copy(to, kOneItemZbiSize, 1u);
     ASSERT_TRUE(result.is_error());
     EXPECT_EQ("offset + length exceeds ZBI size", std::move(result).error_value().zbi_error);
@@ -70,7 +57,7 @@ TEST(ZbitlViewFblByteArrayTests, BoundsChecking) {
   // Byte-range, direct copy: to_offset + length overflows
   {
     std::byte buff[kOneItemZbiSize];
-    fbl::Span to{buff, kOneItemZbiSize};
+    cpp20::span to{buff, kOneItemZbiSize};
     auto result = view.Copy(to, 0u, 1u, std::numeric_limits<uint32_t>::max());
     ASSERT_TRUE(result.is_error());
     EXPECT_EQ("to_offset + length overflows", std::move(result).error_value().zbi_error);
@@ -105,7 +92,7 @@ TEST(StorageFromRawHeader, Creation) {
     EXPECT_EQ(view.size(), image.size_bytes());
   }
   {
-    auto view = zbitl::StorageFromRawHeader<fbl::Span<const std::byte>>(header);
+    auto view = zbitl::StorageFromRawHeader<cpp20::span<const std::byte>>(header);
     EXPECT_EQ(view.data(), raw_pointer);
     EXPECT_EQ(view.size(), image.size_bytes());
   }

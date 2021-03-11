@@ -6,6 +6,7 @@
 #define LIB_ZBITL_STORAGE_TRAITS_H_
 
 #include <lib/fitx/result.h>
+#include <lib/stdcompat/span.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 
@@ -18,13 +19,9 @@
 #include <type_traits>
 #include <version>
 
-#if __cpp_lib_span
-#include <span>
-#endif
-
 namespace zbitl {
 
-using ByteView = std::basic_string_view<std::byte>;
+using ByteView = cpp20::span<const std::byte>;
 
 inline ByteView AsBytes(const void* ptr, size_t len) {
   return {reinterpret_cast<const std::byte*>(ptr), len};
@@ -34,6 +31,14 @@ template <typename T>
 inline ByteView AsBytes(const T& payload) {
   static_assert(std::has_unique_object_representations_v<T>);
   return AsBytes(&payload, sizeof(payload));
+}
+
+// Specialization for cpp20::span<any type> as Storage.  Its payload_type is the
+// same type as Storage, just yielding the subspan of the original whole-ZBI
+// span.
+template <typename T, size_t Extent>
+inline ByteView AsBytes(cpp20::span<T, Extent> payload) {
+  return cpp20::as_bytes(payload);
 }
 
 /// The zbitl::StorageTraits template must be specialized for each type used as
@@ -55,7 +60,7 @@ struct StorageTraits {
   /// corresponding zbi_header_t.length gives its size.  This type is wholly
   /// opaque to zbitl::View but must be copyable.  It might be something as
   /// simple as the offset into the whole ZBI, or for in-memory Storage types a
-  /// std::span pointing to the contents.
+  /// cpp20::span pointing to the contents.
   struct payload_type {};
 
   /// This method is expected to return a type convertible to std::string_view
@@ -251,23 +256,9 @@ struct StorageTraits<std::basic_string_view<T>> {
   }
 };
 
-// Specialization for std::span<any type> as Storage.  Its payload_type is the
-// same type as Storage, just yielding the subspan of the original whole-ZBI
-// span.
-#if __cpp_lib_span
 template <typename T, size_t Extent>
-inline ByteView AsBytes(std::span<T, Extent> payload) {
-  auto bytes = std::as_bytes(payload);
-  return {const_cast<const std::byte*>(bytes.data()), bytes.size()};
-}
-
-inline std::span<std::byte> AsWritableBytes(void* ptr, size_t len) {
-  return {reinterpret_cast<std::byte*>(ptr), len};
-}
-
-template <typename T, size_t Extent>
-struct StorageTraits<std::span<T, Extent>> {
-  using Storage = std::span<T, Extent>;
+struct StorageTraits<cpp20::span<T, Extent>> {
+  using Storage = cpp20::span<T, Extent>;
 
   struct error_type {};
 
@@ -298,9 +289,9 @@ struct StorageTraits<std::span<T, Extent>> {
                                                         uint32_t length) {
     auto payload = [&]() {
       if constexpr (std::is_const_v<T>) {
-        return std::as_bytes(zbi).subspan(offset, length);
+        return cpp20::as_bytes(zbi).subspan(offset, length);
       } else {
-        return std::as_writable_bytes(zbi).subspan(offset, length);
+        return cpp20::as_writable_bytes(zbi).subspan(offset, length);
       }
     }();
     ZX_DEBUG_ASSERT(payload.size() == length);
@@ -311,7 +302,7 @@ struct StorageTraits<std::span<T, Extent>> {
 
   static fitx::result<error_type, ByteView> Read(Storage& zbi, payload_type payload,
                                                  uint32_t length) {
-    auto bytes = AsBytes(std::as_bytes(payload));
+    auto bytes = AsBytes(cpp20::as_bytes(payload));
     ZX_DEBUG_ASSERT(bytes.size() == length);
     return fitx::ok(bytes);
   }
@@ -328,10 +319,9 @@ struct StorageTraits<std::span<T, Extent>> {
     // The caller is supposed to maintain these invariants.
     ZX_DEBUG_ASSERT(offset <= zbi.size_bytes());
     ZX_DEBUG_ASSERT(length <= zbi.size_bytes() - offset);
-    return fitx::ok(&std::as_writable_bytes(zbi)[offset]);
+    return fitx::ok(&cpp20::as_writable_bytes(zbi)[offset]);
   }
 };
-#endif  // __cpp_lib_span
 
 }  // namespace zbitl
 

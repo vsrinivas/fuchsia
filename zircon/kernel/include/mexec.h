@@ -21,7 +21,7 @@
 #include <zircon/types.h>
 
 #include <fbl/ref_ptr.h>
-#include <fbl/span.h>
+#include <ktl/span.h>
 #include <vm/vm_object.h>
 
 // Warning: The geometry of this struct is depended upon by the mexec assembly
@@ -45,7 +45,7 @@ typedef void (*mexec_asm_func)(uint64_t arg0, uint64_t arg1, uint64_t arg2, uint
 
 // Extend the provided data ZBI with the platform-specific items that might
 // be necessary for the kernel that mexec is chain-loading.
-zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi);
+zx_status_t platform_append_mexec_data(ktl::span<std::byte> data_zbi);
 
 /* This function is called at the beginning of mexec.  Interrupts are not yet
  * disabled, but only one CPU is running.

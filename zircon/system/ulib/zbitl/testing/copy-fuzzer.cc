@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/stdcompat/span.h>
 #include <lib/zbitl/error_string.h>
 #include <lib/zbitl/view.h>
 #include <zircon/assert.h>
@@ -11,7 +12,7 @@
 #include <iterator>
 #include <string>
 
-#include <fbl/algorithm.h>
+#include <fbl/array.h>
 #include <fuzzer/FuzzedDataProvider.h>
 
 #include "traits.h"
@@ -51,7 +52,7 @@ int Fuzz(FuzzedDataProvider& provider) {
 
   // Storage destination (only used in the kDirect* codepaths).
   std::unique_ptr<std::byte[]> buff(new std::byte[zbi.size()]);
-  fbl::Span<std::byte> to{buff.get(), zbi.size()};
+  cpp20::span<std::byte> to{buff.get(), zbi.size()};
 
   // These two codepaths are per-view (and not per-iterator) and should not
   // affect the view's internal error state.

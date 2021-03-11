@@ -149,7 +149,7 @@ static void platform_save_bootloader_data(void) {
   printf("Data ZBI: @ %p (%zu bytes)\n", data_zbi, size);
 
   // Handle individual ZBI items.
-  ktl::span<std::byte> zbi = zbitl::AsWritableBytes(data_zbi, size);
+  ktl::span<std::byte> zbi{reinterpret_cast<std::byte*>(data_zbi), size};
   zbitl::View view(zbi);
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
@@ -453,7 +453,7 @@ static fbl::Array<e820entry_t> ConvertMemoryRanges(ktl::span<zbi_mem_range_t> ra
   return e820_ranges;
 }
 
-zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
+zx_status_t platform_append_mexec_data(ktl::span<std::byte> data_zbi) {
   zbitl::Image image(data_zbi);
   // The only possible storage error that can result from a span-backed Image
   // would be a failure to increase the capacity.

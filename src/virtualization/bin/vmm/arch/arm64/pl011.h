@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_ARCH_ARM64_PL011_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_ARCH_ARM64_PL011_H_
 
+#include <lib/stdcompat/span.h>
 #include <lib/zx/socket.h>
 
 #include <mutex>
@@ -25,7 +26,7 @@ class Pl011 : public IoHandler, public PlatformDevice {
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
   // |PlatformDevice|
-  zx_status_t ConfigureZbi(fbl::Span<std::byte> zbi) const override;
+  zx_status_t ConfigureZbi(cpp20::span<std::byte> zbi) const override;
   zx_status_t ConfigureDtb(void* dtb) const override;
 
  private:

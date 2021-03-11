@@ -25,7 +25,7 @@ OneShot::Context* OneShot::Init(void* scratch_space, size_t size) {
   return reinterpret_cast<Context*>(ZSTD_initStaticDCtx(scratch_space, size));
 }
 
-fitx::result<std::string_view> OneShot::DecompressImpl(Context* ctx, fbl::Span<std::byte> out,
+fitx::result<std::string_view> OneShot::DecompressImpl(Context* ctx, cpp20::span<std::byte> out,
                                                        ByteView in) {
   // All-in-one mode.  This will be the only call made.
   auto dctx = reinterpret_cast<ZSTD_DCtx*>(ctx);

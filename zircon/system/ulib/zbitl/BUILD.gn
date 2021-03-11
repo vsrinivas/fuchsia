@@ -30,6 +30,8 @@ zx_library("zbitl") {
     "//zircon/third_party/ulib/cksum",
   ]
   public_deps = [
+    "//sdk/lib/stdcompat",
+
     # <lib/zbitl/view.h> has #include <lib/cksum.h>.
     "//zircon/third_party/ulib/cksum:headers",
 
@@ -79,6 +81,8 @@ source_set("internal.decompress-zstd") {
   defines = [ "ZSTD_STATIC_LINKING_ONLY" ]
   deps = [ "//third_party/zstd:zstd-decompress-standalone" ]
   public_deps = [
+    "//sdk/lib/stdcompat",
+
     # <lib/zbitl/decompress.h> has #include <lib/fitx/result.h>.
     "//zircon/system/ulib/zxc",
 

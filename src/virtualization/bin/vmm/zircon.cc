@@ -7,10 +7,10 @@
 #include <fcntl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fdio/fd.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zbitl/error_string.h>
 #include <lib/zbitl/fd.h>
 #include <lib/zbitl/image.h>
-#include <lib/zbitl/memory.h>
 #include <limits.h>
 #include <stdio.h>
 #include <string.h>
@@ -126,8 +126,8 @@ zx_status_t read_unified_zbi(fbl::unique_fd zbi_fd, const uintptr_t kernel_zbi_o
   auto second = std::next(first);
   size_t kernel_zbi_size = second.item_offset();
   size_t data_zbi_size = view.size_bytes() - (second.item_offset() - first.item_offset());
-  fbl::Span<std::byte> kernel_zbi{phys_mem.as<std::byte>(kernel_zbi_off), kernel_zbi_size};
-  fbl::Span<std::byte> data_zbi{phys_mem.as<std::byte>(data_zbi_off), data_zbi_size};
+  cpp20::span<std::byte> kernel_zbi{phys_mem.as<std::byte>(kernel_zbi_off), kernel_zbi_size};
+  cpp20::span<std::byte> data_zbi{phys_mem.as<std::byte>(data_zbi_off), data_zbi_size};
 
   // Now that we have performed basic data integrity checks and know that the
   // kernel and data ZBI ranges do not overlap, copy.
@@ -161,7 +161,7 @@ static zx_status_t build_data_zbi(const fuchsia::virtualization::GuestConfig& cf
                                   const PhysMem& phys_mem, const DevMem& dev_mem,
                                   const std::vector<PlatformDevice*>& devices, uintptr_t zbi_off) {
   const size_t zbi_max = phys_mem.size() - zbi_off;
-  fbl::Span<std::byte> zbi{phys_mem.as<std::byte>(zbi_off), zbi_max};
+  cpp20::span<std::byte> zbi{phys_mem.as<std::byte>(zbi_off), zbi_max};
   zbitl::Image image(zbi);
 
   // Command line.

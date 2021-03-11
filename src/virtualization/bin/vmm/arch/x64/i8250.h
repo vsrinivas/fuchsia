@@ -5,6 +5,7 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_I8250_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_ARCH_X64_I8250_H_
 
+#include <lib/stdcompat/span.h>
 #include <lib/zx/socket.h>
 
 #include <mutex>
@@ -43,7 +44,7 @@ class I8250Group : public PlatformDevice {
   zx_status_t Init(Guest* guest);
 
   // |PlatformDevice|
-  zx_status_t ConfigureZbi(fbl::Span<std::byte> zbi) const override;
+  zx_status_t ConfigureZbi(cpp20::span<std::byte> zbi) const override;
 
  private:
   static constexpr size_t kNumUarts = 4;

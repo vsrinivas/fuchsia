@@ -13,7 +13,6 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zbitl/error_string.h>
 #include <lib/zbitl/image.h>
-#include <lib/zbitl/memory.h>
 #include <lib/zx/channel.h>
 #include <zircon/boot/driver-config.h>
 
@@ -567,7 +566,7 @@ zx_status_t GicDistributor::Write(uint64_t addr, const IoValue& value) {
   }
 }
 
-zx_status_t GicDistributor::ConfigureZbi(fbl::Span<std::byte> zbi) const {
+zx_status_t GicDistributor::ConfigureZbi(cpp20::span<std::byte> zbi) const {
   const dcfg_arm_gicv2_driver_t gic_v2 = {
       .mmio_phys = kGicv2DistributorPhysBase,
       .gicd_offset = 0x0000,

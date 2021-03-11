@@ -42,7 +42,7 @@ if (is_host) {
 # of its associated test traits type.
 src_storage_types = [
   "String",
-  "ByteView",
+  "ByteSpan",
   "FblByteArray",
   "Fd",
   "Stdio",
@@ -55,11 +55,12 @@ if (is_fuchsia) {
     "MapUnownedVmo",
   ]
 }
-dest_storage_types = src_storage_types - [  # Non-writable types.
-                       "String",
-                       "ByteView",
-                     ]
 
+# Subtract the non-extensible types.
+dest_storage_types = src_storage_types - [
+                       "String",
+                       "ByteSpan",
+                     ]
 copy_test_deps = []
 foreach(src, src_storage_types) {
   foreach(dest, dest_storage_types) {

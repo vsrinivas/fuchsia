@@ -5,10 +5,12 @@
 #include "mem_config.h"
 
 #include <inttypes.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zbitl/items/mem_config.h>
 #include <lib/zbitl/view.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
+#include <zircon/assert.h>
 #include <zircon/boot/e820.h>
 #include <zircon/boot/image.h>
 #include <zircon/limits.h>
@@ -23,8 +25,9 @@ using zbitl::internal::ToMemRange;
 
 // Reinterpret the given ByteView as span of type T.
 template <typename T>
-fbl::Span<const T> ByteViewAsSpan(ByteView bytes) {
-  return fbl::Span<const T>(reinterpret_cast<const T*>(bytes.data()), bytes.size() / sizeof(T));
+inline cpp20::span<const T> AsSpan(ByteView bytes) {
+  ZX_ASSERT(bytes.size() % sizeof(T) == 0);
+  return {reinterpret_cast<const T*>(bytes.data()), bytes.size() / sizeof(T)};
 }
 
 // Ensure the given payload is a valid EFI memory table.
@@ -107,9 +110,9 @@ size_t MemRangeElementCount(uint32_t type, ByteView payload) {
 zbi_mem_range_t MemRangeElement(uint32_t type, ByteView payload, size_t n) {
   switch (type) {
     case ZBI_TYPE_E820_TABLE:
-      return ToMemRange(ByteViewAsSpan<e820entry_t>(payload)[n]);
+      return ToMemRange(AsSpan<e820entry_t>(payload)[n]);
     case ZBI_TYPE_MEM_CONFIG:
-      return ByteViewAsSpan<zbi_mem_range_t>(payload)[n];
+      return AsSpan<zbi_mem_range_t>(payload)[n];
     case ZBI_TYPE_EFI_MEMORY_MAP: {
       const efi_memory_descriptor* descriptor = GetEfiEntry(payload, n);
       // Calling code should ensure that it only requests valid entries.

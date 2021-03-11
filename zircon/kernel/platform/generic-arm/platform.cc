@@ -41,6 +41,8 @@
 #include <kernel/topology.h>
 #include <ktl/algorithm.h>
 #include <ktl/atomic.h>
+#include <ktl/byte.h>
+#include <ktl/span.h>
 #include <lk/init.h>
 #include <object/resource_dispatcher.h>
 #include <platform/crashlog.h>
@@ -81,12 +83,12 @@ static pmm_arena_info_t mem_arena[kNumArenas];
 static size_t arena_count = 0;
 
 // Backs mexec's data ZBI.
-static std::byte mexec_data_zbi[ZX_PAGE_SIZE];
+static ktl::byte mexec_data_zbi[ZX_PAGE_SIZE];
 
 const zbi_header_t* platform_get_zbi(void) { return zbi_root; }
 
-zbitl::Image<ktl::span<std::byte>> GetMexecDataImage() {
-  return zbitl::Image(ktl::span<std::byte>{mexec_data_zbi, sizeof(mexec_data_zbi)});
+zbitl::Image<ktl::span<ktl::byte>> GetMexecDataImage() {
+  return zbitl::Image(ktl::span<ktl::byte>{mexec_data_zbi, sizeof(mexec_data_zbi)});
 }
 
 static void halt_other_cpus(void) {
@@ -306,7 +308,8 @@ void ProcessZbiEarly(zbi_header_t* zbi) {
 
   auto mexec_data_image = GetMexecDataImage();
   // Writable bytes, as we will need to edit CMDLINE items (see below).
-  zbitl::View view(zbitl::AsWritableBytes(zbi, SIZE_MAX));
+  ktl::span span{reinterpret_cast<ktl::byte*>(zbi), SIZE_MAX};
+  zbitl::View view(span);
 
   for (auto it = view.begin(); it != view.end(); ++it) {
     auto [header, payload] = *it;
@@ -320,7 +323,7 @@ void ProcessZbiEarly(zbi_header_t* zbi) {
         if (payload.empty()) {
           break;
         }
-        payload.back() = std::byte{'\0'};
+        payload.back() = ktl::byte{'\0'};
 
         ParseBootOptions(
             ktl::string_view{reinterpret_cast<const char*>(payload.data()), payload.size()});
@@ -672,7 +675,7 @@ void platform_specific_halt(platform_halt_action suggested_action, zircon_crash_
     ;
 }
 
-zx_status_t platform_append_mexec_data(fbl::Span<std::byte> data_zbi) {
+zx_status_t platform_append_mexec_data(ktl::span<ktl::byte> data_zbi) {
   auto mexec_data_image = GetMexecDataImage();
   zbitl::Image image(data_zbi);
   if (auto result = image.Extend(mexec_data_image.begin(), mexec_data_image.end());

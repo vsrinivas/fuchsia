@@ -79,7 +79,7 @@ class Image : public View<Storage> {
     if (padding_size > 0) {
       uint32_t payload_end = new_item_offset + sizeof(new_header) + new_header.length;
       constexpr std::byte kZero[ZBI_ALIGNMENT - 1] = {};
-      auto padding = AsBytes(kZero).substr(0, padding_size);
+      auto padding = AsBytes(kZero).subspan(0, padding_size);
       if (auto result = Traits::Write(this->storage(), payload_end, padding); result.is_error()) {
         return fitx::error{
             Error{"cannot write zero padding", payload_end, std::move(result.error_value())}};

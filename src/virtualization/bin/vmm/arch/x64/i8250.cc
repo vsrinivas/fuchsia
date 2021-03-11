@@ -7,7 +7,6 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zbitl/error_string.h>
 #include <lib/zbitl/image.h>
-#include <lib/zbitl/memory.h>
 #include <stdio.h>
 #include <zircon/boot/driver-config.h>
 #include <zircon/boot/image.h>
@@ -146,7 +145,7 @@ zx_status_t I8250Group::Init(Guest* guest) {
   return ZX_OK;
 }
 
-zx_status_t I8250Group::ConfigureZbi(fbl::Span<std::byte> zbi) const {
+zx_status_t I8250Group::ConfigureZbi(cpp20::span<std::byte> zbi) const {
   dcfg_simple_pio_t zbi_uart = {
       .base = kI8250Base0,
       .irq = 4,

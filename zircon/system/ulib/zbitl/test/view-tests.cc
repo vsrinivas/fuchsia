@@ -21,11 +21,17 @@ TEST(ZbitlViewEmptyTupleTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<EmptyTupleTestTraits>());
 }
 
-TEST(ZbitlViewByteViewTests, DefaultConstructed) {
-  ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<ByteViewTestTraits>());
+TEST(ZbitlViewByteSpanTests, DefaultConstructed) {
+  ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<ByteSpanTestTraits>());
 }
 
-TEST_ITERATION(ZbitlViewByteViewTests, ByteViewTestTraits)
+TEST_ITERATION(ZbitlViewByteSpanTests, ByteSpanTestTraits)
+
+TEST_MUTATION(ZbitlViewByteSpanTests, ByteSpanTestTraits)
+
+TEST(ZbitlImageByteSpanTests, Appending) {
+  ASSERT_NO_FATAL_FAILURE(TestAppending<ByteSpanTestTraits>());
+}
 
 TEST(ZbitlViewStringTests, DefaultConstructed) {
   ASSERT_NO_FATAL_FAILURE(TestDefaultConstructedView<StringTestTraits>());

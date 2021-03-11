@@ -120,7 +120,7 @@ fitx::result<error_type> StorageTraits<fbl::unique_fd>::Write(const fbl::unique_
     }
     ZX_ASSERT(static_cast<size_t>(n) <= data.size());
     offset += static_cast<uint32_t>(n);
-    data.remove_prefix(static_cast<size_t>(n));
+    data = data.subspan(static_cast<size_t>(n));
   }
   return fitx::ok();
 }

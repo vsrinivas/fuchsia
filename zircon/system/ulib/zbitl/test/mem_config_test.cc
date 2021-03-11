@@ -76,7 +76,7 @@ std::basic_string<std::byte> JoinBytes(const T&... object) {
   // Add the bytes from a single item to |result|.
   auto add_item = [&result](const auto& x) {
     zbitl::ByteView object_bytes = zbitl::AsBytes(x);
-    result.append(object_bytes);
+    result.append(object_bytes.begin(), object_bytes.end());
   };
 
   // Add each item.

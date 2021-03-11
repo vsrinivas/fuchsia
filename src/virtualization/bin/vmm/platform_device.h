@@ -5,17 +5,16 @@
 #ifndef SRC_VIRTUALIZATION_BIN_VMM_PLATFORM_DEVICE_H_
 #define SRC_VIRTUALIZATION_BIN_VMM_PLATFORM_DEVICE_H_
 
+#include <lib/stdcompat/span.h>
 #include <zircon/types.h>
 
 #include <cstddef>
-
-#include <fbl/span.h>
 
 class PlatformDevice {
  public:
   virtual ~PlatformDevice() = default;
 
-  virtual zx_status_t ConfigureZbi(fbl::Span<std::byte> zbi) const { return ZX_OK; }
+  virtual zx_status_t ConfigureZbi(cpp20::span<std::byte> zbi) const { return ZX_OK; }
   virtual zx_status_t ConfigureDtb(void *dtb) const { return ZX_OK; }
 };
 

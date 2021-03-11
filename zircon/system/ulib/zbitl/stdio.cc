@@ -114,7 +114,7 @@ fitx::result<error_type> StorageTraits<FILE*>::Write(FILE* f, uint32_t offset, B
     }
     ZX_ASSERT(n <= data.size());
     offset += static_cast<uint32_t>(n);
-    data.remove_prefix(n);
+    data = data.subspan(n);
   }
   return fitx::ok();
 }

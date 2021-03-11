@@ -5,10 +5,10 @@
 #include "src/virtualization/bin/vmm/arch/arm64/pl011.h"
 
 #include <endian.h>
+#include <lib/stdcompat/span.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zbitl/error_string.h>
 #include <lib/zbitl/image.h>
-#include <lib/zbitl/memory.h>
 #include <stdio.h>
 #include <zircon/boot/driver-config.h>
 
@@ -99,7 +99,7 @@ void Pl011::Print(uint8_t ch) {
   tx_offset_ = 0;
 }
 
-zx_status_t Pl011::ConfigureZbi(fbl::Span<std::byte> zbi) const {
+zx_status_t Pl011::ConfigureZbi(cpp20::span<std::byte> zbi) const {
   dcfg_simple_t zbi_uart = {
       .mmio_phys = kPl011PhysBase,
       .irq = 111,

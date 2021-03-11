@@ -6,6 +6,7 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_ARCH_ARM64_GIC_DISTRIBUTOR_H_
 
 #include <fuchsia/sysinfo/cpp/fidl.h>
+#include <lib/stdcompat/span.h>
 #include <limits.h>
 
 #include <map>
@@ -53,7 +54,7 @@ class GicDistributor : public IoHandler, public PlatformDevice {
   zx_status_t Write(uint64_t addr, const IoValue& value) override;
 
   // |PlatformDevice|
-  zx_status_t ConfigureZbi(fbl::Span<std::byte> zbi) const override;
+  zx_status_t ConfigureZbi(cpp20::span<std::byte> zbi) const override;
   zx_status_t ConfigureDtb(void* dtb) const override;
 
  private:

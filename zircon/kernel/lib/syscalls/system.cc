@@ -32,10 +32,11 @@
 #include <arch/mp.h>
 #include <dev/interrupt.h>
 #include <fbl/auto_call.h>
-#include <fbl/span.h>
 #include <kernel/mp.h>
 #include <kernel/range_check.h>
 #include <kernel/thread.h>
+#include <ktl/byte.h>
+#include <ktl/span.h>
 #include <object/event_dispatcher.h>
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
@@ -277,13 +278,13 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
   }
 
   fbl::AllocChecker ac;
-  auto buffer = new (&ac) std::byte[buffer_size];
+  auto buffer = new (&ac) ktl::byte[buffer_size];
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
 
   // Create a zero length ZBI in the buffer.
-  zbitl::Image image(fbl::Span<std::byte>{buffer, buffer_size});
+  zbitl::Image image(ktl::span<ktl::byte>{buffer, buffer_size});
   if (auto result = image.clear(); result.is_error()) {
     zbitl::PrintViewError(result.error_value());
     return ZX_ERR_INTERNAL;
@@ -305,15 +306,15 @@ zx_status_t sys_system_mexec_payload_get(zx_handle_t resource, user_out_ptr<void
       // Image would be a failure to increase the capacity.
       return append_result.error_value().storage_error ? ZX_ERR_BUFFER_TOO_SMALL : ZX_ERR_INTERNAL;
     }
-    auto it = std::move(append_result).value();
-    fbl::Span<std::byte> payload = (*it).payload;
+    auto it = ktl::move(append_result).value();
+    ktl::span<ktl::byte> payload = (*it).payload;
     if (zx_status_t result = stashed_crashlog->Read(payload.data(), 0, payload.size());
         result != ZX_OK) {
       return result;
     }
   }
 
-  return user_buffer.reinterpret<std::byte>().copy_array_to_user(image.storage().data(),
+  return user_buffer.reinterpret<ktl::byte>().copy_array_to_user(image.storage().data(),
                                                                  image.size_bytes());
 }
 

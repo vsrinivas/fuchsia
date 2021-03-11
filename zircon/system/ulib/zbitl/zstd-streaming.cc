@@ -27,8 +27,8 @@ Streaming::Context* Streaming::Init(void* scratch_space, size_t size) {
   return reinterpret_cast<Context*>(ZSTD_initStaticDStream(scratch_space, size));
 }
 
-fitx::result<std::string_view, fbl::Span<std::byte>> Streaming::Decompress(
-    Streaming::Context* dctx, fbl::Span<std::byte> buffer, ByteView& chunk) {
+fitx::result<std::string_view, cpp20::span<std::byte>> Streaming::Decompress(
+    Streaming::Context* dctx, cpp20::span<std::byte> buffer, ByteView& chunk) {
   // Streaming mode.  This may be one of many calls with consecutive chunks.
 
   auto stream = reinterpret_cast<ZSTD_DStream*>(dctx);
@@ -60,7 +60,7 @@ fitx::result<std::string_view, fbl::Span<std::byte>> Streaming::Decompress(
   } while (in.pos < in.size && out.pos < out.size);
 
   ZX_DEBUG_ASSERT(in.pos <= chunk.size());
-  chunk.remove_prefix(in.pos);
+  chunk = chunk.subspan(in.pos);
 
   ZX_DEBUG_ASSERT(out.pos <= buffer.size());
   buffer = {buffer.data() + out.pos, buffer.size() - out.pos};

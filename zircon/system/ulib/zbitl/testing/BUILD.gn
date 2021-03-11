@@ -21,10 +21,7 @@ fuzzer_package("zbitl-fuzzers") {
 
 cpp_fuzzer("append-fuzzer") {
   sources = [ "append-fuzzer.cc" ]
-  deps = [
-    "..",
-    "//zircon/system/ulib/fbl",
-  ]
+  deps = [ ".." ]
 }
 
 cpp_fuzzer("copy-fuzzer") {
