@@ -622,20 +622,6 @@ remaining `(N * (100 - X) / 100)` pages from pager-backed VMOs.
 Note that the kernel will try its best to honor this ratio between discardable
 and pager-backed pages evicted, but the actual numbers might not be exact.
 
-## kernel.userpager.overtime_wait_seconds=\<num>
-
-This option, 20 by default, configures how long a user pager fault may block
-before being considered overtime and printing an information message to the
-debuglog and continuing to wait. A value of 0 indicates a wait is never
-considered to be overtime.
-
-## kernel.userpager.overtime_timeout_seconds=\<num>
-
-This option, 300 by default, configures how long a user pager fault may block
-before being aborted. For a hardware page fault, the faulting thread will
-terminate with a fatal page fault exception. For a software page fault
-triggered by a syscall, the syscall will fail with `ZX_ERR_TIMED_OUT`. A value
-of 0 indicates a page fault is never aborted due to a time out.
 ## kernel.serial=\<string>
 
 This controls what serial port is used.  If provided, it overrides the serial

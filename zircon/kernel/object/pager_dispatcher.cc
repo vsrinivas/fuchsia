@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/counters.h>
 #include <trace.h>
 
@@ -23,14 +23,6 @@ KCOUNTER(dispatcher_pager_total_request_count, "dispatcher.pager.total_requests"
 KCOUNTER(dispatcher_pager_succeeded_request_count, "dispatcher.pager.succeeded_requests")
 KCOUNTER(dispatcher_pager_failed_request_count, "dispatcher.pager.failed_requests")
 KCOUNTER(dispatcher_pager_timed_out_request_count, "dispatcher.pager.timed_out_requests")
-
-// Log warnings every |pager_overtime_wait_seconds| a thread is blocked waiting on a page
-// request. If the thread has been waiting for |pager_overtime_timeout_seconds|, return an
-// error instead of waiting indefinitely.
-static constexpr uint64_t kDefaultPagerOvertimeWaitSeconds = 20;
-static constexpr uint64_t kDefaultPagerOvertimeTimeoutSeconds = 300;
-static uint64_t pager_overtime_wait_seconds = kDefaultPagerOvertimeWaitSeconds;
-static uint64_t pager_overtime_timeout_seconds = kDefaultPagerOvertimeTimeoutSeconds;
 
 zx_status_t PagerDispatcher::Create(KernelHandle<PagerDispatcher>* handle, zx_rights_t* rights) {
   fbl::AllocChecker ac;
@@ -284,10 +276,10 @@ zx_status_t PagerSource::WaitOnEvent(Event* event) {
   // declare a lambda to calculate our deadline to avoid an excessively large statement in our
   // loop condition.
   auto make_deadline = []() {
-    if (pager_overtime_wait_seconds == 0) {
+    if (gBootOptions->userpager_overtime_wait_seconds == 0) {
       return Deadline::infinite();
     } else {
-      return Deadline::after(ZX_SEC(pager_overtime_wait_seconds));
+      return Deadline::after(ZX_SEC(gBootOptions->userpager_overtime_wait_seconds));
     }
   };
   zx_status_t result;
@@ -301,11 +293,12 @@ zx_status_t PagerSource::WaitOnEvent(Event* event) {
 
     // Error out if we've been waiting for longer than the specified timeout, to allow the rest of
     // the system to make progress (if possible).
-    if (pager_overtime_timeout_seconds > 0 &&
-        waited * pager_overtime_wait_seconds >= pager_overtime_timeout_seconds) {
+    if (gBootOptions->userpager_overtime_timeout_seconds > 0 &&
+        waited * gBootOptions->userpager_overtime_wait_seconds >=
+            gBootOptions->userpager_overtime_timeout_seconds) {
       printf("ERROR Pager source %p has been blocked for %" PRIu64
              " seconds. Page request timed out.\n",
-             this, pager_overtime_timeout_seconds);
+             this, gBootOptions->userpager_overtime_timeout_seconds);
       dump_thread(Thread::Current::Get(), false);
       kcounter_add(dispatcher_pager_timed_out_request_count, 1);
       return ZX_ERR_TIMED_OUT;
@@ -319,7 +312,7 @@ zx_status_t PagerSource::WaitOnEvent(Event* event) {
     }
     printf("WARNING pager source %p has been blocked for %" PRIu64
            " seconds with%s message waiting on port.\n",
-           this, waited * pager_overtime_wait_seconds, active ? "" : " no");
+           this, waited * gBootOptions->userpager_overtime_wait_seconds, active ? "" : " no");
     // Dump out the rest of the state of the oustanding requests.
     Dump();
   }
@@ -335,12 +328,3 @@ zx_status_t PagerSource::WaitOnEvent(Event* event) {
 
   return result;
 }
-
-static void pager_init_func(uint level) {
-  pager_overtime_wait_seconds = gCmdline.GetUInt64(kernel_option::kUserpagerOverTimeWaitSeconds,
-                                                   kDefaultPagerOvertimeWaitSeconds);
-  pager_overtime_timeout_seconds = gCmdline.GetUInt64(
-      kernel_option::kUserpagerOverTimeTimeoutSeconds, kDefaultPagerOvertimeTimeoutSeconds);
-}
-
-LK_INIT_HOOK(pager_init, &pager_init_func, LK_INIT_LEVEL_LAST)

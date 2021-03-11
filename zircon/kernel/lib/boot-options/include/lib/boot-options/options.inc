@@ -191,6 +191,21 @@ be a true syscall, instead of simply performing a transformation of the tick
 counter in user-mode.
 )""")
 
+DEFINE_OPTION("kernel.userpager.overtime_wait_seconds", uint64_t, userpager_overtime_wait_seconds, {20}, R"""(
+This option configures how long a user pager fault may block before being
+considered overtime and printing an information message to the debuglog and
+continuing to wait. A value of 0 indicates a wait is never considered to be
+overtime.
+)""")
+
+DEFINE_OPTION("kernel.userpager.overtime_timeout_seconds", uint64_t, userpager_overtime_timeout_seconds, {300}, R"""(
+This option configures how long a user pager fault may block before being
+aborted. For a hardware page fault, the faulting thread will terminate with a
+fatal page fault exception. For a software page fault triggered by a syscall,
+the syscall will fail with `ZX_ERR_TIMED_OUT`. A value of 0 indicates a page
+fault is never aborted due to a time out.
+)""")
+
 // Machine-specific options are included here for all the kernel places.
 // In the generator program, they're included separately.
 

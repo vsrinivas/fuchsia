@@ -171,10 +171,6 @@ static constexpr const char kSerial[] = "kernel.serial";
 static constexpr const char kShell[] = "kernel.shell";
 static constexpr const char kSmpHt[] = "kernel.smp.ht";
 static constexpr const char kSmpMaxCpus[] = "kernel.smp.maxcpus";
-static constexpr const char kUserpagerOverTimeTimeoutSeconds[] =
-    "kernel.userpager.overtime_timeout_seconds";
-static constexpr const char kUserpagerOverTimeWaitSeconds[] =
-    "kernel.userpager.overtime_wait_seconds";
 static constexpr const char kWallclock[] = "kernel.wallclock";
 }  // namespace kernel_option
 
