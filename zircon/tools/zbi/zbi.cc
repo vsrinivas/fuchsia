@@ -7,6 +7,7 @@
 #include <fnmatch.h>
 #include <getopt.h>
 #include <lib/cksum.h>
+#include <lib/stdcompat/span.h>
 #include <lib/zbitl/item.h>
 #include <lib/zbitl/json.h>
 #include <sys/mman.h>
@@ -1336,6 +1337,36 @@ class FileOpener final {
   }
 };
 
+// Attempts to parse a blob as a BOOTFS, returning std::nullopt and logging
+// errors to `complain` in the event of failure. If `complain` is null, no
+// errors will be logged.
+std::optional<zbi_bootfs_header_t> ParseAsBootfs(cpp20::span<const std::byte> bytes,
+                                                 FILE* complain) {
+  zbi_bootfs_header_t superblock;
+  if (bytes.size() < sizeof(superblock)) {
+    if (complain) {
+      fprintf(complain, "payload too short for BOOTFS header\n");
+    }
+    return std::nullopt;
+  }
+  memcpy(&superblock, bytes.data(), sizeof(superblock));
+  if (superblock.magic != ZBI_BOOTFS_MAGIC) {
+    if (complain) {
+      fprintf(complain, "BOOTFS header magic %#x should be %#x\n", superblock.magic,
+              ZBI_BOOTFS_MAGIC);
+    }
+    return std::nullopt;
+  }
+  if (superblock.dirsize > bytes.size() - sizeof(superblock)) {
+    if (complain) {
+      fprintf(complain, "BOOTFS header dirsize %u > payload size %zu\n", superblock.dirsize,
+              bytes.size() - sizeof(superblock));
+    }
+    return std::nullopt;
+  }
+  return superblock;
+}
+
 class Item final {
  public:
   // Only the static methods below can create an Item.
@@ -1447,16 +1478,24 @@ Extracted items use the file names shown below:\n\
     return (header_.flags & ZBI_FLAG_STORAGE_COMPRESSED) && !compress_;
   }
 
+  // Whether the payload is both uncompressed and in BOOTFS format.
+  bool IsUncompressedBootfs() {
+    if (AlreadyCompressed()) {
+      return false;
+    }
+    return ParseAsBootfs({payload_data(), header_.length}, nullptr) != std::nullopt;
+  }
+
   int Show() {
     if (header_.length > 0) {
       if (AlreadyCompressed()) {
         return CreateFromCompressed(*this)->Show();
       }
-      switch (header_.type) {
-        case ZBI_TYPE_STORAGE_BOOTFS:
-          return ShowBootFS();
-        case ZBI_TYPE_CMDLINE:
-          return ShowCmdline();
+      if (IsUncompressedBootfs()) {
+        return ShowBootFS();
+      }
+      if (header_.type == ZBI_TYPE_CMDLINE) {
+        return ShowCmdline();
       }
     }
     return 0;
@@ -1467,7 +1506,7 @@ Extracted items use the file names shown below:\n\
     if (AlreadyCompressed()) {
       CreateFromCompressed(*this)->EmitJsonContents(writer, key);
     } else {
-      if (header_.type == ZBI_TYPE_STORAGE_BOOTFS) {
+      if (IsUncompressedBootfs()) {
         writer.Key(key);
         EmitJsonBootFS(writer);
       } else if (auto ext = TypeExtension(header_.type); ext != nullptr && !strcmp(ext, ".txt")) {
@@ -1967,25 +2006,15 @@ Extracted items use the file names shown below:\n\
     BootFSDirectoryIterator end() { return BootFSDirectoryIterator(); }
 
     static int Create(Item* item, BootFSDirectoryIterator* it) {
-      zbi_bootfs_header_t superblock;
-      const uint32_t length = item->header_.length;
-      if (length < sizeof(superblock)) {
-        fprintf(stderr, "payload too short for BOOTFS header\n");
+      std::optional<zbi_bootfs_header_t> superblock =
+          ParseAsBootfs({item->payload_data(), item->header_.length}, stderr);
+      if (!superblock.has_value()) {
+        // The relevant error message will already have been logged in
+        // ParseAsBootfs().
         return 1;
       }
-      memcpy(&superblock, item->payload_data(), sizeof(superblock));
-      if (superblock.magic != ZBI_BOOTFS_MAGIC) {
-        fprintf(stderr, "BOOTFS header magic %#x should be %#x\n", superblock.magic,
-                ZBI_BOOTFS_MAGIC);
-        return 1;
-      }
-      if (superblock.dirsize > length - sizeof(superblock)) {
-        fprintf(stderr, "BOOTFS header dirsize %u > payload size %zu\n", superblock.dirsize,
-                length - sizeof(superblock));
-        return 1;
-      }
-      it->next_ = item->payload_data() + sizeof(superblock);
-      it->left_ = superblock.dirsize;
+      it->next_ = item->payload_data() + sizeof(*superblock);
+      it->left_ = superblock->dirsize;
       return 0;
     }
 

@@ -9,6 +9,7 @@ import("//build/zircon/migrated_targets.gni")
 zx_host_tool("zbi") {
   sources = [ "zbi.cc" ]
   deps = [
+    "//sdk/lib/stdcompat",
     "//third_party/rapidjson",
     "//third_party/zstd",
     "//zircon/system/ulib/fbl",
