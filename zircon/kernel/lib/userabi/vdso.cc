@@ -5,7 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/affine/ratio.h>
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/userabi/vdso-constants.h>
 #include <lib/userabi/vdso.h>
 #include <lib/version.h>
@@ -221,10 +221,7 @@ void PatchTimeSyscalls(VDsoMutator mutator) {
   // Since this can effect how clock monotonic is calculated as well, we may
   // need to redirect zx_clock_get_monotonic as well.
   const bool need_syscall_for_ticks =
-      !platform_usermode_can_access_tick_registers() ||
-      gCmdline.GetBool(kernel_option::kVdsoTicksGetForceSyscall, false);
-  const bool need_syscall_for_mono =
-      gCmdline.GetBool(kernel_option::kVdsoClockGetMonotonicForceSyscall, false);
+      !platform_usermode_can_access_tick_registers() || gBootOptions->vdso_ticks_get_force_syscall;
 
   if (need_syscall_for_ticks) {
     REDIRECT_SYSCALL(mutator, zx_ticks_get, SYSCALL_zx_ticks_get_via_kernel);
@@ -252,7 +249,7 @@ void PatchTimeSyscalls(VDsoMutator mutator) {
   }
 #endif
 
-  if (need_syscall_for_mono) {
+  if (gBootOptions->vdso_clock_get_monotonic_force_syscall) {
     // Force a syscall for zx_clock_get_monotonic if instructed to do so by the
     // kernel command line arguments.  Make sure to swap out the implementation
     // of zx_deadline_after as well.

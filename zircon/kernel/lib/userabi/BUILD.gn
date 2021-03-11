@@ -185,7 +185,7 @@ if (is_kernel) {
       ":rodso",
       ":vdso-code.h",
       ":vdso.image",
-      "//zircon/kernel/lib/cmdline",
+      "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/syscalls",
       "//zircon/kernel/lib/version",
       "//zircon/kernel/vm:headers",

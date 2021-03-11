@@ -188,6 +188,20 @@ states.
 
 TODO(53594)
 
+### vdso.ticks_get_force_syscall=\<bool>
+**Default:** `false`
+
+If this option is set, the `zx_ticks_get` vDSO call will be forced to be a true
+syscall, even if the hardware cycle counter registers are accessible from
+user-mode.
+
+### vdso.clock_get_monotonic_force_syscall=\<bool>
+**Default:** `false`
+
+If this option is set, the `zx_clock_get_monotonic` vDSO call will be forced to
+be a true syscall, instead of simply performing a transformation of the tick
+counter in user-mode.
+
 
 ## Options available only on arm64 machines
 

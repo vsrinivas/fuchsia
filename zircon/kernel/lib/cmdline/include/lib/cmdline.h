@@ -175,9 +175,6 @@ static constexpr const char kUserpagerOverTimeTimeoutSeconds[] =
     "kernel.userpager.overtime_timeout_seconds";
 static constexpr const char kUserpagerOverTimeWaitSeconds[] =
     "kernel.userpager.overtime_wait_seconds";
-static constexpr const char kVdsoClockGetMonotonicForceSyscall[] =
-    "vdso.clock_get_monotonic_force_syscall";
-static constexpr const char kVdsoTicksGetForceSyscall[] = "vdso.ticks_get_force_syscall";
 static constexpr const char kWallclock[] = "kernel.wallclock";
 }  // namespace kernel_option
 
