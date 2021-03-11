@@ -579,32 +579,6 @@ void main(List<String> args) {
     expect(aggregatedResults[7].values[0], _closeTo(55.00));
   });
 
-  test('Temperature metric with power_manager data', () async {
-    final model = createModelFromJsonString(testTemperatureMetricJsonString);
-    final results = temperatureMetricsProcessor(model, {});
-    expect(results[0].values[0], _closeTo(50.00));
-    expect(results[0].values[1], _closeTo(60.00));
-    final aggregatedResults =
-        temperatureMetricsProcessor(model, {'aggregateMetricsOnly': true});
-    expect(aggregatedResults.length, equals(8));
-    expect(aggregatedResults[0].label, equals('temperature_p5'));
-    expect(aggregatedResults[0].values[0], _closeTo(50.50));
-    expect(aggregatedResults[1].label, equals('temperature_p25'));
-    expect(aggregatedResults[1].values[0], _closeTo(52.50));
-    expect(aggregatedResults[2].label, equals('temperature_p50'));
-    expect(aggregatedResults[2].values[0], _closeTo(55.00));
-    expect(aggregatedResults[3].label, equals('temperature_p75'));
-    expect(aggregatedResults[3].values[0], _closeTo(57.50));
-    expect(aggregatedResults[4].label, equals('temperature_p95'));
-    expect(aggregatedResults[4].values[0], _closeTo(59.50));
-    expect(aggregatedResults[5].label, equals('temperature_min'));
-    expect(aggregatedResults[5].values[0], _closeTo(50.00));
-    expect(aggregatedResults[6].label, equals('temperature_max'));
-    expect(aggregatedResults[6].values[0], _closeTo(60.00));
-    expect(aggregatedResults[7].label, equals('temperature_average'));
-    expect(aggregatedResults[7].values[0], _closeTo(55.00));
-  });
-
   test('Memory metric', () async {
     final model = createModelFromJsonString(testMemoryMetricJsonString);
     final results = memoryMetricsProcessor(model, {});
