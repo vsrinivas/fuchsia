@@ -381,38 +381,35 @@ impl ToResolveStatus for pkgfs::install::BlobWriteError {
 }
 impl ToResolveStatus for FetchError {
     fn to_resolve_status(&self) -> Status {
+        use FetchError::*;
         match self {
-            FetchError::CreateBlob(_) => Status::IO,
-            FetchError::BadHttpStatus { code: hyper::StatusCode::UNAUTHORIZED, .. } => {
-                Status::ACCESS_DENIED
-            }
-            FetchError::BadHttpStatus { code: hyper::StatusCode::FORBIDDEN, .. } => {
-                Status::ACCESS_DENIED
-            }
-            FetchError::BadHttpStatus { .. } => Status::UNAVAILABLE,
-            FetchError::ContentLengthMismatch { .. } => Status::UNAVAILABLE,
-            FetchError::UnknownLength { .. } => Status::UNAVAILABLE,
-            FetchError::BlobTooSmall { .. } => Status::UNAVAILABLE,
-            FetchError::BlobTooLarge { .. } => Status::UNAVAILABLE,
-            FetchError::Hyper { .. } => Status::UNAVAILABLE,
-            FetchError::Http { .. } => Status::UNAVAILABLE,
-            FetchError::Truncate(e) => e.to_resolve_status(),
-            FetchError::Write(e) => e.to_resolve_status(),
-            FetchError::NoMirrors => Status::INTERNAL,
-            FetchError::BlobUrl(_) => Status::INTERNAL,
-            FetchError::FidlError(_) => Status::INTERNAL,
-            FetchError::IoError(_) => Status::IO,
-            FetchError::LocalMirror(_) => Status::INTERNAL,
-            FetchError::NoBlobSource { .. } => Status::INTERNAL,
-            FetchError::ConflictingBlobSources => Status::INTERNAL,
-            FetchError::BlobHeaderTimeout { .. } => Status::UNAVAILABLE,
-            FetchError::BlobBodyTimeout { .. } => Status::UNAVAILABLE,
-            FetchError::ExpectedHttpStatus206 { .. } => Status::UNAVAILABLE,
-            FetchError::MissingContentRangeHeader { .. } => Status::UNAVAILABLE,
-            FetchError::MalformedContentRangeHeader { .. } => Status::UNAVAILABLE,
-            FetchError::InvalidContentRangeHeader { .. } => Status::UNAVAILABLE,
-            FetchError::ExceededResumptionAttemptLimit { .. } => Status::UNAVAILABLE,
-            FetchError::ContentLengthContentRangeMismatch { .. } => Status::UNAVAILABLE,
+            CreateBlob(_) => Status::IO,
+            BadHttpStatus { code: hyper::StatusCode::UNAUTHORIZED, .. } => Status::ACCESS_DENIED,
+            BadHttpStatus { code: hyper::StatusCode::FORBIDDEN, .. } => Status::ACCESS_DENIED,
+            BadHttpStatus { .. } => Status::UNAVAILABLE,
+            ContentLengthMismatch { .. } => Status::UNAVAILABLE,
+            UnknownLength { .. } => Status::UNAVAILABLE,
+            BlobTooSmall { .. } => Status::UNAVAILABLE,
+            BlobTooLarge { .. } => Status::UNAVAILABLE,
+            Hyper { .. } => Status::UNAVAILABLE,
+            Http { .. } => Status::UNAVAILABLE,
+            Truncate(e) => e.to_resolve_status(),
+            Write(e) => e.to_resolve_status(),
+            NoMirrors => Status::INTERNAL,
+            BlobUrl(_) => Status::INTERNAL,
+            FidlError(_) => Status::INTERNAL,
+            IoError(_) => Status::IO,
+            LocalMirror(_) => Status::INTERNAL,
+            NoBlobSource { .. } => Status::INTERNAL,
+            ConflictingBlobSources => Status::INTERNAL,
+            BlobHeaderTimeout { .. } => Status::UNAVAILABLE,
+            BlobBodyTimeout { .. } => Status::UNAVAILABLE,
+            ExpectedHttpStatus206 { .. } => Status::UNAVAILABLE,
+            MissingContentRangeHeader { .. } => Status::UNAVAILABLE,
+            MalformedContentRangeHeader { .. } => Status::UNAVAILABLE,
+            InvalidContentRangeHeader { .. } => Status::UNAVAILABLE,
+            ExceededResumptionAttemptLimit { .. } => Status::UNAVAILABLE,
+            ContentLengthContentRangeMismatch { .. } => Status::UNAVAILABLE,
         }
     }
 }
@@ -961,10 +958,10 @@ pub enum FetchError {
 
 impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
     fn from(error: &FetchError) -> Self {
-        use metrics::FetchBlobMetricDimensionResult as EventCodes;
+        use {metrics::FetchBlobMetricDimensionResult as EventCodes, FetchError::*};
         match error {
-            FetchError::CreateBlob { .. } => EventCodes::CreateBlob,
-            FetchError::BadHttpStatus { code, .. } => match *code {
+            CreateBlob { .. } => EventCodes::CreateBlob,
+            BadHttpStatus { code, .. } => match *code {
                 StatusCode::BAD_REQUEST => EventCodes::HttpBadRequest,
                 StatusCode::UNAUTHORIZED => EventCodes::HttpUnauthorized,
                 StatusCode::FORBIDDEN => EventCodes::HttpForbidden,
@@ -987,33 +984,29 @@ impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
                     _ => EventCodes::BadHttpStatus,
                 },
             },
-            FetchError::NoMirrors => EventCodes::NoMirrors,
-            FetchError::ContentLengthMismatch { .. } => EventCodes::ContentLengthMismatch,
-            FetchError::UnknownLength { .. } => EventCodes::UnknownLength,
-            FetchError::BlobTooSmall { .. } => EventCodes::BlobTooSmall,
-            FetchError::BlobTooLarge { .. } => EventCodes::BlobTooLarge,
-            FetchError::Truncate { .. } => EventCodes::Truncate,
-            FetchError::Write { .. } => EventCodes::Write,
-            FetchError::Hyper { .. } => EventCodes::Hyper,
-            FetchError::Http { .. } => EventCodes::Http,
-            FetchError::BlobUrl { .. } => EventCodes::BlobUrl,
-            FetchError::FidlError { .. } => EventCodes::FidlError,
-            FetchError::IoError { .. } => EventCodes::IoError,
-            FetchError::LocalMirror { .. } => EventCodes::LocalMirror,
-            FetchError::NoBlobSource { .. } => EventCodes::NoBlobSource,
-            FetchError::ConflictingBlobSources => EventCodes::ConflictingBlobSources,
-            FetchError::BlobHeaderTimeout { .. } => EventCodes::BlobHeaderDeadlineExceeded,
-            FetchError::BlobBodyTimeout { .. } => EventCodes::BlobBodyDeadlineExceeded,
-            FetchError::ExpectedHttpStatus206 { .. } => EventCodes::ExpectedHttpStatus206,
-            FetchError::MissingContentRangeHeader { .. } => EventCodes::MissingContentRangeHeader,
-            FetchError::MalformedContentRangeHeader { .. } => {
-                EventCodes::MalformedContentRangeHeader
-            }
-            FetchError::InvalidContentRangeHeader { .. } => EventCodes::InvalidContentRangeHeader,
-            FetchError::ExceededResumptionAttemptLimit { .. } => {
-                EventCodes::ExceededResumptionAttemptLimit
-            }
-            FetchError::ContentLengthContentRangeMismatch { .. } => {
+            NoMirrors => EventCodes::NoMirrors,
+            ContentLengthMismatch { .. } => EventCodes::ContentLengthMismatch,
+            UnknownLength { .. } => EventCodes::UnknownLength,
+            BlobTooSmall { .. } => EventCodes::BlobTooSmall,
+            BlobTooLarge { .. } => EventCodes::BlobTooLarge,
+            Truncate { .. } => EventCodes::Truncate,
+            Write { .. } => EventCodes::Write,
+            Hyper { .. } => EventCodes::Hyper,
+            Http { .. } => EventCodes::Http,
+            BlobUrl { .. } => EventCodes::BlobUrl,
+            FidlError { .. } => EventCodes::FidlError,
+            IoError { .. } => EventCodes::IoError,
+            LocalMirror { .. } => EventCodes::LocalMirror,
+            NoBlobSource { .. } => EventCodes::NoBlobSource,
+            ConflictingBlobSources => EventCodes::ConflictingBlobSources,
+            BlobHeaderTimeout { .. } => EventCodes::BlobHeaderDeadlineExceeded,
+            BlobBodyTimeout { .. } => EventCodes::BlobBodyDeadlineExceeded,
+            ExpectedHttpStatus206 { .. } => EventCodes::ExpectedHttpStatus206,
+            MissingContentRangeHeader { .. } => EventCodes::MissingContentRangeHeader,
+            MalformedContentRangeHeader { .. } => EventCodes::MalformedContentRangeHeader,
+            InvalidContentRangeHeader { .. } => EventCodes::InvalidContentRangeHeader,
+            ExceededResumptionAttemptLimit { .. } => EventCodes::ExceededResumptionAttemptLimit,
+            ContentLengthContentRangeMismatch { .. } => {
                 EventCodes::ContentLengthContentRangeMismatch
             }
         }
@@ -1022,35 +1015,36 @@ impl From<&FetchError> for metrics::FetchBlobMetricDimensionResult {
 
 impl FetchError {
     fn kind(&self) -> FetchErrorKind {
+        use FetchError::*;
         match self {
-            FetchError::BadHttpStatus { code: StatusCode::TOO_MANY_REQUESTS, uri: _ } => {
+            BadHttpStatus { code: StatusCode::TOO_MANY_REQUESTS, uri: _ } => {
                 FetchErrorKind::NetworkRateLimit
             }
-            FetchError::Hyper { .. }
-            | FetchError::Http { .. }
-            | FetchError::BadHttpStatus { .. }
-            | FetchError::BlobHeaderTimeout { .. }
-            | FetchError::BlobBodyTimeout { .. }
-            | FetchError::ExpectedHttpStatus206 { .. }
-            | FetchError::MissingContentRangeHeader { .. }
-            | FetchError::MalformedContentRangeHeader { .. }
-            | FetchError::InvalidContentRangeHeader { .. }
-            | FetchError::ExceededResumptionAttemptLimit { .. }
-            | FetchError::ContentLengthContentRangeMismatch { .. } => FetchErrorKind::Network,
-            FetchError::CreateBlob { .. }
-            | FetchError::NoMirrors
-            | FetchError::ContentLengthMismatch { .. }
-            | FetchError::UnknownLength { .. }
-            | FetchError::BlobTooSmall { .. }
-            | FetchError::BlobTooLarge { .. }
-            | FetchError::Truncate { .. }
-            | FetchError::Write { .. }
-            | FetchError::BlobUrl { .. }
-            | FetchError::FidlError { .. }
-            | FetchError::IoError { .. }
-            | FetchError::LocalMirror { .. }
-            | FetchError::NoBlobSource { .. }
-            | FetchError::ConflictingBlobSources => FetchErrorKind::Other,
+            Hyper { .. }
+            | Http { .. }
+            | BadHttpStatus { .. }
+            | BlobHeaderTimeout { .. }
+            | BlobBodyTimeout { .. }
+            | ExpectedHttpStatus206 { .. }
+            | MissingContentRangeHeader { .. }
+            | MalformedContentRangeHeader { .. }
+            | InvalidContentRangeHeader { .. }
+            | ExceededResumptionAttemptLimit { .. }
+            | ContentLengthContentRangeMismatch { .. } => FetchErrorKind::Network,
+            CreateBlob { .. }
+            | NoMirrors
+            | ContentLengthMismatch { .. }
+            | UnknownLength { .. }
+            | BlobTooSmall { .. }
+            | BlobTooLarge { .. }
+            | Truncate { .. }
+            | Write { .. }
+            | BlobUrl { .. }
+            | FidlError { .. }
+            | IoError { .. }
+            | LocalMirror { .. }
+            | NoBlobSource { .. }
+            | ConflictingBlobSources => FetchErrorKind::Other,
         }
     }
 }
