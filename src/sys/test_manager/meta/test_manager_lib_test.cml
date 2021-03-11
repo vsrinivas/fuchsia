@@ -1,6 +1,7 @@
 {
     include: [
         "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/lib/topology_builder/meta/topology_builder.shard.cml",
         "src/sys/test_runners/rust/default.shard.cml",
     ],
     program: {

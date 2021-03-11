@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/lib/topology_builder/meta/topology_builder.shard.cml",
+    ],
     program: {
         runner: "rust_test_runner",
         binary: "bin/topology_builder_lib_test",

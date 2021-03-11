@@ -4,6 +4,7 @@
 
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
+import("//tools/cmc/build/expect_includes.gni")
 
 rustc_library("topology_builder") {
   testonly = true
@@ -11,6 +12,7 @@ rustc_library("topology_builder") {
   edition = "2018"
 
   deps = [
+    ":client_includes",
     "fidl:fuchsia.topology.builder-rustc",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
@@ -47,6 +49,10 @@ rustc_library("topology_builder") {
     "//examples/components/routing/fidl:echo-rustc",
     "//third_party/rust_crates:matches",
   ]
+}
+
+expect_includes("client_includes") {
+  includes = [ "meta/topology_builder.shard.cml" ]
 }
 
 fuchsia_unittest_package("topology_builder_unittests") {
