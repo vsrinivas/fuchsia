@@ -232,7 +232,7 @@ void arch_init() TA_NO_THREAD_SAFETY_ANALYSIS {
 
 void arch_late_init_percpu(void) {
   arm64_read_percpu_ptr()->should_invalidate_bp_on_context_switch =
-      !gBootOptions->disable_arm64_spec_mitigations && arm64_uarch_needs_spectre_v2_mitigation();
+      !gBootOptions->arm64_disable_spec_mitigations && arm64_uarch_needs_spectre_v2_mitigation();
 }
 
 __NO_RETURN int arch_idle_thread_routine(void*) {

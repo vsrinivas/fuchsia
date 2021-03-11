@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/console.h>
 #include <lib/unittest/unittest.h>
 #include <zircon/syscalls/system.h>
@@ -113,7 +113,7 @@ static bool test_x64_hwp_k_commands() {
   BEGIN_TEST;
 
   // Don't test at all if HWP disabled on the command line.
-  if (!gCmdline.GetBool(kernel_option::kX86Hwp, /*default_value=*/true)) {
+  if (!gBootOptions->x86_hwp) {
     return true;
   }
 
@@ -147,10 +147,7 @@ static bool test_x64_hwp_k_commands() {
 
   // Restore the policy to default.
   MsrAccess msr;
-  x86::IntelHwpPolicy policy =
-      x86::IntelHwpParsePolicy(gCmdline.GetString(kernel_option::kX86HwpPolicy))
-          .value_or(x86::IntelHwpPolicy::kBiosSpecified);
-  x86::IntelHwpInit(&cpuid, &msr, policy);
+  x86::IntelHwpInit(&cpuid, &msr, gBootOptions->x86_hwp_policy);
 
   END_TEST;
 }

@@ -375,3 +375,15 @@ void BootOptions::Parse(std::string_view value, TestStruct BootOptions::*member)
 void BootOptions::PrintValue(const TestStruct& value, FILE* out) { fprintf(out, "test"); }
 
 #endif  // BOOT_OPTIONS_TESTONLY_OPTIONS
+
+#if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
+
+void BootOptions::Parse(std::string_view value, IntelHwpPolicy BootOptions::*member) {
+  Enum<IntelHwpPolicy>(EnumParser{value, &(this->*member)});
+}
+
+void BootOptions::PrintValue(const IntelHwpPolicy& value, FILE* out) {
+  Enum<IntelHwpPolicy>(EnumPrinter{value, out});
+}
+
+#endif  // BOOT_OPTIONS_GENERATOR || defined(__x86_64__)

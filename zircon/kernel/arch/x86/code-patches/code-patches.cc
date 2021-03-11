@@ -55,7 +55,7 @@ void ArchPatchCode(ktl::span<const code_patching::Directive> patches) {
         // `nop` out the mitigation if the bug is not present, if we could not
         // mitigate it even if it was, or if we generally want mitigations off.
         const bool present = arch::HasX86SwapgsBug(cpuid);
-        if (!present || gBootOptions->disable_x86_spec_mitigations) {
+        if (!present || gBootOptions->x86_disable_spec_mitigations) {
           code_patching::NopFill(insns);
           ktl::string_view qualifier = !present ? "bug not present" : "all mitigations disabled";
           PrintCaseInfo(patch, "swapgs bug mitigation disabled (%V)", qualifier);

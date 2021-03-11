@@ -303,7 +303,7 @@ static inline affine::Ratio arm_generic_timer_compute_conversion_factors(uint32_
 // Run once on the boot cpu to decide if we want to start an event stream on each
 // cpu and at what rate.
 static void event_stream_init(uint32_t cntfrq) {
-  if (!gBootOptions->event_stream_enabled) {
+  if (!gBootOptions->arm64_event_stream_enabled) {
     return;
   }
 
@@ -319,7 +319,7 @@ static void event_stream_init(uint32_t cntfrq) {
     // Find a matching shift to the target frequency within range. If the target frequency is too
     // large even for shift 0 then it'll just pick shift 0 because of the <=.
     if (log2_uint_floor(cntfrq >> (shift + 1)) <=
-        log2_uint_floor(gBootOptions->event_stream_freq_hz)) {
+        log2_uint_floor(gBootOptions->arm64_event_stream_freq_hz)) {
       break;
     }
   }

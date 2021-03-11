@@ -11,6 +11,22 @@
 // See kernel/lib/boot-options/README.md for full details and constraints.
 // It should avoid other kernel header dependencies.
 
-// TODO(53594): Wallclock, IntelHwpPolicy
+// TODO(53594): Wallclock
+
+enum class IntelHwpPolicy {
+  // Use BIOS-specified settings if available, falling back to balanced.
+  kBiosSpecified,
+
+  // Use high performance, balanaced, or low-power policies respectively.
+  kPerformance,
+  kBalanced,
+  kPowerSave,
+
+  // Use settings that give predictable performance, such as is required
+  // for benchmarking.
+  kStablePerformance,
+};
+
+#define X86_OPTION_TYPES(OPTION_TYPE) OPTION_TYPE(IntelHwpPolicy);
 
 #endif  // ZIRCON_KERNEL_LIB_BOOT_OPTIONS_INCLUDE_LIB_BOOT_OPTIONS_X86_H_
