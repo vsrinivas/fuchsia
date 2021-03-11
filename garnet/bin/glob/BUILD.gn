@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "glob"
@@ -10,18 +10,7 @@ executable("bin") {
   sources = [ "glob.cc" ]
 }
 
-package("glob") {
+fuchsia_package_with_single_component("glob") {
+  manifest = "meta/glob.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "glob"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/glob.cmx")
-      dest = "glob.cmx"
-    },
-  ]
 }
