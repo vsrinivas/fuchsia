@@ -655,52 +655,53 @@ async fn fetch_blob_http(
         let flaked = Arc::clone(&flaked);
         let mirror_stats = &mirror_stats;
         let mut cobalt_sender = cobalt_sender.clone();
-        // TODO(fxbug.dev/71333) don't use .inspect so this doesn't need to be in an Arc.
-        let fetch_stats = Arc::new(FetchStats::default());
-        let fetch_stats_clone = Arc::clone(&fetch_stats);
         let inspect = &inspect;
         let blob_url = &blob_url;
 
         async move {
-            let inspect = inspect.attempt();
-            inspect.state(inspect::Http::CreateBlob);
-            if let Some((blob, blob_closer)) =
-                cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
-            {
-                inspect.state(inspect::Http::DownloadBlob);
-                let res = download_blob(
-                    &inspect,
-                    client,
-                    &blob_url,
-                    expected_len,
-                    blob,
-                    blob_fetch_params,
-                    fetch_stats_clone,
-                )
-                .await;
-                inspect.state(inspect::Http::CloseBlob);
-                blob_closer.close().await;
-                res?;
-            }
+            let fetch_stats = FetchStats::default();
+            let res = async {
+                let inspect = inspect.attempt();
+                inspect.state(inspect::Http::CreateBlob);
+                if let Some((blob, blob_closer)) =
+                    cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
+                {
+                    inspect.state(inspect::Http::DownloadBlob);
+                    let res = download_blob(
+                        &inspect,
+                        client,
+                        &blob_url,
+                        expected_len,
+                        blob,
+                        blob_fetch_params,
+                        &fetch_stats,
+                    )
+                    .await;
+                    inspect.state(inspect::Http::CloseBlob);
+                    blob_closer.close().await;
+                    res?;
+                }
 
-            Ok(())
-        }
-        .inspect(move |res| match res.as_ref().map_err(FetchError::kind) {
-            Err(FetchErrorKind::NetworkRateLimit) => {
-                mirror_stats.network_rate_limits().increment();
+                Ok(())
             }
-            Err(FetchErrorKind::Network) => {
-                flaked.store(true, Ordering::SeqCst);
-            }
-            Err(FetchErrorKind::Other) => {}
-            Ok(()) => {
-                if flaked.load(Ordering::SeqCst) {
-                    mirror_stats.network_blips().increment();
+            .await;
+
+            match res.as_ref().map_err(FetchError::kind) {
+                Err(FetchErrorKind::NetworkRateLimit) => {
+                    mirror_stats.network_rate_limits().increment();
+                }
+                Err(FetchErrorKind::Network) => {
+                    flaked.store(true, Ordering::SeqCst);
+                }
+                Err(FetchErrorKind::Other) => {}
+                Ok(()) => {
+                    if flaked.load(Ordering::SeqCst) {
+                        mirror_stats.network_blips().increment();
+                    }
                 }
             }
-        })
-        .inspect(move |res| {
-            let result_event_code = match res {
+
+            let result_event_code = match &res {
                 Ok(()) => metrics::FetchBlobMetricDimensionResult::Success,
                 Err(e) => e.into(),
             };
@@ -715,7 +716,9 @@ async fn fetch_blob_http(
                 0,
                 1,
             );
-        })
+
+            res
+        }
     })
     .await
 }
@@ -804,7 +807,7 @@ async fn download_blob(
     expected_len: Option<u64>,
     dest: pkgfs::install::Blob<pkgfs::install::NeedsTruncate>,
     blob_fetch_params: BlobFetchParams,
-    fetch_stats: Arc<FetchStats>,
+    fetch_stats: &FetchStats,
 ) -> Result<(), FetchError> {
     inspect.state(inspect::Http::HttpGet);
     let (expected_len, content) =

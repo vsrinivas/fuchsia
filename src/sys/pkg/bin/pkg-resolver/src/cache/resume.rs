@@ -15,7 +15,6 @@ use {
     std::{
         convert::{TryFrom, TryInto as _},
         str::FromStr,
-        sync::Arc,
     },
 };
 
@@ -26,7 +25,7 @@ pub(super) async fn resuming_get<'a>(
     uri: &'a http::Uri,
     expected_len: Option<u64>,
     blob_fetch_params: BlobFetchParams,
-    fetch_stats: Arc<FetchStats>,
+    fetch_stats: &'a FetchStats,
 ) -> Result<(u64, impl Stream<Item = Result<hyper::body::Bytes, FetchError>> + 'a), FetchError> {
     let request = Request::get(uri)
         .body(Body::empty())
