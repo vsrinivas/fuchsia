@@ -189,6 +189,9 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 			{startString: "RUN   TestPmmCheckerOopsAndPanic", endString: "PASS: TestPmmCheckerOopsAndPanic"},
 			{startString: "RUN   TestCrashAssert", endString: "PASS: TestCrashAssert"},
 		}})
+
+		// For fxbug.dev/71784.
+		ret = append(ret, &stringInLogCheck{String: "intel-i915: No displays detected.", Type: lt})
 	}
 	// These may be in the output of tests, but the syslogType doesn't contain any test output.
 	ret = append(ret, &stringInLogCheck{String: "ASSERT FAILED", Type: syslogType})
