@@ -237,7 +237,7 @@ that apply to every product configuration.
     (with a `.cm` extension).
 
     ```posix-terminal
-    fx scrutiny -c "search.components --url {{ '<var label="component">my_component.cm</var>' }}$"
+    ffx scrutiny shell "search.components --url {{ '<var label="component">my_component.cm</var>' }}$"
     ```
 
 ## Migrate the tests {#migrate-tests}
@@ -674,9 +674,19 @@ your v1 component instead of using the new capabilities routed to it through
 
 ### Test your component {#test-component}
 
-It is recommended that you manually verify that your component and its
-dependencies still work. Perform manual verification of capability routing as it
-is usually outside the scope of hermetic tests.
+Manually verify that your component and its dependencies still work.
+Perform manual verification of capability routing as it is usually outside the
+scope of hermetic tests.
+The `verify routes` command built into [scrutiny][fx-scrutiny] reports routing
+errors in the static component topology of the current build. This can help you
+find missing `offer` or `expose` declarations before performing runtime tests.
+
+```posix-terminal
+ffx scrutiny verify routes
+```
+
+Note: Scrutiny can only verify routes in the v2 component topology. It cannot
+look into `appmgr` and the `sys` environment to review usage from v1 components.
 
 If your component manifest contains additional system features that haven't been
 migrated at this point, see [Other common capabilities](#other-capabilities)
@@ -1166,6 +1176,7 @@ the following to route directory access to your test driver from the test root:
 [ftf-provided-test-runners]: /src/sys/test_runners
 [ftf-test-suite]: /docs/concepts/testing/v2/test_runner_framework.md#test-suite-protocol
 [fuchsia-test-facets]: /docs/concepts/testing/v1_test_component.md
+[fx-scrutiny]: https://fuchsia.dev/reference/tools/fx/cmd/scrutiny
 [glossary-component-manifest]: /docs/glossary.md#component-manifest
 [glossary-components-v1]: /docs/glossary.md#components-v1
 [glossary-components-v2]: /docs/glossary.md#components-v2
