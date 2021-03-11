@@ -176,6 +176,7 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.location.position:fuchsia.location.position_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.location.sensor:fuchsia.location.sensor_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.lowpan.bootstrap:fuchsia.lowpan.bootstrap_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.math:fuchsia.math_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.media:fuchsia.media_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.media.audio:fuchsia.media.audio_sdk($fidl_toolchain)",

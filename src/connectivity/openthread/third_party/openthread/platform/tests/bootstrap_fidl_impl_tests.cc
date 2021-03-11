@@ -1,4 +1,4 @@
-#include <fuchsia/thread/cpp/fidl_test_base.h>
+#include <fuchsia/lowpan/bootstrap/cpp/fidl_test_base.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
@@ -19,9 +19,9 @@ static constexpr char kContents[] =
     "0RVZneImaq7zN3u/wMEdGVzdAECiw4EEDyaLFHv43sLyfgCDs5AuVYMAwKg/w==\"],"
     "\"3\":[\"BA8ADAAAAADrAwAA6AMAACPJ7SOmDXiVYRDVGgGQ+NpGZsaJAgA=\"]}";
 
-class TestableBootstrapImpl : public ot::Fuchsia::BootstrapImpl {
+class TestableBootstrapThreadImpl : public ot::Fuchsia::BootstrapThreadImpl {
  public:
-  TestableBootstrapImpl(sys::ComponentContext* context) : BootstrapImpl(context) {}
+  TestableBootstrapThreadImpl(sys::ComponentContext* context) : BootstrapThreadImpl(context) {}
   void SetShouldServe(bool value) { should_serve_ = value; }
 
   void SetSettingsPath(std::string config_path) { config_path_ = std::move(config_path); }
@@ -34,32 +34,32 @@ class TestableBootstrapImpl : public ot::Fuchsia::BootstrapImpl {
   bool should_serve_;
 };
 
-class BootstrapImplTest : public gtest::TestLoopFixture {
+class BootstrapThreadImplTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     TestLoopFixture::SetUp();
 
-    // Set up BootstrapImpl.
+    // Set up BootstrapThreadImpl.
     ResetImpl(/*should_serve*/ true);
 
     // Connect to the interface under test.
     bootstrap_.set_error_handler([this](zx_status_t error) { last_error_ = error; });
-    ReconnectBootstrapPtr();
+    ReconnectBootstrapThreadPtr();
     ASSERT_TRUE(bootstrap_.is_bound());
   }
 
  protected:
-  fuchsia::thread::BootstrapPtr& bootstrap() { return bootstrap_; }
-  TestableBootstrapImpl& bootstrap_impl() { return *bootstrap_impl_; }
+  fuchsia::lowpan::bootstrap::ThreadPtr& bootstrap() { return bootstrap_; }
+  TestableBootstrapThreadImpl& bootstrap_impl() { return *bootstrap_impl_; }
 
   void ResetImpl(bool should_serve) {
-    bootstrap_impl_ = std::make_unique<TestableBootstrapImpl>(provider_.context());
+    bootstrap_impl_ = std::make_unique<TestableBootstrapThreadImpl>(provider_.context());
     bootstrap_impl_->SetShouldServe(should_serve);
     bootstrap_impl_->Init();
     RunLoopUntilIdle();
   }
 
-  void ReconnectBootstrapPtr() {
+  void ReconnectBootstrapThreadPtr() {
     last_error_ = ZX_OK;
     provider_.ConnectToPublicService(bootstrap_.NewRequest());
     RunLoopUntilIdle();
@@ -69,23 +69,23 @@ class BootstrapImplTest : public gtest::TestLoopFixture {
 
  private:
   sys::testing::ComponentContextProvider provider_;
-  fuchsia::thread::BootstrapPtr bootstrap_;
-  std::unique_ptr<TestableBootstrapImpl> bootstrap_impl_;
+  fuchsia::lowpan::bootstrap::ThreadPtr bootstrap_;
+  std::unique_ptr<TestableBootstrapThreadImpl> bootstrap_impl_;
   zx_status_t last_error_;
 };
 
 // Test Cases ------------------------------------------------------------------
 
-TEST_F(BootstrapImplTest, NoServe) {
+TEST_F(BootstrapThreadImplTest, NoServe) {
   ResetImpl(/*should_serve*/ false);
   EXPECT_FALSE(bootstrap().is_bound());
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, last_error());
-  ReconnectBootstrapPtr();
+  ReconnectBootstrapThreadPtr();
   EXPECT_FALSE(bootstrap().is_bound());
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, last_error());
 }
 
-TEST_F(BootstrapImplTest, ImportSettingsHappy) {
+TEST_F(BootstrapThreadImplTest, ImportSettingsHappy) {
   constexpr char kSettingsPath[] = "/data/config-happy.json";
   bootstrap_impl().SetSettingsPath(kSettingsPath);
 
@@ -95,7 +95,7 @@ TEST_F(BootstrapImplTest, ImportSettingsHappy) {
 
   EXPECT_TRUE(bootstrap().is_bound());
   bool called = false;
-  bootstrap()->ImportThreadSettings(std::move(buffer), [&called]() { called = true; });
+  bootstrap()->ImportSettings(std::move(buffer), [&called]() { called = true; });
   RunLoopUntilIdle();
 
   // Confirm that callback function was called
@@ -110,12 +110,12 @@ TEST_F(BootstrapImplTest, ImportSettingsHappy) {
   EXPECT_FALSE(bootstrap().is_bound());
   EXPECT_EQ(ZX_OK, last_error());
 
-  ReconnectBootstrapPtr();
+  ReconnectBootstrapThreadPtr();
   EXPECT_FALSE(bootstrap().is_bound());
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, last_error());
 }
 
-TEST_F(BootstrapImplTest, ImportSettingsFailUnreadable) {
+TEST_F(BootstrapThreadImplTest, ImportSettingsFailUnreadable) {
   constexpr char kSettingsPath[] = "/data/config-fail.json";
   bootstrap_impl().SetSettingsPath(kSettingsPath);
 
@@ -130,7 +130,7 @@ TEST_F(BootstrapImplTest, ImportSettingsFailUnreadable) {
 
   EXPECT_TRUE(bootstrap().is_bound());
   bool called = false;
-  bootstrap()->ImportThreadSettings(std::move(buffer), [&called]() { called = true; });
+  bootstrap()->ImportSettings(std::move(buffer), [&called]() { called = true; });
   RunLoopUntilIdle();
 
   // Confirm that callback wasn't called:
@@ -141,12 +141,11 @@ TEST_F(BootstrapImplTest, ImportSettingsFailUnreadable) {
   // this indicates that there was some error
   EXPECT_FALSE(bootstrap().is_bound());
 
-  ReconnectBootstrapPtr();
+  ReconnectBootstrapThreadPtr();
   EXPECT_FALSE(bootstrap().is_bound());
 }
 
-
-TEST_F(BootstrapImplTest, ImportSettingsFailNonWritable) {
+TEST_F(BootstrapThreadImplTest, ImportSettingsFailNonWritable) {
   // Use  non-existent-dir to trigger write permission failure
   constexpr char kSettingsPath[] = "/non-existent-dir/config-fail.json";
   bootstrap_impl().SetSettingsPath(kSettingsPath);
@@ -157,7 +156,7 @@ TEST_F(BootstrapImplTest, ImportSettingsFailNonWritable) {
 
   EXPECT_TRUE(bootstrap().is_bound());
   bool called = false;
-  bootstrap()->ImportThreadSettings(std::move(buffer), [&called]() { called = true; });
+  bootstrap()->ImportSettings(std::move(buffer), [&called]() { called = true; });
   RunLoopUntilIdle();
 
   // Confirm that callback wasn't called:
@@ -168,6 +167,6 @@ TEST_F(BootstrapImplTest, ImportSettingsFailNonWritable) {
   // this indicates that there was some error
   EXPECT_FALSE(bootstrap().is_bound());
 
-  ReconnectBootstrapPtr();
+  ReconnectBootstrapThreadPtr();
   EXPECT_FALSE(bootstrap().is_bound());
 }

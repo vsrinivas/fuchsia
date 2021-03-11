@@ -367,7 +367,7 @@ zx_status_t OtStackApp::Init(const std::string& path, bool is_test_env) {
 
   // Init bootstrap fidl:
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  bootstrap_impl_ = std::make_unique<ot::Fuchsia::BootstrapImpl>(context.get());
+  bootstrap_impl_ = std::make_unique<ot::Fuchsia::BootstrapThreadImpl>(context.get());
   status = bootstrap_impl_->Init();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "BootstrapImpl Init() failed with status = " << zx_status_get_string(status);

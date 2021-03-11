@@ -116,7 +116,7 @@ class OtStackApp : public fidl_spinel::Device::SyncEventHandler {
   };
 
   async::Loop loop_{&kAsyncLoopConfigAttachToCurrentThread};
-  std::unique_ptr<ot::Fuchsia::BootstrapImpl> bootstrap_impl_;
+  std::unique_ptr<ot::Fuchsia::BootstrapThreadImpl> bootstrap_impl_;
 
   zx::port port_;
   std::thread event_thread_;

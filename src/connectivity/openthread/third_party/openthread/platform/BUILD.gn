@@ -25,7 +25,7 @@ source_set("platform") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.thread",
+    "//sdk/fidl/fuchsia.lowpan.bootstrap",
     "//sdk/lib/sys/cpp",
     "//src/connectivity/openthread/lib/ot-stack:ot-stack-callback",
     "//src/lib/files",

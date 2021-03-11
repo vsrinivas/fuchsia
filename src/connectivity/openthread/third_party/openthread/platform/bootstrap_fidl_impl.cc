@@ -18,17 +18,17 @@ namespace {
 constexpr char kMigrationConfigPath[] = "/config/data/migration_config.json";
 }  // namespace
 
-// BootstrapImpl definitions -------------------------------------------------------
+// BootstrapThreadImpl definitions -------------------------------------------------------
 
-BootstrapImpl::BootstrapImpl(sys::ComponentContext* context) : context_(context) {}
+BootstrapThreadImpl::BootstrapThreadImpl(sys::ComponentContext* context) : context_(context) {}
 
-BootstrapImpl::~BootstrapImpl() {
+BootstrapThreadImpl::~BootstrapThreadImpl() {
   if (serving_) {
     StopServingFidl();
   }
 }
 
-zx_status_t BootstrapImpl::Init() {
+zx_status_t BootstrapThreadImpl::Init() {
   if (!ShouldServe()) {
     return ZX_OK;
   }
@@ -36,7 +36,7 @@ zx_status_t BootstrapImpl::Init() {
   // Register with the context.
   zx_status_t status = context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to register BootstrapImpl handler with status = "
+    FX_LOGS(ERROR) << "Failed to register BootstrapThreadImpl handler with status = "
                    << zx_status_get_string(status);
   } else {
     serving_ = true;
@@ -44,9 +44,9 @@ zx_status_t BootstrapImpl::Init() {
   return status;
 }
 
-void BootstrapImpl::StopServingFidl() {
+void BootstrapThreadImpl::StopServingFidl() {
   // Stop serving this FIDL and close all active bindings.
-  auto status = context_->outgoing()->RemovePublicService<fuchsia::thread::Bootstrap>();
+  auto status = context_->outgoing()->RemovePublicService<fuchsia::lowpan::bootstrap::Thread>();
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "Could not remove service from outgoing directory.";
   } else {
@@ -54,13 +54,13 @@ void BootstrapImpl::StopServingFidl() {
   }
 }
 
-void BootstrapImpl::StopServingFidlAndCloseBindings(zx_status_t close_bindings_status) {
+void BootstrapThreadImpl::StopServingFidlAndCloseBindings(zx_status_t close_bindings_status) {
   StopServingFidl();
   bindings_.CloseAll(close_bindings_status);
 }
 
-void BootstrapImpl::ImportThreadSettings(fuchsia::mem::Buffer thread_settings_json,
-                                         ImportThreadSettingsCallback callback) {
+void BootstrapThreadImpl::ImportSettings(fuchsia::mem::Buffer thread_settings_json,
+                                         ImportSettingsCallback callback) {
   std::string data;
 
   if (!fsl::StringFromVmo(thread_settings_json, &data)) {
@@ -79,9 +79,9 @@ void BootstrapImpl::ImportThreadSettings(fuchsia::mem::Buffer thread_settings_js
   StopServingFidlAndCloseBindings(ZX_OK);
 }
 
-bool BootstrapImpl::ShouldServe() { return files::IsFile(kMigrationConfigPath); }
+bool BootstrapThreadImpl::ShouldServe() { return files::IsFile(kMigrationConfigPath); }
 
-std::string BootstrapImpl::GetSettingsPath() { return kThreadSettingsPath; }
+std::string BootstrapThreadImpl::GetSettingsPath() { return kThreadSettingsPath; }
 
 }  // namespace Fuchsia
 }  // namespace ot
