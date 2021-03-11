@@ -114,6 +114,9 @@ template("fidl_dart") {
     ]
 
     deps = [
+      ":$copy_options_target_name",
+      ":$copy_pubspec_target_name",
+      ":$generation_target_name",
       "//third_party/dart-pkg/pub/meta",
       dart_package_label.fidl,
       dart_package_label.zircon,
@@ -123,15 +126,9 @@ template("fidl_dart") {
       deps += invoker.public_deps
     }
 
-    non_dart_deps = [
-      ":$copy_options_target_name",
-      ":$copy_pubspec_target_name",
-      ":$generation_target_name",
-    ]
-
     # invoker.deps are the non_fidl_deps passed in to the fidl() rule
     if (defined(invoker.deps)) {
-      non_dart_deps += invoker.deps
+      deps += invoker.deps
     }
   }
 

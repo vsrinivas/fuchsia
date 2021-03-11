@@ -146,7 +146,12 @@ template("fidlmerge_dart") {
 
     sources = [ "$source_base.dart" ]
 
-    deps = []
+    deps = [
+      ":$copy_options_target_name",
+      ":$copy_pubspec_target_name",
+      ":$copy_source_target_name",
+      ":$generation_target_name",
+    ]
 
     if (defined(invoker.deps)) {
       deps += invoker.deps
@@ -154,11 +159,5 @@ template("fidlmerge_dart") {
     if (defined(invoker.public_deps)) {
       deps += invoker.public_deps
     }
-
-    non_dart_deps = [
-      ":$copy_options_target_name",
-      ":$copy_pubspec_target_name",
-      ":$copy_source_target_name",
-    ]
   }
 }

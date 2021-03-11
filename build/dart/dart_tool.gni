@@ -160,6 +160,7 @@ template("dart_tool") {
                            [
                              "disable_analysis",
                              "disable_metadata_entry",
+                             "disable_source_verification",
                              "language_version",
                              "testonly",
                              "visibility",

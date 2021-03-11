@@ -73,6 +73,13 @@ declare_args() {
 #   disable_analysis (optional)
 #     Prevents analysis from being run on this target.
 #
+#   TODO(fxbug.dev/71902): set up allowlist for disable_source_verification when
+#   dart_test no longer depends on dart_library.
+#   NOTE: Do NOT disable source verification unless you are 100% sure it is
+#   absolutely necessary.
+#   disable_source_verification (optional)
+#     Prevents source verification from being run on this target.
+#
 #   sdk_category (optional)
 #     Publication level of the library in SDKs.
 #     See //build/sdk/sdk_atom.gni.
@@ -172,7 +179,14 @@ if (current_toolchain == dart_toolchain) {
     }
 
     assert(defined(invoker.sources), "Sources must be defined")
-    source_file = "$target_gen_dir/$target_name.sources"
+
+    disable_source_verification =
+        defined(invoker.disable_source_verification) &&
+        invoker.disable_source_verification
+    if (disable_source_verification && invoker.sources == []) {
+      not_needed([ source_dir ])
+    }
+
     rebased_sources = []
     foreach(source, invoker.sources) {
       rebased_source_dir = rebase_path(source_dir)
@@ -183,6 +197,7 @@ if (current_toolchain == dart_toolchain) {
         rebased_sources += [ rebase_path(source) ]
       }
     }
+    source_file = "$target_gen_dir/$target_name.sources"
     write_file(source_file, rebased_sources, "list lines")
 
     # Dependencies of the umbrella group for the targets in this file.
@@ -255,39 +270,41 @@ if (current_toolchain == dart_toolchain) {
 
     ################################
     # Dart source "verification"
-    # Warn if there are dart sources included in the build directory that are
+    #
+    # Warn if there are dart sources from the source directory that are
     # not explicitly part of sources. This may cause a failure when syncing to
     # another repository, as they will be excluded from the resulting BUILD
     # file.
-    source_verification_target_name = "${target_name}_source_verification"
-    output_file = "$target_gen_dir/$target_name.missing"
+    #
+    # Also warn if nonexistent files are included in sources.
+    if (!disable_source_verification) {
+      source_verification_target_name = "${target_name}_source_verification"
+      action(source_verification_target_name) {
+        script = "//build/dart/verify_sources.py"
+        output_file = "$target_gen_dir/$target_name.missing"
 
-    action(source_verification_target_name) {
-      script = "//build/dart/verify_sources.py"
+        outputs = [ output_file ]
 
-      inputs = third_party_yaml_lib3_srcs
+        args = [
+          "--source_dir",
+          rebase_path(source_dir),
+          "--stamp",
+          rebase_path(output_file),
+        ]
 
-      outputs = [ output_file ]
+        foreach(source, invoker.sources) {
+          args += [ source ]
+        }
 
-      args = [
-        "--package_root",
-        rebase_path(package_root),
-        "--source_dir",
-        source_dir,
-        "--stamp",
-        rebase_path(output_file),
-      ]
+        forward_variables_from(invoker, [ "testonly" ])
 
-      foreach(source, invoker.sources) {
-        args += [ source ]
+        # Deps may include codegen dependencies that generate dart sources.
+        deps = _dart_deps
       }
-
-      forward_variables_from(invoker, [ "testonly" ])
+      group_deps += [ ":$source_verification_target_name" ]
     }
-    group_deps += [ ":$source_verification_target_name" ]
 
     ################################
-
     # Don't run the analyzer if it is explicitly disabled or if we are using
     # a custom-built Dart SDK in a cross-build.
     with_analysis =
@@ -309,7 +326,8 @@ if (current_toolchain == dart_toolchain) {
       action(invocation_target_name) {
         script = "//build/dart/gen_analyzer_invocation.py"
 
-        deps = dart_sdk_deps + [ ":$_dart_package_config_target_name" ]
+        deps = _dart_deps + dart_sdk_deps +
+               [ ":$_dart_package_config_target_name" ]
 
         inputs = [
           dart_analyzer_binary,
@@ -386,7 +404,8 @@ if (current_toolchain == dart_toolchain) {
           rebase_path(depfile),
         ]
 
-        deps = dart_sdk_deps + [ ":$_dart_package_config_target_name" ]
+        deps = _dart_deps + dart_sdk_deps +
+               [ ":$_dart_package_config_target_name" ]
 
         forward_variables_from(invoker, [ "testonly" ])
       }

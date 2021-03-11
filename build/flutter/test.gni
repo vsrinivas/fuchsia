@@ -83,6 +83,17 @@ if (current_toolchain == dart_toolchain) {
         # analysis is not disabled so include the options file
         options_file = "analysis_options.yaml"
       }
+
+      testonly = true
+
+      # TODO(fxbug.dev/71902): replace the enclosing dart_library with an analysis
+      # target when they are decoupled.
+      #
+      # Skip source verification because the purpose of this target is to run
+      # analysis only. `dart_library` expects all sources under `source_dir` to be
+      # included in `sources`, and this doesn't apply to `dart_test` because it is
+      # valid to have multiple test files for different tests in the same dir.
+      disable_source_verification = true
     }
 
     _packages_file = "$target_gen_dir/${target_name}_package_config.json"
@@ -94,6 +105,7 @@ if (current_toolchain == dart_toolchain) {
     _package_config_target_name = "${target_name}_package_config"
 
     dart_package_config(_package_config_target_name) {
+      testonly = true
       deps = _dart_deps
       outputs = [ _packages_file ]
     }
@@ -150,6 +162,7 @@ if (current_toolchain == dart_toolchain) {
         }
 
         dart_kernel(_kernel_target_name) {
+          testonly = true
           platform_name = "flutter_runner"
           packages_path = _packages_file
           main_dart_file = _bootstrap_filename
@@ -216,6 +229,8 @@ if (current_toolchain == dart_toolchain) {
 
     action(_snapshot_target_name) {
       hermetic_deps = false
+
+      testonly = true
       depfile = "${_snapshot}.d"
 
       outputs = [ _snapshot ]

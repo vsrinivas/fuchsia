@@ -16,5 +16,6 @@ dart_library("sky_engine") {
   # Can be left empty as analysis is disabled.
   sources = []
 
+  disable_source_verification = true
   disable_analysis = true
 }

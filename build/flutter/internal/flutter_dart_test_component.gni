@@ -98,6 +98,15 @@ template("flutter_dart_test_component") {
     source_dir = "."
     pubspec = _pubspec
     options_file = _options_file
+
+    # TODO(fxbug.dev/71902): replace the enclosing dart_library with an analysis
+    # target when they are decoupled.
+    #
+    # Skip source verification because the purpose of this target is to run
+    # analysis only. `dart_library` expects all sources under `source_dir` to be
+    # included in `sources`, and this doesn't apply to `dart_test` because it is
+    # valid to have multiple test files for different tests in the same dir.
+    disable_source_verification = true
   }
 
   # Generate a main which will call all of the test targets

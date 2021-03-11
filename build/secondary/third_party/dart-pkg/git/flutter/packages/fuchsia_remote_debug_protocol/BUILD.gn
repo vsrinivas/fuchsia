@@ -8,6 +8,7 @@ dart_library("fuchsia_remote_debug_protocol") {
   package_name = "fuchsia_remote_debug_protocol"
 
   disable_analysis = true
+  disable_source_verification = true
 
   pubspec = "//third_party/dart-pkg/git/flutter/packages/fuchsia_remote_debug_protocol/pubspec.yaml"
 

@@ -1,74 +1,72 @@
 #!/usr/bin/env python3.8
+
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import argparse
 import os
-import subprocess
 import sys
-
-FUCHSIA_ROOT = os.path.dirname(  # $root
-    os.path.dirname(             # build
-    os.path.dirname(             # dart
-    os.path.abspath(__file__))))
-
-if sys.version_info[0] >= 3:
-    sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib3')]
-else:
-    sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
-
-import yaml
+import pathlib
 
 
 def main():
     parser = argparse.ArgumentParser(
-        'Verifies that all .dart files are included in sources')
+        "Verifies that all .dart files are included in sources, and sources don't include nonexsitent files"
+    )
     parser.add_argument(
-        '--package_root',
-        help='Path to the directory hosting the library',
+        "--source_dir",
+        help="Path to the directory containing the package sources",
         required=True)
     parser.add_argument(
-        '--source_dir',
-        help='Path to the directory containing the package sources',
+        "--stamp",
+        help="File to touch when source checking succeeds",
         required=True)
     parser.add_argument(
-        '--stamp',
-        help='File to touch when source checking succeeds',
-        required=True)
-    parser.add_argument(
-        'sources', help='source files', nargs=argparse.REMAINDER)
+        "sources", help="source files", nargs=argparse.REMAINDER)
     args = parser.parse_args()
 
-    if "/third_party/dart-pkg/git/flutter" in args.package_root:
-        with open(args.stamp, 'w') as stamp:
-            stamp.write('Success!')
-            return 0
+    actual_sources = set()
+    # Get all dart sources from source directory.
+    src_dir_path = pathlib.Path(args.source_dir)
+    for (dirpath, dirnames, filenames) in os.walk(src_dir_path, topdown=True):
+        relpath_to_src_root = pathlib.Path(dirpath).relative_to(src_dir_path)
+        actual_sources.update(
+            os.path.normpath(relpath_to_src_root.joinpath(filename))
+            for filename in filenames
+            if pathlib.Path(filename).suffix == ".dart")
 
-    source_files = set(args.sources)
-    source_root = os.path.join(args.package_root, args.source_dir)
-    missing_sources = []
-    exclude_dirs = ["testing"]
-    slice_length = len(args.package_root) + len(args.source_dir) + 2
-    for (dirpath, dirnames, filenames) in os.walk(source_root, topdown=True):
-        dirnames[:] = [d for d in dirnames if d not in exclude_dirs]
-        for filename in filenames:
-            full_filename = os.path.join(dirpath[slice_length:], filename)
-            [_, file_extension] = os.path.splitext(filename)
-            if file_extension == '.dart' and full_filename not in source_files:
-                missing_sources.extend([full_filename])
+    expected_sources = set(args.sources)
+    # It is possible for sources to include dart files outside of source_dir.
+    actual_sources.update(
+        [
+            s for s in (expected_sources - actual_sources)
+            if src_dir_path.joinpath(s).resolve().exists()
+        ],
+    )
 
-    # We found one or more source files in the directory that was not included in sources.
+    if actual_sources == expected_sources:
+        with open(args.stamp, "w") as stamp:
+            stamp.write("Success!")
+        return 0
+
+    def sources_to_abs_path(sources):
+        return sorted(str(src_dir_path.joinpath(s)) for s in sources)
+
+    missing_sources = actual_sources - expected_sources
     if missing_sources:
         print(
-            'Source files found that were missing from the "sources" parameter:'
+            '\nSource files found that were missing from the "sources" parameter:\n{}\n'
+            .format("\n".join(sources_to_abs_path(missing_sources))),
         )
-        for source in missing_sources:
-            print('"%s",' % source)
-        return 1
-    with open(args.stamp, 'w') as stamp:
-        stamp.write('Success!')
+    nonexistent_sources = expected_sources - actual_sources
+    if nonexistent_sources:
+        print(
+            '\nSource files listed in "sources" parameter but not found:\n{}\n'.
+            format("\n".join(sources_to_abs_path(nonexistent_sources))),
+        )
+    return 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

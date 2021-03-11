@@ -15,6 +15,7 @@ dart_library("flutter_test") {
   sources = []
 
   disable_analysis = true
+  disable_source_verification = true
 
   deps = [
     "../flutter",

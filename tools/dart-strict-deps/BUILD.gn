@@ -10,19 +10,20 @@ group("strict_deps_group") {
   deps = [ ":strict_deps" ]
 }
 
+dart_library_target_name = "dart_strict_deps_proto"
+dart_library_package_name = "tools.dart-strict-deps.$dart_library_target_name"
+
 dart_tool("strict_deps") {
   package_name = "strict_deps"
   main_dart = "bin/main.dart"
   source_dir = "bin"
   output_name = "strict_deps"
   deps = [
+    ":$dart_library_target_name",
     "./library:dart_strict_deps_lib",
     "//third_party/dart-pkg/pub/args",
   ]
 }
-
-dart_library_target_name = "dart_strict_deps_proto"
-dart_library_package_name = "tools.dart-strict-deps.$dart_library_target_name"
 
 # This is the generated dart package's source root directory (where the
 # pubspec.yaml, etc. go).
@@ -118,15 +119,15 @@ copy(copy_pubspec_target) {
 dart_library(dart_library_target_name) {
   disable_analysis = true
   package_root = package_root_dir
+  source_dir = "lib"
   package_name = dart_library_package_name
 
-  sources = proto_output_filepaths
+  sources = rebase_path(proto_output_filepaths, "$package_root/lib")
 
-  deps = [ "//third_party/dart-pkg/pub/protobuf" ]
-
-  non_dart_deps = [
+  deps = [
     ":$copy_pubspec_target",
     ":$proto_gen_target",
+    "//third_party/dart-pkg/pub/protobuf",
   ]
 }
 

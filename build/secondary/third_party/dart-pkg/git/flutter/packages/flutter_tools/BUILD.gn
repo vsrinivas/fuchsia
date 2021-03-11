@@ -16,6 +16,7 @@ dart_library("flutter_tools") {
   sources = []
 
   disable_analysis = true
+  disable_source_verification = true
 
   deps = [
     "//third_party/dart-pkg/pub/analyzer",
@@ -64,6 +65,7 @@ dart_tool("fuchsia_builder") {
 
   disable_analysis = true
   disable_metadata_entry = true
+  disable_source_verification = true
 
   deps = [ ":flutter_tools" ]
 }
@@ -73,6 +75,7 @@ dart_tool("fuchsia_asset_builder") {
 
   disable_analysis = true
   disable_metadata_entry = true
+  disable_source_verification = true
 
   deps = [
     ":flutter_tools",
@@ -85,6 +88,7 @@ dart_tool("fuchsia_tester") {
 
   disable_analysis = true
   disable_metadata_entry = true
+  disable_source_verification = true
 
   deps = [ ":flutter_tools" ]
 
@@ -97,6 +101,7 @@ dart_tool("fuchsia_attach") {
 
   disable_analysis = true
   disable_metadata_entry = true
+  disable_source_verification = true
 
   deps = [ ":flutter_tools" ]
 
