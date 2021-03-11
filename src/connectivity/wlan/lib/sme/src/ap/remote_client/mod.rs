@@ -93,6 +93,11 @@ impl RemoteClient {
         self.state = Some(self.state.take().unwrap().handle_eapol_ind(self, ctx, data));
     }
 
+    pub fn handle_eapol_conf(&mut self, ctx: &mut Context, result: fidl_mlme::EapolResultCode) {
+        // Safe: |state| is never None and always replaced with Some(..).
+        self.state = Some(self.state.take().unwrap().handle_eapol_conf(self, ctx, result));
+    }
+
     pub fn handle_timeout(&mut self, ctx: &mut Context, event_id: EventId, event: ClientEvent) {
         // Safe: |state| is never None and always replaced with Some(..).
         self.state = Some(self.state.take().unwrap().handle_timeout(self, ctx, event_id, event))

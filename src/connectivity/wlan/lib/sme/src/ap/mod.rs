@@ -408,15 +408,7 @@ impl super::Station for ApSme {
                     MlmeEvent::AssociateInd { ind } => bss.handle_assoc_ind(ind),
                     MlmeEvent::DisassociateInd { ind } => bss.handle_disassoc_ind(ind),
                     MlmeEvent::EapolInd { ind } => bss.handle_eapol_ind(ind),
-                    MlmeEvent::EapolConf { resp } => {
-                        if resp.result_code != fidl_mlme::EapolResultCode::Success {
-                            // TODO(fxbug.dev/29301) - Handle unsuccessful EAPoL confirmation. It doesn't
-                            //                  include client address, though. Maybe we can just
-                            //                  ignore these messages and just set a handshake
-                            //                  timeout instead
-                            info!("Received unsuccessful EapolConf");
-                        }
-                    }
+                    MlmeEvent::EapolConf { resp } => bss.handle_eapol_conf(resp),
                     _ => warn!("unsupported MlmeEvent type {:?}; ignoring", event),
                 }
                 State::Started { bss }
@@ -717,6 +709,18 @@ impl InfraBss {
         };
 
         client.handle_eapol_ind(&mut self.ctx, &ind.data[..]);
+    }
+
+    fn handle_eapol_conf(&mut self, resp: fidl_mlme::EapolConfirm) {
+        let client = match self.clients.get_mut(&resp.dst_addr) {
+            None => {
+                warn!("never sent EAPOL frame to client {:02X?}, ignoring confirm", resp.dst_addr);
+                return;
+            }
+            Some(client) => client,
+        };
+
+        client.handle_eapol_conf(&mut self.ctx, resp.result_code);
     }
 }
 

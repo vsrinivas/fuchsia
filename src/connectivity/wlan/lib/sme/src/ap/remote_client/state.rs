@@ -416,6 +416,20 @@ impl RsnaLinkState {
         self.process_authenticator_updates(r_sta, ctx, &update_sink);
         Ok(())
     }
+
+    fn handle_eapol_conf(
+        &mut self,
+        r_sta: &mut RemoteClient,
+        ctx: &mut Context,
+        result: fidl_mlme::EapolResultCode,
+    ) -> Result<(), anyhow::Error> {
+        let authenticator = self.authenticator.as_mut();
+
+        let mut update_sink = vec![];
+        authenticator.on_eapol_conf(&mut update_sink, result)?;
+        self.process_authenticator_updates(r_sta, ctx, &update_sink);
+        Ok(())
+    }
 }
 
 /// Authenticated is the state a client is in when the SME has successfully accepted an
@@ -464,6 +478,22 @@ impl Associated {
             Some(rsna_link_state) => rsna_link_state.handle_eapol_frame(r_sta, ctx, data),
             None => {
                 return Err(format_err!("received EAPoL indication without RSNA link state"));
+            }
+        }
+    }
+
+    /// If RSNA configuration is present, forwards EAPoL frames to the authenticator. Otherwise,
+    /// returns an error.
+    fn handle_eapol_conf(
+        &mut self,
+        r_sta: &mut RemoteClient,
+        ctx: &mut Context,
+        result: fidl_mlme::EapolResultCode,
+    ) -> Result<(), anyhow::Error> {
+        match self.rsna_link_state.as_mut() {
+            Some(rsna_link_state) => rsna_link_state.handle_eapol_conf(r_sta, ctx, result),
+            None => {
+                return Err(format_err!("received EAPoL confirm without RSNA link state"));
             }
         }
     }
@@ -671,6 +701,26 @@ impl States {
             States::Associated(mut state) => {
                 if let Err(e) = state.handle_eapol_ind(r_sta, ctx, data) {
                     error!("client {:02X?} EAPOL.indication: {}", r_sta.addr, e);
+                }
+                state.into()
+            }
+            _ => self,
+        }
+    }
+
+    /// Handles an incoming EAPOL.confirm.
+    ///
+    /// This may update the client's RSNA link state. This will not transition the client.
+    pub fn handle_eapol_conf(
+        self,
+        r_sta: &mut RemoteClient,
+        ctx: &mut Context,
+        result: fidl_mlme::EapolResultCode,
+    ) -> States {
+        match self {
+            States::Associated(mut state) => {
+                if let Err(e) = state.handle_eapol_conf(r_sta, ctx, result) {
+                    error!("client {:02X?} EAPOL.confirm: {}", r_sta.addr, e);
                 }
                 state.into()
             }
@@ -1823,6 +1873,40 @@ mod tests {
             assert_eq!(dst_addr, CLIENT_ADDR);
             assert_eq!(data, Vec::<u8>::from(test_utils::eapol_key_frame()));
         });
+    }
+
+    #[test]
+    fn associated_handles_eapol_conf() {
+        let mut r_sta = make_remote_client();
+        let (mut ctx, _mlme_stream, _) = make_env();
+
+        let state: States = State::new(Authenticating)
+            .transition_to(Authenticated { timeout_event_id: 1 })
+            .transition_to(Associated {
+                aid: 1,
+                rsna_link_state: Some(RsnaLinkState {
+                    request_attempts: 0,
+                    last_key_frame: Some(test_utils::eapol_key_frame()),
+                    request_timeout_event_id: Some(1),
+                    negotiation_timeout_event_id: Some(2),
+                    authenticator: Box::new(MockAuthenticator::new(
+                        Arc::new(Mutex::new(vec![])),
+                        Arc::new(Mutex::new(vec![SecAssocUpdate::TxEapolKeyFrame(
+                            test_utils::eapol_key_frame(),
+                        )])),
+                    )),
+                }),
+            })
+            .into();
+
+        let state =
+            state.handle_eapol_conf(&mut r_sta, &mut ctx, fidl_mlme::EapolResultCode::Success);
+        match state {
+            States::Associated(_) => (),
+            _ => panic!("Eapol conf should leave us in Associated"),
+        }
+
+        // TODO(fxbug.dev/476098): Populate this test once eapol conf is handled.
     }
 
     #[test]
