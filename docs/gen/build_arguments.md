@@ -741,13 +741,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/2872c0ea4e68e197058fadca6dc09d1fa483c0b7/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/2872c0ea4e68e197058fadca6dc09d1fa483c0b7/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://fuchsia.googlesource.com/third_party/crashpad/+/2872c0ea4e68e197058fadca6dc09d1fa483c0b7/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/2872c0ea4e68e197058fadca6dc09d1fa483c0b7/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -2114,13 +2114,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/chromium/mini_chromium/+/12ea507eb719a54698e1429e91e84c65284805ab/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/2872c0ea4e68e197058fadca6dc09d1fa483c0b7/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/chromium/mini_chromium/+/12ea507eb719a54698e1429e91e84c65284805ab/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/2872c0ea4e68e197058fadca6dc09d1fa483c0b7/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -3456,6 +3456,15 @@ Use link time optimization (LTO).
 **Current value (from the default):** `false`
 
 From //build/config/lto/config.gni:7
+
+### use_modern_input_injection
+Set this to true when configuring gn args to use the modern input injection
+protocol `fuchsia.input.injection.InputDeviceRegistry`. If not set, input-synthesis
+defaults to connect to `fuchsia.ui.input.InputDeviceRegistry`.
+
+**Current value (from the default):** `false`
+
+From //src/lib/ui/input-synthesis/BUILD.gn:12
 
 ### use_netstack3
 If true, replaces netstack with netstack3.
