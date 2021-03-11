@@ -1,0 +1,65 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
+
+rustc_test("dynamic_child_stressor_bin") {
+  testonly = true
+  name = "dynamic_child_stressor"
+  edition = "2018"
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/sys/lib/stress-test",
+    "//third_party/rust_crates:argh",
+    "//third_party/rust_crates:async-trait",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:rand",
+  ]
+
+  sources = [
+    "src/component.rs",
+    "src/environment.rs",
+    "src/lib.rs",
+    "src/tree_actor.rs",
+  ]
+}
+
+fuchsia_component("dynamic_child_stressor") {
+  testonly = true
+  manifest = "meta/dynamic_child_stressor.cml"
+  deps = [ ":dynamic_child_stressor_bin" ]
+}
+
+fuchsia_component("dynamic_child_component") {
+  manifest = "meta/dynamic_child_component.cml"
+}
+
+fuchsia_test_package("component-manager-stress-tests-alt") {
+  deps = [ ":dynamic_child_component" ]
+  test_components = [ ":dynamic_child_stressor" ]
+  test_specs = {
+    environments = [
+      {
+        dimensions = {
+          device_type = "QEMU"
+        }
+        tags = [ "stress-tests" ]
+      },
+    ]
+  }
+}
+
+group("stress_tests_alt") {
+  testonly = true
+  deps = [ ":component-manager-stress-tests-alt" ]
+}

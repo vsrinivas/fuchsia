@@ -1,0 +1,14 @@
+{
+    collections: [
+        {
+            name: "children",
+            durability: "transient",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+}
