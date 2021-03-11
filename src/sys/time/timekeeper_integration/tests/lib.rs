@@ -89,7 +89,14 @@ impl PushSourcePuppet {
 
     /// Serve the `PushSource` service to a client.
     fn serve_client(&self, server_end: ServerEnd<PushSourceMarker>) {
-        self.inner.lock().serve_client(server_end);
+        let mut inner = self.inner.lock();
+        // Timekeeper should only need to connect to a push source once, except when it is
+        // restarting a time source. This case appears to the test as a second connection to the
+        // puppet. Since the puppet is restarted, all its state should be cleared as well.
+        if inner.served_client() {
+            *inner = PushSourcePuppetInner::new();
+        }
+        inner.serve_client(server_end);
         *self.cumulative_clients.lock() += 1;
     }
 
@@ -135,6 +142,11 @@ impl PushSourcePuppetInner {
             push_source_clone.poll_updates().await.unwrap();
         })];
         Self { push_source, tasks, update_sink }
+    }
+
+    /// Returns true if this puppet has or is currently serving a client.
+    fn served_client(&self) -> bool {
+        self.tasks.len() > 1
     }
 
     /// Serve the `PushSource` service to a client.
