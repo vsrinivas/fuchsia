@@ -8,8 +8,17 @@ using fuchsia.ui.views;
 
 /// Describes the type of text expected to be input by a virtual keyboard.
 flexible enum TextType {
+    /// The text is likely to contain both alphabetic and numeric
+    /// characters. This is the enum's default (zero-value), so that
+    /// uninitialized enum instances provide the keyboard user the most
+    /// flexibility in what can be input.
     ALPHANUMERIC = 0;
+
+    /// The text is likely to contain only numeric characters.
     NUMERIC = 1;
+
+    /// The text is likely to include both numeric characters,
+    /// and punctuation used with phone numbers (e.g. '*', '#'}).
     PHONE = 2;
 };
 
