@@ -69,46 +69,54 @@ message Static {
   // `exclude_images` is true.
   bool pave = 12;
 
-  // Whether to skip building the basic images needed to boot and test on
-  // Fuchsia.
-  bool exclude_images = 13;
+  // Whether to build the basic images needed to boot and test on Fuchsia.
+  bool include_images = 13;
+
+  // Whether to build manifests of prebuilt binaries.
+  bool include_prebuilt_binary_manifests = 14;
+
+  // Whether to build generated source files specified in the generated sources manifest.
+  bool include_generated_sources = 15;
+
+  // Whether to build ZBI tests.
+  bool include_zbi_tests = 16;
 
   // Whether to build host tests.
-  bool include_host_tests = 14;
+  bool include_host_tests = 17;
 
   // Whether to include archives in the build.
-  bool include_archives = 15;
+  bool include_archives = 18;
 
   // Whether to skip the ninja build if we're running in CQ and none of the
   // changed files affect the build.
-  bool skip_if_unaffected = 16;
+  bool skip_if_unaffected = 19;
 
   // The path within the checkout of a file containing historical test duration
   // data specific to the current build config.
-  string test_durations_file = 17;
+  string test_durations_file = 20;
 
   // If `test_durations_file` doesn't exist within the checkout, use this file
   // instead. It's not specific to the current build config, but it can be
   // assumed to always exist.
-  string default_test_durations_file = 18;
+  string default_test_durations_file = 21;
 
   // Whether to use goma for running ninja. Will be ignored (and goma will not
   // be used) when building with some experimental toolchain versions.
-  bool use_goma = 19;
+  bool use_goma = 22;
 
   // Whether to generate a listing of the commands run during the build.
-  bool generate_compdb = 20;
+  bool generate_compdb = 23;
 
   // Whether to use a go cache when building.
-  bool enable_go_cache = 21;
+  bool enable_go_cache = 24;
 
   // Whether to use a rust cache when building.
-  bool enable_rust_cache = 22;
+  bool enable_rust_cache = 25;
 
   // Which IDE files to generate.
-  repeated string ide_files = 23;
+  repeated string ide_files = 26;
 
   // Passed to --json-ide-script GN flag; GN will execute each of these scripts
   // after regenerating the project.json IDE file.
-  repeated string json_ide_scripts = 24;
+  repeated string json_ide_scripts = 27;
 }
