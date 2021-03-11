@@ -145,5 +145,5 @@ The following is a recap of policy API concepts:
   target, and what policies are active
 
 <!--xrefs-->
-[volume_policy_fidl]: //fuchsia/sdk/fidl/fuchsia.settings.policy/volume_policy.fidl
+[volume_policy_fidl]: /sdk/fidl/fuchsia.settings.policy/volume_policy.fidl
 [hanging-get]: /docs/concepts/api/fidl.md#hanging-get
