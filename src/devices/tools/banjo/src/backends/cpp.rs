@@ -495,6 +495,24 @@ fn filter_protocol<'a>(
     None
 }
 
+/// Same as filter_protocol but with a slightly different signatures. This version is used with a
+/// declaration order vector as opposed to the namespace declaration vector. Ultimately only the
+/// present version will remain.
+fn filter_protocol2<'a>(
+    decl: &&'a ast::Decl,
+) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
+    if let ast::Decl::Protocol { ref name, ref methods, ref attributes, .. } = *decl {
+        if let Some(layout) = attributes.get_attribute("BanjoLayout") {
+            if layout == "ddk-protocol" {
+                return Some((name, methods, attributes));
+            }
+        } else {
+            return Some((name, methods, attributes));
+        }
+    }
+    None
+}
+
 impl<'a, W: io::Write> CppBackend<'a, W> {
     fn codegen_decls(
         &self,
@@ -1220,10 +1238,14 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
         Ok(if text.len() > 0 { "\n".to_string() + &text } else { "".to_string() })
     }
 
-    fn codegen_mock(&self, namespace: &Vec<ast::Decl>, ast: &BanjoAst) -> Result<String, Error> {
-        namespace
+    fn codegen_mock(
+        &self,
+        declarations: &Vec<&ast::Decl>,
+        ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        declarations
             .iter()
-            .filter_map(filter_protocol)
+            .filter_map(filter_protocol2)
             .map(|(name, methods, _attributes)| {
                 Ok(format!(
                     include_str!("templates/cpp/mock.h"),
@@ -1313,6 +1335,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 impl<'a, W: io::Write> Backend<'a, W> for CppBackend<'a, W> {
     fn codegen(&mut self, ast: BanjoAst) -> Result<(), Error> {
         let namespace = &ast.namespaces[&ast.primary_namespace];
+        let decl_order = ast.validate_declaration_deps()?;
         match &self.subtype {
             CppSubtype::Base => {
                 self.w.write_fmt(format_args!(
@@ -1341,7 +1364,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CppBackend<'a, W> {
                     includes = self.codegen_mock_includes(namespace, &ast)?,
                     namespace = &ast.primary_namespace,
                 ))?;
-                self.w.write_fmt(format_args!("{}", self.codegen_mock(namespace, &ast)?))?;
+                self.w.write_fmt(format_args!("{}", self.codegen_mock(&decl_order, &ast)?))?;
                 self.w.write_fmt(format_args!(include_str!("templates/cpp/footer.h")))?;
             }
         }
