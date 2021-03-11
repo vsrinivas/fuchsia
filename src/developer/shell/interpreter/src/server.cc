@@ -217,12 +217,14 @@ void ServerInterpreter::EmitError(ExecutionContext* context, std::string error_m
 void ServerInterpreter::EmitError(ExecutionContext* context, NodeId node_id,
                                   std::string error_message) {
   FX_DCHECK(context != nullptr);
-  std::vector<fuchsia_shell::wire::Location> locations;
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<fuchsia_shell::wire::Location> locations(allocator, 1);
+
+  locations[0].Allocate(allocator);
   fuchsia_shell::wire::NodeId fidl_node_id{.file_id = node_id.file_id, .node_id = node_id.node_id};
-  auto builder =
-      fuchsia_shell::wire::Location::UnownedBuilder().set_node_id(fidl::unowned_ptr(&fidl_node_id));
-  locations.emplace_back(builder.build());
-  service_->OnError(context->id(), locations, std::move(error_message));
+  locations[0].set_node_id(allocator, std::move(fidl_node_id));
+
+  service_->OnError(context->id(), std::move(locations), std::move(error_message));
   context->set_has_errors();
 }
 

@@ -191,15 +191,16 @@ class Service final : public fuchsia_shell::Shell::Interface {
   void Shutdown(ShutdownCompleter::Sync& completer) override;
 
   // Helpers to be able to send events to the client.
-  zx_status_t OnError(uint64_t context_id, std::vector<fuchsia_shell::wire::Location>& locations,
+  zx_status_t OnError(uint64_t context_id,
+                      fidl::VectorView<fuchsia_shell::wire::Location>&& locations,
                       const std::string& error_message) {
-    return binding_.value()->OnError(context_id, fidl::unowned_vec(locations),
+    return binding_.value()->OnError(context_id, std::move(locations),
                                      fidl::unowned_str(error_message));
   }
 
   zx_status_t OnError(uint64_t context_id, const std::string& error_message) {
-    std::vector<fuchsia_shell::wire::Location> locations;
-    return OnError(context_id, locations, error_message);
+    fidl::VectorView<fuchsia_shell::wire::Location> locations;
+    return OnError(context_id, std::move(locations), error_message);
   }
 
   zx_status_t OnDumpDone(uint64_t context_id) { return binding_.value()->OnDumpDone(context_id); }
