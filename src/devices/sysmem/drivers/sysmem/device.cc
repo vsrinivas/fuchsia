@@ -65,22 +65,20 @@ T AlignUp(T value, T divisor) {
 
 // Helper function to build owned HeapProperties table with coherency domain support.
 fuchsia_sysmem2::wire::HeapProperties BuildHeapPropertiesWithCoherencyDomainSupport(
-    bool cpu_supported, bool ram_supported, bool inaccessible_supported, bool need_clear) {
+    fidl::AnyAllocator& allocator, bool cpu_supported, bool ram_supported,
+    bool inaccessible_supported, bool need_clear) {
   using fuchsia_sysmem2::wire::CoherencyDomainSupport;
   using fuchsia_sysmem2::wire::HeapProperties;
 
-  auto coherency_domain_support = std::make_unique<CoherencyDomainSupport>();
-  *coherency_domain_support =
-      CoherencyDomainSupport::Builder(std::make_unique<CoherencyDomainSupport::Frame>())
-          .set_cpu_supported(std::make_unique<bool>(cpu_supported))
-          .set_ram_supported(std::make_unique<bool>(ram_supported))
-          .set_inaccessible_supported(std::make_unique<bool>(inaccessible_supported))
-          .build();
+  CoherencyDomainSupport coherency_domain_support(allocator);
+  coherency_domain_support.set_cpu_supported(allocator, cpu_supported)
+      .set_ram_supported(allocator, ram_supported)
+      .set_inaccessible_supported(allocator, inaccessible_supported);
 
-  return HeapProperties::Builder(std::make_unique<HeapProperties::Frame>())
-      .set_coherency_domain_support(std::move(coherency_domain_support))
-      .set_need_clear(std::make_unique<bool>(need_clear))
-      .build();
+  HeapProperties heap_properties(allocator);
+  heap_properties.set_coherency_domain_support(allocator, std::move(coherency_domain_support))
+      .set_need_clear(allocator, need_clear);
+  return heap_properties;
 }
 
 class SystemRamMemoryAllocator : public MemoryAllocator {
@@ -88,7 +86,8 @@ class SystemRamMemoryAllocator : public MemoryAllocator {
   SystemRamMemoryAllocator(Owner* parent_device)
       : MemoryAllocator(parent_device->table_set(),
                         BuildHeapPropertiesWithCoherencyDomainSupport(
-                            true /*cpu*/, true /*ram*/, true /*inaccessible*/,
+                            parent_device->table_set().allocator(), true /*cpu*/, true /*ram*/,
+                            true /*inaccessible*/,
                             // Zircon guarantees created VMO are filled with 0; sysmem doesn't
                             // need to clear it once again.
                             false /*need_clear*/)) {
@@ -131,7 +130,8 @@ class ContiguousSystemRamMemoryAllocator : public MemoryAllocator {
   explicit ContiguousSystemRamMemoryAllocator(Owner* parent_device)
       : MemoryAllocator(parent_device->table_set(),
                         BuildHeapPropertiesWithCoherencyDomainSupport(
-                            true /*cpu*/, true /*ram*/, true /*inaccessible*/,
+                            parent_device->table_set().allocator(), true /*cpu*/, true /*ram*/,
+                            true /*inaccessible*/,
                             // Zircon guarantees contagious VMO created are filled with 0;
                             // sysmem doesn't need to clear it once again.
                             false /*need_clear*/)),
