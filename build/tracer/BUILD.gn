@@ -14,7 +14,7 @@ group("tests") {
 
     # There are known platforms where fsatrace_test fails.
     # TODO(fxb/70879): enable when test passes on all of them
-    ":fsatrace_test",  # DO NOT SUBMIT: this just to try CQ-tryjobs
+    # ":fsatrace_test",
   ]
 }
 

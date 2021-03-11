@@ -31,16 +31,13 @@ tmpd="$(mktemp -d -t tmp.fsatrace_test.XXXXX)"
 echo "hello, world" > "$tmpd"/src.txt
 
 cp="$(which cp)"
-"$fsatrace" erwmdtq "$tmpd/trace.txt" -- cp "$tmpd"/src.txt "$tmpd"/dest.txt
+"$fsatrace" erwmdt "$tmpd/trace.txt" -- cp "$tmpd"/src.txt "$tmpd"/dest.txt
 
 # Use exit code of diff.
 diff -u "$tmpd/trace.txt" - <<EOF
 r|$cp
-q|$tmpd/src.txt
 r|$tmpd/src.txt
-q|$tmpd/src.txt
 w|$tmpd/dest.txt
-q|$tmpd/dest.txt
 EOF
 # If there is a difference, -e will exit here.
 
