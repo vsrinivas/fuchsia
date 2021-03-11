@@ -110,7 +110,7 @@ To update a third-party crate, do the following:
 [3p-cargo-toml]: /third_party/rust_crates/Cargo.toml
 [3p-vendor]: /third_party/rust_crates/vendor
 [cargo-gnaw-readme]: /tools/cargo-gnaw/README.md
-[osrb-process]: https://docs.google.com/document/d/1X3eNvc4keQxOpbkGUiyYBMtr3ueEnVQCPW61FT96o_E/edit#heading=h.7mb7m2qs89th
+[osrb-process]: /docs/contribute/governance/policy/osrb-process.md
 [jiri-manifest]: https://fuchsia.googlesource.com/manifest/+/master/runtimes/rust "Jiri manifest"
 
 ## Importing a subset of files in a crate

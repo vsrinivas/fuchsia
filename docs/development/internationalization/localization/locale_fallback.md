@@ -61,7 +61,7 @@ planned but not yet implemented features related to fallback.
 <!-- xrefs -->
 
 [fbk]: https://www.w3.org/TR/ltli/#dfn-locale-fallback
-[fip]: https://fuchsia.dev/reference/fidl/fuchsia.intl/Index#Profile
+[fip]: https://fuchsia.dev/reference/fidl/fuchsia.intl/#Profile
 [iln]: /src/lib/intl/lookup/cpp/lookup.h#77
 [langm]: http://unicode.org/reports/tr35/#LanguageMatching
 [ld]: https://sites.google.com/site/cldr/development/development-process/design-proposals/languagedistance

@@ -136,7 +136,7 @@ Run `fx shell killall scenic.cmx` to kill an active instance of Scenic.
   runtests --names gfx_unittests -- --gtest_filter=HostImageTest.FindResource
   ```
 
-  See more documentation about the [glob pattern for the filter arg](https://github.com/google/googletest/blob/HEAD/googletest/docs/advanced.md).
+  See more documentation about the [glob pattern for the filter arg](https://github.com/google/googletest/blob/HEAD/docs/advanced.md).
 
 * Run a specific component
 
