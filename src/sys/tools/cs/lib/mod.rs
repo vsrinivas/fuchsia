@@ -14,6 +14,12 @@ pub enum IncludeDetails {
     No,
 }
 
+pub const COMPONENT_SHOW_HELP: &str = "Filter format: component_name / url / partial url.
+
+Example:
+'appmgr', 'appmgr.cm', 'fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm'
+will all return information about the appmgr component.";
+
 static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 
 pub(crate) async fn get_capabilities(capability_dir: Directory) -> Vec<String> {

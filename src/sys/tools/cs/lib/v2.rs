@@ -6,6 +6,7 @@ use {
     crate::io::Directory,
     crate::v1::V1Realm,
     crate::{get_capabilities, get_capabilities_timeout, IncludeDetails},
+    anyhow::{format_err, Error},
     futures::future::{join_all, BoxFuture, FutureExt},
 };
 
@@ -224,14 +225,13 @@ impl V2Component {
         }
     }
 
-    pub fn print_details(&self, filter: &str) -> bool {
+    pub fn print_details(&self, filter: &str) -> Result<(), Error> {
         if !self.print_details_recursive("", filter) {
-            eprintln!(
-                "Error! Failed to get information about the component. The component may not exist."
-            );
-            return false;
-        }
-        true
+            return Err(format_err!(
+                "filter should be a component name or component (partial) url."
+            ));
+        };
+        Ok(())
     }
 
     fn print_details_recursive(&self, moniker_prefix: &str, filter: &str) -> bool {
@@ -981,8 +981,8 @@ mod tests {
             .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
 
-        assert_eq!(v2_component.print_details("bootstrap"), true);
-        assert_eq!(v2_component.print_details("archivist"), true);
+        assert!(v2_component.print_details("bootstrap").is_ok());
+        assert!(v2_component.print_details("archivist").is_ok());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1085,9 +1085,9 @@ mod tests {
             .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
 
-        assert_eq!(v2_component.print_details("core"), true);
-        assert_eq!(v2_component.print_details("appmgr"), true);
-        assert_eq!(v2_component.print_details("sysmgr"), true);
+        assert!(v2_component.print_details("core").is_ok());
+        assert!(v2_component.print_details("appmgr").is_ok());
+        assert!(v2_component.print_details("sysmgr").is_ok());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1131,6 +1131,6 @@ mod tests {
             .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
 
-        assert_eq!(v2_component.print_details("asdfgh"), false);
+        assert!(v2_component.print_details("asdfgh").is_err());
     }
 }

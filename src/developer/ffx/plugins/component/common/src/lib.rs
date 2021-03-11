@@ -12,3 +12,9 @@ the component remote-control.
 Note that moniker wildcards are not recursive: 'a/*/c' will only match
 components named 'c' running in some sub-realm directly below 'a', and
 no further.";
+
+pub const COMPONENT_SHOW_HELP: &str = "Filter format: component_name / url / partial url.
+
+Example:
+'appmgr', 'appmgr.cm', 'fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm'
+will all return information about the appmgr component.";

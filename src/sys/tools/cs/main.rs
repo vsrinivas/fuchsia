@@ -10,8 +10,8 @@ mod freq;
 mod log_stats;
 
 use {
-    anyhow::Error,
-    cs::{io::Directory, v2::V2Component, IncludeDetails},
+    anyhow::{format_err, Error},
+    cs::{io::Directory, v2::V2Component, IncludeDetails, COMPONENT_SHOW_HELP},
     freq::BlobFrequencies,
     fuchsia_async as fasync,
     log_stats::{LogSeverity, LogStats},
@@ -77,7 +77,9 @@ async fn main() -> Result<(), Error> {
         Opt::Info { filter } => {
             if let Some(hub_dir) = validate_hub_directory() {
                 let component = V2Component::explore(hub_dir, IncludeDetails::Yes).await;
-                component.print_details(&filter);
+                component.print_details(&filter).map_err(|e| {
+                    format_err!("Invalid filter '{}': {}\n{}", filter, e, COMPONENT_SHOW_HELP)
+                })?
             }
         }
         Opt::Tree => {

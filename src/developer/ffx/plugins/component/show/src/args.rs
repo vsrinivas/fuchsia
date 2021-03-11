@@ -26,7 +26,8 @@ exposed/incoming/outgoing services, etc. The command expects a <url/name> which 
 the partial url or name of the component.",
     error_code(
         1,
-        "Error! Failed to get information about the component. The component may not exist."
+        "Invalid filter 'asdfgh': filter should be a component name or component (partial) url.
+Filter format: component_name / url / partial url."
     )
 )]
 pub struct ComponentShowCommand {
