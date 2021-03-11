@@ -87,13 +87,23 @@ def error_return(export):
     return 'return -1'
 
 
+def is_response_argument(argument):
+    if argument['name'][-4:] == '_out':
+        assert argument['type'][-1] == '*', 'output argument not a pointer'
+        # Response arguments must be pointers to 8 byte arguments, so we can pass
+        # the dereferenced value over the wire in only 8 bytes.
+        if argument['type'].find('magma_image_info_t') != -1:
+            return False
+        return True
+    return False
+
+
 # Splits the arguments for an export into inputs and outputs
 def split_arguments(export):
     inputs = []
     outputs = []
     for argument in export['arguments']:
-        if argument['name'][-4:] == '_out':
-            assert argument['type'][-1] == '*', 'output argument not a pointer'
+        if is_response_argument(argument):
             outputs += [argument]
         else:
             inputs += [argument]

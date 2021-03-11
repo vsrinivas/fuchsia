@@ -60,3 +60,15 @@ executable("drm_unit_tests") {
     "//src/graphics/lib/magma/tests/unit_tests:magma_platform_hardware_tests",
   ]
 }
+
+executable("virtmagma_image_tests") {
+  testonly = true
+
+  sources = [ "virtmagma_image_tests.cc" ]
+
+  deps = [
+    "//src/graphics/lib/magma/src/libmagma_linux",
+    "//src/lib/fxl/test:gtest_main",
+    "//third_party/mesa/include:drm-uapi",
+  ]
+}

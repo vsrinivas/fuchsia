@@ -135,3 +135,14 @@ magma_status_t magma_buffer_get_info(magma_connection_t connection, magma_buffer
 magma_status_t magma_initialize_tracing(magma_handle_t channel) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
+
+magma_status_t magma_virt_create_image(magma_connection_t connection,
+                                       magma_image_create_info_t* create_info,
+                                       magma_buffer_t* image_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_virt_get_image_params(magma_connection_t connection, magma_buffer_t image,
+                                           magma_image_info_t* image_info_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}

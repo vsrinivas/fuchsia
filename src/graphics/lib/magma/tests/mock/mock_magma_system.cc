@@ -444,3 +444,14 @@ magma_status_t magma_get_buffer_handle(magma_connection_t connection, magma_buff
     return DRET(MAGMA_STATUS_INVALID_ARGS);
   return MAGMA_STATUS_OK;
 }
+
+magma_status_t magma_virt_create_image(magma_connection_t connection,
+                                       magma_image_create_info_t* create_info,
+                                       magma_buffer_t* image_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}
+
+magma_status_t magma_virt_get_image_params(magma_connection_t connection, magma_buffer_t image,
+                                           magma_image_info_t* image_info_out) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}

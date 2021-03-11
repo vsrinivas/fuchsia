@@ -52,11 +52,10 @@ def wire_format_from_width(width):
     return format_linux.get(width, invalid)
 
 
-# Wire format for a given type
-def wire_format(type):
+def wire_width(type):
     # Default to 8 bytes
     width = 8
-    if type.find('*') != -1:
+    if type == 'uint64_t':
         width = 8
     if type == 'uint32_t':
         width = 4
@@ -66,7 +65,16 @@ def wire_format(type):
         width = 1
     if type == 'magma_handle_t':
         width = 4
-    return wire_format_from_width(width)
+    if type.find('magma_image_info_t') != -1:
+        width = 0  # Unknown
+    return width
+
+
+# Wire format for a given type
+def wire_format(type):
+    if type.find('*') != -1:
+        return "uintptr_t"
+    return wire_format_from_width(wire_width(type))
 
 
 # License string for the top of the file.
@@ -188,6 +196,14 @@ def gen_enums(magma):
     return ret
 
 
+def is_request_argument(argument):
+    # Out params with unknown sizes are kept in the request struct
+    # because response struct elements must be 8 bytes.
+    if argument['name'].find('_out') == -1 or wire_width(argument['type']) == 0:
+        return True
+    return False
+
+
 # Format command or response struct for an export
 def format_struct(export, ctrl):
     global fuchsia
@@ -205,7 +221,7 @@ def format_struct(export, ctrl):
     for argument in export['arguments']:
         # Include this argument iff out and resp or !out and ctrl
         use = False
-        if argument['name'].find('_out') == -1:
+        if is_request_argument(argument):
             if ctrl:
                 use = True
         else:
@@ -232,7 +248,7 @@ def config_type():
     if fuchsia:
         ret += 'typedef '
     ret += 'struct virtio_magma_config {\n'
-    ret += tab + wire_format('uint8_t') + ' dummy;\n'
+    ret += tab + wire_format('uint64_t') + ' dummy;\n'
     if fuchsia:
         ret += '} __PACKED virtio_magma_config_t;\n'
     else:

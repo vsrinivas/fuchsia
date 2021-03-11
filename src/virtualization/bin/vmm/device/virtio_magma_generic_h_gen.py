@@ -69,6 +69,17 @@ def has_unsupported_argument(export):
     return False
 
 
+def is_response_argument(argument):
+    if argument['name'][-4:] == '_out':
+        assert argument['type'][-1] == '*', 'output argument not a pointer'
+        # Response arguments must be pointers to 8 byte arguments, so we can pass
+        # the dereferenced value over the wire in only 8 bytes.
+        if argument['type'].find('magma_image_info_t') != -1:
+            return False
+        return True
+    return False
+
+
 # Generate a method that does simple validation of a virtio command struct,
 # passes it on to magma, and populates the corresponding response struct.
 def generate_generic_method(method, is_internal):
@@ -88,9 +99,7 @@ def generate_generic_method(method, is_internal):
     copy_temporaries = ''
     for argument in method['arguments']:
         invocation_args += '      '
-        if argument['name'].find('_out') != -1:
-            assert (
-                argument['type'][-1] == '*'), 'output argument not a pointer'
+        if is_response_argument(argument):
             # Create locals for output parameters. This is necessary due to struct packing.
             temp_name = 'temp_' + argument['name']
             ret += '    ' + argument['type'][:-1] + ' ' + temp_name + '{};\n'
@@ -177,7 +186,7 @@ def generate_handle_command(magma):
         ret += '        FX_LOGS(INFO) << "Sending MAGMA response:\\n"\\\n'
         ret += '          "  hdr = { " << virtio_magma_ctrl_type_string((virtio_magma_ctrl_type)response->hdr.type) << ", " << response->hdr.flags << " }"\\\n'
         for argument in export['arguments']:
-            if argument['name'].find('_out') != -1:
+            if is_response_argument(argument):
                 ret += '          "\\n  ' + argument[
                     'name'] + ' = " << static_cast<uint64_t>(response->' + argument[
                         'name'] + ') << ""\\\n'

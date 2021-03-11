@@ -171,6 +171,8 @@ enum {
 
 #define MAGMA_MAX_IMAGE_PLANES 4
 
+#define MAGMA_MAX_DRM_FORMAT_MODIFIERS 16
+
 typedef int32_t magma_status_t;
 
 // Normal bool doesn't have to be a particular size.
@@ -299,6 +301,25 @@ typedef struct {
   uint64_t committed_byte_count;
   uint64_t size;
 } magma_buffer_info_t;
+
+enum {
+  MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE = 1,
+};
+
+typedef struct {
+  uint64_t drm_format;
+  // The last modifier must be DRM_FORMAT_MOD_INVALID
+  uint64_t drm_format_modifiers[MAGMA_MAX_DRM_FORMAT_MODIFIERS];
+  uint32_t width;
+  uint32_t height;
+  uint64_t flags;
+} magma_image_create_info_t;
+
+typedef struct {
+  uint64_t plane_strides[MAGMA_MAX_IMAGE_PLANES];
+  uint32_t plane_offsets[MAGMA_MAX_IMAGE_PLANES];
+  uint64_t drm_format_modifier;
+} magma_image_info_t;
 
 #if defined(__cplusplus)
 }

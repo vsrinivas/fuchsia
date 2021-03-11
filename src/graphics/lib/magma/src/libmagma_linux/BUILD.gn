@@ -5,12 +5,20 @@
 import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/graphics/lib/magma/include/virtio/virtmagma_debug.gni")
 
+source_set("virtmagma_headers") {
+  sources = [
+    "virtmagma.h",
+    "virtmagma_util.h",
+  ]
+  public_deps = [ "$magma_build_root/src/magma_util:macros" ]
+}
+
 static_library("libmagma_linux") {
   public_deps = [ "$magma_build_root/include:magma_abi" ]
 
   deps = [
     ":magma_generic($shlib_toolchain)",
-    "$magma_build_root/src/magma_util:macros",
+    ":virtmagma_headers",
     "$magma_build_root/src/magma_util/platform:logger_impl",
     "//src/graphics/lib/magma/include/virtio",
   ]
@@ -21,8 +29,6 @@ static_library("libmagma_linux") {
   sources = [
     "$generic_path/magma_generic.cc",
     "magma.cc",
-    "virtmagma.h",
-    "virtmagma_util.h",
   ]
 
   if (virtmagma_debug) {
