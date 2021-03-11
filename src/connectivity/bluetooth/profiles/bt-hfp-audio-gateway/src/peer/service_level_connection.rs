@@ -40,6 +40,8 @@ pub struct SlcState {
     pub ag_indicator_status: IndicatorStatus,
     /// The format used when representing the network operator name on the AG.
     pub ag_network_operator_name_format: Option<NetworkOperatorNameFormat>,
+    /// Use AG Extended Error Codes.
+    pub extended_errors: bool,
 }
 
 impl SlcState {

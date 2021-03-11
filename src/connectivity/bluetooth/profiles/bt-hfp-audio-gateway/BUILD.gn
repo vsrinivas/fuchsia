@@ -53,6 +53,7 @@ rustc_binary("bin") {
     "src/peer/service_level_connection.rs",
     "src/peer/task.rs",
     "src/procedure.rs",
+    "src/procedure/extended_errors.rs",
     "src/procedure/nrec.rs",
     "src/procedure/query_operator_selection.rs",
     "src/procedure/slc_initialization.rs",

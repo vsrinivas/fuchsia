@@ -10,6 +10,9 @@ use crate::{
     protocol::features::AgFeatures,
 };
 
+/// Defines the implementation of the Report Extended Audio Gateway Error Code Results Procedure.
+pub mod extended_errors;
+
 /// Defines the implementation of the SLC Initialization Procedure.
 pub mod slc_initialization;
 
@@ -19,6 +22,7 @@ pub mod nrec;
 /// Defines the implementation of the Query Operator Selection Procedure.
 pub mod query_operator_selection;
 
+use extended_errors::ExtendedErrorsProcedure;
 use nrec::NrecProcedure;
 use query_operator_selection::QueryOperatorProcedure;
 use slc_initialization::SlcInitProcedure;
@@ -50,12 +54,14 @@ impl From<fuchsia_zircon::Status> for ProcedureError {
 // TODO(fxbug.dev/70591): Add to this enum as more procedures are implemented.
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
 pub enum ProcedureMarker {
-    // The Service Level Connection Initialization procedure as defined in HFP v1.8 Section 4.2.
+    /// The Service Level Connection Initialization procedure as defined in HFP v1.8 Section 4.2.
     SlcInitialization,
     /// The Noise Reduction/Echo Cancellation procedure as defined in HFP v1.8 Section 4.24.
     Nrec,
     /// The Query Operator Selection procedure as defined in HFP v1.8 Section 4.8.
     QueryOperatorSelection,
+    /// The Extended Audio Gateway Error Results Code as defined in HFP v1.8 Section 4.9.
+    ExtendedErrors,
 }
 
 impl ProcedureMarker {
@@ -65,6 +71,7 @@ impl ProcedureMarker {
             Self::SlcInitialization => Box::new(SlcInitProcedure::new()),
             Self::Nrec => Box::new(NrecProcedure::new()),
             Self::QueryOperatorSelection => Box::new(QueryOperatorProcedure::new()),
+            Self::ExtendedErrors => Box::new(ExtendedErrorsProcedure::new()),
         }
     }
 
@@ -84,6 +91,7 @@ impl ProcedureMarker {
             AtHfMessage::SetNetworkOperatorFormat(_) | AtHfMessage::GetNetworkOperator => {
                 Ok(Self::QueryOperatorSelection)
             }
+            AtHfMessage::Cmee(_) => Ok(Self::ExtendedErrors),
             _ => Err(ProcedureError::NotImplemented),
         }
     }
