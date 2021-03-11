@@ -28,7 +28,8 @@ void InputCommandDispatcher::DispatchCommand(ScenicCommand command,
 
   InputCommand& input = command.input();
   if (input.is_send_pointer_input()) {
-    input_system_->DispatchPointerCommand(input.send_pointer_input(), session_id_);
+    input_system_->DispatchPointerCommand(input.send_pointer_input(), session_id_,
+                                          /*parallel_dispatch*/ false);
   } else if (input.is_send_keyboard_input()) {
     FX_LOGS(WARNING) << "SendKeyboardInputCmd deprecated. Command ignored.";
   } else if (input.is_set_hard_keyboard_delivery()) {

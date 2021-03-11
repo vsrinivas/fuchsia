@@ -373,21 +373,6 @@ Contest Hold_ReleasedAheadOfTime_ShouldResolve() {
   };
 }
 
-Contest MultipleNoWithoutEndingContest_ShouldNotCrash() {
-  return {
-      .contenders_high_to_low = {1, 2, 3},
-      .stream = {.length = 2, .is_last_message = false},
-      .updates =
-          std::vector<Update>{
-              {
-                  .response = {.contender_id = 1,
-                               .responses = {GestureResponse::kNo, GestureResponse::kNo}},
-                  .result = {.losers = {1}, .end_of_contest = false},
-              },
-          },
-  };
-}
-
 class GestureArenaParameterizedTest : public testing::TestWithParam<Contest> {};
 INSTANTIATE_TEST_CASE_P(
     /*no prefix*/, GestureArenaParameterizedTest,
@@ -408,8 +393,7 @@ INSTANTIATE_TEST_CASE_P(
         LowerPriorityHold_AgainstMaybeSuppressAtSweep_ShouldNotPreventResolution(),     // 13
         HoldFollowedByMaybe_InTheSameVector_ShouldResolve(),                            // 14
         MultipleHold_ShouldResolve_WhenAllHaveBeenReleased(),                           // 15
-        Hold_ReleasedAheadOfTime_ShouldResolve(),                                       // 16
-        MultipleNoWithoutEndingContest_ShouldNotCrash()                                 // 17
+        Hold_ReleasedAheadOfTime_ShouldResolve()                                        // 16
         ));
 TEST_P(GestureArenaParameterizedTest, Basic) {
   const Contest contest = GetParam();

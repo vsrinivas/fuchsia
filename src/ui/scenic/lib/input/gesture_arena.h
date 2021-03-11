@@ -39,8 +39,8 @@ struct ContestResults {
 // has been designated either a winner or a loser). With every call the arena makes an attempt at
 // determining a winner, returning a ContestResults struct containing any new results from
 // the contest.
-// After the contest ends the arena can be kept around to track stream and winner state, but no more
-// calls to RecordResponse() should be made.
+// The GestureArena should be destroyed after the contest ends, at which point stream events
+// can be sent directly to the winner.
 class GestureArena {
  public:
   // Priority of each contender (only used internally). The lowest number equals highest priority.
@@ -68,13 +68,6 @@ class GestureArena {
   ContestResults RecordResponse(ContenderId contender_id,
                                 const std::vector<GestureResponse>& responses);
 
-  // Returns a vector of all remaining contenders.
-  std::vector<ContenderId> contenders() const;
-
-  bool stream_has_ended() const { return stream_has_ended_; }
-  bool contest_has_ended() const { return contest_has_ended_; }
-  bool contains(ContenderId contender_id) const { return contenders_.count(contender_id) > 0; }
-
  private:
   void AddResponse(ContenderId contender_id, GestureResponse response);
 
@@ -85,16 +78,12 @@ class GestureArena {
   // Should only be called once per contender.
   void RemoveContender(ContenderId contender_id);
 
-  // Makes |id| the only remaining contender and return the resulting ContestResults.
-  ContestResults SetWinner(ContenderId id);
-
   // All current contenders.
   std::unordered_map<ContenderId, Contender> contenders_;
   std::unordered_map<Priority, ContenderId> priority_to_id_;
 
   uint64_t stream_length_ = 0;
   bool stream_has_ended_ = false;
-  bool contest_has_ended_ = false;
 
   // A double ended queue that collects responses from all contenders in chronological order.
   // Each item in the queue is a map of one response from every client, ordered by client priority
