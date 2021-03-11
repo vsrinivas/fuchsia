@@ -51,7 +51,6 @@ zx_library("runtests-utils") {
     "//zircon/system/ulib/debugdata",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fzl",
-    "//zircon/system/ulib/unittest",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
