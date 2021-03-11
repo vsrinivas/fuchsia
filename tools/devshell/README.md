@@ -80,9 +80,7 @@ exports:
 * `FX_SSH_PORT` the device SSH port if set via `fx set-device`.
 
 `get-device-name` returns either the device name that the user has set with
-`fx set-device` or `fx -d <device-name>`. If the user has not set a default
-device, the command will run device discovery, and will return a discovered
-device name provided there is only one device discovered.
+`fx set-device` or `fx -d <device-name>`, if any.
 
 `get-fuchsia-device-addr` consumes `get-device-name` and returns the Fuchsia
 address of the device. The returned address is the "netstack address", not

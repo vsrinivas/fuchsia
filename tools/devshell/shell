@@ -21,14 +21,14 @@ source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.
 
 check=false
 case $1 in
-  --check)
-    check=true
-    shift
-    ;;
-  -h|--help)
-    fx-command-help
-    exit 0
-    ;;
+--check)
+  check=true
+  shift
+  ;;
+-h | --help)
+  fx-command-help
+  exit 0
+  ;;
 esac
 
 ${FUCHSIA_DIR}/tools/ssh-keys/gen-ssh-keys.sh || exit $?
@@ -54,14 +54,14 @@ if $check; then
   if [[ ! -f "${authkeys}" ]]; then
     has_error=true
     fx-warn "Authorized keys file does not exist, attempting to create it: ${authkeys}"
-    echo "${pubkey}" > "${authkeys}"
+    echo "${pubkey}" >"${authkeys}"
     echo "ok, created ${authkeys}"
   fi
 
   if ! grep -q "$pubkey" "$authkeys"; then
     has_error=true
     fx-warn "Authorized keys file does not contain your Fuchsia public key, attempting to fix: ${authkeys}"
-    echo "${pubkey}" >> "${authkeys}"
+    echo "${pubkey}" >>"${authkeys}"
     echo "ok, fixed ${authkeys}"
   fi
 
@@ -101,16 +101,21 @@ fi
 args=()
 device_port="$(get-device-ssh-port)" || exit $?
 if [[ -n "${device_port}" ]]; then
-  args+=( "-p" "${device_port}" )
+  args+=("-p" "${device_port}")
 fi
 device_addr="$(get-fuchsia-device-addr)" || exit $?
 if [[ -z "${device_addr}" ]]; then
-  fx-error "Cannot find a device."
+  device_name="$(get-device-name)" || exit $?
+  if [[ -n "${device_name}" ]]; then
+    fx-error "Cannot find the device '${device_name}'. If necessary, run 'fx unset-device' to allow device discovery."
+  else
+    fx-error "Cannot connect to a device, either no device or multiple devices are discoverable. Run 'fx list-devices' and if necessary run 'fx set-device'."
+  fi
   exit 1
 fi
-args+=( "${device_addr}" )
+args+=("${device_addr}")
 
-args+=( "$@" )
+args+=("$@")
 # Note: I know there are people who don't like the host-key message, but DO NOT
 # apply -q here, it silences error messages and makes network and configuration
 # failures much harder to diagnose when helping people. The control master will
