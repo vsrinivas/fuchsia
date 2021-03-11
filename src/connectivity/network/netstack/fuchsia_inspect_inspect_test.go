@@ -36,6 +36,11 @@ import (
 	"gvisor.dev/gvisor/pkg/waiter"
 )
 
+const (
+	ipv4Addr = tcpip.Address("\xc0\xa8\x01\x01")
+	ipv6Addr = tcpip.Address("\x00\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01")
+)
+
 func TestStatCounterInspectImpl(t *testing.T) {
 	s := tcpip.Stats{}.FillIn()
 	v := statCounterInspectImpl{
@@ -273,23 +278,24 @@ func TestNicInfoInspectImpl(t *testing.T) {
 		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
 	}
 
+	v.value.nicid = 5
 	v.value.Flags.Up = true
 	v.value.Flags.Loopback = true
-	v.value.dnsServers = []tcpip.Address{"\x01\x02\x03\x04"}
+	v.value.dnsServers = []tcpip.Address{ipv4Addr}
 
 	if diff := cmp.Diff(inspect.Object{
 		Name: v.name,
 		Properties: []inspect.Property{
 			{Key: "Name", Value: inspect.PropertyValueWithStr(v.value.Name)},
-			{Key: "NICID", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(v.value.nicid), 10))},
-			{Key: "AdminUp", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.adminUp))},
-			{Key: "LinkOnline", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.linkOnline))},
-			{Key: "Up", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Up))},
-			{Key: "Running", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Running))},
-			{Key: "Loopback", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Loopback))},
-			{Key: "Promiscuous", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Promiscuous))},
-			{Key: "DNS server0", Value: inspect.PropertyValueWithStr(v.value.dnsServers[0].String())},
-			{Key: "DHCP enabled", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.dhcpEnabled))},
+			{Key: "NICID", Value: inspect.PropertyValueWithStr("5")},
+			{Key: "AdminUp", Value: inspect.PropertyValueWithStr("false")},
+			{Key: "LinkOnline", Value: inspect.PropertyValueWithStr("false")},
+			{Key: "Up", Value: inspect.PropertyValueWithStr("true")},
+			{Key: "Running", Value: inspect.PropertyValueWithStr("false")},
+			{Key: "Loopback", Value: inspect.PropertyValueWithStr("true")},
+			{Key: "Promiscuous", Value: inspect.PropertyValueWithStr("false")},
+			{Key: "DNS server0", Value: inspect.PropertyValueWithStr(ipv4Addr.String())},
+			{Key: "DHCP enabled", Value: inspect.PropertyValueWithStr("false")},
 		},
 		Metrics: []inspect.Metric{
 			{Key: "MTU", Value: inspect.MetricValueWithUintValue(uint64(v.value.MTU))},
@@ -321,17 +327,28 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 	if child := v.GetChild(childName); child != nil {
 		t.Errorf("got GetChild(%s) = %s, want = nil", childName, child)
 	}
-
+	v.info.Config.Router = []tcpip.Address{ipv4Addr}
+	v.info.Config.DNS = []tcpip.Address{ipv4Addr}
 	if diff := cmp.Diff(inspect.Object{
 		Name: v.name,
 		Properties: []inspect.Property{
-			{Key: "State", Value: inspect.PropertyValueWithStr(v.info.State.String())},
+			{Key: "State", Value: inspect.PropertyValueWithStr("initSelecting")},
 			{Key: "AcquiredAddress", Value: inspect.PropertyValueWithStr("[none]")},
-			{Key: "ServerAddress", Value: inspect.PropertyValueWithStr("[none]")},
 			{Key: "AssignedAddress", Value: inspect.PropertyValueWithStr("[none]")},
-			{Key: "Acquisition", Value: inspect.PropertyValueWithStr(v.info.Acquisition.String())},
-			{Key: "Backoff", Value: inspect.PropertyValueWithStr(v.info.Backoff.String())},
-			{Key: "Retransmission", Value: inspect.PropertyValueWithStr(v.info.Retransmission.String())},
+			{Key: "Acquisition", Value: inspect.PropertyValueWithStr("0s")},
+			{Key: "Backoff", Value: inspect.PropertyValueWithStr("0s")},
+			{Key: "Retransmission", Value: inspect.PropertyValueWithStr("0s")},
+			{Key: "LeaseExpiration", Value: inspect.PropertyValueWithStr("0001-01-01 00:00:00 +0000 UTC")},
+			{Key: "RenewTime", Value: inspect.PropertyValueWithStr("0001-01-01 00:00:00 +0000 UTC")},
+			{Key: "RebindTime", Value: inspect.PropertyValueWithStr("0001-01-01 00:00:00 +0000 UTC")},
+			{Key: "Config.ServerAddress", Value: inspect.PropertyValueWithStr("[none]")},
+			{Key: "Config.SubnetMask", Value: inspect.PropertyValueWithStr("[none]")},
+			{Key: "Config.Router0", Value: inspect.PropertyValueWithStr(ipv4Addr.String())},
+			{Key: "Config.DNS0", Value: inspect.PropertyValueWithStr(ipv4Addr.String())},
+			{Key: "Config.LeaseLength", Value: inspect.PropertyValueWithStr("0s")},
+			{Key: "Config.RenewTime", Value: inspect.PropertyValueWithStr("0s")},
+			{Key: "Config.RebindTime", Value: inspect.PropertyValueWithStr("0s")},
+			{Key: "Config.Declined", Value: inspect.PropertyValueWithStr("false")},
 		},
 	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
@@ -637,9 +654,6 @@ func TestNetworkEndpointStatsInspectImpl(t *testing.T) {
 }
 
 func TestNeighborTableInspectImpl(t *testing.T) {
-	ipv4Addr := tcpip.Address("\xc0\xa8\x01\x01")
-	ipv6Addr := tcpip.Address("\x00\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01")
-
 	impl := neighborTableInspectImpl{
 		name: neighborsLabel,
 		value: map[string]stack.NeighborEntry{
@@ -694,7 +708,7 @@ func TestNeighborInfoInspectImpl(t *testing.T) {
 		{
 			name: "IPv4",
 			neighbor: stack.NeighborEntry{
-				Addr:           "\xc0\xa8\x01\x01",
+				Addr:           ipv4Addr,
 				LinkAddr:       "\x0a\x00\x00\x00\x00\x01",
 				State:          stack.Reachable,
 				UpdatedAtNanos: 1,
@@ -703,7 +717,7 @@ func TestNeighborInfoInspectImpl(t *testing.T) {
 		{
 			name: "IPv6",
 			neighbor: stack.NeighborEntry{
-				Addr:           "\x00\x0a\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x00\x01",
+				Addr:           ipv6Addr,
 				LinkAddr:       "\x0a\x00\x00\x00\x00\x02",
 				State:          stack.Stale,
 				UpdatedAtNanos: 2,
