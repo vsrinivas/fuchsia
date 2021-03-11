@@ -445,9 +445,13 @@ void DoHeartbeatAndCheckPeerCpus(Timer* timer, zx_time_t now_mono, void* arg) {
     // would rather be correct than fast for the time being.
     cpu_num_t expected = INVALID_CPU;
     if (state.current_checker_id.compare_exchange_strong(expected, current_cpu)) {
-      // Now that we are the assigned "checker", perform the checks.
-      HeartbeatLockupChecker::PerformCheck(state, cpu, now_mono);
+      // Now that we are the assigned "checker", perform the checks.  Start with
+      // the CriticalSection check.  If there is a fatal condition to be
+      // reported, we would rather start with the CriticalSection fatal
+      // condition as it will can provide more specific details about the lockup
+      // than the heartbeat checker can.
       CriticalSectionLockupChecker::PerformCheck(state, cpu, now_ticks);
+      HeartbeatLockupChecker::PerformCheck(state, cpu, now_mono);
 
       // Next, release our role as checker for this CPU.
       state.current_checker_id.store(INVALID_CPU);
