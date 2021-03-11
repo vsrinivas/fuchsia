@@ -87,7 +87,7 @@ impl Hoist {
             host_overnet: HostOvernet::new(node.clone())?,
             _task: Task::spawn(async move {
                 retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || {
-                    run_ascendd_connection(node.clone())
+                    run_ascendd_connection(node.clone(), None)
                 })
                 .await
             }),
@@ -109,20 +109,13 @@ impl super::OvernetInstance for Hoist {
     }
 }
 
-async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
+async fn run_ascendd_connection(node: Arc<Router>, label: Option<String>) -> Result<(), Error> {
     let ascendd_path = std::env::var("ASCENDD").unwrap_or(DEFAULT_ASCENDD_PATH.to_string());
-    let mut connection_label = std::env::var("OVERNET_CONNECTION_LABEL").ok();
-    if connection_label.is_none() {
-        connection_label = std::env::current_exe()
-            .ok()
-            .map(|p| format!("exe:{} pid:{}", p.display(), std::process::id()));
-    }
-    if connection_label.is_none() {
-        connection_label = Some(format!("pid:{}", std::process::id()));
-    }
+
+    let label = connection_label(label);
 
     log::trace!("Ascendd path: {}", ascendd_path);
-    log::trace!("Overnet connection label: {:?}", connection_label);
+    log::trace!("Overnet connection label: {:?}", label);
     let uds = &async_std::os::unix::net::UnixStream::connect(ascendd_path.clone())
         .on_timeout(Duration::from_secs(1), || {
             Err(std::io::Error::new(TimedOut, format_err!("connecting to ascendd socket")))
@@ -133,7 +126,7 @@ async fn run_ascendd_connection(node: Arc<Router>) -> Result<(), Error> {
         Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(
             fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
                 path: Some(ascendd_path.clone()),
-                connection_label: connection_label.clone(),
+                connection_label: Some(label.clone()),
                 ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
             },
         ))
@@ -301,4 +294,52 @@ pub fn hard_coded_security_context() -> impl SecurityContext {
     }
     .into_security_context()
     .unwrap();
+}
+
+const OVERNET_CONNECTION_LABEL: &'static str = "OVERNET_CONNECTION_LABEL";
+
+fn connection_label<S>(o: Option<S>) -> String
+where
+    S: Into<String>,
+{
+    let mut connection_label = o.map(Into::into).or(std::env::var(OVERNET_CONNECTION_LABEL).ok());
+    if connection_label.is_none() {
+        connection_label = std::env::current_exe()
+            .ok()
+            .map(|p| format!("exe:{} pid:{}", p.display(), std::process::id()));
+    }
+
+    match connection_label {
+        Some(label) => label,
+        None => format!("pid:{}", std::process::id()),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use scopeguard::guard;
+
+    #[test]
+    fn test_connection_label() {
+        let original = std::env::var_os(OVERNET_CONNECTION_LABEL);
+        guard(original, |orig| {
+            orig.map(|v| std::env::set_var(OVERNET_CONNECTION_LABEL, v));
+        });
+
+        std::env::remove_var(OVERNET_CONNECTION_LABEL);
+
+        let cs = connection_label(Option::<String>::None);
+        // Note: conditional test is not great, but covers where cover works.
+        if let Ok(path) = std::env::current_exe() {
+            assert!(cs.contains(&path.to_string_lossy().to_string()));
+        }
+
+        assert!(cs.contains(&format!("pid:{}", std::process::id())));
+
+        std::env::set_var(OVERNET_CONNECTION_LABEL, "onetwothree");
+        assert_eq!("onetwothree", connection_label(Option::<String>::None));
+
+        assert_eq!("precedence", connection_label(Some("precedence")));
+    }
 }
