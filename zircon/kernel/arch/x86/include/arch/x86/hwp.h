@@ -7,6 +7,8 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_HWP_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_HWP_H_
 
+#include <lib/boot-options/boot-options.h>  // IntelHwpPolicy
+
 #include <arch/x86/cpuid.h>
 #include <arch/x86/platform_access.h>
 #include <ktl/optional.h>
@@ -14,19 +16,7 @@
 
 namespace x86 {
 
-enum class IntelHwpPolicy {
-  // Use BIOS-specified settings if available, falling back to balanced.
-  kBiosSpecified,
-
-  // Use high performance, balanaced, or low-power policies respectively.
-  kPerformance,
-  kBalanced,
-  kPowerSave,
-
-  // Use settings that give predictable performance, such as is required
-  // for benchmarking.
-  kStablePerformance,
-};
+using IntelHwpPolicy = IntelHwpPolicy;
 
 // Parse a string as an HWP policy.
 ktl::optional<IntelHwpPolicy> IntelHwpParsePolicy(const char* str);

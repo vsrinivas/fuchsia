@@ -116,6 +116,10 @@ struct BootOptions {
   OPTION_TYPE(TestStruct);
 #endif
 
+#if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
+  X86_OPTION_TYPES(OPTION_TYPE)
+#endif
+
   OPTION_TYPE(uart::all::Driver);
 
 #undef OPTION_TYPE

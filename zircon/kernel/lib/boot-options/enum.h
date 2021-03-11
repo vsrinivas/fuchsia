@@ -35,6 +35,20 @@ constexpr auto Enum<OomBehavior> = [](auto&& Switch) {
       .Case("jobkill", OomBehavior::kJobKill);
 };
 
+#if BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
+
+template <>
+constexpr auto Enum<IntelHwpPolicy> = [](auto&& Switch) {
+  Switch  //
+      .Case("bios-specified", IntelHwpPolicy::kBiosSpecified)
+      .Case("performance", IntelHwpPolicy::kPerformance)
+      .Case("balanced", IntelHwpPolicy::kBalanced)
+      .Case("power-save", IntelHwpPolicy::kPowerSave)
+      .Case("stable-performance", IntelHwpPolicy::kStablePerformance);
+};
+
+#endif  // BOOT_OPTIONS_GENERATOR || defined(__x86_64__)
+
 // Helpers for enum overrides.
 
 template <typename F, typename T>

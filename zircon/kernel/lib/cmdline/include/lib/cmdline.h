@@ -179,9 +179,6 @@ static constexpr const char kVdsoClockGetMonotonicForceSyscall[] =
     "vdso.clock_get_monotonic_force_syscall";
 static constexpr const char kVdsoTicksGetForceSyscall[] = "vdso.ticks_get_force_syscall";
 static constexpr const char kWallclock[] = "kernel.wallclock";
-static constexpr const char kX86Hwp[] = "kernel.x86.hwp";
-static constexpr const char kX86HwpPolicy[] = "kernel.x86.hwp_policy";
-static constexpr const char kX86Turbo[] = "kernel.x86.turbo";
 }  // namespace kernel_option
 
 #endif  // ZIRCON_KERNEL_LIB_CMDLINE_INCLUDE_LIB_CMDLINE_H_

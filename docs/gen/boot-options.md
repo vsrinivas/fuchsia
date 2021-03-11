@@ -210,6 +210,31 @@ If set, disables all speculative execution information leak mitigations.
 
 If unset, the per-mitigation defaults will be used.
 
+### kernel.x86.hwp=\<bool>
+**Default:** `true`
+
+This settings enables HWP (hardware P-states) on supported chips. This feature
+lets Intel CPUs automatically scale their own clock speed.
+
+### kernel.x86.hwp_policy=[bios-specified | performance | balanced | power-save | stable-performance]
+**Default:** `bios-specified`
+
+Set a power/performance tradeoff policy of the CPU. x86 CPUs with HWP
+(hardware P-state) support can be configured to autonomusly scale their
+frequency to favour different policies.
+
+Currently supported policies are:
+
+*   `bios-specified`: Use the power/performance tradeoff policy
+    specified in firmware/BIOS settings. If no policy is available, falls back
+    to `balanced`.
+*   `performance`: Maximise performance.
+*   `balanced`: Balance performance / power savings.
+*   `power-save`: Reduce power usage, at the cost of lower performance.
+*   `stable-performance`: Use settings that keep system performance consistent.
+    This may be useful for benchmarking, for example, where keeping performance
+    predictable is more important than maximising performance.
+
 ### kernel.x86.md_clear_on_user_return=\<bool>
 **Default:** `true`
 
@@ -259,5 +284,15 @@ mitigation has negative performance impacts.
 
 * If true, the mitigation is enabled on CPUs that need it.
 * If false (the default), the mitigation is not enabled.
+
+### kernel.x86.turbo=\<bool>
+**Default:** `true`
+
+Turbo Boost or Core Performance Boost are mechanisms that allow processors to
+dynamically vary their performance at runtime based on available thermal and
+electrical budget. This may provide improved interactive performance at the cost
+of performance variability. Some workloads may benefit from disabling Turbo; if
+this command line flag is set to false, turbo is disabled for all CPUs in the
+system.
 
 TODO: put something here

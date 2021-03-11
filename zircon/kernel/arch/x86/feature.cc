@@ -204,7 +204,7 @@ void x86_cpu_feature_init() {
   }
 
   // Evaluate speculative execution mitigation settings.
-  g_disable_spec_mitigations = gBootOptions->disable_x86_spec_mitigations;
+  g_disable_spec_mitigations = gBootOptions->x86_disable_spec_mitigations;
   g_has_swapgs_bug = arch::HasX86SwapgsBug(arch::BootCpuidIo{});
 
   if (x86_vendor == X86_VENDOR_INTEL) {
@@ -225,7 +225,7 @@ void x86_cpu_feature_init() {
     g_has_mds_taa = x86_intel_cpu_has_mds_taa(&cpuid, &msr);
     g_has_md_clear = cpuid.ReadFeatures().HasFeature(cpu_id::Features::MD_CLEAR);
     g_md_clear_on_user_return = ((x86_get_disable_spec_mitigations() == false)) && g_has_mds_taa &&
-                                g_has_md_clear && gBootOptions->md_clear_on_user_return;
+                                g_has_md_clear && gBootOptions->x86_md_clear_on_user_return;
     g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
     g_has_ssbd = x86_intel_cpu_has_ssbd(&cpuid, &msr);
     g_has_spec_ctrl = cpuid.ReadFeatures().HasFeature(cpu_id::Features::IBRS_IBPB) ||
@@ -257,7 +257,7 @@ void x86_cpu_feature_init() {
   // specification - Enhanced IBRS processors may not be retpoline-safe.
   g_enhanced_ibrs_enabled = (x86_get_disable_spec_mitigations() == false) && g_has_enhanced_ibrs;
   g_ssb_mitigated = (x86_get_disable_spec_mitigations() == false) && g_has_ssb && g_has_ssbd &&
-                    gBootOptions->spec_store_bypass_disable;
+                    gBootOptions->x86_spec_store_bypass_disable;
 }
 
 // Invoked on each CPU during boot, after platform init has taken place.
@@ -300,19 +300,13 @@ void x86_cpu_feature_late_init_percpu(void) {
   }
 
   // Set up hardware-controlled performance states.
-  if (gCmdline.GetBool(kernel_option::kX86Hwp, /*default_value=*/true)) {
-    // Read the policy from the command line, falling back to kBiosSpecified.
-    x86::IntelHwpPolicy policy =
-        x86::IntelHwpParsePolicy(gCmdline.GetString(kernel_option::kX86HwpPolicy))
-            .value_or(x86::IntelHwpPolicy::kBiosSpecified);
-    x86::IntelHwpInit(&cpuid, &msr, policy);
+  if (gBootOptions->x86_hwp) {
+    x86::IntelHwpInit(&cpuid, &msr, gBootOptions->x86_hwp_policy);
   }
 
   // Enable/disable Turbo on the processor.
   x86_cpu_set_turbo(&cpuid, &msr,
-                    gCmdline.GetBool(kernel_option::kX86Turbo, /*default_value=*/true)
-                        ? Turbostate::ENABLED
-                        : Turbostate::DISABLED);
+                    gBootOptions->x86_turbo ? Turbostate::ENABLED : Turbostate::DISABLED);
 
   // If we are running under a hypervisor and paravirtual EOI (PV_EOI) is available, enable it.
   if (x86_hypervisor_has_pv_eoi()) {
