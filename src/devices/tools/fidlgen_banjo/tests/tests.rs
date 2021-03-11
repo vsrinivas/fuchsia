@@ -166,17 +166,17 @@ mod cpp_internal {
 }
 
 mod cpp_mock {
-    // macro_rules! cpp_mock_test {
-    //     ( $id:ident ) => {
-    //         codegen_test!($id, CppMockBackend, concat!("cpp/mock-", stringify!($id), ".h"));
-    //     };
-    // }
+    macro_rules! cpp_mock_test {
+        ( $id:ident ) => {
+            codegen_test!($id, CppMockBackend, concat!("cpp/mock-", stringify!($id), ".h"));
+        };
+    }
 
-    // cpp_mock_test!(passcallback);
-    // cpp_mock_test!(protocolarray);
-    // cpp_mock_test!(protocolbase);
-    // cpp_mock_test!(protocolhandle);
-    // cpp_mock_test!(protocolothertypes);
-    // cpp_mock_test!(protocolprimitive);
-    // cpp_mock_test!(protocolvector);
+    cpp_mock_test!(passcallback);
+    cpp_mock_test!(protocolarray);
+    cpp_mock_test!(protocolbase);
+    cpp_mock_test!(protocolhandle);
+    cpp_mock_test!(protocolothertypes);
+    cpp_mock_test!(protocolprimitive);
+    cpp_mock_test!(protocolvector);
 }

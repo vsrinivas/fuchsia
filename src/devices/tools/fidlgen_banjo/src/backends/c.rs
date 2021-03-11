@@ -3,7 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    super::{util::to_c_name, *},
+    super::{
+        util::{
+            array_bounds, name_buffer, name_size, not_callback, primitive_type_to_c_str, to_c_name,
+            ProtocolType,
+        },
+        *,
+    },
     crate::fidl::*,
     anyhow::{anyhow, Error},
     std::io,
@@ -42,22 +48,6 @@ fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> String 
     "".to_string()
 }
 
-fn primitive_type_to_c_str(ty: &PrimitiveSubtype) -> Result<String, Error> {
-    match ty {
-        PrimitiveSubtype::Bool => Ok(String::from("bool")),
-        PrimitiveSubtype::Float32 => Ok(String::from("float")),
-        PrimitiveSubtype::Float64 => Ok(String::from("double")),
-        PrimitiveSubtype::Int8 => Ok(String::from("int8_t")),
-        PrimitiveSubtype::Int16 => Ok(String::from("int16_t")),
-        PrimitiveSubtype::Int32 => Ok(String::from("int32_t")),
-        PrimitiveSubtype::Int64 => Ok(String::from("int64_t")),
-        PrimitiveSubtype::Uint8 => Ok(String::from("uint8_t")),
-        PrimitiveSubtype::Uint16 => Ok(String::from("uint16_t")),
-        PrimitiveSubtype::Uint32 => Ok(String::from("uint32_t")),
-        PrimitiveSubtype::Uint64 => Ok(String::from("uint64_t")),
-    }
-}
-
 fn integer_type_to_c_str(ty: &IntegerType) -> Result<String, Error> {
     primitive_type_to_c_str(&ty.to_primitive())
 }
@@ -90,31 +80,11 @@ fn type_to_c_str(ty: &Type, ir: &FidlIr) -> Result<String, Error> {
     }
 }
 
-pub fn array_bounds(ty: &Type) -> Option<String> {
-    if let Type::Array { ref element_type, element_count } = ty {
-        return if let Some(bounds) = array_bounds(element_type) {
-            Some(format!("[{}]{}", element_count.0, bounds))
-        } else {
-            Some(format!("[{}]", element_count.0))
-        };
-    }
-    None
-}
-
 fn protocol_to_ops_c_str(id: &CompoundIdentifier, ir: &FidlIr) -> Result<String, Error> {
     if ir.is_protocol(id) {
         return Ok(to_c_name(id.get_name()) + "_protocol_ops_t");
     }
     Err(anyhow!("Identifier does not represent a protocol: {:?}", id))
-}
-
-pub fn not_callback(id: &CompoundIdentifier, ir: &FidlIr) -> Result<bool, Error> {
-    if let Some(layout) = ir.get_protocol_attributes(id)?.get("BanjoLayout") {
-        if layout == "ddk-callback" {
-            return Ok(false);
-        }
-    }
-    Ok(true)
 }
 
 fn integer_constant_to_c_str(
@@ -155,22 +125,6 @@ fn constant_to_c_str(ty: &Type, constant: &Constant, ir: &FidlIr) -> Result<Stri
             t => Err(anyhow!("Can't handle this constant identifier: {:?}", t)),
         },
         t => Err(anyhow!("Can't handle this constant type: {:?}", t)),
-    }
-}
-
-pub fn name_buffer(maybe_attributes: &Option<Vec<Attribute>>) -> &'static str {
-    if maybe_attributes.has("Buffer") {
-        "buffer"
-    } else {
-        "list"
-    }
-}
-
-pub fn name_size(maybe_attributes: &Option<Vec<Attribute>>) -> &'static str {
-    if maybe_attributes.has("Buffer") {
-        "size"
-    } else {
-        "count"
     }
 }
 
@@ -319,7 +273,6 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
             match &param._type {
                 Type::Identifier { identifier, .. } => {
                     if identifier.is_base_type() {
-                        let ty_name = type_to_c_str(&param._type, ir)?;
                         return Ok(format!("{} {}", ty_name, c_name));
                     }
                     match ir.get_declaration(identifier).unwrap() {
@@ -329,7 +282,7 @@ fn get_in_params(m: &Method, transform: bool, ir: &FidlIr) -> Result<Vec<String>
                                 Ok(format!(
                                     "void* {name}_ctx, {ty_name}* {name}_ops",
                                     ty_name = ty_name,
-                                    name = to_c_name(&param.name.0)
+                                    name = c_name
                                 ))
                             } else {
                                 Ok(format!("const {}* {}", ty_name, c_name))
@@ -512,31 +465,6 @@ fn get_out_args(m: &Method, ir: &FidlIr) -> Result<(Vec<String>, bool), Error> {
         }),
         skip,
     ))
-}
-
-#[derive(PartialEq, Eq)]
-enum ProtocolType {
-    Callback,
-    Interface,
-    Protocol,
-}
-
-impl From<&Option<Vec<Attribute>>> for ProtocolType {
-    fn from(maybe_attributes: &Option<Vec<Attribute>>) -> Self {
-        if let Some(layout) = maybe_attributes.get("BanjoLayout") {
-            if layout == "ddk-callback" {
-                ProtocolType::Callback
-            } else if layout == "ddk-interface" {
-                ProtocolType::Interface
-            } else if layout == "ddk-protocol" {
-                ProtocolType::Protocol
-            } else {
-                panic!("Unknown layout attribute: {}", layout)
-            }
-        } else {
-            ProtocolType::Protocol
-        }
-    }
 }
 
 impl<'a, W: io::Write> CBackend<'a, W> {
