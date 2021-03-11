@@ -8,20 +8,15 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"os"
 	"path/filepath"
 
 	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/subcommands"
 	"go.fuchsia.dev/fuchsia/tools/integration/fint"
-	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
-	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
 const (
-	fuchsiaDirEnvVar = "FUCHSIA_DIR"
-
 	// artifactsManifest is the name of the file (in `contextSpec.ArtifactsDir`)
 	// that will expose manifest files and other metadata produced by this
 	// command to the caller. We use JSON instead of textproto for this message
@@ -36,8 +31,7 @@ const (
 )
 
 type SetCommand struct {
-	staticSpecPath  string
-	contextSpecPath string
+	BaseCommand
 }
 
 func (*SetCommand) Name() string { return "set" }
@@ -51,76 +45,27 @@ flags:
 `
 }
 
-func (c *SetCommand) SetFlags(f *flag.FlagSet) {
-	f.StringVar(&c.staticSpecPath, "static", "", "path to a Static .textproto file.")
-	f.StringVar(
-		&c.contextSpecPath,
-		"context",
-		"",
-		("path to a Context .textproto file. If unset, the " +
-			fuchsiaDirEnvVar +
-			" will be used to locate the checkout."),
-	)
-}
-
 func (c *SetCommand) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	if c.staticSpecPath == "" {
-		logger.Errorf(ctx, "-static flag is required")
-		return subcommands.ExitUsageError
-	}
-	if err := c.run(ctx); err != nil {
-		logger.Errorf(ctx, err.Error())
-		return subcommands.ExitFailure
-	}
-	return subcommands.ExitSuccess
-}
-
-func (c *SetCommand) run(ctx context.Context) error {
-	staticSpec, err := fint.ReadStatic(c.staticSpecPath)
-	if err != nil {
-		return err
-	}
-
-	var contextSpec *fintpb.Context
-	if c.contextSpecPath != "" {
-		contextSpec, err = fint.ReadContext(c.contextSpecPath)
+	return c.execute(ctx, func(ctx context.Context) error {
+		staticSpec, contextSpec, err := c.loadSpecs()
 		if err != nil {
 			return err
 		}
-	} else {
-		// The -context flag should always be set in production, but fall back
-		// to looking up the `fuchsiaDirEnvVar` to determine the checkout and
-		// build directories to make fint less cumbersome to run manually.
-		contextSpec, err = defaultContextSpec()
-		if err != nil {
-			return err
+
+		artifacts, setErr := fint.Set(ctx, staticSpec, contextSpec)
+
+		if contextSpec.ArtifactDir != "" {
+			f, err := osmisc.CreateFile(filepath.Join(contextSpec.ArtifactDir, artifactsManifest))
+			if err != nil {
+				return fmt.Errorf("failed to create artifacts file: %w", err)
+			}
+			defer f.Close()
+			m := jsonpb.Marshaler{}
+			if err := m.Marshal(f, artifacts); err != nil {
+				return fmt.Errorf("failed to write artifacts file: %w", err)
+			}
 		}
-	}
 
-	artifacts, setErr := fint.Set(ctx, staticSpec, contextSpec)
-
-	if contextSpec.ArtifactDir != "" {
-		f, err := osmisc.CreateFile(filepath.Join(contextSpec.ArtifactDir, artifactsManifest))
-		if err != nil {
-			return fmt.Errorf("failed to create artifacts file: %w", err)
-		}
-		defer f.Close()
-		m := jsonpb.Marshaler{}
-		if err := m.Marshal(f, artifacts); err != nil {
-			return fmt.Errorf("failed to write artifacts file: %w", err)
-		}
-	}
-
-	return setErr
-}
-
-func defaultContextSpec() (*fintpb.Context, error) {
-	checkoutDir, found := os.LookupEnv(fuchsiaDirEnvVar)
-	if !found {
-		return nil, fmt.Errorf("$%s must be set if -context is not set", fuchsiaDirEnvVar)
-	}
-	return &fintpb.Context{
-		CheckoutDir: checkoutDir,
-		BuildDir:    filepath.Join(checkoutDir, "out", "default"),
-	}, nil
+		return setErr
+	})
 }

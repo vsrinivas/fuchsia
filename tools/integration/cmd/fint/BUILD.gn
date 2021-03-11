@@ -10,6 +10,8 @@ import("//third_party/protobuf/proto_library.gni")
 
 go_library("fint_lib") {
   sources = [
+    "build.go",
+    "common.go",
     "main.go",
     "set.go",
     "set_test.go",
