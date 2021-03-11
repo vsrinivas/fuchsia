@@ -100,11 +100,20 @@ class GenericWatchdog32 {
     writel(val, action.addr);
   }
 
-  void PetLocked() TA_REQ(lock_) {
+  zx_time_t PetLocked() TA_REQ(lock_) {
+    // Even if petting is suppressed, take a look at the time just before the
+    // pet was supposed to happen.  This is the value we will use when computing
+    // the next pet timer, instead of basing it on the last_pet_time_.  This is
+    // important because we want the last_pet_time_ to reflect the last time we
+    // _actually_ pet the dog, but if we use it to schedule our next timer
+    // deadline, we might end up scheduling our timers in the past, causing our
+    // core to get stuck in its timer handler.
+    zx_time_t now = current_time();
     if (!is_petting_suppressed_) {
-      last_pet_time_ = current_time();
+      last_pet_time_ = now;
       TakeAction(cfg_.pet_action);
     }
+    return now;
   }
   void HandlePetTimer() TA_REQ(lock_);
   void PretendLocked() TA_ASSERT(lock_) {}
@@ -243,11 +252,10 @@ void GenericWatchdog32::Init(const void*, uint32_t) {
 
 void GenericWatchdog32::HandlePetTimer() {
   if (is_enabled_) {
-    PetLocked();
-    Deadline next_pet_time{last_pet_time_ + (timeout_nsec() / 2),
-                           {(timeout_nsec() / 4), TIMER_SLACK_EARLY}};
+    zx_time_t next_pet_time = zx_time_add_duration(PetLocked(), timeout_nsec() / 2);
+    Deadline next_pet_deadline{next_pet_time, {(timeout_nsec() / 4), TIMER_SLACK_EARLY}};
     pet_timer_.Set(
-        next_pet_time,
+        next_pet_deadline,
         [](Timer*, zx_time_t now, void* arg) {
           auto thiz = reinterpret_cast<GenericWatchdog32*>(arg);
           Guard<SpinLock, IrqSave> guard{&thiz->lock_};
