@@ -107,19 +107,21 @@ union Value {
 };
 
 /// Represents a group of [Value]s with a title.
-struct Group {
+table Group {
     // The title to show for this group.
-    string:128 title;
+    1: string:128 title;
+    // The icon to show for this spec.
+    2: IconValue icon;
     // List of [Value] objects that form part of this spec.
-    vector<Value>:16 values;
+    3: vector<Value>:16 values;
 };
 
 /// Describes a specification of quick UI.
-struct Spec {
+table Spec {
     // The title to show for this spec.
-    string:128 title;
+    1: string:128 title;
     // List of [Group] objects that form part of this spec.
-    vector<Group>:8 groups;
+    2: vector<Group>:8 groups;
 };
 
 /// Defines a protocol for a component to provide specs for building UI for
