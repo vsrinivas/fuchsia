@@ -263,16 +263,13 @@ config("relative_paths") {
       ]
     }
   } else {
-    # Make builds independent of the absolute file path. -fdebug-prefix-map=
-    # can be used to the same effect, but it requires putting the absolute path
-    # to the build directory in the compile command, thus making it dependent
-    # on the absolute path of build directory. -fdebug-compilation-dir is
-    # designed to address this issue, making both debug info and the compile
-    # command itself independent of the absolute path of the build directory.
-    cflags = [
-      "-fdebug-compilation-dir",
-      ".",
-    ]
+    # Make builds independent of the absolute file path. -ffile-prefix-map= can
+    # be used to the same effect, but it requires putting the absolute path to
+    # the build directory in the compile command, thus making it dependent on
+    # the absolute path of build directory. -ffile-compilation-dir is designed
+    # to address this issue, making both debug info and coverage mapping
+    # independent of the absolute path of the build directory.
+    cflags = [ "-ffile-compilation-dir=." ]
   }
 
   if (!is_gcc) {
