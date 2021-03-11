@@ -180,6 +180,69 @@ class Action(object):
             self,
             tempfile_transform: TempFileTransform,
             verbose: bool = False) -> int:
+        """Runs a command twice, copying declared outputs in between.
+
+        Compare both sets of outputs, and error out if any differ.
+        The advantage of this variant over others is that it eliminates
+        output-path sensitivities by running the *same* command twice.
+        One possible disadvantage is that this may expose behavioral
+        differences due to the non/pre-existence of outputs ahead of
+        running the command.
+
+        Args:
+          tempfile_transform: used to rename backup copies of outputs.
+          verbose: if True, print more diagnostics.
+
+        Returns:
+          exit code 0 on command success and outputs match, else nonzero.
+        """
+
+        # Run the command the first time.
+        retval = subprocess.call(self.command)
+
+        # If the command failed, skip re-running.
+        if retval != 0:
+            return retval
+
+        # Backup a copy of all declared outputs.
+        renamed_outputs = {}
+        for out in self.outputs:
+            # TODO(fangism): what do we do about symlinks?
+            if os.path.exists(out):
+                renamed_outputs[out] = tempfile_transform.transform(out)
+            # A nonexistent output would be caught by action_tracer.py.
+
+        for out, backup in renamed_outputs.items():
+            if tempfile_transform.temp_dir:
+                os.makedirs(os.path.dirname(backup), exist_ok=True)
+            # preserve metadata such as timestamp
+            shutil.copy2(out, backup, follow_symlinks=False)
+
+        rerun_retval = subprocess.call(self.command)
+        if rerun_retval != 0:
+            print(
+                f"""Re-run of command {self.command} failed, while first time succeeded!?"""
+            )
+            return rerun_retval
+
+        return verify_files_match(fileset=renamed_outputs, label=self.label)
+
+    def run_twice_with_substitution_and_compare_outputs(
+            self,
+            tempfile_transform: TempFileTransform,
+            verbose: bool = False) -> int:
+        """Runs a command twice, the second time with renamed outputs, and compares.
+
+        Caveat: If the contents if the outputs are sensitive to the names of the
+        outputs, this will find too many differences.
+
+        Args:
+          tempfile_transform: used to rename backup copies of outputs.
+          verbose: if True, print more diagnostics.
+
+        Returns:
+          exit code 0 on command success and outputs match, else nonzero.
+        """
 
         def replace_arg(arg: str):
             if arg in self.outputs:
@@ -216,32 +279,46 @@ class Action(object):
             )
             return rerun_retval
 
-        # Compare outputs and report differences.
-        matching_files, different_files = _partition(
-            renamed_outputs.items(),
-            # If either file is missing, this will fail, which indicates that
-            # something is not working as expected.
-            lambda pair: files_match(pair[0], pair[1]))
+        return verify_files_match(fileset=renamed_outputs, label=self.label)
 
-        # Remove any files that matched to save space.
-        for _, temp_out in matching_files:
-            os.remove(temp_out)
 
-        if different_files:
-            print(
-                f"Repeating command for target [{self.label}] with renamed outputs produces different results:"
-            )
-            for orig, temp in different_files:
-                print(f"  {orig} vs. {temp}")
+def verify_files_match(fileset: Dict[str, str], label: str) -> int:
+    """Compare outputs and report differences.  Remove matching copies.
 
-            # Keep around different outputs for analysis.
+    Args:
+      fileset: {file: backup} key-value pairs of files to compare.
+        Backup files that match are removed to save space, while the .keys()
+        files are kept.
+      label: An identifier for the action that was run, for diagnostics.
 
-            # Note: Even though the original command succeeded, forcing this to
-            # fail may influence tools that examine the freshness of outputs
-            # relative to the last succeeded command.
-            return 1
+    Returns:
+      exit code 0 if all files matched, else 1.
+    """
+    matching_files, different_files = _partition(
+        fileset.items(),
+        # If either file is missing, this will fail, which indicates that
+        # something is not working as expected.
+        lambda pair: files_match(pair[0], pair[1]))
 
-        return 0
+    # Remove any files that matched to save space.
+    for _, temp_out in matching_files:
+        os.remove(temp_out)
+
+    if different_files:
+        print(
+            f"Repeating command for target [{label}] with renamed outputs produces different results:"
+        )
+        for orig, temp in different_files:
+            print(f"  {orig} vs. {temp}")
+
+        # Keep around different outputs for analysis.
+
+        # Note: Even though the original command succeeded, forcing this to
+        # fail may influence tools that examine the freshness of outputs
+        # relative to the last succeeded command.
+        return 1
+
+    return 0
 
 
 def main_arg_parser() -> argparse.ArgumentParser:
@@ -294,6 +371,13 @@ def main_arg_parser() -> argparse.ArgumentParser:
         help=
         "Check for repeatability: run the command twice, with different outputs, and compare.",
     )
+    parser.add_argument(
+        "--rename-outputs",
+        action="store_true",
+        default=False,
+        help=
+        "When checking for repeatability: rename command-line outputs on the second run.",
+    )
 
     # Positional args are the command and arguments to run.
     parser.add_argument("command", nargs="*", help="The command to run")
@@ -341,16 +425,21 @@ def main():
     )
 
     # Run one of the following modes:
-    # check_repeatability: run the command twice, once with alternate output
-    #   names, and compare the outputs.  This finds nondeterminism.
-    #   This check may not work well if the names of the outputs also affects
-    #   the *contents* of outputs produced by the command.
+    # check_repeatability: run the command twice, and compare the outputs.
     # [default]: redirect outputs to temporary locations, and move them
     #   in-place to their original locations if contents have not changed.
 
     if args.check_repeatability:
-        return action.run_twice_and_compare_outputs(
-            tempfile_transform=tempfile_transform, verbose=args.verbose)
+        if args.rename_outputs:
+            # This check variant will find path-sensitive outputs,
+            # and nondeterminstic outputs.
+            return action.run_twice_with_substitution_and_compare_outputs(
+                tempfile_transform=tempfile_transform, verbose=args.verbose)
+        else:
+            # This check will only find nondeterministic outputs.
+            # For example, those affected by the current time.
+            return action.run_twice_and_compare_outputs(
+                tempfile_transform=tempfile_transform, verbose=args.verbose)
 
     return action.run_cached(
         tempfile_transform=tempfile_transform, verbose=args.verbose)
