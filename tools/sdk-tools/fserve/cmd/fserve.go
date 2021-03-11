@@ -180,6 +180,8 @@ func main() {
 		log.Fatalf("Could set package server source on device: %v\n", err)
 	}
 
+	log.Infof("Successfully started the package server! It is running the background.")
+
 	os.Exit(0)
 }
 
@@ -369,7 +371,7 @@ func downloadImageIfNeeded(ctx context.Context, sdk sdkProvider, version string,
 			return fmt.Errorf("Could not copy image from %v to %v: %v", srcPath, localImagePath, err)
 		}
 	} else {
-		log.Infof("Skipping download, packages tarball exists\n")
+		log.Debugf("Skipping download, packages tarball exists\n")
 	}
 
 	// The checksum file contains the output from `md5`. This is used to detect content changes in the packages file.
