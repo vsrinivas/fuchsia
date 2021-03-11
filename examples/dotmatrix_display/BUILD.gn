@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "dotmatrix_display"
@@ -39,31 +39,21 @@ executable("bin2") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-package("dotmatrix_display") {
+fuchsia_component("dotmatrix_display_component") {
+  component_name = "dotmatrix_display"
+  manifest = "meta/dotmatrix_display.cmx"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("create_ssd1306_component") {
+  component_name = "create_ssd1306"
+  manifest = "meta/create_ssd1306.cmx"
+  deps = [ ":bin2" ]
+}
+
+fuchsia_shell_package("dotmatrix_display") {
   deps = [
-    ":bin",
-    ":bin2",
-  ]
-
-  binaries = [
-    {
-      name = "dotmatrix_display"
-      shell = true
-    },
-    {
-      name = "create_ssd1306"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("dotmatrix_display.cmx")
-      dest = "dotmatrix_display.cmx"
-    },
-    {
-      path = rebase_path("create_ssd1306.cmx")
-      dest = "create_ssd1306.cmx"
-    },
+    ":create_ssd1306_component",
+    ":dotmatrix_display_component",
   ]
 }
