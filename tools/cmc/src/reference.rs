@@ -8,21 +8,23 @@ use {
     std::{fs, path::PathBuf},
 };
 
-// These runners don't respect `program.binary`. We ignore validation for
-// components using them.
-// TODO(fxbug.dev/67151)
-const RUNNER_IGNORE_LIST: [&'static str; 4] = [
-    "fuchsia-pkg://fuchsia.com/guest-runner#meta/guest_runner.cmx",
-    "fuchsia-pkg://fuchsia.com/appmgr_mock_runner#meta/appmgr_mock_runner.cmx",
-    "fuchsia-pkg://fuchsia.com/netemul-runner#meta/netemul-runner.cmx",
-    // TODO(fxbug.dev/68608): Add support for Dart components.
-    "fuchsia-pkg://fuchsia.com/dart_jit_runner#meta/dart_jit_runner.cmx",
-];
-
 enum ComponentManifest {
     Cml(cml::Document),
     Cmx(serde_json::Value),
 }
+
+// These runners respect `program.binary`. We only validate the `program` section for components
+// using them.
+// TODO(fxbug.dev/67151)
+const RUNNER_VALIDATE_LIST: [&'static str; 6] = [
+    "driver",
+    "elf",
+    "elf_test_runner",
+    "go_test_runner",
+    "gtest_runner",
+    "rust_test_runner",
+    // TODO(fxbug.dev/68608): Add support for Dart components.
+];
 
 /// Validates that a component manifest file is consistent with the content
 /// of its package. Checks included in this function are:
@@ -35,12 +37,10 @@ pub fn validate(
     gn_label: Option<&String>,
 ) -> Result<(), Error> {
     let component_manifest = read_component_manifest(component_manifest_path)?;
-    match get_component_runner(&component_manifest) {
-        Some(component_runner) => {
-            for runner in RUNNER_IGNORE_LIST.iter() {
-                if &component_runner == runner {
-                    return Ok(());
-                }
+    match get_component_runner(&component_manifest).as_deref() {
+        Some(runner) => {
+            if !RUNNER_VALIDATE_LIST.iter().any(|r| &runner == r) {
+                return Ok(());
             }
         }
         None => {}
