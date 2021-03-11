@@ -81,7 +81,8 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
         "zx_object_get_info failed on child root VMAR handle");
   zx::vmar vmar;
   uintptr_t addr;
-  size_t reserve_size = (((info.base + info.len) / 2) + PAGE_SIZE - 1) & -PAGE_SIZE;
+  size_t reserve_size = (((info.base + info.len) / 2) + zx_system_get_page_size() - 1) &
+                        -static_cast<uint64_t>(zx_system_get_page_size());
   zx_status_t status =
       root_vmar.allocate(ZX_VM_SPECIFIC, 0, reserve_size - info.base, &vmar, &addr);
   check(log, status, "zx_vmar_allocate failed for low address space reservation");
@@ -272,7 +273,8 @@ zx::vmar reserve_low_address_space(const zx::debuglog& log, const zx::vmar& root
     // Allocate the stack for the child.
     uintptr_t sp;
     {
-      stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
+      stack_size = (stack_size + zx_system_get_page_size() - 1) &
+                   -static_cast<uint64_t>(zx_system_get_page_size());
       zx::vmo stack_vmo;
       status = zx::vmo::create(stack_size, 0, &stack_vmo);
       check(log, status, "zx_vmo_create failed for child stack");
