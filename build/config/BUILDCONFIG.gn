@@ -520,6 +520,10 @@ declare_args() {
   # against their declared inputs and outputs and depfiles (if present).
   # An action that accesses undeclared inputs or outputs will fail the build.
   build_should_trace_actions = false
+
+  # If enabled, run each affected action twice (once with renamed outputs)
+  # and compare the outputs' contents for reproducibility.
+  check_repeatability = false
 }
 
 # NOTE: This template needs to be defined before some of the templates below so
@@ -570,21 +574,64 @@ foreach(_target_type,
         inputs += [ python_exe_src ]
 
         # Prepend _args with Python interpreter args.
-        _new_args = [
-                      # Speed up startup by not looking for site packages.
-                      "-S",
-                      rebase_path(invoker.script, root_build_dir),
-                    ] + _args
+        _new_python_args =
+            [
+              # Speed up startup by not looking for site packages.
+              "-S",
+              rebase_path(invoker.script, root_build_dir),
+            ] + _args
         _args = []
-        _args = _new_args
+        _args = _new_python_args
       } else {
         _invoker_script = invoker.script
       }
 
-      # TODO(fangism): support command wrapper transformations (here):
-      #   move-outputs-if-changed
-      #   run-twice-compare-outputs
-      # These look like: wrapper [wrapper_args...] -- original_command_args
+      # To suppress checking for repeatability, in the invoker:
+      #   repeatable = false
+      repeatable = true
+      if (defined(invoker.repeatable)) {
+        repeatable = invoker.repeatable
+      }
+      if (check_repeatability) {
+        should_check_repeatability = repeatable
+      } else {
+        should_check_repeatability = false
+        not_needed([ "repeatable" ])
+      }
+
+      if (should_check_repeatability) {
+        # In this mode, we are looking for non-deterministic outputs.
+        # The wrapper script runs the command twice with different output
+        # locations, and then compares them.
+        inputs += [
+          python_exe_src,
+          "//build/tracer/output_cacher.py",
+        ]
+        _new_repro_check_args = [
+          # Speed up startup by not looking for Python site packages.
+          "-S",
+          rebase_path("//build/tracer/output_cacher.py", root_build_dir),
+          "--check-repeatability",
+          "--disable",
+          "--verbose",
+          "--label",
+          get_label_info(":$target_name", "label_with_toolchain"),
+          "--temp-suffix=",  # don't use suffix
+          "--temp-dir",
+          ".tmp-repro",
+        ]
+        if (defined(outputs)) {
+          _new_repro_check_args +=
+              [ "--outputs" ] + rebase_path(outputs, root_build_dir)
+        }
+        _new_repro_check_args += [
+                                   "--",
+                                   rebase_path(_invoker_script, root_build_dir),
+                                 ] + _args
+        _args = []
+        _args = _new_repro_check_args
+        _invoker_script = python_exe_src
+      }
 
       # If the action has inputs/outputs that are not explicitly stated then
       # it will fail verification against the trace.
@@ -662,7 +709,11 @@ foreach(_target_type,
           args += [ "--no-check-access-permissions" ]
         }
 
-        if (!all_outputs_fresh) {
+        # TODO(fxb/72031): retire output freshness checks
+        if (!all_outputs_fresh || should_check_repeatability) {
+          # Checking for repeatability will fail a command if outputs
+          # do not match on a second invocation, which will make the action tracer
+          # complain about an output being incorrectly fresh on a failed command.
           args += [ "--no-check-output-freshness" ]
         }
 
