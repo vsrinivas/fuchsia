@@ -8,7 +8,7 @@ using fuchsia.io;
 using zx;
 
 /// Manages filesystems which wish to be globally exposed under the filesystem host.
-[Discoverable, ForDeprecatedCBindings]
+[Discoverable]
 protocol Registry {
     /// Registers the output directory of a filesystem. These filesystems are
     /// exported from the fuchsia.fshost.Filesystems service, where they are
@@ -20,7 +20,7 @@ protocol Registry {
 };
 
 /// A collection of all registered filesystems.
-[Discoverable, ForDeprecatedCBindings]
+[Discoverable]
 protocol Filesystems {
     compose fuchsia.io.Directory;
 };
