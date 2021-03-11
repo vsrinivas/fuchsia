@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "rolldice"
@@ -28,30 +27,11 @@ rustc_library("lib") {
   sources = [ "src/lib.rs" ]
 }
 
-package("rolldice") {
+fuchsia_shell_package("rolldice") {
+  manifest = "meta/rolldice.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "rolldice"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/rolldice.cmx")
-      dest = "rolldice.cmx"
-    },
-  ]
 }
 
-unittest_package("rolldice-tests") {
+fuchsia_unittest_package("rolldice-tests") {
   deps = [ ":lib_test" ]
-
-  tests = [
-    {
-      name = "rolldice_lib_lib_test"
-    },
-  ]
 }
