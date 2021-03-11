@@ -8,6 +8,7 @@ import("//src/sys/build/components.gni")
 
 group("starnix") {
   deps = [
+    ":android_starnix",
     ":hello_starnix",
     ":pkg",
   ]
@@ -95,6 +96,48 @@ fuchsia_package("pkg") {
   if (target_cpu == "x64") {
     deps += [ ":starnix_component" ]
   }
+}
+
+template("tar_resource") {
+  main_target = target_name
+  untar_target = "${target_name}__untar"
+  manifest_file = "$target_gen_dir/$target_name.manifest.json"
+  action(untar_target) {
+    script = "tar_to_fini.py"
+    inputs = [ invoker.tarfile ]
+    outputs = [ manifest_file ]
+    depfile = "$target_gen_dir/$target_name.d"
+    args = [
+      "--tar-file",
+      rebase_path(inputs[0], root_build_dir),
+      "--unpack-dir",
+      rebase_path("$target_gen_dir/$target_name", root_build_dir),
+      "--manifest-file",
+      rebase_path(manifest_file, root_build_dir),
+      "--dep-file",
+      rebase_path(depfile, root_build_dir),
+    ]
+    if (defined(invoker.subdir)) {
+      args += [
+        "--package-subdir",
+        invoker.subdir,
+      ]
+    }
+  }
+  distribution_entries_from_fini(main_target) {
+    file = manifest_file
+    deps = [ ":$untar_target" ]
+  }
+}
+
+tar_resource("android_system_image") {
+  tarfile = "//prebuilt/starnix/android-root-amd64/system.img.tar"
+  subdir = "root"
+}
+
+fuchsia_package_with_single_component("android_starnix") {
+  manifest = "meta/android_starnix.cml"
+  deps = [ ":android_system_image" ]
 }
 
 group("tests") {

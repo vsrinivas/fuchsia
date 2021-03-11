@@ -1,0 +1,6 @@
+{
+    program: {
+        runner: "starnix",
+        binary: "system/bin/sh",
+    },
+}
