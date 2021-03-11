@@ -18,11 +18,6 @@ pub mod receptor;
 /// Representation of time used for logging.
 pub type Timestamp = zx::Time;
 
-pub fn now() -> Timestamp {
-    // TODO(fxbug.dev/71479): Refer to use clock::now() for Time::get_monotonic()
-    zx::Time::get_monotonic()
-}
-
 /// Macro for defining a standard message hub
 #[macro_export]
 macro_rules! message_hub_definition {

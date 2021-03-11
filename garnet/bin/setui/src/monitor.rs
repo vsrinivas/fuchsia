@@ -59,6 +59,7 @@
 //! }
 //! ```
 
+use crate::clock::now;
 use crate::payload_convert;
 use fuchsia_zircon as zx;
 
@@ -115,8 +116,7 @@ impl DataBuilder {
     /// details
     #[allow(dead_code)]
     pub fn new(state: State) -> Self {
-        // TODO(fxbug.dev/71479): Refer to use clock::now() for Time::get_monotonic()
-        Self { update_time: zx::Time::get_monotonic(), state, details: None }
+        Self { update_time: now(), state, details: None }
     }
 
     #[allow(dead_code)]

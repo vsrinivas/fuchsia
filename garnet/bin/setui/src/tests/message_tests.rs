@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::clock::now;
 use crate::message::action_fuse::ActionFuseBuilder;
 use crate::message::base::{
     filter, group, role, Address, Audience, MessageEvent, MessengerType, Payload, Role, Status,
 };
 use crate::message::messenger::TargetedMessengerClient;
-use crate::message::now;
 use crate::message::receptor::Receptor;
 use crate::tests::message_utils::verify_payload;
 use fuchsia_zircon::DurationNum;

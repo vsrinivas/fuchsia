@@ -62,6 +62,8 @@ use std::hash::Hash;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
+use crate::clock::now;
+
 /// The `Category` trait defines the data that can be used as a key for the
 /// types of tasks managed by [`Manager`].
 ///
@@ -143,10 +145,7 @@ impl<C: Category + 'static> Client<C> {
         let task_id = self.id_generator.generate();
 
         // We report the creation before spawning in case spawning fails.
-        // TODO(fxbug.dev/71479): Refer to use clock::now() for Time::get_monotonic()
-        self.action_tx
-            .unbounded_send((task_id, Action::Create(category.clone()), zx::Time::get_monotonic()))
-            .ok();
+        self.action_tx.unbounded_send((task_id, Action::Create(category.clone()), now())).ok();
 
         // Pass a clone of the action sender to the spawned task in order to
         // signal when the task completes.
@@ -155,8 +154,7 @@ impl<C: Category + 'static> Client<C> {
             future.await;
 
             // Report exit.
-            // TODO(fxbug.dev/71479): Refer to use clock::now() for Time::get_monotonic()
-            action_tx.unbounded_send((task_id, Action::Complete, zx::Time::get_monotonic())).ok();
+            action_tx.unbounded_send((task_id, Action::Complete, now())).ok();
         })
         .detach();
     }
@@ -480,8 +478,7 @@ mod tests {
 
         // Capture timestamp before spawning to verify any action is recorded
         // after this point.
-        // TODO(fxbug.dev/71479): Refer to use clock::now() for Time::get_monotonic()
-        let before_timestamp = zx::Time::get_monotonic();
+        let before_timestamp = now();
         client.spawn(&category, async move {});
 
         // After spawning a task, the manager should send an update indicating
