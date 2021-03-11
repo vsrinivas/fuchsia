@@ -19,6 +19,9 @@ use {
     fidl::endpoints::{Proxy, ServerEnd},
     fidl_fuchsia_component as fcomp, fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_data as fdata,
+    fidl_fuchsia_diagnostics_types::{
+        ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
+    },
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_process as fproc,
     fidl_fuchsia_process_lifecycle::{LifecycleMarker, LifecycleProxy},
@@ -517,6 +520,7 @@ impl ElfRunner {
             lifecycle_client,
             program_config.main_process_critical,
             tasks,
+            resolved_url.clone(),
         )))
     }
 }
@@ -647,6 +651,9 @@ struct ElfComponent {
     /// listeners are Task objects that live for the duration of the component's
     /// lifetime.
     _tasks: Vec<fasync::Task<()>>,
+
+    /// URL with which the component was launched.
+    component_url: String,
 }
 
 impl ElfComponent {
@@ -657,6 +664,7 @@ impl ElfComponent {
         lifecycle_channel: Option<LifecycleProxy>,
         main_process_critical: bool,
         tasks: Vec<fasync::Task<()>>,
+        component_url: String,
     ) -> Self {
         Self {
             _runtime_dir,
@@ -665,6 +673,7 @@ impl ElfComponent {
             lifecycle_channel,
             main_process_critical,
             _tasks: tasks,
+            component_url,
         }
     }
 
@@ -672,6 +681,19 @@ impl ElfComponent {
     /// Process.
     pub fn copy_process(&self) -> Option<Arc<Process>> {
         self.process.clone()
+    }
+
+    /// Return a handle to the Job containing the process for this component.
+    ///
+    /// The rights of the job will be set such that the resulting handle will be apppropriate to
+    /// use for diagnostics-only purposes. Right now that is ZX_RIGHTS_BASIC (which includes
+    /// INSPECT).
+    pub fn copy_job_for_diagnostics(&self) -> Result<Job, ElfRunnerError> {
+        self.job.as_handle_ref().duplicate(zx::Rights::BASIC).map(|h| Job::from(h)).map_err(
+            |status| {
+                ElfRunnerError::component_job_duplication_error(self.component_url.clone(), status)
+            },
+        )
     }
 }
 
@@ -816,6 +838,21 @@ impl Runner for ScopedElfRunner {
                     }
                 };
 
+                let component_diagnostics = elf_component
+                    .copy_job_for_diagnostics()
+                    .map(|job| ComponentDiagnostics {
+                        tasks: Some(ComponentTasks {
+                            component_task: Some(DiagnosticsTask::Job(job.into())),
+                            ..ComponentTasks::EMPTY
+                        }),
+                        ..ComponentDiagnostics::EMPTY
+                    })
+                    .map_err(|e| {
+                        warn!("Failed to copy job for diagnostics: {}", e);
+                        ()
+                    })
+                    .ok();
+
                 // Spawn a future that watches for the process to exit
                 fasync::Task::spawn(async move {
                     let _ = fasync::OnSignals::new(
@@ -847,13 +884,19 @@ impl Runner for ScopedElfRunner {
                 // epitaph on the controller channel, closes it, and stops
                 // serving the protocol.
                 fasync::Task::spawn(async move {
-                    let server_stream = match server_end.into_stream() {
+                    let (server_stream, control) = match server_end.into_stream_and_control_handle()
+                    {
                         Ok(s) => s,
                         Err(e) => {
                             warn!("Converting Controller channel to stream failed: {}", e);
                             return;
                         }
                     };
+                    if let Some(component_diagnostics) = component_diagnostics {
+                        control.send_on_publish_diagnostics(component_diagnostics).unwrap_or_else(
+                            |e| warn!("sending diagnostics failed for {}: {}", resolved_url, e),
+                        );
+                    }
                     runner::component::Controller::new(elf_component, server_stream)
                         .serve(epitaph_fn)
                         .await
@@ -1102,6 +1145,7 @@ mod tests {
             lifecycle_client,
             critical,
             Vec::new(),
+            "".to_string(),
         );
         (job.into_inner(), component)
     }
@@ -1184,10 +1228,17 @@ mod tests {
                 .expect("could not create component controller endpoints");
 
         runner.start(start_info, server_controller).await;
-        assert_matches!(
-            client_controller.take_event_stream().try_next().await,
-            Err(fidl::Error::ClientChannelClosed { .. })
-        );
+        let mut event_stream = client_controller.take_event_stream();
+        for _ in 0..2 {
+            let event = event_stream.try_next().await;
+            match event {
+                Ok(Some(fcrunner::ComponentControllerEvent::OnPublishDiagnostics { .. })) => {}
+                Err(fidl::Error::ClientChannelClosed { .. }) => {
+                    break;
+                }
+                other => panic!("Expected channel closed error, got {:?}", other),
+            }
+        }
         Ok(())
     }
 
@@ -1494,18 +1545,15 @@ mod tests {
         // We expect the event stream to have closed, which is reported as an
         // error and the value of the error should match the epitaph for a
         // process that was killed.
-        match controller.take_event_stream().try_next().await {
-            Err(fidl::Error::ClientChannelClosed { status, .. }) => {
-                assert_eq!(
-                    status,
-                    zx::Status::from_raw(
-                        i32::try_from(fcomp::Error::InstanceDied.into_primitive()).unwrap()
-                    )
-                );
-            }
-            other => panic!("Expected channel closed error, got {:?}", other),
-        }
-
+        let mut event_stream = controller.take_event_stream();
+        expect_diagnostics_event(&mut event_stream).await;
+        expect_channel_closed(
+            &mut event_stream,
+            zx::Status::from_raw(
+                i32::try_from(fcomp::Error::InstanceDied.into_primitive()).unwrap(),
+            ),
+        )
+        .await;
         Ok(())
     }
 
@@ -1653,10 +1701,9 @@ mod tests {
                     .expect("could not create component controller endpoints");
 
             runner.start(start_info, server_controller).await;
-            assert_matches!(
-                client_controller.take_event_stream().try_next().await,
-                Err(fidl::Error::ClientChannelClosed { .. })
-            );
+            let mut event_stream = client_controller.take_event_stream();
+            expect_diagnostics_event(&mut event_stream).await;
+            expect_channel_closed(&mut event_stream, zx::Status::OK).await;
         };
 
         // TODO(fxbug.dev/69634): Instead of checking for connection count,
@@ -1691,5 +1738,81 @@ mod tests {
 
         assert_eq!(*request_count.lock().expect("lock failed"), connection_count);
         Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn on_publish_diagnostics_contains_job_handle() {
+        let (runtime_dir_client, runtime_dir_server) = zx::Channel::create().unwrap();
+        let start_info = lifecycle_startinfo(Some(ServerEnd::new(runtime_dir_server)));
+
+        let runtime_dir_proxy = DirectoryProxy::from_channel(
+            fasync::Channel::from_channel(runtime_dir_client).unwrap(),
+        );
+
+        let config = RuntimeConfig {
+            use_builtin_process_launcher: should_use_builtin_process_launcher(),
+            ..Default::default()
+        };
+        let runner = Arc::new(ElfRunner::new(&config, None));
+        let runner = runner.get_scoped_runner(ScopedPolicyChecker::new(
+            Arc::downgrade(&Arc::new(config)),
+            AbsoluteMoniker::root(),
+        ));
+        let (controller, server_controller) = create_proxy::<fcrunner::ComponentControllerMarker>()
+            .expect("could not create component controller endpoints");
+
+        runner.start(start_info, server_controller).await;
+
+        let job_id = read_file(&runtime_dir_proxy, "elf/job_id").await.parse::<u64>().unwrap();
+        let mut event_stream = controller.take_event_stream();
+        match event_stream.try_next().await {
+            Ok(Some(fcrunner::ComponentControllerEvent::OnPublishDiagnostics {
+                payload:
+                    ComponentDiagnostics {
+                        tasks:
+                            Some(ComponentTasks {
+                                component_task: Some(DiagnosticsTask::Job(job)), ..
+                            }),
+                        ..
+                    },
+            })) => {
+                assert_eq!(job_id, job.get_koid().unwrap().raw_koid());
+            }
+            other => panic!("unexpected event result: {:?}", other),
+        }
+
+        controller.stop().expect("Stop request failed");
+        // Wait for the process to exit so the test doesn't pagefault due to an invalid stdout
+        // handle.
+        controller.on_closed().await.expect("failed waiting for channel to close");
+    }
+
+    async fn expect_diagnostics_event(event_stream: &mut fcrunner::ComponentControllerEventStream) {
+        let event = event_stream.try_next().await;
+        assert_matches!(
+            event,
+            Ok(Some(fcrunner::ComponentControllerEvent::OnPublishDiagnostics {
+                payload: ComponentDiagnostics {
+                    tasks: Some(ComponentTasks {
+                        component_task: Some(DiagnosticsTask::Job(_)),
+                        ..
+                    }),
+                    ..
+                },
+            }))
+        );
+    }
+
+    async fn expect_channel_closed(
+        event_stream: &mut fcrunner::ComponentControllerEventStream,
+        expected_status: zx::Status,
+    ) {
+        let event = event_stream.try_next().await;
+        match event {
+            Err(fidl::Error::ClientChannelClosed { status, .. }) => {
+                assert_eq!(status, expected_status);
+            }
+            other => panic!("Expected channel closed error, got {:?}", other),
+        }
     }
 }
