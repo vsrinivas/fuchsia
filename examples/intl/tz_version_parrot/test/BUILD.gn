@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
@@ -28,12 +28,7 @@ executable("tz_version_parrot_test_bin") {
   ]
 }
 
-test_package("tz_version_parrot_test") {
+fuchsia_unittest_package("tz_version_parrot_test") {
+  manifest = "meta/tz_version_parrot_test.cmx"
   deps = [ ":tz_version_parrot_test_bin" ]
-
-  tests = [
-    {
-      name = "tz_version_parrot_test"
-    },
-  ]
 }

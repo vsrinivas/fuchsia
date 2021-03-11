@@ -35,5 +35,5 @@ The actual `.res` files live in
 
 Run
 ```shell
-fx run-test tz_version_parrot_test
+fx test tz_version_parrot_test
 ```

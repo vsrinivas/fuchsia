@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
+import("//src/sys/build/components.gni")
 
 executable("tz_version_parrot_bin") {
   output_name = "tz_version_parrot"
@@ -23,44 +23,38 @@ icu_tzdata_config_data("icu_tz_data_for_tz_version_parrot") {
   for_pkg = "tz_version_parrot"
 }
 
-package("tz_version_parrot") {
+fuchsia_component("tz_version_parrot_main") {
+  component_name = "tz_version_parrot"
+  manifest = "meta/tz_version_parrot.cmx"
+  deps = [ ":tz_version_parrot_bin" ]
+}
+
+fuchsia_component("tz_version_parrot_with_tzdata") {
+  manifest = "meta/tz_version_parrot_with_tzdata.cmx"
+  deps = [ ":tz_version_parrot_bin" ]
+}
+
+fuchsia_component("tz_version_parrot_with_tzdata_wrong_revision") {
+  manifest = "meta/tz_version_parrot_with_tzdata_wrong_revision.cmx"
+  deps = [ ":tz_version_parrot_bin" ]
+}
+
+fuchsia_package("tz_version_parrot") {
   deps = [
     ":icu_tz_data_for_tz_version_parrot",
-    ":tz_version_parrot_bin",
+    ":tz_version_parrot_main",
+    ":tz_version_parrot_resources",
+    ":tz_version_parrot_with_tzdata",
+    ":tz_version_parrot_with_tzdata_wrong_revision",
   ]
+}
 
-  binaries = [
-    {
-      name = "tz_version_parrot"
-    },
+resource("tz_version_parrot_resources") {
+  sources = [
+    "//third_party/icu/common/icudtl.dat",
+    "newer_revision.txt",
   ]
-
-  meta = [
-    {
-      path = rebase_path("meta/tz_version_parrot.cmx")
-      dest = "tz_version_parrot.cmx"
-    },
-    {
-      path = rebase_path("meta/tz_version_parrot_with_tzdata.cmx")
-      dest = "tz_version_parrot_with_tzdata.cmx"
-    },
-    {
-      path =
-          rebase_path("meta/tz_version_parrot_with_tzdata_wrong_revision.cmx")
-      dest = "tz_version_parrot_with_tzdata_wrong_revision.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
-    {
-      path = rebase_path("newer_revision.txt")
-      dest = "newer_revision.txt"
-    },
-  ]
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
 group("tests") {
