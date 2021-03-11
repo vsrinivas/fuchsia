@@ -7,7 +7,6 @@
 
 #include <cassert>
 #include <cstddef>
-#include <iterator>
 #include <type_traits>
 
 #include "cstddef.h"
@@ -33,8 +32,6 @@ using std::as_writable_bytes;
 
 #include "internal/span.h"
 #include "internal/utility.h"
-#include "iterator.h"
-#include "memory.h"
 #include "type_traits.h"
 
 namespace cpp20 {

@@ -9,6 +9,10 @@
 #include <limits>
 #include <type_traits>
 
+#if __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+#include <span>
+#endif  // __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
 #include "../iterator.h"
 #include "../type_traits.h"
 #include "utility.h"
@@ -57,9 +61,16 @@ class extent<T, dynamic_extent> {
 
 }  // namespace internal
 
-// Forward declaration of span to define the traits below.
+#if __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::span;
+
+#else  // Provide forward declaration for traits below
+
 template <typename T, size_t Extent>
 class span;
+
+#endif  // __cpp_lib_span >= 202002L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 namespace internal {
 
