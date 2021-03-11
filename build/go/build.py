@@ -120,7 +120,6 @@ def main():
         'win': 'windows',
     }[args.current_os]
 
-    build_id_dir = os.path.join(args.root_out_dir, '.build-id')
     dist = args.stripped_output_path or args.output_path
 
     # Project path is a package specific gopath, also known as a "project" in go parlance.
