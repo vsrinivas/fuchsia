@@ -1454,7 +1454,6 @@ Extracted items use the file names shown below:\n\
       }
       switch (header_.type) {
         case ZBI_TYPE_STORAGE_BOOTFS:
-        case ZBI_TYPE_STORAGE_KERNEL:
           return ShowBootFS();
         case ZBI_TYPE_CMDLINE:
           return ShowCmdline();
@@ -1468,7 +1467,7 @@ Extracted items use the file names shown below:\n\
     if (AlreadyCompressed()) {
       CreateFromCompressed(*this)->EmitJsonContents(writer, key);
     } else {
-      if (header_.type == ZBI_TYPE_STORAGE_BOOTFS || header_.type == ZBI_TYPE_STORAGE_KERNEL) {
+      if (header_.type == ZBI_TYPE_STORAGE_BOOTFS) {
         writer.Key(key);
         EmitJsonBootFS(writer);
       } else if (auto ext = TypeExtension(header_.type); ext != nullptr && !strcmp(ext, ".txt")) {
@@ -1624,8 +1623,8 @@ Extracted items use the file names shown below:\n\
   }
 
   // Create a BOOTFS item.
-  static ItemPtr CreateBootFS(Directory* root, Compressor::Config compress, uint32_t bootfs_type) {
-    auto item = MakeItem(NewHeader(bootfs_type, 0), compress);
+  static ItemPtr CreateBootFS(Directory* root, Compressor::Config compress) {
+    auto item = MakeItem(NewHeader(ZBI_TYPE_STORAGE_BOOTFS, 0), compress);
 
     // Collect the names and contents, calculating the final directory size.
     std::vector<std::pair<std::string, const FileContents*>> entries;
@@ -2158,7 +2157,6 @@ class DirectoryTreeBuilder final {
   std::forward_list<ItemPtr> merged_items_;
 
   std::filesystem::path prefix_ = ".";
-  std::optional<uint32_t> type_;
   FileOpener* opener_;
   bool replace_ = false;
 
@@ -2282,8 +2280,7 @@ duplicate target path (directory vs file) without --replace: %s\n",
 };
 
 bool ImportFile(const FileContents* file, const char* filename, ItemList* items,
-                DirectoryTreeBuilder* bootfs, uint32_t bootfs_type,
-                std::optional<Compressor::Config> recompress) {
+                DirectoryTreeBuilder* bootfs, std::optional<Compressor::Config> recompress) {
   if (file->exact_size() < sizeof(zbi_header_t)) {
     return false;
   }
@@ -2309,9 +2306,8 @@ bool ImportFile(const FileContents* file, const char* filename, ItemList* items,
     if (recompress) {
       item = Item::Recompress(std::move(item), *recompress);
     }
-    const uint32_t type = item->type();
     items->push_back(std::move(item));
-    if (type == bootfs_type) {
+    if (items->back()->type() == ZBI_TYPE_STORAGE_BOOTFS) {
       bootfs->push_back(&items->back());
     }
   }
@@ -2320,7 +2316,6 @@ bool ImportFile(const FileContents* file, const char* filename, ItemList* items,
 
 enum LongOnlyOpt : int {
   kOptRecompress = 0x100,
-  kOptFilesType = 0x101,
 };
 
 constexpr const char kOptString[] = "-B:c::C:d:D:e:Fij:xXRhto:p:T:uv";
@@ -2334,7 +2329,6 @@ constexpr const option kLongOpts[] = {
     {"extract-items", no_argument, nullptr, 'X'},
     {"extract-raw", no_argument, nullptr, 'R'},
     {"files", no_argument, nullptr, 'F'},
-    {"files-type", required_argument, nullptr, kOptFilesType},
     {"help", no_argument, nullptr, 'h'},
     {"ignore-missing-files", no_argument, nullptr, 'i'},
     {"json-output", required_argument, nullptr, 'j'},
@@ -2375,8 +2369,6 @@ file and the `--output` FILE, to append more items.\n\
 Input control switches apply to subsequent input arguments:\n\
     --directory=DIR, -C DIR        change directory to DIR\n\
     --files, -F                    read BOOTFS manifest files (default)\n\
-    --files-type=TYPE              set the item type under which the BOOTFS\n\
-                                   will be created (default: \"bootfs\")\n\
     --prefix=PREFIX, -p PREFIX     prepend PREFIX/ to target file names\n\
     --replace, -r                  duplicate target file name OK (see below)\n\
     --type=TYPE[:N], -T TYPE[:N]   input files are TYPE items (see below)\n\
@@ -2401,11 +2393,6 @@ Each DIRECTORY is listed recursively and handled just like a manifest file\n\
 using the path relative to DIRECTORY as the target name (before any PREFIX).\n\
 Each `--prefix` or `-p` switch affects each file from a manifest or\n\
 directory in subsequent FILE, DIRECTORY, or TEXT arguments.\n\
-All files are packed into a single item in BOOTFS format, regardless of\n\
-position.  The `--files-type` switch controls the type field for this item,\n\
-by default `BOOTFS`.  Any input items of that same type will be combined\n\
-along with any other files into the single output item. When extracting, \n\
---files-type controls which item type to extract files from.\n\
 \n\
 With `--type` or `-T`, input files are treated as TYPE instead of manifest\n\
 files, and directories are not permitted.  See below for the TYPE strings.\n\
@@ -2495,8 +2482,6 @@ int main(int argc, char** argv) {
   bool ignore_missing_files = false;
   ItemList items;
   DirectoryTreeBuilder bootfs(&opener);
-  // Default to building up a STORAGE_BOOTFS.
-  uint32_t bootfs_type = ZBI_TYPE_STORAGE_BOOTFS;
   std::filesystem::path outdir;
   int opt;
   while ((opt = getopt_long(argc, argv, kOptString, kLongOpts, nullptr)) != -1) {
@@ -2533,14 +2518,7 @@ int main(int argc, char** argv) {
       case 'F':
         input_manifest = true;
         continue;
-      case kOptFilesType: {
-        std::optional<uint32_t> max_size;
-        if (!Item::ParseTypeName(optarg, &bootfs_type, &max_size) || max_size) {
-          fprintf(stderr, "unrecognized type: %s\n", optarg);
-          exit(1);
-        }
-        continue;
-      }
+
       case 'T':
         if (Item::ParseTypeName(optarg, &input_type, &input_size_limit)) {
           input_manifest = false;
@@ -2623,7 +2601,7 @@ int main(int argc, char** argv) {
           items.push_back(
               Item::CreateFromFile(opener.Emplace(optarg, input_type == ZBI_TYPE_CMDLINE),
                                    "<command-line>", input_type, input_size_limit, compressed));
-          if (input_type == bootfs_type) {
+          if (input_type == ZBI_TYPE_STORAGE_BOOTFS) {
             bootfs.push_back(&items.back());
           }
         }
@@ -2646,7 +2624,7 @@ int main(int argc, char** argv) {
       }
       bootfs.MergeRootDirectory(*input->AsDir());
     } else if (input_manifest || input_type == ZBI_TYPE_CONTAINER) {
-      if (ImportFile(input->AsContents(), optarg, &items, &bootfs, bootfs_type,
+      if (ImportFile(input->AsContents(), optarg, &items, &bootfs,
                      recompress ? compressed : std::optional<Compressor::Config>())) {
         // It's another file in ZBI format.
       } else if (input_manifest) {
@@ -2683,9 +2661,7 @@ int main(int argc, char** argv) {
   // Don't merge incoming items when only listing or extracting.
   const bool merge = outfile != nullptr;
 
-  auto is_bootfs = [bootfs_type = bootfs_type](const ItemPtr& item) {
-    return item->type() == bootfs_type;
-  };
+  auto is_bootfs = [](const ItemPtr& item) { return item->type() == ZBI_TYPE_STORAGE_BOOTFS; };
 
   ItemPtr keepalive;
   if (merge) {
@@ -2742,7 +2718,7 @@ int main(int argc, char** argv) {
 
   if (!bootfs.tree()->empty()) {
     // Pack up the BOOTFS.
-    items.push_back(Item::CreateBootFS(bootfs.tree(), compressed, bootfs_type));
+    items.push_back(Item::CreateBootFS(bootfs.tree(), compressed));
   }
 
   if (!items.empty()) {
