@@ -16,7 +16,7 @@ In addition, the test launches a mock Cobalt component, which makes
 `fuchsia.cobalt.LoggerFactory` available to Timekeeper.
 
 ## Fake-clock tests
-The tests in faketime_integration.rs also use `//src/lib/fake-clock`. This allows
+The tests in `tests/faketime` also use `//src/lib/fake-clock`. This allows
 the test to control the monotonic time as observed by Timekeeper under test. To
 support this, the fake-clock tests additionally launch the fake clock manager
 component, which makes `fuchsia.testing.FakeClock` available to Timekeeper.

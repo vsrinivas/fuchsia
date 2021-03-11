@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod faketime_integration;
-mod timekeeper_integration;
-
 use chrono::{Datelike, TimeZone, Timelike};
 use fidl::endpoints::{create_endpoints, ServerEnd};
 use fidl_fuchsia_cobalt::{CobaltEvent, LoggerFactoryMarker};

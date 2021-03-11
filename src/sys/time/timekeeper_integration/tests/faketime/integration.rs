@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    create_cobalt_event_stream, new_clock, poll_until, poll_until_async, FakeClockController,
-    NestedTimekeeper, PushSourcePuppet, STD_DEV, VALID_TIME,
-};
 use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierProxy};
 use fidl_fuchsia_testing::Increment;
 use fidl_fuchsia_time_external::{Status, TimeSample};
@@ -17,6 +13,10 @@ use test_util::assert_geq;
 use time_metrics_registry::{
     TimekeeperTimeSourceEventsMetricDimensionEventType as TimeSourceEvent,
     TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
+};
+use timekeeper_integration_lib::{
+    create_cobalt_event_stream, new_clock, poll_until, poll_until_async, FakeClockController,
+    NestedTimekeeper, PushSourcePuppet, STD_DEV, VALID_TIME,
 };
 
 /// Run a test against an instance of timekeeper with fake time. Timekeeper will maintain the

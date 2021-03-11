@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    create_cobalt_event_stream, new_clock, poll_until, poll_until_some, rtc_time_to_zx_time,
-    NestedTimekeeper, PushSourcePuppet, RtcUpdates, BACKSTOP_TIME, BEFORE_BACKSTOP_TIME,
-    BETWEEN_SAMPLES, STD_DEV, VALID_RTC_TIME, VALID_TIME, VALID_TIME_2,
-};
 use fidl_fuchsia_cobalt::CobaltEvent;
 use fidl_fuchsia_cobalt_test::{LogMethod, LoggerQuerierProxy};
 use fidl_fuchsia_time_external::TimeSample;
@@ -25,6 +20,11 @@ use time_metrics_registry::{
     TIMEKEEPER_CLOCK_CORRECTION_METRIC_ID, TIMEKEEPER_LIFECYCLE_EVENTS_METRIC_ID,
     TIMEKEEPER_SQRT_COVARIANCE_METRIC_ID, TIMEKEEPER_TIME_SOURCE_EVENTS_METRIC_ID,
     TIMEKEEPER_TRACK_EVENTS_METRIC_ID,
+};
+use timekeeper_integration_lib::{
+    create_cobalt_event_stream, new_clock, poll_until, poll_until_some, rtc_time_to_zx_time,
+    NestedTimekeeper, PushSourcePuppet, RtcUpdates, BACKSTOP_TIME, BEFORE_BACKSTOP_TIME,
+    BETWEEN_SAMPLES, STD_DEV, VALID_RTC_TIME, VALID_TIME, VALID_TIME_2,
 };
 
 /// Run a test against an instance of timekeeper. Timekeeper will maintain the provided clock.
