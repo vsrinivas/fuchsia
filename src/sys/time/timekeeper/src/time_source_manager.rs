@@ -10,7 +10,7 @@ use {
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_zircon as zx,
     futures::{FutureExt as _, StreamExt as _},
-    log::{info, warn},
+    log::{error, info, warn},
     std::sync::Arc,
 };
 
@@ -118,7 +118,7 @@ impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D
                 Some(event_stream) => event_stream,
                 None => match self.time_source.launch() {
                     Err(err) => {
-                        warn!("Error launching {:?} time source: {:?}", self.role, err);
+                        error!("Error launching {:?} time source: {:?}", self.role, err);
                         self.record_time_source_failure(TimeSourceError::LaunchFailed);
                         if self.delays_enabled {
                             fasync::Timer::new(fasync::Time::after(RESTART_DELAY)).await;
@@ -205,7 +205,7 @@ impl<T: TimeSource, D: Diagnostics, M: MonotonicProvider> TimeSourceManager<T, D
                         return Ok(sample);
                     }
                     Err(error) => {
-                        warn!("Rejected invalid sample from {:?}: {:?}", self.role, error);
+                        error!("Rejected invalid sample from {:?}: {:?}", self.role, error);
                         self.diagnostics.record(Event::SampleRejected { role: self.role, error });
                     }
                 },

@@ -34,7 +34,7 @@ use {
         future::{self, OptionFuture},
         stream::StreamExt as _,
     },
-    log::{info, warn},
+    log::{error, info, warn},
     std::sync::Arc,
     time_metrics_registry::TimeMetricDimensionExperiment,
 };
@@ -191,7 +191,7 @@ async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
     info!("reading initial RTC time.");
     let time = match rtc.get().await {
         Err(err) => {
-            warn!("failed to read RTC time: {}", err);
+            error!("failed to read RTC time: {}", err);
             diagnostics.record(Event::InitializeRtc {
                 outcome: InitializeRtcOutcome::ReadFailed,
                 time: None,
@@ -217,7 +217,7 @@ async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
         time: Some(time),
     });
     if let Err(status) = clock.update(zx::ClockUpdate::new().value(time)) {
-        warn!("failed to start UTC clock from RTC at time {}: {}", utc_chrono, status);
+        error!("failed to start UTC clock from RTC at time {}: {}", utc_chrono, status);
     } else {
         diagnostics
             .record(Event::StartClock { track: Track::Primary, source: StartClockSource::Rtc });
