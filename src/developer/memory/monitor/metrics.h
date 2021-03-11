@@ -14,6 +14,7 @@
 #include <unordered_map>
 
 #include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/metrics/config.h"
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/watcher.h"
 #include "src/developer/memory/monitor/memory_metrics_registry.cb.h"
@@ -23,9 +24,9 @@ namespace monitor {
 
 class Metrics {
  public:
-  Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
-          sys::ComponentInspector* inspector, fuchsia::cobalt::Logger_Sync* logger,
-          memory::CaptureFn capture_cb);
+  Metrics(const std::vector<memory::BucketMatch>& bucket_matches, zx::duration poll_frequency,
+          async_dispatcher_t* dispatcher, sys::ComponentInspector* inspector,
+          fuchsia::cobalt::Logger_Sync* logger, memory::CaptureFn capture_cb);
 
   // Allow monitor to update the memory bandwidth readings
   // once a second to metrics

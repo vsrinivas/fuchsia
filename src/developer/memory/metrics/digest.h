@@ -14,23 +14,9 @@
 #include <vector>
 
 #include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/metrics/config.h"
 
 namespace memory {
-
-class BucketMatch {
- public:
-  BucketMatch(const std::string& name, const std::string& process, const std::string& vmo);
-  const std::string& name() const { return name_; }
-  bool ProcessMatch(const std::string& process);
-  bool VmoMatch(const Vmo& vmo);
-
- private:
-  const std::string name_;
-  const std::regex process_;
-  const std::regex vmo_;
-  std::unordered_map<std::string, bool> process_match_;
-  std::unordered_map<std::string, bool> vmo_match_;
-};
 
 class Bucket {
  public:
@@ -63,8 +49,9 @@ class Digest {
 
 class Digester {
  public:
-  static const std::vector<const BucketMatch> kDefaultBucketMatches;
-  explicit Digester(const std::vector<const BucketMatch>& bucket_matches = kDefaultBucketMatches);
+  explicit Digester(const std::vector<BucketMatch>& bucket_matches);
+
+  static Digester GetDefault();
 
  private:
   void Digest(const Capture& capture, Digest* digest);

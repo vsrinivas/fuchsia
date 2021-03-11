@@ -211,7 +211,38 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                {.koid = 19, .name = "context_provider.cmx", .vmos = {21}},
                {.koid = 20, .name = "new", .vmos = {22}},
            }});
-  Digester digester;
+
+  const std::vector<BucketMatch> bucket_matches = {
+      {"ZBI Buffer", ".*", "uncompressed-bootfs"},
+      // Memory used with the GPU or display hardware.
+      {"Graphics", ".*",
+       "magma_create_buffer|Mali "
+       ".*|Magma.*|ImagePipe2Surface.*|GFXBufferCollection.*|ScenicImageMemory|Display.*|"
+       "CompactImage.*|GFX Device Memory.*"},
+      // Unused protected pool memory.
+      {"ProtectedPool", "driver_host:.*", "SysmemAmlogicProtectedPool"},
+      // Unused contiguous pool memory.
+      {"ContiguousPool", "driver_host:.*", "SysmemContiguousPool"},
+      {"Fshost", "fshost.cm", ".*"},
+      {"Minfs", ".*minfs", ".*"},
+      {"BlobfsInactive", ".*blobfs", "inactive-blob-.*"},
+      {"Blobfs", ".*blobfs", ".*"},
+      {"FlutterApps", "io\\.flutter\\..*", "dart.*"},
+      {"Flutter", "io\\.flutter\\..*", ".*"},
+      {"Web", "web_engine_exe:.*", ".*"},
+      {"Kronk", "kronk.cmx|kronk_for_testing.cmx", ".*"},
+      {"Scenic", "scenic.cmx", ".*"},
+      {"Amlogic", "driver_host:pdev:05:00:f", ".*"},
+      {"Netstack", "netstack.cmx", ".*"},
+      {"Pkgfs", "pkgfs", ".*"},
+      {"Cast", "cast_agent.cmx", ".*"},
+      {"Archivist", "archivist.cm", ".*"},
+      {"Cobalt", "cobalt.cmx", ".*"},
+      {"Audio", "audio_core.cmx", ".*"},
+      {"Context", "context_provider.cmx", ".*"},
+  };
+
+  Digester digester(bucket_matches);
   Digest d(c, &digester);
   EXPECT_EQ(1U, d.undigested_vmos().size());
 

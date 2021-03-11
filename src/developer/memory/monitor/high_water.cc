@@ -34,7 +34,8 @@ HighWater::HighWater(const std::string& dir, zx::duration poll_frequency,
                  RecordHighWater(c);
                  RecordHighWaterDigest(c);
                }),
-      namer_(Summary::kNameMatches) {
+      namer_(Summary::kNameMatches),
+      digester_(Digester::GetDefault()) {
   // Ok to ignore result. last might not exist.
   remove(files::JoinPath(dir_, kPrevious).c_str());
   remove(files::JoinPath(dir_, kPreviousDigest).c_str());

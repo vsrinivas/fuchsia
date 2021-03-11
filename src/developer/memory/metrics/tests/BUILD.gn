@@ -31,6 +31,7 @@ executable("memory_metrics_unittests") {
   output_name = "memory_metrics_unittests"
   sources = [
     "capture_unittest.cc",
+    "config_unittest.cc",
     "digest_unittest.cc",
     "printer_unittest.cc",
     "summary_unittest.cc",
@@ -43,7 +44,9 @@ executable("memory_metrics_unittests") {
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/memory/metrics",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
     "//third_party/rapidjson",
+    "//zircon/system/public:public",
   ]
 
   # TODO(fxbug.dev/58160): delete the below and fix compiler warnings

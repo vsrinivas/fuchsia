@@ -39,7 +39,8 @@ static const std::map<zx_duration_t, TimeSinceBoot> UptimeLevelMap = {
 
 // Metrics polls the memory state periodically asynchroniously using the passed dispatcher and sends
 // information about the memory Digests to Cobalt, in the form of several Events.
-Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
+Metrics::Metrics(const std::vector<memory::BucketMatch>& bucket_matches,
+                 zx::duration poll_frequency, async_dispatcher_t* dispatcher,
                  sys::ComponentInspector* inspector, fuchsia::cobalt::Logger_Sync* logger,
                  CaptureFn capture_cb)
     : poll_frequency_(poll_frequency),
@@ -48,41 +49,17 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
       capture_cb_(std::move(capture_cb)),
       bucket_name_to_code_({
           {"TotalBytes", MemoryMetricDimensionBucket::TotalBytes},
-          {"ZBI Buffer", MemoryMetricDimensionBucket::ZbiBuffer},
-          {"Graphics", MemoryMetricDimensionBucket::Graphics},
-          {"Video Buffer", MemoryMetricDimensionBucket::VideoBuffer},
-          {"Minfs", MemoryMetricDimensionBucket::Minfs},
-          {"Blobfs", MemoryMetricDimensionBucket::Blobfs},
-          {"BlobfsInactive", MemoryMetricDimensionBucket::BlobfsInactive},
-          {"Opal", MemoryMetricDimensionBucket::Opal},
-          {"Web", MemoryMetricDimensionBucket::Web},
-          {"Kronk", MemoryMetricDimensionBucket::Kronk},
-          {"Scenic", MemoryMetricDimensionBucket::Scenic},
-          {"Amlogic", MemoryMetricDimensionBucket::Amlogic},
-          {"Netstack", MemoryMetricDimensionBucket::Netstack},
-          {"Amber", MemoryMetricDimensionBucket::Amber},
-          {"Pkgfs", MemoryMetricDimensionBucket::Pkgfs},
-          {"Cast", MemoryMetricDimensionBucket::Cast},
-          {"Chromium", MemoryMetricDimensionBucket::Chromium},
           {"Free", MemoryMetricDimensionBucket::Free},
           {"Kernel", MemoryMetricDimensionBucket::Kernel},
           {"Orphaned", MemoryMetricDimensionBucket::Orphaned},
           {"Undigested", MemoryMetricDimensionBucket::Undigested},
-          {"Fshost", MemoryMetricDimensionBucket::Fshost},
-          {"Flutter", MemoryMetricDimensionBucket::Flutter},
-          {"Archivist", MemoryMetricDimensionBucket::Archivist},
-          {"Cobalt", MemoryMetricDimensionBucket::Cobalt},
-          {"Audio", MemoryMetricDimensionBucket::Audio},
-          {"Context", MemoryMetricDimensionBucket::Context},
-          {"ContiguousPool", MemoryMetricDimensionBucket::ContiguousPool},
-          {"ProtectedPool", MemoryMetricDimensionBucket::ProtectedPool},
-          {"FlutterApps", MemoryMetricDimensionBucket::FlutterApps},
           {"[Addl]PagerTotal", MemoryMetricDimensionBucket::__Addl_PagerTotal},
           {"[Addl]PagerNewest", MemoryMetricDimensionBucket::__Addl_PagerNewest},
           {"[Addl]PagerOldest", MemoryMetricDimensionBucket::__Addl_PagerOldest},
           {"[Addl]DiscardableLocked", MemoryMetricDimensionBucket::__Addl_DiscardableLocked},
           {"[Addl]DiscardableUnlocked", MemoryMetricDimensionBucket::__Addl_DiscardableUnlocked},
       }),
+      digester_(bucket_matches),
       inspector_(inspector),
       platform_metric_node_(inspector_->root().CreateChild(kInspectPlatformNodeName)),
       // Diagram of hierarchy can be seen below:
@@ -102,6 +79,13 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
           metric_memory_bandwidth_node_.CreateUintArray(kReadings, kMemoryBandwidthArraySize)),
       inspect_memory_bandwidth_timestamp_(
           metric_memory_bandwidth_node_.CreateInt(kReadingMemoryTimestamp, 0)) {
+  for (const auto& bucket : bucket_matches) {
+    if (!bucket.event_code()) {
+      continue;
+    }
+    bucket_name_to_code_.emplace(bucket.name(),
+                                 static_cast<MemoryMetricDimensionBucket>(*bucket.event_code()));
+  }
   for (auto& element : bucket_name_to_code_) {
     inspect_memory_usages_.insert(std::pair<std::string, inspect::UintProperty>(
         element.first, metric_memory_node_.CreateUint(element.first, 0)));

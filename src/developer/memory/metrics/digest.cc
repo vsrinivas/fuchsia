@@ -8,70 +8,18 @@
 
 #include <regex>
 
+#include "src/developer/memory/metrics/config.h"
+
 namespace memory {
-
-// VMOs are bucketed into the first matching entry.
-const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
-    {"ZBI Buffer", ".*", "uncompressed-bootfs"},
-    // Memory used with the GPU or display hardware.
-    {"Graphics", ".*",
-     "magma_create_buffer|Mali "
-     ".*|Magma.*|ImagePipe2Surface.*|GFXBufferCollection.*|ScenicImageMemory|Display.*|"
-     "CompactImage.*|GFX Device Memory.*"},
-    // Unused protected pool memory.
-    {"ProtectedPool", "driver_host:.*", "SysmemAmlogicProtectedPool"},
-    // Unused contiguous pool memory.
-    {"ContiguousPool", "driver_host:.*", "SysmemContiguousPool"},
-    {"Fshost", "fshost.cm", ".*"},
-    {"Minfs", ".*minfs", ".*"},
-    {"BlobfsInactive", ".*blobfs", "inactive-blob-.*"},
-    {"Blobfs", ".*blobfs", ".*"},
-    {"FlutterApps", "io\\.flutter\\..*", "dart.*"},
-    {"Flutter", "io\\.flutter\\..*", ".*"},
-    {"Web", "web_engine_exe:.*", ".*"},
-    {"Kronk", "kronk.cmx|kronk_for_testing.cmx", ".*"},
-    {"Scenic", "scenic.cmx", ".*"},
-    {"Amlogic", "driver_host:pdev:05:00:f", ".*"},
-    {"Netstack", "netstack.cmx", ".*"},
-    {"Pkgfs", "pkgfs", ".*"},
-    {"Cast", "cast_agent.cmx", ".*"},
-    {"Archivist", "archivist.cm", ".*"},
-    {"Cobalt", "cobalt.cmx", ".*"},
-    {"Audio", "audio_core.cmx", ".*"},
-    {"Context", "context_provider.cmx", ".*"},
-};
-
-BucketMatch::BucketMatch(const std::string& name, const std::string& process,
-                         const std::string& vmo)
-    : name_(name), process_(process), vmo_(vmo) {}
-
-bool BucketMatch::ProcessMatch(const std::string& process) {
-  const auto& pi = process_match_.find(process);
-  if (pi != process_match_.end()) {
-    return pi->second;
-  }
-  bool match = std::regex_match(process, process_);
-  process_match_.emplace(process, match);
-  return match;
-}
-
-bool BucketMatch::VmoMatch(const Vmo& vmo) {
-  const auto& vi = vmo_match_.find(vmo.name);
-  if (vi != vmo_match_.end()) {
-    return vi->second;
-  }
-  bool match = std::regex_match(vmo.name, vmo_);
-  vmo_match_.emplace(vmo.name, match);
-  return match;
-}
-
 Digest::Digest(const Capture& capture, Digester* digester) { digester->Digest(capture, this); }
 
-Digester::Digester(const std::vector<const BucketMatch>& bucket_matches) {
+Digester::Digester(const std::vector<BucketMatch>& bucket_matches) {
   for (const auto& bucket_match : bucket_matches) {
     bucket_matches_.emplace_back(bucket_match);
   }
 }
+
+Digester Digester::GetDefault() { return Digester(BucketMatch::GetDefaultBucketMatches()); }
 
 void Digester::Digest(const Capture& capture, class Digest* digest) {
   TRACE_DURATION("memory_metrics", "Digester::Digest");

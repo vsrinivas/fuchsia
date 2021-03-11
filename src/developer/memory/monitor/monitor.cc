@@ -13,23 +13,28 @@
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace/event.h>
 #include <lib/vfs/cpp/internal/file.h>
-#include <lib/vfs/cpp/pseudo_file.h>
+#include <lib/vfs/cpp/vmo_file.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <string.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
 
+#include <filesystem>
 #include <iostream>
 #include <iterator>
 
 #include <soc/aml-common/aml-ram.h>
 #include <trace-vthread/event_vthread.h>
 
+#include "fuchsia/mem/cpp/fidl.h"
 #include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/metrics/config.h"
 #include "src/developer/memory/metrics/printer.h"
 #include "src/developer/memory/monitor/high_water.h"
 #include "src/developer/memory/monitor/memory_metrics_registry.cb.h"
+#include "src/lib/fsl/vmo/file.h"
+#include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
@@ -95,6 +100,17 @@ uint64_t TotalReadWriteCycles(const fuchsia::hardware::ram::metrics::BandwidthIn
   }
   return total_readwrite_cycles;
 }
+
+fsl::SizedVmo ReadConfiguration() {
+  fsl::SizedVmo sized_vmo;
+
+  if (std::filesystem::exists(kBucketConfigPath)) {
+    FX_CHECK(fsl::VmoFromFilename(kBucketConfigPath, &sized_vmo));
+  }
+
+  return sized_vmo;
+}
+
 }  // namespace
 
 Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
@@ -123,6 +139,7 @@ Monitor::Monitor(std::unique_ptr<sys::ComponentContext> context,
       &inspector_);
 
   component_context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
+  ExposeBucketConfiguration();
 
   if (command_line.HasOption("help")) {
     PrintHelp();
@@ -215,7 +232,8 @@ void Monitor::CreateMetrics() {
   }
 
   metrics_ = std::make_unique<Metrics>(
-      kMetricsPollFrequency, dispatcher_, &inspector_, logger_.get(),
+      BucketMatch::GetDefaultBucketMatches(), kMetricsPollFrequency, dispatcher_, &inspector_,
+      logger_.get(),
       [this](Capture* c, CaptureLevel l) { return Capture::GetCapture(c, capture_state_, l); });
 }
 
@@ -249,6 +267,18 @@ void Monitor::NotifyWatchers(const zx_info_kmem_stats_t& kmem_stats) {
   for (auto& watcher : watchers_) {
     watcher->OnChange(stats);
   }
+}
+
+void Monitor::ExposeBucketConfiguration() {
+  fsl::SizedVmo sized_vmo = ReadConfiguration();
+  if (!sized_vmo) {
+    return;
+  }
+
+  fuchsia::mem::Buffer buffer = std::move(sized_vmo).ToTransport();
+  component_context_->outgoing()->debug_dir()->AddEntry(
+      "bucket_configuration.json",
+      std::make_unique<vfs::VmoFile>(std::move(buffer.vmo), 0, buffer.size));
 }
 
 void Monitor::PrintHelp() {
@@ -295,7 +325,7 @@ inspect::Inspector Monitor::Inspect() {
   values.CreateUint("wired_bytes", capture.kmem().wired_bytes, &inspector);
   inspector.emplace(std::move(values));
 
-  Digester digester;
+  Digester digester = Digester::GetDefault();
   Digest digest(capture, &digester);
   std::ostringstream digest_stream;
   Printer digest_printer(digest_stream);

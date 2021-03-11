@@ -2,8 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fdio/directory.h>
+#include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/service_directory.h>
+#include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/fdio_connect.h>
 #include <lib/trace-provider/provider.h>
 #include <lib/trace/observer.h>
@@ -11,10 +17,13 @@
 #include <zircon/status.h>
 
 #include <condition_variable>
+#include <filesystem>
 #include <iostream>
 #include <mutex>
+#include <utility>
 
 #include "src/developer/memory/metrics/capture.h"
+#include "src/developer/memory/metrics/config.h"
 #include "src/developer/memory/metrics/digest.h"
 #include "src/developer/memory/metrics/printer.h"
 #include "src/developer/memory/metrics/summary.h"
@@ -22,6 +31,31 @@
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
 using namespace memory;
+
+// Returns a Digester using the memory monitor configuration if available.
+Digester GetDigester() {
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+
+  if (!std::filesystem::exists("/hub/c/memory_monitor.cmx")) {
+    FX_LOGS(WARNING) << "No memory monitor component found, no bucket will be used.";
+    return Digester::GetDefault();
+  }
+
+  std::string instance_id =
+      std::filesystem::directory_iterator("/hub/c/memory_monitor.cmx")->path();
+  std::string full_path = instance_id + "/out/debug/bucket_configuration.json";
+
+  std::string config_str;
+  if (!files::ReadFileToString(full_path, &config_str)) {
+    FX_LOGS(ERROR) << "Unable to read configuration, no bucket will be used";
+    return Digester::GetDefault();
+  }
+
+  std::vector<BucketMatch> matches;
+  FX_CHECK(BucketMatch::ReadBucketMatchesFromConfig(config_str, &matches));
+
+  return Digester(matches);
+}
 
 int Mem(const fxl::CommandLine& command_line) {
   CaptureState capture_state;
@@ -72,7 +106,7 @@ int Mem(const fxl::CommandLine& command_line) {
         return EXIT_FAILURE;
       }
       if (command_line.HasOption("digest")) {
-        Digester digester;
+        Digester digester = GetDigester();
         Digest d(capture, &digester);
         printer.OutputDigest(d);
       } else {
@@ -100,7 +134,7 @@ int Mem(const fxl::CommandLine& command_line) {
     return EXIT_FAILURE;
   }
   if (command_line.HasOption("digest")) {
-    Digester digester;
+    Digester digester = GetDigester();
     Digest digest(capture, &digester);
     printer.PrintDigest(digest);
     if (command_line.HasOption("undigested")) {
@@ -134,7 +168,8 @@ int main(int argc, const char** argv) {
                  " --print   Machine readable representation of proccess and vmos\n"
                  " --output  CSV of process memory\n"
                  "           --repeat=N Runs forever, outputing every N seconds\n"
-                 "           --pid=N    Output vmo groups of process pid instead\n";
+                 "           --pid=N    Output vmo groups of process pid instead\n"
+                 " --digest  Prints a bucketized digest of memory usage\n";
     return EXIT_SUCCESS;
   }
 

@@ -44,6 +44,8 @@ class Monitor : public fuchsia::memory::Monitor {
   static const char kTraceName[];
 
  private:
+  void ExposeBucketConfiguration();
+
   void CreateMetrics();
 
   void UpdateState();

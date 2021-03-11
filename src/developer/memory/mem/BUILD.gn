@@ -4,6 +4,7 @@
 
 import("//build/config.gni")
 import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "mem"
@@ -22,12 +23,6 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("mem") {
+fuchsia_shell_package("mem") {
   deps = [ ":bin" ]
-  binaries = [
-    {
-      name = "mem"
-      shell = true
-    },
-  ]
 }

@@ -1,0 +1,57 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef SRC_DEVELOPER_MEMORY_METRICS_CONFIG_H_
+#define SRC_DEVELOPER_MEMORY_METRICS_CONFIG_H_
+
+#include <zircon/types.h>
+
+#include <functional>
+#include <optional>
+#include <regex>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "src/developer/memory/metrics/capture.h"
+#include "src/lib/files/file.h"
+
+namespace memory {
+
+using VmoMatcher = std::function<bool(const Vmo&)>;
+
+extern const std::string kBucketConfigPath;
+
+class BucketMatch {
+ public:
+  BucketMatch(const std::string& name, const std::string& process, const std::string& vmo,
+              std::optional<int64_t> event_code = std::nullopt);
+  const std::string& name() const { return name_; }
+  std::optional<int64_t> event_code() const { return event_code_; }
+  bool ProcessMatch(const std::string& process);
+  bool VmoMatch(const Vmo& vmo);
+
+  // Parses a configuration string (e.g. stored in a file) to create bucket matches. The
+  // configuration format is described in the README.md file in this directory. Returns true if the
+  // parsing succeded, false otherwise.
+  static bool ReadBucketMatchesFromConfig(const std::string& config_string,
+                                          std::vector<BucketMatch>* matches);
+
+  static std::vector<BucketMatch> GetDefaultBucketMatches();
+
+ private:
+  const std::string name_;
+  const std::regex process_;
+  const std::regex vmo_;
+  const std::optional<int64_t> event_code_;
+
+  // Cache of the matching results against the |process_| regexp.
+  std::unordered_map<std::string, bool> process_match_;
+  // Cache of the matching results against the |vmo_| regexp.
+  std::unordered_map<zx_koid_t, bool> vmo_match_;
+};
+
+}  // namespace memory
+
+#endif  // SRC_DEVELOPER_MEMORY_METRICS_CONFIG_H_
