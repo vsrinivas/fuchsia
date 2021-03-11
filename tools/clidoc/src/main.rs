@@ -12,7 +12,7 @@ use {
         env,
         ffi::{OsStr, OsString},
         fs::{self, File},
-        io::{prelude::*, BufWriter},
+        io::{BufWriter, Write},
         path::{Path, PathBuf},
         process::Command,
     },
@@ -48,8 +48,6 @@ struct Opt {
 const ALLOW_LIST: &'static [&'static str] = &[
     "bootserver",
     "cmc",
-    "device-finder",
-    "far",
     "fconfig",
     "ffx",
     "fidl-format",
@@ -61,8 +59,6 @@ const ALLOW_LIST: &'static [&'static str] = &[
     "fserve",
     "fssh",
     "fvdl",
-    "fvm",
-    "merkleroot",
     "minfs",
     "pm",
     "symbol-index",
@@ -112,16 +108,8 @@ fn run(opt: Opt) -> Result<()> {
 
     // Write documentation output for each command.
     for cmd_path in cmd_paths.iter() {
-        let cmd_name =
-            cmd_path.file_name().expect("Could not get file name for command").to_os_string();
-        let path = path_for(&cmd_name, &output_path);
-
-        // Get terminal output for cmd --help for a given command.
-        let lines: Vec<String> = help_output_for(&cmd_path)?;
-
-        let cmd_name = cmd_name.to_str().expect("Could not convert cmd_name to str");
-        write_formatted_output(&cmd_name, &lines, &path)
-            .with_context(|| format!("Unable to write {:?} at {:?}", cmd_name, path))?;
+        write_formatted_output(&cmd_path, output_path)
+            .context(format!("Unable to write tool at {:?} to {:?}", cmd_path, output_path))?;
     }
 
     info!("Generated documentation at dir: {}", &output_path.display());
@@ -129,33 +117,100 @@ fn run(opt: Opt) -> Result<()> {
     Ok(())
 }
 
-/// Format `lines` (`cmd_name`'s --help output) in markdown and write to the `path`.
-fn write_formatted_output(cmd_name: &str, lines: &Vec<String>, path: &Path) -> Result<()> {
-    // Create a buffer writer to format and write consecutive lines to a file.
-    let file = File::create(&path).context(format!("create {:?}", path))?;
-    let mut output_writer = BufWriter::new(file);
+/// Helper function for write_formatted_output.
+///
+/// Recursively calls `cmd_name`'s subcommands and writes to `output_writer`.
+fn recurse_cmd_output<W: Write>(
+    cmd_name: &str,
+    cmd_path: &PathBuf,
+    output_writer: &mut W,
+    cmds_sequence: &Vec<&String>,
+) -> Result<()> {
+    // Create vector to collect subcommands.
+    let mut cmds_list: Vec<String> = Vec::new();
+
+    let mut inside_command_section = false;
+
+    // Formatting styles for codeblocks.
+    let codeblock_formatting_start = "```none {: style=\"white-space: break-spaces;\" \
+        .devsite-disable-click-to-copy}\n";
+    let codeblock_formatting_end = "```\n";
+
+    // Track command level starting from 0, to set command headers' formatting.
+    let cmd_level = cmds_sequence.len();
 
     // Write out the header.
-    writeln!(&mut output_writer, "# {}\n", cmd_name)?;
-    writeln!(&mut output_writer, "```")?;
+    let cmd_heading_formatting = "#".repeat(cmd_level + 1);
+    writeln!(output_writer, "{} {}\n", cmd_heading_formatting, cmd_name)?;
+    writeln!(output_writer, "{}", codeblock_formatting_start)?;
+
+    // Get terminal output for cmd <subcommands> --help for a given command.
+    let lines: Vec<String> = help_output_for(&cmd_path, &cmds_sequence)?;
 
     for line in lines {
         // TODO(fxb/69457): Capture all section headers in addition to "Commands" and "Options".
-        if line == "Commands:" || line == "Options:" {
+        if line.to_lowercase() == "commands:" || line.to_lowercase() == "options:" {
             // End preformatting before writing a section header.
-            writeln!(&mut output_writer, "```\n")?;
+            writeln!(output_writer, "{}", codeblock_formatting_end)?;
             // Write the section heading.
-            writeln!(&mut output_writer, "## {}\n", line)?;
+            writeln!(output_writer, "__{}__\n", line)?;
             // Begin preformatting for next section of non-headers.
-            writeln!(&mut output_writer, "```")?;
+            writeln!(output_writer, "{}", codeblock_formatting_start)?;
+            inside_command_section = line.to_lowercase() == "commands:";
         } else {
-            // Write non-header lines unedited.
-            writeln!(&mut output_writer, "{}", line)?;
+            // Command section ends at a blank line (or end of file).
+            if line.trim() == "" {
+                inside_command_section = false;
+            } else if line.contains(&cmd_path.as_path().display().to_string()) {
+                let line_no_path =
+                    line.replace(&cmd_path.as_path().display().to_string(), &cmd_name);
+                // Write line after stripping full path preceeding command name.
+                writeln!(output_writer, "{}", line_no_path)?;
+            } else if !line.contains("sdk WARN:") && !line.contains("See 'ffx help <command>'") {
+                // TODO(fxb/71456): Remove filtering ffx repeated line after documentation standardized.
+                // Write non-header lines unedited.
+                writeln!(output_writer, "{}", line)?;
+            }
+            // Collect commands into a vector.
+            if inside_command_section {
+                // Command name is the first word on the line.
+                if let Some(command) = line.split_whitespace().next() {
+                    cmds_list.push(command.to_string());
+                }
+            }
         }
     }
     // Close preformatting at the end.
-    writeln!(&mut output_writer, "```")?;
+    writeln!(output_writer, "{}", codeblock_formatting_end)?;
+    cmds_list.sort();
+
+    for cmd in cmds_list {
+        // Copy current command sequence and append newest command.
+        let mut cmds_sequence = cmds_sequence.clone();
+        cmds_sequence.push(&cmd);
+        recurse_cmd_output(&cmd, &cmd_path, output_writer, &cmds_sequence)?;
+    }
+
     Ok(())
+}
+
+/// Write output of cmd at `cmd_path` to new cmd.md file at `output_path`.
+fn write_formatted_output(cmd_path: &PathBuf, output_path: &PathBuf) -> Result<()> {
+    // Get name of command from full path to the command executable.
+    let cmd_name = cmd_path.file_name().expect("Could not get file name for command");
+    let output_md_path = md_path(&cmd_name, &output_path);
+
+    // Create vector for commands to call in sequence.
+    let cmd_sequence = Vec::new();
+
+    // Create a buffer writer to format and write consecutive lines to a file.
+    let file = File::create(&output_md_path).context(format!("create {:?}", output_md_path))?;
+    let output_writer = &mut BufWriter::new(file);
+
+    let cmd_name = cmd_name.to_str().expect("Could not convert cmd_name from OsStr to str");
+
+    // Write ouput for cmd and all of its subcommands.
+    recurse_cmd_output(&cmd_name, &cmd_path, output_writer, &cmd_sequence)
 }
 
 /// Generate a vector of full paths to each command in the allow_list.
@@ -194,20 +249,30 @@ fn create_output_dir(path: &Path) -> Result<()> {
 }
 
 /// Get cmd --help output when given a full path to a cmd.
-fn help_output_for(tool: &Path) -> Result<Vec<String>> {
+fn help_output_for(tool: &Path, subcommands: &Vec<&String>) -> Result<Vec<String>> {
     let output = Command::new(&tool)
+        .args(&*subcommands)
         .arg("--help")
         .output()
         .context(format!("Command failed for {:?}", &tool.display()))?;
 
-    let output = output.stdout;
-    let string_output = String::from_utf8(output).expect("Help string from utf8");
-    let lines = string_output.lines().map(String::from).collect::<Vec<_>>();
-    Ok(lines)
+    let stdout = output.stdout;
+    let stderr = output.stderr;
+
+    // Convert string outputs to vector of lines.
+    let stdout_string = String::from_utf8(stdout).expect("Help string from utf8");
+    let mut combined_lines = stdout_string.lines().map(String::from).collect::<Vec<_>>();
+
+    let stderr_string = String::from_utf8(stderr).expect("Help string from utf8");
+    let stderr_lines = stderr_string.lines().map(String::from).collect::<Vec<_>>();
+
+    combined_lines.extend(stderr_lines);
+
+    Ok(combined_lines)
 }
 
 /// Given a cmd name and a dir, create a full path ending in cmd.md.
-fn path_for(file_stem: &OsStr, dir: &PathBuf) -> PathBuf {
+fn md_path(file_stem: &OsStr, dir: &PathBuf) -> PathBuf {
     let mut path = Path::new(dir).join(file_stem);
     path.set_extension("md");
     path
@@ -217,60 +282,107 @@ fn path_for(file_stem: &OsStr, dir: &PathBuf) -> PathBuf {
 mod tests {
     use {
         super::*,
-        std::{fs::File, io::Write, path::PathBuf},
+        std::{fs::File, io::Read, os::unix::fs::PermissionsExt, path::PathBuf, process},
     };
+
+    /// Helper method for write_formatted_output_test(), creates mock cli tool.
+    fn create_temp_script(path: &PathBuf) -> Result<()> {
+        let mut file = File::create(&path)?;
+
+        // Set permission to executable.
+        fs::set_permissions(&path, fs::Permissions::from_mode(0o770))?;
+
+        // Build a bash script mimicking a tool with --help output.
+
+        let output = process::Command::new("/usr/bin/env").arg("which").arg("bash").output()?;
+        let bash_path = PathBuf::from(String::from_utf8_lossy(&output.stdout).trim());
+        let bash_line = format!("#!{}", bash_path.display());
+        let lines = vec![
+            bash_line.to_string(),
+            "\n".to_string(),
+            "# No args and --help flag".to_string(),
+            "if [[ $1 == \"--help\" ]] && [[ \"$#\" -ne 0 ]]; then".to_string(),
+            "    echo \"Usage: host-tool-cmd\"".to_string(),
+            "    echo \"Tool description\"".to_string(),
+            "    echo \"Options:\"".to_string(),
+            "    echo \"--help Display usage information\"".to_string(),
+            "    echo \"Commands:\"".to_string(),
+            "    echo \"debug Start debug session\"".to_string(),
+            "elif [[ $1 == \"debug\" ]] && [[ $2 == \"--help\" ]] && [[ \"$#\" -ne 1 ]]; then"
+                .to_string(),
+            "# One param and --help flag".to_string(),
+            "    echo \"Usage: host-tool-cmd debug [<socket_location>]\"".to_string(),
+            "    echo \"Start a debugging session.\"".to_string(),
+            "fi".to_string(),
+        ];
+
+        // Write lines to file.
+        file.write(lines.join("\n").as_bytes()).expect("Unable to write to temporary file");
+
+        Ok(())
+    }
 
     #[test]
     fn write_formatted_output_test() -> Result<()> {
-        // Format and write a command line tool's help output to a file.
-        let cmd_name = "host-tool-cmd";
-        let lines = vec![
-            "Usage: host-tool-cmd".to_string(),
-            "Tool description".to_string(),
-            "Options:".to_string(),
-            "--help Display usage information".to_string(),
-            "Commands:".to_string(),
-            "debug Start debug session:".to_string(),
-        ];
-        let cmd_output_path = PathBuf::from(r"/tmp/host-tool-cmd.md");
-        write_formatted_output(&cmd_name, &lines, &cmd_output_path)?;
+        // Create temp file for a mock tool script.
+        let cmd_path = PathBuf::from(r"/tmp/host-tool-cmd.sh");
+
+        create_temp_script(&cmd_path)?;
+
+        let output_path = PathBuf::from(r"/tmp/");
+
+        // Creates filename host-tool-cmd.md to match filename of `cmd_path`,
+        // then write formatted output to `output_path` + filename.
+        write_formatted_output(&cmd_path, &output_path)?;
 
         // Write a hard-coded formatted file.
         let formatted_contents = vec![
-            "# host-tool-cmd\n".to_string(),
-            "```".to_string(),
+            "# host-tool-cmd.sh\n".to_string(),
+            "```none {: style=\"white-space: break-spaces;\" .devsite-disable-click-to-copy}\n"
+                .to_string(),
             "Usage: host-tool-cmd".to_string(),
             "Tool description".to_string(),
             "```\n".to_string(),
-            "## Options:\n".to_string(),
-            "```".to_string(),
+            "__Options:__\n".to_string(),
+            "```none {: style=\"white-space: break-spaces;\" .devsite-disable-click-to-copy}\n"
+                .to_string(),
             "--help Display usage information".to_string(),
             "```\n".to_string(),
-            "## Commands:\n".to_string(),
-            "```".to_string(),
-            "debug Start debug session:".to_string(),
+            "__Commands:__\n".to_string(),
+            "```none {: style=\"white-space: break-spaces;\" .devsite-disable-click-to-copy}\n"
+                .to_string(),
+            "debug Start debug session".to_string(),
             "```\n".to_string(),
+            "## debug\n".to_string(),
+            "```none {: style=\"white-space: break-spaces;\" .devsite-disable-click-to-copy}\n"
+                .to_string(),
+            "Usage: host-tool-cmd debug [<socket_location>]".to_string(),
+            "Start a debugging session.".to_string(),
+            "```\n\n".to_string(),
         ];
 
-        let formatted_file_path = PathBuf::from("/tmp/host-tool-cmd-2.md");
+        let formatted_file_path = PathBuf::from("/tmp/host-tool-cmd-formatted.md");
         let mut formatted_file =
             File::create(&formatted_file_path).expect("Unable to create temp file");
         formatted_file
             .write(formatted_contents.join("\n").as_bytes())
             .expect("Unable to write to temporary file");
 
+        // Get name of command from full path to the command executable.
+        let cmd_name = cmd_path.file_name().expect("Could not get file name for command");
+        let output_md_path = md_path(&cmd_name, &output_path);
         // Read the cmd file into a string.
-        let mut cmd_file = File::open(cmd_output_path).unwrap();
-        let mut cmd_buffer = String::new();
-        cmd_file.read_to_string(&mut cmd_buffer).unwrap();
+        let mut output_file = File::open(output_md_path)?;
+        let mut output_buffer = String::new();
+        output_file.read_to_string(&mut output_buffer)?;
 
         // Read the formatted file into a string.
-        let mut formatted_file = File::open(formatted_file_path).unwrap();
+        let mut formatted_file = File::open(formatted_file_path)?;
         let mut formatted_buffer = String::new();
-        formatted_file.read_to_string(&mut formatted_buffer).unwrap();
+        formatted_file.read_to_string(&mut formatted_buffer)?;
 
         // Assert write_formatted_output formatted the documentation correctly.
-        assert_eq!(cmd_buffer, formatted_buffer);
+        assert_eq!(output_buffer, formatted_buffer);
         Ok(())
     }
 }
