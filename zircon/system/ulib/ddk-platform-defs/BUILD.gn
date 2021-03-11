@@ -8,7 +8,13 @@ zx_library("ddk-platform-defs") {
   kernel = true
   static = true
   sdk = "source"
-  sdk_headers = [ "ddk/platform-defs.h" ]
+
+  # TODO(fxbug.dev/64649): ddk/platform-defs.h will be removed after
+  # the soft transition is complete. Use #include <lib/ddk/platform-defs.h>.
+  sdk_headers = [
+    "ddk/platform-defs.h",
+    "lib/ddk/platform-defs.h",
+  ]
   sdk_migrated = true
   sources = []
 }

@@ -149,7 +149,7 @@ func StringInLogsChecks() (ret []FailureModeCheck) {
 	ret = append(ret, driverHostCrash("composite-device", ""))
 	ret = append(ret, driverHostCrash("pci", ""))
 	// Don't fail if we see PDEV_DID_CRASH_TEST, defined in
-	// zircon/system/ulib/ddk-platform-defs/include/ddk/platform-defs.h.
+	// zircon/system/ulib/ddk-platform-defs/include/lib/ddk/platform-defs.h.
 	// That's used for a test that intentionally crashes a driver host.
 	ret = append(ret, driverHostCrash("pdev", "pdev:00:00:24"))
 	// Catch-all for driver host crashes.
