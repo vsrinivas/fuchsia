@@ -388,7 +388,6 @@ func (c *Client) Run(ctx context.Context) {
 			}
 
 			c.assign(&info, info.Acquired, cfg, c.now())
-			info.State = bound
 
 			return nil
 		}(); err != nil {
@@ -461,12 +460,17 @@ func (c *Client) Run(ctx context.Context) {
 }
 
 func (c *Client) assign(info *Info, acquired tcpip.AddressWithPrefix, config Config, now time.Time) {
+	c.updateInfo(info, acquired, config, now, bound)
+}
+
+func (c *Client) updateInfo(info *Info, acquired tcpip.AddressWithPrefix, config Config, now time.Time, state dhcpClientState) {
 	prevAssigned := info.Assigned
 	info.Assigned = acquired
 	info.LeaseExpiration = now.Add(config.LeaseLength.Duration())
 	info.RenewTime = now.Add(config.RenewTime.Duration())
 	info.RebindTime = now.Add(config.RebindTime.Duration())
 	info.Config = config
+	info.State = state
 	c.info.Store(*info)
 	if fn := c.acquiredFunc; fn != nil {
 		fn(prevAssigned, acquired, config)
@@ -511,7 +515,7 @@ func (c *Client) cleanup(info *Info, nicName string, release bool) {
 		}
 	}
 
-	c.assign(info, tcpip.AddressWithPrefix{}, Config{}, time.Time{})
+	c.updateInfo(info, tcpip.AddressWithPrefix{}, Config{}, time.Time{}, info.State)
 }
 
 const maxBackoff = 64 * time.Second
