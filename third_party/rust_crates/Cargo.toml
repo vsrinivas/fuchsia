@@ -123,6 +123,7 @@ slab = "0.4"
 socket2 = { version = "0.4.0-alpha", features = ["all"] }
 splines = "2.2.0"
 static_assertions = "1.1.0"
+streaming-stats = "0.2.3"
 strsim = "0.10.0"
 structopt = "0.2.14"
 tempfile = "3.1"
@@ -254,6 +255,7 @@ rustls = { path = "tiny_mirrors/rustls" }
 security-framework = { path = "tiny_mirrors/security-framework" }
 serde_json5 = { path = "../rust-mirrors/serde_json5" }
 servo-freetype-sys = { path = "tiny_mirrors/servo-freetype-sys" }
+streaming-stats = { path = "tiny_mirrors/streaming-stats" }
 # termcolor 1.1.0 w/ UNLICENSE file removed per OSRB
 termcolor = { path = "tiny_mirrors/termcolor" }
 tracing-core = { path = "tiny_mirrors/tracing-core" }
