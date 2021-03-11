@@ -80,7 +80,6 @@ func TestRecordingOfOutputs(t *testing.T) {
 		Tests: []runtests.TestDetails{{
 			Name:           "fuchsia-pkg://foo#test_a",
 			GNLabel:        "//a/b/c:test_a(//toolchain)",
-			OutputFile:     outputFileA,
 			OutputFiles:    []string{outputFileA},
 			Result:         runtests.TestFailure,
 			StartTime:      start,
@@ -100,7 +99,6 @@ func TestRecordingOfOutputs(t *testing.T) {
 		}, {
 			Name:           "test_b",
 			GNLabel:        "//a/b/c:test_b(//toolchain)",
-			OutputFile:     outputFileB,
 			OutputFiles:    []string{outputFileB},
 			Result:         runtests.TestSuccess,
 			StartTime:      start,

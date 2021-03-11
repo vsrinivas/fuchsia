@@ -51,7 +51,6 @@ func (o *testOutputs) record(result testrunner.TestResult) error {
 	o.summary.Tests = append(o.summary.Tests, runtests.TestDetails{
 		Name:           result.Name,
 		GNLabel:        result.GNLabel,
-		OutputFile:     outputRelPath,
 		OutputFiles:    []string{outputRelPath},
 		Result:         result.Result,
 		Cases:          result.Cases,

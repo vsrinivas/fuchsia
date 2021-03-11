@@ -139,15 +139,17 @@ func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string
 	if testDetail.DurationMillis > 0 {
 		r.Duration = ptypes.DurationProto(time.Duration(testDetail.DurationMillis) * time.Millisecond)
 	}
-	outputFile := filepath.Join(outputRoot, testDetail.OutputFile)
-	if isReadable(outputFile) {
-		r.Artifacts = map[string]*sinkpb.Artifact{
-			filepath.Base(outputFile): {
-				Body:        &sinkpb.Artifact_FilePath{FilePath: outputFile},
-				ContentType: "text/plain",
-			}}
-	} else {
-		log.Printf("[Warn] outputFile: %s is not readable, skip.", outputFile)
+	for _, of := range testDetail.OutputFiles {
+		outputFile := filepath.Join(outputRoot, of)
+		if isReadable(outputFile) {
+			r.Artifacts = map[string]*sinkpb.Artifact{
+				filepath.Base(outputFile): {
+					Body:        &sinkpb.Artifact_FilePath{FilePath: outputFile},
+					ContentType: "text/plain",
+				}}
+		} else {
+			log.Printf("[Warn] outputFile: %s is not readable, skip.", outputFile)
+		}
 	}
 
 	r.SummaryHtml = `<pre><text-artifact artifact-id="triage_output" inv-level/></pre>`

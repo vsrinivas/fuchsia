@@ -77,7 +77,6 @@ func TestRunChecks(t *testing.T) {
 			Name:                 path.Join(checkTestNamePrefix, trueCheck.Name()),
 			Result:               runtests.TestFailure,
 			IsTestingFailureMode: true,
-			OutputFile:           debugPathForCheck(trueCheck),
 			OutputFiles:          []string{debugPathForCheck(trueCheck)},
 		},
 		{
@@ -102,9 +101,9 @@ func TestRunChecks(t *testing.T) {
 		var defaultTime time.Time
 		got[i].StartTime = defaultTime
 		got[i].DurationMillis = 0
-		if td.OutputFile != "" {
-			if _, err := os.Stat(filepath.Join(outputsDir, td.OutputFile)); err != nil {
-				t.Errorf("failed to stat OutputFile %s: %v", td.OutputFile, err)
+		for _, outputFile := range td.OutputFiles {
+			if _, err := os.Stat(filepath.Join(outputsDir, outputFile)); err != nil {
+				t.Errorf("failed to stat OutputFile %s: %v", outputFile, err)
 			}
 		}
 	}

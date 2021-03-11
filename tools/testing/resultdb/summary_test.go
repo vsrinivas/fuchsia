@@ -71,7 +71,7 @@ func createTestSummary(testCount int) *runtests.TestSummary {
 		t = append(t, runtests.TestDetails{
 			Name:                 fmt.Sprintf("test_%d", i),
 			GNLabel:              "some label",
-			OutputFile:           "some file path",
+			OutputFiles:          []string{"some file path"},
 			Result:               runtests.TestSuccess,
 			StartTime:            time.Now(),
 			DurationMillis:       39797,
@@ -95,7 +95,7 @@ func createTestDetailWithTestCase(testCase int) *runtests.TestDetails {
 	return &runtests.TestDetails{
 		Name:                 "foo",
 		GNLabel:              "some label",
-		OutputFile:           "some file path",
+		OutputFiles:          []string{"some file path"},
 		Result:               runtests.TestSuccess,
 		StartTime:            time.Now(),
 		DurationMillis:       39797,

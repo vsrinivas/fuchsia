@@ -69,10 +69,6 @@ type TestDetails struct {
 	// GNLabel is label of the test target (with toolchain).
 	GNLabel string `json:"gn_label"`
 
-	// OutputFile is deprecated. Use OutputFiles instead.
-	// TODO(fxbug.dev/67640): Switch all consumers and then remove.
-	OutputFile string `json:"output_file"`
-
 	// OutputFiles are paths to the test's output files.
 	OutputFiles []string `json:"output_files"`
 
