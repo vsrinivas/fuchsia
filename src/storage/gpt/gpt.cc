@@ -150,25 +150,28 @@ void gpt_sort_partitions(gpt_partition_t** base, size_t count) {
   qsort(base, count, sizeof(gpt_partition_t*), compare);
 }
 
+// TODO(69527): migrate usages to |utf8_to_utf16| in utf_conversion.h
 void cstring_to_utf16(uint16_t* dst, const char* src, size_t maxlen) {
   size_t len = strlen(src);
   if (len > maxlen) {
-    len = maxlen;
+    len = maxlen - 1;
   }
   for (size_t i = 0; i < len; i++) {
-    *dst++ = static_cast<uint16_t>(*src++ & 0x7f);
+    dst[i] = static_cast<uint16_t>(src[i] & 0x7f);
   }
+  dst[len] = 0;
 }
 
+// TODO(69527): migrate usages to |utf16_to_utf8| in utf_conversion.h
 char* utf16_to_cstring(char* dst, const uint16_t* src, size_t len) {
   size_t i = 0;
   char* ptr = dst;
   while (i < len) {
     char c = src[i++] & 0x7f;
-    if (!c) {
-      continue;
-    }
     *ptr++ = c;
+    if (!c) {
+      break;
+    }
   }
   return dst;
 }

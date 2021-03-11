@@ -56,8 +56,13 @@ zx::status<Uuid> GptPartitionType(Partition type) {
 }
 
 bool FilterByName(const gpt_partition_t& part, fbl::StringPiece name) {
-  char cstring_name[GPT_NAME_LEN];
-  ::utf16_to_cstring(cstring_name, reinterpret_cast<const uint16_t*>(part.name), GPT_NAME_LEN);
+  char cstring_name[GPT_NAME_LEN / 2 + 1];
+  ::utf16_to_cstring(cstring_name, reinterpret_cast<const uint16_t*>(part.name),
+                     sizeof(cstring_name));
+
+  if (name.length() != strnlen(cstring_name, sizeof(cstring_name))) {
+    return false;
+  }
 
   // We use a case-insensitive comparison to be compatible with the previous naming scheme.
   // On a ChromeOS device, all of the kernel partitions share a common GUID type, so we

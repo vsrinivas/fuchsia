@@ -103,6 +103,7 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
   // TODO(b/173125535): Remove legacy GPT support
   Uuid legacy_type;
   std::string_view part_name;
+  std::string_view secondary_part_name;
 
   switch (spec.partition) {
     case Partition::kBootloaderA: {
@@ -131,14 +132,17 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
     case Partition::kZirconA:
       legacy_type = GUID_ZIRCON_A_VALUE;
       part_name = GPT_ZIRCON_A_NAME;
+      secondary_part_name = "boot";
       break;
     case Partition::kZirconB:
       legacy_type = GUID_ZIRCON_B_VALUE;
       part_name = GPT_ZIRCON_B_NAME;
+      secondary_part_name = "system";
       break;
     case Partition::kZirconR:
       legacy_type = GUID_ZIRCON_R_VALUE;
       part_name = GPT_ZIRCON_R_NAME;
+      secondary_part_name = "recovery";
       break;
     case Partition::kVbMetaA:
       legacy_type = GUID_VBMETA_A_VALUE;
@@ -165,9 +169,11 @@ zx::status<std::unique_ptr<PartitionClient>> SherlockPartitioner::FindPartition(
       return zx::error(ZX_ERR_INVALID_ARGS);
   }
 
-  const auto filter = [&legacy_type, &part_name](const gpt_partition_t& part) {
+  const auto filter = [&legacy_type, &part_name,
+                       &secondary_part_name](const gpt_partition_t& part) {
     // Only filter by partition name instead of name + type due to bootloader bug (b/173801312)
-    return FilterByType(part, legacy_type) || FilterByName(part, part_name);
+    return FilterByType(part, legacy_type) || FilterByName(part, part_name) ||
+           FilterByName(part, secondary_part_name);
   };
   auto status = gpt_->FindPartition(std::move(filter));
   if (status.is_error()) {

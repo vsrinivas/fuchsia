@@ -1416,6 +1416,59 @@ TEST_F(SherlockPartitionerTests, FindPartitionNewGuidsWithWrongTypeGUIDS) {
   EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
 }
 
+TEST_F(SherlockPartitionerTests, FindPartitionSecondary) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  constexpr uint64_t kBlockCount = 0x748034;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(kBlockCount * block_size_, &gpt_dev));
+
+  const std::vector<PartitionDescription> kSherlockNewPartitions = {
+      {GPT_DURABLE_BOOT_NAME, kStateLinuxGuid, 0x10400, 0x10000},
+      {GPT_VBMETA_A_NAME, kStateLinuxGuid, 0x20400, 0x10000},
+      {GPT_VBMETA_B_NAME, kStateLinuxGuid, 0x30400, 0x10000},
+      // Removed vbmeta_r to validate that it is not found
+      {"boot", kStateLinuxGuid, 0x50400, 0x10000},
+      {"system", kStateLinuxGuid, 0x60400, 0x10000},
+      {"recovery", kStateLinuxGuid, 0x70400, 0x10000},
+      {GPT_FVM_NAME, kStateLinuxGuid, 0x80400, 0x10000},
+  };
+  ASSERT_NO_FATAL_FAILURES(InitializeStartingGPTPartitions(gpt_dev.get(), kSherlockNewPartitions));
+
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  auto status = CreatePartitioner(std::move(gpt_fd));
+  ASSERT_OK(status);
+  std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+
+  // Make sure we can find the important partitions.
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconB)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kAbrMeta)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaA)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaB)));
+  EXPECT_NOT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kVbMetaR)));
+  EXPECT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kFuchsiaVolumeManager)));
+}
+
+TEST_F(SherlockPartitionerTests, ShouldNotFindPartitionBoot) {
+  std::unique_ptr<BlockDevice> gpt_dev;
+  constexpr uint64_t kBlockCount = 0x748034;
+  ASSERT_NO_FATAL_FAILURES(CreateDisk(kBlockCount * block_size_, &gpt_dev));
+
+  const std::vector<PartitionDescription> kSherlockNewPartitions = {
+      {"bootloader", kStateLinuxGuid, 0x10400, 0x10000},
+  };
+  ASSERT_NO_FATAL_FAILURES(InitializeStartingGPTPartitions(gpt_dev.get(), kSherlockNewPartitions));
+
+  fbl::unique_fd gpt_fd(dup(gpt_dev->fd()));
+  auto status = CreatePartitioner(std::move(gpt_fd));
+  ASSERT_OK(status);
+  std::unique_ptr<paver::DevicePartitioner>& partitioner = status.value();
+
+  // Make sure we can't find zircon_a, which is aliased to "boot". The GPT logic would
+  // previously only check prefixes, so "boot" would match with "bootloader".
+  EXPECT_NOT_OK(partitioner->FindPartition(PartitionSpec(paver::Partition::kZirconA)));
+}
+
 TEST_F(SherlockPartitionerTests, FindBootloader) {
   std::unique_ptr<BlockDevice> gpt_dev;
   ASSERT_NO_FATAL_FAILURES(CreateDisk(&gpt_dev));

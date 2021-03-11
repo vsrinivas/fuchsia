@@ -125,6 +125,7 @@ zx::status<uuid::Uuid> GptPartitionType(Partition type);
 zx::status<> RebindGptDriver(fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
                              zx::unowned_channel chan);
 
+// TODO(69527): Remove this and migrate usages to |utf16_to_utf8|
 inline void utf16_to_cstring(char* dst, const uint8_t* src, size_t charcount) {
   while (charcount > 0) {
     *dst++ = *src;
