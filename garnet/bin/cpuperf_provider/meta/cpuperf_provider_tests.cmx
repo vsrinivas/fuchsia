@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/cpuperf_provider_tests"
+        "binary": "bin/cpuperf_provider_tests"
     }
 }

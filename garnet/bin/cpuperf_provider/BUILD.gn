@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 # Split out so that unittests can reference it.
 source_set("categories") {
@@ -75,20 +74,9 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("cpuperf_provider") {
+fuchsia_package_with_single_component("cpuperf_provider") {
+  manifest = "meta/cpuperf_provider.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "cpuperf_provider"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/cpuperf_provider.cmx")
-      dest = "cpuperf_provider.cmx"
-    },
-  ]
 }
 
 group("report_generators") {
@@ -108,7 +96,7 @@ executable("cpuperf_provider_tests_bin") {
 }
 
 if (current_cpu == "x64") {
-  executable("cpuperf_provider_integration_tests") {
+  executable("cpuperf_provider_integration_tests_bin") {
     testonly = true
     output_name = "cpuperf_provider_integration_tests"
 
@@ -124,26 +112,26 @@ if (current_cpu == "x64") {
       "//zircon/system/ulib/trace-reader",
     ]
   }
+
+  fuchsia_test_component("cpuperf_provider_integration_tests_component") {
+    component_name = "cpuperf_provider_integration_tests"
+    manifest = "meta/cpuperf_provider_integration_tests.cmx"
+    deps = [ ":cpuperf_provider_integration_tests_bin" ]
+  }
 }
 
-test_package("cpuperf_provider_tests") {
+fuchsia_unittest_component("cpuperf_provider_tests_component") {
+  component_name = "cpuperf_provider_tests"
+  manifest = "meta/cpuperf_provider_tests.cmx"
   deps = [ ":cpuperf_provider_tests_bin" ]
+}
 
-  tests = [
-    {
-      name = "cpuperf_provider_tests"
-      environments = basic_envs
-    },
-  ]
-
+fuchsia_test_package("cpuperf_provider_tests") {
+  test_components = [ ":cpuperf_provider_tests_component" ]
   if (current_cpu == "x64") {
-    deps += [ ":cpuperf_provider_integration_tests" ]
-
-    tests += [
-      {
-        name = "cpuperf_provider_integration_tests"
-        environments = basic_envs
-      },
-    ]
+    test_components += [ ":cpuperf_provider_integration_tests_component" ]
+  }
+  test_specs = {
+    environments = basic_envs
   }
 }
