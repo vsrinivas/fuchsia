@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/isolated_cache_example_tests"
+        "binary": "bin/isolated_cache_example_bin_test"
     },
     "sandbox": {
         "features": [

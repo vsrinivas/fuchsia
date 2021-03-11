@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("isolated_cache") {
   deps = [ ":isolated_cache_example" ]
@@ -31,29 +30,12 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("isolated_cache_example") {
+fuchsia_package_with_single_component("isolated_cache_example") {
+  manifest = "meta/isolated_cache_example.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "isolated_cache_example"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/isolated_cache_example.cmx")
-      dest = "isolated_cache_example.cmx"
-    },
-  ]
 }
 
-test_package("isolated_cache_example_tests") {
+fuchsia_unittest_package("isolated_cache_example_tests") {
+  manifest = "meta/isolated_cache_example_tests.cmx"
   deps = [ ":bin_test" ]
-  tests = [
-    {
-      name = "isolated_cache_example_bin_test"
-      dest = "isolated_cache_example_tests"
-    },
-  ]
 }
