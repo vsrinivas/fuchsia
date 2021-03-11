@@ -125,6 +125,7 @@ $3 == "R_X86_64_PC32" || $3 == "R_X86_64_PLT32" || \
 $3 == "R_AARCH64_PREL32" || $3 == "R_AARCH64_PREL64" || \
 $3 == "R_AARCH64_CALL26" || $3 == "R_AARCH64_JUMP26" || \
 $3 == "R_AARCH64_CONDBR19" || $3 == "R_AARCH64_TSTBR14" || \
+$3 == "R_AARCH64_PLT32" || \
 $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
     # PC-relative relocs need no fixup.
     next
