@@ -14,7 +14,7 @@ use {
         SuiteProxy,
     },
     fidl_fuchsia_test_manager::{HarnessProxy, LaunchOptions, SuiteControllerProxy},
-    fuchsia_zircon_status as zx_status,
+    fuchsia_async as fasync, fuchsia_zircon_status as zx_status,
     futures::{
         channel::mpsc,
         future::{join_all, try_join},
@@ -27,7 +27,9 @@ use {
     glob,
     linked_hash_map::LinkedHashMap,
     log::*,
-    std::{cell::RefCell, collections::HashMap, marker::Unpin, pin::Pin, sync::Arc},
+    std::{
+        cell::RefCell, collections::HashMap, marker::Unpin, pin::Pin, sync::Arc, time::Duration,
+    },
 };
 
 pub use crate::diagnostics::{LogStream, LogStreamProtocol};
@@ -39,6 +41,9 @@ const LOG_BUFFERING_DURATION: std::time::Duration = std::time::Duration::from_se
 
 /// Maximum log buffer size.
 const LOG_BUFFER_SIZE: usize = 4096;
+
+/// Duration after which to emit an excessive duration event.
+const EXCESSIVE_DURATION: Duration = Duration::from_secs(60);
 
 /// Options that apply when executing a test suite.
 ///
@@ -107,6 +112,9 @@ pub enum TestEvent {
     /// Test case finished.
     TestCaseFinished { test_case_name: String, result: TestResult },
 
+    /// Test case is still running after a long duration.
+    ExcessiveDuration { test_case_name: String, duration: Duration },
+
     /// Test case produced a stdout message.
     StdoutMessage { test_case_name: String, msg: String },
 
@@ -127,6 +135,10 @@ impl TestEvent {
         TestEvent::TestCaseFinished { test_case_name: name.to_string(), result: result }
     }
 
+    pub fn excessive_duration(name: &str, duration: Duration) -> TestEvent {
+        TestEvent::ExcessiveDuration { test_case_name: name.to_string(), duration }
+    }
+
     pub fn test_finished() -> TestEvent {
         TestEvent::Finish
     }
@@ -134,9 +146,10 @@ impl TestEvent {
     /// Returns the name of the test case to which the event belongs, if applicable.
     pub fn test_case_name(&self) -> Option<&String> {
         match self {
-            TestEvent::TestCaseStarted { test_case_name } => Some(test_case_name),
-            TestEvent::TestCaseFinished { test_case_name, result: _ } => Some(test_case_name),
-            TestEvent::StdoutMessage { test_case_name, msg: _ } => Some(test_case_name),
+            TestEvent::TestCaseStarted { test_case_name }
+            | TestEvent::TestCaseFinished { test_case_name, .. }
+            | TestEvent::StdoutMessage { test_case_name, .. }
+            | TestEvent::ExcessiveDuration { test_case_name, .. } => Some(test_case_name),
             TestEvent::Finish => None,
             // NOTE: If new global event types (not tied to a specific test case) are added,
             // `GroupByTestCase` must also be updated so as to preserve correct event ordering.
@@ -279,7 +292,17 @@ impl TestCaseProcessor {
         let test_complete_fut = Self::listen_for_completion(listener);
 
         let fut = async move {
+            let mut sender_clone = sender.clone();
+            let test_case_name_clone = test_case_name.clone();
+            let excessive_time_task = fasync::Task::spawn(async move {
+                fasync::Timer::new(EXCESSIVE_DURATION).await;
+                sender_clone
+                    .send(TestEvent::excessive_duration(&test_case_name_clone, EXCESSIVE_DURATION))
+                    .await
+                    .context("Failed to send excessive duration event")
+            });
             let ((), result) = try_join(stdout_fut, test_complete_fut).await?;
+            excessive_time_task.cancel().await.unwrap_or(Ok(()))?;
             if let Some(result) = result {
                 sender
                     .send(TestEvent::test_case_finished(&test_case_name, result))
@@ -737,6 +760,7 @@ fn suite_error(err: fidl::Error) -> anyhow::Error {
 mod tests {
     use super::*;
     use fidl::HandleBased;
+
     use futures::StreamExt;
     use maplit::hashmap;
     use pretty_assertions::assert_eq;
@@ -794,6 +818,8 @@ mod tests {
     mod stdout {
         use {
             super::*,
+            fidl::endpoints::create_proxy_and_stream,
+            fidl_fuchsia_test::CaseListenerMarker,
             fuchsia_async::{pin_mut, Executor},
             fuchsia_zircon::DurationNum,
             matches::assert_matches,
@@ -953,6 +979,60 @@ mod tests {
                     &name,
                     "test message 1test message 2test message 3"
                 )))
+            );
+        }
+
+        #[test]
+        fn emit_excessive_runtime_event() {
+            let mut executor = Executor::new_with_fake_time().unwrap();
+            let (sock_server, sock_client) = fidl::Socket::create(fidl::SocketOpts::STREAM)
+                .expect("Failed while creating socket");
+            let (listener_proxy, listener_stream) =
+                create_proxy_and_stream::<CaseListenerMarker>().expect("Failed to create proxy");
+
+            let name = "test_name";
+
+            let (sender, mut recv) = mpsc::channel(1);
+            let mut processor_fut =
+                TestCaseProcessor::new(name.to_string(), listener_stream, sock_client, sender)
+                    .wait_for_finish()
+                    .boxed();
+
+            assert_matches!(executor.run_until_stalled(&mut processor_fut), Poll::Pending);
+            assert_matches!(executor.run_until_stalled(&mut recv.next()), Poll::Pending);
+
+            // after LOG_BUFFERING_DURATION seconds log dump timeout is invoked
+            let begin_time = executor.now();
+            let log_dump_timer = executor.wake_next_timer().expect("Failed to wake next timer");
+            executor.set_fake_time(log_dump_timer);
+            assert_matches!(executor.run_until_stalled(&mut processor_fut), Poll::Pending);
+
+            // after EXCESSIVE_DURATION the excessive duration event is triggered
+            let excessive_duration_timer =
+                executor.wake_next_timer().expect("Failed to wake next timer");
+            assert_eq!(
+                excessive_duration_timer,
+                begin_time + fuchsia_zircon::Duration::from(EXCESSIVE_DURATION)
+            );
+            executor.set_fake_time(excessive_duration_timer);
+            assert_matches!(executor.run_until_stalled(&mut processor_fut), Poll::Pending);
+            assert_eq!(
+                executor.run_until_stalled(&mut recv.next()),
+                Poll::Ready(Some(TestEvent::excessive_duration(name, EXCESSIVE_DURATION)))
+            );
+
+            // Signal test complete and verify finished event.
+            drop(sock_server);
+            assert!(listener_proxy
+                .finished(fidl_fuchsia_test::Result_ {
+                    status: Some(fidl_fuchsia_test::Status::Passed),
+                    ..fidl_fuchsia_test::Result_::EMPTY
+                })
+                .is_ok());
+            assert_matches!(executor.run_until_stalled(&mut processor_fut), Poll::Ready(Ok(())));
+            assert_eq!(
+                executor.run_until_stalled(&mut recv.collect::<Vec<_>>()),
+                Poll::Ready(vec![TestEvent::test_case_finished(name, TestResult::Passed)])
             );
         }
     }

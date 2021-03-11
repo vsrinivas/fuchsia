@@ -181,6 +181,11 @@ async fn run_test_for_invocations<W: Write>(
                             writeln!(writer, "[{}]\t{}", result_str, test_case_name)
                                 .expect("Cannot write logs");
                         }
+                        TestEvent::ExcessiveDuration { test_case_name, duration } => {
+                            writeln!(writer, "[duration - {}]:\tStill running after {:?} seconds",
+                                test_case_name, duration.as_secs())
+                                .expect("Cannot write logs");
+                        }
                         TestEvent::StdoutMessage { test_case_name, mut msg } => {
                             if !test_cases_executed.contains(&test_case_name) {
                                 return Err(anyhow::anyhow!(
