@@ -199,7 +199,7 @@ void main() {
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');
-  });
+  }, skip: true);
 
   test('Should be able to switch, rearrange, and close tabs', () async {
     FlutterDriver browser;
@@ -301,7 +301,7 @@ void main() {
     await ermine.driver.waitForAbsent(find.text('simple-browser.cmx'));
     expect(await ermine.isStopped(simpleBrowserUrl), isTrue);
     print('Closed the browser');
-  });
+  }, skip: true);
 
   // TODO(fxb/68720): Test web editing
   // TODO(fxb/68716): Test audio playing
