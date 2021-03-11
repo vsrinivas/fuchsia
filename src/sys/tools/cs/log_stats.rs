@@ -36,8 +36,7 @@ impl FromStr for LogSeverity {
 
 // Number of log messages broken down by severity for a given component.
 pub struct ComponentLogStats {
-    component_url: String,
-    short_name: String,
+    name: String,
     start_time: i64,
     log_counts: Vec<u64>,
     total_logs: u64,
@@ -48,41 +47,38 @@ impl ComponentLogStats {
         node: &DiagnosticsHierarchy,
         start_times: &HashMap<String, i64>,
     ) -> ComponentLogStats {
-        let component_url = node.name.clone();
-        let short_name = {
-            let last_slash_index = component_url.rfind("/");
-            match last_slash_index {
-                Some(index) => &component_url[index + 1..],
-                None => component_url.as_str(),
-            }
-            .to_string()
-        };
-        let start_time = match start_times.get(&short_name) {
+        let name = node.name.clone();
+
+        let start_time = match start_times.get(&name) {
             Some(s) => *s,
             None => 0,
         };
-        let map = node
+
+        // Can safely unwrap here because when this function is called, we've
+        // checked if this component reports logs.
+        let logs = node.get_child("logs").unwrap();
+        let map = logs
             .properties
             .iter()
-            .map(|x| match x {
-                Property::Int(name, value) => (name.as_str(), *value as u64),
-                Property::Uint(name, value) => (name.as_str(), *value),
+            .map(|p| match p {
+                Property::Int(key, value) => (key.as_str(), *value as u64),
+                Property::Uint(key, value) => (key.as_str(), *value),
                 _ => ("", 0),
             })
             .collect::<HashMap<_, _>>();
+
         ComponentLogStats {
-            component_url,
-            short_name,
+            name,
             start_time,
             log_counts: vec![
-                map["trace_logs"],
-                map["debug_logs"],
-                map["info_logs"],
-                map["warning_logs"],
-                map["error_logs"],
-                map["fatal_logs"],
+                map["trace"],
+                map["debug"],
+                map["info"],
+                map["warn"],
+                map["error"],
+                map["fatal"],
             ],
-            total_logs: map["total_logs"],
+            total_logs: map["total"],
         }
     }
 
@@ -118,7 +114,7 @@ pub struct LogStats {
 impl LogStats {
     pub async fn new(min_severity: LogSeverity) -> Result<Self, Error> {
         let mut response = ArchiveReader::new()
-            .add_selector("bootstrap/archivist:root/log_stats/by_component/*:*")
+            .add_selector("bootstrap/archivist:root/sources/*")
             .add_selector("bootstrap/archivist:root/event_stats/recent_events/*:*")
             .snapshot::<Inspect>()
             .await?;
@@ -138,12 +134,14 @@ impl LogStats {
     ) -> Result<Self, Error> {
         let start_times = Self::extract_component_start_times(&inspect_root)?;
 
-        let stats_node = inspect_root
-            .get_child_by_path(&vec!["log_stats", "by_component"])
-            .ok_or(format_err!("Missing log_stats/by_component"))?;
-        let mut stats_list = stats_node
+        let sources = inspect_root.get_child("sources").ok_or(format_err!("Missing sources"))?;
+        let mut stats_list = sources
             .children
             .iter()
+            // Log stats only display components that report logs. This is to distinguish
+            // the components that don't report logs from those who report logs but whose
+            // stats are all zeros.
+            .filter(|x| x.get_child("logs").is_some())
             .map(|x| ComponentLogStats::new(x, &start_times))
             .collect::<Vec<_>>();
         stats_list.sort_by_key(|x| Reverse(x.get_sort_key()));
@@ -202,7 +200,7 @@ impl fmt::Display for LogStats {
                 output_str.push_str(&format!(
                     "Found {} fatal log messages for component {}\n",
                     stats.get_count(LogSeverity::FATAL),
-                    stats.component_url
+                    stats.name,
                 ));
             }
         }
@@ -224,7 +222,7 @@ impl fmt::Display for LogStats {
             }
             output_str.push_str(&format!("{:<7}", stats.total_logs));
             output_str.push_str(&format!("{:<10.4}", stats.error_rate(now)));
-            output_str.push_str(&format!("{}\n", stats.short_name));
+            output_str.push_str(&format!("{}\n", stats.name));
         }
 
         write!(f, "{}", output_str)
