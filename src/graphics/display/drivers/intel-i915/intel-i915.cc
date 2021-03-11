@@ -678,7 +678,7 @@ void Controller::InitDisplays() {
   }
 
   if (display_devices_.size() == 0) {
-    zxlogf(INFO, "No displays detected");
+    zxlogf(INFO, "intel-i915: No displays detected.");
   }
 
   for (unsigned i = 0; i < registers::kDpllCount; i++) {
