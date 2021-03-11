@@ -70,6 +70,8 @@ TEST(VersionTest, FeatureTestMacrosForCpp17) {
                 "'__cpp_lib_addressof_constexpr' should be using draft 201603L for c++17.");
   static_assert(__cpp_lib_byte == 201603L,
                 "'__cpp_lib_byte' should be using draft 201603L in c++17.");
+  static_assert(__cpp_lib_apply == 201603L,
+                "'__cpp_lib_apply' should be using draft 201603L in c++17.");
 #endif
 #if __cplusplus >= 201510L
   static_assert(__cpp_lib_logical_traits == 201510L,
@@ -131,6 +133,9 @@ TEST(VersionTest, FeatureTestMacrosForCpp14) {
 #endif
 #if defined(__cpp_lib_invoke)
   static_assert(false, "'__cpp_lib_is_invoke' should not be defined in c++14.");
+#endif
+#if defined (__cpp_lib_apply)
+  static_assert(false, "'__cpp_lib_apply' should not be defined in c++14.");
 #endif
 }
 

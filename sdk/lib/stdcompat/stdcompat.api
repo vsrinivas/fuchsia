@@ -8,6 +8,7 @@
   "pkg/stdcompat/include/lib/stdcompat/internal/functional.h": "b67ddbebef52db3d0035d1416efb6955",
   "pkg/stdcompat/include/lib/stdcompat/internal/span.h": "171d53e0a806d0994f2237393d67faf1",
   "pkg/stdcompat/include/lib/stdcompat/internal/storage.h": "49ddf504b1b4a507bb845b56e2a8057f",
+  "pkg/stdcompat/include/lib/stdcompat/internal/tuple.h": "b41e24ca31031c06c2879d360ec89cd2",
   "pkg/stdcompat/include/lib/stdcompat/internal/type_traits.h": "5007a7aa97c74ee6fe2e4513cbcaebed",
   "pkg/stdcompat/include/lib/stdcompat/internal/utility.h": "22218049acc4308ff86c8fb72a9f1068",
   "pkg/stdcompat/include/lib/stdcompat/iterator.h": "434049cd05a08dffd2abcb1eb451e30a",
@@ -16,8 +17,9 @@
   "pkg/stdcompat/include/lib/stdcompat/source_location.h": "b9d7911760e33ad247dcf2424eef9595",
   "pkg/stdcompat/include/lib/stdcompat/span.h": "a07f9c7548e964e054b605c70ad351df",
   "pkg/stdcompat/include/lib/stdcompat/string_view.h": "59119e48e390667040f87249819e2ddb",
+  "pkg/stdcompat/include/lib/stdcompat/tuple.h": "9a3c8cb7b861d469c9a5d0d24f591cff",
   "pkg/stdcompat/include/lib/stdcompat/type_traits.h": "7be28fb4d6394f01ce2e949625bf601d",
   "pkg/stdcompat/include/lib/stdcompat/utility.h": "82b39f27eedb1e037049b3a23414e2d3",
   "pkg/stdcompat/include/lib/stdcompat/variant.h": "cf495770e00de513d3a42449dd734443",
-  "pkg/stdcompat/include/lib/stdcompat/version.h": "87f5e00feef9a5077221cc24eaa224b8"
+  "pkg/stdcompat/include/lib/stdcompat/version.h": "00aa0cc8c2ea7cc0e18717e6c7c93758"
 }
