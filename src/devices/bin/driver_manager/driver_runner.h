@@ -169,6 +169,8 @@ class DriverRunner : public fuchsia_component_runner::ComponentRunner::Interface
   // DriverBinder
   zx::status<> Bind(Node* node, fuchsia_driver_framework::wire::NodeAddArgs args) override;
 
+  zx::status<> StartDriver(Node* node, std::string_view url);
+
   zx::status<std::unique_ptr<DriverHostComponent>> StartDriverHost();
   zx::status<fidl::ClientEnd<fuchsia_io::Directory>> CreateComponent(std::string name,
                                                                      std::string url,

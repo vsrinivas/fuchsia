@@ -382,10 +382,18 @@ zx::status<> DriverRunner::PublishComponentRunner(const fbl::RefPtr<fs::PseudoDi
   return zx::make_status(status);
 }
 
-zx::status<> DriverRunner::StartRootDriver(std::string_view name) {
-  auto root_name = fidl::unowned_str(name);
-  auto args = fdf::wire::NodeAddArgs::UnownedBuilder().set_name(fidl::unowned_ptr(&root_name));
-  return Bind(&root_node_, args.build());
+zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
+  return StartDriver(&root_node_, url);
+}
+
+zx::status<> DriverRunner::StartDriver(Node* node, std::string_view url) {
+  auto driver_name = "driver-" + std::to_string(NextId());
+  auto create_result = CreateComponent(driver_name, std::string(url), "drivers");
+  if (create_result.is_error()) {
+    return create_result.take_error();
+  }
+  driver_args_.emplace(url, DriverArgs{std::move(create_result.value()), node});
+  return zx::ok();
 }
 
 void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
@@ -492,13 +500,7 @@ zx::status<> DriverRunner::Bind(Node* node, fdf::wire::NodeAddArgs args) {
     return match_result.take_error();
   }
   auto match = std::move(match_result.value());
-  auto name = "driver-" + std::to_string(NextId());
-  auto create_result = CreateComponent(name, match.url, "drivers");
-  if (create_result.is_error()) {
-    return create_result.take_error();
-  }
-  driver_args_.emplace(match.url, DriverArgs{std::move(create_result.value()), node});
-  return zx::ok();
+  return StartDriver(node, match.url);
 }
 
 zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost() {

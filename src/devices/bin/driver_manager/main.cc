@@ -305,12 +305,7 @@ int main(int argc, char** argv) {
     // TODO(fxbug.dev/33183): Replace this with a driver_index component.
     driver_index.emplace([](auto args) -> zx::status<MatchResult> {
       std::string_view name(args.name().data(), args.name().size());
-      if (name == "platform_bus") {
-        return zx::ok(MatchResult{
-            .url = "fuchsia-boot:///#meta/platform_bus2.cm",
-            .matched_args = std::move(args),
-        });
-      } else if (name == "board") {
+      if (name == "board") {
         return zx::ok(MatchResult{
             .url = "fuchsia-boot:///#meta/x64.cm",
             .matched_args = std::move(args),
@@ -325,7 +320,7 @@ int main(int argc, char** argv) {
     if (publish.is_error()) {
       return publish.error_value();
     }
-    auto start = driver_runner->StartRootDriver("platform_bus");
+    auto start = driver_runner->StartRootDriver("fuchsia-boot:///#meta/platform_bus2.cm");
     if (start.is_error()) {
       return start.error_value();
     }
