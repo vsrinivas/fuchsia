@@ -146,11 +146,6 @@ async fn launch_and_run_sample_test_include_disabled() {
         TestEvent::test_case_started("SampleDisabled.DISABLED_TestFail"),
         TestEvent::test_case_finished("SampleDisabled.DISABLED_TestFail", TestResult::Failed),
     ];
-    let expected_skip_events = vec![
-        TestEvent::test_case_started("SampleDisabled.DynamicSkip"),
-        // gtest treats tests that call `GTEST_SKIP()` as `Passed`.
-        TestEvent::test_case_finished("SampleDisabled.DynamicSkip", TestResult::Passed),
-    ];
 
     let actual_pass_events =
         events.get(&Some("SampleDisabled.DISABLED_TestPass".to_string())).unwrap();
@@ -165,9 +160,6 @@ async fn launch_and_run_sample_test_include_disabled() {
         "actual_fail_events: {:?}",
         &actual_fail_events
     );
-
-    let actual_skip_events = events.get(&Some("SampleDisabled.DynamicSkip".to_string())).unwrap();
-    assert_eq!(actual_skip_events, &expected_skip_events)
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

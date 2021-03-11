@@ -22,8 +22,6 @@ TEST(SampleDisabled, DISABLED_TestPass) {}
 
 TEST(SampleDisabled, DISABLED_TestFail) { EXPECT_FALSE(true); }
 
-TEST(SampleDisabled, DynamicSkip) { GTEST_SKIP(); }
-
 class SampleParameterizedTestFixture : public ::testing::TestWithParam<int> {};
 
 TEST_P(SampleParameterizedTestFixture, Test) {}

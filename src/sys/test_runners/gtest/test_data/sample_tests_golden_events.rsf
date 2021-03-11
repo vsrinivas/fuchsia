@@ -54,12 +54,6 @@
             TestEvent::test_case_finished("SampleDisabled.DISABLED_TestFail", TestResult::Skipped),
         ],
 
-        Some("SampleDisabled.DynamicSkip".to_string()) => vec![
-            TestEvent::test_case_started("SampleDisabled.DynamicSkip"),
-            // gtest treats tests that call `GTEST_SKIP()` as `Passed`.
-            TestEvent::test_case_finished("SampleDisabled.DynamicSkip", TestResult::Passed),
-        ],
-
         Some("Tests/SampleParameterizedTestFixture.Test/0".to_string()) => vec![
             TestEvent::test_case_started("Tests/SampleParameterizedTestFixture.Test/0"),
             TestEvent::test_case_finished(
@@ -108,7 +102,7 @@
             TestEvent::stdout_message("WriteToStdout.TestFail", "first msg"),
             TestEvent::stdout_message(
                 "WriteToStdout.TestFail",
-                "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:42: Failure",
+                "../../src/sys/test_runners/gtest/test_data/sample_tests.cc:40: Failure",
             ),
             TestEvent::stdout_message("WriteToStdout.TestFail", "Value of: true"),
             TestEvent::stdout_message("WriteToStdout.TestFail", "  Actual: true"),
