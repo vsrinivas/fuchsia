@@ -276,6 +276,7 @@ group("deprecated_zx_wrapper_allowlist") {
   visibility = [
     ":*",
     "//sdk/lib/fdio/*",
+    "//sdk/lib/fit-promise/*",
     "//sdk/lib/stdcompat/*",
     "//src/bringup/bin/svchost/*",
     "//src/connectivity/bluetooth/lib/device-protocol-bt-gatt-svc/*",
