@@ -1928,9 +1928,10 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
 
   // TODO(https://fxbug.dev/71558): investigate VLA alternatives.
   fdio_t* ios[n];
-  size_t nios = 0;
-  auto clean_io = fbl::MakeAutoCall([&ios, &nios] {
-    for (size_t i = 0; i < nios; ++i) {
+  zx_wait_item_t items[n];
+  size_t wait_ios = 0;
+  auto clean_io = fbl::MakeAutoCall([&ios, &wait_ios] {
+    for (size_t i = 0; i < wait_ios; ++i) {
       auto* io = ios[i];
       if (io != nullptr) {
         io->release();
@@ -1938,20 +1939,17 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
     }
   });
 
-  zx_wait_item_t items[n];
-  size_t nitems = 0;
-
   for (nfds_t i = 0; i < n; ++i) {
     auto& pfd = fds[i];
 
-    auto& io = ios[nios];
-    if ((io = fd_to_io(pfd.fd)) == nullptr) {
+    auto io = fd_to_io(pfd.fd);
+    if (io == nullptr) {
       // fd is not opened
       pfd.revents = POLLNVAL;
       continue;
     }
+    auto clean_io = fbl::MakeAutoCall([&io] { io->release(); });
     pfd.revents = 0;
-    ++nios;
 
     zx_handle_t h;
     zx_signals_t sigs;
@@ -1960,17 +1958,28 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
       // wait operation is not applicable to the handle
       return ERROR(ZX_ERR_INVALID_ARGS);
     }
-    items[nitems] = {
+    if (sigs == ZX_SIGNAL_NONE) {
+      // Skip waiting on this fd as there are no waitable signals.
+      uint32_t events;
+      io->wait_end(sigs, &events);
+      pfd.revents = static_cast<int16_t>(events);
+      continue;
+    }
+    items[wait_ios] = {
         .handle = h,
         .waitfor = sigs,
     };
-    ++nitems;
+    ios[wait_ios] = io;
+    ++wait_ios;
+    clean_io.cancel();
   }
 
-  zx_status_t status = zx::handle::wait_many(items, nitems, zx::deadline_after(timeout));
-  // pending signals could be reported on ZX_ERR_TIMED_OUT case as well
-  if (!(status == ZX_OK || status == ZX_ERR_TIMED_OUT)) {
-    return ERROR(status);
+  if (wait_ios != 0) {
+    zx_status_t status = zx::handle::wait_many(items, wait_ios, zx::deadline_after(timeout));
+    // pending signals could be reported on ZX_ERR_TIMED_OUT case as well
+    if (!(status == ZX_OK || status == ZX_ERR_TIMED_OUT)) {
+      return ERROR(status);
+    }
   }
 
   nfds_t nfds = 0;
@@ -1978,14 +1987,15 @@ int ppoll(struct pollfd* fds, nfds_t n, const struct timespec* timeout_ts,
   for (nfds_t i = 0; i < n; ++i) {
     auto& pfd = fds[i];
 
-    if (pfd.revents != POLLNVAL) {
+    if (j < wait_ios && pfd.revents == 0) {
       fdio_t* io = ios[j];
       uint32_t events;
       io->wait_end(items[j].pending, &events);
-      // mask unrequested events except HUP/ERR
-      pfd.revents = static_cast<int16_t>(events) & (pfd.events | POLLHUP | POLLERR);
+      pfd.revents = static_cast<int16_t>(events);
       ++j;
     }
+    // Mask unrequested events. Avoid clearing events that are ignored in pollfd::events.
+    pfd.revents &= (pfd.events | POLLNVAL | POLLHUP | POLLERR);
     if (pfd.revents != 0) {
       ++nfds;
     }

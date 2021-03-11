@@ -1368,6 +1368,45 @@ TEST(LocalhostTest, ConnectAFMismatchINET6) {
   EXPECT_EQ(close(s.release()), 0) << strerror(errno);
 }
 
+// Test the behavior of poll on an unconnected or non-listening stream socket.
+TEST(NetStreamTest, UnconnectPoll) {
+  fbl::unique_fd init, bound;
+  ASSERT_TRUE(init = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+  ASSERT_TRUE(bound = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  struct sockaddr_in addr = {
+      .sin_family = AF_INET,
+      .sin_addr.s_addr = htonl(INADDR_LOOPBACK),
+  };
+  ASSERT_EQ(bind(bound.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+
+  for (short events : {0, POLLIN | POLLOUT | POLLPRI | POLLRDHUP}) {
+    struct pollfd pfds[] = {{
+                                .fd = init.get(),
+                                .events = events,
+                            },
+                            {
+                                .fd = bound.get(),
+                                .events = events,
+                            }};
+    int n = poll(pfds, std::size(pfds), kTimeout);
+    EXPECT_GE(n, 0) << strerror(errno);
+    EXPECT_EQ(n, static_cast<int>(std::size(pfds))) << " events = " << std::hex << events;
+
+    for (size_t i = 0; i < std::size(pfds); i++) {
+      EXPECT_EQ(pfds[i].revents, (events & POLLOUT) | POLLHUP) << i;
+    }
+  }
+
+  // Poll on listening socket does timeout on no incoming connections.
+  ASSERT_EQ(listen(bound.get(), 0), 0) << strerror(errno);
+  struct pollfd pfd = {
+      .fd = bound.get(),
+  };
+  EXPECT_EQ(poll(&pfd, 1, 0), 0) << strerror(errno);
+}
+
 TEST(NetStreamTest, ConnectTwice) {
   fbl::unique_fd client, listener;
   ASSERT_TRUE(client = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);

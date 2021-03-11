@@ -876,10 +876,18 @@ struct stream_socket : public pipe {
           ZXSIO_SIGNAL_CONNECTED, zx::time::infinite_past(), &observed);
       if (status == ZX_OK || status == ZX_ERR_TIMED_OUT) {
         if (observed & ZXSIO_SIGNAL_CONNECTED) {
-          ioflag() ^= IOFLAG_SOCKET_CONNECTING;
-          ioflag() |= IOFLAG_SOCKET_CONNECTED;
+          ioflag() = (ioflag() ^ IOFLAG_SOCKET_CONNECTING) | IOFLAG_SOCKET_CONNECTED;
         }
       }
+    }
+
+    // Stream sockets which are non-listening or unconnected do not have a potential peer
+    // to generate any waitable signals, skip signal waiting and notify the caller of the
+    // same.
+    if (!(ioflag() &
+          (IOFLAG_SOCKET_LISTENING | IOFLAG_SOCKET_CONNECTING | IOFLAG_SOCKET_CONNECTED))) {
+      *out_signals = ZX_SIGNAL_NONE;
+      return;
     }
 
     zxio_signals_t signals = ZXIO_SIGNAL_PEER_CLOSED;
@@ -916,11 +924,17 @@ struct stream_socket : public pipe {
   }
 
   void wait_end(zx_signals_t zx_signals, uint32_t* out_events) override {
+    // The caller has not provided any waitable signal, this is the case where we are asked to wait
+    // on an unconnected or non-listening socket.
+    if (zx_signals == ZX_SIGNAL_NONE) {
+      *out_events = POLLOUT | POLLHUP;
+      return;
+    }
+
     // check the connection state
     if (ioflag() & IOFLAG_SOCKET_CONNECTING) {
       if (zx_signals & ZXSIO_SIGNAL_CONNECTED) {
-        ioflag() ^= IOFLAG_SOCKET_CONNECTING;
-        ioflag() |= IOFLAG_SOCKET_CONNECTED;
+        ioflag() = (ioflag() ^ IOFLAG_SOCKET_CONNECTING) | IOFLAG_SOCKET_CONNECTED;
       }
       zx_signals &= ~ZXSIO_SIGNAL_CONNECTED;
     }
@@ -991,6 +1005,7 @@ struct stream_socket : public pipe {
       *out_code = static_cast<int16_t>(result.err());
       return ZX_OK;
     }
+    ioflag() |= IOFLAG_SOCKET_LISTENING;
     *out_code = 0;
     return ZX_OK;
   }

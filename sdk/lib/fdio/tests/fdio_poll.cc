@@ -106,7 +106,7 @@ TEST(Poll, Pipe) {
 
   {
     char c;
-    ASSERT_EQ(write(fds[1].get(), &c, sizeof(c)), sizeof(c), "%s", strerror(errno));
+    EXPECT_EQ(write(fds[1].get(), &c, sizeof(c)), sizeof(c), "%s", strerror(errno));
     struct pollfd pfds[] = {{
                                 .fd = fds[0].get(),
                                 .events = POLLIN,
@@ -116,10 +116,10 @@ TEST(Poll, Pipe) {
                                 .events = POLLOUT,
                             }};
     int n = poll(pfds, std::size(pfds), kTimeout);
-    ASSERT_GE(n, 0, "%s", strerror(errno));
-    ASSERT_EQ(n, std::size(pfds));
-    ASSERT_EQ(pfds[0].revents, POLLIN);
-    ASSERT_EQ(pfds[1].revents, POLLOUT);
+    EXPECT_GE(n, 0, "%s", strerror(errno));
+    EXPECT_EQ(n, std::size(pfds));
+    EXPECT_EQ(pfds[0].revents, POLLIN);
+    EXPECT_EQ(pfds[1].revents, POLLOUT);
   }
 
   {
@@ -137,9 +137,9 @@ TEST(Poll, Pipe) {
             .fd = fds[1].get(),
         }};
     int n = poll(pfds, std::size(pfds), kTimeout);
-    ASSERT_GE(n, 0, "%s", strerror(errno));
-    ASSERT_EQ(n, std::size(pfds));
-    ASSERT_EQ(pfds[0].revents,
+    EXPECT_GE(n, 0, "%s", strerror(errno));
+    EXPECT_EQ(n, std::size(pfds));
+    EXPECT_EQ(pfds[0].revents,
 #if defined(__Fuchsia__)
               // TODO(https://fxbug.dev/47132): For Linux parity, pipe wait_begin needs to always
               // wait on ZXIO_SIGNAL_PEER_CLOSED and wait_end needs to set POLLHUP on seeing this.
@@ -148,7 +148,7 @@ TEST(Poll, Pipe) {
               POLLHUP
 #endif
     );
-    ASSERT_EQ(pfds[1].revents, POLLNVAL);
+    EXPECT_EQ(pfds[1].revents, POLLNVAL);
   }
 }
 

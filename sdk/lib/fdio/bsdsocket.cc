@@ -145,11 +145,9 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     return ERROR(status);
   }
   if (out_code == EINPROGRESS) {
-    bool nonblocking = io->ioflag() & IOFLAG_NONBLOCK;
-
-    if (nonblocking) {
-      io->ioflag() |= IOFLAG_SOCKET_CONNECTING;
-    } else {
+    auto& ioflag = io->ioflag();
+    ioflag = (ioflag & ~IOFLAG_SOCKET_LISTENING) | IOFLAG_SOCKET_CONNECTING;
+    if (!(ioflag & IOFLAG_NONBLOCK)) {
       if ((status = fdio_wait(io, FDIO_EVT_WRITABLE, zx::time::infinite(), nullptr)) != ZX_OK) {
         io->release();
         return ERROR(status);

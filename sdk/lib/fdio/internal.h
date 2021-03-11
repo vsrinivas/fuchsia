@@ -61,6 +61,8 @@ struct Errno {
 #define IOFLAG_NONBLOCK (1 << 6)
 // Socket has an error signal asserted.
 #define IOFLAG_SOCKET_HAS_ERROR (1 << 7)
+// Socket is listening for new connections.
+#define IOFLAG_SOCKET_LISTENING (1 << 8)
 
 // The subset of fdio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.cc ensure we aren't colliding.
