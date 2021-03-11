@@ -32,7 +32,6 @@ constexpr char kRootResourceAllowList[] = "allowlist/root_resource.txt";
 constexpr char kSmcResourceAllowList[] = "allowlist/smc_resource.txt";
 constexpr char kSystemUpdaterAllowList[] = "allowlist/system_updater.txt";
 constexpr char kVmexResourceAllowList[] = "allowlist/vmex_resource.txt";
-constexpr char kWeaveSignerAllowList[] = "allowlist/weave_signer.txt";
 
 }  // end of namespace.
 
@@ -123,12 +122,6 @@ std::optional<SecurityPolicy> PolicyChecker::Check(const SandboxMetadata& sandbo
                    << "fuchsia.kernel.VmexResource";
     return std::nullopt;
   }
-  if (sandbox.HasService("fuchsia.weave.Signer") && !CheckWeaveSigner(pkg_url)) {
-    FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
-                   << "fuchsia.weave.Signer";
-    return std::nullopt;
-  }
-
   if (sandbox.HasService("fuchsia.pkg.PackageResolver") && !CheckPackageResolver(pkg_url)) {
     FX_LOGS(ERROR) << "Component " << pkg_url.ToString() << " is not allowed to use "
                    << "fuchsia.pkg.PackageResolver. go/no-package-resolver";
@@ -255,11 +248,6 @@ bool PolicyChecker::CheckSmcResource(const FuchsiaPkgUrl& pkg_url) {
 bool PolicyChecker::CheckVmexResource(const FuchsiaPkgUrl& pkg_url) {
   AllowList vmex_resource_allowlist(config_, kVmexResourceAllowList);
   return vmex_resource_allowlist.IsAllowed(pkg_url);
-}
-
-bool PolicyChecker::CheckWeaveSigner(const FuchsiaPkgUrl& pkg_url) {
-  AllowList weave_signer_allowlist(config_, kWeaveSignerAllowList);
-  return weave_signer_allowlist.IsAllowed(pkg_url);
 }
 
 }  // namespace component

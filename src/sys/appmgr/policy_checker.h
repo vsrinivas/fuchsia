@@ -59,7 +59,6 @@ class PolicyChecker final {
   bool CheckSmcResource(const FuchsiaPkgUrl& pkg_url);
   bool CheckSystemUpdater(const FuchsiaPkgUrl& pkg_url);
   bool CheckVmexResource(const FuchsiaPkgUrl& pkg_url);
-  bool CheckWeaveSigner(const FuchsiaPkgUrl& pkg_url);
 
   FRIEND_TEST(PolicyCheckerTest, ReplaceAsExecPolicyPresent);
   FRIEND_TEST(PolicyCheckerTest, ReplaceAsExecPolicyAbsent);
@@ -78,7 +77,6 @@ class PolicyChecker final {
   FRIEND_TEST(PolicyCheckerTest, SmcResourcePolicy);
   FRIEND_TEST(PolicyCheckerTest, SystemUpdaterPolicy);
   FRIEND_TEST(PolicyCheckerTest, VmexResourcePolicy);
-  FRIEND_TEST(PolicyCheckerTest, WeaveSignerPolicy);
 };
 
 }  // end of namespace component.
