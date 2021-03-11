@@ -37,13 +37,6 @@ class StartupContextImpl implements StartupContext {
   @override
   final Outgoing outgoing;
 
-  /// Handle of the [ViewRef] of this component.
-  ///
-  /// Use [viewRef] to provide reference to this component's view. This will
-  /// be null on non-flutter platforms.
-  @override
-  final Handle? viewRef;
-
   /// Creates a new instance of [StartupContext].
   ///
   /// This constructor is rarely used directly. Instead, most clients create a
@@ -51,7 +44,6 @@ class StartupContextImpl implements StartupContext {
   StartupContextImpl({
     required this.incoming,
     required this.outgoing,
-    this.viewRef,
   });
 
   /// Creates a startup context from the process startup info.
@@ -67,18 +59,9 @@ class StartupContextImpl implements StartupContext {
       // Note takeOutgoingServices shouldn't be called more than once per pid
       final outgoingServicesHandle = MxStartupInfo.takeOutgoingServices();
 
-      // Get the [ViewRef] handle of the component. This throws an exception for
-      // components that are not flutter based.
-      Handle? viewRef;
-      try {
-        // Note takeViewRef shouldn't be called more than once per pid
-        viewRef = MxStartupInfo.takeViewRef();
-      } on Exception catch (_) {}
-
       return StartupContextImpl(
         incoming: Incoming.fromSvcPath(),
         outgoing: _getOutgoingFromHandle(outgoingServicesHandle),
-        viewRef: viewRef,
       );
     }
 

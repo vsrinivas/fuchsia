@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:zircon/zircon.dart';
-
 import 'incoming.dart';
 import 'outgoing.dart';
 import 'startup_context.dart';
@@ -29,15 +27,9 @@ class ComponentContext {
   /// other components.
   final Outgoing outgoing;
 
-  /// Handle of the [ViewRef] of this component.
-  ///
-  /// Use [viewRef] to provide reference to this component's view.
-  final Handle? viewRef;
-
   ComponentContext({
     required this.svc,
     required this.outgoing,
-    this.viewRef,
   });
 
   /// Creates the component context. Users need to make sure that they call
@@ -65,7 +57,6 @@ class ComponentContext {
     return _componentContext = ComponentContext(
       svc: context.incoming,
       outgoing: context.outgoing,
-      viewRef: context.viewRef,
     );
   }
 

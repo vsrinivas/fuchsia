@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
-import 'package:fuchsia_services/services.dart';
+import 'package:fuchsia/fuchsia.dart';
 import 'package:zircon/zircon.dart';
 
 // ignore: avoid_classes_with_only_static_members
@@ -12,6 +12,6 @@ class ScenicContext {
 
   // Gets a duplicate of the host [ViewRef] handle for the component.
   static ViewRef hostViewRef() => ViewRef(
-      reference: EventPair((_raw ??= StartupContext.fromStartupInfo().viewRef)
-          ?.duplicate(ZX.RIGHT_SAME_RIGHTS)));
+      reference: EventPair((_raw ??= MxStartupInfo.takeViewRef())
+          .duplicate(ZX.RIGHT_SAME_RIGHTS)));
 }

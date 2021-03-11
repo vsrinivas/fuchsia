@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:zircon/zircon.dart';
-
 import 'incoming.dart';
 import 'internal/_startup_context_impl.dart';
 import 'outgoing.dart';
@@ -29,13 +27,7 @@ abstract class StartupContext {
   /// other components.
   final Outgoing outgoing;
 
-  /// Handle of the [ViewRef] of this component.
-  ///
-  /// Use [viewRef] to provide reference to this component's view.
-  final Handle? viewRef;
-
-  StartupContext(
-      {required this.incoming, required this.outgoing, this.viewRef});
+  StartupContext({required this.incoming, required this.outgoing});
 
   /// Creates a startup context from the process startup info.
   ///

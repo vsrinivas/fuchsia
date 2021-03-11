@@ -21,9 +21,7 @@ dart_library("fuchsia_scenic") {
 
   deps = [
     "//sdk/fidl/fuchsia.ui.views",
-
-    # TODO(fxbug.dev/71491): Migrate viewRef away from package:fuchsia_services.
-    dart_package_label.fuchsia_services,
+    dart_package_label.fuchsia,
     dart_package_label.zircon,
   ]
 }
