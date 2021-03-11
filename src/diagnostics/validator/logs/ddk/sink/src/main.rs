@@ -51,6 +51,9 @@ impl Puppet {
 
     async fn test(&self) -> Result<(), Error> {
         let test_log = "test_log";
+        let test_file = "test_file.cc".to_string();
+        let test_line_64: u64 = 9001;
+        let test_line_32 = 9001;
         info!("Ensuring we received the init message.");
         let reader = ArchiveReader::new();
         let (mut logs, mut errors) =
@@ -73,15 +76,24 @@ impl Puppet {
                 name: "message".to_string(),
                 value: Value::Text(test_log.to_string()),
             }],
-            severity: Severity::Info,
+            severity: Severity::Error,
             timestamp: 0,
         };
-        let mut spec = RecordSpec { file: "test_file.cc".to_string(), line: 150, record };
+        let mut spec = RecordSpec { file: test_file.clone(), line: test_line_32, record };
         self._proxy.emit_log(&mut spec).await?;
         info!("Sent message");
         loop {
             let log_entry = logs.next().await.unwrap();
-            if log_entry.msg().unwrap().contains(test_log) {
+            let has_msg = log_entry.msg().unwrap().contains(test_log);
+            let has_file = match log_entry.file_path() {
+                None => false,
+                Some(file) => file == test_file.clone(),
+            };
+            let has_line = match log_entry.line_number() {
+                None => false,
+                Some(line) => *line == test_line_64,
+            };
+            if has_msg && has_file && has_line {
                 break;
             }
         }

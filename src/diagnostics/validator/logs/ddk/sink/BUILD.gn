@@ -56,6 +56,11 @@ fuchsia_component("accessor-validator-for-ddk") {
 }
 
 fuchsia_test_package("accessor-validator-ddk") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   deps = [
     ":log-test-devmgr",
     "puppet/cpp:component",

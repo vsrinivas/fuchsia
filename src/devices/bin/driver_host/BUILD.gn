@@ -21,6 +21,7 @@ executable("driver_host") {
   deps = [
     ":common",
     ":driver",
+    "//sdk/lib/syslog/cpp:backend_fuchsia_compat",
   ]
 }
 
