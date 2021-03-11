@@ -37,6 +37,7 @@ use {
     crate::policy::PolicyType,
     crate::power::power_controller::PowerController,
     crate::privacy::privacy_controller::PrivacyController,
+    crate::service::message::Factory as MessengerFactory,
     crate::service_context::GenerateService,
     crate::service_context::ServiceContext,
     crate::service_context::ServiceContextHandle,
@@ -89,6 +90,7 @@ pub use display::display_configuration::DisplayConfiguration;
 pub use display::LightSensorConfig;
 pub use input::input_device_configuration::InputConfiguration;
 pub use light::light_hardware_configuration::LightHardwareConfiguration;
+pub use service::{Address, Payload, Role};
 
 pub mod agent;
 pub mod base;
@@ -189,11 +191,15 @@ impl ServiceConfiguration {
 /// complete.
 pub struct Environment {
     pub nested_environment: Option<NestedEnvironment>,
+    pub messenger_factory: MessengerFactory,
 }
 
 impl Environment {
-    pub fn new(nested_environment: Option<NestedEnvironment>) -> Environment {
-        Environment { nested_environment }
+    pub fn new(
+        nested_environment: Option<NestedEnvironment>,
+        messenger_factory: MessengerFactory,
+    ) -> Environment {
+        Environment { nested_environment, messenger_factory }
     }
 }
 
@@ -235,14 +241,14 @@ macro_rules! register_handler {
 /// streams, the target FIDL interface, and a list of `SettingType`s whose
 /// presence will cause this handler to be included.
 macro_rules! register_fidl_handler {
-    ($components:ident, $service_dir:ident, $service_messenger_factory:ident,
+    ($components:ident, $service_dir:ident, $messenger_factory:ident,
             $interface:ident, $handler_mod:ident$(, $target:ident)+) => {
         if false $(|| $components.contains(&SettingType::$target))+
         {
-            let service_messenger_factory = $service_messenger_factory.clone();
+            let messenger_factory = $messenger_factory.clone();
             $service_dir.add_fidl_service(
                     move |stream: $interface| {
-                        crate::$handler_mod::fidl_io::spawn(service_messenger_factory.clone(),
+                        crate::$handler_mod::fidl_io::spawn(messenger_factory.clone(),
                         stream);
                     });
         }
@@ -349,7 +355,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     async fn prepare_env(
         self,
         runtime: Runtime,
-    ) -> Result<ServiceFs<ServiceObj<'static, ()>>, Error> {
+    ) -> Result<(ServiceFs<ServiceObj<'static, ()>>, MessengerFactory), Error> {
         let mut fs = ServiceFs::new();
 
         let service_dir;
@@ -435,7 +441,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
         create_environment(
             service_dir,
-            messenger_factory,
+            messenger_factory.clone(),
             settings,
             policies,
             agent_blueprints,
@@ -448,12 +454,12 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         .await
         .map_err(|err| format_err!("could not create environment: {:?}", err))?;
 
-        Ok(fs)
+        Ok((fs, messenger_factory))
     }
 
     pub fn spawn(self, mut executor: fasync::Executor) -> Result<(), Error> {
         match executor.run_singlethreaded(self.prepare_env(Runtime::Service)) {
-            Ok(mut fs) => {
+            Ok((mut fs, _)) => {
                 fs.take_and_serve_directory_handle().expect("could not service directory handle");
                 let () = executor.run_singlethreaded(fs.collect());
 
@@ -465,11 +471,11 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
 
     pub async fn spawn_nested(self, env_name: &'static str) -> Result<Environment, Error> {
         match self.prepare_env(Runtime::Nested(env_name)).await {
-            Ok(mut fs) => {
+            Ok((mut fs, messenger_factory)) => {
                 let nested_environment = Some(fs.create_salted_nested_environment(&env_name)?);
                 fasync::Task::spawn(fs.collect()).detach();
 
-                Ok(Environment::new(nested_environment))
+                Ok(Environment::new(nested_environment, messenger_factory))
             }
             Err(error) => Err(error),
         }
