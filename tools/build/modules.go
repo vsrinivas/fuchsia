@@ -12,25 +12,11 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 )
 
-const (
-	apiModuleName              = "api.json"
-	archiveModuleName          = "archives.json"
-	argsModuleName             = "args.json"
-	binaryModuleName           = "binaries.json"
-	checkoutArtifactModuleName = "checkout_artifacts.json"
-	imageModuleName            = "images.json"
-	packageManifestModuleName  = "all_package_manifest_paths.json"
-	platformModuleName         = "platforms.json"
-	prebuiltBinaryModuleName   = "prebuilt_binaries.json"
-	sdkArchivesModuleName      = "sdk_archives.json"
-	testDurationsName          = "test_durations.json"
-	testModuleName             = "tests.json"
-	toolModuleName             = "tool_paths.json"
-	zbiTestModuleName          = "zbi_tests.json"
-)
-
 // Modules is a convenience interface for accessing the various build API
 // modules associated with a build.
+//
+// For information about each build API module, see the corresponding
+// `build_api_module` target in //BUILD.gn.
 type Modules struct {
 	buildDir          string
 	apis              []string
@@ -126,9 +112,8 @@ func (m Modules) APIs() []string {
 	return m.apis
 }
 
-// APIManifest returns the path to the manifest of build API modules present in the build.
 func (m Modules) APIManifest() string {
-	return filepath.Join(m.BuildDir(), apiModuleName)
+	return filepath.Join(m.BuildDir(), "api.json")
 }
 
 func (m Modules) Archives() []Archive {
@@ -136,57 +121,47 @@ func (m Modules) Archives() []Archive {
 }
 
 func (m Modules) ArchiveManifest() string {
-	return filepath.Join(m.BuildDir(), archiveModuleName)
+	return filepath.Join(m.BuildDir(), "archives.json")
 }
 
-// Args returns the build API module of args set in the build.
 func (m Modules) Args() Args {
 	return m.args
 }
 
-// ArgManifest returns the path to the manifest of GN args set in the build.
 func (m Modules) ArgManifest() string {
-	return filepath.Join(m.BuildDir(), argsModuleName)
+	return filepath.Join(m.BuildDir(), "args.json")
 }
 
-// Binaries returns the build API module of binaries.
 func (m Modules) Binaries() []Binary {
 	return m.binaries
 }
 
-// BinaryManifest returns the path to the manifest of binaries in the build.
 func (m Modules) BinaryManifest() string {
-	return filepath.Join(m.BuildDir(), binaryModuleName)
+	return filepath.Join(m.BuildDir(), "binaries.json")
 }
 
-// CheckoutArtifacts returns the build API module of checkout artifacts.
 func (m Modules) CheckoutArtifacts() []CheckoutArtifact {
 	return m.checkoutArtifacts
 }
 
-// CheckoutArtifactManifest returns the path to the manifest of checkout artifacts in the build.
 func (m Modules) CheckoutArtifactManifest() string {
-	return filepath.Join(m.BuildDir(), checkoutArtifactModuleName)
+	return filepath.Join(m.BuildDir(), "checkout_artifacts.json")
 }
 
-// Images returns the aggregated build APIs of fuchsia and zircon images.
 func (m Modules) Images() []Image {
 	return m.images
 }
 
-// ImageManifest returns the path to the manifest of images in the build.
 func (m Modules) ImageManifest() string {
-	return filepath.Join(m.BuildDir(), imageModuleName)
+	return filepath.Join(m.BuildDir(), "images.json")
 }
 
-// PackageManifests returns a list of paths to all the universe package manifests.
 func (m Modules) PackageManifests() []string {
 	return m.packageManifests
 }
 
-// PackageManifestsManifest returns the path to the manifest of universe package manifests in the build.
 func (m Modules) PackageManifestsManifest() string {
-	return filepath.Join(m.BuildDir(), packageManifestModuleName)
+	return filepath.Join(m.BuildDir(), "all_package_manifest_paths.json")
 }
 
 // Platforms returns the build API module of available platforms to test on.
@@ -194,9 +169,8 @@ func (m Modules) Platforms() []DimensionSet {
 	return m.platforms
 }
 
-// PlatformManifest returns the path to the manifest of available test platforms.
 func (m Modules) PlatformManifest() string {
-	return filepath.Join(m.BuildDir(), platformModuleName)
+	return filepath.Join(m.BuildDir(), "platforms.json")
 }
 
 // PrebuiltBinaries returns the build API module of prebuilt packages registered in the build.
@@ -204,49 +178,40 @@ func (m Modules) PrebuiltBinaries() []PrebuiltBinaries {
 	return m.prebuiltBins
 }
 
-// PrebuiltBinaryManifest returns the path to the manifest of prebuilt packages.
 func (m Modules) PrebuiltBinaryManifest() string {
-	return filepath.Join(m.BuildDir(), prebuiltBinaryModuleName)
+	return filepath.Join(m.BuildDir(), "prebuilt_binaries.json")
 }
 
-// SDKArchives returns the build API module of SDK archives.
 func (m Modules) SDKArchives() []SDKArchive {
 	return m.sdkArchives
 }
 
-// SDKArchivesManifest returns the path to the manifest of SDK archives.
 func (m Modules) SDKArchivesManifest() string {
-	return filepath.Join(m.BuildDir(), sdkArchivesModuleName)
+	return filepath.Join(m.BuildDir(), "sdk_archives.json")
 }
 
-// TestDurations returns the build API module of test duration data.
 func (m Modules) TestDurations() []TestDuration {
 	return m.testDurations
 }
 
-// TestDurationsManifest returns the path to the durations file.
 func (m Modules) TestDurationsManifest() string {
-	return filepath.Join(m.BuildDir(), testDurationsName)
+	return filepath.Join(m.BuildDir(), "test_durations.json")
 }
 
-// TestSpecs returns the build API module of tests.
 func (m Modules) TestSpecs() []TestSpec {
 	return m.testSpecs
 }
 
-// TestManifest returns the path to the manifest of tests in the build.
 func (m Modules) TestManifest() string {
-	return filepath.Join(m.BuildDir(), testModuleName)
+	return filepath.Join(m.BuildDir(), "tests.json")
 }
 
-// Tools returns the build API module of tools.
 func (m Modules) Tools() []Tool {
 	return m.tools
 }
 
-// ToolManifest returns the path to the manifest of tools in the build.
 func (m Modules) ToolManifest() string {
-	return filepath.Join(m.BuildDir(), toolModuleName)
+	return filepath.Join(m.BuildDir(), "tool_paths.json")
 }
 
 func (m Modules) ZBITests() []ZBITest {
@@ -254,5 +219,5 @@ func (m Modules) ZBITests() []ZBITest {
 }
 
 func (m Modules) ZBITestManifest() string {
-	return filepath.Join(m.BuildDir(), zbiTestModuleName)
+	return filepath.Join(m.BuildDir(), "zbi_tests.json")
 }
