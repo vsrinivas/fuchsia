@@ -103,10 +103,12 @@ if [[ -z "${flash_manifest}" ]]; then
     exit 1
 fi
 
+fx-info "Fetching artifacts from remote host: ${host}"
 fetch_remote_build_artifacts "${host}" "${dir}" "${artifact_dir}" flash $build
 fetch_remote_artifacts "${host}" "${dir}" "${artifact_dir}" "${flash_manifest}"
 
 if "${flash}"; then
+  fx-info "Verifying required host tools..."
   fetch_or_build_tool ${host} ${dir} "${artifact_dir}" fastboot
   cd "${artifact_dir}"
   manifest_path="${artifact_dir}/${flash_manifest}"
