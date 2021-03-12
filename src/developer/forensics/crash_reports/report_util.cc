@@ -189,8 +189,8 @@ void AddSnapshotAnnotations(const SnapshotUuid& snapshot_uuid, const Snapshot& s
 void AddCrashServerAnnotations(const std::string& program_name,
                                const std::optional<zx::time_utc>& current_time,
                                const ::fit::result<std::string, Error>& device_id,
-                               const ErrorOr<std::string>& os_version, const Product& product,
-                               const bool should_process, AnnotationMap* annotations) {
+                               const Product& product, const bool should_process,
+                               AnnotationMap* annotations) {
   // Product.
   annotations->Set("product", product.name)
       .Set("version", product.version)
@@ -199,10 +199,6 @@ void AddCrashServerAnnotations(const std::string& program_name,
   // Program.
   // We use ptype to benefit from Chrome's "Process type" handling in the crash server UI.
   annotations->Set("ptype", program_name);
-
-  // OS
-  annotations->Set("osName", "Fuchsia");
-  annotations->Set("osVersion", os_version);
 
   // We set the report time only if we were able to get an accurate one.
   if (current_time.has_value()) {
@@ -229,12 +225,12 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const Re
                                  const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
                                  const std::optional<zx::time_utc>& current_time,
                                  const ::fit::result<std::string, Error>& device_id,
-                                 const ErrorOr<std::string>& os_version, const Product& product,
+                                 const AnnotationMap& default_annotations, const Product& product,
                                  const bool is_hourly_report) {
   const std::string program_name = report.program_name();
   const std::string shortname = Shorten(program_name);
 
-  AnnotationMap annotations;
+  AnnotationMap annotations = default_annotations;
   std::map<std::string, fuchsia::mem::Buffer> attachments;
   std::optional<fuchsia::mem::Buffer> minidump;
   bool should_process = false;
@@ -247,8 +243,8 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const Re
   AddSnapshotAnnotations(snapshot_uuid, snapshot, &annotations);
 
   // Crash server annotations common to all crash reports.
-  AddCrashServerAnnotations(program_name, current_time, device_id, os_version, product,
-                            should_process, &annotations);
+  AddCrashServerAnnotations(program_name, current_time, device_id, product, should_process,
+                            &annotations);
 
   return Report::MakeReport(report_id, shortname, annotations, std::move(attachments),
                             snapshot_uuid, std::move(minidump), is_hourly_report);

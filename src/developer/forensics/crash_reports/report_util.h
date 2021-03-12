@@ -45,7 +45,7 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport input_report, Re
                                  const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
                                  const std::optional<zx::time_utc>& current_time,
                                  const ::fit::result<std::string, Error>& device_id,
-                                 const ErrorOr<std::string>& os_version, const Product& product,
+                                 const AnnotationMap& default_annotations, const Product& product,
                                  bool is_hourly_report);
 
 }  // namespace crash_reports

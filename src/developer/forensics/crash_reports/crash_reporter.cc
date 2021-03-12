@@ -95,7 +95,7 @@ std::unique_ptr<ReportingPolicyWatcher> MakeReportingPolicyWatcher(
 std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context, Config config,
-    const ErrorOr<std::string>& build_version, CrashRegister* crash_register) {
+    AnnotationMap default_annotations, CrashRegister* crash_register) {
   std::unique_ptr<SnapshotManager> snapshot_manager = std::make_unique<SnapshotManager>(
       dispatcher, services, clock, kSnapshotSharedRequestWindow, kGarbageCollectedSnapshotsPath,
       kSnapshotAnnotationsMaxSize, kSnapshotArchivesMaxSize);
@@ -107,14 +107,14 @@ std::unique_ptr<CrashReporter> CrashReporter::TryCreate(
 
   return std::unique_ptr<CrashReporter>(
       new CrashReporter(dispatcher, std::move(services), clock, std::move(info_context),
-                        std::move(config), build_version, crash_register, std::move(tags),
-                        std::move(snapshot_manager), std::move(crash_server)));
+                        std::move(config), std::move(default_annotations), crash_register,
+                        std::move(tags), std::move(snapshot_manager), std::move(crash_server)));
 }
 
 CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
                              std::shared_ptr<sys::ServiceDirectory> services,
                              timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context,
-                             Config config, const ErrorOr<std::string>& build_version,
+                             Config config, AnnotationMap default_annotations,
                              CrashRegister* crash_register, std::unique_ptr<LogTags> tags,
                              std::unique_ptr<SnapshotManager> snapshot_manager,
                              std::unique_ptr<CrashServer> crash_server)
@@ -122,7 +122,7 @@ CrashReporter::CrashReporter(async_dispatcher_t* dispatcher,
       executor_(dispatcher),
       services_(services),
       tags_(std::move(tags)),
-      build_version_(build_version),
+      default_annotations_(std::move(default_annotations)),
       crash_register_(crash_register),
       utc_provider_(dispatcher_, zx::unowned_clock(zx_utc_reference_get()), clock),
       snapshot_manager_(std::move(snapshot_manager)),
@@ -232,7 +232,7 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
                 std::optional<Report> final_report = MakeReport(
                     std::move(report), report_id, snapshot_uuid,
                     snapshot_manager_->GetSnapshot(snapshot_uuid), utc_provider_.CurrentTime(),
-                    device_id, build_version_, product, is_hourly_snapshot);
+                    device_id, default_annotations_, product, is_hourly_snapshot);
                 if (!final_report.has_value()) {
                   return ::fit::error(
                       CrashReporterError{cobalt::CrashState::kDropped, "failed MakeReport()"});

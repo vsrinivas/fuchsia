@@ -72,7 +72,7 @@ TEST(MakeReport, AddsSnapshotAnnotations) {
   const auto report =
       MakeReport(std::move(crash_report), /*report_id=*/0, "snapshot_uuid", Snapshot(annotations),
                  /*current_time=*/std::nullopt, ::fit::ok("device_id"),
-                 ErrorOr<std::string>("os_version"), product, /*is_hourly_report=*/false);
+                 AnnotationMap({{"key", "value"}}), product, /*is_hourly_report=*/false);
   ASSERT_TRUE(report.has_value());
   EXPECT_EQ(report.value().Annotations().Get("snapshot_annotation_key"),
             "snapshot_annotation_value");

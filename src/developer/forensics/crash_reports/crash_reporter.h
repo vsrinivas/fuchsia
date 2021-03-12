@@ -39,15 +39,17 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   // Static factory method.
   //
   // Returns nullptr if the crash reporter cannot be instantiated.
-  static std::unique_ptr<CrashReporter> TryCreate(
-      async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
-      timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context, Config config,
-      const ErrorOr<std::string>& build_version, CrashRegister* crash_register);
+  static std::unique_ptr<CrashReporter> TryCreate(async_dispatcher_t* dispatcher,
+                                                  std::shared_ptr<sys::ServiceDirectory> services,
+                                                  timekeeper::Clock* clock,
+                                                  std::shared_ptr<InfoContext> info_context,
+                                                  Config config, AnnotationMap default_annotations,
+                                                  CrashRegister* crash_register);
 
   // For testing purposes and injecting a stub CrashServer.
   CrashReporter(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                 timekeeper::Clock* clock, std::shared_ptr<InfoContext> info_context, Config config,
-                const ErrorOr<std::string>& build_version, CrashRegister* crash_register,
+                AnnotationMap default_annotations, CrashRegister* crash_register,
                 std::unique_ptr<LogTags> tags, std::unique_ptr<SnapshotManager> snapshot_manager,
                 std::unique_ptr<CrashServer> crash_server);
 
@@ -66,7 +68,7 @@ class CrashReporter : public fuchsia::feedback::CrashReporter {
   async::Executor executor_;
   const std::shared_ptr<sys::ServiceDirectory> services_;
   std::unique_ptr<LogTags> tags_;
-  const ErrorOr<std::string> build_version_;
+  AnnotationMap default_annotations_;
   CrashRegister* crash_register_;
   const UtcTimeProvider utc_provider_;
   std::unique_ptr<SnapshotManager> snapshot_manager_;

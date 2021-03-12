@@ -165,8 +165,8 @@ class CrashReporterTest : public UnitTestFixture {
 
     crash_reporter_ = std::make_unique<CrashReporter>(
         dispatcher(), services(), &clock_, info_context_, config,
-        ErrorOr<std::string>(kBuildVersion), crash_register_.get(), std::make_unique<LogTags>(),
-        std::move(snapshot_manager), std::move(crash_server));
+        AnnotationMap({{"osName", "Fuchsia"}, {"osVersion", kBuildVersion}}), crash_register_.get(),
+        std::make_unique<LogTags>(), std::move(snapshot_manager), std::move(crash_server));
     FX_CHECK(crash_reporter_);
   }
 
