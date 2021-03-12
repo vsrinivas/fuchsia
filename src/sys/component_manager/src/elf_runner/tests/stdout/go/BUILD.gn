@@ -14,30 +14,52 @@ group("go") {
   ]
 }
 
-go_library("prints_when_launched_go_lib") {
-  sources = [ "src/main.go" ]
+# Go programs panic when writing to an unbounded file descriptor (stdout or stderr).
+# In order to pass the tests, we create a binary for each test case instead
+# of using one for all 3 like we do for Rust and C++.
+# See fxbug.dev/72108 for more details.
+template("test_case_binary") {
+  assert(defined(invoker.test_case), "Parameter 'test_case' is required")
 
-  deps = []
+  test_case = invoker.test_case
+  library_name = "prints_to_${test_case}_go_lib"
+  go_library(library_name) {
+    sources = [ "src/${test_case}.go" ]
+
+    deps = []
+  }
+
+  go_binary(target_name) {
+    output_name = "prints_to_${test_case}_go"
+    gopackage = "go.fuchsia.dev/fuchsia/src/sys/component_manager/src/elf_runner/tests/stdout/go/src"
+
+    deps = [ ":$library_name" ]
+  }
 }
 
-go_binary("prints_when_launched_go_bin") {
-  output_name = "prints_when_launched_go"
-  gopackage = "go.fuchsia.dev/fuchsia/src/sys/component_manager/src/elf_runner/tests/stdout/go/src"
+test_case_binary("stdout_and_stderr_bin") {
+  test_case = "stdout_and_stderr"
+}
 
-  deps = [ ":prints_when_launched_go_lib" ]
+test_case_binary("stdout_bin") {
+  test_case = "stdout"
+}
+
+test_case_binary("stderr_bin") {
+  test_case = "stderr"
 }
 
 fuchsia_component("logs-stdout-and-stderr-go") {
-  deps = [ ":prints_when_launched_go_bin" ]
+  deps = [ ":stdout_and_stderr_bin" ]
   manifest = "meta/logs_stdout_and_stderr_go.cml"
 }
 
 fuchsia_component("logs-stdout-go") {
-  deps = [ ":prints_when_launched_go_bin" ]
+  deps = [ ":stdout_bin" ]
   manifest = "meta/logs_stdout_go.cml"
 }
 
 fuchsia_component("logs-stderr-go") {
-  deps = [ ":prints_when_launched_go_bin" ]
+  deps = [ ":stderr_bin" ]
   manifest = "meta/logs_stderr_go.cml"
 }

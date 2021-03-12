@@ -17,15 +17,15 @@ const BASE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test
 const COLLECTION_NAME: &str = "puppets";
 const EXPECTED_STDOUT_PAYLOAD: &str = "Hello Stdout!\n";
 const EXPECTED_STDERR_PAYLOAD: &str = "Hello Stderr!\n";
-// TODO(fxbug.dev/69588): Add golang when bug is resolved.
-const TESTED_LANGUAGUES: [&str; 2] = ["cpp", "rust"];
+const TESTED_LANGUAGUES: [&str; 3] = ["cpp", "rust", "go"];
 
+#[derive(Debug)]
 struct Component {
     url: String,
     moniker: String,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 struct MessageAssertion {
     payload: &'static str,
     severity: Severity,
@@ -43,6 +43,13 @@ async fn test_components_logs_to_stdout() {
     // execution for Archivist's log streams.
     for (component, message_assertions) in get_all_test_components().iter() {
         start_child_component_and_wait_for_exit(&realm, &component).await;
+
+        // Golang prints a message to stdout indicating that stdin handle can't
+        // be cloned. Let's skip that message here before continuing our tests.
+        // TODO(fxbug.dev/69588): Remove this workaround.
+        if component.moniker.ends_with("go") && component.moniker.contains("stdout") {
+            subscription.by_ref().next().await;
+        }
 
         let messages =
             subscription.by_ref().take(message_assertions.len()).collect::<Vec<_>>().await;

@@ -2,7 +2,7 @@
     include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
     program: {
         runner: "elf",
-        binary: "bin/prints_when_launched_go",
+        binary: "bin/prints_to_stdout_go",
         forward_stdout_to: "log",
     },
 }
