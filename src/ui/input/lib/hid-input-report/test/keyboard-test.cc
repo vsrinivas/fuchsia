@@ -168,15 +168,13 @@ TEST(KeyboardTest, OutputDescriptor) {
 
   ASSERT_EQ(descriptor.keyboard().output().leds().count(), 5);
   EXPECT_EQ(descriptor.keyboard().output().leds()[0],
-            hid_input_report::fuchsia_input_report::wire::LedType::NUM_LOCK);
+            fuchsia_input_report::wire::LedType::NUM_LOCK);
   EXPECT_EQ(descriptor.keyboard().output().leds()[1],
-            hid_input_report::fuchsia_input_report::wire::LedType::CAPS_LOCK);
+            fuchsia_input_report::wire::LedType::CAPS_LOCK);
   EXPECT_EQ(descriptor.keyboard().output().leds()[2],
-            hid_input_report::fuchsia_input_report::wire::LedType::SCROLL_LOCK);
-  EXPECT_EQ(descriptor.keyboard().output().leds()[3],
-            hid_input_report::fuchsia_input_report::wire::LedType::COMPOSE);
-  EXPECT_EQ(descriptor.keyboard().output().leds()[4],
-            hid_input_report::fuchsia_input_report::wire::LedType::KANA);
+            fuchsia_input_report::wire::LedType::SCROLL_LOCK);
+  EXPECT_EQ(descriptor.keyboard().output().leds()[3], fuchsia_input_report::wire::LedType::COMPOSE);
+  EXPECT_EQ(descriptor.keyboard().output().leds()[4], fuchsia_input_report::wire::LedType::KANA);
 }
 
 // This test double checks that we don't double count keys that are included twice.
@@ -213,13 +211,13 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
   fidl::FidlAllocator allocator;
-  fidl::VectorView<hid_input_report::fuchsia_input_report::wire::LedType> led_view(allocator, 2);
-  led_view[0] = hid_input_report::fuchsia_input_report::wire::LedType::NUM_LOCK;
-  led_view[1] = hid_input_report::fuchsia_input_report::wire::LedType::SCROLL_LOCK;
+  fidl::VectorView<fuchsia_input_report::wire::LedType> led_view(allocator, 2);
+  led_view[0] = fuchsia_input_report::wire::LedType::NUM_LOCK;
+  led_view[1] = fuchsia_input_report::wire::LedType::SCROLL_LOCK;
   // Build the FIDL table.
-  hid_input_report::fuchsia_input_report::wire::KeyboardOutputReport fidl_keyboard(allocator);
+  fuchsia_input_report::wire::KeyboardOutputReport fidl_keyboard(allocator);
   fidl_keyboard.set_enabled_leds(allocator, std::move(led_view));
-  hid_input_report::fuchsia_input_report::wire::OutputReport fidl_report(allocator);
+  fuchsia_input_report::wire::OutputReport fidl_report(allocator);
   fidl_report.set_keyboard(allocator, std::move(fidl_keyboard));
   uint8_t report_data;
   size_t out_report_size;

@@ -545,13 +545,13 @@ TEST_F(HidDevTest, KeyboardOutputReportTest) {
   auto sync_client = fuchsia_input_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
   // Make an output report.
   fidl::FidlAllocator allocator;
-  fidl::VectorView<hid_input_report::fuchsia_input_report::wire::LedType> led_view(allocator, 2);
-  led_view[0] = hid_input_report::fuchsia_input_report::wire::LedType::NUM_LOCK;
-  led_view[1] = hid_input_report::fuchsia_input_report::wire::LedType::SCROLL_LOCK;
-  hid_input_report::fuchsia_input_report::wire::KeyboardOutputReport fidl_keyboard(allocator);
+  fidl::VectorView<fuchsia_input_report::wire::LedType> led_view(allocator, 2);
+  led_view[0] = fuchsia_input_report::wire::LedType::NUM_LOCK;
+  led_view[1] = fuchsia_input_report::wire::LedType::SCROLL_LOCK;
+  fuchsia_input_report::wire::KeyboardOutputReport fidl_keyboard(allocator);
   fidl_keyboard.set_enabled_leds(allocator, std::move(led_view));
 
-  hid_input_report::fuchsia_input_report::wire::OutputReport output_report(allocator);
+  fuchsia_input_report::wire::OutputReport output_report(allocator);
   output_report.set_keyboard(allocator, std::move(fidl_keyboard));
   // Send the report.
   fuchsia_input_report::InputDevice::ResultOf::SendOutputReport response =
