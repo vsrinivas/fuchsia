@@ -8,6 +8,8 @@ import("//build/go/go_test.gni")
 
 go_library("lib") {
   sources = [
+    "logprocessing.go",
+    "logprocessing_test.go",
     "mass_test_failure_check.go",
     "mass_test_failure_check_test.go",
     "no_tests_ran_check.go",
@@ -22,6 +24,7 @@ go_library("lib") {
     "types.go",
   ]
   deps = [
+    "//third_party/golibs:golang.org/x/sync",
     "//tools/bootserver:bootserverconstants",
     "//tools/botanist:constants",
     "//tools/lib/syslog:constants",

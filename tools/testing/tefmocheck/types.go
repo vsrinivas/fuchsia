@@ -8,11 +8,12 @@ import "go.fuchsia.dev/fuchsia/tools/testing/runtests"
 
 // TestingOutputs are the outputs of a testing Swarming task that are analyzed by a FailureModeCheck.
 type TestingOutputs struct {
-	TestSummary     *runtests.TestSummary
-	SwarmingSummary *SwarmingTaskSummary
-	SerialLog       []byte
-	SwarmingOutput  []byte
-	Syslog          []byte
+	TestSummary           *runtests.TestSummary
+	SwarmingSummary       *SwarmingTaskSummary
+	SerialLog             []byte
+	SwarmingOutput        []byte
+	SwarmingOutputPerTest []TestLog
+	Syslog                []byte
 }
 
 type logType string

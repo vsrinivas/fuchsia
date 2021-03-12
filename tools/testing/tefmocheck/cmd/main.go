@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path/filepath"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/tefmocheck"
@@ -94,10 +95,33 @@ func main() {
 	}
 
 	var swarmingOutput []byte
+	var swarmingOutputPerTest []tefmocheck.TestLog
 	if *swarmingOutputPath != "" {
 		swarmingOutput, err = ioutil.ReadFile(*swarmingOutputPath)
 		if err != nil {
 			log.Fatalf("failed to read swarming output from %s: %e", *swarmingOutputPath, err)
+		}
+		var perTestLogDir string
+		if *outputsDir != "" {
+			perTestLogDir = filepath.Join(*outputsDir, "per-test", filepath.Base(*swarmingOutputPath))
+		}
+		swarmingOutputPerTest, err = tefmocheck.SplitTestLogs(swarmingOutput, perTestLogDir)
+		if err != nil {
+			log.Fatalf("failed to split swarming output into per-test logs: %s", err)
+		}
+	}
+	if *outputsDir != "" {
+		for i := range swarmingOutputPerTest {
+			test := &inputSummary.Tests[i]
+			testLog := &swarmingOutputPerTest[i]
+			if test.Name != testLog.TestName {
+				log.Fatalf("swarmingOutputPerTest[%d].TestName != inputSummary.Tests[%d] (%q vs %q)", i, i, testLog.TestName, test.Name)
+			}
+			relPath, err := filepath.Rel(*outputsDir, testLog.FilePath)
+			if err != nil {
+				log.Fatal(err)
+			}
+			test.OutputFiles = append(test.OutputFiles, relPath)
 		}
 	}
 
@@ -110,11 +134,12 @@ func main() {
 	}
 
 	testingOutputs := tefmocheck.TestingOutputs{
-		TestSummary:     inputSummary,
-		SwarmingSummary: swarmingSummary,
-		SerialLog:       serialLog,
-		SwarmingOutput:  swarmingOutput,
-		Syslog:          syslog,
+		TestSummary:           inputSummary,
+		SwarmingSummary:       swarmingSummary,
+		SerialLog:             serialLog,
+		SwarmingOutput:        swarmingOutput,
+		SwarmingOutputPerTest: swarmingOutputPerTest,
+		Syslog:                syslog,
 	}
 
 	// These should be ordered from most specific to least specific. If an earlier
