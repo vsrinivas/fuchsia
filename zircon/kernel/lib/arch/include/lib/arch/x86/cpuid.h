@@ -656,6 +656,7 @@ struct CpuidMaximumExtendedLeaf
 // "extended features" - this being the extended leaf range - with leaf 0x7.
 //
 // TODO(fxbug.dev/68404): Pass hwreg::EnableAsmGeneration when safe to do so.
+
 struct CpuidAmdFeatureFlagsC
     : public CpuidIoValueBase<CpuidAmdFeatureFlagsC, 0x8000'0001, 0x0, CpuidIo::kEcx> {
   // Bits [31:28] are reserved.
@@ -684,6 +685,41 @@ struct CpuidAmdFeatureFlagsC
   DEF_BIT(2, svm);
   DEF_BIT(1, cmp_legacy);
   DEF_BIT(0, lahf_sahf);
+};
+
+struct CpuidAmdFeatureFlagsD
+    : public CpuidIoValueBase<CpuidAmdFeatureFlagsD, 0x8000'0001, 0x0, CpuidIo::kEdx> {
+  DEF_BIT(31, has_3dnow);
+  DEF_BIT(30, has_3dnow_ext);
+  DEF_BIT(29, lm);
+  // Bit 28 is reserved.
+  DEF_BIT(27, rdtscp);
+  DEF_BIT(26, page1gb);
+  DEF_BIT(25, ffxsr);
+  DEF_BIT(24, fxsr);
+  DEF_BIT(23, mmx);
+  DEF_BIT(22, mmx_ext);
+  // Bit 21 is reserved.
+  DEF_BIT(20, nx);
+  // Bits [19:18] are reserved.
+  DEF_BIT(17, pse36);
+  DEF_BIT(16, pat);
+  DEF_BIT(15, cmov);
+  DEF_BIT(14, mca);
+  DEF_BIT(13, pge);
+  DEF_BIT(12, mtrr);
+  DEF_BIT(11, syscall_sysret);
+  // Bit 10 is reserved.
+  DEF_BIT(9, apic);
+  DEF_BIT(8, cmpxchg8b);
+  DEF_BIT(7, mce);
+  DEF_BIT(6, pae);
+  DEF_BIT(5, msr);
+  DEF_BIT(4, tsc);
+  DEF_BIT(3, pse);
+  DEF_BIT(2, de);
+  DEF_BIT(1, vme);
+  DEF_BIT(0, fpu);
 };
 
 //---------------------------------------------------------------------------//

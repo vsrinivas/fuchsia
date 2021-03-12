@@ -7,10 +7,12 @@
 #ifndef ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_INCLUDE_LIB_PAGE_TABLE_ARCH_X86_BUILDER_H_
 #define ZIRCON_KERNEL_PHYS_LIB_PAGE_TABLE_INCLUDE_LIB_PAGE_TABLE_ARCH_X86_BUILDER_H_
 
+#include <lib/arch/x86/cpuid.h>
 #include <lib/page-table/builder-interface.h>
 #include <zircon/types.h>
 
 #include <optional>
+#include <utility>
 
 namespace page_table::x86 {
 
@@ -18,22 +20,13 @@ class PageTableNode;
 
 class AddressSpaceBuilder final : public AddressSpaceBuilderInterface {
  public:
-  // Options for the builder.
-  struct Options {
-    // If true, use 1 GiB page mappings when possible. Only supported on some hardware.
-    bool allow_1gib_pages = false;
-
-    // Return default options.
-    //
-    // We can't use a default constructor due to LLVM bug
-    // https://bugs.llvm.org/show_bug.cgi?id=36684
-    static Options Default() { return Options{}; }
-  };
-
-  // Create a new AddressSpace builder, using the given allocator.
-  static std::optional<AddressSpaceBuilder> Create(
-      MemoryManager& allocator,
-      const AddressSpaceBuilder::Options& options = AddressSpaceBuilder::Options::Default());
+  // Create a new AddressSpaceBuilder, deriving options suitable for the
+  // system described by the given CpuidIoProvider.
+  template <typename CpuidIoProvider>
+  static std::optional<AddressSpaceBuilder> Create(MemoryManager& allocator, CpuidIoProvider&& io) {
+    bool use_1gib_mappings = io.template Read<arch::CpuidAmdFeatureFlagsD>().page1gb() != 0;
+    return Create(allocator, /*use_1gib_mappings=*/use_1gib_mappings);
+  }
 
   // x86_64-specific page table root.
   PageTableNode* root_node() { return pml4_; }
@@ -43,13 +36,19 @@ class AddressSpaceBuilder final : public AddressSpaceBuilderInterface {
   Paddr root_paddr() override { return allocator_.PtrToPhys(reinterpret_cast<std::byte*>(pml4_)); }
 
  private:
+  // Create a new AddressSpaceBuilder, using the given allocator and options.
+  static std::optional<AddressSpaceBuilder> Create(MemoryManager& allocator,
+                                                   bool use_1gib_mappings);
+
   explicit AddressSpaceBuilder(MemoryManager& allocator, PageTableNode* pml4,
-                               const Options& options)
-      : pml4_(pml4), allocator_(allocator), options_(options) {}
+                               bool use_1gib_mappings)
+      : pml4_(pml4), allocator_(allocator), use_1gib_mappings_(use_1gib_mappings) {}
 
   PageTableNode* pml4_;
   MemoryManager& allocator_;
-  Options options_;
+
+  // Use 1 GiB page mappings when possible. Not supported on all hardware.
+  bool use_1gib_mappings_;
 };
 
 }  // namespace page_table::x86

@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/system.h>
 #include <lib/page-table/builder.h>
 #include <lib/page-table/types.h>
@@ -118,7 +119,7 @@ void CreateBootstapPageTable(page_table::MemoryManager& allocator,
          max_addr, (max_addr - min_addr) / 1024 / 1024);
 
   // Create a page table data structure.
-  ktl::optional builder = page_table::AddressSpaceBuilder::Create(allocator);
+  ktl::optional builder = page_table::AddressSpaceBuilder::Create(allocator, arch::BootCpuidIo{});
   if (!builder.has_value()) {
     ZX_PANIC("Failed to create an AddressSpaceBuilder.");
   }

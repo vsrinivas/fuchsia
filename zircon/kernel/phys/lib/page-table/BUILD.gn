@@ -29,6 +29,7 @@ zx_library("page-table") {
 
   deps = [
     "//src/zircon/lib/zircon",
+    "//zircon/kernel/lib/arch",
     "//zircon/system/ulib/fbl",
     "//zircon/system/ulib/hwreg",
   ]
@@ -42,6 +43,9 @@ zx_library("page-table") {
 
     # <page-table/types.h> has #include <fbl/strong_int.h>.
     "//zircon/system/ulib/fbl:headers",
+
+    # <page-table/arch/x86/builder.h> has #include <lib/arch/x86/cpuid.h>.
+    "//zircon/kernel/lib/arch:headers",
   ]
 }
 
@@ -57,6 +61,8 @@ test("page-table-test") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+    "//zircon/kernel/lib/arch",
+    "//zircon/kernel/lib/arch/testing",
     "//zircon/system/ulib/hwreg",
   ]
 }

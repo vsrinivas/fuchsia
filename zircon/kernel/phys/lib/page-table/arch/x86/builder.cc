@@ -30,8 +30,8 @@ constexpr bool RegionMappableWithPageSize(Vaddr vaddr, Paddr paddr, size_t size,
 //
 // All arguments must be aligned to at least the smallet page size.
 constexpr PageSize GetLargestPageSize(Vaddr vaddr, Paddr paddr, size_t size,
-                                      bool allow_1gib_pages) {
-  if (allow_1gib_pages && RegionMappableWithPageSize(vaddr, paddr, size, kPageSize1GiB)) {
+                                      bool use_1gib_mappings) {
+  if (use_1gib_mappings && RegionMappableWithPageSize(vaddr, paddr, size, kPageSize1GiB)) {
     return PageSize::k1GiB;
   }
   if (RegionMappableWithPageSize(vaddr, paddr, size, kPageSize2MiB)) {
@@ -42,14 +42,15 @@ constexpr PageSize GetLargestPageSize(Vaddr vaddr, Paddr paddr, size_t size,
 
 }  // namespace
 
-std::optional<AddressSpaceBuilder> AddressSpaceBuilder::Create(
-    MemoryManager& allocator, const AddressSpaceBuilder::Options& options) {
+std::optional<AddressSpaceBuilder> AddressSpaceBuilder::Create(MemoryManager& allocator,
+                                                               bool use_1gib_mappings) {
   void* top_level = allocator.Allocate(sizeof(PageTableNode), alignof(PageTableNode));
   if (top_level == nullptr) {
     return std::nullopt;
   }
   new (top_level) PageTableNode();
-  return AddressSpaceBuilder(allocator, reinterpret_cast<PageTableNode*>(top_level), options);
+  return AddressSpaceBuilder(allocator, reinterpret_cast<PageTableNode*>(top_level),
+                             /*use_1gib_mappings=*/use_1gib_mappings);
 }
 
 zx_status_t AddressSpaceBuilder::MapRegion(Vaddr virt_start, Paddr phys_start, uint64_t size) {
@@ -90,7 +91,7 @@ zx_status_t AddressSpaceBuilder::MapRegion(Vaddr virt_start, Paddr phys_start, u
   while (size > 0) {
     // Get the biggest page size we can use.
     PageSize page_size = GetLargestPageSize(virt_start, phys_start, size,
-                                            /*allow_1gib_pages=*/options_.allow_1gib_pages);
+                                            /*use_1gib_mappings=*/use_1gib_mappings_);
 
     // Map it in.
     if (zx_status_t result = MapPage(allocator_, pml4_, virt_start, phys_start, page_size);

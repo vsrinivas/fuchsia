@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/arch/testing/x86/fake-cpuid.h>
 #include <lib/page-table/arch/x86/builder.h>
 #include <lib/page-table/types.h>
 
@@ -15,12 +16,23 @@
 #include "zircon/kernel/phys/lib/page-table/testing/test_util.h"
 
 namespace page_table::x86 {
+namespace {
+
+// Return a CPUID that contains all features used by the builder.
+auto FullFeatureCpuid() {
+  return arch::testing::FakeCpuidIo(arch::testing::X86Microprocessor::kIntelXeonE5_2690_V4);
+}
+
+// Return a CPUID that does not support 1 GiB page mappins.
+auto No1GibMappingsCpuid() {
+  return arch::testing::FakeCpuidIo(arch::testing::X86Microprocessor::kIntelAtom330);
+}
 
 TEST(Builder, Empty) {
   TestMemoryManager allocator;
 
   // Create an empty builder.
-  std::optional builder = AddressSpaceBuilder::Create(allocator);
+  std::optional builder = AddressSpaceBuilder::Create(allocator, FullFeatureCpuid());
   ASSERT_TRUE(builder.has_value());
 
   // Lookups won't resolve any pages, but should still succeed.
@@ -29,7 +41,7 @@ TEST(Builder, Empty) {
 
 TEST(Builder, InvalidArgs) {
   TestMemoryManager allocator;
-  std::optional builder = AddressSpaceBuilder::Create(allocator);
+  std::optional builder = AddressSpaceBuilder::Create(allocator, FullFeatureCpuid());
   ASSERT_TRUE(builder.has_value());
 
   // Unaligned vaddr / paddr.
@@ -52,7 +64,7 @@ TEST(Builder, SinglePage) {
   TestMemoryManager allocator;
 
   // Create a builder, and map a single page.
-  std::optional builder = AddressSpaceBuilder::Create(allocator);
+  std::optional builder = AddressSpaceBuilder::Create(allocator, FullFeatureCpuid());
   ASSERT_TRUE(builder.has_value());
   EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0xaaaa'0000), kPageSize4KiB), ZX_OK);
 
@@ -66,7 +78,7 @@ TEST(Builder, MultiplePages) {
   constexpr int kNumPages = 13;
 
   // Create a builder, and map in a range of pages.
-  std::optional builder = AddressSpaceBuilder::Create(allocator);
+  std::optional builder = AddressSpaceBuilder::Create(allocator, FullFeatureCpuid());
   ASSERT_TRUE(builder.has_value());
   EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0xaaaa'0000), kPageSize4KiB * kNumPages), ZX_OK);
 
@@ -84,8 +96,7 @@ TEST(Builder, LargePage) {
   TestMemoryManager allocator;
 
   // Create a builder, and map a large region with 1:1 phys/virt.
-  std::optional builder = AddressSpaceBuilder::Create(
-      allocator, AddressSpaceBuilder::Options{.allow_1gib_pages = true});
+  std::optional builder = AddressSpaceBuilder::Create(allocator, FullFeatureCpuid());
   ASSERT_TRUE(builder.has_value());
   EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0), kPageSize1GiB * 4), ZX_OK);
 
@@ -101,8 +112,7 @@ TEST(Builder, DisableGigabyteMappings) {
   TestMemoryManager allocator;
 
   // Create a builder, and map a large region with 1:1 phys/virt.
-  std::optional builder = AddressSpaceBuilder::Create(
-      allocator, AddressSpaceBuilder::Options{.allow_1gib_pages = false});
+  std::optional builder = AddressSpaceBuilder::Create(allocator, No1GibMappingsCpuid());
   ASSERT_TRUE(builder.has_value());
   EXPECT_EQ(builder->MapRegion(Vaddr(0), Paddr(0), kPageSize1GiB * 4), ZX_OK);
 
@@ -113,4 +123,6 @@ TEST(Builder, DisableGigabyteMappings) {
   EXPECT_TRUE(result->entry.is_page(result->level));
   EXPECT_EQ(result->level, 1);  // 2 MiB.
 }
+
+}  // namespace
 }  // namespace page_table::x86
