@@ -20,6 +20,7 @@ import (
 
 // stringInLogCheck checks if String is found in the log named LogName.
 type stringInLogCheck struct {
+	// String that will be searched for.
 	String string
 	// OnlyOnStates will cause Check() to return false if the swarming task state doesn't match with one of these states.
 	OnlyOnStates []string
@@ -29,8 +30,10 @@ type stringInLogCheck struct {
 	ExceptBlocks []*logBlock
 	// ExceptSuccessfulSwarmingResult will cause Check() to return false if the Swarming task succeeded.
 	ExceptSuccessfulSwarmingResult bool
-	Type                           logType
-	swarmingResult                 *SwarmingRpcsTaskResult
+	// Type of log that will be checked.
+	Type           logType
+	swarmingResult *SwarmingRpcsTaskResult
+	testName       string
 }
 
 func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
@@ -48,6 +51,16 @@ func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 	if len(c.OnlyOnStates) != 0 && !matchedState {
 		return false
 	}
+
+	if c.Type == swarmingOutputType {
+		for _, testLog := range to.SwarmingOutputPerTest {
+			if c.checkBytes(testLog.Bytes) {
+				c.testName = testLog.TestName
+				return true
+			}
+		}
+	}
+
 	var toCheck []byte
 	switch c.Type {
 	case serialLogType:
@@ -57,6 +70,11 @@ func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 	case syslogType:
 		toCheck = to.Syslog
 	}
+
+	return c.checkBytes(toCheck)
+}
+
+func (c *stringInLogCheck) checkBytes(toCheck []byte) bool {
 	if c.ExceptString != "" && bytes.Contains(toCheck, []byte(c.ExceptString)) {
 		return false
 	}
@@ -106,7 +124,8 @@ func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 }
 
 func (c *stringInLogCheck) Name() string {
-	return path.Join("string_in_log", string(c.Type), strings.ReplaceAll(c.String, " ", "_"))
+	return path.Join("string_in_log", string(c.Type), strings.ReplaceAll(c.String, " ", "_"), c.testName)
+
 }
 
 func (c *stringInLogCheck) DebugText() string {

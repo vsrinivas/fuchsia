@@ -6,6 +6,7 @@ package tefmocheck
 
 import (
 	"fmt"
+	"path"
 	"testing"
 )
 
@@ -26,10 +27,10 @@ func TestStringInLogCheck(t *testing.T) {
 		ExceptString:                   exceptString,
 		ExceptBlocks:                   []*logBlock{exceptBlock, exceptBlock2},
 		ExceptSuccessfulSwarmingResult: true,
-		Type:                           serialLogType,
+		Type:                           swarmingOutputType,
 	}
 	gotName := c.Name()
-	wantName := "string_in_log/serial_log.txt/KILLER_STRING"
+	wantName := "string_in_log/infra_and_test_std_and_klog.txt/KILLER_STRING"
 	if gotName != wantName {
 		t.Errorf("c.Name() returned %q, want %q", gotName, wantName)
 	}
@@ -40,60 +41,57 @@ func TestStringInLogCheck(t *testing.T) {
 		states              []string
 		swarmingResultState string
 		shouldMatch         bool
+		wantName            string
 	}{
 		{
-			name: "should match if string in serial",
+			name: "should match simple",
 			testingOutputs: TestingOutputs{
-				SerialLog: []byte(fmt.Sprintf("PREFIX %s SUFFIX", killerString)),
+				SwarmingOutput: []byte(fmt.Sprintf("PREFIX %s SUFFIX", killerString)),
 			},
 			shouldMatch: true,
 		},
 		{
 			name: "exceptSuccessfulSwarmingResult",
 			testingOutputs: TestingOutputs{
-				SerialLog: []byte(fmt.Sprintf("PREFIX %s SUFFIX", killerString)),
+				SwarmingOutput: []byte(fmt.Sprintf("PREFIX %s SUFFIX", killerString)),
 			},
 			swarmingResultState: "COMPLETED",
-			shouldMatch:         false,
 		}, {
 			name: "should not match if string in other log",
 			testingOutputs: TestingOutputs{
-				SerialLog:      []byte("gentle string"),
-				SwarmingOutput: []byte(killerString),
+				SerialLog:      []byte(killerString),
+				SwarmingOutput: []byte("gentle string"),
 			},
-			shouldMatch: false,
 		}, {
 			name: "should not match if except_string in log",
 			testingOutputs: TestingOutputs{
-				SerialLog: []byte(killerString + exceptString),
+				SwarmingOutput: []byte(killerString + exceptString),
 			},
-			shouldMatch: false,
 		}, {
 			name: "should match if string before except_block",
 			testingOutputs: TestingOutputs{
-				SerialLog: []byte(fmt.Sprintf("PREFIX %s ... %s output %s SUFFIX", killerString, exceptBlock.startString, exceptBlock.endString)),
+				SwarmingOutput: []byte(fmt.Sprintf("PREFIX %s ... %s output %s SUFFIX", killerString, exceptBlock.startString, exceptBlock.endString)),
 			},
 			shouldMatch: true,
 		}, {
 			name: "should match if string after except_block",
 			testingOutputs: TestingOutputs{
-				SerialLog: []byte(fmt.Sprintf("PREFIX %s output %s ... %s SUFFIX", exceptBlock.startString, exceptBlock.endString, killerString)),
+				SwarmingOutput: []byte(fmt.Sprintf("PREFIX %s output %s ... %s SUFFIX", exceptBlock.startString, exceptBlock.endString, killerString)),
 			},
 			shouldMatch: true,
 		}, {
 			name: "should not match if string in except_block",
 			testingOutputs: TestingOutputs{
-				SerialLog: []byte(
+				SwarmingOutput: []byte(
 					fmt.Sprintf(
 						"PREFIX %s %s output %s SUFFIX %s %s %s",
 						exceptBlock.startString, killerString, exceptBlock.endString,
 						exceptBlock2.startString, killerString, exceptBlock2.endString)),
 			},
-			shouldMatch: false,
 		}, {
 			name: "should match if string in both except_block and outside except_block",
 			testingOutputs: TestingOutputs{
-				SerialLog: []byte(fmt.Sprintf(
+				SwarmingOutput: []byte(fmt.Sprintf(
 					"PREFIX %s ... %s %s %s %s %s %s SUFFIX",
 					killerString, exceptBlock.startString, killerString, exceptBlock.endString,
 					exceptBlock2.startString, killerString, exceptBlock2.endString,
@@ -103,7 +101,7 @@ func TestStringInLogCheck(t *testing.T) {
 		}, {
 			name: "should match if swaring task state is in expected states",
 			testingOutputs: TestingOutputs{
-				SerialLog: []byte(killerString),
+				SwarmingOutput: []byte(killerString),
 			},
 			states:              []string{"STATE_1", "STATE_2"},
 			swarmingResultState: "STATE_1",
@@ -111,11 +109,22 @@ func TestStringInLogCheck(t *testing.T) {
 		}, {
 			name: "should not match if swaring task state is not in expected states",
 			testingOutputs: TestingOutputs{
-				SerialLog: []byte(killerString),
+				SwarmingOutput: []byte(killerString),
 			},
 			states:              []string{"STATE_1", "STATE_2"},
 			swarmingResultState: "NO_STATE",
-			shouldMatch:         false,
+		},
+		{
+			name: "should match per test swarming output",
+			testingOutputs: TestingOutputs{
+				SwarmingOutputPerTest: []TestLog{{
+					TestName: "foo-test",
+					Bytes:    []byte(killerString),
+				},
+				},
+			},
+			shouldMatch: true,
+			wantName:    path.Join(wantName, "foo-test"),
 		},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
@@ -124,6 +133,10 @@ func TestStringInLogCheck(t *testing.T) {
 			c.OnlyOnStates = tc.states
 			if c.Check(&tc.testingOutputs) != tc.shouldMatch {
 				t.Errorf("c.Check(%q) returned %v, expected %v", string(tc.testingOutputs.SerialLog), !tc.shouldMatch, tc.shouldMatch)
+			}
+			gotName := c.Name()
+			if tc.wantName != "" && gotName != tc.wantName {
+				t.Errorf("c.Name() returned %q, want %q", gotName, tc.wantName)
 			}
 			c.DebugText() // minimal coverage, check it doesn't crash.
 		})
