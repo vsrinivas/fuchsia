@@ -212,19 +212,15 @@ TEST(KeyboardTest, BootKeyboardOutputReport) {
   hid_input_report::Keyboard keyboard;
   EXPECT_EQ(hid_input_report::ParseResult::kOk,
             keyboard.ParseReportDescriptor(dev_desc->report[0]));
-  std::array<hid_input_report::fuchsia_input_report::wire::LedType, 2> led_array;
-  led_array[0] = hid_input_report::fuchsia_input_report::wire::LedType::NUM_LOCK;
-  led_array[1] = hid_input_report::fuchsia_input_report::wire::LedType::SCROLL_LOCK;
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<hid_input_report::fuchsia_input_report::wire::LedType> led_view(allocator, 2);
+  led_view[0] = hid_input_report::fuchsia_input_report::wire::LedType::NUM_LOCK;
+  led_view[1] = hid_input_report::fuchsia_input_report::wire::LedType::SCROLL_LOCK;
   // Build the FIDL table.
-  auto led_view = fidl::unowned_vec(led_array);
-  hid_input_report::fuchsia_input_report::wire::KeyboardOutputReport::UnownedBuilder
-      keyboard_builder;
-  keyboard_builder.set_enabled_leds(fidl::unowned_ptr(&led_view));
-  hid_input_report::fuchsia_input_report::wire::KeyboardOutputReport fidl_keyboard =
-      keyboard_builder.build();
-  hid_input_report::fuchsia_input_report::wire::OutputReport::UnownedBuilder builder;
-  builder.set_keyboard(fidl::unowned_ptr(&fidl_keyboard));
-  hid_input_report::fuchsia_input_report::wire::OutputReport fidl_report = builder.build();
+  hid_input_report::fuchsia_input_report::wire::KeyboardOutputReport fidl_keyboard(allocator);
+  fidl_keyboard.set_enabled_leds(allocator, std::move(led_view));
+  hid_input_report::fuchsia_input_report::wire::OutputReport fidl_report(allocator);
+  fidl_report.set_keyboard(allocator, std::move(fidl_keyboard));
   uint8_t report_data;
   size_t out_report_size;
   auto result =
