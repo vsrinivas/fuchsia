@@ -479,6 +479,8 @@ int main(int argc, char** argv) {
 
   outgoing.root_dir()->AddEntry("dev",
                                 fbl::MakeRefCounted<fs::RemoteDir>(system_instance.CloneFs("dev")));
+  outgoing.root_dir()->AddEntry("diagnostics", fbl::MakeRefCounted<fs::RemoteDir>(
+                                                   system_instance.CloneFs("dev/diagnostics")));
   outgoing.ServeFromStartupInfo();
 
   coordinator.set_running(true);

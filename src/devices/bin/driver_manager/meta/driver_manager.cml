@@ -1,5 +1,8 @@
 {
-    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
     program: {
         runner: "elf",
         binary: "bin/driver_manager",
@@ -24,13 +27,6 @@
             directory: "dev",
             rights: [ "rw*" ],
             path: "/dev",
-        },
-
-        // Diagnostics directory for archivist
-        {
-            directory: "diagnostics",
-            rights: [ "connect" ],
-            path: "/dev/diagnostics",
         },
         {
             protocol: [
@@ -112,11 +108,6 @@
         {
             directory: "dev",
             from: "self",
-        },
-        {
-            directory: "diagnostics",
-            from: "self",
-            to: "framework",
         },
         {
             protocol: [
