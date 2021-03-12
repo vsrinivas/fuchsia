@@ -18,8 +18,8 @@ int main(int argc, char** argv) {
   zx_time_t start = zx_clock_get_monotonic();
 
   zx_handle_t proc = ZX_HANDLE_INVALID;
-  zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL,
-                                  argv[1], (const char* const*)argv + 1, &proc);
+  zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, argv[1],
+                                  (const char* const*)argv + 1, &proc);
 
   if (status != ZX_OK) {
     fprintf(stderr, "error: Failed to spawn '%s': %d (%s)\n", argv[1], status,
@@ -27,20 +27,18 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  status =
-      zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
+  status = zx_object_wait_one(proc, ZX_PROCESS_TERMINATED, ZX_TIME_INFINITE, NULL);
 
   zx_time_t stop = zx_clock_get_monotonic();
 
   if (status != ZX_OK) {
-    fprintf(stderr, "error: Failed to wait for process termination: %d (%s)\n",
-            status, zx_status_get_string(status));
+    fprintf(stderr, "error: Failed to wait for process termination: %d (%s)\n", status,
+            zx_status_get_string(status));
     return 1;
   }
 
   zx_info_process_t proc_info;
-  status = zx_object_get_info(proc, ZX_INFO_PROCESS, &proc_info,
-                              sizeof(proc_info), NULL, NULL);
+  status = zx_object_get_info(proc, ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), NULL, NULL);
   zx_handle_close(proc);
 
   if (status != ZX_OK) {
@@ -58,5 +56,5 @@ int main(int argc, char** argv) {
   uint64_t usecs = (delta - secs * ZX_SEC(1)) / ZX_USEC(1);
 
   printf("real\t%ld.%06lds\n", secs, usecs);
-  return proc_info.return_code;
+  return (int)proc_info.return_code;
 }
