@@ -69,20 +69,10 @@ func TestRunChecks(t *testing.T) {
 	outputsDir := t.TempDir()
 	want := []runtests.TestDetails{
 		{
-			Name:                 path.Join(checkTestNamePrefix, falseCheck.Name()),
-			Result:               runtests.TestSuccess,
-			IsTestingFailureMode: true,
-		},
-		{
 			Name:                 path.Join(checkTestNamePrefix, trueCheck.Name()),
 			Result:               runtests.TestFailure,
 			IsTestingFailureMode: true,
 			OutputFiles:          []string{debugPathForCheck(trueCheck)},
-		},
-		{
-			Name:                 path.Join(checkTestNamePrefix, panicCheck.Name()),
-			Result:               runtests.TestSuccess,
-			IsTestingFailureMode: true,
 		},
 	}
 	startTime := time.Now()

@@ -23,53 +23,48 @@ func debugPathForCheck(check FailureModeCheck) string {
 }
 
 // RunChecks runs the given checks on the given TestingOutputs.
-// It always returns the same list of tests, with one corresponding to each check.
 // A failed test means the Check() returned true. After the first failed test, all
-// later Checks() will be skipped. Passed tests will be returned for each skipped check.
-// Rationale: We want these tests to be useful for bucketing  via Flake Fetcher.
-// In order for our infrastructure to consider a test as flaky, we need
-// it to sometimes pass and sometimes fail, which means we should always return a test
-// even if it passed or was skipped.
-// In order for these bugs to be useful, we want a failure to be associated only with the most
-// specific, helpful failure modes, which then get routed to specific bugs.
+// later Checks() will be skipped. Tests will not be returned for skipped or passed checks.
+// Rationale: In order for these bugs to be useful, we want a failure to be associated only with the most
+// specific, helpful failure modes, which then get routed to specific bugs. Hence only a single failure
+// is returned.
+// Rationale for not returning passed tests:
+// We want to be able to add many checks without cluttering the output test summary
+// with noise. Our flake detection system will identify a test that appears a a failure on
+// one run of a swarming task, and then disappears on other runs of that same task as a flake.
 func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string) ([]runtests.TestDetails, error) {
 	var checkTests []runtests.TestDetails
-	anyFailed := false
 	for _, check := range checks {
-		// We run more specific checks first, so it's not useful to run any checks
-		// once we have our first failure.
+		if failed := check.Check(to); !failed {
+			continue
+		}
 		testDetails := runtests.TestDetails{
 			Name:                 path.Join(checkTestNamePrefix, check.Name()),
 			IsTestingFailureMode: true,
 			// Specify an empty slice so it gets serialized to an empty JSON
 			// array instead of null.
 			Cases:     []testparser.TestCaseResult{},
-			StartTime: time.Now(),
+			Result:    runtests.TestFailure,
+			StartTime: time.Now(), // needed by ResultDB
 		}
-		if anyFailed {
-			testDetails.Result = runtests.TestSuccess
-		} else if anyFailed = check.Check(to); anyFailed {
-			testDetails.Result = runtests.TestFailure
-			testDetails.DurationMillis = time.Now().Sub(testDetails.StartTime).Milliseconds()
-			if len(outputsDir) > 0 {
-				outputFile := debugPathForCheck(check)
-				testDetails.OutputFiles = []string{outputFile}
-				outputFileAbsPath := filepath.Join(outputsDir, outputFile)
-				if err := os.MkdirAll(filepath.Dir(outputFileAbsPath), 0777); err != nil {
-					return nil, err
-				}
-				debugText := fmt.Sprintf(
-					"This is a synthetic test that was produced by the tefmocheck tool during post-processing of test results. See https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/testing/tefmocheck/README.md\n%s",
-					check.DebugText())
-				if err := ioutil.WriteFile(outputFileAbsPath, []byte(debugText), 0666); err != nil {
-					return nil, err
-				}
+		if len(outputsDir) > 0 {
+			outputFile := debugPathForCheck(check)
+			testDetails.OutputFiles = []string{outputFile}
+			outputFileAbsPath := filepath.Join(outputsDir, outputFile)
+			if err := os.MkdirAll(filepath.Dir(outputFileAbsPath), 0777); err != nil {
+				return nil, err
 			}
-		} else {
-			testDetails.Result = runtests.TestSuccess
-			testDetails.DurationMillis = time.Now().Sub(testDetails.StartTime).Milliseconds()
+			debugText := fmt.Sprintf(
+				"This is a synthetic test that was produced by the tefmocheck tool during post-processing of test results. See https://fuchsia.googlesource.com/fuchsia/+/HEAD/tools/testing/tefmocheck/README.md\n%s",
+				check.DebugText())
+			if err := ioutil.WriteFile(outputFileAbsPath, []byte(debugText), 0666); err != nil {
+				return nil, err
+			}
 		}
 		checkTests = append(checkTests, testDetails)
+		// We run more specific checks first, so it's not useful to run any checks
+		// once we have our first failure.
+		break
 	}
 	return checkTests, nil
 }
