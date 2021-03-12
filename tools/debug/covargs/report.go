@@ -210,7 +210,14 @@ func convertFile(file llvm.File, base string, mapping *DiffMapping) (*codecovera
 		return nil, nil
 	}
 
-	rel, err := filepath.Rel(base, file.Filename)
+	// The filename is expected to be relative to the current working
+	// directory. However, in the report, we need to make it relative to the
+	// base directory of the source tree.
+	abs, err := filepath.Abs(file.Filename)
+	if err != nil {
+		return nil, err
+	}
+	rel, err := filepath.Rel(base, abs)
 	if err != nil {
 		return nil, err
 	}
