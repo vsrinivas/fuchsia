@@ -1,0 +1,84 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+import("//build/packages/prebuilt_package_with_flavors.gni")
+import("//src/chromium/build_args.gni")
+
+# Generates a prebuilt_package_with_flavors target which allows
+# choosing which flavor to use for Chromium packages.
+#
+# Parameters:
+#   prebuilt_archive_base_path: Base path for the prebuilt archive.
+#   debug_archive_base_path: Base path for the debug archive.
+#   custom_package_path: The path to the package inside a custom chromium
+#       build output directory.
+#   selections (optional): Flavor choice. This allows flavor to be changed based
+#       on other build args.
+
+template("generate_flavors") {
+  prebuilt_package_with_flavors("${target_name}_pkg") {
+    forward_variables_from(invoker, [ "selections" ])
+    package_name = invoker.target_name
+    visibility = [ rebase_path(":${invoker.target_name}") ]
+    default = "release"
+    flavors = [
+      {
+        name = "release"
+        archive = "${invoker.prebuilt_archive_base_path}/arch/$target_cpu/${invoker.target_name}.far"
+        production_safe = true
+        debug_archive = "${invoker.debug_archive_base_path}/${invoker.target_name}.symbols.tar.bz2"
+      },
+      {
+        name = "canary"
+        archive = "${invoker.prebuilt_archive_base_path}_latest/arch/$target_cpu/${invoker.target_name}.far"
+        production_safe = true
+        debug_archive = "${invoker.debug_archive_base_path}_latest/${invoker.target_name}.symbols.tar.bz2"
+      },
+      {
+        name = "custom"
+        archive = chromium_build_dir + invoker.custom_package_path
+      },
+    ]
+  }
+}
+
+# Generates a config for Chromium packages. See //build/config.gni for
+# documentation of the parameters below.
+
+template("generate_config") {
+  config_data("${target_name}_config") {
+    forward_variables_from(invoker,
+                           [
+                             "for_pkg",
+                             "sources",
+                             "outputs",
+                           ])
+    visibility = [ rebase_path(":${invoker.target_name}") ]
+  }
+}
+
+# Helper template that generates a prebuilt_package_with_flavors target and
+# a config_data target for a given Chromium package. List of parameters is
+# the combined parameters in the generate_config and generate_flavors templates.
+
+template("generate_pkg_and_config") {
+  generate_flavors(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "prebuilt_archive_base_path",
+                             "debug_archive_base_path",
+                             "custom_package_path",
+                             "selections",
+                           ])
+  }
+  generate_config(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "for_pkg",
+                             "sources",
+                             "outputs",
+                           ])
+  }
+}

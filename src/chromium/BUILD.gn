@@ -4,11 +4,11 @@
 
 import("//build/config.gni")
 import("//build/host.gni")
-import("//build/packages/prebuilt_package_with_flavors.gni")
 import("//build/packages/prebuilt_test_manifest.gni")
 import("//build/testing/host_test_data.gni")
 import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
 import("build_args.gni")
+import("generate_flavors.gni")
 
 # This target is provided for use by the //src:src target. Dependencies on
 # Chromium-supplied packages should refer explicitly to the desired package.
@@ -29,7 +29,6 @@ group("web_engine") {
 
 prebuilt_archive_base_path = "//prebuilt/third_party/chromium"
 debug_archive_base_path = "//prebuilt/build_ids/" + target_cpu + "/chromium"
-canary_suffix = "_latest"
 
 # TODO(fxbug.dev/70573): Remove when use_chromium_canary is deprecated.
 if (use_chromium_canary) {
@@ -58,39 +57,13 @@ if (chromium_build_dir != "") {
   ]
 }
 
-prebuilt_package_with_flavors("web_engine_pkg") {
-  visibility = [ ":web_engine" ]
-  package_name = "web_engine"
-  default = "release"
-  flavors = [
-    {
-      name = "release"
-      archive =
-          prebuilt_archive_base_path + "/arch/" + target_cpu + "/web_engine.far"
-      production_safe = true
-      debug_archive = debug_archive_base_path + "/web_engine.symbols.tar.bz2"
-    },
-    {
-      name = "canary"
-      archive = prebuilt_archive_base_path + canary_suffix + "/arch/" +
-                target_cpu + "/web_engine.far"
-      production_safe = true
-      debug_archive = debug_archive_base_path + canary_suffix +
-                      "/web_engine.symbols.tar.bz2"
-    },
-    {
-      name = "custom"
-      archive =
-          chromium_build_dir + "/gen/fuchsia/engine/web_engine/web_engine.far"
-      debug_archive = debug_archive_base_path + "/web_engine.symbols.tar.bz2"
-    },
-  ]
+generate_pkg_and_config("web_engine") {
+  prebuilt_archive_base_path = prebuilt_archive_base_path
+  debug_archive_base_path = debug_archive_base_path
+  custom_package_path = "/gen/fuchsia/engine/web_engine/web_engine.far"
   selections = package_flavor_selections
-}
 
-config_data("web_engine_config") {
-  visibility = [ ":web_engine" ]
-
+  # Config data arguments.
   for_pkg = "sysmgr"
   sources = [ rebase_path("config/web_context_provider.config") ]
 }
@@ -102,42 +75,16 @@ group("web_runner") {
   ]
 }
 
-config_data("web_runner_config") {
-  visibility = [ ":web_runner" ]
+generate_pkg_and_config("web_runner") {
+  prebuilt_archive_base_path = prebuilt_archive_base_path
+  debug_archive_base_path = debug_archive_base_path
+  custom_package_path = "/gen/fuchsia/runners/web_runner/web_runner.far"
+  selections = package_flavor_selections
+
+  # Config data arguments.
   for_pkg = "appmgr"
   sources = [ rebase_path("config/http_scheme_map.config") ]
-
   outputs = [ "scheme_map/http.config" ]
-}
-
-prebuilt_package_with_flavors("web_runner_pkg") {
-  visibility = [ ":web_runner" ]
-  package_name = "web_runner"
-  default = "release"
-  flavors = [
-    {
-      name = "release"
-      archive =
-          prebuilt_archive_base_path + "/arch/" + target_cpu + "/web_runner.far"
-      production_safe = true
-      debug_archive = debug_archive_base_path + "/web_runner.symbols.tar.bz2"
-    },
-    {
-      name = "canary"
-      archive = prebuilt_archive_base_path + canary_suffix + "/arch/" +
-                target_cpu + "/web_runner.far"
-      production_safe = true
-      debug_archive = debug_archive_base_path + canary_suffix +
-                      "/web_runner.symbols.tar.bz2"
-    },
-    {
-      name = "custom"
-      archive =
-          chromium_build_dir + "/gen/fuchsia/runners/web_runner/web_runner.far"
-      debug_archive = debug_archive_base_path + "/web_runner.symbols.tar.bz2"
-    },
-  ]
-  selections = package_flavor_selections
 }
 
 icu_tzdata_config_data("tzdata_for_web_engine") {
