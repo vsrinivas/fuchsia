@@ -130,7 +130,7 @@ when present:
         ...
         "errors": [
             {
-                "DroppedLogs": {
+                "dropped_logs": {
                     "count": 3
                 }
             }

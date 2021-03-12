@@ -673,7 +673,9 @@ impl FromStr for LogsField {
 /// `DataSource::Logs`.
 #[derive(Clone, Deserialize, Debug, Eq, PartialEq, Serialize)]
 pub enum LogError {
+    #[serde(rename = "dropped_logs")]
     DroppedLogs { count: u64 },
+    #[serde(rename = "other")]
     Other(Error),
 }
 
