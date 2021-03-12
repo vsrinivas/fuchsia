@@ -182,7 +182,3 @@ group("tests") {
   testonly = true
   deps = fidl_targets + hlcpp_targets + rust_targets + dart_targets
 }
-
-group("fidl") {
-  # TODO: remove soon
-}
