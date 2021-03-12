@@ -6,8 +6,9 @@ use {
     crate::{inverse_keymap::InverseKeymap, keymaps},
     anyhow::{ensure, Error},
     async_trait::async_trait,
+    fidl_fuchsia_input as input,
     fidl_fuchsia_ui_input::{self, KeyboardReport, Touch},
-    fuchsia_zircon as zx,
+    fidl_fuchsia_ui_input3 as input3, fuchsia_async as fasync, fuchsia_zircon as zx,
     std::{convert::TryFrom, thread, time::Duration},
 };
 
@@ -38,7 +39,18 @@ pub trait InputDevice {
         camera_disable: bool,
         time: u64,
     ) -> Result<(), Error>;
+
+    /// Sends a keyboard report with keys defined mostly in terms of USB HID usage
+    /// page 7. This is sufficient for keyboard keys, but does not cover the full
+    /// extent of keys that Fuchsia supports. As result, the KeyboardReport is converted
+    /// internally into Fuchsia's encoding before being forwarded.
     fn key_press(&mut self, keyboard: KeyboardReport, time: u64) -> Result<(), Error>;
+
+    /// Sends a keyboard report using the whole range of key codes. Key codes provided
+    /// are not modified or mapped in any way.
+    /// This differs from `key_press`, which performs special mapping for key codes
+    /// from USB HID Page 0x7.
+    fn key_press_raw(&mut self, keyboard: KeyboardReport, time: u64) -> Result<(), Error>;
     fn key_press_usage(&mut self, usage: Option<u32>, time: u64) -> Result<(), Error>;
     fn tap(&mut self, pos: Option<(u32, u32)>, time: u64) -> Result<(), Error>;
     fn multi_finger_tap(&mut self, fingers: Option<Vec<Touch>>, time: u64) -> Result<(), Error>;
@@ -100,6 +112,156 @@ pub(crate) async fn media_button_event(
         monotonic_nanos()?,
     )?;
     input_device.serve_reports().await
+}
+
+/// A single key event to be replayed by `dispatch_key_events_async`.
+///
+/// See [crate::dispatch_key_events] for details of the key event type and the event timing.
+///
+/// For example, a key press like this:
+///
+/// ```ignore
+/// Key1: _________/"""""""""""""""\\___________
+///                ^               ^--- key released
+///                `------------------- key pressed
+///       |<------>|  <-- duration_since_start (50ms)
+///       |<---------------------->| duration_since_start (100ms)
+/// ```
+///
+/// would be described with a sequence of two `TimedKeyEvent`s (pseudo-code):
+///
+/// ```
+/// [
+///    { Key1,  50ms, PRESSED  },
+///    { Key1, 100ms, RELEASED },
+/// ]
+/// ```
+///
+/// This is not overly useful in the case of a single key press, but is useful to model multiple
+/// concurrent keypresses, while allowing an arbitrary interleaving of key events.
+///
+/// Consider a more complicated timing diagram like this one:
+///
+/// ```ignore
+/// Key1: _________/"""""""""""""""\\_____________
+/// Key2: ____/"""""""""""""""\\__________________
+/// Key3: ______/"""""""""""""""\\________________
+/// Key4: _____________/"""""""""""""""\\_________
+/// Key5: ________________ __/""""""\\____________
+/// Key6: ________/""""""\\_______________________
+/// ```
+///
+/// It then becomes obvious how modeling individual events allows us to express this interaction.
+/// Furthermore anchoring `duration_since_start` to the beginning of the key sequence (instead of,
+/// for example, specifying the duration of each key press) gives a common time reference and makes
+/// it fairly easy to express the intended key interaction in terms of a `TimedKeyEvent` sequence.
+#[derive(Debug, Clone)]
+pub struct TimedKeyEvent {
+    /// The [input::Key] which changed state.
+    pub key: input::Key,
+    /// The duration of time,  relative to the start of the key event sequence that this `TimedKeyEvent`
+    /// is part of, at which this event happened at.
+    pub duration_since_start: Duration,
+    /// The type of state change that happened to `key`.  Was it pressed, released or something
+    /// else.
+    pub event_type: input3::KeyEventType,
+}
+
+impl TimedKeyEvent {
+    /// Creates a new [TimedKeyEvent] to inject into the input pipeline.  `key` is
+    /// the key to be pressed (using Fuchsia HID-like encoding), `type_` is the
+    /// event type (Pressed, or Released etc), and `duration_since_start` is the
+    /// duration since the start of the entire event sequence that the key event
+    /// should be scheduled at.
+    pub fn new(
+        key: input::Key,
+        type_: input3::KeyEventType,
+        duration_since_start: Duration,
+    ) -> Self {
+        Self { key, duration_since_start, event_type: type_ }
+    }
+}
+
+/// Replays the sequence of events (see [Replayer::replay]) with the correct timing.
+struct Replayer<'a> {
+    // Invariant: pressed_keys.iter() must use ascending iteration
+    // ordering.
+    pressed_keys: std::collections::BTreeSet<input::Key>,
+    registry: &'a mut dyn InputDeviceRegistry,
+}
+
+impl<'a> Replayer<'a> {
+    fn new(registry: &'a mut dyn InputDeviceRegistry) -> Self {
+        Replayer { pressed_keys: std::collections::BTreeSet::new(), registry }
+    }
+
+    /// Replays the given sequence of key events with the correct timing spacing
+    /// between the events.
+    ///
+    /// All timing in [TimedKeyEvent] is relative to the instance in the monotonic clock base at which
+    /// we started replaying the entire event sequence.  The replay returns an error in case
+    /// the events are not sequenced with nondecreasing timestamps.
+    async fn replay<'b: 'a>(&mut self, events: &'b [TimedKeyEvent]) -> Result<(), Error> {
+        let mut last_key_event_at = Duration::from_micros(0);
+
+        // Verify that the key events are scheduled in a nondecreasing timestamp sequence.
+        for key_event in events {
+            if key_event.duration_since_start < last_key_event_at {
+                return Err(anyhow::anyhow!(
+                    concat!(
+                        "TimedKeyEvent was requested out of sequence: ",
+                        "TimedKeyEvent: {:?}, low watermark for duration_since_start: {:?}"
+                    ),
+                    &key_event,
+                    last_key_event_at
+                ));
+            }
+            last_key_event_at = key_event.duration_since_start;
+        }
+
+        let mut input_device = self.registry.add_keyboard_device()?;
+        let started_at = monotonic_nanos()?;
+        for key_event in events {
+            use input3::KeyEventType;
+            match key_event.event_type {
+                KeyEventType::Pressed | KeyEventType::Sync => {
+                    self.pressed_keys.insert(key_event.key.clone());
+                }
+                KeyEventType::Released | KeyEventType::Cancel => {
+                    self.pressed_keys.remove(&key_event.key);
+                }
+            }
+
+            // The sequence below should be an async task.  The complicating factor is that
+            // input_device lifetime needs to be 'static for this to be schedulable on a
+            // fuchsia::async::Task. So for the time being, we skip that part.
+            let processed_at = Duration::from_nanos(monotonic_nanos()? - started_at);
+            let desired_at = &key_event.duration_since_start;
+            if processed_at < *desired_at {
+                fasync::Timer::new(fasync::Time::after((*desired_at - processed_at).into())).await;
+            }
+            input_device.key_press_raw(self.make_input_report(), monotonic_nanos()?)?;
+        }
+        input_device.serve_reports().await
+    }
+
+    /// Creates a keyboard report based on the keys that are currently pressed.
+    ///
+    /// The pressed keys are always reported in the nondecreasing order of their respective key
+    /// codes, so a single distinct key chord will be always reported as a single distinct
+    /// `KeyboardReport`.
+    fn make_input_report(&self) -> KeyboardReport {
+        KeyboardReport { pressed_keys: self.pressed_keys.iter().map(|k| *k as u32).collect() }
+    }
+}
+
+/// Dispatches the supplied `events` into  a keyboard device registered into `registry`, honoring
+/// the timing sequence that is described in them to the extent that they are possible to schedule.
+pub(crate) async fn dispatch_key_events_async(
+    events: &[TimedKeyEvent],
+    registry: &mut dyn InputDeviceRegistry,
+) -> Result<(), Error> {
+    Replayer::new(registry).replay(events).await
 }
 
 pub(crate) async fn keyboard_event(
@@ -464,6 +626,10 @@ mod tests {
             }
 
             fn key_press(&mut self, keyboard: KeyboardReport, time: u64) -> Result<(), Error> {
+                self.key_press_raw(keyboard, time)
+            }
+
+            fn key_press_raw(&mut self, keyboard: KeyboardReport, time: u64) -> Result<(), Error> {
                 self.fidl_proxy
                     .dispatch_report(&mut InputReport {
                         event_time: time,
@@ -586,6 +752,80 @@ mod tests {
                 ]
             );
             Ok(())
+        }
+
+        #[fasync::run_singlethreaded(test)]
+        async fn dispatch_key_events() -> Result<(), Error> {
+            let mut fake_event_listener = FakeInputDeviceRegistry::new();
+
+            // Configures a two-key chord:
+            // A: _/^^^^^\___
+            // B: __/^^^\____
+            dispatch_key_events_async(
+                &vec![
+                    TimedKeyEvent::new(
+                        input::Key::A,
+                        input3::KeyEventType::Pressed,
+                        Duration::from_millis(10),
+                    ),
+                    TimedKeyEvent::new(
+                        input::Key::B,
+                        input3::KeyEventType::Pressed,
+                        Duration::from_millis(20),
+                    ),
+                    TimedKeyEvent::new(
+                        input::Key::B,
+                        input3::KeyEventType::Released,
+                        Duration::from_millis(50),
+                    ),
+                    TimedKeyEvent::new(
+                        input::Key::A,
+                        input3::KeyEventType::Released,
+                        Duration::from_millis(60),
+                    ),
+                ],
+                &mut fake_event_listener,
+            )
+            .await?;
+            assert_eq!(
+                project!(fake_event_listener.get_events().await, keyboard),
+                [
+                    Ok(Some(KeyboardReport { pressed_keys: vec![input::Key::A as u32] })),
+                    Ok(Some(KeyboardReport {
+                        pressed_keys: vec![input::Key::A as u32, input::Key::B as u32]
+                    })),
+                    Ok(Some(KeyboardReport { pressed_keys: vec![input::Key::A as u32] })),
+                    Ok(Some(KeyboardReport { pressed_keys: vec![] }))
+                ]
+            );
+            Ok(())
+        }
+
+        #[fasync::run_singlethreaded(test)]
+        async fn dispatch_key_events_in_wrong_sequence() -> Result<(), Error> {
+            let mut fake_event_listener = FakeInputDeviceRegistry::new();
+
+            // Configures a two-key chord in the wrong temporal order.
+            let result = dispatch_key_events_async(
+                &vec![
+                    TimedKeyEvent::new(
+                        input::Key::A,
+                        input3::KeyEventType::Pressed,
+                        Duration::from_millis(20),
+                    ),
+                    TimedKeyEvent::new(
+                        input::Key::B,
+                        input3::KeyEventType::Pressed,
+                        Duration::from_millis(10),
+                    ),
+                ],
+                &mut fake_event_listener,
+            )
+            .await;
+            match result {
+                Err(_) => Ok(()),
+                Ok(_) => Err(anyhow::anyhow!("expected error but got Ok")),
+            }
         }
 
         #[fasync::run_singlethreaded(test)]
@@ -950,6 +1190,14 @@ mod tests {
             }
 
             fn key_press(&mut self, _keyboard: KeyboardReport, _time: u64) -> Result<(), Error> {
+                Ok(())
+            }
+
+            fn key_press_raw(
+                &mut self,
+                _keyboard: KeyboardReport,
+                _time: u64,
+            ) -> Result<(), Error> {
                 Ok(())
             }
 

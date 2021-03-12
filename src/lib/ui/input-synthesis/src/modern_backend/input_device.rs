@@ -67,16 +67,11 @@ impl synthesizer::InputDevice for self::InputDevice {
 
     // TODO(fxbug.dev/63973): remove dependency on HID usage codes.
     fn key_press(&mut self, report: KeyboardReport, time: u64) -> Result<(), Error> {
-        self.reports.push(InputReport {
-            event_time: Some(i64::try_from(time).context("converting time to i64")?),
-            keyboard: Some(KeyboardInputReport {
-                pressed_keys: Some(vec![]), // `keyboard.rs` requires `Some`-thing.
-                pressed_keys3: Some(Self::convert_keyboard_report_to_keys(&report)?),
-                ..KeyboardInputReport::EMPTY
-            }),
-            ..InputReport::EMPTY
-        });
-        Ok(())
+        self.key_press_internal(report, time, Self::convert_keyboard_report_to_keys)
+    }
+
+    fn key_press_raw(&mut self, report: KeyboardReport, time: u64) -> Result<(), Error> {
+        self.key_press_internal(report, time, Self::convert_keyboard_report_to_keys_no_transform)
     }
 
     // TODO(fxbug.dev/63973): remove reference to HID usage codes.
@@ -181,6 +176,27 @@ impl InputDevice {
         Self { request_stream, descriptor, reports: vec![] }
     }
 
+    /// Converts a [KeyboardReport] into a sequence of key presses, using the supplied
+    /// key-to-HID usage transformation function.
+    fn key_press_internal(
+        &mut self,
+        report: KeyboardReport,
+        time: u64,
+        transform: fn(r: &KeyboardReport) -> Result<Vec<Key>, Error>,
+    ) -> Result<(), Error> {
+        self.reports.push(InputReport {
+            event_time: Some(i64::try_from(time).context("converting time to i64")?),
+            keyboard: Some(KeyboardInputReport {
+                // TODO(fxbug.dev/71566): `keyboard.rs` requires `Some`-thing.
+                pressed_keys: Some(vec![]),
+                pressed_keys3: Some(transform(&report)?),
+                ..KeyboardInputReport::EMPTY
+            }),
+            ..InputReport::EMPTY
+        });
+        Ok(())
+    }
+
     /// Processes a single request from an `InputDeviceRequestStream`
     ///
     /// # Returns
@@ -225,6 +241,27 @@ impl InputDevice {
             .map(|&usage| {
                 hid_usage_to_input3_key(usage as u16)
                     .ok_or_else(|| format_err!("no Key for usage {:?}", usage))
+            })
+            .collect()
+    }
+
+    /// Same as convert_keyboard_report_to_keys, but no additional calls to HID usage mapping.
+    ///
+    /// The keyboard report in `convert_keyboard_report_to_keys` assumes USB HID usage page 7.
+    /// This set of keys is narrower than what Fuchsia supports so that function needs to map
+    /// back into Fuchsia USB HID encoding (see [fidl_fuchsia_input::Key]).
+    ///
+    /// This function, in turn, uses the full range of [fidl_fuchsia_input::Key], so does not
+    /// need this conversion.
+    fn convert_keyboard_report_to_keys_no_transform(
+        report: &KeyboardReport,
+    ) -> Result<Vec<Key>, Error> {
+        report
+            .pressed_keys
+            .iter()
+            .map(|&usage| {
+                Key::from_primitive(usage)
+                    .ok_or(anyhow::anyhow!("could not convert to input::Key: {}", &usage))
             })
             .collect()
     }
@@ -439,6 +476,32 @@ mod tests {
                 input_device.key_press_usage(Some(0xffff_ffff), DEFAULT_REPORT_TIMESTAMP),
                 Err(_)
             );
+        }
+
+        #[fasync::run_until_stalled(test)]
+        async fn key_events_generates_expected_keyboard_response() -> Result<(), Error> {
+            let (_input_device_proxy, mut input_device) = make_input_device_proxy_and_struct();
+            input_device.key_press_raw(
+                KeyboardReport { pressed_keys: vec![Key::A as u32, Key::B as u32] },
+                DEFAULT_REPORT_TIMESTAMP,
+            )?;
+
+            let input_reports = get_input_reports(input_device, _input_device_proxy).await;
+            assert_eq!(
+                input_reports.as_slice(),
+                [InputReport {
+                    event_time: Some(
+                        DEFAULT_REPORT_TIMESTAMP.try_into().expect("converting to i64")
+                    ),
+                    keyboard: Some(KeyboardInputReport {
+                        pressed_keys: Some(vec![]),
+                        pressed_keys3: Some(vec![Key::A, Key::B]),
+                        ..KeyboardInputReport::EMPTY
+                    }),
+                    ..InputReport::EMPTY
+                }]
+            );
+            Ok(())
         }
     }
 

@@ -150,6 +150,11 @@ impl synthesizer::InputDevice for self::InputDevice {
     }
 
     fn key_press(&mut self, keyboard: KeyboardReport, time: u64) -> Result<(), Error> {
+        self.key_press_raw(keyboard, time)
+    }
+
+    /// See [crate::synthesizer::InputDevice::key_press_raw].
+    fn key_press_raw(&mut self, keyboard: KeyboardReport, time: u64) -> Result<(), Error> {
         self.fidl_proxy.dispatch_report(&mut self::key_press(keyboard, time)).map_err(Into::into)
     }
 
@@ -492,7 +497,7 @@ mod tests {
         input_device.multi_finger_tap(
             Some(vec![
                 Touch { finger_id: 1, x: 99, y: 100, width: 10, height: 20 },
-                Touch { finger_id: 2, x: 199, y: 201, width: 30, height: 40 }
+                Touch { finger_id: 2, x: 199, y: 201, width: 30, height: 40 },
             ]),
             700,
         )?;
