@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("importer") {
   sources = [
@@ -58,20 +57,9 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("ktrace_provider") {
+fuchsia_package_with_single_component("ktrace_provider") {
+  manifest = "meta/ktrace_provider.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "ktrace_provider"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/ktrace_provider.cmx")
-      dest = "ktrace_provider.cmx"
-    },
-  ]
 }
 
 executable("importer_test_app") {
@@ -98,13 +86,7 @@ executable("importer_test_app") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("ktrace_provider_tests") {
+fuchsia_unittest_package("ktrace_provider_tests") {
+  manifest = "meta/importer_tests.cmx"
   deps = [ ":importer_test_app" ]
-
-  tests = [
-    {
-      name = "importer_tests"
-      environments = basic_envs
-    },
-  ]
 }
