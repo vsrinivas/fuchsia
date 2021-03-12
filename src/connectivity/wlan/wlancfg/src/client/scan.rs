@@ -28,6 +28,12 @@ const OUTPUT_CHUNK_NETWORK_COUNT: usize = 5;
 // Delay between scanning retries when the firmware returns "ShouldWait" error code
 const SCAN_RETRY_DELAY_MS: i64 = 100;
 
+#[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+struct SmeNetworkIdentifier {
+    ssid: Vec<u8>,
+    protection: fidl_sme::Protection,
+}
+
 /// Allows for consumption of updated scan results.
 #[async_trait]
 pub trait ScanResultUpdate: Sync + Send {
@@ -114,8 +120,7 @@ pub(crate) async fn perform_scan<F>(
 ) where
     F: FnOnce(&Vec<types::ScanResult>) -> Option<Vec<types::NetworkIdentifier>>,
 {
-    let mut bss_by_network: HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>> =
-        HashMap::new();
+    let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
 
     // Get an SME proxy
     let mut iface_manager_guard = iface_manager.lock().await;
@@ -145,7 +150,7 @@ pub(crate) async fn perform_scan<F>(
     let sme_result = sme_scan(&sme_proxy, scan_request).await;
     match sme_result {
         Ok(results) => {
-            insert_bss_to_network_bss_map(&mut bss_by_network, results, true, wpa3_supported);
+            insert_bss_to_network_bss_map(&mut bss_by_network, results, true);
         }
         Err(()) => {
             // The passive scan failed. Send an error to the requester and return early.
@@ -160,7 +165,7 @@ pub(crate) async fn perform_scan<F>(
 
     // Determine which active scans to perform by asking the active_scan_decider()
     if let Some(requested_active_scan_ids) =
-        active_scan_decider(&network_bss_map_to_scan_result(&bss_by_network))
+        active_scan_decider(&network_bss_map_to_scan_result(&bss_by_network, wpa3_supported))
     {
         let requested_active_scan_ssids =
             requested_active_scan_ids.iter().map(|id| id.ssid.clone()).collect();
@@ -178,7 +183,7 @@ pub(crate) async fn perform_scan<F>(
                     wpa3_supported,
                 )
                 .await;
-                insert_bss_to_network_bss_map(&mut bss_by_network, results, false, wpa3_supported);
+                insert_bss_to_network_bss_map(&mut bss_by_network, results, false);
             }
             Err(()) => {
                 // There was an error in the active scan. For the FIDL interface, send an error. We
@@ -193,7 +198,9 @@ pub(crate) async fn perform_scan<F>(
         }
     };
 
-    let scan_results = network_bss_map_to_scan_result(&bss_by_network);
+    let scan_results = network_bss_map_to_scan_result(&bss_by_network, wpa3_supported);
+    let scan_results_for_non_wpa3_consumers =
+        network_bss_map_to_scan_result(&bss_by_network, false);
     let mut scan_result_consumers = FuturesUnordered::new();
 
     // Send scan results to the location sensor
@@ -202,9 +209,11 @@ pub(crate) async fn perform_scan<F>(
     scan_result_consumers.push(network_selector.update_scan_results(&scan_results));
     // If the requester provided a channel, send the results to them
     if let Some(output_iterator) = output_iterator {
-        let requester_fut = send_scan_results(output_iterator, &scan_results).unwrap_or_else(|e| {
-            error!("Failed to send scan results to requester: {:?}", e);
-        });
+        let requester_fut =
+            send_scan_results(output_iterator, &scan_results_for_non_wpa3_consumers)
+                .unwrap_or_else(|e| {
+                    error!("Failed to send scan results to requester: {:?}", e);
+                });
         scan_result_consumers.push(Box::pin(requester_fut));
     }
 
@@ -225,13 +234,13 @@ pub(crate) async fn perform_directed_active_scan(
 
     let sme_result = sme_scan(sme_proxy, scan_request).await;
     sme_result.map(|results| {
-        let mut bss_by_network: HashMap<types::NetworkIdentifier, Vec<types::Bss>> = HashMap::new();
-        insert_bss_to_network_bss_map(&mut bss_by_network, results, false, wpa3_supported);
+        let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
+        insert_bss_to_network_bss_map(&mut bss_by_network, results, false);
 
         // The active scan targets a specific SSID, ensure only that SSID is present in results
         bss_by_network.retain(|network_id, _| network_id.ssid == *ssid);
 
-        network_bss_map_to_scan_result(&bss_by_network)
+        network_bss_map_to_scan_result(&bss_by_network, wpa3_supported)
     })
 }
 
@@ -293,49 +302,52 @@ impl ScanResultUpdate for LocationSensorUpdater {
 /// Converts sme::BssInfo to our internal BSS type, then adds it to the provided bss_by_network map.
 /// Only keeps the first unique instance of a BSSID
 fn insert_bss_to_network_bss_map(
-    bss_by_network: &mut HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>>,
+    bss_by_network: &mut HashMap<SmeNetworkIdentifier, Vec<types::Bss>>,
     new_bss: Vec<fidl_sme::BssInfo>,
     observed_in_passive_scan: bool,
-    wpa3_supported: bool,
 ) {
     for bss in new_bss.into_iter() {
-        if let Some(security) = security_from_sme_protection(bss.protection, wpa3_supported) {
-            let entry = bss_by_network
-                .entry(fidl_policy::NetworkIdentifier { ssid: bss.ssid.to_vec(), type_: security })
-                .or_insert(vec![]);
-            // Check if this BSSID is already in the hashmap
-            if !entry.iter().any(|existing_bss| existing_bss.bssid == bss.bssid) {
-                entry.push(types::Bss {
-                    bssid: bss.bssid,
-                    rssi: bss.rssi_dbm,
-                    snr_db: bss.snr_db,
-                    channel: bss.channel,
-                    timestamp_nanos: 0, // TODO(mnck): find where this comes from
-                    observed_in_passive_scan,
-                    compatible: bss.compatible,
-                    bss_desc: bss.bss_desc,
-                });
-            };
-        } else {
-            // TODO(mnck): log a metric here
-            debug!("Unknown security type present in scan results: {:?}", bss.protection);
-        }
+        let entry = bss_by_network
+            .entry(SmeNetworkIdentifier { ssid: bss.ssid.to_vec(), protection: bss.protection })
+            .or_insert(vec![]);
+        // Check if this BSSID is already in the hashmap
+        if !entry.iter().any(|existing_bss| existing_bss.bssid == bss.bssid) {
+            entry.push(types::Bss {
+                bssid: bss.bssid,
+                rssi: bss.rssi_dbm,
+                snr_db: bss.snr_db,
+                channel: bss.channel,
+                timestamp_nanos: 0, // TODO(mnck): find where this comes from
+                observed_in_passive_scan,
+                compatible: bss.compatible,
+                bss_desc: bss.bss_desc,
+            });
+        };
     }
 }
 
 fn network_bss_map_to_scan_result(
-    bss_by_network: &HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>>,
+    bss_by_network: &HashMap<SmeNetworkIdentifier, Vec<types::Bss>>,
+    wpa3_supported: bool,
 ) -> Vec<types::ScanResult> {
     let mut scan_results: Vec<types::ScanResult> = bss_by_network
         .iter()
-        .map(|(network, bss_infos)| types::ScanResult {
-            id: network.clone(),
-            entries: bss_infos.to_vec(),
-            compatibility: if bss_infos.iter().any(|bss| bss.compatible) {
-                fidl_policy::Compatibility::Supported
+        .filter_map(|(SmeNetworkIdentifier { ssid, protection }, bss_infos)| {
+            if let Some(security) = security_from_sme_protection(*protection, wpa3_supported) {
+                Some(types::ScanResult {
+                    id: types::NetworkIdentifier { ssid: ssid.to_vec(), type_: security },
+                    entries: bss_infos.to_vec(),
+                    compatibility: if bss_infos.iter().any(|bss| bss.compatible) {
+                        fidl_policy::Compatibility::Supported
+                    } else {
+                        fidl_policy::Compatibility::DisallowedNotSupported
+                    },
+                })
             } else {
-                fidl_policy::Compatibility::DisallowedNotSupported
-            },
+                // TODO(mnck): log a metric here
+                debug!("Unknown security type present in scan results: {:?}", protection);
+                None
+            }
         })
         .collect();
 
@@ -1426,9 +1438,9 @@ mod tests {
             },
         ];
 
-        let expected_id = types::NetworkIdentifier {
+        let expected_id = SmeNetworkIdentifier {
             ssid: "duplicated ssid".as_bytes().to_vec(),
-            type_: types::SecurityType::Wpa3,
+            protection: fidl_sme::Protection::Wpa3Enterprise,
         };
 
         // We should only see one entry for the duplicated BSSs in the passive scan results
@@ -1447,7 +1459,7 @@ mod tests {
             bss_desc: passive_bss_desc.clone(),
         }];
 
-        insert_bss_to_network_bss_map(&mut bss_by_network, passive_input_aps, true, true);
+        insert_bss_to_network_bss_map(&mut bss_by_network, passive_input_aps, true);
         assert_eq!(bss_by_network.len(), 1);
         assert_eq!(bss_by_network[&expected_id], expected_bss);
 
@@ -1516,7 +1528,7 @@ mod tests {
             },
         ];
 
-        insert_bss_to_network_bss_map(&mut bss_by_network, active_input_aps, false, true);
+        insert_bss_to_network_bss_map(&mut bss_by_network, active_input_aps, false);
         assert_eq!(bss_by_network.len(), 1);
         assert_eq!(bss_by_network[&expected_id], expected_bss);
     }
@@ -2039,7 +2051,14 @@ mod tests {
         let type_ =
             if wpa3_capable { types::SecurityType::Wpa3 } else { types::SecurityType::Wpa2 };
         let expected_scan_results = vec![fidl_policy::ScanResult {
-            id: Some(fidl_policy::NetworkIdentifier { ssid: ssid.clone(), type_: type_.clone() }),
+            id: Some(fidl_policy::NetworkIdentifier {
+                ssid: ssid.clone(),
+                // Note: for now, we must always present WPA2/3 networks as WPA2 over our external
+                // interfaces (i.e. to FIDL consumers of scan results). See b/182209070 for more
+                // information.
+                // TODO(b/182569380): change this back to a variable `type_` based on WPA3 support.
+                type_: types::SecurityType::Wpa2,
+            }),
             entries: Some(vec![fidl_policy::Bss {
                 bssid: Some(bss_info.bssid),
                 rssi: Some(bss_info.rssi_dbm),
@@ -2124,11 +2143,10 @@ mod tests {
             combined_fidl_aps: fidl_aps,
         } = create_scan_ap_data();
 
-        let mut bss_by_network: HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>> =
-            HashMap::new();
-        insert_bss_to_network_bss_map(&mut bss_by_network, passive_input_aps, true, false);
-        insert_bss_to_network_bss_map(&mut bss_by_network, active_input_aps, false, false);
-        let scan_results = network_bss_map_to_scan_result(&bss_by_network);
+        let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
+        insert_bss_to_network_bss_map(&mut bss_by_network, passive_input_aps, true);
+        insert_bss_to_network_bss_map(&mut bss_by_network, active_input_aps, false);
+        let scan_results = network_bss_map_to_scan_result(&bss_by_network, false);
 
         // Create an iterator and send scan results
         let (iter, iter_server) =
@@ -2173,11 +2191,10 @@ mod tests {
             combined_fidl_aps: _,
         } = create_scan_ap_data();
 
-        let mut bss_by_network: HashMap<fidl_policy::NetworkIdentifier, Vec<types::Bss>> =
-            HashMap::new();
-        insert_bss_to_network_bss_map(&mut bss_by_network, passive_input_aps, true, true);
-        insert_bss_to_network_bss_map(&mut bss_by_network, active_input_aps, false, true);
-        let scan_results = network_bss_map_to_scan_result(&bss_by_network);
+        let mut bss_by_network: HashMap<SmeNetworkIdentifier, Vec<types::Bss>> = HashMap::new();
+        insert_bss_to_network_bss_map(&mut bss_by_network, passive_input_aps, true);
+        insert_bss_to_network_bss_map(&mut bss_by_network, active_input_aps, false);
+        let scan_results = network_bss_map_to_scan_result(&bss_by_network, true);
 
         // Create an iterator and send scan results
         let (iter, iter_server) =
