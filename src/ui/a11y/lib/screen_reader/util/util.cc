@@ -96,15 +96,20 @@ std::string FormatFloat(float input) {
     return output;
   }
 
-  // In the last remainig case, the string represents a decimal with trailing
+  // In the last remaining case, the string represents a decimal with trailing
   // zeros.
   return output.erase(location_of_last_non_zero_character + 1, std::string::npos);
 }
 
 std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
                                      SemanticsSource* semantics_source) {
-  auto node = semantics_source->GetSemanticNode(koid, node_id);
   std::set<uint32_t> nodes_to_exclude;
+
+  auto node = semantics_source->GetSemanticNode(koid, node_id);
+  if (!node) {
+    return nodes_to_exclude;
+  }
+
   if (node->has_child_ids() && node->has_attributes() && node->attributes().has_label()) {
     auto label = node->attributes().label();
     auto current_node = node;
@@ -131,6 +136,11 @@ std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
 
       // Visit the only child of the current node next.
       current_node = semantics_source->GetSemanticNode(koid, current_node->child_ids().at(0));
+      if (!current_node) {
+        // Node was deleted, no need to continue;
+        nodes_to_exclude.clear();
+        return nodes_to_exclude;
+      }
 
       // If the current node has any actions that the node in question does not,
       // then we should not add the current node to the set of nodes to skip.
@@ -143,6 +153,12 @@ std::set<uint32_t> GetNodesToExclude(zx_koid_t koid, uint32_t node_id,
   if (!nodes_to_exclude.empty() || !node->has_child_ids() || node->child_ids().empty()) {
     auto label = node->attributes().label();
     auto current_node = semantics_source->GetParentNode(koid, node_id);
+    if (!current_node) {
+      // Node was deleted, no need to continue;
+      nodes_to_exclude.clear();
+      return nodes_to_exclude;
+    }
+
     while (current_node) {
       if (!current_node->has_attributes() || !current_node->attributes().has_label()) {
         break;
