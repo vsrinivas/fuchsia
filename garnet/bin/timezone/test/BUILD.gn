@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("test") {
   testonly = true
@@ -27,22 +27,15 @@ executable("deprecated_timezone_unit_tests") {
   ]
 }
 
-test_package("timezone_tests") {
-  deps = [ ":deprecated_timezone_unit_tests" ]
-
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+fuchsia_unittest_package("timezone_tests") {
+  manifest = "meta/deprecated_timezone_unit_tests.cmx"
+  deps = [
+    ":deprecated_timezone_unit_tests",
+    "//garnet/bin/timezone:timezone_resources",
   ]
-
-  tests = [
-    {
-      name = "deprecated_timezone_unit_tests"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }

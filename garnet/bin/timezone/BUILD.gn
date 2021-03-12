@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("lib") {
   sources = [
@@ -38,25 +38,15 @@ executable("bin") {
   ]
 }
 
-package("timezone") {
-  deps = [ ":bin" ]
+resource("timezone_resources") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  binaries = [
-    {
-      name = "timezone"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/timezone.cmx")
-      dest = "timezone.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
+fuchsia_package_with_single_component("timezone") {
+  manifest = "meta/timezone.cmx"
+  deps = [
+    ":bin",
+    ":timezone_resources",
   ]
 }
