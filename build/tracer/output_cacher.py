@@ -208,7 +208,9 @@ class Action(object):
         renamed_outputs = {}
         for out in self.outputs:
             # TODO(fangism): what do we do about symlinks?
-            if os.path.exists(out):
+            # TODO(fangism): An output *directory* is unexpected, coming from GN,
+            # but has been observed.  For now skip it.
+            if os.path.isfile(out):
                 renamed_outputs[out] = tempfile_transform.transform(out)
             # A nonexistent output would be caught by action_tracer.py.
 

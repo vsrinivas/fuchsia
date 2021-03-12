@@ -196,8 +196,8 @@ class RunTwiceCompareTests(unittest.TestCase):
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher, "files_match",
                                    return_value=True) as mock_match:
-                with mock.patch.object(os.path, "exists",
-                                       return_value=True) as mock_exists:
+                with mock.patch.object(os.path, "isfile",
+                                       return_value=True) as mock_isfile:
                     with mock.patch.object(os, "remove") as mock_remove:
                         with mock.patch.object(os, "makedirs") as mock_mkdir:
                             with mock.patch.object(shutil,
@@ -213,7 +213,7 @@ class RunTwiceCompareTests(unittest.TestCase):
             any_order=True)
         mock_match.assert_called_with("out.put", "out.put.tmp")
         mock_remove.assert_called_with("out.put.tmp")
-        mock_exists.assert_called()
+        mock_isfile.assert_called()
         mock_mkdir.assert_not_called()  # using suffix, not temp_dir
         mock_copy.assert_called_once_with(
             "out.put", "out.put.tmp", follow_symlinks=False)
@@ -225,8 +225,8 @@ class RunTwiceCompareTests(unittest.TestCase):
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher, "files_match",
                                    return_value=False) as mock_match:
-                with mock.patch.object(os.path, "exists",
-                                       return_value=True) as mock_exists:
+                with mock.patch.object(os.path, "isfile",
+                                       return_value=True) as mock_isfile:
                     with mock.patch.object(os, "remove") as mock_remove:
                         with mock.patch.object(os, "makedirs") as mock_mkdir:
                             with mock.patch.object(shutil,
@@ -242,7 +242,7 @@ class RunTwiceCompareTests(unittest.TestCase):
             any_order=True)
         mock_match.assert_called_with("out.put", "out.put.tmp")
         mock_remove.assert_not_called()
-        mock_exists.assert_called()
+        mock_isfile.assert_called()
         mock_mkdir.assert_not_called()  # using suffix, not temp_dir
         mock_copy.assert_called_once_with(
             "out.put", "out.put.tmp", follow_symlinks=False)
@@ -263,8 +263,8 @@ class RunTwiceCompareTests(unittest.TestCase):
         with mock.patch.object(subprocess, "call", return_value=0) as mock_call:
             with mock.patch.object(output_cacher, "files_match",
                                    wraps=fake_match) as mock_match:
-                with mock.patch.object(os.path, "exists",
-                                       return_value=True) as mock_exists:
+                with mock.patch.object(os.path, "isfile",
+                                       return_value=True) as mock_isfile:
                     with mock.patch.object(os, "remove") as mock_remove:
                         with mock.patch.object(os, "makedirs") as mock_mkdir:
                             with mock.patch.object(shutil,
@@ -285,7 +285,7 @@ class RunTwiceCompareTests(unittest.TestCase):
             ],
             any_order=True)
         mock_remove.assert_has_calls([mock.call("out.put.tmp")])
-        mock_exists.assert_called()
+        mock_isfile.assert_called()
         mock_mkdir.assert_not_called()  # using suffix, not temp_dir
         mock_copy.assert_has_calls(
             [
