@@ -441,7 +441,8 @@ if (is_kernel) {
       image_rspfile,
       zircon_elf_rspfile,
     ]
-    args = rebase_path(sources + outputs, root_build_dir)
+    depfile = "$target_gen_dir/$target_name.d"
+    args = rebase_path(sources + outputs + [ depfile ], root_build_dir)
   }
 
   # Use the --emit-relocs records to extract the fixups needed to relocate

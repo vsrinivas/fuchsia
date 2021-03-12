@@ -61,6 +61,6 @@ for arg; do
   ARGS+=("$arg")
 done
 
-echo "$OUTPUT: ${FILES[*]}" > "$DEPFILE"
+echo "$OUTPUT: ${INPUTS[*]}" > "$DEPFILE"
 
 exec "$PROGRAM" "${ARGS[@]}"

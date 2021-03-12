@@ -12,10 +12,13 @@ readonly NM="$1"
 readonly KERNEL_IMAGE_FILE="$(<"$2")"
 readonly KERNEL_SYMBOL_FILE="$(<"$3")"
 readonly OUTPUT="$4"
+readonly DEPFILE="$5"
 
 readonly BASE_SYMBOL=__code_start
 readonly VERSION_SYMBOL=kVersionString
 readonly NM_REGEXP="$BASE_SYMBOL|$VERSION_SYMBOL"
+
+trap 'rm -f "$DEPFILE"' ERR HUP INT TERM
 
 grok() {
   local addr size type symbol base_addr version_string_addr version_string_size
@@ -52,4 +55,5 @@ grok() {
   fi
 }
 
+echo "$OUTPUT: $KERNEL_SYMBOL_FILE" > "$DEPFILE"
 "$NM" -S "$KERNEL_SYMBOL_FILE" | egrep "$NM_REGEXP" | grok

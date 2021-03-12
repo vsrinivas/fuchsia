@@ -104,7 +104,6 @@ template("toolchain_utils_action") {
   }
 
   target(target_type, target_name) {
-    hermetic_deps = false
     forward_variables_from(extra_params, "*")
     forward_variables_from(invoker,
                            "*",
@@ -254,10 +253,12 @@ template("image_binary") {
         "readelf",
         "objdump",
       ]
+      depfile = "$target_out_dir/_image_binary.$target_name.d"
       args = [
         "--pure",
         "@" + rebase_path(rspfile, root_build_dir),
         rebase_path(outputs[0], root_build_dir),
+        rebase_path(depfile, root_build_dir),
       ]
     }
   }
