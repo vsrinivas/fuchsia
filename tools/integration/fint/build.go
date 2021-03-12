@@ -27,6 +27,7 @@ var (
 
 type buildModules interface {
 	Archives() []build.Archive
+	GeneratedSources() []string
 	Images() []build.Image
 	TestSpecs() []build.TestSpec
 	ZBITests() []build.ZBITest
@@ -81,6 +82,10 @@ func constructNinjaTargets(modules buildModules, staticSpec *fintpb.Static) []st
 		} else {
 			targets = append(targets, "build/images:updates")
 		}
+	}
+
+	if staticSpec.IncludeGeneratedSources {
+		targets = append(targets, modules.GeneratedSources()...)
 	}
 
 	if staticSpec.IncludeHostTests {

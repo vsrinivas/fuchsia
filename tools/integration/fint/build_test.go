@@ -14,13 +14,15 @@ import (
 )
 
 type fakeBuildModules struct {
-	archives  []build.Archive
-	images    []build.Image
-	testSpecs []build.TestSpec
-	zbiTests  []build.ZBITest
+	archives         []build.Archive
+	generatedSources []string
+	images           []build.Image
+	testSpecs        []build.TestSpec
+	zbiTests         []build.ZBITest
 }
 
 func (m fakeBuildModules) Archives() []build.Archive   { return m.archives }
+func (m fakeBuildModules) GeneratedSources() []string  { return m.generatedSources }
 func (m fakeBuildModules) Images() []build.Image       { return m.images }
 func (m fakeBuildModules) TestSpecs() []build.TestSpec { return m.testSpecs }
 func (m fakeBuildModules) ZBITests() []build.ZBITest   { return m.zbiTests }
@@ -99,6 +101,16 @@ func TestConstructNinjaTargets(t *testing.T) {
 				},
 			},
 			expectedTargets: []string{"foo.zbi", "bar.zbi"},
+		},
+		{
+			name: "generated sources included",
+			staticSpec: &fintpb.Static{
+				IncludeGeneratedSources: true,
+			},
+			modules: fakeBuildModules{
+				generatedSources: []string{"foo.h", "bar.h"},
+			},
+			expectedTargets: []string{"foo.h", "bar.h"},
 		},
 	}
 

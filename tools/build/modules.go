@@ -24,6 +24,7 @@ type Modules struct {
 	args              Args
 	binaries          []Binary
 	checkoutArtifacts []CheckoutArtifact
+	generatedSources  []string
 	images            []Image
 	packageManifests  []string
 	platforms         []DimensionSet
@@ -57,6 +58,10 @@ func NewModules(buildDir string) (*Modules, error) {
 	}
 
 	if err := jsonutil.ReadFromFile(m.CheckoutArtifactManifest(), &m.checkoutArtifacts); err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
+
+	if err := jsonutil.ReadFromFile(m.GeneratedSourcesManifest(), &m.generatedSources); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
@@ -146,6 +151,14 @@ func (m Modules) CheckoutArtifacts() []CheckoutArtifact {
 
 func (m Modules) CheckoutArtifactManifest() string {
 	return filepath.Join(m.BuildDir(), "checkout_artifacts.json")
+}
+
+func (m Modules) GeneratedSources() []string {
+	return m.generatedSources
+}
+
+func (m Modules) GeneratedSourcesManifest() string {
+	return filepath.Join(m.BuildDir(), "generated_sources.json")
 }
 
 func (m Modules) Images() []Image {
