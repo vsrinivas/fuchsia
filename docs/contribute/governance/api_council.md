@@ -138,6 +138,7 @@ Members are appointed by each functional area of the project:
 | FIDL              | ianloic@google.com       |
 | Firmware          | dpursell@google.com      |
 | Graphics          | jbauman@google.com       |
+| View System       | jaeheon@google.com       |
 | HCI (a11y, i18n)  | neelsa@google.com        |
 | Kernel            | cpu@google.com           |
 | Ledger            | qsr@google.com           |
