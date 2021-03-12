@@ -43,7 +43,7 @@ class Allocator : public fuchsia_sysmem::Allocator::RawChannelInterface, public 
 
   Device* parent_device_ = nullptr;
 
-  std::optional<ClientDebugInfo> client_debug_info_;
+  std::optional<LogicalBufferCollection::ClientInfo> client_info_;
 };
 
 }  // namespace sysmem_driver

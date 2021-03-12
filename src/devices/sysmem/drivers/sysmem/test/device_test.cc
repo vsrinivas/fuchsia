@@ -270,8 +270,7 @@ TEST_F(FakeDdkSysmem, NamedToken) {
     async::PostTask(sysmem_.dispatcher(), [&] {
       if (sysmem_.logical_buffer_collections().size() == 1) {
         const auto* logical_collection = *sysmem_.logical_buffer_collections().begin();
-        auto collection_views = logical_collection->collection_views();
-        if (collection_views.size() == 1) {
+        if (logical_collection->collection_views().size() == 1) {
           auto name = logical_collection->name();
           EXPECT_TRUE(name);
           EXPECT_EQ("a", *name);
@@ -311,9 +310,9 @@ TEST_F(FakeDdkSysmem, NamedClient) {
       if (sysmem_.logical_buffer_collections().size() == 1) {
         const auto* logical_collection = *sysmem_.logical_buffer_collections().begin();
         if (logical_collection->collection_views().size() == 1) {
-          const BufferCollection* collection = logical_collection->collection_views().front();
-          if (collection->node_properties().client_debug_info().name == "a") {
-            EXPECT_EQ(5u, collection->node_properties().client_debug_info().id);
+          const auto& collection = logical_collection->collection_views().begin()->second;
+          if (collection->debug_name() == "a") {
+            EXPECT_EQ(5u, collection->debug_id());
             found_collection = true;
           }
         }
@@ -360,11 +359,10 @@ TEST_F(FakeDdkSysmem, NamedAllocatorToken) {
     async::PostTask(sysmem_.dispatcher(), [&] {
       if (sysmem_.logical_buffer_collections().size() == 1) {
         const auto* logical_collection = *sysmem_.logical_buffer_collections().begin();
-        auto collection_views = logical_collection->collection_views();
-        if (collection_views.size() == 1) {
-          const auto& collection = collection_views.front();
-          if (collection->node_properties().client_debug_info().name == "a") {
-            EXPECT_EQ(5u, collection->node_properties().client_debug_info().id);
+        if (logical_collection->collection_views().size() == 1) {
+          const auto& collection = logical_collection->collection_views().begin()->second;
+          if (collection->debug_name() == "a") {
+            EXPECT_EQ(5u, collection->debug_id());
             found_collection = true;
           }
         }

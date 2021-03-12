@@ -5,7 +5,8 @@
 import("//build/test.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
-executable("sysmem-version-test") {
+test("sysmem-version-test") {
+  configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "sysmem-version-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
@@ -13,7 +14,6 @@ executable("sysmem-version-test") {
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/sysmem-version",
   ]
-  testonly = true
 }
 
 fuchsia_unittest_package("sysmem-version-test-pkg") {

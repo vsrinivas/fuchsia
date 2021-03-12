@@ -96,13 +96,6 @@ void FakeBufferCollection::GetAuxBuffers(GetAuxBuffersCallback callback) {
   EXPECT_TRUE(false);
 }
 
-void FakeBufferCollection::AttachToken(
-    uint32_t rights_attenuation_mask,
-    fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> request) {
-  // Not used.
-  EXPECT_TRUE(false);
-}
-
 //////////////////////////////////////////////////////////////////////////////////////////////
 // FakeBufferCollectionToken implementation.
 

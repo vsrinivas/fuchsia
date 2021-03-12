@@ -4,7 +4,6 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/fidl/fidl.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
@@ -36,9 +35,6 @@ source_set("sysmem_common_srcs") {
     "logging.cc",
     "logical_buffer_collection.cc",
     "memory_allocator.cc",
-    "node.cc",
-    "node_properties.cc",
-    "orphaned_node.cc",
     "table_holder.cc",
     "table_set.cc",
     "usage_pixel_format_cost.cc",

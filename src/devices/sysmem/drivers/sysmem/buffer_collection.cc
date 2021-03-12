@@ -12,12 +12,8 @@
 
 #include <ddk/trace/event.h>
 
-#include "buffer_collection_token.h"
-#include "fbl/ref_ptr.h"
-#include "fuchsia/sysmem/c/fidl.h"
 #include "logical_buffer_collection.h"
 #include "macros.h"
-#include "node_properties.h"
 #include "utils.h"
 
 namespace sysmem_driver {
@@ -46,34 +42,24 @@ const uint32_t kMaxClientVmoRights =
 
 }  // namespace
 
-// static
-BufferCollection& BufferCollection::EmplaceInTree(
-    fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection, BufferCollectionToken* token) {
-  // The token is passed in as a pointer because this method deletes token, but the caller must
-  // provide non-nullptr token.
-  ZX_DEBUG_ASSERT(token);
-  // This conversion from unique_ptr<> to RefPtr<> will go away once we move BufferCollection to
-  // LLCPP FIDL server binding.
-  fbl::RefPtr<Node> node(fbl::AdoptRef(new BufferCollection(logical_buffer_collection, *token)));
-  BufferCollection* buffer_collection_ptr = static_cast<BufferCollection*>(node.get());
-  // This also deletes token.
-  token->node_properties().SetNode(std::move(node));
-  return *buffer_collection_ptr;
-}
-
 BufferCollection::~BufferCollection() {
-  TRACE_DURATION("gfx", "BufferCollection::~BufferCollection", "this", this,
-                 "logical_buffer_collection", &logical_buffer_collection());
+  TRACE_DURATION("gfx", "BufferCollection::~BufferCollection", "this", this, "parent",
+                 parent_.get());
 }
 
-void BufferCollection::CloseChannel(zx_status_t epitaph) {
-  // This essentially converts the OnUnboundFn semantic of getting called regardless of channel-fail
-  // vs. server-driven-fail into the more typical semantic where error_handler_ only gets called
-  // on channel-fail but not on server-driven-fail.
+void BufferCollection::CloseChannel() {
   error_handler_ = {};
   if (server_binding_)
-    server_binding_->Close(epitaph);
+    server_binding_->Close(ZX_ERR_PEER_CLOSED);
   server_binding_ = {};
+}
+
+// static
+
+BindingHandle<BufferCollection> BufferCollection::Create(
+    fbl::RefPtr<LogicalBufferCollection> parent) {
+  return BindingHandle<BufferCollection>(
+      fbl::AdoptRef<BufferCollection>(new BufferCollection(std::move(parent))));
 }
 
 void BufferCollection::Bind(zx::channel channel) {
@@ -81,10 +67,10 @@ void BufferCollection::Bind(zx::channel channel) {
   zx_status_t status =
       channel.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   if (status == ZX_OK) {
-    inspect_node_.CreateUint("channel_koid", info.koid, &properties_);
+    node_.CreateUint("channel_koid", info.koid, &properties_);
   }
   auto res = fidl::BindServer(
-      logical_buffer_collection().parent_device()->dispatcher(), std::move(channel), this,
+      parent_->parent_device()->dispatcher(), std::move(channel), this,
       fidl::OnUnboundFn<BufferCollection>(
           [this, this_ref = fbl::RefPtr<BufferCollection>(this)](
               BufferCollection* collection, fidl::UnbindInfo info,
@@ -98,9 +84,10 @@ void BufferCollection::Bind(zx::channel channel) {
                 // LogicalBufferCollection if the close was caused by FailAsync or FailSync.
                 status = *async_failure_result_;
               }
+
               error_handler_(status);
             }
-            // *this can be destroyed by ~this_ref here
+            // *this can be destroyed at this point.
           }));
   if (res.is_error()) {
     return;
@@ -114,27 +101,28 @@ void BufferCollection::SetEventSink(
     SetEventSinkCompleter::Sync& completer) {
   table_set_.MitigateChurn();
   if (is_done_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::SetEventSink() when already is_done_");
+    FailAsync(ZX_ERR_BAD_STATE, "BufferCollectionToken::SetEventSink() when already is_done_");
     return;
   }
   if (!buffer_collection_events_client) {
-    FailSync(FROM_HERE, completer, ZX_ERR_INVALID_ARGS,
-             "BufferCollection::SetEventSink() must be called "
-             "with a non-zero handle.");
+    zx_status_t status = ZX_ERR_INVALID_ARGS;
+    FailAsync(status,
+              "BufferCollection::SetEventSink() must be called "
+              "with a non-zero handle.");
     return;
   }
   if (is_set_constraints_seen_) {
+    zx_status_t status = ZX_ERR_INVALID_ARGS;
     // It's not required to use SetEventSink(), but if it's used, it must be
     // before SetConstraints().
-    FailSync(FROM_HERE, completer, ZX_ERR_INVALID_ARGS,
-             "BufferCollection::SetEventSink() (if any) must be "
-             "before SetConstraints().");
+    FailAsync(status,
+              "BufferCollection::SetEventSink() (if any) must be "
+              "before SetConstraints().");
     return;
   }
   if (events_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_INVALID_ARGS,
-             "BufferCollection::SetEventSink() may only be called at most once.");
+    zx_status_t status = ZX_ERR_INVALID_ARGS;
+    FailAsync(status, "BufferCollection::SetEventSink() may only be called at most once.");
     return;
   }
 
@@ -165,19 +153,18 @@ void BufferCollection::SetConstraintsAuxBuffers(
     SetConstraintsAuxBuffersCompleter::Sync& completer) {
   table_set_.MitigateChurn();
   if (is_set_constraints_aux_buffers_seen_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED,
-             "SetConstraintsAuxBuffers() can be called only once.");
+    FailAsync(ZX_ERR_NOT_SUPPORTED, "SetConstraintsAuxBuffers() can be called only once.");
     return;
   }
   is_set_constraints_aux_buffers_seen_ = true;
   if (is_done_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::SetConstraintsAuxBuffers() when already is_done_");
+    FailAsync(ZX_ERR_BAD_STATE,
+              "BufferCollectionToken::SetConstraintsAuxBuffers() when already is_done_");
     return;
   }
   if (is_set_constraints_seen_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED,
-             "SetConstraintsAuxBuffers() after SetConstraints() causes failure.");
+    FailAsync(ZX_ERR_NOT_SUPPORTED,
+              "SetConstraintsAuxBuffers() after SetConstraints() causes failure.");
     return;
   }
   ZX_DEBUG_ASSERT(!constraints_aux_buffers_);
@@ -186,42 +173,39 @@ void BufferCollection::SetConstraintsAuxBuffers(
   // SetConstraints(), so done for now.
 }
 
-void BufferCollection::SetConstraints(bool has_constraints_param,
+void BufferCollection::SetConstraints(bool has_constraints,
                                       fuchsia_sysmem::wire::BufferCollectionConstraints constraints,
                                       SetConstraintsCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "BufferCollection::SetConstraints", "this", this,
-                 "logical_buffer_collection", &logical_buffer_collection());
+  TRACE_DURATION("gfx", "BufferCollection::SetConstraints", "this", this, "parent", parent_.get());
   table_set_.MitigateChurn();
   std::optional<fuchsia_sysmem::wire::BufferCollectionConstraints> local_constraints(
       std::move(constraints));
   if (is_set_constraints_seen_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED, "2nd SetConstraints() causes failure.");
+    FailAsync(ZX_ERR_NOT_SUPPORTED, "2nd SetConstraints() causes failure.");
     return;
   }
   is_set_constraints_seen_ = true;
   if (is_done_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::SetConstraints() when already is_done_");
+    FailAsync(ZX_ERR_BAD_STATE, "BufferCollectionToken::SetConstraints() when already is_done_");
     // We're failing async - no need to try to fail sync.
     return;
   }
-  if (!has_constraints_param) {
+  if (!has_constraints) {
     // Not needed.
     local_constraints.reset();
     if (is_set_constraints_aux_buffers_seen_) {
       // No constraints are fine, just not aux buffers constraints without main constraints, because
       // I can't think of any reason why we'd need to support aux buffers constraints without main
       // constraints, so disallow at least for now.
-      FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED,
-               "SetConstraintsAuxBuffers() && !has_constraints");
+      FailAsync(ZX_ERR_NOT_SUPPORTED, "SetConstraintsAuxBuffers() && !has_constraints");
       return;
     }
   }
 
-  ZX_DEBUG_ASSERT(!has_constraints());
+  ZX_DEBUG_ASSERT(!constraints_);
   // enforced above
   ZX_DEBUG_ASSERT(!constraints_aux_buffers_ || local_constraints);
-  ZX_DEBUG_ASSERT(has_constraints_param == !!local_constraints);
+  ZX_DEBUG_ASSERT(has_constraints == !!local_constraints);
   {  // scope result
     auto result = sysmem::V2CopyFromV1BufferCollectionConstraints(
         table_set_.allocator(), local_constraints ? &local_constraints.value() : nullptr,
@@ -232,11 +216,29 @@ void BufferCollection::SetConstraints(bool has_constraints_param,
       return;
     }
     ZX_DEBUG_ASSERT(!result.value().IsEmpty() || !local_constraints);
-    node_properties().SetBufferCollectionConstraints(TableHolder(table_set_, result.take_value()));
+    constraints_.emplace(TableHolder<fuchsia_sysmem2::wire::BufferCollectionConstraints>(
+        table_set_, result.take_value()));
   }  // ~result
 
   // No longer needed.
   constraints_aux_buffers_.reset();
+
+  // Stash BufferUsage also, for benefit of GetUsageBasedRightsAttenuation() depsite
+  // TakeConstraints().
+  {  // scope buffer_usage
+    fuchsia_sysmem::wire::BufferUsage empty_buffer_usage{};
+    fuchsia_sysmem::wire::BufferUsage* source_buffer_usage = &empty_buffer_usage;
+    if (local_constraints) {
+      source_buffer_usage = &local_constraints.value().usage;
+    }
+    auto result = sysmem::V2CopyFromV1BufferUsage(table_set_.allocator(), *source_buffer_usage);
+    if (!result.is_ok()) {
+      // Not expected given current impl of sysmem-version.
+      FailSync(FROM_HERE, completer, ZX_ERR_INTERNAL, "V2CopyFromV1BufferUsage failed");
+      return;
+    }
+    usage_.emplace(TableHolder(table_set_, result.take_value()));
+  }  // ~buffer_usage
 
   // LogicalBufferCollection will ask for constraints when it needs them,
   // possibly during this call if this is the last participant to report
@@ -244,14 +246,14 @@ void BufferCollection::SetConstraints(bool has_constraints_param,
   //
   // The LogicalBufferCollection cares if this BufferCollection view has null
   // constraints, but only later when it asks for the specific constraints.
-  logical_buffer_collection().OnSetConstraints();
+  parent()->OnSetConstraints();
   // |this| may be gone at this point, if the allocation failed.  Regardless,
   // SetConstraints() worked, so ZX_OK.
 }
 
 void BufferCollection::WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "BufferCollection::WaitForBuffersAllocated", "this", this,
-                 "logical_buffer_collection", &logical_buffer_collection());
+  TRACE_DURATION("gfx", "BufferCollection::WaitForBuffersAllocated", "this", this, "parent",
+                 parent_.get());
   table_set_.MitigateChurn();
   if (is_done_) {
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
@@ -260,7 +262,7 @@ void BufferCollection::WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter:
   }
   trace_async_id_t current_event_id = TRACE_NONCE();
   TRACE_ASYNC_BEGIN("gfx", "BufferCollection::WaitForBuffersAllocated async", current_event_id,
-                    "this", this, "logical_buffer_collection", &logical_buffer_collection());
+                    "this", this, "parent", parent_.get());
   pending_wait_for_buffers_allocated_.emplace_back(
       std::make_pair(current_event_id, completer.ToAsync()));
   // The allocation is a one-shot (once true, remains true) and may already be
@@ -271,86 +273,42 @@ void BufferCollection::WaitForBuffersAllocated(WaitForBuffersAllocatedCompleter:
 void BufferCollection::CheckBuffersAllocated(CheckBuffersAllocatedCompleter::Sync& completer) {
   table_set_.MitigateChurn();
   if (is_done_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::CheckBuffersAllocated() when "
-             "already is_done_");
+    FailAsync(ZX_ERR_BAD_STATE,
+              "BufferCollectionToken::CheckBuffersAllocated() when "
+              "already is_done_");
     // We're failing async - no need to try to fail sync.
     return;
   }
-  if (!logical_allocation_result_) {
+  LogicalBufferCollection::AllocationResult allocation_result = parent()->allocation_result();
+  if (allocation_result.status == ZX_OK && !allocation_result.buffer_collection_info) {
     completer.Reply(ZX_ERR_UNAVAILABLE);
-    return;
+  } else {
+    completer.Reply(allocation_result.status);
   }
-  // Buffer collection has either been allocated or failed.
-  completer.Reply(logical_allocation_result_->status);
 }
 
 void BufferCollection::GetAuxBuffers(GetAuxBuffersCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "BufferCollection::GetAuxBuffers", "this", this,
-                 "logical_buffer_collection", &logical_buffer_collection());
   table_set_.MitigateChurn();
-  if (!logical_allocation_result_) {
+  LogicalBufferCollection::AllocationResult allocation_result = parent()->allocation_result();
+  if (allocation_result.status == ZX_OK && !allocation_result.buffer_collection_info) {
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
              "GetAuxBuffers() called before allocation complete.");
     return;
   }
-  if (logical_allocation_result_->status != ZX_OK) {
+  if (allocation_result.status != ZX_OK) {
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
              "GetAuxBuffers() called after allocation failure.");
-    // We're failing async - no need to fail sync.
     return;
   }
-  BufferCollection::V1CBufferCollectionInfo v1_c(
-      BufferCollection::V1CBufferCollectionInfo::Default);
-  ZX_DEBUG_ASSERT(logical_allocation_result_->buffer_collection_info);
-  auto v1_result =
-      CloneAuxBuffersResultForSendingV1(*logical_allocation_result_->buffer_collection_info);
+  ZX_DEBUG_ASSERT(allocation_result.buffer_collection_info);
+  auto v1_result = CloneAuxBuffersResultForSendingV1(*allocation_result.buffer_collection_info);
   if (!v1_result.is_ok()) {
     // Close to avoid assert.
     FailSync(FROM_HERE, completer, ZX_ERR_INTERNAL, "CloneAuxBuffersResultForSendingV1() failed.");
     return;
   }
   auto v1 = v1_result.take_value();
-  completer.Reply(logical_allocation_result_->status, std::move(v1));
-}
-
-void BufferCollection::AttachToken(
-    uint32_t rights_attenuation_mask,
-    fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request,
-    AttachTokenCompleter::Sync& completer) {
-  TRACE_DURATION("gfx", "BufferCollection::AttachToken", "this", this, "logical_buffer_collection",
-                 &logical_buffer_collection());
-  table_set_.MitigateChurn();
-  if (is_done_) {
-    // Probably a Close() followed by AttachToken(), which is not permitted and causes the whole
-    // LogicalBufferCollection to fail.
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::AttachToken() attempted when is_done_");
-    return;
-  }
-
-  NodeProperties* new_node_properties = node_properties().NewChild(&logical_buffer_collection());
-
-  // These defaults can be overriden by Allocator.SetDebugClientInfo() called before
-  // BindSharedCollection().
-  if (!new_node_properties->client_debug_info().name.empty()) {
-    // This can be overriden via Allocator::SetDebugClientInfo(), but in case that's not called,
-    // this default may help clarify where the new token / BufferCollection channel came from.
-    new_node_properties->client_debug_info().name =
-        new_node_properties->client_debug_info().name + " then AttachToken()";
-  } else {
-    new_node_properties->client_debug_info().name = "from AttachToken()";
-  }
-  ZX_DEBUG_ASSERT(new_node_properties->client_debug_info().id == 0);
-
-  if (rights_attenuation_mask != ZX_RIGHT_SAME_RIGHTS) {
-    new_node_properties->rights_attenuation_mask() &= rights_attenuation_mask;
-  }
-
-  // All AttachToken() tokesn are ErrorPropagationMode::kDoNotPropagate from the start.
-  new_node_properties->error_propagation_mode() = ErrorPropagationMode::kDoNotPropagate;
-  logical_buffer_collection().CreateBufferCollectionToken(
-      shared_logical_buffer_collection(), new_node_properties, std::move(token_request));
+  completer.Reply(allocation_result.status, std::move(v1));
 }
 
 void BufferCollection::CloseSingleBuffer(uint64_t buffer_index,
@@ -409,8 +367,7 @@ void BufferCollection::CheckSingleBufferAllocated(
 void BufferCollection::Close(CloseCompleter::Sync& completer) {
   table_set_.MitigateChurn();
   if (is_done_) {
-    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollection::Close() when already closed.");
+    FailAsync(ZX_ERR_BAD_STATE, "BufferCollection::Close() when already closed.");
     return;
   }
   // We still want to enforce that the client doesn't send any other messages
@@ -423,30 +380,28 @@ void BufferCollection::Close(CloseCompleter::Sync& completer) {
 void BufferCollection::SetName(uint32_t priority, fidl::StringView name,
                                SetNameCompleter::Sync& completer) {
   table_set_.MitigateChurn();
-  logical_buffer_collection().SetName(priority, std::string(name.begin(), name.end()));
+  parent_->SetName(priority, std::string(name.begin(), name.end()));
 }
 
 void BufferCollection::SetDebugClientInfo(fidl::StringView name, uint64_t id,
                                           SetDebugClientInfoCompleter::Sync& completer) {
   table_set_.MitigateChurn();
-  SetDebugClientInfoInternal(std::string(name.begin(), name.end()), id);
+  SetDebugClientInfo(std::string(name.begin(), name.end()), id);
 }
 
-void BufferCollection::SetDebugClientInfoInternal(std::string name, uint64_t id) {
-  node_properties().client_debug_info().name = std::move(name);
-  node_properties().client_debug_info().id = id;
-  debug_id_property_ =
-      inspect_node_.CreateUint("debug_id", node_properties().client_debug_info().id);
-  debug_name_property_ =
-      inspect_node_.CreateString("debug_name", node_properties().client_debug_info().name);
+void BufferCollection::SetDebugClientInfo(std::string name, uint64_t id) {
+  debug_info_.name = std::move(name);
+  debug_info_.id = id;
+  debug_id_property_ = node_.CreateUint("debug_id", debug_info_.id);
+  debug_name_property_ = node_.CreateString("debug_name", debug_info_.name);
 }
 
-void BufferCollection::FailAsync(Location location, zx_status_t status, const char* format, ...) {
+void BufferCollection::FailAsync(zx_status_t status, const char* format, ...) {
   va_list args;
   va_start(args, format);
-  logical_buffer_collection().VLogClientError(location, &node_properties(), format, args);
-  va_end(args);
+  parent_->VLogClientError(FROM_HERE, &debug_info_, format, args);
 
+  va_end(args);
   // Idempotent, so only close once.
   if (!server_binding_)
     return;
@@ -461,9 +416,9 @@ void BufferCollection::FailSync(Location location, Completer& completer, zx_stat
                                 const char* format, ...) {
   va_list args;
   va_start(args, format);
-  logical_buffer_collection().VLogClientError(location, &node_properties(), format, args);
-  va_end(args);
+  parent_->VLogClientError(location, &debug_info_, format, args);
 
+  va_end(args);
   completer.Close(status);
   async_failure_result_ = status;
 }
@@ -474,15 +429,13 @@ fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo> BufferCollection::Clone
       sysmem::V2CloneBufferCollectionInfo(table_set_.allocator(), buffer_collection_info,
                                           GetClientVmoRights(), GetClientAuxVmoRights());
   if (!clone_result.is_ok()) {
-    FailAsync(FROM_HERE, clone_result.error(),
+    FailAsync(clone_result.error(),
               "CloneResultForSendingV1() V2CloneBufferCollectionInfo() failed - status: %d",
               clone_result.error());
     return fit::error();
   }
   auto v2_b = clone_result.take_value();
-  ZX_DEBUG_ASSERT(has_constraints());
-
-  if (!constraints().has_usage() || !IsAnyUsage(constraints().usage())) {
+  if (!IsAnyUsage(**usage_)) {
     // No VMO handles should be sent to the client in this case.
     if (v2_b.has_buffers()) {
       for (auto& vmo_buffer : v2_b.buffers()) {
@@ -507,7 +460,7 @@ fit::result<fuchsia_sysmem::wire::BufferCollectionInfo_2> BufferCollection::Clon
   }
   auto v1_result = sysmem::V1MoveFromV2BufferCollectionInfo(v2_result.take_value());
   if (!v1_result.is_ok()) {
-    FailAsync(FROM_HERE, ZX_ERR_INVALID_ARGS,
+    FailAsync(ZX_ERR_INVALID_ARGS,
               "CloneResultForSendingV1() V1MoveFromV2BufferCollectionInfo() failed");
     return fit::error();
   }
@@ -524,23 +477,14 @@ BufferCollection::CloneAuxBuffersResultForSendingV1(
   }
   auto v1_result = sysmem::V1AuxBuffersMoveFromV2BufferCollectionInfo(v2_result.take_value());
   if (!v1_result.is_ok()) {
-    FailAsync(FROM_HERE, ZX_ERR_INVALID_ARGS,
+    FailAsync(ZX_ERR_INVALID_ARGS,
               "CloneResultForSendingV1() V1MoveFromV2BufferCollectionInfo() failed");
     return fit::error();
   }
   return fit::ok(v1_result.take_value());
 }
 
-void BufferCollection::OnBuffersAllocated(const AllocationResult& allocation_result) {
-  ZX_DEBUG_ASSERT(!logical_allocation_result_);
-
-  ZX_DEBUG_ASSERT((allocation_result.status == ZX_OK) ==
-                  !!allocation_result.buffer_collection_info);
-
-  node_properties().SetBuffersLogicallyAllocated();
-
-  logical_allocation_result_.emplace(allocation_result);
-
+void BufferCollection::OnBuffersAllocated() {
   // Any that are pending are completed by this call or something called
   // FailAsync().  It's fine for this method to ignore the fact that
   // FailAsync() may have already been called.  That's essentially the main
@@ -552,9 +496,9 @@ void BufferCollection::OnBuffersAllocated(const AllocationResult& allocation_res
   }
 
   fuchsia_sysmem::wire::BufferCollectionInfo_2 v1;
-  if (logical_allocation_result_->status == ZX_OK) {
-    ZX_DEBUG_ASSERT(logical_allocation_result_->buffer_collection_info);
-    auto v1_result = CloneResultForSendingV1(*logical_allocation_result_->buffer_collection_info);
+  if (parent()->allocation_result().status == ZX_OK) {
+    ZX_DEBUG_ASSERT(parent()->allocation_result().buffer_collection_info);
+    auto v1_result = CloneResultForSendingV1(*parent()->allocation_result().buffer_collection_info);
     if (!v1_result.is_ok()) {
       // FailAsync() already called.
       return;
@@ -562,39 +506,41 @@ void BufferCollection::OnBuffersAllocated(const AllocationResult& allocation_res
     v1 = v1_result.take_value();
   }
 
-  events_->OnBuffersAllocated(logical_allocation_result_->status, std::move(v1));
+  events_->OnBuffersAllocated(parent()->allocation_result().status, std::move(v1));
 }
 
-bool BufferCollection::has_constraints() { return node_properties().has_constraints(); }
+bool BufferCollection::has_constraints() { return !!constraints_; }
 
 const fuchsia_sysmem2::wire::BufferCollectionConstraints& BufferCollection::constraints() {
   ZX_DEBUG_ASSERT(has_constraints());
-  return *node_properties().buffer_collection_constraints();
+  return **constraints_;
 }
 
-fuchsia_sysmem2::wire::BufferCollectionConstraints BufferCollection::CloneConstraints() {
+fuchsia_sysmem2::wire::BufferCollectionConstraints BufferCollection::TakeConstraints() {
   ZX_DEBUG_ASSERT(has_constraints());
-  return sysmem::V2CloneBufferCollectionConstraints(table_set_.allocator(), constraints());
+  fuchsia_sysmem2::wire::BufferCollectionConstraints result = std::move(constraints_->mutate());
+  constraints_.reset();
+  return result;
 }
 
-bool BufferCollection::is_done() const { return is_done_; }
+LogicalBufferCollection* BufferCollection::parent() { return parent_.get(); }
 
-BufferCollection::BufferCollection(
-    fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection_param,
-    const BufferCollectionToken& token)
-    : Node(std::move(logical_buffer_collection_param), &token.node_properties()),
-      table_set_(logical_buffer_collection().table_set()) {
-  TRACE_DURATION("gfx", "BufferCollection::BufferCollection", "this", this,
-                 "logical_buffer_collection", &this->logical_buffer_collection());
-  ZX_DEBUG_ASSERT(shared_logical_buffer_collection());
-  inspect_node_ =
-      this->logical_buffer_collection().inspect_node().CreateChild(CreateUniqueName("collection-"));
+fbl::RefPtr<LogicalBufferCollection> BufferCollection::parent_shared() { return parent_; }
+
+bool BufferCollection::is_done() { return is_done_; }
+
+BufferCollection::BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent)
+    : parent_(parent), table_set_(parent->table_set()) {
+  TRACE_DURATION("gfx", "BufferCollection::BufferCollection", "this", this, "parent",
+                 parent_.get());
+  ZX_DEBUG_ASSERT(parent_);
+  node_ = parent_->node().CreateChild(CreateUniqueName("collection-"));
 }
 
 // This method is only meant to be called from GetClientVmoRights().
 uint32_t BufferCollection::GetUsageBasedRightsAttenuation() {
-  // This method won't be called for participants without constraints.
-  ZX_DEBUG_ASSERT(has_constraints());
+  // This method won't be called for participants without any buffer data "usage".
+  ZX_DEBUG_ASSERT(usage_);
 
   // We assume that read and map are both needed by all participants with any "usage".  Only
   // ZX_RIGHT_WRITE is controlled by usage.
@@ -602,7 +548,7 @@ uint32_t BufferCollection::GetUsageBasedRightsAttenuation() {
   // It's not this method's job to attenuate down to kMaxClientVmoRights, so
   // let's not pretend like it is.
   uint32_t result = std::numeric_limits<uint32_t>::max();
-  if (!constraints().has_usage() || !IsWriteUsage(constraints().usage())) {
+  if (!IsWriteUsage(**usage_)) {
     result &= ~ZX_RIGHT_WRITE;
   }
 
@@ -618,7 +564,7 @@ uint32_t BufferCollection::GetClientVmoRights() {
       // attenuate according to BufferCollectionToken.Duplicate() rights
       // parameter so that initiator and participant can distribute the token
       // and remove any unnecessary/unintended rights along the way.
-      node_properties().rights_attenuation_mask();
+      client_rights_attenuation_mask_;
 }
 
 uint32_t BufferCollection::GetClientAuxVmoRights() {
@@ -627,7 +573,8 @@ uint32_t BufferCollection::GetClientAuxVmoRights() {
 }
 
 void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
-  if (!logical_allocation_result_) {
+  LogicalBufferCollection::AllocationResult allocation_result = parent()->allocation_result();
+  if (allocation_result.status == ZX_OK && !allocation_result.buffer_collection_info) {
     // Everything is ok so far, but allocation isn't done yet.
     return;
   }
@@ -636,9 +583,9 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
     pending_wait_for_buffers_allocated_.pop_front();
 
     fuchsia_sysmem::wire::BufferCollectionInfo_2 v1;
-    if (logical_allocation_result_->status == ZX_OK) {
-      ZX_DEBUG_ASSERT(logical_allocation_result_->buffer_collection_info);
-      auto v1_result = CloneResultForSendingV1(*logical_allocation_result_->buffer_collection_info);
+    if (allocation_result.status == ZX_OK) {
+      ZX_DEBUG_ASSERT(allocation_result.buffer_collection_info);
+      auto v1_result = CloneResultForSendingV1(*allocation_result.buffer_collection_info);
       if (!v1_result.is_ok()) {
         // FailAsync() already called.
         return;
@@ -646,10 +593,10 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
       v1 = v1_result.take_value();
     }
     TRACE_ASYNC_END("gfx", "BufferCollection::WaitForBuffersAllocated async", async_id, "this",
-                    this, "logical_buffer_collection", &logical_buffer_collection());
-    auto reply_status = txn.Reply(logical_allocation_result_->status, std::move(v1));
+                    this, "parent", parent_.get());
+    auto reply_status = txn.Reply(allocation_result.status, std::move(v1));
     if (!reply_status.ok()) {
-      FailAsync(FROM_HERE, reply_status.status(),
+      FailAsync(reply_status.status(),
                 "fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated_"
                 "reply failed - status: %s",
                 reply_status.error());
@@ -658,23 +605,5 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
     // ~txn
   }
 }
-
-bool BufferCollection::ReadyForAllocation() { return has_constraints(); }
-
-void BufferCollection::Fail(zx_status_t epitaph) { CloseChannel(epitaph); }
-
-BufferCollectionToken* BufferCollection::buffer_collection_token() { return nullptr; }
-
-const BufferCollectionToken* BufferCollection::buffer_collection_token() const { return nullptr; }
-
-BufferCollection* BufferCollection::buffer_collection() { return this; }
-
-const BufferCollection* BufferCollection::buffer_collection() const { return this; }
-
-OrphanedNode* BufferCollection::orphaned_node() { return nullptr; }
-
-const OrphanedNode* BufferCollection::orphaned_node() const { return nullptr; }
-
-bool BufferCollection::is_connected() const { return true; }
 
 }  // namespace sysmem_driver
