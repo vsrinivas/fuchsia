@@ -154,7 +154,7 @@ zx_library("x86") {
     "system_topology.cc",
     "thread.cc",
     "timer_freq.cc",
-    "user_copy.S",
+    "user-copy/user-copy.S",
     "user_copy.cc",
     "uspace_entry.S",
   ]
