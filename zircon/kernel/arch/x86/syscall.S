@@ -7,7 +7,8 @@
 
 #include <asm.h>
 #include <arch/x86/mp.h>
-#include <lib/code_patching.h>
+#include <lib/code-patching/asm.h>
+#include <arch/code-patches/case-id.h>
 #include <lib/syscalls/zx-syscall-numbers.h>
 
 #define DW_REG_rsp        0x7
@@ -383,12 +384,13 @@ bad:
 #endif
 
     // If we are affected by the MDS speculative execution vulnerability, flush microarchitectural
-    // buffers via mds_buff_overwrite(). x86_mds_flush_select() will NOP out the flush where it is
-    // not required.
+    // buffers via mds_buff_overwrite(). Patching will NOP out the flush where it is not required.
 .global syscall_maybe_mds_buff_overwrite
 syscall_maybe_mds_buff_overwrite:
+    // Mitigates MDS/TAA bugs. See <arch/code-patches/case-id.h>
+    .code_patching.start CASE_ID_MDS_TAA_MITIGATION
     call mds_buff_overwrite
-    APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_mds_flush_select, syscall_maybe_mds_buff_overwrite, 5)
+    .code_patching.end
 
     // Restore general purpose registers just before returning.
     //

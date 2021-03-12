@@ -11,7 +11,6 @@
 #include <arch/code-patches/case-id.h>
 #include <arch/x86/descriptor.h>
 #include <lib/arch/asm.h>
-#include <lib/code_patching.h>
 #include <lib/code-patching/asm.h>
 
 // This is called 256 times in a row, with isr.current set to the iteration
@@ -157,8 +156,10 @@
   jz    1f
 
 .label interrupt_maybe_mds_buff_overwrite, global
+  // Mitigates MDS/TAA bugs. See <arch/code-patches/case-id.h>
+  .code_patching.start CASE_ID_MDS_TAA_MITIGATION
   call mds_buff_overwrite
-  APPLY_CODE_PATCH_FUNC_WITH_DEFAULT(x86_mds_flush_select, interrupt_maybe_mds_buff_overwrite, 5)
+  .code_patching.end
 
   /* swap gs back to user space */
   swapgs

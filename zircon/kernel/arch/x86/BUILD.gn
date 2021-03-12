@@ -226,7 +226,8 @@ zx_library("x86") {
 source_set("syscall") {
   sources = [ "syscall.S" ]
   deps = [
-    "//zircon/kernel/lib/code_patching",
+    "code-patches:headers",
+    "//zircon/kernel/lib/code-patching:headers",
     "//zircon/kernel/lib/syscalls",
   ]
 }

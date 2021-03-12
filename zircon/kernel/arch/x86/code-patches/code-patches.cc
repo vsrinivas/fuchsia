@@ -15,6 +15,7 @@
 #include <cstdio>
 
 #include <arch/code-patches/case-id.h>
+#include <hwreg/x86msr.h>
 
 namespace {
 
@@ -39,6 +40,7 @@ void PrintCaseInfo(const code_patching::Directive& patch, const char* fmt, ...) 
 // Declared in <lib/code-patching/code-patches.h>.
 void ArchPatchCode(ktl::span<const code_patching::Directive> patches) {
   arch::BootCpuidIo cpuid;
+  hwreg::X86MsrIo msr;
 
   // Will effect instruction-data cache consistency on destruction.
   arch::CacheConsistencyContext sync_ctx;
@@ -62,6 +64,22 @@ void ArchPatchCode(ktl::span<const code_patching::Directive> patches) {
           break;
         }
         PrintCaseInfo(patch, "swapgs bug mitigation enabled");
+        continue;  // No patching, so skip past sync'ing.
+      }
+      case CASE_ID_MDS_TAA_MITIGATION: {
+        // `nop` out the mitigation if the bug is not present, if we could not
+        // mitigate it even if it was, or if we generally want mitigations off.
+        const bool present = arch::HasX86MdsTaaBugs(cpuid, msr);
+        const bool can_mitigate = arch::CanMitigateX86MdsTaaBugs(cpuid);
+        if (!present || !can_mitigate || gBootOptions->x86_disable_spec_mitigations) {
+          code_patching::NopFill(insns);
+          ktl::string_view qualifier = !present        ? "bug not present"
+                                       : !can_mitigate ? "unable to mitigate"
+                                                       : "all mitigations disabled";
+          PrintCaseInfo(patch, "MDS/TAA bug mitigation disabled (%V)", qualifier);
+          break;
+        }
+        PrintCaseInfo(patch, "MDS/TAA bug mitigation enabled");
         continue;  // No patching, so skip past sync'ing.
       }
       default:

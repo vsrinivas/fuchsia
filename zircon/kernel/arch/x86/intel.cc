@@ -234,15 +234,3 @@ void x86_intel_init_percpu(void) {
     write_msr(0x1fc, power_ctl_msr & ~0x2);
   }
 }
-
-extern "C" void x86_mds_flush_select(const CodePatchInfo* patch) {
-  const size_t kSize = 5;
-  DEBUG_ASSERT(patch->dest_size == kSize);
-
-  extern bool g_md_clear_on_user_return;
-  if (!g_md_clear_on_user_return) {
-    memset(patch->dest_addr, 0x90, kSize);
-  } else {
-    // Keep the call to mds_buf_overwrite in place.
-  }
-}

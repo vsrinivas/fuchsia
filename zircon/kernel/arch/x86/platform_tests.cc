@@ -4,6 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include <lib/arch/nop.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/console.h>
 #include <lib/unittest/unittest.h>
@@ -678,9 +679,8 @@ static bool test_spectre_v2_mitigations() {
   END_TEST;
 }
 
-static bool test_mds_mitigations() {
+static bool test_mds_taa_mitigation() {
   BEGIN_TEST;
-
   for (char* src : {&interrupt_maybe_mds_buff_overwrite, &syscall_maybe_mds_buff_overwrite}) {
     unsigned char check_buffer[5];
     memcpy(check_buffer, src, sizeof(check_buffer));
@@ -690,7 +690,7 @@ static bool test_mds_mitigations() {
       // If speculative execution mitigations are disabled or we're not affected by MDS or don't
       // have MD_CLEAR, expect NOPs.
       for (size_t i = 0; i < sizeof(check_buffer); i++) {
-        EXPECT_EQ(check_buffer[i], 0x90);
+        EXPECT_EQ(check_buffer[i], arch::X86NopTraits::kNop5[i]);
       }
     }
   }
@@ -782,7 +782,7 @@ UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode
 UNITTEST("test pkg power limit change", test_x64_power_limits)
 UNITTEST("test amd_platform_init", test_amd_platform_init)
 UNITTEST("test spectre v2 mitigation building blocks", test_spectre_v2_mitigations)
-UNITTEST("test mds mitigation building blocks", test_mds_mitigations)
+UNITTEST("test mds mitigation building blocks", test_mds_taa_mitigation)
 UNITTEST("test usercopy variants", test_usercopy_variants)
 UNITTEST("test enable/disable turbo/core performance boost", test_turbo_enable_disable)
 UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "")
