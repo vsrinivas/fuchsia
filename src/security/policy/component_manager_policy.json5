@@ -5,6 +5,7 @@
                 "/core/appmgr",
             ],
             main_process_critical: [
+                "/bootstrap/archivist",
                 "/bootstrap/driver_manager",
                 "/bootstrap/power_manager",
                 "/bootstrap/shutdown_shim",
@@ -267,4 +268,3 @@
         ]
     }
 }
-

@@ -12,6 +12,7 @@
             "/config/data/archivist_service_config.json",
         ],
         lifecycle: { stop_event: "notify" },
+        main_process_critical: "true",
     },
     capabilities: [
         {
