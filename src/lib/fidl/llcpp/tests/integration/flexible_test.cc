@@ -207,19 +207,17 @@ class Server : test::ReceiveFlexibleEnvelope::Interface, private async_wait_t {
   }
 
   void GetUnknownTableMoreBytes(GetUnknownTableMoreBytesCompleter::Sync& completer) override {
-    fidl::aligned<fidl::Array<uint8_t, 30>> array = {};
-    auto table_builder =
-        test::wire::FlexibleTable::UnownedBuilder().set_want_more_than_30_bytes_at_ordinal_3(
-            fidl::unowned_ptr(&array));
-    completer.Reply(table_builder.build());
+    fidl::FidlAllocator allocator;
+    test::wire::FlexibleTable flexible_table(allocator);
+    flexible_table.set_want_more_than_30_bytes_at_ordinal_3(allocator);
+    completer.Reply(std::move(flexible_table));
   }
 
   void GetUnknownTableMoreHandles(GetUnknownTableMoreHandlesCompleter::Sync& completer) override {
-    fidl::aligned<fidl::Array<zx::handle, 4>> array = {};
-    auto table_builder =
-        test::wire::FlexibleTable::UnownedBuilder().set_want_more_than_4_handles_at_ordinal_4(
-            fidl::unowned_ptr(&array));
-    completer.Reply(table_builder.build());
+    fidl::FidlAllocator allocator;
+    test::wire::FlexibleTable flexible_table(allocator);
+    flexible_table.set_want_more_than_4_handles_at_ordinal_4(allocator);
+    completer.Reply(std::move(flexible_table));
   }
 
   Server(async_dispatcher_t* dispatcher, fidl::ServerEnd<test::ReceiveFlexibleEnvelope> channel)
