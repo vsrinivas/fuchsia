@@ -325,6 +325,9 @@ zx_status_t Device::RpcConfigureIrqMode(const zx::unowned_channel& ch) {
       zx_status_t st = SetIrqMode(mode, irq_cnt);
       zxlogf(DEBUG, "[%s] ConfigureIrqMode { mode = %u, requested_irqs = %u, status = %s }",
              cfg_->addr(), mode, irq_cnt, zx_status_get_string(st));
+      if (st == ZX_OK) {
+        response_.irq.mode = mode;
+      }
       return RpcReply(ch, st);
     }
   }

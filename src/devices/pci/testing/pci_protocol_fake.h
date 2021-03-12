@@ -94,18 +94,34 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return ZX_ERR_BAD_STATE;
   }
 
-  zx_status_t PciConfigureIrqMode(uint32_t requested_irq_count) {
+  zx_status_t PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* out_irq_mode) {
     ZX_ASSERT(requested_irq_count);
+    zx_status_t status;
     if (msix_interrupts_.size() >= requested_irq_count) {
-      return PciSetIrqMode(PCI_IRQ_MODE_MSI_X, requested_irq_count);
+      if ((status = PciSetIrqMode(PCI_IRQ_MODE_MSI_X, requested_irq_count)) == ZX_OK) {
+        if (out_irq_mode) {
+          *out_irq_mode = PCI_IRQ_MODE_MSI_X;
+        }
+        return ZX_OK;
+      }
     }
 
     if (msi_interrupts_.size() >= requested_irq_count) {
-      return PciSetIrqMode(PCI_IRQ_MODE_MSI, requested_irq_count);
+      if ((status = PciSetIrqMode(PCI_IRQ_MODE_MSI, requested_irq_count)) == ZX_OK) {
+        if (out_irq_mode) {
+          *out_irq_mode = PCI_IRQ_MODE_MSI;
+        }
+        return ZX_OK;
+      }
     }
 
     if (legacy_interrupt_ && requested_irq_count == 1) {
-      return PciSetIrqMode(PCI_IRQ_MODE_LEGACY, requested_irq_count);
+      if ((status = PciSetIrqMode(PCI_IRQ_MODE_LEGACY, requested_irq_count)) == ZX_OK) {
+        if (out_irq_mode) {
+          *out_irq_mode = PCI_IRQ_MODE_LEGACY;
+        }
+        return ZX_OK;
+      }
     }
 
     return ZX_ERR_NOT_SUPPORTED;
@@ -142,8 +158,8 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
   }
 
   // This allows us to mimic the kernel's handling of outstanding MsiDispatchers per MsiAllocation
-  // objects. A device's legacy interrupt is still a valid object if the interrupt mode is switched,
-  // albeit not a useful one.
+  // objects. A device's legacy interrupt is still a valid object if the interrupt mode is
+  // switched, albeit not a useful one.
   bool AllMappedInterruptsFreed() {
     zx_info_handle_count_t info;
     for (auto& interrupts : {&msix_interrupts_, &msi_interrupts_}) {
@@ -390,10 +406,10 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
         capability_id > 0 && capability_id <= PCI_CAP_ID_FLATTENING_PORTAL_BRIDGE,
         "FakePciProtocol Error: capability_id must be non-zero and <= %#x (capability_id = %#x).",
         PCI_CAP_ID_FLATTENING_PORTAL_BRIDGE, capability_id);
-    ZX_ASSERT_MSG(
-        position >= PCI_CFG_HEADER_SIZE && position + size < PCI_BASE_CONFIG_SIZE,
-        "FakePciProtocolError: capability must fit the range [%#x, %#x] (capability = [%#x, %#x]).",
-        PCI_CFG_HEADER_SIZE, PCI_BASE_CONFIG_SIZE - 1, position, position + size - 1);
+    ZX_ASSERT_MSG(position >= PCI_CFG_HEADER_SIZE && position + size < PCI_BASE_CONFIG_SIZE,
+                  "FakePciProtocolError: capability must fit the range [%#x, %#x] (capability = "
+                  "[%#x, %#x]).",
+                  PCI_CFG_HEADER_SIZE, PCI_BASE_CONFIG_SIZE - 1, position, position + size - 1);
 
     // We need to update the next pointer of the previous capability, or the
     // original header capabilities pointer if this is the first.

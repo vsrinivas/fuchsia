@@ -131,6 +131,10 @@ static zx_status_t kpci_configure_irq_mode(pci_msg_t* req, kpci_device_t* device
     mode = ZX_PCIE_IRQ_MODE_LEGACY;
     st = zx_pci_set_irq_mode(device->handle, mode, req->irq.requested_irqs);
   }
+
+  if (st == ZX_OK) {
+    resp.irq.mode = mode;
+  }
   KPCIDBG("{ irq mode = %u, requested irqs = %u, status = %u }", mode, req->irq.requested_irqs, st);
   return pci_rpc_reply(ch, st, NULL, req, &resp);
 }

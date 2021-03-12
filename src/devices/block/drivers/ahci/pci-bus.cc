@@ -61,7 +61,7 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
   }
 
   // Request 1 interrupt of any mode.
-  status = pci_configure_irq_mode(&pci_, 1);
+  status = pci_configure_irq_mode(&pci_, 1, nullptr);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: no interrupts available %d", status);
     return ZX_ERR_NO_RESOURCES;

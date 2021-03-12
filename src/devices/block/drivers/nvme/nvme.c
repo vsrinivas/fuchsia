@@ -1012,7 +1012,7 @@ static zx_status_t nvme_bind(void* ctx, zx_device_t* dev) {
     goto fail;
   }
 
-  zx_status_t status = pci_configure_irq_mode(&nvme->pci, 1);
+  zx_status_t status = pci_configure_irq_mode(&nvme->pci, 1, NULL);
   if (status != ZX_OK) {
     zxlogf(ERROR, "nvme: could not configure irqs");
     goto fail;

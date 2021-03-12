@@ -944,7 +944,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
   }
 
   // Request 1 interrupt of any mode.
-  status = pci_configure_irq_mode(pci, 1);
+  status = pci_configure_irq_mode(pci, 1, NULL);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to configure irqs");
     goto fail;

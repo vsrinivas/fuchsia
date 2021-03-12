@@ -169,7 +169,7 @@ zx_status_t Interrupts::Init(bool start_thread) {
   ddk::PciProtocolClient pci(controller_->pci());
 
   // Assume that PCI will enable bus mastering as required for MSI interrupts.
-  zx_status_t status = pci.ConfigureIrqMode(1);
+  zx_status_t status = pci.ConfigureIrqMode(1, &irq_mode_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "Failed to configure irq mode (%d)", status);
     return ZX_ERR_INTERNAL;

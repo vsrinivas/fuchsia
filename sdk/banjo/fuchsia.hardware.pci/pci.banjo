@@ -124,7 +124,7 @@ protocol Pci {
     MapInterrupt(uint32 which_irq) -> (zx.status s, zx.handle:INTERRUPT @handle);
     QueryIrqMode(fuchsia.hardware.syscalls.pci.PciIrqMode mode) -> (zx.status s, uint32 max_irqs);
     SetIrqMode(fuchsia.hardware.syscalls.pci.PciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);
-    ConfigureIrqMode(uint32 requested_irq_count) -> (zx.status s);
+    ConfigureIrqMode(uint32 requested_irq_count) -> (zx.status s, PciIrqMode mode);
     GetDeviceInfo() -> (zx.status s, fuchsia.hardware.syscalls.pci.PcieDeviceInfo info);
     ConfigRead8(uint16 offset) -> (zx.status s, uint8 value);
     ConfigRead16(uint16 offset) -> (zx.status s, uint16 value);

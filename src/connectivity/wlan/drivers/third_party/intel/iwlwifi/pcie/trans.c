@@ -1605,8 +1605,7 @@ static zx_status_t iwl_pcie_set_interrupt_capa(struct iwl_trans* trans) {
     return;
 enable_msi:
 #endif  // NEEDS_PORTING
-
-  return pci_configure_irq_mode(trans_pcie->pci, 1);
+  return pci_configure_irq_mode(trans_pcie->pci, 1, NULL);
 }
 
 #if 0   // NEEDS_PORTING

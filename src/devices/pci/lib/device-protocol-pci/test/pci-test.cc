@@ -35,7 +35,9 @@ class FakePci : public ddk::PciProtocol<FakePci> {
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
     return ZX_ERR_NOT_SUPPORTED;
   }
-  zx_status_t PciConfigureIrqMode(uint32_t requested_irq_count) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* mode) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   zx_status_t PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs) {
     return ZX_ERR_NOT_SUPPORTED;
   }

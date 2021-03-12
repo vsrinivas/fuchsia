@@ -187,30 +187,36 @@ TEST_F(FakePciProtocolTests, ConfigureIrqMode) {
   // The intent is to check that the IRQ modes are always favored in order of
   // MSI-X > MSI > Legacy, but also choosing based on how many interrupts each
   // mode is configured to provide.
+  pci_irq_mode_t mode;
   fake_pci().AddLegacyInterrupt();
-  ASSERT_OK(pci().ConfigureIrqMode(1));
+  ASSERT_OK(pci().ConfigureIrqMode(1, &mode));
   ASSERT_EQ(1, fake_pci().GetIrqCount());
+  ASSERT_EQ(PCI_IRQ_MODE_LEGACY, mode);
   ASSERT_EQ(PCI_IRQ_MODE_LEGACY, fake_pci().GetIrqMode());
 
   fake_pci().AddMsiInterrupt();
-  ASSERT_OK(pci().ConfigureIrqMode(1));
+  ASSERT_OK(pci().ConfigureIrqMode(1, &mode));
   ASSERT_EQ(1, fake_pci().GetIrqCount());
+  ASSERT_EQ(PCI_IRQ_MODE_MSI, mode);
   ASSERT_EQ(PCI_IRQ_MODE_MSI, fake_pci().GetIrqMode());
 
   fake_pci().AddMsixInterrupt();
-  ASSERT_OK(pci().ConfigureIrqMode(1));
+  ASSERT_OK(pci().ConfigureIrqMode(1, &mode));
   ASSERT_EQ(1, fake_pci().GetIrqCount());
+  ASSERT_EQ(PCI_IRQ_MODE_MSI_X, mode);
   ASSERT_EQ(PCI_IRQ_MODE_MSI_X, fake_pci().GetIrqMode());
 
   // Ensure it will find the mode that supports the number necessary.
   fake_pci().AddMsiInterrupt();
-  ASSERT_OK(pci().ConfigureIrqMode(2));
+  ASSERT_OK(pci().ConfigureIrqMode(2, &mode));
   ASSERT_EQ(2, fake_pci().GetIrqCount());
+  ASSERT_EQ(PCI_IRQ_MODE_MSI, mode);
   ASSERT_EQ(PCI_IRQ_MODE_MSI, fake_pci().GetIrqMode());
 
   fake_pci().AddMsixInterrupt();
-  ASSERT_OK(pci().ConfigureIrqMode(2));
+  ASSERT_OK(pci().ConfigureIrqMode(2, &mode));
   ASSERT_EQ(2, fake_pci().GetIrqCount());
+  ASSERT_EQ(PCI_IRQ_MODE_MSI_X, mode);
   ASSERT_EQ(PCI_IRQ_MODE_MSI_X, fake_pci().GetIrqMode());
 }
 

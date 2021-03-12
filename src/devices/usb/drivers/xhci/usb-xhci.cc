@@ -339,7 +339,7 @@ zx_status_t UsbXhci::InitPci() {
   // Cap IRQ count at the number of interrupters we want to use and
   // the number of interrupters supported by XHCI.
   uint32_t irq_cnt = std::min(INTERRUPTER_COUNT, xhci_get_max_interrupters(xhci_.get()));
-  while (irq_cnt && (status = pci_.ConfigureIrqMode(irq_cnt)) != ZX_OK) {
+  while (irq_cnt && (status = pci_.ConfigureIrqMode(irq_cnt, nullptr)) != ZX_OK) {
     irq_cnt--;
   }
 
