@@ -7,7 +7,7 @@ use {
     fidl::endpoints::{create_proxy, ClientEnd, Proxy},
     fidl_fuchsia_io::{self as fio, DirectoryMarker, DirectoryProxy},
     fidl_fuchsia_mem as fmem,
-    fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy, UpdatePolicy},
+    fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
@@ -106,16 +106,10 @@ async fn resolve_package(
 ) -> Result<DirectoryProxy, ResolverError> {
     let package_url = package_url.root_url();
     let selectors = Vec::new();
-    let mut update_policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
     let (proxy, server_end) =
         create_proxy::<DirectoryMarker>().expect("failed to create channel pair");
     package_resolver
-        .resolve(
-            &package_url.to_string(),
-            &mut selectors.into_iter(),
-            &mut update_policy,
-            server_end,
-        )
+        .resolve(&package_url.to_string(), &mut selectors.into_iter(), server_end)
         .await
         .map_err(ResolverError::PackageResolverFidlError)?
         .map_err(Status::from_raw)
@@ -183,20 +177,10 @@ mod tests {
             };
             while let Some(request) = server.try_next().await.unwrap() {
                 match request {
-                    PackageResolverRequest::Resolve {
-                        package_url,
-                        selectors,
-                        update_policy,
-                        dir,
-                        responder,
-                    } => {
+                    PackageResolverRequest::Resolve { package_url, selectors, dir, responder } => {
                         assert_eq!(
                             package_url, "fuchsia-pkg://fuchsia.com/test",
                             "unexpected package URL"
-                        );
-                        assert_matches!(
-                            update_policy,
-                            UpdatePolicy { fetch_if_absent: true, allow_old_versions: false }
                         );
                         assert!(
                             selectors.is_empty(),
@@ -248,20 +232,10 @@ mod tests {
             };
             while let Some(request) = server.try_next().await.unwrap() {
                 match request {
-                    PackageResolverRequest::Resolve {
-                        package_url,
-                        selectors,
-                        update_policy,
-                        dir,
-                        responder,
-                    } => {
+                    PackageResolverRequest::Resolve { package_url, selectors, dir, responder } => {
                         assert_eq!(
                             package_url, "fuchsia-pkg://fuchsia.com/test",
                             "unexpected package URL"
-                        );
-                        assert_matches!(
-                            update_policy,
-                            UpdatePolicy { fetch_if_absent: true, allow_old_versions: false }
                         );
                         assert!(
                             selectors.is_empty(),
@@ -303,18 +277,8 @@ mod tests {
             };
             while let Some(request) = server.try_next().await.unwrap() {
                 match request {
-                    PackageResolverRequest::Resolve {
-                        package_url,
-                        selectors,
-                        update_policy,
-                        dir,
-                        responder,
-                    } => {
+                    PackageResolverRequest::Resolve { package_url, selectors, dir, responder } => {
                         assert_eq!(package_url, "fuchsia-pkg://fuchsia.com/test?hash=9e3a3f63c018e2a4db0ef93903a87714f036e3e8ff982a7a2020eca86cc4677c", "unexpected package URL");
-                        assert_matches!(
-                            update_policy,
-                            UpdatePolicy { fetch_if_absent: true, allow_old_versions: false }
-                        );
                         assert!(
                             selectors.is_empty(),
                             "Call to Resolve should not contain any selectors"

@@ -3,11 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_io::DirectoryProxy,
-    fidl_fuchsia_pkg::{PackageResolverProxy, UpdatePolicy},
-    fuchsia_url::pkg_url::PkgUrl,
-    futures::prelude::*,
-    thiserror::Error,
+    fidl_fuchsia_io::DirectoryProxy, fidl_fuchsia_pkg::PackageResolverProxy,
+    fuchsia_url::pkg_url::PkgUrl, futures::prelude::*, thiserror::Error,
     update_package::UpdatePackage,
 };
 
@@ -56,12 +53,7 @@ async fn resolve_package(
 ) -> Result<DirectoryProxy, ResolveError> {
     let (dir, dir_server_end) =
         fidl::endpoints::create_proxy().map_err(ResolveError::CreateProxy)?;
-    let res = pkg_resolver.resolve(
-        &url.to_string(),
-        &mut std::iter::empty(),
-        &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-        dir_server_end,
-    );
+    let res = pkg_resolver.resolve(&url.to_string(), &mut std::iter::empty(), dir_server_end);
     let res = res.await.map_err(|e| ResolveError::Fidl(e, url.clone()))?;
 
     let () = res

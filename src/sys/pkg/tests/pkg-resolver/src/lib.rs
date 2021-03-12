@@ -19,7 +19,7 @@ use {
         ExperimentToggle as Experiment, FontResolverMarker, FontResolverProxy, LocalMirrorMarker,
         PackageCacheMarker, PackageResolverAdminMarker, PackageResolverAdminProxy,
         PackageResolverMarker, PackageResolverProxy, RepositoryManagerMarker,
-        RepositoryManagerProxy, UpdatePolicy,
+        RepositoryManagerProxy,
     },
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigBuilder, RepositoryConfigs},
     fidl_fuchsia_pkg_rewrite::{
@@ -988,12 +988,7 @@ pub fn resolve_package(
 ) -> impl Future<Output = Result<DirectoryProxy, Status>> {
     let (package, package_server_end) = fidl::endpoints::create_proxy().unwrap();
     let selectors: Vec<&str> = vec![];
-    let response_fut = resolver.resolve(
-        url,
-        &mut selectors.into_iter(),
-        &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-        package_server_end,
-    );
+    let response_fut = resolver.resolve(url, &mut selectors.into_iter(), package_server_end);
     async move {
         let () = response_fut.await.unwrap().map_err(Status::from_raw)?;
         Ok(package)

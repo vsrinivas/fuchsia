@@ -8,7 +8,7 @@ use {
     async_trait::async_trait,
     fidl::endpoints::create_proxy,
     fidl_fuchsia_io as io, fidl_fuchsia_mem as mem,
-    fidl_fuchsia_pkg::{FontResolverMarker, UpdatePolicy},
+    fidl_fuchsia_pkg::FontResolverMarker,
     fuchsia_component::client::connect_to_service,
     fuchsia_trace as trace, fuchsia_zircon as zx,
     manifest::v2,
@@ -65,14 +65,12 @@ impl AssetLoader for AssetLoaderImpl {
         // Get directory handle from FontResolver
         let font_resolver = connect_to_service::<FontResolverMarker>()
             .map_err(|e| AssetCollectionError::ServiceConnectionError(e.into()))?;
-        let mut update_policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
         let (dir_proxy, dir_request) = create_proxy::<io::DirectoryMarker>()
             .map_err(|e| AssetCollectionError::ServiceConnectionError(e.into()))?;
 
-        let response =
-            font_resolver.resolve(&package_url, &mut update_policy, dir_request).await.map_err(
-                |e| AssetCollectionError::PackageResolverError(package_locator.clone(), e.into()),
-            )?;
+        let response = font_resolver.resolve(&package_url, dir_request).await.map_err(|e| {
+            AssetCollectionError::PackageResolverError(package_locator.clone(), e.into())
+        })?;
         let () = response.map_err(|i| {
             AssetCollectionError::PackageResolverError(
                 package_locator.clone(),

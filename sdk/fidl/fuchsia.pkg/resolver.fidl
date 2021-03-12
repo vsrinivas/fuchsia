@@ -13,14 +13,12 @@ using zx;
 /// repository administration tools.
 [Discoverable]
 protocol PackageResolver {
-    /// Populates or updates the cache of a package with the given selectors as specified by the
-    /// update policy.
+    /// Populates or updates the cache of a package with the given selectors.
     ///
     /// Ensures that a package is on the local filesystem.
     ///
     /// + request `package_url` the package URL for a package (TODO: link to docs).
     /// + request `selectors` the package selectors (TODO: link to docs).
-    /// + request `update_policy` the policy to use when fetching packages.
     /// + request `dir` a request for a directory that will be resolved when the package has
     ///   been successfully cached.
     /// * error a zx_status value indicating failure. One of the following:
@@ -37,7 +35,6 @@ protocol PackageResolver {
     Resolve(
         string package_url,
         vector<string> selectors,
-        UpdatePolicy update_policy,
         request<fuchsia.io.Directory> dir
         ) -> () error zx.status;
 
@@ -53,13 +50,4 @@ protocol PackageResolver {
     GetHash(
         PackageUrl package_url
         ) -> (BlobId meta_far_blob_id) error zx.status;
-};
-
-/// The policy to use when resolving packages.
-struct UpdatePolicy {
-    /// Whether the resolver should fetch the package if it is not present on the local system.
-    bool fetch_if_absent;
-
-    /// Whether the resolver should allow old versions of the package to be used.
-    bool allow_old_versions;
 };

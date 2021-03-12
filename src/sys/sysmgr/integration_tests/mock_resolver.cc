@@ -26,7 +26,6 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
   }
 
   void Resolve(::std::string package_uri, ::std::vector<::std::string> selectors,
-               fuchsia::pkg::UpdatePolicy update_policy,
                ::fidl::InterfaceRequest<fuchsia::io::Directory> dir,
                ResolveCallback callback) override {
     fdio_service_connect("/pkg", dir.TakeChannel().release());

@@ -126,7 +126,7 @@ pub mod for_tests {
         super::*,
         crate::cache::for_tests::CacheForTest,
         fidl_fuchsia_io::DirectoryProxy,
-        fidl_fuchsia_pkg::{PackageResolverMarker, UpdatePolicy},
+        fidl_fuchsia_pkg::PackageResolverMarker,
         fidl_fuchsia_pkg_ext::RepositoryConfigs,
         fuchsia_pkg_testing::{serve::ServedRepository, Repository},
         fuchsia_url::pkg_url::RepoUrl,
@@ -225,12 +225,7 @@ pub mod for_tests {
             let (package, package_remote) =
                 fidl::endpoints::create_proxy().context("creating package directory endpoints")?;
             let () = resolver
-                .resolve(
-                    url,
-                    &mut selectors.into_iter(),
-                    &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-                    package_remote,
-                )
+                .resolve(url, &mut selectors.into_iter(), package_remote)
                 .await
                 .unwrap()
                 .map_err(zx::Status::from_raw)?;

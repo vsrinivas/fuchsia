@@ -65,14 +65,12 @@ zx::status<fio::Directory::SyncClient> PackageResolver::Resolve(
     LOGF(ERROR, "Failed to parse package url: %s", package_url.data());
     return zx::error(ZX_ERR_INTERNAL);
   }
-  ::fuchsia_pkg::wire::UpdatePolicy update_policy{.fetch_if_absent = true,
-                                                  .allow_old_versions = false};
   ::fidl::VectorView<::fidl::StringView> selectors;
 
   // This is synchronous for now so we can get the proof of concept working.
   // Eventually we will want to do this asynchronously.
   auto result = resolver_client_.Resolve(::fidl::StringView(fidl::unowned_str(fp.package_path())),
-                                         std::move(selectors), update_policy, std::move(remote));
+                                         std::move(selectors), std::move(remote));
   if (!result.ok() || result.Unwrap()->result.is_err()) {
     LOGF(ERROR, "Failed to resolve package");
     return zx::error(!result.ok() ? ZX_ERR_INTERNAL : result.Unwrap()->result.err());

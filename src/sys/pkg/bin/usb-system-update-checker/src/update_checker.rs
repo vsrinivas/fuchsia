@@ -5,7 +5,7 @@
 use {
     anyhow::{anyhow, Context, Error},
     fidl_fuchsia_io::DirectoryMarker,
-    fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy, UpdatePolicy},
+    fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fidl_fuchsia_update_installer::{
         Initiator, InstallerMarker, InstallerProxy, MonitorMarker, MonitorRequest, Options,
         RebootControllerMarker, State,
@@ -224,12 +224,10 @@ impl UsbUpdateChecker<'_> {
         url: PkgUrl,
         resolver: PackageResolverProxy,
     ) -> Result<(UpdatePackage, PkgUrl), Error> {
-        let mut policy = UpdatePolicy { fetch_if_absent: true, allow_old_versions: false };
-
         let (dir, remote) = fidl::endpoints::create_proxy::<DirectoryMarker>()
             .context("Creating directory proxy")?;
         resolver
-            .resolve(&url.to_string(), &mut vec![].into_iter(), &mut policy, remote)
+            .resolve(&url.to_string(), &mut vec![].into_iter(), remote)
             .await
             .context("Sending FIDL request")?
             .map_err(Status::from_raw)

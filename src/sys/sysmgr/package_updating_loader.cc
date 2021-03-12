@@ -93,8 +93,6 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
     callback(fidl::MakeOptional(std::move(package)));
   };
 
-  fuchsia::pkg::UpdatePolicy update_policy;
-  update_policy.fetch_if_absent = true;
   std::vector<std::string> selectors;
 
   // TODO: if the resolver became unavailable in between the start of this
@@ -102,8 +100,8 @@ void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   // had a chance to execute, so we'll still block our client's request
   // indefinitely. to resolve this we'll maybe need to change the API or undergo
   // some more significant refactoring.
-  resolver_->Resolve(fuchsia_url.package_path(), std::move(selectors), std::move(update_policy),
-                     std::move(dir_request), std::move(done_cb));
+  resolver_->Resolve(fuchsia_url.package_path(), std::move(selectors), std::move(dir_request),
+                     std::move(done_cb));
 }
 
 void PackageUpdatingLoader::EnsureConnectedToResolver() {

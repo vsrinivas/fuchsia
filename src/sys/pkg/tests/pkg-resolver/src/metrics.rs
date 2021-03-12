@@ -8,7 +8,6 @@ use {
     cobalt_sw_delivery_registry as metrics,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
-    fidl_fuchsia_pkg::UpdatePolicy,
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{
         serve::{handler, UriPathHandler},
@@ -294,11 +293,7 @@ async fn resolve_duration_font_test_failure() {
     assert_eq!(
         env.proxies
             .font_resolver
-            .resolve(
-                "fuchsia-pkg://example.com/some-nonexistent-pkg",
-                &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-                server,
-            )
+            .resolve("fuchsia-pkg://example.com/some-nonexistent-pkg", server,)
             .await
             .unwrap()
             .unwrap_err(),
@@ -462,11 +457,7 @@ async fn font_resolver_is_font_package_check_not_font() {
     assert_eq!(
         env.proxies
             .font_resolver
-            .resolve(
-                "fuchsia-pkg://example.com/some-nonexistent-pkg",
-                &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-                server,
-            )
+            .resolve("fuchsia-pkg://example.com/some-nonexistent-pkg", server,)
             .await
             .unwrap()
             .unwrap_err(),

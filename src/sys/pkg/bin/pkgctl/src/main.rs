@@ -13,7 +13,7 @@ use {
     anyhow::{bail, format_err, Context as _},
     fidl_fuchsia_pkg::{
         PackageCacheMarker, PackageResolverAdminMarker, PackageResolverMarker, PackageUrl,
-        RepositoryManagerMarker, RepositoryManagerProxy, UpdatePolicy,
+        RepositoryManagerMarker, RepositoryManagerProxy,
     },
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig},
     fidl_fuchsia_pkg_rewrite::{EditTransactionProxy, EngineMarker, EngineProxy},
@@ -52,12 +52,7 @@ async fn main_helper(command: Command) -> Result<i32, anyhow::Error> {
             let (dir, dir_server_end) = fidl::endpoints::create_proxy()?;
 
             let () = resolver
-                .resolve(
-                    &pkg_url,
-                    &mut selectors.iter().map(|s| s.as_str()),
-                    &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: true },
-                    dir_server_end,
-                )
+                .resolve(&pkg_url, &mut selectors.iter().map(|s| s.as_str()), dir_server_end)
                 .await?
                 .map_err(zx::Status::from_raw)?;
 

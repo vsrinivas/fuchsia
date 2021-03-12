@@ -5,7 +5,7 @@
 use crate::errors::{self, Error};
 use anyhow::{anyhow, Context as _};
 use fidl_fuchsia_paver::{Asset, BootManagerMarker, DataSinkMarker, PaverMarker, PaverProxy};
-use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface, UpdatePolicy};
+use fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxyInterface};
 use fuchsia_component::client::connect_to_service;
 use fuchsia_hash::Hash;
 use fuchsia_syslog::fx_log_warn;
@@ -130,12 +130,8 @@ async fn latest_update_package(
 ) -> Result<UpdatePackage, errors::UpdatePackage> {
     let (dir_proxy, dir_server_end) =
         fidl::endpoints::create_proxy().map_err(errors::UpdatePackage::CreateDirectoryProxy)?;
-    let fut = package_resolver.resolve(
-        &UPDATE_PACKAGE_URL,
-        &mut vec![].into_iter(),
-        &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: false },
-        dir_server_end,
-    );
+    let fut =
+        package_resolver.resolve(&UPDATE_PACKAGE_URL, &mut vec![].into_iter(), dir_server_end);
     let () = fut
         .await
         .map_err(errors::UpdatePackage::ResolveFidl)?
@@ -323,15 +319,10 @@ pub mod test_check_for_system_update_impl {
             &self,
             package_url: &str,
             selectors: &mut dyn ExactSizeIterator<Item = &str>,
-            update_policy: &mut UpdatePolicy,
             dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
         ) -> Self::ResolveResponseFut {
             assert_eq!(package_url, UPDATE_PACKAGE_URL);
             assert_eq!(selectors.len(), 0);
-            assert_eq!(
-                update_policy,
-                &UpdatePolicy { fetch_if_absent: true, allow_old_versions: false }
-            );
             fdio::service_connect(
                 self.temp_dir.path().to_str().expect("path is utf8"),
                 dir.into_channel(),
@@ -386,7 +377,6 @@ pub mod test_check_for_system_update_impl {
                 &self,
                 _package_url: &str,
                 _selectors: &mut dyn ExactSizeIterator<Item = &str>,
-                _update_policy: &mut UpdatePolicy,
                 _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::err(fidl::Error::Invalid)
@@ -419,7 +409,6 @@ pub mod test_check_for_system_update_impl {
                 &self,
                 _package_url: &str,
                 _selectors: &mut dyn ExactSizeIterator<Item = &str>,
-                _update_policy: &mut UpdatePolicy,
                 _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::ok(Err(fuchsia_zircon::Status::INTERNAL.into_raw()))
@@ -452,7 +441,6 @@ pub mod test_check_for_system_update_impl {
                 &self,
                 _package_url: &str,
                 _selectors: &mut dyn ExactSizeIterator<Item = &str>,
-                _update_policy: &mut UpdatePolicy,
                 _dir: fidl::endpoints::ServerEnd<fidl_fuchsia_io::DirectoryMarker>,
             ) -> Self::ResolveResponseFut {
                 future::ok(Ok(()))

@@ -40,14 +40,13 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
   explicit PackageResolverMock(zx_status_t status) : status_(status) {}
 
   virtual void Resolve(::std::string package_uri, ::std::vector<::std::string> selectors,
-                       fuchsia::pkg::UpdatePolicy update_policy,
                        ::fidl::InterfaceRequest<fuchsia::io::Directory> dir,
                        ResolveCallback callback) override {
     std::vector<std::string> v_selectors;
     for (const auto& s : selectors) {
       v_selectors.push_back(s);
     }
-    args_ = std::make_tuple(package_uri, v_selectors, update_policy);
+    args_ = std::make_tuple(package_uri, v_selectors);
     fdio_service_connect("/pkg", dir.TakeChannel().release());
     if (status_ == ZX_OK) {
       callback(fuchsia::pkg::PackageResolver_Resolve_Result::WithResponse({}));
@@ -66,7 +65,7 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
 
   void Unbind() { bindings_.CloseAll(); }
 
-  typedef std::tuple<std::string, std::vector<std::string>, fuchsia::pkg::UpdatePolicy> ArgsTuple;
+  typedef std::tuple<std::string, std::vector<std::string>> ArgsTuple;
   const ArgsTuple& args() const { return args_; }
 
  private:
@@ -167,13 +166,10 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   RunLoopUntil([&] { return ret_msg == message; });
 
   // Verify that Resolve was called with the expected arguments.
-  fuchsia::pkg::UpdatePolicy policy;
-  policy.fetch_if_absent = true;
   constexpr char kResolvedUrl[] = "fuchsia-pkg://fuchsia.com/sysmgr-integration-tests/0";
   const auto& args = resolver_service.args();
   EXPECT_EQ(std::get<0>(args), std::string(kResolvedUrl));
   EXPECT_EQ(std::get<1>(args), std::vector<std::string>{});
-  EXPECT_TRUE(fidl::Equals(std::get<2>(args), policy));
 }
 
 TEST_F(PackageUpdatingLoaderTest, Failure) {

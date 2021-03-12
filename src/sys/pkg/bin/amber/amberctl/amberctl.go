@@ -735,7 +735,6 @@ func getUpdateComplete(r *pkg.PackageResolverWithCtxInterface, name string, vers
 	}
 
 	selectors := []string{}
-	updatePolicy := pkg.UpdatePolicy{}
 
 	dirReq, dirPxy, err := fuchsiaio.NewDirectoryWithCtxInterfaceRequest()
 	if err != nil {
@@ -745,7 +744,7 @@ func getUpdateComplete(r *pkg.PackageResolverWithCtxInterface, name string, vers
 
 	ch := make(chan resolveResult)
 	go func() {
-		response, err := r.Resolve(context.Background(), pkgUri, selectors, updatePolicy, dirReq)
+		response, err := r.Resolve(context.Background(), pkgUri, selectors, dirReq)
 		ch <- resolveResult{
 			response: response,
 			err:      err,

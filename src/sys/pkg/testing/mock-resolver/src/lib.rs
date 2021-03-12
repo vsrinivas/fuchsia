@@ -249,7 +249,6 @@ impl MockResolverService {
                 fidl_fuchsia_pkg::PackageResolverRequest::Resolve {
                     package_url,
                     selectors: _,
-                    update_policy: _,
                     dir,
                     responder,
                 } => self.handle_resolve(package_url, dir, responder).await?,
@@ -371,7 +370,7 @@ impl ResolveHandler {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fidl_fuchsia_pkg::UpdatePolicy, matches::assert_matches};
+    use {super::*, matches::assert_matches};
 
     async fn read_file(dir_proxy: &DirectoryProxy, path: &str) -> String {
         let file_proxy =
@@ -387,12 +386,7 @@ mod tests {
         url: &str,
     ) -> impl Future<Output = Result<DirectoryProxy, Status>> {
         let (package_dir, package_dir_server_end) = fidl::endpoints::create_proxy().unwrap();
-        let fut = proxy.resolve(
-            url,
-            &mut std::iter::empty(),
-            &mut UpdatePolicy { fetch_if_absent: true, allow_old_versions: true },
-            package_dir_server_end,
-        );
+        let fut = proxy.resolve(url, &mut std::iter::empty(), package_dir_server_end);
 
         async move {
             let () = fut.await.unwrap().map_err(Status::from_raw)?;

@@ -97,7 +97,6 @@ pub async fn run_resolver_service(
                     PackageResolverRequest::Resolve {
                         package_url,
                         selectors,
-                        update_policy: _,
                         dir,
                         responder,
                     } => {
@@ -462,10 +461,6 @@ async fn get_hash(
     hash_or_status
 }
 
-/// Resolve the package.
-///
-/// FIXME: at the moment, we are proxying to Amber to resolve a package name and variant to a
-/// merkleroot. Because of this, we cant' implement the update policy, so we just ignore it.
 async fn resolve(
     cache: &PackageCache,
     package_fetcher: &PackageFetcher,
@@ -504,12 +499,7 @@ pub async fn run_font_resolver_service(
         .map_err(anyhow::Error::new)
         .try_for_each_concurrent(None, |event| async {
             let mut cobalt_sender = cobalt_sender.clone();
-            let FontResolverRequest::Resolve {
-                package_url,
-                update_policy: _,
-                directory_request,
-                responder,
-            } = event;
+            let FontResolverRequest::Resolve { package_url, directory_request, responder } = event;
             let start_time = Instant::now();
             let response = resolve_font(
                 &font_package_manager,
