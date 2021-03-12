@@ -33,6 +33,18 @@ source_set("main_service") {
   ]
 }
 
+source_set("annotation_map") {
+  sources = [ "annotation_map.h" ]
+
+  public_deps = [
+    ":errors",
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/syslog/cpp",
+    "//src/developer/forensics/utils:errors",
+    "//src/lib/fxl",
+  ]
+}
+
 source_set("config") {
   public = [ "config.h" ]
 
@@ -97,6 +109,7 @@ source_set("crash_reporter") {
     ":product",
     ":queue",
     ":report_id",
+    ":report_util",
     ":reporting_policy_watcher",
     ":snapshot_manager",
     "//sdk/fidl/fuchsia.feedback",
@@ -113,7 +126,6 @@ source_set("crash_reporter") {
 
   deps = [
     ":constants",
-    ":report_util",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils/cobalt",
     "//zircon/public/lib/fit",
@@ -290,6 +302,7 @@ source_set("report_util") {
   ]
 
   deps = [
+    ":annotation_map",
     ":constants",
     ":errors",
     "//sdk/fidl/fuchsia.mem",
@@ -323,6 +336,7 @@ source_set("snapshot_manager") {
   ]
 
   public_deps = [
+    ":annotation_map",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/utils:sized_data",
@@ -350,6 +364,7 @@ source_set("store") {
   ]
 
   public_deps = [
+    ":annotation_map",
     ":log_tags",
     ":report",
     ":report_id",

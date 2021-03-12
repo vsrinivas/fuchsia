@@ -10,6 +10,19 @@ visibility = [ ":*" ]
 ###############################################################################
 # EXECUTABLES
 ###############################################################################
+executable("annotation_map_unittest_exe") {
+  testonly = true
+
+  sources = [ "annotation_map_unittest.cc" ]
+
+  deps = [
+    "//src/developer/forensics/crash_reports:annotation_map",
+    "//src/developer/forensics/testing:gtest_with_syslog_main",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 executable("config_unittest_exe") {
   testonly = true
 
@@ -355,6 +368,14 @@ config_data("valid_override_config") {
 ###############################################################################
 # COMPONENTS
 ###############################################################################
+fuchsia_component("annotation_map_unittest") {
+  testonly = true
+
+  manifest = "meta/annotation_map_unittest.cmx"
+
+  deps = [ ":annotation_map_unittest_exe" ]
+}
+
 fuchsia_component("config_unittest") {
   testonly = true
 
@@ -502,6 +523,7 @@ fuchsia_component("store_metadata_unittest") {
 ###############################################################################
 fuchsia_test_package("crash-reports-tests") {
   test_components = [
+    ":annotation_map_unittest",
     ":config_unittest",
     ":crash_register_unittest",
     ":crash_reporter_unittest",

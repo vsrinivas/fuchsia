@@ -90,59 +90,54 @@ constexpr char kReportTimeMillis[] = "reportTimeMillis";
 // The crash server expects a specific key for client-provided information about whether a crash is
 // fatal.
 const char kIsFatalKey[] = "isFatal";
-const char kIsFatalTrue[] = "true";
-const char kIsFatalFalse[] = "false";
 
 void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
-                                      std::map<std::string, std::string>* annotations,
+                                      AnnotationMap* annotations,
                                       std::map<std::string, fuchsia::mem::Buffer>* attachments,
                                       std::optional<fuchsia::mem::Buffer>* minidump,
                                       bool* should_process) {
   // Default annotations common to all crash reports.
   if (report.has_annotations()) {
-    for (const auto& annotation : report.annotations()) {
-      (*annotations)[annotation.key] = annotation.value;
-    }
+    annotations->Set(report.annotations());
   }
 
   if (report.has_program_uptime()) {
-    (*annotations)[kProgramUptimeMillisKey] =
-        std::to_string(zx::duration(report.program_uptime()).to_msecs());
+    annotations->Set(kProgramUptimeMillisKey, zx::duration(report.program_uptime()).to_msecs());
   }
 
   if (report.has_event_id()) {
-    (*annotations)[kEventIdKey] = report.event_id();
+    annotations->Set(kEventIdKey, report.event_id());
   }
 
   if (report.has_crash_signature()) {
-    (*annotations)[kCrashSignatureKey] = report.crash_signature();
+    annotations->Set(kCrashSignatureKey, report.crash_signature());
   }
 
   if (report.has_is_fatal()) {
-    (*annotations)[kIsFatalKey] = (report.is_fatal()) ? kIsFatalTrue : kIsFatalFalse;
+    annotations->Set(kIsFatalKey, report.is_fatal());
   }
 
   // Generic-specific annotations.
   if (report.has_specific_report() && report.specific_report().is_generic()) {
     const auto& generic_report = report.specific_report().generic();
     if (generic_report.has_crash_signature()) {
-      (*annotations)[kCrashSignatureKey] = generic_report.crash_signature();
+      annotations->Set(kCrashSignatureKey, generic_report.crash_signature());
     }
   }
 
   // Dart-specific annotations.
   if (report.has_specific_report() && report.specific_report().is_dart()) {
-    (*annotations)[kDartTypeKey] = kDartTypeValue;
+    annotations->Set(kDartTypeKey, kDartTypeValue);
 
     const auto& dart_report = report.specific_report().dart();
     if (dart_report.has_exception_type()) {
-      (*annotations)[kDartExceptionRuntimeTypeKey] = dart_report.exception_type();
+      annotations->Set(kDartExceptionRuntimeTypeKey, dart_report.exception_type());
     } else {
       FX_LOGS(WARNING) << "no Dart exception type to attach to Crashpad report";
     }
 
     if (dart_report.has_exception_message()) {
-      (*annotations)[kDartExceptionMessageKey] = dart_report.exception_message();
+      annotations->Set(kDartExceptionMessageKey, dart_report.exception_message());
     } else {
       FX_LOGS(WARNING) << "no Dart exception message to attach to Crashpad report";
     }
@@ -166,7 +161,7 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
       *should_process = true;
     } else {
       FX_LOGS(WARNING) << "no minidump to attach to Crashpad report";
-      (*annotations)[kCrashSignatureKey] = "fuchsia-no-minidump";
+      annotations->Set(kCrashSignatureKey, "fuchsia-no-minidump");
     }
   }
 
@@ -179,15 +174,15 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
       *should_process = true;
     } else {
       FX_LOGS(WARNING) << "no Dart exception stack trace to attach to Crashpad report";
-      (*annotations)[kCrashSignatureKey] = "fuchsia-no-dart-stack-trace";
+      annotations->Set(kCrashSignatureKey, "fuchsia-no-dart-stack-trace");
     }
   }
 }
 
 void AddSnapshotAnnotations(const SnapshotUuid& snapshot_uuid, const Snapshot& snapshot,
-                            std::map<std::string, std::string>* annotations) {
+                            AnnotationMap* annotations) {
   if (const auto snapshot_annotations = snapshot.LockAnnotations(); snapshot_annotations) {
-    annotations->insert(snapshot_annotations->begin(), snapshot_annotations->end());
+    annotations->Set(*snapshot_annotations);
   }
 }
 
@@ -195,61 +190,37 @@ void AddCrashServerAnnotations(const std::string& program_name,
                                const std::optional<zx::time_utc>& current_time,
                                const ::fit::result<std::string, Error>& device_id,
                                const ErrorOr<std::string>& os_version, const Product& product,
-                               const bool should_process,
-                               std::map<std::string, std::string>* annotations) {
+                               const bool should_process, AnnotationMap* annotations) {
   // Product.
-  (*annotations)["product"] = product.name;
-  if (product.version.HasValue()) {
-    (*annotations)["version"] = product.version.Value();
-  } else {
-    // The crash server requires a version and expects alphanumeric, punctuation, and space only.
-    (*annotations)["version"] = "unknown";
-    (*annotations)["debug.version.error"] = ToReason(product.version.Error());
-  }
-  if (product.channel.HasValue()) {
-    (*annotations)["channel"] = product.channel.Value();
-  } else {
-    // "channel" is a required field on the crash server that defaults to the empty string. But on
-    // Fuchsia, the system update channel can be the empty string in the case of a fresh pave
-    // typically. So in case the channel is unavailable, we set the value to "unknown" to
-    // distinguish it from the default empty string value it would get on the crash server.
-    (*annotations)["channel"] = "unknown";
-    (*annotations)["debug.channel.error"] = ToReason(product.channel.Error());
-  }
+  annotations->Set("product", product.name)
+      .Set("version", product.version)
+      .Set("channel", product.channel);
 
   // Program.
   // We use ptype to benefit from Chrome's "Process type" handling in the crash server UI.
-  (*annotations)["ptype"] = program_name;
+  annotations->Set("ptype", program_name);
 
-  // OS.
-  (*annotations)["osName"] = "Fuchsia";
-  if (os_version.HasValue()) {
-    (*annotations)["osVersion"] = os_version.Value();
-  } else {
-    // The crash server requires a version and expects alphanumeric, punctuation, and space only.
-    (*annotations)["osVersion"] = "unknown";
-    (*annotations)["debug.os.version.error"] = ToReason(os_version.Error());
-  }
+  // OS
+  annotations->Set("osName", "Fuchsia");
+  annotations->Set("osVersion", os_version);
 
   // We set the report time only if we were able to get an accurate one.
   if (current_time.has_value()) {
-    (*annotations)[kReportTimeMillis] =
-        std::to_string(current_time.value().get() / zx::msec(1).get());
+    annotations->Set(kReportTimeMillis, current_time.value().get() / zx::msec(1).get());
   } else {
-    (*annotations)["debug.report-time.set"] = "false";
+    annotations->Set("debug.report-time.set", false);
   }
 
   // We set the device's global unique identifier only if the device has one.
   if (device_id.is_ok()) {
-    (*annotations)["guid"] = device_id.value();
+    annotations->Set("guid", device_id.value());
   } else {
-    (*annotations)["debug.guid.set"] = "false";
-    (*annotations)["debug.device-id.error"] = ToReason(device_id.error());
+    annotations->Set("debug.guid.set", false).Set("debug.device-id.error", device_id.error());
   }
 
   // Not all reports need to be processed by the crash server.
   // Typically only reports with a minidump or a Dart stack trace file need to be processed.
-  (*annotations)["should_process"] = should_process ? "true" : "false";
+  annotations->Set("should_process", should_process);
 }
 
 }  // namespace
@@ -263,7 +234,7 @@ std::optional<Report> MakeReport(fuchsia::feedback::CrashReport report, const Re
   const std::string program_name = report.program_name();
   const std::string shortname = Shorten(program_name);
 
-  std::map<std::string, std::string> annotations;
+  AnnotationMap annotations;
   std::map<std::string, fuchsia::mem::Buffer> attachments;
   std::optional<fuchsia::mem::Buffer> minidump;
   bool should_process = false;

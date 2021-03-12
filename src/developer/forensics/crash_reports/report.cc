@@ -29,7 +29,7 @@ std::optional<SizedData> MakeAttachment(const fuchsia::mem::Buffer& buffer) {
 
 std::optional<Report> Report::MakeReport(const ReportId report_id,
                                          const std::string& program_shortname,
-                                         const std::map<std::string, std::string>& annotations,
+                                         const AnnotationMap& annotations,
                                          std::map<std::string, fuchsia::mem::Buffer> attachments,
                                          forensics::crash_reports::SnapshotUuid snapshot_uuid,
                                          std::optional<fuchsia::mem::Buffer> minidump,
@@ -55,8 +55,7 @@ std::optional<Report> Report::MakeReport(const ReportId report_id,
 }
 
 Report::Report(const ReportId report_id, const std::string& program_shortname,
-               const std::map<std::string, std::string>& annotations,
-               std::map<std::string, SizedData> attachments,
+               const AnnotationMap& annotations, std::map<std::string, SizedData> attachments,
                forensics::crash_reports::SnapshotUuid snapshot_uuid,
                std::optional<SizedData> minidump, const bool is_hourly_report)
     : id_(report_id),

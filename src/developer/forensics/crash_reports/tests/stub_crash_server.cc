@@ -43,8 +43,8 @@ CrashServer::UploadStatus StubCrashServer::MakeRequest(const Report& report,
   if (snapshot_manager_) {
     auto snapshot = snapshot_manager_->GetSnapshot(report.SnapshotUuid());
     if (auto annotations = snapshot.LockAnnotations(); annotations) {
-      for (const auto& [key, value] : *annotations) {
-        latest_annotations_.emplace(key, value);
+      for (const auto& [key, value] : annotations->Raw()) {
+        latest_annotations_.Set(key, value);
       }
     }
 

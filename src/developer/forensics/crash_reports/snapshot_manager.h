@@ -97,7 +97,7 @@ class SnapshotManager {
     size_t num_clients_with_uuid;
     StorageSize annotations_size;
     StorageSize archive_size;
-    std::shared_ptr<Snapshot::Annotations> annotations;
+    std::shared_ptr<AnnotationMap> annotations;
     std::shared_ptr<Snapshot::Archive> archive;
   };
 
@@ -163,9 +163,9 @@ class SnapshotManager {
   // time outs.
   struct SpecialCaseSnapshot {
     explicit SpecialCaseSnapshot(SnapshotUuid uuid)
-        : uuid(std::move(uuid)), annotations(std::make_unique<Snapshot::Annotations>()) {}
+        : uuid(std::move(uuid)), annotations(std::make_unique<AnnotationMap>()) {}
     SnapshotUuid uuid;
-    std::shared_ptr<Snapshot::Annotations> annotations;
+    std::shared_ptr<AnnotationMap> annotations;
   };
 
   SpecialCaseSnapshot garbage_collected_snapshot_;

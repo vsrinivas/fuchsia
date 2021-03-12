@@ -78,8 +78,8 @@ class StoreTest : public UnitTestFixture {
     }
 
     const ReportId report_id = next_report_id_++;
-    auto report = Report(report_id, program_shortname, annotations, std::move(attachments_data),
-                         snapshot_uuid, std::move(minidump_data));
+    auto report = Report(report_id, program_shortname, AnnotationMap(annotations),
+                         std::move(attachments_data), snapshot_uuid, std::move(minidump_data));
 
     if (store_->Add(std::move(report), garbage_collected_reports)) {
       return report_id;
@@ -98,7 +98,7 @@ class StoreTest : public UnitTestFixture {
     }
 
     *program_shortname = report.value().ProgramShortname();
-    *annotations = report.value().Annotations();
+    *annotations = report.value().Annotations().Raw();
     for (const auto& [filename, attachment] : report.value().Attachments()) {
       (*attachments)[filename] = std::string(attachment.begin(), attachment.end());
     }

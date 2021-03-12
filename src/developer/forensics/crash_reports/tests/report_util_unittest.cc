@@ -56,7 +56,7 @@ TEST(Logname, MakesLognameCorrectly) {
 }
 
 TEST(MakeReport, AddsSnapshotAnnotations) {
-  auto annotations = std::make_shared<Snapshot::Annotations>(Snapshot::Annotations({
+  auto annotations = std::make_shared<AnnotationMap>(AnnotationMap({
       {"snapshot_annotation_key", "snapshot_annotation_value"},
   }));
 
@@ -74,7 +74,7 @@ TEST(MakeReport, AddsSnapshotAnnotations) {
                  /*current_time=*/std::nullopt, ::fit::ok("device_id"),
                  ErrorOr<std::string>("os_version"), product, /*is_hourly_report=*/false);
   ASSERT_TRUE(report.has_value());
-  EXPECT_EQ(report.value().Annotations().at("snapshot_annotation_key"),
+  EXPECT_EQ(report.value().Annotations().Get("snapshot_annotation_key"),
             "snapshot_annotation_value");
 }
 

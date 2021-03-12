@@ -9,6 +9,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/forensics/crash_reports/annotation_map.h"
 #include "src/developer/forensics/crash_reports/crash_server.h"
 
 namespace forensics {
@@ -37,7 +38,7 @@ class StubCrashServer : public CrashServer {
   bool ExpectRequest() { return next_return_value_ != request_return_values_.cend(); }
 
   // Returns the annotations that were passed to the latest MakeRequest() call.
-  const std::map<std::string, std::string>& latest_annotations() { return latest_annotations_; }
+  const AnnotationMap& latest_annotations() { return latest_annotations_; }
 
   // Returns the keys for the attachments that were passed to the latest MakeRequest() call.
   const std::vector<std::string>& latest_attachment_keys() { return latest_attachment_keys_; }
@@ -48,7 +49,7 @@ class StubCrashServer : public CrashServer {
 
   SnapshotManager* snapshot_manager_;
 
-  std::map<std::string, std::string> latest_annotations_;
+  AnnotationMap latest_annotations_;
   std::vector<std::string> latest_attachment_keys_;
 };
 

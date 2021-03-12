@@ -92,9 +92,7 @@ std::optional<std::string> DeleteReportFromStore() {
   return std::nullopt;
 }
 
-std::map<std::string, std::string> MakeAnnotations() {
-  return {{kAnnotationKey, kAnnotationValue}};
-}
+AnnotationMap MakeAnnotations() { return {{kAnnotationKey, kAnnotationValue}}; }
 
 Report MakeReport(const std::size_t report_id) {
   std::optional<Report> report =
@@ -253,7 +251,7 @@ class QueueTest : public UnitTestFixture {
 
     // Expect annotations that |snapshot_manager_| will for using |kSnapshotUuidValue| as the
     // snapshot uuid.
-    EXPECT_THAT(crash_server_->latest_annotations(),
+    EXPECT_THAT(crash_server_->latest_annotations().Raw(),
                 UnorderedElementsAreArray({
                     Pair(kAnnotationKey, kAnnotationValue),
                     Pair("debug.snapshot.error", "not persisted"),

@@ -12,6 +12,7 @@
 #include <optional>
 #include <string>
 
+#include "src/developer/forensics/crash_reports/annotation_map.h"
 #include "src/developer/forensics/crash_reports/report_id.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"
 #include "src/developer/forensics/utils/sized_data.h"
@@ -24,21 +25,20 @@ class Report {
  public:
   // Return a Report unless there are issues reading a fuchsia::mem::Buffer.
   static std::optional<Report> MakeReport(ReportId report_id, const std::string& program_shortname,
-                                          const std::map<std::string, std::string>& annotations,
+                                          const AnnotationMap& annotations,
                                           std::map<std::string, fuchsia::mem::Buffer> attachments,
                                           forensics::crash_reports::SnapshotUuid snapshot_uuid,
                                           std::optional<fuchsia::mem::Buffer> minidump,
                                           bool is_hourly_report = false);
 
-  Report(ReportId report_id, const std::string& program_shortname,
-         const std::map<std::string, std::string>& annotations,
+  Report(ReportId report_id, const std::string& program_shortname, const AnnotationMap& annotations,
          std::map<std::string, SizedData> attachments, SnapshotUuid snapshot_uuid,
          std::optional<SizedData> minidump, bool is_hourly_report = false);
 
   ReportId Id() const { return id_; }
 
   std::string ProgramShortname() const { return program_shortname_; }
-  const std::map<std::string, std::string>& Annotations() const { return annotations_; }
+  const AnnotationMap& Annotations() const { return annotations_; }
 
   const std::map<std::string, SizedData>& Attachments() const { return attachments_; }
   std::map<std::string, SizedData>& Attachments() { return attachments_; }
@@ -54,7 +54,7 @@ class Report {
  private:
   ReportId id_;
   std::string program_shortname_;
-  std::map<std::string, std::string> annotations_;
+  AnnotationMap annotations_;
   std::map<std::string, SizedData> attachments_;
   forensics::crash_reports::SnapshotUuid snapshot_uuid_;
   std::optional<SizedData> minidump_;

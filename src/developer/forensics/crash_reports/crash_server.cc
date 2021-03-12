@@ -176,7 +176,7 @@ CrashServer::UploadStatus CrashServer::MakeRequest(const Report& report,
   // asynchronous and we won't be able to know the upload status nor the server report ID.
   crashpad::HTTPMultipartBuilder http_multipart_builder;
   http_multipart_builder.SetGzipEnabled(true);
-  for (const auto& [key, value] : report.Annotations()) {
+  for (const auto& [key, value] : report.Annotations().Raw()) {
     http_multipart_builder.SetFormData(key, value);
   }
 
@@ -188,7 +188,7 @@ CrashServer::UploadStatus CrashServer::MakeRequest(const Report& report,
   }
 
   if (const auto annotations = snapshot.LockAnnotations(); annotations) {
-    for (const auto& [key, value] : *annotations) {
+    for (const auto& [key, value] : annotations->Raw()) {
       http_multipart_builder.SetFormData(key, value);
     }
   }

@@ -244,7 +244,7 @@ class CrashReporterTest : public UnitTestFixture {
       expected_annotations[key] = value;
     }
 
-    EXPECT_THAT(crash_server_->latest_annotations(),
+    EXPECT_THAT(crash_server_->latest_annotations().Raw(),
                 testing::UnorderedElementsAreArray(Linearize(expected_annotations)));
   }
 
@@ -503,13 +503,12 @@ TEST_F(CrashReporterTest, Check_UnknownChannel) {
   ASSERT_TRUE(FileOneCrashReport().is_ok());
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 
-  ASSERT_NE(crash_server_->latest_annotations().find("channel"),
-            crash_server_->latest_annotations().end());
-  EXPECT_EQ(crash_server_->latest_annotations().at("channel"), "unknown");
+  ASSERT_TRUE(crash_server_->latest_annotations().Contains("channel"));
+  EXPECT_EQ(crash_server_->latest_annotations().Get("channel"), "unknown");
 
-  ASSERT_NE(crash_server_->latest_annotations().find("debug.channel.error"),
-            crash_server_->latest_annotations().end());
-  EXPECT_EQ(crash_server_->latest_annotations().at("debug.channel.error"), "FIDL connection error");
+  ASSERT_TRUE(crash_server_->latest_annotations().Contains("debug.channel.error"));
+  EXPECT_EQ(crash_server_->latest_annotations().Get("debug.channel.error"),
+            "FIDL connection error");
 }
 
 TEST_F(CrashReporterTest, Check_RegisteredProduct) {
@@ -526,15 +525,12 @@ TEST_F(CrashReporterTest, Check_RegisteredProduct) {
 
   ASSERT_TRUE(FileOneCrashReport().is_ok());
 
-  ASSERT_NE(crash_server_->latest_annotations().find("product"),
-            crash_server_->latest_annotations().end());
-  EXPECT_EQ(crash_server_->latest_annotations().at("product"), "some name");
-  ASSERT_NE(crash_server_->latest_annotations().find("version"),
-            crash_server_->latest_annotations().end());
-  EXPECT_EQ(crash_server_->latest_annotations().at("version"), "some version");
-  ASSERT_NE(crash_server_->latest_annotations().find("channel"),
-            crash_server_->latest_annotations().end());
-  EXPECT_EQ(crash_server_->latest_annotations().at("channel"), "some channel");
+  ASSERT_TRUE(crash_server_->latest_annotations().Contains("product"));
+  EXPECT_EQ(crash_server_->latest_annotations().Get("product"), "some name");
+  ASSERT_TRUE(crash_server_->latest_annotations().Contains("version"));
+  EXPECT_EQ(crash_server_->latest_annotations().Get("version"), "some version");
+  ASSERT_TRUE(crash_server_->latest_annotations().Contains("channel"));
+  EXPECT_EQ(crash_server_->latest_annotations().Get("channel"), "some channel");
 }
 
 TEST_F(CrashReporterTest, Succeed_OnInputCrashReportWithAdditionalData) {
@@ -912,7 +908,7 @@ TEST_F(CrashReporterTest, Upload_HourlySnapshot) {
   SetUpDeviceIdProviderServer(std::make_unique<stubs::DeviceIdProvider>(kDefaultDeviceId));
 
   RunLoopFor(zx::min(5));
-  EXPECT_THAT(crash_server_->latest_annotations(),
+  EXPECT_THAT(crash_server_->latest_annotations().Raw(),
               IsSupersetOf(Linearize(std::map<std::string, testing::Matcher<std::string>>({
                   {"ptime", Not(IsEmpty())},
                   {"signature", kHourlySnapshotSignature},
@@ -920,7 +916,7 @@ TEST_F(CrashReporterTest, Upload_HourlySnapshot) {
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 
   RunLoopFor(zx::hour(1));
-  EXPECT_THAT(crash_server_->latest_annotations(),
+  EXPECT_THAT(crash_server_->latest_annotations().Raw(),
               IsSupersetOf(Linearize(std::map<std::string, testing::Matcher<std::string>>({
                   {"ptime", Not(IsEmpty())},
                   {"signature", kHourlySnapshotSignature},
@@ -946,7 +942,7 @@ TEST_F(CrashReporterTest, Skip_HourlySnapshotIfPending) {
 
   RunLoopFor(zx::min(5));
   RunLoopFor(zx::hour(1));
-  EXPECT_THAT(crash_server_->latest_annotations(),
+  EXPECT_THAT(crash_server_->latest_annotations().Raw(),
               IsSupersetOf(Linearize(std::map<std::string, testing::Matcher<std::string>>({
                   {"ptime", Not(IsEmpty())},
                   {"signature", kHourlySnapshotSignature},
@@ -1065,12 +1061,9 @@ TEST_F(CrashReporterTestWithClock, Check_UtcTimeIsNotReady) {
   ASSERT_TRUE(FileOneCrashReport().is_ok());
   CheckAttachmentsOnServer({kDefaultAttachmentBundleKey});
 
-  EXPECT_EQ(crash_server_->latest_annotations().find("reportTimeMillis"),
-            crash_server_->latest_annotations().end());
-
-  ASSERT_NE(crash_server_->latest_annotations().find("debug.report-time.set"),
-            crash_server_->latest_annotations().end());
-  EXPECT_EQ(crash_server_->latest_annotations().at("debug.report-time.set"), "false");
+  EXPECT_FALSE(crash_server_->latest_annotations().Contains("reportTimeMillis"));
+  ASSERT_TRUE(crash_server_->latest_annotations().Contains("debug.report-time.set"));
+  EXPECT_EQ(crash_server_->latest_annotations().Get("debug.report-time.set"), "false");
 }
 
 }  // namespace

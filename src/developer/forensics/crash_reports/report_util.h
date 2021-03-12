@@ -8,10 +8,10 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fit/result.h>
 
-#include <map>
 #include <optional>
 #include <string>
 
+#include "src/developer/forensics/crash_reports/annotation_map.h"
 #include "src/developer/forensics/crash_reports/product.h"
 #include "src/developer/forensics/crash_reports/report.h"
 #include "src/developer/forensics/crash_reports/snapshot_manager.h"

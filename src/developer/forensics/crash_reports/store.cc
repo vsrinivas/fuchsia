@@ -69,11 +69,11 @@ void RemoveEmptyDirectories(const std::string& root) {
   }
 }
 
-std::string FormatAnnotationsAsJson(const std::map<std::string, std::string>& annotations) {
+std::string FormatAnnotationsAsJson(const AnnotationMap& annotations) {
   rapidjson::Document json(rapidjson::kObjectType);
   auto& allocator = json.GetAllocator();
 
-  for (const auto& [k, v] : annotations) {
+  for (const auto& [k, v] : annotations.Raw()) {
     auto key = rapidjson::Value(k, allocator);
     auto val = rapidjson::Value(v, allocator);
     json.AddMember(key, val, allocator);
@@ -87,7 +87,7 @@ std::string FormatAnnotationsAsJson(const std::map<std::string, std::string>& an
   return buffer.GetString();
 }
 
-bool ReadAnnotations(const std::string& path, std::map<std::string, std::string>* annotations) {
+bool ReadAnnotations(const std::string& path, AnnotationMap* annotations) {
   std::string json;
   if (!files::ReadFileToString(path, &json)) {
     return false;
@@ -109,7 +109,7 @@ bool ReadAnnotations(const std::string& path, std::map<std::string, std::string>
     local_annotations[member.name.GetString()] = member.value.GetString();
   }
 
-  local_annotations.swap(*annotations);
+  *annotations = AnnotationMap(std::move(local_annotations));
   return true;
 }
 
@@ -236,7 +236,7 @@ std::optional<Report> Store::Get(const ReportId report_id) {
     return std::nullopt;
   }
 
-  std::map<std::string, std::string> annotations;
+  AnnotationMap annotations;
   std::map<std::string, SizedData> attachments;
   SnapshotUuid snapshot_uuid;
   std::optional<SizedData> minidump;

@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 
+#include "src/developer/forensics/crash_reports/annotation_map.h"
 #include "src/developer/forensics/utils/sized_data.h"
 
 namespace forensics {
@@ -22,25 +23,24 @@ namespace crash_reports {
 // LockArchive) the data will not be deleted until the last reference is deleted.
 class Snapshot {
  public:
-  using Annotations = std::map<std::string, std::string>;
   struct Archive {
     Archive(const fuchsia::feedback::Attachment& archive);
     std::string key;
     SizedData value;
   };
 
-  Snapshot(std::weak_ptr<Annotations> annotations)
+  explicit Snapshot(std::weak_ptr<AnnotationMap> annotations)
       : annotations_(std::move(annotations)), archive_(std::weak_ptr<Archive>()) {}
 
-  Snapshot(std::weak_ptr<Annotations> annotations, std::weak_ptr<Archive> archive)
+  Snapshot(std::weak_ptr<AnnotationMap> annotations, std::weak_ptr<Archive> archive)
       : annotations_(std::move(annotations)), archive_(std::move(archive)) {}
 
-  std::shared_ptr<Annotations> LockAnnotations() const { return annotations_.lock(); }
+  std::shared_ptr<AnnotationMap> LockAnnotations() const { return annotations_.lock(); }
 
   std::shared_ptr<Archive> LockArchive() const { return archive_.lock(); }
 
  private:
-  std::weak_ptr<Annotations> annotations_;
+  std::weak_ptr<AnnotationMap> annotations_;
   std::weak_ptr<Archive> archive_;
 };
 

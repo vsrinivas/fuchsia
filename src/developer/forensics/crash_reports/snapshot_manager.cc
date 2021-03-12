@@ -41,13 +41,10 @@ void AddAnnotation<std::string>(const std::string& key, const std::string& value
   });
 }
 
-Snapshot::Annotations ToSnapshotAnnotations(const std::vector<Annotation>& annotations) {
-  Snapshot::Annotations snapshot_annotations;
-  for (const auto& [k, v] : annotations) {
-    snapshot_annotations.emplace(k, v);
-  }
-
-  return snapshot_annotations;
+AnnotationMap ToAnnotationMap(const std::vector<Annotation>& annotations) {
+  AnnotationMap map;
+  map.Set(annotations);
+  return map;
 }
 
 // Helper function to make a shared_ptr from a rvalue-reference of a type.
@@ -77,20 +74,20 @@ SnapshotManager::SnapshotManager(async_dispatcher_t* dispatcher,
       timed_out_snapshot_("timed out"),
       shutdown_snapshot_("shutdown"),
       no_uuid_snapshot_(UuidForNoSnapshotUuid()) {
-  garbage_collected_snapshot_.annotations->emplace("debug.snapshot.error", "garbage collected");
-  garbage_collected_snapshot_.annotations->emplace("debug.snapshot.present", "false");
+  garbage_collected_snapshot_.annotations->Set("debug.snapshot.error", "garbage collected");
+  garbage_collected_snapshot_.annotations->Set("debug.snapshot.present", false);
 
-  not_persisted_snapshot_.annotations->emplace("debug.snapshot.error", "not persisted");
-  not_persisted_snapshot_.annotations->emplace("debug.snapshot.present", "false");
+  not_persisted_snapshot_.annotations->Set("debug.snapshot.error", "not persisted");
+  not_persisted_snapshot_.annotations->Set("debug.snapshot.present", false);
 
-  timed_out_snapshot_.annotations->emplace("debug.snapshot.error", "timeout");
-  timed_out_snapshot_.annotations->emplace("debug.snapshot.present", "false");
+  timed_out_snapshot_.annotations->Set("debug.snapshot.error", "timeout");
+  timed_out_snapshot_.annotations->Set("debug.snapshot.present", false);
 
-  shutdown_snapshot_.annotations->emplace("debug.snapshot.error", "system shutdown");
-  shutdown_snapshot_.annotations->emplace("debug.snapshot.present", "false");
+  shutdown_snapshot_.annotations->Set("debug.snapshot.error", "system shutdown");
+  shutdown_snapshot_.annotations->Set("debug.snapshot.present", false);
 
-  no_uuid_snapshot_.annotations->emplace("debug.snapshot.error", "missing uuid");
-  no_uuid_snapshot_.annotations->emplace("debug.snapshot.present", "false");
+  no_uuid_snapshot_.annotations->Set("debug.snapshot.error", "missing uuid");
+  no_uuid_snapshot_.annotations->Set("debug.snapshot.present", false);
 
   // Load the file lines into a set of UUIDs.
   std::ifstream file(garbage_collected_snapshots_path_);
@@ -354,9 +351,9 @@ void SnapshotManager::CompleteWithSnapshot(const SnapshotUuid& uuid, FidlSnapsho
 
   // Take ownership of |fidl_snapshot| and the record the size of its annotations and archive.
   if (fidl_snapshot.has_annotations()) {
-    data->annotations = MakeShared(ToSnapshotAnnotations(fidl_snapshot.annotations()));
+    data->annotations = MakeShared(ToAnnotationMap(fidl_snapshot.annotations()));
 
-    for (const auto& [k, v] : *(data->annotations)) {
+    for (const auto& [k, v] : data->annotations->Raw()) {
       data->annotations_size += StorageSize::Bytes(k.size());
       data->annotations_size += StorageSize::Bytes(v.size());
     }
@@ -436,8 +433,8 @@ void SnapshotManager::DropArchive(SnapshotData* data) {
 
   // If annotations still exist, add an annotation indicating the archive was garbage collected.
   if (data->annotations) {
-    for (const auto& [k, v] : *garbage_collected_snapshot_.annotations) {
-      data->annotations->emplace(k, v);
+    for (const auto& [k, v] : garbage_collected_snapshot_.annotations->Raw()) {
+      data->annotations->Set(k, v);
       data->annotations_size += StorageSize::Bytes(k.size()) + StorageSize::Bytes(v.size());
       current_annotations_size_ += StorageSize::Bytes(k.size()) + StorageSize::Bytes(v.size());
     }
