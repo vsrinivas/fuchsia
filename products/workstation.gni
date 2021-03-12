@@ -28,6 +28,9 @@ base_package_labels += [
   "//third_party/openssh-portable:openssh-tools",
 ]
 
+# Add build type config data
+base_package_labels += [ "//src/fonts:build_type_eng" ]
+
 cache_package_labels -= [ "//src/ui/tools/tiles" ]
 
 cache_package_labels += [

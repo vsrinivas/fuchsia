@@ -6,6 +6,7 @@
 
 mod asset;
 mod builder;
+mod debug;
 mod family;
 mod inspect;
 mod typeface;
@@ -13,11 +14,12 @@ mod typeface;
 use {
     self::{
         asset::AssetCollection,
+        debug::{TypefaceRequestFormatter, TypefaceResponseFormatter},
         family::{FamilyOrAlias, FontFamily, TypefaceQueryOverrides},
         typeface::{Collection as TypefaceCollection, TypefaceInfoAndCharSet},
     },
     anyhow::{format_err, Context as _, Error},
-    fidl::{self, encoding::Decodable, endpoints::ServerEnd},
+    fidl::{self, endpoints::ServerEnd},
     fidl_fuchsia_fonts::{self as fonts, CacheMissPolicy},
     fidl_fuchsia_fonts_experimental as fonts_exp,
     fidl_fuchsia_fonts_ext::{
@@ -72,6 +74,9 @@ where
     fallback_collection: TypefaceCollection,
     /// Holds Inspect data about manifests, families, and the fallback collection.
     inspect_data: inspect::ServiceInspectData,
+
+    /// Indicates whether the service is running on an internal (non-production) Fuchsia build.
+    is_internal_build: bool,
 }
 
 impl<L> FontService<L>
@@ -157,6 +162,8 @@ where
         &self,
         request: fonts::TypefaceRequest,
     ) -> Result<fonts::TypefaceResponse, Error> {
+        fx_log_debug!("match_request: {:?}", &TypefaceRequestFormatter(&request));
+
         let query_family = query_field!(request, family);
         let query_family_string =
             (&query_family).map(|family| family.name.clone()).unwrap_or_default();
@@ -213,14 +220,17 @@ where
                         ..fonts::TypefaceResponse::EMPTY
                     })
                 })
-                .unwrap_or_else(|_| fonts::TypefaceResponse::new_empty()),
-            None => {
-                if let Some(code_points) = query_field!(request, code_points) {
-                    fx_log_err!("Missing code points: {:?}", code_points);
-                }
-                fonts::TypefaceResponse::new_empty()
-            }
+                .ok(),
+            None => None,
         };
+
+        if typeface_response.is_none() && self.is_internal_build {
+            fx_log_warn!("Unfulfilled request {:?}", &TypefaceRequestFormatter(&request));
+        }
+
+        let typeface_response = typeface_response.unwrap_or(fonts::TypefaceResponse::EMPTY);
+
+        fx_log_debug!("Response: {:?}", &TypefaceResponseFormatter(&typeface_response));
 
         // Note that not finding a typeface is not an error, as long as the query was legal.
         Ok(typeface_response)
@@ -229,14 +239,13 @@ where
     fn get_family_info(&self, family_name: fonts::FamilyName) -> fonts::FontFamilyInfo {
         let family_name = UniCase::new(family_name.name);
         let family = self.match_family(&family_name);
-        family.map_or_else(
-            || fonts::FontFamilyInfo::new_empty(),
-            |FontFamilyMatch { family, overrides: _ }| fonts::FontFamilyInfo {
+        family.map_or(fonts::FontFamilyInfo::EMPTY, |FontFamilyMatch { family, overrides: _ }| {
+            fonts::FontFamilyInfo {
                 name: Some(fonts::FamilyName { name: family.name.clone() }),
                 styles: Some(family.faces.get_styles().collect()),
                 ..fonts::FontFamilyInfo::EMPTY
-            },
-        )
+            }
+        })
     }
 
     async fn get_typeface_by_id(
@@ -311,7 +320,7 @@ where
         &self,
         request: fonts_exp::ListTypefacesRequest,
     ) -> Result<Vec<fonts_exp::TypefaceInfo>, fonts_exp::Error> {
-        let flags = request.flags.unwrap_or(fonts_exp::ListTypefacesFlags::new_empty());
+        let flags = request.flags.unwrap_or(fonts_exp::ListTypefacesFlags::empty());
 
         let matched_families = self.list_typefaces_match_families(flags, &request);
 

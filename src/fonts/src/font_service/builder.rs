@@ -5,6 +5,7 @@
 use {
     super::{
         asset::{AssetCollectionBuilder, AssetLoader, AssetLoaderImpl},
+        debug,
         family::{FamilyOrAliasBuilder, FontFamilyBuilder},
         inspect::ServiceInspectData,
         typeface::{Typeface, TypefaceCollectionBuilder, TypefaceId},
@@ -13,7 +14,7 @@ use {
     anyhow::{format_err, Error},
     font_info::FontInfoLoaderImpl,
     fuchsia_inspect as finspect,
-    fuchsia_syslog::fx_vlog,
+    fuchsia_syslog::*,
     fuchsia_trace as trace,
     manifest::{v2, FontManifestWrapper, FontsManifest},
     std::{
@@ -72,7 +73,11 @@ where
     ) -> FontServiceBuilder<'a, L> {
         FontServiceBuilder {
             manifests: vec![],
-            assets: AssetCollectionBuilder::new(asset_loader, default_cache_capacity_bytes, inspect_root),
+            assets: AssetCollectionBuilder::new(
+                asset_loader,
+                default_cache_capacity_bytes,
+                inspect_root,
+            ),
             families: BTreeMap::new(),
             fallback_collection: TypefaceCollectionBuilder::new(),
             inspect_root,
@@ -148,7 +153,9 @@ where
             &fallback_collection,
         );
 
-        Ok(FontService { assets, families, fallback_collection, inspect_data })
+        let is_internal_build = debug::is_internal_build();
+
+        Ok(FontService { assets, families, fallback_collection, inspect_data, is_internal_build })
     }
 
     async fn add_fonts_from_manifest_v2(

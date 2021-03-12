@@ -5,6 +5,7 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
+import("//build/type/config.gni")
 import("//src/fonts/build/fonts.gni")
 import("//src/sys/build/components.gni")
 
@@ -104,6 +105,7 @@ rustc_binary("font_provider") {
     "src/font_service/asset/loader.rs",
     "src/font_service/asset/mod.rs",
     "src/font_service/builder.rs",
+    "src/font_service/debug.rs",
     "src/font_service/family.rs",
     "src/font_service/inspect.rs",
     "src/font_service/mod.rs",
@@ -141,6 +143,10 @@ fuchsia_package("pkg") {
     ":font_provider_cmx",
     ":font_provider_cmx_tests",
   ]
+}
+
+build_type_config_data("build_type") {
+  for_pkg = "fonts"
 }
 
 fuchsia_component("font_provider_unit_tests_cmp") {

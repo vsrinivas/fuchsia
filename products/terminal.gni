@@ -18,6 +18,9 @@ base_package_labels += [
 ]
 base_package_labels -= [ "//src/intl/intl_services:small" ]
 
+# Add build type config data
+base_package_labels += [ "//src/fonts:build_type_eng" ]
+
 cache_package_labels += [
   "//garnet/bin/terminal",
   "//src/fonts:open-fonts-collection",
