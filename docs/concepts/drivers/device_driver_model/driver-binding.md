@@ -4,14 +4,14 @@ In Fuchsia, the driver framework maintains a tree of drivers and devices in the 
 tree, a device represents access to some hardware available to the OS. A driver both publishes and
 binds to devices. For example, a USB driver might bind to a PCI device (its parent) and publish an
 ethernet device (its child). In order to determine which devices a driver can bind to, each driver
-has a bind program and each device has a set of properties. The bind program defines a condition
+has a bind rule and each device has a set of properties. The bind rule defines a condition
 that matches the properties of devices that it wants to bind to.
 
-Bind programs and the conditions they refer to are defined by a domain specific language. The bind
-compiler consumes this language and produces bytecode for bind programs. In the future, it will
-also produce code artefacts that drivers may refer to when publishing device properties. The
-language has two kinds of source files: programs, and libraries. Libraries are used to share
-property definitions between drivers and bind programs.
+Bind rules and the conditions they refer to are defined by a domain specific language. The bind
+compiler consumes this language and produces bytecode for bind rules. The language has two
+kinds of source files: rules, and libraries. Libraries are used to share property definitions
+between drivers and bind rules. The compiler also produces FIDL files from bind libraries so
+that drivers may refer to device properties in code.
 
 Note: Driver binding is under active development and this document describes the current state.
 Not all drivers use this form of bind rules but a migration is under way to convert them all.
@@ -26,7 +26,7 @@ removed from this namespace and all bind property keys will be defined in bind l
 
 ## The compiler
 
-The compiler takes a list of library sources, and one program source. For example:
+The compiler takes a list of library sources, and one rule source. For example:
 
 ```
 fx bindc compile \
@@ -52,10 +52,14 @@ For more details, see [the driver development documentation]
 
 ## Bind rules {#bind-rules}
 
-A bind program defines the conditions to call a driver's `bind()` hook. Each statement in the bind
-program is a condition over the properties of the device that must hold true in order for the
+A bind rule defines the conditions to call a driver's `bind()` hook. Each statement in the bind
+rule is a condition over the properties of the device that must hold true in order for the
 driver to bind. If the bind rules finish executing and all conditions are true, then the device
 coordinator will call the driver's `bind()` hook.
+
+A bind rule should be thought of as a declarative expression of the conditions under which a
+driver should bind. As such, the order of execution of condition expressions is not relevant to its
+final evaluation. It may help to consider the bind rule to be a Boolean formula.
 
 There are four kinds of statements:
 
@@ -63,11 +67,11 @@ There are four kinds of statements:
    `<key> == <value>` (or `<key> != <value>`).
  - **Accept statements** are lists of permissible values for a given key.
  - **If statements** provide simple branching.
- - **Abort statements** cause the bind rule execution to terminate and the driver will not bind.
+ - **True and false statements** can be used to explicitly evaluate a bind rule.
 
 ### Example
 
-This example bind program can be found at [//tools/bindc/examples/gizmo.bind](/tools/bindc/examples/gizmo.bind).
+This example bind rule can be found at [//tools/bindc/examples/gizmo.bind](/tools/bindc/examples/gizmo.bind).
 
 ```
 using fuchsia.usb;
@@ -86,7 +90,7 @@ if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.INTEL {
   }
 } else {
   // If the vendor is neither Intel or Realtek, do not bind.
-  abort;
+  false;
 }
 ```
 
@@ -97,23 +101,27 @@ bind rules are simple representations of the conditions under which a driver sho
 
  - **Empty blocks are not allowed**.
    It's ambiguous whether an empty block should mean that the driver will bind or abort. The
-   author should either use an explicit `abort` statement, or refactor the previous `if` statement
-   conditions into a condition statement.
+   author should use an explicit `true` or `false` statement.
 
  - **If statements must have else blocks and are terminal**.
    This restriction increases readability by making explicit the branches of execution. Since no
    statement may follow an `if` statement, it is easy to trace a path through the bind rules.
 
+ - **True and false statements must be the only statement in their scope**.
+   Bind rules are not imperative programs and the order of evaluation is not important. Mixing
+   boolean statements (particularly `true`) with other conditions may lead to situations where this
+   is not clear.
+
 ### Grammar
 
 ```
-program = using-list , ( statement )+ ;
+rule = using-list , ( statement )+ ;
 
 using-list = ( using , ";" )* ;
 
 using = "using" , compound-identifier , ( "as" , IDENTIFIER ) ;
 
-statement = condition , ";" | accept | if-statement | abort ;
+statement = condition , ";" | accept | if-statement | true | false ;
 
 condition = compound-identifier , condition-op , value ;
 
@@ -125,7 +133,9 @@ if-statement = "if" , condition , "{" , ( statement )+ , "}" ,
                 ( "else if" , "{" , ( statement )+ , "}" )* ,
                 "else" , "{" , ( statement )+ , "}" ;
 
-abort = "abort" , ";" ;
+true = "true" , ";" ;
+
+false = "flase" , ";" ;
 
 compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
 
@@ -136,11 +146,12 @@ An identifier matches the regex `[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?` and must n
 keyword. The list of keywords is:
 
 ```
-abort
 accept
 as
 else
+false
 if
+true
 using
 ```
 
@@ -166,7 +177,7 @@ For more details, refer to [//build/bind/bind.gni](/build/bind/bind.gni).
 
 ## Testing
 The bind compiler supports a data-driven unit test framework for bind rules that allows you to
-test your bind rules in isolation from the driver. A test case for a bind program consists of a
+test your bind rules in isolation from the driver. A test case for a bind rule consists of a
 device specification and an expected result, i.e. bind or abort. Test cases are passed to the bind
 compiler in the form of JSON specification files and the compiler executes each test case by
 running the debugger.
@@ -243,7 +254,7 @@ fx bindc test \
 ## Bind libraries {#bind-libraries}
 
 A bind library defines a set of properties that drivers may assign to their children. Also,
-bind programs may refer to bind libraries.
+bind rules may refer to bind libraries.
 
 ### Namespacing
 
