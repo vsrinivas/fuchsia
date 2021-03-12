@@ -234,13 +234,3 @@ static_assert(sizeof(::fidl_test_vectors::wire::ExampleUseOfVectors) ==
 namespace fidl_test_vectors {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_vectors
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace vectors {
-using namespace ::fidl_test_vectors;
-
-}  // namespace vectors
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

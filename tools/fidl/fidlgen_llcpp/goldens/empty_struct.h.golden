@@ -1769,13 +1769,3 @@ class EmptyProtocol::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_emptystruct
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace emptystruct {
-using namespace ::fidl_test_emptystruct;
-
-}  // namespace emptystruct
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

@@ -366,13 +366,3 @@ static_assert(sizeof(::fidl_test_bits::wire::FlexibleBits) == sizeof(uint64_t));
 namespace fidl_test_bits {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_bits
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace bits {
-using namespace ::fidl_test_bits;
-
-}  // namespace bits
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

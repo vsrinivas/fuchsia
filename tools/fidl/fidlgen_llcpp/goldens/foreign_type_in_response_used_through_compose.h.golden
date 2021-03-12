@@ -896,13 +896,3 @@ class Top::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace foreigntypeinresponseusedthroughcompose {
-using namespace ::fidl_test_foreigntypeinresponseusedthroughcompose;
-
-}  // namespace foreigntypeinresponseusedthroughcompose
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

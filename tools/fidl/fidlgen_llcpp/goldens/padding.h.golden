@@ -3026,13 +3026,3 @@ static_assert(sizeof(::fidl_test_padding::wire::Padding1ByteEnd) ==
 namespace fidl_test_padding {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_padding
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace padding {
-using namespace ::fidl_test_padding;
-
-}  // namespace padding
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

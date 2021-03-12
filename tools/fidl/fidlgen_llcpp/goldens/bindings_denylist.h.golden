@@ -163,13 +163,3 @@ static_assert(
 namespace fidl_test_bindingsdenylist {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_bindingsdenylist
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace bindingsdenylist {
-using namespace ::fidl_test_bindingsdenylist;
-
-}  // namespace bindingsdenylist
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

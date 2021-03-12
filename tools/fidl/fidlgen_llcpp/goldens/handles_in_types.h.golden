@@ -798,13 +798,3 @@ static_assert(sizeof(::fidl_test_handlesintypes::wire::HandlesInTypes) ==
 namespace fidl_test_handlesintypes {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_handlesintypes
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace handlesintypes {
-using namespace ::fidl_test_handlesintypes;
-
-}  // namespace handlesintypes
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

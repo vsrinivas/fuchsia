@@ -1496,13 +1496,3 @@ class ExampleProtocol::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_placementofattributes
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace placementofattributes {
-using namespace ::fidl_test_placementofattributes;
-
-}  // namespace placementofattributes
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

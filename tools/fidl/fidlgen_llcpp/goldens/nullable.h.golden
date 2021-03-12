@@ -2598,13 +2598,3 @@ class SimpleProtocol::WeakEventSender {
 
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_nullable
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace nullable {
-using namespace ::fidl_test_nullable;
-
-}  // namespace nullable
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

@@ -1730,13 +1730,3 @@ class sub::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_inheritance
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace inheritance {
-using namespace ::fidl_test_inheritance;
-
-}  // namespace inheritance
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

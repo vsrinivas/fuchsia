@@ -203,13 +203,3 @@ static_assert(sizeof(::fidl_test_consts::wire::BitsType) == sizeof(uint32_t));
 namespace fidl_test_consts {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_consts
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace consts {
-using namespace ::fidl_test_consts;
-
-}  // namespace consts
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

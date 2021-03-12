@@ -635,13 +635,3 @@ class SomeProtocol::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_handles
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace handles {
-using namespace ::fidl_test_handles;
-
-}  // namespace handles
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

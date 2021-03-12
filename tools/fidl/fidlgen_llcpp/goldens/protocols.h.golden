@@ -12257,13 +12257,3 @@ class WithErrorSyntax::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_protocols
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace protocols {
-using namespace ::fidl_test_protocols;
-
-}  // namespace protocols
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

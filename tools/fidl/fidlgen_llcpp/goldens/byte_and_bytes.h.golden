@@ -240,13 +240,3 @@ static_assert(sizeof(::fidl_test_byteandbytes::wire::ByteAndBytes) ==
 namespace fidl_test_byteandbytes {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_byteandbytes
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace byteandbytes {
-using namespace ::fidl_test_byteandbytes;
-
-}  // namespace byteandbytes
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

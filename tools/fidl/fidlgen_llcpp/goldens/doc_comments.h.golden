@@ -2035,13 +2035,3 @@ class Interface::WeakEventSender {
 
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_doccomments
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace doccomments {
-using namespace ::fidl_test_doccomments;
-
-}  // namespace doccomments
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

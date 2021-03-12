@@ -2530,13 +2530,3 @@ class Child::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_protocolrequest
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace protocolrequest {
-using namespace ::fidl_test_protocolrequest;
-
-}  // namespace protocolrequest
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

@@ -231,13 +231,3 @@ static_assert(sizeof(::fidl_test_escaping::wire::DocCommentWithQuotes) ==
 namespace fidl_test_escaping {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_escaping
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace escaping {
-using namespace ::fidl_test_escaping;
-
-}  // namespace escaping
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

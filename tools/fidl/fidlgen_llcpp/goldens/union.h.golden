@@ -6366,13 +6366,3 @@ class TestProtocol::WeakEventSender {
 
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_union
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace union_ {
-using namespace ::fidl_test_union;
-
-}  // namespace union_
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

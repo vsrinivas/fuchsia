@@ -671,7 +671,6 @@ type Root struct {
 	Library                fidl.LibraryIdentifier
 	LibraryReversed        fidl.LibraryIdentifier
 	LibraryCommonNamespace Namespace
-	LibraryNamespaceAlias  Namespace
 	Decls                  []Decl
 }
 
@@ -1085,7 +1084,6 @@ type compiler struct {
 	naturalNamespace libraryNamespaceFunc
 	wireNamespace    libraryNamespaceFunc
 	commonNamespace  libraryNamespaceFunc
-	aliasNamespace   libraryNamespaceFunc
 	resultForStruct  map[fidl.EncodedCompoundIdentifier]*Result
 	resultForUnion   map[fidl.EncodedCompoundIdentifier]*Result
 }
@@ -1774,7 +1772,7 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 	return r
 }
 
-func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc, aliasNsFormatter libraryNamespaceFunc) Root {
+func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc) Root {
 	root := Root{}
 	library := make(fidl.LibraryIdentifier, 0)
 	rawLibrary := make(fidl.LibraryIdentifier, 0)
@@ -1791,15 +1789,11 @@ func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc, aliasNsFormatt
 		naturalNamespace: naturalLibraryNamespace,
 		wireNamespace:    wireLibraryNamespace,
 		commonNamespace:  commonNsFormatter,
-		aliasNamespace:   aliasNsFormatter,
 		resultForStruct:  make(map[fidl.EncodedCompoundIdentifier]*Result),
 		resultForUnion:   make(map[fidl.EncodedCompoundIdentifier]*Result),
 	}
 
 	root.Library = library
-	if c.aliasNamespace != nil {
-		root.LibraryNamespaceAlias = c.aliasNamespace(library)
-	}
 	root.LibraryCommonNamespace = c.commonNamespace(fidl.ParseLibraryName(r.Name))
 	libraryReversed := make(fidl.LibraryIdentifier, len(library))
 	for i, j := 0, len(library)-1; i < len(library); i, j = i+1, j-1 {
@@ -1892,13 +1886,13 @@ func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc, aliasNsFormatt
 }
 
 func CompileHL(r fidl.Root) Root {
-	return compile(r.ForBindings("hlcpp"), hlLibraryNamespace, nil)
+	return compile(r.ForBindings("hlcpp"), hlLibraryNamespace)
 }
 
 func CompileLL(r fidl.Root) Root {
-	return compile(r.ForBindings("llcpp"), commonLibraryNamespace, oldLlLibraryNamepace)
+	return compile(r.ForBindings("llcpp"), commonLibraryNamespace)
 }
 
 func CompileLibFuzzer(r fidl.Root) Root {
-	return compile(r.ForBindings("libfuzzer"), hlLibraryNamespace, nil)
+	return compile(r.ForBindings("libfuzzer"), hlLibraryNamespace)
 }

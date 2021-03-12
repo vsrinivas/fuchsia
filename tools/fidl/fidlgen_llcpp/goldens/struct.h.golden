@@ -406,13 +406,3 @@ static_assert(sizeof(::fidl_test_struct::wire::BasicStruct) ==
 namespace fidl_test_struct {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_struct
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace struct_ {
-using namespace ::fidl_test_struct;
-
-}  // namespace struct_
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

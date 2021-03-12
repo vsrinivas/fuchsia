@@ -291,13 +291,3 @@ static_assert(
 namespace fidl_test_typealiases {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_typealiases
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace typealiases {
-using namespace ::fidl_test_typealiases;
-
-}  // namespace typealiases
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

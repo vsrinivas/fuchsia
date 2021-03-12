@@ -1512,13 +1512,3 @@ static_assert(
 namespace fidl_test_unionsandwich {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_unionsandwich
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace unionsandwich {
-using namespace ::fidl_test_unionsandwich;
-
-}  // namespace unionsandwich
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

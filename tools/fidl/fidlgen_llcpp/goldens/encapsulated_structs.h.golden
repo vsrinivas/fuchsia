@@ -1216,13 +1216,3 @@ static_assert(
 namespace fidl_test_encapsulatedstructs {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_encapsulatedstructs
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace encapsulatedstructs {
-using namespace ::fidl_test_encapsulatedstructs;
-
-}  // namespace encapsulatedstructs
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

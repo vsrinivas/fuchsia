@@ -2099,13 +2099,3 @@ class Protocol::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_requestflexibleenvelope
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace requestflexibleenvelope {
-using namespace ::fidl_test_requestflexibleenvelope;
-
-}  // namespace requestflexibleenvelope
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

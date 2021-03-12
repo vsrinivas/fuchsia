@@ -227,13 +227,3 @@ static_assert(sizeof(::fidl_test_transitivedependencies::wire::Baz) ==
 namespace fidl_test_transitivedependencies {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_transitivedependencies
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace transitivedependencies {
-using namespace ::fidl_test_transitivedependencies;
-
-}  // namespace transitivedependencies
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

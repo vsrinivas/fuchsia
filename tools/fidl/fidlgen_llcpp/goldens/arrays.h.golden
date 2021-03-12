@@ -1408,13 +1408,3 @@ static_assert(sizeof(::fidl_test_arrays::wire::StructLargeArray) ==
 namespace fidl_test_arrays {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_arrays
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace arrays {
-using namespace ::fidl_test_arrays;
-
-}  // namespace arrays
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

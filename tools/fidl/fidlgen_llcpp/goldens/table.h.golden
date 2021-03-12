@@ -2279,13 +2279,3 @@ static_assert(std::is_standard_layout_v<::fidl_test_table::wire::EmptyTable>);
 namespace fidl_test_table {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_table
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace table {
-using namespace ::fidl_test_table;
-
-}  // namespace table
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

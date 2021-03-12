@@ -892,13 +892,3 @@ class Top::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_transitivedependenciescompose
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace transitivedependenciescompose {
-using namespace ::fidl_test_transitivedependenciescompose;
-
-}  // namespace transitivedependenciescompose
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

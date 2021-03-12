@@ -1379,13 +1379,3 @@ class FirstProtocol::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_service
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace service {
-using namespace ::fidl_test_service;
-
-}  // namespace service
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

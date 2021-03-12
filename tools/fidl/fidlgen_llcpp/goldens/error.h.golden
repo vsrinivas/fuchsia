@@ -1271,13 +1271,3 @@ class Example::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_error
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace error {
-using namespace ::fidl_test_error;
-
-}  // namespace error
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

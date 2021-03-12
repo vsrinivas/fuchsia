@@ -1556,13 +1556,3 @@ class Child::WeakEventSender {
 #endif
 
 }  // namespace fidl_test_inheritancewithrecursivedecl
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace inheritancewithrecursivedecl {
-using namespace ::fidl_test_inheritancewithrecursivedecl;
-
-}  // namespace inheritancewithrecursivedecl
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

@@ -231,13 +231,3 @@ static_assert(
 namespace fidl_test_structdefaultvalueenumlibraryreference {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_structdefaultvalueenumlibraryreference
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace structdefaultvalueenumlibraryreference {
-using namespace ::fidl_test_structdefaultvalueenumlibraryreference;
-
-}  // namespace structdefaultvalueenumlibraryreference
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

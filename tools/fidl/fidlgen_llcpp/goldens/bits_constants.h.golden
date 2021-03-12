@@ -165,13 +165,3 @@ static_assert(sizeof(::fidl_test_bitsconstants::wire::BitsType) ==
 namespace fidl_test_bitsconstants {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_bitsconstants
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace bitsconstants {
-using namespace ::fidl_test_bitsconstants;
-
-}  // namespace bitsconstants
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp

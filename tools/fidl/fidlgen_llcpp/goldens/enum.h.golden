@@ -146,13 +146,3 @@ struct IsFidlType<::fidl_test_enum::wire::MyFlexibleEnum>
 namespace fidl_test_enum {
 namespace wire {}  // namespace wire
 }  // namespace fidl_test_enum
-namespace llcpp {
-namespace fidl {
-namespace test {
-namespace enum_ {
-using namespace ::fidl_test_enum;
-
-}  // namespace enum_
-}  // namespace test
-}  // namespace fidl
-}  // namespace llcpp
