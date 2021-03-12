@@ -37,6 +37,11 @@ import("plugins.gni")
 #     Third party crates can be included through paths like
 #     "//third_party/rust_crates:<cratename>",
 #
+#   args_deps (optional)
+#     List of rust_library GN targets on which the args library depends. Default
+#     location of the args library is at `./src/args.rs`, see
+#     `args_source_root` here for more details.
+#
 #   test_deps (optional)
 #     List of rust_library GN targets on which this crate's tests depend.
 #
