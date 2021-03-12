@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use crate::input::types::{
-    ActionResult, KeyPressRequest, MultiFingerSwipeRequest, MultiFingerTapRequest, SwipeRequest,
-    TapRequest, TextRequest,
+    self, ActionResult, KeyPressRequest, MultiFingerSwipeRequest, MultiFingerTapRequest,
+    SwipeRequest, TapRequest, TextRequest,
 };
 use anyhow::{Context, Error};
 use fuchsia_syslog::macros::fx_log_info;
@@ -336,6 +336,44 @@ impl InputFacade {
             req.key_press_duration.map_or(DEFAULT_KEY_PRESS_DURATION, Duration::from_millis);
 
         input_synthesis::keyboard_event_command(hid_usage_id.into(), key_press_duration).await?;
+        Ok(ActionResult::Success)
+    }
+
+    /// Simulates a sequence of key events (presses and releases) on a keyboard.
+    ///
+    /// Dispatches the supplied `events` into a keyboard device, honoring the timing sequence that is
+    /// requested in them, to the extent possible using the current scheduling system.
+    ///
+    /// Since each individual key press is broken down into constituent pieces (presses, releases,
+    /// pauses), it is possible to dispatch a key event sequence corresponding to multiple keys being
+    /// pressed and released in an arbitrary sequence.  This sequence is usually understood as a timing
+    /// diagram like this:
+    ///
+    /// ```ignore
+    ///           v--- key press   v--- key release
+    /// A: _______/^^^^^^^^^^^^^^^^\__________
+    ///    |<----->|   <-- duration from start for key press.
+    ///    |<--------------------->|   <-- duration from start for key release.
+    ///
+    /// B: ____________/^^^^^^^^^^^^^^^^\_____
+    ///                ^--- key press   ^--- key release
+    ///    |<--------->|   <-- duration from start for key press.
+    ///    |<-------------------------->|   <-- duration for key release.
+    /// ```
+    ///
+    /// You would from there convert the desired timing diagram into a sequence of [KeyEvent]s
+    /// that you would pass into this function. Note that all durations are specified as durations
+    /// from the start of the key event sequence.
+    ///
+    /// Note that due to the way event timing works, it is in practice impossible to have two key
+    /// events happen at exactly the same time even if you so specify.  Do not rely on simultaneous
+    /// asynchronous event processing: it does not work in this code, and it is not how reality works
+    /// either.  Instead, design your key event processing so that it is robust against the inherent
+    /// non-determinism in key event delivery.
+    pub async fn key_events(&self, args: Value) -> Result<ActionResult, Error> {
+        fx_log_info!("Executing KeyEvents in Input Facade: {:?}", args);
+        let req: types::KeyEventsRequest = from_value(args)?;
+        input_synthesis::dispatch_key_events(&req.key_events[..]).await?;
         Ok(ActionResult::Success)
     }
 }

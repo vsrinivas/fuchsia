@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_input as input,
     fidl_fuchsia_ui_input::{self, KeyboardReport, Touch},
     fidl_fuchsia_ui_input3 as input3, fuchsia_async as fasync, fuchsia_zircon as zx,
+    serde::{Deserialize, Deserializer},
     std::{convert::TryFrom, thread, time::Duration},
 };
 
@@ -155,7 +156,7 @@ pub(crate) async fn media_button_event(
 /// Furthermore anchoring `duration_since_start` to the beginning of the key sequence (instead of,
 /// for example, specifying the duration of each key press) gives a common time reference and makes
 /// it fairly easy to express the intended key interaction in terms of a `TimedKeyEvent` sequence.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub struct TimedKeyEvent {
     /// The [input::Key] which changed state.
     pub key: input::Key,
@@ -180,6 +181,45 @@ impl TimedKeyEvent {
     ) -> Self {
         Self { key, duration_since_start, event_type: type_ }
     }
+
+    /// Deserializes a vector of `TimedKeyEvent`.
+    /// A custom deserializer is used because Vec<_> does not work
+    /// with serde, and the [TimedKeyEvent] has constituents that don't
+    /// have a derived serde representation.
+    /// See: https://github.com/serde-rs/serde/issues/723#issuecomment-382501277
+    pub fn vec<'de, D>(deserializer: D) -> Result<Vec<TimedKeyEvent>, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        // Should correspond to TimedKeyEvent, except all fields are described by their underlying
+        // primitive values.
+        #[derive(Deserialize, Debug)]
+        struct TimedKeyEventDes {
+            // The Fuchsia encoded USB HID key, per input::Key.
+            key: u32,
+            // A Duration.
+            duration_millis: u64,
+            // An input3::TimedKeyEventType.
+            #[serde(rename = "type")]
+            type_: u32,
+        }
+
+        impl Into<TimedKeyEvent> for TimedKeyEventDes {
+            /// Reconstructs the typed elements of [TimedKeyEvent] from primitives.
+            fn into(self) -> TimedKeyEvent {
+                TimedKeyEvent::new(
+                    input::Key::from_primitive(self.key)
+                        .expect(&format!("Key::from_primitive failed on: {:?}", &self)),
+                    input3::KeyEventType::from_primitive(self.type_)
+                        .expect(&format!("KeyEventType::from_primitive failed on: {:?}", &self)),
+                    Duration::from_millis(self.duration_millis),
+                )
+            }
+        }
+
+        let v = Vec::deserialize(deserializer)?;
+        Ok(v.into_iter().map(|a: TimedKeyEventDes| a.into()).collect())
+    }
 }
 
 /// Replays the sequence of events (see [Replayer::replay]) with the correct timing.
@@ -187,6 +227,7 @@ struct Replayer<'a> {
     // Invariant: pressed_keys.iter() must use ascending iteration
     // ordering.
     pressed_keys: std::collections::BTreeSet<input::Key>,
+    // The input device registry to use.
     registry: &'a mut dyn InputDeviceRegistry,
 }
 
@@ -495,7 +536,96 @@ pub(crate) async fn multi_finger_swipe(
 
 #[cfg(test)]
 mod tests {
+    use serde::Deserialize;
     use {super::*, fuchsia_async as fasync};
+
+    #[derive(Deserialize, Debug, Eq, PartialEq)]
+    struct KeyEventsRequest {
+        #[serde(default, deserialize_with = "TimedKeyEvent::vec")]
+        pub key_events: Vec<TimedKeyEvent>,
+    }
+
+    #[test]
+    fn deserialize_key_event() -> Result<(), Error> {
+        let request_json = r#"{
+          "key_events": [
+            {
+              "key": 458756,
+              "duration_millis": 100,
+              "type": 1
+            }
+          ]
+        }"#;
+        let event: KeyEventsRequest = serde_json::from_str(&request_json)?;
+        assert_eq!(
+            event,
+            KeyEventsRequest {
+                key_events: vec![TimedKeyEvent {
+                    key: input::Key::A,
+                    duration_since_start: Duration::from_millis(100),
+                    event_type: input3::KeyEventType::Pressed,
+                },],
+            }
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn deserialize_key_event_maformed_input() {
+        let tests: Vec<&'static str> = vec![
+            // "type" has a wrong value.
+            r#"{
+              "key_events": [
+                {
+                  "key": 458756,
+                  "duration_millis": 100,
+                  "type": 99999,
+                }
+              ]
+            }"#,
+            // "key" has a value that is too small.
+            r#"{
+              "key_events": [
+                {
+                  "key": 12,
+                  "duration_millis": 100,
+                  "type": 1,
+                }
+              ]
+            }"#,
+            // "type" is missing.
+            r#"{
+              "key_events": [
+                {
+                  "key": 12,
+                  "duration_millis": 100,
+                }
+              ]
+            }"#,
+            // "duration" is missing.
+            r#"{
+              "key_events": [
+                {
+                  "key": 458756,
+                  "type": 1
+                }
+              ]
+            }"#,
+            // "key" is missing.
+            r#"{
+              "key_events": [
+                {
+                  "duration_millis": 100,
+                  "type": 1
+                }
+              ]
+            }"#,
+        ];
+        for test in tests.iter() {
+            serde_json::from_str::<KeyEventsRequest>(test)
+                .expect_err(&format!("malformed input should not parse: {}", &test));
+        }
+    }
 
     mod event_synthesis {
         use {

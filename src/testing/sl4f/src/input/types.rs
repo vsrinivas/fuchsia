@@ -5,6 +5,7 @@
 use serde::{Deserialize, Deserializer, Serialize};
 
 use fidl_fuchsia_ui_input::Touch;
+use input_synthesis as is;
 
 /// Enum for supported Input commands.
 pub enum InputMethod {
@@ -14,6 +15,8 @@ pub enum InputMethod {
     MultiFingerSwipe,
     Text,
     KeyPress,
+    /// Arbitrary sequence of key events.
+    KeyEvents,
 }
 
 impl std::str::FromStr for InputMethod {
@@ -26,6 +29,7 @@ impl std::str::FromStr for InputMethod {
             "MultiFingerSwipe" => Ok(InputMethod::MultiFingerSwipe),
             "Text" => Ok(InputMethod::Text),
             "KeyPress" => Ok(InputMethod::KeyPress),
+            "KeyEvents" => Ok(InputMethod::KeyEvents),
             _ => return Err(format_err!("Invalid Input Facade method: {}", method)),
         }
     }
@@ -92,6 +96,12 @@ pub struct TextRequest {
 pub struct KeyPressRequest {
     pub hid_usage_id: u16,
     pub key_press_duration: Option<u64>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct KeyEventsRequest {
+    #[serde(default, deserialize_with = "is::synthesizer::TimedKeyEvent::vec")]
+    pub key_events: Vec<is::synthesizer::TimedKeyEvent>,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
