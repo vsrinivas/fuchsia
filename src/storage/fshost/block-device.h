@@ -24,12 +24,10 @@ namespace devmgr {
 
 // A concrete implementation of the block device interface.
 //
-// Used by fshost to attach either drivers or filesystems to
-// incoming block devices.
+// Used by fshost to attach either drivers or filesystems to incoming block devices.
 class BlockDevice final : public BlockDeviceInterface {
  public:
-  BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd,
-              const Config* device_config);
+  BlockDevice(FilesystemMounter* mounter, fbl::unique_fd fd, const Config* device_config);
   BlockDevice(const BlockDevice&) = delete;
   BlockDevice& operator=(const BlockDevice&) = delete;
 
@@ -58,7 +56,7 @@ class BlockDevice final : public BlockDeviceInterface {
   FilesystemMounter* mounter_ = nullptr;
   fbl::unique_fd fd_;
   const Config* device_config_;
-  mutable std::optional<fuchsia_hardware_block_BlockInfo> info_ = {};
+  mutable std::optional<fuchsia_hardware_block_BlockInfo> info_;
   mutable std::optional<disk_format_t> content_format_;
   disk_format_t format_ = DISK_FORMAT_UNKNOWN;
   std::string topological_path_;

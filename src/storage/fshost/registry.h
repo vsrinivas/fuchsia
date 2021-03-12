@@ -10,9 +10,9 @@
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
 
-#include "registry_vnode.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
+#include "src/storage/fshost/registry_vnode.h"
 
 namespace devmgr {
 namespace fshost {

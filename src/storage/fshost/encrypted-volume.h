@@ -9,7 +9,7 @@
 
 #include <fbl/unique_fd.h>
 
-#include "encrypted-volume-interface.h"
+#include "src/storage/fshost/encrypted-volume-interface.h"
 
 namespace devmgr {
 

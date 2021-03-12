@@ -24,14 +24,12 @@
 
 #include "src/lib/loader_service/loader_service.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
-
-// Used for fshost signals.
-#include "delayed-outdir.h"
-#include "fdio.h"
-#include "fshost-boot-args.h"
-#include "inspect-manager.h"
-#include "metrics.h"
-#include "registry.h"
+#include "src/storage/fshost/delayed-outdir.h"
+#include "src/storage/fshost/fdio.h"
+#include "src/storage/fshost/fshost-boot-args.h"
+#include "src/storage/fshost/inspect-manager.h"
+#include "src/storage/fshost/metrics.h"
+#include "src/storage/fshost/registry.h"
 
 namespace devmgr {
 

@@ -53,9 +53,9 @@ struct DirectoryEntry {
   fidl::ClientEnd<fuchsia_io::Node> node;
   // If the entry its a file, this contains the content size. If the entry is a directory, this will
   // be zero.
-  size_t size;
+  size_t size = 0;
   // Whether the entry is a directory or not.
-  bool is_dir;
+  bool is_dir = false;
 };
 
 // Utility to lazily iterate over the entries of a directory.
@@ -76,7 +76,7 @@ class DirectoryEntriesIterator {
   // Pending entries to return.
   std::queue<std::string> pending_entries_;
   // Whether or not the iterator has finished.
-  bool finished_;
+  bool finished_ = false;
 
   // Creates a `DirectoryEntry`. If it fails to retrieve the entry `entry_name` attributes,
   // returns `std::nullopt`.

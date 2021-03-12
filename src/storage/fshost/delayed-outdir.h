@@ -34,8 +34,7 @@ class DelayedOutdir {
  public:
   DelayedOutdir()
       : outgoing_dir_delayed_loop_(new async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread)),
-        delayed_vfs_(fs::ManagedVfs(outgoing_dir_delayed_loop_->dispatcher())),
-        started_(false) {}
+        delayed_vfs_(fs::ManagedVfs(outgoing_dir_delayed_loop_->dispatcher())) {}
 
   ~DelayedOutdir() {
     if (started_) {
@@ -79,7 +78,7 @@ class DelayedOutdir {
  private:
   std::unique_ptr<async::Loop> outgoing_dir_delayed_loop_;
   fs::ManagedVfs delayed_vfs_;
-  bool started_;
+  bool started_ = false;
 };
 
 }  // namespace devmgr

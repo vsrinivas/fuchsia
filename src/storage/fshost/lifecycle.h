@@ -9,8 +9,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
 
-#include "fs-manager.h"
 #include "src/lib/storage/vfs/cpp/service.h"
+#include "src/storage/fshost/fs-manager.h"
 
 namespace devmgr {
 
@@ -18,7 +18,7 @@ class FsManager;
 
 class LifecycleServer final : public fuchsia_process_lifecycle::Lifecycle::Interface {
  public:
-  LifecycleServer(FsManager* fs_manager) : fs_manager_(fs_manager) {}
+  explicit LifecycleServer(FsManager* fs_manager) : fs_manager_(fs_manager) {}
 
   static zx_status_t Create(async_dispatcher_t* dispatcher, FsManager* fs_manager,
                             fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> chan);

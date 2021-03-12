@@ -57,8 +57,8 @@ class FshostBootArgs {
   bool zircon_system_disable_automount_ = false;
   bool zircon_system_filesystem_check_ = false;
   bool zircon_system_wait_for_data_ = true;
-  std::optional<std::string> blobfs_write_compression_algorithm_ = std::nullopt;
-  std::optional<std::string> blobfs_eviction_policy_ = std::nullopt;
+  std::optional<std::string> blobfs_write_compression_algorithm_;
+  std::optional<std::string> blobfs_eviction_policy_;
 };
 
 }  // namespace devmgr

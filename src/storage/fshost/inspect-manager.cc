@@ -155,7 +155,7 @@ void InspectManager::FillFileTreeSizes(fidl::ClientEnd<fio::Directory> current_d
 
 // Create a new lazy iterator.
 DirectoryEntriesIterator::DirectoryEntriesIterator(fidl::ClientEnd<fio::Directory> directory)
-    : directory_(std::move(directory)), finished_(false) {}
+    : directory_(std::move(directory)) {}
 
 // Get the next entry. If there's no more entries left, this method will return std::nullopt
 // forever.

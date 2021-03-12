@@ -35,7 +35,7 @@ class RegistryVnode final : public ::fuchsia_fshost::Registry::Interface, public
   // All registered filesystems known to the fshost.
   fbl::RefPtr<fs::PseudoDir> filesystems_;
   // An always-increasing counter used to identify new filesystems.
-  uint64_t filesystem_counter_;
+  uint64_t filesystem_counter_ = 0;
   async_dispatcher_t* dispatcher_;
 };
 

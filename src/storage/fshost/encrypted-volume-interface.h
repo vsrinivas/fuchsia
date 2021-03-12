@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_FSHOST_ENCRYPTED_VOLUME_INTERFACE_H_
 #define SRC_STORAGE_FSHOST_ENCRYPTED_VOLUME_INTERFACE_H_
 
+#include <zircon/status.h>
+
 namespace devmgr {
 
 class EncryptedVolumeInterface {

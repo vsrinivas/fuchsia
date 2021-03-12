@@ -10,8 +10,8 @@
 
 #include <thread>
 
-#include "fs-manager.h"
 #include "src/lib/storage/vfs/cpp/service.h"
+#include "src/storage/fshost/fs-manager.h"
 
 namespace devmgr {
 

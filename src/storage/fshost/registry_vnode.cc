@@ -21,7 +21,6 @@ RegistryVnode::RegistryVnode(async_dispatcher_t* dispatcher, fbl::RefPtr<fs::Pse
         return fidl::BindSingleInFlightOnly(dispatcher, std::move(server_end), this);
       }),
       filesystems_(std::move(filesystems)),
-      filesystem_counter_(0),
       dispatcher_(dispatcher) {}
 
 zx_status_t RegistryVnode::AddFilesystem(fidl::ClientEnd<::fuchsia_io::Directory> directory) {

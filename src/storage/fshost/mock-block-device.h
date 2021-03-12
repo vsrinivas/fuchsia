@@ -11,7 +11,7 @@
 
 #include <gtest/gtest.h>
 
-#include "block-device-interface.h"
+#include "src/storage/fshost/block-device-interface.h"
 
 namespace devmgr {
 
@@ -27,7 +27,7 @@ class MockBlockDevice : public devmgr::BlockDeviceInterface {
 
     disk_format_t content_format = DISK_FORMAT_UNKNOWN;
     std::string_view driver_path;
-    std::string topological_path = BaseTopologicalPath();
+    std::string topological_path = MockBlockDevice::BaseTopologicalPath();
     std::string partition_name;
   };
 
@@ -46,7 +46,7 @@ class MockBlockDevice : public devmgr::BlockDeviceInterface {
     };
   }
 
-  MockBlockDevice(const Options& options = Options::Default()) : options_(options) {}
+  explicit MockBlockDevice(const Options& options = Options::Default()) : options_(options) {}
 
   // Returns the value SetPartitionMaxSize() was called with. Will be a nullopt if uncalled.
   const std::optional<uint64_t>& max_size() const { return max_size_; }

@@ -5,7 +5,7 @@
 #ifndef SRC_STORAGE_FSHOST_FSHOST_FS_PROVIDER_H_
 #define SRC_STORAGE_FSHOST_FSHOST_FS_PROVIDER_H_
 
-#include "fdio.h"
+#include "src/storage/fshost/fdio.h"
 
 namespace devmgr {
 
