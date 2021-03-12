@@ -514,17 +514,20 @@ zx_status_t get_foo_and_bar(foo* foo_out) {
 }
 ```
 
-#### Propagating Errors with zx::make_status(zx_status_t)
+#### Propagating Errors and Values with zx::make_status
 
 `zx::make_status` is a utility function to simplify forwarding `zx_status_t`
-values through functions returning `zx::status<>` with an empty value set.
+values through functions returning `zx::status<>` with an empty value set or
+through functions returning `zx::status<T>`.
 
 This is primarily to simplify interfacing with FFIs.
+
+For functions that return zx_status_t with no output parameters:
 
 ```C++
 zx_status_t check_foo_and_bar(const foo&, const &bar);
 
-// Without using zx::forward_status.
+// Without using zx::make_status.
 zx::status<> CheckValues(const foo& foo_in, const bar& bar_in) {
   const zx_status_t status = check_foo_and_bar(foo_in, bar_in);
   if (status == ZX_OK) {
@@ -534,9 +537,40 @@ zx::status<> CheckValues(const foo& foo_in, const bar& bar_in) {
   }
 }
 
-// With using zx::forward_status.
+// With using zx::make_status.
 zx::status<> CheckValues(const foo& foo_in, const bar& bar_in) {
   return zx::make_status(check_foo_and_bar(foo_in, bar_in));
+}
+```
+
+For functions that return zx_status_t with one output parameter:
+
+```C++
+zx_status_t compute_foo(foo&);
+
+// Without using zx::make_status.
+zx::status<foo> Compute() {
+  foo foo_out;
+  const zx_status_t status = compute(foo_out);
+  if (status == ZX_OK) {
+    return zx::ok(foo_out);
+  } else {
+    return zx::error(status);
+  }
+}
+
+// With using zx::make_status.
+zx::status<foo> Compute() {
+  foo foo_out;
+  zx_status_t status = compute(foo_out);
+  return zx::make_status(status, foo_out);
+}
+
+// And if you are very careful with argument order evaluation the above can be
+// further simplified by eliminating the status variable.
+zx::status<foo> Compute() {
+  foo foo_out;
+  return zx::make_status(compute(foo_out), foo_out);
 }
 ```
 

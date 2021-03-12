@@ -160,6 +160,18 @@ static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.error_value() == Z
 static_assert(zx::status<int>{zx::error{ZX_ERR_INVALID_ARGS}}.status_value() ==
               ZX_ERR_INVALID_ARGS);
 
+// Status or value via make_status.
+static_assert(zx::make_status(ZX_OK, 10).is_ok() == true);
+static_assert(zx::make_status(ZX_OK, 10).is_error() == false);
+static_assert(zx::make_status(ZX_OK, 10).status_value() == ZX_OK);
+static_assert(zx::make_status(ZX_OK, 10).value() == 10);
+static_assert(*zx::make_status(ZX_OK, 10) == 10);
+
+static_assert(zx::make_status(ZX_ERR_INVALID_ARGS, 0).is_ok() == false);
+static_assert(zx::make_status(ZX_ERR_INVALID_ARGS, 0).is_error() == true);
+static_assert(zx::make_status(ZX_ERR_INVALID_ARGS, 0).error_value() == ZX_ERR_INVALID_ARGS);
+static_assert(zx::make_status(ZX_ERR_INVALID_ARGS, 0).status_value() == ZX_ERR_INVALID_ARGS);
+
 struct default_constructible {
   default_constructible() = default;
 };
@@ -1096,6 +1108,90 @@ TEST(ResultTests, OperatorStar) {
     fitx::result<int, move_only> result = fitx::success<move_only>();
     move_only value = *std::move(result);
     (void)value;
+  }
+}
+
+TEST(LibZxCommon, MakeStatusWithValueType) {
+  auto divide = [](int x, int y, int* output) -> zx_status_t {
+    if (y == 0) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    *output = x / y;
+    return ZX_OK;
+  };
+
+  {
+    int n;
+    auto status = zx::make_status(divide(9, 3, &n), n);
+    ASSERT_TRUE(status.is_ok());
+    ASSERT_EQ(status.value(), 3);
+  }
+
+  {
+    int n;
+    auto status = zx::make_status(divide(9, 0, &n), n);
+    ASSERT_TRUE(status.is_error());
+    ASSERT_EQ(status.error_value(), ZX_ERR_INVALID_ARGS);
+  }
+}
+
+TEST(LibZxCommon, MakeStatusWithReferenceType) {
+  auto divide = [](int x, int y, int& output) -> zx_status_t {
+    if (y == 0) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    output = x / y;
+    return ZX_OK;
+  };
+
+  {
+    int v;
+    int& r = v;
+    auto status = zx::make_status(divide(9, 3, r), r);
+    ASSERT_TRUE(status.is_ok());
+    ASSERT_EQ(status.value(), 3);
+  }
+
+  {
+    int v;
+    int& r = v;
+    auto status = zx::make_status(divide(9, 0, r), r);
+    ASSERT_TRUE(status.is_error());
+    ASSERT_EQ(status.error_value(), ZX_ERR_INVALID_ARGS);
+  }
+
+}
+
+TEST(LibZxCommon, MakeStatusWithMoveOnlyType) {
+  struct Num {
+    // Move only.
+    Num(const Num&) = delete;
+    Num& operator=(const Num&) const = delete;
+    Num(Num&&) = default;
+    Num& operator=(Num&&) = default;
+
+    int v;
+  };
+  auto divide = [](int x, int y, Num& output) -> zx_status_t {
+    if (y == 0) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    output = Num{x / y};
+    return ZX_OK;
+  };
+
+  {
+    Num n{};
+    auto status = zx::make_status(divide(9, 3, n), std::move(n));
+    ASSERT_TRUE(status.is_ok());
+    ASSERT_EQ(status.value().v, 3);
+  }
+
+  {
+    Num n{};
+    auto status = zx::make_status(divide(9, 0, n), std::move(n));
+    ASSERT_TRUE(status.is_error());
+    ASSERT_EQ(status.error_value(), ZX_ERR_INVALID_ARGS);
   }
 }
 

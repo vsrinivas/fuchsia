@@ -178,6 +178,51 @@ constexpr status<> make_status(zx_status_t status) {
   return error_status{status};
 }
 
+// Utility to make a zx::status<T> from a zx_status_t and T.
+//
+// Depending on |status|, the resulting zx::status<T> will be either
+// zx::ok(value) or zx::error(status).
+//
+// Example:
+//
+//   // Legacy method returning zx_status_t.
+//   zx_status_t ComputeValue(Value* value);
+//
+//   // Newer method that interops with the legacy method.
+//   zx::status<Value> ComputeValue() {
+//     Value value;
+//     return zx::make_status(ComputeValue(&value), value);
+//   }
+//
+// Note, because the order of evaluation of function arguments is unspecified,
+// it's critical that the second parameter to zx::make_status (`value`) is
+// passed by reference and *not* passed by value. If it were passed by value,
+// then its value may be bound before the first argument has been evaluated
+// (i.e. before ComputeValue was even called!).
+//
+// Furthermore, pass by reference is not always sufficient to prevent subtle
+// order of evaluation bugs. Consider the following buggy code:
+//
+//   // Legacy method returning zx_status_t.
+//   zx_status_t ComputeValue(std::unique_ptr<Value>* value);
+//
+//   // BUGGY CODE
+//   zx::status<Value> ComputeValue() {
+//     std::unique_ptr<Value> value;
+//     return zx::make_status(ComputeValue(&value), *value);  // <--- BUGGY CODE
+//   }
+//
+// Depending on the compiler, the code above might work or my dereference a null
+// std::unique_ptr. When in doubt, use a local variable.
+//
+template <typename T>
+constexpr status<std::remove_reference_t<T>> make_status(zx_status_t status, T&& value) {
+  if (status == ZX_OK) {
+    return ok(std::forward<T>(value));
+  }
+  return error_status{status};
+}
+
 }  // namespace zx
 
 #endif  // LIB_ZX_STATUS_H_
