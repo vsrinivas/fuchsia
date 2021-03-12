@@ -29,6 +29,7 @@ type buildModules interface {
 	Archives() []build.Archive
 	GeneratedSources() []string
 	Images() []build.Image
+	PrebuiltBinarySets() []build.PrebuiltBinarySet
 	TestSpecs() []build.TestSpec
 	ZBITests() []build.ZBITest
 }
@@ -99,6 +100,12 @@ func constructNinjaTargets(modules buildModules, staticSpec *fintpb.Static) []st
 	if staticSpec.IncludeZbiTests {
 		for _, zbiTest := range modules.ZBITests() {
 			targets = append(targets, zbiTest.Path)
+		}
+	}
+
+	if staticSpec.IncludePrebuiltBinaryManifests {
+		for _, manifest := range modules.PrebuiltBinarySets() {
+			targets = append(targets, manifest.Manifest)
 		}
 	}
 

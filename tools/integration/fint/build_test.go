@@ -17,15 +17,17 @@ type fakeBuildModules struct {
 	archives         []build.Archive
 	generatedSources []string
 	images           []build.Image
+	pbinSets         []build.PrebuiltBinarySet
 	testSpecs        []build.TestSpec
 	zbiTests         []build.ZBITest
 }
 
-func (m fakeBuildModules) Archives() []build.Archive   { return m.archives }
-func (m fakeBuildModules) GeneratedSources() []string  { return m.generatedSources }
-func (m fakeBuildModules) Images() []build.Image       { return m.images }
-func (m fakeBuildModules) TestSpecs() []build.TestSpec { return m.testSpecs }
-func (m fakeBuildModules) ZBITests() []build.ZBITest   { return m.zbiTests }
+func (m fakeBuildModules) Archives() []build.Archive                     { return m.archives }
+func (m fakeBuildModules) GeneratedSources() []string                    { return m.generatedSources }
+func (m fakeBuildModules) Images() []build.Image                         { return m.images }
+func (m fakeBuildModules) PrebuiltBinarySets() []build.PrebuiltBinarySet { return m.pbinSets }
+func (m fakeBuildModules) TestSpecs() []build.TestSpec                   { return m.testSpecs }
+func (m fakeBuildModules) ZBITests() []build.ZBITest                     { return m.zbiTests }
 
 func TestConstructNinjaTargets(t *testing.T) {
 	testCases := []struct {
@@ -111,6 +113,19 @@ func TestConstructNinjaTargets(t *testing.T) {
 				generatedSources: []string{"foo.h", "bar.h"},
 			},
 			expectedTargets: []string{"foo.h", "bar.h"},
+		},
+		{
+			name: "prebuilt binary manifests included",
+			staticSpec: &fintpb.Static{
+				IncludePrebuiltBinaryManifests: true,
+			},
+			modules: fakeBuildModules{
+				pbinSets: []build.PrebuiltBinarySet{
+					{Manifest: "manifest1.json"},
+					{Manifest: "manifest2.json"},
+				},
+			},
+			expectedTargets: []string{"manifest1.json", "manifest2.json"},
 		},
 	}
 
