@@ -2,8 +2,11 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/hardware-display-controller-provider#meta/hdcp.cmx"
-            }
+                "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"
+            },
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
         }
     },
     "include": [
@@ -17,7 +20,8 @@
         "services": [
             "fuchsia.hardware.display.Provider",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Loader"
+            "fuchsia.sys.Loader",
+            "fuchsia.sysmem.Allocator"
         ]
     }
 }
