@@ -381,7 +381,7 @@ mod tests {
         std::mem,
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-            file::pcb::asynchronous::read_only_static, path, pseudo_directory,
+            file::vmo::asynchronous::read_only_static, path, pseudo_directory,
         },
     };
 

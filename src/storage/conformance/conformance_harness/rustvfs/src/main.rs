@@ -23,7 +23,6 @@ use {
             simple::Simple,
         },
         execution_scope::ExecutionScope,
-        file::pcb,
         file::vmo::asynchronous as vmo,
         path::Path,
         registry::token_registry,
@@ -71,10 +70,9 @@ fn add_entry(
         io_test::DirectoryEntry::File(file) => {
             let name = file.name.as_ref().expect("File must have name");
             let contents = file.contents.as_ref().expect("File must have contents").clone();
-            let new_file = pcb::read_write(
-                move || future::ok(contents.clone()),
-                100,
-                |_content| async move { Ok(()) },
+            let new_file = vmo::read_write(
+                vmo::simple_init_vmo_resizable_with_capacity(&contents, 100),
+                |_| future::ready(()),
             );
             dest.add_entry(name, new_file)?;
         }
@@ -148,11 +146,10 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
         let scope = ExecutionScope::build()
             .token_registry(token_registry)
             .entry_constructor(simple::tree_constructor(|_parent, _filename| {
-                let entry = pcb::read_write(
-                    move || future::ok(vec![]),
-                    100,
-                    |_content| async move { Ok(()) },
-                );
+                let entry =
+                    vmo::read_write(vmo::simple_init_vmo_resizable_with_capacity(&[], 100), |_| {
+                        future::ready(())
+                    });
                 Ok(entry)
             }))
             .new();

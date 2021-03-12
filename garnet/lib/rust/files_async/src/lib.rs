@@ -380,7 +380,7 @@ mod tests {
         tempfile::TempDir,
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-            file::pcb::read_only_static, pseudo_directory,
+            file::vmo::read_only_static, pseudo_directory,
         },
     };
 

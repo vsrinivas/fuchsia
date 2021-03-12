@@ -16,8 +16,7 @@ use crate::{
     assert_link_err, assert_read, assert_read_dirents, assert_rename, assert_rename_err,
     assert_unlink, assert_unlink_err, assert_watch, assert_watcher_one_message_watched_events,
     assert_write, open_as_directory_assert_err, open_as_file_assert_err,
-    open_get_directory_proxy_assert_ok, open_get_file_proxy_assert_ok, open_get_proxy_assert,
-    open_get_vmo_file_proxy_assert_ok,
+    open_get_directory_proxy_assert_ok, open_get_proxy_assert, open_get_vmo_file_proxy_assert_ok,
 };
 
 use crate::{
@@ -25,10 +24,7 @@ use crate::{
         mutable::simple::tree_constructor,
         test_utils::{run_server_client, test_server_client, DirentsSameInodeBuilder},
     },
-    file::{
-        pcb::asynchronous::{read_only, read_only_static},
-        vmo::asynchronous::test_utils::simple_read_write,
-    },
+    file::{vmo::asynchronous::read_only_static, vmo::asynchronous::test_utils::simple_read_write},
     registry::token_registry,
 };
 
@@ -38,7 +34,6 @@ use {
         OPEN_FLAG_DIRECTORY, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, WATCH_MASK_ADDED,
         WATCH_MASK_EXISTING, WATCH_MASK_REMOVED,
     },
-    futures::future,
     std::sync::{
         atomic::{AtomicU8, Ordering},
         Arc,
@@ -63,12 +58,12 @@ fn unlink_entry() {
     run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
-        open_as_file_assert_content!(&proxy, ro_flags, "passwd", "[redacted]");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "passwd", "[redacted]");
 
         assert_unlink!(&proxy, "passwd");
 
-        open_as_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
         open_as_file_assert_err!(&proxy, ro_flags, "passwd", Status::NOT_FOUND);
 
         assert_close!(proxy);
@@ -84,11 +79,11 @@ fn unlink_absent_entry() {
     run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
 
         assert_unlink_err!(&proxy, "fstab.2", Status::NOT_FOUND);
 
-        open_as_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
 
         assert_close!(proxy);
     });
@@ -105,11 +100,11 @@ fn unlink_does_not_traverse() {
     run_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
 
         assert_unlink_err!(&proxy, "etc/fstab", Status::BAD_PATH);
 
-        open_as_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
 
         assert_close!(proxy);
     });
@@ -147,7 +142,7 @@ fn rename_within_directory() {
     test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&proxy, ro_flags, "passwd", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "passwd", "/dev/fs /");
 
         let mut root_token = assert_get_token!(&proxy);
         // This should return an error because the source file does not exist
@@ -162,7 +157,7 @@ fn rename_within_directory() {
         assert_rename!(&proxy, "passwd", root_token, "fstab");
 
         open_as_file_assert_err!(&proxy, ro_flags, "passwd", Status::NOT_FOUND);
-        open_as_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
 
         assert_close!(proxy);
     })
@@ -185,7 +180,7 @@ fn rename_across_directories() {
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
         let rw_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&proxy, ro_flags, "tmp/fstab.new", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "tmp/fstab.new", "/dev/fs /");
         open_as_file_assert_err!(&proxy, ro_flags, "etc/fstab", Status::NOT_FOUND);
 
         let tmp = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "tmp");
@@ -200,7 +195,7 @@ fn rename_across_directories() {
         assert_rename!(&tmp, "fstab.new", etc_token, "fstab");
 
         open_as_file_assert_err!(&proxy, ro_flags, "tmp/fstab.new", Status::NOT_FOUND);
-        open_as_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
 
         assert_close!(tmp);
         assert_close!(proxy);
@@ -229,7 +224,7 @@ fn rename_across_directories_twice() {
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
         let rw_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
         open_as_file_assert_err!(&proxy, ro_flags, "tmp/fstab.to-edit", Status::NOT_FOUND);
 
         let etc = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "etc");
@@ -241,11 +236,11 @@ fn rename_across_directories_twice() {
         assert_rename!(&etc, "fstab", tmp_token, "fstab.to-edit");
 
         open_as_file_assert_err!(&proxy, ro_flags, "etc/fstab", Status::NOT_FOUND);
-        open_as_file_assert_content!(&proxy, ro_flags, "tmp/fstab.to-edit", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "tmp/fstab.to-edit", "/dev/fs /");
 
         assert_rename!(&tmp, "fstab.to-edit", etc_token, "fstab.updated");
 
-        open_as_file_assert_content!(&proxy, ro_flags, "etc/fstab.updated", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab.updated", "/dev/fs /");
         open_as_file_assert_err!(&proxy, ro_flags, "tmp/fstab.to-edit", Status::NOT_FOUND);
 
         assert_close!(etc);
@@ -281,7 +276,7 @@ fn rename_within_directory_with_watchers() {
 
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&proxy, ro_flags, "passwd", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "passwd", "/dev/fs /");
 
         let mut root_token = assert_get_token!(&proxy);
         // This should return an error because the source file does not exist
@@ -302,7 +297,7 @@ fn rename_within_directory_with_watchers() {
         assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "fstab" });
 
         open_as_file_assert_err!(&proxy, ro_flags, "passwd", Status::NOT_FOUND);
-        open_as_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "fstab", "/dev/fs /");
 
         drop(watcher_client);
         assert_close!(proxy);
@@ -327,7 +322,7 @@ fn rename_across_directories_with_watchers() {
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
         let rw_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&proxy, ro_flags, "tmp/fstab.new", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "tmp/fstab.new", "/dev/fs /");
         open_as_file_assert_err!(&proxy, ro_flags, "etc/fstab", Status::NOT_FOUND);
 
         let tmp = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "tmp");
@@ -361,7 +356,7 @@ fn rename_across_directories_with_watchers() {
         assert_watcher_one_message_watched_events!(etc_watcher, { ADDED, "fstab" });
 
         open_as_file_assert_err!(&proxy, ro_flags, "tmp/fstab.new", Status::NOT_FOUND);
-        open_as_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
 
         drop(tmp_watcher);
         drop(etc_watcher);
@@ -389,7 +384,7 @@ fn rename_across_directories_twice_with_watchers() {
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
         let rw_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab", "/dev/fs /");
         open_as_file_assert_err!(&proxy, ro_flags, "tmp/fstab.to-edit", Status::NOT_FOUND);
 
         let etc = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "etc");
@@ -424,14 +419,14 @@ fn rename_across_directories_twice_with_watchers() {
         assert_watcher_one_message_watched_events!(tmp_watcher, { ADDED, "fstab.to-edit" });
 
         open_as_file_assert_err!(&proxy, ro_flags, "etc/fstab", Status::NOT_FOUND);
-        open_as_file_assert_content!(&proxy, ro_flags, "tmp/fstab.to-edit", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "tmp/fstab.to-edit", "/dev/fs /");
 
         assert_rename!(&tmp, "fstab.to-edit", etc_token, "fstab.updated");
 
         assert_watcher_one_message_watched_events!(tmp_watcher, { REMOVED, "fstab.to-edit" });
         assert_watcher_one_message_watched_events!(etc_watcher, { ADDED, "fstab.updated" });
 
-        open_as_file_assert_content!(&proxy, ro_flags, "etc/fstab.updated", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "etc/fstab.updated", "/dev/fs /");
         open_as_file_assert_err!(&proxy, ro_flags, "tmp/fstab.to-edit", Status::NOT_FOUND);
 
         drop(etc_watcher);
@@ -466,7 +461,7 @@ fn rename_into_self_with_watchers() {
 
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&proxy, ro_flags, "passwd", "[redacted]");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "passwd", "[redacted]");
 
         let root_token = assert_get_token!(&proxy);
         assert_rename!(&proxy, "passwd", root_token, "passwd");
@@ -474,7 +469,7 @@ fn rename_into_self_with_watchers() {
         assert_watcher_one_message_watched_events!(watcher_client, { REMOVED, "passwd" });
         assert_watcher_one_message_watched_events!(watcher_client, { ADDED, "passwd" });
 
-        open_as_file_assert_content!(&proxy, ro_flags, "passwd", "[redacted]");
+        open_as_vmo_file_assert_content!(&proxy, ro_flags, "passwd", "[redacted]");
 
         drop(watcher_client);
         assert_close!(proxy);
@@ -706,7 +701,7 @@ fn link_to_self_triggers_watcher_added() {
             // `open_as_file_assert_content!` as the later will immediately close the connection,
             // and if no connections exist the VMO is recycled and the assertion is invoked to
             // check if the VMO content matches the final expected state.
-            let file = open_get_file_proxy_assert_ok!(&proxy, ro_flags, "file");
+            let file = open_get_vmo_file_proxy_assert_ok!(&proxy, ro_flags, "file");
 
             let root_token = assert_get_token!(&proxy);
             assert_link!(&proxy, "file", root_token, "file");
@@ -838,7 +833,7 @@ fn create_file() {
     let constructor = tree_constructor(move |_parent, name| {
         let index = count.fetch_add(1, Ordering::Relaxed);
         let content = format!("{} - {}", name, index).into_bytes();
-        Ok(read_only(move || future::ready(Ok(content.clone()))))
+        Ok(read_only_static(content.clone()))
     });
 
     let root = mut_pseudo_directory! {
@@ -850,7 +845,7 @@ fn create_file() {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
         let create_flags = flags | OPEN_FLAG_CREATE;
 
-        open_as_file_assert_content!(&proxy, create_flags, "etc/fstab", "fstab - 0");
+        open_as_vmo_file_assert_content!(&proxy, create_flags, "etc/fstab", "fstab - 0");
 
         let etc = open_get_directory_proxy_assert_ok!(&proxy, flags, "etc");
 
@@ -905,7 +900,7 @@ fn create_two_levels_deep() {
     let constructor = tree_constructor(move |_parent, name| {
         let index = count.fetch_add(1, Ordering::Relaxed);
         let content = format!("{} - {}", name, index).into_bytes();
-        Ok(read_only(move || future::ready(Ok(content.clone()))))
+        Ok(read_only_static(content.clone()))
     });
 
     let root = mut_pseudo_directory! {
@@ -929,8 +924,8 @@ fn create_two_levels_deep() {
             assert_read_dirents!(proxy, 1000, expected.into_vec());
         }
 
-        open_as_file_assert_content!(&proxy, create_flags, "etc/fstab", "fstab - 0");
-        open_as_file_assert_content!(&proxy, create_flags, "etc/passwd", "passwd - 1");
+        open_as_vmo_file_assert_content!(&proxy, create_flags, "etc/fstab", "fstab - 0");
+        open_as_vmo_file_assert_content!(&proxy, create_flags, "etc/passwd", "passwd - 1");
 
         {
             let mut expected = DirentsSameInodeBuilder::new(INO_UNKNOWN);
@@ -990,7 +985,7 @@ fn can_create_nested() {
         let create_flags = flags | OPEN_FLAG_CREATE;
         let create_directory_flags = flags | OPEN_FLAG_DIRECTORY | OPEN_FLAG_CREATE;
 
-        open_as_file_assert_content!(&proxy, create_flags, "etc/passwd", "passwd - 0");
+        open_as_vmo_file_assert_content!(&proxy, create_flags, "etc/passwd", "passwd - 0");
         let log = open_get_directory_proxy_assert_ok!(&proxy, create_directory_flags, "tmp/log");
 
         {
@@ -1003,7 +998,7 @@ fn can_create_nested() {
             assert_read_dirents!(proxy, 1000, expected.into_vec());
         }
 
-        open_as_file_assert_content!(&log, create_flags, "apache/access.log", "access.log - 1");
+        open_as_vmo_file_assert_content!(&log, create_flags, "apache/access.log", "access.log - 1");
 
         assert_close!(log);
         assert_close!(proxy);
@@ -1022,13 +1017,12 @@ mod mocks {
                 simple,
             },
         },
-        file::pcb::asynchronous::read_only,
+        file::vmo::asynchronous::read_only_const,
         path::Path,
     };
 
     use {
         fuchsia_zircon::Status,
-        futures::future,
         std::sync::{
             atomic::{AtomicU8, Ordering},
             Arc,
@@ -1062,7 +1056,7 @@ mod mocks {
                 NewEntryType::File => {
                     let index = self.file_index.fetch_add(1, Ordering::Relaxed);
                     let content = format!("{} - {}", name, index).into_bytes();
-                    read_only(move || future::ready(Ok(content.clone())))
+                    read_only_const(&content.clone())
                 }
             };
 

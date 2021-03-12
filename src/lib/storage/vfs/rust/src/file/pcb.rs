@@ -9,6 +9,6 @@
 pub mod asynchronous;
 
 /// Asynchronous is the default and, currently, the only implementation provided for pseudo files.
-pub use asynchronous::{read_only, read_only_static, read_write, write_only};
+pub use asynchronous::{read_only_static, write_only};
 
 mod connection;

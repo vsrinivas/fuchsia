@@ -289,7 +289,10 @@ mod tests {
         assert_matches!(
             resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/foo.cm", &pkgfs_dir)
                 .await,
-            Ok(fsys::Component { decl: Some(fmem::Data::Bytes(_)), .. })
+            Ok(fsys::Component {
+                decl: Some(fidl_fuchsia_mem::Data::Buffer(fidl_fuchsia_mem::Buffer { .. })),
+                ..
+            })
         );
     }
 
@@ -316,7 +319,7 @@ mod tests {
                                                 )
                                                 .add_entry(
                                                     "vmo.cm",
-                                                    Arc::new(MockFile::new_vmo_backed(cm_bytes)),
+                                                    Arc::new(MockFile::new(cm_bytes)),
                                                 ),
                                         ),
                                     ),

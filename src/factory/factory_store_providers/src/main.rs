@@ -415,7 +415,7 @@ mod tests {
         fidl_fuchsia_io::OPEN_RIGHT_WRITABLE,
         vfs::{
             directory::entry::DirectoryEntry as _, execution_scope::ExecutionScope,
-            file::pcb::read_only_static, pseudo_directory,
+            file::vmo::read_only_static, pseudo_directory,
         },
     };
 

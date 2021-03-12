@@ -40,8 +40,8 @@ mod tests {
 
     // macros
     use vfs::{
-        assert_close, assert_event, assert_read, assert_read_dirents, open_as_file_assert_content,
-        open_get_file_proxy_assert_ok, open_get_proxy_assert,
+        assert_close, assert_event, assert_read, assert_read_dirents,
+        open_as_vmo_file_assert_content, open_get_proxy_assert, open_get_vmo_file_proxy_assert_ok,
     };
 
     use {
@@ -95,7 +95,7 @@ mod tests {
 
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
             let compare = "file1 contents.\n";
-            open_as_file_assert_content!(&root, flags, "file1", compare);
+            open_as_vmo_file_assert_content!(&root, flags, "file1", compare);
 
             assert_close!(root);
         });

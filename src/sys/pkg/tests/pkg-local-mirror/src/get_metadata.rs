@@ -11,7 +11,7 @@ use {
     fuchsia_zircon::Status,
     futures::channel::oneshot,
     matches::assert_matches,
-    vfs::file::pcb::read_only_static,
+    vfs::file::vmo::read_only_static,
 };
 
 async fn verify_get_metadata_with_read_success(env: &TestEnv, path: &str, file_contents: &str) {

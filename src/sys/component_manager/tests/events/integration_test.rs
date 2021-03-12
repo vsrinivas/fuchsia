@@ -12,7 +12,7 @@ use {
     fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::StreamExt,
     test_utils_lib::{echo_capability::EchoCapability, opaque_test::*},
-    vfs::{file::pcb::asynchronous::read_only_static, pseudo_directory},
+    vfs::{file::vmo::asynchronous::read_only_static, pseudo_directory},
 };
 
 #[fasync::run_singlethreaded(test)]

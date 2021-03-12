@@ -646,7 +646,8 @@ async fn file_describe() {
 
     let node_info = file.describe().await.expect("describe failed");
 
-    assert!(matches!(node_info, io::NodeInfo::File { .. }));
+    // The node_info can be either File or Vmofile type.
+    assert!(matches!(node_info, io::NodeInfo::File { .. } | io::NodeInfo::Vmofile { .. }));
 }
 
 #[fasync::run_singlethreaded(test)]

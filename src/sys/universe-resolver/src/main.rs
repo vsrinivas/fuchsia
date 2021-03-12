@@ -158,6 +158,7 @@ mod tests {
     use {
         super::*,
         fidl::{encoding::encode_persistent, endpoints::ServerEnd},
+        fidl_fuchsia_mem,
         fidl_fuchsia_pkg::PackageResolverRequest,
         fuchsia_zircon::Vmo,
         futures::join,
@@ -165,7 +166,7 @@ mod tests {
         vfs::{
             directory::entry::DirectoryEntry,
             execution_scope::ExecutionScope,
-            file::{pcb::asynchronous::read_only_static, vmo::asynchronous::NewVmo},
+            file::{vmo::asynchronous::read_only_static, vmo::asynchronous::NewVmo},
             path::Path,
             pseudo_directory,
         },
@@ -261,7 +262,10 @@ mod tests {
         let client = async move {
             assert_matches!(
                 resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
-                Ok(fsys::Component { decl: Some(fmem::Data::Bytes(_)), .. })
+                Ok(fsys::Component {
+                    decl: Some(fidl_fuchsia_mem::Data::Buffer(fidl_fuchsia_mem::Buffer { .. })),
+                    ..
+                })
             );
         };
         join!(server, client);

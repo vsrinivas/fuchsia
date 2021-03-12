@@ -30,7 +30,7 @@ use {
     },
     vfs::{
         directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
-        execution_scope::ExecutionScope, file::pcb::asynchronous::read_only_static,
+        execution_scope::ExecutionScope, file::vmo::asynchronous::read_only_static,
         path::Path as pfsPath,
     },
 };
@@ -608,7 +608,7 @@ mod tests {
         std::{convert::TryFrom, path::Path},
         vfs::{
             directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-            file::pcb::asynchronous::read_only_static, path::Path as pfsPath, pseudo_directory,
+            file::vmo::asynchronous::read_only_static, path::Path as pfsPath, pseudo_directory,
         },
     };
 

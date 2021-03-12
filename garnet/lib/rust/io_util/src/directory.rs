@@ -201,7 +201,7 @@ mod tests {
         vfs::{
             directory::entry::DirectoryEntry,
             execution_scope::ExecutionScope,
-            file::pcb::{read_only_static, read_write, write_only},
+            file::vmo::{read_only_static, read_write, simple_init_vmo_with_capacity, write_only},
             pseudo_directory,
         },
     };
@@ -395,11 +395,10 @@ mod tests {
         let example_dir = pseudo_directory! {
             "read_only" => read_only_static("read_only"),
             "read_write" => read_write(
-                || future::ok("read_write".as_bytes().into()),
-                100,
-                |_| future::ok(()),
+                simple_init_vmo_with_capacity("read_write".as_bytes(), 100),
+                |_| future::ready(()),
             ),
-            "write_only" => write_only(100, |_| future::ok(())),
+            "write_only" => write_only(simple_init_vmo_with_capacity(&[], 100), |_| future::ready(())),
         };
         let (example_dir_proxy, example_dir_service) =
             fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();

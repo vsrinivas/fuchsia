@@ -123,7 +123,7 @@ mod tests {
         std::path::PathBuf,
         vfs::{
             self, directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-            file::pcb::asynchronous::read_only_static, pseudo_directory,
+            file::vmo::asynchronous::read_only_static, pseudo_directory,
         },
     };
 

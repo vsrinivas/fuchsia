@@ -10,7 +10,7 @@ use super::{lazy, lazy_with_watchers, LazyDirectory, WatcherEvent};
 use crate::{
     assert_channel_closed, assert_close, assert_event, assert_get_token, assert_link, assert_read,
     assert_read_dirents, assert_read_dirents_err, open_get_directory_proxy_assert_ok,
-    open_get_file_proxy_assert_ok, open_get_proxy_assert,
+    open_get_proxy_assert, open_get_vmo_file_proxy_assert_ok,
 };
 
 use crate::{
@@ -21,7 +21,7 @@ use crate::{
         traversal_position::TraversalPosition::{self, End, Name, Start},
     },
     execution_scope::ExecutionScope,
-    file::pcb::asynchronous::{read_only, read_only_static},
+    file::vmo::asynchronous::{read_only_const, read_only_static},
     registry::token_registry,
 };
 
@@ -186,13 +186,10 @@ fn static_entries() {
     ];
 
     let get_entry = |name: String| {
-        Ok(read_only(move || {
-            let name = name.clone();
-            async move {
-                let content = format!("File {} content", name);
-                Ok(content.into_bytes())
-            }
-        }) as Arc<dyn DirectoryEntry>)
+        let name = name.clone();
+        let content = format!("File {} content", name);
+        let bytes = content.into_bytes();
+        Ok(read_only_static(bytes) as Arc<dyn DirectoryEntry>)
     };
 
     run_server_client(
@@ -200,9 +197,9 @@ fn static_entries() {
         lazy(Entries::new(entries, get_entry)),
         |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            open_as_file_assert_content!(&root, flags, "one", "File one content");
-            open_as_file_assert_content!(&root, flags, "two", "File two content");
-            open_as_file_assert_content!(&root, flags, "three", "File three content");
+            open_as_vmo_file_assert_content!(&root, flags, "one", "File one content");
+            open_as_vmo_file_assert_content!(&root, flags, "two", "File two content");
+            open_as_vmo_file_assert_content!(&root, flags, "three", "File three content");
 
             assert_close!(root);
         },
@@ -265,8 +262,8 @@ fn static_entries_with_traversal() {
                 assert_close!(ssh_dir);
             }
 
-            open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-            open_as_file_assert_content!(&root, flags, "files", "Content");
+            open_as_vmo_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+            open_as_vmo_file_assert_content!(&root, flags, "files", "Content");
 
             assert_close!(root);
         },
@@ -357,10 +354,9 @@ fn dynamic_entries() {
     let count = Arc::new(AtomicU8::new(0));
     let get_entry = move |name: String| {
         let entry = |count: u8| {
-            Ok(read_only(move || async move {
-                let content = format!("Content: {}", count);
-                Ok(content.into_bytes())
-            }) as Arc<dyn DirectoryEntry>)
+            let content = format!("Content: {}", count);
+
+            Ok(read_only_const(content.as_bytes()) as Arc<dyn DirectoryEntry>)
         };
 
         match &*name {
@@ -382,11 +378,11 @@ fn dynamic_entries() {
         |root| async move {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-            open_as_file_assert_content!(&root, flags, "file1", "Content: 1");
-            open_as_file_assert_content!(&root, flags, "file1", "Content: 2");
-            open_as_file_assert_content!(&root, flags, "file2", "Content: 12");
-            open_as_file_assert_content!(&root, flags, "file2", "Content: 22");
-            open_as_file_assert_content!(&root, flags, "file1", "Content: 23");
+            open_as_vmo_file_assert_content!(&root, flags, "file1", "Content: 1");
+            open_as_vmo_file_assert_content!(&root, flags, "file1", "Content: 2");
+            open_as_vmo_file_assert_content!(&root, flags, "file2", "Content: 12");
+            open_as_vmo_file_assert_content!(&root, flags, "file2", "Content: 22");
+            open_as_vmo_file_assert_content!(&root, flags, "file1", "Content: 23");
 
             assert_close!(root);
         },
@@ -737,10 +733,8 @@ fn link_from_lazy_into_mutable() {
         assert_eq!(name, "passwd");
 
         let count = count.fetch_add(1, Ordering::Relaxed) + 1;
-        Ok(read_only(move || async move {
-            let content = format!("Connection {}", count);
-            Ok(content.into_bytes())
-        }) as Arc<dyn DirectoryEntry>)
+        let content = format!("Connection {}", count);
+        Ok(read_only_const(content.as_bytes()) as Arc<dyn DirectoryEntry>)
     };
 
     let root = pseudo_directory! {
@@ -762,7 +756,7 @@ fn link_from_lazy_into_mutable() {
             watcher_client
         };
 
-        open_as_file_assert_content!(&etc, ro_flags, "passwd", "Connection 1");
+        open_as_vmo_file_assert_content!(&etc, ro_flags, "passwd", "Connection 1");
 
         let tmp_token = assert_get_token!(&tmp);
         assert_link!(&etc, "passwd", tmp_token, "linked-passwd");
@@ -786,10 +780,10 @@ fn link_from_lazy_into_mutable() {
             assert_read_dirents!(tmp, 1000, expected.into_vec());
         }
 
-        let linked_passwd = open_get_file_proxy_assert_ok!(&tmp, ro_flags, "linked-passwd");
+        let linked_passwd = open_get_vmo_file_proxy_assert_ok!(&tmp, ro_flags, "linked-passwd");
         assert_read!(linked_passwd, "Connection 2");
 
-        open_as_file_assert_content!(&etc, ro_flags, "passwd", "Connection 3");
+        open_as_vmo_file_assert_content!(&etc, ro_flags, "passwd", "Connection 3");
 
         drop(tmp_watcher_client);
         assert_close!(linked_passwd);

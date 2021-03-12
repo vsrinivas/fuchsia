@@ -142,7 +142,7 @@ impl TreeBuilder {
     /// ```should_panic
     /// use crate::{
     ///     directory::immutable::simple,
-    ///     file::pcb::asynchronous::read_only_static,
+    ///     file::vmo::asynchronous::read_only_static,
     /// };
     ///
     /// let mut tree = TreeBuilder::empty_dir();
@@ -158,7 +158,7 @@ impl TreeBuilder {
     /// ```
     /// use crate::{
     ///     directory::immutable::simple,
-    ///     file::pcb::asynchronous::read_only_static,
+    ///     file::vmo::asynchronous::read_only_static,
     /// };
     ///
     /// let mut tree = TreeBuilder::empty_dir();
@@ -358,13 +358,13 @@ mod tests {
     use crate::{
         assert_close, assert_event, assert_read, assert_read_dirents,
         assert_read_dirents_one_listing, assert_read_dirents_path_one_listing,
-        open_as_file_assert_content, open_get_directory_proxy_assert_ok,
-        open_get_file_proxy_assert_ok, open_get_proxy_assert,
+        open_as_vmo_file_assert_content, open_get_directory_proxy_assert_ok, open_get_proxy_assert,
+        open_get_vmo_file_proxy_assert_ok,
     };
 
     use crate::{
         directory::{immutable::simple, test_utils::run_server_client},
-        file::pcb::asynchronous::read_only_static,
+        file::vmo::asynchronous::read_only_static,
     };
 
     use {
@@ -387,13 +387,13 @@ mod tests {
                 { FILE, b"a" },
                 { FILE, b"b" },
             );
-            open_as_file_assert_content!(
+            open_as_vmo_file_assert_content!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
                 "a",
                 "A content"
             );
-            open_as_file_assert_content!(
+            open_as_vmo_file_assert_content!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
                 "b",
@@ -427,19 +427,19 @@ mod tests {
                 { FILE, b"two" },
             );
 
-            open_as_file_assert_content!(
+            open_as_vmo_file_assert_content!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
                 "one/two",
                 "A"
             );
-            open_as_file_assert_content!(
+            open_as_vmo_file_assert_content!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
                 "one/three",
                 "B"
             );
-            open_as_file_assert_content!(
+            open_as_vmo_file_assert_content!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
                 "four",
@@ -484,19 +484,19 @@ mod tests {
                 { FILE, b"sshd_config" },
             );
 
-            open_as_file_assert_content!(
+            open_as_vmo_file_assert_content!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
                 "etc/fstab",
                 "/dev/fs /"
             );
-            open_as_file_assert_content!(
+            open_as_vmo_file_assert_content!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
                 "etc/ssh/sshd_config",
                 "# Empty"
             );
-            open_as_file_assert_content!(
+            open_as_vmo_file_assert_content!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
                 "uname",
@@ -532,7 +532,7 @@ mod tests {
                 { FILE, b"three" },
             );
 
-            open_as_file_assert_content!(
+            open_as_vmo_file_assert_content!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
                 "one/two/three",
@@ -568,7 +568,7 @@ mod tests {
                 { FILE, b"three" },
             );
 
-            open_as_file_assert_content!(
+            open_as_vmo_file_assert_content!(
                 &root,
                 OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE,
                 "one/two/three",

@@ -13,7 +13,7 @@ use {
     std::{collections::HashMap, sync::Arc},
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-        file::pcb::asynchronous::read_only_static, path::Path as VfsPath, pseudo_directory,
+        file::vmo::asynchronous::read_only_static, path::Path as VfsPath, pseudo_directory,
     },
 };
 

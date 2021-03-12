@@ -501,6 +501,26 @@ macro_rules! clone_get_vmo_file_proxy_assert_ok {
 
 // See comment at the top of the file for why this is a macro.
 #[macro_export]
+macro_rules! clone_get_vmo_file_proxy_assert_err {
+    ($proxy:expr, $flags:expr) => {{
+        use $crate::test_utils::assertions::reexport::{
+            FileEvent, FileMarker, FileObject, NodeInfo, Status,
+        };
+
+        clone_get_proxy_assert!($proxy, $flags, FileMarker, FileEvent::OnOpen_ { s, info }, {
+            assert_eq!(Status::from_raw(s), Status::OK);
+            let info = *info.expect("Empty NodeInfo");
+            assert!(
+                matches!(info, NodeInfo::File(FileObject { event: None, stream: None })),
+                "Expected error but got {:?}",
+                info
+            );
+        })
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
 macro_rules! clone_as_file_assert_err {
     ($proxy:expr, $flags:expr, $expected_status:expr) => {{
         use $crate::test_utils::assertions::reexport::{FileEvent, FileMarker, Status};

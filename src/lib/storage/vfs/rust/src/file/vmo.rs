@@ -9,6 +9,9 @@ pub mod asynchronous;
 
 /// Asynchronous is the default and, currently, the only implementation provided for VMO backed
 /// pseudo files.
-pub use asynchronous::{read_only, read_write};
+pub use asynchronous::{
+    read_only, read_only_const, read_only_static, read_write,
+    simple_init_vmo_resizable_with_capacity, simple_init_vmo_with_capacity, write_only,
+};
 
 pub(self) mod connection;

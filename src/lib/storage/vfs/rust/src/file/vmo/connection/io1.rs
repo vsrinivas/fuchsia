@@ -21,10 +21,10 @@ use {
     anyhow::Error,
     fidl::endpoints::{RequestStream, ServerEnd},
     fidl_fuchsia_io::{
-        FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker, SeekOrigin, Vmofile,
-        INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE, OPEN_FLAG_NODE_REFERENCE,
-        OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE, VMO_FLAG_EXACT,
-        VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
+        FileObject, FileRequest, FileRequestStream, NodeAttributes, NodeInfo, NodeMarker,
+        SeekOrigin, Vmofile, INO_UNKNOWN, MODE_TYPE_FILE, OPEN_FLAG_DESCRIBE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
+        VMO_FLAG_EXACT, VMO_FLAG_EXEC, VMO_FLAG_PRIVATE, VMO_FLAG_READ, VMO_FLAG_WRITE,
     },
     fidl_fuchsia_mem::Buffer,
     fuchsia_zircon::{
@@ -377,15 +377,19 @@ impl FileConnection {
 
     /// Returns `NodeInfo` for the VMO file.
     async fn get_node_info(&mut self) -> Result<NodeInfo, Status> {
-        let vmofile = update_initialized_state! {
-            match &*self.file.state().await;
-            error: "get_node_info" => Err(Status::INTERNAL);
-            { vmo, size, .. } => {
-                let vmo = vmo.duplicate_handle(Rights::SAME_RIGHTS).unwrap();
-                Ok(Vmofile {vmo, offset: 0, length: *size})
-            }
-        }?;
-        Ok(NodeInfo::Vmofile(vmofile))
+        if self.flags & &OPEN_FLAG_NODE_REFERENCE != 0 {
+            Ok(NodeInfo::File(FileObject { event: None, stream: None }))
+        } else {
+            let vmofile = update_initialized_state! {
+                match &*self.file.state().await;
+                error: "get_node_info" => Err(Status::INTERNAL);
+                { vmo, size, .. } => {
+                    let vmo = vmo.duplicate_handle(Rights::SAME_RIGHTS).unwrap();
+                    Ok(Vmofile {vmo, offset: 0, length: *size})
+                }
+            }?;
+            Ok(NodeInfo::Vmofile(vmofile))
+        }
     }
 
     /// Handle a [`FileRequest`]. This function is responsible for handing all the file operations
@@ -483,11 +487,16 @@ impl FileConnection {
         Ok(ConnectionState::Alive)
     }
 
-    fn handle_clone(&mut self, parent_flags: u32, flags: u32, server_end: ServerEnd<NodeMarker>) {
-        let flags = match inherit_rights_for_clone(parent_flags, flags) {
+    fn handle_clone(
+        &mut self,
+        parent_flags: u32,
+        current_flags: u32,
+        server_end: ServerEnd<NodeMarker>,
+    ) {
+        let flags = match inherit_rights_for_clone(parent_flags, current_flags) {
             Ok(updated) => updated,
             Err(status) => {
-                send_on_open_with_error(flags, server_end, status);
+                send_on_open_with_error(current_flags, server_end, status);
                 return;
             }
         };

@@ -18,7 +18,7 @@ use {
     std::{ffi::CString, path::Path},
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-        file::pcb::asynchronous::read_only_static, path::Path as pfsPath, pseudo_directory,
+        file::vmo::asynchronous::read_only_static, path::Path as pfsPath, pseudo_directory,
     },
 };
 
@@ -87,7 +87,9 @@ async fn main() -> Result<(), Error> {
                         "meta" => pseudo_directory! {
                             "data" => pseudo_directory! {
                                 "sysmgr" => pseudo_directory! {
-                                    "services.config" => read_only_static(SYSMGR_SERVICES_CONFIG),
+                                    "services.config" => {
+                                    read_only_static(SYSMGR_SERVICES_CONFIG)
+                                    }
                                 },
                                 "appmgr" => pseudo_directory! {
                                     "scheme_map" => pseudo_directory! {

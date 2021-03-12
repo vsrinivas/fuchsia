@@ -15,7 +15,7 @@ use {
     fuchsia_syslog::fx_log_info,
     vfs::{
         directory::entry::DirectoryEntry, execution_scope::ExecutionScope,
-        file::pcb::read_only_static, mut_pseudo_directory, path::Path,
+        file::vmo::read_only_static, mut_pseudo_directory, path::Path,
     },
 };
 

@@ -4,7 +4,7 @@
 
 //! Tests for the asynchronous files.
 
-use super::{read_only, read_write, write_only, NewVmo};
+use super::{read_only, read_only_const, read_only_static, read_write, write_only, NewVmo};
 
 // Macros are exported into the root of the crate.
 use crate::{
@@ -13,7 +13,8 @@ use crate::{
     assert_read_fidl_err_closed, assert_seek, assert_seek_err, assert_truncate,
     assert_truncate_err, assert_vmo_content, assert_write, assert_write_at, assert_write_at_err,
     assert_write_err, assert_write_fidl_err_closed, clone_as_file_assert_err,
-    clone_get_proxy_assert, clone_get_vmo_file_proxy_assert_ok, report_invalid_vmo_content,
+    clone_get_proxy_assert, clone_get_vmo_file_proxy_assert_err,
+    clone_get_vmo_file_proxy_assert_ok, report_invalid_vmo_content,
 };
 
 use crate::{
@@ -48,6 +49,35 @@ use {
         Arc,
     },
 };
+
+#[test]
+fn read_only_static_read() {
+    run_server_client(
+        OPEN_RIGHT_READABLE,
+        read_only_static(b"Read only test"),
+        |proxy| async move {
+            assert_read!(proxy, "Read only test");
+            assert_close!(proxy);
+        },
+    );
+}
+
+#[test]
+fn read_only_static_takes_a_const_string() {
+    run_server_client(OPEN_RIGHT_READABLE, read_only_static("Read only str"), |proxy| async move {
+        assert_read!(proxy, "Read only str");
+        assert_close!(proxy);
+    });
+}
+
+#[test]
+fn read_only_const_read() {
+    let bytes = String::from("Run-time value").into_bytes();
+    run_server_client(OPEN_RIGHT_READABLE, read_only_const(&bytes), |proxy| async move {
+        assert_read!(proxy, "Run-time value");
+        assert_close!(proxy);
+    });
+}
 
 #[test]
 fn read_only_read() {
@@ -917,7 +947,7 @@ fn clone_can_not_remove_node_reference() {
 
                 // We now try without OPEN_RIGHT_READABLE, as we might still be able to Seek.
                 let third_proxy =
-                    clone_get_vmo_file_proxy_assert_ok!(&first_proxy, OPEN_FLAG_DESCRIBE);
+                    clone_get_vmo_file_proxy_assert_err!(&first_proxy, OPEN_FLAG_DESCRIBE);
 
                 assert_seek_err!(third_proxy, 0, Current, Status::BAD_HANDLE, 0);
 

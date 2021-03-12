@@ -12,7 +12,7 @@ use crate::{
     assert_read, assert_read_dirents, assert_read_dirents_err, assert_seek, assert_write,
     clone_as_directory_assert_err, clone_get_directory_proxy_assert_ok, clone_get_proxy_assert,
     open_as_directory_assert_err, open_as_file_assert_err, open_get_directory_proxy_assert_ok,
-    open_get_file_proxy_assert_ok, open_get_proxy_assert,
+    open_get_proxy_assert, open_get_vmo_file_proxy_assert_ok,
 };
 
 use crate::{
@@ -22,7 +22,10 @@ use crate::{
         test_utils::{run_server_client, DirentsSameInodeBuilder},
     },
     execution_scope::ExecutionScope,
-    file::pcb::asynchronous::{read_only_static, read_write, write_only},
+    file::vmo::asynchronous::write_only,
+    file::vmo::asynchronous::{
+        read_only_static, read_write, simple_init_vmo_resizable_with_capacity,
+    },
     path::Path,
     test_utils::node::open_get_proxy,
     test_utils::run_client,
@@ -116,7 +119,7 @@ fn clone() {
     run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| async move {
         async fn assert_read_file(root: &DirectoryProxy) {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+            let file = open_get_vmo_file_proxy_assert_ok!(&root, flags, "file");
 
             assert_read!(file, "Content");
             assert_close!(file);
@@ -147,7 +150,7 @@ fn clone_inherit_access() {
     run_server_client(OPEN_RIGHT_READABLE, root, |first_proxy| async move {
         async fn assert_read_file(root: &DirectoryProxy) {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+            let file = open_get_vmo_file_proxy_assert_ok!(&root, flags, "file");
 
             assert_read!(file, "Content");
             assert_close!(file);
@@ -176,7 +179,7 @@ fn clone_cannot_increase_access() {
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         async fn assert_read_file(root: &DirectoryProxy) {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+            let file = open_get_vmo_file_proxy_assert_ok!(&root, flags, "file");
 
             assert_read!(file, "Content");
             assert_close!(file);
@@ -204,7 +207,7 @@ fn clone_cannot_use_same_rights_flag_with_any_specific_right() {
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+        let file = open_get_vmo_file_proxy_assert_ok!(&root, flags, "file");
 
         assert_read!(file, "Content");
         assert_close!(file);
@@ -227,7 +230,7 @@ fn one_file_open_existing() {
 
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+        let file = open_get_vmo_file_proxy_assert_ok!(&root, flags, "file");
 
         assert_read!(file, "Content");
         assert_close!(file);
@@ -293,7 +296,7 @@ fn small_tree_traversal() {
             expected_content: &'a str,
         ) {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            let file = open_get_file_proxy_assert_ok!(&from_dir, flags, path);
+            let file = open_get_vmo_file_proxy_assert_ok!(&from_dir, flags, path);
             assert_read!(file, expected_content);
             assert_close!(file);
         }
@@ -316,22 +319,18 @@ fn small_tree_traversal() {
 
 #[test]
 fn open_writable_in_subdir() {
-    let write_count = Arc::new(AtomicUsize::new(0));
     let root = {
-        let write_count = write_count.clone();
         pseudo_directory! {
             "etc" => pseudo_directory! {
                 "ssh" => pseudo_directory! {
                     "sshd_config" => read_write(
-                        || future::ready(Ok(b"# Empty".to_vec())),
-                        100,
-                        move |content| {
-                            let write_count = write_count.clone();
-                            async move {
-                                let count = write_count.fetch_add(1, Ordering::Relaxed);
-                                assert_eq!(*&content, format!("Port {}", 22 + count).as_bytes());
-                                Ok(())
-                            }
+                        simple_init_vmo_resizable_with_capacity(&b"# Empty".to_vec(), 100),
+                        move |vmo| {
+                                let expected = b"Port 22";
+                                let mut content = vec![0; expected.len()];
+                                vmo.read(&mut content[..], 0).unwrap();
+                                assert_eq!(&content, expected);
+                                future::ready(())
                         }
                     )
                 }
@@ -345,45 +344,21 @@ fn open_writable_in_subdir() {
             path: &'a str,
             expected_content: &'a str,
             new_content: &'a str,
-            write_count: Arc<AtomicUsize>,
-            expected_count: usize,
         ) {
             let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-            let file = open_get_file_proxy_assert_ok!(&from_dir, flags, path);
+            let file = open_get_vmo_file_proxy_assert_ok!(&from_dir, flags, path);
             assert_read!(file, expected_content);
             assert_seek!(file, 0, Start);
             assert_write!(file, new_content);
             assert_close!(file);
-
-            assert_eq!(write_count.load(Ordering::Relaxed), expected_count);
         }
 
         {
             let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
             let ssh_dir = open_get_directory_proxy_assert_ok!(&root, flags, "etc/ssh");
 
-            open_read_write_close(
-                &ssh_dir,
-                "sshd_config",
-                "# Empty",
-                "Port 22",
-                write_count.clone(),
-                1,
-            )
-            .await;
+            open_read_write_close(&ssh_dir, "sshd_config", "# Empty", "Port 22").await;
         }
-
-        open_read_write_close(
-            &root,
-            "etc/ssh/sshd_config",
-            "# Empty",
-            "Port 23",
-            write_count.clone(),
-            2,
-        )
-        .await;
-
-        assert_close!(root);
     });
 }
 
@@ -394,15 +369,15 @@ fn open_write_only() {
         let write_count = write_count.clone();
         pseudo_directory! {
             "dev" => pseudo_directory! {
-                "output" => write_only(
-                    100,
-                    move |content| {
+                "output" => write_only(simple_init_vmo_resizable_with_capacity(&[], 100),
+                    move |vmo| {
                         let write_count = write_count.clone();
-                        async move {
                             let count = write_count.fetch_add(1, Ordering::Relaxed);
-                            assert_eq!(*&content, format!("Message {}", 1 + count).as_bytes());
-                            Ok(())
-                        }
+                        let expected:String = format!("Message {}", 1 + count);
+                            let mut content = vec![0; expected.len()];
+                            vmo.read(&mut content, 0).unwrap();
+                            assert_eq!(&content, &expected.as_bytes());
+                            future::ready(())
                     }
                 )
             }
@@ -417,7 +392,7 @@ fn open_write_only() {
             expected_count: usize,
         ) {
             let flags = OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-            let file = open_get_file_proxy_assert_ok!(&from_dir, flags, "dev/output");
+            let file = open_get_vmo_file_proxy_assert_ok!(&from_dir, flags, "dev/output");
             assert_write!(file, new_content);
             assert_close!(file);
 
@@ -557,7 +532,7 @@ fn trailing_slash_means_directory() {
         open_as_file_assert_err!(&root, flags, "file/", Status::NOT_DIR);
 
         {
-            let file = open_get_file_proxy_assert_ok!(&root, flags, "file");
+            let file = open_get_vmo_file_proxy_assert_ok!(&root, flags, "file");
             assert_read!(file, "Content");
             assert_close!(file);
         }
@@ -635,10 +610,8 @@ fn directories_restrict_nested_read_permissions() {
 fn directories_restrict_nested_write_permissions() {
     let root = pseudo_directory! {
         "dir" => pseudo_directory! {
-            "file" => write_only(100, |_content| {
-                async move {
-                    panic!("Access permissions should not allow this file to be written");
-                }
+            "file" => write_only(simple_init_vmo_resizable_with_capacity(&[], 100), |_vmo| {
+                future::ready(())
             }),
         },
     };
@@ -657,25 +630,20 @@ fn directories_restrict_nested_write_permissions() {
 
 #[test]
 fn flag_posix_means_writable() {
-    let write_count = Arc::new(AtomicUsize::new(0));
-
     let root = {
-        let write_count = write_count.clone();
         pseudo_directory! {
-            "nested" => pseudo_directory! {
-                "file" => read_write(
-                    || future::ready(Ok(b"Content".to_vec())),
-                    20,
-                    move |content| {
-                        let write_count = write_count.clone();
-                        async move {
-                            write_count.fetch_add(1, Ordering::Relaxed);
-                            assert_eq!(*&content, b"New content");
-                            Ok(())
-                        }
+        "nested" => pseudo_directory! {
+            "file" => read_write(
+                    simple_init_vmo_resizable_with_capacity(&b"Content".to_vec(), 20),
+                    move |vmo| {
+                                let expected = b"New content";
+                                let mut content = vec![0; expected.len()];
+                                vmo.read(&mut content, 0).unwrap();
+                                assert_eq!(&content, expected);
+                                future::ready(())
                     }
-                ),
-            },
+                )
+            }
         }
     };
 
@@ -693,7 +661,7 @@ fn flag_posix_means_writable() {
 
         {
             let flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
-            let file = open_get_file_proxy_assert_ok!(&nested, flags, "file");
+            let file = open_get_vmo_file_proxy_assert_ok!(&nested, flags, "file");
 
             assert_read!(file, "Content");
             assert_seek!(file, 0, Start);
@@ -704,8 +672,6 @@ fn flag_posix_means_writable() {
 
         assert_close!(nested);
         assert_close!(root);
-
-        assert_eq!(write_count.load(Ordering::Relaxed), 1);
     });
 }
 
@@ -714,11 +680,10 @@ fn flag_posix_does_not_add_writable_to_read_only() {
     let root = pseudo_directory! {
         "nested" => pseudo_directory! {
             "file" => read_write(
-                || future::ready(Ok(b"Content".to_vec())),
-                100,
-                |_content| async move {
-                    panic!("OPEN_FLAG_POSIX should not add OPEN_RIGHT_WRITABLE for directories");
-                }),
+                        simple_init_vmo_resizable_with_capacity(&b"Content".to_vec(), 100),
+                        move |_| {
+                            future::ready(())
+                        })
         },
     };
 
@@ -742,7 +707,7 @@ fn flag_posix_does_not_add_writable_to_read_only() {
 
         {
             let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-            let file = open_get_file_proxy_assert_ok!(&nested, flags, "file");
+            let file = open_get_vmo_file_proxy_assert_ok!(&nested, flags, "file");
 
             assert_read!(file, "Content");
             assert_close!(file);
@@ -1050,7 +1015,7 @@ fn simple_add_file() {
         }
 
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        open_as_file_assert_content!(&proxy, flags, "file", "Content");
+        open_as_vmo_file_assert_content!(&proxy, flags, "file", "Content");
         assert_close!(proxy);
     });
 }
@@ -1074,7 +1039,7 @@ fn add_file_to_empty() {
             etc.add_entry("fstab", fstab).unwrap();
         }
 
-        open_as_file_assert_content!(&proxy, flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&proxy, flags, "etc/fstab", "/dev/fs /");
         assert_close!(proxy);
     });
 }
@@ -1102,7 +1067,7 @@ fn in_tree_open() {
         ssh.open(scope, flags, 0, Path::empty(), server_end.into_channel().into());
 
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        open_as_file_assert_content!(&proxy, flags, "sshd_config", "# Empty");
+        open_as_vmo_file_assert_content!(&proxy, flags, "sshd_config", "# Empty");
         assert_close!(proxy);
     });
 }
@@ -1131,7 +1096,7 @@ fn in_tree_open_path_one_component() {
         etc.open(scope, flags, 0, path, server_end.into_channel().into());
 
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-        open_as_file_assert_content!(&proxy, flags, "sshd_config", "# Empty");
+        open_as_vmo_file_assert_content!(&proxy, flags, "sshd_config", "# Empty");
         assert_close!(proxy);
     });
 }
@@ -1181,15 +1146,15 @@ fn in_tree_add_file() {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
         open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
-        open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
         {
             let fstab = read_only_static(b"/dev/fs /");
             etc.add_entry("fstab", fstab).unwrap();
         }
 
-        open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-        open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
         assert_close!(root);
     });
@@ -1209,8 +1174,8 @@ fn in_tree_remove_file() {
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-        open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
         let o_passwd = etc.remove_entry("passwd").unwrap();
         match o_passwd {
@@ -1221,7 +1186,7 @@ fn in_tree_remove_file() {
             }
         }
 
-        open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
         open_as_file_assert_err!(&root, flags, "etc/passwd", Status::NOT_FOUND);
 
         assert_close!(root);
@@ -1241,7 +1206,7 @@ fn in_tree_move_file() {
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
         open_as_file_assert_err!(&root, flags, "etc/passwd", Status::NOT_FOUND);
 
         let fstab = etc
@@ -1253,7 +1218,7 @@ fn in_tree_move_file() {
         etc.add_entry("passwd", fstab).unwrap();
 
         open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
-        open_as_file_assert_content!(&root, flags, "etc/passwd", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/passwd", "/dev/fs /");
 
         assert_close!(root);
     });
@@ -1359,7 +1324,7 @@ fn watch_addition() {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
         open_as_file_assert_err!(&root, flags, "etc/fstab", Status::NOT_FOUND);
-        open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
         let etc_proxy = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
 
@@ -1382,8 +1347,8 @@ fn watch_addition() {
 
         assert_watcher_one_message_watched_events!(watcher, { ADDED, "fstab" });
 
-        open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-        open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
         assert_close!(etc_proxy);
         assert_close!(root);
@@ -1404,8 +1369,8 @@ fn watch_removal() {
     run_server_client(OPEN_RIGHT_READABLE, root, |root| async move {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
 
-        open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
-        open_as_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/passwd", "[redacted]");
 
         let etc_proxy = open_get_directory_proxy_assert_ok!(&root, flags, "etc");
 
@@ -1432,7 +1397,7 @@ fn watch_removal() {
 
         assert_watcher_one_message_watched_events!(watcher, { REMOVED, "passwd" });
 
-        open_as_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
+        open_as_vmo_file_assert_content!(&root, flags, "etc/fstab", "/dev/fs /");
         open_as_file_assert_err!(&root, flags, "etc/passwd", Status::NOT_FOUND);
 
         assert_close!(etc_proxy);
@@ -1496,15 +1461,15 @@ fn watch_addition_with_two_scopes() {
             let root_proxy = open_with_scope(root.clone(), scope1.clone()).await;
 
             open_as_file_assert_err!(&root_proxy, flags, "etc/fstab", Status::NOT_FOUND);
-            open_as_file_assert_content!(&root_proxy, flags, "etc/passwd", "[redacted]");
+            open_as_vmo_file_assert_content!(&root_proxy, flags, "etc/passwd", "[redacted]");
 
             let etc1_proxy = open_with_scope(etc.clone(), scope1.clone()).await;
             open_as_file_assert_err!(&etc1_proxy, flags, "fstab", Status::NOT_FOUND);
-            open_as_file_assert_content!(&etc1_proxy, flags, "passwd", "[redacted]");
+            open_as_vmo_file_assert_content!(&etc1_proxy, flags, "passwd", "[redacted]");
 
             let etc2_proxy = open_with_scope(etc.clone(), scope2.clone()).await;
             open_as_file_assert_err!(&etc2_proxy, flags, "fstab", Status::NOT_FOUND);
-            open_as_file_assert_content!(&etc2_proxy, flags, "passwd", "[redacted]");
+            open_as_vmo_file_assert_content!(&etc2_proxy, flags, "passwd", "[redacted]");
 
             let mask = WATCH_MASK_ADDED | WATCH_MASK_REMOVED;
             let watcher1_client = assert_watch!(etc1_proxy, mask);
@@ -1518,8 +1483,8 @@ fn watch_addition_with_two_scopes() {
             assert_watcher_one_message_watched_events!(watcher1_client, { ADDED, "fstab" });
             assert_watcher_one_message_watched_events!(watcher2_client, { ADDED, "fstab" });
 
-            open_as_file_assert_content!(&root_proxy, flags, "etc/fstab", "/dev/fs /");
-            open_as_file_assert_content!(&root_proxy, flags, "etc/passwd", "[redacted]");
+            open_as_vmo_file_assert_content!(&root_proxy, flags, "etc/fstab", "/dev/fs /");
+            open_as_vmo_file_assert_content!(&root_proxy, flags, "etc/passwd", "[redacted]");
 
             scope2.shutdown();
 
@@ -1535,9 +1500,9 @@ fn watch_addition_with_two_scopes() {
 
             assert_watcher_one_message_watched_events!(watcher1_client, { ADDED, "shells" });
 
-            open_as_file_assert_content!(&root_proxy, flags, "etc/fstab", "/dev/fs /");
-            open_as_file_assert_content!(&root_proxy, flags, "etc/passwd", "[redacted]");
-            open_as_file_assert_content!(&root_proxy, flags, "etc/shells", "/bin/bash");
+            open_as_vmo_file_assert_content!(&root_proxy, flags, "etc/fstab", "/dev/fs /");
+            open_as_vmo_file_assert_content!(&root_proxy, flags, "etc/passwd", "[redacted]");
+            open_as_vmo_file_assert_content!(&root_proxy, flags, "etc/shells", "/bin/bash");
 
             drop(watcher1_client);
             drop(watcher2_client);

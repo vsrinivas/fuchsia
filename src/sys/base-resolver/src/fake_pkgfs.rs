@@ -104,15 +104,6 @@ pub struct MockFile {
 impl MockFile {
     pub fn new(contents: Vec<u8>) -> Self {
         Self {
-            file: vfs::file::pcb::read_only(move || {
-                let contents = contents.clone();
-                async move { Ok(contents) }
-            }),
-        }
-    }
-
-    pub fn new_vmo_backed(contents: Vec<u8>) -> Self {
-        Self {
             file: vfs::file::vmo::read_only(move || {
                 let contents = contents.clone();
                 async move {

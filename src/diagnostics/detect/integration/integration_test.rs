@@ -42,7 +42,7 @@ use {
             helper::DirectlyMutable, immutable::connection::io1::ImmutableConnection,
             simple::Simple,
         },
-        file::pcb::asynchronous::read_only_const,
+        file::vmo::asynchronous::read_only_const,
         pseudo_directory,
     },
 };
@@ -356,7 +356,7 @@ fn prepare_injected_config_directory(test: &TestData) -> Arc<Simple<ImmutableCon
         "data" => pseudo_directory! {leaf -> },
     };
     for ConfigFile { name, contents } in test.config_files.iter() {
-        leaf.add_entry(name, read_only_const(contents.to_string().into_bytes())).unwrap();
+        leaf.add_entry(name, read_only_const(contents.as_bytes())).unwrap();
     }
     data_directory
 }

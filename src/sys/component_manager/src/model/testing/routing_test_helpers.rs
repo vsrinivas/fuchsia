@@ -27,7 +27,7 @@ use {
     fidl_fidl_examples_echo::{self as echo},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{
-        DirectoryProxy, FileEvent, FileMarker, FileObject, FileProxy, NodeInfo, NodeMarker,
+        DirectoryProxy, FileEvent, FileMarker, FileProxy, NodeInfo, NodeMarker, Vmofile,
         CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
@@ -1122,10 +1122,10 @@ pub mod capability_util {
         let event = event_stream.try_next().await.unwrap();
         let FileEvent::OnOpen_ { s, info } = event.expect("failed to received file event");
         assert_eq!(s, zx::sys::ZX_OK);
-        assert_eq!(
+        assert!(matches!(
             *info.expect("failed to receive node info"),
-            NodeInfo::File(FileObject { event: None, stream: None })
-        );
+            NodeInfo::Vmofile(Vmofile { vmo: _, offset: _, length: _ })
+        ));
     }
 
     /// Attempts to read ${path}/hippo in `abs_moniker`'s exposed directory. The file should

@@ -33,7 +33,8 @@ use crate::{
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN},
-    fuchsia_zircon::{Status, Vmo},
+    fuchsia_zircon::{Status, Vmo, VmoOptions},
+    futures::future::BoxFuture,
     futures::lock::{Mutex, MutexLockFuture},
     std::{
         future::Future,
@@ -109,6 +110,102 @@ where
     InitVmoFuture: Future<Output = InitVmoResult> + Send + 'static,
 {
     AsyncFile::new(init_vmo, None, true, false)
+}
+
+fn init_vmo<'a>(content: Arc<[u8]>) -> impl Fn() -> BoxFuture<'a, InitVmoResult> + Send + Sync {
+    move || {
+        // In "production" code we would instead wrap `content` in a smart pointer to be able to
+        // share it with the async block, but for tests it is fine to just clone it.
+        let content = content.clone();
+        Box::pin(async move {
+            let size = content.len() as u64;
+            let vmo = Vmo::create(size)?;
+            vmo.write(&content, 0)?;
+            Ok(NewVmo { vmo, size, capacity: size })
+        })
+    }
+}
+
+/// Creates a new read-only `AsyncFile` which serves static content.  Also see
+/// `read_only_const` which allows you to pass the ownership to the file itself.
+pub fn read_only_static<Bytes>(
+    bytes: Bytes,
+) -> Arc<
+    AsyncFile<
+        impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
+        BoxFuture<'static, InitVmoResult>,
+        fn(Vmo) -> StubConsumeVmoRes,
+        StubConsumeVmoRes,
+    >,
+>
+where
+    Bytes: AsRef<[u8]> + Send + Sync,
+{
+    let content: Arc<[u8]> = bytes.as_ref().to_vec().clone().into();
+    read_only(init_vmo(content.clone()))
+}
+
+/// Create a new read-only `AsyncFile` which servers a constant content.  The difference with
+/// `read_only_static` is that this function takes a run time values that it will own, while
+/// `read_only_static` requires a reference to something with a static lifetime.
+pub fn read_only_const(
+    bytes: &[u8],
+) -> Arc<
+    AsyncFile<
+        impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync,
+        BoxFuture<'static, InitVmoResult>,
+        fn(Vmo) -> StubConsumeVmoRes,
+        StubConsumeVmoRes,
+    >,
+> {
+    let content: Arc<[u8]> = bytes.to_vec().clone().into();
+    read_only(init_vmo(content.clone()))
+}
+
+/// Just like [`simple_init_vmo`], but allows one to specify the capacity explicitly, instead of
+/// setting it to be the max of 100 and the content size.  The VMO is sized to be the
+/// maximum of the `content` length and the specified `capacity`.
+pub fn simple_init_vmo_with_capacity(
+    content: &[u8],
+    capacity: u64,
+) -> impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static {
+    let content = content.to_vec();
+    move || {
+        // In "production" code we would instead wrap `content` in a smart pointer to be able to
+        // share it with the async block, but for tests it is fine to just clone it.
+        let content = content.clone();
+        Box::pin(async move {
+            let size = content.len() as u64;
+            let vmo_size = std::cmp::max(size, capacity);
+            let vmo = Vmo::create(vmo_size)?;
+            if content.len() > 0 {
+                vmo.write(&content, 0)?;
+            }
+            Ok(NewVmo { vmo, size, capacity })
+        })
+    }
+}
+
+/// Similar to the [`simple_init_vmo`], but the produced VMOs are resizable, and the `capacity` is
+/// set by the caller.  Note that this capacity is a limitation enforced by the FIDL binding layer,
+/// not something applied to the VMO.  The VMO is initially sized to be the maximum of the
+/// `content` length and the specified `capacity`.
+pub fn simple_init_vmo_resizable_with_capacity(
+    content: &[u8],
+    capacity: u64,
+) -> impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static {
+    let content = content.to_vec();
+    move || {
+        let content = content.clone();
+        Box::pin(async move {
+            let vmo_size = content.len() as u64;
+            let vmo = Vmo::create_with_opts(VmoOptions::RESIZABLE, vmo_size)?;
+            if vmo_size > 0 {
+                vmo.write(&content, 0)?;
+            }
+            Ok(NewVmo { vmo, size: vmo_size, capacity })
+        })
+    }
 }
 
 /// Creates a new write-only `AsyncFile` backed by the specified `init_vmo` and `consume_vmo`

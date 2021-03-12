@@ -42,7 +42,7 @@ use {
     thiserror::Error,
     vfs::{
         directory::entry::DirectoryEntry, directory::immutable::simple as pfs,
-        execution_scope::ExecutionScope, file::pcb::asynchronous::read_only_static,
+        execution_scope::ExecutionScope, file::vmo::asynchronous::read_only_static,
         path::Path as fvfsPath, tree_builder::TreeBuilder,
     },
 };

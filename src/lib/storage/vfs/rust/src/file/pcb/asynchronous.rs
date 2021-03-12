@@ -26,14 +26,17 @@ use crate::{
     directory::entry::{DirectoryEntry, EntryInfo},
     execution_scope::ExecutionScope,
     file::pcb::connection::{self, AsyncInitBuffer, AsyncUpdate, FileWithPerConnectionBuffer},
+    file::vmo::asynchronous::{
+        read_only_static as vmo_read_only_static, AsyncFile, InitVmoResult, StubConsumeVmoRes,
+    },
     path::Path,
 };
 
 use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN},
-    fuchsia_zircon::Status,
-    futures::future,
+    fuchsia_zircon::{Status, Vmo},
+    futures::future::BoxFuture,
     std::{
         future::Future,
         pin::Pin,
@@ -45,6 +48,25 @@ use {
 #[cfg(test)]
 mod tests;
 
+/// Creates a new read-only `AsyncFile` which serves static content.
+/// This is a temporary wrapper to keep users of pcb happy until we move them to
+/// vmo:: variants.
+pub fn read_only_static<Bytes>(
+    bytes: Bytes,
+) -> Arc<
+    AsyncFile<
+        impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static,
+        BoxFuture<'static, InitVmoResult>,
+        fn(Vmo) -> StubConsumeVmoRes,
+        StubConsumeVmoRes,
+    >,
+>
+where
+    Bytes: AsRef<[u8]> + Send + Sync,
+{
+    vmo_read_only_static(bytes)
+}
+
 /// This is a "stub" type used by [`read_only`] constructor, when it needs to generate type for the
 /// `update` callback that is never used.
 pub struct StubUpdateRes;
@@ -55,60 +77,6 @@ impl Future for StubUpdateRes {
     fn poll(self: Pin<&mut Self>, _cx: &mut Context<'_>) -> Poll<Self::Output> {
         Poll::Pending
     }
-}
-
-/// Creates a new read-only `AsyncPseudoFile` backed by the specified init_buffer handler.
-///
-/// The handler is called every time a new connection to the pseudo file is established, and is
-/// used to populate a per-connection buffer.
-///
-/// For more details on this interaction, see the module documentation.
-pub fn read_only<InitBuffer, InitBufferRes>(
-    init_buffer: InitBuffer,
-) -> Arc<AsyncPseudoFile<InitBuffer, InitBufferRes, fn(Vec<u8>) -> StubUpdateRes, StubUpdateRes>>
-where
-    InitBuffer: Fn() -> InitBufferRes + Send + Sync + 'static,
-    InitBufferRes: Future<Output = Result<Vec<u8>, Status>> + Send + Sync + 'static,
-{
-    AsyncPseudoFile::new(Some(init_buffer), 0, None)
-}
-
-/// Creates a new read-only `AsyncPseudoFile` which serves static content.  Also see
-/// `read_only_const` which allows you to pass the ownership to the file itself.
-pub fn read_only_static<Bytes>(
-    bytes: Bytes,
-) -> Arc<
-    AsyncPseudoFile<
-        impl (Fn() -> future::Ready<Result<Vec<u8>, Status>>) + Send + Sync + 'static,
-        future::Ready<Result<Vec<u8>, Status>>,
-        fn(Vec<u8>) -> StubUpdateRes,
-        StubUpdateRes,
-    >,
->
-where
-    Bytes: AsRef<[u8]> + Send + Sync,
-{
-    read_only(move || future::ready(Ok(bytes.as_ref().to_vec())))
-}
-
-/// Create a new read-only `AsyncPseudoFile` which servers a constant content.  The difference with
-/// `read_only_static` is that this function takes a run time values that it will own, while
-/// `read_only_static` requires a reference to something with a static lifetime.
-pub fn read_only_const<Bytes>(
-    bytes: Bytes,
-) -> Arc<
-    AsyncPseudoFile<
-        impl (Fn() -> future::Ready<Result<Vec<u8>, Status>>) + Send + Sync + 'static,
-        future::Ready<Result<Vec<u8>, Status>>,
-        fn(Vec<u8>) -> StubUpdateRes,
-        StubUpdateRes,
-    >,
->
-where
-    Bytes: Into<Box<[u8]>>,
-{
-    let bytes = Arc::new(bytes.into().into_vec());
-    read_only(move || future::ready(Ok(bytes.as_ref().clone())))
 }
 
 /// This is a "stub" type used by [`write_only`] constructor, when it needs to generate type for
@@ -138,29 +106,6 @@ where
     UpdateRes: Future<Output = Result<(), Status>> + Send + Sync + 'static,
 {
     AsyncPseudoFile::new(None, capacity, Some(update))
-}
-
-/// Creates new `AsyncPseudoFile` backed by the specified `init_buffer` and `update` handlers.
-///
-/// The `init_buffer` handler is called every time a new connection to the pseudo file is
-/// established, and is used to populate a per-connection buffer.
-///
-/// The `update` handler is called when the per-connection buffer content has been updated and the
-/// connection is closed. `update` handler will receive the buffer content as the input.
-///
-/// For more details on these interaction, see the module documentation.
-pub fn read_write<InitBuffer, InitBufferRes, Update, UpdateRes>(
-    init_buffer: InitBuffer,
-    capacity: u64,
-    update: Update,
-) -> Arc<AsyncPseudoFile<InitBuffer, InitBufferRes, Update, UpdateRes>>
-where
-    InitBuffer: Fn() -> InitBufferRes + Send + Sync + 'static,
-    InitBufferRes: Future<Output = Result<Vec<u8>, Status>> + Send + Sync + 'static,
-    Update: Fn(Vec<u8>) -> UpdateRes + Send + Sync + 'static,
-    UpdateRes: Future<Output = Result<(), Status>> + Send + Sync + 'static,
-{
-    AsyncPseudoFile::new(Some(init_buffer), capacity, Some(update))
 }
 
 /// Implementation of an asynchronous pseudo file in a virtual file system. This is created by

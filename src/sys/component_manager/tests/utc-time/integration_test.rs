@@ -16,7 +16,7 @@ use std::sync::Arc;
 use test_util::assert_geq;
 use test_utils_lib::opaque_test::OpaqueTestBuilder;
 use vfs::{
-    directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::pcb::read_only_static,
+    directory::entry::DirectoryEntry, execution_scope::ExecutionScope, file::vmo::read_only_static,
     pseudo_directory,
 };
 
