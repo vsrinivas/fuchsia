@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/host.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "odu"
@@ -50,32 +49,14 @@ rustc_binary("bin") {
   }
 }
 
-package("odu") {
+fuchsia_shell_package("odu") {
+  manifest = "meta/odu.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "odu"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/odu.cmx")
-      dest = "odu.cmx"
-    },
-  ]
 }
 
-test_package("odu_tests") {
+fuchsia_unittest_package("odu_tests") {
+  manifest = "meta/odu_bin_test.cmx"
   deps = [ ":bin_test" ]
-  tests = [
-    {
-      name = "odu_bin_test"
-      dest = "odu_bin_test"
-    },
-  ]
 }
 
 install_host_tools("odu_host") {
