@@ -196,6 +196,10 @@ table Attributes {
 
     /// The origin of the label of this element.
     10: LabelOrigin label_origin;
+
+    /// Whether the element is part of a virtual keyboard. For example, a key
+    /// on an onscreen keyboard.
+    11: bool is_keyboard_key;
 };
 
 /// Represents the state of a UI checkbox.
