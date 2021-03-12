@@ -87,7 +87,7 @@ impl Hoist {
             host_overnet: HostOvernet::new(node.clone())?,
             _task: Task::spawn(async move {
                 retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || {
-                    run_ascendd_connection(node.clone(), None)
+                    run_ascendd_connection(node.clone(), None, None)
                 })
                 .await
             }),
@@ -109,14 +109,17 @@ impl super::OvernetInstance for Hoist {
     }
 }
 
-async fn run_ascendd_connection(node: Arc<Router>, label: Option<String>) -> Result<(), Error> {
-    let ascendd_path = std::env::var("ASCENDD").unwrap_or(DEFAULT_ASCENDD_PATH.to_string());
-
+async fn run_ascendd_connection(
+    node: Arc<Router>,
+    label: Option<String>,
+    path: Option<String>,
+) -> Result<(), Error> {
+    let path = ascendd_path(path);
     let label = connection_label(label);
 
-    log::trace!("Ascendd path: {}", ascendd_path);
+    log::trace!("Ascendd path: {}", path);
     log::trace!("Overnet connection label: {:?}", label);
-    let uds = &async_std::os::unix::net::UnixStream::connect(ascendd_path.clone())
+    let uds = &async_std::os::unix::net::UnixStream::connect(path.clone())
         .on_timeout(Duration::from_secs(1), || {
             Err(std::io::Error::new(TimedOut, format_err!("connecting to ascendd socket")))
         })
@@ -125,7 +128,7 @@ async fn run_ascendd_connection(node: Arc<Router>, label: Option<String>) -> Res
     let config = Box::new(move || {
         Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(
             fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
-                path: Some(ascendd_path.clone()),
+                path: Some(path.clone()),
                 connection_label: Some(label.clone()),
                 ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
             },
@@ -296,6 +299,15 @@ pub fn hard_coded_security_context() -> impl SecurityContext {
     .unwrap();
 }
 
+const ASCENDD: &'static str = "ASCENDD";
+
+fn ascendd_path<S>(o: Option<S>) -> String
+where
+    S: Into<String>,
+{
+    o.map(Into::into).or(std::env::var(ASCENDD).ok()).unwrap_or(DEFAULT_ASCENDD_PATH.into())
+}
+
 const OVERNET_CONNECTION_LABEL: &'static str = "OVERNET_CONNECTION_LABEL";
 
 fn connection_label<S>(o: Option<S>) -> String
@@ -341,5 +353,24 @@ mod test {
         assert_eq!("onetwothree", connection_label(Option::<String>::None));
 
         assert_eq!("precedence", connection_label(Some("precedence")));
+    }
+
+    #[test]
+    fn test_ascendd_path() {
+        let original = std::env::var_os(ASCENDD);
+        guard(original, |orig| {
+            orig.map(|v| std::env::set_var(ASCENDD, v));
+        });
+
+        std::env::remove_var(ASCENDD);
+
+        let p = ascendd_path(Option::<String>::None);
+        assert_eq!(p, DEFAULT_ASCENDD_PATH);
+
+        std::env::set_var(ASCENDD, "foobar");
+
+        assert_eq!(ascendd_path(Option::<String>::None), "foobar");
+
+        assert_eq!("precedence", ascendd_path(Some("precedence")));
     }
 }
