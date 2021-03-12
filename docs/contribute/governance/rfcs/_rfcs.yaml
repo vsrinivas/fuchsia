@@ -313,3 +313,16 @@
   reviewers: ['cpu@google.com', 'amathes@google.com', 'shayba@google.com', 'digit@google.com', 'abarth@google.com', 'mesch@google.com', 'jamesr@google.com']
   submitted: '2021-01-29'
   reviewed: '2021-03-05'
+
+- name: 'RFC-0075'
+  title: 'Deprecate Zedboot-based paving for provisioning devices'
+  short_description: 'Standardize device provisioning around fastboot and deprecate Zedboot-based paving.'
+  authors: ['amituttam@google.com']
+  file: '0075_deprecate_zedboot_paving.md'
+  area: ['General']
+  issue: []
+  gerrit_change_id: ['491819']
+  status: 'Accepted'
+  reviewers: ['rudymathu@google.com', 'nmulcahey@google.com', 'dpursell@google.com', 'wittrock@google.com', 'andresoportus@google.com', 'vaas@google.com', 'dkrahn@google.com', 'jfsulliv@google.com']
+  submitted: '2021-02-25'
+  reviewed: '2021-03-12'
