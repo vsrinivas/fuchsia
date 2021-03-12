@@ -12,7 +12,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("stub_netbuf") {
   testonly = true
@@ -249,34 +249,34 @@ executable("workqueue_test") {
   ]
 }
 
-unittest_package("brcmfmac_test") {
-  package_name = "brcmfmac-test"
-  deps = []
-  tests = []
-  foreach(test_name,
-          [
-            "bcmdhd_crossdriver_test",
-            "brcmu_utils_test",
-            "channel_conversion_test",
-            "cfg80211_test",
-            "debug_test",
-            "device_inspect_test",
-            "dma_buffer_test",
-            "dma_pool_test",
-            "dma_ring_test",
-            "intrusive_list_test",
-            "netbuf_test",
-            "task_queue_test",
-            "timer_test",
-            "throttle_counter_test",
-            "token_bucket_test",
-            "workqueue_test",
-          ]) {
-    deps += [ ":$test_name" ]
-    tests += [
-      {
-        name = "$test_name"
-      },
-    ]
+_tests = [
+  "bcmdhd_crossdriver_test",
+  "brcmu_utils_test",
+  "channel_conversion_test",
+  "cfg80211_test",
+  "debug_test",
+  "device_inspect_test",
+  "dma_buffer_test",
+  "dma_pool_test",
+  "dma_ring_test",
+  "intrusive_list_test",
+  "netbuf_test",
+  "task_queue_test",
+  "timer_test",
+  "throttle_counter_test",
+  "token_bucket_test",
+  "workqueue_test",
+]
+
+foreach(test_name, _tests) {
+  fuchsia_unittest_component("${test_name}_component") {
+    deps = [ ":${test_name}" ]
+  }
+}
+
+fuchsia_test_package("brcmfmac_test") {
+  test_components = []
+  foreach(test_name, _tests) {
+    test_components += [ ":${test_name}_component" ]
   }
 }

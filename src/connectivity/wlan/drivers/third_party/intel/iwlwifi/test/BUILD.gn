@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 # Compile flags
 testing_defines = [
@@ -195,64 +194,31 @@ executable("wlan-device_test") {
   deps += [ "//src/connectivity/wlan/drivers/third_party/intel/iwlwifi:pcie" ]
 }
 
-unittest_package("iwlwifi_test") {
-  package_name = "iwlwifi_test"
+_tests = [
+  "dummy_test",
+  "fuchsia_porting_test",
+  "iwl-phy-db_test",
+  "mac-ctxt_test",
+  "mac80211_test",
+  "mvm_test",
+  "notif-wait_test",
+  "nvm_test",
+  "pcie_test",
+  "phy-ctxt_test",
+  "sta_test",
+  "utils_test",
+  "wlan-device_test",
+]
 
-  deps = [
-    ":dummy_test",
-    ":fuchsia_porting_test",
-    ":iwl-phy-db_test",
-    ":mac-ctxt_test",
-    ":mac80211_test",
-    ":mvm_test",
-    ":notif-wait_test",
-    ":nvm_test",
-    ":pcie_test",
-    ":phy-ctxt_test",
-    ":sta_test",
-    ":utils_test",
-    ":wlan-device_test",
-  ]
+foreach(test_name, _tests) {
+  fuchsia_unittest_component("${test_name}_component") {
+    deps = [ ":${test_name}" ]
+  }
+}
 
-  tests = [
-    {
-      name = "dummy_test"
-    },
-    {
-      name = "fuchsia_porting_test"
-    },
-    {
-      name = "iwl-phy-db_test"
-    },
-    {
-      name = "mac80211_test"
-    },
-    {
-      name = "mac-ctxt_test"
-    },
-    {
-      name = "mvm_test"
-    },
-    {
-      name = "notif-wait_test"
-    },
-    {
-      name = "nvm_test"
-    },
-    {
-      name = "pcie_test"
-    },
-    {
-      name = "phy-ctxt_test"
-    },
-    {
-      name = "sta_test"
-    },
-    {
-      name = "utils_test"
-    },
-    {
-      name = "wlan-device_test"
-    },
-  ]
+fuchsia_test_package("iwlwifi_test") {
+  test_components = []
+  foreach(test_name, _tests) {
+    test_components += [ ":${test_name}_component" ]
+  }
 }

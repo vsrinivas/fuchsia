@@ -1,7 +1,7 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("fake_msgbuf_interfaces") {
   output_name = "fake_msgbuf_interfaces"
@@ -86,21 +86,20 @@ executable("msgbuf_ring_handler_test") {
   ]
 }
 
-unittest_package("brcmfmac_msgbuf_test") {
-  package_name = "brcmfmac-msgbuf-test"
-  deps = []
-  tests = []
-  foreach(test_name,
-          [
-            "flow_ring_handler_test",
-            "flow_ring_test",
-            "msgbuf_ring_handler_test",
-          ]) {
-    deps += [ ":$test_name" ]
-    tests += [
-      {
-        name = "$test_name"
-      },
-    ]
+_tests = [
+  "flow_ring_handler_test",
+  "flow_ring_test",
+  "msgbuf_ring_handler_test",
+]
+foreach(test_name, _tests) {
+  fuchsia_unittest_component("${test_name}_component") {
+    deps = [ ":${test_name}" ]
+  }
+}
+
+fuchsia_test_package("brcmfmac_msgbuf_test") {
+  test_components = []
+  foreach(test_name, _tests) {
+    test_components += [ ":${test_name}_component" ]
   }
 }

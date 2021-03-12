@@ -11,7 +11,7 @@
 # NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 # OF THIS SOFTWARE.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("sim_test") {
   output_name = "sim_test"
@@ -558,138 +558,50 @@ executable("timeout_test") {
   ]
 }
 
-unittest_package("brcmfmac_sim_test") {
-  package_name = "brcmfmac-sim-test"
-  deps = [
-    ":active_scan_test",
-    ":arp_test",
-    ":assoc_test",
-    ":auth_test",
-    ":bad_entropy_test",
-    ":beacon_lost_test",
-    ":bootloader_mac_addr_test",
-    ":call_after_del_iface_test",
-    ":cc_test",
-    ":channel_switch_test",
-    ":crash_recovery_test",
-    ":create_softap_test",
-    ":data_frame_test",
-    ":disassoc_test",
-    ":dynamic_if_test",
-    ":err_inject_test",
-    ":escan_params_test",
-    ":firmware_config_test",
-    ":ifc_query_test",
-    ":iovar_test",
-    ":lifecycle_test",
-    ":mfg_test",
-    ":no_random_mac_test",
-    ":passive_scan_test",
-    ":phy_query_test",
-    ":scan_dwell_time_test",
-    ":scan_while_scanning_test",
-    ":set_keys_test",
-    ":set_multicast_test",
-    ":start_ap_while_scanning_test",
-    ":timeout_test",
-    ":wmm_status_test",
-  ]
-  tests = [
-    {
-      name = "active_scan_test"
-    },
-    {
-      name = "arp_test"
-    },
-    {
-      name = "assoc_test"
-    },
-    {
-      name = "auth_test"
-    },
-    {
-      name = "bad_entropy_test"
-    },
-    {
-      name = "beacon_lost_test"
-    },
-    {
-      name = "bootloader_mac_addr_test"
-    },
-    {
-      name = "call_after_del_iface_test"
-    },
-    {
-      name = "cc_test"
-    },
-    {
-      name = "channel_switch_test"
-    },
-    {
-      name = "crash_recovery_test"
-    },
-    {
-      name = "create_softap_test"
-    },
-    {
-      name = "data_frame_test"
-    },
-    {
-      name = "disassoc_test"
-    },
-    {
-      name = "dynamic_if_test"
-    },
-    {
-      name = "err_inject_test"
-    },
-    {
-      name = "escan_params_test"
-    },
-    {
-      name = "firmware_config_test"
-    },
-    {
-      name = "ifc_query_test"
-    },
-    {
-      name = "iovar_test"
-    },
-    {
-      name = "lifecycle_test"
-    },
-    {
-      name = "mfg_test"
-    },
-    {
-      name = "no_random_mac_test"
-    },
-    {
-      name = "passive_scan_test"
-    },
-    {
-      name = "phy_query_test"
-    },
-    {
-      name = "scan_dwell_time_test"
-    },
-    {
-      name = "scan_while_scanning_test"
-    },
-    {
-      name = "set_keys_test"
-    },
-    {
-      name = "set_multicast_test"
-    },
-    {
-      name = "start_ap_while_scanning_test"
-    },
-    {
-      name = "timeout_test"
-    },
-    {
-      name = "wmm_status_test"
-    },
-  ]
+_tests = [
+  "active_scan_test",
+  "arp_test",
+  "assoc_test",
+  "auth_test",
+  "bad_entropy_test",
+  "beacon_lost_test",
+  "bootloader_mac_addr_test",
+  "call_after_del_iface_test",
+  "cc_test",
+  "channel_switch_test",
+  "crash_recovery_test",
+  "create_softap_test",
+  "data_frame_test",
+  "disassoc_test",
+  "dynamic_if_test",
+  "err_inject_test",
+  "escan_params_test",
+  "firmware_config_test",
+  "ifc_query_test",
+  "iovar_test",
+  "lifecycle_test",
+  "mfg_test",
+  "no_random_mac_test",
+  "passive_scan_test",
+  "phy_query_test",
+  "scan_dwell_time_test",
+  "scan_while_scanning_test",
+  "set_keys_test",
+  "set_multicast_test",
+  "start_ap_while_scanning_test",
+  "timeout_test",
+  "wmm_status_test",
+]
+
+foreach(test_name, _tests) {
+  fuchsia_unittest_component("${test_name}_component") {
+    deps = [ ":${test_name}" ]
+  }
+}
+
+fuchsia_test_package("brcmfmac_sim_test") {
+  test_components = []
+  foreach(test_name, _tests) {
+    test_components += [ ":${test_name}_component" ]
+  }
 }

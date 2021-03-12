@@ -1,7 +1,7 @@
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("fake_register_window_provider_interface") {
   output_name = "fake_register_window_provider_interface"
@@ -49,21 +49,21 @@ executable("firmware_test") {
   ]
 }
 
-unittest_package("brcmfmac_chipset_test") {
-  package_name = "brcmfmac-chipset-test"
-  deps = []
-  tests = []
-  foreach(test_name,
-          [
-            "axi_backplane_test",
-            "cr4_chipset_test",
-            "firmware_test",
-          ]) {
-    deps += [ ":$test_name" ]
-    tests += [
-      {
-        name = "$test_name"
-      },
-    ]
+_tests = [
+  "axi_backplane_test",
+  "cr4_chipset_test",
+  "firmware_test",
+]
+
+foreach(test_name, _tests) {
+  fuchsia_unittest_component("${test_name}_component") {
+    deps = [ ":${test_name}" ]
+  }
+}
+
+fuchsia_test_package("brcmfmac_chipset_test") {
+  test_components = []
+  foreach(test_name, _tests) {
+    test_components += [ ":${test_name}_component" ]
   }
 }

@@ -17,7 +17,7 @@ import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("ath10k_bind") {
   rules = "ath10k_pci.bind"
@@ -189,20 +189,19 @@ executable("bitarr_tests") {
   deps = [ "//src/lib/fxl/test:gtest_main" ]
 }
 
-unittest_package("ath10k_test") {
-  package_name = "ath10k_test"
+_tests = [
+  "bitarr_tests",
+  "sparse_array_tests",
+]
+foreach(test_name, _tests) {
+  fuchsia_unittest_component("${test_name}_component") {
+    deps = [ ":${test_name}" ]
+  }
+}
 
-  deps = [
-    ":bitarr_tests",
-    ":sparse_array_tests",
-  ]
-
-  tests = [
-    {
-      name = "sparse_array_tests"
-    },
-    {
-      name = "bitarr_tests"
-    },
-  ]
+fuchsia_test_package("ath10k_test") {
+  test_components = []
+  foreach(test_name, _tests) {
+    test_components += [ ":${test_name}_component" ]
+  }
 }
