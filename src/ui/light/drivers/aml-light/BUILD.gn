@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("aml_light_bind") {
   rules = "aml_light.bind"
@@ -77,16 +77,9 @@ test("aml-light-test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-unittest_package("aml-light-test-package") {
+fuchsia_unittest_package("aml-light-test-package") {
   package_name = "aml-light-test"
   deps = [ ":aml-light-test" ]
-
-  tests = [
-    {
-      name = "aml-light-test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {

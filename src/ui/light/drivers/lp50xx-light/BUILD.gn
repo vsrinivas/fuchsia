@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("lp50xx_light-bind") {
   rules = "lp50xx_light.bind"
@@ -70,16 +70,9 @@ test("lp50xx-light-test") {
   ]
 }
 
-unittest_package("lp50xx-light-test-package") {
+fuchsia_unittest_package("lp50xx-light-test-package") {
   package_name = "lp50xx-light-test"
   deps = [ ":lp50xx-light-test" ]
-
-  tests = [
-    {
-      name = "lp50xx-light-test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {
