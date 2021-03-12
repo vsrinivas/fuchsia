@@ -76,17 +76,20 @@ class DiagnosticsBatchIteratorDelayedBatches : public DiagnosticsBatchIterator {
  public:
   DiagnosticsBatchIteratorDelayedBatches(async_dispatcher_t* dispatcher,
                                          const std::vector<std::vector<std::string>>& json_batches,
+                                         zx::duration initial_delay,
                                          zx::duration delay_between_batches, bool strict = true)
       : DiagnosticsBatchIterator(json_batches, strict),
         dispatcher_(dispatcher),
+        initial_delay_(initial_delay),
         delay_between_batches_(delay_between_batches) {}
 
   void GetNext(GetNextCallback callback) override;
 
  private:
   async_dispatcher_t* dispatcher_;
+  zx::duration initial_delay_;
   zx::duration delay_between_batches_;
-  bool delay_response_{false};
+  bool is_initial_delay_{true};
 };
 
 }  // namespace stubs

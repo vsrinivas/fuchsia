@@ -30,6 +30,8 @@ namespace feedback_data {
 namespace system_log_recorder {
 namespace {
 
+constexpr zx::duration kZeroInitialDelay = zx::sec(0);
+
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
 const size_t kMaxLogLineSize = std::string("[15604.000][07559][07687][] INFO: line X\n").size();
 const size_t kDroppedFormatStrSize = std::string("!!! DROPPED X MESSAGES !!!\n").size();
@@ -111,7 +113,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   });
 
   stubs::DiagnosticsArchive archive(std::make_unique<stubs::DiagnosticsBatchIteratorDelayedBatches>(
-      dispatcher(), json_batches, kArchivePeriod));
+      dispatcher(), json_batches, kZeroInitialDelay, kArchivePeriod));
 
   InjectServiceProvider(&archive, kArchiveAccessorName);
 
@@ -270,7 +272,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_StopAndDeleteLogs) {
   });
 
   stubs::DiagnosticsArchive archive(std::make_unique<stubs::DiagnosticsBatchIteratorDelayedBatches>(
-      dispatcher(), json_batches, kArchivePeriod, /*strict=*/false));
+      dispatcher(), json_batches, kZeroInitialDelay, kArchivePeriod, /*strict=*/false));
 
   InjectServiceProvider(&archive, kArchiveAccessorName);
 
@@ -383,7 +385,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_Flush) {
   });
 
   stubs::DiagnosticsArchive archive(std::make_unique<stubs::DiagnosticsBatchIteratorDelayedBatches>(
-      dispatcher(), json_batches, kArchivePeriod, /*strict=*/true));
+      dispatcher(), json_batches, kZeroInitialDelay, kArchivePeriod, /*strict=*/true));
 
   InjectServiceProvider(&archive, kArchiveAccessorName);
 

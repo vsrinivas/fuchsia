@@ -72,8 +72,8 @@ void DiagnosticsBatchIteratorDelayedBatches::GetNext(GetNextCallback callback) {
 
         callback(::fit::ok(ToVmo(*next_json_batch_++)));
       },
-      delay_between_batches_ * delay_response_);
-  delay_response_ = true;
+      is_initial_delay_ ? initial_delay_ : delay_between_batches_);
+  is_initial_delay_ = false;
 }
 
 }  // namespace stubs
