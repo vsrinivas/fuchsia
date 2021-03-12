@@ -179,5 +179,7 @@ func (p *BuildPaver) runPave(ctx context.Context, deviceName string, args ...str
 		cmd.Stdout = os.Stdout
 	}
 	cmd.Stderr = os.Stderr
-	return cmd.Run()
+	cmdRet := cmd.Run()
+	logger.Infof(ctx, "finished running %s %q: %q", path, args, cmdRet)
+	return cmdRet
 }
