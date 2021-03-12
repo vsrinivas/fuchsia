@@ -10,7 +10,7 @@ use {
     fuchsia_hash::Hash,
     fuchsia_inspect::assert_inspect_tree,
     fuchsia_pkg_testing::{
-        serve::handler, Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder,
+        serve::responder, Package, PackageBuilder, RepositoryBuilder, SystemImageBuilder,
     },
     fuchsia_zircon::Status,
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
@@ -67,7 +67,7 @@ async fn test_cache_fallback_succeeds_no_network() {
     );
     let served_repository = repo
         .server()
-        .uri_path_override_handler(handler::StaticResponseCode::server_error())
+        .response_overrider(responder::StaticResponseCode::server_error())
         .start()
         .unwrap();
     // System cache fallback is only triggered for fuchsia.com repos.
@@ -106,7 +106,7 @@ async fn test_cache_fallback_succeeds_if_url_merkle_matches() {
     );
     let served_repository = repo
         .server()
-        .uri_path_override_handler(handler::StaticResponseCode::server_error())
+        .response_overrider(responder::StaticResponseCode::server_error())
         .start()
         .unwrap();
     // System cache fallback is only triggered for fuchsia.com repos.
@@ -150,7 +150,7 @@ async fn test_cache_fallback_fails_if_url_merkle_differs() {
     );
     let served_repository = repo
         .server()
-        .uri_path_override_handler(handler::StaticResponseCode::server_error())
+        .response_overrider(responder::StaticResponseCode::server_error())
         .start()
         .unwrap();
     // System cache fallback is only triggered for fuchsia.com repos.
@@ -189,11 +189,11 @@ async fn test_cache_fallback_succeeds_no_targets() {
     );
     let served_repository = repo
         .server()
-        // TODO(ampearce): add a suffix handler so the version
+        // TODO(ampearce): add a suffix responder so the version
         // won't matter. This work, it just seems brittle.
-        .uri_path_override_handler(handler::ForPath::new(
+        .response_overrider(responder::ForPath::new(
             "/2.targets.json",
-            handler::StaticResponseCode::server_error(),
+            responder::StaticResponseCode::server_error(),
         ))
         .start()
         .unwrap();
@@ -236,7 +236,7 @@ async fn test_cache_fallback_succeeds_rewrite_rule() {
     );
     let served_repository = repo
         .server()
-        .uri_path_override_handler(handler::StaticResponseCode::server_error())
+        .response_overrider(responder::StaticResponseCode::server_error())
         .start()
         .unwrap();
     // System cache fallback is only triggered for fuchsia.com repos, but

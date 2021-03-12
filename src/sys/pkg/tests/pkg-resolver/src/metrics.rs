@@ -10,7 +10,7 @@ use {
     fidl_fuchsia_cobalt::{CobaltEvent, EventPayload},
     fuchsia_async as fasync,
     fuchsia_pkg_testing::{
-        serve::{handler, UriPathHandler},
+        serve::{responder, HttpResponder},
         Package, PackageBuilder, RepositoryBuilder,
     },
     fuchsia_zircon::Status,
@@ -53,7 +53,7 @@ async fn assert_elapsed_duration_events(
 
 async fn verify_resolve_emits_cobalt_events_with_metric_id(
     pkg: Package,
-    handler: Option<impl UriPathHandler>,
+    responder: Option<impl HttpResponder>,
     expected_resolve_result: Result<(), Status>,
     metric_id: u32,
     expected_events: Vec<impl AsEventCodes>,
@@ -67,8 +67,8 @@ async fn verify_resolve_emits_cobalt_events_with_metric_id(
             .unwrap(),
     );
     let mut served_repository = repo.server();
-    if let Some(handler) = handler {
-        served_repository = served_repository.uri_path_override_handler(handler);
+    if let Some(responder) = responder {
+        served_repository = served_repository.response_overrider(responder);
     }
     let served_repository = served_repository.start().unwrap();
     let repo_url = "fuchsia-pkg://example.com".parse().unwrap();
@@ -316,7 +316,7 @@ async fn resolve_duration_font_test_failure() {
 async fn pkg_resolver_fetch_blob_success() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
-        Option::<handler::StaticResponseCode>::None,
+        Option::<responder::StaticResponseCode>::None,
         Ok(()),
         metrics::FETCH_BLOB_METRIC_ID,
         vec![(
@@ -331,14 +331,14 @@ async fn pkg_resolver_fetch_blob_success() {
 #[fasync::run_singlethreaded(test)]
 async fn pkg_resolver_fetch_blob_failure() {
     let pkg = PackageBuilder::new("just_meta_far").build().await.expect("created pkg");
-    let handler = handler::ForPath::new(
+    let responder = responder::ForPath::new(
         format!("/blobs/{}", pkg.meta_far_merkle_root()),
-        handler::StaticResponseCode::not_found(),
+        responder::StaticResponseCode::not_found(),
     );
 
     verify_resolve_emits_cobalt_events_with_metric_id(
         pkg,
-        Some(handler),
+        Some(responder),
         Err(Status::UNAVAILABLE),
         metrics::FETCH_BLOB_METRIC_ID,
         vec![
@@ -356,7 +356,7 @@ async fn pkg_resolver_fetch_blob_failure() {
 async fn merkle_for_url_success() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
-        Option::<handler::StaticResponseCode>::None,
+        Option::<responder::StaticResponseCode>::None,
         Ok(()),
         metrics::MERKLE_FOR_URL_METRIC_ID,
         vec![metrics::MerkleForUrlMetricDimensionResult::Success],
@@ -376,7 +376,7 @@ async fn merkle_for_url_failure() {
     }
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
-        Some(handler::ForPath::new("/2.targets.json", delete_targets_stanza)),
+        Some(responder::ForPath::new("/2.targets.json", delete_targets_stanza)),
         Err(Status::INTERNAL),
         metrics::MERKLE_FOR_URL_METRIC_ID,
         vec![metrics::MerkleForUrlMetricDimensionResult::TufError],
@@ -389,7 +389,7 @@ async fn merkle_for_url_failure() {
 async fn create_tuf_client_success() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
-        Option::<handler::StaticResponseCode>::None,
+        Option::<responder::StaticResponseCode>::None,
         Ok(()),
         metrics::CREATE_TUF_CLIENT_METRIC_ID,
         vec![metrics::CreateTufClientMetricDimensionResult::Success],
@@ -400,10 +400,11 @@ async fn create_tuf_client_success() {
 // Resolving a package should trigger the creation of a TUF client.
 #[fasync::run_singlethreaded(test)]
 async fn create_tuf_client_error() {
-    let handler = handler::ForPath::new("/1.root.json", handler::StaticResponseCode::not_found());
+    let responder =
+        responder::ForPath::new("/1.root.json", responder::StaticResponseCode::not_found());
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
-        Some(handler),
+        Some(responder),
         Err(Status::INTERNAL),
         metrics::CREATE_TUF_CLIENT_METRIC_ID,
         vec![metrics::CreateTufClientMetricDimensionResult::NotFound],
@@ -415,7 +416,7 @@ async fn create_tuf_client_error() {
 async fn update_tuf_client_success() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
-        Option::<handler::StaticResponseCode>::None,
+        Option::<responder::StaticResponseCode>::None,
         Ok(()),
         metrics::UPDATE_TUF_CLIENT_METRIC_ID,
         vec![metrics::UpdateTufClientMetricDimensionResult::Success],
@@ -427,7 +428,10 @@ async fn update_tuf_client_success() {
 async fn update_tuf_client_error() {
     verify_resolve_emits_cobalt_events_with_metric_id(
         PackageBuilder::new("just_meta_far").build().await.expect("created pkg"),
-        Some(handler::ForPath::new("/2.targets.json", handler::StaticResponseCode::not_found())),
+        Some(responder::ForPath::new(
+            "/2.targets.json",
+            responder::StaticResponseCode::not_found(),
+        )),
         Err(Status::NOT_FOUND),
         metrics::UPDATE_TUF_CLIENT_METRIC_ID,
         vec![metrics::UpdateTufClientMetricDimensionResult::NotFound],
@@ -568,13 +572,13 @@ async fn pkg_resolver_blob_fetch_status_ranges() {
     );
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
 
-    let (handler, response_code) = handler::DynamicResponseCode::new(100);
+    let (responder, response_code) = responder::DynamicResponseCode::new(100);
     let served_repository = repo
         .server()
         .bind_to_addr(Ipv4Addr::LOCALHOST)
-        .uri_path_override_handler(handler::ForPath::new(
+        .response_overrider(responder::ForPath::new(
             format!("/blobs/{}", pkg.meta_far_merkle_root()),
-            handler,
+            responder,
         ))
         .start()
         .unwrap();
@@ -673,11 +677,11 @@ async fn pkg_resolver_create_tuf_client_status_ranges() {
     );
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
 
-    let (handler, response_code) = handler::DynamicResponseCode::new(100);
+    let (responder, response_code) = responder::DynamicResponseCode::new(100);
     let served_repository = repo
         .server()
         .bind_to_addr(Ipv4Addr::LOCALHOST)
-        .uri_path_override_handler(handler::ForPath::new("/1.root.json", handler))
+        .response_overrider(responder::ForPath::new("/1.root.json", responder))
         .start()
         .unwrap();
     env.register_repo(&served_repository).await;
@@ -775,11 +779,11 @@ async fn pkg_resolver_update_tuf_client_status_ranges() {
     );
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
 
-    let (handler, response_code) = handler::DynamicResponseCode::new(100);
+    let (responder, response_code) = responder::DynamicResponseCode::new(100);
     let served_repository = repo
         .server()
         .bind_to_addr(Ipv4Addr::LOCALHOST)
-        .uri_path_override_handler(handler::ForPath::new("/2.root.json", handler))
+        .response_overrider(responder::ForPath::new("/2.root.json", responder))
         .start()
         .unwrap();
     env.register_repo(&served_repository).await;

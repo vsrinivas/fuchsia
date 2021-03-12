@@ -70,7 +70,7 @@ rustc_library("fuchsia-pkg-testing") {
     "src/process.rs",
     "src/repo.rs",
     "src/serve.rs",
-    "src/serve/handler.rs",
+    "src/serve/responder.rs",
     "src/system_image.rs",
     "src/update_package.rs",
   ]

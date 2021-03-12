@@ -9,7 +9,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_merkle::MerkleTree,
     fuchsia_pkg_testing::{
-        serve::{handler, UriPathHandler},
+        serve::{responder, HttpResponder},
         Package, PackageBuilder, RepositoryBuilder,
     },
     fuchsia_zircon::Status,
@@ -21,9 +21,9 @@ use {
     std::{net::Ipv4Addr, sync::Arc, time::Duration},
 };
 
-async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
+async fn verify_resolve_fails_then_succeeds<H: HttpResponder>(
     pkg: Package,
-    handler: H,
+    responder: H,
     failure_status: Status,
 ) {
     let env = TestEnvBuilder::new().build().await;
@@ -37,11 +37,14 @@ async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
     );
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
 
-    let should_fail = handler::AtomicToggle::new(true);
+    let should_fail = responder::AtomicToggle::new(true);
     let served_repository = repo
         .server()
-        .uri_path_override_handler(handler::Toggleable::new(&should_fail, handler))
-        .range_uri_path_override_handler(handler::RangeStaticResponseCode::server_error())
+        .response_overrider(responder::Toggleable::new(&should_fail, responder))
+        .response_overrider(responder::Filter::new(
+            responder::is_range_request,
+            responder::StaticResponseCode::server_error(),
+        ))
         .start()
         .unwrap();
     env.register_repo(&served_repository).await;
@@ -49,7 +52,7 @@ async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
     // First resolve fails with the expected error.
     assert_matches!(env.resolve_package(&pkg_url).await, Err(status) if status == failure_status);
 
-    // Disabling the custom URI path handler allows the subsequent resolves to succeed.
+    // Disabling the custom responder allows the subsequent resolves to succeed.
     should_fail.unset();
     let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
@@ -64,7 +67,7 @@ async fn second_resolve_succeeds_when_far_404() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, handler::StaticResponseCode::not_found()),
+        responder::ForPath::new(path_to_override, responder::StaticResponseCode::not_found()),
         Status::UNAVAILABLE,
     )
     .await
@@ -84,7 +87,7 @@ async fn second_resolve_succeeds_when_blob_404() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, handler::StaticResponseCode::not_found()),
+        responder::ForPath::new(path_to_override, responder::StaticResponseCode::not_found()),
         Status::UNAVAILABLE,
     )
     .await
@@ -104,7 +107,7 @@ async fn second_resolve_succeeds_when_far_errors_mid_download() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, handler::OneByteShortThenError),
+        responder::ForPath::new(path_to_override, responder::OneByteShortThenError),
         Status::UNAVAILABLE,
     )
     .await
@@ -125,7 +128,7 @@ async fn second_resolve_succeeds_when_blob_errors_mid_download() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, handler::OneByteShortThenError),
+        responder::ForPath::new(path_to_override, responder::OneByteShortThenError),
         Status::UNAVAILABLE,
     )
     .await
@@ -145,7 +148,7 @@ async fn second_resolve_succeeds_disconnect_before_far_complete() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, handler::OneByteShortThenDisconnect),
+        responder::ForPath::new(path_to_override, responder::OneByteShortThenDisconnect),
         Status::UNAVAILABLE,
     )
     .await
@@ -166,7 +169,7 @@ async fn second_resolve_succeeds_disconnect_before_blob_complete() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, handler::OneByteShortThenDisconnect),
+        responder::ForPath::new(path_to_override, responder::OneByteShortThenDisconnect),
         Status::UNAVAILABLE,
     )
     .await
@@ -179,7 +182,7 @@ async fn second_resolve_succeeds_when_far_corrupted() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, handler::OneByteFlipped),
+        responder::ForPath::new(path_to_override, responder::OneByteFlipped),
         Status::IO,
     )
     .await
@@ -196,7 +199,7 @@ async fn second_resolve_succeeds_when_blob_corrupted() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new(path_to_override, handler::OneByteFlipped),
+        responder::ForPath::new(path_to_override, responder::OneByteFlipped),
         Status::IO,
     )
     .await
@@ -217,7 +220,7 @@ async fn second_resolve_succeeds_when_tuf_metadata_update_fails() {
     let pkg = PackageBuilder::new("no-blobs").build().await.unwrap();
     verify_resolve_fails_then_succeeds(
         pkg,
-        handler::ForPath::new("/2.snapshot.json", handler::OneByteShortThenDisconnect),
+        responder::ForPath::new("/2.snapshot.json", responder::OneByteShortThenDisconnect),
         Status::INTERNAL,
     )
     .await
@@ -258,9 +261,9 @@ async fn blob_timeout_causes_new_tcp_connection() {
 
     let server = repo
         .server()
-        .uri_path_override_handler(handler::ForPathPrefix::new(
+        .response_overrider(responder::ForPathPrefix::new(
             "/blobs/",
-            handler::Once::new(handler::HangBody),
+            responder::Once::new(responder::HangBody),
         ))
         .use_https(true)
         .bind_to_addr(Ipv4Addr::LOCALHOST)

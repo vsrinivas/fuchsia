@@ -11,7 +11,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_inspect::assert_inspect_tree,
     fuchsia_merkle::MerkleTree,
-    fuchsia_pkg_testing::{serve::handler, Package, PackageBuilder, RepositoryBuilder},
+    fuchsia_pkg_testing::{serve::responder, Package, PackageBuilder, RepositoryBuilder},
     fuchsia_zircon::Status,
     futures::{join, prelude::*},
     http_uri_ext::HttpUriExt as _,
@@ -359,9 +359,9 @@ async fn retries() {
     );
     let served_repository = repo
         .server()
-        .uri_path_override_handler(handler::ForPathPrefix::new(
+        .response_overrider(responder::ForPathPrefix::new(
             "/blobs",
-            handler::OncePerPath::new(handler::StaticResponseCode::server_error()),
+            responder::OncePerPath::new(responder::StaticResponseCode::server_error()),
         ))
         .start()
         .unwrap();
@@ -416,13 +416,13 @@ async fn handles_429_responses() {
     );
     let served_repository = repo
         .server()
-        .uri_path_override_handler(handler::ForPath::new(
+        .response_overrider(responder::ForPath::new(
             format!("/blobs/{}", pkg1.meta_far_merkle_root()),
-            handler::ForRequestCount::new(2, handler::StaticResponseCode::too_many_requests()),
+            responder::ForRequestCount::new(2, responder::StaticResponseCode::too_many_requests()),
         ))
-        .uri_path_override_handler(handler::ForPath::new(
+        .response_overrider(responder::ForPath::new(
             format!("/blobs/{}", pkg2.meta_contents().unwrap().contents()["data/bar"]),
-            handler::ForRequestCount::new(2, handler::StaticResponseCode::too_many_requests()),
+            responder::ForRequestCount::new(2, responder::StaticResponseCode::too_many_requests()),
         ))
         .start()
         .unwrap();
@@ -480,12 +480,12 @@ async fn use_cached_package() {
             .await
             .unwrap(),
     );
-    let fail_requests = handler::AtomicToggle::new(true);
+    let fail_requests = responder::AtomicToggle::new(true);
     let served_repository = repo
         .server()
-        .uri_path_override_handler(handler::Toggleable::new(
+        .response_overrider(responder::Toggleable::new(
             &fail_requests,
-            handler::StaticResponseCode::server_error(),
+            responder::StaticResponseCode::server_error(),
         ))
         .start()
         .unwrap();
@@ -628,13 +628,10 @@ async fn test_concurrent_blob_writes() {
     let unique_blob_merkle =
         pkg2.meta_contents().expect("extracted contents").contents()[unique_blob_path].to_string();
 
-    // Create the path handler and the channel to communicate with it
-    let (blocking_uri_path_handler, unblocking_closure_receiver) =
-        handler::BlockResponseBodyOnce::new();
-    let blocking_uri_path_handler = handler::ForPath::new(
-        format!("/blobs/{}", duplicate_blob_merkle),
-        blocking_uri_path_handler,
-    );
+    // Create the responder and the channel to communicate with it
+    let (blocking_responder, unblocking_closure_receiver) = responder::BlockResponseBodyOnce::new();
+    let blocking_responder =
+        responder::ForPath::new(format!("/blobs/{}", duplicate_blob_merkle), blocking_responder);
 
     // Construct the repo
     let env = TestEnvBuilder::new().build().await;
@@ -646,8 +643,7 @@ async fn test_concurrent_blob_writes() {
             .await
             .unwrap(),
     );
-    let served_repository =
-        repo.server().uri_path_override_handler(blocking_uri_path_handler).start().unwrap();
+    let served_repository = repo.server().response_overrider(blocking_responder).start().unwrap();
     env.register_repo(&served_repository).await;
 
     // Construct the resolver proxies (clients)
@@ -726,7 +722,7 @@ async fn dedup_concurrent_content_blob_fetches() {
         .await
         .unwrap();
 
-    // Create the request handler to block all content blobs until we are ready to unblock them.
+    // Create the request responder to block all content blobs until we are ready to unblock them.
     let content_blob_paths = {
         let pkg1_meta_contents = pkg1.meta_contents().expect("meta/contents to parse");
         let pkg2_meta_contents = pkg2.meta_contents().expect("meta/contents to parse");
@@ -738,11 +734,11 @@ async fn dedup_concurrent_content_blob_fetches() {
             .map(|blob| format!("/blobs/{}", blob).into())
             .collect::<HashSet<_>>()
     };
-    let (request_handler, mut incoming_requests) = handler::BlockResponseHeaders::new();
-    let request_handler =
-        handler::ForPaths::new(content_blob_paths.iter().cloned().collect(), request_handler);
+    let (request_responder, mut incoming_requests) = responder::BlockResponseHeaders::new();
+    let request_responder =
+        responder::ForPaths::new(content_blob_paths.iter().cloned().collect(), request_responder);
 
-    // Serve and register the repo with our request handler that blocks headers for content blobs.
+    // Serve and register the repo with our request responder that blocks headers for content blobs.
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
             .add_package(&pkg1)
@@ -752,7 +748,7 @@ async fn dedup_concurrent_content_blob_fetches() {
             .expect("repo to build"),
     );
     let served_repository =
-        repo.server().uri_path_override_handler(request_handler).start().expect("repo to serve");
+        repo.server().response_overrider(request_responder).start().expect("repo to serve");
 
     env.register_repo(&served_repository).await;
 
@@ -854,13 +850,13 @@ async fn verify_concurrent_resolve() {
     let pkg2_url = "fuchsia-pkg://test/second_concurrent_resolve_pkg";
 
     let path = format!("/blobs/{}", pkg1.content_blob_files().next().unwrap().merkle);
-    let (blocker, mut chan) = handler::BlockResponseHeaders::new();
-    let handler = handler::ForPath::new(path, blocker);
+    let (blocker, mut chan) = responder::BlockResponseHeaders::new();
+    let responder = responder::ForPath::new(path, blocker);
 
-    let served_repository = repo.server().uri_path_override_handler(handler).start().unwrap();
+    let served_repository = repo.server().response_overrider(responder).start().unwrap();
     env.register_repo(&served_repository).await;
 
-    // First resolve should block per the handler we use.
+    // First resolve should block per the responder we use.
     let pkg1_resolve_fut = env.resolve_package(&pkg1_url);
     // Get the BlockedResponse to make sure we're blocking the above resolve
     // before we try to resolve the second package.

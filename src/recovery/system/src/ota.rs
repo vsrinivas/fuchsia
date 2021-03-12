@@ -279,13 +279,12 @@ mod tests {
         blobfs_ramdisk::BlobfsRamdisk,
         fidl_fuchsia_pkg_ext::RepositoryKey,
         fuchsia_async as fasync,
-        fuchsia_pkg_testing::{serve::UriPathHandler, Package, PackageBuilder, RepositoryBuilder},
+        fuchsia_pkg_testing::{serve::HttpResponder, Package, PackageBuilder, RepositoryBuilder},
         futures::future::{ready, BoxFuture},
-        hyper::{header, Body, Response, StatusCode},
+        hyper::{header, Body, Request, Response, StatusCode},
         mock_paver::MockPaverServiceBuilder,
         std::{
             collections::{BTreeSet, HashMap},
-            path::Path,
             sync::{Arc, Mutex},
         },
     };
@@ -344,13 +343,13 @@ mod tests {
         }
     }
 
-    impl UriPathHandler for FakeConfigArc {
-        fn handle(
+    impl HttpResponder for FakeConfigArc {
+        fn respond(
             &self,
-            uri_path: &Path,
+            request: &Request<Body>,
             response: Response<Body>,
         ) -> BoxFuture<'_, Response<Body>> {
-            if uri_path.to_string_lossy() != "/config.json" {
+            if request.uri().path() != "/config.json" {
                 return ready(response).boxed();
             }
 
@@ -481,7 +480,7 @@ mod tests {
             let request_handler = FakeConfigHandler::new(repo.root_keys());
             let served_repo = Arc::clone(&repo)
                 .server()
-                .uri_path_override_handler(FakeConfigArc { arc: Arc::clone(&request_handler) })
+                .response_overrider(FakeConfigArc { arc: Arc::clone(&request_handler) })
                 .start()
                 .context("Starting repository")?;
 

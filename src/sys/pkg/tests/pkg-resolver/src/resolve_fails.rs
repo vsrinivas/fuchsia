@@ -5,7 +5,7 @@ use {
     cobalt_sw_delivery_registry as metrics,
     fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
     fuchsia_async as fasync,
-    fuchsia_pkg_testing::{serve::handler, PackageBuilder, RepositoryBuilder},
+    fuchsia_pkg_testing::{serve::responder, PackageBuilder, RepositoryBuilder},
     fuchsia_zircon::Status,
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
     std::{sync::Arc, time::Duration},
@@ -85,7 +85,7 @@ async fn create_tuf_client_timeout() {
     let env = TestEnvBuilder::new().tuf_metadata_timeout(Duration::from_secs(0)).build().await;
     let server = repo
         .server()
-        .uri_path_override_handler(handler::ForPath::new("/1.root.json", handler::Hang))
+        .response_overrider(responder::ForPath::new("/1.root.json", responder::Hang))
         .start()
         .expect("Starting server succeeds");
     let repo_config = server.make_repo_config("fuchsia-pkg://test".parse().unwrap());
@@ -123,7 +123,7 @@ async fn update_tuf_client_timeout() {
     // succeed but still fail tuf client update.
     let server = repo
         .server()
-        .uri_path_override_handler(handler::ForPath::new("/timestamp.json", handler::Hang))
+        .response_overrider(responder::ForPath::new("/timestamp.json", responder::Hang))
         .start()
         .expect("Starting server succeeds");
     let repo_config = server.make_repo_config("fuchsia-pkg://test".parse().unwrap());
@@ -163,7 +163,7 @@ async fn download_blob_header_timeout() {
 
     let server = repo
         .server()
-        .uri_path_override_handler(handler::ForPathPrefix::new("/blobs/", handler::Hang))
+        .response_overrider(responder::ForPathPrefix::new("/blobs/", responder::Hang))
         .start()
         .expect("Starting server succeeds");
     let repo_config = server.make_repo_config("fuchsia-pkg://test".parse().unwrap());
@@ -202,7 +202,7 @@ async fn download_blob_body_timeout() {
 
     let server = repo
         .server()
-        .uri_path_override_handler(handler::ForPathPrefix::new("/blobs/", handler::HangBody))
+        .response_overrider(responder::ForPathPrefix::new("/blobs/", responder::HangBody))
         .start()
         .expect("Starting server succeeds");
     let repo_config = server.make_repo_config("fuchsia-pkg://test".parse().unwrap());

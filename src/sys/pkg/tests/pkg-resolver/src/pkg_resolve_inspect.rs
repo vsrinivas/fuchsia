@@ -13,7 +13,7 @@ use {
         testing::{AnyProperty, PropertyAssertion},
         tree_assertion,
     },
-    fuchsia_pkg_testing::{serve::handler as uri_handler, PackageBuilder, RepositoryBuilder},
+    fuchsia_pkg_testing::{serve::responder, PackageBuilder, RepositoryBuilder},
     futures::FutureExt as _,
     lib::MountsBuilder,
     lib::{TestEnvBuilder, EMPTY_REPO_PATH},
@@ -201,22 +201,21 @@ async fn package_and_blob_queues() {
 
     let meta_far_blob_path = format!("/blobs/{}", pkg.meta_far_merkle_root());
 
-    let flake_first_attempt = uri_handler::ForPath::new(
+    let flake_first_attempt = responder::ForPath::new(
         meta_far_blob_path.clone(),
-        uri_handler::OverrideNth::new(1, uri_handler::StaticResponseCode::server_error()),
+        responder::OverrideNth::new(1, responder::StaticResponseCode::server_error()),
     );
 
-    let (blocking_uri_path_handler, unblocking_closure_receiver) =
-        uri_handler::BlockResponseBodyOnce::new();
-    let block_second_attempt = uri_handler::ForPath::new(
+    let (blocking_responder, unblocking_closure_receiver) = responder::BlockResponseBodyOnce::new();
+    let block_second_attempt = responder::ForPath::new(
         meta_far_blob_path.clone(),
-        uri_handler::OverrideNth::new(2, blocking_uri_path_handler),
+        responder::OverrideNth::new(2, blocking_responder),
     );
 
     let served_repository = repo
         .server()
-        .uri_path_override_handler(flake_first_attempt)
-        .uri_path_override_handler(block_second_attempt)
+        .response_overrider(flake_first_attempt)
+        .response_overrider(block_second_attempt)
         .start()
         .unwrap();
     let () = env

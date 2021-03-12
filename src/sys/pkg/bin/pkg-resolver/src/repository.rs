@@ -294,7 +294,7 @@ mod tests {
         crate::DEFAULT_TUF_METADATA_TIMEOUT,
         fuchsia_async as fasync,
         fuchsia_pkg_testing::{
-            serve::{handler, ServedRepository, ServedRepositoryBuilder, UriPathHandler},
+            serve::{responder, HttpResponder, ServedRepository, ServedRepositoryBuilder},
             Package, PackageBuilder, Repository as TestRepository, RepositoryBuilder,
         },
         fuchsia_url::pkg_url::RepoUrl,
@@ -384,8 +384,8 @@ mod tests {
             self
         }
 
-        fn uri_path_override_handler(mut self, handler: impl UriPathHandler) -> Self {
-            self.builder = self.builder.uri_path_override_handler(handler);
+        fn response_overrider(mut self, responder: impl HttpResponder) -> Self {
+            self.builder = self.builder.response_overrider(responder);
             self
         }
 
@@ -456,12 +456,12 @@ mod tests {
         // Serve static repo
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let env = TestEnv::builder().add_package(&pkg).build().await;
-        let should_fail = handler::AtomicToggle::new(false);
+        let should_fail = responder::AtomicToggle::new(false);
         let (_served_repository, repo_config) = env
             .serve_repo()
-            .uri_path_override_handler(handler::Toggleable::new(
+            .response_overrider(responder::Toggleable::new(
                 &should_fail,
-                handler::StaticResponseCode::not_found(),
+                responder::StaticResponseCode::not_found(),
             ))
             .start(TEST_REPO_URL);
         let mut repo = env.repo(&repo_config).await.expect("created opened repo");
@@ -487,12 +487,12 @@ mod tests {
         // Serve static repo
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let env = TestEnv::builder().add_package(&pkg).build().await;
-        let should_fail = handler::AtomicToggle::new(false);
+        let should_fail = responder::AtomicToggle::new(false);
         let (_served_repository, repo_config) = env
             .serve_repo()
-            .uri_path_override_handler(handler::Toggleable::new(
+            .response_overrider(responder::Toggleable::new(
                 &should_fail,
-                handler::StaticResponseCode::server_error(),
+                responder::StaticResponseCode::server_error(),
             ))
             .start(TEST_REPO_URL);
         let mut repo = env.repo(&repo_config).await.expect("created opened repo");
@@ -514,12 +514,12 @@ mod tests {
     ) -> (TestEnv, ServedRepository, mpsc::UnboundedReceiver<()>, Repository) {
         let pkg = PackageBuilder::new("just-meta-far").build().await.expect("created pkg");
         let env = TestEnv::builder().add_package(&pkg).build().await;
-        let (notify_on_request_handler, notified) = handler::NotifyWhenRequested::new();
+        let (notify_on_request_responder, notified) = responder::NotifyWhenRequested::new();
         let (served_repository, repo_config) = env
             .serve_repo()
-            .uri_path_override_handler(handler::ForPath::new(
+            .response_overrider(responder::ForPath::new(
                 "/timestamp.json",
-                notify_on_request_handler,
+                notify_on_request_responder,
             ))
             .subscribe()
             .start(TEST_REPO_URL);
@@ -624,7 +624,7 @@ mod inspect_tests {
         crate::DEFAULT_TUF_METADATA_TIMEOUT,
         fuchsia_async as fasync,
         fuchsia_inspect::assert_inspect_tree,
-        fuchsia_pkg_testing::{serve::handler, PackageBuilder, RepositoryBuilder},
+        fuchsia_pkg_testing::{serve::responder, PackageBuilder, RepositoryBuilder},
         fuchsia_url::pkg_url::RepoUrl,
         futures::stream::StreamExt,
         http_sse::Event,
@@ -753,12 +753,12 @@ mod inspect_tests {
                 .await
                 .expect("created repo"),
         );
-        let (notify_on_request_handler, mut notified) = handler::NotifyWhenRequested::new();
+        let (notify_on_request_responder, mut notified) = responder::NotifyWhenRequested::new();
         let served_repository = repo
             .server()
-            .uri_path_override_handler(handler::ForPath::new(
+            .response_overrider(responder::ForPath::new(
                 "/timestamp.json",
-                notify_on_request_handler,
+                notify_on_request_responder,
             ))
             .start()
             .expect("create served repo");

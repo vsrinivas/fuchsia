@@ -5,14 +5,14 @@
 use {
     cobalt_sw_delivery_registry as metrics, fuchsia_async as fasync,
     fuchsia_pkg_testing::{
-        serve::{handler, HttpRange, RangeUriPathHandler},
+        serve::{responder, HttpRange},
         Package, PackageBuilder, RepositoryBuilder,
     },
     fuchsia_zircon::Status,
     futures::future::{BoxFuture, FutureExt as _},
     hyper::{Body, Response},
     lib::{TestEnvBuilder, EMPTY_REPO_PATH, FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING},
-    std::{convert::TryInto as _, path::Path, sync::Arc},
+    std::{convert::TryInto as _, sync::Arc},
 };
 
 fn meta_far_size(pkg: &Package) -> u64 {
@@ -20,6 +20,21 @@ fn meta_far_size(pkg: &Package) -> u64 {
 }
 
 // TODO(fxbug.dev/71333) these test cases have a lot of repeated code, find an abstraction.
+
+fn for_range_requests<T: fuchsia_pkg_testing::serve::HttpResponder>(
+    responder: T,
+) -> impl fuchsia_pkg_testing::serve::HttpResponder {
+    responder::Filter::new(responder::is_range_request, responder)
+}
+
+fn for_not_range_requests<T: fuchsia_pkg_testing::serve::HttpResponder>(
+    responder: T,
+) -> impl fuchsia_pkg_testing::serve::HttpResponder {
+    responder::Filter::new(
+        |req: &hyper::Request<Body>| !responder::is_range_request(req),
+        responder,
+    )
+}
 
 #[fasync::run_singlethreaded(test)]
 async fn single_blob_resume_success() {
@@ -42,15 +57,18 @@ async fn single_blob_resume_success() {
             .unwrap(),
     );
 
-    let get_handler =
-        handler::ForPath::new(path_to_override.clone(), handler::OneByteShortThenError);
+    let get_responder = for_not_range_requests(responder::ForPath::new(
+        path_to_override.clone(),
+        responder::OneByteShortThenError,
+    ));
 
-    let (range_handler, history) = handler::RecordingRange::new();
+    let (range_responder, history) = responder::Record::new();
+    let range_responder = for_range_requests(range_responder);
 
     let served_repository = repo
         .server()
-        .uri_path_override_handler(get_handler)
-        .range_uri_path_override_handler(range_handler)
+        .response_overrider(get_responder)
+        .response_overrider(range_responder)
         .start()
         .unwrap();
 
@@ -71,9 +89,10 @@ async fn single_blob_resume_success() {
     let history = history.take();
     assert_eq!(history.len(), 1);
     assert_eq!(history[0].uri_path().to_str().unwrap(), path_to_override);
-    let range: HttpRange = history[0].range().try_into().unwrap();
-    assert!(range.start() > 0);
-    assert_eq!(range.end() + 1, meta_far_size(&pkg));
+    let range: HttpRange =
+        history[0].headers().get(http::header::RANGE).unwrap().try_into().unwrap();
+    assert!(range.first_byte_pos() > 0);
+    assert_eq!(range.last_byte_pos() + 1, meta_far_size(&pkg));
 
     env.stop().await;
 }
@@ -99,21 +118,23 @@ async fn two_blob_resume_success() {
             .unwrap(),
     );
 
-    let get_handler = handler::ForPath::new(
+    let get_responder = for_not_range_requests(responder::ForPath::new(
         path_to_override.clone(),
-        handler::NBytesThenError::new(FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING),
-    );
-
-    let (range_recorder, history) = handler::RecordingRange::new();
-    let range_handler = handler::RangeOnce::new(handler::RangeNBytesThenError::new(
-        FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING,
+        responder::NBytesThenError::new(FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING),
     ));
+
+    let (recorder, history) = responder::Record::new();
+    let range_responder = for_range_requests(responder::Chain::new(vec![
+        Box::new(recorder),
+        Box::new(responder::Once::new(responder::NBytesThenError::new(
+            FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING,
+        ))),
+    ]));
 
     let served_repository = repo
         .server()
-        .uri_path_override_handler(get_handler)
-        .range_uri_path_override_handler(range_recorder)
-        .range_uri_path_override_handler(range_handler)
+        .response_overrider(get_responder)
+        .response_overrider(range_responder)
         .start()
         .unwrap();
 
@@ -135,24 +156,25 @@ async fn two_blob_resume_success() {
     assert_eq!(history.len(), 2);
     assert_eq!(history[0].uri_path().to_str().unwrap(), path_to_override);
     assert_eq!(history[1].uri_path().to_str().unwrap(), path_to_override);
-    let range0: HttpRange = history[0].range().try_into().unwrap();
-    assert!(range0.start() > 0);
+    let range0: HttpRange =
+        history[0].headers().get(http::header::RANGE).unwrap().try_into().unwrap();
+    assert!(range0.first_byte_pos() > 0);
     let meta_far_size = meta_far_size(&pkg);
-    assert_eq!(range0.end() + 1, meta_far_size);
-    let range1: HttpRange = history[1].range().try_into().unwrap();
-    assert!(range1.start() > range0.start());
-    assert_eq!(range1.end() + 1, meta_far_size);
+    assert_eq!(range0.last_byte_pos() + 1, meta_far_size);
+    let range1: HttpRange =
+        history[1].headers().get(http::header::RANGE).unwrap().try_into().unwrap();
+    assert!(range1.first_byte_pos() > range0.first_byte_pos());
+    assert_eq!(range1.last_byte_pos() + 1, meta_far_size);
 
     env.stop().await;
 }
 
 // Sets the start of the Content-Range to 0, which will always be invalid for blob resumption.
 struct ContentRangeCorruptor;
-impl RangeUriPathHandler for ContentRangeCorruptor {
-    fn handle(
+impl fuchsia_pkg_testing::serve::HttpResponder for ContentRangeCorruptor {
+    fn respond(
         &self,
-        _: &Path,
-        _: &http::HeaderValue,
+        _: &http::Request<Body>,
         mut response: Response<Body>,
     ) -> BoxFuture<'_, Response<Body>> {
         *response.headers_mut().get_mut(http::header::CONTENT_RANGE).unwrap() =
@@ -182,13 +204,13 @@ async fn resume_validates_content_range() {
             .unwrap(),
     );
 
-    let get_handler =
-        handler::ForPath::new(path_to_override.clone(), handler::OneByteShortThenError);
+    let get_responder =
+        responder::ForPath::new(path_to_override.clone(), responder::OneByteShortThenError);
 
     let served_repository = repo
         .server()
-        .uri_path_override_handler(get_handler)
-        .range_uri_path_override_handler(ContentRangeCorruptor)
+        .response_overrider(for_not_range_requests(get_responder))
+        .response_overrider(for_range_requests(ContentRangeCorruptor))
         .start()
         .unwrap();
 
@@ -218,15 +240,19 @@ async fn resume_validates_content_range() {
 // FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING and the bad Content-Length needs to be for
 // longer than the remaining bytes.
 struct ContentLengthCorruptor;
-impl RangeUriPathHandler for ContentLengthCorruptor {
-    fn handle(
+impl fuchsia_pkg_testing::serve::HttpResponder for ContentLengthCorruptor {
+    fn respond(
         &self,
-        _: &Path,
-        range: &http::HeaderValue,
+        request: &hyper::Request<Body>,
         mut response: Response<Body>,
     ) -> BoxFuture<'_, Response<Body>> {
-        let range: HttpRange = range.try_into().unwrap();
-        let length = 1 + range.end() - range.start();
+        let range: HttpRange = request
+            .headers()
+            .get(http::header::RANGE)
+            .expect("missing header")
+            .try_into()
+            .expect("invalid header");
+        let length = 1 + range.last_byte_pos() - range.first_byte_pos();
         let bad_length = length + FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING as u64;
         response.headers_mut().insert(
             http::header::CONTENT_LENGTH,
@@ -263,15 +289,15 @@ async fn resume_validates_content_length() {
             .unwrap(),
     );
 
-    let get_handler = handler::ForPath::new(
+    let get_responder = responder::ForPath::new(
         path_to_override.clone(),
-        handler::NBytesThenError::new(FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING),
+        responder::NBytesThenError::new(FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING),
     );
 
     let served_repository = repo
         .server()
-        .uri_path_override_handler(get_handler)
-        .range_uri_path_override_handler(ContentLengthCorruptor)
+        .response_overrider(for_not_range_requests(get_responder))
+        .response_overrider(for_range_requests(ContentLengthCorruptor))
         .start()
         .unwrap();
 
@@ -292,20 +318,6 @@ async fn resume_validates_content_length() {
     .await;
 
     env.stop().await;
-}
-
-// Sets the status code to 200 (should be 206).
-struct StatusCodeCorruptor;
-impl RangeUriPathHandler for StatusCodeCorruptor {
-    fn handle(
-        &self,
-        _: &Path,
-        _: &http::HeaderValue,
-        mut response: Response<Body>,
-    ) -> BoxFuture<'_, Response<Body>> {
-        *response.status_mut() = http::StatusCode::OK;
-        futures::future::ready(response).boxed()
-    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -329,13 +341,15 @@ async fn resume_validates_206_status() {
             .unwrap(),
     );
 
-    let get_handler =
-        handler::ForPath::new(path_to_override.clone(), handler::OneByteShortThenError);
+    let get_responder =
+        responder::ForPath::new(path_to_override.clone(), responder::OneByteShortThenError);
 
     let served_repository = repo
         .server()
-        .uri_path_override_handler(get_handler)
-        .range_uri_path_override_handler(StatusCodeCorruptor)
+        .response_overrider(for_not_range_requests(get_responder))
+        .response_overrider(for_range_requests(responder::OverwriteStatusCode::new(
+            http::StatusCode::OK,
+        )))
         .start()
         .unwrap();
 
@@ -379,12 +393,12 @@ async fn resume_enforces_max_resumption_limit() {
             .unwrap(),
     );
 
-    let get_handler = handler::ForPath::new(
+    let get_responder = responder::ForPath::new(
         path_to_override.clone(),
-        handler::NBytesThenError::new(FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING),
+        responder::NBytesThenError::new(FILE_SIZE_LARGE_ENOUGH_TO_TRIGGER_HYPER_BATCHING),
     );
 
-    let served_repository = repo.server().uri_path_override_handler(get_handler).start().unwrap();
+    let served_repository = repo.server().response_overrider(get_responder).start().unwrap();
 
     let env = TestEnvBuilder::new().blob_download_resumption_attempts_limit(0).build().await;
     env.register_repo(&served_repository).await;
