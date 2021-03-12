@@ -23,54 +23,68 @@ void curl_easy_setopt_CHECK(CURL* handle, CURLoption option, T t) {
 
 }  // namespace
 
-// All Curl instances share one Curl::Impl instance. RefCountedThreadSafe is used to destroy the
-// Impl after the last Curl instance is destructed.
-class Curl::Impl final : public debug_ipc::FDWatcher, public fxl::RefCountedThreadSafe<Curl::Impl> {
+// All Curl instances share one Curl::MultiHandle instance. RefCountedThreadSafe is used to destroy
+// the MultiHandle after the last Curl instance is destructed.
+class Curl::MultiHandle final : public debug_ipc::FDWatcher,
+                                public fxl::RefCountedThreadSafe<Curl::MultiHandle> {
  public:
-  static fxl::RefPtr<Curl::Impl> GetInstance();
-  CURLM* multi_handle() { return multi_handle_; }
+  static fxl::RefPtr<Curl::MultiHandle> GetInstance();
+  void AddEasyHandle(CURL* easy);
   void OnFDReady(int fd, bool read, bool write, bool err) override;
 
  private:
-  // Callback given to CURL which it uses to inform us it would like to do IO on a socket and that
+  // Function given to CURL which it uses to inform us it would like to do IO on a socket and that
   // we should add it to our polling in the event loop.
-  static int SocketCallback(CURL* easy, curl_socket_t s, int what, void* userp, void* socketp);
+  static int SocketFunction(CURL* easy, curl_socket_t s, int what, void* userp, void* socketp);
 
-  // Callback given to CURL which it uses to inform us it would like to receive a timer notification
+  // Function given to CURL which it uses to inform us it would like to receive a timer notification
   // at a given time in the future. If the callback is called twice before the timer expires it is
   // expected to re-schedule the existing timer, not make a second timer. A timeout of -1 means to
   // cancel the outstanding timer.
-  static int TimerCallback(CURLM* multi, long timeout_ms, void* userp);
+  static int TimerFunction(CURLM* multi, long timeout_ms, void* userp);
 
-  // Impl() will check and set the pointer, and ~Impl() will check and reset it to make sure there's
-  // at most 1 instance per thread at a time.
-  static thread_local Impl* instance_;
+  // MultiHandle() will check and set the pointer, and ~MultiHandle() will check and reset it to
+  // make sure there's at most 1 instance per thread at a time.
+  static thread_local MultiHandle* instance_;
 
-  Impl();
-  ~Impl();
+  MultiHandle();
+  ~MultiHandle();
+
+  void ProcessResponses();
 
   CURLM* multi_handle_;
   std::map<curl_socket_t, debug_ipc::MessageLoop::WatchHandle> watches_;
-  // Indicates whether we already have a task posted to read the messages from multi_handler_.
-  bool cleanup_pending_ = false;
-  // Used in TimerCallback to avoid scheduling 2 timers and invalidate timers after destruction,
+  // Indicates whether we already have a task posted to process the messages in multi_handler_.
+  bool process_pending_ = false;
+  // Used in TimerFunction to avoid scheduling 2 timers and invalidate timers after destruction,
   // because currently there's no way to cancel a timer from the message loop.
   std::shared_ptr<bool> last_timer_valid_ = std::make_shared<bool>(false);
 
-  FRIEND_REF_COUNTED_THREAD_SAFE(Impl);
-  FRIEND_MAKE_REF_COUNTED(Impl);
+  FRIEND_REF_COUNTED_THREAD_SAFE(MultiHandle);
+  FRIEND_MAKE_REF_COUNTED(MultiHandle);
 };
 
-thread_local Curl::Impl* Curl::Impl::instance_ = nullptr;
+thread_local Curl::MultiHandle* Curl::MultiHandle::instance_ = nullptr;
 
-fxl::RefPtr<Curl::Impl> Curl::Impl::GetInstance() {
+fxl::RefPtr<Curl::MultiHandle> Curl::MultiHandle::GetInstance() {
   if (instance_) {
-    return fxl::RefPtr<Curl::Impl>(instance_);
+    return fxl::RefPtr<Curl::MultiHandle>(instance_);
   }
-  return fxl::MakeRefCounted<Curl::Impl>();
+  return fxl::MakeRefCounted<Curl::MultiHandle>();
 }
 
-void Curl::Impl::OnFDReady(int fd, bool read, bool write, bool err) {
+void Curl::MultiHandle::AddEasyHandle(CURL* easy) {
+  auto result = curl_multi_add_handle(multi_handle_, easy);
+  FX_DCHECK(result == CURLM_OK);
+
+  // There's a chance that the response is available immediately in curl_multi_add_handle, which
+  // could happen when the server is localhost, e.g. requesting authentication from metadata server
+  // on GCE. In this case, no SocketFunction will be invoked and we have to call ProcessResponses()
+  // manually.
+  ProcessResponses();
+}
+
+void Curl::MultiHandle::OnFDReady(int fd, bool read, bool write, bool err) {
   int action = 0;
 
   if (read)
@@ -84,13 +98,17 @@ void Curl::Impl::OnFDReady(int fd, bool read, bool write, bool err) {
   auto result = curl_multi_socket_action(multi_handle_, fd, action, &_ignore);
   FX_DCHECK(result == CURLM_OK);
 
-  if (cleanup_pending_) {
+  ProcessResponses();
+}
+
+void Curl::MultiHandle::ProcessResponses() {
+  if (process_pending_) {
     return;
   }
+  process_pending_ = true;
 
-  cleanup_pending_ = true;
-  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [self = fxl::RefPtr<Impl>(this)]() {
-    self->cleanup_pending_ = false;
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [self = fxl::RefPtr<MultiHandle>(this)]() {
+    self->process_pending_ = false;
 
     int _ignore;
     while (auto info = curl_multi_info_read(self->multi_handle_, &_ignore)) {
@@ -118,8 +136,8 @@ void Curl::Impl::OnFDReady(int fd, bool read, bool write, bool err) {
   });
 }
 
-int Curl::Impl::SocketCallback(CURL* /*easy*/, curl_socket_t s, int what, void* /*userp*/,
-                               void* /*socketp*/) {
+int Curl::MultiHandle::SocketFunction(CURL* /*easy*/, curl_socket_t s, int what, void* /*userp*/,
+                                      void* /*socketp*/) {
   FX_DCHECK(instance_);
 
   if (what == CURL_POLL_REMOVE || what == CURL_POLL_NONE) {
@@ -148,7 +166,7 @@ int Curl::Impl::SocketCallback(CURL* /*easy*/, curl_socket_t s, int what, void* 
   return 0;
 }
 
-int Curl::Impl::TimerCallback(CURLM* multi, long timeout_ms, void* /*userp*/) {
+int Curl::MultiHandle::TimerFunction(CURLM* multi, long timeout_ms, void* /*userp*/) {
   FX_DCHECK(instance_);
 
   *instance_->last_timer_valid_ = false;
@@ -158,23 +176,26 @@ int Curl::Impl::TimerCallback(CURLM* multi, long timeout_ms, void* /*userp*/) {
   }
 
   instance_->last_timer_valid_ = std::make_shared<bool>(true);
-  // It's possible to use PostTask instead of PostTimer if timeout_ms is 0. DO NOT call
-  // curl_multi_socket_action directly!
-  debug_ipc::MessageLoop::Current()->PostTimer(
-      FROM_HERE, timeout_ms, [multi, valid = instance_->last_timer_valid_]() {
-        if (!*valid) {
-          return;
-        }
+  auto cb = [multi, valid = instance_->last_timer_valid_]() {
+    if (!*valid) {
+      return;
+    }
 
-        int _ignore;
-        auto result = curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_ignore);
-        FX_DCHECK(result == CURLM_OK);
-      });
+    int _ignore;
+    auto result = curl_multi_socket_action(multi, CURL_SOCKET_TIMEOUT, 0, &_ignore);
+    FX_DCHECK(result == CURLM_OK);
+  };
+
+  if (timeout_ms == 0) {
+    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, std::move(cb));
+  } else {
+    debug_ipc::MessageLoop::Current()->PostTimer(FROM_HERE, timeout_ms, std::move(cb));
+  }
 
   return 0;
 }
 
-Curl::Impl::Impl() {
+Curl::MultiHandle::MultiHandle() {
   FX_DCHECK(instance_ == nullptr);
   instance_ = this;
 
@@ -183,13 +204,13 @@ Curl::Impl::Impl() {
   multi_handle_ = curl_multi_init();
   FX_DCHECK(multi_handle_);
 
-  auto result = curl_multi_setopt(multi_handle_, CURLMOPT_SOCKETFUNCTION, SocketCallback);
+  auto result = curl_multi_setopt(multi_handle_, CURLMOPT_SOCKETFUNCTION, SocketFunction);
   FX_DCHECK(result == CURLM_OK);
-  result = curl_multi_setopt(multi_handle_, CURLMOPT_TIMERFUNCTION, TimerCallback);
+  result = curl_multi_setopt(multi_handle_, CURLMOPT_TIMERFUNCTION, TimerFunction);
   FX_DCHECK(result == CURLM_OK);
 }
 
-Curl::Impl::~Impl() {
+Curl::MultiHandle::~MultiHandle() {
   *last_timer_valid_ = false;
 
   auto result = curl_multi_cleanup(multi_handle_);
@@ -213,7 +234,7 @@ void Curl::GlobalCleanup() {
 }
 
 Curl::Curl() {
-  impl_ = Impl::GetInstance();
+  multi_handle_ = MultiHandle::GetInstance();
   curl_ = curl_easy_init();
   FX_DCHECK(curl_);
 
@@ -319,14 +340,8 @@ void Curl::Perform(fit::callback<void(Curl*, Curl::Error)> cb) {
   self_ref_ = fxl::RefPtr<Curl>(this);
 
   PrepareToPerform();
-  auto result = curl_multi_add_handle(impl_->multi_handle(), curl_);
-  FX_DCHECK(result == CURLM_OK);
-
   multi_cb_ = std::move(cb);
-
-  int _ignore;
-  result = curl_multi_socket_action(impl_->multi_handle(), CURL_SOCKET_TIMEOUT, 0, &_ignore);
-  FX_DCHECK(result == CURLM_OK);
+  multi_handle_->AddEasyHandle(curl_);
 }
 
 long Curl::ResponseCode() {

@@ -100,14 +100,14 @@ class Curl : public fxl::RefCountedThreadSafe<Curl> {
   long ResponseCode();
 
  private:
-  class Impl;
+  class MultiHandle;
 
   Curl();
   ~Curl();
   void FreeSList();
   void PrepareToPerform();
 
-  fxl::RefPtr<Impl> impl_;
+  fxl::RefPtr<MultiHandle> multi_handle_;
   CURL* curl_ = nullptr;
   struct curl_slist* slist_ = nullptr;
   bool get_body_ = true;
