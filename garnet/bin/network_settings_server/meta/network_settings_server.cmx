@@ -4,5 +4,10 @@
     ],
     "program": {
         "binary": "bin/network_settings_server"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.posix.socket.Provider"
+        ]
     }
 }

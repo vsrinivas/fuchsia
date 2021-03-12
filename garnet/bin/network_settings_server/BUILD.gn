@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "network_settings_server"
@@ -24,25 +24,15 @@ rustc_binary("bin") {
   ]
 }
 
-package("network_settings_server") {
-  deps = [ ":bin" ]
+resource("network_settings_server_resources") {
+  sources = [ "resources/index.html" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  binaries = [
-    {
-      name = "network_settings_server"
-    },
-  ]
-  resources = [
-    {
-      path = rebase_path("resources/index.html")
-      dest = "index.html"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/network_settings_server.cmx")
-      dest = "network_settings_server.cmx"
-    },
+fuchsia_package_with_single_component("network_settings_server") {
+  manifest = "meta/network_settings_server.cmx"
+  deps = [
+    ":bin",
+    ":network_settings_server_resources",
   ]
 }
