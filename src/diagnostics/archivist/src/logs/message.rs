@@ -473,7 +473,7 @@ impl DerefMut for Message {
 
 impl Drop for Message {
     fn drop(&mut self) {
-        self.stats.increment_dropped();
+        self.stats.increment_dropped(&self.data);
     }
 }
 

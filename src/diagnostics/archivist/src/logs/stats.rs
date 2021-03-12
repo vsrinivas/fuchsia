@@ -10,33 +10,48 @@ use fuchsia_inspect_derive::Inspect;
 #[derive(Default, Inspect)]
 pub struct LogStreamStats {
     last_timestamp: IntProperty,
-    total: UintProperty,
-    dropped: UintProperty,
-    fatal: UintProperty,
-    error: UintProperty,
-    warn: UintProperty,
-    info: UintProperty,
-    debug: UintProperty,
-    trace: UintProperty,
+    total: LogCounter,
+    dropped: LogCounter,
+    fatal: LogCounter,
+    error: LogCounter,
+    warn: LogCounter,
+    info: LogCounter,
+    debug: LogCounter,
+    trace: LogCounter,
 
     inspect_node: Node,
 }
 
 impl LogStreamStats {
-    pub fn increment_dropped(&self) {
-        self.dropped.add(1);
+    pub fn increment_dropped(&self, msg: &LogsData) {
+        self.dropped.count(msg);
     }
 
     pub fn ingest_message(&self, msg: &LogsData) {
         self.last_timestamp.set(msg.metadata.timestamp.into());
-        self.total.add(1);
+        self.total.count(msg);
         match msg.metadata.severity {
-            Severity::Trace => self.trace.add(1),
-            Severity::Debug => self.debug.add(1),
-            Severity::Info => self.info.add(1),
-            Severity::Warn => self.warn.add(1),
-            Severity::Error => self.error.add(1),
-            Severity::Fatal => self.fatal.add(1),
+            Severity::Trace => self.trace.count(msg),
+            Severity::Debug => self.debug.count(msg),
+            Severity::Info => self.info.count(msg),
+            Severity::Warn => self.warn.count(msg),
+            Severity::Error => self.error.count(msg),
+            Severity::Fatal => self.fatal.count(msg),
         }
+    }
+}
+
+#[derive(Default, Inspect)]
+struct LogCounter {
+    number: UintProperty,
+    bytes: UintProperty,
+
+    inspect_node: Node,
+}
+
+impl LogCounter {
+    fn count(&self, msg: &LogsData) {
+        self.number.add(1);
+        self.bytes.add(msg.metadata.size_bytes as u64);
     }
 }

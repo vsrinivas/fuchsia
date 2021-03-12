@@ -97,14 +97,38 @@ mod tests {
                         url: "fuchsia-pkg://UNKNOWN",
                         logs: {
                             last_timestamp: AnyProperty,
-                            total: 5u64,
-                            dropped: 0u64,
-                            trace: 0u64,
-                            debug: 0u64,
-                            info: 2u64,
-                            warn: 2u64,
-                            error: 1u64,
-                            fatal: 0u64,
+                            total: {
+                                number: 5u64,
+                                bytes: AnyProperty,
+                            },
+                            dropped: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            trace: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            debug: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            info: {
+                                number: 2u64,
+                                bytes: AnyProperty,
+                            },
+                            warn: {
+                                number: 2u64,
+                                bytes: AnyProperty,
+                            },
+                            error: {
+                                number: 1u64,
+                                bytes: AnyProperty,
+                            },
+                            fatal: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
                         },
                     },
                 }
@@ -151,28 +175,76 @@ mod tests {
                             url: "http://foo.com",
                             logs: {
                                 last_timestamp: AnyProperty,
-                                total: 1u64,
-                                dropped: 0u64,
-                                trace: 0u64,
-                                debug: 0u64,
-                                info: 0u64,
-                                warn: 1u64,
-                                error: 0u64,
-                                fatal: 0u64,
+                                total: {
+                                    number: 1u64,
+                                    bytes: AnyProperty,
+                                },
+                                dropped: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
+                                trace: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
+                                debug: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
+                                info: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
+                                warn: {
+                                    number: 1u64,
+                                    bytes: AnyProperty,
+                                },
+                                error: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
+                                fatal: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
                             },
                         },
                         $bar_moniker: {
                             url: "http://bar.com",
                             logs: {
                                 last_timestamp: AnyProperty,
-                                total: 1u64,
-                                dropped: 0u64,
-                                trace: 0u64,
-                                debug: 0u64,
-                                info: 0u64,
-                                warn: 0u64,
-                                error: 1u64,
-                                fatal: 0u64,
+                                total: {
+                                    number: 1u64,
+                                    bytes: AnyProperty,
+                                },
+                                dropped: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
+                                trace: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
+                                debug: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
+                                info: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
+                                warn: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
+                                error: {
+                                    number: 1u64,
+                                    bytes: AnyProperty,
+                                },
+                                fatal: {
+                                    number: 0u64,
+                                    bytes: 0u64,
+                                },
                             },
                         },
                     },
@@ -563,14 +635,38 @@ mod tests {
                         url: "fuchsia-boot://kernel",
                         logs: {
                             last_timestamp: AnyProperty,
-                            total: 3u64,
-                            dropped: 0u64,
-                            trace: 0u64,
-                            debug: 0u64,
-                            info: 3u64,
-                            warn: 0u64,
-                            error: 0u64,
-                            fatal: 0u64,
+                            total: {
+                                number: 3u64,
+                                bytes: AnyProperty,
+                            },
+                            dropped: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            trace: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            debug: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            info: {
+                                number: 3u64,
+                                bytes: AnyProperty,
+                            },
+                            warn: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            error: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
+                            fatal: {
+                                number: 0u64,
+                                bytes: 0u64,
+                            },
                         },
                     },
                 }

@@ -222,9 +222,22 @@ impl PuppetEnv {
 
         for (moniker, source) in sources.get_children() {
             if let Some(logs) = source.get_child("logs") {
-                let total = *logs.get_property("total").unwrap().uint().unwrap() as usize;
-                let dropped = *logs.get_property("dropped").unwrap().uint().unwrap() as usize;
-                counts.insert(moniker.clone(), Count { total, dropped });
+                let total = logs.get_child("total").unwrap();
+                let total_number = *total.get_property("number").unwrap().uint().unwrap() as usize;
+                let total_bytes = *total.get_property("bytes").unwrap().uint().unwrap() as usize;
+                assert_eq!(total_bytes, total_number * TEST_PACKET_LEN);
+
+                let dropped = logs.get_child("dropped").unwrap();
+                let dropped_number =
+                    *dropped.get_property("number").unwrap().uint().unwrap() as usize;
+                let dropped_bytes =
+                    *dropped.get_property("bytes").unwrap().uint().unwrap() as usize;
+                assert_eq!(dropped_bytes, dropped_number * TEST_PACKET_LEN);
+
+                counts.insert(
+                    moniker.clone(),
+                    Count { total: total_number, dropped: dropped_number },
+                );
             }
         }
 
