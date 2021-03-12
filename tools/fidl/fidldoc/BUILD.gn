@@ -45,7 +45,10 @@ if (host_toolchain == current_toolchain) {
   rustc_binary("fidldoc_bin") {
     name = "fidldoc"
     edition = "2018"
-    deps = [ ":rust_crates" ]
+    deps = [
+      ":rust_crates",
+      "//src/lib/libdoc",
+    ]
 
     sources = common_sources
 
@@ -62,6 +65,7 @@ if (host_toolchain == current_toolchain) {
     deps = [
       ":fidldoc_bin",
       ":rust_crates",
+      "//src/lib/libdoc",
     ]
 
     sources = common_sources
