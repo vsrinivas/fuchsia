@@ -343,9 +343,3 @@ func contains(items []string, target string) bool {
 	}
 	return false
 }
-
-// thirdPartyPrebuilt returns the absolute path to a platform-specific prebuilt
-// in the //prebuilt/third_party subdirectory of the checkout.
-func thirdPartyPrebuilt(checkoutDir, platform, name string) string {
-	return filepath.Join(checkoutDir, "prebuilt", "third_party", name, platform, name)
-}

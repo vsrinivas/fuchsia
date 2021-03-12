@@ -7,9 +7,16 @@ package fint
 import (
 	"context"
 	"io"
+	"path/filepath"
 )
 
 type subprocessRunner interface {
 	Run(ctx context.Context, cmd []string, stdout, stderr io.Writer) error
 	RunWithStdin(ctx context.Context, cmd []string, stdout, stderr io.Writer, stdin io.Reader) error
+}
+
+// thirdPartyPrebuilt returns the absolute path to a platform-specific prebuilt
+// in the //prebuilt/third_party subdirectory of the checkout.
+func thirdPartyPrebuilt(checkoutDir, platform, name string) string {
+	return filepath.Join(checkoutDir, "prebuilt", "third_party", name, platform, name)
 }

@@ -9,7 +9,7 @@ import (
 	"flag"
 
 	"github.com/google/subcommands"
-	"go.fuchsia.dev/fuchsia/tools/lib/logger"
+	"go.fuchsia.dev/fuchsia/tools/integration/fint"
 )
 
 type BuildCommand struct {
@@ -36,9 +36,6 @@ func (c *BuildCommand) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interf
 			return err
 		}
 
-		logger.Infof(ctx, "static: %v", staticSpec)
-		logger.Infof(ctx, "context: %v", contextSpec)
-
-		return nil
+		return fint.Build(ctx, staticSpec, contextSpec)
 	})
 }
