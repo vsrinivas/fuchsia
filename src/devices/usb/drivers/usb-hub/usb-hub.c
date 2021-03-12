@@ -310,8 +310,8 @@ static int usb_hub_thread(void* arg) {
   size_t out_length;
   int desc_type = (hub->hub_speed == USB_SPEED_SUPER ? USB_HUB_DESC_TYPE_SS : USB_HUB_DESC_TYPE);
   zx_status_t result =
-      usb_get_descriptor(&hub->usb, USB_TYPE_CLASS | USB_RECIP_DEVICE, desc_type, 0, &hub_desc,
-                         sizeof(hub_desc), ZX_TIME_INFINITE, &out_length);
+      usb_get_descriptor(&hub->usb, USB_TYPE_CLASS | USB_RECIP_DEVICE, desc_type, 0,
+                         (void*)&hub_desc, sizeof(hub_desc), ZX_TIME_INFINITE, &out_length);
   if (result < 0) {
     zxlogf(ERROR, "get hub descriptor failed: %d", result);
     device_init_reply(hub->zxdev, result, NULL);
@@ -342,8 +342,9 @@ static int usb_hub_thread(void* arg) {
   bool multi_tt = false;
   if (hub->hub_speed == USB_SPEED_LOW || hub->hub_speed == USB_SPEED_FULL) {
     usb_device_qualifier_descriptor_t qual_desc;
-    result = usb_get_descriptor(&hub->usb, USB_TYPE_STANDARD, USB_DT_DEVICE_QUALIFIER, 0,
-                                &qual_desc, sizeof(qual_desc), ZX_TIME_INFINITE, &out_length);
+    result =
+        usb_get_descriptor(&hub->usb, USB_TYPE_STANDARD, USB_DT_DEVICE_QUALIFIER, 0,
+                           (void*)&qual_desc, sizeof(qual_desc), ZX_TIME_INFINITE, &out_length);
     if (result < 0) {
       zxlogf(ERROR, "get device_qualifier descriptor failed: %d", result);
       device_init_reply(hub->zxdev, result, NULL);
@@ -360,16 +361,16 @@ static int usb_hub_thread(void* arg) {
       device_init_reply(hub->zxdev, result, NULL);
       return result;
     }
-    multi_tt = qual_desc.b_device_protocol == 2;
+    multi_tt = qual_desc.bDeviceProtocol == 2;
   } else if (hub->hub_speed == USB_SPEED_HIGH) {
     usb_device_descriptor_t dev_desc;
-    result = usb_get_descriptor(&hub->usb, USB_TYPE_STANDARD, USB_DT_DEVICE, 0, &dev_desc,
+    result = usb_get_descriptor(&hub->usb, USB_TYPE_STANDARD, USB_DT_DEVICE, 0, (void*)&dev_desc,
                                 sizeof(dev_desc), ZX_TIME_INFINITE, &out_length);
     if (result < 0) {
       zxlogf(ERROR, "get device descriptor failed: %d", result);
       device_init_reply(hub->zxdev, result, NULL);
       return result;
-    } else if (dev_desc.bLength != out_length) {
+    } else if (dev_desc.b_length != out_length) {
       zxlogf(ERROR, "usb_device_descriptor_t.bLength != out_length");
       result = ZX_ERR_BAD_STATE;
       device_init_reply(hub->zxdev, result, NULL);
