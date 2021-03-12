@@ -911,6 +911,11 @@ group("default") {
                      universe_package_labels != []) {
     deps += [ "//build/images:default-images" ]
   }
+
+  # Build Banjo libraries as FIDL libraries. This ensures no regression occurs
+  # while deprecating Banjo.
+  # See fxb/67196 for more information.
+  deps += [ "//sdk/banjo:translated" ]
 }
 
 # These groups exist at the root of the build so relative labels specified
