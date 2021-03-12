@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1449
+From //build/config/BUILDCONFIG.gn:1500
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/bf5ea841df6ea61da3fe5137e72aedeef80c2736/src/intel/vulkan/BUILD.gn#26)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/311a46af85ddf24a7662d44fc308a02c0baa3c90/src/intel/vulkan/BUILD.gn#26)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/bf5ea841df6ea61da3fe5137e72aedeef80c2736/src/intel/vulkan/BUILD.gn#28)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/311a46af85ddf24a7662d44fc308a02c0baa3c90/src/intel/vulkan/BUILD.gn#28)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -646,6 +646,14 @@ non-production GN labels. Build will fail if such dependency is found.
 
 From //build/images/args.gni:94
 
+### check_repeatability
+If enabled, run each affected action twice (once with renamed outputs)
+and compare the outputs' contents for reproducibility.
+
+**Current value (from the default):** `false`
+
+From //build/config/BUILDCONFIG.gn:526
+
 ### chromium_build_dir
 This variable specifies a chromium build output directory, such as `~/chromium/src/out/fuchsia`,
 that cast_runner, web_runner, and web_engine will be obtained from. If unset, the prebuilt
@@ -1086,7 +1094,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1228
+From //build/config/BUILDCONFIG.gn:1279
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1776,7 +1784,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1103
+From //build/config/BUILDCONFIG.gn:1154
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -3041,7 +3049,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1439
+From //build/config/BUILDCONFIG.gn:1490
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3050,7 +3058,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1444
+From //build/config/BUILDCONFIG.gn:1495
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3082,7 +3090,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1274
+From //build/config/BUILDCONFIG.gn:1325
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3362,7 +3370,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1258
+From //build/config/BUILDCONFIG.gn:1309
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
