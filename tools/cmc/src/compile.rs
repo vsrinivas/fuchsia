@@ -69,20 +69,20 @@ pub fn compile(
 
 fn compile_cml(document: &cml::Document) -> Result<fsys::ComponentDecl, Error> {
     let all_capability_names = document.all_capability_names();
+    let all_children = document.all_children_names().into_iter().collect();
+    let all_collections = document.all_collection_names().into_iter().collect();
     Ok(fsys::ComponentDecl {
         program: document.program.as_ref().map(|p| translate_program(p)).transpose()?,
         uses: document.r#use.as_ref().map(translate_use).transpose()?,
         exposes: document
             .expose
             .as_ref()
-            .map(|e| translate_expose(e, &all_capability_names))
+            .map(|e| translate_expose(e, &all_capability_names, &all_collections))
             .transpose()?,
         offers: document
             .offer
             .as_ref()
             .map(|offer| {
-                let all_children = document.all_children_names().into_iter().collect();
-                let all_collections = document.all_collection_names().into_iter().collect();
                 translate_offer(offer, &all_children, &all_collections, &all_capability_names)
             })
             .transpose()?,
@@ -323,12 +323,13 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<fsys::UseDecl>, Error> {
 fn translate_expose(
     expose_in: &Vec<cml::Expose>,
     all_capability_names: &HashSet<cml::Name>,
+    all_collections: &HashSet<&cml::Name>,
 ) -> Result<Vec<fsys::ExposeDecl>, Error> {
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
         let target = extract_expose_target(expose)?;
         if let Some(n) = expose.service() {
-            let sources = extract_all_expose_sources(expose)?;
+            let sources = extract_all_expose_sources(expose, Some(all_collections))?;
             let target_name = one_target_capability_name(expose, expose)?;
             for source in sources {
                 out_exposes.push(fsys::ExposeDecl::Service(fsys::ExposeServiceDecl {
@@ -405,7 +406,7 @@ fn translate_offer(
     let mut out_offers = vec![];
     for offer in offer_in.iter() {
         if let Some(n) = offer.service() {
-            let sources = extract_all_offer_sources(offer)?;
+            let sources = extract_all_offer_sources(offer, Some(all_collections))?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_name) in targets {
                 for source in &sources {
@@ -775,15 +776,17 @@ fn extract_expose_rights(in_obj: &cml::Expose) -> Result<Option<fio2::Operations
 fn expose_source_from_ref(
     reference: &cml::ExposeFromRef,
     all_capability_names: Option<&HashSet<cml::Name>>,
+    all_collections: Option<&HashSet<&cml::Name>>,
 ) -> Result<fsys::Ref, Error> {
     match reference {
         cml::ExposeFromRef::Named(name) => {
             if all_capability_names.is_some() && all_capability_names.unwrap().contains(&name) {
-                return Ok(fsys::Ref::Capability(fsys::CapabilityRef {
-                    name: name.clone().into(),
-                }));
+                Ok(fsys::Ref::Capability(fsys::CapabilityRef { name: name.clone().into() }))
+            } else if all_collections.is_some() && all_collections.unwrap().contains(&name) {
+                Ok(fsys::Ref::Collection(fsys::CollectionRef { name: name.clone().into() }))
+            } else {
+                Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
             }
-            Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
         }
         cml::ExposeFromRef::Framework => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
         cml::ExposeFromRef::Self_ => Ok(fsys::Ref::Self_(fsys::SelfRef {})),
@@ -795,7 +798,7 @@ fn extract_single_expose_source(
     all_capability_names: Option<&HashSet<cml::Name>>,
 ) -> Result<fsys::Ref, Error> {
     match &in_obj.from {
-        OneOrMany::One(reference) => expose_source_from_ref(&reference, all_capability_names),
+        OneOrMany::One(reference) => expose_source_from_ref(&reference, all_capability_names, None),
         OneOrMany::Many(many) => {
             return Err(Error::internal(format!(
                 "multiple unexpected \"from\" clauses for \"expose\": {:?}",
@@ -805,8 +808,16 @@ fn extract_single_expose_source(
     }
 }
 
-fn extract_all_expose_sources(in_obj: &cml::Expose) -> Result<Vec<fsys::Ref>, Error> {
-    in_obj.from.to_vec().into_iter().map(|e| expose_source_from_ref(e, None)).collect()
+fn extract_all_expose_sources(
+    in_obj: &cml::Expose,
+    all_collections: Option<&HashSet<&cml::Name>>,
+) -> Result<Vec<fsys::Ref>, Error> {
+    in_obj
+        .from
+        .to_vec()
+        .into_iter()
+        .map(|e| expose_source_from_ref(e, None, all_collections))
+        .collect()
 }
 
 fn extract_offer_rights(in_obj: &cml::Offer) -> Result<Option<fio2::Operations>, Error> {
@@ -847,7 +858,7 @@ where
 {
     match in_obj.from_() {
         OneOrMany::One(reference) => {
-            translate::offer_source_from_ref(reference, all_capability_names)
+            translate::offer_source_from_ref(reference, all_capability_names, None)
         }
         many => {
             return Err(Error::internal(format!(
@@ -858,12 +869,15 @@ where
     }
 }
 
-fn extract_all_offer_sources<T: cml::FromClause>(in_obj: &T) -> Result<Vec<fsys::Ref>, Error> {
+fn extract_all_offer_sources<T: cml::FromClause>(
+    in_obj: &T,
+    all_collections: Option<&HashSet<&cml::Name>>,
+) -> Result<Vec<fsys::Ref>, Error> {
     in_obj
         .from_()
         .to_vec()
         .into_iter()
-        .map(|r| translate::offer_source_from_ref(r.clone(), None))
+        .map(|r| translate::offer_source_from_ref(r.clone(), None, all_collections))
         .collect()
 }
 
@@ -1355,6 +1369,10 @@ mod tests {
                         "from": ["#logger", "self"],
                     },
                     {
+                        "service": "my.service.CollectionService",
+                        "from": ["#coll"],
+                    },
+                    {
                         "protocol": "fuchsia.logger.Log",
                         "from": "#logger",
                         "as": "fuchsia.logger.LegacyLog",
@@ -1404,7 +1422,13 @@ mod tests {
                         "name": "logger",
                         "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     },
-                ]
+                ],
+                "collections": [
+                    {
+                        "name": "coll",
+                        "durability": "transient",
+                    },
+                ],
             }),
             output = fsys::ComponentDecl {
                 exposes: Some(vec![
@@ -1437,6 +1461,15 @@ mod tests {
                             source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
                             source_name: Some("my.service.Service".to_string()),
                             target_name: Some("my.service.Service".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            ..fsys::ExposeServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::ExposeDecl::Service (
+                        fsys::ExposeServiceDecl {
+                            source: Some(fsys::Ref::Collection(fsys::CollectionRef { name: "coll".to_string() })),
+                            source_name: Some("my.service.CollectionService".to_string()),
+                            target_name: Some("my.service.CollectionService".to_string()),
                             target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
                             ..fsys::ExposeServiceDecl::EMPTY
                         }
@@ -1600,6 +1633,14 @@ mod tests {
                         ..fsys::ChildDecl::EMPTY
                     }
                 ]),
+                collections: Some(vec![
+                    fsys::CollectionDecl {
+                        name: Some("coll".to_string()),
+                        durability: Some(fsys::Durability::Transient),
+                        environment: None,
+                        ..fsys::CollectionDecl::EMPTY
+                    }
+                ]),
                 ..default_component_decl()
             },
         },
@@ -1622,6 +1663,11 @@ mod tests {
                         "service": "my.service.Service",
                         "from": ["#logger", "self"],
                         "to": [ "#netstack" ]
+                    },
+                    {
+                        "service": "my.service.CollectionService",
+                        "from": ["#modular"],
+                        "to": [ "#netstack" ],
                     },
                     {
                         "protocol": "fuchsia.logger.LegacyLog",
@@ -1798,6 +1844,18 @@ mod tests {
                                 collection: None,
                             })),
                             target_name: Some("my.service.Service".to_string()),
+                            ..fsys::OfferServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Collection(fsys::CollectionRef { name: "modular".to_string() })),
+                            source_name: Some("my.service.CollectionService".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.CollectionService".to_string()),
                             ..fsys::OfferServiceDecl::EMPTY
                         }
                     ),

@@ -853,6 +853,12 @@ impl<'a> ValidationContext<'a> {
                     &reference_description,
                     from_clause,
                 )?;
+            } else if cap.service().is_some() {
+                // Services can also be sourced from collections.
+                self.validate_component_child_or_collection_ref(
+                    &reference_description,
+                    &from_clause,
+                )?;
             } else {
                 self.validate_component_child_ref(&reference_description, &from_clause)?;
             }
@@ -877,6 +883,33 @@ impl<'a> ValidationContext<'a> {
                 if !self.all_children.contains_key(name) {
                     return Err(Error::validate(format!(
                         "{} \"{}\" does not appear in \"children\"",
+                        reference_description, component_ref
+                    )));
+                }
+                Ok(())
+            }
+            // We don't attempt to validate other reference types.
+            _ => Ok(()),
+        }
+    }
+
+    /// Validates that the given component/collection exists.
+    ///
+    /// - `reference_description` is a human-readable description of the reference used in error
+    ///   message, such as `"offer" source`.
+    /// - `component_ref` is a reference to a component/collection. If the reference is a named
+    ///   child or collection, we ensure that the child component/collection exists.
+    fn validate_component_child_or_collection_ref(
+        &self,
+        reference_description: &str,
+        component_ref: &cml::AnyRef,
+    ) -> Result<(), Error> {
+        match component_ref {
+            cml::AnyRef::Named(name) => {
+                // Ensure we have a child defined by that name.
+                if !self.all_children.contains_key(name) && !self.all_collections.contains(name) {
+                    return Err(Error::validate(format!(
+                        "{} \"{}\" does not appear in \"children\" or \"collections\"",
                         reference_description, component_ref
                     )));
                 }
@@ -1749,7 +1782,7 @@ mod tests {
                     { "service": "fuchsia.logger.Log", "from": "#missing" },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#missing\" does not appear in \"children\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#missing\" does not appear in \"children\" or \"collections\""
         ),
         test_cml_expose_duplicate_target_names(
             json!({
@@ -2008,6 +2041,66 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "Resolver \"pkg_resolver\" is exposed from self, so it must be declared as a \"resolver\" in \"capabilities\""
         ),
+        test_cml_expose_protocol_from_collection_invalid(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "expose": [
+                    { "protocol": "fuchsia.logger.Log", "from": "#coll" },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#coll\" does not appear in \"children\" or \"capabilities\""
+        ),
+        test_cml_expose_directory_from_collection_invalid(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "expose": [
+                    { "directory": "temp", "from": "#coll" },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#coll\" does not appear in \"children\""
+        ),
+        test_cml_expose_runner_from_collection_invalid(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "expose": [
+                    { "runner": "elf", "from": "#coll" },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#coll\" does not appear in \"children\""
+        ),
+        test_cml_expose_resolver_from_collection_invalid(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "expose": [
+                    { "resolver": "base", "from": "#coll" },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#coll\" does not appear in \"children\""
+        ),
+        test_cml_expose_service_from_collection_ok(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "expose": [ {
+                    "service": "fuchsia.logger.Log", "from": "#coll"
+                }]
+            }),
+            Ok(())
+        ),
         test_cml_expose_to_framework_ok(
             json!({
                 "capabilities": [
@@ -2242,7 +2335,7 @@ mod tests {
                         },
                     ],
                 }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#missing\" does not appear in \"children\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#missing\" does not appear in \"children\" or \"collections\""
         ),
         test_cml_storage_offer_from_child(
             json!({
@@ -2315,6 +2408,118 @@ mod tests {
                     ]
                 }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#does-not-exist\" does not appear in \"children\" or \"capabilities\""
+        ),
+        test_cml_offer_protocol_from_collection_invalid(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "children": [ {
+                    "name": "echo_server",
+                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                } ],
+                "offer": [
+                    { "protocol": "fuchsia.logger.Log", "from": "#coll", "to": [ "#echo_server" ] },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#coll\" does not appear in \"children\" or \"capabilities\""
+        ),
+        test_cml_offer_directory_from_collection_invalid(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "children": [ {
+                    "name": "echo_server",
+                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                } ],
+                "offer": [
+                    { "directory": "temp", "from": "#coll", "to": [ "#echo_server" ] },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#coll\" does not appear in \"children\""
+        ),
+        test_cml_offer_storage_from_collection_invalid(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "children": [ {
+                    "name": "echo_server",
+                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                } ],
+                "offer": [
+                    { "storage": "cache", "from": "#coll", "to": [ "#echo_server" ] },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Storage \"cache\" is offered from a child, but storage capabilities cannot be exposed"
+        ),
+        test_cml_offer_runner_from_collection_invalid(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "children": [ {
+                    "name": "echo_server",
+                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                } ],
+                "offer": [
+                    { "runner": "elf", "from": "#coll", "to": [ "#echo_server" ] },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#coll\" does not appear in \"children\""
+        ),
+        test_cml_offer_resolver_from_collection_invalid(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "children": [ {
+                    "name": "echo_server",
+                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                } ],
+                "offer": [
+                    { "resolver": "base", "from": "#coll", "to": [ "#echo_server" ] },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#coll\" does not appear in \"children\""
+        ),
+        test_cml_offer_event_from_collection_invalid(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "children": [ {
+                    "name": "echo_server",
+                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                } ],
+                "offer": [
+                    { "event": "started", "from": "#coll", "to": [ "#echo_server" ] },
+                ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#coll\" does not appear in \"children\""
+        ),
+        test_cml_offer_service_from_collection_ok(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "children": [ {
+                    "name": "echo_server",
+                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                } ],
+                "offer": [ {
+                    "service": "fuchsia.logger.Log", "from": "#coll", "to": [ "#echo_server" ]
+                }]
+            }),
+            Ok(())
         ),
         test_cml_offer_empty_targets(
             json!({

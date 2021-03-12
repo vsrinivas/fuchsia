@@ -59,6 +59,7 @@ pub fn translate_capabilities(
                 source: Some(offer_source_from_ref(
                     capability.from.as_ref().unwrap().into(),
                     None,
+                    None,
                 )?),
                 subdir: capability.subdir.clone().map(Into::into),
                 ..fsys::StorageDecl::EMPTY
@@ -123,15 +124,19 @@ where
 pub fn offer_source_from_ref(
     reference: AnyRef<'_>,
     all_capability_names: Option<&HashSet<Name>>,
+    all_collection_names: Option<&HashSet<&Name>>,
 ) -> Result<fsys::Ref, Error> {
     match reference {
         AnyRef::Named(name) => {
             if all_capability_names.is_some() && all_capability_names.unwrap().contains(&name) {
-                return Ok(fsys::Ref::Capability(fsys::CapabilityRef {
-                    name: name.clone().into(),
-                }));
+                Ok(fsys::Ref::Capability(fsys::CapabilityRef { name: name.clone().into() }))
+            } else if all_collection_names.is_some()
+                && all_collection_names.unwrap().contains(&name)
+            {
+                Ok(fsys::Ref::Collection(fsys::CollectionRef { name: name.clone().into() }))
+            } else {
+                Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
             }
-            Ok(fsys::Ref::Child(fsys::ChildRef { name: name.clone().into(), collection: None }))
         }
         AnyRef::Framework => Ok(fsys::Ref::Framework(fsys::FrameworkRef {})),
         AnyRef::Debug => Ok(fsys::Ref::Debug(fsys::DebugRef {})),

@@ -324,6 +324,12 @@ enum AllowableIds {
     Many,
 }
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum CollectionSource {
+    Allow,
+    Deny,
+}
+
 #[derive(Debug, PartialEq, Eq, Hash)]
 enum TargetId<'a> {
     Component(&'a str),
@@ -997,6 +1003,24 @@ impl<'a> ValidationContext<'a> {
         }
     }
 
+    fn validate_source_collection(&mut self, collection: &fsys::CollectionRef, decl_type: &str) {
+        if !check_name(
+            Some(&collection.name),
+            decl_type,
+            "source.collection.name",
+            &mut self.errors,
+        ) {
+            return;
+        }
+        if !self.all_collections.contains(&collection.name as &str) {
+            self.errors.push(Error::invalid_collection(
+                decl_type,
+                "source",
+                &collection.name as &str,
+            ));
+        }
+    }
+
     fn validate_source_capability(
         &mut self,
         capability: &fsys::CapabilityRef,
@@ -1027,6 +1051,7 @@ impl<'a> ValidationContext<'a> {
                 self.validate_expose_fields(
                     decl,
                     AllowableIds::Many,
+                    CollectionSource::Allow,
                     e.source.as_ref(),
                     e.source_name.as_ref(),
                     e.target_name.as_ref(),
@@ -1046,6 +1071,7 @@ impl<'a> ValidationContext<'a> {
                 self.validate_expose_fields(
                     decl,
                     AllowableIds::One,
+                    CollectionSource::Deny,
                     e.source.as_ref(),
                     e.source_name.as_ref(),
                     e.target_name.as_ref(),
@@ -1065,6 +1091,7 @@ impl<'a> ValidationContext<'a> {
                 self.validate_expose_fields(
                     decl,
                     AllowableIds::One,
+                    CollectionSource::Deny,
                     e.source.as_ref(),
                     e.source_name.as_ref(),
                     e.target_name.as_ref(),
@@ -1102,6 +1129,7 @@ impl<'a> ValidationContext<'a> {
                 self.validate_expose_fields(
                     decl,
                     AllowableIds::One,
+                    CollectionSource::Deny,
                     e.source.as_ref(),
                     e.source_name.as_ref(),
                     e.target_name.as_ref(),
@@ -1120,6 +1148,7 @@ impl<'a> ValidationContext<'a> {
                 self.validate_expose_fields(
                     decl,
                     AllowableIds::One,
+                    CollectionSource::Deny,
                     e.source.as_ref(),
                     e.source_name.as_ref(),
                     e.target_name.as_ref(),
@@ -1143,6 +1172,7 @@ impl<'a> ValidationContext<'a> {
         &mut self,
         decl: &str,
         allowable_ids: AllowableIds,
+        collection_source: CollectionSource,
         source: Option<&fsys::Ref>,
         source_name: Option<&String>,
         target_name: Option<&'a String>,
@@ -1158,6 +1188,9 @@ impl<'a> ValidationContext<'a> {
                 }
                 fsys::Ref::Capability(c) => {
                     self.validate_source_capability(c, decl, "source");
+                }
+                fsys::Ref::Collection(c) if collection_source == CollectionSource::Allow => {
+                    self.validate_source_collection(c, decl);
                 }
                 _ => {
                     self.errors.push(Error::invalid_field(decl, "source"));
@@ -1217,6 +1250,7 @@ impl<'a> ValidationContext<'a> {
                 self.validate_offer_fields(
                     decl,
                     AllowableIds::Many,
+                    CollectionSource::Allow,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
@@ -1236,6 +1270,7 @@ impl<'a> ValidationContext<'a> {
                 self.validate_offer_fields(
                     decl,
                     AllowableIds::One,
+                    CollectionSource::Deny,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
@@ -1259,6 +1294,7 @@ impl<'a> ValidationContext<'a> {
                 self.validate_offer_fields(
                     decl,
                     AllowableIds::One,
+                    CollectionSource::Deny,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
@@ -1299,6 +1335,7 @@ impl<'a> ValidationContext<'a> {
                 self.validate_offer_fields(
                     decl,
                     AllowableIds::One,
+                    CollectionSource::Deny,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
@@ -1317,6 +1354,7 @@ impl<'a> ValidationContext<'a> {
                 self.validate_offer_fields(
                     decl,
                     AllowableIds::One,
+                    CollectionSource::Deny,
                     o.source.as_ref(),
                     o.source_name.as_ref(),
                     o.target.as_ref(),
@@ -1376,6 +1414,7 @@ impl<'a> ValidationContext<'a> {
         &mut self,
         decl: &str,
         allowable_names: AllowableIds,
+        collection_source: CollectionSource,
         source: Option<&fsys::Ref>,
         source_name: Option<&String>,
         target: Option<&'a fsys::Ref>,
@@ -1387,6 +1426,9 @@ impl<'a> ValidationContext<'a> {
             Some(fsys::Ref::Framework(_)) => {}
             Some(fsys::Ref::Child(child)) => self.validate_source_child(child, decl),
             Some(fsys::Ref::Capability(c)) => self.validate_source_capability(c, decl, "source"),
+            Some(fsys::Ref::Collection(c)) if collection_source == CollectionSource::Allow => {
+                self.validate_source_collection(c, decl)
+            }
             Some(_) => self.errors.push(Error::invalid_field(decl, "source")),
             None => self.errors.push(Error::missing_field(decl, "source")),
         }
@@ -2999,6 +3041,78 @@ mod tests {
                 Error::invalid_field("ExposeDirectoryDecl", "target"),
             ])),
         },
+        test_validate_exposes_invalid_source_collection => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.collections = Some(vec![CollectionDecl{
+                    name: Some("col".to_string()),
+                    durability: Some(Durability::Transient),
+                    ..CollectionDecl::EMPTY
+                }]);
+                decl.exposes = Some(vec![
+                    ExposeDecl::Protocol(ExposeProtocolDecl {
+                        source: Some(Ref::Collection(CollectionRef { name: "col".to_string() })),
+                        source_name: Some("a".to_string()),
+                        target_name: Some("a".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                        ..ExposeProtocolDecl::EMPTY
+                    }),
+                    ExposeDecl::Directory(ExposeDirectoryDecl {
+                        source: Some(Ref::Collection(CollectionRef {name: "col".to_string()})),
+                        source_name: Some("b".to_string()),
+                        target_name: Some("b".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                        ..ExposeDirectoryDecl::EMPTY
+                    }),
+                    ExposeDecl::Runner(ExposeRunnerDecl {
+                        source: Some(Ref::Collection(CollectionRef {name: "col".to_string()})),
+                        source_name: Some("c".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                        target_name: Some("c".to_string()),
+                        ..ExposeRunnerDecl::EMPTY
+                    }),
+                    ExposeDecl::Resolver(ExposeResolverDecl {
+                        source: Some(Ref::Collection(CollectionRef {name: "col".to_string()})),
+                        source_name: Some("d".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                        target_name: Some("d".to_string()),
+                        ..ExposeResolverDecl::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("ExposeProtocolDecl", "source"),
+                Error::invalid_field("ExposeDirectoryDecl", "source"),
+                Error::invalid_field("ExposeRunnerDecl", "source"),
+                Error::invalid_field("ExposeResolverDecl", "source"),
+            ])),
+        },
+        test_validate_exposes_sources_collection => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.collections = Some(vec![
+                    CollectionDecl {
+                        name: Some("col".to_string()),
+                        durability: Some(Durability::Transient),
+                        ..CollectionDecl::EMPTY
+                    }
+                ]);
+                decl.exposes = Some(vec![
+                    ExposeDecl::Service(ExposeServiceDecl {
+                        source: Some(Ref::Collection(CollectionRef { name: "col".to_string() })),
+                        source_name: Some("a".to_string()),
+                        target: Some(Ref::Parent(ParentRef {})),
+                        target_name: Some("a".to_string()),
+                        ..ExposeServiceDecl::EMPTY
+                    })
+                ]);
+                decl
+            },
+            result = Ok(()),
+        },
         test_validate_exposes_long_identifiers => {
             input = {
                 let mut decl = new_component_decl();
@@ -4468,6 +4582,116 @@ mod tests {
                 Error::invalid_child("OfferEventDecl", "target", "netstack"),
                 Error::invalid_collection("OfferEventDecl", "target", "modular"),
             ])),
+        },
+        test_validate_offers_invalid_source_collection => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.collections = Some(vec![
+                    CollectionDecl {
+                        name: Some("col".to_string()),
+                        durability: Some(Durability::Transient),
+                        ..CollectionDecl::EMPTY
+                    }
+                ]);
+                decl.children = Some(vec![
+                    ChildDecl {
+                        name: Some("child".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                        startup: Some(StartupMode::Lazy),
+                        ..ChildDecl::EMPTY
+                    }
+                ]);
+                decl.offers = Some(vec![
+                    OfferDecl::Protocol(OfferProtocolDecl {
+                        source: Some(Ref::Collection(CollectionRef { name: "col".to_string() })),
+                        source_name: Some("a".to_string()),
+                        target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                        target_name: Some("a".to_string()),
+                        dependency_type: Some(DependencyType::Strong),
+                        ..OfferProtocolDecl::EMPTY
+                    }),
+                    OfferDecl::Directory(OfferDirectoryDecl {
+                        source: Some(Ref::Collection(CollectionRef { name: "col".to_string() })),
+                        source_name: Some("b".to_string()),
+                        target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                        target_name: Some("b".to_string()),
+                        rights: Some(fio2::Operations::Connect),
+                        subdir: None,
+                        dependency_type: Some(DependencyType::Strong),
+                        ..OfferDirectoryDecl::EMPTY
+                    }),
+                    OfferDecl::Storage(OfferStorageDecl {
+                        source: Some(Ref::Collection(CollectionRef { name: "col".to_string() })),
+                        source_name: Some("c".to_string()),
+                        target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                        target_name: Some("c".to_string()),
+                        ..OfferStorageDecl::EMPTY
+                    }),
+                    OfferDecl::Runner(OfferRunnerDecl {
+                        source: Some(Ref::Collection(CollectionRef { name: "col".to_string() })),
+                        source_name: Some("d".to_string()),
+                        target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                        target_name: Some("d".to_string()),
+                        ..OfferRunnerDecl::EMPTY
+                    }),
+                    OfferDecl::Resolver(OfferResolverDecl {
+                        source: Some(Ref::Collection(CollectionRef { name: "col".to_string() })),
+                        source_name: Some("e".to_string()),
+                        target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                        target_name: Some("e".to_string()),
+                        ..OfferResolverDecl::EMPTY
+                    }),
+                    OfferDecl::Event(OfferEventDecl {
+                        source: Some(Ref::Collection(CollectionRef { name: "col".to_string() })),
+                        source_name: Some("f".to_string()),
+                        target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                        target_name: Some("f".to_string()),
+                        filter: None,
+                        mode: Some(EventMode::Async),
+                        ..OfferEventDecl::EMPTY
+                    }),
+                ]);
+                decl
+            },
+            result = Err(ErrorList::new(vec![
+                Error::invalid_field("OfferProtocolDecl", "source"),
+                Error::invalid_field("OfferDirectoryDecl", "source"),
+                Error::invalid_field("OfferStorageDecl", "source"),
+                Error::invalid_field("OfferRunnerDecl", "source"),
+                Error::invalid_field("OfferResolverDecl", "source"),
+                Error::invalid_field("OfferEventDecl", "source"),
+            ])),
+        },
+        test_validate_offers_source_collection => {
+            input = {
+                let mut decl = new_component_decl();
+                decl.collections = Some(vec![
+                    CollectionDecl {
+                        name: Some("col".to_string()),
+                        durability: Some(Durability::Transient),
+                        ..CollectionDecl::EMPTY
+                    }
+                ]);
+                decl.children = Some(vec![
+                    ChildDecl {
+                        name: Some("child".to_string()),
+                        url: Some("fuchsia-pkg://fuchsia.com/foo".to_string()),
+                        startup: Some(StartupMode::Lazy),
+                        ..ChildDecl::EMPTY
+                    }
+                ]);
+                decl.offers = Some(vec![
+                    OfferDecl::Service(OfferServiceDecl {
+                        source: Some(Ref::Collection(CollectionRef { name: "col".to_string() })),
+                        source_name: Some("a".to_string()),
+                        target: Some(Ref::Child(ChildRef { name: "child".to_string(), collection: None })),
+                        target_name: Some("a".to_string()),
+                        ..OfferServiceDecl::EMPTY
+                    })
+                ]);
+                decl
+            },
+            result = Ok(()),
         },
         test_validate_offers_event_from_realm => {
             input = {
