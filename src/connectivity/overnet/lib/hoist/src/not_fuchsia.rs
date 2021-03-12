@@ -5,6 +5,7 @@
 #![cfg(not(target_os = "fuchsia"))]
 
 use {
+    crate::HOIST,
     anyhow::{format_err, Error},
     async_std::io::ErrorKind::TimedOut,
     fidl::endpoints::{create_proxy, create_proxy_and_stream},
@@ -67,10 +68,18 @@ impl HostOvernet {
     }
 }
 
+static AUTOCONNECT: std::sync::atomic::AtomicBool = std::sync::atomic::AtomicBool::new(true);
+
+/// Disable automatic connections to ascendd. This function will panic if
+/// called more than once, or if hoist has already initialized.
+pub fn disable_autoconnect() {
+    assert_eq!(true, AUTOCONNECT.swap(false, std::sync::atomic::Ordering::SeqCst));
+}
+
 pub struct Hoist {
     host_overnet: HostOvernet,
     node: Arc<Router>,
-    _task: Task<()>,
+    _task: Option<Task<()>>,
 }
 
 impl Hoist {
@@ -84,21 +93,41 @@ impl Hoist {
             Box::new(hard_coded_security_context()),
         )?;
 
-        Ok(Self {
-            host_overnet: HostOvernet::new(node.clone())?,
-            node: node.clone(),
-            _task: Task::spawn(async move {
-                retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || {
-                    run_ascendd_connection(node.clone(), None, None)
-                })
-                .await
-            }),
-        })
+        let mut task = None;
+        if AUTOCONNECT.swap(false, std::sync::atomic::Ordering::SeqCst) {
+            task.replace(spawn_ascendd_link());
+        }
+
+        Ok(Self { host_overnet: HostOvernet::new(node.clone())?, node: node.clone(), _task: task })
     }
 
     pub fn node(&self) -> Arc<Router> {
         self.node.clone()
     }
+}
+
+/// Spawn a persistent ascendd link using the default paths and connection labels.
+#[must_use = "Dropped tasks will not run, either hold on to the reference or detach()"]
+pub fn spawn_ascendd_link() -> Task<()> {
+    Task::spawn(retry_with_backoff(
+        Duration::from_millis(100),
+        Duration::from_secs(3),
+        || async move {
+            let path = ascendd_path(Option::<String>::None);
+            let label = connection_label(Option::<String>::None);
+
+            log::trace!("Ascendd path: {}", path);
+            log::trace!("Overnet connection label: {:?}", label);
+            let uds = &async_std::os::unix::net::UnixStream::connect(path.clone())
+                .on_timeout(Duration::from_secs(1), || {
+                    Err(std::io::Error::new(TimedOut, format_err!("connecting to ascendd socket")))
+                })
+                .await?;
+            let (mut rx, mut tx) = uds.split();
+
+            run_ascendd_connection(&mut rx, &mut tx, Some(label), Some(path)).await
+        },
+    ))
 }
 
 impl super::OvernetInstance for Hoist {
@@ -115,33 +144,23 @@ impl super::OvernetInstance for Hoist {
     }
 }
 
-async fn run_ascendd_connection(
-    node: Arc<Router>,
+fn run_ascendd_connection<'a>(
+    rx: &'a mut (dyn AsyncRead + Unpin + Send),
+    tx: &'a mut (dyn AsyncWrite + Unpin + Send),
     label: Option<String>,
     path: Option<String>,
-) -> Result<(), Error> {
-    let path = ascendd_path(path);
-    let label = connection_label(label);
-
-    log::trace!("Ascendd path: {}", path);
-    log::trace!("Overnet connection label: {:?}", label);
-    let uds = &async_std::os::unix::net::UnixStream::connect(path.clone())
-        .on_timeout(Duration::from_secs(1), || {
-            Err(std::io::Error::new(TimedOut, format_err!("connecting to ascendd socket")))
-        })
-        .await?;
-    let (mut rx, mut tx) = uds.split();
+) -> impl Future<Output = Result<(), Error>> + 'a {
     let config = Box::new(move || {
         Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddClient(
             fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
-                path: Some(path.clone()),
-                connection_label: Some(label.clone()),
+                path: path.clone(),
+                connection_label: label.clone(),
                 ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
             },
         ))
     });
 
-    run_stream_link(node, &mut rx, &mut tx, Default::default(), config).await
+    run_stream_link(HOIST.node.clone(), rx, tx, Default::default(), config)
 }
 
 /// Retry a future until it succeeds or retries run out.

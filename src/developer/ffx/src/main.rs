@@ -68,6 +68,10 @@ async fn get_daemon_proxy() -> Result<DaemonProxy> {
     } else {
         check_hash = true;
     }
+
+    // TODO(raggi): move to a managed link instead.
+    hoist::spawn_ascendd_link().detach();
+
     let proxy = find_and_connect(hoist::hoist()).await?;
     if check_hash {
         // TODO(fxb/67400) Create an e2e test.
@@ -226,6 +230,7 @@ fn get_launch_args() -> String {
 }
 
 async fn run() -> Result<()> {
+    hoist::disable_autoconnect();
     let app: Ffx = from_env();
 
     // Configuration initialization must happen before ANY calls to the config (or the cache won't
