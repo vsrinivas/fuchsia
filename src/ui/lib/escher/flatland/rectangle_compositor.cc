@@ -22,9 +22,14 @@ namespace {
 vec4 GetPremultipliedRgba(vec4 rgba) { return vec4(vec3(rgba) * rgba.a, rgba.a); }
 
 // Draws a single rectangle at a particular depth value, z.
-void DrawSingle(CommandBuffer* cmd_buf, const Rectangle2D& rectangle, const Texture* texture,
-                const glm::vec4& color, float z) {
+void DrawSingle(CommandBuffer* cmd_buf, const ShaderProgramPtr& program,
+                const Rectangle2D& rectangle, const Texture* texture, const glm::vec4& color,
+                float z) {
   TRACE_DURATION("gfx", "RectangleCompositor::DrawSingle");
+
+  // Set the shader program to be used.
+  const SamplerPtr& sampler = texture->sampler()->is_immutable() ? texture->sampler() : nullptr;
+  cmd_buf->SetShaderProgram(program, sampler);
 
   // Bind texture to use in the fragment shader.
   cmd_buf->BindTexture(/*set*/ 0, /*binding*/ 0, texture);
@@ -55,6 +60,12 @@ void DrawSingle(CommandBuffer* cmd_buf, const Rectangle2D& rectangle, const Text
   // for both the vertex and fragment shaders.
   cmd_buf->PushConstants(GetPremultipliedRgba(color), /*offset*/ 80U);
 
+  // In Vulkan, YUV textures don't have a color space defined by the format. The OETF (Opto
+  // Electrical Transfer Function) for BT.709 is closely approximated by using power of 2 for the
+  // RGB components of the sampled texture in the fragment shader. We make another call to
+  // PushConstants() to push this gamma power value.
+  cmd_buf->PushConstants(texture->is_yuv_format() ? 2.f : 1.f, /*offset*/ 96U);
+
   // Draw two triangles. The vertex shader knows how to use the gl_VertexIndex
   // of each vertex to compute the appropriate position and UV values.
   cmd_buf->Draw(/*vertex_count*/ 6);
@@ -71,9 +82,6 @@ void TraverseBatch(CommandBuffer* cmd_buf, vec3 bounds, ShaderProgramPtr program
   TRACE_DURATION("gfx", "RectangleCompositor::TraverseBatch");
   int64_t num_renderables = static_cast<int64_t>(rectangles.size());
 
-  // Set the shader program to be used.
-  cmd_buf->SetShaderProgram(program, nullptr);
-
   // Push the bounds as a constant for all renderables to be used in the vertex shader.
   cmd_buf->PushConstants(bounds);
 
@@ -85,7 +93,7 @@ void TraverseBatch(CommandBuffer* cmd_buf, vec3 bounds, ShaderProgramPtr program
     float z = 1.f;
     for (int64_t i = num_renderables - 1; i >= 0; i--) {
       if (!color_data[i].is_transparent) {
-        DrawSingle(cmd_buf, rectangles[i], textures[i].get(), color_data[i].color, z);
+        DrawSingle(cmd_buf, program, rectangles[i], textures[i].get(), color_data[i].color, z);
       }
       z += 1.f;
     }
@@ -98,7 +106,7 @@ void TraverseBatch(CommandBuffer* cmd_buf, vec3 bounds, ShaderProgramPtr program
     float z = static_cast<float>(rectangles.size());
     for (int64_t i = 0; i < num_renderables; i++) {
       if (color_data[i].is_transparent) {
-        DrawSingle(cmd_buf, rectangles[i], textures[i].get(), color_data[i].color, z);
+        DrawSingle(cmd_buf, program, rectangles[i], textures[i].get(), color_data[i].color, z);
       }
       z -= 1.f;
     }

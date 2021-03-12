@@ -7,16 +7,18 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
+#include "src/ui/lib/escher/renderer/sampler_cache.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 
 namespace {
 
 // Highest priority format first.
-const vk::Format kPreferredImageFormats[] = {
-    vk::Format::eR8G8B8A8Srgb,
-    vk::Format::eB8G8R8A8Srgb,
-};
+const vk::Format kPreferredImageFormats[] = {vk::Format::eR8G8B8A8Srgb, vk::Format::eB8G8R8A8Srgb,
+                                             vk::Format::eG8B8R83Plane420Unorm,
+                                             vk::Format::eG8B8R82Plane420Unorm};
+
+const vk::Filter kDefaultFilter = vk::Filter::eNearest;
 
 // Returns the corresponding Vulkan image format to use given the provided
 // Zircon image format.
@@ -31,6 +33,8 @@ static vk::Format ConvertToVkFormat(zx_pixel_format_t pixel_format) {
     case ZX_PIXEL_FORMAT_BGR_888x:
     case ZX_PIXEL_FORMAT_ABGR_8888:
       return vk::Format::eR8G8B8A8Srgb;
+    case ZX_PIXEL_FORMAT_NV12:
+      return vk::Format::eG8B8R82Plane420Unorm;
   }
   FX_CHECK(false) << "Unsupported Zircon pixel format: " << pixel_format;
   return vk::Format::eUndefined;
@@ -40,16 +44,18 @@ static vk::Format ConvertToVkFormat(zx_pixel_format_t pixel_format) {
 // Sysmem image format.
 static vk::Format ConvertToVkFormat(fuchsia::sysmem::PixelFormatType pixel_format) {
   switch (pixel_format) {
-    // BGRA32 is compatible with ZX_PIXEL_FORMAT_RGB_x888:
-    // and ZX_PIXEL_FORMAT_ARGB_8888. Those Zircon formats
-    // are then compatible with vk::Format::eB8G8R8A8Srgb.
+    // BGRA32 is compatible with ZX_PIXEL_FORMAT_RGB_x888 and ZX_PIXEL_FORMAT_ARGB_8888. Those
+    // Zircon formats are then compatible with vk::Format::eB8G8R8A8Srgb.
     case fuchsia::sysmem::PixelFormatType::BGRA32:
       return vk::Format::eB8G8R8A8Srgb;
-    // R8G8B8A8  is compatible with ZX_PIXEL_FORMAT_ABGR_8888
-    // and ZX_PIXEL_FORMAT_BGR_888x. Those Zircon formats are
-    // then compatible with vk::Format::eR8G8B8A8Srgb.
+    // R8G8B8A8 is compatible with ZX_PIXEL_FORMAT_ABGR_8888 and ZX_PIXEL_FORMAT_BGR_888x. Those
+    // Zircon formats are then compatible with vk::Format::eR8G8B8A8Srgb.
     case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
       return vk::Format::eR8G8B8A8Srgb;
+    case fuchsia::sysmem::PixelFormatType::NV12:
+      return vk::Format::eG8B8R82Plane420Unorm;
+    case fuchsia::sysmem::PixelFormatType::I420:
+      return vk::Format::eG8B8R83Plane420Unorm;
     default:
       FX_CHECK(false) << "Unsupported Sysmem pixel format.";
       return vk::Format::eUndefined;
@@ -307,8 +313,13 @@ void VkRenderer::DeregisterRenderTargetCollection(
 
 escher::TexturePtr VkRenderer::ExtractTexture(ImageMetadata metadata, vk::Format format) {
   auto image = ExtractImage(metadata, format, escher::RectangleCompositor::kTextureUsageFlags);
-  auto texture = escher::Texture::New(escher_->resource_recycler(), image, vk::Filter::eNearest);
-  FX_DCHECK(texture);
+  escher::SamplerPtr sampler =
+      escher::image_utils::IsYuvFormat(image->format())
+          ? escher_->sampler_cache()->ObtainYuvSampler(image->format(), kDefaultFilter)
+          : escher_->sampler_cache()->ObtainSampler(kDefaultFilter);
+  FX_DCHECK(escher::image_utils::IsYuvFormat(image->format()) ? sampler->is_immutable()
+                                                              : !sampler->is_immutable());
+  auto texture = fxl::MakeRefCounted<escher::Texture>(escher_->resource_recycler(), sampler, image);
   return texture;
 }
 

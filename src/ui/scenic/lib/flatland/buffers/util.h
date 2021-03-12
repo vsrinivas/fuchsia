@@ -52,7 +52,7 @@ void SetClientConstraintsAndWaitForAllocated(
 // Sets the constraints on a client buffer collection pointer and returns that pointer back to
 // the caller, *without* waiting for the constraint setting to finish. It is up to the caller
 // to wait until constraints are set.
-fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
+fuchsia::sysmem::BufferCollectionSyncPtr CreateBufferCollectionSyncPtrAndSetConstraints(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count = 1,
     uint32_t width = 64, uint32_t height = 32, fuchsia::sysmem::BufferUsage usage = kNoneUsage,

@@ -74,7 +74,7 @@ void SetClientConstraintsAndWaitForAllocated(
   FX_DCHECK(status == ZX_OK);
 }
 
-fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
+fuchsia::sysmem::BufferCollectionSyncPtr CreateBufferCollectionSyncPtrAndSetConstraints(
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fuchsia::sysmem::BufferCollectionTokenSyncPtr token, uint32_t image_count, uint32_t width,
     uint32_t height, fuchsia::sysmem::BufferUsage usage, fuchsia::sysmem::PixelFormatType format,
@@ -97,13 +97,22 @@ fuchsia::sysmem::BufferCollectionSyncPtr CreateClientPointerWithConstraints(
 
   constraints.image_format_constraints_count = 1;
   auto& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0] =
-      fuchsia::sysmem::ColorSpace{.type = fuchsia::sysmem::ColorSpaceType::SRGB};
 
   image_constraints.pixel_format.type = format;
   image_constraints.pixel_format.has_format_modifier = true;
   image_constraints.pixel_format.format_modifier.value = fuchsia::sysmem::FORMAT_MODIFIER_LINEAR;
+  image_constraints.color_spaces_count = 1;
+  switch (format) {
+    case fuchsia::sysmem::PixelFormatType::BGRA32:
+      image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::SRGB;
+      break;
+    case fuchsia::sysmem::PixelFormatType::I420:
+    case fuchsia::sysmem::PixelFormatType::NV12:
+      image_constraints.color_space[0].type = fuchsia::sysmem::ColorSpaceType::REC709;
+      break;
+    default:
+      FX_NOTREACHED();
+  }
 
   image_constraints.required_min_coded_width = width;
   image_constraints.required_min_coded_height = height;

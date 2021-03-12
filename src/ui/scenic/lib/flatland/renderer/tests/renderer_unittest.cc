@@ -335,9 +335,9 @@ void AsyncEventSignalTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* s
 
   // Create a client-side handle to the buffer collection and set the client constraints.
   const uint32_t kWidth = 64, kHeight = 32;
-  auto client_target_collection =
-      CreateClientPointerWithConstraints(sysmem_allocator, std::move(target_tokens.local_token),
-                                         /*image_count*/ 1, kWidth, kHeight);
+  auto client_target_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
+      sysmem_allocator, std::move(target_tokens.local_token),
+      /*image_count*/ 1, kWidth, kHeight);
   auto allocation_status = ZX_OK;
   auto status = client_target_collection->WaitForBuffersAllocated(&allocation_status, &target_info);
   EXPECT_EQ(status, ZX_OK);
@@ -526,7 +526,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
 
   // Create a client-side handle to the buffer collection and set the client constraints.
   auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
-  auto client_collection = CreateClientPointerWithConstraints(
+  auto client_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
       sysmem_allocator_.get(), std::move(tokens.local_token),
       /*image_count*/ 1,
       /*width*/ 60,
@@ -540,7 +540,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   EXPECT_TRUE(result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
-  auto client_target = CreateClientPointerWithConstraints(
+  auto client_target = CreateBufferCollectionSyncPtrAndSetConstraints(
       sysmem_allocator_.get(), std::move(target_tokens.local_token),
       /*image_count*/ 1,
       /*width*/ 60,
@@ -689,7 +689,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
 
   // Create a client-side handle to the buffer collection and set the client constraints.
   auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
-  auto client_collection = CreateClientPointerWithConstraints(
+  auto client_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
       sysmem_allocator_.get(), std::move(tokens.local_token),
       /*image_count*/ 2,
       /*width*/ 60,
@@ -702,7 +702,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   EXPECT_TRUE(result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
-  auto client_target = CreateClientPointerWithConstraints(
+  auto client_target = CreateBufferCollectionSyncPtrAndSetConstraints(
       sysmem_allocator_.get(), std::move(target_tokens.local_token),
       /*image_count*/ 1,
       /*width*/ 60,
@@ -851,5 +851,168 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
         EXPECT_EQ(black_pixels, kTargetWidth * kTargetHeight - 10U);
       });
 }
+
+class ParameterizedRendererYuvTest
+    : public VulkanRendererTest,
+      public ::testing::WithParamInterface<fuchsia::sysmem::PixelFormatType> {};
+
+// This test actually renders a YUV format texture using the VKRenderer. We create a single
+// rectangle, with a fuchsia texture. The render target and the rectangle are 32x32.
+VK_TEST_P(ParameterizedRendererYuvTest, YuvTest) {
+  SKIP_TEST_IF_ESCHER_USES_DEVICE(VirtualGpu);
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+
+  // Create a pair of tokens for the Image allocation.
+  auto image_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+
+  // Register the Image token with the renderer.
+  auto image_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result = renderer.ImportBufferCollection(image_collection_id, sysmem_allocator_.get(),
+                                                std::move(image_tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  const uint32_t kTargetWidth = 32;
+  const uint32_t kTargetHeight = 32;
+
+  // Set the local constraints for the Image.
+  const fuchsia::sysmem::PixelFormatType pixel_format = GetParam();
+  auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
+  auto image_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
+      sysmem_allocator_.get(), std::move(image_tokens.local_token),
+      /*image_count*/ 1,
+      /*width*/ kTargetWidth,
+      /*height*/ kTargetHeight, buffer_usage, pixel_format, std::make_optional(memory_constraints));
+
+  // Wait for buffers allocated so it can populate its information struct with the vmo data.
+  fuchsia::sysmem::BufferCollectionInfo_2 image_collection_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status =
+        image_collection->WaitForBuffersAllocated(&allocation_status, &image_collection_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+    EXPECT_EQ(image_collection_info.settings.image_format_constraints.pixel_format.type,
+              pixel_format);
+  }
+
+  // Create the image meta data for the Image and import.
+  ImageMetadata image_metadata = {.collection_id = image_collection_id,
+                                  .identifier = sysmem_util::GenerateUniqueImageId(),
+                                  .vmo_index = 0,
+                                  .width = kTargetWidth,
+                                  .height = kTargetHeight};
+  auto import_res = renderer.ImportBufferImage(image_metadata);
+  EXPECT_TRUE(import_res);
+
+  // Create a pair of tokens for the render target allocation.
+  auto render_target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
+
+  // Register the render target tokens with the renderer.
+  auto render_target_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  result =
+      renderer.RegisterRenderTargetCollection(render_target_collection_id, sysmem_allocator_.get(),
+                                              std::move(render_target_tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  // Create a client-side handle to the render target's buffer collection and set the client
+  // constraints.
+  auto render_target_collection = CreateBufferCollectionSyncPtrAndSetConstraints(
+      sysmem_allocator_.get(), std::move(render_target_tokens.local_token),
+      /*image_count*/ 1,
+      /*width*/ kTargetWidth,
+      /*height*/ kTargetHeight, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
+      std::make_optional(memory_constraints));
+
+  // Wait for buffers allocated so it can populate its information struct with the vmo data.
+  fuchsia::sysmem::BufferCollectionInfo_2 render_target_collection_info = {};
+  {
+    zx_status_t allocation_status = ZX_OK;
+    auto status = render_target_collection->WaitForBuffersAllocated(&allocation_status,
+                                                                    &render_target_collection_info);
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_EQ(allocation_status, ZX_OK);
+  }
+
+  // Create the render_target image metadata and import.
+  ImageMetadata render_target_metadata = {
+      .collection_id = render_target_collection_id,
+      .identifier = sysmem_util::GenerateUniqueImageId(),
+      .vmo_index = 0,
+      .width = kTargetWidth,
+      .height = kTargetHeight,
+      .is_render_target = true,
+  };
+  import_res = renderer.ImportBufferImage(render_target_metadata);
+  EXPECT_TRUE(import_res);
+
+  // Create a renderable where the upper-left hand corner should be at position (0,0) with a
+  // width/height of (32,32).
+  Rectangle2D image_renderable(glm::vec2(0, 0), glm::vec2(kTargetWidth, kTargetHeight));
+
+  const uint32_t num_pixels = kTargetWidth * kTargetHeight;
+  const uint8_t kFuchsiaYuvValues[] = {110U, 192U, 192U};
+  const uint8_t kFuchsiaBgraValues[] = {246U, 68U, 228U, 255U};
+  // Have the client write pixel values to the renderable Image's texture.
+  MapHostPointer(
+      image_collection_info, image_metadata.vmo_index,
+      [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+        for (uint32_t i = 0; i < num_pixels; ++i) {
+          vmo_host[i] = kFuchsiaYuvValues[0];
+        }
+        switch (GetParam()) {
+          case fuchsia::sysmem::PixelFormatType::NV12:
+            for (uint32_t i = num_pixels; i < num_pixels + num_pixels / 2; i += 2) {
+              vmo_host[i] = kFuchsiaYuvValues[1];
+              vmo_host[i + 1] = kFuchsiaYuvValues[2];
+            }
+            break;
+            break;
+          case fuchsia::sysmem::PixelFormatType::I420:
+            for (uint32_t i = num_pixels; i < num_pixels + num_pixels / 4; ++i) {
+              vmo_host[i] = kFuchsiaYuvValues[1];
+            }
+            for (uint32_t i = num_pixels + num_pixels / 4; i < num_pixels + num_pixels / 2; ++i) {
+              vmo_host[i] = kFuchsiaYuvValues[2];
+            }
+            break;
+          default:
+            FX_NOTREACHED();
+        }
+
+        // Flush the cache after writing to host VMO.
+        EXPECT_EQ(ZX_OK, zx_cache_flush(vmo_host, num_pixels + num_pixels / 2,
+                                        ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+      });
+
+  // Render the renderable to the render target.
+  renderer.Render(render_target_metadata, {image_renderable}, {image_metadata});
+  renderer.WaitIdle();
+
+  // Get a raw pointer from the client collection's vmo that represents the render target and read
+  // its values. This should show that the renderable was rendered with expected BGRA colors.
+  MapHostPointer(render_target_collection_info, render_target_metadata.vmo_index,
+                 [&](uint8_t* vmo_host, uint32_t num_bytes) mutable {
+                   // Flush the cache before reading back target image.
+                   EXPECT_EQ(ZX_OK,
+                             zx_cache_flush(vmo_host, num_pixels * 4,
+                                            ZX_CACHE_FLUSH_DATA | ZX_CACHE_FLUSH_INVALIDATE));
+
+                   // Make sure the pixels are fuchsia.
+                   for (uint32_t y = 0; y < kTargetHeight; y++) {
+                     for (uint32_t x = 0; x < kTargetWidth; x++) {
+                       EXPECT_EQ(GetPixel(vmo_host, kTargetWidth, x, y),
+                                 glm::ivec4(kFuchsiaBgraValues[0], kFuchsiaBgraValues[1],
+                                            kFuchsiaBgraValues[2], kFuchsiaBgraValues[3]));
+                     }
+                   }
+                 });
+}
+
+INSTANTIATE_TEST_SUITE_P(YuvPixelFormats, ParameterizedRendererYuvTest,
+                         ::testing::Values(fuchsia::sysmem::PixelFormatType::NV12,
+                                           fuchsia::sysmem::PixelFormatType::I420));
 
 }  // namespace flatland

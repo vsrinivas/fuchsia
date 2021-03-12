@@ -40,8 +40,7 @@ fuchsia::sysmem::PixelFormatType ConvertZirconFormatToSysmemFormat(zx_pixel_form
 DisplayCompositor::DisplayCompositor(
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
     const std::shared_ptr<Renderer>& renderer)
-    : display_controller_(std::move(display_controller)),
-      renderer_(renderer){
+    : display_controller_(std::move(display_controller)), renderer_(renderer) {
   FX_DCHECK(renderer_);
 }
 
@@ -411,9 +410,10 @@ sysmem_util::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
 
   // Finally set the DisplayCompositor constraints.
   auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
-  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr = CreateClientPointerWithConstraints(
-      sysmem_allocator, std::move(compositor_token), num_vmos, kWidth, kHeight, buffer_usage,
-      ConvertZirconFormatToSysmemFormat(pixel_format), memory_constraints);
+  fuchsia::sysmem::BufferCollectionSyncPtr collection_ptr =
+      CreateBufferCollectionSyncPtrAndSetConstraints(
+          sysmem_allocator, std::move(compositor_token), num_vmos, kWidth, kHeight, buffer_usage,
+          ConvertZirconFormatToSysmemFormat(pixel_format), memory_constraints);
 
   // Have the client wait for buffers allocated so it can populate its information
   // struct with the vmo data.

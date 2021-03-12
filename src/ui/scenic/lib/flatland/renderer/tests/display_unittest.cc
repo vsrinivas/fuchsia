@@ -139,7 +139,7 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   EXPECT_FALSE(import_result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
-  auto client_collection = flatland::CreateClientPointerWithConstraints(
+  auto client_collection = flatland::CreateBufferCollectionSyncPtrAndSetConstraints(
       sysmem_allocator_.get(), std::move(tokens.local_token),
       /*image_count*/ 1,
       /*width*/ kWidth,

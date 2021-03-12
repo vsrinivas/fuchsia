@@ -201,7 +201,7 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
 
     auto [buffer_usage, memory_constraints] = GetUsageAndMemoryConstraintsForCpuWriteOften();
     fuchsia::sysmem::BufferCollectionSyncPtr texture_collection =
-        CreateClientPointerWithConstraints(
+        CreateBufferCollectionSyncPtrAndSetConstraints(
             sysmem_allocator_.get(), std::move(texture_tokens.local_token), num_vmos, width, height,
             buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32, memory_constraints);
 
@@ -392,9 +392,8 @@ TEST_F(DisplayCompositorPixelTest, FullscreenRectangleTest) {
       .transform = root_handle,
       .pixel_scale = glm::uvec2(display->width_in_px(), display->height_in_px()),
       .formats = {kPixelFormat}};
-  display_compositor->AddDisplay(display->display_id(),
-                     display_info,
-                     sysmem_allocator_.get(), /*num_vmos*/ 0);
+  display_compositor->AddDisplay(display->display_id(), display_info, sysmem_allocator_.get(),
+                                 /*num_vmos*/ 0);
 
   // Setup the uberstruct data.
   auto uberstruct = session.CreateUberStructWithCurrentTopology(root_handle);
@@ -404,7 +403,8 @@ TEST_F(DisplayCompositorPixelTest, FullscreenRectangleTest) {
   session.PushUberStruct(std::move(uberstruct));
 
   // Now we can finally render.
-  display_compositor->RenderFrame(GenerateDisplayListForTest({{display->display_id(), display_info}}));
+  display_compositor->RenderFrame(
+      GenerateDisplayListForTest({{display->display_id(), display_info}}));
 
   // Grab the capture vmo data.
   std::vector<uint8_t> read_values;
@@ -491,7 +491,7 @@ VK_TEST_F(DisplayCompositorPixelTest, SoftwareRenderingTest) {
       .formats = {kPixelFormat}};
   auto render_target_collection_id =
       display_compositor->AddDisplay(display->display_id(), display_info, sysmem_allocator_.get(),
-                         /*num_vmos*/ 2, &render_target_info);
+                                     /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.
@@ -620,7 +620,7 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
       .formats = {kPixelFormat}};
   auto render_target_collection_id =
       display_compositor->AddDisplay(display->display_id(), display_info, sysmem_allocator_.get(),
-                         /*num_vmos*/ 2, &render_target_info);
+                                     /*num_vmos*/ 2, &render_target_info);
   EXPECT_NE(render_target_collection_id, 0U);
 
   // Now we can finally render.
