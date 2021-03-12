@@ -15,11 +15,11 @@
 namespace component {
 namespace DynamicLibraryLoader {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 static async_loop_t* ld_loop = nullptr;
 
-zx::status<fidl::ClientEnd<::fuchsia_ldsvc::Loader>> Start(int package_fd, std::string name) {
+zx::status<fidl::ClientEnd<fuchsia_ldsvc::Loader>> Start(int package_fd, std::string name) {
   if (!ld_loop) {
     zx_status_t status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &ld_loop);
     if (status != ZX_OK) {

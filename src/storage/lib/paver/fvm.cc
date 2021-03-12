@@ -45,13 +45,13 @@ namespace {
 
 using uuid::Uuid;
 
-namespace block = ::fuchsia_hardware_block;
-namespace partition = ::fuchsia_hardware_block_partition;
-namespace volume = ::fuchsia_hardware_block_volume;
-namespace device = ::fuchsia_device;
+namespace block = fuchsia_hardware_block;
+namespace partition = fuchsia_hardware_block_partition;
+namespace volume = fuchsia_hardware_block_volume;
+namespace device = fuchsia_device;
 
-using ::fuchsia_hardware_block_volume::wire::VolumeInfo;
-using ::fuchsia_hardware_block_volume::wire::VolumeManagerInfo;
+using fuchsia_hardware_block_volume::wire::VolumeInfo;
+using fuchsia_hardware_block_volume::wire::VolumeManagerInfo;
 
 // The number of additional slices a partition will need to become
 // zxcrypt'd.
@@ -65,7 +65,7 @@ constexpr size_t kZxcryptExtraSlices = 1;
 // Upon success, |buf| will contain the null-terminated topological path.
 zx_status_t GetTopoPathFromFd(const fbl::unique_fd& fd, char* buf, size_t buf_len) {
   fdio_cpp::UnownedFdioCaller caller(fd.get());
-  auto resp = ::fuchsia_device::Controller::Call::GetTopologicalPath(caller.channel());
+  auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(caller.channel());
   if (!resp.ok()) {
     return resp.status();
   }
@@ -265,7 +265,7 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
   fdio_cpp::UnownedFdioCaller caller(partition_fd.get());
   constexpr char kFvmDriverLib[] = "/boot/driver/fvm.so";
   auto resp =
-      ::fuchsia_device::Controller::Call::Rebind(caller.channel(), fidl::StringView(kFvmDriverLib));
+      fuchsia_device::Controller::Call::Rebind(caller.channel(), fidl::StringView(kFvmDriverLib));
   status = resp.status();
   if (status == ZX_OK) {
     if (resp->result.is_err()) {

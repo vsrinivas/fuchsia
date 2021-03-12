@@ -7,7 +7,7 @@
 
 #include <type_traits>
 
-namespace sysmem = ::fuchsia_sysmem;
+namespace sysmem = fuchsia_sysmem;
 
 namespace image_format {
 

@@ -24,8 +24,8 @@
 
 #include "fdio_unistd.h"
 
-namespace fio = ::fuchsia_io;
-namespace fpty = ::fuchsia_hardware_pty;
+namespace fio = fuchsia_io;
+namespace fpty = fuchsia_hardware_pty;
 
 // Generic ---------------------------------------------------------------------
 

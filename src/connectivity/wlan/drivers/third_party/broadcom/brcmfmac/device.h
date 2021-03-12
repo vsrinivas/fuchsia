@@ -35,7 +35,7 @@ class DeviceInspect;
 class WlanInterface;
 
 class Device : public ::ddk::Device<Device, ddk::Initializable, ddk::Messageable>,
-               ::fuchsia_factory_wlan::Iovar::Interface,
+               fuchsia_factory_wlan::Iovar::Interface,
                public ::ddk::WlanphyImplProtocol<Device, ::ddk::base_protocol> {
  public:
   virtual ~Device();
@@ -84,7 +84,7 @@ class Device : public ::ddk::Device<Device, ddk::Initializable, ddk::Messageable
   WlanInterface* client_interface_;
   WlanInterface* ap_interface_;
 
-  // ::fuchsia_factory_wlan_iovar::Iovar::Interface Implementation
+  // fuchsia_factory_wlan_iovar::Iovar::Interface Implementation
   void Get(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> request,
            GetCompleter::Sync& _completer) override;
   void Set(int32_t iface_idx, int32_t cmd, ::fidl::VectorView<uint8_t> request,

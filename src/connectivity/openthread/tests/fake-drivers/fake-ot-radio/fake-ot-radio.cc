@@ -22,7 +22,7 @@
 #include "src/connectivity/openthread/tests/fake-drivers/fake-ot-radio/fake_ot_radio_bind.h"
 
 namespace fake_ot {
-namespace lowpan_spinel_fidl = ::fuchsia_lowpan_spinel;
+namespace lowpan_spinel_fidl = fuchsia_lowpan_spinel;
 
 enum {
   PORT_KEY_EXIT_THREAD,

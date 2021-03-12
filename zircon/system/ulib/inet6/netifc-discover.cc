@@ -54,7 +54,7 @@ static zx_status_t netifc_open_cb(int dirfd, int event, const char* filename, vo
     const char* interface = ctx->topological_path;
     char buf[1024];
     size_t actual_len;
-    auto resp = ::fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned_channel(netsvc));
+    auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned_channel(netsvc));
     status = resp.status();
     if (status == ZX_OK) {
       if (resp->result.is_err()) {

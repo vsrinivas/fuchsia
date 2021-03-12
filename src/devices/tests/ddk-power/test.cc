@@ -29,8 +29,8 @@ using fuchsia_device::wire::SystemPowerStateInfo;
 using fuchsia_device_power_test::TestDevice;
 using fuchsia_hardware_power_statecontrol::wire::MAX_SYSTEM_POWER_STATES;
 using fuchsia_hardware_power_statecontrol::wire::SystemPowerState;
-namespace device_manager_fidl = ::fuchsia_device_manager;
-namespace lifecycle_fidl = ::fuchsia_process_lifecycle;
+namespace device_manager_fidl = fuchsia_device_manager;
+namespace lifecycle_fidl = fuchsia_process_lifecycle;
 
 class PowerTestCase : public zxtest::Test {
  public:
@@ -1287,7 +1287,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToWorking) {
   ASSERT_OK(call_status);
   ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
 
-  ::fuchsia_device_power_test::wire::TestStatusInfo info;
+  fuchsia_device_power_test::wire::TestStatusInfo info;
   info.resume_status = ZX_ERR_IO;
   info.out_power_state = static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D3COLD);
   info.out_performance_state = 1;
@@ -1357,7 +1357,7 @@ TEST_F(PowerTestCase, SelectiveResume_FailedToResumeToPerformanceState) {
   ASSERT_OK(call_status);
   ASSERT_EQ(response3->result.response().cur_state, DevicePowerState::DEVICE_POWER_STATE_D3COLD);
 
-  ::fuchsia_device_power_test::wire::TestStatusInfo info;
+  fuchsia_device_power_test::wire::TestStatusInfo info;
   info.resume_status = ZX_ERR_IO;
   info.out_power_state = static_cast<uint8_t>(DevicePowerState::DEVICE_POWER_STATE_D0);
   // The previous performance_state set was 1.

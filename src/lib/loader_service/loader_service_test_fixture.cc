@@ -24,8 +24,8 @@
 namespace loader {
 namespace test {
 
-namespace fldsvc = ::fuchsia_ldsvc;
-namespace fkernel = ::fuchsia_kernel;
+namespace fldsvc = fuchsia_ldsvc;
+namespace fkernel = fuchsia_kernel;
 
 namespace {
 

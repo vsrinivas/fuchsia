@@ -68,7 +68,7 @@ class ControllerDevice : public ControllerDeviceType,
   void ShutDown();
 
   // Fuchsia Hardware Camera FIDL implementation.
-  void GetChannel2(::fidl::ServerEnd<::fuchsia_camera2_hal::Controller> server_end,
+  void GetChannel2(::fidl::ServerEnd<fuchsia_camera2_hal::Controller> server_end,
                    GetChannel2Completer::Sync& completer) override;
   // Call not supported
   void GetChannel(zx::channel handle, GetChannelCompleter::Sync& completer) override {

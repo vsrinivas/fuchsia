@@ -11,7 +11,7 @@
 namespace {
 
 TEST(RemoteFile, ApiTest) {
-  auto endpoints = fidl::CreateEndpoints<::fuchsia_io::Directory>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_EQ(ZX_OK, endpoints.status_value());
 
   auto unowned_client = endpoints->client.borrow();

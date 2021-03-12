@@ -33,8 +33,8 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
-namespace fhd = ::fuchsia_hardware_display;
-namespace sysmem = ::fuchsia_sysmem;
+namespace fhd = fuchsia_hardware_display;
+namespace sysmem = fuchsia_sysmem;
 
 static zx_handle_t device_handle = ZX_HANDLE_INVALID;
 

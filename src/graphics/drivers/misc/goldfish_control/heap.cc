@@ -38,12 +38,12 @@ void Heap::BindWithHeapProperties(zx::channel server_request,
                                   fuchsia_sysmem2::wire::HeapProperties heap_properties) {
   async::PostTask(
       loop_.dispatcher(),
-      [server_end = fidl::ServerEnd<::fuchsia_sysmem2::Heap>(std::move(server_request)),
+      [server_end = fidl::ServerEnd<fuchsia_sysmem2::Heap>(std::move(server_request)),
        allocator = std::move(allocator), heap_properties = std::move(heap_properties),
        this]() mutable {
         auto result = fidl::BindServer(loop_.dispatcher(), std::move(server_end), this,
                                        [](Heap* self, fidl::UnbindInfo info,
-                                          fidl::ServerEnd<::fuchsia_sysmem2::Heap> server_end) {
+                                          fidl::ServerEnd<fuchsia_sysmem2::Heap> server_end) {
                                          self->OnClose(info, server_end.TakeChannel());
                                        });
         if (!result.is_ok()) {

@@ -393,8 +393,7 @@ zx_status_t AmlGpu::Bind() {
     return status;
   }
   reset_register.Connect(std::move(register_server_end));
-  reset_register_ =
-      ::fuchsia_hardware_registers::Device::SyncClient(std::move(register_client_end));
+  reset_register_ = fuchsia_hardware_registers::Device::SyncClient(std::move(register_client_end));
 
   if (info.pid == PDEV_PID_AMLOGIC_S905D3 && properties_.supports_protected_mode) {
     // S905D3 needs to use an SMC into the TEE to do protected mode switching.

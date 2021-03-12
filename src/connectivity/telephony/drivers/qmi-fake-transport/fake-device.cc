@@ -16,7 +16,7 @@
 #include <ddktl/fidl.h>
 
 namespace fidl_qmi_transport = fuchsia_hardware_telephony_transport;
-namespace fidl_tel_snoop = ::fuchsia_telephony_snoop;
+namespace fidl_tel_snoop = fuchsia_telephony_snoop;
 
 namespace qmi_fake {
 constexpr uint8_t kQmiInitReq[] = {1, 15, 0, 0, 0, 0, 0, 1, 34, 0, 4, 0, 1, 1, 0, 2};

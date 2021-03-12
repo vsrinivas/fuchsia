@@ -55,7 +55,7 @@ class IntelHDAStreamBase;
 // All this is serialized in the single threaded IntelHdaStreamStream's dispatcher() in loop_.
 class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
                            public fbl::WAVLTreeContainable<fbl::RefPtr<IntelHDAStreamBase>>,
-                           public ::fuchsia_hardware_audio::Device::Interface {
+                           public fuchsia_hardware_audio::Device::Interface {
  public:
   // StreamChannel (thread compatible) implements StreamConfig::Interface so the server for a
   // StreamConfig channel is a StreamChannel instead of a IntelHDAStreamBase (as is the case for
@@ -66,7 +66,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   // All this is serialized in the single threaded IntelHDAStreamBase's dispatcher() in loop_.
   // All the StreamConfig::Interface methods are forwarded to IntelHDAStreamBase.
   class StreamChannel : public RingBufferChannel,
-                        public ::fuchsia_hardware_audio::StreamConfig::Interface,
+                        public fuchsia_hardware_audio::StreamConfig::Interface,
                         public fbl::DoublyLinkedListable<fbl::RefPtr<StreamChannel>> {
    public:
     template <typename... ConstructorSignature>
@@ -100,12 +100,12 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
     void WatchPlugState(WatchPlugStateCompleter::Sync& completer) override {
       stream_.WatchPlugState(this, completer);
     }
-    void SetGain(::fuchsia_hardware_audio::wire::GainState target_state,
+    void SetGain(fuchsia_hardware_audio::wire::GainState target_state,
                  SetGainCompleter::Sync& completer) override {
       stream_.SetGain(std::move(target_state), completer);
     }
-    void CreateRingBuffer(::fuchsia_hardware_audio::wire::Format format,
-                          ::fidl::ServerEnd<::fuchsia_hardware_audio::RingBuffer> ring_buffer,
+    void CreateRingBuffer(fuchsia_hardware_audio::wire::Format format,
+                          ::fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> ring_buffer,
                           CreateRingBufferCompleter::Sync& completer) override {
       stream_.CreateRingBuffer(this, std::move(format), std::move(ring_buffer), completer);
     }
@@ -240,9 +240,8 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   void GetProperties(StreamChannel* channel,
                      StreamChannel::GetPropertiesCompleter::Sync& completer);
   void GetSupportedFormats(StreamChannel::GetSupportedFormatsCompleter::Sync& completer);
-  virtual void CreateRingBuffer(StreamChannel* channel,
-                                ::fuchsia_hardware_audio::wire::Format format,
-                                ::fidl::ServerEnd<::fuchsia_hardware_audio::RingBuffer> ring_buffer,
+  virtual void CreateRingBuffer(StreamChannel* channel, fuchsia_hardware_audio::wire::Format format,
+                                ::fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> ring_buffer,
                                 StreamChannel::CreateRingBufferCompleter::Sync& completer);
   // If a derived class needs to update gain on its own, it can override this method.
   void WatchGainState(StreamChannel* channel,
@@ -251,7 +250,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   // override this method.
   void WatchPlugState(StreamChannel* channel,
                       StreamChannel::WatchPlugStateCompleter::Sync& completer);
-  void SetGain(::fuchsia_hardware_audio::wire::GainState target_state,
+  void SetGain(fuchsia_hardware_audio::wire::GainState target_state,
                StreamChannel::SetGainCompleter::Sync& completer);
 
  private:
@@ -294,7 +293,7 @@ class IntelHDAStreamBase : public fbl::RefCounted<IntelHDAStreamBase>,
   static zx_protocol_device_t STREAM_DEVICE_THUNKS;
   Token domain_token_;
   bool format_change_in_progress_ = false;
-  ::fidl::ServerEnd<::fuchsia_hardware_audio::RingBuffer> rb_channel_;
+  ::fidl::ServerEnd<fuchsia_hardware_audio::RingBuffer> rb_channel_;
   audio_proto::GainState cur_gain_state_ = {};
   zx_time_t plug_time_ = 0;
   async::Loop loop_;

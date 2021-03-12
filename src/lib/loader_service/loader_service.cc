@@ -16,7 +16,7 @@
 
 namespace loader {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 LoaderServiceBase::~LoaderServiceBase() {}
 

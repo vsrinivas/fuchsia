@@ -88,7 +88,7 @@ zx_status_t Nelson::MaliInit() {
   mali_dev.irq_count = countof(mali_irqs);
   mali_dev.bti_list = mali_btis;
   mali_dev.bti_count = countof(mali_btis);
-  using ::fuchsia_hardware_gpu_amlogic::wire::Metadata;
+  using fuchsia_hardware_gpu_amlogic::wire::Metadata;
   auto metadata = Metadata::Builder(std::make_unique<Metadata::Frame>())
                       .set_supports_protected_mode(std::make_unique<bool>(true))
                       .build();

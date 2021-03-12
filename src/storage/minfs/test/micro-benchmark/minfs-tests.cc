@@ -80,7 +80,7 @@ class MinfsMicroBenchmarkFixture : public fs_test::BaseFilesystemTest {
     EXPECT_TRUE(fd);
 
     fdio_cpp::FdioCaller caller(std::move(fd));
-    auto mount_state_or = ::fuchsia_minfs::Minfs::Call::GetMountState(caller.channel());
+    auto mount_state_or = fuchsia_minfs::Minfs::Call::GetMountState(caller.channel());
     EXPECT_TRUE(mount_state_or.ok());
     EXPECT_EQ(mount_state_or.value().status, ZX_OK);
     EXPECT_NE(mount_state_or.value().mount_state, nullptr);

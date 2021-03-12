@@ -10,7 +10,7 @@
 
 #include <array>
 
-namespace fhd = ::fuchsia_hardware_display;
+namespace fhd = fuchsia_hardware_display;
 
 namespace testing {
 namespace display {

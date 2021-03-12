@@ -1570,7 +1570,7 @@ void Coordinator::GetBindProgram(::fidl::StringView driver_path_view,
   completer.ReplySuccess(::fidl::unowned_vec(instructions));
 }
 
-void Coordinator::Register(::fuchsia_pkg::wire::PackageUrl driver_url,
+void Coordinator::Register(fuchsia_pkg::wire::PackageUrl driver_url,
                            RegisterCompleter::Sync& completer) {
   std::string driver_url_str(driver_url.url.data(), driver_url.url.size());
   zx_status_t status = LoadEphemeralDriver(&package_resolver_, driver_url_str);

@@ -23,14 +23,14 @@ struct RamDeviceInfo {
   struct {
     const char* name;
     uint64_t mask;
-  } default_channels[::fuchsia_hardware_ram_metrics::wire::MAX_COUNT_CHANNELS];
+  } default_channels[fuchsia_hardware_ram_metrics::wire::MAX_COUNT_CHANNELS];
 };
 
 class Printer {
  public:
   Printer(FILE* file, uint64_t cycles_to_measure)
       : file_(file),
-        rows_(::fuchsia_hardware_ram_metrics::wire::MAX_COUNT_CHANNELS),
+        rows_(fuchsia_hardware_ram_metrics::wire::MAX_COUNT_CHANNELS),
         cycles_to_measure_(cycles_to_measure) {}
   virtual ~Printer() = default;
 
@@ -38,7 +38,7 @@ class Printer {
     rows_[channel_index] = name;
   }
 
-  virtual void Print(const ::fuchsia_hardware_ram_metrics::wire::BandwidthInfo& bpi) const = 0;
+  virtual void Print(const fuchsia_hardware_ram_metrics::wire::BandwidthInfo& bpi) const = 0;
 
  protected:
   FILE* const file_;
@@ -49,23 +49,23 @@ class Printer {
 class DefaultPrinter : public Printer {
  public:
   DefaultPrinter(FILE* file, uint64_t cycles_to_measure) : Printer(file, cycles_to_measure) {}
-  void Print(const ::fuchsia_hardware_ram_metrics::wire::BandwidthInfo& info) const override;
+  void Print(const fuchsia_hardware_ram_metrics::wire::BandwidthInfo& info) const override;
 };
 
 class CsvPrinter : public Printer {
  public:
   CsvPrinter(FILE* file, uint64_t cycles_to_measure) : Printer(file, cycles_to_measure) {}
-  void Print(const ::fuchsia_hardware_ram_metrics::wire::BandwidthInfo& info) const override;
+  void Print(const fuchsia_hardware_ram_metrics::wire::BandwidthInfo& info) const override;
 };
 
-zx::status<std::array<uint64_t, ::fuchsia_hardware_ram_metrics::wire::MAX_COUNT_CHANNELS>>
+zx::status<std::array<uint64_t, fuchsia_hardware_ram_metrics::wire::MAX_COUNT_CHANNELS>>
 ParseChannelString(std::string_view str);
 
 std::tuple<zx::channel, ram_info::RamDeviceInfo> ConnectToRamDevice();
 
 zx_status_t MeasureBandwith(
     const Printer* printer, zx::channel channel,
-    const ::fuchsia_hardware_ram_metrics::wire::BandwidthMeasurementConfig& config);
+    const fuchsia_hardware_ram_metrics::wire::BandwidthMeasurementConfig& config);
 
 zx_status_t GetDdrWindowingResults(zx::channel channel);
 

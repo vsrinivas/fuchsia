@@ -14,7 +14,7 @@ namespace minfs {
 class MinfsMetrics : public FsMetrics {
  public:
   MinfsMetrics() = default;
-  explicit MinfsMetrics(const ::fuchsia_minfs::wire::Metrics* metrics);
+  explicit MinfsMetrics(const fuchsia_minfs::wire::Metrics* metrics);
 
   // Not copyable or movable
   MinfsMetrics(const MinfsMetrics&) = delete;
@@ -25,7 +25,7 @@ class MinfsMetrics : public FsMetrics {
   ~MinfsMetrics() = default;
 
   // Copies to fields of fidl structure the corresponding fields of MinfsMetrics
-  void CopyToFidl(::fuchsia_minfs::wire::Metrics* metrics) const;
+  void CopyToFidl(fuchsia_minfs::wire::Metrics* metrics) const;
 
   // Prints the fields of MinfsMetrics and FsMetrics to file |stream|. Passes
   // |success| to FsMetrics::Dump. See FsMetrics::Dump.

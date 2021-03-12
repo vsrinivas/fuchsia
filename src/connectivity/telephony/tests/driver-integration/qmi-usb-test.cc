@@ -41,7 +41,7 @@ class USBVirtualBusQmi : public usb_virtual_bus::USBVirtualBusBase {
 };
 
 void USBVirtualBusQmi::InitUsbQmi(fbl::String* devpath) {
-  namespace usb_peripheral = ::fuchsia_hardware_usb_peripheral;
+  namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
   usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_device_class = 0;

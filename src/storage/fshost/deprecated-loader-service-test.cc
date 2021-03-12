@@ -10,7 +10,7 @@ namespace loader {
 namespace test {
 namespace {
 
-namespace fldsvc = ::fuchsia_ldsvc;
+namespace fldsvc = fuchsia_ldsvc;
 
 TEST_F(LoaderServiceTest, SystemBeforeBoot) {
   std::shared_ptr<DeprecatedBootSystemLoaderService> loader;

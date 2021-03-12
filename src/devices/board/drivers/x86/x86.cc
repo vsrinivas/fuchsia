@@ -24,8 +24,8 @@
 #include "src/devices/board/drivers/x86/include/sysmem.h"
 #include "src/devices/board/drivers/x86/x64-bind.h"
 
-using ::fuchsia_hardware_acpi::wire::MAX_ACPI_TABLE_ENTRIES;
-using ::fuchsia_hardware_acpi::wire::TableInfo;
+using fuchsia_hardware_acpi::wire::MAX_ACPI_TABLE_ENTRIES;
+using fuchsia_hardware_acpi::wire::TableInfo;
 
 zx_handle_t root_resource_handle;
 

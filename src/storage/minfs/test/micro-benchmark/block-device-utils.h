@@ -10,7 +10,7 @@
 
 namespace minfs_micro_benchmark {
 
-using BlockFidlMetrics = ::fuchsia_hardware_block::wire::BlockStats;
+using BlockFidlMetrics = fuchsia_hardware_block::wire::BlockStats;
 
 constexpr uint8_t BitsPerByte = 8;
 

@@ -14,7 +14,7 @@
 
 #include <runtests-utils/service-proxy-dir.h>
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 namespace runtests {
 

@@ -205,15 +205,15 @@ struct IsolatedDevmgr::ExceptionLoopState {
     }
 
     // Send exceptions to the ambient fuchsia.exception.Handler.
-    auto local = service::Connect<::fuchsia_exception::Handler>();
+    auto local = service::Connect<fuchsia_exception::Handler>();
     if (!local.is_ok()) {
       return;
     }
-    ::fuchsia_exception::Handler::SyncClient handler(std::move(*local));
-    ::fuchsia_exception::wire::ExceptionInfo einfo;
+    fuchsia_exception::Handler::SyncClient handler(std::move(*local));
+    fuchsia_exception::wire::ExceptionInfo einfo;
     einfo.process_koid = info.pid;
     einfo.thread_koid = info.tid;
-    einfo.type = static_cast<::fuchsia_exception::wire::ExceptionType>(info.type);
+    einfo.type = static_cast<fuchsia_exception::wire::ExceptionType>(info.type);
     handler.OnException(std::move(exception), einfo);
   }
 

@@ -28,7 +28,7 @@
 
 namespace usb_virtual_bus {
 namespace {
-namespace ethernet = ::fuchsia_hardware_ethernet;
+namespace ethernet = fuchsia_hardware_ethernet;
 constexpr const char kManufacturer[] = "Google";
 constexpr const char kProduct[] = "CDC Ethernet";
 constexpr const char kSerial[] = "ebfd5ad49d2a";
@@ -36,8 +36,8 @@ constexpr const char kSerial[] = "ebfd5ad49d2a";
 zx_status_t GetTopologicalPath(int fd, std::string* out) {
   size_t path_len;
   fdio_cpp::UnownedFdioCaller connection(fd);
-  auto resp = ::fuchsia_device::Controller::Call::GetTopologicalPath(
-      ::fidl::UnownedClientEnd<::fuchsia_device::Controller>(connection.borrow_channel()));
+  auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(
+      ::fidl::UnownedClientEnd<fuchsia_device::Controller>(connection.borrow_channel()));
   zx_status_t status = resp.status();
   if (status != ZX_OK) {
     return status;
@@ -90,9 +90,9 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
   USBVirtualBus() = default;
 
   void InitUsbCdcEcm(std::string* peripheral_path, std::string* host_path) {
-    namespace usb_peripheral = ::fuchsia_hardware_usb_peripheral;
+    namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
     using ConfigurationDescriptor =
-        ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+        ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
     usb_peripheral::wire::DeviceDescriptor device_desc = {};
     device_desc.bcd_usb = htole16(0x0200);
     device_desc.b_device_class = 0;

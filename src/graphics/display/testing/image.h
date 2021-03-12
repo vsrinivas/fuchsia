@@ -31,7 +31,7 @@ class Image {
     kBorder,
   };
 
-  static Image* Create(::fuchsia_hardware_display::Controller::SyncClient* dc, uint32_t width,
+  static Image* Create(fuchsia_hardware_display::Controller::SyncClient* dc, uint32_t width,
                        uint32_t height, zx_pixel_format_t format, Pattern pattern,
                        uint32_t fg_color, uint32_t bg_color, uint64_t modifier);
 
@@ -43,8 +43,8 @@ class Image {
   uint32_t stride() { return stride_; }
   zx_pixel_format_t format() { return format_; }
 
-  void GetConfig(::fuchsia_hardware_display::wire::ImageConfig* config_out);
-  bool Import(::fuchsia_hardware_display::Controller::SyncClient* dc, image_import_t* import_out);
+  void GetConfig(fuchsia_hardware_display::wire::ImageConfig* config_out);
+  bool Import(fuchsia_hardware_display::Controller::SyncClient* dc, image_import_t* import_out);
 
  private:
   Image(uint32_t width, uint32_t height, int32_t stride, zx_pixel_format_t format,

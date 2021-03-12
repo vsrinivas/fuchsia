@@ -36,7 +36,7 @@
 #include "src/lib/storage/vfs/cpp/remote_file_connection.h"
 #include "src/lib/storage/vfs/cpp/stream_file_connection.h"
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 #endif
 
@@ -568,8 +568,7 @@ void Vfs::OnConnectionClosedRemotely(internal::Connection* connection) {
 }
 
 zx_status_t Vfs::ServeDirectory(fbl::RefPtr<fs::Vnode> vn,
-                                fidl::ServerEnd<::fuchsia_io::Directory> server_end,
-                                Rights rights) {
+                                fidl::ServerEnd<fuchsia_io::Directory> server_end, Rights rights) {
   VnodeConnectionOptions options;
   options.flags.directory = true;
   options.rights = rights;

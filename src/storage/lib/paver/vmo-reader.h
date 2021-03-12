@@ -14,7 +14,7 @@ namespace paver {
 
 class VmoReader {
  public:
-  VmoReader(::fuchsia_mem::wire::Buffer buffer) : vmo_(std::move(buffer.vmo)), size_(buffer.size) {}
+  VmoReader(fuchsia_mem::wire::Buffer buffer) : vmo_(std::move(buffer.vmo)), size_(buffer.size) {}
 
   zx::status<size_t> Read(void* buf, size_t buf_size) {
     if (offset_ >= size_) {

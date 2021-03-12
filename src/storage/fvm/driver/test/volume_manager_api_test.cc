@@ -25,8 +25,8 @@ constexpr uint64_t kBlockSize = 512;
 constexpr uint64_t kSliceSize = 1 << 20;
 
 // using Partition = fuchsia_hardware_block_partition::Partition;
-using Volume = ::fuchsia_hardware_block_volume::Volume;
-using VolumeManager = ::fuchsia_hardware_block_volume::VolumeManager;
+using Volume = fuchsia_hardware_block_volume::Volume;
+using VolumeManager = fuchsia_hardware_block_volume::VolumeManager;
 
 class FvmVolumeManagerApiTest : public zxtest::Test {
  public:

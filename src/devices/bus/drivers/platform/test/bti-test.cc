@@ -89,7 +89,7 @@ TEST(PbusBtiTest, BtiIsSameAfterCrash) {
   zx::channel chan;
   ASSERT_OK(fdio_get_service_handle(fd.release(), chan.reset_and_get_address()));
 
-  ::fuchsia_hardware_btitest::BtiDevice::SyncClient client(std::move(chan));
+  fuchsia_hardware_btitest::BtiDevice::SyncClient client(std::move(chan));
   uint64_t koid1;
   {
     auto result = client.GetKoid();

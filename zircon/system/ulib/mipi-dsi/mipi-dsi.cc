@@ -20,7 +20,7 @@ zx::status<fuchsia_hardware_dsi::wire::MipiDsiCmd> MipiDsi::CreateCommandFidl(
   uint8_t ch_id = kMipiDsiVirtualChanId;
   uint8_t dsi_data_type = kMipiDsiDtUnknown;
   uint32_t flags = 0;
-  ::fuchsia_hardware_dsi::wire::MipiDsiCmd command(allocator);
+  fuchsia_hardware_dsi::wire::MipiDsiCmd command(allocator);
 
   switch (tlen) {
     case 0:

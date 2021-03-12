@@ -18,7 +18,7 @@
 
 #include "src/lib/storage/vfs/cpp/mount_channel.h"
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 #endif  // __Fuchsia__
 

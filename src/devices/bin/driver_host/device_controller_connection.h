@@ -62,7 +62,7 @@ class DeviceControllerConnection : public AsyncLoopOwnedRpcHandler<DeviceControl
             OpenCompleter::Sync& _completer) override;
 
   // All methods below are intentionally unimplemented.
-  void AddInotifyFilter(::fuchsia_io2::wire::InotifyWatchMask filters, ::fidl::StringView path,
+  void AddInotifyFilter(fuchsia_io2::wire::InotifyWatchMask filters, ::fidl::StringView path,
                         uint32_t watch_descriptor, ::zx::socket socket, ::zx::channel controller,
                         AddInotifyFilterCompleter::Sync& _completer) override {}
 

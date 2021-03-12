@@ -23,7 +23,7 @@
 namespace block_client {
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 constexpr uint16_t kGoldenVmoid = 2;
 
@@ -89,7 +89,7 @@ class MockBlockDevice {
    public:
     explicit MockNode(MockBlockDevice* self) : self_(self) {}
 
-    void Clone(uint32_t flags, ::fidl::ServerEnd<::fuchsia_io::Node> object,
+    void Clone(uint32_t flags, ::fidl::ServerEnd<fuchsia_io::Node> object,
                CloneCompleter::Sync& completer) override {
       self_->Bind(self_->dispatcher_, object.TakeChannel());
     }
@@ -98,7 +98,7 @@ class MockBlockDevice {
     void Describe(DescribeCompleter::Sync& completer) override {}
     void Sync(SyncCompleter::Sync& completer) override {}
     void GetAttr(GetAttrCompleter::Sync& completer) override {}
-    void SetAttr(uint32_t flags, ::fuchsia_io::wire::NodeAttributes attributes,
+    void SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
                  SetAttrCompleter::Sync& completer) override {}
 
    private:

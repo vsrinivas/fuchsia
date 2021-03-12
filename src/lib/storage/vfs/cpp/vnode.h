@@ -338,7 +338,7 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // The vnode is acting as a mount point for a remote filesystem or device.
   virtual bool IsRemote() const;
   virtual fidl::ClientEnd<fuchsia_io::Directory> DetachRemote();
-  virtual fidl::UnownedClientEnd<::fuchsia_io::Directory> GetRemote() const;
+  virtual fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const;
   virtual void SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote);
 #endif  // __Fuchsia__
 

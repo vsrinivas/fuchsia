@@ -16,7 +16,7 @@
 #include "../image.h"
 #include "base.h"
 
-namespace fhd = ::fuchsia_hardware_display;
+namespace fhd = fuchsia_hardware_display;
 
 namespace display {
 

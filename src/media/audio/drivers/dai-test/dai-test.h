@@ -24,7 +24,7 @@ using DaiTestDeviceType = ddk::Device<DaiTest, ddk::Messageable>;
 
 class DaiTest : public DaiTestDeviceType,
                 public ddk::internal::base_protocol,
-                public ::fuchsia_hardware_audio::Device::RawChannelInterface,
+                public fuchsia_hardware_audio::Device::RawChannelInterface,
                 public ::fuchsia::hardware::audio::StreamConfig {
  public:
   explicit DaiTest(zx_device_t* parent, bool is_input);
@@ -33,7 +33,7 @@ class DaiTest : public DaiTestDeviceType,
   zx_status_t InitPDev();
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    ::fuchsia_hardware_audio::Device::Dispatch(this, msg, &transaction);
+    fuchsia_hardware_audio::Device::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
 

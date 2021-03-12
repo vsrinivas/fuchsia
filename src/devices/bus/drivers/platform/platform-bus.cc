@@ -196,7 +196,7 @@ void PlatformBus::GetBootloaderVendor(GetBootloaderVendorCompleter::Sync& comple
 }
 
 void PlatformBus::GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync& completer) {
-  ::fuchsia_sysinfo::wire::InterruptControllerInfo info = {
+  fuchsia_sysinfo::wire::InterruptControllerInfo info = {
       .type = interrupt_controller_type_,
   };
   completer.Reply(ZX_OK, fidl::unowned_ptr(&info));
@@ -569,21 +569,21 @@ zx_status_t PlatformBus::Init() {
   zx::vmo vmo;
   uint32_t length;
 #if __x86_64__
-  interrupt_controller_type_ = ::fuchsia_sysinfo::wire::InterruptControllerType::APIC;
+  interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::APIC;
 #else
   status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V2, &vmo, &length);
   if (status != ZX_OK) {
     return status;
   }
   if (vmo.is_valid()) {
-    interrupt_controller_type_ = ::fuchsia_sysinfo::wire::InterruptControllerType::GIC_V2;
+    interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::GIC_V2;
   }
   status = GetBootItem(ZBI_TYPE_KERNEL_DRIVER, KDRV_ARM_GIC_V3, &vmo, &length);
   if (status != ZX_OK) {
     return status;
   }
   if (vmo.is_valid()) {
-    interrupt_controller_type_ = ::fuchsia_sysinfo::wire::InterruptControllerType::GIC_V3;
+    interrupt_controller_type_ = fuchsia_sysinfo::wire::InterruptControllerType::GIC_V3;
   }
 #endif
 

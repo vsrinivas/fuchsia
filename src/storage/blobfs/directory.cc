@@ -87,7 +87,7 @@ zx_status_t Directory::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out
 zx_status_t Directory::GetAttributes(fs::VnodeAttributes* a) {
   *a = fs::VnodeAttributes();
   a->mode = V_TYPE_DIR | V_IRUSR;
-  a->inode = ::fuchsia_io::wire::INO_UNKNOWN;
+  a->inode = fuchsia_io::wire::INO_UNKNOWN;
   a->content_size = 0;
   a->storage_size = 0;
   a->link_count = 1;
@@ -120,7 +120,7 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
 
 #ifdef __Fuchsia__
 
-zx_status_t Directory::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info) {
+zx_status_t Directory::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   blobfs_->GetFilesystemInfo(info);
   return ZX_OK;
 }

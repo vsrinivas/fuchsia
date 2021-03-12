@@ -21,7 +21,7 @@
 namespace audio {
 namespace aml_g12 {
 
-namespace audio_fidl = ::fuchsia_hardware_audio;
+namespace audio_fidl = fuchsia_hardware_audio;
 
 static constexpr uint32_t kTestFrameRate1 = 48000;
 static constexpr uint32_t kTestFrameRate2 = 96000;

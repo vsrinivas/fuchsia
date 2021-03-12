@@ -21,7 +21,7 @@ class RemoteContainer {
   constexpr RemoteContainer() = default;
   bool IsRemote() const;
   fidl::ClientEnd<fuchsia_io::Directory> DetachRemote();
-  fidl::UnownedClientEnd<::fuchsia_io::Directory> GetRemote() const;
+  fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const;
   void SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote);
 
  private:

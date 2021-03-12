@@ -224,7 +224,7 @@ class TestFilesystem {
   // Returns the ram-nand device, or nullptr if one isn't being used.
   ramdevice_client::RamNand* GetRamNand() const { return filesystem_->GetRamNand(); }
 
-  zx::status<::fuchsia_io::wire::FilesystemInfo> GetFsInfo();
+  zx::status<fuchsia_io::wire::FilesystemInfo> GetFsInfo();
 
   zx::unowned_channel GetOutgoingDirectory() const { return filesystem_->GetOutgoingDirectory(); };
 

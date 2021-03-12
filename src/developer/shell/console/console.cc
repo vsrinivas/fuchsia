@@ -14,7 +14,7 @@
 #include <iostream>
 #include <utility>
 
-namespace fpty = ::fuchsia_hardware_pty;
+namespace fpty = fuchsia_hardware_pty;
 
 namespace shell::console {
 

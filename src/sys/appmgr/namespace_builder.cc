@@ -23,7 +23,7 @@
 
 namespace component {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 constexpr char kDeprecatedDataName[] = "deprecated-data";
 constexpr char kBlockedDataName[] = "data";

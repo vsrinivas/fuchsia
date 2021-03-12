@@ -25,15 +25,15 @@ struct ColorCorrectionArgs {
 
 class Display {
  public:
-  Display(const ::fuchsia_hardware_display::wire::Info& info);
+  Display(const fuchsia_hardware_display::wire::Info& info);
 
-  void Init(::fuchsia_hardware_display::Controller::SyncClient* dc);
-  void Init(::fuchsia_hardware_display::Controller::SyncClient* dc,
+  void Init(fuchsia_hardware_display::Controller::SyncClient* dc);
+  void Init(fuchsia_hardware_display::Controller::SyncClient* dc,
             ColorCorrectionArgs color_correction_args = ColorCorrectionArgs());
 
   zx_pixel_format_t format() const { return pixel_formats_[format_idx_]; }
-  ::fuchsia_hardware_display::wire::Mode mode() const { return modes_[mode_idx_]; }
-  ::fuchsia_hardware_display::wire::CursorInfo cursor() const { return cursors_[0]; }
+  fuchsia_hardware_display::wire::Mode mode() const { return modes_[mode_idx_]; }
+  fuchsia_hardware_display::wire::CursorInfo cursor() const { return cursors_[0]; }
   uint64_t id() const { return id_; }
 
   bool set_format_idx(uint32_t idx) {
@@ -59,8 +59,8 @@ class Display {
 
   uint64_t id_;
   fbl::Vector<zx_pixel_format_t> pixel_formats_;
-  fbl::Vector<::fuchsia_hardware_display::wire::Mode> modes_;
-  fbl::Vector<::fuchsia_hardware_display::wire::CursorInfo> cursors_;
+  fbl::Vector<fuchsia_hardware_display::wire::Mode> modes_;
+  fbl::Vector<fuchsia_hardware_display::wire::CursorInfo> cursors_;
 
   fbl::String manufacturer_name_;
   fbl::String monitor_name_;

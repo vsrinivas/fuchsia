@@ -32,8 +32,8 @@
 
 #include "vc.h"
 
-namespace fhd = ::fuchsia_hardware_display;
-namespace sysmem = ::fuchsia_sysmem;
+namespace fhd = fuchsia_hardware_display;
+namespace sysmem = fuchsia_sysmem;
 
 namespace {
 

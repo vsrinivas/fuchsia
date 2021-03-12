@@ -643,9 +643,9 @@ zx_status_t FdioVolume::OpenManagerWithCaller(fdio_cpp::UnownedFdioCaller& calle
   if (!fd) {
     // No manager device in the /dev tree yet.  Try binding the zxcrypt
     // driver and waiting for it to appear.
-    auto resp = ::fuchsia_device::Controller::Call::Bind(
-        zx::unowned_channel(caller.borrow_channel()),
-        ::fidl::unowned_str(kDriverLib, strlen(kDriverLib)));
+    auto resp =
+        fuchsia_device::Controller::Call::Bind(zx::unowned_channel(caller.borrow_channel()),
+                                               ::fidl::unowned_str(kDriverLib, strlen(kDriverLib)));
     rc = resp.status();
     if (rc == ZX_OK) {
       if (resp->result.is_err()) {
@@ -687,7 +687,7 @@ zx_status_t FdioVolume::RelativeTopologicalPath(fdio_cpp::UnownedFdioCaller& cal
   fbl::StringBuffer<PATH_MAX> path;
   path.Resize(path.capacity());
   size_t path_len;
-  auto resp = ::fuchsia_device::Controller::Call::GetTopologicalPath(
+  auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(
       zx::unowned_channel(caller.borrow_channel()));
   rc = resp.status();
   if (rc == ZX_OK) {

@@ -49,12 +49,12 @@ class InputReport : public DeviceType,
   void GetInputReportsReader(zx::channel req,
                              GetInputReportsReaderCompleter::Sync& completer) override;
   void GetDescriptor(GetDescriptorCompleter::Sync& completer) override;
-  void SendOutputReport(::fuchsia_input_report::wire::OutputReport report,
+  void SendOutputReport(fuchsia_input_report::wire::OutputReport report,
                         SendOutputReportCompleter::Sync& completer) override;
   void GetFeatureReport(GetFeatureReportCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
-  void SetFeatureReport(::fuchsia_input_report::wire::FeatureReport report,
+  void SetFeatureReport(fuchsia_input_report::wire::FeatureReport report,
                         SetFeatureReportCompleter::Sync& completer) override {
     completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }

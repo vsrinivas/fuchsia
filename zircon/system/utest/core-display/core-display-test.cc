@@ -43,9 +43,9 @@
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 
-namespace fhd = ::fuchsia_hardware_display;
-namespace sysinfo = ::fuchsia_sysinfo;
-namespace sysmem = ::fuchsia_sysmem;
+namespace fhd = fuchsia_hardware_display;
+namespace sysinfo = fuchsia_sysinfo;
+namespace sysmem = fuchsia_sysmem;
 
 namespace {
 

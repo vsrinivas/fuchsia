@@ -25,7 +25,7 @@
 namespace blobfs {
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 zx_rights_t get_rights(const zx::object_base& handle) {
   zx_info_handle_basic_t info;

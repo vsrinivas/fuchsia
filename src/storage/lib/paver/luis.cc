@@ -22,7 +22,7 @@ using uuid::Uuid;
 }  // namespace
 
 zx::status<std::unique_ptr<DevicePartitioner>> LuisPartitioner::Initialize(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     const fbl::unique_fd& block_device) {
   auto status = IsBoard(devfs_root, "luis");
   if (status.is_error()) {
@@ -175,13 +175,13 @@ zx::status<> LuisPartitioner::ValidatePayload(const PartitionSpec& spec,
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> LuisPartitionerFactory::New(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root, Arch arch,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return LuisPartitioner::Initialize(std::move(devfs_root), svc_root, block_device);
 }
 
 zx::status<std::unique_ptr<abr::Client>> LuisAbrClientFactory::New(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;
   auto partitioner = LuisPartitioner::Initialize(std::move(devfs_root), std::move(svc_root), none);

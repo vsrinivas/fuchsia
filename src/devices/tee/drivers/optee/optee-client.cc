@@ -568,7 +568,7 @@ zx_status_t OpteeClient::GetRootStorageChannel(zx::unowned_channel* out_root_cha
     return status;
   }
 
-  auto result = ::fuchsia_tee_manager::Provider::Call::RequestPersistentStorage(
+  auto result = fuchsia_tee_manager::Provider::Call::RequestPersistentStorage(
       zx::unowned_channel(provider_channel_), std::move(server_channel));
   status = result.status();
   if (status != ZX_OK) {
@@ -598,7 +598,7 @@ zx_status_t OpteeClient::InitRpmbClient(void) {
     return status;
   }
 
-  rpmb_client_ = ::fuchsia_hardware_rpmb::Rpmb::SyncClient(std::move(client));
+  rpmb_client_ = fuchsia_hardware_rpmb::Rpmb::SyncClient(std::move(client));
 
   return ZX_OK;
 }
@@ -995,7 +995,7 @@ zx_status_t OpteeClient::RpmbRouteFrames(std::optional<SharedMemoryView> tx_fram
   ZX_DEBUG_ASSERT(tx_frames.has_value());
   ZX_DEBUG_ASSERT(rx_frames.has_value());
 
-  using ::fuchsia_hardware_rpmb::wire::FRAME_SIZE;
+  using fuchsia_hardware_rpmb::wire::FRAME_SIZE;
 
   zx_status_t status;
   RpmbFrame* frame = reinterpret_cast<RpmbFrame*>(tx_frames->vaddr());
@@ -1095,7 +1095,7 @@ zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
     size += fbl::round_up(resp->size(), ZX_PAGE_SIZE);
   }
 
-  ::fuchsia_hardware_rpmb::wire::Request rpmb_request = {};
+  fuchsia_hardware_rpmb::wire::Request rpmb_request = {};
 
   status = zx::vmo::create(size, 0, &rpmb_vmo);
   if (status != ZX_OK) {
@@ -1117,7 +1117,7 @@ zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
     return status;
   }
 
-  ::fuchsia_mem::wire::Range rx_frames_range = {};
+  fuchsia_mem::wire::Range rx_frames_range = {};
 
   if (has_rx_frames) {
     status = rpmb_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &rx_frames_range.vmo);
@@ -1128,7 +1128,7 @@ zx_status_t OpteeClient::RpmbSendRequest(std::optional<SharedMemoryView>& req,
 
     rx_frames_range.offset = rx_offset;
     rx_frames_range.size = resp->size();
-    rpmb_request.rx_frames = fidl::unowned_ptr_t<::fuchsia_mem::wire::Range>(&rx_frames_range);
+    rpmb_request.rx_frames = fidl::unowned_ptr_t<fuchsia_mem::wire::Range>(&rx_frames_range);
   }
 
   auto res = rpmb_client_->Request(std::move(rpmb_request));

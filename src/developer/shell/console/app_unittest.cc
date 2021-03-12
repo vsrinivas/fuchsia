@@ -25,7 +25,7 @@ TEST_F(App, BogusArgs) {
   const char* args[] = {"/boot/bin/cliff", "-w", nullptr};
   int quit_count = 0;
 
-  ::fuchsia_shell::Shell::SyncClient client = Client();
+  fuchsia_shell::Shell::SyncClient client = Client();
   shell::console::App app(&client, dispatcher());
   EXPECT_FALSE(app.Init(2, args, [&quit_count] { ++quit_count; }));
   EXPECT_EQ(0, quit_count);

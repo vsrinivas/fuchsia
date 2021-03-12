@@ -144,15 +144,15 @@ void PtyClient::AdjustSignals() {
   zx_signals_t to_set = 0;
 
   if (is_active()) {
-    to_set = ::fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE;
+    to_set = fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE;
   } else {
-    to_clear = ::fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE;
+    to_clear = fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE;
   }
 
   if (rx_fifo_.is_empty()) {
-    to_clear = ::fuchsia_device::wire::DEVICE_SIGNAL_READABLE;
+    to_clear = fuchsia_device::wire::DEVICE_SIGNAL_READABLE;
   } else {
-    to_set = ::fuchsia_device::wire::DEVICE_SIGNAL_READABLE;
+    to_set = fuchsia_device::wire::DEVICE_SIGNAL_READABLE;
   }
 
   local_.signal_peer(to_clear, to_set);

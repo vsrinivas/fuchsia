@@ -27,7 +27,7 @@
 namespace fs_test {
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 using AccessTest = FilesystemTest;
 

@@ -254,8 +254,8 @@ zx_status_t BlockDevice::AttachDriver(const std::string_view& driver) {
   fdio_cpp::UnownedFdioCaller connection(fd_.get());
   zx_status_t call_status = ZX_OK;
   auto resp =
-      ::fuchsia_device::Controller::Call::Bind(zx::unowned_channel(connection.borrow_channel()),
-                                               ::fidl::unowned_str(driver.data(), driver.length()));
+      fuchsia_device::Controller::Call::Bind(zx::unowned_channel(connection.borrow_channel()),
+                                             ::fidl::unowned_str(driver.data(), driver.length()));
   zx_status_t io_status = resp.status();
   if (io_status != ZX_OK) {
     return io_status;

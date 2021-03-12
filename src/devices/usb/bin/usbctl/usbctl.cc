@@ -35,7 +35,7 @@
 #define CDC_TEST_PRODUCT_STRING "CDC Ethernet & USB Function Test"
 #define SERIAL_STRING "12345678"
 
-namespace peripheral = ::fuchsia_hardware_usb_peripheral;
+namespace peripheral = fuchsia_hardware_usb_peripheral;
 
 const peripheral::wire::FunctionDescriptor cdc_function_descs[] = {
     {
@@ -170,7 +170,7 @@ static int open_usb_device(void) {
 
 static zx_status_t device_init(zx_handle_t svc, const usb_config_t* config) {
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+      ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
   device_desc.id_vendor = htole16(config->vid);
   device_desc.id_product = htole16(config->pid);
   device_desc.manufacturer = MANUFACTURER_STRING;

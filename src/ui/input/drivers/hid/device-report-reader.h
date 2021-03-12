@@ -17,7 +17,7 @@ namespace hid_driver {
 
 class HidDevice;
 
-class DeviceReportsReader : public ::fuchsia_hardware_input::DeviceReportsReader::Interface {
+class DeviceReportsReader : public fuchsia_hardware_input::DeviceReportsReader::Interface {
  public:
   // The pointer to `base` must stay alive for as long as DeviceReportsReader
   // is alive.

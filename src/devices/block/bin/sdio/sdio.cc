@@ -10,9 +10,9 @@
 
 namespace sdio {
 
-using SdioClient = ::fuchsia_hardware_sdio::Device::SyncClient;
-using namespace ::fuchsia_hardware_sdio;
-using namespace ::fuchsia_hardware_sdio::wire;
+using SdioClient = fuchsia_hardware_sdio::Device::SyncClient;
+using namespace fuchsia_hardware_sdio;
+using namespace fuchsia_hardware_sdio::wire;
 
 constexpr char kUsageMessage[] = R"""(Usage: sdio <device> <command> [options]
 

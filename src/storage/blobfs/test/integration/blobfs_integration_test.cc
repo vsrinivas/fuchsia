@@ -50,7 +50,7 @@
 namespace blobfs {
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 using BlobfsIntegrationTest = ParameterizedBlobfsTest;
 using ::testing::UnitTest;
 

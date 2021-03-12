@@ -5,14 +5,14 @@
 #include "gpioutil.h"
 
 int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
-              ::fuchsia_hardware_gpio::wire::GpioFlags* in_flag, uint8_t* out_value,
+              fuchsia_hardware_gpio::wire::GpioFlags* in_flag, uint8_t* out_value,
               uint64_t* ds_ua) {
   if (argc < 3) {
     return -1;
   }
 
   *write_value = 0;
-  *in_flag = ::fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL;
+  *in_flag = fuchsia_hardware_gpio::wire::GpioFlags::NO_PULL;
   *out_value = 0;
   *ds_ua = 0;
   unsigned long flag = 0;
@@ -39,7 +39,7 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
         printf("Invalid flag\n\n");
         return -1;
       }
-      *in_flag = static_cast<::fuchsia_hardware_gpio::wire::GpioFlags>(flag);
+      *in_flag = static_cast<fuchsia_hardware_gpio::wire::GpioFlags>(flag);
       break;
     case 'o':
       *func = ConfigOut;
@@ -65,9 +65,8 @@ int ParseArgs(int argc, char** argv, GpioFunc* func, uint8_t* write_value,
   return 0;
 }
 
-int ClientCall(::fuchsia_hardware_gpio::Gpio::SyncClient client, GpioFunc func, uint8_t write_value,
-               ::fuchsia_hardware_gpio::wire::GpioFlags in_flag, uint8_t out_value,
-               uint64_t ds_ua) {
+int ClientCall(fuchsia_hardware_gpio::Gpio::SyncClient client, GpioFunc func, uint8_t write_value,
+               fuchsia_hardware_gpio::wire::GpioFlags in_flag, uint8_t out_value, uint64_t ds_ua) {
   switch (func) {
     case Read: {
       auto result = client.Read();

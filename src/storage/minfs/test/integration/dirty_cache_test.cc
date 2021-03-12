@@ -154,7 +154,7 @@ void CheckDirtyStats(std::string mount_path, uint64_t dirty_bytes) {
 
   fdio_cpp::FdioCaller caller(std::move(fd));
   const bool kExpectDirtyCacheEnabled = Minfs::DirtyCacheEnabled();
-  auto mount_state_or = ::fuchsia_minfs::Minfs::Call::GetMountState(caller.channel());
+  auto mount_state_or = fuchsia_minfs::Minfs::Call::GetMountState(caller.channel());
   ASSERT_TRUE(mount_state_or.ok());
   ASSERT_EQ(mount_state_or.value().status, ZX_OK);
   ASSERT_NE(mount_state_or.value().mount_state, nullptr);
@@ -186,7 +186,7 @@ TEST_P(DirtyCacheTest, DirtyCacheEnabled) {
   ASSERT_TRUE(fd);
 
   fdio_cpp::FdioCaller caller(std::move(fd));
-  auto mount_state_or = ::fuchsia_minfs::Minfs::Call::GetMountState(caller.channel());
+  auto mount_state_or = fuchsia_minfs::Minfs::Call::GetMountState(caller.channel());
   ASSERT_TRUE(mount_state_or.ok());
   ASSERT_EQ(mount_state_or.value().status, ZX_OK);
   ASSERT_NE(mount_state_or.value().mount_state, nullptr);

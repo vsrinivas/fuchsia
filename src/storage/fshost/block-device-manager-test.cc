@@ -107,7 +107,7 @@ TEST(BlockDeviceManager, ReadOptions) {
 // which in turn sets the fshost variable kMinfsMaxBytes. This test is checking that this setting
 // actually was sent to fshost and applies to FVM.
 TEST_F(BlockDeviceManagerIntegration, MaxSize) {
-  namespace fio = ::fuchsia_io;
+  namespace fio = fuchsia_io;
 
   constexpr uint32_t kBlockCount = 1024 * 256;
   constexpr uint32_t kBlockSize = 512;
@@ -157,7 +157,7 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
 
   // Query the minfs partition instance guid. This is needed to query the limit later on.
   fdio_cpp::UnownedFdioCaller partition_caller(partition_fd.get());
-  namespace volume = ::fuchsia_hardware_block_volume;
+  namespace volume = fuchsia_hardware_block_volume;
   auto guid_result = volume::Volume::Call::GetInstanceGuid(partition_caller.channel());
   ASSERT_EQ(ZX_OK, guid_result.status());
   ASSERT_EQ(ZX_OK, guid_result->status);

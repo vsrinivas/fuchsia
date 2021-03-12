@@ -15,7 +15,7 @@
 #include "intel-dsp.h"
 
 namespace {
-namespace audio_fidl = ::fuchsia_hardware_audio;
+namespace audio_fidl = fuchsia_hardware_audio;
 }  // namespace
 
 namespace audio {

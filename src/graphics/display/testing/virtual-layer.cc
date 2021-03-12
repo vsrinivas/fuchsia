@@ -16,7 +16,7 @@
 
 #include "utils.h"
 
-namespace fhd = ::fuchsia_hardware_display;
+namespace fhd = fuchsia_hardware_display;
 
 namespace testing {
 namespace display {

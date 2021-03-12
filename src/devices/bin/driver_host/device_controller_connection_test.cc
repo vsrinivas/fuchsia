@@ -76,7 +76,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
     DeviceControllerConnectionTest(
         DriverHostContext* ctx, fbl::RefPtr<zx_device> dev, zx::channel rpc,
         fidl::Client<fuchsia_device_manager::Coordinator> coordinator_client,
-        fidl::Client<::fuchsia_device_manager::DeviceController>& local)
+        fidl::Client<fuchsia_device_manager::DeviceController>& local)
         : DeviceControllerConnection(ctx, std::move(dev), std::move(rpc),
                                      std::move(coordinator_client)),
           local_(local) {}
@@ -99,11 +99,11 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
     }
 
    private:
-    fidl::Client<::fuchsia_device_manager::DeviceController>& local_;
+    fidl::Client<fuchsia_device_manager::DeviceController>& local_;
     std::optional<BindDriverCompleter::Async> completer_;
   };
 
-  fidl::Client<::fuchsia_device_manager::DeviceController> client;
+  fidl::Client<fuchsia_device_manager::DeviceController> client;
 
   fidl::Client<fuchsia_device_manager::Coordinator> coordinator;
   client.Bind(std::move(device_remote2), ctx.loop().dispatcher());
@@ -115,7 +115,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), ctx.loop().dispatcher()));
   ASSERT_OK(ctx.loop().RunUntilIdle());
 
-  class EventHandler : public ::fuchsia_device_manager::DeviceController::AsyncEventHandler {
+  class EventHandler : public fuchsia_device_manager::DeviceController::AsyncEventHandler {
    public:
     explicit EventHandler(DeviceControllerConnectionTest* connection) : connection_(connection) {}
 
@@ -138,7 +138,7 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   ASSERT_OK(zx::vmo::create(0, 0, &vmo));
   auto result = client->BindDriver(
       ::fidl::StringView("", 1), std::move(vmo),
-      [](::fuchsia_device_manager::DeviceController::BindDriverResponse* response) {});
+      [](fuchsia_device_manager::DeviceController::BindDriverResponse* response) {});
   ASSERT_OK(result.status());
 
   ASSERT_OK(ctx.loop().RunUntilIdle());
@@ -222,12 +222,12 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), ctx.loop().dispatcher()));
   ASSERT_OK(ctx.loop().RunUntilIdle());
 
-  fidl::Client<::fuchsia_device_manager::DeviceController> client;
+  fidl::Client<fuchsia_device_manager::DeviceController> client;
   ASSERT_OK(client.Bind(std::move(device_local), ctx.loop().dispatcher()));
 
   bool unbind_successful = false;
   auto result =
-      client->Unbind([&](::fuchsia_device_manager::DeviceController::UnbindResponse* response) {
+      client->Unbind([&](fuchsia_device_manager::DeviceController::UnbindResponse* response) {
         unbind_successful = response->result.is_response();
       });
   ASSERT_OK(result.status());

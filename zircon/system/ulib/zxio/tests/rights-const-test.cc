@@ -8,7 +8,7 @@
 
 namespace {
 
-namespace fio2 = ::fuchsia_io2;
+namespace fio2 = fuchsia_io2;
 
 // Since fidl does not support operations for constants this test ensures
 // the pre-calculated constants in fuchsia.io2/rights-abilities.fidl match the

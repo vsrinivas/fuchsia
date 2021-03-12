@@ -17,7 +17,7 @@
 
 namespace {
 
-class FakeCoordinator : public ::fuchsia_device_manager::Coordinator::RawChannelInterface {
+class FakeCoordinator : public fuchsia_device_manager::Coordinator::RawChannelInterface {
  public:
   FakeCoordinator() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
     loop_.StartThread("driver_host-test-coordinator-loop");

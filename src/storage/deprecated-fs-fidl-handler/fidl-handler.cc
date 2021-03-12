@@ -17,7 +17,7 @@
 namespace fs {
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 zx_status_t Reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* msg) {
   auto connection = FidlConnection::FromTxn(txn);

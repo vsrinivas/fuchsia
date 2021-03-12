@@ -350,7 +350,7 @@ zx_status_t device_get_dev_power_state_from_mapping(
 
 uint32_t get_perf_state(const fbl::RefPtr<zx_device>& dev, uint32_t requested_perf_state) {
   // Give preference to the performance state that is explicitly for this device.
-  if (dev->current_performance_state() != ::fuchsia_device::wire::DEVICE_PERFORMANCE_STATE_P0) {
+  if (dev->current_performance_state() != fuchsia_device::wire::DEVICE_PERFORMANCE_STATE_P0) {
     return dev->current_performance_state();
   }
   return requested_perf_state;

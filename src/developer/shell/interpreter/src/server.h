@@ -181,8 +181,7 @@ class Service final : public fuchsia_shell::Shell::Interface {
 
   void CreateExecutionContext(uint64_t context_id,
                               CreateExecutionContextCompleter::Sync& completer) override;
-  void AddNodes(uint64_t context_id,
-                ::fidl::VectorView<::fuchsia_shell::wire::NodeDefinition> nodes,
+  void AddNodes(uint64_t context_id, ::fidl::VectorView<fuchsia_shell::wire::NodeDefinition> nodes,
                 AddNodesCompleter::Sync& _completer) override;
   void DumpExecutionContext(uint64_t context_id,
                             DumpExecutionContextCompleter::Sync& completer) override;

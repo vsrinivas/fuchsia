@@ -668,7 +668,7 @@ void VnodeMinfs::Recreate(Minfs* fs, ino_t ino, fbl::RefPtr<VnodeMinfs>* out) {
 
 constexpr std::string_view kFsName = "minfs";
 
-zx_status_t VnodeMinfs::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info) {
+zx_status_t VnodeMinfs::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   uint32_t reserved_blocks = Vfs()->BlocksReserved();
   Transaction transaction(fs_);
   *info = {};
@@ -687,9 +687,9 @@ zx_status_t VnodeMinfs::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info
     info->free_shared_pool_bytes = fvm_info.slice_size * free_slices;
   }
 
-  static_assert(kFsName.size() + 1 < ::fuchsia_io::wire::MAX_FS_NAME_BUFFER, "Minfs name too long");
+  static_assert(kFsName.size() + 1 < fuchsia_io::wire::MAX_FS_NAME_BUFFER, "Minfs name too long");
   info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          ::fuchsia_io::wire::MAX_FS_NAME_BUFFER - 1)] = '\0';
+                          fuchsia_io::wire::MAX_FS_NAME_BUFFER - 1)] = '\0';
   return ZX_OK;
 }
 
@@ -698,7 +698,7 @@ zx_status_t VnodeMinfs::GetDevicePath(size_t buffer_len, char* out_name, size_t*
 }
 
 void VnodeMinfs::GetMetrics(GetMetricsCompleter::Sync& completer) {
-  ::fuchsia_minfs::wire::Metrics metrics;
+  fuchsia_minfs::wire::Metrics metrics;
   zx_status_t status = fs_->GetMetrics(&metrics);
   completer.Reply(status, status == ZX_OK ? fidl::unowned_ptr(&metrics) : nullptr);
 }

@@ -19,9 +19,9 @@ namespace usb_virtual_bus_base {
 using driver_integration_test::IsolatedDevmgr;
 
 using ConfigurationDescriptor =
-    ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
-using ::fuchsia_hardware_usb_peripheral::wire::DeviceDescriptor;
-using ::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor;
+    ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+using fuchsia_hardware_usb_peripheral::wire::DeviceDescriptor;
+using fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor;
 
 class __EXPORT USBVirtualBusBase {
  public:

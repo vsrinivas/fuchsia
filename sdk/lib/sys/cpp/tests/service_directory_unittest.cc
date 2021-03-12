@@ -10,7 +10,7 @@
 #include <gtest/gtest.h>
 #include <test/placeholders/cpp/fidl.h>
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 TEST(ServiceDirectoryTest, Control) {
   zx::channel svc_client, svc_server;

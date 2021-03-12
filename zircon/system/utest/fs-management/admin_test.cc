@@ -12,7 +12,7 @@
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 enum State {
   kEmpty,

@@ -32,7 +32,7 @@
 
 namespace optee {
 
-namespace fuchsia_tee = ::fuchsia_tee;
+namespace fuchsia_tee = fuchsia_tee;
 
 static bool IsOpteeApi(const tee_smc::TrustedOsCallUidResult& returned_uid) {
   return returned_uid.uid_0_3 == kOpteeApiUid_0 && returned_uid.uid_4_7 == kOpteeApiUid_1 &&

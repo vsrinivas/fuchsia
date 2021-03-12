@@ -26,10 +26,10 @@ namespace nand {
 
 using NandOperation = nand::Operation<>;
 
-using ::fuchsia_hardware_skipblock::wire::PartitionInfo;
-using ::fuchsia_hardware_skipblock::wire::ReadWriteOperation;
-using ::fuchsia_hardware_skipblock::wire::WriteBytesMode;
-using ::fuchsia_hardware_skipblock::wire::WriteBytesOperation;
+using fuchsia_hardware_skipblock::wire::PartitionInfo;
+using fuchsia_hardware_skipblock::wire::ReadWriteOperation;
+using fuchsia_hardware_skipblock::wire::WriteBytesMode;
+using fuchsia_hardware_skipblock::wire::WriteBytesOperation;
 
 struct PageRange {
   size_t page_offset;
@@ -40,7 +40,7 @@ class SkipBlockDevice;
 using DeviceType = ddk::Device<SkipBlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Messageable>;
 
 class SkipBlockDevice : public DeviceType,
-                        public ::fuchsia_hardware_skipblock::SkipBlock::Interface,
+                        public fuchsia_hardware_skipblock::SkipBlock::Interface,
                         public ddk::EmptyProtocol<ZX_PROTOCOL_SKIP_BLOCK> {
  public:
   // Spawns device node based on parent node.

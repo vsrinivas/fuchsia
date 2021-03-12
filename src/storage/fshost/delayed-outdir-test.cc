@@ -20,14 +20,14 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
   // Create a new DelayedOutdir, and initialize it with a new channel
   auto delayed_outdir = devmgr::DelayedOutdir();
 
-  auto delayed = fidl::CreateEndpoints<::fuchsia_io::Directory>();
+  auto delayed = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(delayed.status_value());
 
   auto remote_dir = delayed_outdir.Initialize(std::move(delayed->client));
 
   // Put the remote_dir we received from DelayedOutDir in a vfs and run it
 
-  auto root = fidl::CreateEndpoints<::fuchsia_io::Directory>();
+  auto root = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(root.status_value());
 
   auto loop = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
@@ -38,7 +38,7 @@ TEST(DelayedOutdirTest, MessagesWaitForStart) {
   // Attempt to open "fs/foo" in our vfs, which will forward an open request for
   // "foo" into the channel we provided above.
 
-  auto foo = fidl::CreateEndpoints<::fuchsia_io::Directory>();
+  auto foo = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(foo.status_value());
   zx_status_t status = fdio_open_at(root->client.channel().get(), "fs/foo", ZX_FS_RIGHT_READABLE,
                                     foo->server.channel().release());

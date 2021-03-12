@@ -49,13 +49,13 @@ class TestPowerDriverChild : public DeviceType, public TestDevice::Interface {
   void GetCurrentDeviceAutoSuspendConfig(
       GetCurrentDeviceAutoSuspendConfigCompleter::Sync& completer) override;
 
-  void SetTestStatusInfo(::fuchsia_device_power_test::wire::TestStatusInfo test_info,
+  void SetTestStatusInfo(fuchsia_device_power_test::wire::TestStatusInfo test_info,
                          SetTestStatusInfoCompleter::Sync& completer) override;
 
   void DdkUnbind(ddk::UnbindTxn txn) { txn.Reply(); }
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    ::fuchsia_device_power_test::TestDevice::Dispatch(this, msg, &transaction);
+    fuchsia_device_power_test::TestDevice::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
   void DdkInit(ddk::InitTxn txn);

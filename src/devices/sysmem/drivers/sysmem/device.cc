@@ -614,7 +614,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
         // At this point secure_allocators_ has only the secure heaps that are configured via sysmem
         // (not those configured via the TEE), and the memory for these is not yet protected.  Tell
         // the TEE about these.
-        ::fuchsia_sysmem::wire::PhysicalSecureHeaps sysmem_configured_heaps;
+        fuchsia_sysmem::wire::PhysicalSecureHeaps sysmem_configured_heaps;
         for (const auto& [heap_type, allocator] : secure_allocators_) {
           uint64_t base;
           uint64_t size;
@@ -626,14 +626,14 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
               " size: %016" PRIx64,
               static_cast<uint64_t>(heap_type), base, size);
 
-          ::fuchsia_sysmem::wire::PhysicalSecureHeap& heap =
+          fuchsia_sysmem::wire::PhysicalSecureHeap& heap =
               sysmem_configured_heaps.heaps[sysmem_configured_heaps.heaps_count];
-          heap.heap = static_cast<::fuchsia_sysmem::wire::HeapType>(heap_type);
+          heap.heap = static_cast<fuchsia_sysmem::wire::HeapType>(heap_type);
           heap.physical_address = base;
           heap.size_bytes = size;
           ++sysmem_configured_heaps.heaps_count;
         }
-        auto set_result = ::fuchsia_sysmem::SecureMem::Call::SetPhysicalSecureHeaps(
+        auto set_result = fuchsia_sysmem::SecureMem::Call::SetPhysicalSecureHeaps(
             zx::unowned_channel(secure_mem_->channel()), std::move(sysmem_configured_heaps));
         // For now the FIDL IPC failing is fatal.  Among the reasons is without that
         // call succeeding, we haven't told the HW to secure/protect the physical
@@ -656,7 +656,7 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
         }
 
         // Now we get the secure heaps that are configured via the TEE.
-        auto get_result = ::fuchsia_sysmem::SecureMem::Call::GetPhysicalSecureHeaps(
+        auto get_result = fuchsia_sysmem::SecureMem::Call::GetPhysicalSecureHeaps(
             zx::unowned_channel(secure_mem_->channel()));
         if (!get_result.ok()) {
           // For now this is fatal, since this case is very unexpected, and in this case rebooting
@@ -665,11 +665,11 @@ zx_status_t Device::SysmemRegisterSecureMem(zx::channel secure_mem_connection) {
           return;
         }
         ZX_ASSERT(get_result->result.is_response());
-        const ::fuchsia_sysmem::wire::PhysicalSecureHeaps& tee_configured_heaps =
+        const fuchsia_sysmem::wire::PhysicalSecureHeaps& tee_configured_heaps =
             get_result->result.response().heaps;
 
         for (uint32_t heap_index = 0; heap_index < tee_configured_heaps.heaps_count; ++heap_index) {
-          const ::fuchsia_sysmem::wire::PhysicalSecureHeap& heap =
+          const fuchsia_sysmem::wire::PhysicalSecureHeap& heap =
               tee_configured_heaps.heaps[heap_index];
           constexpr bool kIsCpuAccessible = false;
           constexpr bool kIsReady = true;

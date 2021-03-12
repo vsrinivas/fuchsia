@@ -205,7 +205,7 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
   ddk::BlockImplProtocolClient boot1_;
   ddk::BlockImplProtocolClient boot2_;
   ddk::RpmbProtocolClient rpmb_;
-  fidl::Client<::fuchsia_hardware_rpmb::Rpmb> rpmb_fidl_;
+  fidl::Client<fuchsia_hardware_rpmb::Rpmb> rpmb_fidl_;
   Bind ddk_;
   std::atomic<bool> run_threads_ = true;
   async::Loop loop_;
@@ -1130,7 +1130,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   ASSERT_OK(messenger.SetMessageOp(&ddk_, message_op));
 
   sync_completion_t completion;
-  rpmb_fidl_->GetDeviceInfo([&](::fuchsia_hardware_rpmb::Rpmb::GetDeviceInfoResponse* response) {
+  rpmb_fidl_->GetDeviceInfo([&](fuchsia_hardware_rpmb::Rpmb::GetDeviceInfoResponse* response) {
     EXPECT_TRUE(response->info.is_emmc_info());
     EXPECT_EQ(response->info.emmc_info().rpmb_size, 0x74);
     EXPECT_EQ(response->info.emmc_info().reliable_write_sector_count, 1);
@@ -1151,7 +1151,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   ASSERT_OK(rx_frames_mapper.CreateAndMap(512 * 4, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr,
                                           &rx_frames));
 
-  ::fuchsia_hardware_rpmb::wire::Request write_read_request = {};
+  fuchsia_hardware_rpmb::wire::Request write_read_request = {};
   ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP,
                                 &write_read_request.tx_frames.vmo));
 
@@ -1159,11 +1159,11 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   write_read_request.tx_frames.size = 1024;
   FillVmo(tx_frames_mapper, 2, 2);
 
-  ::fuchsia_mem::wire::Range rx_frames_range = {};
+  fuchsia_mem::wire::Range rx_frames_range = {};
   ASSERT_OK(rx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &rx_frames_range.vmo));
   rx_frames_range.offset = 512;
   rx_frames_range.size = 1536;
-  write_read_request.rx_frames = fidl::unowned_ptr_t<::fuchsia_mem::wire::Range>(&rx_frames_range);
+  write_read_request.rx_frames = fidl::unowned_ptr_t<fuchsia_mem::wire::Range>(&rx_frames_range);
 
   sdmmc_.set_command_callback(MMC_SWITCH, [](sdmmc_req_t* req) {
     const uint32_t index = (req->arg >> 16) & 0xff;
@@ -1173,7 +1173,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   });
 
   rpmb_fidl_->Request(std::move(write_read_request),
-                      [&](::fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {
+                      [&](fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {
                         EXPECT_FALSE(response->result.is_err());
                         sync_completion_signal(&completion);
                       });
@@ -1185,7 +1185,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   // The first two blocks were written by the RPMB write request, and read back by the read request.
   ASSERT_NO_FATAL_FAILURES(CheckVmo(rx_frames_mapper, 2, 1));
 
-  ::fuchsia_hardware_rpmb::wire::Request write_request = {};
+  fuchsia_hardware_rpmb::wire::Request write_request = {};
   ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_READ | ZX_RIGHT_TRANSFER | ZX_RIGHT_MAP,
                                 &write_request.tx_frames.vmo));
 
@@ -1201,7 +1201,7 @@ TEST_F(SdmmcBlockDeviceTest, RpmbPartition) {
   });
 
   rpmb_fidl_->Request(std::move(write_request),
-                      [&](::fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {
+                      [&](fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {
                         EXPECT_FALSE(response->result.is_err());
                         sync_completion_signal(&completion);
                       });
@@ -1229,22 +1229,22 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestLimit) {
   ASSERT_OK(zx::vmo::create(512, 0, &tx_frames));
 
   for (int i = 0; i < 16; i++) {
-    ::fuchsia_hardware_rpmb::wire::Request request = {};
+    fuchsia_hardware_rpmb::wire::Request request = {};
     ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
     request.tx_frames.offset = 0;
     request.tx_frames.size = 512;
     rpmb_fidl_->Request(std::move(request),
-                        [&](__UNUSED ::fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {});
+                        [&](__UNUSED fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {});
   }
 
-  ::fuchsia_hardware_rpmb::wire::Request error_request = {};
+  fuchsia_hardware_rpmb::wire::Request error_request = {};
   ASSERT_OK(tx_frames.duplicate(ZX_RIGHT_SAME_RIGHTS, &error_request.tx_frames.vmo));
   error_request.tx_frames.offset = 0;
   error_request.tx_frames.size = 512;
 
   sync_completion_t error_completion;
   rpmb_fidl_->Request(std::move(error_request),
-                      [&](::fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {
+                      [&](fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {
                         EXPECT_TRUE(response->result.is_err());
                         sync_completion_signal(&error_completion);
                       });
@@ -1317,13 +1317,13 @@ void SdmmcBlockDeviceTest::QueueRpmbRequests() {
   while (run_threads_.load()) {
     for (uint32_t i = outstanding_op_count.load(); i < kMaxOutstandingOps;
          i = outstanding_op_count.fetch_add(1) + 1) {
-      ::fuchsia_hardware_rpmb::wire::Request request = {};
+      fuchsia_hardware_rpmb::wire::Request request = {};
       EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
       request.tx_frames.offset = 0;
       request.tx_frames.size = 512;
 
       rpmb_fidl_->Request(std::move(request),
-                          [&](::fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {
+                          [&](fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {
                             EXPECT_FALSE(response->result.is_err());
                             if (outstanding_op_count.fetch_sub(1) == kMaxOutstandingOps / 2) {
                               sync_completion_signal(&completion);
@@ -1373,13 +1373,13 @@ TEST_F(SdmmcBlockDeviceTest, RpmbRequestsGetToRun) {
   sync_completion_t completion;
 
   for (uint32_t i = 0; i < kMaxOutstandingOps; i++) {
-    ::fuchsia_hardware_rpmb::wire::Request request = {};
+    fuchsia_hardware_rpmb::wire::Request request = {};
     EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &request.tx_frames.vmo));
     request.tx_frames.offset = 0;
     request.tx_frames.size = 512;
 
     rpmb_fidl_->Request(std::move(request),
-                        [&](::fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {
+                        [&](fuchsia_hardware_rpmb::Rpmb::RequestResponse* response) {
                           EXPECT_FALSE(response->result.is_err());
                           if ((ops_completed.fetch_add(1) + 1) == kMaxOutstandingOps) {
                             sync_completion_signal(&completion);
@@ -1477,11 +1477,11 @@ TEST_F(SdmmcBlockDeviceTest, GetRpmbClient) {
   ASSERT_OK(zx::channel::create(0, &client, &server));
   rpmb_.ConnectServer(std::move(server));
 
-  fidl::Client<::fuchsia_hardware_rpmb::Rpmb> rpmb_client;
+  fidl::Client<fuchsia_hardware_rpmb::Rpmb> rpmb_client;
   ASSERT_OK(rpmb_client.Bind(std::move(client), loop_.dispatcher()));
 
   sync_completion_t completion;
-  rpmb_client->GetDeviceInfo([&](::fuchsia_hardware_rpmb::Rpmb::GetDeviceInfoResponse* response) {
+  rpmb_client->GetDeviceInfo([&](fuchsia_hardware_rpmb::Rpmb::GetDeviceInfoResponse* response) {
     EXPECT_TRUE(response->info.is_emmc_info());
     EXPECT_EQ(response->info.emmc_info().rpmb_size, 0x74);
     EXPECT_EQ(response->info.emmc_info().reliable_write_sector_count, 1);

@@ -36,7 +36,7 @@ extern "C" zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_o
 
 namespace {
 
-namespace fuchsia_io = ::fuchsia_io;
+namespace fuchsia_io = fuchsia_io;
 
 struct Context {
   zx::vmo vmo;

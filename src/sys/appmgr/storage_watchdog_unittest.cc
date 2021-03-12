@@ -24,7 +24,7 @@
 
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 class StorageWatchdogTest : public ::testing::Test {
  public:

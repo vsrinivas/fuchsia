@@ -33,7 +33,7 @@ int main(int argc, char* argv[]) {
   char path[1025];
   size_t actual_len;
 
-  auto resp = ::fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned_channel(local));
+  auto resp = fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned_channel(local));
   status = resp.status();
 
   if (status == ZX_OK) {

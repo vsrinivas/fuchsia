@@ -23,7 +23,7 @@ namespace {
 
 using namespace loader::test;
 
-namespace fldsvc = ::fuchsia_ldsvc;
+namespace fldsvc = fuchsia_ldsvc;
 
 struct BootfsDirectoryEntry {
   std::string path;

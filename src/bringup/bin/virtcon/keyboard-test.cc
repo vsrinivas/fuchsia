@@ -16,7 +16,7 @@
 
 namespace {
 
-namespace fuchsia_input_report = ::fuchsia_input_report;
+namespace fuchsia_input_report = fuchsia_input_report;
 
 // State reported to keypress_handler().
 uint8_t g_keycode;
@@ -64,7 +64,7 @@ class KeyboardInputHelper {
     for (auto& key : keys) {
       auto fidl_key =
           *key_util::hid_key_to_fuchsia_key(hid::USAGE(hid::usage::Page::kKeyboardKeypad, key));
-      fidl_keys[index++] = static_cast<::fuchsia_ui_input2::wire::Key>(fidl_key);
+      fidl_keys[index++] = static_cast<fuchsia_ui_input2::wire::Key>(fidl_key);
     }
     keyboard_input_report.set_pressed_keys(allocator, std::move(fidl_keys));
     input_report.set_keyboard(allocator, std::move(keyboard_input_report));

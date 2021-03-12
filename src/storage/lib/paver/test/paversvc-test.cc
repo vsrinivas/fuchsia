@@ -47,7 +47,7 @@
 
 namespace {
 
-namespace partition = ::fuchsia_hardware_block_partition;
+namespace partition = fuchsia_hardware_block_partition;
 
 using devmgr_integration_test::IsolatedDevmgr;
 using devmgr_integration_test::RecursiveWaitForFile;
@@ -179,7 +179,7 @@ constexpr fuchsia_hardware_nand_RamNandInfo
             .export_partition_map = true,
 };
 
-class FakeBootArgs : public ::fuchsia_boot::Arguments::Interface {
+class FakeBootArgs : public fuchsia_boot::Arguments::Interface {
  public:
   zx_status_t Connect(async_dispatcher_t* dispatcher, zx::channel request) {
     return fidl::BindSingleInFlightOnly(dispatcher, std::move(request), this);
@@ -201,7 +201,7 @@ class FakeBootArgs : public ::fuchsia_boot::Arguments::Interface {
       completer.Reply(defaultval);
     }
   }
-  void GetBools(::fidl::VectorView<::fuchsia_boot::wire::BoolPair> name,
+  void GetBools(::fidl::VectorView<fuchsia_boot::wire::BoolPair> name,
                 GetBoolsCompleter::Sync& completer) override {}
   void Collect(::fidl::StringView name, CollectCompleter::Sync& completer) override {}
 
@@ -218,7 +218,7 @@ class FakeSvc {
  public:
   explicit FakeSvc(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher), vfs_(dispatcher) {
     root_dir_ = fbl::MakeRefCounted<fs::PseudoDir>();
-    root_dir_->AddEntry(::fuchsia_boot::Arguments::Name,
+    root_dir_->AddEntry(fuchsia_boot::Arguments::Name,
                         fbl::MakeRefCounted<fs::Service>([this](zx::channel request) {
                           return fake_boot_args_.Connect(dispatcher_, std::move(request));
                         }));
@@ -241,14 +241,14 @@ class FakeSvc {
   }
 
   FakeBootArgs& fake_boot_args() { return fake_boot_args_; }
-  fidl::ClientEnd<::fuchsia_io::Directory>& svc_chan() { return svc_local_; }
+  fidl::ClientEnd<fuchsia_io::Directory>& svc_chan() { return svc_local_; }
 
  private:
   async_dispatcher_t* dispatcher_;
   fbl::RefPtr<fs::PseudoDir> root_dir_;
   fs::SynchronousVfs vfs_;
   FakeBootArgs fake_boot_args_;
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_local_;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_local_;
 };
 
 class PaverServiceTest : public zxtest::Test {
@@ -258,11 +258,11 @@ class PaverServiceTest : public zxtest::Test {
   ~PaverServiceTest();
 
  protected:
-  void CreatePayload(size_t num_pages, ::fuchsia_mem::wire::Buffer* out);
+  void CreatePayload(size_t num_pages, fuchsia_mem::wire::Buffer* out);
 
   static constexpr size_t kKilobyte = 1 << 10;
 
-  void ValidateWritten(const ::fuchsia_mem::wire::Buffer& buf, size_t num_pages) {
+  void ValidateWritten(const fuchsia_mem::wire::Buffer& buf, size_t num_pages) {
     ASSERT_GE(buf.size, num_pages * kPageSize);
     fzl::VmoMapper mapper;
     ASSERT_OK(mapper.Map(buf.vmo, 0, fbl::round_up(num_pages * kPageSize, ZX_PAGE_SIZE),
@@ -274,7 +274,7 @@ class PaverServiceTest : public zxtest::Test {
   }
 
   void* provider_ctx_ = nullptr;
-  std::optional<::fuchsia_paver::Paver::SyncClient> client_;
+  std::optional<fuchsia_paver::Paver::SyncClient> client_;
   async::Loop loop_;
   // The paver makes synchronous calls into /svc, so it must run in a separate loop to not
   // deadlock.
@@ -294,7 +294,7 @@ PaverServiceTest::PaverServiceTest()
   ASSERT_OK(paver_get_service_provider()->ops->init(&provider_ctx_));
 
   ASSERT_OK(paver_get_service_provider()->ops->connect(
-      provider_ctx_, loop_.dispatcher(), ::fuchsia_paver::Paver::Name, server.release()));
+      provider_ctx_, loop_.dispatcher(), fuchsia_paver::Paver::Name, server.release()));
   loop_.StartThread("paver-svc-test-loop");
   loop2_.StartThread("paver-svc-test-loop-2");
 }
@@ -306,7 +306,7 @@ PaverServiceTest::~PaverServiceTest() {
   provider_ctx_ = nullptr;
 }
 
-void PaverServiceTest::CreatePayload(size_t num_pages, ::fuchsia_mem::wire::Buffer* out) {
+void PaverServiceTest::CreatePayload(size_t num_pages, fuchsia_mem::wire::Buffer* out) {
   zx::vmo vmo;
   fzl::VmoMapper mapper;
   const size_t size = kPageSize * num_pages;
@@ -442,9 +442,9 @@ class PaverServiceSkipBlockTest : public PaverServiceTest {
 
   void TestSysconfigWipeBufferedClient(uint32_t offset_in_pages, uint32_t sysconfig_pages);
 
-  std::optional<::fuchsia_paver::BootManager::SyncClient> boot_manager_;
-  std::optional<::fuchsia_paver::DataSink::SyncClient> data_sink_;
-  std::optional<::fuchsia_paver::Sysconfig::SyncClient> sysconfig_;
+  std::optional<fuchsia_paver::BootManager::SyncClient> boot_manager_;
+  std::optional<fuchsia_paver::DataSink::SyncClient> data_sink_;
+  std::optional<fuchsia_paver::Sysconfig::SyncClient> sysconfig_;
 
   std::unique_ptr<SkipBlockDevice> device_;
   fbl::unique_fd fvm_;
@@ -547,7 +547,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotB) {
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().configuration, ::fuchsia_paver::wire::Configuration::B);
+  ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::B);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
@@ -564,7 +564,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryActiveConfigurationSlotA) {
   auto result = boot_manager_->QueryActiveConfiguration();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().configuration, ::fuchsia_paver::wire::Configuration::A);
+  ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::A);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotA) {
@@ -579,7 +579,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotA) {
   auto result = boot_manager_->QueryCurrentConfiguration();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().configuration, ::fuchsia_paver::wire::Configuration::A);
+  ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::A);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotB) {
@@ -595,7 +595,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotB) {
   auto result = boot_manager_->QueryCurrentConfiguration();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().configuration, ::fuchsia_paver::wire::Configuration::B);
+  ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::B);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotR) {
@@ -611,8 +611,7 @@ TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotR) {
   auto result = boot_manager_->QueryCurrentConfiguration();
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().configuration,
-            ::fuchsia_paver::wire::Configuration::RECOVERY);
+  ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::RECOVERY);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryCurrentConfigurationSlotInvalid) {
@@ -638,10 +637,10 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusHealthy) {
 
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
-  auto result = boot_manager_->QueryConfigurationStatus(::fuchsia_paver::wire::Configuration::B);
+  auto result = boot_manager_->QueryConfigurationStatus(fuchsia_paver::wire::Configuration::B);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().status, ::fuchsia_paver::wire::ConfigurationStatus::HEALTHY);
+  ASSERT_EQ(result->result.response().status, fuchsia_paver::wire::ConfigurationStatus::HEALTHY);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
@@ -654,10 +653,10 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusPending) {
 
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
-  auto result = boot_manager_->QueryConfigurationStatus(::fuchsia_paver::wire::Configuration::B);
+  auto result = boot_manager_->QueryConfigurationStatus(fuchsia_paver::wire::Configuration::B);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().status, ::fuchsia_paver::wire::ConfigurationStatus::PENDING);
+  ASSERT_EQ(result->result.response().status, fuchsia_paver::wire::ConfigurationStatus::PENDING);
 }
 
 TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
@@ -668,11 +667,10 @@ TEST_F(PaverServiceSkipBlockTest, QueryConfigurationStatusUnbootable) {
 
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
-  auto result = boot_manager_->QueryConfigurationStatus(::fuchsia_paver::wire::Configuration::A);
+  auto result = boot_manager_->QueryConfigurationStatus(fuchsia_paver::wire::Configuration::A);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
-  ASSERT_EQ(result->result.response().status,
-            ::fuchsia_paver::wire::ConfigurationStatus::UNBOOTABLE);
+  ASSERT_EQ(result->result.response().status, fuchsia_paver::wire::ConfigurationStatus::UNBOOTABLE);
 }
 
 TEST_F(PaverServiceSkipBlockTest, SetConfigurationActive) {
@@ -689,7 +687,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActive) {
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   {
-    auto result = boot_manager_->SetConfigurationActive(::fuchsia_paver::wire::Configuration::A);
+    auto result = boot_manager_->SetConfigurationActive(fuchsia_paver::wire::Configuration::A);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -720,7 +718,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationActiveRollover) {
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   {
-    auto result = boot_manager_->SetConfigurationActive(::fuchsia_paver::wire::Configuration::A);
+    auto result = boot_manager_->SetConfigurationActive(fuchsia_paver::wire::Configuration::A);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -751,8 +749,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotA) {
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   {
-    auto result =
-        boot_manager_->SetConfigurationUnbootable(::fuchsia_paver::wire::Configuration::A);
+    auto result = boot_manager_->SetConfigurationUnbootable(fuchsia_paver::wire::Configuration::A);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -783,8 +780,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationUnbootableSlotB) {
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   {
-    auto result =
-        boot_manager_->SetConfigurationUnbootable(::fuchsia_paver::wire::Configuration::B);
+    auto result = boot_manager_->SetConfigurationUnbootable(fuchsia_paver::wire::Configuration::B);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -814,7 +810,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotA) {
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   {
-    auto result = boot_manager_->SetConfigurationHealthy(::fuchsia_paver::wire::Configuration::A);
+    auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::A);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -840,7 +836,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotB) {
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   {
-    auto result = boot_manager_->SetConfigurationHealthy(::fuchsia_paver::wire::Configuration::B);
+    auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::B);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -864,7 +860,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthySlotR) {
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   auto result =
-      boot_manager_->SetConfigurationHealthy(::fuchsia_paver::wire::Configuration::RECOVERY);
+      boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::RECOVERY);
   ASSERT_OK(result.status());
   ASSERT_EQ(result->status, ZX_ERR_INVALID_ARGS);
 }
@@ -889,7 +885,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyBothUnknown) {
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   {
-    auto result = boot_manager_->SetConfigurationHealthy(::fuchsia_paver::wire::Configuration::A);
+    auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::A);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -925,7 +921,7 @@ TEST_F(PaverServiceSkipBlockTest, SetConfigurationHealthyOtherHealthy) {
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
   {
-    auto result = boot_manager_->SetConfigurationHealthy(::fuchsia_paver::wire::Configuration::B);
+    auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::B);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -948,7 +944,7 @@ TEST_F(PaverServiceSkipBlockTest, SetUnbootableConfigurationHealthy) {
 
   ASSERT_NO_FATAL_FAILURES(FindBootManager());
 
-  auto result = boot_manager_->SetConfigurationHealthy(::fuchsia_paver::wire::Configuration::A);
+  auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::A);
   ASSERT_OK(result.status());
   ASSERT_EQ(result->status, ZX_ERR_INVALID_ARGS);
 }
@@ -969,18 +965,17 @@ TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
     ASSERT_TRUE(result->result.is_response());
-    ASSERT_EQ(result->result.response().configuration, ::fuchsia_paver::wire::Configuration::A);
+    ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::A);
   }
 
   {
-    auto result = boot_manager_->SetConfigurationHealthy(::fuchsia_paver::wire::Configuration::A);
+    auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::A);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
 
   {
-    auto result =
-        boot_manager_->SetConfigurationUnbootable(::fuchsia_paver::wire::Configuration::B);
+    auto result = boot_manager_->SetConfigurationUnbootable(fuchsia_paver::wire::Configuration::B);
     ASSERT_OK(result.status());
     ASSERT_OK(result->status);
   }
@@ -1010,12 +1005,12 @@ TEST_F(PaverServiceSkipBlockTest, BootManagerBuffered) {
 TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigA) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->WriteAsset(::fuchsia_paver::wire::Configuration::A,
-                                       ::fuchsia_paver::wire::Asset::KERNEL, std::move(payload));
+  auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::A,
+                                       fuchsia_paver::wire::Asset::KERNEL, std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result->status);
   ValidateWritten(8, 2);
@@ -1025,12 +1020,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigA) {
 TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigB) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->WriteAsset(::fuchsia_paver::wire::Configuration::B,
-                                       ::fuchsia_paver::wire::Asset::KERNEL, std::move(payload));
+  auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::B,
+                                       fuchsia_paver::wire::Asset::KERNEL, std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
   ValidateUnwritten(8, 2);
@@ -1041,12 +1036,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigB) {
 TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigRecovery) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->WriteAsset(::fuchsia_paver::wire::Configuration::RECOVERY,
-                                       ::fuchsia_paver::wire::Asset::KERNEL, std::move(payload));
+  auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::RECOVERY,
+                                       fuchsia_paver::wire::Asset::KERNEL, std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
   ValidateUnwritten(8, 4);
@@ -1056,12 +1051,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetKernelConfigRecovery) {
 TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigA) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(32, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->WriteAsset(::fuchsia_paver::wire::Configuration::A,
-                                       ::fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA,
+  auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::A,
+                                       fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA,
                                        std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
@@ -1076,12 +1071,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigA) {
 TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigB) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(32, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->WriteAsset(::fuchsia_paver::wire::Configuration::B,
-                                       ::fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA,
+  auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::B,
+                                       fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA,
                                        std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
@@ -1096,12 +1091,12 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigB) {
 TEST_F(PaverServiceSkipBlockTest, WriteAssetVbMetaConfigRecovery) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(32, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->WriteAsset(::fuchsia_paver::wire::Configuration::RECOVERY,
-                                       ::fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA,
+  auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::RECOVERY,
+                                       fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA,
                                        std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_OK(result.value().status);
@@ -1137,11 +1132,11 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
     ASSERT_TRUE(result->result.is_response());
-    ASSERT_EQ(result->result.response().configuration, ::fuchsia_paver::wire::Configuration::B);
+    ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::B);
   }
 
   {
-    auto result = boot_manager_->SetConfigurationHealthy(::fuchsia_paver::wire::Configuration::B);
+    auto result = boot_manager_->SetConfigurationHealthy(fuchsia_paver::wire::Configuration::B);
     ASSERT_OK(result.status());
   }
 
@@ -1150,13 +1145,13 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutNotUpdated) {
     // Validate that it is correct.
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result->result.response().configuration, ::fuchsia_paver::wire::Configuration::B);
+    ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::B);
   }
 
   {
     // Mark the old slot A as unbootable.
     auto set_unbootable_result =
-        boot_manager_->SetConfigurationUnbootable(::fuchsia_paver::wire::Configuration::A);
+        boot_manager_->SetConfigurationUnbootable(fuchsia_paver::wire::Configuration::A);
     ASSERT_OK(set_unbootable_result.status());
   }
 
@@ -1215,11 +1210,11 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
     ASSERT_TRUE(result->result.is_response());
-    ASSERT_EQ(result->result.response().configuration, ::fuchsia_paver::wire::Configuration::B);
+    ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::B);
   }
 
   {
-    auto result = boot_manager_->SetConfigurationActive(::fuchsia_paver::wire::Configuration::A);
+    auto result = boot_manager_->SetConfigurationActive(fuchsia_paver::wire::Configuration::A);
     ASSERT_OK(result.status());
   }
 
@@ -1228,7 +1223,7 @@ TEST_F(PaverServiceSkipBlockTest, AbrWearLevelingLayoutUpdated) {
     // Validate that it is correct.
     auto result = boot_manager_->QueryActiveConfiguration();
     ASSERT_OK(result.status());
-    ASSERT_EQ(result->result.response().configuration, ::fuchsia_paver::wire::Configuration::A);
+    ASSERT_EQ(result->result.response().configuration, fuchsia_paver::wire::Configuration::A);
   }
 
   // Haven't flushed yet. abr data in storage should stayed the same.
@@ -1263,15 +1258,15 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetBuffered) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  ::fuchsia_paver::wire::Configuration configs[] = {::fuchsia_paver::wire::Configuration::A,
-                                                    ::fuchsia_paver::wire::Configuration::B,
-                                                    ::fuchsia_paver::wire::Configuration::RECOVERY};
+  fuchsia_paver::wire::Configuration configs[] = {fuchsia_paver::wire::Configuration::A,
+                                                  fuchsia_paver::wire::Configuration::B,
+                                                  fuchsia_paver::wire::Configuration::RECOVERY};
 
   for (auto config : configs) {
-    ::fuchsia_mem::wire::Buffer payload;
+    fuchsia_mem::wire::Buffer payload;
     CreatePayload(32, &payload);
-    auto result = data_sink_->WriteAsset(
-        config, ::fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA, std::move(payload));
+    auto result = data_sink_->WriteAsset(config, fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA,
+                                         std::move(payload));
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
   }
@@ -1286,13 +1281,13 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetBuffered) {
 TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(2 * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   {
-    auto result = data_sink_->WriteAsset(::fuchsia_paver::wire::Configuration::A,
-                                         ::fuchsia_paver::wire::Asset::KERNEL, std::move(payload));
+    auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::A,
+                                         fuchsia_paver::wire::Asset::KERNEL, std::move(payload));
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     CreatePayload(2 * kPagesPerBlock, &payload);
@@ -1300,8 +1295,8 @@ TEST_F(PaverServiceSkipBlockTest, WriteAssetTwice) {
     ValidateUnwritten(10, 4);
   }
   {
-    auto result = data_sink_->WriteAsset(::fuchsia_paver::wire::Configuration::A,
-                                         ::fuchsia_paver::wire::Asset::KERNEL, std::move(payload));
+    auto result = data_sink_->WriteAsset(fuchsia_paver::wire::Configuration::A,
+                                         fuchsia_paver::wire::Asset::KERNEL, std::move(payload));
     ASSERT_OK(result.status());
     ASSERT_OK(result.value().status);
     ValidateWritten(8, 2);
@@ -1313,10 +1308,10 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareConfigASupported) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
   auto result =
-      data_sink_->WriteFirmware(::fuchsia_paver::wire::Configuration::A,
+      data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::A,
                                 fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
@@ -1329,10 +1324,10 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigBFallBackToA) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
   auto result =
-      data_sink_->WriteFirmware(::fuchsia_paver::wire::Configuration::B,
+      data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::B,
                                 fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
@@ -1345,10 +1340,10 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedConfigR) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
   auto result =
-      data_sink_->WriteFirmware(::fuchsia_paver::wire::Configuration::RECOVERY,
+      data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::RECOVERY,
                                 fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_unsupported());
@@ -1365,9 +1360,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2ConfigASupported) {
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
 
   WriteDataBytes(kBl2StartByte, kBl2SkipLength, 0xC6);
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(kBl2ImagePages, &payload);
-  auto result = data_sink_->WriteFirmware(::fuchsia_paver::wire::Configuration::A,
+  auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::A,
                                           fidl::unowned_str(kFirmwareTypeBl2), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
@@ -1383,9 +1378,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigBFallBackToA)
   WriteDataBytes(kBl2StartByte, kBl2SkipLength, 0xC6);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(kBl2ImagePages, &payload);
-  auto result = data_sink_->WriteFirmware(::fuchsia_paver::wire::Configuration::B,
+  auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::B,
                                           fidl::unowned_str(kFirmwareTypeBl2), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
@@ -1401,9 +1396,9 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigR) {
   WriteDataBytes(kBl2StartByte, kBl2SkipLength, 0xC6);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(kBl2ImagePages, &payload);
-  auto result = data_sink_->WriteFirmware(::fuchsia_paver::wire::Configuration::RECOVERY,
+  auto result = data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::RECOVERY,
                                           fidl::unowned_str(kFirmwareTypeBl2), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_unsupported());
@@ -1413,15 +1408,15 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareBl2UnsupportedConfigR) {
 TEST_F(PaverServiceSkipBlockTest, WriteFirmwareUnsupportedType) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  constexpr ::fuchsia_paver::wire::Configuration kAllConfigs[] = {
-      ::fuchsia_paver::wire::Configuration::A,
-      ::fuchsia_paver::wire::Configuration::B,
-      ::fuchsia_paver::wire::Configuration::RECOVERY,
+  constexpr fuchsia_paver::wire::Configuration kAllConfigs[] = {
+      fuchsia_paver::wire::Configuration::A,
+      fuchsia_paver::wire::Configuration::B,
+      fuchsia_paver::wire::Configuration::RECOVERY,
   };
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
   for (auto config : kAllConfigs) {
-    ::fuchsia_mem::wire::Buffer payload;
+    fuchsia_mem::wire::Buffer payload;
     CreatePayload(4 * kPagesPerBlock, &payload);
     auto result = data_sink_->WriteFirmware(config, fidl::unowned_str(kFirmwareTypeUnsupported),
                                             std::move(payload));
@@ -1441,10 +1436,10 @@ TEST_F(PaverServiceSkipBlockTest, WriteFirmwareError) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand(info));
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
   auto result =
-      data_sink_->WriteFirmware(::fuchsia_paver::wire::Configuration::A,
+      data_sink_->WriteFirmware(fuchsia_paver::wire::Configuration::A,
                                 fidl::unowned_str(kFirmwareTypeBootloader), std::move(payload));
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_status());
@@ -1458,8 +1453,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigA) {
   WriteData(8 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->ReadAsset(::fuchsia_paver::wire::Configuration::A,
-                                      ::fuchsia_paver::wire::Asset::KERNEL);
+  auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::A,
+                                      fuchsia_paver::wire::Asset::KERNEL);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
@@ -1471,8 +1466,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigB) {
   WriteData(10 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->ReadAsset(::fuchsia_paver::wire::Configuration::B,
-                                      ::fuchsia_paver::wire::Asset::KERNEL);
+  auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::B,
+                                      fuchsia_paver::wire::Asset::KERNEL);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
@@ -1484,8 +1479,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetKernelConfigRecovery) {
   WriteData(12 * kPagesPerBlock, 2 * kPagesPerBlock, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->ReadAsset(::fuchsia_paver::wire::Configuration::RECOVERY,
-                                      ::fuchsia_paver::wire::Asset::KERNEL);
+  auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::RECOVERY,
+                                      fuchsia_paver::wire::Asset::KERNEL);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 2 * kPagesPerBlock);
@@ -1497,8 +1492,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigA) {
   WriteData(14 * kPagesPerBlock + 32, 32, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->ReadAsset(::fuchsia_paver::wire::Configuration::A,
-                                      ::fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA);
+  auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::A,
+                                      fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 32);
@@ -1510,8 +1505,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigB) {
   WriteData(14 * kPagesPerBlock + 64, 32, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->ReadAsset(::fuchsia_paver::wire::Configuration::B,
-                                      ::fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA);
+  auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::B,
+                                      fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 32);
@@ -1523,8 +1518,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetVbMetaConfigRecovery) {
   WriteData(14 * kPagesPerBlock + 96, 32, 0x4a);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->ReadAsset(::fuchsia_paver::wire::Configuration::RECOVERY,
-                                      ::fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA);
+  auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::RECOVERY,
+                                      fuchsia_paver::wire::Asset::VERIFIED_BOOT_METADATA);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ValidateWritten(result->result.response().asset, 32);
@@ -1544,8 +1539,8 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetZbiSize) {
   WriteDataBytes(8 * kPagesPerBlock * kPageSize, &container, sizeof(container));
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
-  auto result = data_sink_->ReadAsset(::fuchsia_paver::wire::Configuration::A,
-                                      ::fuchsia_paver::wire::Asset::KERNEL);
+  auto result = data_sink_->ReadAsset(fuchsia_paver::wire::Configuration::A,
+                                      fuchsia_paver::wire::Asset::KERNEL);
   ASSERT_OK(result.status());
   ASSERT_TRUE(result->result.is_response());
   ASSERT_EQ(result->result.response().asset.size, sizeof(container));
@@ -1554,7 +1549,7 @@ TEST_F(PaverServiceSkipBlockTest, ReadAssetZbiSize) {
 TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock, &payload);
 
   ASSERT_NO_FATAL_FAILURES(FindDataSink());
@@ -1570,7 +1565,7 @@ TEST_F(PaverServiceSkipBlockTest, WriteBootloader) {
 TEST_F(PaverServiceSkipBlockTest, WriteBootloaderNotAligned) {
   ASSERT_NO_FATAL_FAILURES(InitializeRamNand());
 
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   CreatePayload(4 * kPagesPerBlock - 1, &payload);
 
   WriteData(4 * kPagesPerBlock, 4 * kPagesPerBlock - 1, 0x4a);
@@ -1673,7 +1668,7 @@ void PaverServiceSkipBlockTest::TestSysconfigWriteBufferedClient(uint32_t offset
   }
 
   {
-    ::fuchsia_mem::wire::Buffer payload;
+    fuchsia_mem::wire::Buffer payload;
     CreatePayload(sysconfig_pages, &payload);
     auto result = sysconfig_->Write(std::move(payload));
     ASSERT_OK(result.status());
@@ -1805,7 +1800,7 @@ class PaverServiceBlockTest : public PaverServiceTest {
   }
 
   IsolatedDevmgr devmgr_;
-  std::optional<::fuchsia_paver::DynamicDataSink::SyncClient> data_sink_;
+  std::optional<fuchsia_paver::DynamicDataSink::SyncClient> data_sink_;
 };
 
 TEST_F(PaverServiceBlockTest, DISABLED_InitializePartitionTables) {
@@ -1905,7 +1900,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
     static_cast<paver::Paver*>(provider_ctx_)->set_dispatcher(loop_.dispatcher());
     static_cast<paver::Paver*>(provider_ctx_)->set_devfs_root(devmgr_.devfs_root().duplicate());
-    fidl::ClientEnd<::fuchsia_io::Directory> svc_root = GetSvcRoot();
+    fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     static_cast<paver::Paver*>(provider_ctx_)->set_svc_root(std::move(svc_root));
   }
 
@@ -1917,7 +1912,7 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
         BlockDevice::Create(devmgr_.devfs_root(), kEmptyType, block_count, block_size, &gpt_dev_));
   }
 
-  fidl::ClientEnd<::fuchsia_io::Directory> GetSvcRoot() {
+  fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() {
     return service::MaybeClone(fake_svc_.svc_chan());
   }
 
@@ -1950,8 +1945,8 @@ class PaverServiceGptDeviceTest : public PaverServiceTest {
     ASSERT_OK(gpt->Sync());
 
     fdio_cpp::UnownedFdioCaller caller(gpt_dev_->fd());
-    auto result = ::fuchsia_device::Controller::Call::Rebind(
-        caller.channel(), fidl::StringView("/boot/driver/gpt.so"));
+    auto result = fuchsia_device::Controller::Call::Rebind(caller.channel(),
+                                                           fidl::StringView("/boot/driver/gpt.so"));
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->result.is_err());
   }
@@ -1985,7 +1980,7 @@ class PaverServiceLuisTest : public PaverServiceGptDeviceTest {
 TEST_F(PaverServiceLuisTest, CreateAbr) {
   ASSERT_NO_FATAL_FAILURES(InitializeLuisGPTPartitions());
   std::shared_ptr<paver::Context> context;
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root = GetSvcRoot();
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
   EXPECT_OK(
       abr::ClientFactory::Create(devmgr_.devfs_root().duplicate(), std::move(svc_root), context));
 }
@@ -1997,7 +1992,7 @@ TEST_F(PaverServiceLuisTest, SysconfigNotSupportedAndFailWithPeerClosed) {
   auto result = client_->FindSysconfig(std::move(sysconfig_remote));
   ASSERT_OK(result.status());
 
-  ::fuchsia_paver::Sysconfig::SyncClient sysconfig(std::move(sysconfig_local));
+  fuchsia_paver::Sysconfig::SyncClient sysconfig(std::move(sysconfig_local));
   auto wipe_result = sysconfig.Wipe();
   ASSERT_EQ(wipe_result.status(), ZX_ERR_PEER_CLOSED);
 }

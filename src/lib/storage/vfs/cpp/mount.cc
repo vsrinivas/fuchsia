@@ -22,7 +22,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 namespace fs {
 

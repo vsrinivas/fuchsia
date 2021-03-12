@@ -19,7 +19,7 @@
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/lib/storage/vfs/cpp/vmo_file.h"
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 namespace {
 

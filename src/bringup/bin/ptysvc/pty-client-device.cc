@@ -6,15 +6,15 @@
 
 #include "pty-client.h"
 
-void PtyClientDevice::SetWindowSize(::fuchsia_hardware_pty::wire::WindowSize size,
+void PtyClientDevice::SetWindowSize(fuchsia_hardware_pty::wire::WindowSize size,
                                     SetWindowSizeCompleter::Sync& completer) {
-  fidl::Buffer<::fuchsia_hardware_pty::Device::SetWindowSizeResponse> buf;
+  fidl::Buffer<fuchsia_hardware_pty::Device::SetWindowSizeResponse> buf;
   client_->server()->set_window_size({.width = size.width, .height = size.height});
   completer.Reply(buf.view(), ZX_OK);
 }
 void PtyClientDevice::OpenClient(uint32_t id, fidl::ServerEnd<fuchsia_hardware_pty::Device> client,
                                  OpenClientCompleter::Sync& completer) {
-  fidl::Buffer<::fuchsia_hardware_pty::Device::OpenClientResponse> buf;
+  fidl::Buffer<fuchsia_hardware_pty::Device::OpenClientResponse> buf;
 
   // Only controlling clients (and the server itself) may create new clients
   if (!client_->is_control()) {
@@ -34,9 +34,9 @@ void PtyClientDevice::OpenClient(uint32_t id, fidl::ServerEnd<fuchsia_hardware_p
 
 void PtyClientDevice::ClrSetFeature(uint32_t clr, uint32_t set,
                                     ClrSetFeatureCompleter::Sync& completer) {
-  fidl::Buffer<::fuchsia_hardware_pty::Device::ClrSetFeatureResponse> buf;
+  fidl::Buffer<fuchsia_hardware_pty::Device::ClrSetFeatureResponse> buf;
 
-  constexpr uint32_t kAllowedFeatureBits = ::fuchsia_hardware_pty::wire::FEATURE_RAW;
+  constexpr uint32_t kAllowedFeatureBits = fuchsia_hardware_pty::wire::FEATURE_RAW;
 
   zx_status_t status = ZX_OK;
   if ((clr & ~kAllowedFeatureBits) || (set & ~kAllowedFeatureBits)) {
@@ -48,14 +48,14 @@ void PtyClientDevice::ClrSetFeature(uint32_t clr, uint32_t set,
 }
 
 void PtyClientDevice::GetWindowSize(GetWindowSizeCompleter::Sync& completer) {
-  fidl::Buffer<::fuchsia_hardware_pty::Device::GetWindowSizeResponse> buf;
+  fidl::Buffer<fuchsia_hardware_pty::Device::GetWindowSizeResponse> buf;
   auto size = client_->server()->window_size();
-  ::fuchsia_hardware_pty::wire::WindowSize wsz = {.width = size.width, .height = size.height};
+  fuchsia_hardware_pty::wire::WindowSize wsz = {.width = size.width, .height = size.height};
   completer.Reply(buf.view(), ZX_OK, wsz);
 }
 
 void PtyClientDevice::MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sync& completer) {
-  fidl::Buffer<::fuchsia_hardware_pty::Device::MakeActiveResponse> buf;
+  fidl::Buffer<fuchsia_hardware_pty::Device::MakeActiveResponse> buf;
 
   if (!client_->is_control()) {
     completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED);
@@ -67,7 +67,7 @@ void PtyClientDevice::MakeActive(uint32_t client_pty_id, MakeActiveCompleter::Sy
 }
 
 void PtyClientDevice::ReadEvents(ReadEventsCompleter::Sync& completer) {
-  fidl::Buffer<::fuchsia_hardware_pty::Device::ReadEventsResponse> buf;
+  fidl::Buffer<fuchsia_hardware_pty::Device::ReadEventsResponse> buf;
 
   if (!client_->is_control()) {
     completer.Reply(buf.view(), ZX_ERR_ACCESS_DENIED, 0);
@@ -108,7 +108,7 @@ void PtyClientDevice::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offset,
   ZX_ASSERT(false);
 }
 
-void PtyClientDevice::Seek(int64_t offset, ::fuchsia_io::wire::SeekOrigin start,
+void PtyClientDevice::Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
                            SeekCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }
@@ -127,7 +127,7 @@ void PtyClientDevice::GetBuffer(uint32_t flags, GetBufferCompleter::Sync& comple
 
 void PtyClientDevice::Sync(SyncCompleter::Sync& completer) { ZX_ASSERT(false); }
 
-void PtyClientDevice::SetAttr(uint32_t flags, ::fuchsia_io::wire::NodeAttributes attributes,
+void PtyClientDevice::SetAttr(uint32_t flags, fuchsia_io::wire::NodeAttributes attributes,
                               SetAttrCompleter::Sync& completer) {
   ZX_ASSERT(false);
 }

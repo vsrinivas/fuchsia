@@ -70,9 +70,9 @@ namespace usb_peripheral {
 class UsbFunction;
 
 using ConfigurationDescriptor =
-    ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
-using ::fuchsia_hardware_usb_peripheral::wire::DeviceDescriptor;
-using ::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor;
+    ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+using fuchsia_hardware_usb_peripheral::wire::DeviceDescriptor;
+using fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor;
 
 class UsbPeripheral;
 using UsbPeripheralType = ddk::Device<UsbPeripheral, ddk::Unbindable, ddk::Messageable>;
@@ -95,7 +95,7 @@ struct UsbConfiguration : fbl::RefCounted<UsbConfiguration> {
 class UsbPeripheral : public UsbPeripheralType,
                       public ddk::EmptyProtocol<ZX_PROTOCOL_USB_PERIPHERAL>,
                       public ddk::UsbDciInterfaceProtocol<UsbPeripheral>,
-                      public ::fuchsia_hardware_usb_peripheral::Device::RawChannelInterface {
+                      public fuchsia_hardware_usb_peripheral::Device::RawChannelInterface {
  public:
   UsbPeripheral(zx_device_t* parent) : UsbPeripheralType(parent), dci_(parent), ums_(parent) {}
 

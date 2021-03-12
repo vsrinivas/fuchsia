@@ -13,7 +13,7 @@
 #include <variant>
 #include <vector>
 
-namespace cpuctrl = ::fuchsia_hardware_cpu_ctrl;
+namespace cpuctrl = fuchsia_hardware_cpu_ctrl;
 
 class CpuPerformanceDomain {
  public:

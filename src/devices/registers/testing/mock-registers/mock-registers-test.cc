@@ -25,7 +25,7 @@ class MockRegistersTest : public zxtest::Test {
       return;
     }
     device_->RegistersConnect(std::move(server_end));
-    client_ = ::fuchsia_hardware_registers::Device::SyncClient(std::move(client_end));
+    client_ = fuchsia_hardware_registers::Device::SyncClient(std::move(client_end));
   }
 
   void TearDown() override {
@@ -38,7 +38,7 @@ class MockRegistersTest : public zxtest::Test {
  protected:
   std::unique_ptr<MockRegistersDevice> device_;
 
-  ::fuchsia_hardware_registers::Device::SyncClient client_;
+  fuchsia_hardware_registers::Device::SyncClient client_;
   async::Loop loop_{&kAsyncLoopConfigNeverAttachToThread};
 };
 

@@ -12,7 +12,7 @@ fidl::ClientEnd<fuchsia_io::Directory> RemoteContainer::DetachRemote() {
   return std::move(remote_);
 }
 
-fidl::UnownedClientEnd<::fuchsia_io::Directory> RemoteContainer::GetRemote() const {
+fidl::UnownedClientEnd<fuchsia_io::Directory> RemoteContainer::GetRemote() const {
   return remote_.borrow();
 }
 

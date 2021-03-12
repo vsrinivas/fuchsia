@@ -75,11 +75,10 @@ zx_status_t DeviceReportsReader::SendReports() {
     return ZX_ERR_SHOULD_WAIT;
   }
 
-  std::array<uint8_t, ::fuchsia_hardware_input::wire::MAX_REPORT_DATA> buf;
+  std::array<uint8_t, fuchsia_hardware_input::wire::MAX_REPORT_DATA> buf;
   size_t buf_index = 0;
 
-  std::array<::fuchsia_hardware_input::wire::Report,
-             ::fuchsia_hardware_input::wire::MAX_REPORTS_COUNT>
+  std::array<fuchsia_hardware_input::wire::Report, fuchsia_hardware_input::wire::MAX_REPORTS_COUNT>
       reports;
   size_t reports_size = 0;
   zx_status_t status = ZX_OK;

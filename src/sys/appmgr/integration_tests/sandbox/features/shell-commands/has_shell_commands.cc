@@ -6,7 +6,7 @@
 
 #include "src/sys/appmgr/integration_tests/sandbox/namespace_test.h"
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 TEST_F(NamespaceTest, HasShellCommands) {
   // TODO(fxbug.dev/37858): pkgfs/thinfs do not properly support hierarchical directory rights so

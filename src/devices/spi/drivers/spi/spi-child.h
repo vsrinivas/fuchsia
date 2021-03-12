@@ -40,17 +40,17 @@ class SpiChild : public SpiChildType,
   void ExchangeVector(::fidl::VectorView<uint8_t> txdata,
                       ExchangeVectorCompleter::Sync& completer) override;
 
-  void RegisterVmo(uint32_t vmo_id, ::fuchsia_mem::wire::Range vmo,
-                   ::fuchsia_hardware_sharedmemory::wire::SharedVmoRight rights,
+  void RegisterVmo(uint32_t vmo_id, fuchsia_mem::wire::Range vmo,
+                   fuchsia_hardware_sharedmemory::wire::SharedVmoRight rights,
                    RegisterVmoCompleter::Sync& completer) override;
   void UnregisterVmo(uint32_t vmo_id, UnregisterVmoCompleter::Sync& completer) override;
 
-  void Transmit(::fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer buffer,
+  void Transmit(fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer buffer,
                 TransmitCompleter::Sync& completer) override;
-  void Receive(::fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer buffer,
+  void Receive(fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer buffer,
                ReceiveCompleter::Sync& completer) override;
-  void Exchange(::fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer tx_buffer,
-                ::fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer rx_buffer,
+  void Exchange(fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer tx_buffer,
+                fuchsia_hardware_sharedmemory::wire::SharedVmoBuffer rx_buffer,
                 ExchangeCompleter::Sync& completer) override;
 
   zx_status_t SpiTransmit(const uint8_t* txdata_list, size_t txdata_count);

@@ -43,8 +43,8 @@ class FtdiI2c : public DeviceType, public ddk::I2cImplProtocol<FtdiI2c, ddk::bas
         i2c_devices_(std::move(i2c_devices)) {}
 
   static zx_status_t Create(zx_device_t* device,
-                            const ::fuchsia_hardware_ftdi::wire::I2cBusLayout* layout,
-                            const ::fuchsia_hardware_ftdi::wire::I2cDevice* i2c_dev);
+                            const fuchsia_hardware_ftdi::wire::I2cBusLayout* layout,
+                            const fuchsia_hardware_ftdi::wire::I2cDevice* i2c_dev);
 
   zx_status_t Bind();
   void DdkInit(ddk::InitTxn txn);

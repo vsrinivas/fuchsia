@@ -43,7 +43,7 @@ void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync& compl
 }
 
 void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
-  ::fuchsia_paver::wire::ReadResult result = {};
+  fuchsia_paver::wire::ReadResult result = {};
   if (!vmo_) {
     zx_status_t status = ZX_ERR_BAD_STATE;
     result.set_err(fidl::unowned_ptr(&status));
@@ -68,7 +68,7 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync& completer) {
   } else {
     // completer.Reply must be called from within this else block since otherwise
     // |info| will go out of scope
-    ::fuchsia_paver::wire::ReadInfo info{.offset = 0, .size = static_cast<uint64_t>(n)};
+    fuchsia_paver::wire::ReadInfo info{.offset = 0, .size = static_cast<uint64_t>(n)};
     result.set_info(fidl::unowned_ptr(&info));
     completer.Reply(std::move(result));
   }

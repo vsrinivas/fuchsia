@@ -56,7 +56,7 @@
 namespace devmgr {
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 constexpr char kPathBlockDeviceRoot[] = "/dev/class/block";
 

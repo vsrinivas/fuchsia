@@ -40,8 +40,8 @@ static constexpr uint32_t kAfbcBytesPerBlockHeader = 16u;
 static constexpr uint32_t kAfbcTilePixelWidth = 16u;
 static constexpr uint32_t kAfbcTilePixelHeight = 16u;
 
-namespace sysmem = ::fuchsia_sysmem;
-namespace fhd = ::fuchsia_hardware_display;
+namespace sysmem = fuchsia_sysmem;
+namespace fhd = fuchsia_hardware_display;
 
 namespace testing {
 namespace display {

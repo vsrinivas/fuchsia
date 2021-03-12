@@ -223,7 +223,7 @@ TEST_F(File, GetVmoPropagatesError) {
   class TestServer : public TestServerBase {
    public:
     void GetAttr(GetAttrCompleter::Sync& completer) override {
-      completer.Reply(kGetAttrError, ::fuchsia_io::wire::NodeAttributes{});
+      completer.Reply(kGetAttrError, fuchsia_io::wire::NodeAttributes{});
     }
     void GetBuffer(uint32_t flags, GetBufferCompleter::Sync& completer) override {
       completer.Reply(kGetBufferError, nullptr);

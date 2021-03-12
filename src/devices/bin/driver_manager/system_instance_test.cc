@@ -19,8 +19,8 @@
 
 #include <zxtest/zxtest.h>
 
-namespace fboot = ::fuchsia_boot;
-namespace fkernel = ::fuchsia_kernel;
+namespace fboot = fuchsia_boot;
+namespace fkernel = fuchsia_kernel;
 
 namespace {
 

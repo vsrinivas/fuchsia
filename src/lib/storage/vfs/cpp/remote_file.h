@@ -31,7 +31,7 @@ class RemoteFile : public Vnode {
   VnodeProtocolSet GetProtocols() const final;
   zx_status_t GetAttributes(VnodeAttributes* a) final;
   bool IsRemote() const final;
-  fidl::UnownedClientEnd<::fuchsia_io::Directory> GetRemote() const final;
+  fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const final;
   zx_status_t GetNodeInfoForProtocol(VnodeProtocol protocol, Rights rights,
                                      VnodeRepresentation* info) final;
 
@@ -46,12 +46,12 @@ class RemoteFile : public Vnode {
   // the |fuchsia.io/Directory.Open| method. In a sense, the remote file speaks the combination of
   // file/directory protocols. If we change to using |fuchsia.io/Node.Clone| to open this file, it
   // might make sense to change this endpoint type to |Node| instead.
-  explicit RemoteFile(fidl::ClientEnd<::fuchsia_io::Directory> remote_client);
+  explicit RemoteFile(fidl::ClientEnd<fuchsia_io::Directory> remote_client);
 
   // Releases the remotely hosted file.
   ~RemoteFile() override;
 
-  fidl::ClientEnd<::fuchsia_io::Directory> const remote_client_;
+  fidl::ClientEnd<fuchsia_io::Directory> const remote_client_;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(RemoteFile);
 };

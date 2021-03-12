@@ -29,8 +29,8 @@
 
 namespace {
 
-using MinfsFidlMetrics = ::fuchsia_minfs::wire::Metrics;
-namespace fio = ::fuchsia_io;
+using MinfsFidlMetrics = fuchsia_minfs::wire::Metrics;
+namespace fio = fuchsia_io;
 
 int Usage() {
   fprintf(stdout, "usage: storage-metrics [ <option>* ] [paths]\n");

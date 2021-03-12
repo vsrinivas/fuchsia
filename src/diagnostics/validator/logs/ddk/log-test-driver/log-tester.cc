@@ -55,13 +55,13 @@ zx_koid_t GetKoid(zx_handle_t handle) {
 }
 
 void LogTester::GetInfo(GetInfoCompleter::Sync& completer) {
-  ::fuchsia_validate_logs::wire::PuppetInfo info;
+  fuchsia_validate_logs::wire::PuppetInfo info;
   info.pid = GetKoid(zx_process_self());
   info.tid = GetKoid(zx_thread_self());
   completer.Reply(std::move(info));
 }
 
-void LogTester::EmitLog(::fuchsia_validate_logs::wire::RecordSpec spec,
+void LogTester::EmitLog(fuchsia_validate_logs::wire::RecordSpec spec,
                         EmitLogCompleter::Sync& completer) {
   using fuchsia_diagnostics::wire::Severity;
   fx_log_severity_t severity;
@@ -98,7 +98,7 @@ void LogTester::EmitLog(::fuchsia_validate_logs::wire::RecordSpec spec,
 
 zx_status_t LogTester::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  ::fuchsia_validate_logs::LogSinkPuppet::Dispatch(this, msg, &transaction);
+  fuchsia_validate_logs::LogSinkPuppet::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

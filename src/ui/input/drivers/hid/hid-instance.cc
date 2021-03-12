@@ -89,7 +89,7 @@ void HidInstance::ReadReport(ReadReportCompleter::Sync& completer) {
     return;
   }
 
-  std::array<uint8_t, ::fuchsia_hardware_input::wire::MAX_REPORT_DATA> buf;
+  std::array<uint8_t, fuchsia_hardware_input::wire::MAX_REPORT_DATA> buf;
   zx_time_t time = 0;
   size_t report_size = 0;
   zx_status_t status;
@@ -111,7 +111,7 @@ void HidInstance::ReadReports(ReadReportsCompleter::Sync& completer) {
     return;
   }
 
-  std::array<uint8_t, ::fuchsia_hardware_input::wire::MAX_REPORT_DATA> buf;
+  std::array<uint8_t, fuchsia_hardware_input::wire::MAX_REPORT_DATA> buf;
   size_t buf_index = 0;
   zx_status_t status = ZX_OK;
   zx_time_t time;
@@ -159,7 +159,7 @@ void HidInstance::DdkRelease() { delete this; }
 
 zx_status_t HidInstance::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  ::fuchsia_hardware_input::Device::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_input::Device::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 
@@ -169,7 +169,7 @@ void HidInstance::GetBootProtocol(GetBootProtocolCompleter::Sync& completer) {
 
 void HidInstance::GetDeviceIds(GetDeviceIdsCompleter::Sync& completer) {
   hid_info_t info = base_->GetHidInfo();
-  ::fuchsia_hardware_input::wire::DeviceIds ids = {};
+  fuchsia_hardware_input::wire::DeviceIds ids = {};
   ids.vendor_id = info.vendor_id;
   ids.product_id = info.product_id;
   ids.version = info.version;

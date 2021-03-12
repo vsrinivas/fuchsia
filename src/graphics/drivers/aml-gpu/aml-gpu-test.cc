@@ -56,8 +56,7 @@ class TestAmlGpu {
     zx::channel client_end, server_end;
     ASSERT_OK(zx::channel::create(0, &client_end, &server_end));
     reset_mock.RegistersConnect(std::move(server_end));
-    aml_gpu.reset_register_ =
-        ::fuchsia_hardware_registers::Device::SyncClient(std::move(client_end));
+    aml_gpu.reset_register_ = fuchsia_hardware_registers::Device::SyncClient(std::move(client_end));
     reset_mock.fidl_service()->ExpectWrite<uint32_t>(aml_gpu.gpu_block_->reset0_mask_offset,
                                                      aml_registers::MALI_RESET0_MASK, 0);
     reset_mock.fidl_service()->ExpectWrite<uint32_t>(aml_gpu.gpu_block_->reset0_level_offset,
@@ -88,7 +87,7 @@ class TestAmlGpu {
   }
 
   static void TestMetadata() {
-    using ::fuchsia_hardware_gpu_amlogic::wire::Metadata;
+    using fuchsia_hardware_gpu_amlogic::wire::Metadata;
     aml_gpu::AmlGpu aml_gpu(nullptr);
     arm_mali_protocol_t protocol;
     EXPECT_OK(aml_gpu.DdkGetProtocol(ZX_PROTOCOL_ARM_MALI, &protocol));

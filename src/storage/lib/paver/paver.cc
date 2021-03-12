@@ -47,10 +47,10 @@
 namespace paver {
 namespace {
 
-using ::fuchsia_paver::wire::Asset;
-using ::fuchsia_paver::wire::Configuration;
-using ::fuchsia_paver::wire::ConfigurationStatus;
-using ::fuchsia_paver::wire::WriteFirmwareResult;
+using fuchsia_paver::wire::Asset;
+using fuchsia_paver::wire::Configuration;
+using fuchsia_paver::wire::ConfigurationStatus;
+using fuchsia_paver::wire::WriteFirmwareResult;
 
 // Get the architecture of the currently running platform.
 inline constexpr Arch GetCurrentArch() {
@@ -219,8 +219,8 @@ zx::status<zx::channel> FormatFvm(const fbl::unique_fd& devfs_root,
 }
 
 // Reads an image from disk into a vmo.
-zx::status<::fuchsia_mem::wire::Buffer> PartitionRead(const DevicePartitioner& partitioner,
-                                                      const PartitionSpec& spec) {
+zx::status<fuchsia_mem::wire::Buffer> PartitionRead(const DevicePartitioner& partitioner,
+                                                    const PartitionSpec& spec) {
   LOG("Reading partition \"%s\".\n", spec.ToString().c_str());
 
   auto status = partitioner.FindPartition(spec);
@@ -266,7 +266,7 @@ zx::status<::fuchsia_mem::wire::Buffer> PartitionRead(const DevicePartitioner& p
   }
 
   LOG("Completed successfully\n");
-  return zx::ok(::fuchsia_mem::wire::Buffer{std::move(vmo), asset_size});
+  return zx::ok(fuchsia_mem::wire::Buffer{std::move(vmo), asset_size});
 }
 
 zx::status<> ValidatePartitionPayload(const DevicePartitioner& partitioner,
@@ -527,7 +527,7 @@ void DataSink::ReadAsset(Configuration configuration, Asset asset,
 }
 
 void DataSink::WriteFirmware(Configuration configuration, fidl::StringView type,
-                             ::fuchsia_mem::wire::Buffer payload,
+                             fuchsia_mem::wire::Buffer payload,
                              WriteFirmwareCompleter::Sync& completer) {
   auto variant = sink_.WriteFirmware(configuration, std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
@@ -542,8 +542,8 @@ void DataSink::WipeVolume(WipeVolumeCompleter::Sync& completer) {
   }
 }
 
-zx::status<::fuchsia_mem::wire::Buffer> DataSinkImpl::ReadAsset(Configuration configuration,
-                                                                Asset asset) {
+zx::status<fuchsia_mem::wire::Buffer> DataSinkImpl::ReadAsset(Configuration configuration,
+                                                              Asset asset) {
   // No assets support content types yet, use the PartitionSpec default.
   PartitionSpec spec(PartitionType(configuration, asset));
 
@@ -563,7 +563,7 @@ zx::status<::fuchsia_mem::wire::Buffer> DataSinkImpl::ReadAsset(Configuration co
 }
 
 zx::status<> DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
-                                      ::fuchsia_mem::wire::Buffer payload) {
+                                      fuchsia_mem::wire::Buffer payload) {
   // No assets support content types yet, use the PartitionSpec default.
   PartitionSpec spec(PartitionType(configuration, asset));
 
@@ -579,7 +579,7 @@ zx::status<> DataSinkImpl::WriteAsset(Configuration configuration, Asset asset,
 }
 
 std::variant<zx_status_t, fidl::aligned<bool>> DataSinkImpl::WriteFirmware(
-    Configuration configuration, fidl::StringView type, ::fuchsia_mem::wire::Buffer payload) {
+    Configuration configuration, fidl::StringView type, fuchsia_mem::wire::Buffer payload) {
   // Currently all our supported firmware lives in Partition::kBootloaderA/B/R.
   Partition part_type;
   switch (configuration) {
@@ -624,7 +624,7 @@ zx::status<> DataSinkImpl::WriteVolumes(zx::channel payload_stream) {
 
 // Deprecated in favor of WriteFirmware().
 // TODO(fxbug.dev/45606): move clients off this function and delete it.
-zx::status<> DataSinkImpl::WriteBootloader(::fuchsia_mem::wire::Buffer payload) {
+zx::status<> DataSinkImpl::WriteBootloader(fuchsia_mem::wire::Buffer payload) {
   PartitionSpec spec(Partition::kBootloaderA);
 
   if (!partitioner_->SupportsPartition(spec)) {
@@ -635,7 +635,7 @@ zx::status<> DataSinkImpl::WriteBootloader(::fuchsia_mem::wire::Buffer payload) 
 }
 
 zx::status<> DataSinkImpl::WriteDataFile(fidl::StringView filename,
-                                         ::fuchsia_mem::wire::Buffer payload) {
+                                         fuchsia_mem::wire::Buffer payload) {
   const char* mount_path = "/volume/data";
   const uint8_t data_guid[] = GUID_DATA_VALUE;
   char minfs_path[PATH_MAX] = {0};
@@ -809,7 +809,7 @@ zx::status<zx::channel> DataSinkImpl::WipeVolume() {
 }
 
 void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                    fidl::ClientEnd<::fuchsia_io::Directory> svc_root, zx::channel server,
+                    fidl::ClientEnd<fuchsia_io::Directory> svc_root, zx::channel server,
                     std::shared_ptr<Context> context) {
   auto partitioner = DevicePartitionerFactory::Create(devfs_root.duplicate(), std::move(svc_root),
                                                       GetCurrentArch(), context);
@@ -823,7 +823,7 @@ void DataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
 }
 
 void DynamicDataSink::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                           fidl::ClientEnd<::fuchsia_io::Directory> svc_root,
+                           fidl::ClientEnd<fuchsia_io::Directory> svc_root,
                            zx::channel block_device, zx::channel server,
                            std::shared_ptr<Context> context) {
   auto partitioner =
@@ -858,7 +858,7 @@ void DynamicDataSink::ReadAsset(Configuration configuration, Asset asset,
 }
 
 void DynamicDataSink::WriteFirmware(Configuration configuration, fidl::StringView type,
-                                    ::fuchsia_mem::wire::Buffer payload,
+                                    fuchsia_mem::wire::Buffer payload,
                                     WriteFirmwareCompleter::Sync& completer) {
   auto variant = sink_.WriteFirmware(configuration, std::move(type), std::move(payload));
   completer.Reply(CreateWriteFirmwareResult(&variant));
@@ -874,7 +874,7 @@ void DynamicDataSink::WipeVolume(WipeVolumeCompleter::Sync& completer) {
 }
 
 void BootManager::Bind(async_dispatcher_t* dispatcher, fbl::unique_fd devfs_root,
-                       fidl::ClientEnd<::fuchsia_io::Directory> svc_root,
+                       fidl::ClientEnd<fuchsia_io::Directory> svc_root,
                        std::shared_ptr<Context> context, zx::channel server) {
   auto status = abr::ClientFactory::Create(std::move(devfs_root), svc_root, context);
   if (status.is_error()) {

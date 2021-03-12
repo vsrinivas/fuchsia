@@ -12,7 +12,7 @@
 
 #include "src/lib/storage/vfs/cpp/vfs.h"
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 namespace fs {
 

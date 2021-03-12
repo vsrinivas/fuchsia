@@ -49,7 +49,7 @@ const device_performance_state_info_t kDeviceDefaultPerfStates[1] = {
 const zx_device::SystemPowerStateMapping kDeviceDefaultStateMapping = []() {
   zx_device::SystemPowerStateMapping states_mapping{};
   for (auto& entry : states_mapping) {
-    entry.dev_state = ::fuchsia_device::wire::DevicePowerState::DEVICE_POWER_STATE_D3COLD;
+    entry.dev_state = fuchsia_device::wire::DevicePowerState::DEVICE_POWER_STATE_D3COLD;
     entry.wakeup_enable = false;
   }
   return states_mapping;

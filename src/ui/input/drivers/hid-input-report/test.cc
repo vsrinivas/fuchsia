@@ -265,7 +265,7 @@ TEST_F(HidDevTest, ReadInputReportsHangingGetTest) {
 
   // Read the report. This will hang until a report is sent.
   auto status = reader->ReadInputReports(
-      [&](::fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
+      [&](fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
         ASSERT_FALSE(response->result.is_err());
         auto& reports = response->result.response().reports;
         ASSERT_EQ(1, reports.count());
@@ -315,7 +315,7 @@ TEST_F(HidDevTest, CloseReaderWithOutstandingRead) {
 
   // Queue a report.
   auto status = reader->ReadInputReports(
-      [&](::fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
+      [&](fuchsia_input_report::InputReportsReader::ReadInputReportsResponse* response) {
         ASSERT_TRUE(response->result.is_err());
       });
   ASSERT_OK(status.status());

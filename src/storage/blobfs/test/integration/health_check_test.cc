@@ -17,7 +17,7 @@
 namespace blobfs {
 namespace {
 
-namespace fuv = ::fuchsia_update_verify;
+namespace fuv = fuchsia_update_verify;
 
 class HealthCheckTest : public ParameterizedBlobfsTest {
  protected:

@@ -17,7 +17,7 @@
 
 namespace hid_input_report_dev {
 
-namespace fuchsia_input_report = ::fuchsia_input_report;
+namespace fuchsia_input_report = fuchsia_input_report;
 
 class InputReportsReader;
 
@@ -26,7 +26,7 @@ class InputReportBase {
   virtual void RemoveReaderFromList(InputReportsReader* reader) = 0;
 };
 
-class InputReportsReader : public ::fuchsia_input_report::InputReportsReader::Interface {
+class InputReportsReader : public fuchsia_input_report::InputReportsReader::Interface {
  public:
   // The InputReportBase has to exist for the lifetime of the InputReportsReader.
   // The pointer to InputReportBase is unowned.

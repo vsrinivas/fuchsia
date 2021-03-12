@@ -14,7 +14,7 @@ namespace {
 
 using namespace loader::test;
 
-namespace fldsvc = ::fuchsia_ldsvc;
+namespace fldsvc = fuchsia_ldsvc;
 
 TEST_F(LoaderServiceTest, LoadObject) {
   std::shared_ptr<DriverHostLoaderService> loader;

@@ -11,7 +11,7 @@
 #include <zircon/status.h>
 
 namespace sysinfo {
-class SysInfo : public ::fuchsia_sysinfo::SysInfo::Interface {
+class SysInfo : public fuchsia_sysinfo::SysInfo::Interface {
  public:
   SysInfo() {}
   // fuchsia.sysinfo.SysInfo methods
@@ -24,7 +24,7 @@ class SysInfo : public ::fuchsia_sysinfo::SysInfo::Interface {
   zx_status_t GetBoardName(std::string* board_name);
   zx_status_t GetBoardRevision(uint32_t* board_revision);
   zx_status_t GetBootloaderVendor(std::string* bootloader_vendor);
-  zx_status_t GetInterruptControllerInfo(::fuchsia_sysinfo::wire::InterruptControllerInfo* info);
+  zx_status_t GetInterruptControllerInfo(fuchsia_sysinfo::wire::InterruptControllerInfo* info);
   zx_status_t ConnectToPBus(fuchsia_sysinfo::SysInfo::SyncClient* client);
 };
 }  // namespace sysinfo

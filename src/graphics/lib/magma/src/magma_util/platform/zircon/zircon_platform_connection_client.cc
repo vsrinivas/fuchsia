@@ -201,8 +201,8 @@ magma_status_t PrimaryWrapper::DestroyContext(uint32_t context_id) {
 }
 
 magma_status_t PrimaryWrapper::ExecuteCommandBufferWithResources(
-    uint32_t context_id, ::fuchsia_gpu_magma::wire::CommandBuffer command_buffer,
-    ::fidl::VectorView<::fuchsia_gpu_magma::wire::Resource> resources,
+    uint32_t context_id, fuchsia_gpu_magma::wire::CommandBuffer command_buffer,
+    ::fidl::VectorView<fuchsia_gpu_magma::wire::Resource> resources,
     ::fidl::VectorView<uint64_t> wait_semaphores, ::fidl::VectorView<uint64_t> signal_semaphores) {
   std::lock_guard<std::mutex> lock(flow_control_mutex_);
   FlowControl();

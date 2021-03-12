@@ -30,7 +30,7 @@
 #include "src/connectivity/openthread/drivers/ot-radio/ot_radio_bootloader.h"
 
 namespace ot {
-namespace lowpan_spinel_fidl = ::fuchsia_lowpan_spinel;
+namespace lowpan_spinel_fidl = fuchsia_lowpan_spinel;
 
 OtRadioDevice::LowpanSpinelDeviceFidlImpl::LowpanSpinelDeviceFidlImpl(OtRadioDevice& ot_radio)
     : ot_radio_obj_(ot_radio) {}

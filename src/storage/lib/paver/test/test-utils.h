@@ -124,7 +124,7 @@ class FakePartitionClient : public paver::BlockDevicePartitionClient {
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size);
   zx::status<> Trim();
   zx::status<> Flush();
-  fidl::ClientEnd<::fuchsia_hardware_block::Block> GetChannel();
+  fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel();
   fbl::unique_fd block_fd();
 
  protected:

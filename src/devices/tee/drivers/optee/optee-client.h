@@ -27,7 +27,7 @@
 
 namespace optee {
 
-namespace fuchsia_tee = ::fuchsia_tee;
+namespace fuchsia_tee = fuchsia_tee;
 
 class OpteeClient;
 
@@ -269,7 +269,7 @@ class OpteeClient : public OpteeClientBase,
   zx::channel root_storage_channel_;
 
   // A lazily-initialized, cached the Rpmb client.
-  std::optional<::fuchsia_hardware_rpmb::Rpmb::SyncClient> rpmb_client_;
+  std::optional<fuchsia_hardware_rpmb::Rpmb::SyncClient> rpmb_client_;
 
   // The (only) trusted application UUID this client is allowed to use.
   Uuid application_uuid_;

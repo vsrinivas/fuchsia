@@ -11,7 +11,7 @@
 
 namespace registers {
 
-using ::fuchsia_hardware_registers::wire::Mask;
+using fuchsia_hardware_registers::wire::Mask;
 template <typename T>
 Mask BuildMask(fidl::AnyAllocator& allocator, T mask) {
   if constexpr (std::is_same_v<T, uint8_t>) {
@@ -36,8 +36,8 @@ struct MaskEntryBuilder {
   uint32_t reg_count;
   bool overlap_check_on = true;
 };
-using ::fuchsia_hardware_registers::wire::MaskEntry;
-using ::fuchsia_hardware_registers::wire::RegistersMetadataEntry;
+using fuchsia_hardware_registers::wire::MaskEntry;
+using fuchsia_hardware_registers::wire::RegistersMetadataEntry;
 template <typename T>
 RegistersMetadataEntry BuildMetadata(fidl::AnyAllocator& allocator, uint32_t bind_id,
                                      uint32_t mmio_id, std::vector<MaskEntryBuilder<T>> masks) {
@@ -57,14 +57,14 @@ RegistersMetadataEntry BuildMetadata(fidl::AnyAllocator& allocator, uint32_t bin
   return entry;
 }
 
-using ::fuchsia_hardware_registers::wire::MmioMetadataEntry;
+using fuchsia_hardware_registers::wire::MmioMetadataEntry;
 MmioMetadataEntry BuildMetadata(fidl::AnyAllocator& allocator, uint32_t id) {
   MmioMetadataEntry entry(allocator);
   entry.set_id(allocator, id);
   return entry;
 }
 
-using ::fuchsia_hardware_registers::wire::Metadata;
+using fuchsia_hardware_registers::wire::Metadata;
 Metadata BuildMetadata(fidl::AnyAllocator& allocator, fidl::VectorView<MmioMetadataEntry> mmio,
                        fidl::VectorView<RegistersMetadataEntry> registers) {
   Metadata metadata(allocator);

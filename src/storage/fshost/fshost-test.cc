@@ -34,7 +34,7 @@
 namespace devmgr {
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 std::unique_ptr<cobalt_client::Collector> MakeCollector() {
   return std::make_unique<cobalt_client::Collector>(
@@ -63,10 +63,10 @@ TEST(VnodeTestCase, AddFilesystem) {
 
   // Adds a new filesystem to the fshost service node.
   // This filesystem should appear as a new entry within |dir|.
-  auto endpoints = fidl::CreateEndpoints<::fuchsia_io::Directory>();
+  auto endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(endpoints.status_value());
 
-  fidl::UnownedClientEnd<::fuchsia_io::Directory> client_value = endpoints->client.borrow();
+  fidl::UnownedClientEnd<fuchsia_io::Directory> client_value = endpoints->client.borrow();
   ASSERT_OK(fshost_vn->AddFilesystem(std::move(endpoints->client)));
   fbl::RefPtr<fs::Vnode> node;
   ASSERT_OK(dir->Lookup("0", &node));
@@ -78,7 +78,7 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   ASSERT_EQ(loop.StartThread(), ZX_OK);
 
   // set up registry service
-  auto registry_endpoints = fidl::CreateEndpoints<::fuchsia_fshost::Registry>();
+  auto registry_endpoints = fidl::CreateEndpoints<fuchsia_fshost::Registry>();
   ASSERT_OK(registry_endpoints.status_value());
   auto [registry_client, registry_server] = std::move(registry_endpoints.value());
 
@@ -89,7 +89,7 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
   ASSERT_TRUE(server_binding.is_ok());
 
   // make a new "vfs" "client" that doesn't really point anywhere.
-  auto vfs_endpoints = fidl::CreateEndpoints<::fuchsia_io::Directory>();
+  auto vfs_endpoints = fidl::CreateEndpoints<fuchsia_io::Directory>();
   ASSERT_OK(vfs_endpoints.status_value());
   auto [vfs_client, vfs_server] = std::move(vfs_endpoints.value());
   zx_info_handle_basic_t vfs_client_info;
@@ -98,7 +98,7 @@ TEST(VnodeTestCase, AddFilesystemThroughFidl) {
 
   // register the filesystem through the fidl interface
   auto resp =
-      ::fuchsia_fshost::Registry::Call::RegisterFilesystem(registry_client, std::move(vfs_client));
+      fuchsia_fshost::Registry::Call::RegisterFilesystem(registry_client, std::move(vfs_client));
   ASSERT_TRUE(resp.ok());
   ASSERT_OK(resp.value().s);
 

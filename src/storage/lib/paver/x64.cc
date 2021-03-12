@@ -28,7 +28,7 @@ constexpr char kOldEfiName[] = "efi-system";
 }  // namespace
 
 zx::status<std::unique_ptr<DevicePartitioner>> EfiDevicePartitioner::Initialize(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root, Arch arch,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     const fbl::unique_fd& block_device) {
   if (arch != Arch::kX64) {
     return zx::error(ZX_ERR_NOT_FOUND);
@@ -259,13 +259,13 @@ zx::status<> EfiDevicePartitioner::ValidatePayload(const PartitionSpec& spec,
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> X64PartitionerFactory::New(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root, Arch arch,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return EfiDevicePartitioner::Initialize(std::move(devfs_root), svc_root, arch, block_device);
 }
 
 zx::status<std::unique_ptr<abr::Client>> X64AbrClientFactory::New(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   fbl::unique_fd none;
   auto partitioner = EfiDevicePartitioner::Initialize(std::move(devfs_root), std::move(svc_root),

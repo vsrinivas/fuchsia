@@ -13,7 +13,7 @@
 
 #include <algorithm>
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 static zx_status_t read_at(zxio_t* io, void* buf, size_t len, off_t offset, size_t* out_actual) {
   size_t actual = 0u;

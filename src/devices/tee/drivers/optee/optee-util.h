@@ -17,7 +17,7 @@
 
 namespace optee {
 
-namespace fuchsia_tee = ::fuchsia_tee;
+namespace fuchsia_tee = fuchsia_tee;
 
 constexpr std::string_view kDeviceName = "optee";
 

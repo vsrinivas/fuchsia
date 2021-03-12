@@ -171,7 +171,7 @@ std::optional<fbl::unique_fd> ConsoleLauncher::GetVirtioFd(const Arguments& args
     return std::nullopt;
   }
 
-  ::fuchsia_hardware_virtioconsole::Device::SyncClient virtio_client(std::move(virtio_channel));
+  fuchsia_hardware_virtioconsole::Device::SyncClient virtio_client(std::move(virtio_channel));
   virtio_client.GetChannel(std::move(remote));
 
   fdio_t* fdio;

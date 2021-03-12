@@ -19,7 +19,7 @@
 
 namespace amlogic_cpu {
 
-namespace fuchsia_cpuctrl = ::fuchsia_hardware_cpu_ctrl;
+namespace fuchsia_cpuctrl = fuchsia_hardware_cpu_ctrl;
 
 class AmlCpu;
 using DeviceType =

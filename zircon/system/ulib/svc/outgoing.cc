@@ -19,7 +19,7 @@ Outgoing::Outgoing(async_dispatcher_t* dispatcher)
 
 Outgoing::~Outgoing() = default;
 
-zx_status_t Outgoing::Serve(fidl::ServerEnd<::fuchsia_io::Directory> dir_server_end) {
+zx_status_t Outgoing::Serve(fidl::ServerEnd<fuchsia_io::Directory> dir_server_end) {
   if (!dir_server_end.is_valid())
     return ZX_ERR_BAD_HANDLE;
   return vfs_.ServeDirectory(root_dir_, std::move(dir_server_end));

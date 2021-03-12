@@ -19,7 +19,7 @@
 
 namespace ppp {
 
-namespace netdev = ::fuchsia_hardware_network;
+namespace netdev = fuchsia_hardware_network;
 
 static constexpr zx_driver_ops_t driver_ops = {
     .version = DRIVER_OPS_VERSION,

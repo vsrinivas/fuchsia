@@ -34,42 +34,41 @@ namespace cobalt_client {
 namespace internal {
 namespace {
 
-using Status = ::fuchsia_cobalt::wire::Status;
-using EventData = ::fuchsia_cobalt::wire::EventPayload;
+using Status = fuchsia_cobalt::wire::Status;
+using EventData = fuchsia_cobalt::wire::EventPayload;
 
 // Fake Implementation for fuchsia::cobalt::LoggerFactory.
-class FakeLoggerFactoryService : public ::fuchsia_cobalt::LoggerFactory::Interface {
+class FakeLoggerFactoryService : public fuchsia_cobalt::LoggerFactory::Interface {
  public:
   void CreateLoggerFromProjectId(uint32_t project_id,
-                                 ::fidl::ServerEnd<::fuchsia_cobalt::Logger> logger,
+                                 ::fidl::ServerEnd<fuchsia_cobalt::Logger> logger,
                                  CreateLoggerFromProjectIdCompleter::Sync& completer) final {
     completer.Reply(create_logger_handler_(project_id, std::move(logger)));
   }
 
   void CreateLoggerSimpleFromProjectId(
-      uint32_t project_id, ::fidl::ServerEnd<::fuchsia_cobalt::LoggerSimple> logger,
+      uint32_t project_id, ::fidl::ServerEnd<fuchsia_cobalt::LoggerSimple> logger,
       CreateLoggerSimpleFromProjectIdCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
   void CreateLoggerFromProjectSpec(uint32_t customer_id, uint32_t project_id,
-                                   ::fidl::ServerEnd<::fuchsia_cobalt::Logger> logger,
+                                   ::fidl::ServerEnd<fuchsia_cobalt::Logger> logger,
                                    CreateLoggerFromProjectSpecCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
   void set_create_logger_handler(
-      fit::function<Status(uint32_t, ::fidl::ServerEnd<::fuchsia_cobalt::Logger>)> handler) {
+      fit::function<Status(uint32_t, ::fidl::ServerEnd<fuchsia_cobalt::Logger>)> handler) {
     create_logger_handler_ = std::move(handler);
   }
 
  private:
-  fit::function<Status(uint32_t, ::fidl::ServerEnd<::fuchsia_cobalt::Logger>)>
-      create_logger_handler_;
+  fit::function<Status(uint32_t, ::fidl::ServerEnd<fuchsia_cobalt::Logger>)> create_logger_handler_;
 };
 
 // Fake Implementation for fuchsia::cobalt::Logger.
-class FakeLoggerService : public ::fuchsia_cobalt::Logger::Interface {
+class FakeLoggerService : public fuchsia_cobalt::Logger::Interface {
  public:
   void LogEvent(uint32_t metric_id, uint32_t event_code, LogEventCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
@@ -108,18 +107,18 @@ class FakeLoggerService : public ::fuchsia_cobalt::Logger::Interface {
   }
 
   void LogIntHistogram(uint32_t metric_id, uint32_t event_code, ::fidl::StringView component,
-                       ::fidl::VectorView<::fuchsia_cobalt::wire::HistogramBucket> histogram,
+                       ::fidl::VectorView<fuchsia_cobalt::wire::HistogramBucket> histogram,
                        LogIntHistogramCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
   void LogCustomEvent(uint32_t metric_id,
-                      ::fidl::VectorView<::fuchsia_cobalt::wire::CustomEventValue> event_values,
+                      ::fidl::VectorView<fuchsia_cobalt::wire::CustomEventValue> event_values,
                       LogCustomEventCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
 
-  void LogCobaltEvent(::fuchsia_cobalt::wire::CobaltEvent event,
+  void LogCobaltEvent(fuchsia_cobalt::wire::CobaltEvent event,
                       LogCobaltEventCompleter::Sync& completer) final {
     // Use MetricOptions as a key.
     MetricOptions info;
@@ -152,7 +151,7 @@ class FakeLoggerService : public ::fuchsia_cobalt::Logger::Interface {
     completer.Reply(log_return_status_);
   }
 
-  void LogCobaltEvents(::fidl::VectorView<::fuchsia_cobalt::wire::CobaltEvent> events,
+  void LogCobaltEvents(::fidl::VectorView<fuchsia_cobalt::wire::CobaltEvent> events,
                        LogCobaltEventsCompleter::Sync& completer) final {
     ZX_PANIC("Not Implemented.");
   }
@@ -201,7 +200,7 @@ void BindLoggerToLoggerFactoryService(FakeLoggerFactoryService* binder, FakeLogg
                                       async_dispatcher_t* dispatcher) {
   binder->set_create_logger_handler(
       [bindee, checker, dispatcher](uint32_t project_id,
-                                    ::fidl::ServerEnd<::fuchsia_cobalt::Logger> channel) {
+                                    ::fidl::ServerEnd<fuchsia_cobalt::Logger> channel) {
         fbl::AutoLock lock(&checker->result_lock_);
         checker->is_id_ok = (checker->project_id == project_id);
         checker->is_channel_ok = channel.is_valid();

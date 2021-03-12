@@ -10,7 +10,7 @@
 #include <fbl/unique_fd.h>
 #include <soc/aml-common/aml-ram.h>
 
-namespace ram_metrics = ::fuchsia_hardware_ram_metrics;
+namespace ram_metrics = fuchsia_hardware_ram_metrics;
 
 namespace {
 

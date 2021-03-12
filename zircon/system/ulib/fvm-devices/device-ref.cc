@@ -272,8 +272,8 @@ std::unique_ptr<FvmAdapter> FvmAdapter::CreateGrowable(const fbl::unique_fd& dev
   }
 
   zx_status_t status = ZX_OK;
-  auto resp = ::fuchsia_device::Controller::Call::Bind(
-      zx::unowned_channel(device->channel()->get()), ::fidl::StringView(kFvmDriverLib));
+  auto resp = fuchsia_device::Controller::Call::Bind(zx::unowned_channel(device->channel()->get()),
+                                                     ::fidl::StringView(kFvmDriverLib));
   zx_status_t fidl_status = resp.status();
   if (resp->result.is_err()) {
     status = resp->result.err();
@@ -347,7 +347,7 @@ zx_status_t FvmAdapter::Rebind(fbl::Vector<VPartitionAdapter*> vpartitions) {
     return status;
   }
 
-  auto resp = ::fuchsia_device::Controller::Call::Bind(
+  auto resp = fuchsia_device::Controller::Call::Bind(
       zx::unowned_channel(block_device_->channel()->get()), ::fidl::StringView(kFvmDriverLib));
   zx_status_t fidl_status = resp.status();
   status = ZX_OK;

@@ -19,12 +19,12 @@ Registry::Registry(async::Loop* loop) : vfs_(loop->dispatcher()) {
   // Create a "tracking directory", capable of monitoring registered filesystems,
   // and detaching them once they are unmounted.
   auto filesystems = fbl::MakeRefCounted<fs::PseudoDir>();
-  zx_status_t status = root_->AddEntry(::fuchsia_fshost::Filesystems::Name, filesystems);
+  zx_status_t status = root_->AddEntry(fuchsia_fshost::Filesystems::Name, filesystems);
   ZX_ASSERT(status == ZX_OK);
 
   // Create a service node, which clients may use to communicate with the registry.
   svc_ = fbl::MakeRefCounted<fshost::RegistryVnode>(vfs_.dispatcher(), std::move(filesystems));
-  status = root_->AddEntry(::fuchsia_fshost::Registry::Name, svc_);
+  status = root_->AddEntry(fuchsia_fshost::Registry::Name, svc_);
   ZX_ASSERT(status == ZX_OK);
 }
 

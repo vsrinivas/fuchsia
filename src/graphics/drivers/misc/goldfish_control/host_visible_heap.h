@@ -21,7 +21,7 @@
 namespace goldfish {
 
 class Control;
-using HeapInterface = ::fuchsia_sysmem2::Heap::Interface;
+using HeapInterface = fuchsia_sysmem2::Heap::Interface;
 
 // LLCPP synchronous server of a goldfish device-local Fuchsia sysmem Heap
 // interface.

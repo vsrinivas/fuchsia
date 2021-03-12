@@ -15,7 +15,7 @@
 
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 TEST(Rights, ReadOnly) {
   // clang-format off

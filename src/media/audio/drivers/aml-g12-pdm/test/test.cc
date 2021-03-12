@@ -18,7 +18,7 @@
 
 namespace audio::aml_g12 {
 
-namespace audio_fidl = ::fuchsia_hardware_audio;
+namespace audio_fidl = fuchsia_hardware_audio;
 
 class FakeMmio {
  public:

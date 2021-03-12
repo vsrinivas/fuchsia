@@ -33,7 +33,7 @@ zx_status_t ControllerDevice::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* t
   return transaction.Status();
 }
 
-void ControllerDevice::GetChannel2(::fidl::ServerEnd<::fuchsia_camera2_hal::Controller> server_end,
+void ControllerDevice::GetChannel2(::fidl::ServerEnd<fuchsia_camera2_hal::Controller> server_end,
                                    GetChannel2Completer::Sync& completer) {
   if (!server_end.is_valid()) {
     completer.Close(ZX_ERR_INVALID_ARGS);

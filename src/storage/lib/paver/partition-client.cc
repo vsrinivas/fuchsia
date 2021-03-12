@@ -22,7 +22,7 @@
 namespace paver {
 namespace {
 
-namespace block = ::fuchsia_hardware_block;
+namespace block = fuchsia_hardware_block;
 
 }  // namespace
 
@@ -219,7 +219,7 @@ zx::status<> BlockPartitionClient::Flush() {
   return zx::make_status(client_->Transaction(&request, 1));
 }
 
-fidl::ClientEnd<::fuchsia_hardware_block::Block> BlockPartitionClient::GetChannel() {
+fidl::ClientEnd<fuchsia_hardware_block::Block> BlockPartitionClient::GetChannel() {
   return service::MaybeClone(partition_.client_end(), service::AssumeProtocolComposesNode);
 }
 
@@ -281,7 +281,7 @@ zx::status<> FixedOffsetBlockPartitionClient::Trim() { return client_.Trim(); }
 
 zx::status<> FixedOffsetBlockPartitionClient::Flush() { return client_.Flush(); }
 
-fidl::ClientEnd<::fuchsia_hardware_block::Block> FixedOffsetBlockPartitionClient::GetChannel() {
+fidl::ClientEnd<fuchsia_hardware_block::Block> FixedOffsetBlockPartitionClient::GetChannel() {
   return client_.GetChannel();
 }
 
@@ -365,7 +365,7 @@ zx::status<> PartitionCopyClient::Flush() {
   return zx::ok();
 }
 
-fidl::ClientEnd<::fuchsia_hardware_block::Block> PartitionCopyClient::GetChannel() { return {}; }
+fidl::ClientEnd<fuchsia_hardware_block::Block> PartitionCopyClient::GetChannel() { return {}; }
 
 fbl::unique_fd PartitionCopyClient::block_fd() { return fbl::unique_fd(); }
 

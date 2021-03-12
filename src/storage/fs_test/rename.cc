@@ -25,7 +25,7 @@ namespace {
 
 using RenameTest = FilesystemTest;
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 TEST_P(RenameTest, Basic) {
   // Cannot rename when src does not exist

@@ -22,7 +22,7 @@
 namespace audio {
 namespace utils {
 
-namespace audio_fidl = ::fuchsia_hardware_audio;
+namespace audio_fidl = fuchsia_hardware_audio;
 
 class AudioDeviceStream {
  public:

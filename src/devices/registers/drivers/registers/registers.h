@@ -40,11 +40,11 @@ struct MmioInfo {
   std::vector<fbl::Mutex> locks;
 };
 
-using ::fuchsia_hardware_registers::wire::Metadata;
-using ::fuchsia_hardware_registers::wire::RegistersMetadataEntry;
+using fuchsia_hardware_registers::wire::Metadata;
+using fuchsia_hardware_registers::wire::RegistersMetadataEntry;
 
 template <typename T>
-class Register : public ::fuchsia_hardware_registers::Device::Interface,
+class Register : public fuchsia_hardware_registers::Device::Interface,
                  public RegisterType<T>,
                  public ddk::RegistersProtocol<Register<T>, ddk::base_protocol>,
                  public fbl::RefCounted<Register<T>> {
@@ -56,7 +56,7 @@ class Register : public ::fuchsia_hardware_registers::Device::Interface,
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    ::fuchsia_hardware_registers::Device::Dispatch(this, msg, &transaction);
+    fuchsia_hardware_registers::Device::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
   void DdkUnbind(ddk::UnbindTxn txn) {

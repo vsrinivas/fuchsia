@@ -20,9 +20,9 @@
 #include "private-socket.h"
 #include "zxio.h"
 
-namespace fio = ::fuchsia_io;
-namespace fsocket = ::fuchsia_posix_socket;
-namespace fnet = ::fuchsia_net;
+namespace fio = fuchsia_io;
+namespace fsocket = fuchsia_posix_socket;
+namespace fnet = fuchsia_net;
 
 namespace {
 

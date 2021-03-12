@@ -49,7 +49,7 @@ namespace dsi_dw {
 class DsiDwBase;
 class DsiDw;
 
-namespace fidl_dsi = ::fuchsia_hardware_dsi;
+namespace fidl_dsi = fuchsia_hardware_dsi;
 
 using DeviceTypeBase = ddk::Device<DsiDwBase, ddk::Unbindable, ddk::Messageable>;
 class DsiDwBase : public DeviceTypeBase,
@@ -60,7 +60,7 @@ class DsiDwBase : public DeviceTypeBase,
   zx_status_t Bind();
 
   // FIDL
-  void SendCmd(::fuchsia_hardware_dsi::wire::MipiDsiCmd cmd, ::fidl::VectorView<uint8_t> txdata,
+  void SendCmd(fuchsia_hardware_dsi::wire::MipiDsiCmd cmd, ::fidl::VectorView<uint8_t> txdata,
                SendCmdCompleter::Sync& _completer) override;
 
   void DdkUnbind(ddk::UnbindTxn txn);

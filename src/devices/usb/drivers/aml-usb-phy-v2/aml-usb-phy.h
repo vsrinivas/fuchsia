@@ -77,7 +77,7 @@ class AmlUsbPhy : public AmlUsbPhyType, public ddk::UsbPhyProtocol<AmlUsbPhy, dd
   int IrqThread();
 
   ddk::PDev pdev_;
-  ::fuchsia_hardware_registers::Device::SyncClient reset_register_;
+  fuchsia_hardware_registers::Device::SyncClient reset_register_;
   std::optional<ddk::MmioBuffer> usbctrl_mmio_;
   std::optional<ddk::MmioBuffer> usbphy20_mmio_;
   std::optional<ddk::MmioBuffer> usbphy21_mmio_;

@@ -33,8 +33,8 @@
 #define ETHERNET_INITIAL_TRANSMIT_DELAY 0
 #define ETHERNET_INITIAL_RECV_DELAY 0
 
-namespace telephony_transport = ::fuchsia_hardware_telephony_transport;
-namespace telephony_snoop = ::fuchsia_telephony_snoop;
+namespace telephony_transport = fuchsia_hardware_telephony_transport;
+namespace telephony_snoop = fuchsia_telephony_snoop;
 
 // TODO (jiamingw): investigate whether it can be replaced by eth::Operation
 typedef struct txn_info {
@@ -215,7 +215,7 @@ zx_status_t Device::SetAsyncWait() {
 }
 
 zx_status_t Device::SetSnoopChannelToDevice(
-    ::fidl::ClientEnd<::fuchsia_telephony_snoop::Publisher> channel) {
+    ::fidl::ClientEnd<fuchsia_telephony_snoop::Publisher> channel) {
   zx_port_packet_t packet;
   zx_status_t status = ZX_OK;
   // Initialize a port to watch whether the other handle of snoop channel has
@@ -277,7 +277,7 @@ void Device::SetNetwork(bool connected, SetNetworkCompleter::Sync& completer) {
   completer.Reply();
 }
 
-void Device::SetSnoopChannel(::fidl::ClientEnd<::fuchsia_telephony_snoop::Publisher> interface,
+void Device::SetSnoopChannel(::fidl::ClientEnd<fuchsia_telephony_snoop::Publisher> interface,
                              SetSnoopChannelCompleter::Sync& completer) {
   zx_status_t set_snoop_res = SetSnoopChannelToDevice(std::move(interface));
   if (set_snoop_res == ZX_OK) {

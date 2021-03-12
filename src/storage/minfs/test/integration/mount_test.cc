@@ -35,7 +35,7 @@
 namespace minfs {
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 template <bool repairable>
 class MountTestTemplate : public testing::Test {

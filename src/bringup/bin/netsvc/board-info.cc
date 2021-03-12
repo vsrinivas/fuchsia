@@ -37,7 +37,7 @@
 namespace {
 
 [[maybe_unused]] static bool IsChromebook(const zx::channel& sysinfo) {
-  auto result = ::fuchsia_sysinfo::SysInfo::Call::GetBootloaderVendor(zx::unowned(sysinfo));
+  auto result = fuchsia_sysinfo::SysInfo::Call::GetBootloaderVendor(zx::unowned(sysinfo));
   zx_status_t status = result.ok() ? result->status : result.status();
   if (status != ZX_OK) {
     return status;
@@ -46,7 +46,7 @@ namespace {
 }
 
 zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
-  auto result = ::fuchsia_sysinfo::SysInfo::Call::GetBoardName(zx::unowned(sysinfo));
+  auto result = fuchsia_sysinfo::SysInfo::Call::GetBoardName(zx::unowned(sysinfo));
   if (!result.ok()) {
     return false;
   }
@@ -75,7 +75,7 @@ zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
 }
 
 zx_status_t GetBoardRevision(const zx::channel& sysinfo, uint32_t* board_revision) {
-  auto result = ::fuchsia_sysinfo::SysInfo::Call::GetBoardRevision(zx::unowned(sysinfo));
+  auto result = fuchsia_sysinfo::SysInfo::Call::GetBoardRevision(zx::unowned(sysinfo));
   if (!result.ok()) {
     return false;
   }

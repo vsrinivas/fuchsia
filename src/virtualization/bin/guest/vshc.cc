@@ -22,7 +22,7 @@
 #include "src/virtualization/lib/vsh/util.h"
 #include "src/virtualization/packages/biscotti_guest/third_party/protos/vsh.pb.h"
 
-namespace fpty = ::fuchsia_hardware_pty;
+namespace fpty = fuchsia_hardware_pty;
 
 std::pair<int, int> init_tty(void) {
   int cols = 80;

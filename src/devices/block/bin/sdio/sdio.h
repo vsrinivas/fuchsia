@@ -9,8 +9,8 @@
 
 namespace sdio {
 
-using namespace ::fuchsia_hardware_sdio;
-using SdioClient = ::fuchsia_hardware_sdio::Device::SyncClient;
+using namespace fuchsia_hardware_sdio;
+using SdioClient = fuchsia_hardware_sdio::Device::SyncClient;
 
 std::string GetTxnStats(const zx::duration duration, const uint64_t bytes);
 void PrintUsage();

@@ -32,7 +32,7 @@
 
 #include "src/ui/lib/key_util/key_util.h"
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 namespace {
 
@@ -141,7 +141,7 @@ void Keyboard::SetCapsLockLed(bool caps_lock) {
 }
 
 // returns true if key was pressed and none were released
-void Keyboard::ProcessInput(const ::fuchsia_input_report::wire::InputReport& report) {
+void Keyboard::ProcessInput(const fuchsia_input_report::wire::InputReport& report) {
   if (!report.has_keyboard()) {
     return;
   }

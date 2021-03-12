@@ -87,7 +87,7 @@ void USBVirtualBusBase::InitPeripheral() {
 
 int USBVirtualBusBase::GetRootFd() { return devfs_root().get(); }
 
-class EventWatcher : public ::fuchsia_hardware_usb_peripheral::Events::Interface {
+class EventWatcher : public fuchsia_hardware_usb_peripheral::Events::Interface {
  public:
   explicit EventWatcher(async::Loop* loop, zx::channel svc, size_t functions)
       : loop_(loop), functions_(functions) {
@@ -127,7 +127,7 @@ void EventWatcher::FunctionsCleared(FunctionsClearedCompleter::Sync& completer) 
 void USBVirtualBusBase::SetupPeripheralDevice(DeviceDescriptor&& device_desc,
                                               std::vector<FunctionDescriptor> function_descs) {
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+      ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
   zx::channel state_change_sender, state_change_receiver;
   ASSERT_EQ(zx::channel::create(0, &state_change_sender, &state_change_receiver), ZX_OK);
   auto set_result = peripheral_->SetStateChangeListener(std::move(state_change_receiver));

@@ -29,7 +29,7 @@
 
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 TEST(FidlTests, TestFidlBasic) {
   memfs_filesystem_t* fs;

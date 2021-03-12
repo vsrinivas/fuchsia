@@ -18,7 +18,7 @@ namespace optee {
 // `OpteeDeviceInfo` is a simple child device of `OpteeController` that serves the
 // `fuchsia.tee.DeviceInfo` FIDL protocol.
 
-namespace fuchsia_tee = ::fuchsia_tee;
+namespace fuchsia_tee = fuchsia_tee;
 
 class OpteeDeviceInfo;
 using OpteeDeviceInfoBase = ddk::Device<OpteeDeviceInfo, ddk::Messageable>;

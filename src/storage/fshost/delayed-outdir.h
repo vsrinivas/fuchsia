@@ -54,13 +54,12 @@ class DelayedOutdir {
     }
   }
 
-  fbl::RefPtr<fs::RemoteDir> Initialize(
-      fidl::ClientEnd<::fuchsia_io::Directory> filesystems_client) {
+  fbl::RefPtr<fs::RemoteDir> Initialize(fidl::ClientEnd<fuchsia_io::Directory> filesystems_client) {
     auto delayed_dir = fbl::MakeRefCounted<fs::PseudoDir>();
     delayed_dir->AddEntry("fs", fbl::MakeRefCounted<fs::RemoteDir>(std::move(filesystems_client)));
 
     // Add the delayed vfs to the main one under /delayed
-    auto delayed = fidl::CreateEndpoints<::fuchsia_io::Directory>();
+    auto delayed = fidl::CreateEndpoints<fuchsia_io::Directory>();
     if (!delayed.is_ok()) {
       FX_LOGS(ERROR) << "delayed outdir failed to create channel";
       return fbl::RefPtr<fs::RemoteDir>();

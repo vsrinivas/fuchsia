@@ -15,8 +15,8 @@ namespace devmgr {
 
 // Utility to open a directory at the given `path` under `root`. The resulting channel handle will
 // be in `result`. The returned `status` indicates whether the operation was successful or not.
-zx_status_t OpenNode(fidl::UnownedClientEnd<::fuchsia_io::Directory> root, const std::string& path,
-                     uint32_t mode, fidl::ClientEnd<::fuchsia_io::Node>* result);
+zx_status_t OpenNode(fidl::UnownedClientEnd<fuchsia_io::Directory> root, const std::string& path,
+                     uint32_t mode, fidl::ClientEnd<fuchsia_io::Node>* result);
 
 // Management of fshost inspect data.
 class InspectManager {
@@ -37,12 +37,11 @@ class InspectManager {
 
   // Fills information about the size of files and directories under the given `root` under the
   // given `node` and emplaces it in the given `inspector`. Returns the total size of `root`.
-  void FillFileTreeSizes(fidl::ClientEnd<::fuchsia_io::Directory> root, inspect::Node node,
+  void FillFileTreeSizes(fidl::ClientEnd<fuchsia_io::Directory> root, inspect::Node node,
                          inspect::Inspector* inspector);
 
   // Queries the filesystem about stats of the given `root` and stores them in the given `inspector`
-  void FillStats(fidl::UnownedClientEnd<::fuchsia_io::Directory> root,
-                 inspect::Inspector* inspector);
+  void FillStats(fidl::UnownedClientEnd<fuchsia_io::Directory> root, inspect::Inspector* inspector);
 };
 
 // A directory entry returned by `DirectoryEntriesIterator`

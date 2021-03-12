@@ -12,7 +12,7 @@
 
 namespace factoryfs {
 
-namespace fuchsia_fs = ::fuchsia_fs;
+namespace fuchsia_fs = fuchsia_fs;
 using fuchsia_fs::wire::FilesystemInfoQuery;
 
 constexpr char kFsName[] = "factoryfs";

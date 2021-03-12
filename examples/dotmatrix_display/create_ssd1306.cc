@@ -54,15 +54,15 @@ int main(int argc, char** argv) {
   }
 
   // This wires the 0 pin as SCL and pins 1 & 2 as SDA.
-  ::fuchsia_hardware_ftdi::wire::I2cBusLayout layout = {0, 1, 2};
-  ::fuchsia_hardware_ftdi::wire::I2cDevice i2c_dev = {// This is the I2C address for the SSD1306.
-                                                      0x3c,
-                                                      // These are the SSD1306 driver binding rules.
-                                                      PDEV_VID_GENERIC, PDEV_PID_GENERIC,
-                                                      PDEV_DID_SSD1306};
+  fuchsia_hardware_ftdi::wire::I2cBusLayout layout = {0, 1, 2};
+  fuchsia_hardware_ftdi::wire::I2cDevice i2c_dev = {// This is the I2C address for the SSD1306.
+                                                    0x3c,
+                                                    // These are the SSD1306 driver binding rules.
+                                                    PDEV_VID_GENERIC, PDEV_PID_GENERIC,
+                                                    PDEV_DID_SSD1306};
 
-  auto resp = ::fuchsia_hardware_ftdi::Device::Call::CreateI2C(zx::unowned_channel(handle), layout,
-                                                               i2c_dev);
+  auto resp =
+      fuchsia_hardware_ftdi::Device::Call::CreateI2C(zx::unowned_channel(handle), layout, i2c_dev);
   status = resp.status();
   if (status != ZX_OK) {
     printf("Create I2C device failed with %d\n", status);

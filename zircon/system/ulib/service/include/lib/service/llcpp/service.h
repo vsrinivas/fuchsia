@@ -74,7 +74,7 @@ template <typename Protocol>
 struct has_fidl_method_named_clone<
     Protocol, std::void_t<decltype(typename Protocol::CloneRequest(
                   std::declval<zx_txid_t>() /* txid */, std::declval<uint32_t>() /* flags */,
-                  std::declval<::fidl::ServerEnd<::fuchsia_io::Node>&>() /* object */))>>
+                  std::declval<::fidl::ServerEnd<fuchsia_io::Node>&>() /* object */))>>
     : public std::true_type {};
 template <typename Protocol>
 constexpr inline auto has_fidl_method_named_clone_v = has_fidl_method_named_clone<Protocol>::value;
@@ -258,8 +258,8 @@ template <typename FidlService>
 // ## Example
 //
 // ```C++
-// using Echo = ::fuchsia_echo::Echo;
-// using EchoService = ::fuchsia_echo::EchoService;
+// using Echo = fuchsia_echo::Echo;
+// using EchoService = fuchsia_echo::EchoService;
 //
 // zx::status<EchoService::ServiceClient> open_result =
 //     sys::OpenServiceAt<EchoService>(std::move(svc_));
@@ -274,7 +274,7 @@ template <typename FidlService>
 // ```
 template <typename FidlService>
 ::zx::status<typename FidlService::ServiceClient> OpenServiceAt(
-    ::fidl::UnownedClientEnd<::fuchsia_io::Directory> dir, cpp17::string_view instance);
+    ::fidl::UnownedClientEnd<fuchsia_io::Directory> dir, cpp17::string_view instance);
 
 // Opens a connection to the given instance of a FIDL service with the name `service_name`, rooted
 // at `dir`. The `remote` channel is passed to the remote service, and its local twin can be used to
@@ -285,7 +285,7 @@ template <typename FidlService>
 // Returns ZX_OK on success. In the event of failure, an error value is returned.
 //
 // Returns ZX_ERR_INVALID_ARGS if `service_path` or `instance` are more than 255 characters long.
-::zx::status<> OpenNamedServiceAt(::fidl::UnownedClientEnd<::fuchsia_io::Directory> dir,
+::zx::status<> OpenNamedServiceAt(::fidl::UnownedClientEnd<fuchsia_io::Directory> dir,
                                   cpp17::string_view service_path, cpp17::string_view instance,
                                   ::zx::channel remote);
 
@@ -301,7 +301,7 @@ namespace internal {
 
 template <typename FidlService>
 ::zx::status<typename FidlService::ServiceClient> OpenServiceAt(
-    ::fidl::UnownedClientEnd<::fuchsia_io::Directory> dir, cpp17::string_view instance) {
+    ::fidl::UnownedClientEnd<fuchsia_io::Directory> dir, cpp17::string_view instance) {
   ::zx::channel local, remote;
   if (zx_status_t status = ::zx::channel::create(0, &local, &remote); status != ZX_OK) {
     return ::zx::error(status);
@@ -317,7 +317,7 @@ template <typename FidlService>
 
 template <typename FidlService>
 ::zx::status<typename FidlService::ServiceClient> OpenServiceAt(
-    ::fidl::UnownedClientEnd<::fuchsia_io::Directory> dir) {
+    ::fidl::UnownedClientEnd<fuchsia_io::Directory> dir) {
   return OpenServiceAt<FidlService>(dir, kDefaultInstance);
 }
 

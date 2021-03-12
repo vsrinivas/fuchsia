@@ -49,7 +49,7 @@ class Keyboard {
   zx_status_t Setup(fuchsia_input_report::InputDevice::SyncClient keyboard_client);
 
   // Process a given set of keys and send them to the handler.
-  void ProcessInput(const ::fuchsia_input_report::wire::InputReport& report);
+  void ProcessInput(const fuchsia_input_report::wire::InputReport& report);
 
  private:
   // The callback for when key-repeat is triggered.
@@ -99,7 +99,7 @@ class KeyboardWatcher {
   zx_status_t OpenFile(uint8_t evt, char* name);
 
   // The channel representing the directory this is watching.
-  fidl::UnownedClientEnd<::fuchsia_io::Directory> Directory() { return dir_caller_.directory(); }
+  fidl::UnownedClientEnd<fuchsia_io::Directory> Directory() { return dir_caller_.directory(); }
 
   bool repeat_keys_ = true;
   keypress_handler_t handler_ = {};

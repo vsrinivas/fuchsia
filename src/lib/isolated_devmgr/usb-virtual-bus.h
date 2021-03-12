@@ -22,7 +22,7 @@ namespace usb_virtual_bus {
 using fuchsia_hardware_usb_peripheral::wire::DeviceDescriptor;
 using fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor;
 using ConfigurationDescriptor =
-    ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+    ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
 
 class USBVirtualBusBase {
  public:

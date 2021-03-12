@@ -72,13 +72,13 @@ class Paver : public PaverInterface {
 
   uint8_t* buffer() { return static_cast<uint8_t*>(buffer_mapper_.start()); }
 
-  zx_status_t WriteABImage(::fuchsia_paver::DataSink::SyncClient data_sink,
-                           ::fuchsia_mem::wire::Buffer buffer);
+  zx_status_t WriteABImage(fuchsia_paver::DataSink::SyncClient data_sink,
+                           fuchsia_mem::wire::Buffer buffer);
 
-  zx_status_t OpenDataSink(::fuchsia_mem::wire::Buffer buffer,
-                           std::optional<::fuchsia_paver::DynamicDataSink::SyncClient>* data_sink);
-  zx_status_t InitPartitionTables(::fuchsia_mem::wire::Buffer buffer);
-  zx_status_t WipePartitionTables(::fuchsia_mem::wire::Buffer buffer);
+  zx_status_t OpenDataSink(fuchsia_mem::wire::Buffer buffer,
+                           std::optional<fuchsia_paver::DynamicDataSink::SyncClient>* data_sink);
+  zx_status_t InitPartitionTables(fuchsia_mem::wire::Buffer buffer);
+  zx_status_t WipePartitionTables(fuchsia_mem::wire::Buffer buffer);
 
   // Pushes all data from the paver buffer (filled by netsvc) into the paver input VMO. When
   // there's no data to copy, blocks on data_ready until more data is written into the buffer.
@@ -107,11 +107,11 @@ class Paver : public PaverInterface {
   // File descriptor to dev.
   fbl::unique_fd devfs_root_;
 
-  std::optional<::fuchsia_paver::Paver::SyncClient> paver_svc_;
+  std::optional<fuchsia_paver::Paver::SyncClient> paver_svc_;
 
-  ::fuchsia_paver::wire::Configuration configuration_;
+  fuchsia_paver::wire::Configuration configuration_;
   // Only meaningful when command == Command::kAsset.
-  ::fuchsia_paver::wire::Asset asset_;
+  fuchsia_paver::wire::Asset asset_;
   // Only meaningful when command == Command::kDataFile.
   char path_[PATH_MAX];
   // Only meaningful when command == Command::kFirmware.

@@ -67,7 +67,7 @@ zx_status_t RemoteBlockDevice::GetDevicePath(size_t buffer_len, char* out_name,
   zx_status_t status, io_status;
 
   auto resp =
-      ::fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned_channel(device_.get()));
+      fuchsia_device::Controller::Call::GetTopologicalPath(zx::unowned_channel(device_.get()));
 
   io_status = resp.status();
   if (io_status != ZX_OK) {

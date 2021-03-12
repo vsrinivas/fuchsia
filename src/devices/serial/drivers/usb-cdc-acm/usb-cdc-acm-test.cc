@@ -34,9 +34,9 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 
 // Initialize a USB CDC ACM device. Asserts on failure.
 void USBVirtualBus::InitUsbCdcAcm(fbl::String* devpath) {
-  namespace usb_peripheral = ::fuchsia_hardware_usb_peripheral;
+  namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+      ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
   usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);
   device_desc.b_max_packet_size0 = 64;

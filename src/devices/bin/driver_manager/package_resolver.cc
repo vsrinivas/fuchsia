@@ -43,12 +43,12 @@ zx_status_t PackageResolver::ConnectToResolverService() {
   if (status != ZX_OK) {
     return status;
   }
-  const auto path = fbl::StringPrintf("/svc/%s", ::fuchsia_pkg::PackageResolver::Name);
+  const auto path = fbl::StringPrintf("/svc/%s", fuchsia_pkg::PackageResolver::Name);
   status = fdio_service_connect(path.c_str(), remote.release());
   if (status != ZX_OK) {
     return status;
   }
-  resolver_client_ = ::fuchsia_pkg::PackageResolver::SyncClient(std::move(local));
+  resolver_client_ = fuchsia_pkg::PackageResolver::SyncClient(std::move(local));
   return ZX_OK;
 }
 

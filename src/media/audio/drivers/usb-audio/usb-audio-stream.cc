@@ -32,7 +32,7 @@
 namespace audio {
 namespace usb {
 
-namespace audio_fidl = ::fuchsia_hardware_audio;
+namespace audio_fidl = fuchsia_hardware_audio;
 
 static constexpr uint32_t MAX_OUTSTANDING_REQ = 3;
 

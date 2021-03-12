@@ -23,8 +23,8 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 
-namespace sysinfo = ::fuchsia_sysinfo;
-namespace gpio = ::fuchsia_hardware_gpio;
+namespace sysinfo = fuchsia_sysinfo;
+namespace gpio = fuchsia_hardware_gpio;
 
 enum Boards {
   SHERLOCK,

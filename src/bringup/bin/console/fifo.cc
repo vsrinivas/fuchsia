@@ -20,7 +20,7 @@ zx_status_t Fifo::Read(uint8_t* buffer, size_t length, size_t* actual) {
   *actual = count;
 
   if (IsEmptyLocked()) {
-    event_.signal_peer(::fuchsia_io::wire::DEVICE_SIGNAL_READABLE, 0);
+    event_.signal_peer(fuchsia_io::wire::DEVICE_SIGNAL_READABLE, 0);
   }
 
   if (count == 0) {
@@ -41,7 +41,7 @@ zx_status_t Fifo::Write(const uint8_t* buffer, size_t length, size_t* actual) {
   *actual = count;
 
   if (!IsEmptyLocked()) {
-    event_.signal_peer(0, ::fuchsia_io::wire::DEVICE_SIGNAL_READABLE);
+    event_.signal_peer(0, fuchsia_io::wire::DEVICE_SIGNAL_READABLE);
   }
 
   if (count == 0) {

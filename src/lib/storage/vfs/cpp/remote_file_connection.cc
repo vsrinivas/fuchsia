@@ -28,7 +28,7 @@
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 #include "src/lib/storage/vfs/cpp/vnode.h"
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 namespace fs {
 
@@ -135,7 +135,7 @@ void RemoteFileConnection::WriteAt(fidl::VectorView<uint8_t> data, uint64_t offs
   completer.Reply(status, actual);
 }
 
-void RemoteFileConnection::Seek(int64_t offset, ::fuchsia_io::wire::SeekOrigin start,
+void RemoteFileConnection::Seek(int64_t offset, fuchsia_io::wire::SeekOrigin start,
                                 SeekCompleter::Sync& completer) {
   FS_PRETTY_TRACE_DEBUG("[FileSeek] options: ", options());
 

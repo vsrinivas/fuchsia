@@ -34,7 +34,7 @@ TEST(AstroAbrTests, CreateFails) {
   fbl::unique_fd fd;
   ASSERT_OK(RecursiveWaitForFile(devmgr.devfs_root(), "sys/platform", &fd));
 
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root;
   ASSERT_NOT_OK(
       paver::AstroAbrClientFactory().New(devmgr.devfs_root().duplicate(), svc_root, nullptr));
 }

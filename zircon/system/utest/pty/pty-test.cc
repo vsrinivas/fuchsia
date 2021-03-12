@@ -16,7 +16,7 @@
 
 #include <zxtest/zxtest.h>
 
-namespace fpty = ::fuchsia_hardware_pty;
+namespace fpty = fuchsia_hardware_pty;
 
 zx::status<uint32_t> fd_signals(const fbl::unique_fd& fd, uint32_t wait_for_any,
                                 zx::time deadline) {

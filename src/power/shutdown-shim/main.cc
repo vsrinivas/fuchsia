@@ -26,7 +26,7 @@
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/sys/lib/stdout-to-debuglog/cpp/stdout-to-debuglog.h"
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 namespace statecontrol_fidl = fuchsia_hardware_power_statecontrol;
 namespace device_manager_fidl = fuchsia_device_manager;

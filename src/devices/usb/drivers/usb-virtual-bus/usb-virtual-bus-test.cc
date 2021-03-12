@@ -28,7 +28,7 @@
 
 namespace usb_virtual_bus {
 namespace {
-namespace virtualbustest = ::fuchsia_hardware_usb_virtualbustest;
+namespace virtualbustest = fuchsia_hardware_usb_virtualbustest;
 constexpr const char kManufacturer[] = "Google";
 constexpr const char kProduct[] = "USB Virtual Bus Virtual Device";
 constexpr const char kSerial[] = "ebfd5ad49d2a";
@@ -53,9 +53,9 @@ zx_status_t WaitForDevice(int dirfd, int event, const char* name, void* cookie) 
 }
 
 void USBVirtualBus::InitUsbVirtualBus(std::optional<virtualbustest::BusTest::SyncClient>* test) {
-  namespace usb_peripheral = ::fuchsia_hardware_usb_peripheral;
+  namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+      ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
 
   usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = 0x0200;

@@ -598,7 +598,7 @@ zx_status_t Blobfs::Readdir(fs::VdirCookie* cookie, void* dirents, size_t len, s
       }
 
       auto name = digest.ToString();
-      uint64_t ino = ::fuchsia_io::wire::INO_UNKNOWN;
+      uint64_t ino = fuchsia_io::wire::INO_UNKNOWN;
       if (df.Next(name, VTYPE_TO_DTYPE(V_TYPE_FILE), ino) != ZX_OK) {
         break;
       }
@@ -758,10 +758,9 @@ void Blobfs::GetFilesystemInfo(FilesystemInfo* info) const {
   info->total_nodes = Info().inode_count;
   info->used_nodes = Info().alloc_inode_count;
 
-  static_assert(kFsName.size() + 1 < ::fuchsia_io::wire::MAX_FS_NAME_BUFFER,
-                "Blobfs name too long");
+  static_assert(kFsName.size() + 1 < fuchsia_io::wire::MAX_FS_NAME_BUFFER, "Blobfs name too long");
   info->name[kFsName.copy(reinterpret_cast<char*>(info->name.data()),
-                          ::fuchsia_io::wire::MAX_FS_NAME_BUFFER - 1)] = '\0';
+                          fuchsia_io::wire::MAX_FS_NAME_BUFFER - 1)] = '\0';
 }
 
 zx::status<BlockIterator> Blobfs::BlockIteratorByNodeIndex(uint32_t node_index) {

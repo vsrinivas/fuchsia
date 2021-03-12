@@ -21,7 +21,7 @@ namespace fs_pty {
 
 namespace internal {
 
-void DispatchPtyDeviceMessage(::fuchsia_hardware_pty::Device::Interface* interface,
+void DispatchPtyDeviceMessage(fuchsia_hardware_pty::Device::Interface* interface,
                               fidl_incoming_msg_t* msg, fidl::Transaction* txn);
 }
 
@@ -37,7 +37,7 @@ class Service : public fs::Vnode {
  public:
   using SelfType = Service<PtyDeviceImpl, ConsoleOps, Console>;
 
-  static_assert(std::is_base_of<::fuchsia_hardware_pty::Device::Interface, PtyDeviceImpl>::value);
+  static_assert(std::is_base_of<fuchsia_hardware_pty::Device::Interface, PtyDeviceImpl>::value);
 
   explicit Service(Console console) : pty_device_impl_(console), console_(console) {}
 

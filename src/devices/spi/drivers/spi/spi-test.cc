@@ -269,7 +269,7 @@ TEST(SpiDevice, SpiTest) {
 }
 
 TEST(SpiDevice, SpiFidlVmoTest) {
-  using ::fuchsia_hardware_sharedmemory::wire::SharedVmoRight;
+  using fuchsia_hardware_sharedmemory::wire::SharedVmoRight;
 
   constexpr uint8_t kTestData[] = {1, 2, 3, 4, 5, 6, 7};
 
@@ -278,7 +278,7 @@ TEST(SpiDevice, SpiFidlVmoTest) {
 
   FakeDdkSpiImpl ddk;
 
-  fidl::Client<::fuchsia_hardware_spi::Device> cs0_client, cs1_client;
+  fidl::Client<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
 
   SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
   EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));
@@ -302,7 +302,7 @@ TEST(SpiDevice, SpiFidlVmoTest) {
   ASSERT_OK(zx::vmo::create(4096, 0, &cs1_vmo));
 
   {
-    ::fuchsia_mem::wire::Range vmo = {.offset = 0, .size = 4096};
+    fuchsia_mem::wire::Range vmo = {.offset = 0, .size = 4096};
     ASSERT_OK(cs0_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo.vmo));
     auto result = cs0_client->RegisterVmo_Sync(1, std::move(vmo),
                                                SharedVmoRight::READ | SharedVmoRight::WRITE);
@@ -311,7 +311,7 @@ TEST(SpiDevice, SpiFidlVmoTest) {
   }
 
   {
-    ::fuchsia_mem::wire::Range vmo = {.offset = 0, .size = 4096};
+    fuchsia_mem::wire::Range vmo = {.offset = 0, .size = 4096};
     ASSERT_OK(cs1_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo.vmo));
     auto result = cs1_client->RegisterVmo_Sync(2, std::move(vmo),
                                                SharedVmoRight::READ | SharedVmoRight::WRITE);
@@ -389,7 +389,7 @@ TEST(SpiDevice, SpiFidlVectorTest) {
 
   FakeDdkSpiImpl ddk;
 
-  fidl::Client<::fuchsia_hardware_spi::Device> cs0_client, cs1_client;
+  fidl::Client<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
 
   SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
   EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));
@@ -452,7 +452,7 @@ TEST(SpiDevice, SpiFidlVectorErrorTest) {
 
   FakeDdkSpiImpl ddk;
 
-  fidl::Client<::fuchsia_hardware_spi::Device> cs0_client, cs1_client;
+  fidl::Client<fuchsia_hardware_spi::Device> cs0_client, cs1_client;
 
   SpiDevice::Create(nullptr, fake_ddk::kFakeParent);
   EXPECT_EQ(ddk.children_.size(), std::size(ddk.kSpiChannels));

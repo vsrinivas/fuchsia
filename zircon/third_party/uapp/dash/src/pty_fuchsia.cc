@@ -6,7 +6,7 @@
 
 #include "pty_fuchsia.h"
 
-namespace fpty = ::fuchsia_hardware_pty;
+namespace fpty = fuchsia_hardware_pty;
 
 zx_status_t pty_read_events(zx_handle_t handle, uint32_t* out_events) {
   auto result = fpty::Device::Call::ReadEvents(zx::unowned_channel(handle));

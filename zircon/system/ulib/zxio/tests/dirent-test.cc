@@ -18,8 +18,8 @@
 
 namespace {
 
-namespace fio = ::fuchsia_io;
-namespace fio2 = ::fuchsia_io2;
+namespace fio = fuchsia_io;
+namespace fio2 = fuchsia_io2;
 
 class TestServer final : public fio::Directory::RawChannelInterface {
  public:

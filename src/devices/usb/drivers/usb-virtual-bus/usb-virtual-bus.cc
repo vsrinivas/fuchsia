@@ -284,7 +284,7 @@ zx_status_t UsbVirtualBus::SetStall(uint8_t ep_address, bool stall) {
 
 zx_status_t UsbVirtualBus::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  ::fuchsia_hardware_usb_virtual_bus::Bus::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_usb_virtual_bus::Bus::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

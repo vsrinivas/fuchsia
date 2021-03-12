@@ -27,7 +27,7 @@ int main(int argc, const char** argv) {
   // Connect to the |fuchsia.examples/Echo| protocol, here we demonstrate
   // using |service::ConnectAt| relative to some service directory.
   // One may also directly call |Connect| to use the default service directory.
-  auto client_end = service::ConnectAt<::fuchsia_examples::Echo>(*svc);
+  auto client_end = service::ConnectAt<fuchsia_examples::Echo>(*svc);
   ZX_ASSERT(client_end.status_value() == ZX_OK);
 
   // Define the event handler for the client. The OnString event handler prints the event.

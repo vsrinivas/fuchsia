@@ -22,13 +22,13 @@ namespace {
 
 using uuid::Uuid;
 
-std::optional<::fuchsia_boot::Arguments::SyncClient> OpenBootArgumentClient(
-    fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root) {
+std::optional<fuchsia_boot::Arguments::SyncClient> OpenBootArgumentClient(
+    fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root) {
   if (!svc_root.is_valid()) {
     return {};
   }
 
-  auto local = service::ConnectAt<::fuchsia_boot::Arguments>(svc_root);
+  auto local = service::ConnectAt<fuchsia_boot::Arguments>(svc_root);
   if (!local.is_ok()) {
     ERROR("Failed to connect to boot::Arguments service.\n");
     return {};
@@ -37,7 +37,7 @@ std::optional<::fuchsia_boot::Arguments::SyncClient> OpenBootArgumentClient(
   return {fidl::BindSyncClient(std::move(*local))};
 }
 
-bool GetBool(::fuchsia_boot::Arguments::SyncClient& client, ::fidl::StringView key,
+bool GetBool(fuchsia_boot::Arguments::SyncClient& client, ::fidl::StringView key,
              bool default_on_missing_or_failure) {
   auto key_data = key.data();
   auto result = client.GetBool(std::move(key), default_on_missing_or_failure);
@@ -127,7 +127,7 @@ zx::status<> AstroPartitioner::InitializeContext(const fbl::unique_fd& devfs_roo
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitioner::Initialize(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<Context> context) {
   auto boot_arg_client = OpenBootArgumentClient(svc_root);
   zx::status<> status = IsBoard(devfs_root, "astro");
@@ -307,13 +307,13 @@ zx::status<> AstroPartitioner::ValidatePayload(const PartitionSpec& spec,
 }
 
 zx::status<std::unique_ptr<DevicePartitioner>> AstroPartitionerFactory::New(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root, Arch arch,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
     std::shared_ptr<Context> context, const fbl::unique_fd& block_device) {
   return AstroPartitioner::Initialize(std::move(devfs_root), svc_root, context);
 }
 
 zx::status<std::unique_ptr<abr::Client>> AstroAbrClientFactory::New(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     std::shared_ptr<paver::Context> context) {
   auto status = AstroPartitioner::Initialize(std::move(devfs_root), svc_root, context);
   if (status.is_error()) {
@@ -382,8 +382,7 @@ zx::status<> AstroSysconfigPartitionClientBuffered::Flush() {
       [&](auto* ctx) { return zx::make_status(ctx->client_->Flush()); });
 }
 
-fidl::ClientEnd<::fuchsia_hardware_block::Block>
-AstroSysconfigPartitionClientBuffered::GetChannel() {
+fidl::ClientEnd<fuchsia_hardware_block::Block> AstroSysconfigPartitionClientBuffered::GetChannel() {
   return {};
 }
 

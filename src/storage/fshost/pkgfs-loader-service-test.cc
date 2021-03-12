@@ -16,7 +16,7 @@ namespace {
 
 using namespace loader::test;
 
-namespace fldsvc = ::fuchsia_ldsvc;
+namespace fldsvc = fuchsia_ldsvc;
 
 // Create a subclass to access the test-only constructor on FshostBootArgs.
 class FshostBootArgsForTest : public FshostBootArgs {

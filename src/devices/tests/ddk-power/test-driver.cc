@@ -38,7 +38,7 @@ class TestPowerDriver : public DeviceType,
   }
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    ::fuchsia_device_power_test::TestDevice::Dispatch(this, msg, &transaction);
+    fuchsia_device_power_test::TestDevice::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
 

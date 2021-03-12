@@ -317,13 +317,13 @@ struct zx_device
     static bool EqualTo(const uint64_t& key1, const uint64_t& key2) { return key1 == key2; }
   };
 
-  using DevicePowerStates = std::array<::fuchsia_device::wire::DevicePowerStateInfo,
-                                       ::fuchsia_device::wire::MAX_DEVICE_POWER_STATES>;
+  using DevicePowerStates = std::array<fuchsia_device::wire::DevicePowerStateInfo,
+                                       fuchsia_device::wire::MAX_DEVICE_POWER_STATES>;
   using SystemPowerStateMapping =
-      std::array<::fuchsia_device::wire::SystemPowerStateInfo,
-                 ::fuchsia_hardware_power_statecontrol::wire::MAX_SYSTEM_POWER_STATES>;
-  using PerformanceStates = std::array<::fuchsia_device::wire::DevicePerformanceStateInfo,
-                                       ::fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES>;
+      std::array<fuchsia_device::wire::SystemPowerStateInfo,
+                 fuchsia_hardware_power_statecontrol::wire::MAX_SYSTEM_POWER_STATES>;
+  using PerformanceStates = std::array<fuchsia_device::wire::DevicePerformanceStateInfo,
+                                       fuchsia_device::wire::MAX_DEVICE_PERFORMANCE_STATES>;
 
   bool has_composite() const;
   void set_composite(fbl::RefPtr<CompositeDevice> composite, bool fragment = true);
@@ -337,7 +337,7 @@ struct zx_device
 
   zx_status_t SetPowerStates(const device_power_state_info_t* power_states, uint8_t count);
 
-  bool IsPowerStateSupported(::fuchsia_device::wire::DevicePowerState requested_state) {
+  bool IsPowerStateSupported(fuchsia_device::wire::DevicePowerState requested_state) {
     // requested_state is bounded by the enum.
     return power_states_[static_cast<uint8_t>(requested_state)].is_supported;
   }

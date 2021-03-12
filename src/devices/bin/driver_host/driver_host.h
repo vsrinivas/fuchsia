@@ -64,7 +64,7 @@ class DevhostControllerConnection
                     ::fidl::StringView proxy_args, uint64_t local_device_id,
                     CreateDeviceCompleter::Sync& completer) override;
   void CreateCompositeDevice(zx::channel coordinator_client, zx::channel device_controller_rpc,
-                             ::fidl::VectorView<::fuchsia_device_manager::wire::Fragment> fragments,
+                             ::fidl::VectorView<fuchsia_device_manager::wire::Fragment> fragments,
                              ::fidl::StringView name, uint64_t local_device_id,
                              CreateCompositeDeviceCompleter::Sync& completer) override;
   void CreateDeviceStub(zx::channel coordinator_client, zx::channel device_controller_rpc,

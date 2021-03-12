@@ -17,7 +17,7 @@
 
 namespace input {
 
-namespace fuchsia_input_report = ::fuchsia_input_report;
+namespace fuchsia_input_report = fuchsia_input_report;
 
 template <class Report>
 class InputReportReader;

@@ -12,7 +12,7 @@
 
 namespace {
 
-namespace fuchsia_io = ::fuchsia_io;
+namespace fuchsia_io = fuchsia_io;
 
 const uint32_t kReadFlags = fuchsia_io::wire::OPEN_RIGHT_READABLE;
 
@@ -25,7 +25,7 @@ TEST(DirectoryTest, ServiceConnect) {
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, fdio_service_connect("/", h2.release()));
 
   ASSERT_OK(zx::channel::create(0, &h1, &h2));
-  std::string path = std::string("/svc/") + ::fuchsia_process::Launcher::Name;
+  std::string path = std::string("/svc/") + fuchsia_process::Launcher::Name;
   ASSERT_OK(fdio_service_connect(path.c_str(), h1.release()));
 }
 
@@ -42,8 +42,8 @@ TEST(DirectoryTest, Open) {
 
   zx::channel h3, h4;
   ASSERT_OK(zx::channel::create(0, &h3, &h4));
-  ASSERT_OK(fdio_service_connect_at(h2.get(), ::fuchsia_process::Launcher::Name, h3.release()));
-  ASSERT_OK(fdio_open_at(h2.get(), ::fuchsia_process::Launcher::Name, kReadFlags, h4.release()));
+  ASSERT_OK(fdio_service_connect_at(h2.get(), fuchsia_process::Launcher::Name, h3.release()));
+  ASSERT_OK(fdio_open_at(h2.get(), fuchsia_process::Launcher::Name, kReadFlags, h4.release()));
 
   h3.reset(fdio_service_clone(h2.get()));
   ASSERT_TRUE(h3.is_valid());

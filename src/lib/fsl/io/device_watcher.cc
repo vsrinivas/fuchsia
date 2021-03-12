@@ -18,7 +18,7 @@
 
 #include <fbl/unique_fd.h>
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 namespace fsl {
 

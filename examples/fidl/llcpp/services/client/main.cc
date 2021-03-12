@@ -11,8 +11,8 @@
 
 #include <iostream>
 
-using ::fuchsia_examples::Echo;
-using ::fuchsia_examples::EchoService;
+using fuchsia_examples::Echo;
+using fuchsia_examples::EchoService;
 
 fidl::InterfaceHandle<fuchsia::io::Directory> StartEchoServer(
     sys::ComponentContext* context,

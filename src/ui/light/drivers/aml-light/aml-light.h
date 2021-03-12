@@ -24,10 +24,10 @@ namespace aml_light {
 
 class AmlLight;
 using AmlLightType = ddk::Device<AmlLight, ddk::Messageable>;
-using ::fuchsia_hardware_light::Light;
-using ::fuchsia_hardware_light::wire::Capability;
-using ::fuchsia_hardware_light::wire::LightError;
-using ::fuchsia_hardware_light::wire::Rgb;
+using fuchsia_hardware_light::Light;
+using fuchsia_hardware_light::wire::Capability;
+using fuchsia_hardware_light::wire::LightError;
+using fuchsia_hardware_light::wire::Rgb;
 
 class LightDevice {
  public:

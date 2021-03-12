@@ -20,7 +20,7 @@
 
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 // Delete the given dirent inside the openend directory. If the dirent is a
 // directory itself, it will be recursively deleted.

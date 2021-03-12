@@ -75,14 +75,14 @@ FsManager::~FsManager() {
 }
 
 zx_status_t FsManager::SetupLifecycleServer(
-    fidl::ServerEnd<::fuchsia_process_lifecycle::Lifecycle> lifecycle_request) {
+    fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request) {
   return devmgr::LifecycleServer::Create(global_loop_->dispatcher(), this,
                                          std::move(lifecycle_request));
 }
 
 // Sets up the outgoing directory, and runs it on the PA_DIRECTORY_REQUEST
 // handle if it exists. See fshost.cml for a list of what's in the directory.
-zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<::fuchsia_io::Directory> dir_request,
+zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<fuchsia_io::Directory> dir_request,
                                               std::shared_ptr<loader::LoaderServiceBase> loader,
                                               BlockWatcher& watcher) {
   auto outgoing_dir = fbl::MakeRefCounted<fs::PseudoDir>();
@@ -103,7 +103,7 @@ zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<::fuchsia_io::Dire
     // this implementation comes from fshost.
     svc_dir_->AddEntry(
         "fuchsia.fshost.Loader",
-        fbl::MakeRefCounted<fs::Service>([loader](fidl::ServerEnd<::fuchsia_ldsvc::Loader> chan) {
+        fbl::MakeRefCounted<fs::Service>([loader](fidl::ServerEnd<fuchsia_ldsvc::Loader> chan) {
           auto status = loader->Bind(std::move(chan));
           if (status.is_error()) {
             FX_LOGS(ERROR) << "failed to attach loader service: " << status.status_string();
@@ -173,9 +173,9 @@ zx_status_t FsManager::SetupOutgoingDirectory(fidl::ServerEnd<::fuchsia_io::Dire
 }
 
 zx_status_t FsManager::Initialize(
-    fidl::ServerEnd<::fuchsia_io::Directory> dir_request,
-    fidl::ServerEnd<::fuchsia_process_lifecycle::Lifecycle> lifecycle_request,
-    fidl::ClientEnd<::fuchsia_device_manager::Administrator> driver_admin,
+    fidl::ServerEnd<fuchsia_io::Directory> dir_request,
+    fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request,
+    fidl::ClientEnd<fuchsia_device_manager::Administrator> driver_admin,
     std::shared_ptr<loader::LoaderServiceBase> loader, BlockWatcher& watcher) {
   zx_status_t status = memfs::Vfs::Create("<root>", &root_vfs_, &global_root_);
   if (status != ZX_OK) {
@@ -255,7 +255,7 @@ zx_status_t FsManager::SetFsExportRoot(MountPoint point, zx::channel export_root
   return ZX_OK;
 }
 
-zx_status_t FsManager::ServeRoot(fidl::ServerEnd<::fuchsia_io::Directory> server) {
+zx_status_t FsManager::ServeRoot(fidl::ServerEnd<fuchsia_io::Directory> server) {
   fs::Rights rights;
   rights.read = true;
   rights.write = true;

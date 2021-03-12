@@ -68,7 +68,7 @@ class FakePartitionClient final : public paver::BlockDevicePartitionClient {
     return zx::make_status(result_);
   }
 
-  fidl::ClientEnd<::fuchsia_hardware_block::Block> GetChannel() final { return {}; }
+  fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel() final { return {}; }
   fbl::unique_fd block_fd() final { return {}; }
 
   bool read_called() { return read_called_; }
@@ -407,12 +407,12 @@ class FixedOffsetBlockPartitionClientTest : public zxtest::Test {
         partition_offset, buffer_offset);
   }
 
-  fidl::ClientEnd<::fuchsia_io::Directory> GetSvcRoot() {
+  fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() {
     auto fshost_root = devmgr_.fshost_outgoing_dir();
-    auto local = service::ConnectAt<::fuchsia_io::Directory>(fshost_root, "svc");
+    auto local = service::ConnectAt<fuchsia_io::Directory>(fshost_root, "svc");
     if (!local.is_ok()) {
       std::cout << "Failed to connect to fshost svc dir: " << local.status_string() << std::endl;
-      return fidl::ClientEnd<::fuchsia_io::Directory>();
+      return fidl::ClientEnd<fuchsia_io::Directory>();
     }
     return std::move(*local);
   }

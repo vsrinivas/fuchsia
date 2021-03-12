@@ -71,15 +71,15 @@ class BlockDeviceTest : public testing::Test {
 
   void SetUp() override {
     // Initialize FilesystemMounter.
-    fidl::ServerEnd<::fuchsia_io::Directory> dir_request;
-    fidl::ServerEnd<::fuchsia_process_lifecycle::Lifecycle> lifecycle_request;
+    fidl::ServerEnd<fuchsia_io::Directory> dir_request;
+    fidl::ServerEnd<fuchsia_process_lifecycle::Lifecycle> lifecycle_request;
     ASSERT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request),
                                   zx::channel(), nullptr, watcher_),
               ZX_OK);
 
     // Fshost really likes mounting filesystems at "/fs".
     // Let's make that available in our namespace.
-    auto root = fidl::CreateEndpoints<::fuchsia_io::Directory>();
+    auto root = fidl::CreateEndpoints<fuchsia_io::Directory>();
     ASSERT_EQ(root.status_value(), ZX_OK);
     ASSERT_EQ(manager_.ServeRoot(std::move(root->server)), ZX_OK);
     fdio_ns_t* ns;

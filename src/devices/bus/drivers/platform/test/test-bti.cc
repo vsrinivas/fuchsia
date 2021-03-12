@@ -18,7 +18,7 @@
 namespace {
 
 class TestBti : public ddk::Device<TestBti, ddk::Messageable>,
-                public ::fuchsia_hardware_btitest::BtiDevice::Interface {
+                public fuchsia_hardware_btitest::BtiDevice::Interface {
  public:
   explicit TestBti(zx_device_t* parent) : ddk::Device<TestBti, ddk::Messageable>(parent) {}
 
@@ -46,7 +46,7 @@ zx_status_t TestBti::Create(void*, zx_device_t* parent) {
 
 zx_status_t TestBti::DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
   DdkTransaction transaction(txn);
-  ::fuchsia_hardware_btitest::BtiDevice::Dispatch(this, msg, &transaction);
+  fuchsia_hardware_btitest::BtiDevice::Dispatch(this, msg, &transaction);
   return transaction.Status();
 }
 

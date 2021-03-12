@@ -10,11 +10,11 @@
 
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 namespace fs {
 
-RemoteDir::RemoteDir(fidl::ClientEnd<::fuchsia_io::Directory> remote_dir_client)
+RemoteDir::RemoteDir(fidl::ClientEnd<fuchsia_io::Directory> remote_dir_client)
     : remote_dir_client_(std::move(remote_dir_client)) {
   ZX_DEBUG_ASSERT(remote_dir_client_);
 }
@@ -33,7 +33,7 @@ zx_status_t RemoteDir::GetAttributes(VnodeAttributes* attr) {
 
 bool RemoteDir::IsRemote() const { return true; }
 
-fidl::UnownedClientEnd<::fuchsia_io::Directory> RemoteDir::GetRemote() const {
+fidl::UnownedClientEnd<fuchsia_io::Directory> RemoteDir::GetRemote() const {
   return remote_dir_client_.borrow();
 }
 

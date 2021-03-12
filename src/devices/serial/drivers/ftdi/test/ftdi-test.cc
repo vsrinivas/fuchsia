@@ -35,8 +35,8 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 // Initialize an FTDI USB device. Asserts on failure.
 void USBVirtualBus::InitFtdi(fbl::String* devpath) {
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
-  namespace usb_peripheral = ::fuchsia_hardware_usb_peripheral;
+      ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+  namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
 
   usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);

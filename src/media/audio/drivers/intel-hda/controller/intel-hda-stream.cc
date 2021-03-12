@@ -32,7 +32,7 @@ constexpr zx_time_t IHDA_SD_RESET_POLL_TIME_NSEC = 100000u;   // 100uSec
 constexpr zx_time_t IHDA_SD_STOP_HOLD_TIME_NSEC = 100000u;
 constexpr uint32_t DMA_ALIGN = 128;
 constexpr uint32_t DMA_ALIGN_MASK = DMA_ALIGN - 1;
-namespace audio_fidl = ::fuchsia_hardware_audio;
+namespace audio_fidl = fuchsia_hardware_audio;
 }  // namespace
 
 fbl::RefPtr<IntelHDAStream> IntelHDAStream::Create(Type type, uint16_t id,

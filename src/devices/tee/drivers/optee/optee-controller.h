@@ -31,7 +31,7 @@
 
 namespace optee {
 
-namespace fuchsia_hardware_tee = ::fuchsia_hardware_tee;
+namespace fuchsia_hardware_tee = fuchsia_hardware_tee;
 
 class OpteeClient;
 class OpteeDeviceInfo;

@@ -16,7 +16,7 @@
 
 namespace storage_metrics {
 
-using BlockStatFidl = ::fuchsia_hardware_block::wire::BlockStats;
+using BlockStatFidl = fuchsia_hardware_block::wire::BlockStats;
 
 // Compares block stat for read, write, trim, flush, barrier_before and
 // barrier_after. Returns false if the stats dont match.

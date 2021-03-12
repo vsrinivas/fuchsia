@@ -102,11 +102,11 @@ const zx_device::SystemPowerStateMapping& zx_device::GetSystemPowerStateMapping(
 
 zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_states,
                                       uint8_t count) {
-  if (count < ::fuchsia_device::wire::MIN_DEVICE_POWER_STATES ||
-      count > ::fuchsia_device::wire::MAX_DEVICE_POWER_STATES) {
+  if (count < fuchsia_device::wire::MIN_DEVICE_POWER_STATES ||
+      count > fuchsia_device::wire::MAX_DEVICE_POWER_STATES) {
     return ZX_ERR_INVALID_ARGS;
   }
-  bool visited[::fuchsia_device::wire::MAX_DEVICE_POWER_STATES] = {false};
+  bool visited[fuchsia_device::wire::MAX_DEVICE_POWER_STATES] = {false};
   for (uint8_t i = 0; i < count; i++) {
     const auto& info = power_states[i];
     if (info.state_id >= std::size(visited)) {
@@ -116,7 +116,7 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
       return ZX_ERR_INVALID_ARGS;
     }
     auto state = &power_states_[info.state_id];
-    state->state_id = static_cast<::fuchsia_device::wire::DevicePowerState>(info.state_id);
+    state->state_id = static_cast<fuchsia_device::wire::DevicePowerState>(info.state_id);
     state->is_supported = true;
     state->restore_latency = info.restore_latency;
     state->wakeup_capable = info.wakeup_capable;
@@ -124,10 +124,10 @@ zx_status_t zx_device::SetPowerStates(const device_power_state_info_t* power_sta
     visited[info.state_id] = true;
   }
   if (!(power_states_[static_cast<uint8_t>(
-                          ::fuchsia_device::wire::DevicePowerState::DEVICE_POWER_STATE_D0)]
+                          fuchsia_device::wire::DevicePowerState::DEVICE_POWER_STATE_D0)]
             .is_supported) ||
       !(power_states_[static_cast<uint8_t>(
-                          ::fuchsia_device::wire::DevicePowerState::DEVICE_POWER_STATE_D3COLD)]
+                          fuchsia_device::wire::DevicePowerState::DEVICE_POWER_STATE_D3COLD)]
             .is_supported)) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -150,8 +150,7 @@ zx_status_t zx_device::SetPerformanceStates(
     if (visited[info.state_id]) {
       return ZX_ERR_INVALID_ARGS;
     }
-    ::fuchsia_device::wire::DevicePerformanceStateInfo* state =
-        &(performance_states_[info.state_id]);
+    fuchsia_device::wire::DevicePerformanceStateInfo* state = &(performance_states_[info.state_id]);
     state->state_id = info.state_id;
     state->is_supported = true;
     state->restore_latency = info.restore_latency;

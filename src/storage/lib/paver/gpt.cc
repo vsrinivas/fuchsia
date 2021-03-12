@@ -19,8 +19,8 @@ namespace {
 
 using uuid::Uuid;
 
-namespace block = ::fuchsia_hardware_block;
-namespace device = ::fuchsia_device;
+namespace block = fuchsia_hardware_block;
+namespace device = fuchsia_device;
 
 constexpr size_t ReservedHeaderBlocks(size_t blk_size) {
   constexpr size_t kReservedEntryBlocks = (16 * 1024);
@@ -74,14 +74,14 @@ bool FilterByTypeAndName(const gpt_partition_t& part, const Uuid& type, fbl::Str
   return type == Uuid(part.type) && FilterByName(part, name);
 }
 
-zx::status<> RebindGptDriver(fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
+zx::status<> RebindGptDriver(fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
                              zx::unowned_channel chan) {
   auto pauser = BlockWatcherPauser::Create(svc_root);
   if (pauser.is_error()) {
     return pauser.take_error();
   }
-  auto result = ::fuchsia_device::Controller::Call::Rebind(std::move(chan),
-                                                           fidl::StringView("/boot/driver/gpt.so"));
+  auto result = fuchsia_device::Controller::Call::Rebind(std::move(chan),
+                                                         fidl::StringView("/boot/driver/gpt.so"));
   return zx::make_status(result.ok() ? (result->result.is_err() ? result->result.err() : ZX_OK)
                                      : result.status());
 }
@@ -148,7 +148,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
 }
 
 zx::status<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::InitializeProvidedGptDevice(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     fbl::unique_fd gpt_device) {
   auto pauser = BlockWatcherPauser::Create(svc_root);
   if (pauser.is_error()) {
@@ -196,7 +196,7 @@ zx::status<std::unique_ptr<GptDevicePartitioner>> GptDevicePartitioner::Initiali
 }
 
 zx::status<GptDevicePartitioner::InitializeGptResult> GptDevicePartitioner::InitializeGpt(
-    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
+    fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
     const fbl::unique_fd& block_device) {
   if (block_device) {
     auto status =

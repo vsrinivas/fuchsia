@@ -37,7 +37,7 @@ constexpr const char kEmptyBlobName[] =
 
 constexpr uint32_t kBlockSize = 512;
 constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 class BlobTest : public testing::TestWithParam<std::tuple<BlobLayoutFormat, CompressionAlgorithm>> {
  public:

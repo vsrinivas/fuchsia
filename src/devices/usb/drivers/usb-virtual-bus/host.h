@@ -24,7 +24,7 @@ namespace virtualbus {
 class Device;
 using DeviceType = ddk::Device<Device, ddk::Unbindable, ddk::Messageable>;
 class Device : public DeviceType,
-               public ::fuchsia_hardware_usb_virtualbustest::BusTest::Interface,
+               public fuchsia_hardware_usb_virtualbustest::BusTest::Interface,
                public ddk::EmptyProtocol<ZX_PROTOCOL_VIRTUALBUS_TEST> {
  public:
   explicit Device(zx_device_t* parent) : DeviceType(parent), usb_client_(parent) {}
@@ -41,7 +41,7 @@ class Device : public DeviceType,
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     DdkTransaction transaction(txn);
-    ::fuchsia_hardware_usb_virtualbustest::BusTest::Dispatch(this, msg, &transaction);
+    fuchsia_hardware_usb_virtualbustest::BusTest::Dispatch(this, msg, &transaction);
     return transaction.Status();
   }
 

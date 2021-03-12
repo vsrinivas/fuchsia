@@ -31,7 +31,7 @@ class MockUserPager {
     ASSERT_OK(loop_.StartThread("data-sink-test-pager-loop"));
   }
 
-  void CreatePayloadPaged(size_t num_pages, ::fuchsia_mem::wire::Buffer* out) {
+  void CreatePayloadPaged(size_t num_pages, fuchsia_mem::wire::Buffer* out) {
     zx::vmo vmo;
     size_t vmo_size = num_pages * ZX_PAGE_SIZE;
 
@@ -131,7 +131,7 @@ TEST(DataSinkTest, WriteAssetPaged) {
 
   auto data_sink = paver::DataSinkImpl(fbl::unique_fd(), std::move(partitioner));
 
-  ::fuchsia_mem::wire::Buffer payload;
+  fuchsia_mem::wire::Buffer payload;
   pager.CreatePayloadPaged(kPageCount, &payload);
 
   // Verify that no pages in the payload VMO are committed initially.
@@ -141,8 +141,8 @@ TEST(DataSinkTest, WriteAssetPaged) {
 
   // The Configuration and Asset type passed in here are not relevant. They just need to be valid
   // values.
-  ASSERT_OK(data_sink.WriteAsset(::fuchsia_paver::wire::Configuration::A,
-                                 ::fuchsia_paver::wire::Asset::KERNEL, std::move(payload)));
+  ASSERT_OK(data_sink.WriteAsset(fuchsia_paver::wire::Configuration::A,
+                                 fuchsia_paver::wire::Asset::KERNEL, std::move(payload)));
 }
 
 }  // namespace

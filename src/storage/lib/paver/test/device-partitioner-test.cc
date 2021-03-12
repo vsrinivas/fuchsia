@@ -54,8 +54,8 @@ extern zx_duration_t g_wipe_timeout;
 
 namespace {
 
-constexpr fidl::UnownedClientEnd<::fuchsia_io::Directory> kInvalidSvcRoot =
-    fidl::UnownedClientEnd<::fuchsia_io::Directory>(ZX_HANDLE_INVALID);
+constexpr fidl::UnownedClientEnd<fuchsia_io::Directory> kInvalidSvcRoot =
+    fidl::UnownedClientEnd<fuchsia_io::Directory>(ZX_HANDLE_INVALID);
 
 constexpr uint64_t kMebibyte = 1024 * 1024;
 constexpr uint64_t kGibibyte = kMebibyte * 1024;
@@ -365,12 +365,12 @@ class GptDevicePartitionerTests : public zxtest::Test {
     ASSERT_OK(RecursiveWaitForFile(devmgr_.devfs_root(), "sys/platform", &fd));
   }
 
-  fidl::ClientEnd<::fuchsia_io::Directory> GetSvcRoot() {
+  fidl::ClientEnd<fuchsia_io::Directory> GetSvcRoot() {
     auto fshost_root = devmgr_.fshost_outgoing_dir();
-    auto local = service::ConnectAt<::fuchsia_io::Directory>(fshost_root, "svc");
+    auto local = service::ConnectAt<fuchsia_io::Directory>(fshost_root, "svc");
     if (!local.is_ok()) {
       std::cout << "Failed to connect to fshost svc dir: " << local.status_string() << std::endl;
-      return fidl::ClientEnd<::fuchsia_io::Directory>();
+      return fidl::ClientEnd<fuchsia_io::Directory>();
     }
     return std::move(*local);
   }
@@ -440,15 +440,15 @@ class GptDevicePartitionerTests : public zxtest::Test {
     ASSERT_OK(gpt->Sync());
 
     fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
-    auto result = ::fuchsia_device::Controller::Call::Rebind(
-        caller.channel(), fidl::StringView("/boot/driver/gpt.so"));
+    auto result = fuchsia_device::Controller::Call::Rebind(caller.channel(),
+                                                           fidl::StringView("/boot/driver/gpt.so"));
     ASSERT_TRUE(result.ok());
     ASSERT_FALSE(result->result.is_err());
   }
 
   void ReadBlocks(const BlockDevice* blk_dev, size_t offset_in_blocks, size_t size_in_blocks,
                   uint8_t* out) {
-    fidl::ClientEnd<::fuchsia_hardware_block::Block> gpt_chan;
+    fidl::ClientEnd<fuchsia_hardware_block::Block> gpt_chan;
     ASSERT_OK(fdio_fd_clone(blk_dev->fd(), gpt_chan.channel().reset_and_get_address()));
     auto block_client = std::make_unique<paver::BlockPartitionClient>(std::move(gpt_chan));
 
@@ -461,7 +461,7 @@ class GptDevicePartitionerTests : public zxtest::Test {
 
   void WriteBlocks(const BlockDevice* blk_dev, size_t offset_in_blocks, size_t size_in_blocks,
                    uint8_t* buffer) {
-    fidl::ClientEnd<::fuchsia_hardware_block::Block> gpt_chan;
+    fidl::ClientEnd<fuchsia_hardware_block::Block> gpt_chan;
     ASSERT_OK(fdio_fd_clone(blk_dev->fd(), gpt_chan.channel().reset_and_get_address()));
     auto block_client = std::make_unique<paver::BlockPartitionClient>(std::move(gpt_chan));
 
@@ -526,7 +526,7 @@ class EfiDevicePartitionerTests : public GptDevicePartitionerTests {
   // Create a DevicePartition for a device.
   zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
       const fbl::unique_fd& device) {
-    fidl::ClientEnd<::fuchsia_io::Directory> svc_root = GetSvcRoot();
+    fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     return paver::EfiDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(), svc_root,
                                                    paver::Arch::kX64, std::move(device));
   }
@@ -715,8 +715,8 @@ TEST_F(EfiDevicePartitionerTests, FindOldBootloaderPartitionName) {
   }
 
   fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
-  auto result = ::fuchsia_device::Controller::Call::Rebind(caller.channel(),
-                                                           fidl::StringView("/boot/driver/gpt.so"));
+  auto result = fuchsia_device::Controller::Call::Rebind(caller.channel(),
+                                                         fidl::StringView("/boot/driver/gpt.so"));
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->result.is_err());
 
@@ -862,7 +862,7 @@ class CrosDevicePartitionerTests : public GptDevicePartitionerTests {
   // Create a DevicePartition for a device.
   void CreatePartitioner(BlockDevice* device,
                          std::unique_ptr<paver::DevicePartitioner>* partitioner) {
-    fidl::ClientEnd<::fuchsia_io::Directory> svc_root = GetSvcRoot();
+    fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     auto status = paver::CrosDevicePartitioner::Initialize(devmgr_.devfs_root().duplicate(),
                                                            std::move(svc_root), paver::Arch::kX64,
                                                            fbl::unique_fd{dup(device->fd())});
@@ -1218,7 +1218,7 @@ class SherlockPartitionerTests : public GptDevicePartitionerTests {
   // Create a DevicePartition for a device.
   zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
       const fbl::unique_fd& device) {
-    fidl::ClientEnd<::fuchsia_io::Directory> svc_root = GetSvcRoot();
+    fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     return paver::SherlockPartitioner::Initialize(devmgr_.devfs_root().duplicate(), svc_root,
                                                   device);
   }
@@ -1298,8 +1298,8 @@ TEST_F(SherlockPartitionerTests, InitializePartitionTable) {
   }
 
   fdio_cpp::UnownedFdioCaller caller(gpt_dev->fd());
-  auto result = ::fuchsia_device::Controller::Call::Rebind(caller.channel(),
-                                                           fidl::StringView("/boot/driver/gpt.so"));
+  auto result = fuchsia_device::Controller::Call::Rebind(caller.channel(),
+                                                         fidl::StringView("/boot/driver/gpt.so"));
   ASSERT_TRUE(result.ok());
   ASSERT_FALSE(result->result.is_err());
 
@@ -1530,7 +1530,7 @@ class LuisPartitionerTests : public GptDevicePartitionerTests {
   // Create a DevicePartition for a device.
   zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
       const fbl::unique_fd& device) {
-    fidl::ClientEnd<::fuchsia_io::Directory> svc_root = GetSvcRoot();
+    fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     return paver::LuisPartitioner::Initialize(devmgr_.devfs_root().duplicate(), svc_root, device);
   }
 };
@@ -1636,7 +1636,7 @@ TEST_F(LuisPartitionerTests, CreateAbrClient) {
       {GPT_DURABLE_BOOT_NAME, kDummyType, 0x10400, 0x10000},
   };
   ASSERT_NO_FATAL_FAILURES(InitializeStartingGPTPartitions(gpt_dev.get(), kStartingPartitions));
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root = GetSvcRoot();
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
   std::shared_ptr<paver::Context> context;
   EXPECT_OK(paver::LuisAbrClientFactory().New(devmgr_.devfs_root().duplicate(), svc_root, context));
 }
@@ -1686,7 +1686,7 @@ class NelsonPartitionerTests : public GptDevicePartitionerTests {
   // Create a DevicePartition for a device.
   zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
       const fbl::unique_fd& device) {
-    fidl::ClientEnd<::fuchsia_io::Directory> svc_root = GetSvcRoot();
+    fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     return paver::NelsonPartitioner::Initialize(devmgr_.devfs_root().duplicate(), svc_root, device);
   }
 
@@ -1921,7 +1921,7 @@ TEST_F(NelsonPartitionerTests, CreateAbrClient) {
       {GUID_ABR_META_NAME, kAbrMetaType, 0x10400, 0x10000},
   };
   ASSERT_NO_FATAL_FAILURES(InitializeStartingGPTPartitions(gpt_dev.get(), kStartingPartitions));
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root = GetSvcRoot();
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
   std::shared_ptr<paver::Context> context;
   EXPECT_OK(
       paver::NelsonAbrClientFactory().New(devmgr_.devfs_root().duplicate(), svc_root, context));
@@ -2043,7 +2043,7 @@ class Vim3PartitionerTests : public GptDevicePartitionerTests {
   // Create a DevicePartition for a device.
   zx::status<std::unique_ptr<paver::DevicePartitioner>> CreatePartitioner(
       const fbl::unique_fd& device) {
-    fidl::ClientEnd<::fuchsia_io::Directory> svc_root = GetSvcRoot();
+    fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
     return paver::Vim3Partitioner::Initialize(devmgr_.devfs_root().duplicate(), svc_root, device);
   }
 };
@@ -2139,7 +2139,7 @@ TEST_F(Vim3PartitionerTests, CreateAbrClient) {
       {GPT_DURABLE_BOOT_NAME, kDummyType, 0x10400, 0x10000},
   };
   ASSERT_NO_FATAL_FAILURES(InitializeStartingGPTPartitions(gpt_dev.get(), kStartingPartitions));
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root = GetSvcRoot();
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root = GetSvcRoot();
   std::shared_ptr<paver::Context> context;
   EXPECT_OK(paver::Vim3AbrClientFactory().New(devmgr_.devfs_root().duplicate(), svc_root, context));
 }
@@ -2175,7 +2175,7 @@ TEST(AstroPartitionerTests, IsFvmWithinFtl) {
   std::unique_ptr<SkipBlockDevice> device;
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
   auto status = paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context);
   ASSERT_OK(status);
@@ -2201,7 +2201,7 @@ TEST(AstroPartitionerTests, AddPartitionTest) {
   std::unique_ptr<SkipBlockDevice> device;
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
   auto status = paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context);
   ASSERT_OK(status);
@@ -2214,7 +2214,7 @@ TEST(AstroPartitionerTests, WipeFvmTest) {
   std::unique_ptr<SkipBlockDevice> device;
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
   auto status = paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context);
   ASSERT_OK(status);
@@ -2226,7 +2226,7 @@ TEST(AstroPartitionerTests, FinalizePartitionTest) {
   std::unique_ptr<SkipBlockDevice> device;
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
   auto status = paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context);
   ASSERT_OK(status);
@@ -2249,7 +2249,7 @@ TEST(AstroPartitionerTests, FindPartitionTest) {
   std::unique_ptr<BlockDevice> fvm;
   ASSERT_NO_FATAL_FAILURES(BlockDevice::Create(devfs_root, kFvmType, &fvm));
 
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
   auto status = paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context);
   ASSERT_OK(status);
@@ -2271,7 +2271,7 @@ TEST(AstroPartitionerTests, SupportsPartition) {
   std::unique_ptr<SkipBlockDevice> device;
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
   auto status = paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context);
   ASSERT_OK(status);
@@ -2324,7 +2324,7 @@ TEST(AstroPartitionerTests, BootloaderTplTest) {
   std::unique_ptr<SkipBlockDevice> device;
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
   auto status = paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context);
   ASSERT_OK(status);
@@ -2342,7 +2342,7 @@ TEST(AstroPartitionerTests, BootloaderBl2Test) {
   std::unique_ptr<SkipBlockDevice> device;
   ASSERT_NO_FATAL_FAILURES(SkipBlockDevice::Create(kNandInfo, &device));
 
-  fidl::ClientEnd<::fuchsia_io::Directory> svc_root;
+  fidl::ClientEnd<fuchsia_io::Directory> svc_root;
   std::shared_ptr<paver::Context> context = std::make_shared<paver::Context>();
   auto status = paver::AstroPartitioner::Initialize(device->devfs_root(), svc_root, context);
   ASSERT_OK(status);

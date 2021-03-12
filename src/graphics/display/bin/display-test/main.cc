@@ -41,9 +41,9 @@
 #include "src/graphics/display/testing/utils.h"
 #include "src/graphics/display/testing/virtual-layer.h"
 
-namespace fhd = ::fuchsia_hardware_display;
-namespace sysmem = ::fuchsia_sysmem;
-namespace sysinfo = ::fuchsia_sysinfo;
+namespace fhd = fuchsia_hardware_display;
+namespace sysmem = fuchsia_sysmem;
+namespace sysinfo = fuchsia_sysinfo;
 
 using testing::display::ColorLayer;
 using testing::display::CursorLayer;
@@ -945,7 +945,7 @@ int main(int argc, const char* argv[]) {
   if (testbundle == INTEL) {
     // Intel only supports 90/270 rotation for Y-tiled images, so enable it for testing.
     constexpr uint64_t kIntelYTilingModifier =
-        ::fuchsia_sysmem::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+        fuchsia_sysmem::wire::FORMAT_MODIFIER_INTEL_I915_Y_TILED;
 
     // Color layer which covers all displays
     std::unique_ptr<ColorLayer> layer0 = fbl::make_unique_checked<ColorLayer>(&ac, displays);
@@ -1060,7 +1060,7 @@ int main(int argc, const char* argv[]) {
     }
     layer1->SetLayerFlipping(true);
     if (enable_compression) {
-      layer1->SetFormatModifier(::fuchsia_sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16);
+      layer1->SetFormatModifier(fuchsia_sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16);
     }
     layers.push_back(std::move(layer1));
   } else if (testbundle == SIMPLE) {
@@ -1073,7 +1073,7 @@ int main(int argc, const char* argv[]) {
     }
 
     if (enable_compression) {
-      layer1->SetFormatModifier(::fuchsia_sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16);
+      layer1->SetFormatModifier(fuchsia_sysmem::wire::FORMAT_MODIFIER_ARM_AFBC_16X16);
     }
     if (apply_config_once) {
       max_apply_configs = 1;

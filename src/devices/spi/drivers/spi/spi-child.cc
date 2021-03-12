@@ -11,7 +11,7 @@
 
 namespace spi {
 
-namespace sharedmemory = ::fuchsia_hardware_sharedmemory;
+namespace sharedmemory = fuchsia_hardware_sharedmemory;
 
 void SpiChild::TransmitVector(::fidl::VectorView<uint8_t> data,
                               TransmitVectorCompleter::Sync& completer) {
@@ -52,7 +52,7 @@ void SpiChild::ExchangeVector(::fidl::VectorView<uint8_t> txdata,
   }
 }
 
-void SpiChild::RegisterVmo(uint32_t vmo_id, ::fuchsia_mem::wire::Range vmo,
+void SpiChild::RegisterVmo(uint32_t vmo_id, fuchsia_mem::wire::Range vmo,
                            sharedmemory::wire::SharedVmoRight rights,
                            RegisterVmoCompleter::Sync& completer) {
   sharedmemory::wire::SharedVmoRegister_RegisterVmo_Result result;

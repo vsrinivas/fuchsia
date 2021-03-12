@@ -396,7 +396,7 @@ void Service::CreateExecutionContext(uint64_t context_id,
 }
 
 void Service::AddNodes(uint64_t context_id,
-                       ::fidl::VectorView<::fuchsia_shell::wire::NodeDefinition> nodes,
+                       ::fidl::VectorView<fuchsia_shell::wire::NodeDefinition> nodes,
                        AddNodesCompleter::Sync& _completer) {
   auto context = interpreter_->GetServerContext(context_id);
   if (context == nullptr) {

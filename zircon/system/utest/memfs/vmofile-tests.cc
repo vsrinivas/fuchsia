@@ -29,7 +29,7 @@
 
 namespace {
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 // These are rights that are common to the various rights checks below.
 const uint32_t kCommonExpectedRights =

@@ -348,7 +348,7 @@ class Minfs :
 
 #ifdef __Fuchsia__
   // Acquire a copy of the collected metrics.
-  [[nodiscard]] zx_status_t GetMetrics(::fuchsia_minfs::wire::Metrics* out) const {
+  [[nodiscard]] zx_status_t GetMetrics(fuchsia_minfs::wire::Metrics* out) const {
     if (metrics_.Enabled()) {
       metrics_.CopyToFidl(out);
       return ZX_OK;

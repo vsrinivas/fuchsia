@@ -34,9 +34,9 @@
 
 #include "vc.h"
 
-namespace fhd = ::fuchsia_hardware_display;
-namespace sysmem = ::fuchsia_sysmem;
-namespace fio = ::fuchsia_io;
+namespace fhd = fuchsia_hardware_display;
+namespace sysmem = fuchsia_sysmem;
+namespace fio = fuchsia_io;
 
 using fhd::wire::VirtconMode;
 

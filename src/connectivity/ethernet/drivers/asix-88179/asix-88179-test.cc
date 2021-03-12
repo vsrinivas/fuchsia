@@ -23,8 +23,8 @@
 namespace usb_ax88179 {
 namespace {
 
-namespace ethernet = ::fuchsia_hardware_ethernet;
-namespace ax88179 = ::fuchsia_hardware_ax88179;
+namespace ethernet = fuchsia_hardware_ethernet;
+namespace ax88179 = fuchsia_hardware_ax88179;
 
 class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
  public:
@@ -34,9 +34,9 @@ class USBVirtualBus : public usb_virtual_bus_base::USBVirtualBusBase {
 };
 
 void USBVirtualBus::InitUsbAx88179(fbl::String* dev_path, fbl::String* test_function_path) {
-  namespace usb_peripheral = ::fuchsia_hardware_usb_peripheral;
+  namespace usb_peripheral = fuchsia_hardware_usb_peripheral;
   using ConfigurationDescriptor =
-      ::fidl::VectorView<::fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
+      ::fidl::VectorView<fuchsia_hardware_usb_peripheral::wire::FunctionDescriptor>;
 
   usb_peripheral::wire::DeviceDescriptor device_desc = {};
   device_desc.bcd_usb = htole16(0x0200);

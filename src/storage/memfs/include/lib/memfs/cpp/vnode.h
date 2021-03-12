@@ -129,14 +129,14 @@ class VnodeDir final : public VnodeMemfs {
   // Use the watcher container to implement a directory watcher
   void Notify(fbl::StringPiece name, unsigned event) final;
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
-  zx_status_t QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* out) final;
+  zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) final;
 
   // Vnode overrides.
   //
   // The vnode is acting as a mount point for a remote filesystem or device.
   bool IsRemote() const final;
   fidl::ClientEnd<fuchsia_io::Directory> DetachRemote() final;
-  fidl::UnownedClientEnd<::fuchsia_io::Directory> GetRemote() const final;
+  fidl::UnownedClientEnd<fuchsia_io::Directory> GetRemote() const final;
   void SetRemote(fidl::ClientEnd<fuchsia_io::Directory> remote) final;
 
  private:

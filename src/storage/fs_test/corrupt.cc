@@ -18,7 +18,7 @@
 namespace fs_test {
 namespace {
 
-namespace device = ::fuchsia_device;
+namespace device = fuchsia_device;
 
 TEST(CorruptTest, CorruptTest) {
   // 768 blocks containing 64 pages of 4 KiB with 8 bytes OOB

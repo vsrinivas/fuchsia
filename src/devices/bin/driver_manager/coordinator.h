@@ -377,7 +377,7 @@ class Coordinator : public device_manager_fidl::BindDebugger::Interface,
                            GetDevicePropertiesCompleter::Sync& completer) override;
 
   // Driver registrar interface
-  void Register(::fuchsia_pkg::wire::PackageUrl driver_url,
+  void Register(fuchsia_pkg::wire::PackageUrl driver_url,
                 RegisterCompleter::Sync& completer) override;
 
   void OnOOMEvent(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,

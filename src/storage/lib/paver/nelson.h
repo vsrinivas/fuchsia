@@ -16,7 +16,7 @@ constexpr size_t kNelsonBL2Size = 64 * 1024;
 class NelsonPartitioner : public DevicePartitioner {
  public:
   static zx::status<std::unique_ptr<DevicePartitioner>> Initialize(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       const fbl::unique_fd& block_device);
 
   bool IsFvmWithinFtl() const override { return false; }
@@ -56,14 +56,14 @@ class NelsonPartitioner : public DevicePartitioner {
 class NelsonPartitionerFactory : public DevicePartitionerFactory {
  public:
   zx::status<std::unique_ptr<DevicePartitioner>> New(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
-      Arch arch, std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root, Arch arch,
+      std::shared_ptr<Context> context, const fbl::unique_fd& block_device) final;
 };
 
 class NelsonAbrClientFactory : public abr::ClientFactory {
  public:
   zx::status<std::unique_ptr<abr::Client>> New(
-      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<::fuchsia_io::Directory> svc_root,
+      fbl::unique_fd devfs_root, fidl::UnownedClientEnd<fuchsia_io::Directory> svc_root,
       std::shared_ptr<paver::Context> context) final;
 };
 
@@ -80,7 +80,7 @@ class NelsonBootloaderPartitionClient final : public BlockDevicePartitionClient 
   zx::status<> Write(const zx::vmo& vmo, size_t vmo_size) final;
   zx::status<> Trim() final;
   zx::status<> Flush() final;
-  fidl::ClientEnd<::fuchsia_hardware_block::Block> GetChannel() final;
+  fidl::ClientEnd<fuchsia_hardware_block::Block> GetChannel() final;
   fbl::unique_fd block_fd() final;
 
   // No copy, no move.

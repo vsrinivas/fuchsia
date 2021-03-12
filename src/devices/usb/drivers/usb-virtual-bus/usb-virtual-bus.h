@@ -34,7 +34,7 @@ using UsbVirtualBusType =
 
 // This is the main class for the USB virtual bus.
 class UsbVirtualBus : public UsbVirtualBusType,
-                      public ::fuchsia_hardware_usb_virtual_bus::Bus::Interface {
+                      public fuchsia_hardware_usb_virtual_bus::Bus::Interface {
  public:
   explicit UsbVirtualBus(zx_device_t* parent) : UsbVirtualBusType(parent) {}
 

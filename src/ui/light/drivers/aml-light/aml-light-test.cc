@@ -93,7 +93,7 @@ TEST_F(AmlLightTest, GetInfoTest1) {
   ASSERT_NOT_NULL(light_);
   Init();
 
-  ::fuchsia_hardware_light::Light::SyncClient client(std::move(client_));
+  fuchsia_hardware_light::Light::SyncClient client(std::move(client_));
   auto result = client.GetInfo(0);
   EXPECT_OK(result.status());
   EXPECT_FALSE(result->result.is_err());
@@ -109,7 +109,7 @@ TEST_F(AmlLightTest, GetInfoTest2) {
   ASSERT_NOT_NULL(light_);
   Init();
 
-  ::fuchsia_hardware_light::Light::SyncClient client(std::move(client_));
+  fuchsia_hardware_light::Light::SyncClient client(std::move(client_));
   auto result = client.GetInfo(0);
   EXPECT_OK(result.status());
   EXPECT_FALSE(result->result.is_err());
@@ -125,7 +125,7 @@ TEST_F(AmlLightTest, SetValueTest1) {
   ASSERT_NOT_NULL(light_);
   Init();
 
-  ::fuchsia_hardware_light::Light::SyncClient client(std::move(client_));
+  fuchsia_hardware_light::Light::SyncClient client(std::move(client_));
   {
     auto get_result = client.GetCurrentSimpleValue(0);
     EXPECT_OK(get_result.status());
@@ -183,7 +183,7 @@ TEST_F(AmlLightTest, SetValueTest2) {
   ASSERT_NOT_NULL(light_);
   Init();
 
-  ::fuchsia_hardware_light::Light::SyncClient client(std::move(client_));
+  fuchsia_hardware_light::Light::SyncClient client(std::move(client_));
   {
     auto get_result = client.GetCurrentBrightnessValue(0);
     EXPECT_OK(get_result.status());
@@ -243,7 +243,7 @@ TEST_F(AmlLightTest, SetInvalidValueTest) {
   ASSERT_NOT_NULL(light_);
   Init();
 
-  ::fuchsia_hardware_light::Light::SyncClient client(std::move(client_));
+  fuchsia_hardware_light::Light::SyncClient client(std::move(client_));
   {
     auto get_result = client.GetCurrentBrightnessValue(0);
     EXPECT_OK(get_result.status());

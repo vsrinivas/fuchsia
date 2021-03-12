@@ -11,7 +11,7 @@
 
 #include "src/lib/storage/vfs/cpp/service.h"
 
-namespace fuv = ::fuchsia_update_verify;
+namespace fuv = fuchsia_update_verify;
 
 namespace blobfs {
 

@@ -509,7 +509,7 @@ void DevhostControllerConnection::CreateDevice(zx::channel coordinator_client,
 
 void DevhostControllerConnection::CreateCompositeDevice(
     zx::channel coordinator_client, zx::channel device_controller_rpc,
-    ::fidl::VectorView<::fuchsia_device_manager::wire::Fragment> fragments, ::fidl::StringView name,
+    ::fidl::VectorView<fuchsia_device_manager::wire::Fragment> fragments, ::fidl::StringView name,
     uint64_t local_device_id, CreateCompositeDeviceCompleter::Sync& completer) {
   // Convert the fragment IDs into zx_device references
   CompositeFragments fragments_list(new CompositeFragment[fragments.count()], fragments.count());

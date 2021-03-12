@@ -26,10 +26,10 @@ class SessionManager final : public fuchsia_virtualconsole::SessionManager::Inte
                  const color_scheme_t* color_scheme)
       : dispatcher_(dispatcher), keep_log_visible_(keep_log_visible), color_scheme_(color_scheme) {}
 
-  zx_status_t Bind(fidl::ServerEnd<::fuchsia_virtualconsole::SessionManager> request);
+  zx_status_t Bind(fidl::ServerEnd<fuchsia_virtualconsole::SessionManager> request);
 
   // FIDL functions.
-  void CreateSession(::fidl::ServerEnd<::fuchsia_hardware_pty::Device> session,
+  void CreateSession(::fidl::ServerEnd<fuchsia_hardware_pty::Device> session,
                      CreateSessionCompleter::Sync& completer) override;
   void HasPrimaryConnected(HasPrimaryConnectedCompleter::Sync& completer) override;
 
@@ -38,13 +38,13 @@ class SessionManager final : public fuchsia_virtualconsole::SessionManager::Inte
   // The returned `vc_t*` will be freed when the other end of `session` is closed.
   // For this reason the returned `vc_t*` can ONLY be used when the code has control over
   // the other end of the session, and it must be used with care.
-  zx::status<vc_t*> CreateSession(::fidl::ServerEnd<::fuchsia_hardware_pty::Device> session);
+  zx::status<vc_t*> CreateSession(::fidl::ServerEnd<fuchsia_hardware_pty::Device> session);
 
  private:
   void SessionIoCallback(vc_t* vc, async_dispatcher_t* dispatcher, async::Wait* wait,
                          zx_status_t status, const zx_packet_signal_t* signal);
 
-  zx::status<vc_t*> CreateSession(fidl::ServerEnd<::fuchsia_hardware_pty::Device> session,
+  zx::status<vc_t*> CreateSession(fidl::ServerEnd<fuchsia_hardware_pty::Device> session,
                                   bool make_active, const color_scheme_t* color_scheme);
 
   // The number of active vcs at the moment.

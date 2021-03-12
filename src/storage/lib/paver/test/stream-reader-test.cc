@@ -20,7 +20,7 @@ TEST(StreamReaderTest, InvalidChannel) {
   ASSERT_NOT_OK(paver::StreamReader::Create(zx::channel()));
 }
 
-class FakePayloadStream : public ::fuchsia_paver::PayloadStream::Interface {
+class FakePayloadStream : public fuchsia_paver::PayloadStream::Interface {
  public:
   FakePayloadStream() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {
     zx::channel server;
@@ -32,12 +32,12 @@ class FakePayloadStream : public ::fuchsia_paver::PayloadStream::Interface {
   void ReadSuccess(ReadDataCompleter::Sync& completer) {
     vmo_.write(kFileData, 0, sizeof(kFileData));
 
-    ::fuchsia_paver::wire::ReadInfo info{.offset = 0, .size = sizeof(kFileData)};
-    completer.Reply(::fuchsia_paver::wire::ReadResult::WithInfo(fidl::unowned_ptr(&info)));
+    fuchsia_paver::wire::ReadInfo info{.offset = 0, .size = sizeof(kFileData)};
+    completer.Reply(fuchsia_paver::wire::ReadResult::WithInfo(fidl::unowned_ptr(&info)));
   }
 
   void ReadError(ReadDataCompleter::Sync& completer) {
-    ::fuchsia_paver::wire::ReadResult result;
+    fuchsia_paver::wire::ReadResult result;
     zx_status_t status = ZX_ERR_INTERNAL;
     result.set_err(fidl::unowned_ptr(&status));
 
@@ -45,7 +45,7 @@ class FakePayloadStream : public ::fuchsia_paver::PayloadStream::Interface {
   }
 
   void ReadEof(ReadDataCompleter::Sync& completer) {
-    ::fuchsia_paver::wire::ReadResult result;
+    fuchsia_paver::wire::ReadResult result;
     fidl::aligned<bool> eof = true;
     result.set_eof(fidl::unowned_ptr(&eof));
 
@@ -54,7 +54,7 @@ class FakePayloadStream : public ::fuchsia_paver::PayloadStream::Interface {
 
   void ReadData(ReadDataCompleter::Sync& completer) {
     if (!vmo_) {
-      ::fuchsia_paver::wire::ReadResult result;
+      fuchsia_paver::wire::ReadResult result;
       zx_status_t status = ZX_ERR_BAD_STATE;
       result.set_err(fidl::unowned_ptr(&status));
       completer.Reply(std::move(result));

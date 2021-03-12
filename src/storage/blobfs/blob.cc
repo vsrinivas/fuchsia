@@ -1005,7 +1005,7 @@ void Blob::SetTargetCompressionSize(uint64_t size) {
 
 #ifdef __Fuchsia__
 
-zx_status_t Blob::QueryFilesystem(::fuchsia_io::wire::FilesystemInfo* info) {
+zx_status_t Blob::QueryFilesystem(fuchsia_io::wire::FilesystemInfo* info) {
   blobfs_->GetFilesystemInfo(info);
   return ZX_OK;
 }
@@ -1017,9 +1017,9 @@ zx_status_t Blob::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_l
 zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", flags);
 
-  if (flags & ::fuchsia_io::wire::VMO_FLAG_WRITE) {
+  if (flags & fuchsia_io::wire::VMO_FLAG_WRITE) {
     return ZX_ERR_NOT_SUPPORTED;
-  } else if (flags & ::fuchsia_io::wire::VMO_FLAG_EXACT) {
+  } else if (flags & fuchsia_io::wire::VMO_FLAG_EXACT) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -1028,8 +1028,8 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   // We can ignore fuchsia_io_VMO_FLAG_PRIVATE, since private / shared access
   // to the underlying VMO can both be satisfied with a clone due to
   // the immutability of blobfs blobs.
-  rights |= (flags & ::fuchsia_io::wire::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
-  rights |= (flags & ::fuchsia_io::wire::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+  rights |= (flags & fuchsia_io::wire::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+  rights |= (flags & fuchsia_io::wire::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
   return CloneDataVmo(rights, out_vmo, out_size);
 }
 

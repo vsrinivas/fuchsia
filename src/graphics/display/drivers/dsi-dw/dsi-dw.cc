@@ -61,7 +61,7 @@ zx_status_t DsiDwBase::Bind() {
   return status;
 }
 
-void DsiDwBase::SendCmd(::fuchsia_hardware_dsi::wire::MipiDsiCmd cmd,
+void DsiDwBase::SendCmd(fuchsia_hardware_dsi::wire::MipiDsiCmd cmd,
                         ::fidl::VectorView<uint8_t> txdata, SendCmdCompleter::Sync& _completer) {
   zx_status_t status = ZX_OK;
   // TODO(payamm): We don't support READ at the moment. READ is complicated because it consumes

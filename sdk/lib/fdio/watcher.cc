@@ -10,7 +10,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-namespace fio = ::fuchsia_io;
+namespace fio = fuchsia_io;
 
 typedef struct fdio_watcher {
   zx_handle_t h;

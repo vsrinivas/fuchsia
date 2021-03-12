@@ -37,33 +37,33 @@ class PtyClient : public fbl::RefCounted<PtyClient>,
 
   void AssertHangupSignal() {
     ClearSetFlags(0, kFlagPeerClosed);
-    local_.signal_peer(::fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE,
-                       ::fuchsia_device::wire::DEVICE_SIGNAL_HANGUP);
+    local_.signal_peer(fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE,
+                       fuchsia_device::wire::DEVICE_SIGNAL_HANGUP);
   }
   void AssertActiveHungup() {
-    local_.signal_peer(0, ::fuchsia_hardware_pty::wire::SIGNAL_EVENT |
-                              ::fuchsia_device::wire::DEVICE_SIGNAL_HANGUP);
+    local_.signal_peer(
+        0, fuchsia_hardware_pty::wire::SIGNAL_EVENT | fuchsia_device::wire::DEVICE_SIGNAL_HANGUP);
   }
 
   void AssertReadableSignal() {
-    local_.signal_peer(0, ::fuchsia_device::wire::DEVICE_SIGNAL_READABLE);
+    local_.signal_peer(0, fuchsia_device::wire::DEVICE_SIGNAL_READABLE);
   }
   void AssertWritableSignal() {
-    local_.signal_peer(0, ::fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE);
+    local_.signal_peer(0, fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE);
   }
   void AssertEventSignal() {
-    static_assert(::fuchsia_hardware_pty::wire::SIGNAL_EVENT ==
-                  ::fuchsia_device::wire::DEVICE_SIGNAL_OOB);
-    local_.signal_peer(0, ::fuchsia_hardware_pty::wire::SIGNAL_EVENT);
+    static_assert(fuchsia_hardware_pty::wire::SIGNAL_EVENT ==
+                  fuchsia_device::wire::DEVICE_SIGNAL_OOB);
+    local_.signal_peer(0, fuchsia_hardware_pty::wire::SIGNAL_EVENT);
   }
 
   void DeAssertReadableSignal() {
-    local_.signal_peer(::fuchsia_device::wire::DEVICE_SIGNAL_READABLE, 0);
+    local_.signal_peer(fuchsia_device::wire::DEVICE_SIGNAL_READABLE, 0);
   }
   void DeAssertWritableSignal() {
-    local_.signal_peer(::fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE, 0);
+    local_.signal_peer(fuchsia_device::wire::DEVICE_SIGNAL_WRITABLE, 0);
   }
-  void DeAssertEventSignal() { local_.signal_peer(::fuchsia_hardware_pty::wire::SIGNAL_EVENT, 0); }
+  void DeAssertEventSignal() { local_.signal_peer(fuchsia_hardware_pty::wire::SIGNAL_EVENT, 0); }
 
   void ClearSetFlags(uint32_t clr, uint32_t set) { flags_ = (flags_ & ~clr) | set; }
   uint32_t flags() const { return flags_; }
@@ -95,7 +95,7 @@ class PtyClient : public fbl::RefCounted<PtyClient>,
   zx::eventpair local_, remote_;
 
   static constexpr uint32_t kFlagRawMode = 0x00000001u;
-  static_assert(kFlagRawMode == ::fuchsia_hardware_pty::wire::FEATURE_RAW);
+  static_assert(kFlagRawMode == fuchsia_hardware_pty::wire::FEATURE_RAW);
   static constexpr uint32_t kFlagPeerClosed = 0x00000002u;
 
   uint32_t flags_ = 0;
