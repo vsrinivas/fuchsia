@@ -769,6 +769,7 @@ mod tests {
                     name: "SampleDisabled.DISABLED_TestFail".to_owned(),
                     enabled: false
                 },
+                TestCaseInfo { name: "SampleDisabled.DynamicSkip".to_owned(), enabled: true },
                 TestCaseInfo { name: "WriteToStdout.TestPass".to_owned(), enabled: true },
                 TestCaseInfo { name: "WriteToStdout.TestFail".to_owned(), enabled: true },
                 TestCaseInfo {
