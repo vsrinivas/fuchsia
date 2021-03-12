@@ -17,7 +17,7 @@ use fuchsia_syslog::levels::{DEBUG, INFO, WARN};
 use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use futures::{channel::mpsc, StreamExt};
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn embedding_stop_api_for_log_listener() {
     let mut archivist = start_archivist();
 
@@ -79,7 +79,7 @@ async fn embedding_stop_api_for_log_listener() {
     );
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn embedding_stop_api_works_for_batch_iterator() {
     let mut archivist = start_archivist();
 

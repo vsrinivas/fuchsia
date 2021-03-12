@@ -172,7 +172,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn component_event_stream() {
         let (mut provider_proxy, listener_receiver) = spawn_fake_component_event_provider();
         let (sender, receiver) = mpsc::channel(CHANNEL_CAPACITY);

@@ -137,7 +137,7 @@ mod tests {
         std::convert::TryFrom,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn get_contents() -> Result<(), Error> {
         let tree = spawn_server(test_inspector(), TreeServerSettings::default())?;
         let tree_content = tree.get_content().await?;
@@ -148,7 +148,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn list_child_names() -> Result<(), Error> {
         let tree = spawn_server(test_inspector(), TreeServerSettings::default())?;
         let (name_iterator, server_end) =
@@ -158,7 +158,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn open_children() -> Result<(), Error> {
         let tree = spawn_server(test_inspector(), TreeServerSettings::default())?;
         let (child_tree, server_end) = fidl::endpoints::create_proxy::<TreeMarker>()?;
@@ -188,7 +188,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn force_private_snapshot() -> Result<(), Error> {
         let inspector = test_inspector();
         let tree_dup = spawn_server(inspector.clone(), TreeServerSettings::default())?;

@@ -743,7 +743,6 @@ mod tests {
             reader::{snapshot::Snapshot, PartialNodeHierarchy},
             Inspector,
         },
-        fuchsia_async as fasync,
         futures::prelude::*,
         std::convert::TryFrom,
     };
@@ -1302,7 +1301,7 @@ mod tests {
         assert!(state.header.check_locked(false).is_ok());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_link() {
         // Intialize state and create a link block.
         let state = get_state(4096);
@@ -1388,7 +1387,7 @@ mod tests {
         assert_eq!(content_block.name_contents().unwrap(), "link-name-1");
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn stats() {
         // Intialize state and create a link block.
         let state = get_state(12288);

@@ -1396,7 +1396,7 @@ mod tests {
         assert!(!no_op_node.is_valid());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn new_no_op() -> Result<(), Error> {
         let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
 
@@ -2058,7 +2058,7 @@ mod tests {
         assert_inspect_tree!(inspector, root: { });
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn connect_to_service() -> Result<(), anyhow::Error> {
         let mut service_fs = ServiceFs::new();
         let env = service_fs.create_nested_environment("test")?;
@@ -2127,7 +2127,7 @@ mod tests {
         });
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn atomic_update_reader() {
         let inspector = Inspector::new();
 

@@ -13,7 +13,7 @@ use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, StreamExt};
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn timestamp_sorting_for_batches() {
     let message_times = [1_000, 5_000, 10_000, 15_000];
     let hare_times = (0, 2);

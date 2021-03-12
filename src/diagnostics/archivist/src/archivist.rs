@@ -873,7 +873,7 @@ mod tests {
         directory
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn can_log_and_retrive_log() {
         let directory = run_archivist().await;
         let mut recv_logs = start_listener(&directory);
@@ -923,7 +923,7 @@ mod tests {
 
     /// Makes sure that implementaion can handle multiple sockets from same
     /// log sink.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn log_from_multiple_sock() {
         let directory = run_archivist().await;
         let mut recv_logs = start_listener(&directory);
@@ -961,7 +961,7 @@ mod tests {
     }
 
     /// Stop API works
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn stop_works() {
         let (directory, signal_recv) = run_archivist_and_signal_on_exit().await;
         let mut recv_logs = start_listener(&directory);

@@ -33,7 +33,6 @@ use {
     fake_archive_accessor::FakeArchiveAccessor,
     fake_crash_reporter::FakeCrashReporter,
     fake_crash_reporting_product_register::FakeCrashReportingProductRegister,
-    fuchsia_async as fasync,
     futures::{channel::mpsc, FutureExt, SinkExt, StreamExt},
     log::*,
     std::sync::Arc,
@@ -82,11 +81,8 @@ async fn run_all_tests() -> Vec<Result<(), Error>> {
     .await
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn entry_point() -> Result<(), Error> {
-    fuchsia_syslog::init().unwrap();
-    fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
-
     for result in run_all_tests().await.into_iter() {
         if result.is_err() {
             error!("{:?}", result);

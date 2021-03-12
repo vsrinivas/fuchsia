@@ -226,7 +226,6 @@ mod tests {
         super::*,
         async_trait::async_trait,
         fidl_fuchsia_logger::LogSinkMarker,
-        fuchsia_async as fasync,
         fuchsia_inspect::{self as inspect, assert_inspect_tree},
         fuchsia_zircon as zx,
         futures::SinkExt,
@@ -354,7 +353,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn joint_event_channel() {
         let inspector = inspect::Inspector::new();
         let node = inspector.root().create_child("events");

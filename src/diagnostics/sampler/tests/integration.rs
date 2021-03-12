@@ -42,7 +42,7 @@ async fn setup(
 /// manipulated by the test via fidl, and uses cobalt mock and log querier to
 /// verify that the sampler observers changes as expected, and logs them to
 /// cobalt as expected.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn event_count_sampler_test() {
     let (mut sampler_app, _test_component, test_app_controller, logger_querier, reboot_controller) =
         setup().await;

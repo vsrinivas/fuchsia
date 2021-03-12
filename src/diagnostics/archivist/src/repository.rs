@@ -575,12 +575,12 @@ mod tests {
     use {
         super::*, crate::events::types::ComponentIdentifier,
         diagnostics_hierarchy::trie::TrieIterableNode, fidl_fuchsia_io::DirectoryMarker,
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fuchsia_zircon as zx,
     };
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn inspect_repo_disallows_duplicated_dirs() {
         let inspect_repo = DataRepo::default();
         let mut inspect_repo = inspect_repo.write();
@@ -610,7 +610,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn data_repo_updates_existing_entry_to_hold_inspect_data() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
@@ -640,7 +640,7 @@ mod tests {
         assert_eq!(entry.identity.url, TEST_URL);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn data_repo_tolerates_duplicate_new_component_insertions() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
@@ -673,7 +673,7 @@ mod tests {
         assert_eq!(entry.identity.url, TEST_URL);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn running_components_provide_start_time() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
@@ -703,7 +703,7 @@ mod tests {
         assert_eq!(entry.identity.url, TEST_URL);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn data_repo_tolerant_of_new_component_calls_if_diagnostics_ready_already_processed() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
@@ -736,7 +736,7 @@ mod tests {
         assert!(entry.lifecycle.is_some());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn diagnostics_repo_cant_have_more_than_one_diagnostics_data_container_per_component() {
         let data_repo = DataRepo::default();
         let mut data_repo = data_repo.write();
@@ -767,7 +767,7 @@ mod tests {
         assert!(data_repo.add_inspect_artifacts(identity, proxy, zx::Time::from_nanos(0)).is_err());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn data_repo_filters_inspect_by_selectors() {
         let data_repo = DataRepo::default();
         let realm_path = vec!["a".to_string(), "b".to_string()];

@@ -5,7 +5,7 @@ use {
     diagnostics_reader::{ArchiveReader, Inspect},
     fidl_fuchsia_diagnostics::ArchiveAccessorMarker,
     fidl_fuchsia_sys::ComponentControllerEvent,
-    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component::client::{launch, launcher},
     fuchsia_component::client::{App, AppBuilder},
     fuchsia_zircon::DurationNum,
@@ -219,7 +219,7 @@ async fn retrieve_and_validate_results(
     assert_eq!(&expected_string, &pretty_results, "goldens mismatch");
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn canonical_reader_test() -> Result<(), Error> {
     // We need to keep example_app in scope so it stays running until the end
     // of the test.
@@ -272,7 +272,7 @@ async fn canonical_reader_test() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_disabled_pipeline() -> Result<(), Error> {
     let (archivist_app, _example_app) =
         setup_environment(TestOptions { disable_filtering: true, omit_selectors: false }).await?;
@@ -281,7 +281,7 @@ async fn test_disabled_pipeline() -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_pipeline_missing_selectors() -> Result<(), Error> {
     let (archivist_app, _example_app) =
         setup_environment(TestOptions { disable_filtering: false, omit_selectors: true }).await?;

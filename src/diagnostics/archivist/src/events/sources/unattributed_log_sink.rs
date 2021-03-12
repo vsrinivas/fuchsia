@@ -57,7 +57,7 @@ impl EventSource for UnattributedLogSinkSource {
 mod tests {
     use {super::*, fidl, fidl_fuchsia_logger::LogSinkMarker, matches::assert_matches};
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn events_have_unknown_identity() {
         let mut source = UnattributedLogSinkSource::new();
         let mut publisher = source.get_publisher();

@@ -202,7 +202,6 @@ mod tests {
         super::*,
         crate::{data, puppet, results::Results},
         anyhow::{bail, format_err},
-        fuchsia_async as fasync,
         fuchsia_inspect::format::{
             bitfields::{BlockHeader, Payload},
             block::{ArrayFormat, PropertyFormat},
@@ -211,7 +210,7 @@ mod tests {
         },
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn metrics_work() -> Result<(), Error> {
         let puppet = puppet::tests::local_incomplete_puppet().await?;
         let metrics = puppet.metrics().unwrap();

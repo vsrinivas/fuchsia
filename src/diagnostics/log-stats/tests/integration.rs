@@ -6,7 +6,7 @@ use diagnostics_reader::{tree_assertion, Inspect};
 use diagnostics_testing::{EnvWithDiagnostics, Launched};
 use fuchsia_async as fasync;
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn log_attribution() {
     let env = EnvWithDiagnostics::new().await;
 

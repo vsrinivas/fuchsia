@@ -259,7 +259,7 @@ pub(crate) mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_fidl_loopback() -> Result<(), Error> {
         let mut puppet = local_incomplete_puppet().await?;
         assert_eq!(puppet.vmo.get_size().unwrap(), VMO_SIZE);

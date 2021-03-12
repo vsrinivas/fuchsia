@@ -29,22 +29,21 @@ mod tests {
     use diagnostics_data::{DROPPED_LABEL, MESSAGE_LABEL, PID_LABEL, TAG_LABEL, TID_LABEL};
     use diagnostics_log_encoding::{Argument, Record, Severity as StreamSeverity, Value};
     use fidl_fuchsia_logger::{LogFilterOptions, LogLevelFilter, LogMessage};
-    use fuchsia_async as fasync;
     use fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty};
     use fuchsia_zircon as zx;
     use std::sync::Arc;
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_log_manager_simple() {
         TestHarness::new().manager_test(false).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_log_manager_dump() {
         TestHarness::new().manager_test(true).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn unfiltered_stats() {
         let first_packet = setup_default_packet();
         let first_message = LogMessage {
@@ -253,7 +252,7 @@ mod tests {
         }}
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn attributed_inspect_two_streams_different_identities() {
         let mut harness = TestHarness::with_retained_sinks();
 
@@ -282,7 +281,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn attributed_inspect_two_v2_streams_different_identities() {
         let mut harness = TestHarness::with_retained_sinks();
         let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
@@ -295,7 +294,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn attributed_inspect_two_mixed_streams_different_identities() {
         let mut harness = TestHarness::with_retained_sinks();
         let log_reader1 = harness.create_event_stream_reader("./foo:0", "http://foo.com");
@@ -315,7 +314,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_filter_by_pid() {
         let p = setup_default_packet();
         let mut p2 = p.clone();
@@ -346,7 +345,7 @@ mod tests {
         harness.filter_test(vec![lm], Some(options)).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_filter_by_tid() {
         let mut p = setup_default_packet();
         p.metadata.pid = 0;
@@ -378,7 +377,7 @@ mod tests {
         harness.filter_test(vec![lm], Some(options)).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_filter_by_min_severity() {
         let p = setup_default_packet();
         let mut p2 = p.clone();
@@ -417,7 +416,7 @@ mod tests {
         harness.filter_test(vec![lm], Some(options)).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_filter_by_combination() {
         let mut p = setup_default_packet();
         p.metadata.pid = 0;
@@ -452,7 +451,7 @@ mod tests {
         harness.filter_test(vec![lm], Some(options)).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_filter_by_tags() {
         let mut p = setup_default_packet();
         let mut p2 = p.clone();
@@ -501,7 +500,7 @@ mod tests {
         harness.filter_test(vec![lm1, lm2], Some(options)).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_structured_log() {
         let logs = vec![
             Record {
@@ -582,7 +581,7 @@ mod tests {
         harness.filter_test(expected_logs, None).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_debuglog_drainer() {
         let log1 = TestDebugEntry::new("log1".as_bytes());
         let log2 = TestDebugEntry::new("log2".as_bytes());

@@ -111,7 +111,7 @@ mod tests {
     const ALL_NODES: [&str; 4] =
         [SINGLE_CHILD_ROOT, NAMED_CHILD_NODE, NAMED_GRANDCHILD_NODE, MULTI_CHILD_ROOT];
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn complete_vmo_tree_gets_read() -> Result<(), Error> {
         let vmos = Arc::new(TestVmos::new());
         let tree = spawn_root_tree_server(SINGLE_CHILD_ROOT, Arc::clone(&vmos))?;
@@ -131,7 +131,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn repeatedly_calls_list_children_until_all_names_are_fetched() -> Result<(), Error> {
         let vmos = Arc::new(TestVmos::new());
         let tree = spawn_root_tree_server(MULTI_CHILD_ROOT, Arc::clone(&vmos))?;

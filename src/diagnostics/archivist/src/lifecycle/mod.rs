@@ -91,7 +91,7 @@ mod tests {
 
     const TEST_URL: &'static str = "fuchsia-pkg://test";
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn reader_server_formatting() {
         let path = PathBuf::from("/test-bindings3");
 

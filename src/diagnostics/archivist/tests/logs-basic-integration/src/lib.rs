@@ -72,7 +72,7 @@ async fn listen_for_syslog() {
     assert_eq!(logs[1].msg, "log crate: 20");
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn listen_for_klog() {
     let logs = run_listener("klog");
 
@@ -85,7 +85,7 @@ async fn listen_for_klog() {
     logs.filter(|m| futures::future::ready(m.msg == msg)).next().await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn listen_for_klog_routed_stdio() {
     let mut logs = run_listener("klog");
 

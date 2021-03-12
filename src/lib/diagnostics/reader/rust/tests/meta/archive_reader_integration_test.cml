@@ -14,24 +14,17 @@
     capabilities: [],
     offer: [
         {
-            protocol: "fuchsia.boot.WriteOnlyLog",
-            from: "parent",
-            to: [ "#driver" ],
-        },
-        {
             protocol: "fuchsia.diagnostics.ArchiveAccessor",
             from: "#archivist",
             to: [ "#driver" ],
         },
         {
             protocol: "fuchsia.logger.LogSink",
-            from: "#archivist",
-            to: [ "#driver" ],
-        },
-        {
-            protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#archivist" ],
+            to: [
+                "#archivist",
+                "#driver",
+            ],
         },
         {
             protocol: "fuchsia.sys2.EventSource",
@@ -46,14 +39,14 @@
             ],
             from: "framework",
             to: [ "#archivist" ],
-            modes: ["async"],
+            modes: [ "async" ],
         },
         {
             event: "capability_ready",
             from: "framework",
             to: [ "#archivist" ],
             filter: { name: "diagnostics" },
-            modes: ["async"],
+            modes: [ "async" ],
         },
         {
             directory: "config-data",

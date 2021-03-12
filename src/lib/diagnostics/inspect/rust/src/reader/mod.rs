@@ -504,11 +504,10 @@ mod tests {
             LinearHistogramParams,
         },
         anyhow::Error,
-        fuchsia_async as fasync,
         futures::prelude::*,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn read_vmo() {
         let inspector = Inspector::new();
         let root = inspector.root();
@@ -754,7 +753,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn lazy_nodes() -> Result<(), Error> {
         let inspector = Inspector::new();
         inspector.root().record_int("int", 3);

@@ -14,10 +14,7 @@
     ],
     use: [
         {
-            protocol: [
-                "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.diagnostics.ArchiveAccessor",
-            ],
+            protocol: [ "fuchsia.diagnostics.ArchiveAccessor" ],
         },
         {
             protocol: "fuchsia.sys2.Realm",

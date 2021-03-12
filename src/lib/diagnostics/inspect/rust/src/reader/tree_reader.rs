@@ -123,10 +123,9 @@ mod tests {
     use {
         super::*,
         crate::{assert_inspect_tree, reader, Inspector},
-        anyhow, fuchsia_async as fasync,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_read() -> Result<(), anyhow::Error> {
         let inspector = test_inspector();
         let hierarchy = read(&inspector).await?;
@@ -142,7 +141,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_load_snapshot_tree() -> Result<(), anyhow::Error> {
         let inspector = test_inspector();
         let mut snapshot_tree = load_snapshot_tree(&inspector).await?;
@@ -173,7 +172,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn missing_value_parse_failure() -> Result<(), anyhow::Error> {
         let inspector = Inspector::new();
         let _lazy_child = inspector.root().create_lazy_child("lazy", || {
@@ -190,7 +189,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn missing_value_not_found() -> Result<(), anyhow::Error> {
         let inspector = Inspector::new();
         inspector.state().map(|state| {

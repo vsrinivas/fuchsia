@@ -13,7 +13,7 @@ use fuchsia_syslog::levels::INFO;
 use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use futures::{channel::mpsc, StreamExt};
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn same_log_sink_simultaneously() {
     // launch archivist-for-embedding.cmx
     let launcher = connect_to_service::<LauncherMarker>().unwrap();

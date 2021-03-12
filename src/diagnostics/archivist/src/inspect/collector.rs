@@ -203,7 +203,7 @@ mod tests {
         vmo
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn inspect_data_collector() {
         let path = PathBuf::from("/test-bindings");
         // Make a ServiceFs containing two files.
@@ -275,7 +275,7 @@ mod tests {
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn inspect_data_collector_tree() {
         let path = PathBuf::from("/test-bindings2");
 

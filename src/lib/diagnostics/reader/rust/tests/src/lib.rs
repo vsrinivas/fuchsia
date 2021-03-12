@@ -5,11 +5,10 @@
 use {
     anyhow::Error,
     diagnostics_reader::{ArchiveReader, Inspect},
-    fuchsia_async as fasync,
     fuchsia_inspect::testing::assert_inspect_tree,
 };
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn verify_proxy_reuse() -> Result<(), Error> {
     let archive_reader = ArchiveReader::new().add_selector(
         "archivist:root/all_archive_accessor:archive_accessor_connections_opened".to_string(),

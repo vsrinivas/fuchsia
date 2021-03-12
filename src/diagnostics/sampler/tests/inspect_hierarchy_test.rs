@@ -60,7 +60,7 @@ async fn sampler_inspect_hierarchy() -> DiagnosticsHierarchy {
 /// Runs the Lapis Sampler and a test component that can have its inspect properties
 /// manipulated by the test via fidl, and uses mock services to determine that when
 /// the reboot server goes down, lapis continues to run as expected.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn sampler_inspect_test() {
     let (mut sampler_app, _test_component, _reboot_controller) = setup().await;
 

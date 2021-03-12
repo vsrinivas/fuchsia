@@ -7,7 +7,6 @@ use {
     diagnostics_hierarchy::assert_data_tree,
     diagnostics_reader::{ArchiveReader, Inspect},
     diagnostics_testing::Severity,
-    fuchsia_async as fasync,
     fuchsia_component::client::ScopedInstance,
     fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
     futures::stream::StreamExt,
@@ -19,7 +18,7 @@ const DRIVER_COMPONENT: &str =
 const TEST_COMPONENT: &str =
     "fuchsia-pkg://fuchsia.com/archivist-integration-tests-v2#meta/stub_inspect_component.cm";
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn read_v2_components_inspect() {
     let _test_app = ScopedInstance::new("coll".to_string(), TEST_COMPONENT.to_string())
         .await
@@ -40,9 +39,8 @@ async fn read_v2_components_inspect() {
 }
 
 // This test verifies that Archivist knows about logging from this component.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn log_attribution() {
-    fuchsia_syslog::init().unwrap();
     let mut result =
         ArchiveReader::new().snapshot_then_subscribe::<Logs>().expect("snapshot then subscribe");
 
@@ -55,7 +53,7 @@ async fn log_attribution() {
         assert_eq!(log_record.metadata.severity, Severity::Info);
         assert_data_tree!(log_record.payload.unwrap(), root: contains {
             "message".to_string() => log_str.to_string(),
-            "tag".to_string() => "archivist_integration_tests".to_string(),
+            "tag".to_string() => "log_attribution".to_string(),
         });
     }
 }

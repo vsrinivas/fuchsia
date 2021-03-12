@@ -5,7 +5,6 @@
 use {
     anyhow::{anyhow, bail, format_err, Context, Error},
     fidl_fuchsia_sys::ComponentControllerEvent,
-    fuchsia_async as fasync,
     fuchsia_component::client::{launcher, AppBuilder},
     futures::StreamExt,
     glob::glob,
@@ -71,7 +70,7 @@ fn verify_out(hub_out_path: &Path) -> Result<(), Error> {
     Ok(())
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn out_can_be_read() -> Result<(), Error> {
     fs::create_dir_all(&*CONFIG_PATH).context("create archivist config dir")?;
     fs::create_dir_all(*ARCHIVE_PATH).context("create archive dir")?;

@@ -7,7 +7,7 @@ use {
     fidl::endpoints::create_proxy,
     fidl_fuchsia_diagnostics::{ArchiveAccessorMarker, SelectorArgument},
     fidl_fuchsia_sys::ComponentControllerEvent,
-    fuchsia_async::{self as fasync, DurationExt, TimeoutExt},
+    fuchsia_async::{DurationExt, TimeoutExt},
     fuchsia_component::client::{launch, launcher},
     fuchsia_component::client::{App, AppBuilder},
     fuchsia_zircon::DurationNum,
@@ -240,7 +240,7 @@ async fn retrieve_and_validate_results(
     }
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn unified_reader() -> Result<(), Error> {
     // We need to keep example_app in scope so it stays running until the end
     // of the test.

@@ -641,7 +641,6 @@ mod tests {
         super::*,
         crate::*,
         fidl_test_inspect_validate::Number,
-        fuchsia_async as fasync,
         fuchsia_inspect::format::{
             bitfields::{BlockHeader, Payload as BlockPayload},
             block_type::BlockType,
@@ -838,7 +837,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_to_string_order() -> Result<(), Error> {
         // Make sure property payloads are distinguished by name, value, and type
         // but ignore id and parent, and that prefix is used.

@@ -494,7 +494,7 @@ mod tests {
         Ok((env, app))
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn lifecycle_events_for_component() {
         let (_env, _app) = start_component("test-lifecycle").await.unwrap();
 
@@ -526,7 +526,7 @@ mod tests {
         }
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn inspect_data_for_component() -> Result<(), anyhow::Error> {
         let (_env, _app) = start_component("test-ok").await?;
 
@@ -573,7 +573,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn timeout() -> Result<(), anyhow::Error> {
         let (_env, _app) = start_component("test-timeout").await?;
 
@@ -586,7 +586,7 @@ mod tests {
         Ok(())
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn component_selector() {
         let selector = ComponentSelector::new(vec!["a.cmx".to_string()]);
         assert_eq!(selector.relative_moniker_str(), "a.cmx");
@@ -605,7 +605,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn custom_archive() {
         let proxy = spawn_fake_archive();
         let result = ArchiveReader::new()

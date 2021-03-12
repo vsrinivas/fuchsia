@@ -314,10 +314,9 @@ mod tests {
         crate::trials::{Step, Trial},
         crate::*,
         fidl_test_inspect_validate::*,
-        fuchsia_async as fasync,
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn unimplemented_works() -> Result<(), Error> {
         let mut int_maker = trial_with_action(
             "foo",

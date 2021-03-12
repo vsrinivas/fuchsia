@@ -116,7 +116,7 @@ mod tests {
         std::collections::{HashMap, HashSet},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_load_hierarchy() -> Result<(), Error> {
         let (client_proxy, server_stream) =
             fidl::endpoints::create_proxy_and_stream::<InspectMarker>()?;

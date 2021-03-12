@@ -24,6 +24,7 @@ iquery_deps = [
   "//src/lib/diagnostics/testing/rust",
   "//src/lib/fdio/rust:fdio",
   "//src/lib/fidl/rust/fidl",
+  "//src/lib/fuchsia",
   "//src/lib/fuchsia-async",
   "//src/lib/fuchsia-component",
   "//src/lib/syslog/rust:syslog",

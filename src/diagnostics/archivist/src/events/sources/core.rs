@@ -112,7 +112,7 @@ pub mod tests {
         futures::{future::RemoteHandle, FutureExt, StreamExt},
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn event_stream() {
         let (mut source_proxy, stream_receiver) = spawn_fake_event_source();
         let (sender, mut event_stream) = mpsc::channel(CHANNEL_CAPACITY);

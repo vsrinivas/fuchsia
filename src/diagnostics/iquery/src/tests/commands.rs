@@ -7,7 +7,6 @@
 use {
     crate::{assert_command, commands::expand_paths, tests::utils, types::Error},
     diagnostics_testing::{EnvWithDiagnostics, Launched},
-    fuchsia_async as fasync,
     matches::assert_matches,
     std::path::Path,
     tempfile::tempdir,
@@ -15,7 +14,7 @@ use {
 
 // List command
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_list() {
     let (_env, app) = utils::start_basic_component("list-test").await.expect("create comp 1");
     let (_env2, app2) = utils::start_basic_component("list-test2").await.expect("create comp 2");
@@ -29,7 +28,7 @@ async fn test_list() {
     utils::wait_for_terminated(app2).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_list_no_duplicates() {
     let (_env, app) = utils::start_test_component("list-dup-test").await.expect("create comp 1");
     assert_command!(
@@ -41,7 +40,7 @@ async fn test_list_no_duplicates() {
     utils::wait_for_terminated(app).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_list_filter_manifest() {
     let (_env, app) =
         utils::start_basic_component("list-filter-test").await.expect("create comp 1");
@@ -57,7 +56,7 @@ async fn test_list_filter_manifest() {
     utils::wait_for_terminated(app2).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_list_with_urls() {
     let (_env, app) = utils::start_basic_component("list-url-test").await.expect("create comp 1");
     let (_env, app2) = utils::start_test_component("list-url-test2").await.expect("create comp 2");
@@ -71,7 +70,7 @@ async fn test_list_with_urls() {
     utils::wait_for_terminated(app2).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn list_archive() {
     let test_env = EnvWithDiagnostics::new().await;
     let Launched { app, .. } = test_env.launch(utils::BASIC_COMPONENT_URL, None);
@@ -89,7 +88,7 @@ async fn list_archive() {
 
 // List files command
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn list_files_empty_path_uses_cwd() {
     std::env::set_current_dir(Path::new("/hub")).expect("change dir");
     let (_env, app) =
@@ -102,7 +101,7 @@ async fn list_files_empty_path_uses_cwd() {
     utils::wait_for_terminated(app).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn list_files() {
     let (_env, app) =
         utils::start_basic_component("list-file-test-2").await.expect("create comp 1");
@@ -122,13 +121,13 @@ async fn list_files() {
 
 // Selectors command
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_selectors_empty() {
     let result = utils::execute_command(&["selectors"]).await;
     assert_matches!(result, Err(Error::InvalidArguments(_)));
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_selectors() {
     let (_env, app) = utils::start_basic_component("selectors-test").await.expect("create comp 1");
     let (_env2, app2) =
@@ -150,7 +149,7 @@ async fn test_selectors() {
     utils::wait_for_terminated(app3).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_selectors_filter() {
     let (_env, app) =
         utils::start_basic_component("selectors-filter").await.expect("create comp 1");
@@ -170,7 +169,7 @@ async fn test_selectors_filter() {
     utils::wait_for_terminated(app2).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn selectors_archive() {
     let test_env = EnvWithDiagnostics::new().await;
     let Launched { app, .. } = test_env.launch(utils::BASIC_COMPONENT_URL, None);
@@ -189,13 +188,13 @@ async fn selectors_archive() {
 
 // Show file
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_no_paths() {
     let result = utils::execute_command(&["show-file"]).await;
     assert_matches!(result, Err(Error::InvalidArguments(_)));
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_invalid_location() {
     let dir = tempdir().unwrap();
     let file_path = dir.path().join("root.inspect").to_string_lossy().to_string();
@@ -203,7 +202,7 @@ async fn test_invalid_location() {
     assert_matches!(result, Err(Error::ReadLocation(path, _)) if path == file_path);
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn show_file_test() {
     let (_env, app) =
         utils::start_basic_component("show-file-test-1").await.expect("create comp 1");
@@ -221,7 +220,7 @@ async fn show_file_test() {
     utils::wait_for_terminated(app2).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn inspect_vmo_file_directly() {
     let (_env, app) = utils::start_test_component("show-file-vmo-2").await.expect("create comp 2");
     let paths = expand_paths(&[
@@ -243,7 +242,7 @@ async fn inspect_vmo_file_directly() {
 
 // Show
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn test_no_selectors() {
     let (_env, app) = utils::start_basic_component("show-all-test").await.expect("create comp 1");
     let (_env2, app2) =
@@ -258,7 +257,7 @@ async fn test_no_selectors() {
     utils::wait_for_terminated(app2).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn show_test() {
     let (_env, app) = utils::start_basic_component("show-test").await.expect("create comp 1");
     let (_env2, app2) = utils::start_basic_component("show-test2").await.expect("create comp 2");
@@ -282,7 +281,7 @@ async fn show_test() {
     utils::wait_for_terminated(app4).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn empty_result_on_null_payload() {
     let (_env, app) = utils::start_basic_component("show-test-empty").await.expect("create comp 1");
     let result =
@@ -292,7 +291,7 @@ async fn empty_result_on_null_payload() {
     utils::wait_for_terminated(app).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn show_filter_manifest() {
     let (_env, app) = utils::start_basic_component("show-filter").await.expect("create comp 1");
     let (_env, app2) = utils::start_test_component("show-filter2").await.expect("create comp 2");
@@ -310,7 +309,7 @@ async fn show_filter_manifest() {
     utils::wait_for_terminated(app2).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn show_filter_manifest_no_selectors() {
     let (_env, app) =
         utils::start_basic_component("show-filter-no-selectors").await.expect("create comp 1");
@@ -329,7 +328,7 @@ async fn show_filter_manifest_no_selectors() {
     utils::wait_for_terminated(app2).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn show_archive() {
     let test_env = EnvWithDiagnostics::new().await;
     let Launched { app, .. } = test_env.launch(utils::BASIC_COMPONENT_URL, None);
@@ -346,7 +345,7 @@ async fn show_archive() {
     utils::wait_for_terminated(app).await;
 }
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn list_accessors() {
     std::env::set_current_dir(Path::new("/hub/c")).expect("change dir");
     assert_command!(

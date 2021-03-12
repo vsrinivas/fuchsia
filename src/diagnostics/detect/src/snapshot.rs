@@ -214,7 +214,7 @@ mod tests {
 
     /// Tests that the node responds to the FileCrashReport message and that the expected crash
     /// report is received by the CrashReporter service.
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn test_crash_report_content() {
         // The crash report signature to use and verify against
         let crash_report_signature = "TestCrashReportSignature";

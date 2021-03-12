@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 use diagnostics_reader::{ArchiveReader, Data, Inspect};
 use fidl_fuchsia_sys::ComponentControllerEvent;
-use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, launcher, App};
 use futures::StreamExt;
 
@@ -56,7 +55,7 @@ async fn setup() -> (App, App) {
 /// manipulated by the test via fidl, and uses cobalt mock and log querier to
 /// verify that the sampler observers changes as expected, and logs them to
 /// cobalt as expected.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn accessor_truncation_test() {
     let (_test_component, _alternative_test_component) = setup().await;
 

@@ -41,7 +41,7 @@ async fn setup(
 /// Runs the Lapis Sampler and a test component that can have its inspect properties
 /// manipulated by the test via fidl, and uses mock services to determine that when
 /// the reboot server goes down, lapis continues to run as expected.
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn reboot_server_crashed_test() {
     let (mut sampler_app, _test_component, test_app_controller, logger_querier, reboot_controller) =
         setup().await;

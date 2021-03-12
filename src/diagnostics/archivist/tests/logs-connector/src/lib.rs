@@ -24,7 +24,7 @@ use fuchsia_syslog_listener::{run_log_listener_with_proxy, LogProcessor};
 use fuchsia_zircon as zx;
 use futures::{channel::mpsc, StreamExt, TryStreamExt};
 
-#[fasync::run_singlethreaded(test)]
+#[fuchsia::test]
 async fn same_log_sink_simultaneously_via_connector() {
     let (client, server) = zx::Channel::create().unwrap();
     let mut serverend = Some(ServerEnd::new(server));

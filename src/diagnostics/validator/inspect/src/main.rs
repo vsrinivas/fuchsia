@@ -133,7 +133,7 @@ async fn run_all_puppets(urls: Vec<String>, results: &mut results::Results) {
 mod tests {
     use super::*;
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn url_is_required() {
         let mut results = results::Results::new();
         run_all_puppets(vec![], &mut results).await;
@@ -141,7 +141,7 @@ mod tests {
         assert!(results.to_json().contains("At least one"));
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn bad_url_fails() {
         let mut results = results::Results::new();
         run_all_puppets(vec!["a".to_owned()], &mut results).await;
@@ -149,7 +149,7 @@ mod tests {
         assert!(results.to_json().contains("URL may be invalid"), "{}", results.to_json());
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn all_urls_are_tried() {
         let mut results = results::Results::new();
         run_all_puppets(vec!["a".to_owned(), "b".to_owned()], &mut results).await;

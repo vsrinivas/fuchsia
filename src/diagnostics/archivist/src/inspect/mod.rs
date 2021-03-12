@@ -387,7 +387,7 @@ mod tests {
         vmo
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn inspect_data_collector() {
         let path = PathBuf::from("/test-bindings");
         // Make a ServiceFs containing two files.
@@ -459,7 +459,7 @@ mod tests {
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn inspect_data_collector_tree() {
         let path = PathBuf::from("/test-bindings2");
 
@@ -544,7 +544,7 @@ mod tests {
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn reader_server_formatting() {
         let path = PathBuf::from("/test-bindings3");
 
@@ -585,7 +585,7 @@ mod tests {
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn read_server_formatting_tree() {
         let path = PathBuf::from("/test-bindings4");
 
@@ -621,7 +621,7 @@ mod tests {
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn reader_server_reports_errors() {
         let path = PathBuf::from("/test-bindings-errors-01");
 
@@ -657,7 +657,7 @@ mod tests {
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn inspect_repo_disallows_duplicated_dirs() {
         let inspect_repo = DataRepo::default();
         let mut inspect_repo = inspect_repo.write();
@@ -687,32 +687,32 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn three_directories_two_batches() {
         stress_test_diagnostics_repository(vec![33, 33, 33], vec![64, 35]).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn max_batch_intact_two_batches_merged() {
         stress_test_diagnostics_repository(vec![64, 63, 1], vec![64, 64]).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn sixty_four_vmos_packed_into_one_batch() {
         stress_test_diagnostics_repository([1usize; 64].to_vec(), vec![64]).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn component_with_more_than_max_batch_size_is_split_in_two() {
         stress_test_diagnostics_repository(vec![65], vec![64, 1]).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn errorful_component_doesnt_halt_iteration() {
         stress_test_diagnostics_repository(vec![64, 65, 64, 64], vec![64, 64, 64, 64, 1]).await;
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn merge_errorful_component_into_next_batch() {
         stress_test_diagnostics_repository(vec![63, 65], vec![64, 64]).await;
     }

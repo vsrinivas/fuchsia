@@ -17,6 +17,7 @@ rustc_test("config-validation") {
   name = "config_validation_test"
   deps = [
     "//src/diagnostics/sampler:lib",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
   ]
 
@@ -45,6 +46,7 @@ rustc_test("test-bin") {
     "//src/diagnostics/sampler/tests/fidl-for-test:fuchsia.samplertestcontroller-rustc",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/diagnostics/testing/rust",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -68,6 +70,7 @@ rustc_test("failure-state-test-bin") {
     "//src/diagnostics/sampler/tests/fidl-for-test:fuchsia.samplertestcontroller-rustc",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/diagnostics/testing/rust",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",
@@ -95,6 +98,7 @@ rustc_test("inspect-hierarchy-test-bin") {
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/diagnostics/reader/rust",
     "//src/lib/diagnostics/testing/rust",
+    "//src/lib/fuchsia",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/zircon/rust:fuchsia-zircon",

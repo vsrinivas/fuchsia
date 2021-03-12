@@ -132,9 +132,7 @@ async fn maintain(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn smoke_test() {
         assert!(true);
     }

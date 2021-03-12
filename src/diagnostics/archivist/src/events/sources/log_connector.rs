@@ -107,7 +107,7 @@ mod tests {
         client
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn listen_for_events() {
         let (connector, request_stream) =
             fidl::endpoints::create_proxy_and_stream::<LogConnectorMarker>().expect("create proxy");
