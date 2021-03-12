@@ -811,6 +811,34 @@ You can use libraries for the initialization if your component is written in
 Note: If the component isn't  written in C++ or Rust you can use the existing
 libraries as a template for how to perform the initialization.
 
+### Shell binaries
+
+Your project may contain a `fuchsia_shell_package()` build target designed to
+execute in a shell environment. Many of these packages also contain a CMX file
+to support invoking the binary as a v1 component.
+When [exposing your services][#expose-services] to the `sys` environment,
+include any services required by shell binaries.
+
+Note: If your component requires `shell-commands` directory access to invoke
+shell binaries, see [directory features][#directory-features] for more details.
+
+Shell binaries are run in the `sys` [environment][glossary-environment],
+and have access to all the capabilities provided there.
+Capabilities are not defined by the CMX manifest file unless shell binaries are
+invoked as a component using the `run` command.
+
+When working with shell binaries, consider the following:
+
+-   If you only need access to the binary through a shell interface, remove the
+    unused CMX file entirely. Do not replace it with a corresponding CML file.
+-   If you need to access the binary from somewhere else in the v2 component
+    topology (such as tests), migrate the functionality into a new v2 component
+    instead.
+
+Note: There is no v2 equivalent of using `run` to invoke a shell binary
+**as a component**. If you require this feature for your component,
+please reach out to [component-framework-dev][cf-dev-list].
+
 ## Converting CMX features {:#cmx-features}
 
 This section provides guidance on migrating CMX [`features`][cmx-services].
