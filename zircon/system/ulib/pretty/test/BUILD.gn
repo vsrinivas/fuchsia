@@ -21,7 +21,10 @@ test("pretty-test") {
       configs -= fdio_config
     }
   }
-  sources = [ "test.c" ]
+  sources = [
+    "test.c",
+    "test_cpp.cc",
+  ]
   deps = [
     "//sdk/lib/fdio",
     "//zircon/public/lib/pretty",
