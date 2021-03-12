@@ -132,13 +132,6 @@ static void write_reg_hour(uint8_t hour, bool reg_is_binary, bool reg_is_24_hour
   write_reg_raw(REG_HOURS, data);
 }
 
-static zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
-  uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;
-  int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
-}
-
 // Retrieve the hour format and data mode bits. Note that on some
 // platforms (including the acer) these bits can not be reliably
 // written. So we must instead parse and provide the data in whatever
@@ -205,11 +198,6 @@ static zx_status_t intel_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* rtc
   }
 
   write_time(rtc);
-  // TODO(kulakowski) This isn't the place for this long term.
-  zx_status_t status = set_utc_offset(rtc);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
-  }
   return ZX_OK;
 }
 
@@ -261,11 +249,6 @@ static zx_status_t intel_rtc_bind(void* ctx, zx_device_t* parent) {
 
   fuchsia_hardware_rtc_Time rtc;
   sanitize_rtc(NULL, &rtc, intel_rtc_get, intel_rtc_set);
-  status = set_utc_offset(&rtc);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
-  }
-
   return ZX_OK;
 #else
   return ZX_ERR_NOT_SUPPORTED;

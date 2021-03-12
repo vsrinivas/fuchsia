@@ -88,16 +88,6 @@ zx_status_t Pl031::SetRtc(FidlRtc::wire::Time rtc) {
 
   MmioWrite32(static_cast<uint32_t>(SecondsSinceEpoch(rtc)), &regs_->lr);
 
-  // Set the UTC offset.
-  const zx::time time_since_epoch = zx::time(SecondsSinceEpoch(rtc) * 1'000'000'000);
-  const zx::duration utc_offset = time_since_epoch - zx::clock::get_monotonic();
-
-  // TODO(fxb/31358): Replace get_root_resource().
-  const zx_status_t status = zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, utc_offset.get());
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
-  }
-
   return ZX_OK;
 }
 

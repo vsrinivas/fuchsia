@@ -19,13 +19,6 @@ typedef struct {
   i2c_protocol_t i2c;
 } pcf8563_context;
 
-static zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
-  uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;
-  int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
-}
-
 static zx_status_t pcf8563_rtc_get(void* ctx, fuchsia_hardware_rtc_Time* rtc) {
   ZX_DEBUG_ASSERT(ctx);
 
@@ -78,11 +71,6 @@ static zx_status_t pcf8563_rtc_set(void* ctx, const fuchsia_hardware_rtc_Time* r
   zx_status_t err = i2c_write_read_sync(&context->i2c, write_buf, sizeof write_buf, NULL, 0);
   if (err) {
     return err;
-  }
-
-  zx_status_t status = set_utc_offset(rtc);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
   }
 
   return ZX_OK;
@@ -140,11 +128,6 @@ static zx_status_t pcf8563_bind(void* ctx, zx_device_t* parent) {
 
   fuchsia_hardware_rtc_Time rtc;
   sanitize_rtc(context, &rtc, pcf8563_rtc_get, pcf8563_rtc_set);
-  status = set_utc_offset(&rtc);
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
-  }
-
   return ZX_OK;
 }
 

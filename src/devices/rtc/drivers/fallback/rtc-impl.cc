@@ -18,13 +18,6 @@
 
 namespace fallback_rtc {
 
-zx_status_t set_utc_offset(const fuchsia_hardware_rtc_Time* rtc) {
-  uint64_t rtc_nanoseconds = seconds_since_epoch(rtc) * 1000000000;
-  int64_t offset = rtc_nanoseconds - zx_clock_get_monotonic();
-  // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
-  return zx_clock_adjust(get_root_resource(), ZX_CLOCK_UTC, offset);
-}
-
 static zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn);
 static zx_status_t fidl_Set(void* ctx, const fuchsia_hardware_rtc_Time* rtc, fidl_txn_t* txn);
 
@@ -54,9 +47,6 @@ class FallbackRtc : public RtcDevice, public ddk::EmptyProtocol<ZX_PROTOCOL_RTC>
     if (status == ZX_OK && size == 1) {
       uint8_t metadata;
       status = DdkGetMetadata(DEVICE_METADATA_TEST, &metadata, 1, &size);
-      if (status == ZX_OK && metadata == PDEV_PID_FALLBACK_RTC_TEST) {
-        is_isolated_for_testing = true;
-      }
     }
 
     return DdkAdd("fallback-rtc");
@@ -84,14 +74,6 @@ class FallbackRtc : public RtcDevice, public ddk::EmptyProtocol<ZX_PROTOCOL_RTC>
     }
 
     rtc_last_ = rtc;
-
-    if (!is_isolated_for_testing) {
-      auto status = set_utc_offset(&rtc_last_);
-      if (status != ZX_OK) {
-        zxlogf(ERROR, "The RTC driver was unable to set the UTC clock!");
-      }
-    }
-
     return ZX_OK;
   }
 
@@ -104,7 +86,6 @@ class FallbackRtc : public RtcDevice, public ddk::EmptyProtocol<ZX_PROTOCOL_RTC>
   };
 
   fuchsia_hardware_rtc_Time rtc_last_;
-  bool is_isolated_for_testing = false;
 };
 
 zx_status_t fidl_Get(void* ctx, fidl_txn_t* txn) {
