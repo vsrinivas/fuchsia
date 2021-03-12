@@ -176,6 +176,10 @@ resource table PresentArgs {
     4: bool squashable;
 };
 
+/// A user-defined identifier for future presentation info. A maximum of 8
+/// future presentation counts is enough for the current usage of these APIs.
+alias FuturePresentationInfos = vector<fuchsia.scenic.scheduling.PresentationInfo>:8;
+
 /// Each Flatland instance contains a Graph, which consists of a set of objects, and the
 /// relationships between those objects. The client can specify a subset of those objects
 /// (specifically, the directed acyclic graph starting at the root transform) to be presented as
@@ -191,42 +195,50 @@ resource table PresentArgs {
 protocol Flatland {
     /// Complete execution of all feed-forward operations.
     ///
-    /// If executing an operation produces an error (e.g., CreateTransform(0)), Present() will
-    /// return an error. Operations that produce errors are ignored. Future operations are still
-    /// executed.
+    /// If executing an operation produces an error (e.g., CreateTransform(0)),
+    /// [`Present`]() will; return an error. Operations that produce errors are
+    /// ignored. Future operations are still executed.
     ///
-    /// The client may only call Present() when they have a non-zero number of "present tokens",
-    /// which are tracked by the server. The server may increment the counter when it fires the
-    /// OnPresentTokensReturned() event, which informs the client when it receives additional
-    /// tokens. Each Present() call uses one "present token" and decrements the server count by
-    /// one. If the client calls Present() when no tokens remain, it will return
+    /// The client may only call [`Present`] when they have a non-zero number
+    /// of "present tokens", which are tracked by the server. The server may
+    /// increment the counter when it fires the [`OnPresentProcessed`] event, which
+    /// informs the client when it receives additional tokens. Each [`Present`]
+    /// call uses one "present token" and decrements the server count by one. If
+    /// the client calls [`Present`] when no tokens remain, it will return
     /// `NO_PRESENTS_REMAINING`.
     ///
-    /// The client should assume that prior to receiving any OnPresentTokensReturned() events, they
-    /// have one present token.
+    /// The client should assume that prior to receiving any [`OnPresentProcessed`]
+    /// events, they have one present token.
     ///
-    /// Every Present() call results in one OnPresentTokensReturned() event, and one
-    /// OnFramePresented() event, typically in that order.
+    /// Every [`Present`] call results in one [`OnPresentProcessed`] event, and one
+    /// [`OnFramePresented`] event, typically in that order.
     ///
-    /// When the commands flushed by Present() make it to display, an `OnFramePresented`
-    /// event is fired. This event includes information pertaining to all Present()s that had content
-    /// that were part of that frame.
+    /// When the commands flushed by [`Present`] make it to display, an
+    /// [`OnFramePresented`] event is fired. This event includes information
+    /// pertaining to all [`Present`]s that had content that were part of that
+    /// frame.
     ///
-    /// See `PresentArgs` documentation above for more detailed information on what arguments are
-    /// passed in and their role.
+    /// See [`fuchsia.ui.scenic.internal/PresentArgs`] documentation above for
+    /// more detailed information on what arguments are passed in and their
+    /// role.
     ///
-    /// TODO(fxbug.dev/36166): Present should stop execution, and kill the channel, when irrecoverable
-    /// errors are detected.
+    /// TODO(fxbug.dev/36166): [`Present`] should stop execution, and kill the
+    /// channel, when irrecoverable errors are detected.
     Present(PresentArgs args) -> () error Error;
 
-    /// Clients may use the timing of this event to begin their rendering work.
+    /// This event is fired when clients should expect minimal resource
+    /// contention. Clients may use the timing of this event to begin their
+    /// rendering work, using the information returned to inform their
+    /// scheduling decsisions.
     ///
-    /// This event is fired to give the client additional present tokens, indicating that the
-    /// client can call Present() additional times.
-    -> OnPresentTokensReturned(uint32 present_tokens);
+    /// - response `present_tokens` the number of present tokens returned to the
+    /// client so that the client can call [`Present`] further times.
+    /// - response `future_presentation_infos` information about future
+    /// presentation and latch times.
+    -> OnPresentProcessed(uint32 present_tokens, FuturePresentationInfos future_presentation_infos);
 
-    /// This event is fired whenever a set of one or more Present()s are presented simultaneously,
-    /// and are therefore no longer in flight.
+    /// This event is fired whenever a set of one or more [`Present`]s are
+    /// presented simultaneously, and are therefore no longer in flight.
     /// TODO(fxbug.dev/63305): remove `num_presents_allowed` from this event.
     -> OnFramePresented(fuchsia.scenic.scheduling.FramePresentedInfo frame_presented_info);
 

@@ -113,12 +113,16 @@ class MockSessionUpdater : public SessionUpdater {
     on_frame_presented_call_count_++;
   }
 
+  // |SessionUpdater|
+  void OnCpuWorkDone() override { cpu_work_done_count_++; };
+
   void SetUpdateSessionsReturnValue(SessionUpdater::UpdateResults new_value) {
     update_sessions_return_value_ = new_value;
   }
 
   uint64_t update_sessions_call_count() { return update_sessions_call_count_; }
   uint64_t on_frame_presented_call_count() { return on_frame_presented_call_count_; }
+  uint64_t cpu_work_done_count() const { return cpu_work_done_count_; }
   const std::unordered_map<scheduling::SessionId, scheduling::PresentId>&
   last_sessions_to_update() {
     return last_sessions_to_update_;
@@ -135,6 +139,8 @@ class MockSessionUpdater : public SessionUpdater {
 
   uint64_t update_sessions_call_count_ = 0;
   uint64_t on_frame_presented_call_count_ = 0;
+  uint64_t cpu_work_done_count_ = 0;
+
   std::unordered_map<scheduling::SessionId, scheduling::PresentId> last_sessions_to_update_;
 
   std::unordered_map<scheduling::SessionId,
