@@ -95,7 +95,7 @@ See [registering a component resolver](#registering).
 ## Built-in boot resolver
 
 The component manager provides a built-in component resolver called `boot-resolver`, which is
-registered to the `fuchsia-pkg` scheme in component manager's built-in environment.
+registered to the `fuchsia-boot` scheme in component manager's built-in environment.
 
 This resolver can be routed, and the built-in environment can be extended.
 See [`environments`][environment].
