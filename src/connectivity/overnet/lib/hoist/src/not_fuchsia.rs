@@ -69,6 +69,7 @@ impl HostOvernet {
 
 pub struct Hoist {
     host_overnet: HostOvernet,
+    node: Arc<Router>,
     _task: Task<()>,
 }
 
@@ -85,6 +86,7 @@ impl Hoist {
 
         Ok(Self {
             host_overnet: HostOvernet::new(node.clone())?,
+            node: node.clone(),
             _task: Task::spawn(async move {
                 retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || {
                     run_ascendd_connection(node.clone(), None, None)
@@ -92,6 +94,10 @@ impl Hoist {
                 .await
             }),
         })
+    }
+
+    pub fn node(&self) -> Arc<Router> {
+        self.node.clone()
     }
 }
 
