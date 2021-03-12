@@ -179,7 +179,11 @@ func getRevision(path string) (string, int64, error) {
 		return "", 0, nil
 	}
 	var stdout bytes.Buffer
-	cmd := exec.Command("git", "--literal-pathspecs", "log", "-n", "1", `--pretty=format:%H:%ct`, path)
+	rel, err := filepath.Rel(filepath.Dir(path), path)
+	if err != nil {
+		return "", 0, err
+	}
+	cmd := exec.Command("git", "--literal-pathspecs", "log", "-n", "1", `--pretty=format:%H:%ct`, rel)
 	cmd.Dir = filepath.Dir(path)
 	cmd.Stdout = &stdout
 	if err := cmd.Run(); err != nil {
