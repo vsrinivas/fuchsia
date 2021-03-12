@@ -29,6 +29,7 @@ group("tests") {
   deps = [
     ":zbi-input-chrdev-test",
     ":zbi-input-size-limit-test",
+    ":zbi-storage-kernel-test",
   ]
 }
 
@@ -44,7 +45,12 @@ template("input_test") {
 
   zbi_input("$test_name.input") {
     testonly = true
-    forward_variables_from(invoker, "*", [ "expected" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "expected",
+                             "fields",
+                           ])
   }
 
   action("$test_name.json") {
@@ -55,8 +61,10 @@ template("input_test") {
     outputs = [ "$target_out_dir/$target_name" ]
     inputs = [ jq_path ]
     script = "jq-test.sh"
+
+    fields = string_join(", ", invoker.fields)
     args = rebase_path(inputs + sources + outputs, root_build_dir) +
-           [ "[ .[] | {type, size} ]" ]
+           [ "[ .[] | {$fields} ]" ]
   }
 
   generated_file("$test_name.expected.json") {
@@ -72,6 +80,7 @@ template("input_test") {
       ":$test_name.expected.json",
       ":$test_name.json",
     ]
+
     sources = get_target_outputs(deps[0]) + get_target_outputs(deps[1])
     outputs = [ "$target_out_dir/$test_name.ok" ]
     script = "json-diff.sh"
@@ -83,6 +92,10 @@ input_test("zbi-input-size-limit-test") {
   args = [ "--uncompressed" ]
   type = "ramdisk:42"
   sources = [ "BUILD.gn" ]
+  fields = [
+    "type",
+    "size",
+  ]
   expected = [
     {
       type = "RAMDISK"
@@ -95,10 +108,53 @@ input_test("zbi-input-chrdev-test") {
   args = [ "--uncompressed" ]
   type = "ramdisk:23"
   sources = [ "/dev/zero" ]
+  fields = [
+    "type",
+    "size",
+  ]
   expected = [
     {
       type = "RAMDISK"
       size = 23
     },
   ]
+}
+
+bootfs_entry = "$target_gen_dir/bootfs-entry.txt"
+generated_file("bootfs-entry") {
+  output_conversion = "list lines"
+  contents = []
+  outputs = [ bootfs_entry ]
+}
+
+bootfs_manifest = "$target_gen_dir/bootfs-manifest.txt"
+generated_file("bootfs-manifest") {
+  output_conversion = "list lines"
+  contents = [ "DEST=" + rebase_path(bootfs_entry, root_build_dir) ]
+  outputs = [ bootfs_manifest ]
+  deps = [ ":bootfs-entry" ]
+}
+
+input_test("zbi-storage-kernel-test") {
+  sources = [ bootfs_manifest ]
+  args = [ "--files-type=kernel" ]
+  fields = [
+    "type",
+    "contents",
+  ]
+  expected = [
+    {
+      type = "KERNEL"
+      contents = [
+        {
+          length = 0
+          name = "DEST"
+          offset = 4096
+          size = 0
+        },
+      ]
+    },
+  ]
+
+  deps = [ ":bootfs-manifest" ]
 }
