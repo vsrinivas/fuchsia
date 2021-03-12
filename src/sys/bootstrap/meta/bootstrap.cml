@@ -696,6 +696,7 @@
         {
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.sys2.EventSource",
             ],
             from: "parent",

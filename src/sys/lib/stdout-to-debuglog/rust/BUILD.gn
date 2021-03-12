@@ -16,3 +16,7 @@ rustc_library("stdout-to-debuglog") {
 
   sources = [ "src/lib.rs" ]
 }
+
+group("rust") {
+  deps = [ ":stdout-to-debuglog" ]
+}

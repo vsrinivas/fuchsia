@@ -4,7 +4,7 @@
         runner: "elf",
         binary: "bin/archivist",
         args: [
-            "--consume-own-logs",
+            "--log-to-debuglog",
             "--listen-to-lifecycle",
             "--config-path",
             "/config/data/archivist_config.json",
@@ -28,6 +28,7 @@
         {
             protocol: [
                 "fuchsia.boot.ReadOnlyLog",
+                "fuchsia.boot.WriteOnlyLog",
                 "fuchsia.diagnostics.internal.DetectController",
                 "fuchsia.diagnostics.internal.LogStatsController",
                 "fuchsia.diagnostics.internal.SamplerController",

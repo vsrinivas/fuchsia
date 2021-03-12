@@ -279,9 +279,7 @@ impl ArchivistBuilder {
         &self.log_sender
     }
 
-    // TODO(fxrev.dev/427417) pass a LogSinkRequestStream instead
-    //      when doing above, investigate why sandbox-unittest.cmx hangs if we use handle_log_sink
-    //      and write a new integration test for the archivist to capture the behavior
+    // TODO(fxbug.dev/72046) delete when netemul no longer using
     pub fn consume_own_logs(&self, socket: zx::Socket) {
         let container = self.data_repo().write().get_own_log_container();
         fasync::Task::spawn(async move {

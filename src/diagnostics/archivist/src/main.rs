@@ -46,9 +46,14 @@ pub struct Args {
     #[argh(switch)]
     disable_component_event_provider: bool,
 
+    // TODO(fxbug.dev/72046) delete when netemul no longer using
     /// initializes syslog library with a log socket to itself
     #[argh(switch)]
     consume_own_logs: bool,
+
+    /// initializes logging to debuglog via fuchsia.boot.WriteOnlyLog
+    #[argh(switch)]
+    log_to_debuglog: bool,
 
     /// serve fuchsia.diagnostics.test.Controller
     #[argh(switch)]
@@ -70,18 +75,28 @@ pub struct Args {
 fn main() -> Result<(), Error> {
     let opt: Args = argh::from_env();
 
+    let mut executor = fasync::Executor::new()?;
+
     let mut log_server = None;
     if opt.consume_own_logs {
+        assert!(!opt.log_to_debuglog, "cannot specify both consume-own-logs and log-to-debuglog");
         let (log_client, server) = zx::Socket::create(zx::SocketOpts::DATAGRAM)?;
         log_server = Some(server);
         fuchsia_syslog::init_with_socket_and_name(log_client, "archivist")?;
-        info!("Logging started.");
-        logs::redact::emit_canary();
+    } else if opt.log_to_debuglog {
+        assert!(!opt.consume_own_logs, "cannot specify both consume-own-logs and log-to-debuglog");
+        executor.run_singlethreaded(stdout_to_debuglog::init()).unwrap();
+
+        log::set_logger(&STDOUT_LOGGER).unwrap();
+        log::set_max_level(log::LevelFilter::Info);
     } else {
         fuchsia_syslog::init_with_tags(&["embedded"])?;
     }
 
-    let mut executor = fasync::Executor::new()?;
+    if opt.consume_own_logs || opt.log_to_debuglog {
+        info!("Logging started.");
+        logs::redact::emit_canary();
+    }
 
     diagnostics::init();
 
@@ -185,4 +200,19 @@ fn main() -> Result<(), Error> {
 
     debug!("Exiting.");
     Ok(())
+}
+
+static STDOUT_LOGGER: StdoutLogger = StdoutLogger;
+struct StdoutLogger;
+
+impl log::Log for StdoutLogger {
+    fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
+        metadata.level() <= log::Level::Info
+    }
+    fn log(&self, record: &log::Record<'_>) {
+        if self.enabled(record.metadata()) {
+            println!("[archivist] {}: {}", record.level(), record.args());
+        }
+    }
+    fn flush(&self) {}
 }
