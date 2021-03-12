@@ -12,10 +12,11 @@ import (
 // Match is used to combine Copyright information, license text and the list of files where they occur
 // all in one data struct.
 type Match struct {
-	Copyrights map[string]bool
-	Text       string
-	Projects   []string
-	Files      []string
+	Copyrights            map[string]bool
+	Text                  string
+	Projects              []string
+	Files                 []string
+	LicenseAppliesToFiles []string
 
 	sync.RWMutex
 }
@@ -38,9 +39,10 @@ func NewMatch(data [][]byte, file string, pattern *regexp.Regexp) *Match {
 	}
 
 	m := &Match{
-		Copyrights: map[string]bool{string(regexMap["copyright"]): true},
-		Text:       string(regexMap["text"]),
-		Files:      []string{file},
+		Copyrights:            map[string]bool{string(regexMap["copyright"]): true},
+		Text:                  string(regexMap["text"]),
+		Files:                 []string{file},
+		LicenseAppliesToFiles: []string{file},
 	}
 	return m
 }
@@ -53,5 +55,6 @@ func (m *Match) merge(other *Match) {
 	}
 	m.Projects = append(m.Projects, other.Projects...)
 	m.Files = append(m.Files, other.Files...)
+	m.LicenseAppliesToFiles = append(m.LicenseAppliesToFiles, other.LicenseAppliesToFiles...)
 	m.Unlock()
 }

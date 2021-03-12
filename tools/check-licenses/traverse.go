@@ -186,7 +186,7 @@ func processFile(file *File, metrics *Metrics, licenses *Licenses, unlicensedFil
 				for _, matches := range file_tree.LicenseMatches {
 					for _, match := range matches {
 						match.Lock()
-						match.Files = append(match.Files, path)
+						match.LicenseAppliesToFiles = append(match.LicenseAppliesToFiles, path)
 						match.Unlock()
 					}
 				}
