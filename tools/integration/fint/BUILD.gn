@@ -50,6 +50,7 @@ go_library("fint_lib") {
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:github.com/google/subcommands",
     "//third_party/golibs:google.golang.org/protobuf",
+    "//tools/build",
     "//tools/lib/color",
     "//tools/lib/command",
     "//tools/lib/hostplatform",

@@ -14,6 +14,7 @@ import (
 
 const (
 	apiModuleName              = "api.json"
+	archiveModuleName          = "archives.json"
 	argsModuleName             = "args.json"
 	binaryModuleName           = "binaries.json"
 	checkoutArtifactModuleName = "checkout_artifacts.json"
@@ -32,6 +33,7 @@ const (
 type Modules struct {
 	buildDir          string
 	apis              []string
+	archives          []Archive
 	args              Args
 	binaries          []Binary
 	checkoutArtifacts []CheckoutArtifact
@@ -51,6 +53,10 @@ func NewModules(buildDir string) (*Modules, error) {
 	m := &Modules{buildDir: buildDir}
 
 	if err := jsonutil.ReadFromFile(m.APIManifest(), &m.apis); err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
+
+	if err := jsonutil.ReadFromFile(m.ArchiveManifest(), &m.archives); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
@@ -117,6 +123,14 @@ func (m Modules) APIs() []string {
 // APIManifest returns the path to the manifest of build API modules present in the build.
 func (m Modules) APIManifest() string {
 	return filepath.Join(m.BuildDir(), apiModuleName)
+}
+
+func (m Modules) Archives() []Archive {
+	return m.archives
+}
+
+func (m Modules) ArchiveManifest() string {
+	return filepath.Join(m.BuildDir(), archiveModuleName)
 }
 
 // Args returns the build API module of args set in the build.

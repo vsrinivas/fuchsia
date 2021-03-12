@@ -9,10 +9,7 @@ type Image struct {
 	// Name is the canonical name of the image.
 	Name string `json:"name"`
 
-	// Path is the absolute path to the image.
-	// Note: when unmarshaled from a manifest this entry actually gives the relative
-	// location from the manifest's directory; we prepend that directory when loading. See
-	// LoadImageModule() below.
+	// Path is the path to the image within the build directory.
 	Path string `json:"path"`
 
 	// Type is the shorthand for the type of the image (e.g., "zbi" or "blk").
