@@ -209,8 +209,8 @@ TEST(ComplexTable, SuccessEmpty) {
   // clang-format on
   // encode
   {
-    llcpp_misc::wire::ComplexTable::UnownedBuilder builder;
-    auto input = builder.build();
+    fidl::FidlAllocator allocator;
+    llcpp_misc::wire::ComplexTable input(allocator);
     fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(&input);
     ASSERT_STREQ(encoded.error(), nullptr);
     ASSERT_TRUE(encoded.ok());
@@ -294,10 +294,9 @@ TEST(ComplexTable, Success) {
   int32_t xunion_i = 0xdeadbeef;
   // encode
   {
-    auto simple_builder = llcpp_misc::wire::SimpleTable::UnownedBuilder()
-                              .set_x(fidl::unowned_ptr(&table_x))
-                              .set_y(fidl::unowned_ptr(&table_y));
-    auto simple_table = simple_builder.build();
+    fidl::FidlAllocator allocator;
+    llcpp_misc::wire::SimpleTable simple_table(allocator);
+    simple_table.set_x(allocator, table_x).set_y(allocator, table_y);
     llcpp_misc::wire::SampleXUnion xu;
     xu.set_i(fidl::unowned_ptr(&xunion_i));
     fidl::StringView strings_vector[]{
@@ -305,11 +304,10 @@ TEST(ComplexTable, Success) {
         fidl::unowned_str(after),
     };
     fidl::VectorView<fidl::StringView> strings = fidl::unowned_vec(strings_vector);
-    auto builder = llcpp_misc::wire::ComplexTable::UnownedBuilder()
-                       .set_simple(fidl::unowned_ptr(&simple_table))
-                       .set_u(fidl::unowned_ptr(&xu))
-                       .set_strings(fidl::unowned_ptr(&strings));
-    auto input = builder.build();
+    llcpp_misc::wire::ComplexTable input(allocator);
+    input.set_simple(allocator, std::move(simple_table))
+        .set_u(allocator, std::move(xu))
+        .set_strings(allocator, std::move(strings));
     fidl::OwnedEncodedMessage<llcpp_misc::wire::ComplexTable> encoded(&input);
     ASSERT_STREQ(encoded.error(), nullptr);
     ASSERT_TRUE(encoded.ok());
