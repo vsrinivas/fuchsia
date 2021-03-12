@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("session_spec") {
   sources = [
@@ -63,58 +63,30 @@ executable("bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-package("cpuperf") {
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "cpuperf"
-      shell = true
-    },
+fuchsia_shell_package("cpuperf") {
+  manifest = "meta/cpuperf.cmx"
+  deps = [
+    ":bin",
+    ":cpuperf_resources",
   ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/cpuperf.cmx")
-      dest = "cpuperf.cmx"
-    },
-  ]
-
-  resources = []
-
+resource("cpuperf_resources") {
   if (current_cpu == "x64") {
-    resources += [
-      {
-        path = rebase_path("cpspec/intel/basic-cpu-memory.cpspec")
-        dest = "basic-cpu-memory.cpspec"
-      },
-      {
-        path = rebase_path("cpspec/intel/l1.cpspec")
-        dest = "l1.cpspec"
-      },
-      {
-        path = rebase_path("cpspec/intel/l2.cpspec")
-        dest = "l2.cpspec"
-      },
-      {
-        path = rebase_path("cpspec/intel/l3.cpspec")
-        dest = "l3.cpspec"
-      },
+    sources = [
+      "cpspec/intel/basic-cpu-memory.cpspec",
+      "cpspec/intel/l1.cpspec",
+      "cpspec/intel/l2.cpspec",
+      "cpspec/intel/l3.cpspec",
     ]
   }
-
   if (current_cpu == "arm64") {
-    resources += [
-      {
-        path = rebase_path("cpspec/arm64/cycle-counter.cpspec")
-        dest = "cycle-counter.cpspec"
-      },
-      {
-        path = rebase_path("cpspec/arm64/l1.cpspec")
-        dest = "l1.cpspec"
-      },
+    sources = [
+      "cpspec/arm64/cycle-counter.cpspec",
+      "cpspec/arm64/l1.cpspec",
     ]
   }
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
 source_set("unittests") {
