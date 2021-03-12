@@ -6,6 +6,7 @@ import("//build/banjo/toolchain.gni")
 import("//build/compiled_action.gni")
 import("//build/fidl/fidl_library.gni")
 import("//build/fidl/toolchain.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/testing/golden_file.gni")
 
 # Exposes a Banjo library as a FIDL library.
@@ -54,28 +55,33 @@ template("fidl_adapter") {
   } else if (is_fuchsia) {
     not_needed(invoker, "*")
 
-    c_target_name = "${library_name}_banjo_c"
-    fidlgen_target_name = "$c_target_name.gen"
-    config_target_name = "$c_target_name.config"
-    verification_target_name = "${library_name}.verify"
+    original_target_name = target_name
 
     ir_dep = ":$main_target_name($fidl_toolchain)"
     ir_gen_dir = get_label_info(ir_dep, "target_gen_dir")
     ir_file = "$ir_gen_dir/$main_target_name.fidl.json"
 
-    header_path = string_replace(library_name, ".", "/")
-    header_path = string_replace(header_path, "_", "-")
-    header_include_base = "$target_gen_dir/$c_target_name"
-    header_file = "$header_include_base/$header_path/c/banjo.h"
+    ##############################################################################
+    # C backend
+
+    c_target_name = "${original_target_name}_banjo_c"
+    c_fidlgen_target_name = "$c_target_name.gen"
+    c_config_target_name = "$c_target_name.config"
+    c_verification_target_name = "$c_target_name.verify"
+
+    c_header_path = string_replace(library_name, ".", "/")
+    c_header_path = string_replace(c_header_path, "_", "-")
+    c_header_include_base = "$target_gen_dir/$c_target_name"
+    c_header_file = "$c_header_include_base/$c_header_path/c/banjo.h"
 
     # Run fidlgen_banjo on the IR and generate C code.
-    compiled_action(fidlgen_target_name) {
+    compiled_action(c_fidlgen_target_name) {
       tool = "//src/devices/tools/fidlgen_banjo:bin"
       tool_output_name = "fidlgen_banjo"
 
       inputs = [ ir_file ]
 
-      outputs = [ header_file ]
+      outputs = [ c_header_file ]
 
       deps = [ ir_dep ]
 
@@ -83,44 +89,138 @@ template("fidl_adapter") {
         "--ir",
         rebase_path(ir_file, root_build_dir),
         "--output",
-        rebase_path(header_file, root_build_dir),
+        rebase_path(c_header_file, root_build_dir),
         "--backend",
         "c",
       ]
     }
 
-    banjo_dep = ":${target_name}_c_compile($banjo_toolchain)"
-    banjo_gen_dir = get_label_info(banjo_dep, "root_gen_dir")
-    banjo_header_file = "$banjo_gen_dir/$header_path/c/banjo.h"
+    c_banjo_dep = ":${target_name}_c_compile($banjo_toolchain)"
+    c_banjo_gen_dir = get_label_info(c_banjo_dep, "root_gen_dir")
+    c_banjo_header_file = "$c_banjo_gen_dir/$c_header_path/c/banjo.h"
 
     # Verify that the new-style and old-style bindings are identical.
-    golden_file(verification_target_name) {
-      golden = banjo_header_file
+    golden_file(c_verification_target_name) {
+      golden = c_banjo_header_file
 
-      current = header_file
+      current = c_header_file
 
       deps = [
-        ":$fidlgen_target_name",
-        banjo_dep,
+        ":$c_fidlgen_target_name",
+        c_banjo_dep,
       ]
     }
 
     # This config ensures dependents can find the generated header within the
     # output directory.
-    config(config_target_name) {
-      include_dirs = [ header_include_base ]
+    config(c_config_target_name) {
+      include_dirs = [ c_header_include_base ]
     }
 
     # Exposes the bindings as C sources to the rest of the build.
     # Eventually this target will be surfaced via the `fidl` template.
     source_set(c_target_name) {
-      public = [ header_file ]
+      public = [ c_header_file ]
 
-      public_configs = [ ":$config_target_name" ]
+      public_configs = [ ":$c_config_target_name" ]
 
-      deps = [ ":$fidlgen_target_name" ]
+      deps = [ ":$c_fidlgen_target_name" ]
 
-      deps += [ ":$verification_target_name" ]
+      deps += [ ":$c_verification_target_name" ]
+
+      if (defined(invoker.deps)) {
+        foreach(dep, invoker.deps) {
+          if (dep == "//sdk/banjo/zx") {
+            deps += [ "//zircon/vdso/zx:zx_c" ]
+          } else {
+            _name = get_label_info(dep, "name")
+            _dir = get_label_info(dep, "dir")
+            deps += [ "$_dir:${_name}_banjo_c" ]
+          }
+        }
+      }
+    }
+
+    ##############################################################################
+    # Rust backend
+
+    rust_target_name = "${original_target_name}_banjo_rust"
+    rust_fidlgen_target_name = "$rust_target_name.gen"
+    rust_verification_target_name = "$rust_target_name.verify"
+
+    rust_library_name = "banjo_" + string_replace(library_name, ".", "_")
+    rust_file_name = "$rust_library_name.rs"
+    rust_source_file = "$target_gen_dir/$rust_file_name"
+
+    # Run fidlgen_banjo on the IR and generate Rust code.
+    compiled_action(rust_fidlgen_target_name) {
+      tool = "//src/devices/tools/fidlgen_banjo:bin"
+      tool_output_name = "fidlgen_banjo"
+
+      inputs = [ ir_file ]
+
+      outputs = [ rust_source_file ]
+
+      deps = [ ir_dep ]
+
+      args = [
+        "--ir",
+        rebase_path(ir_file, root_build_dir),
+        "--output",
+        rebase_path(rust_source_file, root_build_dir),
+        "--backend",
+        "rust",
+      ]
+    }
+
+    rust_banjo_dep = ":${target_name}_rust_compile($banjo_toolchain)"
+    rust_banjo_gen_dir = get_label_info(rust_banjo_dep, "target_gen_dir")
+    rust_banjo_source_file = "$rust_banjo_gen_dir/$rust_file_name"
+
+    # Verify that the new-style and old-style bindings are identical.
+    golden_file(rust_verification_target_name) {
+      golden = rust_banjo_source_file
+
+      current = rust_source_file
+
+      deps = [
+        ":$rust_fidlgen_target_name",
+        rust_banjo_dep,
+      ]
+    }
+
+    rustc_library(rust_target_name) {
+      name = rust_library_name
+      version = "0.1.0"
+      edition = "2018"
+
+      source_root = rebase_path(rust_source_file)
+      sources = [ rust_source_file ]
+
+      output_dir = "$target_out_dir/banjo"
+
+      non_rust_deps = [
+        ":$rust_fidlgen_target_name",
+        ":$rust_verification_target_name",
+      ]
+
+      deps = [
+        "//src/lib/fuchsia-async",
+        "//src/lib/zircon/rust:fuchsia-zircon",
+        "//third_party/rust_crates:futures",
+      ]
+
+      if (defined(invoker.deps)) {
+        foreach(dep, invoker.deps) {
+          if (dep == "//sdk/banjo/zx") {
+            deps += [ "//zircon/vdso/zx:zx-rustc" ]
+          } else {
+            _name = get_label_info(dep, "name")
+            _dir = get_label_info(dep, "dir")
+            deps += [ "$_dir:${_name}_banjo_rust" ]
+          }
+        }
+      }
     }
   } else {
     assert(false,
