@@ -6,7 +6,9 @@
 // https://opensource.org/licenses/MIT
 
 #include <inttypes.h>
+#include <lib/affine/ratio.h>
 #include <lib/arch/intrin.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,6 +17,9 @@
 #include <trace.h>
 
 #include <arch/ops.h>
+#include <dev/hw_watchdog.h>
+#include <fbl/auto_call.h>
+#include <kernel/auto_preempt_disabler.h>
 #include <kernel/brwlock.h>
 #include <kernel/mp.h>
 #include <kernel/mutex.h>
@@ -27,6 +32,24 @@
 const size_t BUFSIZE = (512 * 1024);  // must be smaller than max allowed heap allocation
 const size_t ITER =
     (1UL * 1024 * 1024 * 1024 / BUFSIZE);  // enough iterations to have to copy/set 1GB of memory
+
+__NO_INLINE static void bench_cycles_per_second() {
+  {
+    InterruptDisableGuard irqd;
+    const zx_ticks_t before_ticks = current_ticks();
+    const uint64_t before_cycles = arch::Cycles();
+    for (size_t i = 0; i < 100000000; i++) {
+      __asm__ volatile("");
+    }
+    const zx_ticks_t after_ticks = current_ticks();
+    const uint64_t after_cycles = arch::Cycles();
+    const zx_duration_t delta_time =
+        platform_get_ticks_to_time_ratio().Scale(after_ticks - before_ticks);
+    const uint64_t delta_cycles = after_cycles - before_cycles;
+    printf("%" PRIu64 " cycles per second (%" PRIu64 " cycles in %" PRId64 " ns)\n",
+           (delta_cycles * ZX_SEC(1) / delta_time), delta_cycles, delta_time);
+  }
+}
 
 __NO_INLINE static void bench_set_overhead() {
   uint32_t* buf = (uint32_t*)malloc(BUFSIZE);
@@ -230,9 +253,10 @@ __NO_INLINE static void bench_memcpy() {
   free(buf);
 }
 
-__NO_INLINE static void bench_spinlock() {
+template <typename SpinLockType>
+__NO_INLINE static void bench_spinlock(const char* spin_lock_name) {
   interrupt_saved_state_t state;
-  SpinLock lock;
+  SpinLockType lock;
   uint64_t c;
 
 #define COUNT (128 * 1024 * 1024)
@@ -242,14 +266,18 @@ __NO_INLINE static void bench_spinlock() {
 
     c = arch::Cycles();
     for (size_t i = 0; i < COUNT; i++) {
-      lock.Acquire();
+      if constexpr (ktl::is_same_v<SpinLockType, MonitoredSpinLock>) {
+        lock.Acquire(SOURCE_TAG);
+      } else {
+        lock.Acquire();
+      }
       lock.Release();
     }
     c = arch::Cycles() - c;
   }
 
-  printf("%" PRIu64 " cycles to acquire/release spinlock %d times (%" PRIu64 " cycles per)\n", c,
-         COUNT, c / COUNT);
+  printf("%" PRIu64 " cycles to acquire/release %s %d times (%" PRIu64 " cycles per)\n", c,
+         spin_lock_name, COUNT, c / COUNT);
 
   // test 2: acquire/release a spinlock with irq save and irqs already disabled
   {
@@ -257,28 +285,34 @@ __NO_INLINE static void bench_spinlock() {
 
     c = arch::Cycles();
     for (size_t i = 0; i < COUNT; i++) {
-      lock.AcquireIrqSave(state);
+      if constexpr (ktl::is_same_v<SpinLockType, MonitoredSpinLock>) {
+        lock.AcquireIrqSave(state, SOURCE_TAG);
+      } else {
+        lock.AcquireIrqSave(state);
+      }
       lock.ReleaseIrqRestore(state);
     }
     c = arch::Cycles() - c;
   }
 
-  printf("%" PRIu64
-         " cycles to acquire/release spinlock w/irqsave (already disabled) %d times (%" PRIu64
+  printf("%" PRIu64 " cycles to acquire/release %s w/irqsave (already disabled) %d times (%" PRIu64
          " cycles per)\n",
-         c, COUNT, c / COUNT);
+         c, spin_lock_name, COUNT, c / COUNT);
 
   // test 2: acquire/release a spinlock with irq save and irqs enabled
   c = arch::Cycles();
   for (size_t i = 0; i < COUNT; i++) {
-    lock.AcquireIrqSave(state);
+    if constexpr (ktl::is_same_v<SpinLockType, MonitoredSpinLock>) {
+      lock.AcquireIrqSave(state, SOURCE_TAG);
+    } else {
+      lock.AcquireIrqSave(state);
+    }
     lock.ReleaseIrqRestore(state);
   }
   c = arch::Cycles() - c;
 
-  printf("%" PRIu64 " cycles to acquire/release spinlock w/irqsave %d times (%" PRIu64
-         " cycles per)\n",
-         c, COUNT, c / COUNT);
+  printf("%" PRIu64 " cycles to acquire/release %s w/irqsave %d times (%" PRIu64 " cycles per)\n",
+         c, spin_lock_name, COUNT, c / COUNT);
 #undef COUNT
 }
 
@@ -328,6 +362,23 @@ __NO_INLINE static void bench_rwlock() {
 }
 
 int benchmarks(int, const cmd_args*, uint32_t) {
+  // Disable the hardware watchdog (if present and enabled) because some of these benchmarks will
+  // disable interrupts for extended periods of time.
+  bool need_to_reenable = false;
+  if (hw_watchdog_present() && hw_watchdog_is_enabled()) {
+    hw_watchdog_set_enabled(false);
+    need_to_reenable = true;
+  }
+  auto reenable_hw_watchdog = fbl::MakeAutoCall([need_to_reenable]() {
+    if (need_to_reenable) {
+      hw_watchdog_set_enabled(true);
+    }
+  });
+
+  // Ensure that benchmarks aren't impacted by preemption.
+  AutoPreemptDisabler preempt_disabler;
+
+  bench_cycles_per_second();
   bench_set_overhead();
   bench_memcpy();
   bench_memset();
@@ -340,8 +391,8 @@ int benchmarks(int, const cmd_args*, uint32_t) {
   bench_cset<uint32_t>();
   bench_cset<uint64_t>();
   bench_cset_wide();
-
-  bench_spinlock();
+  bench_spinlock<SpinLock>("SpinLock");
+  bench_spinlock<MonitoredSpinLock>("MonitoredSpinLock");
   bench_mutex();
   bench_rwlock<BrwLockPi>();
   bench_rwlock<BrwLockNoPi>();
