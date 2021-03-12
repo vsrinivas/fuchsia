@@ -283,23 +283,20 @@ if (current_toolchain == dart_toolchain) {
         script = "//build/dart/verify_sources.py"
         output_file = "$target_gen_dir/$target_name.missing"
 
+        sources = rebased_sources
         outputs = [ output_file ]
 
         args = [
-          "--source_dir",
-          rebase_path(source_dir),
-          "--stamp",
-          rebase_path(output_file),
-        ]
-
-        foreach(source, invoker.sources) {
-          args += [ source ]
-        }
+                 "--source_dir",
+                 rebase_path(source_dir),
+                 "--stamp",
+                 rebase_path(output_file),
+               ] + invoker.sources
 
         forward_variables_from(invoker, [ "testonly" ])
 
         # Deps may include codegen dependencies that generate dart sources.
-        deps = _dart_deps
+        deps = _dart_deps + _non_dart_deps
       }
       group_deps += [ ":$source_verification_target_name" ]
     }
