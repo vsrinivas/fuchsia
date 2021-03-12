@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::update::BuildInfo,
+    crate::update::{BuildInfo, CURRENT_EPOCH_RAW},
     anyhow::{anyhow, Error},
     bounded_node::BoundedNode,
     fidl_fuchsia_paver::{BootManagerProxy, DataSinkProxy},
@@ -203,6 +203,7 @@ impl UpdateHistory {
                 boot_manager,
                 build_info,
                 pkgfs_system,
+                CURRENT_EPOCH_RAW,
             )
             .await;
             PendingAttempt { attempt_id, source_version, options, update_url, start_time }
@@ -536,14 +537,16 @@ mod tests {
                             "system_image_hash": "",
                             "vbmeta_hash": "",
                             "zbi_hash": "",
-                            "build_version": ""
+                            "build_version": "",
+                            "epoch": "0"
                         },
                         "target": {
                             "update_hash": "newer",
                             "system_image_hash": "",
                             "vbmeta_hash": "",
                             "zbi_hash": "",
-                            "build_version": ""
+                            "build_version": "",
+                            "epoch": "0"
                         },
                         "options": {
                             "initiator":  "User",
@@ -572,14 +575,16 @@ mod tests {
                             "system_image_hash": "",
                             "vbmeta_hash": "",
                             "zbi_hash": "",
-                            "build_version": ""
+                            "build_version": "",
+                            "epoch": "0"
                         },
                         "target": {
                             "update_hash": "new",
                             "system_image_hash": "",
                             "vbmeta_hash": "",
                             "zbi_hash": "",
-                            "build_version": ""
+                            "build_version": "",
+                            "epoch": "0"
                         },
                         "options": {
                             "initiator":  "User",
@@ -653,14 +658,16 @@ mod tests {
                                 "system_image_hash": "",
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
-                                "build_version": ""
+                                "build_version": "",
+                                "epoch": "0"
                             },
                             "target_version": {
                                 "update_hash": "new",
                                 "system_image_hash": "",
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
-                                "build_version": ""
+                                "build_version": "",
+                                "epoch": "0"
                             },
                             "options": {
                                 "initiator": "User",
@@ -687,14 +694,16 @@ mod tests {
                                 "system_image_hash": "",
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
-                                "build_version": ""
+                                "build_version": "",
+                                "epoch": "0"
                             },
                             "target_version": {
                                 "update_hash": "newer",
                                 "system_image_hash": "",
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
-                                "build_version": ""
+                                "build_version": "",
+                                "epoch": "0"
                             },
                             "options": {
                                 "initiator": "User",
@@ -739,14 +748,16 @@ mod tests {
                                 "system_image_hash": "",
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
-                                "build_version": ""
+                                "build_version": "",
+                                "epoch": "0"
                             },
                             "target_version": {
                                 "update_hash": "new",
                                 "system_image_hash": "",
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
-                                "build_version": ""
+                                "build_version": "",
+                                "epoch": "0"
                             },
                             "options": {
                                 "initiator": "User",
@@ -773,14 +784,16 @@ mod tests {
                                 "system_image_hash": "",
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
-                                "build_version": ""
+                                "build_version": "",
+                                "epoch": "0"
                             },
                             "target_version": {
                                 "update_hash": "newer",
                                 "system_image_hash": "",
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
-                                "build_version": ""
+                                "build_version": "",
+                                "epoch": "0"
                             },
                             "options": {
                                 "initiator": "User",
@@ -807,14 +820,16 @@ mod tests {
                                 "system_image_hash": "",
                                 "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                                 "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                                "build_version": ""
+                                "build_version": "",
+                                "epoch": "0"
                             },
                             "target_version": {
                                 "update_hash": "new",
                                 "system_image_hash": "",
                                 "vbmeta_hash": "",
                                 "zbi_hash": "",
-                                "build_version": ""
+                                "build_version": "",
+                                "epoch": "0"
                             },
                             "options": {
                                 "initiator": "User",
@@ -948,14 +963,16 @@ mod tests {
                         "system_image_hash": "",
                         "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                         "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-                        "build_version": ""
+                        "build_version": "",
+                        "epoch": "0"
                     },
                     "target": {
                         "update_hash": "new",
                         "system_image_hash": "",
                         "vbmeta_hash": "",
                         "zbi_hash": "",
-                        "build_version": ""
+                        "build_version": "",
+                        "epoch": "0"
                     },
                     "options": {
                         "allow_attach_to_existing_attempt": false,

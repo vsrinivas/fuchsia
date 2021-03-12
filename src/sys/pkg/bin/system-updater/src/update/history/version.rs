@@ -5,10 +5,11 @@
 use {
     crate::update::{paver, BuildInfo},
     anyhow::{anyhow, Error},
+    epoch::EpochFile,
     fidl_fuchsia_mem::Buffer,
     fidl_fuchsia_paver::{Asset, BootManagerProxy, DataSinkProxy},
     fuchsia_inspect as inspect,
-    fuchsia_syslog::{fx_log_err, fx_log_warn},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn},
     mundane::hash::{Hasher as _, Sha256},
     serde::{Deserialize, Serialize},
     std::{convert::TryInto as _, str::FromStr},
@@ -28,6 +29,8 @@ pub struct Version {
     pub zbi_hash: String,
     /// The version in build-info.
     pub build_version: SystemVersion,
+    /// The epoch of the update package.
+    pub epoch: String,
 }
 
 impl Default for Version {
@@ -38,6 +41,7 @@ impl Default for Version {
             vbmeta_hash: Default::default(),
             zbi_hash: Default::default(),
             build_version: SystemVersion::Opaque("".to_string()),
+            epoch: "0".to_string(),
         }
     }
 }
@@ -94,7 +98,18 @@ impl Version {
             fx_log_err!("Failed to read build version: {:#}", anyhow!(e));
             SystemVersion::Opaque("".to_string())
         });
-        Self { update_hash, system_image_hash, vbmeta_hash, zbi_hash, build_version }
+        let epoch = match update_package.epoch().await {
+            Ok(Some(epoch)) => epoch.to_string(),
+            Ok(None) => {
+                fx_log_info!("epoch.json does not exist, defaulting to zero");
+                "0".to_string()
+            }
+            Err(e) => {
+                fx_log_err!("Failed to read epoch: {:#}", anyhow!(e));
+                "".to_string()
+            }
+        };
+        Self { update_hash, system_image_hash, vbmeta_hash, zbi_hash, build_version, epoch }
     }
 
     /// Returns the Version for the current running system.
@@ -104,6 +119,7 @@ impl Version {
         boot_manager: &BootManagerProxy,
         build_info: &impl BuildInfo,
         pkgfs_system: &Option<pkgfs::system::Client>,
+        current_epoch_raw: &str,
     ) -> Self {
         let system_image_hash =
             get_system_image_hash_from_pkgfs_system(pkgfs_system).await.unwrap_or_else(|e| {
@@ -144,18 +160,28 @@ impl Version {
             }
             None => "".to_string(),
         };
-        Self { update_hash, system_image_hash, vbmeta_hash, zbi_hash, build_version }
+        let epoch = match serde_json::from_str(current_epoch_raw) {
+            Ok(EpochFile::Version1 { epoch }) => epoch.to_string(),
+            Err(e) => {
+                fx_log_err!("Failed to parse current epoch: {:#}", anyhow!(e));
+                "".to_string()
+            }
+        };
+
+        Self { update_hash, system_image_hash, vbmeta_hash, zbi_hash, build_version, epoch }
     }
 
     pub fn write_to_inspect(&self, node: &inspect::Node) {
         // This destructure exists to use the compiler to guarantee we are copying all the
         // UpdateAttempt fields to inspect.
-        let Version { update_hash, system_image_hash, vbmeta_hash, zbi_hash, build_version } = self;
+        let Version { update_hash, system_image_hash, vbmeta_hash, zbi_hash, build_version, epoch } =
+            self;
         node.record_string("update_hash", update_hash);
         node.record_string("system_image_hash", system_image_hash);
         node.record_string("vbmeta_hash", vbmeta_hash);
         node.record_string("zbi_hash", zbi_hash);
         node.record_string("build_version", build_version.to_string());
+        node.record_string("epoch", epoch);
     }
 }
 
@@ -246,7 +272,7 @@ mod tests {
         crate::update::environment::NamespaceBuildInfo,
         ::version::Version as SemanticVersion,
         fidl_fuchsia_paver::Configuration,
-        fuchsia_pkg_testing::TestUpdatePackage,
+        fuchsia_pkg_testing::{make_epoch_json, TestUpdatePackage},
         fuchsia_zircon::Vmo,
         mock_paver::{hooks as mphooks, MockPaverServiceBuilder},
         pretty_assertions::assert_eq,
@@ -271,7 +297,8 @@ mod tests {
             .add_file("zbi", "zbi")
             .await
             .add_file("version", "1.2.3.4")
-            .await;
+            .await
+            .add_file("epoch.json", make_epoch_json(1)).await;
         assert_eq!(
             Version::for_update_package(&update_pkg).await,
             Version {
@@ -286,6 +313,7 @@ mod tests {
                 zbi_hash: "a7124150e065aa234710ab387523f17deb36a9249938e11f2f3656954412ab8"
                     .to_string(),
                 build_version: SystemVersion::Semantic(SemanticVersion::from([1, 2, 3, 4])),
+                epoch: "1".to_string()
             }
         );
     }
@@ -320,6 +348,7 @@ mod tests {
             // See comment in sha256_hash_removed_trailing_zeros test.
             zbi_hash: "a7124150e065aa234710ab387523f17deb36a9249938e11f2f3656954412ab8".to_string(),
             build_version: SystemVersion::Opaque("".to_string()),
+            epoch: "0".to_string(),
         };
         assert_eq!(
             Version::current(
@@ -327,7 +356,8 @@ mod tests {
                 &data_sink,
                 &boot_manager,
                 &NamespaceBuildInfo,
-                &Some(pkgfs_system)
+                &Some(pkgfs_system),
+                &make_epoch_json(0)
             )
             .await,
             last_target_version
