@@ -306,6 +306,11 @@ TEST(ScreenReaderUtilTest, GetNodesToExcludeInternalLinearMotif) {
   }
 
   {
+    auto nodes_to_exclude = GetNodesToExclude(koid, 0u, &mock_semantics_source);
+    EXPECT_TRUE(nodes_to_exclude.empty());
+  }
+
+  {
     auto nodes_to_exclude = GetNodesToExclude(koid, 2u, &mock_semantics_source);
     EXPECT_TRUE(nodes_to_exclude.empty());
   }
