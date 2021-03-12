@@ -612,8 +612,8 @@ foreach(_target_type,
           "-S",
           rebase_path("//build/tracer/output_cacher.py", root_build_dir),
           "--check-repeatability",
-          "--disable",
-          "--verbose",
+
+          # "--disable",  # This will execute only the original command (pass-through).
           "--label",
           get_label_info(":$target_name", "label_with_toolchain"),
           "--temp-suffix=",  # don't use suffix

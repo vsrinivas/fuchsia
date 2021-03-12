@@ -138,6 +138,13 @@ template("prebuilt_package") {
     if (defined(invoker.deps)) {
       deps += invoker.deps
     }
+
+    # Outputs seem nondeterministic, or contain timestamps.
+    # Specifically (inside PACKAGE.meta):
+    #   blobs.manifest
+    #   blobs.json
+    #   package_manifest.json
+    repeatable = false
   }
 
   group(manifest_target_name) {
