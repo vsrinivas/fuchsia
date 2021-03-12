@@ -74,6 +74,14 @@ static const format_size_test_case_t format_size_test_cases[] = {
     TC0(KILO * 9999 + 1, "9999.0k"),
     TC0(KILO * 10000, "9.8M"),
 
+    // Ensure values are correctly rounded.
+    TC0(10700, "10.4k"),                  // 10700 / 1024 == 10.4492187500
+    TC0(10701, "10.5k"),                  // 10701 / 1024 == 10.4501953125
+    TC0(69887590, "66.6M"),               // 69887590 / 1M == ~66.64999961
+    TC0(69887591, "66.7M"),               // 69887591 / 1M == ~66.65000057
+    TC0(18389097998479209267u, "15.9E"),  // 18389097998479209267 / 1E == ~15.9499999999999999998
+    TC0(18389097998479209268u, "16.0E"),  // 18389097998479209268 / 1E == ~15.9500000000000000016
+
 // Declare a test case fixed to the specified unit.
 #define TCF(i, u, o) \
   { .input = i, .unit = u, .expected_output = o }
