@@ -565,8 +565,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
             inner.read_stream.send(entry.clone()).await;
         }
 
-        self.cleanup_logs(inner).await?;
-
+        self.cleanup_logs(inner).await.unwrap_or_else(|e| log::warn!("log cleanup failed: {}", e));
         Ok(())
     }
 
@@ -588,14 +587,17 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
                 .last()
                 .await;
             if entry.is_some() {
+                log::trace!("read of most recent target timestamps finished with entry found");
                 return Ok(entry);
             }
         }
+        log::trace!("read of most recent target timestamps finished with no entry found");
         Ok(None)
     }
 
     /// Reads the entry timestamp of the most recent log (of any type)
     async fn read_most_recent_entry_timestamp(&self) -> Result<Option<Timestamp>> {
+        log::trace!("beginning read of most recent entry timestamps");
         let inner = self.inner.read().await;
         let output_dir = inner.output_dir.as_ref().context("stream not setup")?;
 
@@ -609,21 +611,26 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
                 .last()
                 .await;
             if entry.is_some() {
+                log::trace!("read of most recent entry timestamps finished with entry found");
                 return Ok(entry);
             }
         }
+        log::trace!("read of most recent entry timestamps finished with no entry found");
         Ok(None)
     }
 
     async fn clean_sessions_for_target(&self) -> Result<()> {
+        log::trace!("beginning to clean sessions for target.");
         let inner = self.inner.read().await;
-        inner
+        let result = inner
             .output_dir
             .as_ref()
             .context("missing output directory")?
             .parent()
             .clean_sessions(inner.max_num_sessions)
-            .await
+            .await;
+        log::trace!("clean sessions for target finished.");
+        result
     }
 
     async fn stream_entries(&self, stream_mode: StreamMode) -> Result<SessionStream> {
@@ -690,6 +697,7 @@ impl DiagnosticsStreamer<'_> {
         &self,
         inner: RwLockWriteGuard<'_, DiagnosticsStreamerInner<'a>>,
     ) -> Result<()> {
+        log::trace!("beginning logger clean up run");
         let output_dir = inner.output_dir.as_ref().context("no stream setup")?;
         let mut entries = output_dir.sort_entries().await?;
 
@@ -700,9 +708,10 @@ impl DiagnosticsStreamer<'_> {
         {
             let to_remove = entries.first_mut().unwrap();
             log::info!("logger: garbage collecting log file: {:?}", to_remove);
-            to_remove.remove().await?;
+            to_remove.remove().await.context(format!("removing log dir {:?}", to_remove))?;
         }
 
+        log::trace!("logger cleanup run finished.");
         Ok(())
     }
 }

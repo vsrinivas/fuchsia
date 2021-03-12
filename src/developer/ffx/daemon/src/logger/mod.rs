@@ -186,10 +186,17 @@ impl Logger {
             .boot_timestamp_nanos()
             .await
             .with_context(|| format!("no boot timestamp for target {:?}", &nodename))?;
-        streamer.setup_stream(nodename, boot_timestamp).await?;
+        streamer.setup_stream(nodename.clone(), boot_timestamp).await?;
 
         // Garbage collect old sessions before kicking off the log stream.
-        streamer.clean_sessions_for_target().await?;
+        match streamer.clean_sessions_for_target().await {
+            Ok(()) => {}
+            Err(e) => {
+                log::warn!("cleaning sessions for {} failed: {}. logging will proceed anyway. \
+                            If space usage is excessive, try restarting the ffx daemon or disabling proactive logging ('ffx config set proactive_log.enabled false').",
+                            nodename, e);
+            }
+        }
 
         let (listener_client, listener_fut) = write_logs_to_file(streamer.clone())?;
         let params = BridgeStreamParameters {
