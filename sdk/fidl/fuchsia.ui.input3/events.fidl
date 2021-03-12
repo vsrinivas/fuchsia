@@ -26,7 +26,42 @@ enum KeyEventType {
     CANCEL = 4;
 };
 
-/// Keyboard event is generated to reflect key input.
+/// NonPrintableKey represents the meaning of a non-symbolic key on a keyboard.
+///
+/// The definition of each key is derived from W3C named values of a key attribute:
+/// https://www.w3.org/TR/uievents-key/#named-key-attribute-values
+flexible enum NonPrintableKey : uint32 {
+    // Whitespace keys
+    // Reserved range: 0x00000031 - 0x00000040
+
+    /// The Enter or ↵ key, to activate current selection or accept current input.
+    /// This key value is also used for the Return (Macintosh numpad) key.
+    ENTER = 0x00000031;
+
+    /// The Horizontal Tabulation Tab key.
+    TAB = 0x00000032;
+
+    // Editing keys
+    // Reserved range: 0x00000041 - 0x00000060
+
+    /// Delete the character immediately preceding the cursor (i.e. the
+    /// character to the left for LTR languages).
+    BACKSPACE = 0x00000041;
+};
+
+/// The meaning of the key press. This is typically the Unicode codepoint inserted
+/// by this event, or an enum representing a key that corresponds to whitespace or
+/// is otherwise unprintable.
+strict union KeyMeaning {
+    /// The Unicode codepoint representing character typed, if any.
+    1: uint32 codepoint;
+
+    /// The meaning of the key for key events with no corresponding symbol.
+    2: NonPrintableKey non_printable_key;
+};
+
+/// A Keyboard event generated to reflect key input. `timestamp` and `type` are required.
+/// At least one of `key` and `key_meaning`  must be set for a valid event. 
 table KeyEvent {
     /// Time in nanoseconds when the event was recorded, in the `CLOCK_MONOTONIC` time base.
     1: zx.time timestamp;
@@ -34,7 +69,9 @@ table KeyEvent {
     /// Type of event.
     2: KeyEventType type;
 
-    /// Identifies the key ignoring modifiers, layout, prior key events, etc.
+    /// Identifies the key ignoring modifiers, layout, prior key events, etc. This is called
+    /// the "physical key" on some platforms. In cases where the key event did not originate
+    /// from a physical keyboard (e.g. onscreen keyboard) this field may be empty.
     3: fuchsia.input.Key key;
 
     /// Modifiers in effect at the time of the event.
@@ -52,4 +89,7 @@ table KeyEvent {
     ///  3. type: Released, key: CapsLock, modifiers: None
     ///  4. type: Released, key: A, modifiers: None
     4: Modifiers modifiers;
+
+    /// Meaning of the key.
+    5: KeyMeaning key_meaning;
 };
