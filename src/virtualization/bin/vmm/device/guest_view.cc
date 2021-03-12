@@ -63,21 +63,30 @@ void GuestView::OnSceneInvalidated(fuchsia::images::PresentationInfo presentatio
   const float height = logical_size().y;
   scenic::Rectangle shape(session(), width, height);
   background_.SetShape(shape);
+
   const float center_x = width * .5f;
   const float center_y = height * .5f;
-  const float scale_x = static_cast<float>(image_info_.width) / scanout_source_width_;
-  const float scale_y = static_cast<float>(image_info_.height) / scanout_source_height_;
-
-  // Scale the background node such that the scanout resource sub-region
-  // matches the image size. Ideally, this would just be a scale transform of
-  // the material itself.
-  // TODO(fxbug.dev/24174): Materials should support transforms
   background_.SetAnchor(-center_x, -center_y, 0.0f);
   background_.SetTranslation(center_x, center_y, 0.0f);
-  background_.SetScale(scale_x, scale_y, 1.0f);
 
-  scenic::Image image(*memory_, 0u, image_info_);
-  material_.SetTexture(image);
+  if (scanout_source_height_ > 0 && scanout_source_width_ > 0) {
+    // Scale the background node such that the scanout resource sub-region
+    // matches the image size. Ideally, this would just be a scale transform of
+    // the material itself.
+    // TODO(fxbug.dev/24174): Materials should support transforms
+    const float scale_x = static_cast<float>(image_info_.width) / scanout_source_width_;
+    const float scale_y = static_cast<float>(image_info_.height) / scanout_source_height_;
+    background_.SetScale(scale_x, scale_y, 1.0f);
+
+    scenic::Image image(*memory_, 0u, image_info_);
+    material_.SetTexture(image);
+  } else {
+    // If Virtio GPU disables the scanout, the |scanout_source_height_| and
+    // |scanout_source_width_| will be set to 0. In that case we should display
+    // a plain color background instead.
+    background_.SetScale(1.0f, 1.0f, 1.0f);
+    material_.SetColor(0, 0, 0, 255);
+  }
 }
 
 void GuestView::OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) {
