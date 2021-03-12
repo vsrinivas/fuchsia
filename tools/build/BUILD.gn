@@ -41,6 +41,7 @@ go_library("build") {
     "tests.go",
     "tests_test.go",
     "tools.go",
+    "zbi_tests.go",
   ]
   deps = [
     "//tools/lib/jsonutil",

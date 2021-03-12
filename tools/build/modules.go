@@ -26,6 +26,7 @@ const (
 	testDurationsName          = "test_durations.json"
 	testModuleName             = "tests.json"
 	toolModuleName             = "tool_paths.json"
+	zbiTestModuleName          = "zbi_tests.json"
 )
 
 // Modules is a convenience interface for accessing the various build API
@@ -45,6 +46,7 @@ type Modules struct {
 	testSpecs         []TestSpec
 	testDurations     []TestDuration
 	tools             []Tool
+	zbiTests          []ZBITest
 }
 
 // NewModules returns a Modules associated with a given build directory.
@@ -101,6 +103,10 @@ func NewModules(buildDir string) (*Modules, error) {
 	}
 
 	if err := jsonutil.ReadFromFile(m.ToolManifest(), &m.tools); err != nil {
+		errMsgs = append(errMsgs, err.Error())
+	}
+
+	if err := jsonutil.ReadFromFile(m.ZBITestManifest(), &m.zbiTests); err != nil {
 		errMsgs = append(errMsgs, err.Error())
 	}
 
@@ -241,4 +247,12 @@ func (m Modules) Tools() []Tool {
 // ToolManifest returns the path to the manifest of tools in the build.
 func (m Modules) ToolManifest() string {
 	return filepath.Join(m.BuildDir(), toolModuleName)
+}
+
+func (m Modules) ZBITests() []ZBITest {
+	return m.zbiTests
+}
+
+func (m Modules) ZBITestManifest() string {
+	return filepath.Join(m.BuildDir(), zbiTestModuleName)
 }

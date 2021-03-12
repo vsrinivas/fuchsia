@@ -17,11 +17,13 @@ type fakeBuildModules struct {
 	archives  []build.Archive
 	images    []build.Image
 	testSpecs []build.TestSpec
+	zbiTests  []build.ZBITest
 }
 
 func (m fakeBuildModules) Archives() []build.Archive   { return m.archives }
 func (m fakeBuildModules) Images() []build.Image       { return m.images }
 func (m fakeBuildModules) TestSpecs() []build.TestSpec { return m.testSpecs }
+func (m fakeBuildModules) ZBITests() []build.ZBITest   { return m.zbiTests }
 
 func TestConstructNinjaTargets(t *testing.T) {
 	testCases := []struct {
@@ -84,6 +86,19 @@ func TestConstructNinjaTargets(t *testing.T) {
 				},
 			},
 			expectedTargets: []string{"linux_path", "mac_path"},
+		},
+		{
+			name: "zbi tests included",
+			staticSpec: &fintpb.Static{
+				IncludeZbiTests: true,
+			},
+			modules: fakeBuildModules{
+				zbiTests: []build.ZBITest{
+					{Path: "foo.zbi"},
+					{Path: "bar.zbi"},
+				},
+			},
+			expectedTargets: []string{"foo.zbi", "bar.zbi"},
 		},
 	}
 
