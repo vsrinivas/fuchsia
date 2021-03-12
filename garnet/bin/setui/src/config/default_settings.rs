@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::fx_log_err;
 use serde::de::DeserializeOwned;
 use std::fmt::Display;
 use std::fs::File;
@@ -41,10 +41,8 @@ where
     /// Returns the default value if unable to read or parse the file. The returned option will
     /// only be None if the default_value was provided as None.
     fn load_default_settings(&self) -> Option<T> {
+        // TODO(fxbug.dev/67569): Log config load failures to inspect in an agent.
         File::open(self.config_file_path.as_ref())
-            .map_err(|e| {
-                fx_log_info!("unable to open {}, using defaults: {:?}", self.config_file_path, e);
-            })
             .ok()
             .and_then(|file| {
                 serde_json::from_reader(BufReader::new(file))
