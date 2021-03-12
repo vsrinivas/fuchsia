@@ -10,6 +10,7 @@
 #include <lib/arch/x86/boot-cpuid.h>
 #include <lib/arch/x86/bug.h>
 #include <lib/arch/x86/cache.h>
+#include <lib/arch/x86/extension.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/cmdline.h>
 #include <lib/code_patching.h>
@@ -24,6 +25,7 @@
 #include <arch/x86/platform_access.h>
 #include <arch/x86/pv.h>
 #include <fbl/algorithm.h>
+#include <hwreg/x86msr.h>
 #include <ktl/atomic.h>
 #include <ktl/iterator.h>
 #include <platform/pc/bootbyte.h>
@@ -188,8 +190,12 @@ void x86_feature_early_init_percpu(void) {
 void x86_cpu_feature_init() {
   DEBUG_ASSERT(arch_curr_cpu_num() == 0);
 
-  cpu_id::CpuId cpuid;
-  MsrAccess msr;
+  arch::BootCpuidIo cpuid;
+  hwreg::X86MsrIo msr;
+
+  // TODO(61093): Replace with newer lib/arch and hwreg counterparts.
+  cpu_id::CpuId cpuid_old;
+  MsrAccess msr_old;
 
   // Get microcode patch level
   switch (x86_vendor) {
@@ -205,49 +211,53 @@ void x86_cpu_feature_init() {
 
   // Evaluate speculative execution mitigation settings.
   g_disable_spec_mitigations = gBootOptions->x86_disable_spec_mitigations;
-  g_has_swapgs_bug = arch::HasX86SwapgsBug(arch::BootCpuidIo{});
+  g_has_swapgs_bug = arch::HasX86SwapgsBug(cpuid);
+
+  // If mitigations are enabled, try to disable TSX. Disabling TSX prevents exploiting
+  // TAA/CacheOut attacks and potential future exploits. It also avoids MD_CLEAR on CPUs
+  // without MDS.
+  //
+  // WARNING: If we disable TSX, we must do so before we determine whether we are affected by
+  // TAA/Cacheout; otherwise the TAA/Cacheout determination code will run before the TSX
+  // CPUID bit is masked.
+  if (!g_disable_spec_mitigations && arch::DisableTsx(cpuid, msr)) {
+    // If successful, repopulate the boot CPU's CPUID cache in order to reflect
+    // the disabling.
+    arch::InitializeBootCpuid();
+  }
+
+  g_has_md_clear = cpuid.Read<arch::CpuidExtendedFeatureFlagsD>().md_clear();
+  g_has_mds_taa = arch::HasX86MdsTaaBugs(cpuid, msr);
+  g_md_clear_on_user_return = !g_disable_spec_mitigations && g_has_mds_taa && g_has_md_clear &&
+                              gBootOptions->x86_md_clear_on_user_return;
 
   if (x86_vendor == X86_VENDOR_INTEL) {
-    g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
-    g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
+    g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid_old, &msr_old);
+    g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid_old, &msr_old);
     g_l1d_flush_on_vmentry = ((x86_get_disable_spec_mitigations() == false)) && g_has_l1tf &&
                              x86_feature_test(X86_FEATURE_L1D_FLUSH);
-    if (x86_get_disable_spec_mitigations() == false) {
-      // If mitigations are enabled, try to disable TSX. Disabling TSX prevents exploiting
-      // TAA/CacheOut attacks and potential future exploits. It also avoids MD_CLEAR on CPUs
-      // without MDS.
-      //
-      // WARNING: If we disable TSX, we must do so before we determine whether we are affected by
-      // TAA/Cacheout; otherwise the TAA/Cacheout determination code will run before the TSX
-      // CPUID bit is masked.
-      x86_intel_cpu_try_disable_tsx(&cpuid, &msr);
-    }
-    g_has_mds_taa = x86_intel_cpu_has_mds_taa(&cpuid, &msr);
-    g_has_md_clear = cpuid.ReadFeatures().HasFeature(cpu_id::Features::MD_CLEAR);
-    g_md_clear_on_user_return = ((x86_get_disable_spec_mitigations() == false)) && g_has_mds_taa &&
-                                g_has_md_clear && gBootOptions->x86_md_clear_on_user_return;
-    g_has_ssb = x86_intel_cpu_has_ssb(&cpuid, &msr);
-    g_has_ssbd = x86_intel_cpu_has_ssbd(&cpuid, &msr);
-    g_has_spec_ctrl = cpuid.ReadFeatures().HasFeature(cpu_id::Features::IBRS_IBPB) ||
-                      cpuid.ReadFeatures().HasFeature(cpu_id::Features::STIBP) ||
-                      cpuid.ReadFeatures().HasFeature(cpu_id::Features::SSBD);
-    g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::IBRS_IBPB);
-    g_has_enhanced_ibrs = g_has_spec_ctrl && x86_intel_cpu_has_enhanced_ibrs(&cpuid, &msr);
+    g_has_ssb = x86_intel_cpu_has_ssb(&cpuid_old, &msr_old);
+    g_has_ssbd = x86_intel_cpu_has_ssbd(&cpuid_old, &msr_old);
+    g_has_spec_ctrl = cpuid_old.ReadFeatures().HasFeature(cpu_id::Features::IBRS_IBPB) ||
+                      cpuid_old.ReadFeatures().HasFeature(cpu_id::Features::STIBP) ||
+                      cpuid_old.ReadFeatures().HasFeature(cpu_id::Features::SSBD);
+    g_has_ibpb = cpuid_old.ReadFeatures().HasFeature(cpu_id::Features::IBRS_IBPB);
+    g_has_enhanced_ibrs = g_has_spec_ctrl && x86_intel_cpu_has_enhanced_ibrs(&cpuid_old, &msr_old);
   } else if (x86_vendor == X86_VENDOR_AMD) {
-    g_has_ssb = x86_amd_cpu_has_ssb(&cpuid, &msr);
-    g_has_ssbd = x86_amd_cpu_has_ssbd(&cpuid, &msr);
-    g_has_spec_ctrl = cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBRS) ||
-                      cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_STIBP);
-    g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBPB);
+    g_has_ssb = x86_amd_cpu_has_ssb(&cpuid_old, &msr_old);
+    g_has_ssbd = x86_amd_cpu_has_ssbd(&cpuid_old, &msr_old);
+    g_has_spec_ctrl = cpuid_old.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBRS) ||
+                      cpuid_old.ReadFeatures().HasFeature(cpu_id::Features::AMD_STIBP);
+    g_has_ibpb = cpuid_old.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBPB);
     // Certain AMD CPUs may prefer modes where retpolines are not used and IBRS is enabled
     // early in boot. This is similar to Intel's "Enhanced IBRS" but enumerated differently.
     // See "Indirect Branch Control Extension" Revision 4.10.18, Extended Usage Models.
-    g_has_enhanced_ibrs = g_has_spec_ctrl && x86_amd_cpu_has_ibrs_always_on(&cpuid);
+    g_has_enhanced_ibrs = g_has_spec_ctrl && x86_amd_cpu_has_ibrs_always_on(&cpuid_old);
   }
   g_ras_fill_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false);
   g_cpu_vulnerable_to_rsb_underflow = (x86_get_disable_spec_mitigations() == false) &&
                                       (x86_vendor == X86_VENDOR_INTEL) &&
-                                      x86_intel_cpu_has_rsb_fallback(&cpuid, &msr);
+                                      x86_intel_cpu_has_rsb_fallback(&cpuid_old, &msr_old);
   // TODO(fxbug.dev/33667, fxbug.dev/12150): Consider whether a process can opt-out of an IBPB on
   // switch, either on switch-in (ex: its compiled with a retpoline) or switch-out (ex: it promises
   // not to attack the next process).
@@ -267,7 +277,7 @@ void x86_cpu_feature_late_init_percpu(void) {
 
   // Same reasoning as was done in x86_cpu_feature_init() for the boot CPU.
   if (x86_get_disable_spec_mitigations() == false && arch_curr_cpu_num() != 0) {
-    x86_intel_cpu_try_disable_tsx(&cpuid, &msr);
+    arch::DisableTsx(arch::BootCpuidIo{}, hwreg::X86MsrIo{});
   }
 
   // Spectre V2: If Enhanced IBRS is available and speculative mitigations are enabled, enable IBRS.
@@ -585,7 +595,6 @@ static const x86_microarch_config_t cannon_lake_config{
     .disable_c1e = true,
     .has_meltdown = true,
     .has_l1tf = true,
-    .has_mds = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -604,7 +613,6 @@ static const x86_microarch_config_t skylake_config{
     .disable_c1e = true,
     .has_meltdown = true,
     .has_l1tf = true,
-    .has_mds = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -632,7 +640,6 @@ static const x86_microarch_config_t skylake_x_config{
     .disable_c1e = true,
     .has_meltdown = true,
     .has_l1tf = true,
-    .has_mds = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -651,7 +658,6 @@ static const x86_microarch_config_t broadwell_config{
     .disable_c1e = true,
     .has_meltdown = true,
     .has_l1tf = true,
-    .has_mds = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -669,7 +675,6 @@ static const x86_microarch_config_t haswell_config{
     .disable_c1e = true,
     .has_meltdown = true,
     .has_l1tf = true,
-    .has_mds = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -687,7 +692,6 @@ static const x86_microarch_config_t ivybridge_config{
     .disable_c1e = true,
     .has_meltdown = true,
     .has_l1tf = true,
-    .has_mds = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -705,7 +709,6 @@ static const x86_microarch_config_t sandybridge_config{
     .disable_c1e = true,
     .has_meltdown = true,
     .has_l1tf = true,
-    .has_mds = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -723,7 +726,6 @@ static const x86_microarch_config_t westmere_config{
     .disable_c1e = true,
     .has_meltdown = true,
     .has_l1tf = true,
-    .has_mds = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -741,7 +743,6 @@ static const x86_microarch_config_t nehalem_config{
     .disable_c1e = true,
     .has_meltdown = true,
     .has_l1tf = true,
-    .has_mds = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -759,7 +760,6 @@ static const x86_microarch_config_t silvermont_config{
     .disable_c1e = false,
     .has_meltdown = false,
     .has_l1tf = false,
-    .has_mds = true,
     .has_ssb = false,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -777,7 +777,6 @@ static const x86_microarch_config_t goldmont_config{
     .disable_c1e = false,
     .has_meltdown = true,
     .has_l1tf = false,
-    .has_mds = false,
     .has_ssb = true,
     // [APL30] Apollo Lake SOCs (Goldmont) have an errata which causes stores to not always wake
     // MWAIT-ing cores. Prefer HLT to avoid the issue.
@@ -797,7 +796,6 @@ static const x86_microarch_config_t goldmont_plus_config{
     .disable_c1e = false,
     .has_meltdown = true,
     .has_l1tf = false,
-    .has_mds = false,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -825,7 +823,6 @@ static const x86_microarch_config_t intel_default_config{
     .disable_c1e = false,
     .has_meltdown = true,
     .has_l1tf = true,
-    .has_mds = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -845,7 +842,6 @@ static const x86_microarch_config_t zen_config{
     .disable_c1e = false,
     .has_meltdown = false,
     .has_l1tf = false,
-    .has_mds = false,
     .has_ssb = true,
     // Zen SOCs save substantial power using HLT instead of MWAIT.
     // TODO(fxbug.dev/61265): Use a predictor/selection to use mwait for short sleeps.
@@ -865,7 +861,6 @@ static const x86_microarch_config_t jaguar_config{
     .disable_c1e = false,
     .has_meltdown = false,
     .has_l1tf = false,
-    .has_mds = false,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -883,7 +878,6 @@ static const x86_microarch_config_t bulldozer_config{
     .disable_c1e = false,
     .has_meltdown = false,
     .has_l1tf = false,
-    .has_mds = false,
     .has_ssb = true,
     // Excavator SOCs in particular save substantial power using HLT instead of MWAIT
     .idle_prefer_hlt = true,
@@ -902,7 +896,6 @@ static const x86_microarch_config_t amd_default_config{
     .disable_c1e = false,
     .has_meltdown = false,
     .has_l1tf = false,
-    .has_mds = false,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =
@@ -922,7 +915,6 @@ static const x86_microarch_config_t unknown_vendor_config{
     .disable_c1e = false,
     .has_meltdown = true,
     .has_l1tf = true,
-    .has_mds = true,
     .has_ssb = true,
     .idle_prefer_hlt = false,
     .idle_states =

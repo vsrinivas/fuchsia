@@ -52,6 +52,10 @@ enum class X86Msr : uint32_t {
   IA32_GS_BASE = 0xc000'0101,         // Current %gs.base value.
   IA32_KERNEL_GS_BASE = 0xc000'0102,  // %gs.base value after `swapgs`.
 
+  IA32_ARCH_CAPABILITIES = 0x0000'010a,  // Enumeration of architectural features.
+
+  IA32_TSX_CTRL = 0x0000'0122,  // TSX control.
+
   IA32_DEBUGCTL = 0x0000'01d9,  // Debug control.
 
   IA32_PERF_CAPABILITIES = 0x0000'0345,  // Performance monitoring features available.

@@ -432,6 +432,27 @@ struct CpuidExtendedFeatureFlagsB
   DEF_BIT(0, fsgsbase);
 };
 
+struct CpuidExtendedFeatureFlagsD
+    : public CpuidIoValueBase<CpuidExtendedFeatureFlagsD, 0x7, 0x0, CpuidIo::kEdx> {
+  DEF_BIT(31, ssbd);
+  DEF_BIT(30, ia32_core_capabilities);
+  DEF_BIT(29, ia32_arch_capabilities);
+  DEF_BIT(28, l1d_flush);
+  DEF_BIT(27, stibp);
+  DEF_BIT(26, ibrs_ibpb);
+  // Bits [25:21] are reserved.
+  DEF_BIT(20, cet_ibt);
+  // Bits [19:16] are reserved.
+  DEF_BIT(15, hybrid);
+  // Bits [14:11] are reserved.
+  DEF_BIT(10, md_clear);
+  // Bits [9:5] are reserved.
+  DEF_BIT(4, fsrm);
+  DEF_BIT(3, avx512_4fmaps);
+  DEF_BIT(2, avx512_4vnniw);
+  // Bits [1:0] are reserved.
+};
+
 //---------------------------------------------------------------------------//
 // Leaf/Function 0xa.
 //

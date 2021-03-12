@@ -324,7 +324,6 @@ typedef struct {
   // be overriden by a more specific enumeration mechanism (ex: IA32_ARCH_CAPABILITIES)
   bool has_meltdown;
   bool has_l1tf;
-  bool has_mds;
   bool has_ssb;
 
   // Whether the idle loop should prefer HLT to MWAIT.
@@ -393,7 +392,6 @@ void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);
 bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr);
-bool x86_intel_cpu_has_mds_taa(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_amd_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);
@@ -406,7 +404,6 @@ void x86_intel_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostat
 void x86_cpu_ibpb(MsrAccess* msr);
 bool x86_intel_cpu_has_enhanced_ibrs(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_amd_cpu_has_ibrs_always_on(const cpu_id::CpuId* cpuid);
-void x86_intel_cpu_try_disable_tsx(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 // Enable or disable Turbo/CPB on the current CPU
 void x86_cpu_set_turbo(const cpu_id::CpuId* cpuid, MsrAccess* msr, Turbostate state);
 uint32_t x86_amd_get_patch_level(void);

@@ -345,64 +345,6 @@ static bool test_x64_l1tf_enumeration() {
   END_TEST;
 }
 
-static bool test_x64_mds_enumeration() {
-  BEGIN_TEST;
-
-  fbl::AllocChecker ac;
-  {
-    // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
-    FakeMsrAccess fake_msrs;
-    EXPECT_TRUE(x86_intel_cpu_has_mds_taa(&cpu_id::kCpuIdXeon2690v4, &fake_msrs));
-  }
-
-  {
-    // Test an Intel Xeon E5-2690 V4 w/ new microcode (ARCH_CAPABILITIES available)
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
-    ASSERT_TRUE(ac.check(), "");
-    data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
-        (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
-    cpu_id::FakeCpuId cpu(*data.get());
-    FakeMsrAccess fake_msrs = {};
-    fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
-    EXPECT_TRUE(x86_intel_cpu_has_mds_taa(&cpu, &fake_msrs));
-  }
-
-  {
-    // Intel(R) Xeon(R) Gold 6xxx; does not have MDS but it does have TAA.
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
-    ASSERT_TRUE(ac.check(), "");
-    data->leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
-    data->leaf1 = {.reg = {0x50656, 0x12400800, 0x7ffefbff, 0xbfebfbff}};
-    data->leaf4 = {.reg = {0x7c004121, 0x1c0003f, 0x3f, 0x0}};
-    data->leaf7 = {.reg = {0x0, 0xd39ffffb, 0x808, 0xbc000400}};
-
-    cpu_id::FakeCpuId cpu(*data.get());
-    FakeMsrAccess fake_msrs = {};
-    fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x2b};
-    EXPECT_TRUE(x86_intel_cpu_has_mds_taa(&cpu, &fake_msrs));
-  }
-
-  {
-    // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have MDS but does not
-    // enumerate MDS_NO with microcode 32h (at least). It does not have TSX,
-    // so it does not have TAA.
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
-    ASSERT_TRUE(ac.check(), "");
-    data->leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
-    data->leaf1 = {.reg = {0x506c9, 0x2200800, 0x4ff8ebbf, 0xbfebfbff}};
-    data->leaf4 = {.reg = {0x3c000121, 0x140003f, 0x3f, 0x1}};
-    data->leaf7 = {.reg = {0x0, 0x2294e283, 0x0, 0x2c000000}};
-
-    cpu_id::FakeCpuId cpu(*data.get());
-    FakeMsrAccess fake_msrs = {};
-    // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
-    fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
-    EXPECT_FALSE(x86_intel_cpu_has_mds_taa(&cpu, &fake_msrs));
-  }
-
-  END_TEST;
-}
-
 static bool test_x64_ssb_enumeration() {
   BEGIN_TEST;
 
@@ -832,7 +774,6 @@ UNITTEST("test k hwp commands", test_x64_hwp_k_commands)
 UNITTEST("test uarch_config is correctly selected", test_x64_cpu_uarch_config_selection)
 UNITTEST("test enumeration of x64 Meltdown vulnerability", test_x64_meltdown_enumeration)
 UNITTEST("test enumeration of x64 L1TF vulnerability", test_x64_l1tf_enumeration)
-UNITTEST("test enumeration of x64 MDS vulnerability", test_x64_mds_enumeration)
 UNITTEST("test enumeration of x64 SSB vulnerability", test_x64_ssb_enumeration)
 UNITTEST("test mitigation of x64 SSB vulnerability", test_x64_ssb_disable)
 UNITTEST("test enumeration of x64 Spectre V2 flags", test_x64_spectre_v2_enumeration)

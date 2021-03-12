@@ -152,36 +152,6 @@ bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   return microarch_config->has_l1tf;
 }
 
-// Returns true iff the CPU is susceptible to any variant of MDS or TAA.
-bool x86_intel_cpu_has_mds_taa(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
-  // MDS is a family of speculative execution information disclosure vulnerabilities affecting
-  // many CPUs.
-  // https://www.intel.com/content/www/us/en/architecture-and-technology/mds.html
-  //
-  // TAA is a related vulnerability which uses TSX extensions
-  // https://www.intel.com/content/www/us/en/security-center/advisory/intel-sa-00270.html
-
-  // A processor has MDS if:
-  // 1. arch_capabilities is present and MDS_NO = 0 OR
-  // 2. arch_capabilities is not present and static tables indicate the processor family has MDS.
-  // A processor has TAA if:
-  // 0. TSX is available AND
-  // 1. arch_capabilities is present and TAA_NO = 0 OR
-  // 2. arch_capabilities is not present
-  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
-    uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
-    if ((arch_capabilities & X86_ARCH_CAPABILITIES_MDS_NO) &&
-        (arch_capabilities & X86_ARCH_CAPABILITIES_TAA_NO)) {
-      return false;
-    }
-  }
-  bool has_tsx = cpuid->ReadFeatures().HasFeature(cpu_id::Features::HLE) ||
-                 cpuid->ReadFeatures().HasFeature(cpu_id::Features::RTM);
-
-  auto* const microarch_config = get_microarch_config(cpuid);
-  return microarch_config->has_mds || has_tsx;
-}
-
 bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
     uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
@@ -248,19 +218,6 @@ void x86_intel_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostat
   }
   if (new_value != value) {
     msr->write_msr(/*msr_index=*/X86_MSR_IA32_MISC_ENABLE, /*value=*/new_value);
-  }
-}
-
-// Disable TSX if possible.
-void x86_intel_cpu_try_disable_tsx(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
-  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
-    uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
-    if (!(arch_capabilities & X86_ARCH_CAPABILITIES_TSX_CTRL)) {
-      return;
-    }
-
-    msr->write_msr(/*index=*/X86_MSR_IA32_TSX_CTRL,
-                   X86_TSX_CTRL_RTM_DISABLE | X86_TSX_CTRL_CPUID_DISABLE);
   }
 }
 
