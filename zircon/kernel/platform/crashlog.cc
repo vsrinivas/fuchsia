@@ -70,7 +70,7 @@ size_t default_platform_recover_crashlog(size_t len, void* cookie,
       str_hw_reason = "BROWNOUT";
       break;
     case ZbiHwRebootReason::Watchdog:
-      str_hw_reason = "WATCHDOG";
+      str_hw_reason = "HW WATCHDOG";
       break;
     default:
       snprintf(str_hw_reason_buf, sizeof(str_hw_reason_buf), "0x%08x",
