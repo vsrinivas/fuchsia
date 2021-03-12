@@ -1601,9 +1601,9 @@ checksum = "1306f3464951f30e30d12373d31c79fbd52d236e5e896fd92f96ec7babbbe60b"
 
 [[package]]
 name = "json5format"
-version = "0.1.5"
+version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3ca059529c958a8dceab7fa1b9388928d446d0ab3013fe7261f3f08a90ab19a"
+checksum = "0d2fdb4e2e20d2c9a0b6fe1edb85e6ea9f19aac61fc3306179cb2571c4f9560f"
 dependencies = [
  "lazy_static",
  "regex",

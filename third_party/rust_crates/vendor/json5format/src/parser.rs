@@ -232,8 +232,9 @@ pub(crate) struct Parser<'parser> {
 }
 
 impl<'parser> Parser<'parser> {
-    pub fn new(remaining: &'parser str, filename: &'parser Option<String>) -> Self {
-        let current_line = remaining.lines().next().unwrap();
+    pub fn new(filename: &'parser Option<String>) -> Self {
+        let remaining = "";
+        let current_line = &remaining;
         Self {
             remaining,
             filename,

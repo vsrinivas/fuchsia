@@ -275,7 +275,7 @@ group("itoa") {
 }
 
 group("json5format") {
-  deps = [ ":json5format-v0_1_5" ]
+  deps = [ ":json5format-v0_2_0" ]
 }
 
 group("lazy_static") {
@@ -4379,10 +4379,10 @@ rust_library("itoa-v0_4_3") {
   ]
 }
 
-rust_library("json5format-v0_1_5") {
+rust_library("json5format-v0_2_0") {
   crate_name = "json5format"
   crate_root = "//third_party/rust_crates/vendor/json5format/src/lib.rs"
-  output_name = "json5format-9f3ec41377f77d1d"
+  output_name = "json5format-51d5f403fa4d32fa"
   configs -= [
     "//build/config:rust_edition_2018",
     "//build/config:rust_2018_idioms",
@@ -4397,8 +4397,8 @@ rust_library("json5format-v0_1_5") {
   rustflags = [
     "--cap-lints=allow",
     "--edition=2018",
-    "-Cmetadata=9f3ec41377f77d1d",
-    "-Cextra-filename=-9f3ec41377f77d1d",
+    "-Cmetadata=51d5f403fa4d32fa",
+    "-Cextra-filename=-51d5f403fa4d32fa",
   ]
 }
 

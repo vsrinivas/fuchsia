@@ -292,7 +292,14 @@ use {
     std::rc::Rc,
 };
 
+pub use content::Array;
+pub use content::Comment;
+pub use content::Comments;
+pub use content::Object;
 pub use content::ParsedDocument;
+pub use content::Primitive;
+pub use content::Property;
+pub use content::Value;
 pub use error::Error;
 pub use error::Location;
 pub use options::FormatOptions;

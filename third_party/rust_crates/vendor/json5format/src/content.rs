@@ -5,7 +5,7 @@
 #![deny(missing_docs)]
 use {
     crate::{error::*, formatter::*, options::*, parser::*},
-    std::cell::RefCell,
+    std::cell::{Ref, RefCell, RefMut},
     std::cmp::Ordering,
     std::rc::Rc,
 };
@@ -19,7 +19,7 @@ pub struct ParsedDocument {
     filename: Option<String>,
 
     /// The parsed document model represented as an array of zero or more objects to format.
-    pub(crate) content: Array,
+    pub content: Array,
 }
 
 impl ParsedDocument {
@@ -30,7 +30,7 @@ impl ParsedDocument {
     /// If a filename is also provided, any parsing errors will include the filename with the line
     /// number and column where the error was encountered.
     pub fn from_str(buffer: &str, filename: Option<String>) -> Result<Self, Error> {
-        let mut parser = Parser::new(buffer, &filename);
+        let mut parser = Parser::new(&filename);
         let content = parser.parse(&buffer)?;
 
         Ok(Self { owned_buffer: None, filename, content })
@@ -47,7 +47,7 @@ impl ParsedDocument {
     /// If a filename is also provided, any parsing errors will include the filename with the line
     /// number and column where the error was encountered.
     pub fn from_string(buffer: String, filename: Option<String>) -> Result<Self, Error> {
-        let mut parser = Parser::new(&buffer, &filename);
+        let mut parser = Parser::new(&filename);
         let content = parser.parse(&buffer)?;
 
         Ok(Self { owned_buffer: Some(buffer), filename, content })
@@ -65,14 +65,32 @@ impl ParsedDocument {
     }
 }
 
-#[derive(Debug)]
-pub(crate) enum Comment {
-    Block { lines: Vec<String>, align: bool },
+/// Represents the variations of allowable comments.
+#[derive(Debug, Clone)]
+pub enum Comment {
+    /// Represents a comment read from a `/* */` pattern.
+    Block {
+        /// The content of the block comment, represented as a `String` for each line.
+        lines: Vec<String>,
+        /// `align` (if true) indicates that all comment `lines` started in a column after the
+        /// star's column in the opening `/*`. For each subsequent line in lines, the spaces from
+        /// column 0 to the star's column will be stripped, allowing the indent spaces to be
+        /// restored, during format, relative to the block's new horizontal position. Otherwise, the
+        /// original indentation will not be stripped, and the lines will be restored at their
+        /// original horizontal position. In either case, lines after the opening `/*` will retain
+        /// their original horizontal alignment, relative to one another.
+        align: bool,
+    },
+
+    /// Represents a comment read from a line starting with `//`.
     Line(String),
+
+    /// Represents a blank line between data.
     Break,
 }
 
 impl Comment {
+    /// Returns `true` if the `Comment` instance is a `Block` variant.
     pub fn is_block(&self) -> bool {
         match self {
             Comment::Block { .. } => true,
@@ -80,6 +98,7 @@ impl Comment {
         }
     }
 
+    /// Returns `true` if the `Comment` instance is a `Line` variant.
     #[allow(dead_code)] // for API consistency and tests even though enum is currently not `pub`
     pub fn is_line(&self) -> bool {
         match self {
@@ -88,6 +107,7 @@ impl Comment {
         }
     }
 
+    /// Returns `true` if the `Comment` instance is a `Break` variant.
     #[allow(dead_code)] // for API consistency and tests even though enum is currently not `pub`
     pub fn is_break(&self) -> bool {
         match self {
@@ -96,7 +116,10 @@ impl Comment {
         }
     }
 
-    pub fn format<'a>(&self, formatter: &'a mut Formatter) -> Result<&'a mut Formatter, Error> {
+    pub(crate) fn format<'a>(
+        &self,
+        formatter: &'a mut Formatter,
+    ) -> Result<&'a mut Formatter, Error> {
         match self {
             Comment::Block { lines, align } => {
                 let len = lines.len();
@@ -125,7 +148,9 @@ impl Comment {
     }
 }
 
-pub(crate) struct Comments {
+/// A struct containing all comments associated with a specific `Value`.
+#[derive(Clone)]
+pub struct Comments {
     /// Comments applied to the associated value.
     before_value: Vec<Comment>,
 
@@ -136,10 +161,12 @@ pub(crate) struct Comments {
 }
 
 impl Comments {
-    pub fn before_value(&mut self) -> &mut Vec<Comment> {
-        &mut self.before_value
+    /// Retrieves the comments immediately before an associated value.
+    pub fn before_value(&self) -> &Vec<Comment> {
+        &self.before_value
     }
 
+    /// Injects text into the end-of-line comment.
     pub fn append_end_of_line_comment(&mut self, comment: &str) -> Result<(), Error> {
         let updated = match self.end_of_line_comment.take() {
             None => comment.to_string(),
@@ -149,11 +176,14 @@ impl Comments {
         Ok(())
     }
 
-    pub fn end_of_line(&mut self) -> &Option<String> {
+    /// Retrieves a reference to the end-of-line comment.
+    pub fn end_of_line(&self) -> &Option<String> {
         &self.end_of_line_comment
     }
 }
 
+/// A struct used for capturing comments at the end of an JSON5 array or object, which are not
+/// associated to any of the Values contained in the array/object.
 pub(crate) struct ContainedComments {
     /// Parsed comments to be applied to the next Value, when reached.
     /// If there are any pending comments after the last item, they are written after the last
@@ -214,7 +244,7 @@ impl ContainedComments {
     ) -> Result<bool, Error> {
         if let Some(value_ref) = &mut self.current_line_value {
             if start_column == *self.end_of_line_comment_start_column.get_or_insert(start_column) {
-                (*value_ref.borrow_mut()).comments().append_end_of_line_comment(content)?;
+                (*value_ref.borrow_mut()).comments_mut().append_end_of_line_comment(content)?;
                 return Ok(false); // the comment is (part of) an end-of-line comment
             }
             self.current_line_value = None;
@@ -247,13 +277,38 @@ impl ContainedComments {
     }
 }
 
-pub(crate) enum Value {
-    Primitive { val: Primitive, comments: Comments },
-    Array { val: Array, comments: Comments },
-    Object { val: Object, comments: Comments },
+/// Represents the possible data types in a JSON5 object. Each variant has a field representing a
+/// specialized struct representing the value's data, and a field for comments (possibly including a
+/// line comment and comments appearing immediately before the value). For `Object` and `Array`,
+/// comments appearing at the end of the the structure are encapsulated inside the appropriate
+/// specialized struct.
+pub enum Value {
+    /// Represents a non-recursive data type (string, bool, number, or "null") and its associated
+    /// comments.
+    Primitive {
+        /// The struct containing the associated value.
+        val: Primitive,
+        /// The associated comments.
+        comments: Comments,
+    },
+    /// Represents a JSON5 array and its associated comments.
+    Array {
+        /// The struct containing the associated value.
+        val: Array,
+        /// The comments associated with the array.
+        comments: Comments,
+    },
+    /// Represents a JSON5 object and its associated comments.
+    Object {
+        /// The struct containing the associated value.
+        val: Object,
+        /// The comments associated with the object.
+        comments: Comments,
+    },
 }
 
 impl Value {
+    /// Returns `true` for an `Array` variant.
     pub fn is_array(&self) -> bool {
         match self {
             Value::Array { .. } => true,
@@ -261,6 +316,7 @@ impl Value {
         }
     }
 
+    /// Returns `true` for an `Object` variant.
     pub fn is_object(&self) -> bool {
         match self {
             Value::Object { .. } => true,
@@ -268,6 +324,7 @@ impl Value {
         }
     }
 
+    /// Returns `true` for a `Primitive` variant.
     pub fn is_primitive(&self) -> bool {
         match self {
             Value::Primitive { .. } => true,
@@ -275,7 +332,11 @@ impl Value {
         }
     }
 
-    pub fn format<'a>(&self, formatter: &'a mut Formatter) -> Result<&'a mut Formatter, Error> {
+    /// Recursively formats the data inside a `Value`.
+    pub(crate) fn format<'a>(
+        &self,
+        formatter: &'a mut Formatter,
+    ) -> Result<&'a mut Formatter, Error> {
         use Value::*;
         match self {
             Primitive { val, .. } => val.format(formatter),
@@ -284,7 +345,17 @@ impl Value {
         }
     }
 
-    pub fn comments(&mut self) -> &mut Comments {
+    /// Retrieves an immutable reference to the `comments` attribute of any variant.
+    pub fn comments(&self) -> &Comments {
+        use Value::*;
+        match self {
+            Primitive { comments, .. } | Array { comments, .. } | Object { comments, .. } => {
+                comments
+            }
+        }
+    }
+    /// Returns a mutable reference to the `comments` attribute of any variant.
+    pub fn comments_mut(&mut self) -> &mut Comments {
         use Value::*;
         match self {
             Primitive { comments, .. } | Array { comments, .. } | Object { comments, .. } => {
@@ -311,16 +382,26 @@ impl std::fmt::Debug for Value {
     }
 }
 
-pub(crate) struct Primitive {
+/// Represents a primitive value in a JSON5 object property or array item.
+/// The parsed value is stored as a formatted string, retaining its original format,
+/// and written to the formatted document just as it appeared.
+pub struct Primitive {
     value_string: String,
 }
 
 impl Primitive {
-    pub fn new(value_string: String, comments: Vec<Comment>) -> Value {
+    /// Instantiates a `Value::Array` with empty data and the provided comments.
+    pub(crate) fn new(value_string: String, comments: Vec<Comment>) -> Value {
         Value::Primitive {
             val: Primitive { value_string },
             comments: Comments { before_value: comments, end_of_line_comment: None },
         }
+    }
+
+    /// Returns the primitive value, as a formatted string.
+    #[inline]
+    pub fn as_str(&self) -> &str {
+        &self.value_string
     }
 
     fn format<'a>(&self, formatter: &'a mut Formatter) -> Result<&'a mut Formatter, Error> {
@@ -334,6 +415,7 @@ impl std::fmt::Debug for Primitive {
     }
 }
 
+/// An interface that represents the recursive nature of `Object` and `Array`.
 pub(crate) trait Container {
     /// Called by the `Parser` to add a parsed `Value` to the current `Container`.
     fn add_value(&mut self, value: Rc<RefCell<Value>>, parser: &Parser<'_>) -> Result<(), Error>;
@@ -349,13 +431,18 @@ pub(crate) trait Container {
     /// and given format options.
     fn format_content<'a>(&self, formatter: &'a mut Formatter) -> Result<&'a mut Formatter, Error>;
 
+    /// Retrieves an immutable reference to the `contained_comments` attribute.
     fn contained_comments(&self) -> &ContainedComments;
+
+    /// Retrieves a mutable reference to the `contained_comments` attribute.
     fn contained_comments_mut(&mut self) -> &mut ContainedComments;
 
+    /// See `ContainedComments::on_newline`.
     fn on_newline(&mut self) -> Result<(), Error> {
         self.contained_comments_mut().on_newline()
     }
 
+    /// See `ContainedComments::add_line_comment`.
     fn add_line_comment(
         &mut self,
         content: &str,
@@ -369,21 +456,29 @@ pub(crate) trait Container {
         )
     }
 
+    /// See `ContainedComments::add_block_comment`.
     fn add_block_comment(&mut self, comment: Comment) -> Result<(), Error> {
         self.contained_comments_mut().add_block_comment(comment)
     }
 
+    /// See `ContainedComments::has_pending_comments`.
     fn has_pending_comments(&self) -> bool {
         self.contained_comments().has_pending_comments()
     }
 
+    /// See `ContainedComments::take_pending_comments`.
     fn take_pending_comments(&mut self) -> Vec<Comment> {
         self.contained_comments_mut().take_pending_comments()
     }
 }
 
-pub(crate) struct Array {
-    /// The array items
+/// Represents a JSON5 array of items. During parsing, this object's state changes, as comments and
+/// items are encountered. Parsed comments are temporarily stored in contained_comments, to be
+/// transferred to the next parsed item. After the last item, if any other comments are encountered,
+/// those comments are retained in the contained_comments field, to be restored during formatting,
+/// after writing the last item.
+pub struct Array {
+    /// The array items.
     items: Vec<Rc<RefCell<Value>>>,
 
     /// Set to true when a value is encountered (parsed primitive, or sub-container in process)
@@ -391,12 +486,14 @@ pub(crate) struct Array {
     /// validating that each array item is separated by one and only one comma.
     is_parsing_value: bool,
 
-    /// Manages comments applied to contained items, or to be placed at the end of the container.
+    /// Manages parsed comments inside the array scope, which are either transferred to each array
+    /// item, or retained for placement after the last array item.
     contained_comments: ContainedComments,
 }
 
 impl Array {
-    pub fn new(comments: Vec<Comment>) -> Value {
+    /// Instantiates a `Value::Array` with empty data and the provided comments.
+    pub(crate) fn new(comments: Vec<Comment>) -> Value {
         Value::Array {
             val: Array {
                 items: vec![],
@@ -405,6 +502,40 @@ impl Array {
             },
             comments: Comments { before_value: comments, end_of_line_comment: None },
         }
+    }
+
+    /// Returns an iterator over the array items. Items must be dereferenced to access
+    /// the `Value`. For example:
+    ///
+    /// ```
+    /// use json5format::*;
+    /// let parsed_document = ParsedDocument::from_str("{}", None)?;
+    /// for item in parsed_document.content.items() {
+    ///     assert!(!(*item).is_primitive());
+    /// }
+    /// # Ok::<(),anyhow::Error>(())
+    /// ```
+    pub fn items(&self) -> impl Iterator<Item = Ref<'_, Value>> {
+        self.items.iter().map(|rc| rc.borrow())
+    }
+
+    /// As in `Array::items`, returns an iterator over the array items, but with mutable references.
+    #[inline]
+    pub fn items_mut(&mut self) -> impl Iterator<Item = RefMut<'_, Value>> {
+        self.items.iter_mut().map(|rc| rc.borrow_mut())
+    }
+
+    /// Returns a reference to the comments at the end of an array not associated with any values.
+    #[inline]
+    pub fn trailing_comments(&self) -> &Vec<Comment> {
+        &self.contained_comments.pending_comments
+    }
+
+    /// Returns a mutable reference to the comments at the end of an array not associated with any
+    /// values.
+    #[inline]
+    pub fn trailing_comments_mut(&mut self) -> &mut Vec<Comment> {
+        &mut self.contained_comments.pending_comments
     }
 
     /// Returns a cloned vector of item references in sorted order. The items owned by this Array
@@ -507,19 +638,43 @@ impl std::fmt::Debug for Array {
     }
 }
 
+/// Represents a name-value pair for a field in a JSON5 object.
 #[derive(Clone)]
-pub(crate) struct Property {
+pub struct Property {
     /// An unquoted or quoted property name. If unquoted, the name must match the
     /// UNQUOTED_PROPERTY_NAME_PATTERN.
-    pub name: String,
+    pub(crate) name: String,
 
     /// The property value.
-    pub value: Rc<RefCell<Value>>,
+    pub(crate) value: Rc<RefCell<Value>>,
 }
 
 impl Property {
-    pub fn new(name: String, value: Rc<RefCell<Value>>) -> Self {
+    /// Returns a new instance of a `Property` with the name provided as a `String`
+    /// and value provided as indirection to a `Value`.
+    pub(crate) fn new(name: String, value: Rc<RefCell<Value>>) -> Self {
         Property { name, value }
+    }
+
+    /// An unquoted or quoted property name. If unquoted, JSON5 property
+    /// names comply with the ECMAScript 5.1 `IdentifierName` requirements.
+    #[inline]
+    pub fn name(&self) -> &str {
+        return &self.name;
+    }
+
+    /// Returns a `Ref` to the property's value, which can be accessed by dereference,
+    /// for example: `(*some_prop.value()).is_primitive()`.
+    #[inline]
+    pub fn value(&self) -> Ref<'_, Value> {
+        return self.value.borrow();
+    }
+
+    /// Returns a `RefMut` to the property's value, which can be accessed by dereference,
+    /// for example: `(*some_prop.value()).is_primitive()`.
+    #[inline]
+    pub fn value_mut(&mut self) -> RefMut<'_, Value> {
+        return self.value.borrow_mut();
     }
 }
 
@@ -529,7 +684,9 @@ impl std::fmt::Debug for Property {
     }
 }
 
-pub(crate) struct Object {
+/// A specialized struct to represent the data of JSON5 object, including any comments placed at
+/// the end of the object.
+pub struct Object {
     /// Parsed property name to be applied to the next upcoming Value.
     pending_property_name: Option<String>,
 
@@ -541,12 +698,14 @@ pub(crate) struct Object {
     /// validating that each property is separated by one and only one comma.
     is_parsing_property: bool,
 
-    /// Manages comments applied to contained items, or to be placed at the end of the container.
+    /// Manages parsed comments inside the object scope, which are either transferred to each object
+    /// item, or retained for placement after the last object item.
     contained_comments: ContainedComments,
 }
 
 impl Object {
-    pub fn new(comments: Vec<Comment>) -> Value {
+    /// Instantiates a `Value::Object` with empty data and the provided comments.
+    pub(crate) fn new(comments: Vec<Comment>) -> Value {
         Value::Object {
             val: Object {
                 pending_property_name: None,
@@ -558,13 +717,41 @@ impl Object {
         }
     }
 
+    /// Retrieves an iterator from the `properties` field.
+    #[inline]
+    pub fn properties(&self) -> impl Iterator<Item = &Property> {
+        self.properties.iter()
+    }
+
+    /// Retrieves an iterator of mutable references from the `properties` field.
+    #[inline]
+    pub fn properties_mut(&mut self) -> impl Iterator<Item = &mut Property> {
+        self.properties.iter_mut()
+    }
+
+    /// Returns a reference to the comments at the end of an object not associated with any values.
+    #[inline]
+    pub fn trailing_comments(&self) -> &Vec<Comment> {
+        &self.contained_comments.pending_comments
+    }
+
+    /// Returns a mutable reference to the comments at the end of an object not associated with any
+    /// values.
+    #[inline]
+    pub fn trailing_comments_mut(&mut self) -> &mut Vec<Comment> {
+        &mut self.contained_comments.pending_comments
+    }
     /// The given property name was parsed. Once it's value is also parsed, the property will be
     /// added to this `Object`.
     ///
     /// # Arguments
     ///   * name - the property name, possibly quoted
     ///   * parser - reference to the current state of the parser
-    pub fn set_pending_property(&mut self, name: String, parser: &Parser<'_>) -> Result<(), Error> {
+    pub(crate) fn set_pending_property(
+        &mut self,
+        name: String,
+        parser: &Parser<'_>,
+    ) -> Result<(), Error> {
         self.contained_comments.current_line_value = None;
         if self.is_parsing_property {
             Err(parser.error("Properties must be separated by a comma"))
@@ -588,7 +775,7 @@ impl Object {
     }
 
     /// Returns true if a property name has been parsed, and the parser has not yet reached a value.
-    pub fn has_pending_property(&mut self) -> Result<bool, Error> {
+    pub(crate) fn has_pending_property(&mut self) -> Result<bool, Error> {
         Ok(self.pending_property_name.is_some())
     }
 

@@ -9,8 +9,7 @@
 
 ## `json5format` Rust library
 
-The [`json5format` library](https://crates.io/crates/json5format) includes APIs to customize the document format, with style options configurable both globally (affecting the entire document) as well as tailoring specific subsets of a target JSON5 schema. (See the [Rust package documentation](https://docs.rs/json5format/0.1.0/json5format) for more details and examples.)
-
+The [`json5format` library](https://crates.io/crates/json5format) includes APIs to customize the document format, with style options configurable both globally (affecting the entire document) as well as tailoring specific subsets of a target JSON5 schema. (See the [Rust package documentation](https://docs.rs/json5format/0.1.0/json5format) for more details and examples.) As of version 0.2.0, public APIs allow limited support for accessing the information inside a parsed document, and for injecting or modifying comments.
 ## `formatjson5` command line tool
 
 The `json5format` package also bundles an [example command line tool, `formatjson5`,](https://github.com/google/json5format/blob/master/examples/formatjson5.rs) that formats JSON5 documents using a basic style with some customizations available through command line options:
