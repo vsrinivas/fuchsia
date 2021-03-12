@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "uname"
@@ -12,13 +12,6 @@ executable("bin") {
   deps = [ "//src/zircon/lib/zircon" ]
 }
 
-package("uname") {
+fuchsia_shell_package("uname") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "uname"
-      shell = true
-    },
-  ]
 }
