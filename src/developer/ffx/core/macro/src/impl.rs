@@ -13,11 +13,16 @@ use {
         punctuated::Punctuated,
         spanned::Spanned,
         token::Comma,
-        Error, FnArg, Ident, ItemFn, ItemStruct, Lit, LitStr, Pat, PatType, PathSegment, Token,
+        AngleBracketedGenericArguments, Error, FnArg, GenericArgument, Ident, ItemFn, ItemStruct,
+        Lit, LitStr, Pat, PatType, PathArguments, PathSegment, Token,
         Type::Path,
         TypePath,
     },
 };
+
+const UNKNOWN_PROXY_TYPE: &str = "This argument was not recognized. Possible arguments include \
+                                  proxy types as well as Result and Option wrappers for proxy \
+                                  types.";
 
 const EXPECTED_SIGNATURE: &str = "ffx_plugin expects at least the command created in the args.rs \
                                   file and will accept FIDL proxies if mapped in the ffx_plugin \
@@ -26,12 +31,8 @@ const EXPECTED_SIGNATURE: &str = "ffx_plugin expects at least the command create
 const UNRECOGNIZED_PARAMETER: &str = "If this is a proxy, make sure the parameter's type matches \
 the mapping passed into the ffx_plugin attribute.";
 
-const REMOTE_CONTROL_PROXY: &str = "RemoteControlProxy";
-const REMOTE_CONTROL_INDEX: usize = 0;
-
 lazy_static! {
     static ref KNOWN_PROXIES: Vec<(&'static str, &'static str, &'static str)> = vec![
-        // If this order changes, change the REMOTE_CONTROL_INDEX const.
         ("RemoteControlProxy", "remote_proxy", "remote_factory"),
         ("DaemonProxy", "daemon_proxy", "daemon_factory"),
         ("FastbootProxy", "fastboot_proxy", "fastboot_factory"),
@@ -105,9 +106,10 @@ fn generate_fake_test_proxy_method(
 }
 
 struct GeneratedCodeParts {
-    preamble: TokenStream,
-    args: Punctuated<Ident, Token!(,)>,
+    known_proxies: Vec<TokenStream>,
+    args: Punctuated<TokenStream, Token!(,)>,
     futures: Punctuated<Ident, Token!(,)>,
+    future_results: Punctuated<Ident, Token!(,)>,
     proxies_to_generate: Vec<TokenStream>,
     test_fake_methods_to_generate: Vec<TokenStream>,
     cmd: FnArg,
@@ -117,13 +119,13 @@ fn parse_arguments(
     args: Punctuated<FnArg, Comma>,
     proxies: &ProxyMap,
 ) -> Result<GeneratedCodeParts, Error> {
-    let mut preamble = quote! {};
-    let mut inner_args: Punctuated<Ident, Token!(,)> = Punctuated::new();
+    let mut known_proxies = Vec::<TokenStream>::new();
+    let mut inner_args: Punctuated<TokenStream, Token!(,)> = Punctuated::new();
     let mut futures: Punctuated<Ident, Token!(,)> = Punctuated::new();
+    let mut future_results: Punctuated<Ident, Token!(,)> = Punctuated::new();
     let mut proxies_to_generate = Vec::new();
     let mut test_fake_methods_to_generate = Vec::<TokenStream>::new();
     let mut cmd: Option<FnArg> = None;
-    let mut remote_used = false;
     for arg in &args {
         match arg.clone() {
             FnArg::Receiver(_) => {
@@ -133,89 +135,67 @@ fn parse_arguments(
                 ))
             }
             FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
-                Path(TypePath { path, .. }) => match path.segments.last() {
-                    Some(simple_proxy_type) => {
-                        if let Some(GeneratedKnownProxyParts {
-                            name,
-                            factory,
-                            testing,
-                            is_remote,
-                        }) = generate_known_proxy(simple_proxy_type, &pat, path)
-                        {
-                            preamble = quote! {
-                                #preamble
-                                let #name = #factory().await?;
-                            };
-                            inner_args.push(name);
-                            test_fake_methods_to_generate.push(testing);
-                            if is_remote {
-                                remote_used = true;
-                            }
-                        } else if let Some(GeneratedMappedProxyParts {
-                            name,
-                            fut,
-                            implementation,
-                            testing,
-                        }) = generate_mapped_proxy(proxies, &pat, path)
-                        {
-                            inner_args.push(name);
-                            futures.push(fut);
-                            proxies_to_generate.push(implementation);
-                            test_fake_methods_to_generate.push(testing);
-                        } else if let Some(command) = parse_argh_command(&pat) {
-                            // This SHOULD be the argh command - and there should only be one.
-                            if let Some(_) = cmd {
-                                return Err(Error::new(
-                                    arg.span(),
-                                    format!(
-                                        "ffx_plugin could not recognize the parameters: {} \n{}",
-                                        command.clone(),
-                                        UNRECOGNIZED_PARAMETER
-                                    ),
-                                ));
-                            } else {
-                                cmd = Some(arg.clone());
-                                inner_args.push(command.clone());
-                            }
+                Path(TypePath { path, .. }) => {
+                    if let Some(GeneratedKnownProxyParts { name, factory, testing }) =
+                        generate_known_proxy(&pat, path)?
+                    {
+                        known_proxies.push(factory);
+                        inner_args.push(quote! { #name });
+                        test_fake_methods_to_generate.push(testing);
+                    } else if let Some(GeneratedMappedProxyParts {
+                        arg,
+                        fut,
+                        fut_res,
+                        implementation,
+                        testing,
+                    }) = generate_mapped_proxy(proxies, &pat, path)?
+                    {
+                        inner_args.push(arg);
+                        futures.push(fut);
+                        future_results.push(fut_res);
+                        proxies_to_generate.push(implementation);
+                        test_fake_methods_to_generate.push(testing);
+                    } else if let Some(command) = parse_argh_command(&pat) {
+                        // This SHOULD be the argh command - and there should only be one.
+                        if let Some(_) = cmd {
+                            return Err(Error::new(
+                                arg.span(),
+                                format!(
+                                    "ffx_plugin could not recognize the parameters: {} \n{}",
+                                    command.clone(),
+                                    UNRECOGNIZED_PARAMETER
+                                ),
+                            ));
                         } else {
-                            if let Pat::Ident(pat_ident) = pat.as_ref() {
-                                return Err(Error::new(
-                                    arg.span(),
-                                    format!(
-                                        "ffx_plugin could not recognize the parameter: {}\n{}",
-                                        pat_ident.ident.clone(),
-                                        UNRECOGNIZED_PARAMETER
-                                    ),
-                                ));
-                            } else {
-                                return Err(Error::new(arg.span(), EXPECTED_SIGNATURE));
-                            }
+                            cmd = Some(arg.clone());
+                            inner_args.push(quote! { #command });
+                        }
+                    } else {
+                        if let Pat::Ident(pat_ident) = pat.as_ref() {
+                            return Err(Error::new(
+                                arg.span(),
+                                format!(
+                                    "ffx_plugin could not recognize the parameter: {}\n{}",
+                                    pat_ident.ident.clone(),
+                                    UNRECOGNIZED_PARAMETER
+                                ),
+                            ));
+                        } else {
+                            return Err(Error::new(arg.span(), EXPECTED_SIGNATURE));
                         }
                     }
-                    _ => return Err(Error::new(arg.span(), EXPECTED_SIGNATURE)),
-                },
+                }
                 _ => return Err(Error::new(arg.span(), EXPECTED_SIGNATURE)),
             },
         }
     }
 
-    // Generated proxies need the remote_proxy. If the remote_proxy is not in the argument list and
-    // there are proxies to generate, we still need to add it to the preamble.
-    if proxies_to_generate.len() > 0 && !remote_used {
-        let (_, name, factory) = KNOWN_PROXIES[REMOTE_CONTROL_INDEX];
-        let name_ident = Ident::new(name, Span::call_site());
-        let factory_ident = Ident::new(factory, Span::call_site());
-        preamble = quote! {
-            #preamble
-            let #name_ident = #factory_ident().await?;
-        };
-    }
-
     if let Some(cmd) = cmd {
         Ok(GeneratedCodeParts {
-            preamble,
+            known_proxies,
             args: inner_args,
             futures,
+            future_results,
             proxies_to_generate,
             test_fake_methods_to_generate,
             cmd,
@@ -235,37 +215,87 @@ fn parse_argh_command(pattern_type: &Box<Pat>) -> Option<Ident> {
 
 struct GeneratedKnownProxyParts {
     name: Ident,
-    factory: Ident,
+    factory: TokenStream,
     testing: TokenStream,
-    is_remote: bool,
+}
+
+enum ProxyWrapper {
+    Option(syn::Path),
+    Result(syn::Path),
+    None(syn::Path),
+}
+
+fn extract_proxy_type(proxy_type_path: &syn::Path) -> Result<ProxyWrapper, Error> {
+    if proxy_type_path.segments.last().is_none() {
+        return Err(Error::new(proxy_type_path.span(), UNKNOWN_PROXY_TYPE));
+    }
+    let simple_proxy_type =
+        proxy_type_path.segments.last().expect("proxy path should not be empty");
+    match &simple_proxy_type.arguments {
+        PathArguments::AngleBracketed(AngleBracketedGenericArguments { args, .. }) => {
+            match args.first() {
+                Some(GenericArgument::Type(Path(TypePath { path, .. }))) => {
+                    let option_ident = Ident::new("Option", Span::call_site());
+                    let result_ident = Ident::new("Result", Span::call_site());
+                    match path.segments.last() {
+                        Some(PathSegment { .. }) => {
+                            if simple_proxy_type.ident == option_ident {
+                                Ok(ProxyWrapper::Option(path.clone()))
+                            } else if simple_proxy_type.ident == result_ident {
+                                Ok(ProxyWrapper::Result(path.clone()))
+                            } else {
+                                Err(Error::new(simple_proxy_type.span(), UNKNOWN_PROXY_TYPE))
+                            }
+                        }
+                        _ => Err(Error::new(simple_proxy_type.span(), UNKNOWN_PROXY_TYPE)),
+                    }
+                }
+                _ => Err(Error::new(simple_proxy_type.span(), UNKNOWN_PROXY_TYPE)),
+            }
+        }
+        PathArguments::None => Ok(ProxyWrapper::None(proxy_type_path.clone())),
+        _ => Err(Error::new(simple_proxy_type.span(), UNKNOWN_PROXY_TYPE)),
+    }
 }
 
 fn generate_known_proxy(
-    simple_proxy_type: &PathSegment,
     pattern_type: &Box<Pat>,
     path: &syn::Path,
-) -> Option<GeneratedKnownProxyParts> {
+) -> Result<Option<GeneratedKnownProxyParts>, Error> {
+    let proxy_wrapper_type = extract_proxy_type(path)?;
+    let proxy_type_path = match proxy_wrapper_type {
+        ProxyWrapper::Option(ref ptype)
+        | ProxyWrapper::Result(ref ptype)
+        | ProxyWrapper::None(ref ptype) => ptype,
+    };
+    let proxy_type = match proxy_type_path.segments.last() {
+        Some(last) => last,
+        None => return Err(Error::new(proxy_type_path.span(), UNKNOWN_PROXY_TYPE)),
+    };
     for known_proxy in KNOWN_PROXIES.iter() {
-        if simple_proxy_type.ident == Ident::new(known_proxy.0, Span::call_site()) {
+        if proxy_type.ident == Ident::new(known_proxy.0, Span::call_site()) {
             let testing = if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
-                generate_fake_test_proxy_method(pat_ident.ident.clone(), path)
+                generate_fake_test_proxy_method(pat_ident.ident.clone(), proxy_type_path)
             } else {
                 quote! {}
             };
-            return Some(GeneratedKnownProxyParts {
-                name: Ident::new(known_proxy.1, Span::call_site()),
-                factory: Ident::new(known_proxy.2, Span::call_site()),
-                testing,
-                is_remote: known_proxy.0 == REMOTE_CONTROL_PROXY,
-            });
+            let name = Ident::new(known_proxy.1, Span::call_site());
+            let factory_name = Ident::new(known_proxy.2, Span::call_site());
+            let factory = match proxy_wrapper_type {
+                ProxyWrapper::Option(_) => quote! { let #name = #factory_name().await.ok(); },
+                ProxyWrapper::Result(_) => quote! { let #name = #factory_name().await; },
+                ProxyWrapper::None(_) => quote! { let #name = #factory_name().await?; },
+            };
+            return Ok(Some(GeneratedKnownProxyParts { name, factory, testing }));
         }
     }
-    None
+    Ok(None)
 }
 
 struct GeneratedMappedProxyParts {
-    name: Ident,
+    arg: TokenStream,
     fut: Ident,
+    fut_res: Ident,
     implementation: TokenStream,
     testing: TokenStream,
 }
@@ -274,17 +304,24 @@ fn generate_mapped_proxy(
     proxies: &ProxyMap,
     pattern_type: &Box<Pat>,
     path: &syn::Path,
-) -> Option<GeneratedMappedProxyParts> {
-    let qualified_proxy_name = qualified_name(path);
+) -> Result<Option<GeneratedMappedProxyParts>, Error> {
+    let proxy_wrapper_type = extract_proxy_type(path)?;
+    let proxy_type_path = match proxy_wrapper_type {
+        ProxyWrapper::Option(ref ptype)
+        | ProxyWrapper::Result(ref ptype)
+        | ProxyWrapper::None(ref ptype) => ptype,
+    };
+    let qualified_proxy_name = qualified_name(proxy_type_path);
     if let Some(mapping) = proxies.map.get(&qualified_proxy_name) {
         let mapping_lit = LitStr::new(mapping, Span::call_site());
         if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
             let output = pat_ident.ident.clone();
             let output_fut = Ident::new(&format!("{}_fut", output), Span::call_site());
+            let output_fut_res = Ident::new(&format!("{}_fut_res", output), Span::call_site());
             let server_end = Ident::new(&format!("{}_server_end", output), Span::call_site());
             let selector = Ident::new(&format!("{}_selector", output), Span::call_site());
             let implementation = generate_proxy_from_selector(
-                path,
+                proxy_type_path,
                 mapping,
                 mapping_lit,
                 &output,
@@ -292,16 +329,22 @@ fn generate_mapped_proxy(
                 server_end,
                 selector,
             );
-            let testing = generate_fake_test_proxy_method(pat_ident.ident.clone(), path);
-            return Some(GeneratedMappedProxyParts {
-                name: output,
+            let testing = generate_fake_test_proxy_method(pat_ident.ident.clone(), proxy_type_path);
+            let arg = match proxy_wrapper_type {
+                ProxyWrapper::Option(_) => quote! { #output_fut_res.map(|_| #output).ok() },
+                ProxyWrapper::Result(_) => quote! { #output_fut_res.map(|_| #output) },
+                ProxyWrapper::None(_) => quote! { #output_fut_res.map(|_| #output)? },
+            };
+            return Ok(Some(GeneratedMappedProxyParts {
+                arg,
                 fut: output_fut,
+                fut_res: output_fut_res,
                 implementation,
                 testing,
-            });
+            }));
         }
     }
-    None
+    Ok(None)
 }
 
 fn generate_proxy_from_selector(
@@ -318,11 +361,11 @@ fn generate_proxy_from_selector(
             fidl::endpoints::create_proxy::<<#path as fidl::endpoints::Proxy>::Service>()?;
         let #selector =
             selectors::parse_selector(#mapping_lit)?;
-        let #output_fut;
-        {
+        let #output_fut =
+        async {
             // This needs to be a block in order for this `use` to avoid conflicting with a plugins own `use` for this trait.
             use futures::TryFutureExt;
-            #output_fut = remote_proxy
+            remote_factory().await?
             .connect(#selector, #server_end.into_channel())
             .map_ok_or_else(|e| Result::<(), anyhow::Error>::Err(anyhow::anyhow!(e)), |fidl_result| {
                 fidl_result
@@ -353,8 +396,8 @@ Plugin developers: you can use `ffx component select '{}'` to see which services
                         }
                     }
                 })
-            });
-        }
+            }).await
+        };
     }
 }
 
@@ -367,9 +410,10 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     };
 
     let GeneratedCodeParts {
-        mut preamble,
+        known_proxies,
         args,
         futures,
+        future_results,
         proxies_to_generate,
         test_fake_methods_to_generate,
         cmd,
@@ -382,27 +426,20 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     outer_args.push(quote! {is_experiment: E});
     outer_args.push(quote! {#cmd});
 
-    preamble = quote! {
-        #preamble
+    let generation = quote! {
+        #(#known_proxies)*
         #(#proxies_to_generate)*
     };
 
     let implementation = if proxies_to_generate.len() > 0 {
         quote! {
-            #preamble
-            match futures::try_join!(#futures) {
-                Ok(_) => {
-                    #method(#args)#asyncness
-                },
-                Err(e) => {
-                    log::error!("There was an error getting proxies from the Remote Control Service: {}", e);
-                    anyhow::bail!(e)
-                }
-            }
+            #generation
+            let (#future_results,) = futures::join!(#futures);
+            #method(#args)#asyncness
         }
     } else {
         quote! {
-            #preamble
+            #generation
             #method(#args)#asyncness
         }
     };
@@ -420,25 +457,25 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
         implementation
     };
 
-    Ok(quote! {
+    let res = quote! {
         #input
         pub async fn ffx_plugin_impl<D, R, DFut, RFut, E, EFut, F, FFut>(
             #outer_args
         ) -> anyhow::Result<()>
             where
-            D: FnOnce() -> DFut,
+            D: Fn() -> DFut,
             DFut: std::future::Future<
                 Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
             >,
-            R: FnOnce() -> RFut,
+            R: Fn() -> RFut,
             RFut: std::future::Future<
                 Output = anyhow::Result<
                     fidl_fuchsia_developer_remotecontrol::RemoteControlProxy
                 >,
             >,
-            E: FnOnce(&'static str) -> EFut,
+            E: Fn(&'static str) -> EFut,
             EFut: std::future::Future<Output = bool>,
-            F: FnOnce() -> FFut,
+            F: Fn() -> FFut,
             FFut: std::future::Future<
                 Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
             >,
@@ -447,7 +484,8 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
         }
 
         #(#test_fake_methods_to_generate)*
-    })
+    };
+    Ok(res)
 }
 
 fn cmp_string_selector(selector: &StringSelector, expected: &str) -> bool {
@@ -1075,20 +1113,18 @@ mod test {
             fn test_fn(test_param: DaemonProxy) {}
         );
         let param = input.sig.inputs[0].clone();
-        if let Some(GeneratedKnownProxyParts { name, factory, testing: _, is_remote }) = match param
-        {
+        if let Some(GeneratedKnownProxyParts { name, factory, testing: _ }) = match param {
             FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
-                Path(TypePath { path, .. }) => match path.segments.last() {
-                    Some(simple_proxy_type) => generate_known_proxy(simple_proxy_type, &pat, path),
-                    _ => return Err(Error::new(Span::call_site(), "unexpected param")),
-                },
+                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
         } {
             assert_eq!(name, Ident::new("daemon_proxy", Span::call_site()));
-            assert_eq!(factory, Ident::new("daemon_factory", Span::call_site()));
-            assert_eq!(is_remote, false);
+            assert_eq!(
+                factory.to_string(),
+                quote! { let daemon_proxy = daemon_factory().await?; }.to_string()
+            );
             Ok(())
         } else {
             Err(Error::new(Span::call_site(), "known proxy not generated"))
@@ -1101,20 +1137,18 @@ mod test {
             fn test_fn(test_param: RemoteControlProxy) {}
         );
         let param = input.sig.inputs[0].clone();
-        if let Some(GeneratedKnownProxyParts { name, factory, testing: _, is_remote }) = match param
-        {
+        if let Some(GeneratedKnownProxyParts { name, factory, testing: _ }) = match param {
             FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
-                Path(TypePath { path, .. }) => match path.segments.last() {
-                    Some(simple_proxy_type) => generate_known_proxy(simple_proxy_type, &pat, path),
-                    _ => return Err(Error::new(Span::call_site(), "unexpected param")),
-                },
+                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
         } {
             assert_eq!(name, Ident::new("remote_proxy", Span::call_site()));
-            assert_eq!(factory, Ident::new("remote_factory", Span::call_site()));
-            assert_eq!(is_remote, true);
+            assert_eq!(
+                factory.to_string(),
+                quote! { let remote_proxy = remote_factory().await?;}.to_string()
+            );
             Ok(())
         } else {
             Err(Error::new(Span::call_site(), "known proxy not generated"))
@@ -1127,20 +1161,18 @@ mod test {
             fn test_fn(test_param: FastbootProxy) {}
         );
         let param = input.sig.inputs[0].clone();
-        if let Some(GeneratedKnownProxyParts { name, factory, testing: _, is_remote }) = match param
-        {
+        if let Some(GeneratedKnownProxyParts { name, factory, testing: _ }) = match param {
             FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
-                Path(TypePath { path, .. }) => match path.segments.last() {
-                    Some(simple_proxy_type) => generate_known_proxy(simple_proxy_type, &pat, path),
-                    _ => return Err(Error::new(Span::call_site(), "unexpected param")),
-                },
+                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
         } {
             assert_eq!(name, Ident::new("fastboot_proxy", Span::call_site()));
-            assert_eq!(factory, Ident::new("fastboot_factory", Span::call_site()));
-            assert_eq!(is_remote, false);
+            assert_eq!(
+                factory.to_string(),
+                quote! { let fastboot_proxy = fastboot_factory().await?;}.to_string()
+            );
             Ok(())
         } else {
             Err(Error::new(Span::call_site(), "known proxy not generated"))
@@ -1156,10 +1188,7 @@ mod test {
         let param = input.sig.inputs[0].clone();
         let result = match param {
             FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
-                Path(TypePath { path, .. }) => match path.segments.last() {
-                    Some(simple_proxy_type) => generate_known_proxy(simple_proxy_type, &pat, path),
-                    _ => return Err(Error::new(Span::call_site(), "unexpected param")),
-                },
+                Path(TypePath { path, .. }) => generate_known_proxy(&pat, path)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
@@ -1175,16 +1204,17 @@ mod test {
             fn test_fn(test_param: TestProxy) {}
         );
         let param = input.sig.inputs[0].clone();
-        if let Some(GeneratedMappedProxyParts { name, fut, implementation: _, testing: _ }) =
-            match param {
-                FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
-                    Path(TypePath { path, .. }) => generate_mapped_proxy(&proxy_map, &pat, path),
-                    _ => return Err(Error::new(Span::call_site(), "unexpected param")),
-                },
+        if let Some(GeneratedMappedProxyParts { arg, fut, .. }) = match param {
+            FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
+                Path(TypePath { path, .. }) => generate_mapped_proxy(&proxy_map, &pat, path)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
-            }
-        {
-            assert_eq!(name, Ident::new("test_param", Span::call_site()));
+            },
+            _ => return Err(Error::new(Span::call_site(), "unexpected param")),
+        } {
+            assert_eq!(
+                arg.to_string(),
+                quote! { test_param_fut_res.map(|_| test_param)? }.to_string()
+            );
             assert_eq!(fut, Ident::new("test_param_fut", Span::call_site()));
             Ok(())
         } else {
@@ -1201,12 +1231,81 @@ mod test {
         let param = input.sig.inputs[0].clone();
         let result = match param {
             FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
-                Path(TypePath { path, .. }) => generate_mapped_proxy(&proxy_map, &pat, path),
+                Path(TypePath { path, .. }) => generate_mapped_proxy(&proxy_map, &pat, path)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
         };
         assert!(result.is_none());
         Ok(())
+    }
+
+    #[test]
+    fn test_known_proxy_works_with_options() -> Result<(), Error> {
+        let proxies = Default::default();
+        let input: ItemFn = parse_quote! {
+            fn test_fn(test_param: Option<test::DaemonProxy>, cmd: OptionCommand) -> Result<()> {}
+        };
+        ffx_plugin(input, proxies).map(|_| ())
+    }
+
+    #[test]
+    fn test_known_proxy_works_with_results() -> Result<(), Error> {
+        let proxies = Default::default();
+        let input: ItemFn = parse_quote! {
+            fn test_fn(test_param: Result<DaemonProxy>, cmd: ResultCommand) -> Result<()> {}
+        };
+        ffx_plugin(input, proxies).map(|_| ())
+    }
+
+    #[test]
+    fn test_mapped_proxy_works_with_options() -> Result<(), Error> {
+        let proxies: ProxyMap = parse_quote! { TestProxy= "test:expose:anything" };
+        let input: ItemFn = parse_quote! {
+            fn test_fn(test_param: Option<TestProxy>, cmd: ResultCommand) -> Result<()> {}
+        };
+        ffx_plugin(input, proxies).map(|_| ())
+    }
+
+    #[test]
+    fn test_mapped_proxy_works_with_results() -> Result<(), Error> {
+        let proxies: ProxyMap = parse_quote! { TestProxy= "test:expose:anything" };
+        let input: ItemFn = parse_quote! {
+            fn test_fn(test_param: Result<TestProxy>, cmd: ResultCommand) -> Result<()> {}
+        };
+        ffx_plugin(input, proxies).map(|_| ())
+    }
+
+    #[test]
+    fn test_mapped_proxy_works_with_both_options_and_results() -> Result<(), Error> {
+        let proxies: ProxyMap = parse_quote! {
+            TestProxy= "test:expose:anything",
+            TestProxy2 = "test:expose:anything"
+        };
+        let input: ItemFn = parse_quote! {
+            fn test_fn(
+                test_param: Result<TestProxy>,
+                test_param_2: Option<TestProxy2>,
+                cmd: ResultCommand) -> Result<()> {}
+        };
+        ffx_plugin(input, proxies).map(|_| ())
+    }
+
+    #[test]
+    fn test_both_known_and_mapped_proxy_works_with_both_options_and_results() -> Result<(), Error> {
+        let proxies: ProxyMap = parse_quote! {
+            TestProxy= "test:expose:anything",
+            TestProxy2 = "test:expose:anything"
+        };
+        let input: ItemFn = parse_quote! {
+            fn test_fn(
+                test_param: Result<TestProxy>,
+                test_param_2: Option<TestProxy2>,
+                daemon_proxy: DaemonProxy,
+                fastboot_proxy: Option<FastbootProxy>,
+                remote_proxy: Result<RemoteControlProxy>,
+                cmd: ResultCommand) -> Result<()> {}
+        };
+        ffx_plugin(input, proxies).map(|_| ())
     }
 }

@@ -15,14 +15,13 @@ use {
     },
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fuchsia_async::TimeoutExt,
-    futures::Future,
-    futures::FutureExt,
+    futures::{lock::Mutex, Future, FutureExt},
     lazy_static::lazy_static,
     ring::digest::{Context as ShaContext, Digest, SHA256},
     std::error::Error,
     std::fs::File,
     std::io::{BufReader, Read},
-    std::sync::{Arc, Mutex},
+    std::sync::Arc,
     std::time::{Duration, Instant},
 };
 
@@ -63,7 +62,7 @@ lazy_static! {
 // the spawning only happens one thread at a time.
 async fn get_daemon_proxy() -> Result<DaemonProxy> {
     let mut check_hash = false;
-    let _guard = SPAWN_GUARD.lock().unwrap();
+    let _guard = SPAWN_GUARD.lock().await;
     if !is_daemon_running().await {
         spawn_daemon().await?;
     } else {

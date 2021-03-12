@@ -11,6 +11,8 @@ ffx_plugin("ffx_reboot") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.power.statecontrol:fuchsia.hardware.power.statecontrol-rustc",
     "//src/lib/fuchsia-async",
+    "//third_party/rust_crates:chrono",
+    "//third_party/rust_crates:termion",
   ]
 
   sources = [

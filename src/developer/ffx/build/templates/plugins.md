@@ -14,21 +14,21 @@ pub async fn ffx_plugin_impl<D, DFut, R, RFut, E, EFut, F, FFut>(
 {% endif %}
 ) -> Result<(), anyhow::Error>
     where
-    D: FnOnce() -> DFut,
+    D: Fn() -> DFut,
     DFut: std::future::Future<
         Output = anyhow::Result<fidl_fuchsia_developer_bridge::DaemonProxy>,
     >,
-    R: FnOnce() -> RFut,
+    R: Fn() -> RFut,
     RFut: std::future::Future<
         Output = anyhow::Result<
             fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
         >,
     >,
-    F: FnOnce() -> FFut,
+    F: Fn() -> FFut,
     FFut: std::future::Future<
         Output = anyhow::Result<fidl_fuchsia_developer_bridge::FastbootProxy>,
     >,
-    E: FnOnce(&'static str) -> EFut,
+    E: Fn(&'static str) -> EFut,
     EFut: std::future::Future<Output = bool>,
 {
 {% if includes_execution %}
