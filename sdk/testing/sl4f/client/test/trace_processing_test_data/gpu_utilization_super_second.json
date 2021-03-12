@@ -1,0 +1,31 @@
+{
+    "displayTimeUnit": "ns",
+    "systemTraceEvents": {
+        "events": [],
+        "type": "fuchsia"
+    },
+    "traceEvents": [
+        {
+            "args": {
+                "utilization": 0.2
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 0.1
+        },
+        {
+            "args": {
+                "utilization": 0.7
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 2000000
+        }
+    ]
+}

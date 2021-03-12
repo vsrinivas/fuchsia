@@ -1,0 +1,32 @@
+{
+    "displayTimeUnit": "ns",
+    "traceEvents": [
+        {
+            "cat": "test",
+            "dur": 1000,
+            "name": "duration",
+            "ph": "X",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 10000
+        },
+        {
+            "args": {
+                "name": "Test thread"
+            },
+            "name": "thread_name",
+            "ph": "M",
+            "pid": 1000,
+            "tid": 1234
+        },
+        {
+            "args": {
+                "name": "Test process"
+            },
+            "name": "process_name",
+            "ph": "M",
+            "pid": 1000,
+            "tid": 1234
+        }
+    ]
+}

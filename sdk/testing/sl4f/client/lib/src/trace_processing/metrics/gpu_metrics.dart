@@ -51,7 +51,7 @@ List<TestCaseResults> gpuMetricsProcessor(
           'Error, expected ("magma", "GPU Utilization") event to'
           'have key "utilization" in args, and instead found ${b.args}');
     }
-    final double value = b.args['utilization'];
+    final double value = b.args['utilization'].toDouble();
     var duration = b.start - a.start;
     assert(duration > TimeDelta.zero());
     while (duration > TimeDelta.zero()) {

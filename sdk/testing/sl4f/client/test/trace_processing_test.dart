@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:io' show Platform;
+
 import 'package:test/test.dart';
 
 import 'package:sl4f/trace_processing.dart';
-
-import 'trace_processing_test_data.dart';
 
 Model _getTestModel() {
   final readEvent = DurationEvent()
@@ -274,12 +274,14 @@ void _checkModelsEqual(Model a, Model b) {
 
 Matcher _closeTo(num value, {num delta = 1e-5}) => closeTo(value, delta);
 
+Future<Model> _modelFromPath(String path) =>
+    createModelFromFilePath(Platform.script.resolve(path).toFilePath());
+
 void main(List<String> args) {
   test('Create trace model', () async {
     final testModel = _getTestModel();
-    final testModelFromJsonString =
-        createModelFromJsonString(testModelJsonString);
-    _checkModelsEqual(testModel, testModelFromJsonString);
+    final testModelFromJson = await _modelFromPath('runtime_deps/model.json');
+    _checkModelsEqual(testModel, testModelFromJson);
   });
 
   test('Dangling begin event', () async {
@@ -401,7 +403,7 @@ void main(List<String> args) {
   });
 
   test('Flutter frame stats metric', () async {
-    final model = createModelFromJsonString(flutterAppTraceJsonString);
+    final model = await _modelFromPath('runtime_deps/flutter_app.json');
     final results = flutterFrameStatsMetricsProcessor(
         model, {'flutterAppName': 'flutter_app'});
 
@@ -420,7 +422,8 @@ void main(List<String> args) {
   });
 
   test('Flutter frame stats with long name app', () async {
-    final model = createModelFromJsonString(flutterAppLongNameTraceJsonString);
+    final model =
+        await _modelFromPath('runtime_deps/flutter_app_long_name.json');
     final results = flutterFrameStatsMetricsProcessor(
         model, {'flutterAppName': 'flutter_app_long_name_xy'});
 
@@ -438,7 +441,8 @@ void main(List<String> args) {
   });
 
   test('Flutter frame stats metric (no Scenic edge case)', () async {
-    final model = createModelFromJsonString(flutterAppNoScenicTraceJsonString);
+    final model =
+        await _modelFromPath('runtime_deps/flutter_app_no_scenic.json');
     expect(
         () => flutterFrameStatsMetricsProcessor(
             model, {'flutterAppName': 'flutter_app'}),
@@ -446,7 +450,7 @@ void main(List<String> args) {
   });
 
   test('Scenic frame stats metric', () async {
-    final model = createModelFromJsonString(scenicTraceJsonString);
+    final model = await _modelFromPath('runtime_deps/scenic.json');
     final results = scenicFrameStatsMetricsProcessor(model, {});
 
     expect(computeMean(results[0].values), _closeTo(1.254430254));
@@ -484,7 +488,7 @@ void main(List<String> args) {
   });
 
   test('DRM FPS metric', () async {
-    final model = createModelFromJsonString(flutterAppTraceJsonString);
+    final model = await _modelFromPath('runtime_deps/flutter_app.json');
     final results =
         drmFpsMetricsProcessor(model, {'flutterAppName': 'flutter_app'});
 
@@ -495,7 +499,7 @@ void main(List<String> args) {
   });
 
   test('System DRM FPS metric', () async {
-    final model = createModelFromJsonString(flutterAppTraceJsonString);
+    final model = await _modelFromPath('runtime_deps/flutter_app.json');
     final results = systemDrmFpsMetricsProcessor(model, {});
 
     expect(computeMean(results[0].values), _closeTo(53.22293098104574));
@@ -505,7 +509,7 @@ void main(List<String> args) {
   });
 
   test('CPU metric', () async {
-    final model = createModelFromJsonString(testCpuMetricJsonString);
+    final model = await _modelFromPath('runtime_deps/cpu_metric.json');
     final results = cpuMetricsProcessor(model, {});
     expect(results[0].values[0], _closeTo(43.00));
     expect(results[0].values[1], _closeTo(20.00));
@@ -532,29 +536,29 @@ void main(List<String> args) {
 
   test('GPU metric', () async {
     {
-      final model = createModelFromJsonString(gpuUtilizationTraceString);
+      final model = await _modelFromPath('runtime_deps/gpu_utilization.json');
       final results = gpuMetricsProcessor(model, {});
       expect(computeMean(results[0].values), _closeTo(20.43815763249877));
     }
 
     {
       final model =
-          createModelFromJsonString(gpuUtilizationSubSecondTraceString);
+          await _modelFromPath('runtime_deps/gpu_utilization_sub_second.json');
       final results = gpuMetricsProcessor(model, {});
       expect(computeMean(results[0].values), _closeTo(80.0));
     }
 
     {
-      final model =
-          createModelFromJsonString(gpuUtilizationSuperSecondTraceString);
+      final model = await _modelFromPath(
+          'runtime_deps/gpu_utilization_super_second.json');
       final results = gpuMetricsProcessor(model, {});
       expect(computeMean(results[0].values), _closeTo(70.0));
     }
   });
 
   test('Temperature metric with temperature_logger data', () async {
-    final model = createModelFromJsonString(
-        testTemperatureMetricTemperatureLoggerJsonString);
+    final model = await _modelFromPath(
+        'runtime_deps/temperature_metric_temperature_logger.json');
     final results = temperatureMetricsProcessor(model, {});
     expect(results[0].values[0], _closeTo(50.00));
     expect(results[0].values[1], _closeTo(60.00));
@@ -580,7 +584,7 @@ void main(List<String> args) {
   });
 
   test('Memory metric', () async {
-    final model = createModelFromJsonString(testMemoryMetricJsonString);
+    final model = await _modelFromPath('runtime_deps/memory_metric.json');
     final results = memoryMetricsProcessor(model, {});
     expect(results[0].label, equals('Total System Memory'));
     expect(results[0].values[0], _closeTo(940612736));
@@ -645,7 +649,7 @@ void main(List<String> args) {
   });
 
   test('Input latency metric', () async {
-    final model = createModelFromJsonString(inputLatencyTraceJsonString);
+    final model = await _modelFromPath('runtime_deps/input_latency.json');
     final results = inputLatencyMetricsProcessor(model, {});
 
     expect(computeMean(results[0].values), _closeTo(77.39932275));
@@ -677,7 +681,7 @@ void main(List<String> args) {
   });
 
   test('Flow event binding points', () async {
-    final model = createModelFromJsonString(flowEventBindingJsonString);
+    final model = await _modelFromPath('runtime_deps/flow_event_binding.json');
 
     final thread = model.processes.single.threads.single;
     final flowEvents = filterEventsTyped<FlowEvent>(thread.events).toList();
@@ -703,7 +707,7 @@ void main(List<String> args) {
   });
 
   test('Chrome metadata events', () async {
-    final model = createModelFromJsonString(chromeMetadataJsonString);
+    final model = await _modelFromPath('runtime_deps/chrome_metadata.json');
 
     final process = model.processes.single;
     final thread = process.threads.single;
@@ -713,7 +717,7 @@ void main(List<String> args) {
   });
 
   test('Async events with id2', () async {
-    final model = createModelFromJsonString(id2AsyncJsonString);
+    final model = await _modelFromPath('runtime_deps/id2_async.json');
 
     expect(model.processes.length, 2);
 
@@ -732,7 +736,7 @@ void main(List<String> args) {
   });
 
   test('Wall time metric', () async {
-    final model = createModelFromJsonString(flutterAppTraceJsonString);
+    final model = await _modelFromPath('runtime_deps/flutter_app.json');
     final results = totalTraceWallTimeMetricsProcessor(model, {});
     expect(results[0].values[0], _closeTo(16247.062083));
   });

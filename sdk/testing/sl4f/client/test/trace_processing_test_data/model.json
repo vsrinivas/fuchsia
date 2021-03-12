@@ -1,0 +1,139 @@
+{
+    "displayTimeUnit": "ns",
+    "systemTraceEvents": {
+        "events": [
+            {
+                "name": "root_presenter",
+                "ph": "p",
+                "pid": 7009
+            },
+            {
+                "name": "initial-thread",
+                "ph": "t",
+                "pid": 7009,
+                "tid": 7022
+            }
+        ],
+        "type": "fuchsia"
+    },
+    "traceEvents": [
+        {
+            "cat": "io",
+            "id": 43,
+            "name": "AsyncReadWrite",
+            "ph": "b",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 697503138
+        },
+        {
+            "cat": "io",
+            "name": "Read",
+            "ph": "B",
+            "pid": 7009,
+            "tid": 7021,
+            "ts": 697503138.9531089
+        },
+        {
+            "cat": "io",
+            "id": 0,
+            "name": "ReadWriteFlow",
+            "ph": "s",
+            "pid": 7009,
+            "tid": 7021,
+            "ts": 697503139.9531089
+        },
+        {
+            "cat": "io",
+            "name": "Write",
+            "ph": "B",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 697778328.2160872
+        },
+        {
+            "cat": "io",
+            "id": 0,
+            "name": "ReadWriteFlow",
+            "ph": "t",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 697779328.2160872
+        },
+        {
+            "cat": "io",
+            "name": "Read",
+            "ph": "B",
+            "pid": 7010,
+            "tid": 7023,
+            "ts": 697868185.3588456
+        },
+        {
+            "bp": "e",
+            "cat": "io",
+            "id": 0,
+            "name": "ReadWriteFlow",
+            "ph": "f",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 697868050.2160872
+        },
+        {
+            "cat": "io",
+            "name": "Read",
+            "ph": "E",
+            "pid": 7010,
+            "tid": 7023,
+            "ts": 697868571.6018075
+        },
+        {
+            "cat": "io",
+            "name": "Write",
+            "ph": "E",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 697868582.5994568
+        },
+        {
+            "cat": "io",
+            "id": 43,
+            "name": "AsyncReadWrite",
+            "ph": "e",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 698607461
+        },
+        {
+            "cat": "io",
+            "name": "Read",
+            "ph": "E",
+            "pid": 7009,
+            "tid": 7021,
+            "ts": 698607461.7395687
+        },
+        {
+            "args": {
+                "message": "[INFO:trace_manager.cc(66)] Stopping trace"
+            },
+            "cat": "log",
+            "name": "log",
+            "ph": "i",
+            "pid": 7009,
+            "s": "g",
+            "tid": 7021,
+            "ts": 698607465.312
+        },
+        {
+            "args": {
+                "average_cpu_percentage": 0.89349317793,
+                "max_cpu_usage": 0.1234
+            },
+            "cat": "system_metrics",
+            "name": "cpu_usage",
+            "ph": "C",
+            "pid": 7010,
+            "tid": 7023,
+            "ts": 698607465.375
+        }
+    ]
+}

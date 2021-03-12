@@ -1,0 +1,125 @@
+{
+    "displayTimeUnit": "ns",
+    "traceEvents": [
+        {
+            "cat": "test",
+            "dur": 1000,
+            "name": "duration",
+            "ph": "X",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 10000
+        },
+        {
+            "cat": "test",
+            "dur": 1000,
+            "name": "duration",
+            "ph": "X",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 20000
+        },
+        {
+            "cat": "test",
+            "dur": 1000,
+            "name": "duration",
+            "ph": "X",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 30000
+        },
+        {
+            "cat": "test",
+            "dur": 1000,
+            "name": "duration",
+            "ph": "X",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 40000
+        },
+        {
+            "cat": "test",
+            "dur": 1000,
+            "name": "duration",
+            "ph": "X",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 50000
+        },
+        {
+            "cat": "test",
+            "dur": 1000,
+            "name": "duration",
+            "ph": "X",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 60000
+        },
+        {
+            "cat": "test",
+            "dur": 1000,
+            "name": "duration",
+            "ph": "X",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 70000
+        },
+        {
+            "cat": "test",
+            "id": 1,
+            "name": "flow",
+            "ph": "s",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 10500
+        },
+        {
+            "cat": "test",
+            "id": 1,
+            "name": "flow",
+            "ph": "t",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 20500
+        },
+        {
+            "cat": "test",
+            "id": 1,
+            "name": "flow",
+            "ph": "f",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 30500
+        },
+        {
+            "bp": "e",
+            "cat": "test",
+            "id": 2,
+            "name": "flow",
+            "ph": "s",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 50500
+        },
+        {
+            "bp": "e",
+            "cat": "test",
+            "id": 2,
+            "name": "flow",
+            "ph": "t",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 60500
+        },
+        {
+            "bp": "e",
+            "cat": "test",
+            "id": 2,
+            "name": "flow",
+            "ph": "f",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 70500
+        }
+    ]
+}

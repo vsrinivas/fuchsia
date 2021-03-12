@@ -1,0 +1,93 @@
+{
+    "displayTimeUnit": "ns",
+    "traceEvents": [
+        {
+            "cat": "test",
+            "id2": {
+                "local": "0x100"
+            },
+            "name": "async",
+            "ph": "b",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 10000
+        },
+        {
+            "cat": "test",
+            "id2": {
+                "local": "0x100"
+            },
+            "name": "async2",
+            "ph": "b",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 12000
+        },
+        {
+            "cat": "test",
+            "id2": {
+                "local": "0x100"
+            },
+            "name": "async2",
+            "ph": "e",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 14000
+        },
+        {
+            "cat": "test",
+            "id2": {
+                "local": "0x100"
+            },
+            "name": "async",
+            "ph": "e",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 16000
+        },
+        {
+            "cat": "test",
+            "id2": {
+                "global": "0x101"
+            },
+            "name": "async",
+            "ph": "b",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 20000
+        },
+        {
+            "cat": "test",
+            "id2": {
+                "global": "0x101"
+            },
+            "name": "async2",
+            "ph": "b",
+            "pid": 1001,
+            "tid": 1235,
+            "ts": 22000
+        },
+        {
+            "cat": "test",
+            "id2": {
+                "global": "0x101"
+            },
+            "name": "async2",
+            "ph": "e",
+            "pid": 1001,
+            "tid": 1235,
+            "ts": 24000
+        },
+        {
+            "cat": "test",
+            "id2": {
+                "global": "0x101"
+            },
+            "name": "async",
+            "ph": "e",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 26000
+        }
+    ]
+}

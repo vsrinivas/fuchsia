@@ -91,7 +91,6 @@ dart_test("sl4f_client_tests") {
     "storage_test.dart",
     "time_test.dart",
     "trace_processing_test.dart",
-    "trace_processing_test_data.dart",
     "update_test.dart",
     "webdriver_from_existing_chromedriver_test.dart",
     "webdriver_test.dart",
@@ -114,7 +113,24 @@ dart_test("sl4f_client_tests") {
 
 if (is_host) {
   host_test_data("runtime_deps") {
-    sources = [ "${root_out_dir}/fake_zedmon" ]
+    sources = [
+      "${root_out_dir}/fake_zedmon",
+      "test/trace_processing_test_data/chrome_metadata.json",
+      "test/trace_processing_test_data/cpu_metric.json",
+      "test/trace_processing_test_data/flow_event_binding.json",
+      "test/trace_processing_test_data/flutter_app.json",
+      "test/trace_processing_test_data/flutter_app_long_name.json",
+      "test/trace_processing_test_data/flutter_app_no_scenic.json",
+      "test/trace_processing_test_data/gpu_utilization.json",
+      "test/trace_processing_test_data/gpu_utilization_sub_second.json",
+      "test/trace_processing_test_data/gpu_utilization_super_second.json",
+      "test/trace_processing_test_data/id2_async.json",
+      "test/trace_processing_test_data/input_latency.json",
+      "test/trace_processing_test_data/memory_metric.json",
+      "test/trace_processing_test_data/model.json",
+      "test/trace_processing_test_data/scenic.json",
+      "test/trace_processing_test_data/temperature_metric_temperature_logger.json",
+    ]
 
     outputs = [ "$target_gen_dir/runtime_deps/{{source_file_part}}" ]
 

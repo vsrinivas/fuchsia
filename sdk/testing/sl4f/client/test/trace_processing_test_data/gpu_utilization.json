@@ -1,0 +1,592 @@
+{
+    "displayTimeUnit": "ns",
+    "systemTraceEvents": {
+        "events": [],
+        "type": "fuchsia"
+    },
+    "traceEvents": [
+        {
+            "args": {
+                "utilization": 0
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 206550189.4583333
+        },
+        {
+            "args": {
+                "utilization": 0.1332479625162552
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 206650927.375
+        },
+        {
+            "args": {
+                "utilization": 0.29501801533335137
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 206751501.5833333
+        },
+        {
+            "args": {
+                "utilization": 0.23495125948201584
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 206852301.125
+        },
+        {
+            "args": {
+                "utilization": 0.2542014732310366
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 206953575.91666666
+        },
+        {
+            "args": {
+                "utilization": 0.2661659866774079
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 207066276.875
+        },
+        {
+            "args": {
+                "utilization": 0.27596547564435836
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 207167030.625
+        },
+        {
+            "args": {
+                "utilization": 0.22328079251179514
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 207267622.75
+        },
+        {
+            "args": {
+                "utilization": 0.2676943489895865
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 207368287.29166666
+        },
+        {
+            "args": {
+                "utilization": 0.2775761249639612
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 207469115.29166666
+        },
+        {
+            "args": {
+                "utilization": 0.29916646577103745
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 207569217.5833333
+        },
+        {
+            "args": {
+                "utilization": 0.2525793529045661
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 207681681.41666666
+        },
+        {
+            "args": {
+                "utilization": 0.27593176212661
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 207782011.75
+        },
+        {
+            "args": {
+                "utilization": 0.2777838987719402
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 207883040.91666666
+        },
+        {
+            "args": {
+                "utilization": 0.2874631107224833
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 207983522.0833333
+        },
+        {
+            "args": {
+                "utilization": 0.2796434694195617
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 208084998
+        },
+        {
+            "args": {
+                "utilization": 0.2882633553038855
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 208185791.79166666
+        },
+        {
+            "args": {
+                "utilization": 0.2640954547289931
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 208296959.79166666
+        },
+        {
+            "args": {
+                "utilization": 0.26268398152127204
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 208397248.875
+        },
+        {
+            "args": {
+                "utilization": 0.22749706461820135
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 208497768.875
+        },
+        {
+            "args": {
+                "utilization": 0.2054824580652523
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 208598043.9583333
+        },
+        {
+            "args": {
+                "utilization": 0.2636031927023945
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 208698108.4583333
+        },
+        {
+            "args": {
+                "utilization": 0.2919747328828931
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 208798370.04166666
+        },
+        {
+            "args": {
+                "utilization": 0.2941737517045073
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 208899612.16666666
+        },
+        {
+            "args": {
+                "utilization": 0.2883083428877738
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 208999677.16666666
+        },
+        {
+            "args": {
+                "utilization": 0.2680095322076389
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 209101784.16666666
+        },
+        {
+            "args": {
+                "utilization": 0.2597752192512452
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 209215984.79166666
+        },
+        {
+            "args": {
+                "utilization": 0.270081627824441
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 209316260.54166666
+        },
+        {
+            "args": {
+                "utilization": 0.27732308983080123
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 209419349.54166666
+        },
+        {
+            "args": {
+                "utilization": 0.269592602411768
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 209522087.75
+        },
+        {
+            "args": {
+                "utilization": 0.27721895506459887
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 209629646.04166666
+        },
+        {
+            "args": {
+                "utilization": 0.2668497254118822
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 209729661.54166666
+        },
+        {
+            "args": {
+                "utilization": 0.27091932457786116
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 209829715.9583333
+        },
+        {
+            "args": {
+                "utilization": 0.19035999922539165
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 209937394.9583333
+        },
+        {
+            "args": {
+                "utilization": 0.053834871066950556
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 210104872.5833333
+        },
+        {
+            "args": {
+                "utilization": 0.37568236059882837
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 210220098.41666666
+        },
+        {
+            "args": {
+                "utilization": 0.39530002677841225
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 210320557.875
+        },
+        {
+            "args": {
+                "utilization": 0.33701802740633247
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 210433474.75
+        },
+        {
+            "args": {
+                "utilization": 0.6091608322650626
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 210537468.3333333
+        },
+        {
+            "args": {
+                "utilization": 0.6093101750931721
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 210638926.9583333
+        },
+        {
+            "args": {
+                "utilization": 0.5602886272257324
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 210745811.8333333
+        },
+        {
+            "args": {
+                "utilization": 0.5532468086013256
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 210846454.79166666
+        },
+        {
+            "args": {
+                "utilization": 0
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 212497209.79166666
+        },
+        {
+            "args": {
+                "utilization": 0
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 213432614.2083333
+        },
+        {
+            "args": {
+                "utilization": 0.3310386997514695
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 213538095.29166666
+        },
+        {
+            "args": {
+                "utilization": 0.509411731438105
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 213644200.125
+        },
+        {
+            "args": {
+                "utilization": 0.5384445852502824
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 213744251.41666666
+        },
+        {
+            "args": {
+                "utilization": 0.5773710626514365
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 213844264.41666666
+        },
+        {
+            "args": {
+                "utilization": 0.5715181339585534
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 213945014.54166666
+        },
+        {
+            "args": {
+                "utilization": 0.5458617316290314
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 214045559.5833333
+        },
+        {
+            "args": {
+                "utilization": 0.6109103753799057
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 214152101.04166666
+        },
+        {
+            "args": {
+                "utilization": 0
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 214395286.29166666
+        },
+        {
+            "args": {
+                "utilization": 0
+            },
+            "cat": "magma",
+            "name": "GPU Utilization",
+            "ph": "C",
+            "pid": 4219,
+            "tid": 18849,
+            "ts": 214577241.04166666
+        }
+    ]
+}

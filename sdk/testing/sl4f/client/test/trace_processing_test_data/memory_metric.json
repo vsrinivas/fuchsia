@@ -1,0 +1,136 @@
+{
+    "displayTimeUnit": "ns",
+    "systemTraceEvents": {
+        "events": [
+            {
+                "name": "root_presenter",
+                "ph": "p",
+                "pid": 7009
+            },
+            {
+                "name": "initial-thread",
+                "ph": "t",
+                "pid": 7009,
+                "tid": 7022
+            }
+        ],
+        "type": "fuchsia"
+    },
+    "traceEvents": [
+        {
+            "args": {
+                "total": 1610612736,
+                "total_heap": 15183872,
+                "wired": 60354560
+            },
+            "cat": "memory_monitor",
+            "name": "fixed",
+            "ph": "C",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 3000000000
+        },
+        {
+            "args": {
+                "ipc": 49152,
+                "mmu_overhead": 77529088,
+                "vmo": 781942784
+            },
+            "cat": "memory_monitor",
+            "name": "allocated",
+            "ph": "C",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 4100000000
+        },
+        {
+            "args": {
+                "ipc": 49152,
+                "mmu_overhead": 77529089,
+                "vmo": 781942785
+            },
+            "cat": "memory_monitor",
+            "name": "allocated",
+            "ph": "C",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 4100000000
+        },
+        {
+            "args": {
+                "free": 670000000,
+                "free_heap": 460000
+            },
+            "cat": "memory_monitor",
+            "name": "free",
+            "ph": "C",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 4100000000
+        },
+        {
+            "args": {
+                "free": 620000000,
+                "free_heap": 430000
+            },
+            "cat": "memory_monitor",
+            "name": "free",
+            "ph": "C",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 4100000000
+        },
+        {
+            "args": {
+                "cpu": 40000000,
+                "gpu": 240000000,
+                "other": 0,
+                "vdec": 0,
+                "vpu": 140000000
+            },
+            "cat": "memory_monitor",
+            "name": "bandwidth_usage",
+            "ph": "C",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 4100000000
+        },
+        {
+            "args": {
+                "cpu": 50000000,
+                "gpu": 250000000,
+                "other": 190000000,
+                "vdec": 0,
+                "vpu": 140000000
+            },
+            "cat": "memory_monitor",
+            "name": "bandwidth_usage",
+            "ph": "C",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 4100000000
+        },
+        {
+            "args": {
+                "value": 420000000
+            },
+            "cat": "memory_monitor",
+            "name": "bandwidth_free",
+            "ph": "C",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 4100000000
+        },
+        {
+            "args": {
+                "value": 210000000
+            },
+            "cat": "memory_monitor",
+            "name": "bandwidth_free",
+            "ph": "C",
+            "pid": 7009,
+            "tid": 7022,
+            "ts": 4100000000
+        }
+    ]
+}
