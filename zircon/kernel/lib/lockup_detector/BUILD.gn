@@ -11,7 +11,7 @@ zx_library("lockup_detector") {
   sources = [ "lockup_detector.cc" ]
   deps = [
     "tests",
-    "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",
     "//zircon/kernel/lib/crashlog",

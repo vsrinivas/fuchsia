@@ -95,6 +95,67 @@ that even when set to false, the CPRNG will re-process the samples, so the
 processing inside of jitterentropy is somewhat redundant.
 )""")
 
+// TODO(maniscalco): Set a default threshold that is high enough that it won't erronously trigger
+// under qemu.  Alternatively, set an aggressive default threshold in code and override in
+// virtualized environments and scripts that start qemu.
+DEFINE_OPTION("kernel.lockup-detector.critical-section-threshold-ms", uint64_t, lockup_detector_critical_section_threshold_ms, {3000}, R"""(
+When a CPU remains in a designated critical section for longer than
+this threshold, a KERNEL OOPS will be emitted.
+
+See also `k lockup status` and
+[lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
+
+When 0, critical section lockup detection is disabled.
+
+When kernel.lockup-detector.heartbeat-period-ms is 0, critical section lockup
+detection is disabled.
+)""")
+
+DEFINE_OPTION("kernel.lockup-detector.critical-section-fatal-threshold-ms", uint64_t, lockup_detector_critical_section_fatal_threshold_ms, {10000}, R"""(
+When a CPU remains in a designated critical section for longer than this
+threshold, a crashlog will be generated and the system will reboot, indicating a
+reboot reason of `SOFTWARE_WATCHDOG` as it does.
+
+See also `k lockup status` and
+[lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
+
+When 0, critical section crashlog generation and reboot is disabled.
+
+When kernel.lockup-detector.heartbeat-period-ms is 0, critical section lockup
+detection is disabled.
+)""")
+
+DEFINE_OPTION("kernel.lockup-detector.heartbeat-period-ms", uint64_t, lockup_detector_heartbeat_period_ms, {1000}, R"""(
+How frequently a secondary CPU should emit a heartbeat via kernel timer.  This
+value should be large enough to not impact system performance, but should be
+smaller than the heartbeat age threshold.  1000 is a reasonable value.
+
+See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
+
+When 0, heartbeat detection is disabled.
+)""")
+
+DEFINE_OPTION("kernel.lockup-detector.heartbeat-age-threshold-ms", uint64_t, lockup_detector_heartbeat_age_threshold_ms, {3000}, R"""(
+The maximum age of a secondary CPU's last heartbeat before it is considered to
+be locked up.  This value should be larger than the heartbeat peroid, but small
+enough so as to not miss short-lived lockup events.  3000 is a reasonable value.
+
+See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
+
+When 0, heartbeat detection is disabled.
+)""")
+
+
+DEFINE_OPTION("kernel.lockup-detector.heartbeat-age-fatal-threshold-ms", uint64_t, lockup_detector_age_fatal_threshold_ms, {10000}, R"""(
+The maximum age of a CPU's last heartbeat before it is considered to be locked
+up, triggering generation of a crashlog indicating a reboot reason of
+`SOFTWARE_WATCHDOG` followed by a reboot.
+
+See also [lockup detector](/zircon/kernel/lib/lockup_detector/README.md).
+
+When 0, heartbeat crashlog generation and reboot is disabled.
+)""")
+
 DEFINE_OPTION("kernel.oom.behavior", OomBehavior, oom_behavior, {OomBehavior::kReboot}, R"""(
 This option can be used to configure the behavior of the kernel when
 encountering an out-of-memory (OOM) situation. Valid values are `jobkill`, and

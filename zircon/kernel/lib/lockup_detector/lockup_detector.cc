@@ -8,7 +8,7 @@
 
 #include <inttypes.h>
 #include <lib/affine/ratio.h>
-#include <lib/cmdline.h>
+#include <lib/boot-options/boot-options.h>
 #include <lib/console.h>
 #include <lib/counters.h>
 #include <lib/crashlog.h>
@@ -129,16 +129,9 @@ class HeartbeatLockupChecker {
   static zx_duration_t fatal_threshold() { return fatal_threshold_; }
 
   static void InitStaticParams() {
-    constexpr uint64_t kDefaultPeriodMsec = 1000;
-    constexpr uint64_t kDefaultAgeThresholdMsec = 3000;
-    constexpr uint64_t kDefaultAgeFatalThresholdMsec = 10000;
-
-    period_ = ZX_MSEC(
-        gCmdline.GetUInt64(kernel_option::kLockupDetectorHeartbeatPeriodMs, kDefaultPeriodMsec));
-    threshold_ = ZX_MSEC(gCmdline.GetUInt64(kernel_option::kLockupDetectorHeartbeatAgeThresholdMs,
-                                            kDefaultAgeThresholdMsec));
-    fatal_threshold_ = ZX_MSEC(gCmdline.GetUInt64(
-        kernel_option::kLockupDetectorHeartbeatAgeFatalThresholdMs, kDefaultAgeFatalThresholdMsec));
+    period_ = ZX_MSEC(gBootOptions->lockup_detector_heartbeat_period_ms);
+    threshold_ = ZX_MSEC(gBootOptions->lockup_detector_heartbeat_age_threshold_ms);
+    fatal_threshold_ = ZX_MSEC(gBootOptions->lockup_detector_age_fatal_threshold_ms);
   }
 
   // TODO(johngro): once state->current_checker_id becomes a more formal
@@ -177,14 +170,12 @@ class CriticalSectionLockupChecker {
   static bool IsEnabled() { return (threshold_ticks() > 0) || (fatal_threshold_ticks() > 0); }
 
   static void InitStaticParams() {
-    constexpr uint64_t kDefaultThresholdMsec = 3000;
-    const zx_duration_t threshold_duration = ZX_MSEC(gCmdline.GetUInt64(
-        kernel_option::kLockupDetectorCriticalSectionThresholdMs, kDefaultThresholdMsec));
+    const zx_duration_t threshold_duration =
+        ZX_MSEC(gBootOptions->lockup_detector_critical_section_threshold_ms);
     threshold_ticks_.store(DurationToTicks(threshold_duration));
 
-    constexpr uint64_t kDefaultFatalThresholdMsec = 10000;
-    const zx_duration_t fatal_threshold_duration = ZX_MSEC(gCmdline.GetUInt64(
-        kernel_option::kLockupDetectorCriticalSectionFatalThresholdMs, kDefaultFatalThresholdMsec));
+    const zx_duration_t fatal_threshold_duration =
+        ZX_MSEC(gBootOptions->lockup_detector_critical_section_fatal_threshold_ms);
     fatal_threshold_ticks_ = DurationToTicks(fatal_threshold_duration);
 
     worst_case_threshold_ticks_ = DurationToTicks(counter_buckets_[0].exceeding);
