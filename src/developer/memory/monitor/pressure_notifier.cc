@@ -12,7 +12,8 @@ namespace monitor {
 // |dispatcher| is the dispatcher associated with memory_monitor's main thread.
 // The fuchsia::memorypressure::Provider service which the |PressureNotifier| class implements runs
 // on this thread.
-PressureNotifier::PressureNotifier(bool watch_for_changes, bool send_critical_pressure_crash_reports,
+PressureNotifier::PressureNotifier(bool watch_for_changes,
+                                   bool send_critical_pressure_crash_reports,
                                    sys::ComponentContext* context, async_dispatcher_t* dispatcher)
     : provider_dispatcher_(dispatcher),
       context_(context),
@@ -175,16 +176,11 @@ void PressureNotifier::FileCrashReport() {
     return;
   }
 
-  fuchsia::feedback::GenericCrashReport generic_report;
-  generic_report.set_crash_signature("fuchsia-critical-memory-pressure");
-
-  fuchsia::feedback::SpecificCrashReport specific_report;
-  specific_report.set_generic(std::move(generic_report));
-
   fuchsia::feedback::CrashReport report;
   report.set_program_name("system");
+  report.set_crash_signature("fuchsia-critical-memory-pressure");
   report.set_program_uptime(zx_clock_get_monotonic());
-  report.set_specific_report(std::move(specific_report));
+  report.set_is_fatal(false);
 
   crash_reporter->File(std::move(report),
                        [](fuchsia::feedback::CrashReporter_File_Result unused) {});
