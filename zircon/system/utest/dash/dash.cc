@@ -13,6 +13,8 @@
 #include <sstream>
 #include <string>
 
+#include <zxtest/zxtest.h>
+
 #include "lib/fdio/fd.h"
 #include "lib/fdio/fdio.h"
 #include "lib/fdio/io.h"
@@ -21,7 +23,6 @@
 #include "lib/zx/object.h"
 #include "lib/zx/process.h"
 #include "lib/zx/socket.h"
-#include "unittest/unittest.h"
 #include "zircon/limits.h"
 #include "zircon/processargs.h"
 #include "zircon/syscalls/object.h"
@@ -31,18 +32,14 @@
 static constexpr char kDash[] = "/pkg/bin/sh";
 static constexpr const char* kDashArgv[] = {kDash, nullptr};
 
-static int64_t join(const zx::process& process) {
-  zx_status_t status = process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr);
-  ASSERT_EQ(ZX_OK, status);
+static void join(const zx::process& process) {
+  ASSERT_OK(process.wait_one(ZX_TASK_TERMINATED, zx::time::infinite(), nullptr));
   zx_info_process_t proc_info{};
-  status = process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr);
-  ASSERT_EQ(ZX_OK, status);
-  return proc_info.return_code;
+  ASSERT_OK(process.get_info(ZX_INFO_PROCESS, &proc_info, sizeof(proc_info), nullptr, nullptr));
+  ASSERT_EQ(0, proc_info.return_code);
 }
 
-static bool dash_ls_test() {
-  BEGIN_TEST;
-
+TEST(DashTests, dash_ls_test) {
   zx_status_t status;
   zx::process process;
   zx::socket sstdout, sstdin;
@@ -76,7 +73,7 @@ static bool dash_ls_test() {
   ASSERT_EQ(ZX_OK, sstdin.write(0, ls.data(), ls.length(), nullptr));
   sstdin.reset();
 
-  EXPECT_EQ(0, join(process));
+  join(process);
 
   std::string buf(4096, 0);
   size_t actual;
@@ -108,10 +105,4 @@ static bool dash_ls_test() {
   }
 
   ASSERT_EQ(lines, expected);
-
-  END_TEST;
 }
-
-BEGIN_TEST_CASE(dash_tests)
-RUN_TEST(dash_ls_test)
-END_TEST_CASE(dash_tests)
