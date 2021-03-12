@@ -17,7 +17,6 @@ group("tests_no_e2e") {
     "//src/lib/fidl_table_validation/fidl_table_validation_tests",
     "//third_party/go:fidl-tests",
     "//tools/fidl:tests",
-    "//topaz/bundles/fidl:tests",
     "//zircon/system/ulib/fidl-async-2/test",
     "//zircon/system/utest/fidl-compiler($host_toolchain)",
   ]

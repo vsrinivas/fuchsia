@@ -83,8 +83,7 @@ are compatible. Compatibility tests are found at
 ##### Dangerous identifiers
 
 Dangerous identifier tests are found in
-[/src/tests/fidl/dangerous_identifiers] and
-[/topaz/tests/fidl-dangerous-identifiers].
+[/src/tests/fidl/dangerous_identifiers].
 
 #### Other
 
@@ -235,7 +234,7 @@ Read the [Fuchsia Getting Started][getting_started] guide first.
 If you are working on the FIDL toolchain, use:
 
 ```sh
-fx set core.x64 --with //bundles/fidl:tests --with //topaz/bundles/fidl:tests
+fx set core.x64 --with //bundles/fidl:tests
 ```
 
 If you are working on an LSC:
@@ -776,7 +775,6 @@ fidl fmt --library my_library.fidl -i
 
 [/src/tests/fidl/compatibility/]: /src/tests/fidl/compatibility/
 [/src/tests/fidl/dangerous_identifiers]: /src/tests/fidl/dangerous_identifiers
-[/topaz/tests/fidl-dangerous-identifiers]: /topaz/tests/fidl-dangerous-identifiers
 
 [/tools/fidl/fidldoc]: /tools/fidl/fidldoc
 [/tools/fidl/fidlmerge]: /tools/fidl/fidlmerge

@@ -64,6 +64,7 @@ foreach(use, uses) {
           fidl_library = "${fidl_library_prefix}.${use}.${style}${shard}"
           fidl_target = fidl_library
           hlcpp_target = "hlcpp_${use}_${style}_${shard}"
+          dart_target = "dart_${use}_${style}_${shard}"
 
           # Deny list of libraries we can compile in Rust.
           # [BindingsDenyList] on struct members doesn't work in Rust.
@@ -168,12 +169,20 @@ foreach(test, dangerous_tests) {
   }
 }
 
-group("tests") {
-  testonly = true
-  deps = fidl_targets + hlcpp_targets + rust_targets
+# Define all Dart targets
+dart_targets = []
+foreach(test, dangerous_tests) {
+  group(test.dart_target) {
+    deps = [ ":${test.fidl_target}($dart_toolchain)" ]
+  }
+  dart_targets += [ ":${test.dart_target}" ]
 }
 
-# TODO(ianloic): Remove this once Dart FIDL support is moved into fuchsia.git
+group("tests") {
+  testonly = true
+  deps = fidl_targets + hlcpp_targets + rust_targets + dart_targets
+}
+
 group("fidl") {
-  deps = fidl_targets
+  # TODO: remove soon
 }
