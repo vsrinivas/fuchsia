@@ -1,0 +1,25 @@
+// Errors that pertain to the font server.
+// File issues at: https://bugs.fuchsia.dev/p/fuchsia/issues/list?q=component:I18N%3EFonts
+{
+    act: {
+        unfulfilled_request: {
+            type: "Warning",
+            trigger: "SyslogHas('Unfulfilled\ request.*TypefaceRequest')",
+            print: "A requested font could not be found. If seen repeatedly, file bugs in I18N>Fonts.",
+        },
+    },
+    test: {
+        test_unfulfilled_request_yes: {
+            yes: [
+                "unfulfilled_request",
+            ],
+            syslog: "[00027.554290][39107][39109][fonts] WARNING: Unfulfilled request TypefaceRequest { query: TypefaceQuery { family: FamilyName { name: \"Roboto Mono\" }, style: Style2 { slant: Upright, weight: 400, width: Normal } }, flags: ExactFamily | ExactStyle }"
+        },
+        test_unfulfilled_request_no: {
+            no: [
+                "unfulfilled_request",
+            ],
+            syslog: "[00027.554290][39107][39109][fonts] WARNING: Unfulfilled request: Make me a sandwich."
+        },
+    }
+}
