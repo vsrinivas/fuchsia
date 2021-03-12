@@ -112,6 +112,16 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
     RunLoopUntil([enclosing_environment] { return enclosing_environment->is_running(); });
   }
 
+  // Kills and waits for environment to terminate.
+  //
+  // You should either use this function to wait or run your own loop if you
+  // want to wait for your environment to be killed.
+  void KillEnclosingEnvironment(EnclosingEnvironment* enclosing_environment) {
+    bool killed = false;
+    enclosing_environment->Kill([&] { killed = true; });
+    RunLoopUntil([&] { return killed; });
+  }
+
   // Run a loop until the given component is terminated or |timeout| elapses.
   bool RunComponentUntilTerminated(fuchsia::sys::ComponentControllerPtr component_controller,
                                    TerminationResult* termination_result = nullptr);

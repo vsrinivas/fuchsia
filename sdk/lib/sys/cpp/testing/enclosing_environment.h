@@ -35,6 +35,11 @@ class EnclosingEnvironment;
 // Every EnclosingEnvironment takes EnvironmentServices as an argument to
 // instantiation. Services should not be added after the EnclosingEnvironment is
 // created.
+//
+// NOTE: When this object is dropped, the actual environment is not killed instantly and if the test
+// cases depend on global resources test author should call `Kill()` first and wait for it in their
+// fixture destructor. Test authors can also call `KillEnclosingEnvironment()` if using
+// `TestWithEnvironment`.
 class EnvironmentServices {
  public:
   using ServiceTerminatedCallback =
