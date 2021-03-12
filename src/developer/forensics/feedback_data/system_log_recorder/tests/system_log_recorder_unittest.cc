@@ -48,7 +48,7 @@ std::string BuildLogMessage(const std::string& message) {
   {
     "metadata": {
       "timestamp": 15604000000000,
-      "severity": "Info"
+      "severity": "INFO"
     },
     "payload": {
       "root": {

@@ -117,7 +117,7 @@ const char PAYLOAD_TEMPLATE[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1000,
-      "severity": "Info"
+      "severity": "INFO"
     },
     "payload": %s
   }
@@ -149,7 +149,7 @@ const char TWO_FLAT_VALID_INFO_MESSAGES[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1000,
-      "severity": "Info"
+      "severity": "INFO"
     },
     "payload": {
       "message": "Hello world",
@@ -162,7 +162,7 @@ const char TWO_FLAT_VALID_INFO_MESSAGES[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1000,
-      "severity": "Info"
+      "severity": "INFO"
     },
     "payload": {
       "message": "Hello world",
@@ -179,7 +179,7 @@ TEST(LogMessage, Valid) {
   // Ensure that both flat and nested (under "root") messages work.
   FormattedContent content;
   ASSERT_TRUE(
-      fsl::VmoFromString(fxl::StringPrintf(VALID_MESSAGE_FOR_SEVERITY, "Info"), &content.json()));
+      fsl::VmoFromString(fxl::StringPrintf(VALID_MESSAGE_FOR_SEVERITY, "INFO"), &content.json()));
   auto one_message_result = ConvertFormattedContentToLogMessages(std::move(content));
 
   content = {};
@@ -216,7 +216,7 @@ TEST(LogMessage, ValidSeverityTests) {
 
   std::vector<TestCase> cases;
   cases.emplace_back(TestCase{
-      .input = fxl::StringPrintf(VALID_MESSAGE_FOR_SEVERITY, "Info"),
+      .input = fxl::StringPrintf(VALID_MESSAGE_FOR_SEVERITY, "INFO"),
       .severity = fuchsia::logger::LogLevelFilter::INFO,
   });
   cases.emplace_back(TestCase{
@@ -329,7 +329,7 @@ const char ROOT_TEMPLATE[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1000,
-      "severity": "Info"
+      "severity": "INFO"
     },
     "payload": {
       "root": %s

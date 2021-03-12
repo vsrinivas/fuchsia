@@ -37,7 +37,7 @@ constexpr char kMessage1Json[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1234000000000,
-      "severity": "Info"
+      "severity": "INFO"
     },
     "payload": {
       "root": {
@@ -56,7 +56,7 @@ constexpr char kMessage2Json[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1234000000000,
-      "severity": "Info"
+      "severity": "INFO"
     },
     "payload": {
       "root": {
@@ -75,7 +75,7 @@ constexpr char kMessage3Json[] = R"JSON(
   {
     "metadata": {
       "timestamp": 1234000000000,
-      "severity": "Info"
+      "severity": "INFO"
     },
     "payload": {
       "root": {

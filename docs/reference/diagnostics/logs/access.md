@@ -71,7 +71,7 @@ from other sources:
     "moniker": "netstack.cmx",
     "metadata": {
         "timestamp": 1234567890,
-        "severity": "Info",
+        "severity": "INFO",
         "component_url": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
         "size_bytes": 123
     },

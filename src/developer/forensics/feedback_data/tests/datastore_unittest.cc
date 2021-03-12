@@ -488,7 +488,7 @@ TEST_F(DatastoreTest, GetAttachments_SysLog) {
   {
     "metadata": {
       "timestamp": 15604000000000,
-      "severity": "Info"
+      "severity": "INFO"
     },
     "payload": {
       "root": {
