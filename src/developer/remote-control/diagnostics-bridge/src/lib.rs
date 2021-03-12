@@ -355,7 +355,7 @@ mod test {
         return proxy;
     }
 
-    fn make_log(timestamp: u64, msg: String) -> LogsData {
+    fn make_log(timestamp: i64, msg: String) -> LogsData {
         let hierarchy =
             DiagnosticsHierarchy::new("root", vec![Property::String(LogsField::Msg, msg)], vec![]);
         LogsData::for_logs(
@@ -369,11 +369,11 @@ mod test {
         )
     }
 
-    fn make_short_log(timestamp: u64) -> LogsData {
+    fn make_short_log(timestamp: i64) -> LogsData {
         make_log(timestamp, "msg".to_string())
     }
 
-    fn make_long_log(timestamp: u64, len: u32) -> LogsData {
+    fn make_long_log(timestamp: i64, len: u32) -> LogsData {
         let mut msg = String::default();
         for _ in 0..len {
             msg.push('a');

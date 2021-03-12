@@ -465,7 +465,7 @@ pub trait GenericDiagnosticsStreamer {
     async fn setup_stream(
         &self,
         target_nodename: String,
-        target_boot_time_nanos: u64,
+        target_boot_time_nanos: i64,
     ) -> Result<()>;
 
     async fn append_logs(&self, entries: Vec<LogEntry>) -> Result<()>;
@@ -484,7 +484,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
     async fn setup_stream(
         &self,
         target_nodename: String,
-        target_boot_time_nanos: u64,
+        target_boot_time_nanos: i64,
     ) -> Result<()> {
         self.setup_stream_with_config(
             TargetLogDirectory::new(target_nodename).await?,
@@ -635,7 +635,7 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
 
     async fn stream_entries(&self, stream_mode: StreamMode) -> Result<SessionStream> {
         let ts = if stream_mode == StreamMode::SnapshotAll {
-            Some(self.read_most_recent_entry_timestamp().await?.unwrap_or(Timestamp::from(0u64)))
+            Some(self.read_most_recent_entry_timestamp().await?.unwrap_or(Timestamp::from(0)))
         } else {
             None
         };
@@ -652,7 +652,7 @@ impl DiagnosticsStreamer<'_> {
     pub(crate) async fn setup_stream_with_config(
         &self,
         target_root_dir: TargetLogDirectory,
-        target_boot_time_nanos: u64,
+        target_boot_time_nanos: i64,
         max_file_size_bytes: usize,
         max_session_size_bytes: usize,
         max_num_sessions: usize,
@@ -737,9 +737,9 @@ mod test {
     const LARGE_MAX_SESSION_SIZE: usize = 1_000_001;
     const DEFAULT_MAX_SESSIONS: usize = 1;
     const NODENAME: &str = "my-cool-node";
-    const BOOT_TIME_NANOS: u64 = 123456789000000000;
+    const BOOT_TIME_NANOS: i64 = 123456789000000000;
     const BOOT_TIME_MILLIS: u64 = 123456789000;
-    const TIMESTAMP: u64 = 987654321;
+    const TIMESTAMP: i64 = 987654321;
     const READ_TIMEOUT_MILLIS: u64 = 100;
 
     async fn collect_logs(path: PathBuf) -> Result<HashMap<String, String>> {
@@ -771,7 +771,7 @@ mod test {
         collect_logs(root).await
     }
 
-    fn make_target_log(ts: u64, msg: String) -> LogsData {
+    fn make_target_log(ts: i64, msg: String) -> LogsData {
         let hierarchy =
             DiagnosticsHierarchy::new("root", vec![Property::String(LogsField::Msg, msg)], vec![]);
         LogsData::for_logs(
@@ -785,7 +785,7 @@ mod test {
         )
     }
 
-    fn make_malformed_log(ts: u64) -> LogEntry {
+    fn make_malformed_log(ts: i64) -> LogEntry {
         LogEntry {
             data: LogData::MalformedTargetLog("fake log data".to_string()),
             version: 1,
@@ -793,17 +793,17 @@ mod test {
         }
     }
 
-    fn make_valid_log(ts: u64, msg: String) -> LogEntry {
+    fn make_valid_log(ts: i64, msg: String) -> LogEntry {
         LogEntry {
             data: LogData::TargetLog(make_target_log(ts, msg)),
             version: 1,
-            timestamp: Timestamp::from(0u64),
+            timestamp: Timestamp::from(0),
         }
     }
 
     async fn setup_default_streamer_with_temp_and_boot_time(
         temp_parent: &TempDir,
-        boot_time_nanos: u64,
+        boot_time_nanos: i64,
         max_log_size: usize,
         max_session_size: usize,
         max_sessions: usize,

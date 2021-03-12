@@ -37,7 +37,7 @@ Verify that the target is up with `ffx target list` and retry \
 in a few seconds.";
 
 fn timestamp_to_partial_secs(ts: Timestamp) -> f64 {
-    let u_ts: u64 = ts.into();
+    let u_ts: i64 = ts.into();
     u_ts as f64 / 1_000_000_000.0
 }
 
@@ -317,7 +317,7 @@ mod test {
         selectors::parse_component_selector,
     };
 
-    const DEFAULT_TS: u64 = 1234567;
+    const DEFAULT_TS: i64 = 1234567;
     const DEFAULT_TARGET_STR: &str = "target-target";
     const DEFAULT_COMPONENT_URL: &str = "fake-url";
 
@@ -403,7 +403,7 @@ mod test {
         LogData::TargetLog(LogsData::for_logs(
             String::from(moniker),
             Some(hierarchy),
-            Timestamp::from(1u64),
+            Timestamp::from(1),
             String::from(component_url),
             severity,
             1,

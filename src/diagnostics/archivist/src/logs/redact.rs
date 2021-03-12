@@ -241,7 +241,7 @@ mod test {
 
     fn test_message(contents: &str) -> Message {
         Message::new(
-            0u64, // time
+            0, // time
             Severity::Info,
             0, // size
             0, // dropped_logs

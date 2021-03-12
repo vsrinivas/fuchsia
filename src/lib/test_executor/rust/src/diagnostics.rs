@@ -416,7 +416,7 @@ mod tests {
         let data = LogsData::for_logs(
             String::from("test/moniker"),
             Some(hierarchy),
-            Timestamp::from(0u64),
+            Timestamp::from(0),
             String::from("fake-url"),
             Severity::Info,
             1,

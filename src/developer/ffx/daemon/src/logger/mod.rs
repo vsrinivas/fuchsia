@@ -15,6 +15,7 @@ use {
     },
     futures::TryFutureExt,
     selectors::parse_selector,
+    std::convert::TryInto,
     std::future::Future,
     std::sync::Arc,
     std::time::SystemTime,
@@ -33,7 +34,7 @@ fn get_timestamp() -> Result<Timestamp> {
         SystemTime::now()
             .duration_since(SystemTime::UNIX_EPOCH)
             .context("system time before Unix epoch")?
-            .as_nanos(),
+            .as_nanos() as i64,
     ))
 }
 
@@ -182,10 +183,11 @@ impl Logger {
         };
 
         let nodename = target.nodename_str().await;
-        let boot_timestamp = target
+        let boot_timestamp: i64 = target
             .boot_timestamp_nanos()
             .await
-            .with_context(|| format!("no boot timestamp for target {:?}", &nodename))?;
+            .with_context(|| format!("no boot timestamp for target {:?}", &nodename))?
+            .try_into()?;
         streamer.setup_stream(nodename.clone(), boot_timestamp).await?;
 
         // Garbage collect old sessions before kicking off the log stream.
@@ -237,14 +239,14 @@ mod test {
     };
 
     const NODENAME: &str = "nodename-foo";
-    const BOOT_TIME: u64 = 98765432123;
+    const BOOT_TIME: i64 = 98765432123;
 
     #[derive(Default)]
     struct FakeDiagnosticsStreamerInner {
         nodename: String,
-        boot_time: u64,
+        boot_time: i64,
         log_buf: Arc<Mutex<Vec<LogEntry>>>,
-        most_recent_ts: u64,
+        most_recent_ts: i64,
         expect_setup: bool,
         cleaned_sessions: bool,
     }
@@ -255,7 +257,7 @@ mod test {
     }
 
     impl FakeDiagnosticsStreamer {
-        fn new(most_recent_ts: u64, log_buf: Arc<Mutex<Vec<LogEntry>>>) -> Self {
+        fn new(most_recent_ts: i64, log_buf: Arc<Mutex<Vec<LogEntry>>>) -> Self {
             Self {
                 inner: Mutex::new(FakeDiagnosticsStreamerInner {
                     most_recent_ts,
@@ -265,7 +267,7 @@ mod test {
             }
         }
 
-        async fn expect_setup(&self, nodename: &str, boot_time: u64) {
+        async fn expect_setup(&self, nodename: &str, boot_time: i64) {
             let mut inner = self.inner.lock().await;
             inner.expect_setup = true;
             inner.nodename = nodename.to_string();
@@ -283,7 +285,7 @@ mod test {
         async fn setup_stream(
             &self,
             target_nodename: String,
-            target_boot_time_nanos: u64,
+            target_boot_time_nanos: i64,
         ) -> Result<()> {
             let inner = self.inner.lock().await;
             if !inner.expect_setup {
@@ -406,7 +408,7 @@ mod test {
                             .send(&mut Ok(IdentifyHostResponse {
                                 nodename: Some(NODENAME.to_string()),
                                 addresses: None,
-                                boot_timestamp_nanos: Some(BOOT_TIME),
+                                boot_timestamp_nanos: Some(BOOT_TIME.try_into().unwrap()),
                                 ..IdentifyHostResponse::EMPTY
                             }))
                             .context("sending testing response")
@@ -424,7 +426,7 @@ mod test {
     fn logging_started_entry() -> LogEntry {
         LogEntry {
             data: LogData::FfxEvent(EventType::LoggingStarted),
-            timestamp: Timestamp::from(0u64),
+            timestamp: Timestamp::from(0),
             version: 1,
         }
     }
@@ -432,16 +434,16 @@ mod test {
     fn malformed_log(s: &str) -> LogEntry {
         LogEntry {
             data: LogData::MalformedTargetLog(s.to_string()),
-            timestamp: Timestamp::from(0u64),
+            timestamp: Timestamp::from(0),
             version: 1,
         }
     }
 
     fn valid_log(data: LogsData) -> LogEntry {
-        LogEntry { data: LogData::TargetLog(data), timestamp: Timestamp::from(0u64), version: 1 }
+        LogEntry { data: LogData::TargetLog(data), timestamp: Timestamp::from(0), version: 1 }
     }
 
-    fn target_log(timestamp: u64, msg: &str) -> LogsData {
+    fn target_log(timestamp: i64, msg: &str) -> LogsData {
         let hierarchy = DiagnosticsHierarchy::new(
             "root",
             vec![Property::String(LogsField::Msg, msg.to_string())],

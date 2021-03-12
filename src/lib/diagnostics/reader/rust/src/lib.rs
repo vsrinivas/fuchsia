@@ -648,7 +648,7 @@ mod tests {
                                                 vec![Property::Uint("x".to_string(), 1)],
                                                 vec![],
                                             )),
-                                            0u64,
+                                            0i64,
                                             "component-url",
                                             "filename",
                                             vec![],

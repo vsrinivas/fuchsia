@@ -359,7 +359,7 @@ mod tests {
                 vec![Property::Uint("x".to_string(), 1)],
                 vec![],
             )),
-            0u64,
+            0,
             "http://component",
             "fuchsia.inspect.Tree",
             vec![],

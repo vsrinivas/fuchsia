@@ -196,7 +196,7 @@ impl DiagnosticsData for Logs {
 
 /// Wraps a time for serialization and deserialization purposes.
 #[derive(Clone, Copy, Debug, Deserialize, Eq, Ord, PartialEq, PartialOrd, Serialize)]
-pub struct Timestamp(u64);
+pub struct Timestamp(i64);
 
 impl fmt::Display for Timestamp {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -204,39 +204,22 @@ impl fmt::Display for Timestamp {
     }
 }
 
-impl From<usize> for Timestamp {
-    fn from(nanos: usize) -> Timestamp {
-        Timestamp(nanos as u64)
-    }
-}
-
-impl From<u64> for Timestamp {
-    fn from(nanos: u64) -> Timestamp {
-        Timestamp(nanos)
-    }
-}
-
-impl From<u128> for Timestamp {
-    fn from(nanos: u128) -> Timestamp {
-        Timestamp(nanos as u64)
+// i32 here because it's the default for a bare integer literal w/o a type suffix
+impl From<i32> for Timestamp {
+    fn from(nanos: i32) -> Timestamp {
+        Timestamp(nanos as i64)
     }
 }
 
 impl From<i64> for Timestamp {
     fn from(nanos: i64) -> Timestamp {
-        Timestamp(nanos as u64)
+        Timestamp(nanos)
     }
 }
 
 impl Into<i64> for Timestamp {
     fn into(self) -> i64 {
-        self.0 as _
-    }
-}
-
-impl Into<u64> for Timestamp {
-    fn into(self) -> u64 {
-        self.0 as _
+        self.0
     }
 }
 
@@ -247,19 +230,19 @@ mod zircon {
 
     impl From<zx::Time> for Timestamp {
         fn from(t: zx::Time) -> Timestamp {
-            Timestamp(t.into_nanos() as u64)
+            Timestamp(t.into_nanos())
         }
     }
 
     impl Into<zx::Time> for Timestamp {
         fn into(self) -> zx::Time {
-            zx::Time::from_nanos(self.0 as i64)
+            zx::Time::from_nanos(self.0)
         }
     }
 }
 
 impl Deref for Timestamp {
-    type Target = u64;
+    type Target = i64;
 
     fn deref(&self) -> &Self::Target {
         &self.0
@@ -760,7 +743,7 @@ mod tests {
         let json_schema = Data::for_inspect(
             "a/b/c/d",
             Some(hierarchy),
-            123456u64,
+            123456i64,
             TEST_URL,
             "test_file_plz_ignore.inspect",
             Vec::new(),
@@ -794,7 +777,7 @@ mod tests {
         let json_schema = Data::for_inspect(
             "a/b/c/d",
             None,
-            123456u64,
+            123456i64,
             TEST_URL,
             "test_file_plz_ignore.inspect",
             vec![Error { message: "too much fun being had.".to_string() }],
@@ -826,7 +809,7 @@ mod tests {
             LifecycleType::DiagnosticsReady,
             None,
             TEST_URL,
-            123456u64,
+            123456i64,
             Vec::new(),
         );
 
@@ -856,7 +839,7 @@ mod tests {
             LifecycleType::DiagnosticsReady,
             None,
             TEST_URL,
-            123456u64,
+            123456i64,
             vec![Error { message: "too much fun being had.".to_string() }],
         );
 
