@@ -90,6 +90,16 @@ group("tests") {
   ]
 }
 
+# A collection of all stress tests available in-tree. The tests in this group will be built
+# and run on the core.qemu-x64-stress builder.
+group("stress-tests") {
+  testonly = true
+  public_deps = [
+    "//src/storage/stress-tests",
+    "//src/sys/component_manager/stress_tests_alt",
+  ]
+}
+
 group("kitchen_sink") {
   testonly = true
   public_deps = [
