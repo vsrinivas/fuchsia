@@ -129,6 +129,8 @@ class FakeBufferCollectionToken : public fuchsia::sysmem::BufferCollectionToken 
 
   void SetDebugTimeoutLogDeadline(int64_t deadline) override;
 
+  void SetDispensable() override;
+
  private:
   FakeSysmem* owner_;
   fidl::BindingSet<fuchsia::sysmem::BufferCollectionToken> bindings_;
@@ -190,6 +192,10 @@ class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
   void SetConstraintsAuxBuffers(
       fuchsia::sysmem::BufferCollectionConstraintsAuxBuffers constraints) override;
   void GetAuxBuffers(GetAuxBuffersCallback callback) override;
+
+  void AttachToken(
+      uint32_t rights_attenuation_mask,
+      fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> token_request) override;
 
  private:
   void MaybeCompleteAllocation();

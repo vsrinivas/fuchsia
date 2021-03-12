@@ -624,6 +624,11 @@ TEST(SysmemVersion, BufferCollectionConstraints) {
       auto snap_aux_2 = SnapMoveFrom(std::move(v1_aux_2));
       EXPECT_TRUE(IsEqual(*snap_aux_1, *snap_aux_2));
     }
+
+    auto v2_2 = sysmem::V2CloneBufferCollectionConstraints(allocator, v2);
+    auto snap_v2 = SnapMoveFrom(std::move(v2));
+    auto snap_v2_2 = SnapMoveFrom(std::move(v2_2));
+    EXPECT_TRUE(IsEqual(*snap_v2, *snap_v2_2));
   }
 }
 

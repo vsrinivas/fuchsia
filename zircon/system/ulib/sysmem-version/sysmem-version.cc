@@ -896,18 +896,22 @@ fit::result<fuchsia_sysmem2::wire::VmoBuffer, zx_status_t> V2CloneVmoBuffer(
     uint32_t vmo_rights_mask, uint32_t aux_vmo_rights_mask) {
   fuchsia_sysmem2::wire::VmoBuffer vmo_buffer(allocator);
   if (src.has_vmo()) {
-    zx_info_handle_basic_t info{};
-    zx_status_t get_info_status =
-        src.vmo().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-    if (get_info_status != ZX_OK) {
-      LOG(ERROR, "get_info_status: %d", get_info_status);
-      return fit::error(get_info_status);
-    }
     zx::vmo clone_vmo;
-    zx_status_t duplicate_status = src.vmo().duplicate(info.rights & vmo_rights_mask, &clone_vmo);
-    if (duplicate_status != ZX_OK) {
-      LOG(ERROR, "duplicate_status: %d", duplicate_status);
-      return fit::error(duplicate_status);
+    if (src.vmo().get() != ZX_HANDLE_INVALID) {
+      zx_info_handle_basic_t info{};
+      zx_status_t get_info_status =
+          src.vmo().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+      if (get_info_status != ZX_OK) {
+        LOG(ERROR, "get_info_status: %d", get_info_status);
+        return fit::error(get_info_status);
+      }
+      zx_status_t duplicate_status = src.vmo().duplicate(info.rights & vmo_rights_mask, &clone_vmo);
+      if (duplicate_status != ZX_OK) {
+        LOG(ERROR, "duplicate_status: %d", duplicate_status);
+        return fit::error(duplicate_status);
+      }
+    } else {
+      ZX_DEBUG_ASSERT(clone_vmo.get() == ZX_HANDLE_INVALID);
     }
     vmo_buffer.set_vmo(allocator, std::move(clone_vmo));
   }
@@ -915,19 +919,23 @@ fit::result<fuchsia_sysmem2::wire::VmoBuffer, zx_status_t> V2CloneVmoBuffer(
     vmo_buffer.set_vmo_usable_start(allocator, src.vmo_usable_start());
   }
   if (src.has_aux_vmo()) {
-    zx_info_handle_basic_t info{};
-    zx_status_t get_info_status =
-        src.aux_vmo().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-    if (get_info_status != ZX_OK) {
-      LOG(ERROR, "get_info_status: %d", get_info_status);
-      return fit::error(get_info_status);
-    }
     zx::vmo clone_vmo;
-    zx_status_t duplicate_status =
-        src.aux_vmo().duplicate(info.rights & aux_vmo_rights_mask, &clone_vmo);
-    if (duplicate_status != ZX_OK) {
-      LOG(ERROR, "duplicate_status: %d", duplicate_status);
-      return fit::error(duplicate_status);
+    if (src.aux_vmo().get() != ZX_HANDLE_INVALID) {
+      zx_info_handle_basic_t info{};
+      zx_status_t get_info_status =
+          src.aux_vmo().get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+      if (get_info_status != ZX_OK) {
+        LOG(ERROR, "get_info_status: %d", get_info_status);
+        return fit::error(get_info_status);
+      }
+      zx_status_t duplicate_status =
+          src.aux_vmo().duplicate(info.rights & aux_vmo_rights_mask, &clone_vmo);
+      if (duplicate_status != ZX_OK) {
+        LOG(ERROR, "duplicate_status: %d", duplicate_status);
+        return fit::error(duplicate_status);
+      }
+    } else {
+      ZX_DEBUG_ASSERT(clone_vmo.get() == ZX_HANDLE_INVALID);
     }
     vmo_buffer.set_aux_vmo(allocator, std::move(clone_vmo));
   }

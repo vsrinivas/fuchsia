@@ -64,6 +64,9 @@ class FakeBufferCollection : public fuchsia::sysmem::BufferCollection {
 
   void GetAuxBuffers(GetAuxBuffersCallback callback) override;
 
+  void AttachToken(uint32_t rights_attenuation_mask,
+                   fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> request) override;
+
   FakeServiceProvider* owner_;
   fidl::BindingSet<fuchsia::sysmem::BufferCollection> bindings_;
   std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints_;
@@ -88,6 +91,7 @@ class FakeBufferCollectionToken : public fuchsia::sysmem::BufferCollectionToken 
   void Close() override;
   void SetDebugClientInfo(std::string name, uint64_t id) override {}
   void SetDebugTimeoutLogDeadline(int64_t deadline) override {}
+  void SetDispensable() override {}
 
   FakeServiceProvider* owner_;
   fidl::BindingSet<fuchsia::sysmem::BufferCollectionToken> bindings_;

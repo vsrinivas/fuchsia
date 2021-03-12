@@ -14,6 +14,8 @@
 #include <zircon/errors.h>
 
 #include <limits>  // std::numeric_limits
+#include <type_traits>
+#include <unordered_map>
 
 #include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
@@ -24,6 +26,8 @@
 #include "device.h"
 #include "koid_util.h"
 #include "macros.h"
+#include "orphaned_node.h"
+#include "src/devices/sysmem/drivers/sysmem/logging.h"
 #include "usage_pixel_format_cost.h"
 #include "utils.h"
 
@@ -42,6 +46,8 @@ const uint64_t kMaxSizeBytesPerBuffer = 256ull * 1024 * 1024;
 // Zero-initialized, so it shouldn't take up space on-disk.
 constexpr uint64_t kFlushThroughBytes = 8192;
 const uint8_t kZeroes[kFlushThroughBytes] = {};
+
+constexpr uint32_t kNeedAuxVmoAlso = 1;
 
 template <typename T>
 bool IsNonZeroPowerOf2(T value) {
@@ -181,6 +187,23 @@ void BarrierAfterFlush() {
 #endif
 }
 
+bool IsSecureHeap(const fuchsia_sysmem2::wire::HeapType heap_type) {
+  // TODO(fxbug.dev/37452): Generalize this by finding if the heap_type maps to secure
+  // MemoryAllocator.
+  return heap_type == fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE ||
+         heap_type == fuchsia_sysmem2::wire::HeapType::AMLOGIC_SECURE_VDEC;
+}
+
+bool IsPotentiallyIncludedInInitialAllocation(const NodeProperties& node) {
+  bool potentially_included_in_initial_allocation = true;
+  for (const NodeProperties* iter = &node; iter; iter = iter->parent()) {
+    if (iter->error_propagation_mode() == ErrorPropagationMode::kDoNotPropagate) {
+      potentially_included_in_initial_allocation = false;
+    }
+  }
+  return potentially_included_in_initial_allocation;
+}
+
 }  // namespace
 
 // static
@@ -191,9 +214,10 @@ void LogicalBufferCollection::Create(zx::channel buffer_collection_token_request
   // The existence of a channel-owned BufferCollectionToken adds a
   // fbl::RefPtr<> ref to LogicalBufferCollection.
   LogInfo(FROM_HERE, "LogicalBufferCollection::Create()");
+  logical_buffer_collection->root_ = NodeProperties::NewRoot(logical_buffer_collection.get());
   logical_buffer_collection->CreateBufferCollectionToken(
-      logical_buffer_collection, std::numeric_limits<uint32_t>::max(),
-      std::move(buffer_collection_token_request), nullptr);
+      logical_buffer_collection, logical_buffer_collection->root_.get(),
+      std::move(buffer_collection_token_request));
 }
 
 // static
@@ -218,7 +242,7 @@ void LogicalBufferCollection::Create(zx::channel buffer_collection_token_request
 void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
                                                    zx::channel buffer_collection_token,
                                                    zx::channel buffer_collection_request,
-                                                   const ClientInfo* client_info) {
+                                                   const ClientDebugInfo* client_debug_info) {
   ZX_DEBUG_ASSERT(buffer_collection_token);
   ZX_DEBUG_ASSERT(buffer_collection_request);
 
@@ -227,7 +251,7 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   zx_status_t status =
       get_channel_koids(buffer_collection_token, &token_client_koid, &token_server_koid);
   if (status != ZX_OK) {
-    LogErrorStatic(FROM_HERE, client_info, "Failed to get channel koids");
+    LogErrorStatic(FROM_HERE, client_debug_info, "Failed to get channel koids");
     // ~buffer_collection_token
     // ~buffer_collection_request
     return;
@@ -237,7 +261,7 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   if (!token) {
     // The most likely scenario for why the token was not found is that Sync() was not called on
     // either the BufferCollectionToken or the BufferCollection.
-    LogErrorStatic(FROM_HERE, client_info,
+    LogErrorStatic(FROM_HERE, client_debug_info,
                    "BindSharedCollection could not find token from server channel koid %ld; "
                    "perhaps BufferCollectionToken.Sync() was not called",
                    token_server_koid);
@@ -250,9 +274,9 @@ void LogicalBufferCollection::BindSharedCollection(Device* parent_device,
   // token already saw token->Close().
   token->SetBufferCollectionRequest(std::move(buffer_collection_request));
 
-  if (client_info) {
+  if (client_debug_info) {
     // The info will be propagated into the logcial buffer collection when the token closes.
-    token->SetDebugClientInfo(client_info->name, client_info->id);
+    token->SetDebugClientInfoInternal(client_debug_info->name, client_debug_info->id);
   }
 
   // At this point, the token will process the rest of its previously queued
@@ -275,36 +299,33 @@ zx_status_t LogicalBufferCollection::ValidateBufferCollectionToken(Device* paren
 }
 
 void LogicalBufferCollection::CreateBufferCollectionToken(
-    fbl::RefPtr<LogicalBufferCollection> self, uint32_t rights_attenuation_mask,
-    zx::channel buffer_collection_token_request, const ClientInfo* client_info) {
-  ZX_DEBUG_ASSERT(buffer_collection_token_request.get());
-  auto token = BufferCollectionToken::Create(parent_device_, self, rights_attenuation_mask);
-  token->SetErrorHandler([this, token_ptr = token.get()](zx_status_t status) {
+    fbl::RefPtr<LogicalBufferCollection> self, NodeProperties* new_node_properties,
+    fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request) {
+  ZX_DEBUG_ASSERT(token_request);
+  auto& token = BufferCollectionToken::EmplaceInTree(parent_device_, self, new_node_properties);
+  token.SetErrorHandler([this, &token](zx_status_t status) {
     // Clean close from FIDL channel point of view is ZX_ERR_PEER_CLOSED,
     // and ZX_OK is never passed to the error handler.
     ZX_DEBUG_ASSERT(status != ZX_OK);
 
     // The dispatcher shut down before we were able to Bind(...)
     if (status == ZX_ERR_BAD_STATE) {
-      LogAndFail(FROM_HERE, "sysmem dispatcher shutting down - status: %d", status);
+      LogAndFailRootNode(FROM_HERE, status, "sysmem dispatcher shutting down - status: %d", status);
       return;
     }
 
     // We know |this| is alive because the token is alive and the token has
     // a fbl::RefPtr<LogicalBufferCollection>.  The token is alive because
-    // the token is still in token_views_.
+    // the token is still under the tree rooted at root_.
     //
-    // Any other deletion of the token_ptr out of token_views_ (outside of
+    // Any other deletion of the token_ptr out of the tree at root_ (outside of
     // this error handler) doesn't run this error handler.
-    //
-    // TODO(dustingreen): Switch to contains() when C++20.
-    ZX_DEBUG_ASSERT(token_views_.find(token_ptr) != token_views_.end());
+    ZX_DEBUG_ASSERT(root_);
 
-    zx::channel buffer_collection_request = token_ptr->TakeBufferCollectionRequest();
+    zx::channel buffer_collection_request = token.TakeBufferCollectionRequest();
 
-    if (!(status == ZX_ERR_PEER_CLOSED && (token_ptr->is_done() || buffer_collection_request))) {
-      // We don't have to explicitly remove token from token_views_
-      // because Fail() will token_views_.clear().
+    if (!(status == ZX_ERR_PEER_CLOSED && (token.is_done() || buffer_collection_request))) {
+      // LogAndFailDownFrom() will also remove any no-longer-needed nodes from the tree.
       //
       // A token whose error handler sees anything other than clean close
       // with is_done() implies LogicalBufferCollection failure.  The
@@ -314,52 +335,71 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
       //
       // If a participant for some reason finds itself with an extra token it doesn't need, the
       // participant should use Close() to avoid triggering this failure.
-      LogAndFail(FROM_HERE, "Token failure causing LogicalBufferCollection failure - status: %d",
-                 status);
+      NodeProperties* tree_to_fail = FindTreeToFail(&token.node_properties());
+      if (tree_to_fail == root_.get()) {
+        LogAndFailDownFrom(FROM_HERE, tree_to_fail, status,
+                           "Token failure causing LogicalBufferCollection failure - status: %d",
+                           status);
+      } else {
+        LogAndFailDownFrom(FROM_HERE, tree_to_fail, status,
+                           "Token failure causing AttachToken() sub-tree failure - status: %d",
+                           status);
+      }
       return;
     }
 
-    // At this point we know the token channel was closed cleanly, and that
-    // before the client's closing the channel, the client did a
-    // token::Close() or allocator::BindSharedCollection().
-    ZX_DEBUG_ASSERT(status == ZX_ERR_PEER_CLOSED &&
-                    (token_ptr->is_done() || buffer_collection_request));
-    // BufferCollectionToken enforces that these never both become true; the
-    // BufferCollectionToken will fail instead.
-    ZX_DEBUG_ASSERT(!(token_ptr->is_done() && buffer_collection_request));
+    // At this point we know the token channel was closed, and that the client either did a Close()
+    // or the token was dispensable, or allocator::BindSharedCollection() was used.
+    ZX_DEBUG_ASSERT(status == ZX_ERR_PEER_CLOSED && (token.is_done() || buffer_collection_request));
+    // BufferCollectionToken enforces that these never both become true; the BufferCollectionToken
+    // will fail instead.
+    ZX_DEBUG_ASSERT(!(token.is_done() && buffer_collection_request));
 
     if (!buffer_collection_request) {
-      // This was a token::Close().  In this case we want to stop tracking the token now that we've
-      // processed all its previously-queued inbound messages.  This might be the last token, so we
+      ZX_DEBUG_ASSERT(token.is_done());
+      // This was a token::Close().  We want to stop tracking the token now that we've processed all
+      // its previously-queued inbound messages.  This might be the last token, so we
       // MaybeAllocate().  This path isn't a failure (unless there are also zero BufferCollection
       // views in which case MaybeAllocate() calls Fail()).
-      auto self = token_ptr->parent_shared();
+      //
+      // Keep self alive via "self" in case this will drop connected_node_count_ to zero.
+      auto self = token.shared_logical_buffer_collection();
       ZX_DEBUG_ASSERT(self.get() == this);
-      token_views_.erase(token_ptr);
+      // This token never had any constraints, and it was Close()ed, but we need to keep the
+      // NodeProperties because it may have child NodeProperties under it, and it may have had
+      // SetDispensable() called on it.
+      //
+      // This OrphanedNode has no BufferCollectionConstraints.
+      ZX_DEBUG_ASSERT(!token.node_properties().buffers_logically_allocated());
+      NodeProperties& node_properties = token.node_properties();
+      // This replaces token with an OrphanedNode, and also de-refs token.  Not possible to send an
+      // epitaph because ZX_ERR_PEER_CLOSED.
+      OrphanedNode::EmplaceInTree(fbl::RefPtr(this), &node_properties);
       MaybeAllocate();
       // ~self may delete "this"
     } else {
-      // At this point we know that this was a BindSharedCollection().  We
-      // need to convert the BufferCollectionToken into a BufferCollection.
+      // At this point we know that this was a BindSharedCollection().  We need to convert the
+      // BufferCollectionToken into a BufferCollection.  The NodeProperties remains, with its Node
+      // set to the new BufferCollection instead of the old BufferCollectionToken.
       //
-      // ~token_ptr during this call
-      BindSharedCollectionInternal(token_ptr, std::move(buffer_collection_request));
+      // ~token during this call
+      BindSharedCollectionInternal(&token, std::move(buffer_collection_request));
     }
   });
-  auto token_ptr = token.get();
-  token_views_.insert({token_ptr, std::move(token)});
 
   zx_koid_t server_koid;
   zx_koid_t client_koid;
-  zx_status_t status =
-      get_channel_koids(buffer_collection_token_request, &server_koid, &client_koid);
+  zx_status_t status = get_channel_koids(token_request.channel(), &server_koid, &client_koid);
   if (status != ZX_OK) {
-    LogAndFail(FROM_HERE, "get_channel_koids() failed - status: %d", status);
+    LogAndFailNode(FROM_HERE, new_node_properties, status,
+                   "get_channel_koids() failed - status: %d", status);
+    // ~token
     return;
   }
-  token_ptr->SetServerKoid(server_koid);
-  if (token_ptr->was_unfound_token()) {
-    LogClientError(FROM_HERE, client_info,
+  token.SetServerKoid(server_koid);
+  if (token.was_unfound_token()) {
+    // No failure triggered by this, but a helpful debug message on how to avoid a previous failure.
+    LogClientError(FROM_HERE, new_node_properties,
                    "BufferCollectionToken.Duplicate() received for creating token with server koid"
                    "%ld after BindSharedCollection() previously received attempting to use same"
                    "token.  Client sequence should be Duplicate(), Sync(), BindSharedCollection()."
@@ -367,11 +407,13 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
                    server_koid);
   }
 
-  LogInfo(FROM_HERE, "CreateBufferCollectionToken() - server_koid: %lu", token_ptr->server_koid());
-  token_ptr->Bind(std::move(buffer_collection_token_request));
+  LogInfo(FROM_HERE, "CreateBufferCollectionToken() - server_koid: %lu", token.server_koid());
+  token.Bind(std::move(token_request));
 }
 
 void LogicalBufferCollection::OnSetConstraints() {
+  // MaybeAllocate() requires the caller to keep "this" alive.
+  auto self = fbl::RefPtr(this);
   MaybeAllocate();
   return;
 }
@@ -379,7 +421,7 @@ void LogicalBufferCollection::OnSetConstraints() {
 void LogicalBufferCollection::SetName(uint32_t priority, std::string name) {
   if (!name_ || (priority > name_->priority)) {
     name_ = CollectionName{priority, name};
-    name_property_ = node_.CreateString("name", name);
+    name_property_ = inspect_node_.CreateString("name", name);
   }
 }
 
@@ -390,7 +432,9 @@ void LogicalBufferCollection::SetDebugTimeoutLogDeadline(int64_t deadline) {
   ZX_ASSERT(status == ZX_OK);
 }
 
-LogicalBufferCollection::AllocationResult LogicalBufferCollection::allocation_result() {
+uint64_t LogicalBufferCollection::CreateDispensableOrdinal() { return next_dispensable_ordinal_++; }
+
+AllocationResult LogicalBufferCollection::allocation_result() {
   ZX_DEBUG_ASSERT(has_allocation_result_ ||
                   (allocation_result_status_ == ZX_OK && !allocation_result_info_));
   // If this assert fails, it mean we've already done ::Fail().  This should be impossible since
@@ -410,7 +454,8 @@ LogicalBufferCollection::LogicalBufferCollection(Device* parent_device)
   TRACE_DURATION("gfx", "LogicalBufferCollection::LogicalBufferCollection", "this", this);
   LogInfo(FROM_HERE, "LogicalBufferCollection::LogicalBufferCollection()");
   parent_device_->AddLogicalBufferCollection(this);
-  node_ = parent_device_->collections_node().CreateChild(CreateUniqueName("logical-collection-"));
+  inspect_node_ =
+      parent_device_->collections_node().CreateChild(CreateUniqueName("logical-collection-"));
 
   zx_status_t status = creation_timer_.PostDelayed(parent_device_->dispatcher(), zx::sec(5));
   ZX_ASSERT(status == ZX_OK);
@@ -420,11 +465,10 @@ LogicalBufferCollection::LogicalBufferCollection(Device* parent_device)
 LogicalBufferCollection::~LogicalBufferCollection() {
   TRACE_DURATION("gfx", "LogicalBufferCollection::~LogicalBufferCollection", "this", this);
   LogInfo(FROM_HERE, "~LogicalBufferCollection");
-  // Every entry in these collections keeps a
-  // fbl::RefPtr<LogicalBufferCollection>, so these should both already be
-  // empty.
-  ZX_DEBUG_ASSERT(token_views_.empty());
-  ZX_DEBUG_ASSERT(collection_views_.empty());
+
+  // This isn't strictly necessary, but to avoid any confusion or brittle-ness, cancel explicitly
+  // before member destructors start running.
+  creation_timer_.Cancel();
 
   // Cancel all TrackedParentVmo waits to avoid a use-after-free of |this|
   for (auto& tracked : parent_vmos_) {
@@ -434,60 +478,95 @@ LogicalBufferCollection::~LogicalBufferCollection() {
   if (memory_allocator_) {
     memory_allocator_->RemoveDestroyCallback(reinterpret_cast<intptr_t>(this));
   }
+
   parent_device_->RemoveLogicalBufferCollection(this);
 }
 
-void LogicalBufferCollection::LogAndFail(Location location, const char* format, ...) {
+void LogicalBufferCollection::LogAndFailRootNode(Location location, zx_status_t epitaph,
+                                                 const char* format, ...) {
   ZX_DEBUG_ASSERT(format);
   va_list args;
   va_start(args, format);
   vLog(true, location.file(), location.line(), "LogicalBufferCollection", "fail", format, args);
   va_end(args);
-  Fail();
+  FailRootNode(epitaph);
 }
 
-void LogicalBufferCollection::Fail() {
-  // Close all the associated channels.  We do this by swapping into local
-  // collections and clearing those, since deleting the items in the
-  // collections will delete |this|.
-  TokenMap local_token_views;
-  token_views_.swap(local_token_views);
-  CollectionMap local_collection_views;
-  collection_views_.swap(local_collection_views);
+void LogicalBufferCollection::FailRootNode(zx_status_t epitaph) {
+  FailDownFrom(root_.get(), epitaph);
+}
 
-  // Since all the token views and collection views will shortly be gone, there
-  // will be no way for any client to be sent the VMOs again, so we can close
-  // the handles to the VMOs here.  This is necessary in order to get
-  // ZX_VMO_ZERO_CHILDREN to happen in TrackedParentVmo, but not sufficient
-  // alone (clients must also close their VMO(s)).
-  //
-  // We can't just allocation_result_info_.reset() here, because we're using a
-  // BufferThenHeapAllocator<> that'll delay close of the VMOs until during
-  // ~LogicalBufferCollection (a deadlock) unless we dig into the structure and
-  // close these VMOs directly.
-  if (allocation_result_info_) {
-    for (uint32_t i = 0; i < allocation_result_info_.value()->buffers().count(); ++i) {
-      if (allocation_result_info_.value()->buffers()[i].has_vmo()) {
-        allocation_result_info_.value().mutate().buffers()[i].vmo().reset();
+void LogicalBufferCollection::LogAndFailDownFrom(Location location, NodeProperties* tree_to_fail,
+                                                 zx_status_t epitaph, const char* format, ...) {
+  ZX_DEBUG_ASSERT(format);
+  va_list args;
+  va_start(args, format);
+  bool is_error = (tree_to_fail == root_.get());
+  vLog(is_error, location.file(), location.line(), "LogicalBufferCollection",
+       is_error ? "root fail" : "sub-tree fail", format, args);
+  va_end(args);
+  FailDownFrom(tree_to_fail, epitaph);
+}
+
+void LogicalBufferCollection::FailDownFrom(NodeProperties* tree_to_fail, zx_status_t epitaph) {
+  // Keep self alive until this method is done.
+  auto self = fbl::RefPtr(this);
+  bool is_root = (tree_to_fail == root_.get());
+  std::vector<NodeProperties*> breadth_first_order = tree_to_fail->BreadthFirstOrder();
+  while (!breadth_first_order.empty()) {
+    NodeProperties* child_most = breadth_first_order.back();
+    breadth_first_order.pop_back();
+    ZX_DEBUG_ASSERT(child_most->child_count() == 0);
+    child_most->node()->Fail(epitaph);
+    child_most->RemoveFromTreeAndDelete();
+  }
+  if (is_root) {
+    // At this point there is no further way for any participant on this LogicalBufferCollection to
+    // perform a BufferCollectionToken::Duplicate(), BufferCollection::AttachToken(), or
+    // BindSharedCollection(), because all the BufferCollectionToken(s) and BufferCollection(s) are
+    // gone.  Any further pending requests were dropped when the channels closed just above.
+    //
+    // Since all the token views and collection views are gone, there is no way for any client to be
+    // sent the VMOs again, so we can close the handles to the VMOs here.  This is necessary in
+    // order to get ZX_VMO_ZERO_CHILDREN to happen in TrackedParentVmo, but not sufficient alone
+    // (clients must also close their VMO(s)).
+    //
+    // We can't just allocation_result_info_.reset() here, because we're using a
+    // BufferThenHeapAllocator<> that'll delay close of the VMOs until during
+    // ~LogicalBufferCollection (a deadlock) unless we dig into the structure and close these VMOs
+    // directly.
+    if (allocation_result_info_) {
+      auto& allocation_result = allocation_result_info_->mutate();
+      for (uint32_t i = 0; i < allocation_result.buffers().count(); ++i) {
+        if (allocation_result.buffers()[i].has_vmo()) {
+          allocation_result.buffers()[i].vmo().reset();
+        }
+        if (allocation_result.buffers()[i].has_aux_vmo()) {
+          allocation_result.buffers()[i].aux_vmo().reset();
+        }
       }
-      if (allocation_result_info_.value()->buffers()[i].has_aux_vmo()) {
-        allocation_result_info_.value().mutate().buffers()[i].aux_vmo().reset();
-      }
+      allocation_result_info_.reset();
     }
   }
-  allocation_result_info_.reset();
+  // ~self, which will delete "this" if there are no more references to "this".
+}
 
-  // |this| can be deleted during these calls to clear(), unless parent_vmos_
-  // isn't empty yet, or unless the caller of Fail() has its own temporary
-  // fbl::RefPtr<LogicalBufferCollection> on the stack.
-  //
-  // These clear() calls will close the channels, which in turn will inform
-  // the participants to close their child VMO handles.  We don't revoke the
-  // child VMOs, so the LogicalBufferCollection will stick around until
-  // parent_vmo_map_ becomes empty thanks to participants closing their child
-  // VMOs.
-  local_token_views.clear();
-  local_collection_views.clear();
+void LogicalBufferCollection::LogAndFailNode(Location location, NodeProperties* member_node,
+                                             zx_status_t epitaph, const char* format, ...) {
+  ZX_DEBUG_ASSERT(format);
+  auto tree_to_fail = FindTreeToFail(member_node);
+  va_list args;
+  va_start(args, format);
+  bool is_error = (tree_to_fail == root_.get());
+  vLog(is_error, location.file(), location.line(), "LogicalBufferCollection",
+       is_error ? "root fail" : "sub-tree fail", format, args);
+  va_end(args);
+  FailDownFrom(tree_to_fail, epitaph);
+}
+
+void LogicalBufferCollection::FailNode(NodeProperties* member_node, zx_status_t epitaph) {
+  auto tree_to_fail = FindTreeToFail(member_node);
+  FailDownFrom(tree_to_fail, epitaph);
 }
 
 namespace {
@@ -509,14 +588,15 @@ void LogicalBufferCollection::LogInfo(Location location, const char* format, ...
   va_end(args);
 }
 
-void LogicalBufferCollection::LogErrorStatic(Location location, const ClientInfo* client_info,
+void LogicalBufferCollection::LogErrorStatic(Location location,
+                                             const ClientDebugInfo* client_debug_info,
                                              const char* format, ...) {
   va_list args;
   va_start(args, format);
   fbl::String formatted = fbl::StringVPrintf(format, args);
-  if (client_info && !client_info->name.empty()) {
-    fbl::String client_name =
-        fbl::StringPrintf(" - client \"%s\" id %ld", client_info->name.c_str(), client_info->id);
+  if (client_debug_info && !client_debug_info->name.empty()) {
+    fbl::String client_name = fbl::StringPrintf(
+        " - client \"%s\" id %ld", client_debug_info->name.c_str(), client_debug_info->id);
 
     formatted = fbl::String::Concat({formatted, client_name});
   }
@@ -524,14 +604,15 @@ void LogicalBufferCollection::LogErrorStatic(Location location, const ClientInfo
   va_end(args);
 }
 
-void LogicalBufferCollection::VLogClientError(Location location, const ClientInfo* client_info,
-                                              const char* format, va_list args) {
+void LogicalBufferCollection::VLogClient(bool is_error, Location location,
+                                         const NodeProperties* node_properties, const char* format,
+                                         va_list args) const {
   const char* collection_name = name_ ? name_->name.c_str() : "Unknown";
   fbl::String formatted = fbl::StringVPrintf(format, args);
-  if (client_info && !client_info->name.empty()) {
-    fbl::String client_name =
-        fbl::StringPrintf(" - collection \"%s\" - client \"%s\" id %ld", collection_name,
-                          client_info->name.c_str(), client_info->id);
+  if (node_properties && !node_properties->client_debug_info().name.empty()) {
+    fbl::String client_name = fbl::StringPrintf(
+        " - collection \"%s\" - client \"%s\" id %ld", collection_name,
+        node_properties->client_debug_info().name.c_str(), node_properties->client_debug_info().id);
 
     formatted = fbl::String::Concat({formatted, client_name});
   } else {
@@ -539,27 +620,55 @@ void LogicalBufferCollection::VLogClientError(Location location, const ClientInf
 
     formatted = fbl::String::Concat({formatted, client_name});
   }
-  LogErrorInternal(location, "%s", formatted.c_str());
+
+  if (is_error) {
+    LogErrorInternal(location, "%s", formatted.c_str());
+  } else {
+    LogInfo(location, "%s", formatted.c_str());
+  }
+
   va_end(args);
 }
 
-void LogicalBufferCollection::LogClientError(Location location, const ClientInfo* client_info,
-                                             const char* format, ...) {
+void LogicalBufferCollection::LogClientInfo(Location location,
+                                            const NodeProperties* node_properties,
+                                            const char* format, ...) const {
   va_list args;
   va_start(args, format);
-  VLogClientError(location, client_info, format, args);
+  VLogClientInfo(location, node_properties, format, args);
   va_end(args);
 }
 
-void LogicalBufferCollection::LogError(Location location, const char* format, ...) {
+void LogicalBufferCollection::LogClientError(Location location,
+                                             const NodeProperties* node_properties,
+                                             const char* format, ...) const {
+  va_list args;
+  va_start(args, format);
+  VLogClientError(location, node_properties, format, args);
+  va_end(args);
+}
+
+void LogicalBufferCollection::VLogClientInfo(Location location,
+                                             const NodeProperties* node_properties,
+                                             const char* format, va_list args) const {
+  VLogClient(/*is_error=*/false, location, node_properties, format, args);
+}
+
+void LogicalBufferCollection::VLogClientError(Location location,
+                                              const NodeProperties* node_properties,
+                                              const char* format, va_list args) const {
+  VLogClient(/*is_error=*/true, location, node_properties, format, args);
+}
+
+void LogicalBufferCollection::LogError(Location location, const char* format, ...) const {
   va_list args;
   va_start(args, format);
   VLogError(location, format, args);
   va_end(args);
 }
 
-void LogicalBufferCollection::VLogError(Location location, const char* format, va_list args) {
-  VLogClientError(location, current_client_info_, format, args);
+void LogicalBufferCollection::VLogError(Location location, const char* format, va_list args) const {
+  VLogClientError(location, current_node_properties_, format, args);
 }
 
 void LogicalBufferCollection::InitializeConstraintSnapshots(
@@ -568,100 +677,251 @@ void LogicalBufferCollection::InitializeConstraintSnapshots(
   ZX_DEBUG_ASSERT(!constraints_list.empty());
   for (auto& constraints : constraints_list) {
     ConstraintInfoSnapshot snapshot;
-    snapshot.node = node().CreateChild(CreateUniqueName("collection-at-allocation-"));
+    snapshot.inspect_node =
+        inspect_node().CreateChild(CreateUniqueName("collection-at-allocation-"));
     if (constraints.constraints().has_min_buffer_count_for_camping()) {
-      snapshot.node.CreateUint("min_buffer_count_for_camping",
-                               constraints.constraints().min_buffer_count_for_camping(),
-                               &snapshot.node_constraints);
+      snapshot.inspect_node.CreateUint("min_buffer_count_for_camping",
+                                       constraints.constraints().min_buffer_count_for_camping(),
+                                       &snapshot.node_constraints);
     }
     if (constraints.constraints().has_min_buffer_count_for_shared_slack()) {
-      snapshot.node.CreateUint("min_buffer_count_for_shared_slack",
-                               constraints.constraints().min_buffer_count_for_shared_slack(),
-                               &snapshot.node_constraints);
+      snapshot.inspect_node.CreateUint(
+          "min_buffer_count_for_shared_slack",
+          constraints.constraints().min_buffer_count_for_shared_slack(),
+          &snapshot.node_constraints);
     }
     if (constraints.constraints().has_min_buffer_count_for_dedicated_slack()) {
-      snapshot.node.CreateUint("min_buffer_count_for_dedicated_slack",
-                               constraints.constraints().min_buffer_count_for_dedicated_slack(),
-                               &snapshot.node_constraints);
+      snapshot.inspect_node.CreateUint(
+          "min_buffer_count_for_dedicated_slack",
+          constraints.constraints().min_buffer_count_for_dedicated_slack(),
+          &snapshot.node_constraints);
     }
     if (constraints.constraints().has_min_buffer_count()) {
-      snapshot.node.CreateUint("min_buffer_count", constraints.constraints().min_buffer_count(),
-                               &snapshot.node_constraints);
+      snapshot.inspect_node.CreateUint("min_buffer_count",
+                                       constraints.constraints().min_buffer_count(),
+                                       &snapshot.node_constraints);
     }
-    snapshot.node.CreateUint("debug_id", constraints.client_info().id, &snapshot.node_constraints);
-    snapshot.node.CreateString("debug_name", constraints.client_info().name,
-                               &snapshot.node_constraints);
+    snapshot.inspect_node.CreateUint("debug_id", constraints.client_debug_info().id,
+                                     &snapshot.node_constraints);
+    snapshot.inspect_node.CreateString("debug_name", constraints.client_debug_info().name,
+                                       &snapshot.node_constraints);
     constraints_at_allocation_.push_back(std::move(snapshot));
   }
 }
 
 void LogicalBufferCollection::MaybeAllocate() {
-  if (!token_views_.empty()) {
-    // All tokens must be converted into BufferCollection views or Close()ed
-    // before allocation will happen.
-    return;
-  }
-  if (collection_views_.empty()) {
-    // The LogicalBufferCollection should be failed because there are no clients left, despite only
-    // getting here if all of the clients did a clean Close().
-    if (is_allocate_attempted_) {
-      // Only log as info because this is a normal way to destroy the buffer collection.
-      LogInfo(FROM_HERE,
-              "All clients called Close(), but now zero clients remain (after allocation).");
-      Fail();
-    } else {
-      LogAndFail(FROM_HERE,
-                 "All clients called Close(), but now zero clients remain (before allocation).");
+  bool did_something;
+  do {
+    did_something = false;
+    // If a previous iteration of the loop failed the root_ of the LogicalBufferCollection, we'll
+    // return below when we noticed that root_.connected_client_count() == 0.
+    //
+    // MaybeAllocate() is called after a connection drops.  If that connection is the last
+    // connection to a failure domain, we'll fail the failure domain via this check.  We don't blame
+    // the specific node that closed here, as it's just the last one, and could just as easily not
+    // have been the last one.  We blame the root of the failure domain since it's fairly likely to
+    // have useful debug name and debug ID.
+    //
+    // When it comes to connected_client_count() 0, we care about failure domains as defined by
+    // FailurePropagationMode != kPropagate.  In other words, we'll fail a sub-tree with any degree
+    // of failure isolation if its connected_client_count() == 0.  Whether we also fail the parent
+    // tree depends on ErrorPropagationMode::kPropagateBeforeAllocation (and is_allocate_attempted_)
+    // vs. ErrorPropagationMode::kDoNotPropagate.
+    //
+    // There's no "safe" iteration order that isn't subject to NodeProperties getting deleted out
+    // from under the iteration, so we re-enumerate failure domains each time we fail a node + any
+    // relevant other nodes.  The cost of enumeration could be reduced, but it should be good enough
+    // given the expected participant counts.
+    while (true) {
+    fresh_failure_domains:;
+      auto failure_domains = FailureDomainSubtrees();
+      // To get more detailed log output, we fail smaller trees first.
+      for (int32_t i = failure_domains.size() - 1; i >= 0; --i) {
+        auto node_properties = failure_domains[i];
+        if (node_properties->connected_client_count() == 0) {
+          bool is_root = (node_properties == root_.get());
+          if (is_root) {
+            if (is_allocate_attempted_) {
+              // Only log as info, because this is a normal way to destroy the buffer collection.
+              LogClientInfo(FROM_HERE, node_properties, "Zero clients remain (after allocation).");
+            } else {
+              LogClientError(FROM_HERE, node_properties,
+                             "Zero clients remain (before allocation).");
+            }
+          } else {
+            LogClientError(FROM_HERE, node_properties,
+                           "Sub-tree has zero clients remaining - failure_propagation_mode(): %u "
+                           "is_allocate_attempted_: %u",
+                           node_properties->error_propagation_mode(), is_allocate_attempted_);
+          }
+          // This may fail the parent failure domain, possibly including the root, depending on
+          // error_propagation_mode() and possibly is_allocate_attempted_.  If that happens,
+          // FailNode() will log INFO saying so (FindTreeToFail() will log INFO).
+          FailNode(node_properties, ZX_ERR_PEER_CLOSED);
+          if (is_root) {
+            return;
+          }
+          // Not "continue" because we're nested within a for loop.
+          goto fresh_failure_domains;
+        }
+      }
+      // Processed all failure domains and found zero that needed to fail due to zero
+      // connected_client_count().
+      break;
     }
-    return;
-  }
-  if (is_allocate_attempted_) {
-    // Allocate was already attempted.
-    return;
-  }
-  // Sweep looking for any views that don't have constraints.
-  for (auto& [key, value] : collection_views_) {
-    if (!key->has_constraints()) {
+
+    // We may have failed the root.  The caller is keeping "this" alive, so we can still check
+    // root_.
+    if (!root_) {
+      LogError(FROM_HERE,
+               "Root node was failed due to sub-tree having zero clients remaining. (1)");
       return;
     }
-  }
-  // All the views have seen SetConstraints(), and there are no tokens left.
-  // Regardless of whether allocation succeeds or fails, we remember we've
-  // started an attempt to allocate so we don't attempt again.
-  is_allocate_attempted_ = true;
-  TryAllocate();
-  return;
+
+    auto eligible_subtrees = PrunedSubtreesEligibleForLogicalAllocation();
+    if (eligible_subtrees.empty()) {
+      // nothing to do
+      return;
+    }
+    for (auto eligible_subtree : eligible_subtrees) {
+      // It's possible to fail a sub-tree mid-way through processing sub-trees; in that case we're
+      // fine to continue with the next sub-tree since failure of one sub-tree in the list doesn't
+      // impact any other sub-tree in the list.  However, if the root_ is failed, there are no
+      // longer any sub-trees.
+      if (!root_) {
+        LogError(FROM_HERE,
+                 "Root node was failed due to sub-tree having zero clients remaining. (2)");
+        return;
+      }
+
+      auto nodes = NodesOfPrunedSubtreeEligibleForLogicalAllocation(*eligible_subtree);
+      ZX_DEBUG_ASSERT(nodes.front() == eligible_subtree);
+      bool found_not_ready_node = false;
+      for (auto node_properties : nodes) {
+        if (!node_properties->node()->ReadyForAllocation()) {
+          found_not_ready_node = true;
+          break;
+        }
+      }
+      if (found_not_ready_node) {
+        // next sub-tree
+        continue;
+      }
+
+      // We know all the nodes of this sub-tree are ready to attempt allocation.
+
+      ZX_DEBUG_ASSERT((!is_allocate_attempted_) == (eligible_subtree == root_.get()));
+      ZX_DEBUG_ASSERT(is_allocate_attempted_ || eligible_subtrees.size() == 1);
+
+      if (is_allocate_attempted_) {
+        // Allocate was already previously attempted.
+        TryLateLogicalAllocation(std::move(nodes));
+        did_something = true;
+        // next sub-tree
+        continue;
+      }
+
+      // All the views have seen SetConstraints(), and there are no tokens left.
+      // Regardless of whether allocation succeeds or fails, we remember we've
+      // started an attempt to allocate so we don't attempt again.
+      is_allocate_attempted_ = true;
+      TryAllocate(std::move(nodes));
+      did_something = true;
+
+      // Try again, in case there were ready AttachToken()(s) and/or dispensable views queued up
+      // behind the initial allocation.  In the next iteration if there's nothing to do we'll
+      // return.
+      ZX_DEBUG_ASSERT(eligible_subtrees.size() == 1);
+    }
+  } while (did_something);
 }
 
-// This only runs on a clean stack.
-void LogicalBufferCollection::TryAllocate() {
+void LogicalBufferCollection::TryAllocate(std::vector<NodeProperties*> nodes) {
   TRACE_DURATION("gfx", "LogicalBufferCollection::TryAllocate", "this", this);
-  // If we're here it means we still have collection_views_, because if the
-  // last collection view disappeared we would have run ~this which would have
-  // cleared the Post() canary so this method wouldn't be running.
-  ZX_DEBUG_ASSERT(!collection_views_.empty());
 
-  // Currently only BufferCollection(s) that have already done a clean Close()
-  // have their constraints in constraints_list_.  The rest of the constraints
-  // are still with collection_views_.  Move all constraints into
-  // constraints_list_.
-  for (auto& [key, value] : collection_views_) {
-    ZX_DEBUG_ASSERT(key->has_constraints());
-    constraints_list_.emplace_back(table_set_, key->TakeConstraints(),
-                                   ClientInfo{key->debug_name(), key->debug_id()});
-    ZX_DEBUG_ASSERT(!key->has_constraints());
+  // If we're here it means we have connected clients.
+  ZX_DEBUG_ASSERT(root_->connected_client_count() != 0);
+  ZX_DEBUG_ASSERT(!root_->buffers_logically_allocated());
+  ZX_DEBUG_ASSERT(!nodes.empty());
+
+  // Since this is the initial allocation, it's impossible for anything to be eligible other than
+  // the root, since parents logically allocate before children, or together with children,
+  // depending on use of AttachToken() or not.
+  //
+  // The root will be nodes[0].
+  ZX_DEBUG_ASSERT(nodes[0] == root_.get());
+
+  // Build a list of current constraints.  We clone/copy the constraints instead of moving any
+  // portion of constraints, since we potentially will need the original constraints again after an
+  // AttachToken().
+  ConstraintsList constraints_list;
+  for (auto node_properties : nodes) {
+    ZX_DEBUG_ASSERT(node_properties->node()->ReadyForAllocation());
+    if (node_properties->buffer_collection_constraints()) {
+      constraints_list.emplace_back(
+          table_set_,
+          sysmem::V2CloneBufferCollectionConstraints(
+              table_set_.allocator(), *node_properties->buffer_collection_constraints()),
+          *node_properties);
+    }
   }
 
-  InitializeConstraintSnapshots(constraints_list_);
-  if (!CombineConstraints()) {
+  InitializeConstraintSnapshots(constraints_list);
+
+  auto combine_result = CombineConstraints(&constraints_list);
+  if (!combine_result.is_ok()) {
     // It's impossible to combine the constraints due to incompatible
     // constraints, or all participants set null constraints.
+    LOG(ERROR, "CombineConstraints() failed");
     SetFailedAllocationResult(ZX_ERR_NOT_SUPPORTED);
     return;
   }
-  ZX_DEBUG_ASSERT(!!constraints_);
+  ZX_DEBUG_ASSERT(combine_result.is_ok());
+  ZX_DEBUG_ASSERT(constraints_list.empty());
+  auto combined_constraints = combine_result.take_value();
 
-  fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t> result = Allocate();
+  auto generate_result = GenerateUnpopulatedBufferCollectionInfo(combined_constraints);
+  if (!generate_result.is_ok()) {
+    ZX_DEBUG_ASSERT(generate_result.error() != ZX_OK);
+    LOG(ERROR, "GenerateUnpopulatedBufferCollectionInfo() failed");
+    SetFailedAllocationResult(generate_result.error());
+    return;
+  }
+  ZX_DEBUG_ASSERT(generate_result.is_ok());
+  auto buffer_collection_info = generate_result.take_value();
+
+  // Save BufferCollectionInfo prior to populating with VMOs, for later comparison with analogous
+  // BufferCollectionInfo generated after AttachToken().
+  //
+  // Save both non-linearized and linearized versions of pre-populated BufferCollectionInfo.  The
+  // linearized copy is for checking whether an attachtoken sequence should succeed, and the
+  // non-linearized copy is for easier logging of diffs if an AttachToken() sequence fails due to
+  // mismatched BufferCollectionInfo.
+  ZX_DEBUG_ASSERT(!buffer_collection_info_before_population_);
+  auto clone_result =
+      sysmem::V2CloneBufferCollectionInfo(table_set_.allocator(), buffer_collection_info, 0, 0);
+  if (!clone_result.is_ok()) {
+    ZX_DEBUG_ASSERT(clone_result.error() != ZX_OK);
+    LOG(ERROR, "V2CloneBufferCollectionInfo() failed");
+    SetFailedAllocationResult(clone_result.error());
+    return;
+  }
+  buffer_collection_info_before_population_.emplace(
+      TableHolder(table_set_, clone_result.take_value()));
+  clone_result =
+      sysmem::V2CloneBufferCollectionInfo(table_set_.allocator(), buffer_collection_info, 0, 0);
+  if (!clone_result.is_ok()) {
+    ZX_DEBUG_ASSERT(clone_result.error() != ZX_OK);
+    LOG(ERROR, "V2CloneBufferCollectionInfo() failed");
+    SetFailedAllocationResult(clone_result.error());
+    return;
+  }
+  auto tmp_buffer_collection_info_before_population = clone_result.take_value();
+  linearized_buffer_collection_info_before_population_.emplace(
+      &tmp_buffer_collection_info_before_population);
+
+  fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t> result =
+      Allocate(combined_constraints, &buffer_collection_info);
   if (!result.is_ok()) {
     ZX_DEBUG_ASSERT(result.error() != ZX_OK);
     SetFailedAllocationResult(result.error());
@@ -669,23 +929,227 @@ void LogicalBufferCollection::TryAllocate() {
   }
   ZX_DEBUG_ASSERT(result.is_ok());
 
-  fuchsia_sysmem2::wire::BufferCollectionInfo info = result.take_value();
-  // Setting empty constraints as the success case isn't allowed.  That's
-  // considered a failure.  At least one participant must specify non-empty
-  // constraints.
-  ZX_DEBUG_ASSERT(!info.IsEmpty());
+  SetAllocationResult(std::move(nodes), result.take_value());
+}
 
-  // Only set result once.
-  ZX_DEBUG_ASSERT(!has_allocation_result_);
-  // allocation_result_status_ is initialized to ZX_OK, so should still be set
-  // that way.
-  ZX_DEBUG_ASSERT(allocation_result_status_ == ZX_OK);
+// This requires that nodes have the sub-tree's root-most node at nodes[0].
+void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodeProperties*> nodes) {
+  TRACE_DURATION("gfx", "LogicalBufferCollection::TryLateLogicalAllocation", "this", this);
 
-  creation_timer_.Cancel();
-  allocation_result_status_ = ZX_OK;
-  allocation_result_info_.emplace(table_set_, std::move(info));
-  has_allocation_result_ = true;
-  SendAllocationResult();
+  // The initial allocation was attempted, or we wouldn't be here.
+  ZX_DEBUG_ASSERT(is_allocate_attempted_);
+
+  // The initial allocation succeeded, or we wouldn't be here.  If the initial allocation fails, it
+  // responds to any already-pending late allocation attempts also, and clears out all allocation
+  // attempts including late allocation attempts.
+  ZX_DEBUG_ASSERT(allocation_result().status == ZX_OK &&
+                  allocation_result().buffer_collection_info != nullptr);
+
+  // If we're here it means we still have connected clients.
+  ZX_DEBUG_ASSERT(root_->connected_client_count() != 0);
+
+  // Build a list of current constraints.  We clone/copy instead of moving since we potentially will
+  // need the original constraints again after another AttachToken() later.
+  ConstraintsList constraints_list;
+
+  // The constraints_list will include all already-logically-allocated node constraints, as well as
+  // all node constraints from the "nodes" list which is all the nodes attempting to logically
+  // allocate in this attempt.  There's also a synthetic entry to make sure the total # of buffers
+  // is at least as large as the number already allocated.
+
+  // Constraints of already-logically-allocated nodes.  This can include some OrphanedNode(s) in
+  // addition to still-connected BufferCollection nodes.  There are no BufferCollectionToken nodes
+  // in this category.
+  auto logically_allocated_nodes =
+      root_->BreadthFirstOrder([](const NodeProperties& node_properties) {
+        bool keep_and_iterate_children = node_properties.buffers_logically_allocated();
+        return NodeFilterResult{.keep_node = keep_and_iterate_children,
+                                .iterate_children = keep_and_iterate_children};
+      });
+  for (auto logically_allocated_node : logically_allocated_nodes) {
+    if (logically_allocated_node->buffer_collection_constraints()) {
+      constraints_list.emplace_back(
+          table_set_,
+          sysmem::V2CloneBufferCollectionConstraints(
+              table_set_.allocator(), *logically_allocated_node->buffer_collection_constraints()),
+          *logically_allocated_node);
+    }
+  }
+
+  // Constraints of nodes trying to logically allocate now.  These can include BufferCollection(s)
+  // and OrphanedNode(s).
+  for (auto additional_node : nodes) {
+    ZX_DEBUG_ASSERT(additional_node->node()->ReadyForAllocation());
+    if (additional_node->buffer_collection_constraints()) {
+      constraints_list.emplace_back(
+          table_set_,
+          sysmem::V2CloneBufferCollectionConstraints(
+              table_set_.allocator(), *additional_node->buffer_collection_constraints()),
+          *additional_node);
+    }
+  }
+
+  // Synthetic constraints entry to make sure the total # of buffers is at least as large as the
+  // number already allocated.  Also, to try to use the same PixelFormat as we've already allocated,
+  // else we'll fail to CombineConstraints().  Also, if what we've already allocated has any
+  // optional characteristics, we require those so that we'll choose to enable those characteristics
+  // again if we can, else we'll fail to CombineConstraints().
+  const auto& existing = **buffer_collection_info_before_population_;
+  auto existing_constraints =
+      fuchsia_sysmem2::wire::BufferCollectionConstraints(table_set_.allocator());
+  auto usage = fuchsia_sysmem2::wire::BufferUsage(table_set_.allocator());
+  usage.set_none(table_set_.allocator(), fuchsia_sysmem2::wire::NONE_USAGE);
+  existing_constraints.set_usage(table_set_.allocator(), std::move(usage));
+  ZX_DEBUG_ASSERT(!existing_constraints.has_min_buffer_count_for_camping());
+  ZX_DEBUG_ASSERT(!existing_constraints.has_min_buffer_count_for_dedicated_slack());
+  ZX_DEBUG_ASSERT(!existing_constraints.has_min_buffer_count_for_shared_slack());
+  ZX_DEBUG_ASSERT(!existing_constraints.has_min_buffer_count_for_shared_slack());
+  existing_constraints.set_min_buffer_count(table_set_.allocator(),
+                                            static_cast<uint32_t>(existing.buffers().count()));
+  // We don't strictly need to set this, because we always try to allocate as few buffers as we can
+  // so we'd catch needing more than we have during linear form comparison below, but _might_ be
+  // easier to diagnose why we failed with this set, as the constraints aggregation will fail with
+  // a logged message about the max_buffer_count being exceeded.
+  existing_constraints.set_max_buffer_count(table_set_.allocator(),
+                                            static_cast<uint32_t>(existing.buffers().count()));
+  existing_constraints.set_buffer_memory_constraints(table_set_.allocator(),
+                                                     table_set_.allocator());
+  auto& buffer_memory_constraints = existing_constraints.buffer_memory_constraints();
+  buffer_memory_constraints.set_min_size_bytes(table_set_.allocator(),
+                                               existing.settings().buffer_settings().size_bytes());
+  buffer_memory_constraints.set_max_size_bytes(table_set_.allocator(),
+                                               existing.settings().buffer_settings().size_bytes());
+  if (existing.settings().buffer_settings().is_physically_contiguous()) {
+    buffer_memory_constraints.set_physically_contiguous_required(table_set_.allocator(), true);
+  }
+  ZX_DEBUG_ASSERT(existing.settings().buffer_settings().is_secure() ==
+                  IsSecureHeap(existing.settings().buffer_settings().heap()));
+  if (existing.settings().buffer_settings().is_secure()) {
+    buffer_memory_constraints.set_secure_required(table_set_.allocator(), true);
+  }
+  switch (existing.settings().buffer_settings().coherency_domain()) {
+    case fuchsia_sysmem2::wire::CoherencyDomain::CPU:
+      buffer_memory_constraints.set_cpu_domain_supported(table_set_.allocator(), true);
+      break;
+    case fuchsia_sysmem2::wire::CoherencyDomain::RAM:
+      buffer_memory_constraints.set_ram_domain_supported(table_set_.allocator(), true);
+      break;
+    case fuchsia_sysmem2::wire::CoherencyDomain::INACCESSIBLE:
+      buffer_memory_constraints.set_inaccessible_domain_supported(table_set_.allocator(), true);
+      break;
+    default:
+      ZX_PANIC("not yet implemented (new enum value?)");
+  }
+  buffer_memory_constraints.set_heap_permitted(table_set_.allocator(), table_set_.allocator(), 1);
+  buffer_memory_constraints.heap_permitted()[0] = existing.settings().buffer_settings().heap();
+  if (existing.settings().has_image_format_constraints()) {
+    // We can't loosen the constraints after initial allocation, nor can we tighten them.  We also
+    // want to chose the same PixelFormat as we already have allocated.
+    existing_constraints.set_image_format_constraints(table_set_.allocator(),
+                                                      table_set_.allocator(), 1);
+    existing_constraints.image_format_constraints()[0] = sysmem::V2CloneImageFormatConstraints(
+        table_set_.allocator(), existing.settings().image_format_constraints());
+  }
+  if (existing.buffers()[0].vmo_usable_start() & kNeedAuxVmoAlso) {
+    existing_constraints.set_need_clear_aux_buffers_for_secure(table_set_.allocator(), true);
+  }
+  existing_constraints.set_allow_clear_aux_buffers_for_secure(table_set_.allocator(), true);
+  // We could make this temp NodeProperties entirely stack-based, but we'd rather enforce that
+  // NodeProperties is always tracked with std::unique_ptr<NodeProperties>.
+  auto tmp_node = NodeProperties::NewTemporary(this, std::move(existing_constraints),
+                                               "sysmem-internals-no-fewer");
+  constraints_list.emplace_back(
+      table_set_,
+      sysmem::V2CloneBufferCollectionConstraints(table_set_.allocator(),
+                                                 *tmp_node->buffer_collection_constraints()),
+      *tmp_node);
+
+  auto combine_result = CombineConstraints(&constraints_list);
+  if (!combine_result.is_ok()) {
+    // It's impossible to combine the constraints due to incompatible
+    // constraints, or all participants set null constraints.
+    LOG(ERROR, "CombineConstraints() failed -> AttachToken() sequence failed");
+    // While nodes are from the pruned tree, if a parent can't allocate, then its child can't
+    // allocate either, so this fails the whole sub-tree.
+    SetFailedLateLogicalAllocationResult(nodes[0], ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+
+  ZX_DEBUG_ASSERT(combine_result.is_ok());
+  ZX_DEBUG_ASSERT(constraints_list.empty());
+  auto combined_constraints = combine_result.take_value();
+
+  auto generate_result = GenerateUnpopulatedBufferCollectionInfo(combined_constraints);
+  if (!generate_result.is_ok()) {
+    ZX_DEBUG_ASSERT(generate_result.error() != ZX_OK);
+    LOG(ERROR,
+        "GenerateUnpopulatedBufferCollectionInfo() failed -> AttachToken() sequence failed "
+        "- status: %d",
+        generate_result.error());
+    SetFailedLateLogicalAllocationResult(nodes[0], generate_result.error());
+    return;
+  }
+  ZX_DEBUG_ASSERT(generate_result.is_ok());
+  fuchsia_sysmem2::wire::BufferCollectionInfo unpopulated_buffer_collection_info =
+      generate_result.take_value();
+
+  auto clone_result = sysmem::V2CloneBufferCollectionInfo(table_set_.allocator(),
+                                                          unpopulated_buffer_collection_info, 0, 0);
+  if (!clone_result.is_ok()) {
+    ZX_DEBUG_ASSERT(clone_result.error() != ZX_OK);
+    LOG(ERROR, "V2CloneBufferCollectionInfo() failed -> AttachToken() sequence failed - status: %d",
+        clone_result.error());
+    SetFailedLateLogicalAllocationResult(nodes[0], clone_result.error());
+    return;
+  }
+  auto tmp_unpopulated_buffer_collection_info = clone_result.take_value();
+  // This could be big so use heap.
+  auto linearized_late_logical_allocation_buffer_collection_info =
+      std::make_unique<fuchsia_sysmem2::wire::BufferCollectionInfo::OwnedEncodedMessage>(
+          &tmp_unpopulated_buffer_collection_info);
+
+  fidl::OutgoingByteMessage& original_linear_buffer_collection_info =
+      linearized_buffer_collection_info_before_population_->GetOutgoingMessage();
+  fidl::OutgoingByteMessage& new_linear_buffer_collection_info =
+      linearized_late_logical_allocation_buffer_collection_info->GetOutgoingMessage();
+  if (!original_linear_buffer_collection_info.ok()) {
+    LOG(ERROR, "original error: %s", original_linear_buffer_collection_info.error());
+  }
+  if (!new_linear_buffer_collection_info.ok()) {
+    LOG(ERROR, "new error: %s", new_linear_buffer_collection_info.error());
+  }
+  ZX_DEBUG_ASSERT(original_linear_buffer_collection_info.ok());
+  ZX_DEBUG_ASSERT(new_linear_buffer_collection_info.ok());
+  ZX_DEBUG_ASSERT(original_linear_buffer_collection_info.handle_actual() == 0);
+  ZX_DEBUG_ASSERT(new_linear_buffer_collection_info.handle_actual() == 0);
+  if (original_linear_buffer_collection_info.byte_actual() !=
+      new_linear_buffer_collection_info.byte_actual()) {
+    LOG(WARNING,
+        "original_linear_buffer_collection_info.byte_actual() != "
+        "new_linear_buffer_collection_info.byte_actual()");
+    LogDiffsBufferCollectionInfo(**buffer_collection_info_before_population_,
+                                 unpopulated_buffer_collection_info);
+    SetFailedLateLogicalAllocationResult(nodes[0], ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+  size_t linear_size_bytes = original_linear_buffer_collection_info.byte_actual();
+  if (0 != memcmp(original_linear_buffer_collection_info.bytes(),
+                  new_linear_buffer_collection_info.bytes(), linear_size_bytes)) {
+    LOG(WARNING,
+        "0 != memcmp(original_linear_buffer_collection_info.bytes(), "
+        "new_linear_buffer_collection_info.bytes(), linear_size_bytes)");
+    LogDiffsBufferCollectionInfo(**buffer_collection_info_before_population_,
+                                 unpopulated_buffer_collection_info);
+    SetFailedLateLogicalAllocationResult(nodes[0], ZX_ERR_NOT_SUPPORTED);
+    return;
+  }
+
+  // Now that we know the new participants can be added without changing the BufferCollectionInfo,
+  // we can inform the new participants that their logical allocation succeeded.
+  //
+  // This sets success for nodes of the pruned sub-tree, not any AttachToken() children; those
+  // attempt logical allocation later assuming all goes well.
+  SetSucceededLateLogicalAllocationResult(std::move(nodes));
 }
 
 void LogicalBufferCollection::SetFailedAllocationResult(zx_status_t status) {
@@ -702,135 +1166,203 @@ void LogicalBufferCollection::SetFailedAllocationResult(zx_status_t status) {
   // Was initialized to nullptr.
   ZX_DEBUG_ASSERT(!allocation_result_info_);
   has_allocation_result_ = true;
-  SendAllocationResult();
+  SendAllocationResult(root_->BreadthFirstOrder());
   return;
 }
 
-void LogicalBufferCollection::SendAllocationResult() {
-  ZX_DEBUG_ASSERT(has_allocation_result_);
-  ZX_DEBUG_ASSERT(token_views_.empty());
-  ZX_DEBUG_ASSERT(!collection_views_.empty());
+void LogicalBufferCollection::SetAllocationResult(
+    std::vector<NodeProperties*> nodes, fuchsia_sysmem2::wire::BufferCollectionInfo&& info) {
+  // Setting empty constraints as the success case isn't allowed.  That's considered a failure.  At
+  // least one participant must specify non-empty constraints.
+  ZX_DEBUG_ASSERT(!info.IsEmpty());
 
-  for (auto& [key, value] : collection_views_) {
-    key->OnBuffersAllocated();
+  // Only set result once.
+  ZX_DEBUG_ASSERT(!has_allocation_result_);
+
+  // allocation_result_status_ is initialized to ZX_OK, so should still be set
+  // that way.
+  ZX_DEBUG_ASSERT(allocation_result_status_ == ZX_OK);
+
+  creation_timer_.Cancel();
+  allocation_result_status_ = ZX_OK;
+  allocation_result_info_.emplace(table_set_, std::move(info));
+  has_allocation_result_ = true;
+  SendAllocationResult(std::move(nodes));
+}
+
+void LogicalBufferCollection::SendAllocationResult(std::vector<NodeProperties*> nodes) {
+  ZX_DEBUG_ASSERT(has_allocation_result_);
+  ZX_DEBUG_ASSERT(root_->buffer_collection_count() != 0);
+  ZX_DEBUG_ASSERT(nodes[0] == root_.get());
+
+  for (auto node_properties : nodes) {
+    ZX_DEBUG_ASSERT(!node_properties->buffers_logically_allocated());
+    node_properties->node()->OnBuffersAllocated(allocation_result());
+    ZX_DEBUG_ASSERT(node_properties->buffers_logically_allocated());
   }
 
   if (allocation_result_status_ != ZX_OK) {
-    LogAndFail(FROM_HERE,
-               "LogicalBufferCollection::SendAllocationResult() done sending "
-               "allocation failure - now auto-failing self.");
+    LogAndFailRootNode(FROM_HERE, allocation_result_status_,
+                       "LogicalBufferCollection::SendAllocationResult() done sending allocation "
+                       "failure - now auto-failing self.");
     return;
+  }
+}
+
+void LogicalBufferCollection::SetFailedLateLogicalAllocationResult(NodeProperties* tree,
+                                                                   zx_status_t status_param) {
+  ZX_DEBUG_ASSERT(status_param != ZX_OK);
+  AllocationResult logical_allocation_result{
+      .buffer_collection_info = nullptr,
+      .status = status_param,
+  };
+  auto nodes_to_notify_and_fail = tree->BreadthFirstOrder();
+  for (auto node_properties : nodes_to_notify_and_fail) {
+    ZX_DEBUG_ASSERT(!node_properties->buffers_logically_allocated());
+    node_properties->node()->OnBuffersAllocated(logical_allocation_result);
+    ZX_DEBUG_ASSERT(node_properties->buffers_logically_allocated());
+  }
+  LogAndFailDownFrom(FROM_HERE, tree, status_param,
+                     "AttachToken() sequence failed logical allocation - status: %d", status_param);
+}
+
+void LogicalBufferCollection::SetSucceededLateLogicalAllocationResult(
+    std::vector<NodeProperties*> pruned_sub_tree) {
+  ZX_DEBUG_ASSERT(allocation_result().status == ZX_OK);
+  for (auto node_properties : pruned_sub_tree) {
+    ZX_DEBUG_ASSERT(!node_properties->buffers_logically_allocated());
+    node_properties->node()->OnBuffersAllocated(allocation_result());
+    ZX_DEBUG_ASSERT(node_properties->buffers_logically_allocated());
   }
 }
 
 void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken* token,
                                                            zx::channel buffer_collection_request) {
   ZX_DEBUG_ASSERT(buffer_collection_request.get());
-  auto self = token->parent_shared();
-  ZX_DEBUG_ASSERT(self.get() == this);
-  auto collection = BufferCollection::Create(self);
-  collection->SetDebugClientInfo(token->debug_name(), token->debug_id());
-  collection->SetErrorHandler([this, collection_ptr = collection.get()](zx_status_t status) {
+  auto self = fbl::RefPtr(this);
+  // This links the new collection into the tree under root_ in the same place as the token was, and
+  // deletes the token.
+  //
+  // ~BufferCollectionToken calls UntrackTokenKoid().
+  auto& collection = BufferCollection::EmplaceInTree(self, token);
+  token = nullptr;
+  collection.SetErrorHandler([this, &collection](zx_status_t status) {
     // status passed to an error handler is never ZX_OK.  Clean close is
     // ZX_ERR_PEER_CLOSED.
     ZX_DEBUG_ASSERT(status != ZX_OK);
 
     // The dispatcher shut down before we were able to Bind(...)
     if (status == ZX_ERR_BAD_STATE) {
-      LogAndFail(FROM_HERE, "sysmem dispatcher shutting down - status: %d", status);
+      LogAndFailRootNode(FROM_HERE, status, "sysmem dispatcher shutting down - status: %d", status);
       return;
     }
 
-    // We know collection_ptr is still alive because collection_ptr is
-    // still in collection_views_.  We know this is still alive because
-    // this has a RefPtr<> ref from collection_ptr.
+    // We know collection is still alive because collection is still under root_.  We know "this"
+    // is still alive because collection has a fbl::RefPtr<> to "this".
     //
-    // TODO(dustingreen): Switch to contains() when C++20.
-    ZX_DEBUG_ASSERT(collection_views_.find(collection_ptr) != collection_views_.end());
+    // If collection isn't under root_, this check isn't going to be robust, but it's better than
+    // nothing.  We could iterate the tree to verify it contains collection, but that'd be a lot for
+    // just an assert.
+    ZX_DEBUG_ASSERT(collection.node_properties().parent() ||
+                    &collection.node_properties() == root_.get());
 
-    // The BufferCollection may have had Close() called on it, in which
-    // case closure of the BufferCollection doesn't cause
-    // LogicalBufferCollection failure.  Or, Close() wasn't called and
-    // the LogicalBufferCollection is out of here.
+    // The BufferCollection may have had Close() called on it, in which case closure of the
+    // BufferCollection doesn't cause LogicalBufferCollection failure.  Or, Close() wasn't called
+    // and the BufferCollection node needs to fail, along with its failure domain and any child
+    // failure domains.
 
-    if (!(status == ZX_ERR_PEER_CLOSED && collection_ptr->is_done())) {
-      // We don't have to explicitly remove collection from collection_views_ because Fail() will
-      // collection_views_.clear().
+    if (!(status == ZX_ERR_PEER_CLOSED && collection.is_done())) {
+      // LogAndFailDownFrom() will also remove any no-longer-needed Node(s) from the tree.
       //
-      // A BufferCollection view whose error handler runs implies LogicalBufferCollection failure.
+      // A collection whose error handler sees anything other than clean Close() (is_done() true)
+      // implies LogicalBufferCollection failure.  The ability to detect unexpected closure is a
+      // main reason we use a channel for BufferCollection instead of an eventpair.
       //
-      // A LogicalBufferCollection intentionally treats any error that might be triggered by a
-      // client failure as a LogicalBufferCollection failure, because a LogicalBufferCollection can
-      // use a lot of RAM and can tend to block creating a replacement LogicalBufferCollection.
-      //
-      // If a participant is cleanly told to be done with a BufferCollection, the participant can
-      // send Close() before BufferCollection channel close to avoid triggering this failure, in
-      // case the initiator might want to continue using the BufferCollection without the
-      // participant.
-      //
-      // TODO(fxbug.dev/33670): Provide a way to mark a BufferCollection view as expendable without
-      // implying that the channel is closing, so that the client can still detect when the
-      // BufferCollection VMOs need to be closed based on BufferCollection channel closure by
-      // sysmem.
-      //
-      // In rare cases, an initiator might choose to use Close() to avoid this failure, but more
-      // typically initiators will just close their BufferCollection view without Close() first, and
-      // this failure results.  This is considered acceptable partly because it helps exercise code
-      // in participants that may see BufferCollection channel closure before closure of related
-      // channels, and it helps get the VMO handles closed ASAP to avoid letting those continue to
-      // use space of a MemoryAllocator's pool of pre-reserved space (for example).
-      //
-      // TODO(fxbug.dev/45878): Provide a way to distinguish between BufferCollection clean/unclean
-      // close so that we print an error if participant closes before initiator
-      Fail();
+      // If a participant for some reason finds itself with an extra BufferCollection it doesn't
+      // need, the participant should use Close() to avoid triggering this failure.
+      NodeProperties* tree_to_fail = FindTreeToFail(&collection.node_properties());
+      if (tree_to_fail == root_.get()) {
+        // A LogicalBufferCollection intentionally treats any error (other than errors explicitly
+        // ignored using SetDispensable() or AttachToken()) that might be triggered by a client
+        // failure as a LogicalBufferCollection failure, because a LogicalBufferCollection can
+        // use a lot of RAM and can tend to block creating a replacement LogicalBufferCollection.
+        //
+        // In rare cases, an initiator might choose to use Close() to avoid this failure, but more
+        // typically initiators will just close their BufferCollection view without Close() first,
+        // and this failure results.  This is considered acceptable partly because it helps exercise
+        // code in participants that may see BufferCollection channel closure before closure of
+        // related channels, and it helps get the VMO handles closed ASAP to avoid letting those
+        // continue to use space of a MemoryAllocator's pool of pre-reserved space (for example).
+        //
+        // We only log if a participant closed before the initiator, as the initiator closing first
+        // is considered normal.
+        if (&collection.node_properties() == root_.get()) {
+          // Normal for initiator to close first, in which case this isn't necessarily a failure.
+          // If we had client to server epitaphs, we'd be able to tell the difference and log only
+          // if a participant closed the channel without sending a ZX_OK epitaph.  But we don't have
+          // client to server epitaphs so far.
+          FailDownFrom(tree_to_fail, status);
+        } else {
+          // If this is too noisy, we can just do FailDownFrom() for both, but it'd be nice if
+          // participants other than the initiator wouldn't be the first to cause
+          // LogicalBufferCollection failure.
+          LogAndFailDownFrom(FROM_HERE, tree_to_fail, status,
+                             "Child BufferCollection failure causing LogicalBufferCollection "
+                             "failure (to silence this, initiator can close first) - status: %d",
+                             status);
+        }
+      } else {
+        // This also removes the sub-tree, which can reduce SUM(min_buffer_count_for_camping) (or
+        // similar for other constraints) to make room for a replacement sub-tree.  The replacement
+        // sub-tree can be created with AttachToken().  The initial sub-tree may have been placed
+        // in a separate failure domain by using SetDispensable() or AttachToken().
+        //
+        // Hopefully this won't be too noisy.
+        LogAndFailDownFrom(FROM_HERE, tree_to_fail, status,
+                           "BufferCollection failure causing sub-tree failure (SetDispensable() or "
+                           "AttachToken() was used) - status: %d",
+                           status);
+      }
       return;
     }
 
-    // At this point we know the collection_ptr is cleanly done (Close()
-    // was sent from client) and can be removed from the set of tracked
-    // collections.  We keep the collection's constraints (if any), as
-    // those are still relevant - this lets a participant do
-    // SetConstraints() followed by Close() followed by closing the
-    // participant's BufferCollection channel, which is convenient for
-    // some participants.
+    // At this point we know the collection is cleanly done (Close() was sent from client).  We keep
+    // the NodeProperties for now though, in case there are children, and in case the
+    // BufferCollection had SetDispensable() called on the token that led to this BufferCollection.
     //
-    // If this causes collection_tokens_.empty() and collection_views_.empty(),
-    // MaybeAllocate() takes care of calling Fail().
-
-    if (collection_ptr->has_constraints()) {
-      constraints_list_.emplace_back(
-          table_set_, collection_ptr->TakeConstraints(),
-          ClientInfo{collection_ptr->debug_name(), collection_ptr->debug_id()});
-    }
-
-    auto self = collection_ptr->parent_shared();
+    // We keep the collection's constraints (if any), as those are still relevant; this lets a
+    // participant do SetConstraints() followed by Close() followed by closing the participant's
+    // BufferCollection channel, which is convenient for some participants.
+    //
+    // If this causes zero remaining BufferCollectionToken(s) and zero remaining BufferCollection(s)
+    // then LogicalBufferCollection can be deleted below.
+    ZX_DEBUG_ASSERT(collection.is_done());
+    auto self = fbl::RefPtr(this);
     ZX_DEBUG_ASSERT(self.get() == this);
-    collection_views_.erase(collection_ptr);
+    ZX_DEBUG_ASSERT(collection.shared_logical_buffer_collection().get() == this);
+    // This also de-refs collection.
+    (void)OrphanedNode::EmplaceInTree(self, &collection.node_properties());
     MaybeAllocate();
     // ~self may delete "this"
     return;
   });
-  auto collection_ptr = collection.get();
-  collection_views_.insert({collection_ptr, std::move(collection)});
-  // ~BufferCollectionToken calls UntrackTokenKoid().
-  token_views_.erase(token);
-  collection_ptr->Bind(std::move(buffer_collection_request));
+  collection.Bind(std::move(buffer_collection_request));
+  // ~self
 }
 
-bool LogicalBufferCollection::IsMinBufferSizeSpecifiedByAnyParticipant() {
-  ZX_DEBUG_ASSERT(!collection_views_.empty());
-  ZX_DEBUG_ASSERT(collection_views_.end() ==
-                  std::find_if(collection_views_.begin(), collection_views_.end(),
-                               [](auto& item_pair) { return item_pair.first->has_constraints(); }));
-  ZX_DEBUG_ASSERT(!constraints_list_.empty());
-  for (auto& constraints : constraints_list_) {
-    if (constraints.constraints().has_buffer_memory_constraints() &&
-        constraints.constraints().buffer_memory_constraints().has_min_size_bytes() &&
-        constraints.constraints().buffer_memory_constraints().min_size_bytes() > 0) {
+bool LogicalBufferCollection::IsMinBufferSizeSpecifiedByAnyParticipant(
+    const ConstraintsList& constraints_list) {
+  ZX_DEBUG_ASSERT(root_->connected_client_count() != 0);
+  ZX_DEBUG_ASSERT(!constraints_list.empty());
+  for (auto& entry : constraints_list) {
+    auto& constraints = entry.constraints();
+    if (constraints.has_buffer_memory_constraints() &&
+        constraints.buffer_memory_constraints().has_min_size_bytes() &&
+        constraints.buffer_memory_constraints().min_size_bytes() > 0) {
       return true;
     }
-    if (constraints.constraints().has_image_format_constraints()) {
-      for (auto& image_format_constraints : constraints.constraints().image_format_constraints()) {
+    if (constraints.has_image_format_constraints()) {
+      for (auto& image_format_constraints : constraints.image_format_constraints()) {
         if (image_format_constraints.has_min_coded_width() &&
             image_format_constraints.has_min_coded_height() &&
             image_format_constraints.min_coded_width() > 0 &&
@@ -849,26 +1381,85 @@ bool LogicalBufferCollection::IsMinBufferSizeSpecifiedByAnyParticipant() {
   return false;
 }
 
-bool LogicalBufferCollection::CombineConstraints() {
-  // This doesn't necessarily mean that any of the collection_views_ have
+std::vector<NodeProperties*> LogicalBufferCollection::FailureDomainSubtrees() {
+  if (!root_) {
+    return std::vector<NodeProperties*>();
+  }
+  return root_->BreadthFirstOrder([](const NodeProperties& node_properties) {
+    if (!node_properties.parent()) {
+      return NodeFilterResult{.keep_node = true, .iterate_children = true};
+    }
+    if (node_properties.error_propagation_mode() != ErrorPropagationMode::kPropagate) {
+      return NodeFilterResult{.keep_node = true, .iterate_children = true};
+    }
+    return NodeFilterResult{.keep_node = false, .iterate_children = true};
+  });
+}
+
+// This could be more efficient, but should be fast enough as-is.
+std::vector<NodeProperties*> LogicalBufferCollection::PrunedSubtreesEligibleForLogicalAllocation() {
+  if (!root_) {
+    return std::vector<NodeProperties*>();
+  }
+  return root_->BreadthFirstOrder([](const NodeProperties& node_properties) {
+    if (node_properties.buffers_logically_allocated()) {
+      return NodeFilterResult{.keep_node = false, .iterate_children = true};
+    }
+    if (node_properties.parent() && !node_properties.parent()->buffers_logically_allocated()) {
+      return NodeFilterResult{.keep_node = false, .iterate_children = false};
+    }
+    ZX_DEBUG_ASSERT(!node_properties.parent() || node_properties.error_propagation_mode() ==
+                                                     ErrorPropagationMode::kDoNotPropagate);
+    return NodeFilterResult{.keep_node = true, .iterate_children = false};
+  });
+}
+
+std::vector<NodeProperties*>
+LogicalBufferCollection::NodesOfPrunedSubtreeEligibleForLogicalAllocation(NodeProperties& subtree) {
+  ZX_DEBUG_ASSERT(!subtree.buffers_logically_allocated());
+  ZX_DEBUG_ASSERT((&subtree == root_.get()) || subtree.parent()->buffers_logically_allocated());
+  return subtree.BreadthFirstOrder([&subtree](const NodeProperties& node_properties) {
+    bool in_subtree = false;
+    bool iterate_children = true;
+    for (const NodeProperties* iter = &node_properties; iter; iter = iter->parent()) {
+      if (iter == &subtree) {
+        in_subtree = true;
+        break;
+      }
+      if (iter->error_propagation_mode() == ErrorPropagationMode::kDoNotPropagate) {
+        iterate_children = false;
+        break;
+      }
+    }
+    return NodeFilterResult{.keep_node = in_subtree, .iterate_children = iterate_children};
+  });
+}
+
+void LogicalBufferCollection::LogTreeForDebugOnly(NodeProperties* node) {
+  LOG(INFO, "node: 0x%p", node);
+  LOG(INFO, "node->error_propagation_mode(): %u", node->error_propagation_mode());
+  LOG(INFO, "node->buffers_logically_allocated(): %u", node->buffers_logically_allocated());
+  for (auto& [child_ptr, child_smart_ptr] : node->children_) {
+    LOG(INFO, "child: 0x%p", child_ptr);
+    LogTreeForDebugOnly(child_ptr);
+  }
+}
+
+fit::result<fuchsia_sysmem2::wire::BufferCollectionConstraints, void>
+LogicalBufferCollection::CombineConstraints(ConstraintsList* constraints_list) {
+  // This doesn't necessarily mean that any of the clients have
   // set non-empty constraints though.  We do require that at least one
   // participant (probably the initiator) retains an open channel to its
   // BufferCollection until allocation is done, else allocation won't be
   // attempted.
-  ZX_DEBUG_ASSERT(!collection_views_.empty());
-  // Caller is supposed to move all constraints into constraints_list_ before calling.
-  ZX_DEBUG_ASSERT(collection_views_.end() ==
-                  std::find_if(collection_views_.begin(), collection_views_.end(),
-                               [](auto& item_pair) { return item_pair.first->has_constraints(); }));
-  // We also know that all the constraints are in constraints_list_ now,
-  // including all constraints from collection_views_.
-  ZX_DEBUG_ASSERT(!constraints_list_.empty());
+  ZX_DEBUG_ASSERT(root_->connected_client_count() != 0);
+  ZX_DEBUG_ASSERT(!constraints_list->empty());
 
   // At least one participant must specify min buffer size (in terms of non-zero min buffer size or
   // non-zero min image size or non-zero potential max image size).
   //
   // This also enforces that at least one participant must specify non-empty constraints.
-  if (!IsMinBufferSizeSpecifiedByAnyParticipant()) {
+  if (!IsMinBufferSizeSpecifiedByAnyParticipant(*constraints_list)) {
     // Too unconstrained...  We refuse to allocate buffers without any min size
     // bounds from any participant.  At least one particpant must provide
     // some form of size bounds (in terms of buffer size bounds or in terms
@@ -876,7 +1467,7 @@ bool LogicalBufferCollection::CombineConstraints() {
     LogError(FROM_HERE,
              "At least one participant must specify buffer_memory_constraints or "
              "image_format_constraints that implies non-zero min buffer size.");
-    return false;
+    return fit::error();
   }
 
   // Start with empty constraints / unconstrained.
@@ -886,28 +1477,28 @@ bool LogicalBufferCollection::CombineConstraints() {
   bool result = CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kInitial, acc);
   ZX_DEBUG_ASSERT(result);
   // Accumulate each participant's constraints.
-  while (!constraints_list_.empty()) {
-    Constraints constraints_entry = std::move(constraints_list_.front());
-    constraints_list_.pop_front();
-    current_client_info_ = &constraints_entry.client_info();
-    auto defer_reset = fit::defer([this] { current_client_info_ = nullptr; });
+  while (!constraints_list->empty()) {
+    Constraints constraints_entry = std::move(constraints_list->front());
+    constraints_list->pop_front();
+    current_node_properties_ = &constraints_entry.node_properties();
+    auto defer_reset = fit::defer([this] { current_node_properties_ = nullptr; });
     if (!CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kNotAggregated,
                                                   constraints_entry.mutate_constraints())) {
-      return false;
+      return fit::error();
     }
-    if (!AccumulateConstraintBufferCollection(&acc, &constraints_entry.mutate_constraints())) {
+    if (!AccumulateConstraintBufferCollection(&acc,
+                                              std::move(constraints_entry.mutate_constraints()))) {
       // This is a failure.  The space of permitted settings contains no
       // points.
-      return false;
+      return fit::error();
     }
   }
 
   if (!CheckSanitizeBufferCollectionConstraints(CheckSanitizeStage::kAggregated, acc)) {
-    return false;
+    return fit::error();
   }
 
-  constraints_.emplace(table_set_, std::move(acc));
-  return true;
+  return fit::ok(std::move(acc));
 }
 
 // TODO(dustingreen): Consider rejecting secure_required + any non-secure heaps, including the
@@ -1282,14 +1873,14 @@ bool LogicalBufferCollection::CheckSanitizeImageFormatConstraints(
 }
 
 bool LogicalBufferCollection::AccumulateConstraintsBufferUsage(
-    fuchsia_sysmem2::wire::BufferUsage* acc, fuchsia_sysmem2::wire::BufferUsage* c) {
+    fuchsia_sysmem2::wire::BufferUsage* acc, fuchsia_sysmem2::wire::BufferUsage c) {
   // We accumulate "none" usage just like other usages, to make aggregation and CheckSanitize
   // consistent/uniform.
-  acc->none() |= c->none();
-  acc->cpu() |= c->cpu();
-  acc->vulkan() |= c->vulkan();
-  acc->display() |= c->display();
-  acc->video() |= c->video();
+  acc->none() |= c.none();
+  acc->cpu() |= c.cpu();
+  acc->vulkan() |= c.vulkan();
+  acc->display() |= c.display();
+  acc->video() |= c.video();
   return true;
 }
 
@@ -1298,29 +1889,30 @@ bool LogicalBufferCollection::AccumulateConstraintsBufferUsage(
 // |c| additional constraint to aggregate into acc
 bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
     fuchsia_sysmem2::wire::BufferCollectionConstraints* acc,
-    fuchsia_sysmem2::wire::BufferCollectionConstraints* c) {
-  if (!AccumulateConstraintsBufferUsage(&acc->usage(), &c->usage())) {
+    fuchsia_sysmem2::wire::BufferCollectionConstraints c) {
+  if (!AccumulateConstraintsBufferUsage(&acc->usage(), std::move(c.usage()))) {
     return false;
   }
 
-  acc->min_buffer_count_for_camping() += c->min_buffer_count_for_camping();
-  acc->min_buffer_count_for_dedicated_slack() += c->min_buffer_count_for_dedicated_slack();
-  acc->min_buffer_count_for_shared_slack() =
-      std::max(acc->min_buffer_count_for_shared_slack(), c->min_buffer_count_for_shared_slack());
+  acc->min_buffer_count_for_camping() += c.min_buffer_count_for_camping();
+  acc->min_buffer_count_for_dedicated_slack() += c.min_buffer_count_for_dedicated_slack();
 
-  acc->min_buffer_count() = std::max(acc->min_buffer_count(), c->min_buffer_count());
+  acc->min_buffer_count_for_shared_slack() =
+      std::max(acc->min_buffer_count_for_shared_slack(), c.min_buffer_count_for_shared_slack());
+  acc->min_buffer_count() = std::max(acc->min_buffer_count(), c.min_buffer_count());
+
   // 0 is replaced with 0xFFFFFFFF in
   // CheckSanitizeBufferCollectionConstraints.
   ZX_DEBUG_ASSERT(acc->max_buffer_count() != 0);
-  ZX_DEBUG_ASSERT(c->max_buffer_count() != 0);
-  acc->max_buffer_count() = std::min(acc->max_buffer_count(), c->max_buffer_count());
+  ZX_DEBUG_ASSERT(c.max_buffer_count() != 0);
+  acc->max_buffer_count() = std::min(acc->max_buffer_count(), c.max_buffer_count());
 
   // CheckSanitizeBufferCollectionConstraints() takes care of setting a default
   // buffer_collection_constraints, so we can assert that both acc and c "has_" one.
   ZX_DEBUG_ASSERT(acc->has_buffer_memory_constraints());
-  ZX_DEBUG_ASSERT(c->has_buffer_memory_constraints());
+  ZX_DEBUG_ASSERT(c.has_buffer_memory_constraints());
   if (!AccumulateConstraintBufferMemory(&acc->buffer_memory_constraints(),
-                                        &c->buffer_memory_constraints())) {
+                                        std::move(c.buffer_memory_constraints()))) {
     return false;
   }
 
@@ -1328,12 +1920,12 @@ bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
     // Take the whole VectorView<>, as the count() can only go down later, so the capacity of
     // c.image_format_constraints() is fine.
     acc->set_image_format_constraints(table_set_.allocator(),
-                                      std::move(c->image_format_constraints()));
+                                      std::move(c.image_format_constraints()));
   } else {
     ZX_DEBUG_ASSERT(acc->image_format_constraints().count());
-    if (c->image_format_constraints().count()) {
+    if (c.image_format_constraints().count()) {
       if (!AccumulateConstraintImageFormats(&acc->image_format_constraints(),
-                                            &c->image_format_constraints())) {
+                                            std::move(c.image_format_constraints()))) {
         // We return false if we've seen non-zero
         // image_format_constraint_count from at least one participant
         // but among non-zero image_format_constraint_count participants
@@ -1351,9 +1943,9 @@ bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
   }
 
   acc->need_clear_aux_buffers_for_secure() =
-      acc->need_clear_aux_buffers_for_secure() || c->need_clear_aux_buffers_for_secure();
+      acc->need_clear_aux_buffers_for_secure() || c.need_clear_aux_buffers_for_secure();
   acc->allow_clear_aux_buffers_for_secure() =
-      acc->allow_clear_aux_buffers_for_secure() && c->allow_clear_aux_buffers_for_secure();
+      acc->allow_clear_aux_buffers_for_secure() && c.allow_clear_aux_buffers_for_secure();
   // We check for consistency of these later only if we're actually attempting to allocate secure
   // buffers.
 
@@ -1364,21 +1956,21 @@ bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
 
 bool LogicalBufferCollection::AccumulateConstraintHeapPermitted(
     fidl::VectorView<fuchsia_sysmem2::wire::HeapType>* acc,
-    fidl::VectorView<fuchsia_sysmem2::wire::HeapType>* c) {
+    fidl::VectorView<fuchsia_sysmem2::wire::HeapType> c) {
   // Remove any heap in acc that's not in c.  If zero heaps
   // remain in acc, return false.
   ZX_DEBUG_ASSERT(acc->count() > 0);
 
   for (uint32_t ai = 0; ai < acc->count(); ++ai) {
     uint32_t ci;
-    for (ci = 0; ci < c->count(); ++ci) {
-      if ((*acc)[ai] == (*c)[ci]) {
+    for (ci = 0; ci < c.count(); ++ci) {
+      if ((*acc)[ai] == c[ci]) {
         // We found heap in c.  Break so we can move on to
         // the next heap.
         break;
       }
     }
-    if (ci == c->count()) {
+    if (ci == c.count()) {
       // Remove from acc because not found in c.
       //
       // Copy formerly last item on top of the item being removed, if not the same item.
@@ -1403,8 +1995,8 @@ bool LogicalBufferCollection::AccumulateConstraintHeapPermitted(
 
 bool LogicalBufferCollection::AccumulateConstraintBufferMemory(
     fuchsia_sysmem2::wire::BufferMemoryConstraints* acc,
-    fuchsia_sysmem2::wire::BufferMemoryConstraints* c) {
-  acc->min_size_bytes() = std::max(acc->min_size_bytes(), c->min_size_bytes());
+    fuchsia_sysmem2::wire::BufferMemoryConstraints c) {
+  acc->min_size_bytes() = std::max(acc->min_size_bytes(), c.min_size_bytes());
 
   // Don't permit 0 as the overall min_size_bytes; that would be nonsense.  No
   // particular initiator should feel that it has to specify 1 in this field;
@@ -1413,23 +2005,24 @@ bool LogicalBufferCollection::AccumulateConstraintBufferMemory(
   // byte, mainly for testing reasons, and to avoid any unnecessary dependence
   // or assumptions re. page size.
   acc->min_size_bytes() = std::max(acc->min_size_bytes(), 1u);
-  acc->max_size_bytes() = std::min(acc->max_size_bytes(), c->max_size_bytes());
+  acc->max_size_bytes() = std::min(acc->max_size_bytes(), c.max_size_bytes());
 
   acc->physically_contiguous_required() =
-      acc->physically_contiguous_required() || c->physically_contiguous_required();
+      acc->physically_contiguous_required() || c.physically_contiguous_required();
 
-  acc->secure_required() = acc->secure_required() || c->secure_required();
+  acc->secure_required() = acc->secure_required() || c.secure_required();
 
-  acc->ram_domain_supported() = acc->ram_domain_supported() && c->ram_domain_supported();
-  acc->cpu_domain_supported() = acc->cpu_domain_supported() && c->cpu_domain_supported();
+  acc->ram_domain_supported() = acc->ram_domain_supported() && c.ram_domain_supported();
+  acc->cpu_domain_supported() = acc->cpu_domain_supported() && c.cpu_domain_supported();
   acc->inaccessible_domain_supported() =
-      acc->inaccessible_domain_supported() && c->inaccessible_domain_supported();
+      acc->inaccessible_domain_supported() && c.inaccessible_domain_supported();
 
   if (!acc->heap_permitted().count()) {
-    acc->set_heap_permitted(table_set_.allocator(), std::move(c->heap_permitted()));
+    acc->set_heap_permitted(table_set_.allocator(), std::move(c.heap_permitted()));
   } else {
-    if (c->heap_permitted().count()) {
-      if (!AccumulateConstraintHeapPermitted(&acc->heap_permitted(), &c->heap_permitted())) {
+    if (c.heap_permitted().count()) {
+      if (!AccumulateConstraintHeapPermitted(&acc->heap_permitted(),
+                                             std::move(c.heap_permitted()))) {
         return false;
       }
     }
@@ -1439,7 +2032,7 @@ bool LogicalBufferCollection::AccumulateConstraintBufferMemory(
 
 bool LogicalBufferCollection::AccumulateConstraintImageFormats(
     fidl::VectorView<fuchsia_sysmem2::wire::ImageFormatConstraints>* acc,
-    fidl::VectorView<fuchsia_sysmem2::wire::ImageFormatConstraints>* c) {
+    fidl::VectorView<fuchsia_sysmem2::wire::ImageFormatConstraints> c) {
   // Remove any pixel_format in acc that's not in c.  Process any format
   // that's in both.  If processing the format results in empty set for that
   // format, pretend as if the format wasn't in c and remove that format from
@@ -1450,23 +2043,34 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormats(
   ZX_DEBUG_ASSERT(acc->count());
 
   for (uint32_t ai = 0; ai < acc->count(); ++ai) {
-    size_t ci;
-    for (ci = 0; ci < c->count(); ++ci) {
-      if (ImageFormatIsPixelFormatEqual((*acc)[ai].pixel_format(), (*c)[ci].pixel_format())) {
-        if (!AccumulateConstraintImageFormat(&(*acc)[ai], &(*c)[ci])) {
+    bool is_found_in_c = false;
+    for (size_t ci = 0; ci < c.count(); ++ci) {
+      if (ImageFormatIsPixelFormatEqual((*acc)[ai].pixel_format(), c[ci].pixel_format())) {
+        // Move last entry into the entry we're consuming, since LLCPP FIDL tables don't have any
+        // way to detect that they've been moved out of, so we need to keep c tightly packed with
+        // not-moved-out-of entries.  We don't need to adjust ci to stay at the same entry for the
+        // next iteration of the loop because by this point we know we're done scanning c in this
+        // iteration of the ai loop.
+        fuchsia_sysmem2::wire::ImageFormatConstraints old_c_ci = std::move(c[ci]);
+        if (ci != c.count() - 1) {
+          c[ci] = std::move(c[c.count() - 1]);
+        }
+        c.set_count(c.count() - 1);
+        if (!AccumulateConstraintImageFormat(&(*acc)[ai], std::move(old_c_ci))) {
           // Pretend like the format wasn't in c to begin with, so
           // this format gets removed from acc.  Only if this results
           // in zero formats in acc do we end up returning false.
-          ci = c->count();
+          ZX_DEBUG_ASSERT(!is_found_in_c);
           break;
         }
         // We found the format in c and processed the format without
         // that resulting in empty set; break so we can move on to the
         // next format.
+        is_found_in_c = true;
         break;
       }
     }
-    if (ci == c->count()) {
+    if (!is_found_in_c) {
       // Remove from acc because not found in c.
       //
       // Move last item on top of the item being removed, if not the same item.
@@ -1500,47 +2104,47 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormats(
 
 bool LogicalBufferCollection::AccumulateConstraintImageFormat(
     fuchsia_sysmem2::wire::ImageFormatConstraints* acc,
-    fuchsia_sysmem2::wire::ImageFormatConstraints* c) {
-  ZX_DEBUG_ASSERT(ImageFormatIsPixelFormatEqual(acc->pixel_format(), c->pixel_format()));
+    fuchsia_sysmem2::wire::ImageFormatConstraints c) {
+  ZX_DEBUG_ASSERT(ImageFormatIsPixelFormatEqual(acc->pixel_format(), c.pixel_format()));
   // Checked previously.
   ZX_DEBUG_ASSERT(acc->color_spaces().count());
   // Checked previously.
-  ZX_DEBUG_ASSERT(c->color_spaces().count());
+  ZX_DEBUG_ASSERT(c.color_spaces().count());
 
-  if (!AccumulateConstraintColorSpaces(&acc->color_spaces(), &c->color_spaces())) {
+  if (!AccumulateConstraintColorSpaces(&acc->color_spaces(), std::move(c.color_spaces()))) {
     return false;
   }
   // Else AccumulateConstraintColorSpaces() would have returned false.
   ZX_DEBUG_ASSERT(acc->color_spaces().count());
 
-  acc->min_coded_width() = std::max(acc->min_coded_width(), c->min_coded_width());
-  acc->max_coded_width() = std::min(acc->max_coded_width(), c->max_coded_width());
-  acc->min_coded_height() = std::max(acc->min_coded_height(), c->min_coded_height());
-  acc->max_coded_height() = std::min(acc->max_coded_height(), c->max_coded_height());
-  acc->min_bytes_per_row() = std::max(acc->min_bytes_per_row(), c->min_bytes_per_row());
-  acc->max_bytes_per_row() = std::min(acc->max_bytes_per_row(), c->max_bytes_per_row());
+  acc->min_coded_width() = std::max(acc->min_coded_width(), c.min_coded_width());
+  acc->max_coded_width() = std::min(acc->max_coded_width(), c.max_coded_width());
+  acc->min_coded_height() = std::max(acc->min_coded_height(), c.min_coded_height());
+  acc->max_coded_height() = std::min(acc->max_coded_height(), c.max_coded_height());
+  acc->min_bytes_per_row() = std::max(acc->min_bytes_per_row(), c.min_bytes_per_row());
+  acc->max_bytes_per_row() = std::min(acc->max_bytes_per_row(), c.max_bytes_per_row());
   acc->max_coded_width_times_coded_height() =
-      std::min(acc->max_coded_width_times_coded_height(), c->max_coded_width_times_coded_height());
+      std::min(acc->max_coded_width_times_coded_height(), c.max_coded_width_times_coded_height());
 
-  acc->coded_width_divisor() = std::max(acc->coded_width_divisor(), c->coded_width_divisor());
+  acc->coded_width_divisor() = std::max(acc->coded_width_divisor(), c.coded_width_divisor());
   acc->coded_width_divisor() =
       std::max(acc->coded_width_divisor(), ImageFormatCodedWidthMinDivisor(acc->pixel_format()));
 
-  acc->coded_height_divisor() = std::max(acc->coded_height_divisor(), c->coded_height_divisor());
+  acc->coded_height_divisor() = std::max(acc->coded_height_divisor(), c.coded_height_divisor());
   acc->coded_height_divisor() =
       std::max(acc->coded_height_divisor(), ImageFormatCodedHeightMinDivisor(acc->pixel_format()));
 
-  acc->bytes_per_row_divisor() = std::max(acc->bytes_per_row_divisor(), c->bytes_per_row_divisor());
+  acc->bytes_per_row_divisor() = std::max(acc->bytes_per_row_divisor(), c.bytes_per_row_divisor());
   acc->bytes_per_row_divisor() =
       std::max(acc->bytes_per_row_divisor(), ImageFormatSampleAlignment(acc->pixel_format()));
 
-  acc->start_offset_divisor() = std::max(acc->start_offset_divisor(), c->start_offset_divisor());
+  acc->start_offset_divisor() = std::max(acc->start_offset_divisor(), c.start_offset_divisor());
   acc->start_offset_divisor() =
       std::max(acc->start_offset_divisor(), ImageFormatSampleAlignment(acc->pixel_format()));
 
-  acc->display_width_divisor() = std::max(acc->display_width_divisor(), c->display_width_divisor());
+  acc->display_width_divisor() = std::max(acc->display_width_divisor(), c.display_width_divisor());
   acc->display_height_divisor() =
-      std::max(acc->display_height_divisor(), c->display_height_divisor());
+      std::max(acc->display_height_divisor(), c.display_height_divisor());
 
   // The required_ space is accumulated by taking the union, and must be fully
   // within the non-required_ space, else fail.  For example, this allows a
@@ -1548,43 +2152,43 @@ bool LogicalBufferCollection::AccumulateConstraintImageFormat(
   // output dimensions, but that it has specific current dimensions that are
   // presently required_ (min == max) for decode to proceed.
   ZX_DEBUG_ASSERT(acc->required_min_coded_width() != 0);
-  ZX_DEBUG_ASSERT(c->required_min_coded_width() != 0);
+  ZX_DEBUG_ASSERT(c.required_min_coded_width() != 0);
   acc->required_min_coded_width() =
-      std::min(acc->required_min_coded_width(), c->required_min_coded_width());
+      std::min(acc->required_min_coded_width(), c.required_min_coded_width());
   acc->required_max_coded_width() =
-      std::max(acc->required_max_coded_width(), c->required_max_coded_width());
+      std::max(acc->required_max_coded_width(), c.required_max_coded_width());
   ZX_DEBUG_ASSERT(acc->required_min_coded_height() != 0);
-  ZX_DEBUG_ASSERT(c->required_min_coded_height() != 0);
+  ZX_DEBUG_ASSERT(c.required_min_coded_height() != 0);
   acc->required_min_coded_height() =
-      std::min(acc->required_min_coded_height(), c->required_min_coded_height());
+      std::min(acc->required_min_coded_height(), c.required_min_coded_height());
   acc->required_max_coded_height() =
-      std::max(acc->required_max_coded_height(), c->required_max_coded_height());
+      std::max(acc->required_max_coded_height(), c.required_max_coded_height());
   ZX_DEBUG_ASSERT(acc->required_min_bytes_per_row() != 0);
-  ZX_DEBUG_ASSERT(c->required_min_bytes_per_row() != 0);
+  ZX_DEBUG_ASSERT(c.required_min_bytes_per_row() != 0);
   acc->required_min_bytes_per_row() =
-      std::min(acc->required_min_bytes_per_row(), c->required_min_bytes_per_row());
+      std::min(acc->required_min_bytes_per_row(), c.required_min_bytes_per_row());
   acc->required_max_bytes_per_row() =
-      std::max(acc->required_max_bytes_per_row(), c->required_max_bytes_per_row());
+      std::max(acc->required_max_bytes_per_row(), c.required_max_bytes_per_row());
 
   return true;
 }
 
 bool LogicalBufferCollection::AccumulateConstraintColorSpaces(
     fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace>* acc,
-    fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace>* c) {
+    fidl::VectorView<fuchsia_sysmem2::wire::ColorSpace> c) {
   // Remove any color_space in acc that's not in c.  If zero color spaces
   // remain in acc, return false.
 
   for (uint32_t ai = 0; ai < acc->count(); ++ai) {
     uint32_t ci;
-    for (ci = 0; ci < c->count(); ++ci) {
-      if (IsColorSpaceEqual((*acc)[ai], (*c)[ci])) {
+    for (ci = 0; ci < c.count(); ++ci) {
+      if (IsColorSpaceEqual((*acc)[ai], c[ci])) {
         // We found the color space in c.  Break so we can move on to
         // the next color space.
         break;
       }
     }
-    if (ci == c->count()) {
+    if (ci == c.count()) {
       // Remove from acc because not found in c.
       //
       // Move formerly last item on top of the item being removed, if not same item.
@@ -1696,11 +2300,11 @@ static fit::result<fuchsia_sysmem2::wire::CoherencyDomain> GetCoherencyDomain(
 }
 
 fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t>
-LogicalBufferCollection::Allocate() {
-  TRACE_DURATION("gfx", "LogicalBufferCollection:Allocate", "this", this);
-  ZX_DEBUG_ASSERT(constraints_);
+LogicalBufferCollection::GenerateUnpopulatedBufferCollectionInfo(
+    const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints) {
+  TRACE_DURATION("gfx", "LogicalBufferCollection:GenerateUnpopulatedBufferCollectionInfo", "this",
+                 this);
 
-  fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints = constraints_->mutate();
   fidl::AnyAllocator& fidl_allocator = table_set_.allocator();
 
   fuchsia_sysmem2::wire::BufferCollectionInfo result(fidl_allocator);
@@ -1802,7 +2406,7 @@ LogicalBufferCollection::Allocate() {
       if (best_index == UINT32_MAX) {
         best_index = i;
       } else {
-        if (CompareImageFormatConstraintsByIndex(i, best_index) < 0) {
+        if (CompareImageFormatConstraintsByIndex(constraints, i, best_index) < 0) {
           best_index = i;
         }
       }
@@ -1812,9 +2416,11 @@ LogicalBufferCollection::Allocate() {
       LogError(FROM_HERE, "No formats were compatible with protected memory.");
       return fit::error(ZX_ERR_NOT_SUPPORTED);
     }
-    // move from constraints_ to settings.
+    // clone from constraints to settings.
     settings.set_image_format_constraints(
-        fidl_allocator, std::move(constraints.image_format_constraints()[best_index]));
+        fidl_allocator,
+        sysmem::V2CloneImageFormatConstraints(table_set_.allocator(),
+                                              constraints.image_format_constraints()[best_index]));
   }
 
   // Compute the min buffer size implied by image_format_constraints, so we ensure the buffers can
@@ -1915,73 +2521,118 @@ LogicalBufferCollection::Allocate() {
   }
   ZX_DEBUG_ASSERT(min_size_bytes <= std::numeric_limits<uint32_t>::max());
 
-  if (settings.has_image_format_constraints()) {
-    const fuchsia_sysmem2::wire::ImageFormatConstraints& image_format_constraints =
-        settings.image_format_constraints();
-    node_.CreateUint("pixel_format",
-                     static_cast<uint64_t>(image_format_constraints.pixel_format().type()),
-                     &vmo_properties_);
-    if (image_format_constraints.pixel_format().has_format_modifier_value()) {
-      node_.CreateUint("pixel_format_modifier",
-                       image_format_constraints.pixel_format().format_modifier_value(),
-                       &vmo_properties_);
-    }
-    if (image_format_constraints.min_coded_width() > 0) {
-      node_.CreateUint("min_coded_width", image_format_constraints.min_coded_width(),
-                       &vmo_properties_);
-    }
-    if (image_format_constraints.min_coded_height() > 0) {
-      node_.CreateUint("min_coded_height", image_format_constraints.min_coded_height(),
-                       &vmo_properties_);
-    }
-    if (image_format_constraints.required_max_coded_width() > 0) {
-      node_.CreateUint("required_max_coded_width",
-                       image_format_constraints.required_max_coded_width(), &vmo_properties_);
-    }
-    if (image_format_constraints.required_max_coded_height() > 0) {
-      node_.CreateUint("required_max_coded_height",
-                       image_format_constraints.required_max_coded_height(), &vmo_properties_);
-    }
-  }
-
-  node_.CreateUint("allocator_id", allocator->id(), &vmo_properties_);
-  node_.CreateUint("size_bytes", min_size_bytes, &vmo_properties_);
-  node_.CreateUint("heap", static_cast<uint64_t>(buffer_settings.heap()), &vmo_properties_);
-
   // Now that min_size_bytes accounts for any ImageFormatConstraints, we can just allocate
   // min_size_bytes buffers.
   //
   // If an initiator (or a participant) wants to force buffers to be larger than the size implied by
   // minimum image dimensions, the initiator can use BufferMemorySettings.min_size_bytes to force
   // allocated buffers to be large enough.
-  buffer_settings.set_size_bytes(fidl_allocator, static_cast<uint32_t>(min_size_bytes));
-
-  // Get memory allocator for aux buffers, if needed.
-  MemoryAllocator* maybe_aux_allocator = nullptr;
-  std::optional<fuchsia_sysmem2::wire::SingleBufferSettings> maybe_aux_settings;
-  if (buffer_settings.is_secure() && constraints.need_clear_aux_buffers_for_secure()) {
-    maybe_aux_settings.emplace(fuchsia_sysmem2::wire::SingleBufferSettings(fidl_allocator));
-    maybe_aux_settings->set_buffer_settings(fidl_allocator, fidl_allocator);
-    auto& aux_buffer_settings = maybe_aux_settings->buffer_settings();
-    aux_buffer_settings.set_size_bytes(fidl_allocator, buffer_settings.size_bytes());
-    aux_buffer_settings.set_is_physically_contiguous(fidl_allocator, false);
-    aux_buffer_settings.set_is_secure(fidl_allocator, false);
-    aux_buffer_settings.set_coherency_domain(fidl_allocator,
-                                             fuchsia_sysmem2::wire::CoherencyDomain::CPU);
-    aux_buffer_settings.set_heap(fidl_allocator, fuchsia_sysmem2::wire::HeapType::SYSTEM_RAM);
-    maybe_aux_allocator = parent_device_->GetAllocator(aux_buffer_settings);
-    ZX_DEBUG_ASSERT(maybe_aux_allocator);
-  }
+  buffer_settings.set_size_bytes(table_set_.allocator(), static_cast<uint32_t>(min_size_bytes));
 
   if (buffer_settings.size_bytes() > parent_device_->settings().max_allocation_size) {
     // This is different than max_size_bytes.  While max_size_bytes is part of the constraints,
     // max_allocation_size isn't part of the constraints.  The latter is used for simulating OOM or
     // preventing unpredictable memory pressure caused by a fuzzer or similar source of
     // unpredictability in tests.
-    LogError(FROM_HERE, "AllocateVmo() failed because size %u > max_allocation_size %ld",
+    LogError(FROM_HERE,
+             "GenerateUnpopulatedBufferCollectionInfo() failed because size %u > "
+             "max_allocation_size %ld",
              buffer_settings.size_bytes(), parent_device_->settings().max_allocation_size);
     return fit::error(ZX_ERR_NO_MEMORY);
   }
+
+  // We initially set vmo_usable_start to bit-fields indicating whether vmo and aux_vmo fields will
+  // be set to valid handles later.  This is for purposes of comparison with a later
+  // BufferCollectionInfo after an AttachToken().  Before sending to the client, the
+  // vmo_usable_start is set to 0.  Even if later we need a non-zero vmo_usable_start to be compared
+  // we are extremely unlikely to want a buffer to start at an offset that isn't divisible by 4, so
+  // using the two low-order bits for this seems reasonable enough.
+  for (uint32_t i = 0; i < result.buffers().count(); ++i) {
+    auto vmo_buffer = fuchsia_sysmem2::wire::VmoBuffer(table_set_.allocator());
+    vmo_buffer.set_vmo_usable_start(table_set_.allocator(), 0ul);
+    if (buffer_settings.is_secure() && constraints.need_clear_aux_buffers_for_secure()) {
+      vmo_buffer.vmo_usable_start() |= kNeedAuxVmoAlso;
+    }
+    result.buffers()[i] = std::move(vmo_buffer);
+  }
+
+  return fit::ok(std::move(result));
+}
+
+fit::result<fuchsia_sysmem2::wire::BufferCollectionInfo, zx_status_t>
+LogicalBufferCollection::Allocate(
+    const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints,
+    fuchsia_sysmem2::wire::BufferCollectionInfo* builder) {
+  TRACE_DURATION("gfx", "LogicalBufferCollection:Allocate", "this", this);
+
+  fuchsia_sysmem2::wire::BufferCollectionInfo& result = *builder;
+
+  fuchsia_sysmem2::wire::SingleBufferSettings& settings = result.settings();
+  fuchsia_sysmem2::wire::BufferMemorySettings& buffer_settings = settings.buffer_settings();
+
+  // Get memory allocator for settings.
+  MemoryAllocator* allocator = parent_device_->GetAllocator(buffer_settings);
+  if (!allocator) {
+    LogError(FROM_HERE, "No memory allocator for buffer settings");
+    return fit::error(ZX_ERR_NO_MEMORY);
+  }
+
+  if (settings.has_image_format_constraints()) {
+    const fuchsia_sysmem2::wire::ImageFormatConstraints& image_format_constraints =
+        settings.image_format_constraints();
+    inspect_node_.CreateUint("pixel_format",
+                             static_cast<uint64_t>(image_format_constraints.pixel_format().type()),
+                             &vmo_properties_);
+    if (image_format_constraints.pixel_format().has_format_modifier_value()) {
+      inspect_node_.CreateUint("pixel_format_modifier",
+                               image_format_constraints.pixel_format().format_modifier_value(),
+                               &vmo_properties_);
+    }
+    if (image_format_constraints.min_coded_width() > 0) {
+      inspect_node_.CreateUint("min_coded_width", image_format_constraints.min_coded_width(),
+                               &vmo_properties_);
+    }
+    if (image_format_constraints.min_coded_height() > 0) {
+      inspect_node_.CreateUint("min_coded_height", image_format_constraints.min_coded_height(),
+                               &vmo_properties_);
+    }
+    if (image_format_constraints.required_max_coded_width() > 0) {
+      inspect_node_.CreateUint("required_max_coded_width",
+                               image_format_constraints.required_max_coded_width(),
+                               &vmo_properties_);
+    }
+    if (image_format_constraints.required_max_coded_height() > 0) {
+      inspect_node_.CreateUint("required_max_coded_height",
+                               image_format_constraints.required_max_coded_height(),
+                               &vmo_properties_);
+    }
+  }
+
+  inspect_node_.CreateUint("allocator_id", allocator->id(), &vmo_properties_);
+  inspect_node_.CreateUint("size_bytes", buffer_settings.size_bytes(), &vmo_properties_);
+  inspect_node_.CreateUint("heap", static_cast<uint64_t>(buffer_settings.heap()), &vmo_properties_);
+
+  // Get memory allocator for aux buffers, if needed.
+  MemoryAllocator* maybe_aux_allocator = nullptr;
+  std::optional<fuchsia_sysmem2::wire::SingleBufferSettings> maybe_aux_settings;
+  ZX_DEBUG_ASSERT(!!(result.buffers()[0].vmo_usable_start() & kNeedAuxVmoAlso) ==
+                  (buffer_settings.is_secure() && constraints.need_clear_aux_buffers_for_secure()));
+  if (result.buffers()[0].vmo_usable_start() & kNeedAuxVmoAlso) {
+    maybe_aux_settings.emplace(fuchsia_sysmem2::wire::SingleBufferSettings(table_set_.allocator()));
+    maybe_aux_settings->set_buffer_settings(table_set_.allocator(), table_set_.allocator());
+    auto& aux_buffer_settings = maybe_aux_settings->buffer_settings();
+    aux_buffer_settings.set_size_bytes(table_set_.allocator(), buffer_settings.size_bytes());
+    aux_buffer_settings.set_is_physically_contiguous(table_set_.allocator(), false);
+    aux_buffer_settings.set_is_secure(table_set_.allocator(), false);
+    aux_buffer_settings.set_coherency_domain(table_set_.allocator(),
+                                             fuchsia_sysmem2::wire::CoherencyDomain::CPU);
+    aux_buffer_settings.set_heap(table_set_.allocator(),
+                                 fuchsia_sysmem2::wire::HeapType::SYSTEM_RAM);
+    maybe_aux_allocator = parent_device_->GetAllocator(aux_buffer_settings);
+    ZX_DEBUG_ASSERT(maybe_aux_allocator);
+  }
+
+  ZX_DEBUG_ASSERT(buffer_settings.size_bytes() <= parent_device_->settings().max_allocation_size);
 
   for (uint32_t i = 0; i < result.buffers().count(); ++i) {
     auto allocate_result = AllocateVmo(allocator, settings, i);
@@ -1990,9 +2641,8 @@ LogicalBufferCollection::Allocate() {
       return fit::error(ZX_ERR_NO_MEMORY);
     }
     zx::vmo vmo = allocate_result.take_value();
-    fuchsia_sysmem2::wire::VmoBuffer vmo_buffer(fidl_allocator);
-    vmo_buffer.set_vmo(fidl_allocator, std::move(vmo));
-    vmo_buffer.set_vmo_usable_start(fidl_allocator, 0ul);
+    auto& vmo_buffer = result.buffers()[i];
+    vmo_buffer.set_vmo(table_set_.allocator(), std::move(vmo));
     if (maybe_aux_allocator) {
       ZX_DEBUG_ASSERT(maybe_aux_settings);
       auto aux_allocate_result = AllocateVmo(maybe_aux_allocator, maybe_aux_settings.value(), i);
@@ -2001,18 +2651,21 @@ LogicalBufferCollection::Allocate() {
         return fit::error(ZX_ERR_NO_MEMORY);
       }
       zx::vmo aux_vmo = aux_allocate_result.take_value();
-      vmo_buffer.set_aux_vmo(fidl_allocator, std::move(aux_vmo));
+      vmo_buffer.set_aux_vmo(table_set_.allocator(), std::move(aux_vmo));
     }
-    result.buffers()[i] = std::move(vmo_buffer);
+    ZX_DEBUG_ASSERT(vmo_buffer.has_vmo_usable_start());
+    // In case kNeedAuxVmoAlso was set.
+    vmo_buffer.vmo_usable_start() = 0;
   }
-  vmo_count_property_ = node_.CreateUint("vmo_count", result.buffers().count());
+  vmo_count_property_ = inspect_node_.CreateUint("vmo_count", result.buffers().count());
   // Make sure we have sufficient barrier after allocating/clearing/flushing any VMO newly allocated
   // by allocator above.
   BarrierAfterFlush();
 
   // Register failure handler with memory allocator.
   allocator->AddDestroyCallback(reinterpret_cast<intptr_t>(this), [this]() {
-    LogAndFail(FROM_HERE, "LogicalBufferCollection memory allocator gone - now auto-failing self.");
+    LogAndFailRootNode(FROM_HERE, ZX_ERR_BAD_STATE,
+                       "LogicalBufferCollection memory allocator gone - now auto-failing self.");
   });
   memory_allocator_ = allocator;
 
@@ -2060,7 +2713,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
     return fit::error();
   }
 
-  auto node = node_.CreateChild(fbl::StringPrintf("vmo-%ld", info.koid).c_str());
+  auto node = inspect_node_.CreateChild(fbl::StringPrintf("vmo-%ld", info.koid).c_str());
   node.CreateUint("koid", info.koid, &vmo_properties_);
   vmo_properties_.emplace(std::move(node));
 
@@ -2185,24 +2838,50 @@ void LogicalBufferCollection::CreationTimedOut(async_dispatcher_t* dispatcher,
   if (status != ZX_OK)
     return;
 
+  // It's possible for the timer to fire after the root_ has been deleted, but before "this" has
+  // been deleted (which also cancels the timer if it's still pending).  The timer doesn't need to
+  // take any action in this case.
+  if (!root_) {
+    return;
+  }
+
   std::string name = name_ ? name_->name : "Unknown";
 
   LogError(FROM_HERE, "Allocation of %s timed out. Waiting for tokens: ", name.c_str());
-  for (auto& token : token_views_) {
-    if (token.second->debug_name() != "") {
-      LogError(FROM_HERE, "Name %s id %ld", token.second->debug_name().c_str(),
-               token.second->debug_id());
+  ZX_DEBUG_ASSERT(root_);
+  auto token_nodes = root_->BreadthFirstOrder([](const NodeProperties& node) {
+    ZX_DEBUG_ASSERT(node.node());
+    bool potentially_included_in_initial_allocation =
+        IsPotentiallyIncludedInInitialAllocation(node);
+    return NodeFilterResult{.keep_node = potentially_included_in_initial_allocation &&
+                                         !!node.node()->buffer_collection_token(),
+                            .iterate_children = potentially_included_in_initial_allocation};
+  });
+  for (auto node_properties : token_nodes) {
+    if (!node_properties->client_debug_info().name.empty()) {
+      LogError(FROM_HERE, "Name %s id %ld", node_properties->client_debug_info().name.c_str(),
+               node_properties->client_debug_info().id);
     } else {
       LogError(FROM_HERE, "Unknown token");
     }
   }
+
   LogError(FROM_HERE, "Collections:");
-  for (auto& collection : collection_views_) {
-    const char* constraints_state = collection.second->has_constraints() ? "set" : "unset";
-    if (collection.second->debug_name() != "") {
+  auto collection_nodes = root_->BreadthFirstOrder([](const NodeProperties& node) {
+    ZX_DEBUG_ASSERT(node.node());
+    bool potentially_included_in_initial_allocation =
+        IsPotentiallyIncludedInInitialAllocation(node);
+    return NodeFilterResult{.keep_node = potentially_included_in_initial_allocation &&
+                                         !!node.node()->buffer_collection(),
+                            .iterate_children = potentially_included_in_initial_allocation};
+  });
+  for (auto node_properties : collection_nodes) {
+    const char* constraints_state =
+        node_properties->node()->buffer_collection()->has_constraints() ? "set" : "unset";
+    if (!node_properties->client_debug_info().name.empty()) {
       LogError(FROM_HERE, "Name \"%s\" id %ld (constraints %s)",
-               collection.second->debug_name().c_str(), collection.second->debug_id(),
-               constraints_state);
+               node_properties->client_debug_info().name.c_str(),
+               node_properties->client_debug_info().id, constraints_state);
     } else {
       LogError(FROM_HERE, "Name unknown (constraints %s)", constraints_state);
     }
@@ -2254,14 +2933,12 @@ int32_t LogicalBufferCollection::CompareImageFormatConstraintsTieBreaker(
   return result;
 }
 
-int32_t LogicalBufferCollection::CompareImageFormatConstraintsByIndex(uint32_t index_a,
-                                                                      uint32_t index_b) {
-  // This method is allowed to look at constraints_.
-  ZX_DEBUG_ASSERT(constraints_);
-
+int32_t LogicalBufferCollection::CompareImageFormatConstraintsByIndex(
+    const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints, uint32_t index_a,
+    uint32_t index_b) {
   int32_t cost_compare = UsagePixelFormatCost::Compare(parent_device_->pdev_device_info_vid(),
                                                        parent_device_->pdev_device_info_pid(),
-                                                       **constraints_, index_a, index_b);
+                                                       constraints, index_a, index_b);
   if (cost_compare != 0) {
     return cost_compare;
   }
@@ -2271,8 +2948,8 @@ int32_t LogicalBufferCollection::CompareImageFormatConstraintsByIndex(uint32_t i
   // between PixelFormat(s).
 
   int32_t tie_breaker_compare =
-      CompareImageFormatConstraintsTieBreaker((*constraints_)->image_format_constraints()[index_a],
-                                              (*constraints_)->image_format_constraints()[index_b]);
+      CompareImageFormatConstraintsTieBreaker(constraints.image_format_constraints()[index_a],
+                                              constraints.image_format_constraints()[index_b]);
   return tie_breaker_compare;
 }
 
@@ -2289,6 +2966,8 @@ LogicalBufferCollection::TrackedParentVmo::TrackedParentVmo(
 }
 
 LogicalBufferCollection::TrackedParentVmo::~TrackedParentVmo() {
+  // We avoid relying on LogicalBufferCollection member destruction order by cancelling explicitly
+  // before the end of ~LogicalBufferCollection, so we're never waiting_ by this point.
   ZX_DEBUG_ASSERT(!waiting_);
   if (do_delete_) {
     do_delete_(this);
@@ -2345,6 +3024,91 @@ void LogicalBufferCollection::TrackedParentVmo::OnZeroChildren(async_dispatcher_
   // will delete "this"
   local_do_delete(this);
   ZX_DEBUG_ASSERT(!local_do_delete);
+}
+
+void LogicalBufferCollection::AddCountsForNode(const Node& node) {
+  AdjustRelevantNodeCounts(node, [](uint32_t& count) { ++count; });
+}
+
+void LogicalBufferCollection::RemoveCountsForNode(const Node& node) {
+  AdjustRelevantNodeCounts(node, [](uint32_t& count) { --count; });
+}
+
+void LogicalBufferCollection::AdjustRelevantNodeCounts(
+    const Node& node, fit::function<void(uint32_t& count)> visitor) {
+  for (NodeProperties* iter = &node.node_properties(); iter; iter = iter->parent()) {
+    visitor(iter->node_count_);
+    if (node.is_connected()) {
+      visitor(iter->connected_client_count_);
+    }
+    if (node.buffer_collection()) {
+      visitor(iter->buffer_collection_count_);
+    }
+    if (node.buffer_collection_token()) {
+      visitor(iter->buffer_collection_token_count_);
+    }
+  }
+}
+
+// Only for use by NodeProperties.
+void LogicalBufferCollection::DeleteRoot() { root_.reset(); }
+
+NodeProperties* LogicalBufferCollection::FindTreeToFail(NodeProperties* failing_node) {
+  ZX_DEBUG_ASSERT(failing_node);
+  for (NodeProperties* iter = failing_node; iter; iter = iter->parent()) {
+    if (!iter->parent()) {
+      LogClientInfo(FROM_HERE, iter, "The root should fail.");
+      return iter;
+    }
+    NodeProperties* parent = iter->parent();
+    ErrorPropagationMode mode = iter->error_propagation_mode();
+    switch (mode) {
+      case ErrorPropagationMode::kPropagate:
+        // keep propagating the failure upward
+        LogClientInfo(FROM_HERE, iter, "Propagate node failure to parent because kPropagate");
+        continue;
+      case ErrorPropagationMode::kPropagateBeforeAllocation:
+        // Propagate failure if before allocation.  We also know in this case that parent and child
+        // will allocate together.
+        ZX_DEBUG_ASSERT(parent->buffers_logically_allocated() ==
+                        iter->buffers_logically_allocated());
+        if (!iter->buffers_logically_allocated()) {
+          LogClientInfo(FROM_HERE, iter,
+                        "Propagate node failure to parent because kPropagateBeforeAllocation and "
+                        "!BuffersLogicallyAllocated");
+          continue;
+        } else {
+          LogClientInfo(FROM_HERE, iter,
+                        "Do not propagate node failure to parent because "
+                        "kPropagateBeforeAllocation and BuffersLogicallyAllocated");
+          return iter;
+        }
+      case ErrorPropagationMode::kDoNotPropagate:
+        LogClientInfo(FROM_HERE, iter,
+                      "Do not propagate node failure to parent because kDoNotPropagate");
+        return iter;
+      default:
+        ZX_PANIC("unreachable 1");
+        return nullptr;
+    }
+  }
+  ZX_PANIC("unreachable 2");
+  return nullptr;
+}
+
+// For tests.
+std::vector<const BufferCollection*> LogicalBufferCollection::collection_views() const {
+  std::vector<const BufferCollection*> result;
+  if (!root_) {
+    return result;
+  }
+  auto nodes = root_->BreadthFirstOrder();
+  for (auto node_properties : nodes) {
+    if (node_properties->node()->buffer_collection()) {
+      result.push_back(node_properties->node()->buffer_collection());
+    }
+  }
+  return result;
 }
 
 }  // namespace sysmem_driver

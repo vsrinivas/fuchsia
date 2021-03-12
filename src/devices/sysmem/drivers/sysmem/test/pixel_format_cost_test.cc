@@ -99,6 +99,7 @@ TEST(PixelFormatCost, IntelTiling) {
     // Explicit linear should be treated the same as no format modifier value.
     constraints.image_format_constraints()[0].pixel_format().format_modifier_value() =
         fuchsia_sysmem2::wire::FORMAT_MODIFIER_NONE;
+
     EXPECT_LT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 0, 1));
     EXPECT_GT(0, UsagePixelFormatCost::Compare(kUnknownVid, kUnknownPid, constraints, 1, 0));
 
