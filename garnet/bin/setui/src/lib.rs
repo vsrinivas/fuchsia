@@ -26,7 +26,6 @@ use {
     crate::handler::setting_proxy::SettingProxy,
     crate::input::input_controller::InputController,
     crate::inspect::inspect_broker::InspectBroker,
-    crate::inspect::policy_inspect_broker::PolicyInspectBroker,
     crate::intl::intl_controller::IntlController,
     crate::light::light_controller::LightController,
     crate::monitor::base as monitor_base,
@@ -432,12 +431,20 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
                 .expect("unable to initialize storage for agent");
         }
 
-        let agent_blueprints = self
+        let mapping_func_present_without_inspect =
+            !agent_types.contains(&AgentType::InspectPolicy) && self.agent_mapping_func.is_some();
+
+        let mut agent_blueprints = self
             .agent_mapping_func
             .map(|agent_mapping_func| {
                 agent_types.into_iter().map(|agent_type| (agent_mapping_func)(agent_type)).collect()
             })
             .unwrap_or(self.agent_blueprints);
+
+        // TODO(fxb/71872): Remove when the configuration file has InspectPolicy
+        if mapping_func_present_without_inspect {
+            agent_blueprints.push(crate::agent::inspect_policy::blueprint::create());
+        }
 
         create_environment(
             service_dir,
@@ -702,10 +709,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             .await?;
         }
     }
-
-    // Attach the policy inspect broker, which watches messages to the policy layer and records
-    // policy state to inspect.
-    PolicyInspectBroker::create(messenger_factory.clone()).await;
 
     let mut agent_authority =
         Authority::create(messenger_factory.clone(), components.clone(), monitor_actor).await?;

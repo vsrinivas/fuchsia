@@ -34,6 +34,9 @@ pub enum AgentType {
     Restore,
     /// Responsible for logging to Inspect.
     Inspect,
+    /// Responsible for recording internal state of messages sent on the message
+    /// hub to policy proxies handlers.
+    InspectPolicy,
 }
 
 impl AgentType {
@@ -60,6 +63,11 @@ impl AgentType {
             AgentType::Inspect => {
                 storage_factory.initialize::<crate::agent::inspect::InspectAgent>().await
             }
+            AgentType::InspectPolicy => {
+                storage_factory
+                    .initialize::<crate::agent::inspect_policy::InspectPolicyAgent>()
+                    .await
+            }
         }
     }
 }
@@ -76,6 +84,7 @@ impl From<AgentType> for BlueprintHandle {
             AgentType::MediaButtons => crate::agent::media_buttons::blueprint::create(),
             AgentType::Restore => crate::agent::restore_agent::blueprint::create(),
             AgentType::Inspect => crate::agent::inspect::blueprint::create(),
+            AgentType::InspectPolicy => crate::agent::inspect_policy::blueprint::create(),
         }
     }
 }

@@ -34,6 +34,10 @@ pub mod inspect;
 /// Earcons.
 pub mod earcons;
 
+/// Agent for capturing policy state from messages from the message hub to
+/// policy proxies.
+pub mod inspect_policy;
+
 #[derive(Error, Debug, Clone, Copy, PartialEq)]
 pub enum AgentError {
     #[error("Unhandled Lifespan")]
