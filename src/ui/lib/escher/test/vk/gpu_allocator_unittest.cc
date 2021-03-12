@@ -483,10 +483,10 @@ VK_TEST(NaiveAllocator, NaiveAllocator) {
   // TestAllocationOfImages(&allocator);
 }
 
-class VmaAllocator : public ::testing::Test {};
+class VmaAllocator : public ::testing::TestWithParam</*protected_memory=*/bool> {};
 
-void TestMemory(bool protected_memory) {
-  auto vulkan_queues = CreateVulkanDeviceQueues(protected_memory);
+VK_TEST_P(VmaAllocator, Memory) {
+  auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
   if (!vulkan_queues) {
     GTEST_SKIP();
   }
@@ -495,8 +495,8 @@ void TestMemory(bool protected_memory) {
   TestAllocationOfMemory(&allocator);
 }
 
-void TestBuffers(bool protected_memory) {
-  auto vulkan_queues = CreateVulkanDeviceQueues(protected_memory);
+VK_TEST_P(VmaAllocator, Buffers) {
+  auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
   if (!vulkan_queues) {
     GTEST_SKIP();
   }
@@ -505,27 +505,17 @@ void TestBuffers(bool protected_memory) {
   TestAllocationOfBuffers(&allocator);
 }
 
-void TestImages(bool protected_memory) {
-  auto vulkan_queues = CreateVulkanDeviceQueues(protected_memory);
+VK_TEST_P(VmaAllocator, Images) {
+  auto vulkan_queues = CreateVulkanDeviceQueues(GetParam());
   if (!vulkan_queues) {
     GTEST_SKIP();
   }
   VmaGpuAllocator allocator(vulkan_queues->GetVulkanContext());
 
-  TestAllocationOfImages(&allocator, protected_memory);
+  TestAllocationOfImages(&allocator, GetParam());
 }
 
-VK_TEST(VmaAllocator, Memory_True) { TestMemory(true); }
-
-VK_TEST(VmaAllocator, Memory_False) { TestMemory(false); }
-
-VK_TEST(VmaAllocator, Buffers_True) { TestBuffers(true); }
-
-VK_TEST(VmaAllocator, Buffers_False) { TestBuffers(false); }
-
-VK_TEST(VmaAllocator, Images_True) { TestImages(true); }
-
-VK_TEST(VmaAllocator, Images_False) { TestImages(false); }
+INSTANTIATE_TEST_SUITE_P(VmaAllocatorTestSuite, VmaAllocator, ::testing::Bool());
 
 class MockVmaGpuAllocator : public VmaGpuAllocator {
  public:

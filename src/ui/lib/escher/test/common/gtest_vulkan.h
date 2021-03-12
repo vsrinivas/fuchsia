@@ -19,6 +19,11 @@
   VK_GTEST_TEST_(test_fixture, test_name, test_fixture, \
                  ::testing::internal::GetTypeId<test_fixture>())
 
+// Tests declared using this macro are only registered with GTest when Vulkan is available.
+// This is used for creating value-parameterized test suites. It also requires
+// INSTANTIATE_TEST_SUITE_P to instantiate test suites, see gtest.h for details.
+#define VK_TEST_P(test_fixture, test_name) VK_GTEST_TEST_P_(test_fixture, test_name)
+
 // Tests that require Vulkan are suppressed if Vulkan is not supported.
 #define VK_TESTS_SUPPRESSED() (!escher::VulkanIsSupported())
 
