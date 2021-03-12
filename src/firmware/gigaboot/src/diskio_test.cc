@@ -20,13 +20,15 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
+#include "diskio_test.h"
+
 // Equality operator so we can do EXPECT_EQ() with gpt_entry_t.
 // Has to be in the global namespace.
 bool operator==(const gpt_entry_t& a, const gpt_entry_t& b) {
   return memcmp(&a, &b, sizeof(a)) == 0;
 }
 
-namespace {
+namespace gigaboot {
 
 using efi::MatchGuid;
 using efi::MockBootServices;
@@ -36,71 +38,12 @@ using testing::ElementsAreArray;
 using testing::Return;
 using testing::SetArgPointee;
 
-// Arbitrary values chosen for testing, these can be modified if needed.
-// The block size just has to be 8-byte aligned for easy casting.
-constexpr uint32_t kBootMediaId = 3;
-constexpr uint32_t kBootMediaBlockSize = 512;
-constexpr uint64_t kBootMediaNumBlocks = 8;
-constexpr uint64_t kBootMediaSize = kBootMediaBlockSize * kBootMediaNumBlocks;
-static_assert(kBootMediaBlockSize % 8 == 0, "Block size must be 8-byte aligned");
-
-// These values don't matter, they're just arbitrary handles, but make them
-// somewhat recognizable so that if a failure occurs it's easy to tell which
-// one it's referring to.
-const efi_handle kImageHandle = reinterpret_cast<efi_handle>(0x10);
-const efi_handle kDeviceHandle = reinterpret_cast<efi_handle>(0x20);
-const efi_handle kBlockHandle = reinterpret_cast<efi_handle>(0x30);
-
-// A set of partitions we can use to set up a fake GPT.
-// These are broken out as individual variables as well to make it easy to
-// grab GUIDs when needed.
-const gpt_entry_t kZirconAGptEntry = {
-    .type = GPT_ZIRCON_ABR_TYPE_GUID,
-    .guid = {0x01},
-    .first = 3,
-    .last = 4,
-    // Partition names are little-endian UTF-16.
-    .name = "z\0i\0r\0c\0o\0n\0_\0a\0",
-};
-const gpt_entry_t kZirconBGptEntry = {
-    .type = GPT_ZIRCON_ABR_TYPE_GUID,
-    .guid = {0x02},
-    .first = 5,
-    .last = 6,
-    .name = "z\0i\0r\0c\0o\0n\0_\0b\0",
-};
-const gpt_entry_t kZirconRGptEntry = {
-    .type = GPT_ZIRCON_ABR_TYPE_GUID,
-    .guid = {0x03},
-    .first = 7,
-    .last = 8,
-    .name = "z\0i\0r\0c\0o\0n\0_\0r\0",
-};
-const gpt_entry_t kFvmGptEntry = {
-    .type = GPT_FVM_TYPE_GUID,
-    .guid = {0x04},
-    .first = 9,
-    .last = 11,
-    .name = "f\0v\0m\0",
-};
-
-std::vector<gpt_entry_t> TestPartitions() {
-  return std::vector<gpt_entry_t>{
-      // Defined out-of-order to make sure our code handles it properly.
-      kFvmGptEntry,
-      kZirconAGptEntry,
-      kZirconBGptEntry,
-      kZirconRGptEntry,
-  };
-}
-
-// Returns a disk_t with reasonable default values to represent the boot media.
 disk_t TestBootDisk(efi_disk_io_protocol* disk_protocol, efi_boot_services* boot_services) {
   return disk_t{
       .io = disk_protocol,
-      .h = kBlockHandle,
+      .h = BlockHandle(),
       .bs = boot_services,
-      .img = kImageHandle,
+      .img = ImageHandle(),
       .first = 0,
       .last = kBootMediaNumBlocks - 1,
       .blksz = kBootMediaBlockSize,
@@ -108,94 +51,6 @@ disk_t TestBootDisk(efi_disk_io_protocol* disk_protocol, efi_boot_services* boot
   };
 }
 
-const uint8_t kUnknownPartitionGuid[GPT_GUID_LEN] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0xFF};
-
-// The state necessary to set up mocks for disk_find_boot().
-// The default values will result in a successful execution.
-struct DiskFindBootState {
-  // Empty paths are the simplest way to satisfy the path matching check.
-  efi_device_path_protocol device_path = {
-      .Type = DEVICE_PATH_END,
-      .SubType = DEVICE_PATH_END,
-      .Length = {0, 0},
-  };
-
-  efi_loaded_image_protocol loaded_image = {
-      .DeviceHandle = kDeviceHandle,
-      .FilePath = &device_path,
-  };
-
-  // disk_find_boot() doesn't use any block I/O callbacks, just the media
-  // information.
-  efi_block_io_media media = {
-      .MediaId = kBootMediaId,
-      .MediaPresent = true,
-      .LogicalPartition = false,
-      .BlockSize = kBootMediaBlockSize,
-      .LastBlock = kBootMediaNumBlocks - 1,
-  };
-
-  efi_block_io_protocol block_io = {
-      .Media = &media,
-  };
-};
-
-// Performs all the necessary mocking so that disk_find_boot() will complete
-// successfully.
-//
-// The returned object holds the state necessary for the mocks and must be kept
-// in scope until disk_find_boot() is called, after which it can be released.
-std::unique_ptr<DiskFindBootState> ExpectDiskFindBoot(MockBootServices& mock_services,
-                                                      efi_disk_io_protocol* disk_io_protocol) {
-  auto state = std::make_unique<DiskFindBootState>();
-
-  mock_services.ExpectProtocol(kImageHandle, EFI_LOADED_IMAGE_PROTOCOL_GUID, &state->loaded_image);
-  mock_services.ExpectProtocol(kDeviceHandle, EFI_DEVICE_PATH_PROTOCOL_GUID, &state->device_path);
-
-  // LocateHandleBuffer() dynamically allocates the list of handles, we need to
-  // do the same since the caller will try to free it when finished.
-  efi_handle* handle_buffer = reinterpret_cast<efi_handle*>(malloc(sizeof(efi_handle)));
-  handle_buffer[0] = kBlockHandle;
-  EXPECT_CALL(mock_services, LocateHandleBuffer(_, MatchGuid(EFI_BLOCK_IO_PROTOCOL_GUID), _, _, _))
-      .WillOnce(DoAll(SetArgPointee<3>(1), SetArgPointee<4>(handle_buffer), Return(EFI_SUCCESS)));
-
-  mock_services.ExpectProtocol(kBlockHandle, EFI_BLOCK_IO_PROTOCOL_GUID, &state->block_io);
-  mock_services.ExpectProtocol(kBlockHandle, EFI_DEVICE_PATH_PROTOCOL_GUID, &state->device_path);
-
-  // The disk I/O protocol shouldn't close since it's returned to the caller.
-  mock_services.ExpectOpenProtocol(kBlockHandle, EFI_DISK_IO_PROTOCOL_GUID, disk_io_protocol);
-
-  return state;
-}
-
-TEST(DiskFindBoot, Success) {
-  MockBootServices mock_services;
-  efi::FakeDiskIoProtocol fake_disk;
-  auto state = ExpectDiskFindBoot(mock_services, fake_disk.protocol());
-
-  efi_system_table system_table = {.BootServices = mock_services.services()};
-  disk_t result = {};
-  EXPECT_EQ(0, disk_find_boot(kImageHandle, &system_table, false, &result));
-
-  // Make sure the fetched information was properly copied out to the disk_t.
-  EXPECT_EQ(result.io, fake_disk.protocol());
-  EXPECT_EQ(result.h, kBlockHandle);
-  EXPECT_EQ(result.bs, mock_services.services());
-  EXPECT_EQ(result.img, kImageHandle);
-  EXPECT_EQ(result.first, 0u);
-  EXPECT_EQ(result.last, kBootMediaNumBlocks - 1);
-  EXPECT_EQ(result.blksz, kBootMediaBlockSize);
-  EXPECT_EQ(result.id, kBootMediaId);
-}
-
-// Writes a primary GPT to |fake_disk| such that it will contain the given
-// |partitions|. Partition contents on disk are unchanged.
-//
-// This will use blocks 0-2 for MBR/header/partition data, so a
-// properly-configured set of partitions should only use blocks in the range
-// [3, kBootMediaNumBlocks).
-//
-// Should be called with ASSERT_NO_FATAL_FAILURES().
 void SetupDiskPartitions(efi::FakeDiskIoProtocol& fake_disk,
                          const std::vector<gpt_entry_t>& partitions) {
   std::vector<uint8_t>& contents = fake_disk.contents(kBootMediaId);
@@ -229,6 +84,63 @@ void SetupDiskPartitions(efi::FakeDiskIoProtocol& fake_disk,
 
   // Make sure the media has declared enough space for all the partitions.
   ASSERT_LT(header->last, kBootMediaNumBlocks);
+}
+
+std::unique_ptr<DiskFindBootState> ExpectDiskFindBoot(MockBootServices& mock_services,
+                                                      efi_disk_io_protocol* disk_io_protocol) {
+  auto state = std::make_unique<DiskFindBootState>();
+
+  mock_services.ExpectProtocol(ImageHandle(), EFI_LOADED_IMAGE_PROTOCOL_GUID, &state->loaded_image);
+  mock_services.ExpectProtocol(DeviceHandle(), EFI_DEVICE_PATH_PROTOCOL_GUID, &state->device_path);
+
+  // LocateHandleBuffer() dynamically allocates the list of handles, we need to
+  // do the same since the caller will try to free it when finished.
+  efi_handle* handle_buffer = reinterpret_cast<efi_handle*>(malloc(sizeof(efi_handle)));
+  handle_buffer[0] = BlockHandle();
+  EXPECT_CALL(mock_services, LocateHandleBuffer(_, MatchGuid(EFI_BLOCK_IO_PROTOCOL_GUID), _, _, _))
+      .WillOnce(DoAll(SetArgPointee<3>(1), SetArgPointee<4>(handle_buffer), Return(EFI_SUCCESS)));
+
+  mock_services.ExpectProtocol(BlockHandle(), EFI_BLOCK_IO_PROTOCOL_GUID, &state->block_io);
+  mock_services.ExpectProtocol(BlockHandle(), EFI_DEVICE_PATH_PROTOCOL_GUID, &state->device_path);
+
+  // The disk I/O protocol shouldn't close since it's returned to the caller.
+  mock_services.ExpectOpenProtocol(BlockHandle(), EFI_DISK_IO_PROTOCOL_GUID, disk_io_protocol);
+
+  return state;
+}
+
+namespace {
+
+std::vector<gpt_entry_t> TestPartitions() {
+  return std::vector<gpt_entry_t>{
+      // Defined out-of-order to make sure our code handles it properly.
+      kFvmGptEntry,
+      kZirconAGptEntry,
+      kZirconBGptEntry,
+      kZirconRGptEntry,
+  };
+}
+
+const uint8_t kUnknownPartitionGuid[GPT_GUID_LEN] = {0x00, 0x11, 0x22, 0x33, 0x44, 0x55, 0xFF};
+
+TEST(DiskFindBoot, Success) {
+  MockBootServices mock_services;
+  efi::FakeDiskIoProtocol fake_disk;
+  auto state = ExpectDiskFindBoot(mock_services, fake_disk.protocol());
+
+  efi_system_table system_table = {.BootServices = mock_services.services()};
+  disk_t result = {};
+  EXPECT_EQ(0, disk_find_boot(ImageHandle(), &system_table, false, &result));
+
+  // Make sure the fetched information was properly copied out to the disk_t.
+  EXPECT_EQ(result.io, fake_disk.protocol());
+  EXPECT_EQ(result.h, BlockHandle());
+  EXPECT_EQ(result.bs, mock_services.services());
+  EXPECT_EQ(result.img, ImageHandle());
+  EXPECT_EQ(result.first, 0u);
+  EXPECT_EQ(result.last, kBootMediaNumBlocks - 1);
+  EXPECT_EQ(result.blksz, kBootMediaBlockSize);
+  EXPECT_EQ(result.id, kBootMediaId);
 }
 
 TEST(DiskFindPartition, ByType) {
@@ -393,7 +305,7 @@ struct IsUsbBootState {
   };
 
   efi_loaded_image_protocol loaded_image = {
-      .DeviceHandle = kDeviceHandle,
+      .DeviceHandle = DeviceHandle(),
       .FilePath = device_path,
   };
 };
@@ -402,8 +314,8 @@ std::unique_ptr<IsUsbBootState> ExpectUsbBootState(MockBootServices& mock_servic
                                                    efi_disk_io_protocol* disk_io_protocol) {
   auto state = std::make_unique<IsUsbBootState>();
 
-  mock_services.ExpectProtocol(kImageHandle, EFI_LOADED_IMAGE_PROTOCOL_GUID, &state->loaded_image);
-  mock_services.ExpectProtocol(kDeviceHandle, EFI_DEVICE_PATH_PROTOCOL_GUID, &state->device_path);
+  mock_services.ExpectProtocol(ImageHandle(), EFI_LOADED_IMAGE_PROTOCOL_GUID, &state->loaded_image);
+  mock_services.ExpectProtocol(DeviceHandle(), EFI_DEVICE_PATH_PROTOCOL_GUID, &state->device_path);
 
   return state;
 }
@@ -414,7 +326,7 @@ TEST(IsBootFromUsb, ReturnsTrue) {
   auto state = ExpectUsbBootState(mock_services, fake_disk.protocol());
 
   efi_system_table system_table = {.BootServices = mock_services.services()};
-  EXPECT_TRUE(is_booting_from_usb(kImageHandle, &system_table));
+  EXPECT_TRUE(is_booting_from_usb(ImageHandle(), &system_table));
 }
 
 TEST(IsBootFromUsb, ReturnsFalse) {
@@ -424,7 +336,8 @@ TEST(IsBootFromUsb, ReturnsFalse) {
   state->device_path[0].SubType = DEVICE_PATH_MESSAGING_ATAPI;
 
   efi_system_table system_table = {.BootServices = mock_services.services()};
-  EXPECT_FALSE(is_booting_from_usb(kImageHandle, &system_table));
+  EXPECT_FALSE(is_booting_from_usb(ImageHandle(), &system_table));
 }
 
 }  // namespace
+}  // namespace gigaboot
