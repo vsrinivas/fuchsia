@@ -11,6 +11,7 @@ async fn writes_bootloader() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
         .add_file("zbi", "fake zbi")
         .add_file("bootloader", "new bootloader");
 
@@ -63,6 +64,7 @@ async fn writes_firmware() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
         .add_file("zbi", "fake zbi")
         .add_file("firmware", "fake firmware");
 
@@ -115,6 +117,7 @@ async fn writes_multiple_firmware_types() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
         .add_file("zbi", "fake zbi")
         .add_file("firmware_a", "fake firmware A")
         .add_file("firmware_b", "fake firmware B");
@@ -181,6 +184,7 @@ async fn skips_unsupported_firmware_type() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
         .add_file("zbi", "fake zbi")
         .add_file("firmware", "fake firmware");
 

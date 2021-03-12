@@ -17,7 +17,7 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_pkg_testing::make_packages_json,
+    fuchsia_pkg_testing::{make_epoch_json, make_packages_json},
     fuchsia_zircon::Status,
     futures::prelude::*,
     matches::assert_matches,
@@ -40,6 +40,7 @@ use {
 mod board;
 mod channel;
 mod cobalt_metrics;
+mod epoch;
 mod fetch_packages;
 mod history;
 mod mode_force_recovery;
@@ -659,6 +660,13 @@ const UPDATE_HASH: &str = "00112233445566778899aabbccddeeffffeeddccbbaa998877665
 const SYSTEM_IMAGE_HASH: &str = "42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296";
 const SYSTEM_IMAGE_URL: &str = "fuchsia-pkg://fuchsia.com/system_image/0?hash=42ade6f4fd51636f70c68811228b4271ed52c4eb9a647305123b4f4d0741f296";
 const UPDATE_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/update";
+
+// We specifically make the integration tests dependent on this (rather than e.g. u64::MAX) so that
+// when we bump the epoch, most of the integration tests will fail. To fix this, simply bump this
+// constant to match the current epoch. This will encourage developers to think critically about
+// bumping the epoch and follow the policy documented on fuchsia.dev.
+// TODO(fxbug.dev/68409) publish the policy for bumping epoch and link here.
+const CURRENT_EPOCH: u64 = 0;
 
 fn resolved_urls(interactions: SystemUpdaterInteractions) -> Vec<String> {
     (*interactions.lock())

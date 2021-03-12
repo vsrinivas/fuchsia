@@ -50,7 +50,8 @@ async fn fails_on_update_package_fetch_error() {
 
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]));
+        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH));
 
     let system_image_url = SYSTEM_IMAGE_URL;
     env.resolver.mock_resolve_failure(system_image_url, Status::NOT_FOUND);
@@ -112,18 +113,21 @@ async fn fails_on_content_package_fetch_error() {
     let pkg5 = env.resolver.package("package5", merkle_str!("dd"));
 
     env.resolver.url("fuchsia-pkg://fuchsia.com/update").resolve(
-        &env.resolver.package("update", UPDATE_HASH).add_file(
-            "packages.json",
-            make_packages_json([
-                SYSTEM_IMAGE_URL,
-                pkg1_url,
-                pkg2_url,
-                pkg3_url,
-                pkg4_url,
-                pkg5_url,
-                pkg6_url,
-            ]),
-        ),
+        &env.resolver
+            .package("update", UPDATE_HASH)
+            .add_file(
+                "packages.json",
+                make_packages_json([
+                    SYSTEM_IMAGE_URL,
+                    pkg1_url,
+                    pkg2_url,
+                    pkg3_url,
+                    pkg4_url,
+                    pkg5_url,
+                    pkg6_url,
+                ]),
+            )
+            .add_file("epoch.json", make_epoch_json(1)),
     );
     env.resolver
         .url(SYSTEM_IMAGE_URL)
@@ -209,7 +213,8 @@ async fn fails_when_package_cache_sync_fails() {
     env.cache_service.set_sync_response(Err(Status::INTERNAL));
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]));
+        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH));
     env.resolver
         .url(SYSTEM_IMAGE_URL)
         .resolve(&env.resolver.package("system_image/0", SYSTEM_IMAGE_HASH));
@@ -282,7 +287,8 @@ async fn assert_fetch_failure_reason(resolve_status: Status, expected_reason: Fe
     let env = TestEnv::builder().build();
     env.resolver
         .register_package("update", "upd4t3")
-        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]));
+        .add_file("packages.json", make_packages_json([SYSTEM_IMAGE_URL]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH));
     env.resolver.mock_resolve_failure(SYSTEM_IMAGE_URL, resolve_status);
 
     let mut attempt = env.start_update().await.unwrap();

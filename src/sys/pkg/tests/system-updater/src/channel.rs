@@ -13,6 +13,7 @@ async fn promotes_target_channel_as_current_channel() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
         .add_file("zbi", "fake zbi");
 
     env.run_update().await.unwrap();
@@ -35,6 +36,7 @@ async fn succeeds_even_if_target_channel_does_not_exist() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
         .add_file("zbi", "fake zbi");
 
     env.run_update().await.unwrap();

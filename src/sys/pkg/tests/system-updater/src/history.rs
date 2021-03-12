@@ -21,6 +21,7 @@ async fn succeeds_without_writable_data() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
         .add_file("zbi", "fake zbi");
 
     env.run_update().await.expect("run system updater");
@@ -129,6 +130,7 @@ async fn writes_history() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67"]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
         .add_file("zbi", "fake zbi")
         .add_file("fuchsia.vbmeta", "vbmeta")
         .add_file("version", "0.2");
@@ -199,6 +201,7 @@ async fn replaces_bogus_history() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
         .add_file("zbi", "fake zbi");
 
     env.run_update().await.unwrap();
@@ -251,6 +254,7 @@ async fn increments_attempts_counter_on_retry() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
+        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
         .add_file("zbi", "fake zbi");
 
     let _ = env

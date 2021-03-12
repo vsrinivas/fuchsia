@@ -80,3 +80,12 @@ pub fn make_packages_json<'a>(urls: impl AsRef<[&'a str]>) -> String {
     })
     .to_string()
 }
+
+/// Provided an epoch, constructs an `epoch.json` and returns the JSON as a string.
+pub fn make_epoch_json(epoch: u64) -> String {
+    json!({
+        "version": "1",
+        "epoch": epoch
+    })
+    .to_string()
+}

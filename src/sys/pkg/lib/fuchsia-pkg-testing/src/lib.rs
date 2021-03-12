@@ -23,7 +23,7 @@ mod system_image;
 pub use crate::system_image::SystemImageBuilder;
 
 mod update_package;
-pub use crate::update_package::{make_packages_json, TestUpdatePackage};
+pub use crate::update_package::{make_epoch_json, make_packages_json, TestUpdatePackage};
 
 mod process;
 
