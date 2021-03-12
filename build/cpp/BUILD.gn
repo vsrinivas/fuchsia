@@ -319,7 +319,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//zircon/system/utest/fvm:fvm",
     "//zircon/system/utest/memfs:memfs",
     "//zircon/system/utest/miscsvc:miscsvc",
-    "//zircon/system/utest/pty:pty",
     "//zircon/system/utest/service:service-llcpp-test",
     "//zircon/system/utest/svchost:svchost",
     "//zircon/third_party/uapp/dash:dash",

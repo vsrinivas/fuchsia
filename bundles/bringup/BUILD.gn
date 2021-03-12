@@ -107,7 +107,6 @@ group("tests") {
     "//zircon/system/utest/miscsvc:miscsvc-bootfs-test",
     "//zircon/system/utest/namespace:namespace-bootfs-test",
     "//zircon/system/utest/psutils:ps-bootfs-test",
-    "//zircon/system/utest/pty:pty-bootfs-test",
     "//zircon/system/utest/race-tests:race-tests-bootfs-test",
     "//zircon/system/utest/runtests-utils:runtests-utils-bootfs-test",
     "//zircon/system/utest/svchost:svchost-bootfs-test",
