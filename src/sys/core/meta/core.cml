@@ -20,6 +20,10 @@
             url: "fuchsia-pkg://fuchsia.com/system-update-committer#meta/system-update-committer.cm",
             startup: "eager",
         },
+        {
+            name: "last_reboot",
+            url: "fuchsia-pkg://fuchsia.com/forensics#meta/last_reboot.cm",
+        },
 
         // Children below this line may be present on some but not all product configurations (whereas
         // children above it are expected to be present on all configs that include core.cml)
@@ -92,6 +96,17 @@
             from: "parent",
             subdir: "persistent",
             backing_dir: "minfs",
+        },
+        {
+            storage: "cache",
+            from: "parent",
+            subdir: "cache",
+            backing_dir: "minfs",
+        },
+        {
+            storage: "tmp",
+            from: "parent",
+            backing_dir: "tmp",
         },
         {
             protocol: [
@@ -177,7 +192,11 @@
         {
             protocol: [ "fuchsia.cobalt.LoggerFactory" ],
             from: "#appmgr",
-            to: [ "#sampler" ],
+            to: [
+                "#last_reboot",
+                "#sampler",
+            ],
+            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.pkg.PackageResolver",
@@ -289,7 +308,10 @@
         {
             protocol: [ "fuchsia.hardware.power.statecontrol.RebootMethodsWatcherRegister" ],
             from: "parent",
-            to: [ "#sampler" ],
+            to: [
+                "#last_reboot",
+                "#sampler",
+            ],
         },
         {
             protocol: [ "fuchsia.diagnostics.FeedbackArchiveAccessor" ],
@@ -307,6 +329,7 @@
                 "#detect",
                 "#dhcpd",
                 "#font_provider",
+                "#last_reboot",
                 "#log-stats",
                 "#pkg-cache",
                 "#remote-control",
@@ -412,7 +435,11 @@
         {
             protocol: "fuchsia.feedback.CrashReporter",
             from: "#appmgr",
-            to: [ "#detect" ],
+            to: [
+                "#detect",
+                "#last_reboot",
+            ],
+            dependency: "weak_for_migration",
         },
         {
             protocol: "fuchsia.feedback.CrashReportingProductRegister",
@@ -491,7 +518,10 @@
         {
             directory: "boot",
             from: "parent",
-            to: [ "#appmgr" ],
+            to: [
+                "#appmgr",
+                "#last_reboot",
+            ],
         },
         {
             directory: "dev",
@@ -615,7 +645,25 @@
         {
             storage: "data",
             from: "self",
-            to: [ "#dhcpd" ],
+            to: [
+                "#dhcpd",
+                "#last_reboot",
+            ],
+        },
+        {
+            protocol: "fuchsia.feedback.LastRebootInfoProvider",
+            from: "#last_reboot",
+            to: [ "#appmgr" ],
+        },
+        {
+            storage: "tmp",
+            from: "self",
+            to: [ "#last_reboot" ],
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: [ "#last_reboot" ],
         },
     ],
     expose: [

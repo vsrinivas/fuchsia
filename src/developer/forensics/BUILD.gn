@@ -123,7 +123,7 @@ fuchsia_component("feedback_data") {
 }
 
 fuchsia_component("last_reboot") {
-  manifest = "last_reboot/meta/last_reboot.cmx"
+  manifest = "last_reboot/meta/last_reboot.cml"
 
   deps = [ ":last_reboot_exe" ]
 }

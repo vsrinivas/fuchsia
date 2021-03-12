@@ -153,7 +153,7 @@ fuchsia_component("graceful_reboot_reason_unittest") {
 fuchsia_component("last_reboot_info_provider_unittest") {
   testonly = true
 
-  manifest = "meta/last_reboot_info_provider_unittest.cmx"
+  manifest = "meta/last_reboot_info_provider_unittest.cml"
 
   deps = [ ":last_reboot_info_provider_unittest_exe" ]
 }
@@ -161,7 +161,7 @@ fuchsia_component("last_reboot_info_provider_unittest") {
 fuchsia_component("main_service_unittest") {
   testonly = true
 
-  manifest = "meta/main_service_unittest.cmx"
+  manifest = "meta/main_service_unittest.cml"
 
   deps = [ ":main_service_unittest_exe" ]
 }
@@ -169,7 +169,7 @@ fuchsia_component("main_service_unittest") {
 fuchsia_component("reboot_log_unittest") {
   testonly = true
 
-  manifest = "meta/reboot_log_unittest.cmx"
+  manifest = "meta/reboot_log_unittest.cml"
 
   deps = [ ":reboot_log_unittest_exe" ]
 }
@@ -177,7 +177,7 @@ fuchsia_component("reboot_log_unittest") {
 fuchsia_component("reboot_reason_unittest") {
   testonly = true
 
-  manifest = "meta/reboot_reason_unittest.cmx"
+  manifest = "meta/reboot_reason_unittest.cml"
 
   deps = [ ":reboot_reason_unittest_exe" ]
 }
@@ -185,7 +185,7 @@ fuchsia_component("reboot_reason_unittest") {
 fuchsia_component("reboot_watcher_unittest") {
   testonly = true
 
-  manifest = "meta/reboot_watcher_unittest.cmx"
+  manifest = "meta/reboot_watcher_unittest.cml"
 
   deps = [ ":reboot_watcher_unittest_exe" ]
 }
@@ -193,7 +193,7 @@ fuchsia_component("reboot_watcher_unittest") {
 fuchsia_component("reporter_unittest") {
   testonly = true
 
-  manifest = "meta/reporter_unittest.cmx"
+  manifest = "meta/reporter_unittest.cml"
 
   deps = [ ":reporter_unittest_exe" ]
 }
@@ -202,6 +202,11 @@ fuchsia_component("reporter_unittest") {
 # PACKAGES
 ###############################################################################
 fuchsia_test_package("last-reboot-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
   test_components = [
     ":graceful_reboot_reason_unittest",
     ":last_reboot_info_provider_unittest",

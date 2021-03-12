@@ -13,9 +13,9 @@
                 url: "fuchsia-pkg://fuchsia.com/archivist#meta/archivist.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "f1a52f7b4d7081060a3295fd36df7b68fb0518f80aae0eae8a3fc1d55231375f",
@@ -23,9 +23,9 @@
                 url: "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "2e3e35640b0f45265e268204779f7314cf5acae5883ac0d028232859672a7152",
@@ -33,9 +33,9 @@
                 url: "fuchsia-pkg://fuchsia.com/timezone#meta/timezone.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "e534c6322665ea3b4e7bf7bdce64d17bea86100be0eba25ed220a5e9b355c4ef",
@@ -43,13 +43,13 @@
                 url: "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "20b2c7aba6793929c252d4e933b8a1537f7bfe8e208ad228c50a896a18b2c4b5",
-            moniker: "/core/dhcpd"
+            moniker: "/core/dhcpd",
         },
         {
             instance_id: "b63d06982a705d04fcfc5f401db2b2f9faa640fa973ff99adb4f62a39f23d24f",
@@ -57,9 +57,9 @@
                 url: "fuchsia-pkg://fuchsia.com/netcfg#meta/netcfg.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "18f6b0d52208bab5e5dd65ef6021b7e47d7a6b3d09f6668dcea18f93161e9b1d",
@@ -67,9 +67,9 @@
                 url: "fuchsia-pkg://fuchsia.com/wlancfg#meta/wlancfg.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "796fc46a1898539f901c909c1ccf61c98660692fa45dabe474afaec84be6d720",
@@ -77,19 +77,13 @@
                 url: "fuchsia-pkg://fuchsia.com/forensics#meta/feedback_data.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "de3e6f95d17b22bcc6b8bb5389301dc9fa60a16e2c5a4d35eb4a35dd9ac571c3",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/forensics#meta/last_reboot.cmx",
-                realm_path: [
-                    "app",
-                    "sys"
-                ]
-            }
+            moniker: "/core/last_reboot",
         },
         {
             instance_id: "bf29aeef2be5779e9181fcd68a3f6de53db15d8cc952407030063086671f2904",
@@ -97,9 +91,9 @@
                 url: "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "72967e62c92be6e9c6d1609eec1989be814f0daf0e9324a4d18f3d0b02a3bf94",
@@ -107,9 +101,9 @@
                 url: "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "e9c49c28c1a0543cbd3ad4233467838c5d808285fd020ea17c8f3a9aeb6161fd",
@@ -117,9 +111,9 @@
                 url: "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/device_settings_manager.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "ab7a3ec7a062f943c00f3f62eb1a0f4a2ad50356600efffab46c1969ce49f3d8",
@@ -127,9 +121,9 @@
                 url: "fuchsia-pkg://fuchsia.com/amber#meta/system_updater.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "d577f733dfbe1787d272e43f7e4423a01108a71d7e3a89b4e97081ad39372e4e",
@@ -137,9 +131,9 @@
                 url: "fuchsia-pkg://fuchsia.com/pkg-resolver#meta/pkg-resolver.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "ea59eb01e52454f12fab0b571008d2ba8518ae12508f46a3f3f0350b7bbea40f",
@@ -147,9 +141,9 @@
                 url: "fuchsia-pkg://fuchsia.com/stash#meta/stash2.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "946b2f9dbe2ee352b033a635b1c79fc680ef62f9c1b36a39e46404f95b58e6d5",
@@ -157,9 +151,9 @@
                 url: "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "c1a6d0aebbf7c092c53e8e696636af8ec0629ff39b7f2e548430b0034d809da4",
@@ -167,9 +161,9 @@
                 url: "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "8285f9d54645ea6baa7fd7b7905c7ae89a9daf8d5172be43b2587b166fd021af",
@@ -177,9 +171,9 @@
                 url: "fuchsia-pkg://fuchsia.com/brightness_manager#meta/brightness_manager.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "f4597d9b92f6c3e4847a5bdb53ea095aee59ad07f69745ebcdb43c9f96125d73",
@@ -187,9 +181,9 @@
                 url: "fuchsia-pkg://fuchsia.com/factory-reset-trigger#meta/factory-reset-trigger.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "5bd5150caf1ff36c0c48bd26ef276c7ebe01b17b7919dba84abed3ab7d7bd48b",
@@ -197,9 +191,9 @@
                 url: "fuchsia-pkg://fuchsia.com/system-updater#meta/system-updater.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "426871d8856f43fc8433ad9049bf188454d038dc6295e0c59fd3401d72f25a48",
@@ -207,20 +201,21 @@
                 url: "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "eac51c2ea624ca423dbdd1110a2aa870e4f977e59be215e7f814bbcfcfd20334",
             appmgr_moniker: {
                 url: "fuchsia-pkg://fuchsia.com/ot-stack#meta/ot-stack.cmx",
+
                 // ot-stack.cmx is launched by lowpan-spinel-driver.cmx, which is launched by sysmgr.
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
         {
             instance_id: "76777fb21aa060c86680f0fbd7cbd4734ef6b239b429ac4d9cb2a9d08792033d",
@@ -228,9 +223,9 @@
                 url: "fuchsia-pkg://fuchsia.com/cobalt_system_metrics#meta/cobalt_system_metrics.cmx",
                 realm_path: [
                     "app",
-                    "sys"
-                ]
-            }
+                    "sys",
+                ],
+            },
         },
-    ]
+    ],
 }

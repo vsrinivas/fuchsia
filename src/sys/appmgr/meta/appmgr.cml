@@ -335,6 +335,10 @@
             protocol: "fuchsia.space.Manager",
             path: "/svc_for_sys/fuchsia.space.Manager",
         },
+        {
+            protocol: "fuchsia.feedback.LastRebootInfoProvider",
+            path: "/svc_for_sys/fuchsia.feedback.LastRebootInfoProvider",
+        },
 
         // From archivist
         {
