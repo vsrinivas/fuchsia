@@ -27,7 +27,7 @@ func DebugBinaryUploads(mods *build.Modules, debugNamespace, buildidNamespace st
 
 func debugBinaryUploads(mods binModules, debugNamespace, buildidNamespace string) ([]Upload, []string, error) {
 	bins := mods.Binaries()
-	for _, pb := range mods.PrebuiltBinaries() {
+	for _, pb := range mods.PrebuiltBinarySets() {
 		if pb.Manifest == "" {
 			continue
 		}
@@ -172,5 +172,5 @@ type binModules interface {
 	BuildDir() string
 	Args() build.Args
 	Binaries() []build.Binary
-	PrebuiltBinaries() []build.PrebuiltBinaries
+	PrebuiltBinarySets() []build.PrebuiltBinarySet
 }

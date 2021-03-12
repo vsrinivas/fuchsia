@@ -13,8 +13,9 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 )
 
-// PrebuiltBinaries represents a set of prebuilt binaries.
-type PrebuiltBinaries struct {
+// PrebuiltBinarySet represents a manifest referencing a set of prebuilt
+// binaries.
+type PrebuiltBinarySet struct {
 	// Name is the name of the set of prebuilt binaries.
 	Name string `json:"package_name"`
 
@@ -30,7 +31,7 @@ type PrebuiltBinaries struct {
 // Get returns the list of binaries in enumerated in the associated
 // binary manifest.
 // Returns os.ErrIsNotExist if the file does not exist.
-func (pb *PrebuiltBinaries) Get(buildDir string) ([]Binary, error) {
+func (pb *PrebuiltBinarySet) Get(buildDir string) ([]Binary, error) {
 	if pb.Manifest == "" {
 		return nil, errors.New("no associated debug binary manifest")
 	}
