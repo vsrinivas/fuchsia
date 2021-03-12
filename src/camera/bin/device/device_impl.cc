@@ -245,7 +245,10 @@ void DeviceImpl::ConnectToStream(uint32_t index,
       };
 
   // When the last client disconnects, post a task to the device thread to destroy the stream.
-  auto on_no_clients = [this, index]() { streams_[index] = nullptr; };
+  auto on_no_clients = [this, index]() {
+    stream_request_sent_to_controller_[index] = false;
+    streams_[index] = nullptr;
+  };
 
   streams_[index] = std::make_unique<StreamImpl>(
       dispatcher_, configuration_metrics_[current_configuration_index_]->stream(index),
@@ -291,7 +294,8 @@ void DeviceImpl::OnStreamRequested(
           }));
 }
 
-constexpr uint32_t kMaxLegacyStreamRequestRequeueCount = 6;
+// HUGE CAVEAT: Please see b/181345355 comment #24 for details.
+constexpr uint32_t kMaxLegacyStreamRequestRequeueCount = 64;
 constexpr zx::duration kLegacyStreamRequestDelay = zx::msec(1500);
 
 // TODO(fxbug.dev/42241): Remove workaround once ordering constraint is removed.
@@ -307,6 +311,14 @@ void DeviceImpl::MaybeConnectToLegacyStreams() {
       auto& [index, params] = *it;
       if (preceding_streams_bound ||
           params.requeue_count++ == kMaxLegacyStreamRequestRequeueCount) {
+
+        // Definitely need an error log message if timed out because this affects the normal
+        // Sherlock use cases!
+        if (!preceding_streams_bound) {
+          FX_LOGS(ERROR) << "Legacy stream re-order wait timed out for stream_index=" << i;
+          FX_LOGS(ERROR) << "Controller behavior could be problematic from here on!";
+        }
+
         // If all preceding streams are bound, or the threshold requeue count has been reached,
         // immediately send the creation request and delete the pending map element.
         controller_->CreateStream(current_configuration_index_, index, params.format_index,
