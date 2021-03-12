@@ -120,27 +120,37 @@ MAC_UNZIP_DIR="fuchsia_devtools/macos-extracted"
 MAC_BINARY="fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
 
 if is-mac; then
-  if [[ ! -d "${FDT_DIR}/${MAC_UNZIP_DIR}" ]]; then
-    temp_dir="${FDT_DIR}/${MAC_UNZIP_DIR}-temp"
+  rm -rf "${FDT_DIR}/${MAC_UNZIP_DIR}"
+  temp_dir="${FDT_DIR}/${MAC_UNZIP_DIR}-temp"
+  if [[ -e "${FDT_DIR}/${MAC_ZIP}" ]]; then
     mkdir -p "${temp_dir}"
     if ! unzip -qq "${FDT_DIR}/${MAC_ZIP}" -d "${temp_dir}"; then
       rm -rf "${temp_dir}"
-      if ! unzip -qq "${FDT_DIR}/${MAC_ZIP_OLD}" -d "${temp_dir}"; then
-        rm -rf "${temp_dir}"
-        fx-error "Downloaded archive for ${LABEL_DEVTOOLS} failed to extract"
-        exit 1
-      fi
+      fx-error "Downloaded archive for ${LABEL_DEVTOOLS} failed to extract."
+      exit 1
     fi
     mv "${temp_dir}" "${FDT_DIR}/${MAC_UNZIP_DIR}"
+    open "${FDT_DIR}/${MAC_BINARY}" "--args" "${FDT_ARGS[@]}"
+  elif [[ -e "${FDT_DIR}/${MAC_ZIP_OLD}" ]]; then
+    mkdir -p "${temp_dir}"
+    if ! unzip -qq "${FDT_DIR}/${MAC_ZIP_OLD}" -d "${temp_dir}"; then
+      rm -rf "${temp_dir}"
+      fx-error "Downloaded archive for ${LABEL_DEVTOOLS} failed to extract."
+      exit 1
+    fi
+    mv "${temp_dir}" "${FDT_DIR}/${MAC_UNZIP_DIR}"
+    open "${FDT_DIR}/${MAC_BINARY}" "--args" "${FDT_ARGS[@]}"
+  else
+    fx-error "Failed to find Fuchsia DevTools archive."
+    exit 1
   fi
-  open "${FDT_DIR}/${MAC_BINARY}" "--args" "${FDT_ARGS[@]}"
 else
   if [[ -x "${FDT_DIR}/${LINUX_BINARY}" ]]; then
     "${FDT_DIR}/${LINUX_BINARY}" "${FDT_ARGS[@]}"
   elif [[ -x "${FDT_DIR}/${LINUX_BINARY_OLD}" ]]; then
     "${FDT_DIR}/${LINUX_BINARY_OLD}" "${FDT_ARGS[@]}"
   else
-    echo "Failed to find Fuchsia DevTools binary."
+    fx-error "Failed to find Fuchsia DevTools binary."
     exit 1
   fi
 fi

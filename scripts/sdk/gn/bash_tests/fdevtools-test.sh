@@ -15,8 +15,8 @@ DEVTOOLS_LABEL="$(echo "${DEVTOOLS_VERSION}" | tr ':/' '_')"
 
 # Verifies that the correct commands are run before starting Fuchsia DevTools
 TEST_fdevtools_with_authkeys_fuchsia_devtools_directory() {
-  btf::make_mock "${BT_TEMP_DIR}/test-home/.fuchsia/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
-  btf::make_mock "${BT_TEMP_DIR}/test-home/.fuchsia/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/linux/fuchsia_devtools"
+  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos/macos.zip"
+  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/linux/fuchsia_devtools"
 
   # Run command.
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" \
@@ -45,8 +45,8 @@ TEST_fdevtools_with_authkeys_fuchsia_devtools_directory() {
 }
 
 TEST_fdevtools_with_authkeys_no_fuchsia_devtools_directory() {
-  btf::make_mock "${BT_TEMP_DIR}/test-home/.fuchsia/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
-  btf::make_mock "${BT_TEMP_DIR}/test-home/.fuchsia/fuchsia_devtools-${DEVTOOLS_LABEL}/linux/fuchsia_devtools"
+  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos/macos.zip"
+  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/linux/fuchsia_devtools"
 
   # Run command.
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" \
@@ -76,6 +76,8 @@ TEST_fdevtools_with_authkeys_no_fuchsia_devtools_directory() {
 
 TEST_fdevtools_no_args_unzip_on_mac() {
   if is-mac; then
+    btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos/macos.zip"
+
     # Set the version file to match the mock
     echo "git_revision_unknown" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devtools.version"
 
@@ -102,8 +104,8 @@ TEST_fdevtools_no_args_unzip_on_mac() {
 }
 
 TEST_fdevtools_noargs_fuchsia_devtools_directory() {
-  btf::make_mock "${BT_TEMP_DIR}/test-home/.fuchsia/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
-  btf::make_mock "${BT_TEMP_DIR}/test-home/.fuchsia/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/linux/fuchsia_devtools"
+  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos/macos.zip"
+  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/linux/fuchsia_devtools"
 
   # Set the version file to match the mock
   echo "git_revision_unknown" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devtools.version"
@@ -132,8 +134,8 @@ TEST_fdevtools_noargs_fuchsia_devtools_directory() {
 }
 
 TEST_fdevtools_noargs_no_fuchsia_devtools_directory() {
-  btf::make_mock "${BT_TEMP_DIR}/test-home/.fuchsia/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app"
-  btf::make_mock "${BT_TEMP_DIR}/test-home/.fuchsia/fuchsia_devtools-${DEVTOOLS_LABEL}/linux/fuchsia_devtools"
+  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos/macos.zip"
+  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/linux/fuchsia_devtools"
 
   # Set the version file to match the mock
   echo "git_revision_unknown" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devtools.version"

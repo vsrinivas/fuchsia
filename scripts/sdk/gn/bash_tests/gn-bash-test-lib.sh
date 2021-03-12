@@ -30,8 +30,9 @@ function run-md5 {
 }
 
 if is-mac; then
+  # realpath is called as 'realpath -m "$path"'
   realpath() {
-      [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+      [[ $2 = /* ]] && echo "$2" || echo "$PWD/${2#./}"
   }
 fi
 
