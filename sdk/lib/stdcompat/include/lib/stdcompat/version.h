@@ -70,6 +70,10 @@
 #define __cpp_lib_apply 201603L
 #endif
 
+#if !defined(__cpp_lib_as_const) && __cplusplus >= 201510L
+#define __cpp_lib_as_const 201510L
+#endif
+
 #endif  // __has_include(<version>) && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
 #endif  // LIB_STDCOMPAT_INCLUDE_LIB_STDCOMPAT_VERSION_H_

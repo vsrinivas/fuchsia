@@ -36,6 +36,8 @@ TEST(VersionTest, FeatureTestMacrosForCpp20) {
                 "'__cpp_lib_bounded_array_traits' should be using draft 201902L for c++20.");
   static_assert(__cpp_lib_remove_cvref == 201711L,
                 "'__cpp_lib_remove_cvref' should be using draft 201711L for c++20.");
+  static_assert(__cpp_lib_as_const == 201510L,
+                "'__cpp_lib_as_const' should be using draft 201510L for c++17.");
 #if defined(__cpp_lib_type_identity)
   static_assert(__cpp_lib_type_identity == 201806L,
                 "'__cpp_lib_type_identity' should be using draft 201806L for c++20.");
@@ -79,6 +81,8 @@ TEST(VersionTest, FeatureTestMacrosForCpp17) {
   static_assert(
       __cpp_lib_type_trait_variable_templates == 201510L,
       "'__cpp_lib_type_trait_variable_templates' should be using draft 201510L for c++17.");
+  static_assert(__cpp_lib_as_const == 201510L,
+                "'__cpp_lib_as_const' should be using draft 201510L for c++17.");
 #endif
 #if __cplusplus >= 201505L
   static_assert(__cpp_lib_bool_constant == 201505L,
@@ -134,8 +138,11 @@ TEST(VersionTest, FeatureTestMacrosForCpp14) {
 #if defined(__cpp_lib_invoke)
   static_assert(false, "'__cpp_lib_is_invoke' should not be defined in c++14.");
 #endif
-#if defined (__cpp_lib_apply)
+#if defined(__cpp_lib_apply)
   static_assert(false, "'__cpp_lib_apply' should not be defined in c++14.");
+#endif
+#if defined(__cpp_lib_as_const)
+  static_assert(false, "'__cpp_lib_as_const' should not be defined in c++14.");
 #endif
 }
 

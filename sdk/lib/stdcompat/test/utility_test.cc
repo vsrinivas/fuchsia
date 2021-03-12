@@ -60,10 +60,56 @@ TEST(SwapTest, IsConstexpr) {
 
 #if __cpp_lib_constexpr_algorithms >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
-TEST(SwapTest, IsAlisWhenAvailable) {
+TEST(SwapTest, IsAliasWhenAvailable) {
   constexpr void (*cpp20_swap)(int&, int&) = &cpp20::swap<int>;
   constexpr void (*std_swap)(int&, int&) = &std::swap<int>;
   static_assert(cpp20_swap == std_swap, "cpp20::swap must be an alias for std::swap in c++20.");
+}
+
+#endif
+
+template <typename T, typename = void>
+struct matches_as_const : std::false_type {};
+
+template <typename T>
+struct matches_as_const<T, cpp17::void_t<decltype(cpp17::as_const(std::declval<T>()))>>
+    : std::true_type {};
+
+template <typename T>
+static constexpr bool matches_as_const_v = matches_as_const<T>::value;
+
+template <typename T>
+constexpr bool match(T&& value) {
+  return matches_as_const_v<T>;
+}
+
+TEST(AsConstTest, ReturnsConstReference) {
+  int i = 0;
+  const int ci = 0;
+
+  static_assert(cpp17::is_same_v<decltype(cpp17::as_const(i)), const int&>, "");
+  static_assert(cpp17::is_same_v<decltype(cpp17::as_const(ci)), const int&>, "");
+}
+
+TEST(AsConstTest, DeniesRvalueReferences) {
+  int i = 0;
+  const int ci = 0;
+
+  static_assert(match(i) == true, "cpp17::as_const should accept lvalue references.");
+  static_assert(match(std::move(i)) == false,
+                "cpp17::as_const should not accept rvalue references.");
+  static_assert(match(ci) == true, "cpp17::as_const should accept lvalue references.");
+  static_assert(match(std::move(ci)) == false,
+                "cpp17::as_const should not accept rvalue references.");
+}
+
+#if __cpp_lib_as_const >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+TEST(AsConstTest, IsAliasWhenAvailable) {
+  constexpr const int& (*cpp17_as_const)(int&) = &cpp17::as_const<int>;
+  constexpr const int& (*std_as_const)(int&) = &std::as_const<int>;
+  static_assert(cpp17_as_const == std_as_const,
+                "cpp17::as_const must be an alias for std::as_const in c++17.");
 }
 
 #endif

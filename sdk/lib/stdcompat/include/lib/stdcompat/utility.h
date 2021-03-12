@@ -70,6 +70,22 @@ static constexpr const in_place_index_t<Index>& in_place_index =
 
 #endif  // __cplusplus >= 201411L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
+#if __cpp_lib_as_const >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::as_const;
+
+#else  // Provide as_const polyfill.
+
+template <typename T>
+constexpr std::add_const_t<T>& as_const(T& t) noexcept {
+  return t;
+}
+
+template <typename T>
+void as_const(T&&) = delete;
+
+#endif  // __cpp_lib_as_const >= 201510L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
 }  // namespace cpp17
 
 namespace cpp20 {
