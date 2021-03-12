@@ -5,22 +5,29 @@
 #include "src/sys/appmgr/storage_metrics.h"
 
 #include <lib/fdio/namespace.h>
+#include <lib/fit/single_threaded_executor.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <lib/inspect/cpp/hierarchy.h>
+#include <lib/inspect/cpp/inspector.h>
+#include <lib/inspect/cpp/reader.h>
 #include <lib/memfs/memfs.h>
 #include <lib/sync/completion.h>
 
+#include <cstdint>
+
 #include <fbl/unique_fd.h>
+#include <gtest/gtest.h>
 #include <src/lib/files/directory.h>
 #include <src/lib/files/file.h>
 #include <src/lib/files/path.h>
-
-namespace {
+#include <src/lib/fxl/strings/join_strings.h>
 
 class StorageMetricsTest : public ::testing::Test {
  public:
   static constexpr const char* kTestRoot = "/test_storage";
   static constexpr const char* kPersistentPath = "/test_storage/persistent";
   static constexpr const char* kCachePath = "/test_storage/cache";
+  static constexpr const char* kInspectNodeName = "storage_metrics";
 
   StorageMetricsTest() : loop_(async::Loop(&kAsyncLoopConfigAttachToCurrentThread)) {}
 
@@ -38,7 +45,8 @@ class StorageMetricsTest : public ::testing::Test {
     // The dispatcher is used only for delaying calls. Setting it as null here since we don't
     // want any delayed actions and it would actually deadlock if we set it share the existing
     // loop_ dispatcher. Best to have it fail fast if anyone tries to do that.
-    metrics_ = std::make_unique<StorageMetrics>(std::move(watch));
+    metrics_ = std::make_unique<StorageMetrics>(std::move(watch),
+                                                inspector_.GetRoot().CreateChild(kInspectNodeName));
   }
   // Set up the async loop, create memfs, install memfs at /hippo_storage
   void TearDown() override {
@@ -50,7 +58,53 @@ class StorageMetricsTest : public ::testing::Test {
     ASSERT_EQ(ZX_OK, sync_completion_wait(&memfs_freed_signal, ZX_SEC(5)));
   }
 
+  // Grabs a new Hierarchy snapshot from Inspect.
+  void GetHierarchy(inspect::Hierarchy* hierarchy_ptr) {
+    fit::single_threaded_executor executor;
+    fit::result<inspect::Hierarchy> hierarchy;
+    executor.schedule_task(
+        inspect::ReadFromInspector(inspector_).then([&](fit::result<inspect::Hierarchy>& res) {
+          hierarchy = std::move(res);
+        }));
+    executor.run();
+    ASSERT_TRUE(hierarchy.is_ok());
+    *hierarchy_ptr = hierarchy.take_value();
+  }
+
+  // Rebuilds a UsageMap from the Inspect data. Do all the heavy lifting here so that the tests can
+  // focus on verifying the right values.
+  void GetUsageMap(StorageMetrics::UsageMap* usage) {
+    inspect::Hierarchy hierarchy;
+    GetHierarchy(&hierarchy);
+
+    *usage = StorageMetrics::UsageMap();
+    std::vector<inspect::Hierarchy> child_nodes = hierarchy.take_children();
+    auto it = std::find_if(
+        child_nodes.begin(), child_nodes.end(),
+        [](const inspect::Hierarchy& node) { return node.name() == kInspectNodeName; });
+    child_nodes = it->take_children();
+
+    for (auto& child : child_nodes) {
+      if (child.name() == "inodes") {
+        for (auto& property : child.node_ptr()->take_properties()) {
+          usage->AddForKey(property.name(),
+                           {0, property.Get<inspect::UintPropertyValue>().value()});
+        }
+      } else if (child.name() == "bytes") {
+        for (auto& property : child.node_ptr()->take_properties()) {
+          usage->AddForKey(property.name(),
+                           {property.Get<inspect::UintPropertyValue>().value(), 0});
+        }
+      } else {
+        ASSERT_TRUE(false) << "Unexpected child node: " << child.name();
+      }
+    }
+  }
+
+  void AggregateStorage() { metrics_->PollStorage(); }
+
  protected:
+  inspect::Inspector inspector_;
   std::unique_ptr<StorageMetrics> metrics_;
 
  private:
@@ -77,7 +131,9 @@ TEST_F(StorageMetricsTest, TwoComponents) {
     ASSERT_GE(fd.get(), 0);
   }
 
-  StorageMetrics::UsageMap usage = metrics_->GatherStorageUsage();
+  AggregateStorage();
+  StorageMetrics::UsageMap usage;
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
 
   // Expect one file each.
   ASSERT_EQ(usage.map().at("12345").inodes, 1ul);
@@ -103,7 +159,9 @@ TEST_F(StorageMetricsTest, CountSubdirectories) {
     ASSERT_GE(fd.get(), 0);
   }
 
-  StorageMetrics::UsageMap usage = metrics_->GatherStorageUsage();
+  AggregateStorage();
+  StorageMetrics::UsageMap usage;
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
 
   // 3 Total files
   ASSERT_EQ(usage.map().at("12345").inodes, 3ul);
@@ -122,8 +180,11 @@ TEST_F(StorageMetricsTest, IncrementByBlocks) {
     ASSERT_EQ(write(fd.get(), "1", 1), 1);
   }
 
+  AggregateStorage();
+  StorageMetrics::UsageMap usage;
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
+
   // Check block size, the one byte file will allocate an entire block.
-  StorageMetrics::UsageMap usage = metrics_->GatherStorageUsage();
   ASSERT_EQ(usage.map().at("12345").inodes, 1ul);
   ASSERT_GT(usage.map().at("12345").bytes, 0ul);
   size_t block_size = usage.map().at("12345").bytes;
@@ -135,7 +196,9 @@ TEST_F(StorageMetricsTest, IncrementByBlocks) {
     ASSERT_GE(fd.get(), 0);
     ASSERT_EQ(write(fd.get(), "12", 2), 2);
   }
-  usage = metrics_->GatherStorageUsage();
+
+  AggregateStorage();
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
   ASSERT_EQ(usage.map().at("12345").bytes, block_size);
 
   // Reopen file and make it block_size + 1 to make the result 2 * block_size
@@ -152,14 +215,17 @@ TEST_F(StorageMetricsTest, IncrementByBlocks) {
       length -= to_write;
     }
   }
-  usage = metrics_->GatherStorageUsage();
+  AggregateStorage();
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
   ASSERT_EQ(usage.map().at("12345").bytes, block_size * 2);
 }
 
 // Empty component dir
 TEST_F(StorageMetricsTest, EmptyComponent) {
   files::CreateDirectory(files::JoinPath(kPersistentPath, "12345"));
-  StorageMetrics::UsageMap usage = metrics_->GatherStorageUsage();
+  AggregateStorage();
+  StorageMetrics::UsageMap usage;
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
   ASSERT_EQ(usage.map().at("12345").inodes, 0ul);
   ASSERT_EQ(usage.map().at("12345").bytes, 0ul);
 }
@@ -178,7 +244,9 @@ TEST_F(StorageMetricsTest, MultipleWatchPaths) {
     ASSERT_GE(fd.get(), 0);
   }
 
-  StorageMetrics::UsageMap usage = metrics_->GatherStorageUsage();
+  AggregateStorage();
+  StorageMetrics::UsageMap usage;
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
 
   ASSERT_EQ(usage.map().at("12345").inodes, 2ul);
   ASSERT_EQ(usage.map().at("12345").bytes, 0ul);
@@ -202,10 +270,10 @@ TEST_F(StorageMetricsTest, RealmNesting) {
     ASSERT_GE(fd.get(), 0);
   }
 
-  StorageMetrics::UsageMap usage = metrics_->GatherStorageUsage();
+  AggregateStorage();
+  StorageMetrics::UsageMap usage;
+  ASSERT_NO_FATAL_FAILURE(GetUsageMap(&usage));
 
   ASSERT_EQ(usage.map().at("12345").inodes, 1ul);
   ASSERT_EQ(usage.map().at("67890").inodes, 1ul);
 }
-
-}  // namespace

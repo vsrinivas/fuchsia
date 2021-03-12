@@ -15,6 +15,9 @@
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
+#include <mutex>
+#include <unordered_map>
+
 #include <fbl/unique_fd.h>
 #include <src/lib/files/directory.h>
 #include <src/lib/files/path.h>
@@ -156,10 +159,33 @@ void StorageMetrics::UsageMap::AddForKey(const std::string& name, const Usage& u
   }
 }
 
-StorageMetrics::StorageMetrics(std::vector<std::string> paths_to_watch)
-    : paths_to_watch_(std::move(paths_to_watch)) {}
+fit::promise<inspect::Inspector> StorageMetrics::InspectByteUsage() const {
+  inspect::Inspector inspector;
+  std::lock_guard<std::mutex> lock(usage_lock_);
+  for (const auto& it : usage_.map()) {
+    inspector.GetRoot().CreateUint(it.first, it.second.bytes, &inspector);
+  }
+  return fit::make_ok_promise(inspector);
+}
 
-StorageMetrics::UsageMap StorageMetrics::GatherStorageUsage() {
+fit::promise<inspect::Inspector> StorageMetrics::InspectInodeUsage() const {
+  inspect::Inspector inspector;
+  std::lock_guard<std::mutex> lock(usage_lock_);
+  for (const auto& it : usage_.map()) {
+    inspector.GetRoot().CreateUint(it.first, it.second.inodes, &inspector);
+  }
+  return fit::make_ok_promise(inspector);
+}
+
+StorageMetrics::StorageMetrics(std::vector<std::string> paths_to_watch, inspect::Node inspect_node)
+    : paths_to_watch_(std::move(paths_to_watch)),
+      inspect_root_(std::move(inspect_node)),
+      inspect_bytes_stats_(
+          inspect_root_.CreateLazyNode("bytes", [this] { return this->InspectByteUsage(); })),
+      inspect_inode_stats_(
+          inspect_root_.CreateLazyNode("inodes", [this] { return this->InspectInodeUsage(); })) {}
+
+StorageMetrics::UsageMap StorageMetrics::GatherStorageUsage() const {
   UsageMap usage;
   for (const std::string& dir : paths_to_watch_) {
     fbl::unique_fd fd(open(dir.c_str(), O_DIRECTORY | O_RDONLY));
@@ -173,19 +199,24 @@ StorageMetrics::UsageMap StorageMetrics::GatherStorageUsage() {
 }
 
 void StorageMetrics::PollStorage() {
-  StorageMetrics::UsageMap usage = GatherStorageUsage();
-  for (auto& it : usage.map()) {
-    FX_LOGS(DEBUG) << it.first << ": " << it.second.bytes << " bytes " << it.second.inodes
-                   << " inodes";
+  StorageMetrics::UsageMap new_usage = GatherStorageUsage();
+  {
+    std::lock_guard<std::mutex> lock(usage_lock_);
+    usage_ = std::move(new_usage);
   }
 
   async::PostDelayedTask(
       loop_.dispatcher(), [this] { this->PollStorage(); }, kPollCycle);
 }
 
-zx_status_t StorageMetrics::Run() {
-  if (zx_status_t status = loop_.StartThread("StorageMetrics") != ZX_OK) {
-    return status;
+zx::status<> StorageMetrics::Run() {
+  zx_status_t status = loop_.StartThread("StorageMetrics");
+  if (status != ZX_OK) {
+    return zx::error(status);
   }
-  return async::PostTask(loop_.dispatcher(), [this] { this->PollStorage(); });
+  status = async::PostTask(loop_.dispatcher(), [this] { this->PollStorage(); });
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok();
 }

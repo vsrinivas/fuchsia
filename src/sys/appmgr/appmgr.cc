@@ -48,9 +48,11 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
       sysmgr_url_(std::move(args.sysmgr_url)),
       sysmgr_args_(std::move(args.sysmgr_args)),
       storage_watchdog_(StorageWatchdog(kRootDataDir, kRootCacheDir)),
-      storage_metrics_({
-          "/data/persistent",
-      }),
+      storage_metrics_(
+          {
+              "/data/persistent",
+          },
+          inspector_.GetRoot().CreateChild("storage_usage")),
       lifecycle_server_(this, std::move(args.stop_callback)),
       lifecycle_executor_(dispatcher),
       lifecycle_allowlist_(std::move(args.lifecycle_allowlist)),
@@ -70,7 +72,9 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
 
   // 0. Start storage watchdog for cache storage
   storage_watchdog_.Run(dispatcher);
-  storage_metrics_.Run();
+  if (zx_status_t status = storage_metrics_.Run().status_value() != ZX_OK) {
+    FX_LOGS(WARNING) << "Failed to start polling storage usage: " << zx_status_get_string(status);
+  }
 
   // 1. Create root realm.
   fbl::unique_fd appmgr_config_dir(
