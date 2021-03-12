@@ -1,113 +1,53 @@
-# LLCPP Memory Ownership
+# LLCPP Memory Management
 
 This document provides an overview of the tools available to manage memory when
 using the LLCPP bindings.
 
-## Pointers and memory ownership {#memory-ownership}
+##Memory ownership {#memory-ownership}
 
-LLCPP objects use special smart pointers called `tracking_ptr` to keep track of memory ownership.
-With `tracking_ptr`, LLCPP makes it possible for your code to easily set a value and forget
-about ownership since `tracking_ptr` will take care of freeing memory when it goes out of scope.
+LLCPP keeps references to objects using:
 
-These pointers have two states:
+*   `fidl::StringView` for a string.
+*   `fidl::VectorView` for a vector of objects.
+*   `fidl::ObjectView` for a reference to an object.
 
-*   Unowned (constructed from an `unowned_ptr_t`).
-*   Heap allocated and owned (constructed from a `std::unique_ptr`).
+These are non-owning views that only keep a reference and do not manage the object lifetime. The
+lifetime of the objects must be managed externally. That means that the referenced objects must
+outlive the views.
 
-When the contents is owned, a `tracking_ptr` behaves like a `unique_ptr` and the pointer is
-deleted on destruction. In the unowned state, `tracking_ptr` behaves like a raw pointer and
-destruction is a no-op.
+In particular, LLCPP generated types do not own theit out-of-line children, as defined by the FIDL
+wire format.
 
-`tracking_ptr` is move-only and has an API closely matching `unique_ptr`.
+### Create LLCPP object using the FidlAllocator
 
-### Types of object allocation
+The FIDL allocator (`fidl::FidlAllocator`) can allocate LLCPP objects. It manages the lifetime of
+the allocated LLCPP objects (it owns the objects). As soon as the allocator is deleted, all the
+objects it has allocated are deallocated and their destructors are called.
 
-`tracking_ptr` makes it possible to create LLCPP objects with several allocation strategies.
-The allocation strategies can be mixed and matched within the same code.
+The FIDL allocator is defined in [lib/fidl/llcpp/fidl_allocator.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/fidl_allocator.h).
 
-#### Heap allocation
+The objects are first allocated within a buffer which belongs to the allocator (this is a field of
+the allocator). The default size of the buffer is 512 bytes. A different size can be selected using
+`fidl::FidlAllocator<size>`.
 
-To heap allocate objects, use the standard `std::make_unique`.
+When this buffer is full, the allocator allocates more buffers on the heap. Each of these buffers
+is 16 KiB (if it needs to allocate an object bigger, it will use a buffer which fit the bigger
+size).
 
-An example with an optional `uint32` field represented as a `tracking_ptr`.
+The standard patern for using the allocator is:
 
-```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-field" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
-```
-
-This applies to all union and table fields and data arrays within vectors and strings.
-Vector and string data arrays must use the array specialization of `std::unique_ptr`,
-which takes the element count as an argument.
-
-```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-vec" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
-```
-
-To copy a collection to a `VectorView`, use `heap_copy_vec`.
-
-```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-copy-vec" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
-```
-
-
-To copy a string to a `StringView`, use `heap_copy_str`.
-
-```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="heap-copy-str" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
-```
-
-#### Allocators
-
-FIDL provides an `Allocator` API that enables creating `tracking_ptr`s to LLCPP objects through a
-number of allocation algorithms. Currently, `BufferThenHeapAllocator`, `UnsafeBufferAllocator`, and
-`HeapAllocator` are available in fidl namespace.
-
-The `BufferThenHeapAllocator` allocates from an in-band fixed-size buffer (can be used for stack
-allocation), but falls back to heap allocation if the in-band buffer has been exhausted (to avoid
-unnecessary unfortunate surprises). Be aware that excessive stack usage can cause its own problems,
-so consider using a buffer size that comfortably fits on the stack, or consider putting the whole
-BufferThenHeapAllocator on the heap if the buffer needs to be larger than fits on the stack, or
-consider using HeapAllocator. Allocations must be assumed to be gone upon destruction of the
-`BufferThenHeapAllocator` used to make them.
-
-The `HeapAllocator` always allocates from the heap, and is unique among allocators (so far) in that
-all of the `HeapAllocator` allocations can out-live the `HeapAllocator` instance used to make
-them.
-
-The `UnsafeBufferAllocator` is unsafe in the sense that it lacks heap failover, so risks creating
-unfortunate data-dependent surprises unless the buffer size is absolutely guaranteed to be large
-enough including the internal destructor-tracking overhead.  If the internal buffer is exhausted,
-make<>() will panic the entire process. Consider using `BufferThenHeapAllocator` instead.  Do not
-use `UnsafeBufferAllocator` without rigorously testing that the worst-case set of cumulative
-allocations made through the allocator all fit without a panic, and consider how the rigor will be
-maintained as code and FIDL tables are changed.
+*   Define a local variable allocator of type fidl::FidlAllocator.
+*   Allocate objects using the allocator.
+*   Send the allocated objects by making a FIDL method call or making a reply via a completer.
+*   Leave the function; everything is deallocated.
 
 Example:
+-```c++
+-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+-```
 
-```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="allocator-field" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
-```
 
-The arguments to `allocator.make` are identical to the arguments to `std::make_unique`.
-This also applies to VectorViews.
-
-```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="allocator-vec" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
-```
-
-To copy a collection to a `VectorView` using an allocator, use `copy_vec`.
-
-```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="copy-vec" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
-```
-
-To create a copy of a string using an allocator, use `copy_str`.
-
-```c++
-{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="copy-str" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
-```
-
-#### Unowned pointers
+### Unowned pointers
 
 In addition to the managed allocation strategies, it is also possible to directly
 create pointers to memory unowned by FIDL. This is discouraged, as it is easy to
@@ -141,7 +81,7 @@ A `StringView` can also be created directly from string literals without using
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="stringview-assign" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
-#### fidl::StringView
+### fidl::StringView
 
 Defined in [lib/fidl/llcpp/string_view.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/string_view.h)
 
@@ -155,7 +95,7 @@ and `size()`. The string view would borrow the contents of the container.
 
 It is memory layout compatible with **fidl_string**.
 
-#### fidl::VectorView\<T\>
+### fidl::VectorView\<T\>
 
 Defined in [lib/fidl/llcpp/vector_view.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/vector_view.h)
 
@@ -170,7 +110,7 @@ the container.
 
 It is memory layout compatible with **fidl_vector**.
 
-#### fidl::Array\<T, N\>
+### fidl::Array\<T, N\>
 
 Defined in [lib/fidl/llcpp/array.h](/zircon/system/ulib/fidl/include/lib/fidl/llcpp/array.h)
 

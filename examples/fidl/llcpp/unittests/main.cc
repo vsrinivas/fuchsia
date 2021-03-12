@@ -59,67 +59,6 @@ TEST(FidlExamples, Tables) {
 }
 // [END tables]
 
-// [START heap-field]
-TEST(AllocationExamples, UnionOrTableField) {
-  // JsonValue is a FIDL union with field: "int32 int_value"
-  fuchsia_examples::wire::JsonValue val;
-  val.set_int_value(std::make_unique<int32_t>(1));
-}
-// [END heap-field]
-
-// [START heap-vec]
-TEST(AllocationExamples, VectorOrStringDataArrays) {
-  fidl::VectorView<uint32_t> vec;
-  vec.set_data(std::make_unique<uint32_t[]>(10));
-}
-// [END heap-vec]
-
-// [START heap-copy-vec]
-TEST(AllocationExamples, VectorViewCopy) {
-  std::vector<uint32_t> vec = {1, 2, 3};
-  fidl::VectorView<uint32_t> vv = fidl::heap_copy_vec(vec);
-}
-// [END heap-copy-vec]
-
-// [START heap-copy-str]
-TEST(AllocationExamples, StringViewCopy) {
-  std::string_view str = "hello world";
-  fidl::StringView sv = fidl::heap_copy_str(str);
-}
-// [END heap-copy-str]
-
-// [START allocator-field]
-TEST(AllocationExamples, AllocatorUnionOrTableField) {
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  fuchsia_examples::wire::JsonValue val;
-  val.set_int_value(allocator.make<int32_t>(1));
-}
-// [END allocator-field]
-
-// [START allocator-vec]
-TEST(AllocationExamples, AllocatorVectorView) {
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  fidl::VectorView<uint32_t> vec;
-  vec.set_data(allocator.make<uint32_t[]>(1));
-}
-// [END allocator-vec]
-
-// [START copy-vec]
-TEST(AllocationExamples, AllocatorCopyVec) {
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  std::vector<uint32_t> vec;
-  fidl::VectorView<uint32_t> vv = fidl::copy_vec(allocator, vec);
-}
-// [END copy-vec]
-
-// [START copy-str]
-TEST(AllocationExamples, AllocatorCopyStr) {
-  fidl::BufferThenHeapAllocator<2048> allocator;
-  std::string_view str = "hello world";
-  fidl::StringView sv = fidl::copy_str(allocator, str);
-}
-// [END copy-str]
-
 // [START unowned-ptr]
 TEST(AllocationExamples, UnownedPtr) {
   fuchsia_examples::wire::JsonValue val;
