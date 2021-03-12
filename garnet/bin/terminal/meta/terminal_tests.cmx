@@ -10,7 +10,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/terminal_tests"
+        "binary": "bin/terminal_lib_lib_test"
     },
     "sandbox": {
         "boot": [

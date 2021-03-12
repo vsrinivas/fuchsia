@@ -3,10 +3,9 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -86,21 +85,9 @@ rustc_binary("bin") {
   sources = [ "src/bin/terminal.rs" ]
 }
 
-package("terminal") {
+fuchsia_package_with_single_component("terminal") {
+  manifest = "meta/terminal.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "terminal"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/terminal.cmx")
-      dest = "terminal.cmx"
-    },
-  ]
 }
 
 config_data("tiles_config") {
@@ -108,35 +95,26 @@ config_data("tiles_config") {
   sources = [ "config/tiles.config" ]
 }
 
-test_package("terminal_tests") {
+fuchsia_test_component("terminal_tests_component") {
+  component_name = "terminal_tests"
+  manifest = "meta/terminal_tests.cmx"
   deps = [
     ":lib_test",
     "//src/lib/zircon/rust:exit_with_code_util",
     "//zircon/third_party/uapp/dash",
   ]
-
-  binaries = [
-    {
-      name = "sh"
-    },
-    {
-      name = "exit_with_code_util"
-    },
-  ]
-
-  tests = [
-    {
-      name = "terminal_lib_lib_test"
-      dest = "terminal_tests"
-    },
-  ]
 }
 
-test_package("term_model_tests") {
+fuchsia_test_package("terminal_tests") {
+  test_components = [ ":terminal_tests_component" ]
+}
+
+fuchsia_test_component("term_model_tests_component") {
+  component_name = "term_model_tests"
+  manifest = "meta/term_model_lib_test.cmx"
   deps = [ "third_party/term-model:term-model_test" ]
-  tests = [
-    {
-      name = "term_model_lib_test"
-    },
-  ]
+}
+
+fuchsia_test_package("term_model_tests") {
+  test_components = [ ":term_model_tests_component" ]
 }
