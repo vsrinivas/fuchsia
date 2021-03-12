@@ -10,7 +10,7 @@ use {
         sync::Arc,
     },
     async_trait::async_trait,
-    diagnostics_data::{Severity, Timestamp},
+    diagnostics_data::{LogsData, Severity, Timestamp},
     ffx_config::get,
     ffx_core::{ffx_error, ffx_plugin},
     ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, WatchCommand},
@@ -53,7 +53,8 @@ struct LogFilterCriteria {
     monikers: Vec<Arc<ComponentSelector>>,
     exclude_monikers: Vec<Arc<ComponentSelector>>,
     min_severity: Severity,
-    msg: Vec<String>,
+    filters: Vec<String>,
+    excludes: Vec<String>,
 }
 
 impl LogFilterCriteria {
@@ -61,17 +62,28 @@ impl LogFilterCriteria {
         monikers: Vec<Arc<ComponentSelector>>,
         exclude_monikers: Vec<Arc<ComponentSelector>>,
         min_severity: Severity,
-        msg: Vec<String>,
+        filters: Vec<String>,
+        excludes: Vec<String>,
     ) -> Self {
-        Self { monikers, exclude_monikers, min_severity: min_severity, msg }
+        Self { monikers, exclude_monikers, min_severity: min_severity, filters, excludes }
+    }
+
+    fn matches_filter(f: &str, log: &LogsData) -> bool {
+        return log.msg().as_ref().unwrap_or(&"").contains(f)
+            || log.metadata.component_url.contains(f)
+            || log.moniker.contains(f);
     }
 
     fn matches(&self, entry: &LogEntry) -> bool {
         match entry {
             LogEntry { data: LogData::TargetLog(data), .. } => {
-                if !(self.msg.is_empty()
-                    || self.msg.iter().any(|m| data.msg().as_ref().unwrap_or(&"").contains(m)))
+                if self.filters.len() > 0
+                    && !self.filters.iter().any(|m| Self::matches_filter(m, &data))
                 {
+                    return false;
+                }
+
+                if self.excludes.iter().any(|m| Self::matches_filter(m, &data)) {
                     return false;
                 }
 
@@ -124,7 +136,8 @@ impl From<&LogCommand> for LogFilterCriteria {
             cmd.moniker.clone().into_iter().map(|m| Arc::new(m)).collect(),
             cmd.exclude_moniker.clone().into_iter().map(|m| Arc::new(m)).collect(),
             cmd.min_severity,
-            cmd.msg_contains.clone(),
+            cmd.filter.clone(),
+            cmd.exclude.clone(),
         )
     }
 }
@@ -306,6 +319,7 @@ mod test {
 
     const DEFAULT_TS: u64 = 1234567;
     const DEFAULT_TARGET_STR: &str = "target-target";
+    const DEFAULT_COMPONENT_URL: &str = "fake-url";
 
     struct FakeLogFormatter {
         pushed_logs: Vec<ArchiveIteratorResult>,
@@ -376,7 +390,11 @@ mod test {
         }
     }
 
-    fn make_log(moniker: &str, msg: &str, severity: Severity) -> LogData {
+    fn make_log_with_default_url(moniker: &str, msg: &str, severity: Severity) -> LogData {
+        make_log(moniker, msg, DEFAULT_COMPONENT_URL, severity)
+    }
+
+    fn make_log(moniker: &str, msg: &str, component_url: &str, severity: Severity) -> LogData {
         let hierarchy = DiagnosticsHierarchy::new(
             "root",
             vec![Property::String(LogsField::Msg, msg.to_string())],
@@ -386,7 +404,7 @@ mod test {
             String::from(moniker),
             Some(hierarchy),
             Timestamp::from(1u64),
-            String::from("fake-url"),
+            String::from(component_url),
             severity,
             1,
             vec![],
@@ -396,7 +414,8 @@ mod test {
     fn empty_log_command(sub_cmd: LogSubCommand) -> LogCommand {
         LogCommand {
             cmd: sub_cmd,
-            msg_contains: vec![],
+            filter: vec![],
+            exclude: vec![],
             color: None,
             moniker: vec![],
             exclude_moniker: vec![],
@@ -508,36 +527,37 @@ mod test {
         let cmd = LogCommand {
             cmd: LogSubCommand::Dump(DumpCommand {}),
             color: None,
-            moniker: vec![parse_component_selector(&"included/*".to_string()).unwrap()],
+            moniker: vec![],
             exclude_moniker: vec![],
-            msg_contains: vec!["included".to_string()],
+            filter: vec!["included".to_string()],
+            exclude: vec!["not this".to_string()],
             min_severity: Severity::Error,
         };
         let criteria = LogFilterCriteria::from(&cmd);
 
-        assert!(criteria.matches(&make_log_entry(make_log(
+        assert!(criteria.matches(&make_log_entry(make_log_with_default_url(
             "included/moniker",
             "included message",
             Severity::Error
         ))));
-        assert!(criteria.matches(&make_log_entry(make_log(
+        assert!(criteria.matches(&make_log_entry(make_log_with_default_url(
             "included/moniker",
             "included message",
             Severity::Fatal
         ))));
-        assert!(!criteria.matches(&make_log_entry(make_log(
-            "included/moniker",
+        assert!(!criteria.matches(&make_log_entry(make_log_with_default_url(
+            "not/this/moniker",
             "different message",
             Severity::Error
         ))));
-        assert!(!criteria.matches(&make_log_entry(make_log(
+        assert!(!criteria.matches(&make_log_entry(make_log_with_default_url(
             "included/moniker",
             "included message",
             Severity::Warn
         ))));
-        assert!(!criteria.matches(&make_log_entry(make_log(
+        assert!(!criteria.matches(&make_log_entry(make_log_with_default_url(
             "other/moniker",
-            "included message",
+            "not this message",
             Severity::Error
         ))));
     }
@@ -549,22 +569,23 @@ mod test {
             color: None,
             moniker: vec![],
             exclude_moniker: vec![],
-            msg_contains: vec![],
+            filter: vec![],
+            exclude: vec![],
             min_severity: Severity::Info,
         };
         let criteria = LogFilterCriteria::from(&cmd);
 
-        assert!(criteria.matches(&make_log_entry(make_log(
+        assert!(criteria.matches(&make_log_entry(make_log_with_default_url(
             "included/moniker",
             "included message",
             Severity::Error
         ))));
-        assert!(criteria.matches(&make_log_entry(make_log(
+        assert!(criteria.matches(&make_log_entry(make_log_with_default_url(
             "included/moniker",
             "different message",
             Severity::Info
         ))));
-        assert!(!criteria.matches(&make_log_entry(make_log(
+        assert!(!criteria.matches(&make_log_entry(make_log_with_default_url(
             "other/moniker",
             "included message",
             Severity::Debug
@@ -581,22 +602,23 @@ mod test {
                 parse_component_selector(&"als*/moniker".to_string()).unwrap(),
             ],
             exclude_moniker: vec![],
-            msg_contains: vec![],
+            filter: vec![],
+            exclude: vec![],
             min_severity: Severity::Info,
         };
         let criteria = LogFilterCriteria::from(&cmd);
 
-        assert!(criteria.matches(&make_log_entry(make_log(
+        assert!(criteria.matches(&make_log_entry(make_log_with_default_url(
             "included/moniker",
             "included message",
             Severity::Error
         ))));
-        assert!(criteria.matches(&make_log_entry(make_log(
+        assert!(criteria.matches(&make_log_entry(make_log_with_default_url(
             "also/moniker",
             "different message",
             Severity::Error
         ))));
-        assert!(!criteria.matches(&make_log_entry(make_log(
+        assert!(!criteria.matches(&make_log_entry(make_log_with_default_url(
             "other/moniker",
             "included message",
             Severity::Error
@@ -604,28 +626,34 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_criteria_multiple_message_matches() {
+    async fn test_criteria_multiple_matches() {
         let cmd = LogCommand {
             cmd: LogSubCommand::Dump(DumpCommand {}),
             color: None,
             moniker: vec![],
             exclude_moniker: vec![],
-            msg_contains: vec!["included".to_string(), "also".to_string()],
+            filter: vec!["included".to_string(), "also".to_string()],
+            exclude: vec![],
             min_severity: Severity::Info,
         };
         let criteria = LogFilterCriteria::from(&cmd);
 
-        assert!(criteria.matches(&make_log_entry(make_log(
+        assert!(criteria.matches(&make_log_entry(make_log_with_default_url(
             "moniker",
             "included message",
             Severity::Error
         ))));
-        assert!(criteria.matches(&make_log_entry(make_log(
+        assert!(criteria.matches(&make_log_entry(make_log_with_default_url(
             "moniker",
             "also message",
             Severity::Info
         ))));
-        assert!(!criteria.matches(&make_log_entry(make_log(
+        assert!(criteria.matches(&make_log_entry(make_log_with_default_url(
+            "included/moniker",
+            "not in there message",
+            Severity::Info
+        ))));
+        assert!(!criteria.matches(&make_log_entry(make_log_with_default_url(
             "moniker",
             "different message",
             Severity::Error
@@ -642,24 +670,88 @@ mod test {
                 parse_component_selector(&"included/*".to_string()).unwrap(),
                 parse_component_selector(&"als*/moniker".to_string()).unwrap(),
             ],
-            msg_contains: vec![],
+            filter: vec![],
+            exclude: vec![],
             min_severity: Severity::Info,
         };
         let criteria = LogFilterCriteria::from(&cmd);
 
-        assert!(!criteria.matches(&make_log_entry(make_log(
+        assert!(!criteria.matches(&make_log_entry(make_log_with_default_url(
             "included/moniker.cmx:12345",
             "included message",
             Severity::Error
         ))));
-        assert!(!criteria.matches(&make_log_entry(make_log(
+        assert!(!criteria.matches(&make_log_entry(make_log_with_default_url(
             "also/moniker",
             "different message",
             Severity::Error
         ))));
-        assert!(criteria.matches(&make_log_entry(make_log(
+        assert!(criteria.matches(&make_log_entry(make_log_with_default_url(
             "other/moniker",
             "included message",
+            Severity::Error
+        ))));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_criteria_multiple_excludes() {
+        let cmd = LogCommand {
+            cmd: LogSubCommand::Dump(DumpCommand {}),
+            color: None,
+            moniker: vec![],
+            exclude_moniker: vec![],
+            filter: vec![],
+            exclude: vec![".cmx".to_string(), "also".to_string()],
+            min_severity: Severity::Info,
+        };
+        let criteria = LogFilterCriteria::from(&cmd);
+
+        assert!(!criteria.matches(&make_log_entry(make_log_with_default_url(
+            "included/moniker.cmx:12345",
+            "included message",
+            Severity::Error
+        ))));
+        assert!(!criteria.matches(&make_log_entry(make_log_with_default_url(
+            "also/moniker",
+            "different message",
+            Severity::Error
+        ))));
+        assert!(criteria.matches(&make_log_entry(make_log_with_default_url(
+            "other/moniker",
+            "included message",
+            Severity::Error
+        ))));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_criteria_matches_component_url() {
+        let cmd = LogCommand {
+            cmd: LogSubCommand::Dump(DumpCommand {}),
+            color: None,
+            moniker: vec![],
+            exclude_moniker: vec![],
+            filter: vec!["fuchsia.com".to_string()],
+            exclude: vec!["not-this-component.cmx".to_string()],
+            min_severity: Severity::Info,
+        };
+        let criteria = LogFilterCriteria::from(&cmd);
+
+        assert!(criteria.matches(&make_log_entry(make_log(
+            "any/moniker",
+            "message",
+            "fuchsia.com/this-component.cmx",
+            Severity::Error
+        ))));
+        assert!(!criteria.matches(&make_log_entry(make_log(
+            "any/moniker",
+            "message",
+            "fuchsia.com/not-this-component.cmx",
+            Severity::Error
+        ))));
+        assert!(!criteria.matches(&make_log_entry(make_log(
+            "any/moniker",
+            "message",
+            "some-other.com/component.cmx",
             Severity::Error
         ))));
     }

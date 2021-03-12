@@ -32,18 +32,28 @@ Dump the most recent logs and stream new ones as they happen:
 Stream new logs without dumping recent ones, filtering for severity of at least \"WARN\":
   $ ffx target log --min-severity warn watch --dump false
 
-Dump all logs from components matching a moniker:
-  $ ffx target log --moniker \"core/remote-control\" dump
+Dump all logs from components with a moniker, url, or message containing \"remote-control\":
+  $ ffx target log --filter remote-control dump
 
-Stream logs from components matching a wildcarded moniker or from klog:
-  $ ffx target log --moniker \"core/remote*\" --moniker \"klog\" watch
+Stream logs from components with moniker, url or message that do not include \"sys\":
+  $ ffx target log --exclude sys watch
 
-Dump logs containing the word \"fuchsia\"
-  $ ffx target log --msg-contains fuchsia dump"
+Dump ERROR logs with moniker, url or message containing either \"klog\" or \"remote-control.cm\",
+but which do not contain \"sys\":
+  $ ffx target log --min-severity error --filter klog --filter remote-control.cm --exclude sys dump
+
+Dump logs with monikers matching component selectors, instead of text matches:
+  $ ffx target log --moniker \"core/remote-*\" --exclude-moniker \"sys/*\" dump"
 )]
 pub struct LogCommand {
     #[argh(subcommand)]
     pub cmd: LogSubCommand,
+    /// filter for a string in either the message, component or url.
+    #[argh(option)]
+    pub filter: Vec<String>,
+    /// exclude a string in either the message, component or url.
+    #[argh(option)]
+    pub exclude: Vec<String>,
 
     /// toggle coloring logs according to severity
     #[argh(option)]
@@ -62,9 +72,6 @@ pub struct LogCommand {
         description = "exclude log entries matching a component selector"
     )]
     pub exclude_moniker: Vec<ComponentSelector>,
-    /// filter for words in the message body
-    #[argh(option)]
-    pub msg_contains: Vec<String>,
     /// set the minimum severity
     #[argh(option, default = "Severity::Info")]
     pub min_severity: Severity,
