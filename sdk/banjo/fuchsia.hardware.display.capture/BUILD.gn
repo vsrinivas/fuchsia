@@ -5,7 +5,6 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.display.capture") {
-  translate_to_fidl = true
   sources = [ "display-capture.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }

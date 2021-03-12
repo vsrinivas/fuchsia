@@ -54,7 +54,7 @@ struct SdioHwInfo {
     uint32 host_max_transfer_size;
 };
 
-struct SdioRwTxnNew {
+resource struct SdioRwTxnNew {
     uint32 addr;
     bool incr;
     bool write;
@@ -62,7 +62,7 @@ struct SdioRwTxnNew {
     vector<fuchsia.hardware.sdmmc.SdmmcBufferRegion> buffers;
 };
 
-struct SdioRwTxn {
+resource struct SdioRwTxn {
     uint32 addr;
     uint32 data_size;
     bool incr;

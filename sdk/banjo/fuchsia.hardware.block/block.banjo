@@ -146,7 +146,7 @@ struct BlockFifoResponse {
 // Note: this data structure is used for the driver <--> driver interfaces, while
 // BlockFifoRequest above is part of a client <--> server interface and related
 // to the block FIDL API.
-struct BlockReadWrite {
+resource struct BlockReadWrite {
     /// Command and flags.
     uint32 command;
 
@@ -178,7 +178,7 @@ struct BlockTrim {
     uint64 offset_dev;
 };
 
-union BlockOp {
+resource union BlockOp {
     /// All Commands
     1: uint32 command;
 

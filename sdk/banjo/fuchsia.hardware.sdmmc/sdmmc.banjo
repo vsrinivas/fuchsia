@@ -37,7 +37,7 @@ enum SdmmcTiming : uint8 {
     MAX = 10;
 };
 
-union SdmmcBuffer {
+resource union SdmmcBuffer {
     /// The ID of a VMO that was previously registered.
     1: uint32 vmo_id;
     /// An unregistered VMO of which the protocol implementation does not take ownership. The VMO is
@@ -50,7 +50,7 @@ enum SdmmcBufferType : uint32 {
     VMO_HANDLE = 2;
 };
 
-struct SdmmcBufferRegion {
+resource struct SdmmcBufferRegion {
     SdmmcBuffer buffer;
     SdmmcBufferType type;
     /// Offset into the VMO to start reading or writing. This is relative to the offset passed to
@@ -60,7 +60,7 @@ struct SdmmcBufferRegion {
     uint64 size;
 };
 
-struct SdmmcReqNew {
+resource struct SdmmcReqNew {
     uint32 cmd_idx;
     uint32 cmd_flags;
     uint32 arg;
@@ -83,7 +83,7 @@ struct SdmmcReqNew {
 const uint64 SDMMC_PAGES_COUNT = 512;
 
 /// sdmmc requests. one per command
-struct SdmmcReq {
+resource struct SdmmcReq {
     uint32 cmd_idx;
     uint32 cmd_flags;
     uint32 arg;
@@ -171,7 +171,6 @@ protocol Sdmmc {
     /// In the methods below, vmo_id is used to uniquely identify a VMO that will be passed to
     /// Request in an SdmmcBufferRegion. VMO IDs are chosen by the caller, and may be any uint32
     /// value.
-
     /// Registers a VMO and transfers ownership to the protocol implementation. vmo_rights is a bit
     /// field containing SdmmcVmoRight values, and determines the read/write permissions used by
     /// the implementation when pinning or mapping the VMO. The implementation may pin vmo during

@@ -12,7 +12,7 @@ file = { SOI ~ contents ~ EOI }
 
 contents = _{ library_header ~ (using_list)* ~ declaration_list }
 
-library_header = { "library" ~ compound_ident ~ ";" }
+library_header = { (doc_comment_block)? ~ "library" ~ compound_ident ~ ";" }
 
 using_list = _{ using | using_decl }
 using_decl  = { "using" ~ compound_ident ~ "=" ~ primitive_type ~ ";" }

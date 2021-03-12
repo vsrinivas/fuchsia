@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be found
 // in the LICENSE file.
 
-library ddk.hw.wlan.ieee80211;
-
 /// This header contains structs and enums derived from the IEEE 802.11
 /// specification, in particular IEEE Std 802.11-2016. Accordingly:
 ///
 /// * All uses of declarations from 802.11-2016 should be placed in this file.
 /// * This file should not contain anything that is not explicitly defined in
 ///   802.11-2016.
+library ddk.hw.wlan.ieee80211;
 
 /// IEEE Std 802.11-2016, 9.4.2.2
 const uint32 IEEE80211_SSID_LEN_MAX = 32;

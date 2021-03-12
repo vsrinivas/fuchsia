@@ -20,7 +20,7 @@ const uint16 HID_MAX_REPORT_IDS = 256;
 protocol HidReportListener {
     /// Sends a single report to the listener. This comes with a timestamp that was gotten
     /// from the computer's monotonic clock.
-    ReceiveReport(vector<uint8>:MAX_REPORT_LEN report, zx.time report_time);
+    ReceiveReport(vector<uint8>:HID_MAX_REPORT_LEN report, zx.time report_time);
 };
 
 struct HidDeviceInfo {
@@ -40,15 +40,15 @@ protocol HidDevice {
 
     GetHidDeviceInfo() -> (HidDeviceInfo info);
 
-    GetDescriptor() -> (zx.status s, vector<uint8>:MAX_DESC_LEN descriptor);
+    GetDescriptor() -> (zx.status s, vector<uint8>:HID_MAX_DESC_LEN descriptor);
 
     /// Request a given report. Can be used to get FEATURE and INPUT reports. Getting an OUTPUT
     /// report is an error. This should be used most frequently to get FEATURE reports,
     /// since most devices will send normal INPUT reports through the Listener API.
-    GetReport(HidReportType rpt_type, uint8 rpt_id) -> (zx.status s, vector<uint8>:MAX_REPORT_LEN
+    GetReport(HidReportType rpt_type, uint8 rpt_id) -> (zx.status s, vector<uint8>:HID_MAX_REPORT_LEN
             report);
 
     /// Set a given report. Only FEATURE and OUTPUT type reports can be set. Setting an INPUT
     /// report is an error.
-    SetReport(HidReportType rpt_type, uint8 rpt_id, vector<uint8>:MAX_REPORT_LEN report) -> (zx.status s);
+    SetReport(HidReportType rpt_type, uint8 rpt_id, vector<uint8>:HID_MAX_REPORT_LEN report) -> (zx.status s);
 };

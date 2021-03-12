@@ -16,7 +16,7 @@ struct MaliProperties {
 };
 
 /// Low-level protocol between ARM Mali GPU driver and low-level SoC driver.
-[Layout = "ddk-protocol"]
+[BanjoLayout = "ddk-protocol"]
 protocol ArmMali {
     GetProperties() -> (MaliProperties properties);
 

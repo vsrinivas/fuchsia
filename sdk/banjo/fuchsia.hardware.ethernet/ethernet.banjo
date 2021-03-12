@@ -15,8 +15,6 @@ const uint32 ETH_FRAME_MAX_SIZE = 1518;
 /// proto->queue_tx() and ifc->complete_tx() methods.
 ///
 /// Receive operations are supported with the ifc->recv() interface.
-// TODO: implement netbuf-based receive operations by implementing proto->queue_rx() and
-// ifc->complete_rx()
 ///
 /// The FEATURE_WLAN flag indicates a device that supports wlan operations.
 ///
@@ -24,6 +22,8 @@ const uint32 ETH_FRAME_MAX_SIZE = 1518;
 ///
 /// The FEATURE_DMA flag indicates that the device can copy the buffer data using DMA and will ensure
 /// that physical addresses are provided in netbufs.
+// TODO: implement netbuf-based receive operations by implementing proto->queue_rx() and
+// ifc->complete_rx()
 enum EthernetFeature : uint32 {
     WLAN = 0x1;
     SYNTH = 0x2;
@@ -74,7 +74,7 @@ const uint32 ETHERNET_TX_OPT_MORE = 1;
 /// SETPARAM_ values identify the parameter to set. Each call to set_param()
 /// takes an int32_t |value| and uint8_t* |data| which have meaning specific to
 /// the parameter being set.
-
+///
 /// |value| is bool. |data| is unused.
 const uint32 ETHERNET_SETPARAM_PROMISC = 1;
 

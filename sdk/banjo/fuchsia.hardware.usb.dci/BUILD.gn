@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.usb.dci") {
+  translate_to_fidl = false
   sources = [ "usb-dci.banjo" ]
   deps = [
     "//sdk/banjo/ddk.hw.physiter",

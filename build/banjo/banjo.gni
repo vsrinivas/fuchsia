@@ -36,7 +36,7 @@ import("//build/rust/toolchain.gni")
 #     Whether to add extra targets presenting this library as a FIDL library.
 #     This is part of the Banjo deprecation effort and should not be used in
 #     any other context.
-#     Defaults to false.
+#     Defaults to true.
 
 template("banjo") {
   if (defined(invoker.sdk_category)) {
@@ -73,7 +73,7 @@ template("banjo") {
            "Unable to process BANJO target in toolchain $current_toolchain.")
   }
 
-  if (defined(invoker.translate_to_fidl) && invoker.translate_to_fidl) {
+  if (!defined(invoker.translate_to_fidl) || invoker.translate_to_fidl) {
     if (is_fuchsia) {
       # Add an extra set of targets handling Banjo sources as a FIDL library.
       fidl_adapter(target_name) {

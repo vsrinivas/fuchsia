@@ -31,12 +31,12 @@ enum PciIrqMode : uint8 {
     MSI_X = 3;
 };
 
-union PciField {
+resource union PciField {
     1: uint64 addr;
     2: zx.handle:VMO handle;
 };
 
-struct PciBar {
+resource struct PciBar {
     uint32 id;
     uint32 type;
     uint64 size;

@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.hardware.network.device;
-using zx;
-
 /// Generic Network Device interface.
 ///
 /// The definitions herein provide the API surface to expose a hardware device as a network device
@@ -71,6 +68,9 @@ using zx;
 ///  (4) When the data is successfully transmitted, `NetworkDeviceImpl` marks the transmission as
 ///  complete referencing the buffer's identifier to
 ///  [`fuchsia.hardware.network.device/NetworkDeviceIfc.CompleteTx`].
+library fuchsia.hardware.network.device;
+
+using zx;
 
 /// Disables automatic snooping for the device. The generic NetworkDevice layer typically
 /// automatically copies all tx traffic to any snooping clients. Devices may turn off that behavior

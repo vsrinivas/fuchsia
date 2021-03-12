@@ -4,6 +4,8 @@
 
 library fuchsia.hardware.bt.vendor;
 
+using zx;
+
 /// The maximum buffer length an encoded command might require.
 /// Update when adding new commands that might require a larger buffer.
 const uint16 BT_VENDOR_MAX_COMMAND_BUFFER_LEN = 16;
@@ -54,5 +56,5 @@ protocol BtVendor {
     /// documented in `BtVendorCommand`.
     /// Returns an error status if the command is not supported or the paramaters are invalid.
     EncodeCommand(BtVendorCommand command, BtVendorParams params)
-        -> (zx.status status, [Buffer] vector<uint8>:MAX_COMMAND_BUFFER_LEN encoded);
+        -> (zx.status status, [Buffer] vector<uint8>:BT_VENDOR_MAX_COMMAND_BUFFER_LEN encoded);
 };

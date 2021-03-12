@@ -5,7 +5,6 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.acpi") {
-  translate_to_fidl = true
   sources = [ "acpi.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }

@@ -33,7 +33,6 @@ const uint32 USB_FEATURE_C_PORT_OVER_CURRENT   = 19;
 const uint32 USB_FEATURE_C_PORT_RESET          = 20;
 const uint32 USB_FEATURE_PORT_TEST             = 21;
 const uint32 USB_FEATURE_PORT_INDICATOR        = 22;
-const uint32 USB_FEATURE_PORT_INDICATOR        = 22;
 const uint32 USB_FEATURE_PORT_U1_TIMEOUT       = 23;
 const uint32 USB_FEATURE_PORT_U2_TIMEOUT       = 24;
 const uint32 USB_FEATURE_C_PORT_LINK_STATE     = 25;

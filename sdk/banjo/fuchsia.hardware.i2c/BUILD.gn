@@ -5,7 +5,6 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.i2c") {
-  translate_to_fidl = true
   sources = [ "i2c.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }

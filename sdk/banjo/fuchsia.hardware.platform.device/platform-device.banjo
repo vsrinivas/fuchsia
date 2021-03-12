@@ -31,7 +31,7 @@ struct PdevBoardInfo {
     uint32 board_revision;
 };
 
-struct PdevMmio {
+resource struct PdevMmio {
     /// Offset from beginning of VMO where the mmio region begins.
     zx.off offset;
     /// Size of mmio region.

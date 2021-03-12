@@ -2,11 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.hardware.nand;
-
-using fuchsia.hardware.nandinfo;
-using zx;
-
 /// NandOperation's are submitted for processing via the queue() method of the
 /// Nand Protocol. Once submitted, the contents of the NandOperation may be modified
 /// while it's being processed.
@@ -19,6 +14,10 @@ using zx;
 /// possible to obtain a value that is larger than what is being read (in the oob
 /// case). On the other hand, if errors cannot be corrected, the operation will
 /// fail, and corrected_bit_flips will be undefined.
+library fuchsia.hardware.nand;
+
+using fuchsia.hardware.nandinfo;
+using zx;
 
 /// NOTE: The protocol can be extended with barriers to support controllers that
 /// may issue multiple simultaneous request to the IO chips.
@@ -53,7 +52,7 @@ enum NandOp : uint32 {
 ///
 /// will transfer pages [20, 24] to the first 2048 * 5 bytes of the vmo,
 /// followed by 16 * 5 bytes of OOB data starting at offset 2048 * 5.
-struct NandReadWrite {
+resource struct NandReadWrite {
     /// Command.
     NandOp command;
 
@@ -94,7 +93,7 @@ struct NandErase {
     uint32 num_blocks;
 };
 
-union NandOperation {
+resource union NandOperation {
     /// All Commands.
     1: NandOp command;
 
