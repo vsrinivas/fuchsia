@@ -35,4 +35,8 @@ void __chkstk(void);
 #define _byteswap_ulong __builtin_bswap32
 #define _byteswap_uint64 __builtin_bswap64
 
+// stdlib functions needed for libavb.
+
+void abort(void) __attribute__((__noreturn__));
+
 #endif  // SRC_FIRMWARE_GIGABOOT_INCLUDE_STDLIB_H_

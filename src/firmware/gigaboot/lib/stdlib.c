@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <assert.h>
 #include <ctype.h>
 #include <printf.h>
 #include <stdbool.h>
@@ -67,3 +68,8 @@ void* memmove(void* dest, const void* src, size_t count) {
 }
 
 void __chkstk(void) {}
+
+void abort(void) {
+  printf("Fatal: abort() called\n");
+  assert(false);
+}

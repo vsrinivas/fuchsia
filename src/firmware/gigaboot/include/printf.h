@@ -27,6 +27,8 @@ int snprintf(char *str, size_t len, const char *fmt, ...) __PRINTFLIKE(3, 4);
 int vsprintf(char *str, const char *fmt, va_list ap);
 int vsnprintf(char *str, size_t len, const char *fmt, va_list ap);
 
+#define fprintf(fd, x...) printf(x)
+
 /* printf engine that parses the format string and generates output */
 
 /* function pointer to pass the printf engine, called back during the formatting.

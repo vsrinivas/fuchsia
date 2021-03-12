@@ -30,6 +30,7 @@ source_set("src") {
   deps = [
     "../lib",
     "//src/firmware/lib/abr",
+    "//third_party/android/platform/external/avb",
     "//zircon/kernel/lib/efi",
     "//zircon/system/public",
     "//zircon/system/ulib/gfx-font-data",
