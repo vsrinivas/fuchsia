@@ -106,11 +106,6 @@ template("boot_shim") {
           },
         ]
       }
-
-      # Use the same variant for the extraction that will have built the shim.
-      variant_target = {
-        match = "executable"
-      }
     }
   } else {
     group(board) {

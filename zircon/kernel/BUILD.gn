@@ -412,13 +412,6 @@ if (is_kernel) {
       link_output_path = [ output_path ]
       link_output_barrier = []
     }
-
-    # Use the same variant for the extraction that will have built the kernel.
-    variant_target = {
-      match = "executable"
-      label = ":zircon"
-      output_name = "zircon"
-    }
   }
 
   image_rspfile = "$target_gen_dir/image.rsp"
@@ -468,13 +461,6 @@ if (is_kernel) {
       rebase_path(outputs[0], root_build_dir),
       rebase_path(depfile, root_build_dir),
     ]
-
-    # Use the same variant for the extraction that will have built the kernel.
-    variant_target = {
-      match = "executable"
-      label = ":zircon"
-      output_name = "zircon"
-    }
   }
 
   # Link the final kernel image layout including the extracted raw binary
@@ -575,13 +561,6 @@ if (is_kernel) {
           output_path,
         ]
       }
-    }
-
-    # Use the same variant for the extraction that will have built the kernel.
-    variant_target = {
-      match = "executable"
-      label = ":zircon"
-      output_name = "zircon"
     }
   }
 

@@ -29,17 +29,6 @@ import("//build/config/clang/clang.gni")
 #   depfile, deps, inputs, outputs, sources, testonly, visibility
 #      See action().
 #
-#   variant_target
-#     Optional: If present, this target will participate in $variants
-#     selection.  This scope is passed through to _variant_target() as
-#     $target to control how the selector matching is done.  The main
-#     effect of this variant selection is on where the $utils will be
-#     found (e.g. clang with LLVM utilities vs gcc with GNU binutils).
-#     It also affects the toolchain context in which this target is
-#     evaluated, but usually the inputs/deps will themselves be targets
-#     like executable() that will do their own variant dispatch.
-#     Type: scope, see _variant_target() for details.
-#
 # Notes on response files
 #
 # When using "@rspfile" command-line syntax, its crucial that any input
@@ -66,19 +55,6 @@ template("toolchain_utils_action") {
   target_type = "action"
   extra_params = {
   }
-
-  # `variant_target` is completely ignored in the Fuchsia build.
-  # The main reason for this is that it is used primarily to run
-  # the action() in a toolchain built from the same variant as the
-  # one that applies to the kernel (or more exactly, anything with
-  # an `output_name` or `label` of "zircon").
-  #
-  # However, in practice, this is always the same variant that is
-  # applied to the current toolchain instance. Since the Zircon build
-  # has become a secondary child of the Fuchsia build, it lost the
-  # ability to apply per-output or per-label variants anyway, proving
-  # that this feature was seldom used.
-  not_needed(invoker, [ "variant_target" ])
 
   forward_variables_from(invoker, [ "script" ])
 
@@ -214,20 +190,13 @@ template("link_output_rspfile") {
 #     Type: bool
 #     Default: false
 #
-#   variant_target
-#     See toolchain_utils_action().
-#
 template("image_binary") {
   image_target = target_name
   rspfile_target = "_image_binary.rsp.$target_name"
   rspfile = "$target_gen_dir/$target_name.image.rsp"
   check_target = "_image_binary.pure-check.$target_name"
 
-  # It's a _variant_target() so it has the _build subtarget.
-  image_target_visibility = [
-    ":$image_target",
-    ":$image_target._build",
-  ]
+  image_target_visibility = [ ":$image_target" ]
 
   link_output_rspfile(rspfile_target) {
     forward_variables_from(invoker,
@@ -272,7 +241,6 @@ template("image_binary") {
                              "output_extension",
                              "output_name",
                              "testonly",
-                             "variant_target",
                              "visibility",
                            ])
     if (!defined(output_dir)) {
