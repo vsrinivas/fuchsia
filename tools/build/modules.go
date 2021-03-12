@@ -32,7 +32,7 @@ type Modules struct {
 	sdkArchives        []SDKArchive
 	testSpecs          []TestSpec
 	testDurations      []TestDuration
-	tools              []Tool
+	tools              Tools
 	zbiTests           []ZBITest
 }
 
@@ -222,7 +222,7 @@ func (m Modules) TestManifest() string {
 	return filepath.Join(m.BuildDir(), "tests.json")
 }
 
-func (m Modules) Tools() []Tool {
+func (m Modules) Tools() Tools {
 	return m.tools
 }
 

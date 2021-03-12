@@ -6,6 +6,7 @@ package fint
 
 import (
 	"context"
+	"fmt"
 	"os"
 	"sort"
 
@@ -31,6 +32,7 @@ type buildModules interface {
 	Images() []build.Image
 	PrebuiltBinarySets() []build.PrebuiltBinarySet
 	TestSpecs() []build.TestSpec
+	Tools() build.Tools
 	ZBITests() []build.ZBITest
 }
 
@@ -48,7 +50,10 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	}
 
 	runner := &runner.SubprocessRunner{}
-	targets := constructNinjaTargets(modules, staticSpec)
+	targets, err := constructNinjaTargets(modules, staticSpec, platform)
+	if err != nil {
+		return err
+	}
 
 	ninjaPath := thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja")
 	cmd := []string{ninjaPath, "-C", contextSpec.BuildDir}
@@ -56,7 +61,7 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 	return runner.Run(ctx, cmd, os.Stdout, os.Stderr)
 }
 
-func constructNinjaTargets(modules buildModules, staticSpec *fintpb.Static) []string {
+func constructNinjaTargets(modules buildModules, staticSpec *fintpb.Static, platform string) ([]string, error) {
 	var targets []string
 
 	if staticSpec.IncludeImages {
@@ -109,10 +114,24 @@ func constructNinjaTargets(modules buildModules, staticSpec *fintpb.Static) []st
 		}
 	}
 
+	if len(staticSpec.Tools) != 0 {
+		// We only support specifying tools for the current platform. Tools
+		// needed for other platforms can be included in the build indirectly
+		// via higher-level targets.
+		availableTools := modules.Tools().AsMap(platform)
+		for _, toolName := range staticSpec.Tools {
+			tool, ok := availableTools[toolName]
+			if !ok {
+				return nil, fmt.Errorf("tool %q with platform %q does not exist", toolName, platform)
+			}
+			targets = append(targets, tool.Path)
+		}
+	}
+
 	targets = append(targets, staticSpec.NinjaTargets...)
 
 	sort.Strings(targets)
-	return targets
+	return targets, nil
 }
 
 // isTestingImage determines whether an image is necessary for testing Fuchsia.

@@ -21,13 +21,13 @@ func (m mockToolModules) BuildDir() string {
 	return "BUILD_DIR"
 }
 
-func (m mockToolModules) Tools() []build.Tool {
+func (m mockToolModules) Tools() build.Tools {
 	return m.tools
 }
 
 func TestToolUploads(t *testing.T) {
 	m := &mockToolModules{
-		tools: []build.Tool{
+		tools: build.Tools{
 			{
 				Name: "A",
 				Path: filepath.Join("host_arm64", "A"),

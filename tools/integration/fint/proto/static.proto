@@ -87,36 +87,40 @@ message Static {
   // Whether to include archives in the build.
   bool include_archives = 18;
 
+  // Names of tools referenced in tool_paths.json that we should build with
+  // Ninja. We assume that we should build each tool for the current OS and CPU.
+  repeated string tools = 19;
+
   // Whether to skip the ninja build if we're running in CQ and none of the
   // changed files affect the build.
-  bool skip_if_unaffected = 19;
+  bool skip_if_unaffected = 20;
 
   // The path within the checkout of a file containing historical test duration
   // data specific to the current build config.
-  string test_durations_file = 20;
+  string test_durations_file = 21;
 
   // If `test_durations_file` doesn't exist within the checkout, use this file
   // instead. It's not specific to the current build config, but it can be
   // assumed to always exist.
-  string default_test_durations_file = 21;
+  string default_test_durations_file = 22;
 
   // Whether to use goma for running ninja. Will be ignored (and goma will not
   // be used) when building with some experimental toolchain versions.
-  bool use_goma = 22;
+  bool use_goma = 23;
 
   // Whether to generate a listing of the commands run during the build.
-  bool generate_compdb = 23;
+  bool generate_compdb = 24;
 
   // Whether to use a go cache when building.
-  bool enable_go_cache = 24;
+  bool enable_go_cache = 25;
 
   // Whether to use a rust cache when building.
-  bool enable_rust_cache = 25;
+  bool enable_rust_cache = 26;
 
   // Which IDE files to generate.
-  repeated string ide_files = 26;
+  repeated string ide_files = 27;
 
   // Passed to --json-ide-script GN flag; GN will execute each of these scripts
   // after regenerating the project.json IDE file.
-  repeated string json_ide_scripts = 27;
+  repeated string json_ide_scripts = 28;
 }

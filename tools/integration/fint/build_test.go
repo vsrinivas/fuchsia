@@ -5,6 +5,7 @@
 package fint
 
 import (
+	"fmt"
 	"sort"
 	"testing"
 
@@ -19,6 +20,7 @@ type fakeBuildModules struct {
 	images           []build.Image
 	pbinSets         []build.PrebuiltBinarySet
 	testSpecs        []build.TestSpec
+	tools            build.Tools
 	zbiTests         []build.ZBITest
 }
 
@@ -27,6 +29,7 @@ func (m fakeBuildModules) GeneratedSources() []string                    { retur
 func (m fakeBuildModules) Images() []build.Image                         { return m.images }
 func (m fakeBuildModules) PrebuiltBinarySets() []build.PrebuiltBinarySet { return m.pbinSets }
 func (m fakeBuildModules) TestSpecs() []build.TestSpec                   { return m.testSpecs }
+func (m fakeBuildModules) Tools() build.Tools                            { return m.tools }
 func (m fakeBuildModules) ZBITests() []build.ZBITest                     { return m.zbiTests }
 
 func TestConstructNinjaTargets(t *testing.T) {
@@ -35,6 +38,7 @@ func TestConstructNinjaTargets(t *testing.T) {
 		staticSpec      *fintpb.Static
 		modules         fakeBuildModules
 		expectedTargets []string
+		expectErr       bool
 	}{
 		{
 			name:            "empty spec produces no ninja targets",
@@ -127,15 +131,71 @@ func TestConstructNinjaTargets(t *testing.T) {
 			},
 			expectedTargets: []string{"manifest1.json", "manifest2.json"},
 		},
+		{
+			name: "tools included",
+			staticSpec: &fintpb.Static{
+				Tools: []string{"tool1", "tool2"},
+			},
+			modules: fakeBuildModules{
+				tools: makeTools(map[string][]string{
+					"tool1": {"linux", "mac"},
+					"tool2": {"linux"},
+					"tool3": {"linux", "mac"},
+				}),
+			},
+			expectedTargets: []string{"linux_x64/tool1", "linux_x64/tool2"},
+		},
+		{
+			name: "nonexistent tool",
+			staticSpec: &fintpb.Static{
+				Tools: []string{"tool1"},
+			},
+			expectErr: true,
+		},
+		{
+			name: "tool not supported on current platform",
+			staticSpec: &fintpb.Static{
+				Tools: []string{"tool1"},
+			},
+			modules: fakeBuildModules{
+				tools: makeTools(map[string][]string{
+					"tool1": {"mac"},
+				}),
+			},
+			expectErr: true,
+		},
 	}
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			sort.Strings(tc.expectedTargets)
-			got := constructNinjaTargets(tc.modules, tc.staticSpec)
+			got, err := constructNinjaTargets(tc.modules, tc.staticSpec, "linux-x64")
+			if err != nil {
+				if tc.expectErr {
+					return
+				}
+				t.Fatal(err)
+			} else if tc.expectErr {
+				t.Fatalf("Expected an error, but got nil")
+			}
 			if diff := cmp.Diff(tc.expectedTargets, got); diff != "" {
 				t.Fatalf("Got wrong targets (-want +got):\n%s", diff)
 			}
 		})
 	}
+}
+
+func makeTools(supportedOSes map[string][]string) build.Tools {
+	var res build.Tools
+	for toolName, systems := range supportedOSes {
+		for _, os := range systems {
+			res = append(res, build.Tool{
+				Name: toolName,
+				OS:   os,
+				CPU:  "x64",
+				Path: fmt.Sprintf("%s_x64/%s", os, toolName),
+			})
+		}
+	}
+	return res
 }

@@ -16,6 +16,12 @@ func Name() (string, error) {
 	return name(runtime.GOOS, runtime.GOARCH)
 }
 
+// MakeName constructs the canonical name for a platform given its OS and CPU
+// architecture.
+func MakeName(os, arch string) string {
+	return fmt.Sprintf("%s-%s", os, arch)
+}
+
 // name is extracted for testability.
 func name(goOS, goArch string) (string, error) {
 	os, ok := map[string]string{
@@ -34,5 +40,5 @@ func name(goOS, goArch string) (string, error) {
 	if !ok {
 		return "", fmt.Errorf("unsupported GOARCH %q", goArch)
 	}
-	return fmt.Sprintf("%s-%s", os, arch), nil
+	return MakeName(os, arch), nil
 }

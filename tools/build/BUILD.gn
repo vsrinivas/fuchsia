@@ -41,9 +41,12 @@ go_library("build") {
     "tests.go",
     "tests_test.go",
     "tools.go",
+    "tools_test.go",
     "zbi_tests.go",
   ]
   deps = [
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//tools/lib/hostplatform",
     "//tools/lib/jsonutil",
     "//tools/lib/osmisc",
   ]

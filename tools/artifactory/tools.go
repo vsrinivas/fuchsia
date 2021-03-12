@@ -50,5 +50,5 @@ func toolUploads(mods toolModules, allowlist map[string]string, namespace string
 
 type toolModules interface {
 	BuildDir() string
-	Tools() []build.Tool
+	Tools() build.Tools
 }
