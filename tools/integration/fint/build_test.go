@@ -14,12 +14,14 @@ import (
 )
 
 type fakeBuildModules struct {
-	archives []build.Archive
-	images   []build.Image
+	archives  []build.Archive
+	images    []build.Image
+	testSpecs []build.TestSpec
 }
 
-func (m fakeBuildModules) Archives() []build.Archive { return m.archives }
-func (m fakeBuildModules) Images() []build.Image     { return m.images }
+func (m fakeBuildModules) Archives() []build.Archive   { return m.archives }
+func (m fakeBuildModules) Images() []build.Image       { return m.images }
+func (m fakeBuildModules) TestSpecs() []build.TestSpec { return m.testSpecs }
 
 func TestConstructNinjaTargets(t *testing.T) {
 	testCases := []struct {
@@ -68,6 +70,20 @@ func TestConstructNinjaTargets(t *testing.T) {
 				},
 			},
 			expectedTargets: append(extraTargetsForImages, "p.tar.gz", "b.tar", "b.tgz"),
+		},
+		{
+			name: "host tests included",
+			staticSpec: &fintpb.Static{
+				IncludeHostTests: true,
+			},
+			modules: fakeBuildModules{
+				testSpecs: []build.TestSpec{
+					{Test: build.Test{OS: "fuchsia", Path: "fuchsia_path"}},
+					{Test: build.Test{OS: "linux", Path: "linux_path"}},
+					{Test: build.Test{OS: "mac", Path: "mac_path"}},
+				},
+			},
+			expectedTargets: []string{"linux_path", "mac_path"},
 		},
 	}
 

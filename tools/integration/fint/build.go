@@ -28,6 +28,7 @@ var (
 type buildModules interface {
 	Archives() []build.Archive
 	Images() []build.Image
+	TestSpecs() []build.TestSpec
 }
 
 // Build runs `ninja` given a static and context spec. It's intended to be
@@ -78,6 +79,14 @@ func constructNinjaTargets(modules buildModules, staticSpec *fintpb.Static) []st
 			}
 		} else {
 			targets = append(targets, "build/images:updates")
+		}
+	}
+
+	if staticSpec.IncludeHostTests {
+		for _, testSpec := range modules.TestSpecs() {
+			if testSpec.OS != "fuchsia" {
+				targets = append(targets, testSpec.Path)
+			}
 		}
 	}
 
