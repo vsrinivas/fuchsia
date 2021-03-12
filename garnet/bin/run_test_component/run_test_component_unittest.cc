@@ -35,7 +35,6 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(0u, result.matching_urls.size());
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
-    EXPECT_EQ(-1, result.wait_for_utc_timeout);
     EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
   }
 
@@ -51,7 +50,6 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
-    EXPECT_EQ(-1, result.wait_for_utc_timeout);
     EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
   }
 
@@ -68,15 +66,12 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
     EXPECT_EQ(-1, result.timeout);
-    EXPECT_EQ(-1, result.wait_for_utc_timeout);
     EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
   }
 
   {
-    std::vector<const char*> argv = {kBinName,       "--realm-label=kittens",
-                                     "--timeout=30", "--wait-for-utc=10",
-                                     component_url,  "--",
-                                     "myarg1",       "myarg2"};
+    std::vector<const char*> argv = {
+        kBinName, "--realm-label=kittens", "--timeout=30", component_url, "--", "myarg1", "myarg2"};
     auto argc = argv.size();
     auto result = ParseArgs(env_services, argc, argv.data());
     EXPECT_FALSE(result.error) << result.error_msg;
@@ -87,7 +82,6 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("kittens", result.realm_label);
     EXPECT_EQ(30, result.timeout);
-    EXPECT_EQ(10, result.wait_for_utc_timeout);
     EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
   }
 
@@ -108,23 +102,6 @@ TEST(RunTest, ParseArgs) {
   }
 
   {
-    std::vector<const char*> argv = {
-        kBinName, "--wait-for-utc-timeout=invalid", component_url, "--", "myarg1", "myarg2"};
-    auto argc = argv.size();
-    auto result = ParseArgs(env_services, argc, argv.data());
-    EXPECT_TRUE(result.error);
-  }
-
-  {
-    std::vector<const char*> argv = {kBinName,      "--wait-for-utc-timeout=987654321987654321",
-                                     component_url, "--",
-                                     "myarg1",      "myarg2"};
-    auto argc = argv.size();
-    auto result = ParseArgs(env_services, argc, argv.data());
-    EXPECT_TRUE(result.error);
-  }
-
-  {
     std::vector<const char*> argv = {kBinName, "--timeout=100", component_url,
                                      "--",     "myarg1",        "myarg2"};
     auto argc = argv.size();
@@ -137,7 +114,6 @@ TEST(RunTest, ParseArgs) {
     EXPECT_EQ(argv[argc - 1], result.launch_info.arguments->at(1));
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(100, result.timeout);
-    EXPECT_EQ(-1, result.wait_for_utc_timeout);
   }
 
   // timeout out of range

@@ -31,7 +31,6 @@ static constexpr char kLabelArgPrefix[] = "--realm-label=";
 static constexpr char kTimeoutArgPrefix[] = "--timeout=";
 static constexpr char kSeverityArgPrefix[] = "--min-severity-logs=";
 static constexpr char kMaxSeverityArgPrefix[] = "--max-log-severity=";
-static constexpr char kWaitForUtcArgPrefix[] = "--wait-for-utc=";
 
 bool to_bool(std::string str) {
   std::transform(str.begin(), str.end(), str.begin(), ::tolower);
@@ -83,7 +82,6 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
     const size_t kTimeoutArgPrefixLength = strlen(kTimeoutArgPrefix);
     const size_t kSeverityArgPrefixLength = strlen(kSeverityArgPrefix);
     const size_t kMaxSeverityArgPrefixLength = strlen(kMaxSeverityArgPrefix);
-    const size_t kWaitForUtcArgPrefixLength = strlen(kWaitForUtcArgPrefix);
 
     if (argument.substr(0, kLabelArgPrefixLength) == kLabelArgPrefix) {
       result.realm_label = argument.substr(kLabelArgPrefixLength);
@@ -125,19 +123,6 @@ ParseArgsResult ParseArgs(const std::shared_ptr<sys::ServiceDirectory>& services
       if (stream.fail() || result.timeout <= 0) {
         result.error = true;
         result.error_msg = fxl::StringPrintf("\"%s\" is not a valid timeout.", arg.c_str());
-        return result;
-      }
-      url_or_matcher_argi++;
-      continue;
-    }
-
-    if (argument.substr(0, kWaitForUtcArgPrefixLength) == kWaitForUtcArgPrefix) {
-      std::string arg = argument.substr(kWaitForUtcArgPrefixLength);
-      std::istringstream stream(arg);
-      stream >> result.wait_for_utc_timeout;
-      if (stream.fail() || result.wait_for_utc_timeout <= 0) {
-        result.error = true;
-        result.error_msg = fxl::StringPrintf("\"%s\" is not a valid UTC timeout.", arg.c_str());
         return result;
       }
       url_or_matcher_argi++;

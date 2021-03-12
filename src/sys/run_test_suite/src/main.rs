@@ -2,13 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    argh::FromArgs,
-    diagnostics_data::Severity,
-    fidl_fuchsia_test_manager::HarnessMarker,
-    fuchsia_async::{self, TimeoutExt},
-    fuchsia_zircon as zx,
-};
+use {argh::FromArgs, diagnostics_data::Severity, fidl_fuchsia_test_manager::HarnessMarker};
 
 #[derive(FromArgs, Default, PartialEq, Eq, Debug)]
 /// Entry point for executing tests.
@@ -16,14 +10,6 @@ struct Args {
     /// test timeout. Exits with -`ZX_ERR_TIMED_OUT` if the test times out.
     #[argh(option, short = 't')]
     timeout: Option<u32>,
-
-    /// seconds to wait for the UTC clock to start before running tests.
-    /// By default the runner does not wait for the UTC clock. This option is
-    /// intended for use with gtest in CI, which measures test execution time
-    /// using UTC time and will eventually be removed. Tests should in general
-    /// not assume the UTC clock is running.
-    #[argh(option)]
-    wait_for_utc: Option<u32>,
 
     /// test url. Test should implement `fuchsia.test.Suite` protocol.
     #[argh(positional)]
@@ -66,7 +52,6 @@ async fn main() {
 
     let Args {
         timeout,
-        wait_for_utc,
         test_url,
         test_filter,
         also_run_disabled_tests,
@@ -84,20 +69,6 @@ async fn main() {
 
     let harness = fuchsia_component::client::connect_to_service::<HarnessMarker>()
         .expect("connecting to HarnessProxy");
-
-    if let Some(wait_for_utc_timeout) = wait_for_utc {
-        let utc_clock = fuchsia_runtime::duplicate_utc_clock_handle(zx::Rights::WAIT)
-            .expect("retrieving utc handle");
-        let timeout =
-            fuchsia_async::Time::after(zx::Duration::from_seconds(wait_for_utc_timeout.into()));
-        fuchsia_async::OnSignals::new(&utc_clock, zx::Signals::CLOCK_STARTED)
-            .on_timeout(timeout, || {
-                println!("Timed out waiting for UTC clock to start, running test anyway");
-                Ok(zx::Signals::NONE)
-            })
-            .await
-            .expect("waiting for utc clock to start");
-    }
 
     let log_opts = run_test_suite_lib::diagnostics::LogCollectionOptions {
         min_severity: min_severity_logs,
