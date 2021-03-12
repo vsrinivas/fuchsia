@@ -39,13 +39,10 @@ impl FuchsiaPkgResolver {
         component_url: &'a str,
     ) -> Result<ResolvedComponent, ResolverError> {
         // Parse URL.
-        let fuchsia_pkg_url = PkgUrl::parse(component_url)
-            .map_err(|e| ResolverError::url_parse_error(component_url, e))?;
-        let cm_path = Path::new(
-            fuchsia_pkg_url
-                .resource()
-                .ok_or(ResolverError::url_missing_resource_error(component_url))?,
-        );
+        let fuchsia_pkg_url =
+            PkgUrl::parse(component_url).map_err(|e| ResolverError::malformed_url(e))?;
+        let cm_path =
+            Path::new(fuchsia_pkg_url.resource().ok_or(ResolverError::UrlMissingResource)?);
         let package_url = fuchsia_pkg_url.root_url().to_string();
 
         // Resolve package.
@@ -53,31 +50,27 @@ impl FuchsiaPkgResolver {
             .loader
             .load_url(&package_url)
             .await
-            .map_err(|e| ResolverError::component_not_available(component_url, e))?
-            .ok_or(ResolverError::component_not_available(
-                component_url,
-                format_err!("package not available"),
-            ))?;
-        let dir = package.directory.ok_or(ResolverError::component_not_available(
-            component_url,
-            format_err!("package is missing directory handle"),
-        ))?;
+            .map_err(|e| ResolverError::package_not_found(e))?
+            .ok_or(ResolverError::package_not_found(format_err!("package not available")))?;
+        let dir = package.directory.ok_or(ResolverError::package_not_found(format_err!(
+            "package is missing directory handle"
+        )))?;
 
         // Read component manifest from package.
         let dir = ClientEnd::<DirectoryMarker>::new(dir)
             .into_proxy()
             .expect("failed to create directory proxy");
         let file = io_util::open_file(&dir, cm_path, fio::OPEN_RIGHT_READABLE)
-            .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
+            .map_err(|e| ResolverError::manifest_not_found(e))?;
         let component_decl = io_util::read_file_fidl(&file).await.map_err(|e| {
             match e.downcast_ref::<io_util::file::ReadError>() {
-                Some(_) => ResolverError::manifest_not_available(component_url, e),
-                None => ResolverError::manifest_invalid(component_url, e),
+                Some(_) => ResolverError::manifest_not_found(e),
+                None => ResolverError::manifest_invalid(e),
             }
         })?;
         // Validate the component manifest
         cm_fidl_validator::validate(&component_decl)
-            .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
+            .map_err(|e| ResolverError::manifest_invalid(e))?;
 
         let package_dir = ClientEnd::new(
             dir.into_channel().expect("could not convert proxy to channel").into_zx_channel(),
@@ -270,13 +263,10 @@ mod tests {
     }
 
     macro_rules! test_resolve_error {
-        ($resolver:ident, $url:expr, $resolver_error_expected:ident) => {
-            let url = $url;
-            let res = $resolver.resolve_async(url).await;
+        ($resolver:ident, $url:expr, $resolver_error_expected:pat) => {
+            let res = $resolver.resolve_async($url).await;
             match res.err().expect("unexpected success") {
-                ResolverError::$resolver_error_expected { url: u, .. } => {
-                    assert_eq!(u, url);
-                }
+                $resolver_error_expected => {}
                 e => panic!("unexpected error {:?}", e),
             }
         };
@@ -289,32 +279,32 @@ mod tests {
         test_resolve_error!(
             resolver,
             "fuchsia-pkg:///hello-world#meta/hello-world.cm",
-            UrlParseError
+            ResolverError::MalformedUrl { .. }
         );
         test_resolve_error!(
             resolver,
             "fuchsia-pkg://fuchsia.com/hello-world",
-            UrlMissingResourceError
+            ResolverError::UrlMissingResource
         );
         test_resolve_error!(
             resolver,
             "fuchsia-pkg://fuchsia.com/goodbye-world#meta/hello-world.cm",
-            ComponentNotAvailable
+            ResolverError::PackageNotFound { .. }
         );
         test_resolve_error!(
             resolver,
             "fuchsia-pkg://fuchsia.com/hello-world#meta/does_not_exist.cm",
-            ManifestNotAvailable
+            ResolverError::ManifestNotFound { .. }
         );
         test_resolve_error!(
             resolver,
             "fuchsia-pkg://fuchsia.com/hello-world#meta/component_manager_tests_invalid.cm",
-            ManifestInvalid
+            ResolverError::ManifestInvalid { .. }
         );
         test_resolve_error!(
             resolver,
             "fuchsia-pkg://fuchsia.com/invalid-cm#meta/invalid.cm",
-            ManifestInvalid
+            ResolverError::ManifestInvalid { .. }
         );
     }
 }

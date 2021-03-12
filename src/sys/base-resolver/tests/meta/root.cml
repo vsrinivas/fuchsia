@@ -33,6 +33,7 @@
             to: [
                 "#base_resolver",
                 "#fake_pkgfs",
+                "#integration_test",
             ],
         },
         {

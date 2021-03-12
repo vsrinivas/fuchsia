@@ -183,7 +183,7 @@ impl RealmCapabilityHost {
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
         let child = {
             let state = component.lock_resolved_state().await.map_err(|e| match e {
-                ModelError::ResolverError { err } => {
+                ModelError::ResolverError { err, .. } => {
                     debug!("failed to resolve: {:?}", err);
                     fcomponent::Error::InstanceCannotResolve
                 }
@@ -200,7 +200,7 @@ impl RealmCapabilityHost {
                 .bind(&BindReason::BindChild { parent: component.abs_moniker.clone() })
                 .await
                 .map_err(|e| match e {
-                    ModelError::ResolverError { err } => {
+                    ModelError::ResolverError { err, .. } => {
                         debug!("failed to resolve child: {:?}", err);
                         fcomponent::Error::InstanceCannotResolve
                     }

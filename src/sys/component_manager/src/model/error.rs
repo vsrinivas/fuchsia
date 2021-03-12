@@ -61,9 +61,10 @@ pub enum ModelError {
         #[source]
         err: ClonableError,
     },
-    #[error("Resolver error: {}", err)]
+    #[error("failed to resolve \"{}\": {}", url, err)]
     ResolverError {
-        #[from]
+        url: String,
+        #[source]
         err: ResolverError,
     },
     #[error("Routing error: {}", err)]

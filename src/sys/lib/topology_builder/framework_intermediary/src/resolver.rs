@@ -5,7 +5,7 @@
 use {
     anyhow::{Context, Error},
     cm_fidl_validator, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync, fuchsia_zircon as zx,
+    fuchsia_async as fasync,
     futures::{lock::Mutex, TryStreamExt},
     log::*,
     std::{collections::HashMap, sync::Arc},
@@ -59,25 +59,14 @@ impl Registry {
             match req {
                 fsys::ComponentResolverRequest::Resolve { component_url, responder } => {
                     if let Some(decl) = self.component_decls.lock().await.get(&component_url) {
-                        responder.send(
-                            zx::Status::OK.into_raw(),
-                            fsys::Component {
-                                resolved_url: Some(component_url),
-                                decl: Some(encode(decl.clone())?),
-                                package: None,
-                                ..fsys::Component::EMPTY
-                            },
-                        )?;
+                        responder.send(&mut Ok(fsys::Component {
+                            resolved_url: Some(component_url),
+                            decl: Some(encode(decl.clone())?),
+                            package: None,
+                            ..fsys::Component::EMPTY
+                        }))?;
                     } else {
-                        responder.send(
-                            zx::Status::NOT_FOUND.into_raw(),
-                            fsys::Component {
-                                resolved_url: None,
-                                decl: None,
-                                package: None,
-                                ..fsys::Component::EMPTY
-                            },
-                        )?;
+                        responder.send(&mut Err(fsys::ResolverError::ManifestNotFound))?;
                     }
                 }
             }

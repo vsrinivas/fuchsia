@@ -8,7 +8,6 @@ use {
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_zircon::Status,
     futures::prelude::*,
     log::*,
 };
@@ -31,7 +30,7 @@ async fn serve_resolver(mut stream: ComponentResolverRequestStream) -> Result<()
                         .context("failed to create zx::channel pair")?;
                     fdio::open("/pkg", fio::OPEN_RIGHT_READABLE, server.into_channel())
                         .context("failed to open /pkg")?;
-                    responder.send(Status::OK.into_raw(), fsys::Component {
+                    responder.send(&mut Ok(fsys::Component {
                         resolved_url: Some("fuchsia-pkg://fuchsia.com/component-manager-test-resolver#meta/component.cm".to_string()),
                         decl: Some(build_decl()),
                         package: Some(fsys::Package {
@@ -40,24 +39,16 @@ async fn serve_resolver(mut stream: ComponentResolverRequestStream) -> Result<()
                             ..fsys::Package::EMPTY
                         }),
                         ..fsys::Component::EMPTY
-                    }).with_context(|| format!("failed to send response to resolve request for component URL {}", component_url))?;
+                    })).with_context(|| format!("failed to send response to resolve request for component URL {}", component_url))?;
                 } else {
-                    responder
-                        .send(
-                            Status::NOT_FOUND.into_raw(),
-                            fsys::Component {
-                                resolved_url: None,
-                                decl: None,
-                                package: None,
-                                ..fsys::Component::EMPTY
-                            },
-                        )
-                        .with_context(|| {
+                    responder.send(&mut Err(fsys::ResolverError::ManifestNotFound)).with_context(
+                        || {
                             format!(
                                 "failed to send response to resolve request for component URL {}",
                                 component_url
                             )
-                        })?;
+                        },
+                    )?;
                 }
             }
         }

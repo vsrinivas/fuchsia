@@ -8,7 +8,6 @@ use {
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
     fidl_fuchsia_mem as fmem,
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
-    fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_url::{errors::ParseError as PkgUrlParseError, pkg_url::PkgUrl},
     fuchsia_zircon::Status,
@@ -17,20 +16,14 @@ use {
     thiserror::Error,
 };
 
-/// Wraps all hosted protocols into a single type that can be matched against
-/// and dispatched.
-enum IncomingRequest {
-    ComponentResolver(ComponentResolverRequestStream),
-}
-
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init().expect("failed to initialize logging");
+#[fuchsia::component]
+async fn main() -> anyhow::Result<()> {
+    info!("started");
     let mut service_fs = ServiceFs::new_local();
-    service_fs.dir("svc").add_fidl_service(IncomingRequest::ComponentResolver);
+    service_fs.dir("svc").add_fidl_service(|stream: ComponentResolverRequestStream| stream);
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
     service_fs
-        .for_each_concurrent(None, |IncomingRequest::ComponentResolver(stream)| async move {
+        .for_each_concurrent(None, |stream| async move {
             match serve(stream).await {
                 Ok(()) => {}
                 Err(err) => error!("failed to serve resolve request: {:?}", err),
@@ -41,7 +34,7 @@ async fn main() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn serve(mut stream: ComponentResolverRequestStream) -> Result<(), anyhow::Error> {
+async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
     let pkgfs_dir = io_util::open_directory_in_namespace(
         "/pkgfs",
         fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
@@ -51,10 +44,10 @@ async fn serve(mut stream: ComponentResolverRequestStream) -> Result<(), anyhow:
         stream.try_next().await.context("failed to read request from FIDL stream")?
     {
         match resolve_component(&component_url, &pkgfs_dir).await {
-            Ok(result) => responder.send(Status::OK.into_raw(), result),
+            Ok(result) => responder.send(&mut Ok(result)),
             Err(err) => {
                 error!("failed to resolve component URL {}: {}", &component_url, &err);
-                responder.send(err.as_zx_status(), fsys::Component::EMPTY)
+                responder.send(&mut Err(err.into()))
             }
         }
         .context("failed sending response")?;
@@ -140,16 +133,16 @@ enum ResolverError {
     VmoFailure(#[source] Status),
 }
 
-impl ResolverError {
-    fn as_zx_status(&self) -> i32 {
-        match self {
-            Self::InvalidUrl(_) => Status::INVALID_ARGS.into_raw(),
-            Self::UnsupportedRepo => Status::NOT_SUPPORTED.into_raw(),
-            Self::ComponentNotFound(_) => Status::NOT_FOUND.into_raw(),
-            Self::PackageNotFound(_) => Status::NOT_FOUND.into_raw(),
-            Self::ReadManifest(_) => Status::IO.into_raw(),
-            Self::IOError(_) => Status::IO.into_raw(),
-            Self::VmoFailure(s) => s.into_raw(),
+impl From<ResolverError> for fsys::ResolverError {
+    fn from(err: ResolverError) -> fsys::ResolverError {
+        match err {
+            ResolverError::InvalidUrl(_) => fsys::ResolverError::InvalidArgs,
+            ResolverError::UnsupportedRepo => fsys::ResolverError::NotSupported,
+            ResolverError::ComponentNotFound(_) => fsys::ResolverError::ManifestNotFound,
+            ResolverError::PackageNotFound(_) => fsys::ResolverError::PackageNotFound,
+            ResolverError::ReadManifest(_)
+            | ResolverError::IOError(_)
+            | ResolverError::VmoFailure(_) => fsys::ResolverError::Io,
         }
     }
 }
@@ -203,7 +196,7 @@ mod tests {
         Ok(proxy)
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolves_package_with_executable_rights() {
         let pkg_url = PkgUrl::new_package("fuchsia.com".into(), "/test-package".into(), None)
             .expect("failed to create test PkgUrl");
@@ -228,7 +221,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn fails_to_resolve_package_unsupported_repo() {
         let pkg_url = PkgUrl::new_package("fuchsia.ca".into(), "/test-package".into(), None)
             .expect("failed to create test PkgUrl");
@@ -239,7 +232,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn fails_to_resolve_component_invalid_url() {
         let pkgfs_dir = serve_pkgfs(Arc::new(MockDir::new())).expect("failed to serve pkgfs");
         assert_matches!(
@@ -260,7 +253,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn fails_to_resolve_component_package_not_found() {
         let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).expect("failed to serve pkgfs");
         assert_matches!(
@@ -270,7 +263,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn fails_to_resolve_component_missing_manifest() {
         let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).expect("failed to serve pkgfs");
         assert_matches!(
@@ -280,7 +273,7 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolves_component_vmo_manifest() {
         let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).expect("failed to serve pkgfs");
         assert_matches!(
@@ -290,10 +283,8 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolves_component_file_manifest() {
-        fuchsia_syslog::init().unwrap();
-        fuchsia_syslog::set_severity(fuchsia_syslog::levels::INFO);
         let pkgfs_dir = serve_pkgfs(build_fake_pkgfs()).expect("failed to serve pkgfs");
         assert_matches!(
             resolve_component("fuchsia-pkg://fuchsia.com/test-package#meta/foo.cm", &pkgfs_dir)

@@ -4,8 +4,6 @@
 
 library fuchsia.sys2;
 
-using zx;
-
 /// An interface for resolving a URL to a component.
 ///
 /// This interface is implemented by components that provide support
@@ -24,14 +22,31 @@ protocol ComponentResolver {
     ///
     /// `component_url` is the unescaped URL of the component to resolve.
     ///
-    /// If successful, returns `ZX_OK` and information about the component
+    /// If successful, returns information about the component
     /// that was resolved.
     ///
-    /// On failure, returns null `info` and...
-    /// - `ZX_ERR_INVALID_ARGS`: The component's URL was malformed.
-    /// - `ZX_ERR_NOT_FOUND`: The component does not exist.
-    /// - `ZX_ERR_UNAVAILABLE`: The resolver was unable to retrieve or parse
-    ///   the component's resources.
+    /// On failure, returns a `ResolverError` error.
     Resolve(string component_url)
-        -> (zx.status status, Component component);
+        -> (Component component) error ResolverError;
+};
+
+/// The possible error conditions returned by ComponentResolver.
+// TODO(fxbug.dev/72139): API review of ResolverError.
+enum ResolverError {
+    /// An unexpected error occurred.
+    INTERNAL = 1;
+    /// A general IO error occurred.
+    IO = 2;
+    /// The component URL was malformed.
+    INVALID_ARGS = 3;
+    /// The repository specified in the URL is unsupported.
+    NOT_SUPPORTED = 4;
+    /// The component manifest was not found.
+    MANIFEST_NOT_FOUND = 5;
+    /// The component's package was not found.
+    PACKAGE_NOT_FOUND = 6;
+    /// Insufficient space on device to store component's package.
+    NO_SPACE = 7;
+    /// The component is temporarily unavailable.
+    RESOURCE_UNAVAILABLE = 8;
 };

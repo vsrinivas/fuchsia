@@ -85,7 +85,7 @@ impl Resolver for ResolverRegistry {
                     Err(ResolverError::SchemeNotRegistered)
                 }
             }
-            Err(e) => Err(ResolverError::url_parse_error(component_url, e)),
+            Err(e) => Err(ResolverError::malformed_url(e)),
         }
     }
 }
@@ -109,7 +109,7 @@ impl RemoteResolver {
 impl Resolver for RemoteResolver {
     async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
         let (proxy, server_end) = fidl::endpoints::create_proxy::<fsys::ComponentResolverMarker>()
-            .map_err(ResolverError::unknown_resolver_error)?;
+            .map_err(ResolverError::internal)?;
         let component = self.component.upgrade().map_err(ResolverError::routing_error)?;
         let capability_source = routing::route_resolver(self.registration.clone(), &component)
             .await
@@ -124,35 +124,17 @@ impl Resolver for RemoteResolver {
         )
         .await
         .map_err(ResolverError::routing_error)?;
-        let (status, component) =
-            proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)?;
-        let status = Status::from_raw(status);
-        match status {
-            Status::OK => {
-                let decl_buffer: fmem::Data =
-                    component.decl.ok_or(ResolverError::RemoteInvalidData)?;
-                Ok(ResolvedComponent {
-                    resolved_url: component.resolved_url.ok_or(ResolverError::RemoteInvalidData)?,
-                    decl: read_and_validate_manifest(component_url, decl_buffer).await?,
-                    package: component.package,
-                })
-            }
-            Status::INVALID_ARGS => {
-                Err(ResolverError::url_parse_error(component_url, RemoteError(status)))
-            }
-            Status::NOT_FOUND => {
-                Err(ResolverError::component_not_available(component_url, RemoteError(status)))
-            }
-            Status::UNAVAILABLE => {
-                Err(ResolverError::manifest_invalid(component_url, RemoteError(status)))
-            }
-            _ => Err(ResolverError::unknown_resolver_error(RemoteError(status))),
-        }
+        let component = proxy.resolve(component_url).await.map_err(ResolverError::fidl_error)??;
+        let decl_buffer: fmem::Data = component.decl.ok_or(ResolverError::RemoteInvalidData)?;
+        Ok(ResolvedComponent {
+            resolved_url: component.resolved_url.ok_or(ResolverError::RemoteInvalidData)?,
+            decl: read_and_validate_manifest(decl_buffer).await?,
+            package: component.package,
+        })
     }
 }
 
 async fn read_and_validate_manifest(
-    component_url: &str,
     data: fmem::Data,
 ) -> Result<fsys::ComponentDecl, ResolverError> {
     let bytes = match data {
@@ -160,99 +142,75 @@ async fn read_and_validate_manifest(
         fmem::Data::Buffer(buffer) => {
             let mut contents = Vec::<u8>::new();
             contents.resize(buffer.size as usize, 0);
-            buffer.vmo.read(&mut contents, 0).map_err(|status| ResolverError::ManifestIO {
-                url: component_url.to_string(),
-                status,
-            })?;
+            buffer.vmo.read(&mut contents, 0).map_err(ResolverError::ManifestIo)?;
             contents
         }
         _ => return Err(ResolverError::RemoteInvalidData),
     };
     let component_decl: fsys::ComponentDecl = fidl::encoding::decode_persistent(&bytes)
-        .map_err(|err| ResolverError::manifest_invalid(component_url.to_string(), err))?;
-    cm_fidl_validator::validate(&component_decl)
-        .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
+        .map_err(|err| ResolverError::manifest_invalid(err))?;
+    cm_fidl_validator::validate(&component_decl).map_err(|e| ResolverError::manifest_invalid(e))?;
     Ok(component_decl)
 }
 
 /// Errors produced by `Resolver`.
 #[derive(Debug, Error, Clone)]
 pub enum ResolverError {
-    #[error("resolver is already registered for scheme \"{}\"", scheme)]
-    DuplicateResolverError { scheme: String },
-    #[error("component not available with url \"{}\": {}", url, err)]
-    ComponentNotAvailable {
-        url: String,
-        #[source]
-        err: ClonableError,
-    },
-    #[error("component manifest not available for url \"{}\": {}", url, err)]
-    ManifestNotAvailable {
-        url: String,
-        #[source]
-        err: ClonableError,
-    },
-    #[error("component manifest invalid for url \"{}\": {}", url, err)]
-    ManifestInvalid {
-        url: String,
-        #[source]
-        err: ClonableError,
-    },
-    #[error("failed to read manifest for url \"{}\": {}", url, status)]
-    ManifestIO { url: String, status: Status },
-    #[error("Model not available.")]
-    ModelAccessError,
+    #[error("an unexpected error occurred: {0}")]
+    Internal(#[source] ClonableError),
+    #[error("an IO error occurred: {0}")]
+    Io(#[source] ClonableError),
+    #[error("component manifest not found: {0}")]
+    ManifestNotFound(#[source] ClonableError),
+    #[error("package not found: {0}")]
+    PackageNotFound(#[source] ClonableError),
+    #[error("component manifest invalid: {0}")]
+    ManifestInvalid(#[source] ClonableError),
+    #[error("failed to read manifest: {0}")]
+    ManifestIo(Status),
+    #[error("Model not available")]
+    ModelNotAvailable,
     #[error("scheme not registered")]
     SchemeNotRegistered,
-    #[error("failed to parse url \"{}\": {}", url, err)]
-    UrlParseError {
-        url: String,
-        #[source]
-        err: ClonableError,
-    },
-    #[error("url missing resource \"{}\"", url)]
-    UrlMissingResourceError { url: String },
-    #[error("failed to route resolver capability: {}", .0)]
+    #[error("malformed url: {0}")]
+    MalformedUrl(#[source] ClonableError),
+    #[error("url missing resource")]
+    UrlMissingResource,
+    #[error("failed to route resolver capability: {0}")]
     RoutingError(#[source] Box<ModelError>),
     #[error("the remote resolver returned invalid data")]
     RemoteInvalidData,
-    #[error("an unknown error ocurred with the resolver: {}", .0)]
-    UnknownResolverError(#[source] ClonableError),
-    #[error("an error occurred sending a FIDL request to the remote resolver: {}", .0)]
+    #[error("an error occurred sending a FIDL request to the remote resolver: {0}")]
     FidlError(#[source] ClonableError),
 }
 
 impl ResolverError {
-    pub fn component_not_available(url: impl Into<String>, err: impl Into<Error>) -> ResolverError {
-        ResolverError::ComponentNotAvailable { url: url.into(), err: err.into().into() }
+    pub fn internal(err: impl Into<Error>) -> ResolverError {
+        ResolverError::Internal(err.into().into())
     }
 
-    pub fn manifest_not_available(url: impl Into<String>, err: impl Into<Error>) -> ResolverError {
-        ResolverError::ManifestNotAvailable { url: url.into(), err: err.into().into() }
+    pub fn io(err: impl Into<Error>) -> ResolverError {
+        ResolverError::Io(err.into().into())
     }
 
-    pub fn manifest_invalid(url: impl Into<String>, err: impl Into<Error>) -> ResolverError {
-        ResolverError::ManifestInvalid { url: url.into(), err: err.into().into() }
+    pub fn manifest_not_found(err: impl Into<Error>) -> ResolverError {
+        ResolverError::ManifestNotFound(err.into().into())
     }
 
-    pub fn model_not_available() -> ResolverError {
-        ResolverError::ModelAccessError
+    pub fn package_not_found(err: impl Into<Error>) -> ResolverError {
+        ResolverError::PackageNotFound(err.into().into())
     }
 
-    pub fn url_parse_error(url: impl Into<String>, err: impl Into<Error>) -> ResolverError {
-        ResolverError::UrlParseError { url: url.into(), err: err.into().into() }
+    pub fn manifest_invalid(err: impl Into<Error>) -> ResolverError {
+        ResolverError::ManifestInvalid(err.into().into())
     }
 
-    pub fn url_missing_resource_error(url: impl Into<String>) -> ResolverError {
-        ResolverError::UrlMissingResourceError { url: url.into() }
+    pub fn malformed_url(err: impl Into<Error>) -> ResolverError {
+        ResolverError::MalformedUrl(err.into().into())
     }
 
     pub fn routing_error(err: ModelError) -> ResolverError {
         ResolverError::RoutingError(Box::new(err))
-    }
-
-    pub fn unknown_resolver_error(err: impl Into<Error>) -> ResolverError {
-        ResolverError::UnknownResolverError(err.into().into())
     }
 
     pub fn fidl_error(err: impl Into<Error>) -> ResolverError {
@@ -260,9 +218,28 @@ impl ResolverError {
     }
 }
 
+impl From<fsys::ResolverError> for ResolverError {
+    fn from(err: fsys::ResolverError) -> ResolverError {
+        match err {
+            fsys::ResolverError::Internal => ResolverError::internal(RemoteError(err)),
+            fsys::ResolverError::Io => ResolverError::io(RemoteError(err)),
+            fsys::ResolverError::PackageNotFound
+            | fsys::ResolverError::NoSpace
+            | fsys::ResolverError::ResourceUnavailable
+            | fsys::ResolverError::NotSupported => {
+                ResolverError::package_not_found(RemoteError(err))
+            }
+            fsys::ResolverError::ManifestNotFound => {
+                ResolverError::manifest_not_found(RemoteError(err))
+            }
+            fsys::ResolverError::InvalidArgs => ResolverError::malformed_url(RemoteError(err)),
+        }
+    }
+}
+
 #[derive(Error, Clone, Debug)]
-#[error("remote resolver returned status {}", .0)]
-struct RemoteError(Status);
+#[error("remote resolver responded with {0:?}")]
+struct RemoteError(fsys::ResolverError);
 
 #[cfg(test)]
 mod tests {
@@ -323,8 +300,8 @@ mod tests {
             "bar".to_string(),
             Box::new(MockErrorResolver {
                 expected_url: "bar://url".to_string(),
-                error: Box::new(|url| {
-                    ResolverError::component_not_available(url, format_err!("not available"))
+                error: Box::new(|_| {
+                    ResolverError::manifest_not_found(format_err!("not available"))
                 }),
             }),
         );
@@ -335,7 +312,7 @@ mod tests {
 
         // Resolve a different scheme that produces an error.
         let expected_res: Result<ResolvedComponent, ResolverError> =
-            Err(ResolverError::component_not_available("bar://url", format_err!("not available")));
+            Err(ResolverError::manifest_not_found(format_err!("not available")));
         assert_eq!(
             format!("{:?}", expected_res),
             format!("{:?}", registry.resolve("bar://url").await)
@@ -351,7 +328,7 @@ mod tests {
 
         // Resolve an URL lacking a scheme.
         let expected_res: Result<ResolvedComponent, ResolverError> =
-            Err(ResolverError::url_parse_error("xxx", url::ParseError::RelativeUrlWithoutBase));
+            Err(ResolverError::malformed_url(url::ParseError::RelativeUrlWithoutBase));
         assert_eq!(format!("{:?}", expected_res), format!("{:?}", registry.resolve("xxx").await),);
     }
 

@@ -150,10 +150,10 @@ impl MockResolver {
         const NAME_PREFIX: &str = "test:///";
         debug_assert!(component_url.starts_with(NAME_PREFIX), "invalid component url");
         let (_, name) = component_url.split_at(NAME_PREFIX.len());
-        let decl = self.components.get(name).ok_or(ResolverError::component_not_available(
-            name.to_string(),
-            format_err!("not in the hashmap"),
-        ))?;
+        let decl = self
+            .components
+            .get(name)
+            .ok_or(ResolverError::manifest_not_found(format_err!("not in the hashmap")))?;
         let fsys_decl =
             fsys::ComponentDecl::try_from(decl.clone()).expect("decl failed conversion");
         Ok(ResolvedComponent {

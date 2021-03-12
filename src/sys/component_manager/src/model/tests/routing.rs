@@ -30,8 +30,7 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fidl_examples_echo::{self as echo},
     fidl_fuchsia_component_runner as fcrunner, fidl_fuchsia_mem as fmem, fidl_fuchsia_sys2 as fsys,
-    fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, Status},
+    fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{join, lock::Mutex, StreamExt, TryStreamExt},
     log::*,
     maplit::hashmap,
@@ -3596,20 +3595,17 @@ async fn use_resolver_from_parent_environment() {
             {
                 assert_eq!(component_url, "base://b");
                 responder
-                    .send(
-                        Status::OK.into_raw(),
-                        fsys::Component {
-                            resolved_url: Some("test://b".into()),
-                            decl: Some(fmem::Data::Bytes(
-                                fidl::encoding::encode_persistent(
-                                    &mut default_component_decl().native_into_fidl(),
-                                )
-                                .unwrap(),
-                            )),
-                            package: None,
-                            ..fsys::Component::EMPTY
-                        },
-                    )
+                    .send(&mut Ok(fsys::Component {
+                        resolved_url: Some("test://b".into()),
+                        decl: Some(fmem::Data::Bytes(
+                            fidl::encoding::encode_persistent(
+                                &mut default_component_decl().native_into_fidl(),
+                            )
+                            .unwrap(),
+                        )),
+                        package: None,
+                        ..fsys::Component::EMPTY
+                    }))
                     .expect("failed to send resolve response");
             }
         }
@@ -3684,20 +3680,17 @@ async fn use_resolver_from_grandparent_environment() {
             {
                 assert_eq!(component_url, "base://c");
                 responder
-                    .send(
-                        Status::OK.into_raw(),
-                        fsys::Component {
-                            resolved_url: Some("test://c".into()),
-                            decl: Some(fmem::Data::Bytes(
-                                fidl::encoding::encode_persistent(
-                                    &mut default_component_decl().native_into_fidl(),
-                                )
-                                .unwrap(),
-                            )),
-                            package: None,
-                            ..fsys::Component::EMPTY
-                        },
-                    )
+                    .send(&mut Ok(fsys::Component {
+                        resolved_url: Some("test://c".into()),
+                        decl: Some(fmem::Data::Bytes(
+                            fidl::encoding::encode_persistent(
+                                &mut default_component_decl().native_into_fidl(),
+                            )
+                            .unwrap(),
+                        )),
+                        package: None,
+                        ..fsys::Component::EMPTY
+                    }))
                     .expect("failed to send resolve response");
             }
         }
@@ -3753,7 +3746,7 @@ async fn resolver_is_not_available() {
         async move {
             assert_matches!(
                 universe.bind_instance(&vec!["c:0"].into()).await,
-                Err(ModelError::ResolverError { err: ResolverError::SchemeNotRegistered })
+                Err(ModelError::ResolverError { err: ResolverError::SchemeNotRegistered, .. })
             );
         },
         // Wait for a request, and resolve it.
@@ -3763,20 +3756,17 @@ async fn resolver_is_not_available() {
             {
                 assert_eq!(component_url, "base://b");
                 responder
-                    .send(
-                        Status::OK.into_raw(),
-                        fsys::Component {
-                            resolved_url: Some("test://b".into()),
-                            decl: Some(fmem::Data::Bytes(
-                                fidl::encoding::encode_persistent(
-                                    &mut default_component_decl().native_into_fidl(),
-                                )
-                                .unwrap(),
-                            )),
-                            package: None,
-                            ..fsys::Component::EMPTY
-                        },
-                    )
+                    .send(&mut Ok(fsys::Component {
+                        resolved_url: Some("test://b".into()),
+                        decl: Some(fmem::Data::Bytes(
+                            fidl::encoding::encode_persistent(
+                                &mut default_component_decl().native_into_fidl(),
+                            )
+                            .unwrap(),
+                        )),
+                        package: None,
+                        ..fsys::Component::EMPTY
+                    }))
                     .expect("failed to send resolve response");
             }
         }
@@ -3830,7 +3820,7 @@ async fn resolver_component_decl_is_validated() {
         async move {
             assert_matches!(
                 universe.bind_instance(&vec!["b:0"].into()).await,
-                Err(ModelError::ResolverError { err: ResolverError::ManifestInvalid { .. } })
+                Err(ModelError::ResolverError { err: ResolverError::ManifestInvalid { .. }, .. })
             );
         },
         // Wait for a request, and resolve it.
@@ -3840,26 +3830,23 @@ async fn resolver_component_decl_is_validated() {
             {
                 assert_eq!(component_url, "base://b");
                 responder
-                    .send(
-                        Status::OK.into_raw(),
-                        fsys::Component {
-                            resolved_url: Some("test://b".into()),
-                            decl: Some(fmem::Data::Bytes({
-                                let mut fidl = fsys::ComponentDecl {
-                                    exposes: Some(vec![fsys::ExposeDecl::Protocol(
-                                        fsys::ExposeProtocolDecl {
-                                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                                            ..fsys::ExposeProtocolDecl::EMPTY
-                                        },
-                                    )]),
-                                    ..fsys::ComponentDecl::EMPTY
-                                };
-                                fidl::encoding::encode_persistent(&mut fidl).unwrap()
-                            })),
-                            package: None,
-                            ..fsys::Component::EMPTY
-                        },
-                    )
+                    .send(&mut Ok(fsys::Component {
+                        resolved_url: Some("test://b".into()),
+                        decl: Some(fmem::Data::Bytes({
+                            let mut fidl = fsys::ComponentDecl {
+                                exposes: Some(vec![fsys::ExposeDecl::Protocol(
+                                    fsys::ExposeProtocolDecl {
+                                        source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                                        ..fsys::ExposeProtocolDecl::EMPTY
+                                    },
+                                )]),
+                                ..fsys::ComponentDecl::EMPTY
+                            };
+                            fidl::encoding::encode_persistent(&mut fidl).unwrap()
+                        })),
+                        package: None,
+                        ..fsys::Component::EMPTY
+                    }))
                     .expect("failed to send resolve response");
             }
         }

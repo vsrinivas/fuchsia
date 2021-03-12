@@ -9,7 +9,6 @@ use {
     fidl_fuchsia_mem as fmem,
     fidl_fuchsia_pkg::{PackageResolverMarker, PackageResolverProxy},
     fidl_fuchsia_sys2::{self as fsys, ComponentResolverRequest, ComponentResolverRequestStream},
-    fuchsia_async as fasync,
     fuchsia_component::{client::connect_to_service, server::ServiceFs},
     fuchsia_url::{errors::ParseError as PkgUrlParseError, pkg_url::PkgUrl},
     fuchsia_zircon::Status,
@@ -18,20 +17,14 @@ use {
     thiserror::Error,
 };
 
-/// Wraps all hosted protocols into a single type that can be matched against
-/// and dispatched.
-enum IncomingRequest {
-    ComponentResolver(ComponentResolverRequestStream),
-}
-
-#[fasync::run_singlethreaded]
-async fn main() -> Result<(), anyhow::Error> {
-    fuchsia_syslog::init().expect("failed to initialize logging");
+#[fuchsia::component]
+async fn main() -> anyhow::Result<()> {
+    info!("started");
     let mut service_fs = ServiceFs::new_local();
-    service_fs.dir("svc").add_fidl_service(IncomingRequest::ComponentResolver);
+    service_fs.dir("svc").add_fidl_service(|stream: ComponentResolverRequestStream| stream);
     service_fs.take_and_serve_directory_handle().context("failed to serve outgoing namespace")?;
     service_fs
-        .for_each_concurrent(None, |IncomingRequest::ComponentResolver(stream)| async move {
+        .for_each_concurrent(None, |stream| async move {
             match serve(stream).await {
                 Ok(()) => {}
                 Err(err) => error!("failed to serve resolve request: {:?}", err),
@@ -42,17 +35,17 @@ async fn main() -> Result<(), anyhow::Error> {
     Ok(())
 }
 
-async fn serve(mut stream: ComponentResolverRequestStream) -> Result<(), anyhow::Error> {
+async fn serve(mut stream: ComponentResolverRequestStream) -> anyhow::Result<()> {
     let package_resolver = connect_to_service::<PackageResolverMarker>()
         .context("failed to connect to PackageResolver service")?;
     while let Some(ComponentResolverRequest::Resolve { component_url, responder }) =
         stream.try_next().await.context("failed to read request from FIDL stream")?
     {
         match resolve_component(&component_url, &package_resolver).await {
-            Ok(result) => responder.send(Status::OK.into_raw(), result),
+            Ok(result) => responder.send(&mut Ok(result)),
             Err(err) => {
                 error!("failed to resolve component URL {}: {}", &component_url, &err);
-                responder.send(err.as_zx_status(), fsys::Component::EMPTY)
+                responder.send(&mut Err(err.into()))
             }
         }
         .context("failed sending response")?;
@@ -76,7 +69,7 @@ async fn resolve_component(
         .map_err(ResolverError::ComponentNotFound)?;
 
     let (status, buffer) =
-        cm_file.get_buffer(fio::VMO_FLAG_READ).await.map_err(ResolverError::IOError)?;
+        cm_file.get_buffer(fio::VMO_FLAG_READ).await.map_err(ResolverError::IoError)?;
     Status::ok(status).map_err(ResolverError::VmoFailure)?;
     let data = match buffer {
         Some(buffer) => fmem::Data::Buffer(*buffer),
@@ -111,40 +104,51 @@ async fn resolve_package(
     package_resolver
         .resolve(&package_url.to_string(), &mut selectors.into_iter(), server_end)
         .await
-        .map_err(ResolverError::PackageResolverFidlError)?
+        .map_err(ResolverError::IoError)?
         .map_err(Status::from_raw)
-        .map_err(ResolverError::PackageResolverError)?;
+        .map_err(|err| match err {
+            Status::NOT_FOUND => ResolverError::PackageNotFound,
+            Status::ADDRESS_UNREACHABLE | Status::UNAVAILABLE => ResolverError::Unavailable,
+            Status::NO_SPACE => ResolverError::NoSpace,
+            _ => ResolverError::Internal,
+        })?;
     Ok(proxy)
 }
 
 #[derive(Error, Debug)]
 enum ResolverError {
+    #[error("an unexpected error ocurred")]
+    Internal,
     #[error("invalid component URL: {}", .0)]
     InvalidUrl(#[from] PkgUrlParseError),
     #[error("component not found: {}", .0)]
     ComponentNotFound(#[source] io_util::node::OpenError),
-    #[error("failed to communicate with package resolver: {}", .0)]
-    PackageResolverFidlError(#[source] fidl::Error),
-    #[error("package resolver returned an error: {}", .0)]
-    PackageResolverError(#[source] Status),
+    #[error("package not found")]
+    PackageNotFound,
     #[error("read manifest error: {}", .0)]
     ReadManifest(#[source] io_util::file::ReadError),
     #[error("IO error: {}", .0)]
-    IOError(#[source] fidl::Error),
+    IoError(#[source] fidl::Error),
     #[error("failed to get manifest VMO: {}", .0)]
     VmoFailure(#[source] Status),
+    #[error("insufficient space to store package")]
+    NoSpace,
+    #[error("the component's package is temporarily unavailable")]
+    Unavailable,
 }
 
-impl ResolverError {
-    fn as_zx_status(&self) -> i32 {
-        match self {
-            Self::InvalidUrl(_) => Status::INVALID_ARGS.into_raw(),
-            Self::ComponentNotFound(_) => Status::NOT_FOUND.into_raw(),
-            Self::PackageResolverFidlError(_) => Status::INTERNAL.into_raw(),
-            Self::PackageResolverError(s) => s.into_raw(),
-            Self::ReadManifest(_) => Status::IO.into_raw(),
-            Self::IOError(_) => Status::IO.into_raw(),
-            Self::VmoFailure(s) => s.into_raw(),
+impl From<ResolverError> for fsys::ResolverError {
+    fn from(err: ResolverError) -> fsys::ResolverError {
+        match err {
+            ResolverError::Internal => fsys::ResolverError::Internal,
+            ResolverError::InvalidUrl(_) => fsys::ResolverError::InvalidArgs,
+            ResolverError::ComponentNotFound(_) => fsys::ResolverError::ManifestNotFound,
+            ResolverError::PackageNotFound => fsys::ResolverError::PackageNotFound,
+            ResolverError::ReadManifest(_)
+            | ResolverError::VmoFailure(_)
+            | ResolverError::IoError(_) => fsys::ResolverError::Io,
+            ResolverError::NoSpace => fsys::ResolverError::NoSpace,
+            ResolverError::Unavailable => fsys::ResolverError::ResourceUnavailable,
         }
     }
 }
@@ -167,7 +171,7 @@ mod tests {
         },
     };
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolve_package_succeeds() {
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
@@ -218,7 +222,7 @@ mod tests {
         join!(server, client);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolve_component_succeeds() {
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
@@ -263,7 +267,7 @@ mod tests {
         join!(server, client);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolve_component_succeeds_with_hash() {
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
@@ -302,7 +306,7 @@ mod tests {
         join!(server, client);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolve_component_succeeds_with_vmo_manifest() {
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
@@ -343,18 +347,18 @@ mod tests {
         join!(server, client);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolve_component_fails_bad_connection() {
         let (proxy, server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
         drop(server);
         assert_matches!(
             resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
-            Err(ResolverError::PackageResolverFidlError(_))
+            Err(ResolverError::IoError(_))
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolve_component_fails_with_package_resolver_failure() {
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();
@@ -371,13 +375,13 @@ mod tests {
         let client = async move {
             assert_matches!(
                 resolve_component("fuchsia-pkg://fuchsia.com/test#meta/test.cm", &proxy).await,
-                Err(ResolverError::PackageResolverError(Status::NO_SPACE))
+                Err(ResolverError::NoSpace)
             );
         };
         join!(server, client);
     }
 
-    #[fasync::run_singlethreaded(test)]
+    #[fuchsia::test]
     async fn resolve_component_fails_with_component_not_found() {
         let (proxy, mut server) =
             fidl::endpoints::create_proxy_and_stream::<PackageResolverMarker>().unwrap();

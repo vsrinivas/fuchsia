@@ -58,12 +58,12 @@ impl FuchsiaBootResolver {
         component_url: &'a str,
     ) -> Result<ResolvedComponent, ResolverError> {
         // Parse URL.
-        let url = BootUrl::parse(component_url)
-            .map_err(|e| ResolverError::component_not_available(component_url, e))?;
+        let url =
+            BootUrl::parse(component_url).map_err(|e| ResolverError::manifest_not_found(e))?;
         // Package path is 'canonicalized' to ensure that it is relative, since absolute paths will
         // be (inconsistently) rejected by fuchsia.io methods.
         let package_path = Path::new(io_util::canonicalize_path(url.path()));
-        let res = url.resource().ok_or(ResolverError::url_missing_resource_error(component_url))?;
+        let res = url.resource().ok_or(ResolverError::UrlMissingResource)?;
         let res_path = match package_path.to_str() {
             Some(".") => PathBuf::from(res),
             _ => package_path.join(res),
@@ -71,13 +71,13 @@ impl FuchsiaBootResolver {
 
         // Read component manifest from resource into a component decl.
         let cm_file = io_util::open_file(&self.boot_proxy, &res_path, fio::OPEN_RIGHT_READABLE)
-            .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
+            .map_err(|e| ResolverError::manifest_not_found(e))?;
         let component_decl = io_util::read_file_fidl(&cm_file)
             .await
-            .map_err(|e| ResolverError::manifest_not_available(component_url, e))?;
+            .map_err(|e| ResolverError::manifest_not_found(e))?;
         // Validate the component manifest
         cm_fidl_validator::validate(&component_decl)
-            .map_err(|e| ResolverError::manifest_invalid(component_url, e))?;
+            .map_err(|e| ResolverError::manifest_invalid(e))?;
 
         // Set up the fuchsia-boot path as the component's "package" namespace.
         let path_proxy = io_util::open_directory(
@@ -86,10 +86,7 @@ impl FuchsiaBootResolver {
             fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
         )
         .map_err(|e| {
-            ResolverError::component_not_available(
-                component_url,
-                e.context("failed to open package directory"),
-            )
+            ResolverError::package_not_found(e.context("failed to open package directory"))
         })?;
         let package = fsys::Package {
             package_url: Some(url.root_url().to_string()),
@@ -296,12 +293,9 @@ mod tests {
 
     macro_rules! test_resolve_error {
         ($resolver:ident, $url:expr, $resolver_error_expected:ident) => {
-            let url = $url;
-            let res = $resolver.resolve_async(url).await;
+            let res = $resolver.resolve_async($url).await;
             match res.err().expect("unexpected success") {
-                ResolverError::$resolver_error_expected { url: u, .. } => {
-                    assert_eq!(u, url);
-                }
+                ResolverError::$resolver_error_expected { .. } => {}
                 e => panic!("unexpected error {:?}", e),
             }
         };
