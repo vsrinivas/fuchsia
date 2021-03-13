@@ -12,12 +12,6 @@
     ],
     use: [
         {
-            directory: "usb",
-            from: "parent",
-            rights: [ "r*" ],
-            path: "/usb",
-        },
-        {
             protocol: "fuchsia.fat.Admin",
             from: "parent",
         },

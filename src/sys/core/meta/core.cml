@@ -93,6 +93,10 @@
             name: "fatfs-mounter",
             url: "fuchsia-pkg://fuchsia.com/fuchsia-fatfs#meta/fatfs-mounter.cm",
         },
+        {
+            name: "pkg-local-mirror",
+            url: "fuchsia-pkg://fuchsia.com/pkg-local-mirror#meta/component.cm",
+        },
     ],
     capabilities: [
         {
@@ -183,6 +187,13 @@
                 "fuchsia.fat.Query",
             ],
             from: "#fatfs-mounter",
+            to: [ "#appmgr", "#pkg-local-mirror" ],
+        },
+        {
+            protocol: [
+                "fuchsia.pkg.LocalMirror",
+            ],
+            from: "#pkg-local-mirror",
             to: [ "#appmgr" ],
         },
         {
@@ -350,6 +361,7 @@
                 "#last_reboot",
                 "#log-stats",
                 "#pkg-cache",
+                "#pkg-local-mirror",
                 "#remote-control",
                 "#sampler",
                 "#session-manager",
@@ -500,6 +512,13 @@
             as: "dev-thermal",
             to: [ "#temperature-logger" ],
             subdir: "class/thermal",
+        },
+        {
+            directory: "dev",
+            from: "parent",
+            as: "dev-class-block",
+            to: [ "#fatfs-mounter" ],
+            subdir: "class/block",
         },
         {
             directory: "config-data",

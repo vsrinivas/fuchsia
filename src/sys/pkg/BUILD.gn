@@ -84,7 +84,6 @@ group("system-update-checker") {
 merge_sysmgr_config("core_config") {
   output = "pkg.config"
   deps = [
-    "bin/pkg-local-mirror:config",
     "bin/pkg-resolver:config",
     "bin/system-updater:config",
   ]

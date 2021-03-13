@@ -1,10 +1,12 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
         "binary": "bin/usb_updater"
     },
     "sandbox": {
         "services": [
-            "fuchsia.logger.LogSink",
             "fuchsia.pkg.RepositoryManager",
             "fuchsia.update.usb.Checker"
         ]

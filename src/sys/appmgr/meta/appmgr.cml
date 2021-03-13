@@ -336,6 +336,10 @@
             path: "/svc_for_sys/fuchsia.space.Manager",
         },
         {
+            protocol: "fuchsia.pkg.LocalMirror",
+            path: "/svc_for_sys/fuchsia.pkg.LocalMirror",
+        },
+        {
             protocol: "fuchsia.feedback.LastRebootInfoProvider",
             path: "/svc_for_sys/fuchsia.feedback.LastRebootInfoProvider",
         },

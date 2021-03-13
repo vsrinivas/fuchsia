@@ -56,6 +56,6 @@ fuchsia_package("package") {
 
 # Run with `fx test usb-updater-unittests`.
 fuchsia_unittest_package("usb-updater-unittests") {
-  executable_path = "bin/usb_updater_bin_test"
+  #executable_path = "bin/usb_updater_bin_test"
   deps = [ ":bin_test" ]
 }

@@ -19,12 +19,12 @@
         {
             protocol: "fuchsia.fs.Query",
             from: "self",
-            as: "svc-fuchsia.fat.Query",
+            as: "fuchsia.fat.Query",
         },
         {
             protocol: "fuchsia.fs.Admin",
             from: "self",
-            as: "svc-fuchsia.fat.Admin",
+            as: "fuchsia.fat.Admin",
         },
     ],
 }

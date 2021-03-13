@@ -27,10 +27,6 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-sysmgr_config("config") {
-  source = "sysmgr.config"
-}
-
 rustc_library("lib") {
   visibility = [
     ":bin",
@@ -61,5 +57,5 @@ fuchsia_component("component") {
 }
 
 fuchsia_package("pkg-local-mirror") {
-  deps = [":component"]
+  deps = [ ":component" ]
 }
