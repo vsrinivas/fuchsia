@@ -28,7 +28,6 @@ use {
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorRequest, RemoteControlMarker,
     },
-    fidl_fuchsia_overnet::{MeshControllerProxy, ServiceConsumerProxy, ServicePublisherProxy},
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::{Task, TimeoutExt, Timer},
     futures::prelude::*,
@@ -47,20 +46,6 @@ pub struct Daemon {
 
     target_collection: Arc<TargetCollection>,
     ascendd: Arc<Ascendd>,
-}
-
-impl OvernetInstance for Daemon {
-    fn connect_as_service_consumer(&self) -> Result<ServiceConsumerProxy, anyhow::Error> {
-        self.ascendd.connect_as_service_consumer()
-    }
-
-    fn connect_as_service_publisher(&self) -> Result<ServicePublisherProxy, anyhow::Error> {
-        self.ascendd.connect_as_service_publisher()
-    }
-
-    fn connect_as_mesh_controller(&self) -> Result<MeshControllerProxy, anyhow::Error> {
-        self.ascendd.connect_as_mesh_controller()
-    }
 }
 
 // This is just for mocking config values for unit testing.
@@ -87,12 +72,11 @@ pub struct DaemonEventHandler {
     // here).
     target_collection: Weak<TargetCollection>,
     config_reader: Arc<dyn ConfigReader>,
-    ascendd: Arc<Ascendd>,
 }
 
 impl DaemonEventHandler {
-    fn new(ascendd: Arc<Ascendd>, target_collection: Weak<TargetCollection>) -> Self {
-        Self { ascendd, target_collection, config_reader: Arc::new(DefaultConfigReader::default()) }
+    fn new(target_collection: Weak<TargetCollection>) -> Self {
+        Self { target_collection, config_reader: Arc::new(DefaultConfigReader::default()) }
     }
 
     fn handle_mdns<'a>(
@@ -102,7 +86,7 @@ impl DaemonEventHandler {
         cr: Weak<dyn ConfigReader>,
     ) -> impl Future<Output = ()> + 'a {
         log::trace!("Found new target via mdns: {}", t.nodename);
-        tc.merge_insert(Target::from_target_info(self.ascendd.clone(), t)).then(|target| {
+        tc.merge_insert(Target::from_target_info(t)).then(|target| {
             async move {
                 let nodename = target.nodename().await;
 
@@ -145,7 +129,7 @@ impl DaemonEventHandler {
         // It's possible that the target will be dropped in the middle of this operation.
         // Do not exit an error, just log and exit this round.
         let res = {
-            match RcsConnection::new(self.ascendd.clone(), &mut NodeId { id: node_id })
+            match RcsConnection::new(&mut NodeId { id: node_id })
                 .await
                 .context("unable to convert proxy to target")
             {
@@ -170,7 +154,7 @@ impl DaemonEventHandler {
 
     async fn handle_fastboot(&self, t: TargetInfo, tc: &TargetCollection) {
         log::trace!("Found new target via fastboot: {}", t.nodename);
-        tc.merge_insert(Target::from_target_info(self.ascendd.clone(), t.into()))
+        tc.merge_insert(Target::from_target_info(t.into()))
             .then(|target| async move {
                 target
                     .update_connection_state(|s| match s {
@@ -224,8 +208,7 @@ impl Daemon {
         let target_collection = Arc::new(TargetCollection::new());
         let queue = events::Queue::new(&target_collection);
         let ascendd = Arc::new(create_ascendd().await?);
-        let daemon_event_handler =
-            DaemonEventHandler::new(ascendd.clone(), Arc::downgrade(&target_collection));
+        let daemon_event_handler = DaemonEventHandler::new(Arc::downgrade(&target_collection));
         queue.add_handler(daemon_event_handler).await;
         target_collection.set_event_queue(queue.clone()).await;
         Daemon::spawn_onet_discovery(queue.clone());
@@ -522,7 +505,6 @@ impl Daemon {
             DaemonRequest::AddTarget { ip, responder } => {
                 self.target_collection
                     .merge_insert(Target::new_with_addrs(
-                        self.ascendd.clone(),
                         None,
                         BTreeSet::from_iter(Some(ip.into()).into_iter()),
                     ))
@@ -664,12 +646,10 @@ mod test {
 
     struct TestHookFakeFastboot {
         tc: Weak<TargetCollection>,
-        ascendd: Arc<Ascendd>,
     }
 
     struct TestHookFakeRcs {
         tc: Weak<TargetCollection>,
-        ascendd: Arc<Ascendd>,
     }
 
     struct TargetControl {
@@ -736,7 +716,7 @@ mod test {
             };
             match event {
                 DaemonEvent::WireTraffic(WireTrafficType::Fastboot(t)) => {
-                    tc.merge_insert(Target::from_target_info(self.ascendd.clone(), t.into()))
+                    tc.merge_insert(Target::from_target_info(t.into()))
                         .then(|target| async move {
                             target
                                 .update_connection_state(|_| ConnectionState::Fastboot(Utc::now()))
@@ -761,11 +741,10 @@ mod test {
             };
             match event {
                 DaemonEvent::WireTraffic(WireTrafficType::Mdns(t)) => {
-                    tc.merge_insert(Target::from_target_info(self.ascendd.clone(), t)).await;
+                    tc.merge_insert(Target::from_target_info(t)).await;
                 }
                 DaemonEvent::NewTarget(Some(n)) => {
                     let rcs = RcsConnection::new_with_proxy(
-                        self.ascendd.clone(),
                         setup_fake_target_service(n),
                         &NodeId { id: 0u64 },
                     );
@@ -783,10 +762,7 @@ mod test {
     ) -> TargetControl {
         let d = Daemon::new_for_test().await;
         d.event_queue
-            .add_handler(TestHookFakeFastboot {
-                ascendd: d.ascendd.clone(),
-                tc: Arc::downgrade(&d.target_collection),
-            })
+            .add_handler(TestHookFakeFastboot { tc: Arc::downgrade(&d.target_collection) })
             .await;
         let event_clone = d.event_queue.clone();
         let res = TargetControl {
@@ -804,10 +780,7 @@ mod test {
     async fn spawn_daemon_server_with_target_ctrl(stream: DaemonRequestStream) -> TargetControl {
         let d = Daemon::new_for_test().await;
         d.event_queue
-            .add_handler(TestHookFakeRcs {
-                ascendd: d.ascendd.clone(),
-                tc: Arc::downgrade(&d.target_collection),
-            })
+            .add_handler(TestHookFakeRcs { tc: Arc::downgrade(&d.target_collection) })
             .await;
         let event_clone = d.event_queue.clone();
         let res = TargetControl {
@@ -828,7 +801,7 @@ mod test {
     ) -> (TargetControl, Arc<Ascendd>) {
         let mut res = spawn_daemon_server_with_target_ctrl(stream).await;
         let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let fake_target = Target::new(ascendd.clone(), nodename);
+        let fake_target = Target::new(nodename);
         fake_target
             .addrs_insert(
                 SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 1)).into(),
@@ -844,7 +817,7 @@ mod test {
     ) -> (TargetControl, Arc<Ascendd>) {
         let mut res = spawn_daemon_server_with_target_ctrl_for_fastboot(stream).await;
         let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let fake_target = Target::new_with_serial(ascendd.clone(), nodename, "florp");
+        let fake_target = Target::new_with_serial(nodename, "florp");
         res.send_fastboot_discovery_event(fake_target).await;
         (res, ascendd)
     }
@@ -886,8 +859,8 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let (mut ctrl, ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new(ascendd, "bazmumble")).await;
+        let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
         if let Ok(_) = daemon_proxy.get_remote_control(None, remote_server_end).await.unwrap() {
             panic!("failure expected for multiple targets");
         }
@@ -900,8 +873,8 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let (mut ctrl, ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new(ascendd, "bazmumble")).await;
+        let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
         if let Err(_) = daemon_proxy.get_remote_control(Some(""), remote_server_end).await.unwrap()
         {
             panic!("failure expected for multiple targets");
@@ -915,8 +888,8 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let (mut ctrl, ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new(ascendd, "bazmumble")).await;
+        let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
         if let Err(_) =
             daemon_proxy.get_remote_control(Some("foobar"), remote_server_end).await.unwrap()
         {
@@ -931,8 +904,8 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let (mut ctrl, ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new(ascendd, "bazmumble")).await;
+        let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
         if let Ok(_) = timeout(Duration::from_millis(10), async move {
             daemon_proxy.get_remote_control(Some("rando"), remote_server_end).await.unwrap()
         })
@@ -947,9 +920,9 @@ mod test {
     async fn test_list_targets_mdns_discovery() -> Result<()> {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let (mut ctrl, ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new(ascendd.clone(), "baz")).await;
-        ctrl.send_mdns_discovery_event(Target::new(ascendd.clone(), "quux")).await;
+        let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        ctrl.send_mdns_discovery_event(Target::new("baz")).await;
+        ctrl.send_mdns_discovery_event(Target::new("quux")).await;
         let res = daemon_proxy.list_targets("").await.unwrap();
 
         // Daemon server contains one fake target plus these two.
@@ -1020,15 +993,14 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_daemon_mdns_event_handler() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let _ascendd = Arc::new(create_ascendd().await.unwrap());
 
-        let t = Target::new(ascendd.clone(), "this-town-aint-big-enough-for-the-three-of-us");
+        let t = Target::new("this-town-aint-big-enough-for-the-three-of-us");
 
         let tc = Arc::new(TargetCollection::new());
         tc.merge_insert(t.clone()).await;
 
         let handler = DaemonEventHandler {
-            ascendd: ascendd.clone(),
             target_collection: Arc::downgrade(&tc),
             config_reader: Arc::new(FakeConfigReader {
                 query_expected: "target.default".to_owned(),
@@ -1063,7 +1035,6 @@ mod test {
         // This handler will now return the value of the default target as
         // intended.
         let handler = DaemonEventHandler {
-            ascendd,
             target_collection: Arc::downgrade(&tc),
             config_reader: Arc::new(FakeConfigReader {
                 query_expected: "target.default".to_owned(),
@@ -1110,20 +1081,20 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_default_target_empty() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let _ascendd = Arc::new(create_ascendd().await.unwrap());
         let d = Daemon::new_for_test().await;
         let nodename = "where-is-my-hasenpfeffer";
-        let t = Target::new_autoconnected(ascendd.clone(), nodename).await;
+        let t = Target::new_autoconnected(nodename).await;
         d.target_collection.merge_insert(t.clone()).await;
         assert_eq!(nodename, d.get_default_target(None).await.unwrap().nodename().await.unwrap());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_default_target_query() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let _ascendd = Arc::new(create_ascendd().await.unwrap());
         let d = Daemon::new_for_test().await;
         let nodename = "where-is-my-hasenpfeffer";
-        let t = Target::new_autoconnected(ascendd.clone(), nodename).await;
+        let t = Target::new_autoconnected(nodename).await;
         d.target_collection.merge_insert(t.clone()).await;
         assert_eq!(
             nodename,
@@ -1138,10 +1109,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_default_target_ambiguous() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
+        let _ascendd = Arc::new(create_ascendd().await.unwrap());
         let d = Daemon::new_for_test().await;
-        let t = Target::new_autoconnected(ascendd.clone(), "where-is-my-hasenpfeffer").await;
-        let t2 = Target::new_autoconnected(ascendd.clone(), "it-is-rabbit-season").await;
+        let t = Target::new_autoconnected("where-is-my-hasenpfeffer").await;
+        let t2 = Target::new_autoconnected("it-is-rabbit-season").await;
         d.target_collection.merge_insert(t.clone()).await;
         d.target_collection.merge_insert(t2.clone()).await;
         assert_eq!(Err(DaemonError::TargetAmbiguous), d.get_default_target(None).await);

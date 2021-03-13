@@ -189,7 +189,6 @@ impl<T: AsyncRead + AsyncWrite + Unpin + Send> FastbootImpl<T> {
 mod test {
     use {
         super::*,
-        crate::onet::create_ascendd,
         anyhow::{anyhow, bail},
         fastboot::reply::Reply,
         fidl::endpoints::{create_endpoints, create_proxy_and_stream},
@@ -200,7 +199,6 @@ mod test {
         futures::task::{Context as fContext, Poll},
         std::io::{BufWriter, Write},
         std::pin::Pin,
-        std::sync::Arc,
         tempfile::NamedTempFile,
     };
 
@@ -275,8 +273,7 @@ mod test {
     }
 
     async fn setup(replies: Vec<Reply>) -> (Target, FastbootProxy) {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let target = Target::new(ascendd, "scooby-dooby-doo");
+        let target = Target::new("scooby-dooby-doo");
         let mut fb =
             FastbootImpl::<TestTransport>::new(target.clone(), Box::new(TestFactory::new(replies)));
         let (proxy, stream) = create_proxy_and_stream::<FastbootMarker>().unwrap();

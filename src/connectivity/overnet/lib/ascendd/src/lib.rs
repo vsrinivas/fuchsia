@@ -8,12 +8,11 @@ use crate::serial::run_serial_link_handlers;
 use anyhow::{bail, format_err, Error};
 use argh::FromArgs;
 use async_std::os::unix::net::{UnixListener, UnixStream};
-use fidl_fuchsia_overnet::{MeshControllerProxy, ServiceConsumerProxy, ServicePublisherProxy};
 use fuchsia_async::Task;
 use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
-use hoist::{HostOvernet, OvernetInstance};
-use overnet_core::{Router, RouterOptions};
+use hoist::hoist;
+use overnet_core::Router;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::{io::ErrorKind::TimedOut, pin::Pin, time::Duration};
@@ -37,22 +36,12 @@ pub struct Opt {
 
 #[derive(Debug)]
 pub struct Ascendd {
-    host_overnet: HostOvernet,
     task: Task<Result<(), Error>>,
 }
 
 impl Ascendd {
     pub fn new(opt: Opt, stdout: impl AsyncWrite + Unpin + Send + 'static) -> Result<Self, Error> {
-        let node = Router::new(
-            RouterOptions::new()
-                .export_diagnostics(fidl_fuchsia_overnet_protocol::Implementation::Ascendd),
-            Box::new(hoist::hard_coded_security_context()),
-        )?;
-
-        Ok(Self {
-            host_overnet: HostOvernet::new(node.clone())?,
-            task: Task::spawn(run_ascendd(node, opt, stdout)),
-        })
+        Ok(Self { task: Task::spawn(run_ascendd(opt, stdout)) })
     }
 }
 
@@ -61,20 +50,6 @@ impl Future for Ascendd {
 
     fn poll(mut self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Result<(), Error>> {
         self.task.poll_unpin(ctx)
-    }
-}
-
-impl OvernetInstance for Ascendd {
-    fn connect_as_service_consumer(&self) -> Result<ServiceConsumerProxy, Error> {
-        self.host_overnet.connect_as_service_consumer()
-    }
-
-    fn connect_as_service_publisher(&self) -> Result<ServicePublisherProxy, Error> {
-        self.host_overnet.connect_as_service_publisher()
-    }
-
-    fn connect_as_mesh_controller(&self) -> Result<MeshControllerProxy, Error> {
-        self.host_overnet.connect_as_mesh_controller()
     }
 }
 
@@ -98,17 +73,13 @@ async fn run_stream(
     run_stream_link(node, &mut rx, &mut tx, Default::default(), config).await
 }
 
-async fn run_ascendd(
-    node: Arc<Router>,
-    opt: Opt,
-    stdout: impl AsyncWrite + Unpin + Send,
-) -> Result<(), Error> {
+async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result<(), Error> {
     let Opt { sockpath, serial } = opt;
 
     let sockpath = &sockpath.unwrap_or(hoist::DEFAULT_ASCENDD_PATH.to_string());
     let serial = serial.unwrap_or("none".to_string());
 
-    log::info!("starting ascendd on {} with node id {:?}", sockpath, node.node_id());
+    log::info!("starting ascendd on {} with node id {:?}", sockpath, hoist().node().node_id());
 
     let incoming = loop {
         match UnixListener::bind(sockpath).await {
@@ -136,16 +107,13 @@ async fn run_ascendd(
     log::info!("ascendd listening to socket {}", sockpath);
 
     futures::future::try_join(
-        run_serial_link_handlers(Arc::downgrade(&node), &serial, stdout),
+        run_serial_link_handlers(Arc::downgrade(&hoist().node()), &serial, stdout),
         async move {
             incoming
                 .incoming()
-                .for_each_concurrent(None, |stream| {
-                    let node = node.clone();
-                    async move {
-                        if let Err(e) = run_stream(node, stream, sockpath).await {
-                            log::warn!("Failed processing socket: {:?}", e);
-                        }
+                .for_each_concurrent(None, |stream| async move {
+                    if let Err(e) = run_stream(hoist().node(), stream, sockpath).await {
+                        log::warn!("Failed processing socket: {:?}", e);
                     }
                 })
                 .await;

@@ -128,7 +128,7 @@ async fn exec_server(daemon: Daemon) -> Result<()> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;
     let mut stream = ServiceProviderRequestStream::from_channel(chan);
-    daemon.publish_service(DaemonMarker::NAME, ClientEnd::new(p))?;
+    hoist::hoist().publish_service(DaemonMarker::NAME, ClientEnd::new(p))?;
     while let Some(ServiceProviderRequest::ConnectToService {
         chan,
         info: _,

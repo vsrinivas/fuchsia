@@ -19,7 +19,6 @@ use {
     std::future::Future,
     std::io,
     std::process::{Child, Stdio},
-    std::sync::Arc,
     std::time::Duration,
 };
 
@@ -46,7 +45,7 @@ async fn latency_sensitive_copy(
 }
 
 impl HostPipeChild {
-    pub async fn new(ascendd: Arc<Ascendd>, addrs: Vec<TargetAddr>) -> Result<HostPipeChild> {
+    pub async fn new(addrs: Vec<TargetAddr>) -> Result<HostPipeChild> {
         let mut inner = build_ssh_command(addrs, vec!["remote_control_runner"])
             .await?
             .stdout(Stdio::piped())
@@ -56,7 +55,7 @@ impl HostPipeChild {
             .context("running target overnet pipe")?;
 
         let (mut pipe_rx, mut pipe_tx) = futures::AsyncReadExt::split(
-            overnet_pipe(&*ascendd).context("creating local overnet pipe")?,
+            overnet_pipe(hoist::hoist()).context("creating local overnet pipe")?,
         );
         let (cancel_tx, cancel_rx) = oneshot::channel::<()>();
 
@@ -156,7 +155,7 @@ impl HostPipeConnection {
 
     async fn new_with_cmd<F>(
         target: WeakTarget,
-        cmd_func: impl FnOnce(Arc<Ascendd>, Vec<TargetAddr>) -> F + Send + Copy + 'static,
+        cmd_func: impl FnOnce(Vec<TargetAddr>) -> F + Send + Copy + 'static,
         relaunch_command_delay: Duration,
     ) -> Result<(), String>
     where
@@ -166,8 +165,7 @@ impl HostPipeConnection {
             log::debug!("Spawning new host-pipe instance");
             let target = target.upgrade().ok_or("parent Arc<> lost. exiting".to_owned())?;
             let addrs = target.addrs().await;
-            let mut cmd =
-                cmd_func(target.ascendd().clone(), addrs).await.map_err(|e| e.to_string())?;
+            let mut cmd = cmd_func(addrs).await.map_err(|e| e.to_string())?;
 
             // Attempts to run the command. If it exits successfully (disconnect due to peer
             // dropping) then will set the target to disconnected state. If
@@ -238,10 +236,7 @@ mod test {
         }
     }
 
-    async fn start_child_normal_operation(
-        _ascendd: Arc<Ascendd>,
-        _t: Vec<TargetAddr>,
-    ) -> Result<HostPipeChild> {
+    async fn start_child_normal_operation(_t: Vec<TargetAddr>) -> Result<HostPipeChild> {
         Ok(HostPipeChild::fake_new(
             std::process::Command::new("yes")
                 .arg("test-command")
@@ -252,17 +247,13 @@ mod test {
         ))
     }
 
-    async fn start_child_internal_failure(
-        _ascendd: Arc<Ascendd>,
-        _t: Vec<TargetAddr>,
-    ) -> Result<HostPipeChild> {
+    async fn start_child_internal_failure(_t: Vec<TargetAddr>) -> Result<HostPipeChild> {
         Err(anyhow!(ERR_CTX))
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_host_pipe_start_and_stop_normal_operation() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let target = crate::target::Target::new(ascendd, "flooooooooberdoober");
+        let target = crate::target::Target::new("flooooooooberdoober");
         let _conn = HostPipeConnection::new_with_cmd(
             target.downgrade(),
             start_child_normal_operation,
@@ -274,8 +265,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_host_pipe_start_and_stop_internal_failure() {
         // TODO(awdavies): Verify the error matches.
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let target = crate::target::Target::new(ascendd, "flooooooooberdoober");
+        let target = crate::target::Target::new("flooooooooberdoober");
         let conn = HostPipeConnection::new_with_cmd(
             target.downgrade(),
             start_child_internal_failure,

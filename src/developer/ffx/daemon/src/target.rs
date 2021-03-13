@@ -12,7 +12,6 @@ use {
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
     crate::onet::HostPipeConnection,
     anyhow::{anyhow, Context, Error, Result},
-    ascendd::Ascendd,
     async_std::{
         future::{timeout, TimeoutError},
         sync::RwLock,
@@ -109,7 +108,6 @@ pub trait ToFidlTarget {
 pub struct RcsConnection {
     pub proxy: RemoteControlProxy,
     pub overnet_id: NodeId,
-    ascendd: Arc<Ascendd>,
 }
 
 impl Hash for RcsConnection {
@@ -165,34 +163,30 @@ impl Display for RcsConnectionError {
 }
 
 impl RcsConnection {
-    pub async fn new(ascendd: Arc<Ascendd>, id: &mut NodeId) -> Result<Self> {
+    pub async fn new(id: &mut NodeId) -> Result<Self> {
         let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
-        let _result = RcsConnection::connect_to_service(&ascendd, id, s)?;
+        let _result = RcsConnection::connect_to_service(id, s)?;
         let proxy = RemoteControlProxy::new(
             fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?,
         );
 
-        Ok(Self { ascendd, proxy, overnet_id: id.clone() })
+        Ok(Self { proxy, overnet_id: id.clone() })
     }
 
     pub fn copy_to_channel(&mut self, channel: fidl::Channel) -> Result<()> {
-        RcsConnection::connect_to_service(&self.ascendd, &mut self.overnet_id, channel)
+        RcsConnection::connect_to_service(&mut self.overnet_id, channel)
     }
 
-    fn connect_to_service(
-        ascendd: &Arc<Ascendd>,
-        overnet_id: &mut NodeId,
-        channel: fidl::Channel,
-    ) -> Result<()> {
-        let svc = ascendd.connect_as_service_consumer()?;
+    fn connect_to_service(overnet_id: &mut NodeId, channel: fidl::Channel) -> Result<()> {
+        let svc = hoist::hoist().connect_as_service_consumer()?;
         svc.connect_to_service(overnet_id, RemoteControlMarker::NAME, channel)
             .map_err(|e| anyhow!("Error connecting to Rcs: {}", e))
     }
 
     // For testing.
     #[cfg(test)]
-    pub fn new_with_proxy(ascendd: Arc<Ascendd>, proxy: RemoteControlProxy, id: &NodeId) -> Self {
-        Self { proxy, overnet_id: id.clone(), ascendd }
+    pub fn new_with_proxy(proxy: RemoteControlProxy, id: &NodeId) -> Self {
+        Self { proxy, overnet_id: id.clone() }
     }
 }
 
@@ -298,13 +292,11 @@ struct TargetInner {
     serial: RwLock<Option<String>>,
     boot_timestamp_nanos: RwLock<Option<u64>>,
     diagnostics_info: Arc<DiagnosticsStreamer<'static>>,
-    ascendd: Arc<Ascendd>,
 }
 
 impl TargetInner {
-    fn new(ascendd: Arc<Ascendd>, nodename: Option<&str>) -> Self {
+    fn new(nodename: Option<&str>) -> Self {
         Self {
-            ascendd,
             nodename: Mutex::new(nodename.map(str::to_string)),
             last_response: RwLock::new(Utc::now()),
             state: Mutex::new(TargetState::default()),
@@ -315,37 +307,29 @@ impl TargetInner {
         }
     }
 
-    pub fn new_with_boot_timestamp(
-        ascendd: Arc<Ascendd>,
-        nodename: &str,
-        boot_timestamp_nanos: u64,
-    ) -> Self {
+    pub fn new_with_boot_timestamp(nodename: &str, boot_timestamp_nanos: u64) -> Self {
         Self {
             boot_timestamp_nanos: RwLock::new(Some(boot_timestamp_nanos)),
-            ..Self::new(ascendd, Some(nodename))
+            ..Self::new(Some(nodename))
         }
     }
 
-    pub fn new_with_addrs(
-        ascendd: Arc<Ascendd>,
-        nodename: Option<&str>,
-        addrs: BTreeSet<TargetAddr>,
-    ) -> Self {
+    pub fn new_with_addrs(nodename: Option<&str>, addrs: BTreeSet<TargetAddr>) -> Self {
         Self {
             addrs: RwLock::new(addrs.iter().map(|e| (*e, Utc::now()).into()).collect()),
-            ..Self::new(ascendd, nodename)
+            ..Self::new(nodename)
         }
     }
 
-    pub fn new_with_serial(ascendd: Arc<Ascendd>, nodename: &str, serial: &str) -> Self {
-        Self { serial: RwLock::new(Some(serial.to_string())), ..Self::new(ascendd, Some(nodename)) }
+    pub fn new_with_serial(nodename: &str, serial: &str) -> Self {
+        Self { serial: RwLock::new(Some(serial.to_string())), ..Self::new(Some(nodename)) }
     }
 
     /// Dependency injection constructor so we can insert a fake time for
     /// testing.
     #[cfg(test)]
-    pub fn new_with_time(ascendd: Arc<Ascendd>, nodename: &str, time: DateTime<Utc>) -> Self {
-        Self { last_response: RwLock::new(time), ..Self::new(ascendd, Some(nodename)) }
+    pub fn new_with_time(nodename: &str, time: DateTime<Utc>) -> Self {
+        Self { last_response: RwLock::new(time), ..Self::new(Some(nodename)) }
     }
 
     pub async fn nodename_str(&self) -> String {
@@ -466,10 +450,6 @@ impl Target {
         WeakTarget { events: self.events.clone(), inner: Arc::downgrade(&self.inner) }
     }
 
-    pub fn ascendd(&self) -> &Arc<Ascendd> {
-        &self.inner.ascendd
-    }
-
     fn from_inner(inner: Arc<TargetInner>) -> Self {
         let events = events::Queue::new(&inner);
         let weak_inner = Arc::downgrade(&inner);
@@ -493,52 +473,39 @@ impl Target {
         Self { inner, events, task_manager }
     }
 
-    pub fn new(ascendd: Arc<Ascendd>, nodename: &str) -> Self {
-        let inner = Arc::new(TargetInner::new(ascendd, Some(nodename)));
+    pub fn new(nodename: &str) -> Self {
+        let inner = Arc::new(TargetInner::new(Some(nodename)));
         Self::from_inner(inner)
     }
 
-    pub fn new_with_boot_timestamp(
-        ascendd: Arc<Ascendd>,
-        nodename: &str,
-        boot_timestamp_nanos: u64,
-    ) -> Self {
-        let inner =
-            Arc::new(TargetInner::new_with_boot_timestamp(ascendd, nodename, boot_timestamp_nanos));
+    pub fn new_with_boot_timestamp(nodename: &str, boot_timestamp_nanos: u64) -> Self {
+        let inner = Arc::new(TargetInner::new_with_boot_timestamp(nodename, boot_timestamp_nanos));
         Self::from_inner(inner)
     }
 
-    pub fn new_with_addrs(
-        ascendd: Arc<Ascendd>,
-        nodename: Option<&str>,
-        addrs: BTreeSet<TargetAddr>,
-    ) -> Self {
-        let inner = Arc::new(TargetInner::new_with_addrs(ascendd, nodename, addrs));
+    pub fn new_with_addrs(nodename: Option<&str>, addrs: BTreeSet<TargetAddr>) -> Self {
+        let inner = Arc::new(TargetInner::new_with_addrs(nodename, addrs));
         Self::from_inner(inner)
     }
 
-    pub fn new_with_serial(ascendd: Arc<Ascendd>, nodename: &str, serial: &str) -> Self {
-        let inner = Arc::new(TargetInner::new_with_serial(ascendd, nodename, serial));
+    pub fn new_with_serial(nodename: &str, serial: &str) -> Self {
+        let inner = Arc::new(TargetInner::new_with_serial(nodename, serial));
         Self::from_inner(inner)
     }
 
-    pub fn from_target_info(ascendd: Arc<Ascendd>, mut t: TargetInfo) -> Self {
+    pub fn from_target_info(mut t: TargetInfo) -> Self {
         if let Some(s) = t.serial {
-            Self::new_with_serial(ascendd, t.nodename.as_ref(), &s)
+            Self::new_with_serial(t.nodename.as_ref(), &s)
         } else {
-            Self::new_with_addrs(
-                ascendd,
-                Some(t.nodename.as_ref()),
-                t.addresses.drain(..).collect(),
-            )
+            Self::new_with_addrs(Some(t.nodename.as_ref()), t.addresses.drain(..).collect())
         }
     }
 
     /// Dependency injection constructor so we can insert a fake time for
     /// testing.
     #[cfg(test)]
-    pub fn new_with_time(ascendd: Arc<Ascendd>, nodename: &str, time: DateTime<Utc>) -> Self {
-        let inner = Arc::new(TargetInner::new_with_time(ascendd, nodename, time));
+    pub fn new_with_time(nodename: &str, time: DateTime<Utc>) -> Self {
+        let inner = Arc::new(TargetInner::new_with_time(nodename, time));
         Self::from_inner(inner)
     }
 
@@ -655,8 +622,8 @@ impl Target {
     }
 
     #[cfg(test)]
-    pub async fn new_autoconnected(ascendd: Arc<Ascendd>, n: &str) -> Self {
-        let s = Self::new(ascendd, n);
+    pub async fn new_autoconnected(n: &str) -> Self {
+        let s = Self::new(n);
         s.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
             ConnectionState::Mdns(Utc::now())
@@ -745,8 +712,8 @@ impl Target {
         // up properly, else there will be duplicate link-local addresses that
         // aren't usable.
         let target = match fidl_target.boot_timestamp_nanos {
-            Some(t) => Target::new_with_boot_timestamp(r.ascendd.clone(), nodename.as_ref(), t),
-            None => Target::new(r.ascendd.clone(), nodename.as_ref()),
+            Some(t) => Target::new_with_boot_timestamp(nodename.as_ref(), t),
+            None => Target::new(nodename.as_ref()),
         };
 
         // Forces drop of target state mutex so that target can be returned.
@@ -1384,7 +1351,6 @@ impl TargetCollection {
 mod test {
     use {
         super::*,
-        crate::onet::create_ascendd,
         chrono::offset::TimeZone,
         fidl, fidl_fuchsia_developer_remotecontrol as rcs,
         futures::{channel::mpsc, executor::block_on},
@@ -1408,7 +1374,6 @@ mod test {
                     block_on(self.boot_timestamp_nanos.read()).clone(),
                 ),
                 diagnostics_info: self.diagnostics_info.clone(),
-                ascendd: self.ascendd.clone(),
             }
         }
     }
@@ -1432,10 +1397,9 @@ mod test {
     }
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_insert_new_not_connected() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let tc = TargetCollection::new();
         let nodename = String::from("what");
-        let t = Target::new_with_time(ascendd, &nodename, fake_now());
+        let t = Target::new_with_time(&nodename, fake_now());
         tc.merge_insert(clone_target(&t).await).await;
         let other_target = &tc.get(nodename.clone()).await.unwrap();
         assert_eq!(other_target, &t);
@@ -1460,10 +1424,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_insert_new() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let tc = TargetCollection::new();
         let nodename = String::from("what");
-        let t = Target::new_with_time(ascendd, &nodename, fake_now());
+        let t = Target::new_with_time(&nodename, fake_now());
         tc.merge_insert(clone_target(&t).await).await;
         assert_eq!(&tc.get(nodename.clone()).await.unwrap(), &t);
         match tc.get("oihaoih").await {
@@ -1474,11 +1437,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_merge() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let tc = TargetCollection::new();
         let nodename = String::from("bananas");
-        let t1 = Target::new_with_time(ascendd.clone(), &nodename, fake_now());
-        let t2 = Target::new_with_time(ascendd.clone(), &nodename, fake_elapsed());
+        let t1 = Target::new_with_time(&nodename, fake_now());
+        let t2 = Target::new_with_time(&nodename, fake_elapsed());
         let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
         let a2 = IpAddr::V6(Ipv6Addr::new(
             0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
@@ -1498,14 +1460,14 @@ mod test {
         // Insert another instance of the a2 address, but with a missing
         // scope_id, and ensure that the new address does not affect the address
         // collection.
-        let t3 = Target::new_with_time(ascendd.clone(), &nodename, fake_now());
+        let t3 = Target::new_with_time(&nodename, fake_now());
         t3.addrs_insert((a2.clone(), 0).into()).await;
         tc.merge_insert(clone_target(&t3).await).await;
         let merged_target = tc.get(nodename.clone()).await.unwrap();
         assert_eq!(merged_target.addrs().await.len(), 2);
 
         // Insert another instance of the a2 address, but with a new scope_id, and ensure that the new scope is used.
-        let t3 = Target::new_with_time(ascendd.clone(), &nodename, fake_now());
+        let t3 = Target::new_with_time(&nodename, fake_now());
         t3.addrs_insert((a2.clone(), 3).into()).await;
         tc.merge_insert(clone_target(&t3).await).await;
         let merged_target = tc.get(nodename.clone()).await.unwrap();
@@ -1561,9 +1523,7 @@ mod test {
     async fn test_target_from_rcs_connection_internal_err() {
         // TODO(awdavies): Do some form of PartialEq implementation for
         // the RcsConnectionError enum to avoid the nested matches.
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let conn = RcsConnection::new_with_proxy(
-            ascendd,
             setup_fake_remote_control_service(true, "foo".to_owned()),
             &NodeId { id: 123 },
         );
@@ -1581,9 +1541,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_from_rcs_connection_nodename_none() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let conn = RcsConnection::new_with_proxy(
-            ascendd,
             setup_fake_remote_control_service(false, "".to_owned()),
             &NodeId { id: 123456 },
         );
@@ -1598,9 +1556,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_from_rcs_connection_no_err() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let conn = RcsConnection::new_with_proxy(
-            ascendd,
             setup_fake_remote_control_service(false, "foo".to_owned()),
             &NodeId { id: 1234 },
         );
@@ -1616,18 +1572,15 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_query_matches_nodename() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let query = TargetQuery::from("foo");
-        let target = Arc::new(Target::new(ascendd, "foo"));
+        let target = Arc::new(Target::new("foo"));
         assert!(query.matches(&target).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_by_overnet_id() {
         const ID: u64 = 12345;
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let conn = RcsConnection::new_with_proxy(
-            ascendd,
             setup_fake_remote_control_service(false, "foo".to_owned()),
             &NodeId { id: ID },
         );
@@ -1639,9 +1592,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_by_addr() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
-        let t = Target::new(ascendd.clone(), "foo");
+        let t = Target::new("foo");
         t.addrs_insert(addr.clone()).await;
         let tc = TargetCollection::new();
         tc.merge_insert(clone_target(&t).await).await;
@@ -1651,7 +1603,7 @@ mod test {
 
         let addr: TargetAddr =
             (IpAddr::from([0xfe80, 0x0, 0x0, 0x0, 0xdead, 0xbeef, 0xbeef, 0xbeef]), 3).into();
-        let t = Target::new(ascendd.clone(), "fooberdoober");
+        let t = Target::new("fooberdoober");
         t.addrs_insert(addr.clone()).await;
         tc.merge_insert(clone_target(&t).await).await;
         assert_eq!(tc.get("fe80::dead:beef:beef:beef").await.unwrap(), t);
@@ -1662,8 +1614,7 @@ mod test {
     // Most of this is now handled in `task.rs`
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_disconnect_multiple_invocations() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Arc::new(Target::new(ascendd, "flabbadoobiedoo"));
+        let t = Arc::new(Target::new("flabbadoobiedoo"));
         {
             let addr: TargetAddr = (IpAddr::from([192, 168, 0, 1]), 0).into();
             t.addrs_insert(addr).await;
@@ -1682,7 +1633,6 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_rcs_states() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         for test in vec![
             RcsStateTest {
                 loop_started: true,
@@ -1705,7 +1655,7 @@ mod test {
                 expected: bridge::RemoteControlState::Unknown,
             },
         ] {
-            let t = Target::new(ascendd.clone(), "schlabbadoo");
+            let t = Target::new("schlabbadoo");
             let a2 = IpAddr::V6(Ipv6Addr::new(
                 0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
             ));
@@ -1717,7 +1667,6 @@ mod test {
                 *t.inner.state.lock().await = TargetState {
                     connection_state: if test.rcs_is_some {
                         ConnectionState::Rcs(RcsConnection::new_with_proxy(
-                            ascendd.clone(),
                             setup_fake_remote_control_service(true, "foobiedoo".to_owned()),
                             &NodeId { id: 123 },
                         ))
@@ -1732,8 +1681,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_to_fidl_target() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new(ascendd, "cragdune-the-impaler");
+        let t = Target::new("cragdune-the-impaler");
         let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
         let a2 = IpAddr::V6(Ipv6Addr::new(
             0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
@@ -1756,8 +1704,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_event_synthesis() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new(ascendd.clone(), "clopperdoop");
+        let t = Target::new("clopperdoop");
         let vec = t.synthesize_events().await;
         assert_eq!(vec.len(), 0);
         t.update_connection_state(|s| {
@@ -1775,11 +1722,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_event_synthesis_all_connected() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new_autoconnected(ascendd.clone(), "clam-chowder-is-tasty").await;
-        let t2 = Target::new_autoconnected(ascendd.clone(), "this-is-a-crunchy-falafel").await;
-        let t3 = Target::new_autoconnected(ascendd.clone(), "i-should-probably-eat-lunch").await;
-        let t4 = Target::new_autoconnected(ascendd.clone(), "i-should-probably-eat-lunch").await;
+        let t = Target::new_autoconnected("clam-chowder-is-tasty").await;
+        let t2 = Target::new_autoconnected("this-is-a-crunchy-falafel").await;
+        let t3 = Target::new_autoconnected("i-should-probably-eat-lunch").await;
+        let t4 = Target::new_autoconnected("i-should-probably-eat-lunch").await;
         let tc = TargetCollection::new();
         tc.merge_insert(t).await;
         tc.merge_insert(t2).await;
@@ -1804,11 +1750,10 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_event_synthesis_none_connected() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new(ascendd.clone(), "clam-chowder-is-tasty");
-        let t2 = Target::new(ascendd.clone(), "this-is-a-crunchy-falafel");
-        let t3 = Target::new(ascendd.clone(), "i-should-probably-eat-lunch");
-        let t4 = Target::new(ascendd.clone(), "i-should-probably-eat-lunch");
+        let t = Target::new("clam-chowder-is-tasty");
+        let t2 = Target::new("this-is-a-crunchy-falafel");
+        let t3 = Target::new("i-should-probably-eat-lunch");
+        let t4 = Target::new("i-should-probably-eat-lunch");
 
         let tc = TargetCollection::new();
         tc.merge_insert(t).await;
@@ -1845,10 +1790,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_collection_events() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new(ascendd.clone(), "clam-chowder-is-tasty");
-        let t2 = Target::new(ascendd.clone(), "this-is-a-crunchy-falafel");
-        let t3 = Target::new(ascendd.clone(), "i-should-probably-eat-lunch");
+        let t = Target::new("clam-chowder-is-tasty");
+        let t2 = Target::new("this-is-a-crunchy-falafel");
+        let t3 = Target::new("i-should-probably-eat-lunch");
 
         let tc = Arc::new(TargetCollection::new());
         let queue = events::Queue::new(&tc);
@@ -1866,9 +1810,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_event_synthesis_wait() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let conn = RcsConnection::new_with_proxy(
-            ascendd,
             setup_fake_remote_control_service(false, "foo".to_owned()),
             &NodeId { id: 1234 },
         );
@@ -1887,10 +1829,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_event_fire() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new(ascendd.clone(), "balaowihf");
+        let t = Target::new("balaowihf");
         let conn = RcsConnection::new_with_proxy(
-            ascendd,
             setup_fake_remote_control_service(false, "balaowihf".to_owned()),
             &NodeId { id: 1234 },
         );
@@ -1957,10 +1897,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_get_default() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let default = "clam-chowder-is-tasty";
-        let t = Target::new_autoconnected(ascendd.clone(), default).await;
-        let t2 = Target::new_autoconnected(ascendd.clone(), "this-is-a-crunchy-falafel").await;
+        let t = Target::new_autoconnected(default).await;
+        let t2 = Target::new_autoconnected("this-is-a-crunchy-falafel").await;
         let tc = TargetCollection::new();
         assert!(tc.get_default(None).await.is_err());
         tc.merge_insert(clone_target(&t).await).await;
@@ -1974,10 +1913,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_get_default_matches_contains() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let default = "clam-chowder-is-tasty";
-        let t = Target::new_autoconnected(ascendd.clone(), default).await;
-        let t2 = Target::new_autoconnected(ascendd.clone(), "this-is-a-crunchy-falafel").await;
+        let t = Target::new_autoconnected(default).await;
+        let t2 = Target::new_autoconnected("this-is-a-crunchy-falafel").await;
         let tc = TargetCollection::new();
         assert!(tc.get_default(None).await.is_err());
         tc.merge_insert(clone_target(&t).await).await;
@@ -1992,8 +1930,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_update_connection_state() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new(ascendd, "have-you-seen-my-cat");
+        let t = Target::new("have-you-seen-my-cat");
         let fake_time = Utc.yo(2017, 12).and_hms(1, 2, 3);
         let fake_time_clone = fake_time.clone();
         t.update_connection_state(move |s| {
@@ -2007,8 +1944,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_mdns_set_disconnected() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new(ascendd, "yo-yo-ma-plays-that-cello-ya-hear");
+        let t = Target::new("yo-yo-ma-plays-that-cello-ya-hear");
         let now = Utc::now();
         t.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
@@ -2034,8 +1970,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_fastboot_set_disconnected() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new(ascendd, "platypodes-are-venomous");
+        let t = Target::new("platypodes-are-venomous");
         let now = Utc::now();
         t.update_connection_state(|s| {
             assert_eq!(s, ConnectionState::Disconnected);
@@ -2061,8 +1996,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_addresses_order_preserved() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new(ascendd, "this-is-a-target-i-guess");
+        let t = Target::new("this-is-a-target-i-guess");
         let addrs_pre = vec![
             SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 0)),
             SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(127, 0, 0, 1), 0)),
@@ -2094,8 +2028,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_addresses_order() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new(ascendd, "hi-hi-hi");
+        let t = Target::new("hi-hi-hi");
         let expected = SocketAddr::V6(SocketAddrV6::new(
             "fe80::4559:49b2:462d:f46b".parse().unwrap(),
             0,
@@ -2122,8 +2055,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_addresses_prefer_local_vs_v6() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new(ascendd, "hi-hi-hi");
+        let t = Target::new("hi-hi-hi");
         let expected = SocketAddr::V4(SocketAddrV4::new(Ipv4Addr::new(192, 168, 70, 68), 0));
         let addrs_pre = vec![
             expected.clone(),
@@ -2150,7 +2082,6 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_merge_no_name() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let ip = "f111::3".parse().unwrap();
 
         // t1 is a target as we would naturally discover it via mdns, or from a
@@ -2158,12 +2089,12 @@ mod test {
         // link-local address.
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip, scope_id: 0xbadf00d });
-        let t1 = Target::new_with_addrs(ascendd.clone(), None, addr_set);
+        let t1 = Target::new_with_addrs(None, addr_set);
 
         // t2 is an incoming target that has the same address, but, it is
         // missing scope information, this is essentially what occurs when we
         // ask the target for its addresses.
-        let t2 = Target::new(ascendd, "this-is-a-crunchy-falafel");
+        let t2 = Target::new("this-is-a-crunchy-falafel");
         t2.inner.addrs.write().await.replace(TargetAddr { ip, scope_id: 0 }.into());
 
         let tc = TargetCollection::new();
@@ -2189,9 +2120,8 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_get_default_successful() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let default = "clam-chowder-is-tasty";
-        let t = Target::new_autoconnected(ascendd.clone(), default).await;
+        let t = Target::new_autoconnected(default).await;
         let tc = TargetCollection::new();
         tc.merge_insert(clone_target(&t).await).await;
         assert_eq!(tc.get_default(Some(default.to_string())).await.unwrap(), t);
@@ -2199,10 +2129,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_get_default_ambiguous() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let default = "clam-chowder-is-tasty";
-        let t = Target::new_autoconnected(ascendd.clone(), default).await;
-        let t2 = Target::new_autoconnected(ascendd.clone(), "this-is-a-crunchy-falafel").await;
+        let t = Target::new_autoconnected(default).await;
+        let t2 = Target::new_autoconnected("this-is-a-crunchy-falafel").await;
         let tc = TargetCollection::new();
         tc.merge_insert(clone_target(&t).await).await;
         tc.merge_insert(t2).await;
@@ -2216,10 +2145,9 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_get_default_not_found() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let default = "clam-chowder-is-tasty";
-        let t = Target::new_autoconnected(ascendd.clone(), default).await;
-        let t2 = Target::new_autoconnected(ascendd.clone(), "this-is-a-crunchy-falafel").await;
+        let t = Target::new_autoconnected(default).await;
+        let t2 = Target::new_autoconnected("this-is-a-crunchy-falafel").await;
         let tc = TargetCollection::new();
         tc.merge_insert(clone_target(&t).await).await;
         tc.merge_insert(t2).await;
@@ -2231,13 +2159,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_remove_unnamed_by_addr() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let ip1 = "f111::3".parse().unwrap();
         let ip2 = "f111::4".parse().unwrap();
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
-        let t1 = Target::new_with_addrs(ascendd.clone(), None, addr_set);
-        let t2 = Target::new(ascendd, "this-is-a-crunchy-falafel");
+        let t1 = Target::new_with_addrs(None, addr_set);
+        let t2 = Target::new("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new();
         t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1).await;
@@ -2257,13 +2184,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_remove_named_by_addr() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let ip1 = "f111::3".parse().unwrap();
         let ip2 = "f111::4".parse().unwrap();
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
-        let t1 = Target::new_with_addrs(ascendd.clone(), None, addr_set);
-        let t2 = Target::new(ascendd, "this-is-a-crunchy-falafel");
+        let t1 = Target::new_with_addrs(None, addr_set);
+        let t2 = Target::new("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new();
         t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1).await;
@@ -2283,13 +2209,12 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_remove_by_name() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
         let ip1 = "f111::3".parse().unwrap();
         let ip2 = "f111::4".parse().unwrap();
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
-        let t1 = Target::new_with_addrs(ascendd.clone(), None, addr_set);
-        let t2 = Target::new(ascendd, "this-is-a-crunchy-falafel");
+        let t1 = Target::new_with_addrs(None, addr_set);
+        let t2 = Target::new("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new();
         t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
         tc.merge_insert(t1).await;
@@ -2309,12 +2234,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_match_serial() {
-        let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let t = Target::new_with_serial(
-            ascendd.clone(),
-            "turritopsis-dohrnii-is-an-immortal-jellyfish",
-            "florp",
-        );
+        let t = Target::new_with_serial("turritopsis-dohrnii-is-an-immortal-jellyfish", "florp");
         let tc = TargetCollection::new();
         tc.merge_insert(clone_target(&t).await).await;
         assert_eq!(
