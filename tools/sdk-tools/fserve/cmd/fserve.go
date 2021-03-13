@@ -31,6 +31,8 @@ import (
 var (
 	// ExecCommand exports exec.Command as a variable so it can be mocked.
 	ExecCommand = exec.Command
+	// OsStat exports os.Stat as a variable so it can be mocked.
+	OsStat = os.Stat
 	// Logger level.
 	level = logger.InfoLevel
 )
@@ -81,6 +83,7 @@ func main() {
 	nameFlag := flag.String("name", "devhost", "Name is used as the update channel identifier, as reported by fuchsia.update.channel.Provider.")
 	repoPortFlag := flag.String("server-port", "", "Port number to use when serving the packages.")
 	killFlag := flag.Bool("kill", false, "Kills any existing package manager server.")
+	cleanFlag := flag.Bool("clean", false, "Cleans the package repository first.")
 	prepareFlag := flag.Bool("prepare", false, "Downloads any dependencies but does not start the package server.")
 	versionFlag := flag.String("version", sdk.GetSDKVersion(), "SDK Version to use for prebuilt packages.")
 	flag.Var(&level, "level", "Output verbosity, can be fatal, error, warning, info, debug or trace.")
@@ -163,6 +166,14 @@ func main() {
 		os.Exit(0)
 	}
 
+	if *cleanFlag {
+		if err = cleanPmRepo(ctx, *repoFlag); err != nil {
+			log.Warningf("Could not clean up the package repository: %v\n", err)
+		}
+	} else {
+		log.Infof("Using repository: %v (without cleaning, use -clean to clean the package repository first).\n", *repoFlag)
+	}
+
 	if err = prepare(ctx, sdk, *versionFlag, *repoFlag, *bucketFlag, *imageFlag); err != nil {
 		log.Fatalf("Could not prepare packages: %v\n", err)
 	}
@@ -206,6 +217,25 @@ func prepare(ctx context.Context, sdk sdkcommon.SDKProperties, version string, r
 	err := downloadImageIfNeeded(ctx, sdk, version, bucket, targetPackage, imageFilename, repoPath)
 	if err != nil {
 		return fmt.Errorf("Could not download %v:  %v", targetPackage, err)
+	}
+	return nil
+}
+
+// cleanPmRepo removes any files in the package repository.
+func cleanPmRepo(ctx context.Context, repoDir string) error {
+	log := logger.LoggerFromContext(ctx)
+	log.Infof("Cleaning the package repository %v.\n", repoDir)
+
+	if _, err := OsStat(repoDir); os.IsNotExist(err) {
+		// The repository does not exist and thus is already clean.
+		return nil
+	}
+
+	args := []string{"-Rf", repoDir}
+	cmd := ExecCommand("rm", args...)
+	_, err := cmd.Output()
+	if err != nil {
+		return err
 	}
 	return nil
 }

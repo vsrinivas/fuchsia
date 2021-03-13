@@ -30,6 +30,8 @@ var testrootFlag = flag.String("testroot", "", "Root directory of the files need
 
 const hostaddr = "fe80::c0ff:eeee:fefe:c000%eth1"
 
+const validDir = "/some/package/repo/dir"
+
 type testSDKProperties struct {
 	dataPath              string
 	expectCustomSSHConfig bool
@@ -110,6 +112,52 @@ func helperCommandForFServe(command string, s ...string) (cmd *exec.Cmd) {
 	// Set this in the enviroment, so we can control the result.
 	cmd.Env = append(os.Environ(), "GO_WANT_HELPER_PROCESS=1")
 	return cmd
+}
+
+func TestCleanPmRepo(t *testing.T) {
+	sdkcommon.ExecCommand = helperCommandForFServe
+	ExecCommand = helperCommandForFServe
+	ctx := testingContext()
+	defer func() {
+		ExecCommand = exec.Command
+	}()
+
+	var tests = []struct {
+		path          string
+		expectedError string
+		doesPathExist bool
+	}{
+		{
+			path:          validDir,
+			doesPathExist: true,
+		},
+		{
+			path:          "/some/dir/rm/error",
+			expectedError: "exit status 1",
+			doesPathExist: true,
+		}, {
+			path:          "/dir/does/not/exist",
+			doesPathExist: false,
+		},
+	}
+
+	for _, test := range tests {
+		OsStat = func(name string) (fi os.FileInfo, err error) {
+			var cmd os.FileInfo
+			if test.doesPathExist {
+				return cmd, nil
+			}
+			return nil, os.ErrNotExist
+		}
+		defer func() {
+			OsStat = os.Stat
+		}()
+
+		err := cleanPmRepo(ctx, test.path)
+		if err != nil && err.Error() != test.expectedError {
+			t.Errorf("Expected error '%v', but got '%v'", test.expectedError, err)
+		}
+	}
 }
 
 func TestKillServers(t *testing.T) {
@@ -416,6 +464,8 @@ func TestFakeFServe(t *testing.T) {
 		fakePgrep(args)
 	case "ps":
 		fakePS(args)
+	case "rm":
+		fakeRmRf(args)
 	case "pm":
 		fakePM(args)
 	case "gsutil":
@@ -545,6 +595,15 @@ func fakePS(args []string) {
 			fmt.Println("3000  pts/0    Sl     0:00 /sdk/path/tools/x64/pm serve -repo /home/developer/.fuchsia/packages/amber-files -l :8084 -q")
 		}
 	}
+}
+
+func fakeRmRf(args []string) {
+	command := strings.Join(args, " ")
+	if command == fmt.Sprintf("-Rf %v", validDir) {
+		os.Exit(0)
+	}
+	fmt.Fprintf(os.Stderr, "Directory does not exist\n")
+	os.Exit(1)
 }
 
 type testProcess struct {
