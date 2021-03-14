@@ -103,13 +103,13 @@ async fn do_start(
     .await;
 
     let mut start_context = match result {
-        Ok(start_context) => {
+        Ok(mut start_context) => {
             let event = Event::new_with_timestamp(
                 component,
                 Ok(EventPayload::Started {
                     component: component.into(),
                     runtime: RuntimeInfo::from_runtime(
-                        &start_context.pending_runtime,
+                        &mut start_context.pending_runtime,
                         start_context.resolved_url.clone(),
                     ),
                     component_decl: start_context.component_decl.clone(),

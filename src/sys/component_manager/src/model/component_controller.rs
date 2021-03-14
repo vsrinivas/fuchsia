@@ -45,9 +45,8 @@ impl<'a> ComponentController {
         let (diagnostics_sender, diagnostics_value_recv) = oneshot::channel();
 
         let event_stream = proxy.take_event_stream();
-        let event_listener_task = fasync::Task::spawn(async move {
-            Self::listen_for_events(event_stream, epitaph_sender, diagnostics_sender).await;
-        });
+        let events_fut = Self::listen_for_events(event_stream, epitaph_sender, diagnostics_sender);
+        let event_listener_task = fasync::Task::spawn(events_fut);
 
         Self {
             inner: proxy,

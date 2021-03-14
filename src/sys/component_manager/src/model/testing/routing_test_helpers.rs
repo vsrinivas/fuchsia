@@ -31,7 +31,7 @@ use {
         CLONE_FLAG_SAME_RIGHTS, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, MODE_TYPE_SERVICE,
         OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE,
     },
-    fidl_fuchsia_sys2 as fsys, fuchsia_zircon as zx,
+    fidl_fuchsia_sys2 as fsys, fuchsia_inspect as inspect, fuchsia_zircon as zx,
     futures::lock::Mutex,
     futures::prelude::*,
     moniker::{AbsoluteMoniker, PartialMoniker, RelativeMoniker},
@@ -285,7 +285,9 @@ impl RoutingTest {
             component_id_index_path: builder.component_id_index_path,
             ..Default::default()
         };
+        let inspector = inspect::Inspector::new();
         let mut env_builder = BuiltinEnvironmentBuilder::new()
+            .set_inspector(inspector)
             .set_runtime_config(config)
             .add_resolver("test".to_string(), Box::new(mock_resolver))
             .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone());

@@ -14,9 +14,10 @@ use {
     anyhow::format_err,
     async_trait::async_trait,
     cm_rust::{CapabilityName, ComponentDecl},
+    fidl_fuchsia_diagnostics_types as fdiagnostics,
     fidl_fuchsia_io::{self as fio, DirectoryProxy, NodeProxy},
     fidl_fuchsia_sys2 as fsys, fuchsia_trace as trace, fuchsia_zircon as zx,
-    futures::{future::BoxFuture, lock::Mutex},
+    futures::{channel::oneshot, future::BoxFuture, lock::Mutex},
     io_util,
     moniker::{AbsoluteMoniker, ExtendedMoniker},
     rand::random,
@@ -316,10 +317,18 @@ pub struct RuntimeInfo {
     pub package_dir: Option<DirectoryProxy>,
     pub outgoing_dir: Option<DirectoryProxy>,
     pub runtime_dir: Option<DirectoryProxy>,
+    pub diagnostics_receiver:
+        Arc<Mutex<Option<oneshot::Receiver<fdiagnostics::ComponentDiagnostics>>>>,
 }
 
 impl RuntimeInfo {
-    pub fn from_runtime(runtime: &Runtime, resolved_url: String) -> Self {
+    pub fn from_runtime(runtime: &mut Runtime, resolved_url: String) -> Self {
+        let diagnostics_receiver = Arc::new(Mutex::new(
+            runtime
+                .controller
+                .as_mut()
+                .and_then(|controller| controller.take_diagnostics_receiver()),
+        ));
         Self {
             resolved_url,
             package_dir: runtime
@@ -328,6 +337,7 @@ impl RuntimeInfo {
                 .and_then(|n| clone_dir(n.package_dir.as_ref().map(|d| d as &DirectoryProxy))),
             outgoing_dir: clone_dir(runtime.outgoing_dir.as_ref()),
             runtime_dir: clone_dir(runtime.runtime_dir.as_ref()),
+            diagnostics_receiver,
         }
     }
 }

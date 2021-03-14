@@ -18,6 +18,7 @@ pub mod startup;
 
 pub(crate) mod capability_ready_notifier;
 pub(crate) mod channel;
+pub(crate) mod component_tree_stats;
 pub(crate) mod framework;
 pub(crate) mod fuchsia_boot_resolver;
 pub(crate) mod fuchsia_pkg_resolver;

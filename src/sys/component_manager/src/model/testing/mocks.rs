@@ -19,18 +19,23 @@ use {
     async_trait::async_trait,
     cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::RoutingFn,
+    fidl::endpoints::RequestStream,
     fidl::{endpoints::ServerEnd, epitaph::ChannelEpitaphExt},
     fidl_fidl_examples_echo::{EchoMarker, EchoRequest, EchoRequestStream},
     fidl_fuchsia_component_runner as fcrunner,
+    fidl_fuchsia_diagnostics_types::{
+        ComponentDiagnostics, ComponentTasks, Task as DiagnosticsTask,
+    },
     fidl_fuchsia_io::{DirectoryMarker, NodeMarker},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, AsHandleRef, Koid},
+    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Koid},
     futures::{
         channel::oneshot,
         future::{AbortHandle, Abortable},
         lock::Mutex,
         prelude::*,
     },
+    log::warn,
     moniker::AbsoluteMoniker,
     std::{
         boxed::Box,
@@ -475,6 +480,23 @@ impl MockController {
         // channel to drop and close the channel.
 
         let (handle, registration) = AbortHandle::new_pair();
+
+        // Send default job for the sake of testing only.
+        let job_dup = fuchsia_runtime::job_default()
+            .duplicate_handle(zx::Rights::SAME_RIGHTS)
+            .expect("duplicate default job");
+        self.request_stream
+            .control_handle()
+            .send_on_publish_diagnostics(ComponentDiagnostics {
+                tasks: Some(ComponentTasks {
+                    component_task: Some(DiagnosticsTask::Job(job_dup)),
+                    ..ComponentTasks::EMPTY
+                }),
+                ..ComponentDiagnostics::EMPTY
+            })
+            .unwrap_or_else(|e| {
+                warn!("sending diagnostics failed: {:?}", e);
+            });
         let fut = Abortable::new(
             async move {
                 self.messages.lock().await.insert(self.koid, Vec::new());

@@ -25,6 +25,7 @@ use {
             vmex_resource::VmexResource,
         },
         capability_ready_notifier::CapabilityReadyNotifier,
+        component_tree_stats::ComponentTreeStats,
         config::RuntimeConfig,
         elf_runner::ElfRunner,
         framework::RealmCapabilityHost,
@@ -61,7 +62,7 @@ use {
     fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
     fuchsia_async as fasync,
     fuchsia_component::{client, server::*},
-    fuchsia_inspect::{component, health::Reporter},
+    fuchsia_inspect::{component, health::Reporter, Inspector},
     fuchsia_runtime::{take_startup_handle, HandleType},
     fuchsia_zircon::{self as zx, Clock, HandleBased},
     futures::{channel::oneshot, prelude::*},
@@ -83,6 +84,7 @@ pub struct BuiltinEnvironmentBuilder {
     resolvers: ResolverRegistry,
     utc_clock: Option<Arc<Clock>>,
     add_environment_resolvers: bool,
+    inspector: Option<Inspector>,
 }
 
 impl BuiltinEnvironmentBuilder {
@@ -96,6 +98,11 @@ impl BuiltinEnvironmentBuilder {
 
     pub fn set_runtime_config(mut self, runtime_config: RuntimeConfig) -> Self {
         self.runtime_config = Some(runtime_config);
+        self
+    }
+
+    pub fn set_inspector(mut self, inspector: Inspector) -> Self {
+        self.inspector = Some(inspector);
         self
     }
 
@@ -234,6 +241,7 @@ impl BuiltinEnvironmentBuilder {
             runtime_config,
             builtin_runners,
             self.utc_clock,
+            self.inspector.unwrap_or(component::inspector().clone()),
         )
         .await?)
     }
@@ -328,9 +336,11 @@ pub struct BuiltinEnvironment {
     pub capability_ready_notifier: Arc<CapabilityReadyNotifier>,
     pub event_stream_provider: Arc<EventStreamProvider>,
     pub event_logger: Option<Arc<EventLogger>>,
+    pub component_tree_stats: Arc<ComponentTreeStats>,
     pub execution_mode: ExecutionMode,
     pub num_threads: usize,
     pub out_dir_contents: OutDirContents,
+    pub inspector: Inspector,
 }
 
 impl BuiltinEnvironment {
@@ -340,6 +350,7 @@ impl BuiltinEnvironment {
         runtime_config: Arc<RuntimeConfig>,
         builtin_runners: Vec<Arc<BuiltinRunner>>,
         utc_clock: Option<Arc<Clock>>,
+        inspector: Inspector,
     ) -> Result<BuiltinEnvironment, ModelError> {
         let execution_mode = match runtime_config.debug {
             true => ExecutionMode::Debug,
@@ -602,6 +613,10 @@ impl BuiltinEnvironment {
         let hub = Arc::new(Hub::new(root_component_url.as_str().to_owned())?);
         model.root.hooks.install(hub.hooks()).await;
 
+        let component_tree_stats =
+            Arc::new(ComponentTreeStats::new(inspector.root().create_child("tree_stats")));
+        model.root.hooks.install(component_tree_stats.hooks()).await;
+
         // Set up the capability ready notifier.
         let capability_ready_notifier =
             Arc::new(CapabilityReadyNotifier::new(Arc::downgrade(&model)));
@@ -668,9 +683,11 @@ impl BuiltinEnvironment {
             capability_ready_notifier,
             event_stream_provider,
             event_logger,
+            component_tree_stats,
             execution_mode,
             num_threads,
             out_dir_contents,
+            inspector,
         })
     }
 

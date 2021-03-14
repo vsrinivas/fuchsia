@@ -24,6 +24,14 @@ async fn main() {
         "fuchsia.inspect.Health": {
             "start_timestamp_nanos": AnyProperty,
             "status": "OK"
+        },
+        "tree_stats": {
+            "/archivist:0": {
+                "start": AnyProperty
+            },
+            "/reporter:0": {
+                "start": AnyProperty
+            }
         }
     });
 
