@@ -12,6 +12,7 @@ ffx_plugin("ffx_emulator") {
   sources = [
     "src/args.rs",
     "src/cipd.rs",
+    "src/graphic_utils.rs",
     "src/lib.rs",
     "src/portpicker.rs",
     "src/types.rs",

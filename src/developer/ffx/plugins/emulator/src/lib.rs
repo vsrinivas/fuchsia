@@ -10,6 +10,7 @@ use {
 };
 
 mod cipd;
+mod graphic_utils;
 mod portpicker;
 mod types;
 pub mod vdl_files;

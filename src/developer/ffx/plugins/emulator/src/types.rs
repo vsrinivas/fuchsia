@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::cipd;
+use crate::graphic_utils::get_default_graphics;
 use ansi_term::Colour::*;
 use anyhow::{anyhow, format_err, Result};
 use ffx_config::sdk::{Sdk, SdkVersion};
@@ -424,13 +425,13 @@ pub struct VDLArgs {
 
 impl From<&StartCommand> for VDLArgs {
     fn from(cmd: &StartCommand) -> Self {
-        let mut gpu = "swiftshader_indirect";
+        let mut gpu = get_default_graphics();
         if cmd.host_gpu {
-            gpu = "host";
+            gpu = "host".to_string();
+        } else if cmd.software_gpu {
+            gpu = "swiftshader_indirect".to_string();
         }
-        if cmd.software_gpu {
-            gpu = "swiftshader_indirect";
-        }
+
         let mut enable_grpcwebproxy = false;
         let mut grpcwebproxy_port = "0".to_string();
 
@@ -469,7 +470,7 @@ impl From<&StartCommand> for VDLArgs {
                 .to_string(),
             image_size: cmd.image_size.as_ref().unwrap_or(&String::from("2G")).to_string(),
             device_proto: cmd.device_proto.as_ref().unwrap_or(&String::from("")).to_string(),
-            gpu: gpu.to_string(),
+            gpu: gpu,
             pointing_device: cmd
                 .pointing_device
                 .as_ref()
