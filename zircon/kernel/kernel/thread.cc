@@ -1315,6 +1315,8 @@ void Thread::SecondaryCpuInitEarly() {
   // disallowed until to catch bugs where code might block before we're ready.
   arch_set_blocking_disallowed(true);
 
+  percpu::InitializeSecondaryFinish();
+
   // Save |this|'s stack because |thread_construct_first| will zero out the whole struct.
   KernelStack stack = ktl::move(stack_);
 

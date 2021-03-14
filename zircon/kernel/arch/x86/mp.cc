@@ -93,6 +93,8 @@ struct x86_percpu bp_percpu = {
     .num_spinlocks = 0,
     .last_user_aspace = nullptr,
 
+    .high_level_percpu = {},
+
     .default_tss = {},
     .interrupt_stacks = {},
 };
@@ -177,8 +179,12 @@ zx_status_t x86_allocate_ap_structures(uint32_t* apic_ids, uint8_t cpu_count) {
   return ZX_OK;
 }
 
+static struct x86_percpu* x86_percpu_for(cpu_num_t cpu_num) {
+  return (cpu_num == 0) ? &bp_percpu : &ap_percpus[cpu_num - 1];
+}
+
 void x86_init_percpu(cpu_num_t cpu_num) {
-  struct x86_percpu* const percpu = cpu_num == 0 ? &bp_percpu : &ap_percpus[cpu_num - 1];
+  struct x86_percpu* const percpu = x86_percpu_for(cpu_num);
   DEBUG_ASSERT(percpu->cpu_num == cpu_num);
   DEBUG_ASSERT(percpu->direct == percpu);
 
@@ -531,6 +537,13 @@ void arch_flush_state_and_halt(Event* flush_done) {
   while (1) {
     __asm__ volatile("cli; hlt" : : : "memory");
   }
+}
+
+void arch_setup_percpu(cpu_num_t cpu_num, struct percpu* percpu) {
+  x86_percpu* arch_percpu = x86_percpu_for(cpu_num);
+  DEBUG_ASSERT(arch_percpu != nullptr);
+  DEBUG_ASSERT(arch_percpu->high_level_percpu == nullptr);
+  arch_percpu->high_level_percpu = percpu;
 }
 
 static void reset_idle_counters(X86IdleStates* idle_states) {
