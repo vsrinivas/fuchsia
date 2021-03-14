@@ -1,0 +1,24 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.RootResource"
+            ]
+        }
+    },
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "-t",
+            "79200"
+        ],
+        "binary": "bin/kstress"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.RootResource"
+        ]
+    }
+}

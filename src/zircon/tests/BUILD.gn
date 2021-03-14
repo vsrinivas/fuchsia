@@ -15,6 +15,7 @@ group("tests") {
     "property:tests",
     "register-state:tests",
     "status:tests",
+    "stress-tests:tests",
     "thread-initial-state:tests",
     "vmo:tests",
   ]
