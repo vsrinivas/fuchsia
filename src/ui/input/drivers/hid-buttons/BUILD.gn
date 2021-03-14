@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("hid-buttons-bind") {
   rules = "hid-buttons.bind"
@@ -78,17 +78,11 @@ test("hid-buttons-test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-unittest_package("hid-buttons-test-package") {
+fuchsia_unittest_package("hid-buttons-test-package") {
   package_name = "hid-buttons-test"
   deps = [ ":hid-buttons-test" ]
-
-  tests = [
-    {
-      name = "hid-buttons-test"
-      environments = basic_envs
-    },
-  ]
 }
+
 group("tests") {
   testonly = true
   deps = [

@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("hid_bind") {
   rules = "hid.bind"
@@ -82,16 +82,9 @@ test("hid-test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-unittest_package("hid-test-package") {
+fuchsia_unittest_package("hid-test-package") {
   package_name = "hid-test"
   deps = [ ":hid-test" ]
-
-  tests = [
-    {
-      name = "hid-test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {

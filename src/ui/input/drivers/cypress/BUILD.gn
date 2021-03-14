@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("cypress_cy8cmbr3108-bind") {
   rules = "cypress_cy8cmbr3108.bind"
@@ -67,17 +67,11 @@ test("cypress-touch-test") {
   ]
 }
 
-unittest_package("cypress-touch-test-package") {
+fuchsia_unittest_package("cypress-touch-test-package") {
   package_name = "cypress-touch-test"
   deps = [ ":cypress-touch-test" ]
-
-  tests = [
-    {
-      name = "cypress-touch-test"
-      environments = basic_envs
-    },
-  ]
 }
+
 group("tests") {
   testonly = true
   deps = [

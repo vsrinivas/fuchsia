@@ -4,9 +4,8 @@
 
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
-import("//build/package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("hid_input_report_bind") {
   rules = "hid_input_report.bind"
@@ -92,13 +91,6 @@ test("hid-input-report-test-bin") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-test_package("hid-input-report-test") {
+fuchsia_unittest_package("hid-input-report-test") {
   deps = [ ":hid-input-report-test-bin" ]
-  tests = [
-    {
-      name = "hid-input-report-test-bin"
-      dest = "hid-input-report-test"
-      environments = basic_envs
-    },
-  ]
 }

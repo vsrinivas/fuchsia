@@ -5,8 +5,8 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/bootfs_test.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("ti-lp8556-bind") {
   rules = "ti-lp8556.bind"
@@ -81,16 +81,9 @@ test("ti-lp8556-test") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-unittest_package("ti-lp8556-test-package") {
+fuchsia_unittest_package("ti-lp8556-test-package") {
   package_name = "ti-lp8556-test"
   deps = [ ":ti-lp8556-test" ]
-
-  tests = [
-    {
-      name = "ti-lp8556-test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {
