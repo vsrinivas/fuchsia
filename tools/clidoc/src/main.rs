@@ -46,6 +46,7 @@ struct Opt {
 
 // TODO(fxb/69336): Move allow list to its own separate config file.
 const ALLOW_LIST: &'static [&'static str] = &[
+    "blobfs-compression",
     "bootserver",
     "cmc",
     "fconfig",
