@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("goldfish-display-bind") {
   rules = "goldfish-display.bind"
@@ -77,14 +77,7 @@ group("tests") {
   ]
 }
 
-unittest_package("goldfish-unittests-package") {
+fuchsia_unittest_package("goldfish-unittests-package") {
   package_name = "goldfish-unittests"
   deps = [ ":goldfish-unittests" ]
-
-  tests = [
-    {
-      name = "goldfish-unittests"
-      environments = basic_envs
-    },
-  ]
 }

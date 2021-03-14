@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("aml_canvas_bind") {
   rules = "aml_canvas.bind"
@@ -65,14 +65,7 @@ group("tests") {
   ]
 }
 
-unittest_package("aml-canvas-test-package") {
+fuchsia_unittest_package("aml-canvas-test-package") {
   package_name = "aml-canvas-test"
   deps = [ ":aml-canvas-test" ]
-
-  tests = [
-    {
-      name = "aml-canvas-test"
-      environments = basic_envs
-    },
-  ]
 }

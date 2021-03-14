@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("intel-i915-bind") {
   rules = "intel-i915.bind"
@@ -94,14 +94,7 @@ group("tests") {
   ]
 }
 
-unittest_package("intel-i915-test-package") {
+fuchsia_unittest_package("intel-i915-test-package") {
   package_name = "intel-i915-test"
   deps = [ ":intel-i915-test" ]
-
-  tests = [
-    {
-      name = "intel-i915-test"
-      environments = basic_envs
-    },
-  ]
 }

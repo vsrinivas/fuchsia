@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("dsi_dw_bind") {
   rules = "dsi_dw.bind"
@@ -71,16 +71,9 @@ test("dsi-dw-test") {
   ]
 }
 
-unittest_package("dsi-dw-test-package") {
+fuchsia_unittest_package("dsi-dw-test-package") {
   package_name = "dsi-dw-test"
   deps = [ ":dsi-dw-test" ]
-
-  tests = [
-    {
-      name = "dsi-dw-test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {

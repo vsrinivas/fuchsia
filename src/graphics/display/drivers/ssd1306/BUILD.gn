@@ -6,7 +6,7 @@ import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("ssd1306-bind") {
   rules = "ssd1306.bind"
@@ -86,12 +86,7 @@ group("tests") {
   ]
 }
 
-unittest_package("ssd1306-test-package") {
+fuchsia_unittest_package("ssd1306-test-package") {
   package_name = "ssd1306-test"
   deps = [ ":ssd1306-test" ]
-  tests = [
-    {
-      name = "ssd1306-test"
-    },
-  ]
 }

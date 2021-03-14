@@ -5,7 +5,7 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 bind_rules("vim-display-bind") {
   rules = "vim-display.bind"
@@ -106,14 +106,7 @@ group("tests") {
   ]
 }
 
-unittest_package("vim-display-test-package") {
+fuchsia_unittest_package("vim-display-test-package") {
   package_name = "vim-display-test"
   deps = [ ":vim-display-test" ]
-
-  tests = [
-    {
-      name = "vim-display-test"
-      environments = basic_envs
-    },
-  ]
 }
