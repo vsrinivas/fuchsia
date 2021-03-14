@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "image_grid_cpp"
@@ -26,19 +26,7 @@ executable("bin") {
   ]
 }
 
-package("image_grid_cpp") {
+fuchsia_package_with_single_component("image_grid_cpp") {
+  manifest = "meta/image_grid_cpp.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "image_grid_cpp"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("image_grid_cpp.cmx")
-      dest = "image_grid_cpp.cmx"
-    },
-  ]
 }
