@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "httpget_rust"
@@ -24,19 +24,7 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("httpget_rust") {
-  meta = [
-    {
-      path = rebase_path("meta/httpget_rust.cmx")
-      dest = "httpget_rust.cmx"
-    },
-  ]
-
+fuchsia_package_with_single_component("httpget_rust") {
+  manifest = "meta/httpget_rust.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "httpget_rust"
-    },
-  ]
 }
