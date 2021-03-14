@@ -8,6 +8,7 @@
 #define RUNTESTS_UTILS_RUNTESTS_UTILS_H_
 
 #include <inttypes.h>
+#include <lib/debugdata/datasink.h>
 #include <lib/zircon-internal/fnv1hash.h>
 #include <zircon/types.h>
 
@@ -36,18 +37,12 @@ enum LaunchStatus {
   TIMED_OUT,
 };
 
-// Represents a single dumpfile element.
-struct DumpFile {
-  std::string name;  // Name of the dumpfile.
-  std::string file;  // File name for the content.
-};
-
 // Represents the result of a single test run.
 struct Result {
   fbl::String name;
   LaunchStatus launch_status;
   int64_t return_code;  // Only valid if launch_status == SUCCESS or FAILED_NONZERO_RETURN_CODE.
-  std::unordered_map<std::string, std::vector<DumpFile>>
+  std::unordered_map<std::string, std::vector<debugdata::DumpFile>>
       data_sinks;  // Mapping from data sink name to list of files.
   int64_t duration_milliseconds;
 

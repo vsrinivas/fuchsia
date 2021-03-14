@@ -17,7 +17,6 @@ zx_library("runtests-utils") {
     "discover-and-run-tests.cc",
     "fuchsia-run-test.cc",
     "log-exporter.cc",
-    "profile.cc",
     "runtests-utils.cc",
     "service-proxy-dir.cc",
   ]
@@ -32,6 +31,9 @@ zx_library("runtests-utils") {
 
     # <runtests-utils/log-exporter.h> has #include <lib/async-loop/cpp/loop.h>.
     "//zircon/system/ulib/async-loop:async-loop-cpp",
+
+    # <runtests-utils/runtests-utils.h> has #include <lib/debugdata/datasink.h>.
+    "//zircon/system/ulib/debugdata",
   ]
   deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
@@ -48,7 +50,6 @@ zx_library("runtests-utils") {
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
-    "//zircon/system/ulib/debugdata",
     "//zircon/system/ulib/fidl-async:fidl-async-cpp",
     "//zircon/system/ulib/fzl",
   ]

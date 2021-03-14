@@ -7,13 +7,13 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/debugdata/datasink.h>
 #include <lib/debugdata/debugdata.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl-async/cpp/bind.h>
-#include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
@@ -40,7 +40,6 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <runtests-utils/fuchsia-run-test.h>
-#include <runtests-utils/profile.h>
 #include <runtests-utils/service-proxy-dir.h>
 
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
@@ -65,252 +64,6 @@ fbl::String RootName(const fbl::String& path) {
     end = &path.c_str()[path.size()];
   }
   return fbl::String::Concat({"/", fbl::String(start, end - start)});
-}
-
-std::error_code ReadFile(const fbl::unique_fd& fd, uint8_t* data, size_t size) {
-  auto* buf = data;
-  ssize_t count = size;
-  off_t off = 0;
-  while (count > 0) {
-    ssize_t len = pread(fd.get(), buf, count, off);
-    if (len <= 0) {
-      return std::error_code{errno, std::generic_category()};
-    }
-    buf += len;
-    count -= len;
-    off += len;
-  }
-  return std::error_code{};
-}
-
-std::error_code WriteFile(const fbl::unique_fd& fd, const uint8_t* data, size_t size) {
-  auto* buf = data;
-  ssize_t count = size;
-  off_t off = 0;
-  while (count > 0) {
-    ssize_t len = pwrite(fd.get(), buf, count, off);
-    if (len <= 0) {
-      return std::error_code{errno, std::generic_category()};
-    }
-    buf += len;
-    count -= len;
-    off += len;
-  }
-  return std::error_code{};
-}
-
-std::optional<std::string> GetVMOName(const zx::vmo& vmo) {
-  char name[ZX_MAX_NAME_LEN];
-  zx_status_t status = vmo.get_property(ZX_PROP_NAME, name, sizeof(name));
-  if (status != ZX_OK || name[0] == '\0') {
-    zx_info_handle_basic_t info;
-    status = vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-    if (status != ZX_OK) {
-      return {};
-    }
-    snprintf(name, sizeof(name), "unnamed.%" PRIu64, info.koid);
-  }
-  return name;
-}
-
-// This function processes all raw profiles that were published via data sink
-// in an efficient manner. Concretely, rather than writing each data sink into
-// a separate file, it merges all profiles from the same binary into a single
-// profile. First it groups all VMOs by name which uniquely identifies each
-// binary. Then it merges together all VMOs for the same binary together with
-// data that's already on the disk (if it exists). Finally it writes the data
-// back to disk (or creates the file if necessary). This ensures that at the
-// end, we have exactly one profile for each binary in total, and each profile
-// is read and written at most once per call to ProcessProfiles.
-std::optional<std::vector<DumpFile>> ProcessProfiles(const std::vector<zx::vmo>& data,
-                                                     const fbl::unique_fd& data_sink_dir_fd) {
-  zx_status_t status;
-
-  if (mkdirat(data_sink_dir_fd.get(), kProfileSink, 0777) != 0 && errno != EEXIST) {
-    fprintf(stderr, "FAILURE: cannot mkdir \"%s\" for data-sink: %s\n", kProfileSink,
-            strerror(errno));
-    return {};
-  }
-  fbl::unique_fd sink_dir_fd{openat(data_sink_dir_fd.get(), kProfileSink, O_RDONLY | O_DIRECTORY)};
-  if (!sink_dir_fd) {
-    fprintf(stderr, "FAILURE: cannot open data-sink directory \"%s\": %s\n", kProfileSink,
-            strerror(errno));
-    return {};
-  }
-
-  std::unordered_map<std::string, std::forward_list<std::reference_wrapper<const zx::vmo>>>
-      profiles;
-  std::vector<DumpFile> dump_files;
-
-  // Group data by profile name. The name is a hash computed from profile metadata and
-  // should be unique across all binaries (modulo hash collisions).
-  for (const auto& vmo : data) {
-    auto name = GetVMOName(vmo);
-    if (!name) {
-      fprintf(stderr, "FAILURE: Cannot get a name for the VMO\n");
-      return {};
-    }
-    profiles[*name].push_front(std::cref(vmo));
-  }
-
-  for (auto& [name, vmos] : profiles) {
-    fbl::unique_fd fd{openat(sink_dir_fd.get(), name.c_str(), O_RDWR | O_CREAT, 0666)};
-    if (!fd) {
-      fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", name.c_str(),
-              strerror(errno));
-      return {};
-    }
-
-    uint64_t buffer_size;
-    std::unique_ptr<uint8_t[]> buffer;
-
-    struct stat stat;
-    if (fstat(fd.get(), &stat) == -1) {
-      fprintf(stderr, "FAILURE: Cannot stat data-sink file \"%s\": %s\n", name.c_str(),
-              strerror(errno));
-      return {};
-    }
-    if (auto file_size = static_cast<uint64_t>(stat.st_size); file_size > 0) {
-      // The file already exists, use it to initialize the buffer...
-      buffer_size = file_size;
-      buffer = std::make_unique<uint8_t[]>(buffer_size);
-      if (std::error_code ec = ReadFile(fd, buffer.get(), file_size); ec) {
-        fprintf(stderr, "FAILURE: Cannot read data from \"%s\": %s\n", name.c_str(),
-                strerror(ec.value()));
-        return {};
-      }
-    }
-
-    while (!vmos.empty()) {
-      // Merge all VMOs into the buffer.
-      const zx::vmo& vmo = vmos.front();
-      vmos.pop_front();
-
-      uint64_t vmo_size;
-      status = vmo.get_size(&vmo_size);
-      if (status != ZX_OK) {
-        fprintf(stderr, "FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n",
-                name.c_str(), kProfileSink, zx_status_get_string(status));
-        return {};
-      }
-
-      fzl::VmoMapper mapper;
-      if (vmo_size > 0) {
-        zx_status_t status = mapper.Map(vmo, 0, vmo_size, ZX_VM_PERM_READ);
-        if (status != ZX_OK) {
-          fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n", name.c_str(),
-                  kProfileSink, zx_status_get_string(status));
-          return {};
-        }
-      } else {
-        fprintf(stderr, "WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n", kProfileSink,
-                name.c_str());
-        continue;
-      }
-
-      if (likely(buffer)) {
-        if (buffer_size != vmo_size) {
-          fprintf(stderr, "FAILURE: Mismatch between content sizes for \"%s\": %lu != %lu\n",
-                  name.c_str(), buffer_size, vmo_size);
-        }
-        ZX_ASSERT(buffer_size == vmo_size);
-
-        // Ensure that profiles are structuraly compatible.
-        if (!ProfilesCompatible(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()),
-                                buffer_size)) {
-          fprintf(stderr, "WARNING: Unable to merge profile data: %s\n",
-                  "source profile file is not compatible");
-          continue;
-        }
-
-        MergeProfiles(buffer.get(), reinterpret_cast<const uint8_t*>(mapper.start()), buffer_size);
-      } else {
-        // ...Otherwise use the first non-empty VMO in the list to initialize the buffer.
-        buffer_size = vmo_size;
-        buffer = std::make_unique<uint8_t[]>(buffer_size);
-        memcpy(buffer.get(), mapper.start(), buffer_size);
-      }
-    }
-
-    // Write the data back to the file.
-    if (std::error_code ec = WriteFile(fd, buffer.get(), buffer_size); ec) {
-      fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", name.c_str(),
-              strerror(ec.value()));
-      return {};
-    }
-
-    dump_files.push_back(DumpFile{name, JoinPath(kProfileSink, name).c_str()});
-  }
-
-  return dump_files;
-}
-
-std::optional<DumpFile> ProcessDataSinkDump(const std::string& sink_name, const zx::vmo& file_data,
-                                            const fbl::unique_fd& data_sink_dir_fd) {
-  zx_status_t status;
-
-  if (mkdirat(data_sink_dir_fd.get(), sink_name.c_str(), 0777) != 0 && errno != EEXIST) {
-    fprintf(stderr, "FAILURE: cannot mkdir \"%s\" for data-sink: %s\n", sink_name.c_str(),
-            strerror(errno));
-    return {};
-  }
-  fbl::unique_fd sink_dir_fd{
-      openat(data_sink_dir_fd.get(), sink_name.c_str(), O_RDONLY | O_DIRECTORY)};
-  if (!sink_dir_fd) {
-    fprintf(stderr, "FAILURE: cannot open data-sink directory \"%s\": %s\n", sink_name.c_str(),
-            strerror(errno));
-    return {};
-  }
-
-  auto name = GetVMOName(file_data);
-  if (!name) {
-    fprintf(stderr, "FAILURE: Cannot get a name for the VMO\n");
-    return {};
-  }
-
-  uint64_t size;
-  status = file_data.get_size(&size);
-  if (status != ZX_OK) {
-    fprintf(stderr, "FAILURE: Cannot get size of VMO \"%s\" for data-sink \"%s\": %s\n",
-            name->c_str(), sink_name.c_str(), zx_status_get_string(status));
-    return {};
-  }
-
-  fzl::VmoMapper mapper;
-  if (size > 0) {
-    zx_status_t status = mapper.Map(file_data, 0, size, ZX_VM_PERM_READ);
-    if (status != ZX_OK) {
-      fprintf(stderr, "FAILURE: Cannot map VMO \"%s\" for data-sink \"%s\": %s\n", name->c_str(),
-              sink_name.c_str(), zx_status_get_string(status));
-      return {};
-    }
-  } else {
-    fprintf(stderr, "WARNING: Empty VMO \"%s\" published for data-sink \"%s\"\n", name->c_str(),
-            sink_name.c_str());
-    return {};
-  }
-
-  zx_info_handle_basic_t info;
-  status = file_data.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    fprintf(stderr, "FAILURE: Cannot get a basic info for VMO \"%s\": %s\n", name->c_str(),
-            zx_status_get_string(status));
-    return {};
-  }
-
-  char filename[ZX_MAX_NAME_LEN];
-  snprintf(filename, sizeof(filename), "%s.%" PRIu64, sink_name.c_str(), info.koid);
-  fbl::unique_fd fd{openat(sink_dir_fd.get(), filename, O_WRONLY | O_CREAT | O_EXCL, 0666)};
-  if (!fd) {
-    fprintf(stderr, "FAILURE: Cannot open data-sink file \"%s\": %s\n", filename, strerror(errno));
-    return {};
-  }
-  if (std::error_code ec = WriteFile(fd, reinterpret_cast<uint8_t*>(mapper.start()), size); ec) {
-    fprintf(stderr, "FAILURE: Cannot write data to \"%s\": %s\n", filename, strerror(ec.value()));
-    return {};
-  }
-
-  return DumpFile{*name, JoinPath(sink_name, filename).c_str()};
 }
 
 }  // namespace
@@ -581,25 +334,19 @@ std::unique_ptr<Result> RunTest(const char* argv[], const char* output_dir, cons
 
   fbl::unique_fd data_sink_dir_fd{open(output_dir, O_RDONLY | O_DIRECTORY)};
   if (!data_sink_dir_fd) {
-    printf("FAILURE: Could not open output directory %s: %s\n", "/tmp", strerror(errno));
+    fprintf(stderr, "FAILURE: Could not open output directory %s: %s\n", "/tmp", strerror(errno));
     return result;
   }
 
-  for (const auto& [sink_name, data] : debug_data->data()) {
-    if (sink_name == kProfileSink) {
-      if (auto dump_files = ProcessProfiles(data, data_sink_dir_fd)) {
-        result->data_sinks.emplace(sink_name, std::move(*dump_files));
-      }
-    } else {
-      for (const auto& file_data : data) {
-        if (auto dump_file = ProcessDataSinkDump(sink_name, file_data, data_sink_dir_fd)) {
-          result->data_sinks[sink_name].push_back(*dump_file);
-        } else if (result->return_code == 0) {
+  result->data_sinks = debugdata::ProcessDebugData(
+      data_sink_dir_fd, debug_data->TakeData(),
+      [&](const std::string& error) {
+        fprintf(stderr, "FAILURE: %s\n", error.c_str());
+        if (result->return_code == 0) {
           result->launch_status = FAILED_COLLECTING_SINK_DATA;
         }
-      }
-    }
-  }
+      },
+      [&](const std::string& warning) { fprintf(stderr, "WARNING: %s\n", warning.c_str()); });
 
   return result;
 }

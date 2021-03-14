@@ -5,18 +5,25 @@
 import("//build/unification/zx_library.gni")
 
 zx_library("debugdata") {
-  sources = [ "debugdata.cc" ]
+  sources = [
+    "datasink.cc",
+    "debugdata.cc",
+  ]
   sdk = "source"
-  sdk_headers = [ "lib/debugdata/debugdata.h" ]
+  sdk_headers = [
+    "lib/debugdata/debugdata.h",
+    "lib/debugdata/datasink.h",
+  ]
   deps = [
     "//sdk/fidl/fuchsia.debugdata:fuchsia.debugdata_llcpp",
+    "//src/lib/fxl",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
-    "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/fzl",
   ]
   public_deps = [
     # <debugdata/debugdata.h has #include <fuchsia/debugdata/llcpp/fidl.h>.
@@ -30,6 +37,9 @@ zx_library("debugdata") {
 
     # <debugdata/debugdata.h> has #include <lib/zircon-internal/fnv1hash.h>.
     "//zircon/public/lib/zircon-internal",
+
+    # <debugdata/datasink.h> has #include <lib/zx/vmo.h>.
+    "//zircon/public/lib/zx",
   ]
 }
 

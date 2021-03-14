@@ -33,6 +33,8 @@ class DebugData : public fuchsia_debugdata::DebugData::Interface {
 
   const auto& data() const { return data_; }
 
+  std::unordered_map<std::string, std::vector<zx::vmo>> TakeData();
+
  private:
   std::unordered_map<std::string, std::vector<zx::vmo>> data_ __TA_GUARDED(lock_);
   std::mutex lock_;

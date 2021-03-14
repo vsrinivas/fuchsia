@@ -31,6 +31,13 @@ void DebugData::Publish(fidl::StringView data_sink, zx::vmo vmo, PublishComplete
   data_[name].push_back(std::move(vmo));
 }
 
+std::unordered_map<std::string, std::vector<zx::vmo>> DebugData::TakeData() {
+  std::lock_guard<std::mutex> lock(lock_);
+  auto temp = std::move(data_);
+  data_ = std::unordered_map<std::string, std::vector<zx::vmo>>();
+  return temp;
+}
+
 void DebugData::LoadConfig(fidl::StringView config_name, LoadConfigCompleter::Sync& completer) {
   // When loading debug configuration file, we expect an absolute path.
   if (config_name[0] != '/') {
