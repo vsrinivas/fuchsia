@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/power_manager_bin_test"
+        "binary": "bin/power_manager_bin_test"
     },
     "sandbox": {
         "features": [

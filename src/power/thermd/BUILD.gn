@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 if (target_cpu == "x64") {
   executable("bin") {
@@ -61,37 +60,19 @@ if (target_cpu == "arm64") {
     configs += [ "//build/config:Wno-conversion" ]
   }
 
-  test_package("thermd-bin-tests") {
+  fuchsia_unittest_package("thermd-bin-tests") {
+    manifest = "meta/thermd_bin_test.cmx"
     deps = [ ":bin_test" ]
-
-    tests = [
-      {
-        name = "thermd_bin_test"
-      },
-    ]
   }
 }
 
-package("thermd") {
+fuchsia_package_with_single_component("thermd") {
   if (target_cpu == "arm64") {
-    manifest_path = "meta/thermd_arm.cmx"
+    manifest = "meta/thermd_arm.cmx"
   } else {
-    manifest_path = "meta/thermd.cmx"
+    manifest = "meta/thermd.cmx"
   }
-
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "thermd"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path(manifest_path)
-      dest = "thermd.cmx"
-    },
-  ]
 }
 
 config_data("config") {

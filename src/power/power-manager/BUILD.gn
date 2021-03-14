@@ -4,10 +4,9 @@
 
 import("//build/config.gni")
 import("//build/dist/component_manifest_resources.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 import("//third_party/cobalt/metrics_registry.gni")
 
 metrics_registry("power_manager_metrics") {
@@ -207,16 +206,11 @@ group("tests") {
   ]
 }
 
-test_package("power-manager-tests") {
+fuchsia_unittest_package("power-manager-tests") {
+  manifest = "meta/power_manager_bin_test.cmx"
   deps = [
     ":bin_test",
     "node_config:test_config_data",
-  ]
-
-  tests = [
-    {
-      name = "power_manager_bin_test"
-    },
   ]
 }
 
