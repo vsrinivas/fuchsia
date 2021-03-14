@@ -31,7 +31,6 @@ template("compile_glsl_shader_foreach") {
     if (defined(invoker.args)) {
       args += invoker.args
     }
-    hermetic_deps = false
   }
 }
 
