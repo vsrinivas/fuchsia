@@ -299,7 +299,7 @@ template("test_spec") {
                                "package_label",
                                "parallel",
                              ])
-      label = get_label_info(invoker.target, "label_with_toolchain")
+      label = get_label_info(":${invoker.target}", "label_with_toolchain")
       if (is_fuchsia) {
         log_settings = _log_settings
       }
