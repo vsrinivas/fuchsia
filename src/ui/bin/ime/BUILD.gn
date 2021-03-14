@@ -99,7 +99,7 @@ fuchsia_component("ime_service_bin_test") {
   manifest = "meta/ime_service_bin_test.cmx"
   deps = [
     ":bin_test",
-    "//src/ui/testing/text:test_suite",
+    "//src/ui/testing/text:text_test_suite",
   ]
 }
 

@@ -15,7 +15,7 @@ async fn test_external_text_field_implementation() {
     let launcher = launcher().expect("Failed to open launcher service");
     let app = launch(
         &launcher,
-        "fuchsia-pkg://fuchsia.com/text_test_suite#meta/test_suite.cmx".to_string(),
+        "fuchsia-pkg://fuchsia.com/text_test_suite#meta/text_test_suite.cmx".to_string(),
         None,
     )
     .expect("Failed to launch testing service");
