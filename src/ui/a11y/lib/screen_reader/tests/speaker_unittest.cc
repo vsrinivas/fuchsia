@@ -155,13 +155,12 @@ TEST_F(SpeakerTest, TaskWaitsInQueueWhenNotInterrupting) {
   auto task2 = speaker_->SpeakNodePromise(&node, {.interrupt = false});
   executor_.schedule_task(std::move(task));
   executor_.schedule_task(std::move(task2));
-  RunLoopWithTimeout(zx::duration(zx::msec(50)));
+  RunLoopUntil([this]() { return mock_tts_engine_.ExamineUtterances().size() == 3u; });
+
+  // If the second task waited in the queue before speaking, all three messages will be presente,
+  // meaning that the third one did not trump the second.
   EXPECT_TRUE(mock_tts_engine_.ReceivedSpeak());
-  ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 1u);
   EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[0].message(), "foo");
-  RunLoopWithTimeout(zx::duration(zx::msec(300)));
-  // Now, the first task ran and notified the second it can start running. Check if utterances were
-  // received in order.
   ASSERT_EQ(mock_tts_engine_.ExamineUtterances().size(), 3u);
   EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[1].message(), "button");
   EXPECT_EQ(mock_tts_engine_.ExamineUtterances()[2].message(), "foo");
