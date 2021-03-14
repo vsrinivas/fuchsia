@@ -49,6 +49,9 @@ executable("fidelity_test_bin") {
   ]
 }
 
+# Note: audio_core/mixer sets specific compiler flags for floating-point optimization which may make
+# audio_fidelity_tests sensitive to toolchain changes. If non-audio changes cause failures, disable
+# this test, contact Fuchsia media (tq-media-team@) and file a bug against the "Media>audio" area.
 fuchsia_unittest_package("audio_fidelity_tests") {
   deps = [ ":fidelity_test_bin" ]
 
