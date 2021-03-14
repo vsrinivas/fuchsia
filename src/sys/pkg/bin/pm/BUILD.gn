@@ -6,7 +6,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/host.gni")
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 go_library("pm_lib") {
   name = "go.fuchsia.dev/fuchsia/src/sys/pkg/bin/pm/..."
@@ -110,22 +110,9 @@ go_binary("pm_bin") {
   deps = [ ":pm_lib" ]
 }
 
-package("pm") {
+fuchsia_shell_package("pm") {
+  manifest = "meta/pm.cmx"
   deps = [ ":pm_bin" ]
-
-  binaries = [
-    {
-      name = "pm"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/pm.cmx")
-      dest = "pm.cmx"
-    },
-  ]
 }
 
 install_host_tools("host") {
