@@ -18,6 +18,7 @@
 #define PERCPU_SAVED_USER_SP_OFFSET 0x20
 #define PERCPU_GPF_RETURN_OFFSET 0x50
 #define PERCPU_CPU_NUM_OFFSET 0x58
+#define PERCPU_HIGH_LEVEL_PERCPU_OFFSET 0x68
 #define PERCPU_DEFAULT_TSS_OFFSET 0x70
 
 /* offset of default_tss.rsp0 */
@@ -41,6 +42,7 @@
 __BEGIN_CDECLS
 
 struct Thread;
+struct percpu;
 
 struct x86_percpu {
   /* a direct pointer to ourselves */
@@ -85,6 +87,9 @@ struct x86_percpu {
   /* Last user VmAspace that was active on this core. Lazily updated. */
   void *last_user_aspace;
 
+  /* A pointer providing fast access to the high-level arch-agnostic per-cpu struct. */
+  percpu *high_level_percpu;
+
   /* This CPU's default TSS */
   tss_t default_tss __ALIGNED(16);
 
@@ -99,6 +104,7 @@ static_assert(__offsetof(struct x86_percpu, kernel_unsafe_sp) == ZX_TLS_UNSAFE_S
 static_assert(__offsetof(struct x86_percpu, saved_user_sp) == PERCPU_SAVED_USER_SP_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, gpf_return_target) == PERCPU_GPF_RETURN_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, cpu_num) == PERCPU_CPU_NUM_OFFSET, "");
+static_assert(__offsetof(struct x86_percpu, high_level_percpu) == PERCPU_HIGH_LEVEL_PERCPU_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, default_tss) == PERCPU_DEFAULT_TSS_OFFSET, "");
 static_assert(__offsetof(struct x86_percpu, default_tss.rsp0) == PERCPU_KERNEL_SP_OFFSET, "");
 
@@ -121,6 +127,11 @@ static inline struct x86_percpu *x86_get_percpu(void) {
   return (struct x86_percpu *)x86_read_gs_offset64(PERCPU_DIRECT_OFFSET);
 }
 
+// Return a pointer to the high-level percpu struct for the calling CPU.
+static inline struct percpu *arch_get_curr_percpu(void) {
+  return ((struct percpu *)x86_read_gs_offset64(PERCPU_HIGH_LEVEL_PERCPU_OFFSET));
+}
+
 static inline cpu_num_t arch_curr_cpu_num(void) {
   return x86_read_gs_offset32(PERCPU_CPU_NUM_OFFSET);
 }
@@ -138,6 +149,9 @@ void x86_ipi_halt_handler(void *) __NO_RETURN;
 void x86_secondary_entry(ktl::atomic<unsigned int>* aps_still_booting, Thread *thread);
 
 void x86_force_halt_all_but_local_and_bsp(void);
+
+// Setup the high-level percpu struct pointer for |cpu_num|.
+void arch_setup_percpu(cpu_num_t cpu_num, struct percpu *percpu);
 
 __END_CDECLS
 

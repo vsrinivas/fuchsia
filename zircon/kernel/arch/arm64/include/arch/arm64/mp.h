@@ -33,6 +33,8 @@ __BEGIN_CDECLS
 
 // TODO: add support for AFF2 and AFF3
 
+struct percpu;
+
 // Per cpu structure, pointed to by a fixed register while in kernel mode.
 // Aligned on the maximum architectural cache line to avoid cache
 // line sharing between cpus.
@@ -52,6 +54,9 @@ struct arm64_percpu {
   // True if the branch predictor should be invalidated during context switch or on suspicious
   // entries to EL2 to mitigate Spectre V2 attacks.
   bool should_invalidate_bp_on_context_switch;
+
+  // A pointer providing fast access to the high-level arch-agnostic per-cpu struct.
+  percpu* high_level_percpu;
 } __CPU_ALIGN;
 
 void arch_init_cpu_map(uint cluster_count, const uint* cluster_cpus);
@@ -79,6 +84,11 @@ static inline uint32_t arm64_read_percpu_u32(size_t offset) {
 
 static inline void arm64_write_percpu_u32(size_t offset, uint32_t val) {
   __asm__("str %w[val], [x15, %[offset]]" ::[val] "r"(val), [offset] "Ir"(offset) : "memory");
+}
+
+// Return a pointer to the high-level percpu struct for the calling CPU.
+static inline struct percpu* arch_get_curr_percpu(void) {
+  return __arm64_percpu->high_level_percpu;
 }
 
 static inline cpu_num_t arch_curr_cpu_num(void) {
@@ -123,6 +133,9 @@ cpu_num_t arm64_mpidr_to_cpu_num(uint64_t mpidr);
 
 #define WRITE_PERCPU_FIELD32(field, value) \
   arm64_write_percpu_u32(offsetof(struct arm64_percpu, field), (value))
+
+// Setup the high-level percpu struct pointer for |cpu_num|.
+void arch_setup_percpu(cpu_num_t cpu_num, struct percpu *percpu);
 
 __END_CDECLS
 

@@ -41,9 +41,13 @@ percpu::percpu(cpu_num_t cpu_num) {
   counters = CounterArena().CpuData(cpu_num);
 }
 
-void percpu::InitializeBoot() { boot_processor_.Initialize(0); }
+void percpu::InitializeBoot() {
+  boot_processor_.Initialize(0);
+  // Install a pointer to the boot CPU's high-level percpu struct in its low-level percpu struct.
+  arch_setup_percpu(0, &boot_processor_);
+}
 
-void percpu::InitializeSecondary(uint32_t /*init_level*/) {
+void percpu::InitializeSecondariesBegin(uint32_t /*init_level*/) {
   processor_count_ = CpuDistanceMap::Get().cpu_count();
   DEBUG_ASSERT(processor_count_ != 0);
 
@@ -107,6 +111,12 @@ void percpu::InitializeSecondary(uint32_t /*init_level*/) {
   }
 }
 
+void percpu::InitializeSecondaryFinish() {
+  const cpu_num_t cpu_num = arch_curr_cpu_num();
+  DEBUG_ASSERT(cpu_num < processor_count());
+  arch_setup_percpu(cpu_num, processor_index_[cpu_num]);
+}
+
 // Allocate secondary percpu instances before booting other processors, after
 // vm and system topology are initialized.
-LK_INIT_HOOK(percpu_heap_init, percpu::InitializeSecondary, LK_INIT_LEVEL_KERNEL)
+LK_INIT_HOOK(percpu_heap_init, percpu::InitializeSecondariesBegin, LK_INIT_LEVEL_KERNEL)

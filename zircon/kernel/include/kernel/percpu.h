@@ -85,16 +85,22 @@ struct percpu {
     return *processor_index_[cpu_num];
   }
 
+  // Returns a reference to the percpu instance for the calling CPU.
+  static percpu& GetCurrent() { return *arch_get_curr_percpu(); }
+
   // Returns the number of percpu instances.
   static size_t processor_count() { return processor_count_; }
 
-  // Called once during early init to initalize the percpu data for the boot
-  // processor.
+  // Called once during early init by the boot processor to initalize the percpu
+  // data for the boot processor.
   static void InitializeBoot();
 
-  // Called once after heap init to initialize the percpu data for the
-  // secondary processors.
-  static void InitializeSecondary(uint32_t init_level);
+  // Called once by the boot processor after heap init to initialize the percpu
+  // data for the secondary processors.
+  static void InitializeSecondariesBegin(uint32_t init_level);
+
+  // Called on each secondary processors immediately after booting.
+  static void InitializeSecondaryFinish();
 
   // Call |Func| with the current CPU's percpu struct with preemption disabled.
   //
@@ -103,7 +109,7 @@ struct percpu {
   static void WithCurrentPreemptDisable(Func&& func) {
     PreemptionState& preemption_state = Thread::Current::preemption_state();
     preemption_state.PreemptDisable();
-    ktl::forward<Func>(func)(&Get(arch_curr_cpu_num()));
+    ktl::forward<Func>(func)(&GetCurrent());
     preemption_state.PreemptReenable();
   }
 
@@ -151,6 +157,6 @@ struct percpu {
 
 // TODO(edcoyne): rename this to c++, or wait for travis's work to integrate
 // into arch percpus.
-static inline struct percpu* get_local_percpu(void) { return &percpu::Get(arch_curr_cpu_num()); }
+static inline struct percpu* get_local_percpu(void) { return arch_get_curr_percpu(); }
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_PERCPU_H_

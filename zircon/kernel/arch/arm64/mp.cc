@@ -147,3 +147,9 @@ bool arch_quirks_needs_arm_erratum_858921_mitigation() {
   }
   return false;
 }
+
+void arch_setup_percpu(cpu_num_t cpu_num, struct percpu* percpu) {
+  arm64_percpu* arch_percpu = &arm64_percpu_array[cpu_num];
+  DEBUG_ASSERT(arch_percpu->high_level_percpu == nullptr);
+  arch_percpu->high_level_percpu = percpu;
+}

@@ -24,7 +24,6 @@
 #include <kernel/cpu.h>
 #include <kernel/init.h>
 #include <kernel/mutex.h>
-#include <kernel/percpu.h>
 #include <kernel/thread.h>
 #include <kernel/topology.h>
 #include <lk/init.h>
