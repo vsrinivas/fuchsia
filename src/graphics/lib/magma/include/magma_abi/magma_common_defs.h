@@ -307,6 +307,7 @@ enum {
 };
 
 typedef struct {
+  // A format specified by DRM (Linux Direct Rendering Manager)
   uint64_t drm_format;
   // The last modifier must be DRM_FORMAT_MOD_INVALID
   uint64_t drm_format_modifiers[MAGMA_MAX_DRM_FORMAT_MODIFIERS];

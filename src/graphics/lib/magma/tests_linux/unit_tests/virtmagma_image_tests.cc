@@ -20,6 +20,5 @@ TEST_F(MagmaImageTest, Placeholder) {
   magma_buffer_t image;
 
   EXPECT_EQ(MAGMA_STATUS_UNIMPLEMENTED, magma_virt_create_image(connection_, &create_info, &image));
-  EXPECT_EQ(MAGMA_STATUS_UNIMPLEMENTED,
-            magma_virt_get_image_params(connection_, image, &image_info));
+  EXPECT_EQ(MAGMA_STATUS_UNIMPLEMENTED, magma_virt_get_image_info(connection_, image, &image_info));
 }

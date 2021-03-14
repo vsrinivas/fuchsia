@@ -592,7 +592,8 @@ magma_status_t magma_read_notification_channel2(
     magma_bool_t* more_data_out);
 
 ///
-/// \brief Creates an image buffer backed by a buffer collection given a DRM format.
+/// \brief Creates an image buffer backed by a buffer collection given a DRM format and optional
+///        modifier, as specified in the create info.
 /// \param connection An open connection.
 /// \param create_info Input parameters describing the image.
 /// \param image_out The image buffer.
@@ -608,7 +609,7 @@ magma_status_t magma_virt_create_image(
 /// \param image The image buffer.
 /// \param image_info_out Output parameters describing the image.
 ///
-magma_status_t magma_virt_get_image_params(
+magma_status_t magma_virt_get_image_info(
     magma_connection_t connection,
     magma_buffer_t image,
     magma_image_info_t* image_info_out);

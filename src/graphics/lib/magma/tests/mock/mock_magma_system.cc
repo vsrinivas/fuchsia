@@ -451,7 +451,7 @@ magma_status_t magma_virt_create_image(magma_connection_t connection,
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
 
-magma_status_t magma_virt_get_image_params(magma_connection_t connection, magma_buffer_t image,
-                                           magma_image_info_t* image_info_out) {
+magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_buffer_t image,
+                                         magma_image_info_t* image_info_out) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }

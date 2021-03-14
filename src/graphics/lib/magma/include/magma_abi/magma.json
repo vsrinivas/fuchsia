@@ -1076,7 +1076,7 @@
         "ordinal": 71,
         "name": "magma_virt_create_image",
         "type": "magma_status_t",
-        "description": "Creates an image buffer backed by a buffer collection given a DRM format.",
+        "description": "Creates an image buffer backed by a buffer collection given a DRM format and optional modifier, as specified in the create info.",
         "arguments": [
           {
             "name": "connection",
@@ -1097,7 +1097,7 @@
       },
       {
         "ordinal": 72,
-        "name": "magma_virt_get_image_params",
+        "name": "magma_virt_get_image_info",
         "type": "magma_status_t",
         "description": "Returns parameters for an image created with virtmagma_create_image.",
         "arguments": [
