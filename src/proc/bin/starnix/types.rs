@@ -11,7 +11,7 @@ use {
     fuchsia_zircon::{self as zx, sys::zx_vaddr_t},
     std::fmt,
     std::ops,
-    zerocopy::AsBytes,
+    zerocopy::{AsBytes, FromBytes},
 };
 
 pub type uid_t = u32;
@@ -123,7 +123,8 @@ impl From<zx::Status> for Errno {
     }
 }
 
-#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, AsBytes, FromBytes)]
+#[repr(transparent)]
 pub struct UserAddress(u64);
 
 impl UserAddress {
@@ -276,3 +277,12 @@ pub struct stat_t {
     pub st_ctim: timespec_t,
     pub _pad3: [i64; 3],
 }
+
+#[derive(Debug, Default, Clone, Copy, AsBytes, FromBytes)]
+#[repr(C)]
+pub struct iovec {
+    pub iov_base: UserAddress,
+    pub iov_len: usize,
+}
+
+pub const UIO_MAXIOV: u32 = 1024;

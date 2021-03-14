@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use std::convert::TryInto;
 use {fuchsia_zircon::Task, log::info, zerocopy::AsBytes};
 
 use crate::executive::*;
@@ -55,13 +56,31 @@ pub fn sys_brk(ctx: &ThreadContext, addr: UserAddress) -> Result<SyscallResult, 
 }
 
 pub fn sys_writev(
-    _ctx: &ThreadContext,
+    ctx: &ThreadContext,
     fd: i32,
-    iovec: UserAddress,
+    iovec_addr: UserAddress,
     iovec_count: i32,
 ) -> Result<SyscallResult, Errno> {
-    info!("writev: fd={} iovec={} iovec_count={}", fd, iovec, iovec_count);
-    Err(ENOSYS)
+    let iovec_count: usize = iovec_count.try_into().map_err(|_| EINVAL)?;
+    if iovec_count > UIO_MAXIOV as usize {
+        return Err(EINVAL);
+    }
+
+    let mut iovecs: Vec<iovec> = Vec::new();
+    iovecs.reserve(iovec_count); // TODO: try_reserve
+    iovecs.resize(iovec_count, iovec::default());
+    ctx.process.read_memory(iovec_addr, iovecs.as_mut_slice().as_bytes_mut())?;
+
+    info!("writev: fd={} iovec={:?}", fd, iovecs);
+
+    let mut count = 0;
+    for iovec in iovecs {
+        let mut data = vec![0; iovec.iov_len];
+        ctx.process.read_memory(iovec.iov_base, &mut data)?;
+        info!("writev: {}", String::from_utf8_lossy(&data));
+        count += data.len();
+    }
+    Ok(count.into())
 }
 
 pub fn sys_access(
