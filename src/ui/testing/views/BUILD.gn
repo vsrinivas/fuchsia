@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("views") {
   testonly = true
@@ -51,29 +51,29 @@ executable("test_views_app") {
   ]
 }
 
-package("test_views") {
+fuchsia_component("background_view") {
   testonly = true
-
-  binaries = [
-    {
-      name = "test_views_app"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/background_view.cmx")
-      dest = "background_view.cmx"
-    },
-    {
-      path = rebase_path("meta/coordinate_test_view.cmx")
-      dest = "coordinate_test_view.cmx"
-    },
-    {
-      path = rebase_path("meta/rotated_square_view.cmx")
-      dest = "rotated_square_view.cmx"
-    },
-  ]
-
+  manifest = "meta/background_view.cmx"
   deps = [ ":test_views_app" ]
+}
+
+fuchsia_component("coordinate_test_view") {
+  testonly = true
+  manifest = "meta/coordinate_test_view.cmx"
+  deps = [ ":test_views_app" ]
+}
+
+fuchsia_component("rotated_square_view") {
+  testonly = true
+  manifest = "meta/rotated_square_view.cmx"
+  deps = [ ":test_views_app" ]
+}
+
+fuchsia_package("test_views") {
+  testonly = true
+  deps = [
+    ":background_view",
+    ":coordinate_test_view",
+    ":rotated_square_view",
+  ]
 }
