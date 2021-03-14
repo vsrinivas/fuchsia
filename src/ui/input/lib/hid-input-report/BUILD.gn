@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("hid-input-report") {
   sources = [
@@ -23,13 +23,6 @@ source_set("hid-input-report") {
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/hid",
     "//zircon/system/ulib/hid-parser",
-  ]
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-
-    # TODO(fxbug.dev/69507): delete the below and fix compiler warnings
-    "//build/config:Wno-deprecated-declarations",
   ]
 }
 
@@ -64,23 +57,9 @@ test("lib-hid-input-report-test") {
     "//zircon/system/ulib/hid-parser",
     "//zircon/system/ulib/hid-parser",
   ]
-
-  configs += [
-    # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
-    "//build/config:Wno-conversion",
-
-    # TODO(fxbug.dev/69507): delete the below and fix compiler warnings
-    "//build/config:Wno-deprecated-declarations",
-  ]
 }
 
-unittest_package("test") {
+fuchsia_unittest_package("test") {
   package_name = "lib-hid-input-report-test"
   deps = [ ":lib-hid-input-report-test" ]
-  tests = [
-    {
-      name = "lib-hid-input-report-test"
-      environments = basic_envs
-    },
-  ]
 }
