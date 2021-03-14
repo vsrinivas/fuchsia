@@ -3,23 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{anyhow, Error},
-    fidl::endpoints::ServerEnd,
+    anyhow::{anyhow, Context, Error},
+    fidl::endpoints::{ClientEnd, ServerEnd},
     fidl_fuchsia_component_runner::{
         self as fcrunner, ComponentControllerMarker, ComponentStartInfo,
     },
-    fuchsia_async as fasync,
+    fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    fuchsia_syslog,
     fuchsia_zircon::{
         self as zx, sys::zx_exception_info_t, sys::zx_thread_state_general_regs_t,
         sys::ZX_EXCEPTION_STATE_HANDLED, sys::ZX_EXCEPTION_STATE_TRY_NEXT,
         sys::ZX_EXCP_POLICY_CODE_BAD_SYSCALL,
     },
     futures::{StreamExt, TryStreamExt},
-    library_loader,
+    io_util::directory,
     log::info,
-    runner,
     std::ffi::CString,
     std::mem,
     std::sync::Arc,
@@ -135,8 +133,10 @@ async fn start_component(
         start_info.resolved_url.clone().unwrap_or("<unknown>".to_string())
     );
 
+    let root_path = runner::get_program_string(&start_info, "root")
+        .ok_or_else(|| anyhow!("No root in component manifest"))?
+        .to_owned();
     let binary_path = runner::get_program_binary(&start_info)?;
-
     let ns = start_info.ns.ok_or_else(|| anyhow!("Missing namespace"))?;
 
     let pkg_proxy = ns
@@ -145,8 +145,28 @@ async fn start_component(
         .ok_or_else(|| anyhow!("Missing /pkg entry in namespace"))?
         .directory
         .ok_or_else(|| anyhow!("Missing directory handlee in pkg namespace entry"))?
-        .into_proxy()?;
-    let executable_vmo = library_loader::load_vmo(&pkg_proxy, &binary_path).await?;
+        .into_proxy()
+        .context("failed to open /pkg")?;
+    let root_proxy = directory::open_directory(
+        &pkg_proxy,
+        &root_path,
+        fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE,
+    )
+    .await
+    .context("failed to open root")?;
+
+    let executable_vmo = library_loader::load_vmo(&root_proxy, &binary_path)
+        .await
+        .context("failed to load executable")?;
+    let (ldsvc_client, ldsvc_server) = zx::Channel::create()?;
+    library_loader::start(
+        directory::clone_no_describe(
+            &root_proxy,
+            Some(fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE),
+        )?,
+        ldsvc_server,
+    );
+    let ldsvc_client = ClientEnd::new(ldsvc_client);
 
     let parent_job = fuchsia_runtime::job_default();
     let job = parent_job.create_child_job()?;
@@ -158,7 +178,8 @@ async fn start_component(
         aux: vec![AT_UID, 3, AT_EUID, 3, AT_GID, 3, AT_EGID, 3, AT_SECURE, 0],
     };
 
-    run_process(Arc::new(load_executable(&job, executable_vmo, &params).await?)).await?;
+    run_process(Arc::new(load_executable(&job, executable_vmo, ldsvc_client, &params).await?))
+        .await?;
     Ok(())
 }
 

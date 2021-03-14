@@ -76,6 +76,37 @@ fn find<'a>(dict: &'a fdata::Dictionary, key: &str) -> Option<&'a fdata::Diction
     }
 }
 
+fn get_program_value<'a>(
+    start_info: &'a fcrunner::ComponentStartInfo,
+    key: &str,
+) -> Option<&'a fdata::DictionaryValue> {
+    find(start_info.program.as_ref()?, key)
+}
+
+/// Retrieve a string from the program dictionary in ComponentStartInfo.
+pub fn get_program_string<'a>(
+    start_info: &'a fcrunner::ComponentStartInfo,
+    key: &str,
+) -> Option<&'a str> {
+    if let fdata::DictionaryValue::Str(value) = get_program_value(start_info, key)? {
+        Some(value)
+    } else {
+        None
+    }
+}
+
+/// Retrieve a StrVec from the program dictionary in ComponentStartInfo.
+pub fn get_program_strvec<'a>(
+    start_info: &'a fcrunner::ComponentStartInfo,
+    key: &str,
+) -> Option<&'a Vec<String>> {
+    if let fdata::DictionaryValue::StrVec(value) = get_program_value(start_info, key)? {
+        Some(value)
+    } else {
+        None
+    }
+}
+
 /// Retrieves program.binary from ComponentStartInfo and makes sure that path is relative.
 pub fn get_program_binary(
     start_info: &fcrunner::ComponentStartInfo,
@@ -103,14 +134,11 @@ pub fn get_program_binary(
 pub fn get_program_args(
     start_info: &fcrunner::ComponentStartInfo,
 ) -> Result<Vec<String>, StartInfoProgramError> {
-    if let Some(program) = &start_info.program {
-        if let Some(args) = find(program, "args") {
-            if let fdata::DictionaryValue::StrVec(vec) = args {
-                return vec.iter().map(|v| Ok(v.clone())).collect();
-            }
-        }
+    if let Some(vec) = get_program_strvec(start_info, "args") {
+        Ok(vec.iter().map(|v| v.clone()).collect())
+    } else {
+        Ok(vec![])
     }
-    Ok(vec![])
 }
 
 /// Retrieves `program.forward_stdout_to` from ComponentStartInfo and validates.
@@ -135,15 +163,9 @@ fn get_program_stream_sink_by_key(
     start_info: &fcrunner::ComponentStartInfo,
     key: &str,
 ) -> Option<StreamSink> {
-    let val = if let Some(val) = start_info.program.as_ref().and_then(|program| find(program, key))
-    {
-        val
-    } else {
-        return Some(StreamSink::None); // Default to None.
-    };
-
-    match val {
-        fdata::DictionaryValue::Str(sink) => match sink.as_str() {
+    match get_program_value(start_info, key) {
+        None => Some(StreamSink::None),
+        Some(fdata::DictionaryValue::Str(sink)) => match sink.as_str() {
             "log" => Some(StreamSink::Log),
             "none" => Some(StreamSink::None),
             _ => None,

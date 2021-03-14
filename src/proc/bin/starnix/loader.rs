@@ -4,7 +4,8 @@
 
 use {
     anyhow::Error,
-    fuchsia_async as fasync,
+    fidl::endpoints::ClientEnd,
+    fidl_fuchsia_ldsvc as fldsvc, fuchsia_async as fasync,
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Status, Task},
     process_builder::ProcessBuilder,
     std::ffi::CString,
@@ -92,11 +93,13 @@ fn populate_initial_stack(
 pub async fn load_executable(
     job: &zx::Job,
     executable: zx::Vmo,
+    loader_service: ClientEnd<fldsvc::LoaderMarker>,
     params: &ProcessParameters,
 ) -> Result<ProcessContext, Error> {
     job.set_name(&params.name)?;
 
-    let builder = ProcessBuilder::new(&params.name, &job, executable)?;
+    let mut builder = ProcessBuilder::new(&params.name, &job, executable)?;
+    builder.set_loader_service(loader_service)?;
     let mut built = builder.build().await?;
 
     built.stack = populate_initial_stack(&built.stack_vmo, &params, built.stack_base, built.stack)?;
