@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 executable("benchmark_example") {
   sources = [ "main.cc" ]
@@ -19,19 +19,7 @@ executable("benchmark_example") {
   ]
 }
 
-package("benchmark") {
+fuchsia_package_with_single_component("benchmark") {
+  manifest = "meta/benchmark.cmx"
   deps = [ ":benchmark_example" ]
-
-  binaries = [
-    {
-      name = "benchmark_example"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/benchmark.cmx")
-      dest = "benchmark.cmx"
-    },
-  ]
 }
