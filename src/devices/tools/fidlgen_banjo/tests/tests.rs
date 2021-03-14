@@ -172,6 +172,7 @@ mod cpp_mock {
         };
     }
 
+    cpp_mock_test!(interface);
     cpp_mock_test!(passcallback);
     cpp_mock_test!(protocolarray);
     cpp_mock_test!(protocolbase);

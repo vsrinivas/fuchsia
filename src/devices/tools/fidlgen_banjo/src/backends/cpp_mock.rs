@@ -30,7 +30,7 @@ fn filter_protocol<'b>(declaration: &Decl<'b>) -> Option<&'b Interface> {
 }
 
 fn get_mock_out_param_types(m: &Method, ir: &FidlIr) -> Result<String, Error> {
-    if !m.has_response {
+    if !m.has_response || m.maybe_response.as_ref().unwrap().is_empty() {
         Ok("void".to_string())
     } else {
         Ok(format!(
@@ -133,7 +133,7 @@ fn get_mock_params(m: &Method, ir: &FidlIr) -> Result<String, Error> {
 
 fn get_mock_expect_args(m: &Method) -> Result<String, Error> {
     let mut args = Vec::new();
-    if m.has_response {
+    if m.has_response && !m.maybe_response.as_ref().unwrap().is_empty() {
         args.push(format!(
             "{{{}}}",
             m.maybe_response
@@ -446,7 +446,7 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
 
                 accum.push_str("        ");
 
-                if m.has_response {
+                if m.has_response && !m.maybe_response.as_ref().unwrap().is_empty() {
                     accum
                         .push_str(format!("{} ret = ", get_mock_out_param_types(&m, ir)?).as_str());
                 }
@@ -518,7 +518,7 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
                     });
                 }
 
-                if method.has_response {
+                if method.has_response && !method.maybe_response.as_ref().unwrap().is_empty() {
                     need_cpp_tuple_header = true;
                     method.maybe_response.as_ref().unwrap().iter().for_each(|param| {
                         match param._type {

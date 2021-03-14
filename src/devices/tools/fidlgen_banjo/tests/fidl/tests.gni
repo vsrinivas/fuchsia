@@ -166,6 +166,7 @@ _simple_libraries = [
       "c",
       "cpp",
       "cpp_internal",
+      "cpp_mock",
     ]
     deps = [ "//zircon/vdso/zx" ]
   },

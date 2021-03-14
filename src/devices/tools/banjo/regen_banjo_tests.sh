@@ -67,7 +67,7 @@ do
   if [ "$filename" = "pass-callback" ] || [ "$filename" = "protocol-array" ] \
     || [ "$filename" = "protocol-base" ] || [ "$filename" = "protocol-handle" ] \
     || [ "$filename" = "protocol-other-types" ] || [ "$filename" = "protocol-primitive" ] \
-    || [ "$filename" = "protocol-vector" ]; then
+    || [ "$filename" = "protocol-vector" ] || [ "$filename" = "interface" ]; then
     with_cpp_mock=true
   fi
 
