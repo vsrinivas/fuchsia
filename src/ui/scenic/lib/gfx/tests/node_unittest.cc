@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cmath>
+
 #include <gtest/gtest.h>
 
 #include "lib/ui/scenic/cpp/commands.h"
@@ -48,6 +50,38 @@ TEST_F(NodeTest, ShapeNodeMaterialAndShape) {
   ASSERT_NE(nullptr, circle.get());
   EXPECT_EQ(shape_node->material(), material);
   EXPECT_EQ(shape_node->shape(), circle);
+}
+
+TEST_F(NodeTest, InvalidFloatVector) {
+  const ResourceId kNodeId = 1;
+
+  EXPECT_TRUE(Apply(scenic::NewCreateShapeNodeCmd(kNodeId)));
+  // Valid values.
+  EXPECT_TRUE(Apply(scenic::NewSetTranslationCmd(kNodeId, {1.f, 2.f, 3.f})));
+  EXPECT_TRUE(Apply(scenic::NewSetScaleCmd(kNodeId, {1.f, 1.f, 1.f})));
+  EXPECT_TRUE(Apply(scenic::NewSetAnchorCmd(kNodeId, {4.f, 5.f, 6.f})));
+  constexpr float PI = 3.14159;
+  EXPECT_TRUE(Apply(
+      scenic::NewSetRotationCmd(kNodeId, {0.f, 0.f, std::sin(PI / 2.f), std::cos(PI / 2.f)})));
+  // Invalid values.
+  EXPECT_FALSE(Apply(scenic::NewSetTranslationCmd(kNodeId, {INFINITY, 0.f, 0.f})));
+  EXPECT_FALSE(Apply(scenic::NewSetTranslationCmd(kNodeId, {NAN, 0.f, 0.f})));
+  EXPECT_FALSE(Apply(scenic::NewSetAnchorCmd(kNodeId, {INFINITY, 0.f, 0.f})));
+  EXPECT_FALSE(Apply(scenic::NewSetAnchorCmd(kNodeId, {NAN, 0.f, 0.f})));
+  EXPECT_FALSE(Apply(scenic::NewSetRotationCmd(kNodeId, {0.f, 0.f, 0.f, 2.f})));
+  EXPECT_FALSE(Apply(scenic::NewSetRotationCmd(kNodeId, {0.f, 0.f, INFINITY, 1.f})));
+  EXPECT_FALSE(Apply(scenic::NewSetScaleCmd(kNodeId, {1.f, 1.f, INFINITY})));
+  EXPECT_FALSE(Apply(scenic::NewSetScaleCmd(kNodeId, {1.f, 1.f, NAN})));
+  EXPECT_FALSE(Apply(scenic::NewSetScaleCmd(kNodeId, {1.f, 0.f, 1.f})));
+
+  auto shape_node = FindResource<ShapeNode>(kNodeId);
+  ASSERT_NE(nullptr, shape_node.get());
+  EXPECT_EQ(shape_node->translation(), escher::vec3(1.f, 2.f, 3.f));
+  EXPECT_EQ(shape_node->scale(), escher::vec3(1.f, 1.f, 1.f));
+  EXPECT_EQ(shape_node->anchor(), escher::vec3(4.f, 5.f, 6.f));
+  // fuchsia::ui::gfx::Quaternion {x, y, z, w} corresponds to escher::quat
+  // {w, x, y, z}.
+  EXPECT_EQ(shape_node->rotation(), escher::quat(std::cos(PI / 2.f), 0.f, 0.f, std::sin(PI / 2.f)));
 }
 
 TEST_F(NodeTest, NodesWithChildren) {

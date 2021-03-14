@@ -8,6 +8,7 @@
 #include <lib/syslog/cpp/macros.h>
 
 #include <algorithm>
+#include <cmath>
 
 #include "src/ui/lib/escher/geometry/intersection.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
@@ -26,6 +27,25 @@ constexpr ResourceTypeFlags kHasTransform = ResourceType::kClipNode | ResourceTy
                                             ResourceType::kShapeNode | ResourceType::kViewHolder |
                                             ResourceType::kViewNode;
 constexpr ResourceTypeFlags kHasClip = ResourceType::kEntityNode | ResourceType::kViewHolder;
+
+bool IsTranslationValid(const escher::vec3& translation) {
+  return std::isfinite(translation.x) && std::isfinite(translation.y) &&
+         std::isfinite(translation.z);
+}
+
+bool IsAnchorValid(const escher::vec3& translation) {
+  return std::isfinite(translation.x) && std::isfinite(translation.y) &&
+         std::isfinite(translation.z);
+}
+
+bool IsRotationValid(const escher::quat& quat) {
+  return std::isfinite(quat.x) && std::isfinite(quat.y) && std::isfinite(quat.z) &&
+         std::isfinite(quat.w) && quat.w - 1 <= escher::kEpsilon && quat.w + 1 >= -escher::kEpsilon;
+}
+
+bool IsScaleValid(const escher::vec3& scale) {
+  return std::isnormal(scale.x) && std::isnormal(scale.y) && std::isnormal(scale.z);
+}
 
 }  // anonymous namespace
 
@@ -145,8 +165,11 @@ bool Node::SetTranslation(const escher::vec3& translation, ErrorReporter* error_
                             << " cannot have translation set.";
     return false;
   }
+  if (!IsTranslationValid(translation)) {
+    error_reporter->ERROR() << "SetTranslation: Translation invalid.";
+    return false;
+  }
   bound_variables_.erase(NodeProperty::kTranslation);
-
   transform_.translation = translation;
   InvalidateGlobalTransform();
   return true;
@@ -159,9 +182,13 @@ bool Node::SetTranslation(Vector3VariablePtr translation_variable, ErrorReporter
     return false;
   }
 
-  bound_variables_[NodeProperty::kTranslation] =
-      std::make_unique<Vector3VariableBinding>(translation_variable, [this](escher::vec3 value) {
-        transform_.translation = value;
+  bound_variables_[NodeProperty::kTranslation] = std::make_unique<Vector3VariableBinding>(
+      translation_variable, [this, error_reporter](escher::vec3 value) {
+        if (IsTranslationValid(value)) {
+          transform_.translation = value;
+        } else {
+          error_reporter->ERROR() << "SetTranslation: Translation invalid.";
+        }
         InvalidateGlobalTransform();
       });
   return true;
@@ -171,6 +198,10 @@ bool Node::SetScale(const escher::vec3& scale, ErrorReporter* error_reporter) {
   if (!(type_flags() & kHasTransform)) {
     error_reporter->ERROR() << "scenic::gfx::Node::SetScale(): node of type " << type_name()
                             << " cannot have scale set.";
+    return false;
+  }
+  if (!IsScaleValid(scale)) {
+    error_reporter->ERROR() << "SetScale: Scale invalid.";
     return false;
   }
   bound_variables_.erase(NodeProperty::kScale);
@@ -185,9 +216,13 @@ bool Node::SetScale(Vector3VariablePtr scale_variable, ErrorReporter* error_repo
                             << " cannot have scale set.";
     return false;
   }
-  bound_variables_[NodeProperty::kScale] =
-      std::make_unique<Vector3VariableBinding>(scale_variable, [this](escher::vec3 value) {
-        transform_.scale = value;
+  bound_variables_[NodeProperty::kScale] = std::make_unique<Vector3VariableBinding>(
+      scale_variable, [this, error_reporter](escher::vec3 value) {
+        if (IsScaleValid(value)) {
+          transform_.scale = value;
+        } else {
+          error_reporter->ERROR() << "SetScale: Scale invalid.";
+        }
         InvalidateGlobalTransform();
       });
   return true;
@@ -199,6 +234,10 @@ bool Node::SetRotation(const escher::quat& rotation, ErrorReporter* error_report
   if (!(type_flags() & kHasTransform)) {
     error_reporter->ERROR() << "scenic::gfx::Node::SetRotation(): node of type " << type_name()
                             << " cannot have rotation set.";
+    return false;
+  }
+  if (!IsRotationValid(rotation)) {
+    error_reporter->ERROR() << "SetRotation: Rotation invalid.";
     return false;
   }
   bound_variables_.erase(NodeProperty::kRotation);
@@ -213,9 +252,13 @@ bool Node::SetRotation(QuaternionVariablePtr rotation_variable, ErrorReporter* e
                             << " cannot have rotation set.";
     return false;
   }
-  bound_variables_[NodeProperty::kRotation] =
-      std::make_unique<QuaternionVariableBinding>(rotation_variable, [this](escher::quat value) {
-        transform_.rotation = value;
+  bound_variables_[NodeProperty::kRotation] = std::make_unique<QuaternionVariableBinding>(
+      rotation_variable, [this, error_reporter](escher::quat value) {
+        if (IsRotationValid(value)) {
+          transform_.rotation = value;
+        } else {
+          error_reporter->ERROR() << "SetRotation: Rotation invalid.";
+        }
         InvalidateGlobalTransform();
       });
   return true;
@@ -225,6 +268,10 @@ bool Node::SetAnchor(const escher::vec3& anchor, ErrorReporter* error_reporter) 
   if (!(type_flags() & kHasTransform)) {
     error_reporter->ERROR() << "scenic::gfx::Node::SetAnchor(): node of type " << type_name()
                             << " cannot have anchor set.";
+    return false;
+  }
+  if (!IsAnchorValid(anchor)) {
+    error_reporter->ERROR() << "SetAnchor: Anchor invalid.";
     return false;
   }
   bound_variables_.erase(NodeProperty::kAnchor);
@@ -239,9 +286,13 @@ bool Node::SetAnchor(Vector3VariablePtr anchor_variable, ErrorReporter* error_re
                             << " cannot have anchor set.";
     return false;
   }
-  bound_variables_[NodeProperty::kAnchor] =
-      std::make_unique<Vector3VariableBinding>(anchor_variable, [this](escher::vec3 value) {
-        transform_.anchor = value;
+  bound_variables_[NodeProperty::kAnchor] = std::make_unique<Vector3VariableBinding>(
+      anchor_variable, [this, error_reporter](escher::vec3 value) {
+        if (IsAnchorValid(value)) {
+          transform_.anchor = value;
+        } else {
+          error_reporter->ERROR() << "SetAnchor: Anchor invalid.";
+        }
         InvalidateGlobalTransform();
       });
   return true;
