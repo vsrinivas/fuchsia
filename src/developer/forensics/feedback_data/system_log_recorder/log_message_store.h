@@ -50,6 +50,8 @@ class LogMessageStore {
   // of the block (after the returned string). Calling Consume will empty the store.
   std::string Consume(bool* end_of_block);
 
+  void TurnOnRateLimiting() { buffer_rate_limit_ = true; }
+
  private:
   class ContainerStats {
    public:
@@ -80,6 +82,7 @@ class LogMessageStore {
   ContainerStats buffer_stats_;
   ContainerStats block_stats_;
 
+  bool buffer_rate_limit_ = false;
   size_t num_messages_dropped_ = 0;
   size_t last_pushed_message_count_ = 0;
   std::string last_pushed_message_;

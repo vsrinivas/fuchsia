@@ -81,6 +81,7 @@ TEST(WriterTest, VerifyFileOrdering) {
   const size_t kBufferSize = kMaxLogLineSize;
 
   LogMessageStore store(kBlockSize, kBufferSize, MakeIdentityEncoder());
+  store.TurnOnRateLimiting();
   SystemLogWriter writer(temp_dir.path(), 4u, &store);
 
   // Written to file 0
@@ -143,6 +144,7 @@ TEST(WriterTest, VerifyEncoderInput) {
   auto encoder = std::unique_ptr<EncoderStub>(new EncoderStub());
   auto encoder_ptr = encoder.get();
   LogMessageStore store(kBlockSize, kBufferSize, std::move(encoder));
+  store.TurnOnRateLimiting();
   SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 1")));
@@ -171,6 +173,7 @@ TEST(WriterTest, WritesMessages) {
   // Set up the writer such that each file can fit 2 log messages and the "!!! DROPPED..."
   // string.
   LogMessageStore store(kMaxLogLineSize * 2, kMaxLogLineSize * 2, MakeIdentityEncoder());
+  store.TurnOnRateLimiting();
   SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -211,6 +214,7 @@ TEST(WriterTest, VerifyCompressionRatio) {
   files::ScopedTempDir temp_dir;
 
   LogMessageStore store(kMaxLogLineSize * 4, kMaxLogLineSize * 4, MakeIdentityEncoder());
+  store.TurnOnRateLimiting();
   SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -233,6 +237,7 @@ TEST(WriterTest, VerifyProductionEcoding) {
   // Set up the writer such that one file contains 5 log messages.
   auto encoder = std::unique_ptr<Encoder>(new ProductionEncoder());
   LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, std::move(encoder));
+  store.TurnOnRateLimiting();
   SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
   EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
@@ -267,6 +272,7 @@ TEST(WriterTest, FilesAlreadyPresent) {
     // Set up the writer such that one file contains at most 5 log messages.
     auto encoder = std::unique_ptr<Encoder>(new ProductionEncoder());
     LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, std::move(encoder));
+    store.TurnOnRateLimiting();
 
     SystemLogWriter writer(temp_dir.path(), 2u, &store);
 
@@ -278,6 +284,7 @@ TEST(WriterTest, FilesAlreadyPresent) {
     // Set up the writer such that one file contains at most 5 log messages.
     auto encoder = std::unique_ptr<Encoder>(new ProductionEncoder());
     LogMessageStore store(kMaxLogLineSize * 5, kMaxLogLineSize * 5, std::move(encoder));
+    store.TurnOnRateLimiting();
 
     SystemLogWriter writer(temp_dir.path(), 2u, &store);
 

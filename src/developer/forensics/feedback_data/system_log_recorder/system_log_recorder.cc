@@ -13,12 +13,17 @@ namespace forensics {
 namespace feedback_data {
 namespace system_log_recorder {
 
+// No rate limiting in the first minute of recording to allow us to catch up on all the log
+// messages prior to listening.
+constexpr zx::duration kNoRateLimitDuration = zx::sec(60);
+
 SystemLogRecorder::SystemLogRecorder(async_dispatcher_t* archive_dispatcher,
                                      async_dispatcher_t* write_dispatcher,
                                      std::shared_ptr<sys::ServiceDirectory> services,
                                      WriteParameters write_parameters,
                                      std::unique_ptr<Encoder> encoder)
-    : write_dispatcher_(write_dispatcher),
+    : archive_dispatcher_(archive_dispatcher),
+      write_dispatcher_(write_dispatcher),
       write_period_(write_parameters.period),
       logs_dir_(write_parameters.logs_dir),
       store_(write_parameters.total_log_size_bytes / write_parameters.max_num_files,
@@ -42,6 +47,9 @@ void SystemLogRecorder::Start() {
   });
 
   periodic_write_task_.Post(write_dispatcher_);
+
+  async::PostDelayedTask(
+      archive_dispatcher_, [this] { store_.TurnOnRateLimiting(); }, kNoRateLimitDuration);
 }
 
 void SystemLogRecorder::Flush(const std::optional<std::string> message) {

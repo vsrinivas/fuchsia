@@ -30,7 +30,7 @@ namespace feedback_data {
 namespace system_log_recorder {
 namespace {
 
-constexpr zx::duration kZeroInitialDelay = zx::sec(0);
+constexpr zx::duration kTimeWaitForLimitedLogs = zx::sec(60);
 
 // Only change "X" for one character. i.e. X -> 12 is not allowed.
 const size_t kMaxLogLineSize = std::string("[15604.000][07559][07687][] INFO: line X\n").size();
@@ -86,6 +86,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   //    5.25: line13 -> write 6 -> file 3
   //
   // Note: we use the IdentityEncoder to easily control which messages are dropped.
+  // Note 2: we offset time by kTimeWaitForLimitedLog to wait for the buffer rate limiter.
   const zx::duration kArchivePeriod = zx::msec(750);
   const zx::duration kWriterPeriod = zx::sec(1);
 
@@ -113,7 +114,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
   });
 
   stubs::DiagnosticsArchive archive(std::make_unique<stubs::DiagnosticsBatchIteratorDelayedBatches>(
-      dispatcher(), json_batches, kZeroInitialDelay, kArchivePeriod));
+      dispatcher(), json_batches, kTimeWaitForLimitedLogs, kArchivePeriod));
 
   InjectServiceProvider(&archive, kArchiveAccessorName);
 
@@ -131,6 +132,8 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_SmokeTest) {
                              },
                              std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
+
+  RunLoopFor(kTimeWaitForLimitedLogs);
 
   std::string contents;
 
@@ -245,6 +248,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_StopAndDeleteLogs) {
   //    5.25: line13 -> write 6 -> file 3
   //
   // Note: we use the IdentityEncoder to easily control which messages are dropped.
+  // Note 2: we offset time by kTimeWaitForLimitedLog to wait for the buffer rate limiter.
   const zx::duration kArchivePeriod = zx::msec(750);
   const zx::duration kWriterPeriod = zx::sec(1);
 
@@ -272,7 +276,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_StopAndDeleteLogs) {
   });
 
   stubs::DiagnosticsArchive archive(std::make_unique<stubs::DiagnosticsBatchIteratorDelayedBatches>(
-      dispatcher(), json_batches, kZeroInitialDelay, kArchivePeriod, /*strict=*/false));
+      dispatcher(), json_batches, kTimeWaitForLimitedLogs, kArchivePeriod, /*strict=*/false));
 
   InjectServiceProvider(&archive, kArchiveAccessorName);
 
@@ -290,6 +294,8 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_StopAndDeleteLogs) {
                              },
                              std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
+
+  RunLoopFor(kTimeWaitForLimitedLogs);
 
   std::string contents;
 
@@ -363,6 +369,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_Flush) {
   //    1.50: line8  -> write 2 -> file 2
   //
   // Note: we use the IdentityEncoder to easily control which messages are dropped.
+  // Note 2: we offset time by kTimeWaitForLimitedLog to wait for the buffer rate limiter.
   const zx::duration kArchivePeriod = zx::msec(750);
   const zx::duration kWriterPeriod = zx::sec(1);
 
@@ -385,7 +392,7 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_Flush) {
   });
 
   stubs::DiagnosticsArchive archive(std::make_unique<stubs::DiagnosticsBatchIteratorDelayedBatches>(
-      dispatcher(), json_batches, kZeroInitialDelay, kArchivePeriod, /*strict=*/true));
+      dispatcher(), json_batches, kTimeWaitForLimitedLogs, kArchivePeriod, /*strict=*/true));
 
   InjectServiceProvider(&archive, kArchiveAccessorName);
 
@@ -405,6 +412,8 @@ TEST_F(SystemLogRecorderTest, SingleThreaded_Flush) {
                              },
                              std::unique_ptr<Encoder>(new IdentityEncoder()));
   recorder.Start();
+
+  RunLoopFor(kTimeWaitForLimitedLogs);
 
   RunLoopFor(kArchivePeriod);
   recorder.Flush(kFlushStr);

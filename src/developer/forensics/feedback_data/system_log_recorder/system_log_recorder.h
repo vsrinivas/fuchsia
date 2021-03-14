@@ -39,6 +39,7 @@ class SystemLogRecorder {
  private:
   void PeriodicWriteTask();
 
+  async_dispatcher_t* archive_dispatcher_;
   async_dispatcher_t* write_dispatcher_;
   const zx::duration write_period_;
   const std::string logs_dir_;

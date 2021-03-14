@@ -75,8 +75,8 @@ bool LogMessageStore::Add(::fit::result<fuchsia::logger::LogMessage, std::string
   }
   last_pushed_message_count_ = 0;
 
-  // 3. Early return on full buffer.
-  if (buffer_stats_.IsFull()) {
+  // 3. Early return on full buffer when there is a rate limit.
+  if (buffer_rate_limit_ && buffer_stats_.IsFull()) {
     ++num_messages_dropped_;
     return false;
   }
@@ -84,8 +84,8 @@ bool LogMessageStore::Add(::fit::result<fuchsia::logger::LogMessage, std::string
   // 4. Serialize incoming message.
   const std::string str = (log.is_ok()) ? Format(log.value()) : FormatError(log.error());
 
-  // 5. Push the incoming message if below the limit, otherwise drop it.
-  if (buffer_stats_.CanUse(str.size())) {
+  // 5. Push the incoming message if below the limit or there is no rate limit; otherwise drop it.
+  if (!buffer_rate_limit_ || buffer_stats_.CanUse(str.size())) {
     AddToBuffer(str);
     last_pushed_message_ = log_msg;
     last_pushed_message_count_ = 1;
