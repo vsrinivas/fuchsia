@@ -91,6 +91,26 @@ pub fn filter_interface<'b>(declaration: &Decl<'b>) -> Option<&'b Interface> {
     }
 }
 
+pub fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> String {
+    if let Some(attrs) = maybe_attrs {
+        for attr in attrs.iter() {
+            if attr.name == "Doc" {
+                if attr.value.is_empty() {
+                    continue;
+                }
+                let tabs: String = iter::repeat(' ').take(tabs * 4).collect();
+                return attr
+                    .value
+                    .trim_end()
+                    .split("\n")
+                    .map(|line| format!("{}//{}\n", tabs, line))
+                    .collect();
+            }
+        }
+    }
+    "".to_string()
+}
+
 //---------------------------------------------
 // Utilities shared by the four C/C++ backends.
 
@@ -176,7 +196,7 @@ pub fn to_cpp_name(name: &str) -> &str {
     name.split(".").last().unwrap()
 }
 
-fn handle_type_to_cpp_str(ty: &HandleSubtype) -> String {
+pub fn handle_type_to_cpp_str(ty: &HandleSubtype) -> String {
     match ty {
         HandleSubtype::Handle => String::from("zx::handle"),
         HandleSubtype::Bti => String::from("zx::bti"),

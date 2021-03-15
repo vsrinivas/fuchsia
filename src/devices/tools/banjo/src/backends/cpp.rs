@@ -467,22 +467,6 @@ fn get_mock_expect_args(m: &ast::Method) -> Result<String, Error> {
 
 /// Checks whether a decl is a protocol, and if it is a protocol, checks that it is a "ddk-interface".
 fn filter_interface<'a>(
-    decl: &'a ast::Decl,
-) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Protocol { ref name, ref methods, ref attributes, .. } = *decl {
-        if let Some(layout) = attributes.get_attribute("BanjoLayout") {
-            if layout == "ddk-interface" {
-                return Some((name, methods, attributes));
-            }
-        }
-    }
-    None
-}
-
-/// Same as filter_interface but with a slightly different signature. This version is used with a
-/// declaration order vector as opposed to the namespace declaration vector. Ultimately only the
-/// present version will remain.
-fn filter_interface2<'a>(
     decl: &&'a ast::Decl,
 ) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Protocol { ref name, ref methods, ref attributes, .. } = *decl {
@@ -497,24 +481,6 @@ fn filter_interface2<'a>(
 
 /// Checks whether a decl is a protocol, and if it is a protocol, checks that it is a "ddk-protocol".
 fn filter_protocol<'a>(
-    decl: &'a ast::Decl,
-) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Protocol { ref name, ref methods, ref attributes, .. } = *decl {
-        if let Some(layout) = attributes.get_attribute("BanjoLayout") {
-            if layout == "ddk-protocol" {
-                return Some((name, methods, attributes));
-            }
-        } else {
-            return Some((name, methods, attributes));
-        }
-    }
-    None
-}
-
-/// Same as filter_protocol but with a slightly different signature. This version is used with a
-/// declaration order vector as opposed to the namespace declaration vector. Ultimately only the
-/// present version will remain.
-fn filter_protocol2<'a>(
     decl: &&'a ast::Decl,
 ) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Protocol { ref name, ref methods, ref attributes, .. } = *decl {
@@ -593,7 +559,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     ) -> Result<String, Error> {
         declarations
             .iter()
-            .filter_map(filter_protocol2)
+            .filter_map(filter_protocol)
             .map(|(name, methods, _)| {
                 Ok(format!(
                     include_str!("templates/cpp/internal_protocol.h"),
@@ -613,7 +579,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     ) -> Result<String, Error> {
         declarations
             .iter()
-            .filter_map(filter_interface2)
+            .filter_map(filter_interface)
             .map(|(name, methods, _)| {
                 Ok(format!(
                     include_str!("templates/cpp/internal_protocol.h"),
@@ -826,10 +792,10 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
     fn codegen_interfaces(
         &self,
-        namespace: &Vec<ast::Decl>,
+        declarations: &Vec<&ast::Decl>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
-        namespace
+        declarations
             .iter()
             .filter_map(filter_interface)
             .map(|(name, methods, attributes)| {
@@ -854,10 +820,10 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
     fn codegen_protocols(
         &self,
-        namespace: &Vec<ast::Decl>,
+        declarations: &Vec<&ast::Decl>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
-        namespace
+        declarations
             .iter()
             .filter_map(filter_protocol)
             .map(|(name, methods, attributes)| {
@@ -940,10 +906,10 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
     fn codegen_examples(
         &self,
-        namespaces: &Vec<ast::Decl>,
+        declarations: &Vec<&ast::Decl>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
-        namespaces
+        declarations
             .iter()
             .filter_map(filter_protocol)
             .map(|(name, methods, _)| {
@@ -1261,7 +1227,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
     ) -> Result<String, Error> {
         declarations
             .iter()
-            .filter_map(filter_protocol2)
+            .filter_map(filter_protocol)
             .map(|(name, methods, _attributes)| {
                 Ok(format!(
                     include_str!("templates/cpp/mock.h"),
@@ -1281,7 +1247,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
     fn codegen_mock_includes(
         &self,
-        namespace: &Vec<ast::Decl>,
+        declarations: &Vec<&ast::Decl>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
         let mut need_c_string_header = false;
@@ -1289,30 +1255,32 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
         let mut need_cpp_tuple_header = false;
         let mut need_cpp_vector_header = false;
 
-        namespace.iter().filter_map(filter_protocol).for_each(|(_name, methods, _attributes)| {
-            methods.iter().for_each(|m| {
-                m.in_params.iter().for_each(|(_name, ty, _)| match ty {
-                    ast::Ty::Str { .. } => need_cpp_string_header = true,
-                    ast::Ty::Vector { .. } => need_cpp_vector_header = true,
-                    _ => {}
-                });
+        declarations.iter().filter_map(filter_protocol).for_each(
+            |(_name, methods, _attributes)| {
+                methods.iter().for_each(|m| {
+                    m.in_params.iter().for_each(|(_name, ty, _)| match ty {
+                        ast::Ty::Str { .. } => need_cpp_string_header = true,
+                        ast::Ty::Vector { .. } => need_cpp_vector_header = true,
+                        _ => {}
+                    });
 
-                if !m.out_params.is_empty() {
-                    need_cpp_tuple_header = true;
-                }
-
-                m.out_params.iter().for_each(|(_name, ty, _)| match ty {
-                    ast::Ty::Str { .. } => {
-                        need_cpp_string_header = true;
-                        if !m.attributes.has_attribute("Async") {
-                            need_c_string_header = true;
-                        }
+                    if !m.out_params.is_empty() {
+                        need_cpp_tuple_header = true;
                     }
-                    ast::Ty::Vector { .. } => need_cpp_vector_header = true,
-                    _ => {}
+
+                    m.out_params.iter().for_each(|(_name, ty, _)| match ty {
+                        ast::Ty::Str { .. } => {
+                            need_cpp_string_header = true;
+                            if !m.attributes.has_attribute("Async") {
+                                need_c_string_header = true;
+                            }
+                        }
+                        ast::Ty::Vector { .. } => need_cpp_vector_header = true,
+                        _ => {}
+                    });
                 });
-            });
-        });
+            },
+        );
 
         let mut accum = String::new();
         if need_c_string_header {
@@ -1350,20 +1318,20 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
 impl<'a, W: io::Write> Backend<'a, W> for CppBackend<'a, W> {
     fn codegen(&mut self, ast: BanjoAst) -> Result<(), Error> {
-        let namespace = &ast.namespaces[&ast.primary_namespace];
         let decl_order = ast.validate_declaration_deps()?;
         match &self.subtype {
             CppSubtype::Base => {
                 self.w.write_fmt(format_args!(
                     include_str!("templates/cpp/header.h"),
                     includes = self.codegen_includes(&ast)?,
-                    examples = self.codegen_examples(namespace, &ast)?,
+                    examples = self.codegen_examples(&decl_order, &ast)?,
                     namespace = &ast.primary_namespace,
                     primary_namespace = to_c_name(&ast.primary_namespace).as_str()
                 ))?;
 
-                self.w.write_fmt(format_args!("{}", self.codegen_interfaces(namespace, &ast)?))?;
-                self.w.write_fmt(format_args!("{}", self.codegen_protocols(namespace, &ast)?))?;
+                self.w
+                    .write_fmt(format_args!("{}", self.codegen_interfaces(&decl_order, &ast)?))?;
+                self.w.write_fmt(format_args!("{}", self.codegen_protocols(&decl_order, &ast)?))?;
                 self.w.write_fmt(format_args!(include_str!("templates/cpp/footer.h")))?;
             }
             CppSubtype::Internal => {
@@ -1377,7 +1345,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CppBackend<'a, W> {
             CppSubtype::Mock => {
                 self.w.write_fmt(format_args!(
                     include_str!("templates/cpp/mock_header.h"),
-                    includes = self.codegen_mock_includes(namespace, &ast)?,
+                    includes = self.codegen_mock_includes(&decl_order, &ast)?,
                     namespace = &ast.primary_namespace,
                 ))?;
                 self.w.write_fmt(format_args!("{}", self.codegen_mock(&decl_order, &ast)?))?;

@@ -5,7 +5,7 @@
 use {
     super::{
         util::{
-            array_bounds, get_declarations, name_buffer, name_size, not_callback,
+            array_bounds, get_declarations, get_doc_comment, name_buffer, name_size, not_callback,
             primitive_type_to_c_str, to_c_name, Decl, ProtocolType,
         },
         Backend,
@@ -26,26 +26,6 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     pub fn new(w: &'a mut W) -> Self {
         CBackend { w }
     }
-}
-
-fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> String {
-    if let Some(attrs) = maybe_attrs {
-        for attr in attrs.iter() {
-            if attr.name == "Doc" {
-                if attr.value.is_empty() {
-                    continue;
-                }
-                let tabs: String = iter::repeat(' ').take(tabs * 4).collect();
-                return attr
-                    .value
-                    .trim_end()
-                    .split("\n")
-                    .map(|line| format!("{}//{}\n", tabs, line))
-                    .collect();
-            }
-        }
-    }
-    "".to_string()
 }
 
 fn integer_type_to_c_str(ty: &IntegerType) -> Result<String, Error> {

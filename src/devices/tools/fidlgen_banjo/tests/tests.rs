@@ -114,30 +114,30 @@ mod rust {
 }
 
 mod cpp {
-    // macro_rules! cpp_test {
-    //     ( $id:ident ) => {
-    //         codegen_test!($id, CppBackend, concat!("cpp/", stringify!($id), ".h"));
-    //     };
-    // }
+    macro_rules! cpp_test {
+        ( $id:ident ) => {
+            codegen_test!($id, CppBackend, concat!("cpp/", stringify!($id), ".h"));
+        };
+    }
 
-    // cpp_test!(buffer);
-    // cpp_test!(callback);
-    // cpp_test!(empty);
-    // cpp_test!(example4);
-    // cpp_test!(example6);
-    // cpp_test!(example7);
-    // cpp_test!(example9);
-    // cpp_test!(handles);
-    // cpp_test!(interface);
-    // cpp_test!(protocolarray);
-    // cpp_test!(protocolbase);
-    // cpp_test!(protocolhandle);
-    // cpp_test!(protocolothertypes);
-    // cpp_test!(protocolprimitive);
-    // cpp_test!(protocolvector);
-    // cpp_test!(references);
-    // cpp_test!(simple);
-    // cpp_test!(view);
+    cpp_test!(buffer);
+    cpp_test!(callback);
+    cpp_test!(empty);
+    cpp_test!(example4);
+    cpp_test!(example6);
+    cpp_test!(example7);
+    cpp_test!(example9);
+    cpp_test!(handles);
+    cpp_test!(interface);
+    cpp_test!(protocolarray);
+    cpp_test!(protocolbase);
+    cpp_test!(protocolhandle);
+    cpp_test!(protocolothertypes);
+    cpp_test!(protocolprimitive);
+    cpp_test!(protocolvector);
+    cpp_test!(references);
+    cpp_test!(simple);
+    cpp_test!(view);
 }
 
 mod cpp_internal {
