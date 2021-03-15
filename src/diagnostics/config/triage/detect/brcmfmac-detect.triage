@@ -4,6 +4,7 @@
         conn_no_network_fail_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy/connection-metrics:no_network_fail_24hrs",
         conn_auth_fail_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy/connection-metrics:auth_fail_24hrs",
         conn_other_fail_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy/connection-metrics:other_fail_24hrs",
+        rx_freeze_24hrs: "INSPECT:bootstrap/driver_manager:root/brcmfmac-phy:rx_freeze_24hrs",
     },
     act: {
         excessive_tx_qfull: {
@@ -29,6 +30,12 @@
             trigger: "conn_other_fail_24hrs >= 5",
             repeat: "Hours(24)",
             signature: "excessive-conn-other-fail",
+        },
+        occurrence_rx_freeze: {
+            type: "Snapshot",
+            trigger: "rx_freeze_24hrs >= 1",
+            repeat: "Hours(24)",
+            signature: "occurrence-rx-freeze",
         },
     },
     test: {
@@ -102,6 +109,24 @@
             ],
             values: {
                 conn_other_fail_24hrs: 4,
+            },
+        },
+        occurrence_rx_freeze: {
+            yes: [
+                "occurrence_rx_freeze",
+            ],
+            no: [],
+            values: {
+                rx_freeze_24hrs: 1,
+            },
+        },
+        no_occurrence_rx_freeze: {
+            yes: [],
+            no: [
+                "occurrence_rx_freeze",
+            ],
+            values: {
+                rx_freeze_24hrs: 0,
             },
         },
     },
