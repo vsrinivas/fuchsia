@@ -104,7 +104,7 @@ protocol Primary {
     ReleaseBuffer(zx.koid buffer_id);
 
     /// Imports an object for use in the system driver.
-    ImportObject(handle object, uint32 object_type);
+    ImportObject(zx.handle object, uint32 object_type);
 
     /// Destroys the object with `object_id` within this connection.
     ReleaseObject(zx.koid object_id, uint32 object_type);

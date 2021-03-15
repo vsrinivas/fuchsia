@@ -7,12 +7,14 @@
 
 library fidl.test.coding.fuchsia;
 
+using zx;
+
 protocol Handles {
     // Starting easy: just a handle.
-    NonnullableHandle(handle h0);
+    NonnullableHandle(zx.handle h0);
 
     // Multiple handles!
-    MultipleNonnullableHandles(uint32 data0, handle h0, uint64 data1, handle h1, handle h2, uint64 data2);
+    MultipleNonnullableHandles(uint32 data0, zx.handle h0, uint64 data1, zx.handle h1, zx.handle h2, uint64 data2);
     MultipleNullableHandles(uint32 data0, handle? h0, uint64 data1, handle? h1, handle? h2, uint64 data2);
 };
 
@@ -52,17 +54,17 @@ protocol Vectors {
 };
 
 resource union SingleHandleUnion {
-    1: handle h0;
+    1: zx.handle h0;
 };
 
 resource union MultipleHandlesUnion {
-    1: handle h;
+    1: zx.handle h;
     2: array<handle>:2 hs;
     3: array<array<handle>:2>:2 hss;
 };
 
 resource union MaybeRecurse {
-    1: handle h;
+    1: zx.handle h;
     2: MaybeRecurseHelper more;
 };
 
@@ -81,17 +83,17 @@ protocol Unions {
 
 resource struct Inline3 {
     uint32 padding;
-    handle h;
+    zx.handle h;
 };
 
 resource struct Inline2 {
     uint64 padding;
     Inline3 l3;
-    handle h;
+    zx.handle h;
 };
 
 resource struct Inline1 {
-    handle h;
+    zx.handle h;
     Inline2 l2;
     uint64 padding;
 };
@@ -99,12 +101,12 @@ resource struct Inline1 {
 resource struct Inline0 {
     uint64 padding;
     Inline1 L1;
-    handle h;
+    zx.handle h;
 };
 
 resource struct OutOfLine3 {
     uint32 padding;
-    handle h;
+    zx.handle h;
 };
 
 resource struct OutOfLine2 {
@@ -115,7 +117,7 @@ resource struct OutOfLine2 {
 };
 
 resource struct OutOfLine1 {
-    handle h;
+    zx.handle h;
     OutOfLine2? l2_present;
     OutOfLine2 l2_inline;
     OutOfLine2? l2_absent;
@@ -126,7 +128,7 @@ resource struct OutOfLine0 {
     uint64 padding;
     OutOfLine1? l1_absent;
     OutOfLine1 l1_inline;
-    handle h;
+    zx.handle h;
     OutOfLine1? l1_present;
 };
 

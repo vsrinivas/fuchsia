@@ -55,6 +55,7 @@ cts_fidl("fidl_test_handles") {
   testonly = true
 
   sources = [ "fidl_test_handles.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }
 
 cts_fidl("collision_test") {

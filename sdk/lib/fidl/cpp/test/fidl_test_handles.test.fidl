@@ -4,6 +4,8 @@
 
 library fidl.test.handles;
 
+using zx;
+
 protocol Foo {
-    Bar(handle h);
+    Bar(zx.handle h);
 };

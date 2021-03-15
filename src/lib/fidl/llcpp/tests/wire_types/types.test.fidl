@@ -4,12 +4,14 @@
 
 library fidl.llcpp.types.test;
 
+using zx;
+
 struct CopyableStruct {
     int32 x;
 };
 
 resource struct MoveOnlyStruct {
-    handle? h;
+    zx.handle? h;
 };
 
 /// Verifies that user code can manipulate these union payloads.
@@ -22,7 +24,7 @@ resource union TestUnion {
 flexible resource union TestXUnion {
     1: int32 primitive;
     2: CopyableStruct copyable;
-    3: handle h;
+    3: zx.handle h;
 };
 
 union TestStrictXUnion {

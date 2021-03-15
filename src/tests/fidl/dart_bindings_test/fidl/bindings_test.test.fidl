@@ -4,10 +4,12 @@
 
 library fidl.test.dartbindingstest;
 
+using zx;
+
 resource struct HandleStruct {
     string foo;
     int32 bar;
-    handle baz;
+    zx.handle baz;
 };
 
 struct NoHandleStruct {
@@ -18,7 +20,7 @@ struct NoHandleStruct {
 
 resource struct NumberHandleNumber {
     uint32 n1;
-    handle h;
+    zx.handle h;
     uint32 n2;
 };
 

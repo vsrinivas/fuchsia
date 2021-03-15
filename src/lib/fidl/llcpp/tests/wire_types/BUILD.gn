@@ -17,6 +17,7 @@ group("wire_types") {
 
 fidl("fidl.llcpp.types.test") {
   sources = [ "types.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
   host_llcpp = true
 }
 

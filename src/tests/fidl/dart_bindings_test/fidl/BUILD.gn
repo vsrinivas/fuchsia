@@ -19,4 +19,6 @@ fidl("bindings_test") {
     "bindings_test.test.fidl",
     "conformance.test.fidl",
   ]
+
+  public_deps = [ "//zircon/vdso/zx" ]
 }

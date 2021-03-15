@@ -244,14 +244,14 @@ alias MyOldHandleAlias = zx.handle : VMO ;
 alias MyOldHandleAlias2 = zx.handle    :  THREAD  ;
 
 struct        Constraints {
-    handle :      THING1         h1;           handle: <  THING2  >    h2;  handle: <  THING2 ,   zx.rights.TRANSFER   |    zx.rights.SIGNAL  >    h3;  
+    zx.handle :      THING1         h1;           zx.handle: <  THING2  >    h2;  zx.handle: <  THING2 ,   zx.rights.TRANSFER   |    zx.rights.SIGNAL  >    h3;  
 };
 
-alias HandleAlias = handle  :  <  THING3  >;
-alias MyHandleAlias = handle  :  <  THING3  >;
+alias HandleAlias = zx.handle  :  <  THING3  >;
+alias MyHandleAlias = zx.handle  :  <  THING3  >;
 
-using HandleRightsAlias = handle  :  <  THING3 ,   zx.rights.TRANSFER       |    zx.rights.SIGNAL   >;
-alias MyHandleRightsAlias = handle  :  <  THING3 ,   zx.rights.TRANSFER       |    zx.rights.SIGNAL   >;
+using HandleRightsAlias = zx.handle  :  <  THING3 ,   zx.rights.TRANSFER       |    zx.rights.SIGNAL   >;
+alias MyHandleRightsAlias = zx.handle  :  <  THING3 ,   zx.rights.TRANSFER       |    zx.rights.SIGNAL   >;
 
 // Comments at EOF
 

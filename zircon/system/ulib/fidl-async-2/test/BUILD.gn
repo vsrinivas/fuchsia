@@ -29,4 +29,5 @@ fuchsia_unittest_package("fidl-struct-test-package") {
 
 fidl("fidl.types.test") {
   sources = [ "types.test.fidl" ]
+  public_deps = [ "//zircon/vdso/zx" ]
 }

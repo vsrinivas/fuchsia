@@ -158,7 +158,7 @@ struct Vectors {
 // A record which contains some handles.
 resource struct Handles {
     // a handle of unspecified type
-    handle h;
+    zx.handle h;
 
     // an optional channel
     zx.handle:CHANNEL? c;
@@ -173,8 +173,12 @@ table Profile {
 };
 // [END tables]
 
-struct Left {};
-struct Right {};
+struct Left {
+};
+
+struct Right {
+};
+
 // [START unions-use]
 union Either {
     1: Left left;
@@ -189,7 +193,9 @@ flexible union FlexibleEither {
 };
 // [END strict-vs-flexible]
 
-protocol RealCalculator {};
+protocol RealCalculator {
+};
+
 // [START endpoints]
 // A record which contains protocol-bound channels.
 resource struct Record {
@@ -236,7 +242,9 @@ protocol FontController {
 };
 // [END composition-multiple-1]
 
-struct Time {};
+struct Time {
+};
+
 // [START layering-clock]
 protocol Clock {
     Now() -> (Time time);
@@ -284,8 +292,8 @@ enum DivisionError : uint32 {
 
 protocol Calculator {
     Add(int32 a, int32 b) -> (int32 sum);
-    Divide(int32 dividend, int32 divisor) ->
-        (int32 quotient, int32 remainder) error DivisionError;
+    Divide(int32 dividend, int32 divisor)
+        -> (int32 quotient, int32 remainder) error DivisionError;
     Clear();
     -> OnError(uint32 status_code);
 };

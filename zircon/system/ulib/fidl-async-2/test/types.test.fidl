@@ -4,6 +4,8 @@
 
 library fidl.types.test;
 
+using zx;
+
 [ForDeprecatedCBindings]
 struct CopyableStruct {
     int32 x;
@@ -11,7 +13,7 @@ struct CopyableStruct {
 
 [ForDeprecatedCBindings]
 resource struct MoveOnlyStruct {
-    handle h;
+    zx.handle h;
 };
 
 const uint32 ARRAY_OF_STRUCT_COUNT = 32;

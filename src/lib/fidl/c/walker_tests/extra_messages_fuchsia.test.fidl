@@ -7,19 +7,21 @@
 /// instead.
 library fidl.test.coding.fuchsia;
 
+using zx;
+
 protocol LinearizerTest {
     VectorOfUint32(vector<uint32> v);
     VectorOfString(vector<string> v);
 };
 
 resource struct StructWithHandle {
-    handle h;
+    zx.handle h;
     int32 foo;
 };
 
 resource struct StructWithManyHandles {
-    handle h1;
-    handle h2;
+    zx.handle h1;
+    zx.handle h2;
     vector<handle>:2 hs;
 };
 

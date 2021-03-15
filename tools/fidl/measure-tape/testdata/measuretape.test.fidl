@@ -9,13 +9,13 @@ using zx;
 // 24 bytes + selected member size
 resource union TopLevelUnion {
     1: uint64 primitive;
-    2: handle handle;
+    2: zx.handle handle;
     3: StructWithString struct_with_string;
     4: StructWithOptString struct_with_opt_string;
     5: Table table;
     6: array<byte>:12 array_of_twelve_bytes;
     7: array<string>:3 array_of_three_strings;
-    8: array<handle>:3 array_of_three_handles;
+    8: array<zx.handle>:3 array_of_three_handles;
     9: array<Table>:2 array_of_two_tables;
     10: array<Union>:2 array_of_two_unions;
     11: StructWithTwoArrays struct_with_two_arrays;
@@ -23,7 +23,7 @@ resource union TopLevelUnion {
     21: array<StructWithTwoHandles>:3 array_of_three_structs_with_two_handles;
     13: vector<byte> vector_of_bytes;
     14: vector<string> vector_of_strings;
-    15: vector<handle> vector_of_handles;
+    15: vector<zx.handle> vector_of_handles;
     16: vector<Table> vector_of_tables;
     17: vector<Union> vector_of_unions;
     18: StructWithTwoVectors struct_with_two_vectors;
@@ -49,7 +49,7 @@ resource table Table {
     2: reserved;
     1: reserved;
     3: string string;
-    4: handle handle;
+    4: zx.handle handle;
 };
 
 // 24 bytes + selected member size

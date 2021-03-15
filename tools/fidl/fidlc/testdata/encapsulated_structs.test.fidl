@@ -1,5 +1,7 @@
 library fidl.test.encapsulatedstructs;
 
+using zx;
+
 struct Int8Int32 {
     int8 a;
     // padding of 3 bytes.
@@ -30,7 +32,7 @@ struct StructPaddingTestStruct {
 
 resource struct NonInlineStructTestStruct {
     Int16Int8? element; // 8-byte alignment
-    handle h;
+    zx.handle h;
     // 4-byte padding after handle.
 };
 

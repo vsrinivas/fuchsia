@@ -17,7 +17,7 @@ using zx;
 /// identifier.
 resource struct HandleInfo {
     /// The handle to use for this process argument.
-    handle handle;
+    zx.handle handle;
 
     /// Process argument identifier.
     ///

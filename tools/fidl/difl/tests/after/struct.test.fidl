@@ -24,7 +24,7 @@ struct StructAttributeRemoved {
     int32 field;
 };
 
-[Attribute="after"]
+[Attribute = "after"]
 struct StructAttributeChanged {
     int32 field;
 };
@@ -32,14 +32,14 @@ struct StructAttributeChanged {
 // Fields
 
 struct StructMemberRenamed {
-//!StructMemberRenamed
+    //!StructMemberRenamed
     int32 renamed_field;
 };
 
 //!StructSizeChanged
 struct StructMemberAdded {
     int32 field;
-//!StructMemberAdded
+    //!StructMemberAdded
     int32 new_field;
 };
 
@@ -50,9 +50,9 @@ struct StructMemberRemoved {
 };
 
 struct StructMemberReordered {
-//!StructMemberMoved
+    //!StructMemberMoved
     int32 second;
-//!StructMemberMoved
+    //!StructMemberMoved
     int32 first;
 };
 
@@ -68,21 +68,21 @@ struct StructMemberAttributeRemoved {
 };
 
 struct StructMemberAttributeChanged {
-    [Attribute="before"]
+    [Attribute = "before"]
     int32 field;
 };
 
 // Field types
 
 struct StructMemberSignChanged {
-//!StructMemberTypeChanged
+    //!StructMemberTypeChanged
     uint32 field;
 };
 
 //!StructSizeChanged
 struct StructMemberSizeChanged {
-//!StructMemberSizeChanged
-//!StructMemberTypeChanged
+    //!StructMemberSizeChanged
+    //!StructMemberTypeChanged
     int64 field;
 };
 
@@ -93,7 +93,7 @@ struct StructMemberSplit {
 };
 
 struct StructMemberJoin {
-//!StructMemberJoined
+    //!StructMemberJoined
     int32 ab;
 };
 
@@ -101,9 +101,9 @@ struct StructMemberJoin {
 //!StructMemberRemoved
 struct StructMemberSplitPadding {
     uint16 z;
-//!StructMemberAdded
+    //!StructMemberAdded
     int16 a;
-//!StructMemberAdded
+    //!StructMemberAdded
     int16 b;
 };
 
@@ -111,49 +111,49 @@ struct StructMemberSplitPadding {
 //!StructMemberRemoved
 struct StructMemberJoinPadding {
     uint16 z;
-//!StructMemberAdded
+    //!StructMemberAdded
     int32 ab;
 };
 
 struct StructMemberStringToOptionalString {
-//!StructMemberTypeChanged
+    //!StructMemberTypeChanged
     string? field;
 };
 
 struct StructMemberStringFromOptionalString {
-//!StructMemberTypeChanged
+    //!StructMemberTypeChanged
     string field;
 };
 
 struct StructMemberHandleToOptionalHandle {
-//!StructMemberTypeChanged
-    handle? field;
+    //!StructMemberTypeChanged
+    zx.handle? field;
 };
 
 struct StructMemberHandleFromOptionalHandle {
-//!StructMemberTypeChanged
-    handle field;
+    //!StructMemberTypeChanged
+    zx.handle field;
 };
 
 struct StructMemberHandleTypeChanged {
-//!StructMemberTypeChanged
+    //!StructMemberTypeChanged
     zx.handle:SOCKET field;
 };
 
 struct StructMemberStringLengthChanged {
-//!StructMemberTypeChanged
+    //!StructMemberTypeChanged
     string:10 field;
 };
 
 struct StructMemberVectorLengthChanged {
-//!StructMemberTypeChanged
+    //!StructMemberTypeChanged
     vector<int32>:10 field;
 };
 
 //!StructSizeChanged
 struct StructMemberArrayLengthChanged {
-//!StructMemberSizeChanged
-//!StructMemberTypeChanged
+    //!StructMemberSizeChanged
+    //!StructMemberTypeChanged
     array<int32>:10 field;
 };
 

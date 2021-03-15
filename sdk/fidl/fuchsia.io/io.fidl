@@ -586,7 +586,7 @@ protocol Directory {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    Rename(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
+    Rename(string:MAX_PATH src, zx.handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
     /// Creates a link to an object named src by the name dst, within a directory represented by
     /// token.
@@ -599,7 +599,7 @@ protocol Directory {
     ///
     /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
     /// `ZX_ERR_BAD_HANDLE`.
-    Link(string:MAX_PATH src, handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
+    Link(string:MAX_PATH src, zx.handle dst_parent_token, string:MAX_PATH dst) -> (zx.status s);
 
     // TODO(smklein): When stablized, remove the "This API is unstable" comment
     /// Watches a directory, receiving events of added messages on the

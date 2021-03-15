@@ -36,6 +36,7 @@
 
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
+#include <zx/llcpp/fidl.h>
 
 namespace fidl_test_encapsulatedstructs {
 namespace wire {

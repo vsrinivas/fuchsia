@@ -181,7 +181,7 @@ type Static struct {
 	// Whether to include archives in the build.
 	IncludeArchives bool `protobuf:"varint,18,opt,name=include_archives,json=includeArchives,proto3" json:"include_archives,omitempty"`
 	// Names of tools referenced in tool_paths.json that we should build with
-	// Ninja.
+	// Ninja. We assume that we should build each tool for the current OS and CPU.
 	Tools []string `protobuf:"bytes,19,rep,name=tools,proto3" json:"tools,omitempty"`
 	// Whether to skip the ninja build if we're running in CQ and none of the
 	// changed files affect the build.
