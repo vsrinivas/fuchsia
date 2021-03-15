@@ -26,7 +26,7 @@ use crate::{
     },
     peer_manager::PeerManager,
     peer_manager::ServiceRequest,
-    profile::{AvcrpTargetFeatures, AvrcpProtocolVersion, AvrcpService},
+    profile::{AvrcpProtocolVersion, AvrcpService, AvrcpTargetFeatures},
     service,
 };
 
@@ -232,7 +232,7 @@ async fn test_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Err
     peer_manager.services_found(
         &fake_peer_id,
         vec![AvrcpService::Target {
-            features: AvcrpTargetFeatures::CATEGORY1,
+            features: AvrcpTargetFeatures::CATEGORY1,
             psm: PSM_AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         }],

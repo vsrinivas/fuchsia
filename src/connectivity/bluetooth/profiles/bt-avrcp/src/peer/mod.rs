@@ -191,7 +191,6 @@ impl Inspect for &mut RemotePeer {
         name: impl AsRef<str>,
     ) -> Result<(), AttachError> {
         self.inspect.iattach(parent, name)?;
-        self.inspect.node().record_string("peer_id", self.peer_id.to_string());
         self.control_channel.iattach(&self.inspect.node(), "control")?;
         self.browse_channel.iattach(&self.inspect.node(), "browse")?;
         Ok(())
@@ -219,7 +218,7 @@ impl RemotePeer {
             cancel_tasks: false,
             last_connected_time: None,
             notification_cache: HashMap::new(),
-            inspect: RemotePeerInspect::default(),
+            inspect: RemotePeerInspect::new(peer_id),
         }
     }
 
@@ -305,6 +304,7 @@ impl RemotePeer {
                     self.peer_id,
                     diff
                 );
+                self.inspect.metrics().control_collision();
                 self.reset_connection(true);
                 return;
             }
@@ -322,6 +322,7 @@ impl RemotePeer {
     fn set_browse_connection(&mut self, peer: AvctpPeer) {
         info!("{} connected browse channel", self.peer_id);
         self.browse_channel.connected(Arc::new(peer));
+        self.inspect.metrics().browse_connection();
         self.wake_state_watcher();
     }
 
@@ -552,7 +553,7 @@ impl RemotePeerHandle {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::profile::{AvcrpTargetFeatures, AvrcpProtocolVersion};
+    use crate::profile::{AvrcpProtocolVersion, AvrcpTargetFeatures};
 
     use {
         anyhow::Error,
@@ -591,7 +592,7 @@ mod tests {
 
         // Set the descriptor to simulate service found for peer.
         peer_handle.set_target_descriptor(AvrcpService::Target {
-            features: AvcrpTargetFeatures::CATEGORY1,
+            features: AvrcpTargetFeatures::CATEGORY1,
             psm: PSM_AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
@@ -637,7 +638,7 @@ mod tests {
 
         // Set the descriptor to simulate service found for peer.
         peer_handle.set_target_descriptor(AvrcpService::Target {
-            features: AvcrpTargetFeatures::CATEGORY1,
+            features: AvrcpTargetFeatures::CATEGORY1,
             psm: PSM_AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
@@ -714,7 +715,7 @@ mod tests {
 
         // Set the descriptor to simulate service found for peer.
         peer_handle.set_target_descriptor(AvrcpService::Target {
-            features: AvcrpTargetFeatures::CATEGORY1,
+            features: AvrcpTargetFeatures::CATEGORY1,
             psm: PSM_AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
@@ -822,7 +823,7 @@ mod tests {
 
         // Set the descriptor to simulate service found for peer.
         peer_handle.set_target_descriptor(AvrcpService::Target {
-            features: AvcrpTargetFeatures::CATEGORY1,
+            features: AvrcpTargetFeatures::CATEGORY1,
             psm: PSM_AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
@@ -848,9 +849,9 @@ mod tests {
         // Inspect tree should be updated with the connection error count.
         assert_inspect_tree!(inspect, root: {
             peer: contains {},
-            metrics: {
+            metrics: contains {
                 connection_errors: 1u64,
-                total_connections: 0u64,
+                control_connections: 0u64,
             }
         });
         Ok(())
@@ -866,7 +867,7 @@ mod tests {
 
         // Set the descriptor to simulate service found for peer.
         peer_handle.set_target_descriptor(AvrcpService::Target {
-            features: AvcrpTargetFeatures::CATEGORY1,
+            features: AvrcpTargetFeatures::CATEGORY1,
             psm: PSM_AVCTP,
             protocol_version: AvrcpProtocolVersion(1, 6),
         });
@@ -882,9 +883,28 @@ mod tests {
             peer: contains {
                 control: "Connected",
             },
-            metrics: {
+            metrics: contains {
                 connection_errors: 0u64,
-                total_connections: 1u64,
+                control_connections: 1u64,
+                browse_connections: 0u64,
+            }
+        });
+
+        // Peer initiates a browse connection.
+        let (_remote1, channel1) = Channel::create();
+        let peer1 = AvctpPeer::new(channel1);
+        peer_handle.set_browse_connection(peer1);
+        // Run to update watcher state.
+        let _ = exec.run_until_stalled(&mut futures::future::pending::<()>());
+        // Inspect tree should be updated with the browse connection.
+        assert_inspect_tree!(inspect, root: {
+            peer: contains {
+                control: "Connected",
+            },
+            metrics: contains {
+                connection_errors: 0u64,
+                control_connections: 1u64,
+                browse_connections: 1u64,
             }
         });
 
@@ -897,9 +917,10 @@ mod tests {
             peer: contains {
                 control: "Disconnected",
             },
-            metrics: {
+            metrics: contains {
                 connection_errors: 0u64,
-                total_connections: 1u64,
+                control_connections: 1u64,
+                browse_connections: 1u64,
             }
         });
         Ok(())

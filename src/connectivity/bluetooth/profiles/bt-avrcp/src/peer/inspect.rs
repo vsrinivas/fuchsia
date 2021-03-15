@@ -3,7 +3,9 @@
 // found in the LICENSE file.
 
 use {
-    fuchsia_async as fasync, fuchsia_inspect as inspect,
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::types::PeerId,
+    fuchsia_inspect as inspect,
     fuchsia_inspect_contrib::{
         inspect_log,
         nodes::{BoundedListNode, NodeExt, TimeProperty},
@@ -18,8 +20,8 @@ use crate::{metrics::MetricsNode, profile::AvrcpService};
 /// save the last `MAX_FEATURE_SETS` feature sets.
 const MAX_FEATURE_SETS: usize = 3;
 
-#[derive(Default)]
 pub struct RemotePeerInspect {
+    peer_id: PeerId,
     // Information about this peer's target and controller services.
     target_info: Option<BoundedListNode>,
     controller_info: Option<BoundedListNode>,
@@ -33,6 +35,7 @@ pub struct RemotePeerInspect {
 impl Inspect for &mut RemotePeerInspect {
     fn iattach(self, parent: &inspect::Node, name: impl AsRef<str>) -> Result<(), AttachError> {
         self.inspect_node = parent.create_child(name);
+        self.inspect_node.record_string("peer_id", self.peer_id.to_string());
         self.target_info = Some(BoundedListNode::new(
             self.inspect_node.create_child("target_info"),
             MAX_FEATURE_SETS,
@@ -46,6 +49,17 @@ impl Inspect for &mut RemotePeerInspect {
 }
 
 impl RemotePeerInspect {
+    pub fn new(peer_id: PeerId) -> Self {
+        Self {
+            peer_id,
+            target_info: None,
+            controller_info: None,
+            last_connected: None,
+            metrics_node: MetricsNode::default(),
+            inspect_node: inspect::Node::default(),
+        }
+    }
+
     pub fn node(&self) -> &inspect::Node {
         &self.inspect_node
     }
@@ -64,6 +78,7 @@ impl RemotePeerInspect {
                     version: format!("{:?}", protocol_version)
                 );
             });
+            self.metrics_node.target_features(self.peer_id, features);
         }
     }
 
@@ -76,6 +91,7 @@ impl RemotePeerInspect {
                     version: format!("{:?}", protocol_version)
                 );
             });
+            self.metrics_node.controller_features(self.peer_id, features);
         }
     }
 
@@ -86,7 +102,7 @@ impl RemotePeerInspect {
             self.last_connected =
                 Some(self.inspect_node.create_time_at("last_connected", at.into()));
         }
-        self.metrics_node.connected();
+        self.metrics_node.control_connection();
     }
 
     pub fn metrics(&self) -> &MetricsNode {
@@ -97,7 +113,7 @@ impl RemotePeerInspect {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::profile::{AvcrpControllerFeatures, AvcrpTargetFeatures, AvrcpProtocolVersion};
+    use crate::profile::{AvrcpControllerFeatures, AvrcpProtocolVersion, AvrcpTargetFeatures};
 
     use {
         fuchsia_inspect::{assert_inspect_tree, testing::AnyProperty},
@@ -109,23 +125,24 @@ mod tests {
         let inspect = inspect::Inspector::new();
 
         let mut peer_inspect =
-            RemotePeerInspect::default().with_inspect(inspect.root(), "peer").unwrap();
+            RemotePeerInspect::new(PeerId(1)).with_inspect(inspect.root(), "peer").unwrap();
 
         // Default inspect tree.
         assert_inspect_tree!(inspect, root: {
             peer: {
+                peer_id: AnyProperty,
                 controller_info: {},
                 target_info: {},
             }
         });
 
         let target_info = AvrcpService::Target {
-            features: AvcrpTargetFeatures::PLAYERSETTINGS,
+            features: AvrcpTargetFeatures::PLAYERSETTINGS,
             psm: 20,
             protocol_version: AvrcpProtocolVersion(1, 5),
         };
         let controller_info = AvrcpService::Controller {
-            features: AvcrpControllerFeatures::CATEGORY1,
+            features: AvrcpControllerFeatures::CATEGORY1,
             psm: 10,
             protocol_version: AvrcpProtocolVersion(1, 6),
         };
@@ -134,6 +151,7 @@ mod tests {
         peer_inspect.record_controller_features(target_info);
         assert_inspect_tree!(inspect, root: {
             peer: {
+                peer_id: AnyProperty,
                 controller_info: {},
                 target_info: {},
             }
@@ -143,6 +161,7 @@ mod tests {
         peer_inspect.record_controller_features(controller_info);
         assert_inspect_tree!(inspect, root: {
             peer: {
+                peer_id: AnyProperty,
                 controller_info: {
                     "0": { "@time": AnyProperty, features: "CATEGORY1", version: "1.6" },
                 },
@@ -156,6 +175,7 @@ mod tests {
         peer_inspect.record_connected(time);
         assert_inspect_tree!(inspect, root: {
             peer: {
+                peer_id: AnyProperty,
                 controller_info: contains {},
                 target_info: contains {},
                 last_connected: AnyProperty,

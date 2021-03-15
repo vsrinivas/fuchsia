@@ -121,6 +121,8 @@ impl PeerManager {
                 // The inspect node for this peer with a shared metrics node.
                 let _ = handle.iattach(self.inspect.node(), fuchsia_inspect::unique_name("peer_"));
                 handle.set_metrics_node(self.inspect.metrics_node().clone());
+                // Log the unique peer.
+                self.inspect.metrics_node().new_peer(peer_id.clone());
                 handle
             })
             .clone()

@@ -38,7 +38,7 @@ pub(crate) fn protocol_to_channel_type(protocols: &Vec<ProtocolDescriptor>) -> O
 }
 
 bitflags! {
-    pub struct AvcrpTargetFeatures: u16 {
+    pub struct AvrcpTargetFeatures: u16 {
         const CATEGORY1         = 1 << 0;
         const CATEGORY2         = 1 << 1;
         const CATEGORY3         = 1 << 2;
@@ -53,7 +53,7 @@ bitflags! {
 }
 
 bitflags! {
-    pub struct AvcrpControllerFeatures: u16 {
+    pub struct AvrcpControllerFeatures: u16 {
         const CATEGORY1         = 1 << 0;
         const CATEGORY2         = 1 << 1;
         const CATEGORY3         = 1 << 2;
@@ -64,6 +64,16 @@ bitflags! {
         const SUPPORTSCOVERARTGETIMAGE = 1 << 8;
         const SUPPORTSCOVERARTGETLINKEDTHUMBNAIL = 1 << 9;
         // 10-15 RESERVED
+    }
+}
+
+impl AvrcpControllerFeatures {
+    pub fn supports_cover_art(&self) -> bool {
+        self.contains(
+            AvrcpControllerFeatures::SUPPORTSCOVERARTGETIMAGE
+                | AvrcpControllerFeatures::SUPPORTSCOVERARTGETIMAGEPROPERTIES
+                | AvrcpControllerFeatures::SUPPORTSCOVERARTGETLINKEDTHUMBNAIL,
+        )
     }
 }
 
@@ -108,7 +118,7 @@ fn make_controller_service_definition() -> ServiceDefinition {
     service.additional_attributes = Some(vec![Attribute {
         id: SDP_SUPPORTED_FEATURES, // SDP Attribute "SUPPORTED FEATURES"
         element: DataElement::Uint16(
-            AvcrpControllerFeatures::CATEGORY1.bits() | AvcrpControllerFeatures::CATEGORY2.bits(),
+            AvrcpControllerFeatures::CATEGORY1.bits() | AvrcpControllerFeatures::CATEGORY2.bits(),
         ),
     }]);
 
@@ -127,9 +137,9 @@ fn make_target_service_definition() -> ServiceDefinition {
     service.additional_attributes = Some(vec![Attribute {
         id: SDP_SUPPORTED_FEATURES, // SDP Attribute "SUPPORTED FEATURES"
         element: DataElement::Uint16(
-            AvcrpTargetFeatures::CATEGORY1.bits()
-                | AvcrpTargetFeatures::CATEGORY2.bits()
-                | AvcrpTargetFeatures::SUPPORTSBROWSING.bits(),
+            AvrcpTargetFeatures::CATEGORY1.bits()
+                | AvrcpTargetFeatures::CATEGORY2.bits()
+                | AvrcpTargetFeatures::SUPPORTSBROWSING.bits(),
         ),
     }]);
 
@@ -159,12 +169,12 @@ impl std::fmt::Debug for AvrcpProtocolVersion {
 #[derive(Debug, PartialEq, Clone, Copy)]
 pub enum AvrcpService {
     Target {
-        features: AvcrpTargetFeatures,
+        features: AvrcpTargetFeatures,
         psm: u16,
         protocol_version: AvrcpProtocolVersion,
     },
     Controller {
-        features: AvcrpControllerFeatures,
+        features: AvrcpControllerFeatures,
         psm: u16,
         protocol_version: AvrcpProtocolVersion,
     },
@@ -227,12 +237,12 @@ impl AvrcpService {
         let protocol_version = AvrcpProtocolVersion(profile.major_version, profile.minor_version);
 
         if service_uuids.contains(&Uuid::new16(AV_REMOTE_TARGET_CLASS)) {
-            let features = AvcrpTargetFeatures::from_bits_truncate(features);
+            let features = AvrcpTargetFeatures::from_bits_truncate(features);
             return Some(AvrcpService::Target { features, psm, protocol_version });
         } else if service_uuids.contains(&Uuid::new16(AV_REMOTE_CLASS))
             || service_uuids.contains(&Uuid::new16(AV_REMOTE_CONTROLLER_CLASS))
         {
-            let features = AvcrpControllerFeatures::from_bits_truncate(features);
+            let features = AvrcpControllerFeatures::from_bits_truncate(features);
             return Some(AvrcpService::Controller { features, psm, protocol_version });
         }
         info!("Failed to find any applicable services for AVRCP");

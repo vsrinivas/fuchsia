@@ -89,8 +89,19 @@ root:
       controller_info
       last_connected_time
   metrics:
+    distinct_peers
+    control_connections
+    browse_connections
     connection_errors
-    total_connections
+    control_channel_collisions
+    target_peers_supporting_browsing
+    distinct_target_peers_supporting_browsing
+    target_peers_supporting_cover_art
+    distinct_target_peers_supporting_cover_art
+    controller_peers_supporting_browsing
+    distinct_controller_peers_supporting_browsing
+    controller_peers_supporting_cover_art
+    distinct_controller_peers_supporting_cover_art
 ```
 
 One peer child exists in the hierarchy for each peer that has been discovered regardless of its
