@@ -52,10 +52,10 @@ zx_status_t arch_smc_call(const zx_smc_parameters_t* params, zx_smc_result_t* re
     AutoPreemptDisabler disabler;
 
     const zx_time_t before = current_time();
-    LOCKUP_BEGIN(SOURCE_TAG);
+    LOCKUP_TIMED_BEGIN(SOURCE_TAG);
     arm_result = arm_smccc_smc(params->func_id, params->arg1, params->arg2, params->arg3,
                                params->arg4, params->arg5, params->arg6, client_and_secure_os_id);
-    LOCKUP_END();
+    LOCKUP_TIMED_END();
     const zx_duration_t delta = zx_time_sub_time(current_time(), before);
 
     // Amount of time this thread may overrun its target preemption time before an OOPS is emitted.

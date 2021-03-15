@@ -10,22 +10,22 @@ heartbeat checker.
 
 The critical section detector detects when the kernel has remained in
 a critical section for "too long".  Critical sections are marked using
-`LOCKUP_BEGIN()` and `LOCKUP_END()`.  The code executing during an SMC
-call is an example of a critical section.  A function that temporarily
-disables interrupts would be another example.
+`LOCKUP_TIMED_BEGIN()` and `LOCKUP_TIMED_END()`.  The code executing
+during an SMC call is an example of a critical section.  A function
+that temporarily disables interrupts would be another example.
 
 ### Self Checking and Cross Checking
 
 Currently, detection is performed in two ways.
 
 First, each time a CPU leaves a critical section (calls
-`LOCKUP_END()`), it will observe the time spent in the critical
+`LOCKUP_TIMED_END()`), it will observe the time spent in the critical
 section, and then update kcounters which track the number of long
 running critical sections we have seen.  Additionally, it will track
 the "worst case" critical section time for that CPU.
 
-Second,  If a CPU calls `LOCKUP_BEGIN()`, but never calls
-`LOCKUP_END()`, and the CPU has spent more than the configured
+Second, If a CPU calls `LOCKUP_TIMED_BEGIN()`, but never calls
+`LOCKUP_TIMED_END()`, and the CPU has spent more than the configured
 threshold amount of time in the critical section, a lockup will be
 reported as a `KERNEL_OOPS` by another one of the CPUs when it is
 performing a heartbeat check.  If the amount of time spent by the
@@ -60,7 +60,7 @@ if the last heartbeat is older than the configured threshold, a (rate
 limited) `KERNEL_OOPS` will be emitted.  If the time since last
 heartbeat exceeds the fatal threshold, a crashlog will be generated
 and the kernel will reboot, indicating a reboot reason of
-`SOFTWARE_WATCHDOG` in the crashlog as it does. 
+`SOFTWARE_WATCHDOG` in the crashlog as it does.
 
 `kernel.lockup-detector.heartbeat-period-ms` controls how frequently
 the CPUs emit heartbeats and perform checks.

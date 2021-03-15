@@ -71,14 +71,14 @@ struct LockupDetectorState {
   //
   /////////////////////////////////////////////////////////////////////////////
   struct {
-    // Critical sections may be nested, so lockup_begin and lockup_end (called
-    // as code enters and exits critical sections) must keep track of the depth.
-    // This variable is only ever accessed by the code entering and exiting the
-    // CS, and always on the same CPU, so there is no need for it to be atomic.
-    // However, because an interrupt may fire as a thread enters a critical
-    // section and the interrupt handler itself my enter a critical section,
-    // compiler fences must be used when accessing to ensure that compiler
-    // reordering does not lead to problem.
+    // Critical sections may be nested, so lockup_timed_begin and
+    // lockup_timed_end (called as code enters and exits critical sections) must
+    // keep track of the depth.  This variable is only ever accessed by the code
+    // entering and exiting the CS, and always on the same CPU, so there is no
+    // need for it to be atomic.  However, because an interrupt may fire as a
+    // thread enters a critical section and the interrupt handler itself my
+    // enter a critical section, compiler fences must be used when accessing to
+    // ensure that compiler reordering does not lead to problem.
     //
     // Accessed only by this CPU.
     uint32_t depth = 0;
