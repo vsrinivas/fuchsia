@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_DDK_INCLUDE_HW_SDMMC_H_
-#define SRC_LIB_DDK_INCLUDE_HW_SDMMC_H_
+#ifndef SRC_DEVICES_BLOCK_LIB_SDMMC_INCLUDE_LIB_SDMMC_SDMMC_H_
+#define SRC_DEVICES_BLOCK_LIB_SDMMC_INCLUDE_LIB_SDMMC_SDMMC_H_
 
 #include <zircon/compiler.h>
 
@@ -207,4 +207,4 @@ __BEGIN_CDECLS
 
 __END_CDECLS
 
-#endif  // SRC_LIB_DDK_INCLUDE_HW_SDMMC_H_
+#endif  // SRC_DEVICES_BLOCK_LIB_SDMMC_INCLUDE_LIB_SDMMC_SDMMC_H_

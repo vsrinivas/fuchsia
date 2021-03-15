@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_DDK_INCLUDE_HW_SDIO_H_
-#define SRC_LIB_DDK_INCLUDE_HW_SDIO_H_
+#ifndef SRC_DEVICES_BLOCK_LIB_SDIO_INCLUDE_LIB_SDIO_SDIO_H_
+#define SRC_DEVICES_BLOCK_LIB_SDIO_INCLUDE_LIB_SDIO_SDIO_H_
 
+#include <lib/sdmmc/hw.h>
 #include <zircon/compiler.h>
 
 #include <ddk/device.h>
-
-#include "sdmmc.h"
 
 #define SDIO_IO_RW_DIRECT 52
 #define SDIO_IO_RW_DIRECT_EXTENDED 53
@@ -197,4 +196,4 @@ static const uint32_t sdio_cis_tpl_funce_tran_speed_val[16] = {
 static const uint32_t sdio_cis_tpl_funce_tran_speed_unit[8] = {1, 10, 100, 1000,
                                                                0, 0,  0,   0};  // Kbit/sec
 
-#endif  // SRC_LIB_DDK_INCLUDE_HW_SDIO_H_
+#endif  // SRC_DEVICES_BLOCK_LIB_SDIO_INCLUDE_LIB_SDIO_SDIO_H_

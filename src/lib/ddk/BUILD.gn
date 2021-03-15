@@ -26,8 +26,6 @@ library_headers("ddk-headers") {
     "hw/arch_ops.h",
     "hw/inout.h",
     "hw/reg.h",
-    "hw/sdio.h",
-    "hw/sdmmc.h",
   ]
   public_deps = [
     # <ddk/io-buffer.h> has #include <zircon/syscalls.h>.

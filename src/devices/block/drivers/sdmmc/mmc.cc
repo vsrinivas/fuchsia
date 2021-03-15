@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <inttypes.h>
+#include <lib/sdmmc/hw.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +14,6 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/emmc.h>
-#include <hw/sdmmc.h>
 #include <pretty/hexdump.h>
 
 #include "sdmmc-block-device.h"

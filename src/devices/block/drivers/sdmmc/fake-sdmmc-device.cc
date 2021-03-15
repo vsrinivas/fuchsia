@@ -5,9 +5,9 @@
 #include "fake-sdmmc-device.h"
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sdio/hw.h>
+#include <lib/sdmmc/hw.h>
 
-#include <hw/sdio.h>
-#include <hw/sdmmc.h>
 #include <zxtest/zxtest.h>
 
 namespace sdmmc {

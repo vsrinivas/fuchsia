@@ -8,13 +8,13 @@
 #include <fuchsia/hardware/sdio/c/banjo.h>
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <inttypes.h>
+#include <lib/sdio/hw.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <ddk/debug.h>
-#include <hw/sdio.h>
 #include <pretty/hexdump.h>
 
 namespace {

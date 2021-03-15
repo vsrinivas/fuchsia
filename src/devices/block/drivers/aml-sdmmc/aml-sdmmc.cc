@@ -12,6 +12,7 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fzl/pinned-vmo.h>
+#include <lib/sdmmc/hw.h>
 #include <lib/sync/completion.h>
 #include <stdint.h>
 #include <string.h>
@@ -32,7 +33,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>
-#include <hw/sdmmc.h>
 #include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>

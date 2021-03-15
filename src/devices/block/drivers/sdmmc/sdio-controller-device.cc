@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <inttypes.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sdio/hw.h>
 #include <lib/zx/clock.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +21,6 @@
 #include <ddk/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <hw/sdio.h>
 
 namespace {
 

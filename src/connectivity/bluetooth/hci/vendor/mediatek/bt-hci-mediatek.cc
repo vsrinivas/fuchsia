@@ -18,7 +18,6 @@
 #include <ddk/driver.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <hw/sdio.h>
 
 #include "src/connectivity/bluetooth/hci/vendor/mediatek/bt-hci-mediatek-bind.h"
 

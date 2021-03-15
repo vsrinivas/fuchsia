@@ -5,12 +5,12 @@
 #include "sdio-controller-device.h"
 
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sdio/hw.h>
 #include <lib/zx/vmo.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <hw/sdio.h>
 #include <zxtest/zxtest.h>
 
 #include "fake-sdmmc-device.h"

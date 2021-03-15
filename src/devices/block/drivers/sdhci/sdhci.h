@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/sdhci/cpp/banjo.h>
 #include <fuchsia/hardware/sdmmc/cpp/banjo.h>
 #include <lib/mmio/mmio.h>
+#include <lib/sdmmc/hw.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
@@ -18,7 +19,6 @@
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <hw/sdmmc.h>
 
 #include "sdhci-reg.h"
 

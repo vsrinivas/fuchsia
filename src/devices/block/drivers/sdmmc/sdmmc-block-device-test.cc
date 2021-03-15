@@ -11,10 +11,10 @@
 #include <lib/fake_ddk/fidl-helper.h>
 #include <lib/fidl/llcpp/client.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sdmmc/hw.h>
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <hw/sdmmc.h>
 #include <zxtest/zxtest.h>
 
 #include "fake-sdmmc-device.h"

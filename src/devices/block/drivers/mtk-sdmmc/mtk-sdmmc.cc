@@ -7,6 +7,8 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <lib/sdio/hw.h>
+#include <lib/sdmmc/hw.h>
 #include <unistd.h>
 #include <zircon/device/block.h>
 
@@ -19,8 +21,6 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <hw/sdio.h>
-#include <hw/sdmmc.h>
 
 #include "dma_descriptors.h"
 #include "src/devices/block/drivers/mtk-sdmmc/mtk-sdmmc-bind.h"

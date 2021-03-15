@@ -6,11 +6,11 @@
 #define SRC_DEVICES_BLOCK_DRIVERS_SDMMC_SDMMC_DEVICE_H_
 
 #include <fuchsia/hardware/sdmmc/cpp/banjo.h>
+#include <lib/sdmmc/hw.h>
 
 #include <array>
 
 #include <fbl/span.h>
-#include <hw/sdmmc.h>
 
 namespace sdmmc {
 
