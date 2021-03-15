@@ -33,6 +33,7 @@ use {
     log::{error, info, warn},
     std::{sync::Arc, unimplemented},
     void::Void,
+    wlan_metrics_registry,
 };
 
 // Maximum allowed interval between scans when attempting to reconnect client interfaces.  This
@@ -56,6 +57,7 @@ pub(crate) struct ApIfaceContainer {
     pub iface_id: u16,
     pub config: Option<ap_fsm::ApConfig>,
     pub ap_state_machine: Box<dyn AccessPointApi + Send + Sync>,
+    enabled_time: Option<zx::Time>,
 }
 
 #[derive(Clone, Debug)]
@@ -126,6 +128,7 @@ pub(crate) struct IfaceManagerService {
     fsm_futures:
         FuturesUnordered<future_with_metadata::FutureWithMetadata<(), StateMachineMetadata>>,
     cobalt_api: CobaltSender,
+    clients_enabled_time: Option<zx::Time>,
 }
 
 impl IfaceManagerService {
@@ -149,6 +152,7 @@ impl IfaceManagerService {
             network_selector,
             fsm_futures: FuturesUnordered::new(),
             cobalt_api,
+            clients_enabled_time: None,
         }
     }
 
@@ -309,6 +313,7 @@ impl IfaceManagerService {
             iface_id: iface_id,
             config: None,
             ap_state_machine: Box::new(state_machine),
+            enabled_time: None,
         })
     }
 
@@ -652,6 +657,15 @@ impl IfaceManagerService {
         &mut self,
         reason: client_types::DisconnectReason,
     ) -> BoxFuture<'static, Result<(), Error>> {
+        if let Some(start_time) = self.clients_enabled_time.take() {
+            let elapsed_time = zx::Time::get_monotonic() - start_time;
+            self.cobalt_api.log_elapsed_time(
+                wlan_metrics_registry::CLIENT_CONNECTIONS_ENABLED_DURATION_METRIC_ID,
+                (),
+                elapsed_time.into_micros(),
+            );
+        }
+
         let client_ifaces: Vec<ClientIfaceContainer> = self.clients.drain(..).collect();
         let phy_manager = self.phy_manager.clone();
         let update_sender = self.client_update_sender.clone();
@@ -721,6 +735,10 @@ impl IfaceManagerService {
                 ));
             }
         }
+
+        if self.clients_enabled_time.is_none() {
+            self.clients_enabled_time = Some(zx::Time::get_monotonic());
+        }
         Ok(())
     }
 
@@ -730,7 +748,13 @@ impl IfaceManagerService {
         let (sender, receiver) = oneshot::channel();
         ap_iface_container.config = Some(config.clone());
         match ap_iface_container.ap_state_machine.start(config, sender) {
-            Ok(()) => self.aps.push(ap_iface_container),
+            Ok(()) => {
+                if ap_iface_container.enabled_time.is_none() {
+                    ap_iface_container.enabled_time = Some(zx::Time::get_monotonic());
+                }
+
+                self.aps.push(ap_iface_container)
+            }
             Err(e) => {
                 let mut phy_manager = self.phy_manager.lock().await;
                 phy_manager.destroy_ap_iface(ap_iface_container.iface_id).await?;
@@ -753,7 +777,16 @@ impl IfaceManagerService {
             })
         {
             let phy_manager = self.phy_manager.clone();
-            let ap_container = self.aps.remove(removal_index);
+            let mut ap_container = self.aps.remove(removal_index);
+
+            if let Some(start_time) = ap_container.enabled_time.take() {
+                let elapsed_time = zx::Time::get_monotonic() - start_time;
+                self.cobalt_api.log_elapsed_time(
+                    wlan_metrics_registry::ACCESS_POINT_ENABLED_DURATION_METRIC_ID,
+                    (),
+                    elapsed_time.into_micros(),
+                );
+            }
 
             let fut = async move {
                 let stop_result =
@@ -776,6 +809,17 @@ impl IfaceManagerService {
     fn stop_all_aps(&mut self) -> BoxFuture<'static, Result<(), Error>> {
         let mut aps: Vec<ApIfaceContainer> = self.aps.drain(..).collect();
         let phy_manager = self.phy_manager.clone();
+
+        for ap_container in aps.iter_mut() {
+            if let Some(start_time) = ap_container.enabled_time.take() {
+                let elapsed_time = zx::Time::get_monotonic() - start_time;
+                self.cobalt_api.log_elapsed_time(
+                    wlan_metrics_registry::ACCESS_POINT_ENABLED_DURATION_METRIC_ID,
+                    (),
+                    elapsed_time.into_micros(),
+                );
+            }
+        }
 
         let fut = async move {
             let mut failed_iface_deletions: u8 = 0;
@@ -1456,6 +1500,7 @@ mod tests {
             iface_id: TEST_AP_IFACE_ID,
             config: None,
             ap_state_machine: Box::new(fake_ap),
+            enabled_time: None,
         };
         let phy_manager =
             FakePhyManager { create_iface_ok: true, destroy_iface_ok: true, wpa3_iface: None };
@@ -2200,6 +2245,7 @@ mod tests {
         // Create a configured ClientIfaceContainer.
         let mut test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
+        iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
 
         // Create a PhyManager with a single, known client iface.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
@@ -2229,6 +2275,12 @@ mod tests {
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
+
+        // Ensure a metric was logged.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+
+        // Ensure the client connections enabled time was reset to None.
+        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Call stop_client_connections when the only available client is unconfigured.
@@ -2237,8 +2289,9 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
+        iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
 
         // Create a PhyManager with one known client.
         let network_id = NetworkIdentifier::new(TEST_SSID.as_bytes().to_vec(), SecurityType::Wpa);
@@ -2257,13 +2310,19 @@ mod tests {
 
         // Ensure there are no remaining client ifaces.
         assert!(iface_manager.clients.is_empty());
+
+        // Ensure a metric was logged.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+
+        // Ensure the client connections enabled time was reset to None.
+        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Tests the case where stop_client_connections is called, but there are no client ifaces.
     #[test]
     fn test_stop_no_clients() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
 
         // Create and empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
@@ -2279,15 +2338,24 @@ mod tests {
             test_values.network_selector,
             test_values.cobalt_api,
         );
+        iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
 
         // Call stop_client_connections.
-        let stop_fut = iface_manager.stop_client_connections(
-            client_types::DisconnectReason::FidlStopClientConnectionsRequest,
-        );
+        {
+            let stop_fut = iface_manager.stop_client_connections(
+                client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+            );
 
-        // Ensure stop_client_connections returns immediately and is successful.
-        pin_mut!(stop_fut);
-        assert_variant!(exec.run_until_stalled(&mut stop_fut), Poll::Ready(Ok(_)));
+            // Ensure stop_client_connections returns immediately and is successful.
+            pin_mut!(stop_fut);
+            assert_variant!(exec.run_until_stalled(&mut stop_fut), Poll::Ready(Ok(_)));
+        }
+
+        // Ensure a metric was logged.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+
+        // Ensure the client connections enabled time was reset to None.
+        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Tests the case where client connections are stopped, but stopping one of the client state
@@ -2297,8 +2365,9 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
+        iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
         iface_manager.clients[0].client_state_machine = Some(Box::new(FakeClient {
             disconnect_ok: false,
             is_alive: true,
@@ -2322,6 +2391,13 @@ mod tests {
 
         // Ensure that no client interfaces are accounted for.
         assert!(iface_manager.clients.is_empty());
+
+        // Regardless of whether or not stop succeeds or fails, a metric should be logged.
+        // Ensure a metric was logged.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+
+        // Ensure the client connections enabled time was reset to None.
+        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Tests the case where the IfaceManager fails to tear down all of the client ifaces.
@@ -2330,8 +2406,9 @@ mod tests {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
         // Create a configured ClientIfaceContainer.
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let (mut iface_manager, _) = create_iface_manager_with_client(&test_values, true);
+        iface_manager.clients_enabled_time = Some(zx::Time::get_monotonic());
         iface_manager.phy_manager = Arc::new(Mutex::new(FakePhyManager {
             create_iface_ok: true,
             destroy_iface_ok: false,
@@ -2355,6 +2432,53 @@ mod tests {
 
         // Ensure that no client interfaces are accounted for.
         assert!(iface_manager.clients.is_empty());
+
+        // Regardless of whether or not stop succeeds or fails, a metric should be logged.
+        // Ensure a metric was logged.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+
+        // Ensure the client connections enabled time was reset to None.
+        assert!(iface_manager.clients_enabled_time.is_none());
+    }
+
+    /// Tests the case where StopClientConnections is called when the client interfaces are already
+    /// stopped.
+    #[test]
+    fn test_stop_client_when_already_stopped() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup(&mut exec);
+
+        // Create an empty PhyManager and IfaceManager.
+        let phy_manager = phy_manager::PhyManager::new(
+            test_values.device_service_proxy.clone(),
+            test_values.node,
+        );
+        let mut iface_manager = IfaceManagerService::new(
+            Arc::new(Mutex::new(phy_manager)),
+            test_values.client_update_sender,
+            test_values.ap_update_sender,
+            test_values.device_service_proxy,
+            test_values.saved_networks,
+            test_values.network_selector,
+            test_values.cobalt_api,
+        );
+
+        // Call stop_client_connections.
+        {
+            let stop_fut = iface_manager.stop_client_connections(
+                client_types::DisconnectReason::FidlStopClientConnectionsRequest,
+            );
+
+            // Ensure stop_client_connections returns immediately and is successful.
+            pin_mut!(stop_fut);
+            assert_variant!(exec.run_until_stalled(&mut stop_fut), Poll::Ready(Ok(_)));
+        }
+
+        // Ensure no metric was logged.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Err(_));
+
+        // Ensure the client connections enabled is None.
+        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Tests the case where an existing iface is marked as idle.
@@ -2469,11 +2593,13 @@ mod tests {
             test_values.cobalt_api,
         );
 
-        let start_fut = iface_manager.start_client_connections();
+        {
+            let start_fut = iface_manager.start_client_connections();
 
-        // Ensure stop_client_connections returns immediately and is successful.
-        pin_mut!(start_fut);
-        assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Ready(Ok(_)));
+            // Ensure stop_client_connections returns immediately and is successful.
+            pin_mut!(start_fut);
+            assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Ready(Ok(_)));
+        }
 
         // Ensure an update was sent
         let client_state_update = listener::ClientStateUpdate {
@@ -2485,6 +2611,8 @@ mod tests {
             Ok(Some(listener::Message::NotifyListeners(updates))) => {
             assert_eq!(updates, client_state_update);
         });
+
+        assert!(iface_manager.clients_enabled_time.is_some());
     }
 
     /// Tests the case where starting client connections fails.
@@ -2501,9 +2629,13 @@ mod tests {
             wpa3_iface: None,
         }));
 
-        let start_fut = iface_manager.start_client_connections();
-        pin_mut!(start_fut);
-        assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Ready(Err(_)));
+        {
+            let start_fut = iface_manager.start_client_connections();
+            pin_mut!(start_fut);
+            assert_variant!(exec.run_until_stalled(&mut start_fut), Poll::Ready(Err(_)));
+        }
+
+        assert!(iface_manager.clients_enabled_time.is_none());
     }
 
     /// Tests the case where the IfaceManager is able to request that the AP state machine start
@@ -2516,10 +2648,14 @@ mod tests {
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
         let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
 
-        let fut = iface_manager.start_ap(config);
+        {
+            let fut = iface_manager.start_ap(config);
 
-        pin_mut!(fut);
-        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(_)));
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(_)));
+        }
+
+        assert!(iface_manager.aps[0].enabled_time.is_some());
     }
 
     /// Tests the case where the IfaceManager is not able to request that the AP state machine start
@@ -2532,10 +2668,12 @@ mod tests {
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
         let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
 
-        let fut = iface_manager.start_ap(config);
+        {
+            let fut = iface_manager.start_ap(config);
 
-        pin_mut!(fut);
-        assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
+        }
     }
 
     /// Tests the case where start is called on the IfaceManager, but there are no AP ifaces.
@@ -2572,11 +2710,12 @@ mod tests {
     #[test]
     fn test_stop_ap_succeeds() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
         let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
         iface_manager.aps[0].config = Some(config);
+        iface_manager.aps[0].enabled_time = Some(zx::Time::get_monotonic());
 
         {
             let fut = iface_manager
@@ -2585,15 +2724,19 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
         }
         assert!(iface_manager.aps.is_empty());
+
+        // Ensure a metric was logged.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
     }
 
     /// Tests the case where IfaceManager is requested to stop a config that is not accounted for.
     #[test]
     fn test_stop_ap_invalid_config() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
+        iface_manager.aps[0].enabled_time = Some(zx::Time::get_monotonic());
 
         {
             let fut = iface_manager
@@ -2602,6 +2745,12 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
         }
         assert!(!iface_manager.aps.is_empty());
+
+        // Ensure no metric was logged.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Err(_));
+
+        // Ensure the AP start time has not been cleared.
+        assert!(iface_manager.aps[0].enabled_time.is_some());
     }
 
     /// Tests the case where IfaceManager attempts to stop the AP state machine, but the request
@@ -2609,11 +2758,12 @@ mod tests {
     #[test]
     fn test_stop_ap_stop_fails() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: false, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
         let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
         iface_manager.aps[0].config = Some(config);
+        iface_manager.aps[0].enabled_time = Some(zx::Time::get_monotonic());
 
         {
             let fut = iface_manager
@@ -2623,6 +2773,9 @@ mod tests {
         }
 
         assert!(iface_manager.aps.is_empty());
+
+        // Ensure metric was logged.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
     }
 
     /// Tests the case where IfaceManager stops the AP state machine, but the request to exit
@@ -2630,11 +2783,12 @@ mod tests {
     #[test]
     fn test_stop_ap_exit_fails() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: false };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
         let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
         iface_manager.aps[0].config = Some(config);
+        iface_manager.aps[0].enabled_time = Some(zx::Time::get_monotonic());
 
         {
             let fut = iface_manager
@@ -2644,6 +2798,9 @@ mod tests {
         }
 
         assert!(iface_manager.aps.is_empty());
+
+        // Ensure metric was logged.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
     }
 
     /// Tests the case where stop is called on the IfaceManager, but there are no AP ifaces.
@@ -2676,9 +2833,10 @@ mod tests {
     #[test]
     fn test_stop_all_aps_succeeds() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
+        iface_manager.aps[0].enabled_time = Some(zx::Time::get_monotonic());
 
         // Insert a second iface and add it to the list of APs.
         let second_iface = ApIfaceContainer {
@@ -2689,6 +2847,7 @@ mod tests {
                 stop_succeeds: true,
                 exit_succeeds: true,
             }),
+            enabled_time: Some(zx::Time::get_monotonic()),
         };
         iface_manager.aps.push(second_iface);
 
@@ -2698,15 +2857,20 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
         }
         assert!(iface_manager.aps.is_empty());
+
+        // Ensure metrics are logged for both AP interfaces.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
     }
 
     /// Tests the case where stop_all_aps is called and the request to stop fails for an iface.
     #[test]
     fn test_stop_all_aps_stop_fails() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: false, exit_succeeds: true };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
+        iface_manager.aps[0].enabled_time = Some(zx::Time::get_monotonic());
 
         // Insert a second iface and add it to the list of APs.
         let second_iface = ApIfaceContainer {
@@ -2717,6 +2881,7 @@ mod tests {
                 stop_succeeds: true,
                 exit_succeeds: true,
             }),
+            enabled_time: Some(zx::Time::get_monotonic()),
         };
         iface_manager.aps.push(second_iface);
 
@@ -2726,15 +2891,20 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
         }
         assert!(iface_manager.aps.is_empty());
+
+        // Ensure metrics are logged for both AP interfaces.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
     }
 
     /// Tests the case where stop_all_aps is called and the request to stop fails for an iface.
     #[test]
     fn test_stop_all_aps_exit_fails() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
         let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: false };
         let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
+        iface_manager.aps[0].enabled_time = Some(zx::Time::get_monotonic());
 
         // Insert a second iface and add it to the list of APs.
         let second_iface = ApIfaceContainer {
@@ -2745,6 +2915,7 @@ mod tests {
                 stop_succeeds: true,
                 exit_succeeds: true,
             }),
+            enabled_time: Some(zx::Time::get_monotonic()),
         };
         iface_manager.aps.push(second_iface);
 
@@ -2754,6 +2925,10 @@ mod tests {
             assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Err(_)));
         }
         assert!(iface_manager.aps.is_empty());
+
+        // Ensure metrics are logged for both AP interfaces.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
     }
 
     /// Tests the case where stop_all_aps is called on the IfaceManager, but there are no AP
@@ -2761,7 +2936,7 @@ mod tests {
     #[test]
     fn test_stop_all_aps_no_ifaces() {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
-        let test_values = test_setup(&mut exec);
+        let mut test_values = test_setup(&mut exec);
 
         // Create an empty PhyManager and IfaceManager.
         let phy_manager = phy_manager::PhyManager::new(
@@ -2781,6 +2956,59 @@ mod tests {
         let fut = iface_manager.stop_all_aps();
         pin_mut!(fut);
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+
+        // Ensure no metrics are logged.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Err(_));
+    }
+
+    /// Tests the case where there is a single AP interface and it is asked to start twice and then
+    /// asked to stop.
+    #[test]
+    fn test_start_ap_twice_then_stop() {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+        let mut test_values = test_setup(&mut exec);
+        let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
+        let mut iface_manager = create_iface_manager_with_ap(&test_values, fake_ap);
+        let config = create_ap_config(TEST_SSID, TEST_PASSWORD);
+
+        // Issue an initial start command.
+        {
+            let fut = iface_manager.start_ap(config);
+
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(_)));
+        }
+
+        // Record the initial start time.
+        let initial_start_time = iface_manager.aps[0].enabled_time.clone();
+
+        // Now issue a second start command.
+        let alternate_ssid = "some_other_ssid";
+        let alternate_password = "some_other_password";
+        let config = create_ap_config(alternate_ssid, alternate_password);
+        {
+            let fut = iface_manager.start_ap(config);
+
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(_)));
+        }
+
+        // Verify that the start time has not been updated.
+        assert_eq!(initial_start_time, iface_manager.aps[0].enabled_time);
+
+        // Verify that no metric has been recorded.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Err(_));
+
+        // Now issue a stop command.
+        {
+            let fut = iface_manager.stop_all_aps();
+            pin_mut!(fut);
+            assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(Ok(())));
+        }
+        assert!(iface_manager.aps.is_empty());
+
+        // Make sure the metric has been sent.
+        assert_variant!(test_values.cobalt_receiver.try_next(), Ok(Some(_)));
     }
 
     #[test]
@@ -2802,6 +3030,7 @@ mod tests {
                 stop_succeeds: true,
                 exit_succeeds: true,
             }),
+            enabled_time: None,
         };
         iface_manager.aps.push(ap_iface);
 
@@ -2873,6 +3102,7 @@ mod tests {
                 stop_succeeds: true,
                 exit_succeeds: true,
             }),
+            enabled_time: None,
         };
         iface_manager.aps.push(ap_iface);
 
@@ -2921,6 +3151,7 @@ mod tests {
                 stop_succeeds: true,
                 exit_succeeds: true,
             }),
+            enabled_time: None,
         };
         iface_manager.aps.push(ap_iface);
 
@@ -2956,6 +3187,7 @@ mod tests {
                 stop_succeeds: true,
                 exit_succeeds: true,
             }),
+            enabled_time: None,
         };
         iface_manager.aps.push(ap_iface);
 
