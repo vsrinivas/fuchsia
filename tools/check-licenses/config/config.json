@@ -141,6 +141,10 @@
     "third_party/opus/COPYING"
   ],
   "licenseAllowList": {
+    "amlogic.lic": [
+      "prebuilt/media/firmware/amlogic_encoder",
+      "prebuilt/media/firmware/amlogic-decoder"
+    ],
     "cryptsoft.lic": [
       "prebuilt/third_party/flutter"
     ],

@@ -12,8 +12,6 @@ var additionalSkipDirs = []string{
 	"build/test",
 	"garnet/examples",
 	"garnet/public/lib/fostr/test",
-	"prebuilt/media/firmware/amlogic_encoder",
-	"prebuilt/media/firmware/amlogic-decoder",
 	"prebuilt/ml/tests",
 	"prebuilt/third_party", // TODO(jcecil): remove in a moment
 	"third_party/glfw/examples",
