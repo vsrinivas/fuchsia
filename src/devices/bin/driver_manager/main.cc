@@ -38,6 +38,7 @@
 #include "driver_host_loader_service.h"
 #include "driver_runner.h"
 #include "fdio.h"
+#include "src/devices/bin/driver_manager/fake_driver_index.h"
 #include "src/devices/lib/log/log.h"
 #include "src/lib/storage/vfs/cpp/managed_vfs.h"
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
@@ -289,8 +290,7 @@ int main(int argc, char** argv) {
   InspectManager inspect_manager(loop.dispatcher());
 
   std::optional<DriverRunner> driver_runner;
-  // TODO(fxbug.dev/33183): Replace this with a driver_index component.
-  std::optional<DriverIndex> driver_index;
+  std::optional<FakeDriverIndex> driver_index;
   if (driver_manager_args.use_driver_runner) {
     const auto realm_path = fbl::StringPrintf("/svc/%s", fuchsia_sys2::Realm::Name);
     auto endpoints = fidl::CreateEndpoints<fuchsia_sys2::Realm>();
@@ -303,18 +303,26 @@ int main(int argc, char** argv) {
       return status;
     }
     // TODO(fxbug.dev/33183): Replace this with a driver_index component.
-    driver_index.emplace([](auto args) -> zx::status<MatchResult> {
-      std::string_view name(args.name().data(), args.name().size());
-      if (name == "board") {
-        return zx::ok(MatchResult{
-            .url = "fuchsia-boot:///#meta/x64.cm",
-            .matched_args = std::move(args),
-        });
-      } else {
-        return zx::error(ZX_ERR_NOT_FOUND);
-      }
-    });
-    driver_runner.emplace(std::move(endpoints->client), &driver_index.value(),
+    driver_index.emplace(loop.dispatcher(),
+                         [](auto args) -> zx::status<FakeDriverIndex::MatchResult> {
+                           std::string_view name(args.name().data(), args.name().size());
+                           if (name == "board") {
+                             return zx::ok(FakeDriverIndex::MatchResult{
+                                 .url = "fuchsia-boot:///#meta/x64.cm",
+                                 .matched_args = std::move(args),
+                             });
+                           } else {
+                             return zx::error(ZX_ERR_NOT_FOUND);
+                           }
+                         });
+    auto driver_index_client = driver_index->Connect();
+    if (driver_index_client.is_error()) {
+      LOGF(INFO, "Failed to conect to DriverIndex: %s",
+           zx_status_get_string(driver_index_client.status_value()));
+      return driver_index_client.status_value();
+    }
+
+    driver_runner.emplace(std::move(endpoints->client), std::move(driver_index_client.value()),
                           &inspect_manager.inspector(), loop.dispatcher());
     auto publish = driver_runner->PublishComponentRunner(outgoing.svc_dir());
     if (publish.is_error()) {

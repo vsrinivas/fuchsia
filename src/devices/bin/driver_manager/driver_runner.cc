@@ -324,30 +324,26 @@ void Node::AddChild(fdf::wire::NodeAddArgs args, fidl::ServerEnd<fdf::NodeContro
       return;
     }
     child->set_node_ref(bind_node.take_value());
+    children_.push_back(std::move(child));
   } else {
-    auto bind_result = driver_binder_->Bind(child.get(), std::move(args));
-    if (bind_result.is_error()) {
-      LOGF(ERROR, "Failed to bind driver to Node '%.*s': %s", name.size(), name.data(),
-           bind_result.status_string());
-      completer.Close(bind_result.status_value());
-      return;
-    }
+    auto child_ptr = child.get();
+    auto callback = [this, child = std::move(child),
+                     completer = completer.ToAsync()](zx::status<> result) mutable {
+      if (result.is_error()) {
+        completer.Close(result.status_value());
+        return;
+      }
+      children_.push_back(std::move(child));
+    };
+    driver_binder_->Bind(child_ptr, std::move(args), std::move(callback));
   }
-
-  children_.push_back(std::move(child));
 }
 
-DriverIndex::DriverIndex(MatchCallback match_callback)
-    : match_callback_(std::move(match_callback)) {}
-
-zx::status<MatchResult> DriverIndex::Match(fdf::wire::NodeAddArgs args) {
-  return match_callback_(std::move(args));
-}
-
-DriverRunner::DriverRunner(fidl::ClientEnd<fsys::Realm> realm, DriverIndex* driver_index,
+DriverRunner::DriverRunner(fidl::ClientEnd<fsys::Realm> realm,
+                           fidl::ClientEnd<fuchsia_driver_framework::DriverIndex> driver_index,
                            inspect::Inspector* inspector, async_dispatcher_t* dispatcher)
     : realm_(std::move(realm), dispatcher),
-      driver_index_(driver_index),
+      driver_index_(std::move(driver_index), dispatcher),
       dispatcher_(dispatcher),
       root_node_(nullptr, this, dispatcher, "root") {
   inspector->GetRoot().CreateLazyNode(
@@ -494,13 +490,30 @@ void DriverRunner::Start(frunner::wire::ComponentStartInfo start_info,
   drivers_.push_back(std::move(driver));
 }
 
-zx::status<> DriverRunner::Bind(Node* node, fdf::wire::NodeAddArgs args) {
-  auto match_result = driver_index_->Match(std::move(args));
-  if (match_result.is_error()) {
-    return match_result.take_error();
+void DriverRunner::Bind(Node* node, fdf::wire::NodeAddArgs args,
+                        fit::callback<void(zx::status<>)> callback) {
+  auto match_result = driver_index_->MatchDriver(
+      std::move(args), [this, callback = callback.share(), node](auto response) mutable {
+        if (response->result.is_err()) {
+          LOGF(ERROR, "Failed to match driver %s: %s", node->name().data(),
+               zx_status_get_string(response->result.err()));
+          callback(zx::error(response->result.err()));
+          return;
+        }
+        auto& url = response->result.response().url;
+        auto start_result = StartDriver(node, url.get());
+        if (start_result.is_error()) {
+          LOGF(ERROR, "Failed to start driver %s: %s", node->name().data(),
+               zx_status_get_string(start_result.status_value()));
+          callback(start_result.take_error());
+          return;
+        }
+        callback(zx::ok());
+      });
+  if (!match_result.ok()) {
+    LOGF(ERROR, "Failed to call match driver %s: %s", node->name().data(), match_result.error());
+    callback(zx::error(match_result.status()));
   }
-  auto match = std::move(match_result.value());
-  return StartDriver(node, match.url);
 }
 
 zx::status<std::unique_ptr<DriverHostComponent>> DriverRunner::StartDriverHost() {

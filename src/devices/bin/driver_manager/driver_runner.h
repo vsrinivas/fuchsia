@@ -10,6 +10,7 @@
 #include <fuchsia/sys2/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/llcpp/client.h>
+#include <lib/fit/function.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/status.h>
 
@@ -74,7 +75,10 @@ class Node;
 class DriverBinder {
  public:
   virtual ~DriverBinder() = default;
-  virtual zx::status<> Bind(Node* node, fuchsia_driver_framework::wire::NodeAddArgs args) = 0;
+  // Attempt to bind `node` with given `args`.
+  // The lifetime of `node` must live until `callback` is called.
+  virtual void Bind(Node* node, fuchsia_driver_framework::wire::NodeAddArgs args,
+                    fit::callback<void(zx::status<>)> callback) = 0;
 };
 
 class Node : public fuchsia_driver_framework::NodeController::Interface,
@@ -128,24 +132,6 @@ class Node : public fuchsia_driver_framework::NodeController::Interface,
   fbl::DoublyLinkedList<std::unique_ptr<Node>> children_;
 };
 
-struct MatchResult {
-  std::string url;
-  fuchsia_driver_framework::wire::NodeAddArgs matched_args;
-};
-
-// TODO(fxbug.dev/33183): Replace this with a driver_index component.
-class DriverIndex {
- public:
-  using MatchCallback =
-      fit::function<zx::status<MatchResult>(fuchsia_driver_framework::wire::NodeAddArgs args)>;
-  explicit DriverIndex(MatchCallback match_callback);
-
-  zx::status<MatchResult> Match(fuchsia_driver_framework::wire::NodeAddArgs args);
-
- private:
-  MatchCallback match_callback_;
-};
-
 struct DriverArgs {
   fidl::ClientEnd<fuchsia_io::Directory> exposed_dir;
   Node* node;
@@ -154,7 +140,8 @@ struct DriverArgs {
 class DriverRunner : public fuchsia_component_runner::ComponentRunner::Interface,
                      public DriverBinder {
  public:
-  DriverRunner(fidl::ClientEnd<fuchsia_sys2::Realm> realm, DriverIndex* driver_index,
+  DriverRunner(fidl::ClientEnd<fuchsia_sys2::Realm> realm,
+               fidl::ClientEnd<fuchsia_driver_framework::DriverIndex> driver_index,
                inspect::Inspector* inspector, async_dispatcher_t* dispatcher);
 
   fit::promise<inspect::Inspector> Inspect();
@@ -167,7 +154,8 @@ class DriverRunner : public fuchsia_component_runner::ComponentRunner::Interface
              fidl::ServerEnd<fuchsia_component_runner::ComponentController> controller,
              StartCompleter::Sync& completer) override;
   // DriverBinder
-  zx::status<> Bind(Node* node, fuchsia_driver_framework::wire::NodeAddArgs args) override;
+  void Bind(Node* node, fuchsia_driver_framework::wire::NodeAddArgs args,
+            fit::callback<void(zx::status<>)> callback) override;
 
   zx::status<> StartDriver(Node* node, std::string_view url);
 
@@ -179,7 +167,7 @@ class DriverRunner : public fuchsia_component_runner::ComponentRunner::Interface
 
   uint64_t next_id_ = 0;
   fidl::Client<fuchsia_sys2::Realm> realm_;
-  DriverIndex* driver_index_;
+  fidl::Client<fuchsia_driver_framework::DriverIndex> driver_index_;
   async_dispatcher_t* dispatcher_;
   Node root_node_;
   std::unordered_map<std::string, DriverArgs> driver_args_;
