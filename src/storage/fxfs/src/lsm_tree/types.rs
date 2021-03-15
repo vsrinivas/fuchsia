@@ -99,13 +99,14 @@ impl<'a, K, V> From<&'a Item<K, V>> for ItemRef<'a, K, V> {
 /// so for keys that are like extents, the keys should sort (via std::cmp::Ord) using the end of
 /// their ranges, and you should set the search key accordingly.
 ///
-/// For example, let's say the tree holds an extent with range, 100..200 and you want to perform a
-/// read for range 150..250, you should search for 150..151 and that will return the extent
-/// 150..250. When merging, keys can overlap, so consider the case where we want to merge an extent
-/// with range 100..300 with an existing extent of 200..250. In that case, we want to treat the
-/// extent with range 100..300 as lower than the key 200..250 because we'll likely want to split the
-/// extents (e.g. perhaps we want 100..200, 200..250, 250..300), so for merging, we need to use a
-/// different comparison function and we deal with that using the OrdLowerBound trait.
+/// For example, let's say the tree holds extents 100..200, 200..250 and you want to perform a read
+/// for range 150..250, you should search for 0..151 which will first return the extent 100..200 (and
+/// then the iterator can be advanced to 200..250 after). When merging, keys can overlap, so consider
+/// the case where we want to merge an extent with range 100..300 with an existing extent of
+/// 200..250. In that case, we want to treat the extent with range 100..300 as lower than the key
+/// 200..250 because we'll likely want to split the extents (e.g. perhaps we want 100..200, 200..250,
+/// 250..300), so for merging, we need to use a different comparison function and we deal with that
+/// using the OrdLowerBound trait.
 ///
 /// If your keys don't have overlapping ranges that need to be merged, then this can be the same as
 /// std::cmp::Ord.

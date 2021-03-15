@@ -47,16 +47,24 @@ impl ExtentKey {
         }
     }
 
-    /// Returns the lower bound of this extent; that is, the first extent which is > this extent
-    /// using OrdLowerBound. This would be used when searching for an extent with |find|.
+    /// Returns the search key for this extent; that is, a key which is <= this key under Ord and
+    /// OrdLowerBound.
+    /// This would be used when searching for an extent with |find| (when we want to find any
+    /// overlapping extent, which could include extents that start earlier).
+    /// For example, if the tree has extents 50..150 and 150..200 and we wish to read 100..200,
+    /// we'd search for 0..101 which would set the iterator to 50..150.
     pub fn search_key(&self) -> Self {
+        assert_ne!(self.range.start, self.range.end);
         ExtentKey { attribute_id: self.attribute_id, range: 0..self.range.start + 1 }
     }
 
-    /// Returns the insertion key for this extent; that is, the first extent which is <= this extent
-    /// using OrdLowerBound. This would be used with |merge_into| to seek to the position where the
-    /// key ought to be inserted or merged.
-    pub fn insertion_key(&self) -> Self {
+    /// Returns the merge key for this extent; that is, a key which is <= this extent and any other
+    /// possibly overlapping extent, under Ord. This would be used to set the hint for |merge_into|.
+    ///
+    /// For example, if the tree has extents 0..50, 50..150 and 150..200 and we wish to insert
+    /// 100..150, we'd use a merge hint of 0..100 which would set the iterator to 50..150 (the first
+    /// element > 100..150 under Ord).
+    pub fn key_for_merge_into(&self) -> Self {
         ExtentKey { attribute_id: self.attribute_id, range: 0..self.range.start }
     }
 }
@@ -145,11 +153,23 @@ impl ObjectKey {
         Self { object_id, data: ObjectKeyData::Child { name: name.to_owned() } }
     }
 
-    /// Returns the lower bound for a key; that is, the first key that is >= this key using
+    /// Returns the search key for this extent; that is, a key which is <= this key under Ord and
     /// OrdLowerBound.
-    pub fn lower_bound(&self) -> Self {
+    /// This would be used when searching for an extent with |find| (when we want to find any
+    /// overlapping extent, which could include extents that start earlier).
+    pub fn search_key(&self) -> Self {
         if let Self { object_id, data: ObjectKeyData::Extent(e) } = self {
             Self::extent(*object_id, e.search_key())
+        } else {
+            self.clone()
+        }
+    }
+
+    /// Returns the merge key for this key; that is, a key which is <= this key and any
+    /// other possibly overlapping key, under Ord. This would be used for the hint in |merge_into|.
+    pub fn key_for_merge_into(&self) -> Self {
+        if let Self { object_id, data: ObjectKeyData::Extent(e) } = self {
+            Self::extent(*object_id, e.key_for_merge_into())
         } else {
             self.clone()
         }
@@ -174,6 +194,13 @@ pub struct ExtentValue {
     /// The device offset for the extent. A value of None indicates a deleted extent; that is, the
     /// logical range described by the extent key is considered to be deleted.
     pub device_offset: Option<u64>,
+}
+
+impl ExtentValue {
+    /// Returns a new ExtentValue offset by |amount|.
+    pub fn offset_by(&self, amount: u64) -> Self {
+        Self { device_offset: self.device_offset.map(|o| o + amount) }
+    }
 }
 
 /// ObjectValue is the value of an item in the object store.
@@ -336,8 +363,15 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_extent_lower_bound() {
+    async fn test_extent_search_and_insertion_key() {
         let extent = ObjectKey::extent(1, ExtentKey::data_extent(100..150));
-        assert_eq!(extent.lower_bound(), ObjectKey::extent(1, ExtentKey::data_extent(0..101)));
+        assert_eq!(extent.search_key(), ObjectKey::extent(1, ExtentKey::data_extent(0..101)));
+        assert_eq!(extent.cmp_lower_bound(&extent.search_key()), Ordering::Greater);
+        assert_eq!(extent.cmp(&extent.search_key()), Ordering::Greater);
+        assert_eq!(
+            extent.key_for_merge_into(),
+            ObjectKey::extent(1, ExtentKey::data_extent(0..100))
+        );
+        assert_eq!(extent.cmp_lower_bound(&extent.key_for_merge_into()), Ordering::Greater);
     }
 }
