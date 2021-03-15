@@ -13,7 +13,6 @@ executable("unittests") {
   testonly = true
   sources = [
     "display_unittest.cc",
-    "gpu_mem_unittest.cc",
     "renderer_unittest.cc",
 
     # Registers a global Escher environment for testing.

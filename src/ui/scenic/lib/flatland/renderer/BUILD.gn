@@ -12,8 +12,6 @@ config("glm_config") {
 # due to its dependencies on Escher which we do not want exposed.
 source_set("renderer") {
   sources = [
-    "gpu_mem.cc",
-    "gpu_mem.h",
     "mock_renderer.h",
     "null_renderer.cc",
     "null_renderer.h",

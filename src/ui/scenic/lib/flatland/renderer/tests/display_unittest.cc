@@ -81,6 +81,8 @@ class DisplayTest : public gtest::RealLoopFixture {
     return layer_id;
   }
 
+  const zx_pixel_format_t kDefaultImageFormat = ZX_PIXEL_FORMAT_ARGB_8888;
+
   std::unique_ptr<async::Executor> executor_;
   std::unique_ptr<display::DisplayManager> display_manager_;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
@@ -89,8 +91,8 @@ class DisplayTest : public gtest::RealLoopFixture {
 // Create a buffer collection and set constraints on the display, the vulkan renderer
 // and the client, and make sure that the collection is still properly allocated.
 VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
-  const uint64_t kWidth = 32;
-  const uint64_t kHeight = 64;
+  const uint64_t kWidth = 8;
+  const uint64_t kHeight = 16;
 
   // Grab the display controller.
   auto display_controller = display_manager_->default_display_controller();
@@ -111,31 +113,32 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   FX_DCHECK(status == ZX_OK);
 
   // Register the collection with the renderer, which sets the vk constraints.
-  auto renderer_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
-  auto result = renderer.ImportBufferCollection(renderer_collection_id, sysmem_allocator_.get(),
+  auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto image_id = sysmem_util::GenerateUniqueImageId();
+  auto result = renderer.ImportBufferCollection(collection_id, sysmem_allocator_.get(),
                                                 std::move(tokens.dup_token));
   EXPECT_TRUE(result);
 
+  flatland::ImageMetadata metadata = {.collection_id = collection_id,
+                                      .identifier = image_id,
+                                      .vmo_index = 0,
+                                      .width = kWidth,
+                                      .height = kHeight,
+                                      .is_render_target = false};
+
   // Importing an image should fail at this point because we've only set the renderer constraints.
-  auto import_result = renderer.ImportBufferImage({.collection_id = renderer_collection_id,
-                                                   .vmo_index = 0,
-                                                   .width = kWidth,
-                                                   .height = kHeight});
+  auto import_result = renderer.ImportBufferImage(metadata);
   EXPECT_FALSE(import_result);
 
   // Set the display constraints on the display controller.
-  fuchsia::hardware::display::ImageConfig display_constraints = {
-      .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
-  };
-  bool res = scenic_impl::ImportBufferCollection(renderer_collection_id, *display_controller.get(),
+  fuchsia::hardware::display::ImageConfig display_constraints;
+  display_constraints.pixel_format = kDefaultImageFormat;
+  bool res = scenic_impl::ImportBufferCollection(collection_id, *display_controller.get(),
                                                  std::move(display_token), display_constraints);
   ASSERT_TRUE(res);
 
   // Importing should fail again, because we've only set 2 of the 3 constraints.
-  import_result = renderer.ImportBufferImage({.collection_id = renderer_collection_id,
-                                              .vmo_index = 0,
-                                              .width = kWidth,
-                                              .height = kHeight});
+  import_result = renderer.ImportBufferImage(metadata);
   EXPECT_FALSE(import_result);
 
   // Create a client-side handle to the buffer collection and set the client constraints.
@@ -158,28 +161,23 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
 
   // Now that the renderer, client, and the display have set their constraints, we import one last
   // time and this time it should return true.
-  import_result = renderer.ImportBufferImage({.collection_id = renderer_collection_id,
-                                              .vmo_index = 0,
-                                              .width = kWidth,
-                                              .height = kHeight});
+  import_result = renderer.ImportBufferImage(metadata);
   EXPECT_TRUE(import_result);
 
   // We should now be able to also import an image to the display controller, using the
   // display-specific buffer collection id. If it returns OK, then we know that the renderer
   // did fully set the DC constraints.
-  uint64_t image_id;
-  fuchsia::hardware::display::ImageConfig image_config = {
-      .width = kWidth,
-      .height = kHeight,
-      .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
-  };
+  fuchsia::hardware::display::ImageConfig image_config;
+  image_config.pixel_format = kDefaultImageFormat;
 
+  // Try to import the image into the display controller API and make sure it succeeds.
+  uint64_t display_image_id;
   zx_status_t import_image_status = ZX_OK;
   (*display_controller.get())
-      ->ImportImage(image_config, renderer_collection_id, /*vmo_index*/ 0, &import_image_status,
-                    &image_id);
+      ->ImportImage(image_config, collection_id, /*vmo_index*/ 0, &import_image_status,
+                    &display_image_id);
   EXPECT_EQ(import_image_status, ZX_OK);
-  EXPECT_NE(image_id, 0u);
+  EXPECT_NE(display_image_id, 0u);
 }
 
 // Test out event signaling on the Display Controller by importing a buffer collection and its 2

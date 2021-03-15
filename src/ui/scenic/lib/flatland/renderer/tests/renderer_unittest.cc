@@ -196,11 +196,17 @@ void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
 void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
                                                   fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                                                   bool use_vulkan) {
-  auto tokens = SysmemTokens::Create(sysmem_allocator);
+  auto texture_tokens = SysmemTokens::Create(sysmem_allocator);
+  auto target_tokens = SysmemTokens::Create(sysmem_allocator);
 
-  auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
-  auto result = renderer->RegisterRenderTargetCollection(collection_id, sysmem_allocator,
-                                                         std::move(tokens.dup_token));
+  auto texture_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto target_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto result = renderer->RegisterRenderTargetCollection(texture_collection_id, sysmem_allocator,
+                                                         std::move(texture_tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  result = renderer->RegisterRenderTargetCollection(target_collection_id, sysmem_allocator,
+                                                    std::move(target_tokens.dup_token));
   EXPECT_TRUE(result);
 
   std::vector<uint64_t> additional_format_modifiers;
@@ -208,13 +214,18 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
     additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
   }
   const uint32_t kWidth = 64, kHeight = 32;
-  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token),
-                                          /* image_count */ 2, /* width */ kWidth,
+  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(texture_tokens.local_token),
+                                          /* image_count */ 1, /* width */ kWidth,
+                                          /* height */ kHeight, kNoneUsage,
+                                          additional_format_modifiers);
+
+  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(target_tokens.local_token),
+                                          /* image_count */ 1, /* width */ kWidth,
                                           /* height */ kHeight, kNoneUsage,
                                           additional_format_modifiers);
 
   // Import render target.
-  ImageMetadata render_target = {.collection_id = collection_id,
+  ImageMetadata render_target = {.collection_id = target_collection_id,
                                  .identifier = sysmem_util::GenerateUniqueImageId(),
                                  .vmo_index = 0,
                                  .width = kWidth,
@@ -224,9 +235,9 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
   EXPECT_TRUE(import_result);
 
   // Import image.
-  ImageMetadata image = {.collection_id = collection_id,
+  ImageMetadata image = {.collection_id = texture_collection_id,
                          .identifier = sysmem_util::GenerateUniqueImageId(),
-                         .vmo_index = 1,
+                         .vmo_index = 0,
                          .width = kWidth,
                          .height = kHeight,
                          .is_render_target = false};
@@ -234,7 +245,8 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
   EXPECT_TRUE(import_result);
 
   // Now deregister the collection.
-  renderer->DeregisterRenderTargetCollection(collection_id);
+  renderer->DeregisterRenderTargetCollection(texture_collection_id);
+  renderer->DeregisterRenderTargetCollection(target_collection_id);
 
   // We should still be able to render this image.
   renderer->Render(render_target, {Rectangle2D(glm::vec2(0, 0), glm::vec2(kWidth, kHeight))},

@@ -5,18 +5,20 @@
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 
 #include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/impl/naive_image.h"
 #include "src/ui/lib/escher/impl/vulkan_utils.h"
 #include "src/ui/lib/escher/renderer/render_funcs.h"
 #include "src/ui/lib/escher/renderer/sampler_cache.h"
+#include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 
 namespace {
 
 // Highest priority format first.
-const vk::Format kPreferredImageFormats[] = {vk::Format::eR8G8B8A8Srgb, vk::Format::eB8G8R8A8Srgb,
-                                             vk::Format::eG8B8R83Plane420Unorm,
-                                             vk::Format::eG8B8R82Plane420Unorm};
+const std::vector<vk::Format> kPreferredImageFormats = {
+    vk::Format::eR8G8B8A8Srgb, vk::Format::eB8G8R8A8Srgb, vk::Format::eG8B8R83Plane420Unorm,
+    vk::Format::eG8B8R82Plane420Unorm};
 
 const vk::Filter kDefaultFilter = vk::Filter::eNearest;
 
@@ -40,28 +42,6 @@ static vk::Format ConvertToVkFormat(zx_pixel_format_t pixel_format) {
   return vk::Format::eUndefined;
 }
 
-// Returns the corresponding Vulkan image format to use given the provided
-// Sysmem image format.
-static vk::Format ConvertToVkFormat(fuchsia::sysmem::PixelFormatType pixel_format) {
-  switch (pixel_format) {
-    // BGRA32 is compatible with ZX_PIXEL_FORMAT_RGB_x888 and ZX_PIXEL_FORMAT_ARGB_8888. Those
-    // Zircon formats are then compatible with vk::Format::eB8G8R8A8Srgb.
-    case fuchsia::sysmem::PixelFormatType::BGRA32:
-      return vk::Format::eB8G8R8A8Srgb;
-    // R8G8B8A8 is compatible with ZX_PIXEL_FORMAT_ABGR_8888 and ZX_PIXEL_FORMAT_BGR_888x. Those
-    // Zircon formats are then compatible with vk::Format::eR8G8B8A8Srgb.
-    case fuchsia::sysmem::PixelFormatType::R8G8B8A8:
-      return vk::Format::eR8G8B8A8Srgb;
-    case fuchsia::sysmem::PixelFormatType::NV12:
-      return vk::Format::eG8B8R82Plane420Unorm;
-    case fuchsia::sysmem::PixelFormatType::I420:
-      return vk::Format::eG8B8R83Plane420Unorm;
-    default:
-      FX_CHECK(false) << "Unsupported Sysmem pixel format.";
-      return vk::Format::eUndefined;
-  }
-}
-
 static escher::TexturePtr CreateDepthTexture(escher::Escher* escher,
                                              const escher::ImagePtr& output_image) {
   escher::TexturePtr depth_buffer;
@@ -81,9 +61,11 @@ VkRenderer::VkRenderer(escher::EscherWeakPtr escher)
 VkRenderer::~VkRenderer() {
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
-  for (auto& [_, vk_collection] : vk_collection_map_) {
-    vk_device.destroyBufferCollectionFUCHSIA(vk_collection, nullptr, vk_loader);
+  collections_.clear();
+  for (auto& [_, collection] : vk_collections_) {
+    vk_device.destroyBufferCollectionFUCHSIA(collection, nullptr, vk_loader);
   }
+  vk_collections_.clear();
 }
 
 bool VkRenderer::ImportBufferCollection(
@@ -100,25 +82,19 @@ void VkRenderer::ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId c
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(lock_);
 
-  auto collection_itr = collection_map_.find(collection_id);
+  auto vk_itr = vk_collections_.find(collection_id);
 
   // If the collection is not in the map, then there's nothing to do.
-  if (collection_itr == collection_map_.end()) {
+  if (vk_itr == vk_collections_.end()) {
+    FX_LOGS(WARNING) << "Attempting to release a non-existent buffer collection.";
     return;
   }
 
-  // Erase the sysmem collection from the map.
-  collection_map_.erase(collection_id);
-
-  // Grab the vulkan collection and DCHECK since there should always be
-  // a vk collection to correspond with the buffer collection. We then
-  // delete it using the vk device.
-  auto vk_itr = vk_collection_map_.find(collection_id);
-  FX_DCHECK(vk_itr != vk_collection_map_.end());
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
   vk_device.destroyBufferCollectionFUCHSIA(vk_itr->second, nullptr, vk_loader);
-  vk_collection_map_.erase(collection_id);
+  vk_collections_.erase(collection_id);
+  collections_.erase(collection_id);
 }
 
 bool VkRenderer::RegisterCollection(
@@ -135,126 +111,123 @@ bool VkRenderer::RegisterCollection(
   // Check for a null token here before we try to duplicate it to get the
   // vulkan token.
   if (!token.is_valid()) {
-    FX_LOGS(ERROR) << "Token is invalid.";
-    return sysmem_util::kInvalidId;
-  }
-
-  std::vector<vk::ImageCreateInfo> create_infos;
-  for (const auto& format : kPreferredImageFormats) {
-    create_infos.push_back(escher::RectangleCompositor::GetDefaultImageConstraints(format, usage));
-  }
-
-  vk::ImageConstraintsInfoFUCHSIA image_constraints_info;
-  image_constraints_info.createInfoCount = create_infos.size();
-  image_constraints_info.pCreateInfos = create_infos.data();
-  image_constraints_info.pFormatConstraints = nullptr;
-  image_constraints_info.minBufferCount = 1;
-  image_constraints_info.minBufferCountForDedicatedSlack = 0;
-  image_constraints_info.minBufferCountForSharedSlack = 0;
-
-  // Create a duped vulkan token.
-  fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
-  {
-    // TODO(fxbug.dev/51213): See if this can become asynchronous.
-    fuchsia::sysmem::BufferCollectionTokenSyncPtr sync_token = token.BindSync();
-    zx_status_t status =
-        sync_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());
-    FX_DCHECK(status == ZX_OK);
-
-    // Reassign the channel to the non-sync interface handle.
-    token = sync_token.Unbind();
-  }
-
-  // Create the sysmem buffer collection. We do this before creating the vulkan collection below,
-  // since New() checks if the incoming token is of the wrong type/malicious.
-  //
-  // TODO(fxbug.dev/71336): Remove this collection and grab all necessary information using the
-  // Vulkan Fuchsia extension API.
-  auto result = BufferCollectionInfo::New(sysmem_allocator, std::move(token));
-  if (result.is_error()) {
-    FX_LOGS(ERROR) << "Unable to register collection.";
+    FX_LOGS(WARNING) << "Token is invalid.";
     return false;
   }
 
-  // Create the vk_collection and set its constraints.
-  vk::BufferCollectionFUCHSIA vk_collection;
+  // Bind the buffer collection token to get the local token. Valid tokens can always be bound.
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token = token.BindSync();
+  fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
+  // TODO(fxbug.dev/51213): See if this can become asynchronous.
+  zx_status_t status =
+      local_token->Duplicate(std::numeric_limits<uint32_t>::max(), vulkan_token.NewRequest());
+  FX_DCHECK(status == ZX_OK);
+
+  // Create the sysmem collection.
+  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection;
   {
+    // Use local token to create a BufferCollection and then sync. We can trust
+    // |buffer_collection->Sync()| to tell us if we have a bad or malicious channel. So if this call
+    // passes, then we know we have a valid BufferCollection.
+    sysmem_allocator->BindSharedCollection(std::move(local_token), buffer_collection.NewRequest());
+    zx_status_t status = buffer_collection->Sync();
+    if (status != ZX_OK) {
+      FX_LOGS(ERROR) << "Could not bind buffer collection. Status: " << status;
+      return false;
+    }
+
+    // Use a name with a priority that's greater than the vulkan implementation, but less than
+    // what any client would use.
+    buffer_collection->SetName(10u, "FlatlandImageMemory");
+    status = buffer_collection->SetConstraints(false /* has_constraints */,
+                                               fuchsia::sysmem::BufferCollectionConstraints());
+    FX_DCHECK(status == ZX_OK);
+  }
+
+  // Create the vk collection.
+  vk::BufferCollectionFUCHSIA collection;
+  {
+    std::vector<vk::ImageCreateInfo> create_infos;
+    for (const auto& format : kPreferredImageFormats) {
+      create_infos.push_back(
+          escher::RectangleCompositor::GetDefaultImageConstraints(format, usage));
+    }
+
+    vk::ImageConstraintsInfoFUCHSIA image_constraints_info;
+    image_constraints_info.createInfoCount = create_infos.size();
+    image_constraints_info.pCreateInfos = create_infos.data();
+    image_constraints_info.pFormatConstraints = nullptr;
+    image_constraints_info.pNext = nullptr;
+    image_constraints_info.minBufferCount = 1;
+    image_constraints_info.minBufferCountForDedicatedSlack = 0;
+    image_constraints_info.minBufferCountForSharedSlack = 0;
+
+    // Create the collection and set its constraints.
     vk::BufferCollectionCreateInfoFUCHSIA buffer_collection_create_info;
     buffer_collection_create_info.collectionToken = vulkan_token.Unbind().TakeChannel().release();
-    vk_collection = escher::ESCHER_CHECKED_VK_RESULT(
+    collection = escher::ESCHER_CHECKED_VK_RESULT(
         vk_device.createBufferCollectionFUCHSIA(buffer_collection_create_info, nullptr, vk_loader));
     auto vk_result = vk_device.setBufferCollectionImageConstraintsFUCHSIA(
-        vk_collection, image_constraints_info, vk_loader);
+        collection, image_constraints_info, vk_loader);
     FX_DCHECK(vk_result == vk::Result::eSuccess);
   }
 
-  // Multiple threads may be attempting to read/write from |collection_map_| and
-  // |vk_collection_map_| so we lock this function here.
+  // Multiple threads may be attempting to read/write from |vk_collections_| and
+  // |collections_| so we lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(lock_);
-  collection_map_[collection_id] = std::move(result.value());
-  vk_collection_map_[collection_id] = std::move(vk_collection);
+  vk_collections_[collection_id] = std::move(collection);
+  collections_[collection_id] = std::move(buffer_collection);
   return true;
 }
 
 bool VkRenderer::ImportBufferImage(const ImageMetadata& metadata) {
   std::unique_lock<std::mutex> lock(lock_);
-  const auto& collection_itr = collection_map_.find(metadata.collection_id);
-  if (collection_itr == collection_map_.end()) {
-    FX_LOGS(ERROR) << "Collection with id " << metadata.collection_id << " does not exist.";
+
+  // Make sure that the collection that will back this image's memory
+  // is actually registered with the renderer.
+  auto vk_itr = vk_collections_.find(metadata.collection_id);
+  if (vk_itr == vk_collections_.end()) {
+    FX_LOGS(WARNING) << "Collection with id " << metadata.collection_id << " does not exist.";
     return false;
   }
 
-  auto& collection = collection_itr->second;
-  if (!collection.BuffersAreAllocated()) {
-    FX_LOGS(ERROR) << "Buffers for collection " << metadata.collection_id
-                   << " have not been allocated.";
+  // Check to see if the buffers are allocated and return false if not.
+  auto sysmem_itr = collections_.find(metadata.collection_id);
+  FX_DCHECK(sysmem_itr->second);
+  zx_status_t allocation_status = ZX_OK;
+  zx_status_t status = sysmem_itr->second->CheckBuffersAllocated(&allocation_status);
+  if (status != ZX_OK || allocation_status != ZX_OK) {
+    FX_LOGS(WARNING) << "Collection was not allocated.";
     return false;
   }
 
-  const auto& sysmem_info = collection.GetSysmemInfo();
-  const auto vmo_count = sysmem_info.buffer_count;
-  auto image_constraints = sysmem_info.settings.image_format_constraints;
-
+  // Make sure we're not reusing the same image identifier.
   if (texture_map_.find(metadata.identifier) != texture_map_.end() ||
       render_target_map_.find(metadata.identifier) != render_target_map_.end()) {
-    FX_LOGS(ERROR) << "An image with this identifier already exists.";
+    FX_LOGS(WARNING) << "An image with this identifier already exists.";
     return false;
   }
-
-  if (metadata.vmo_index >= vmo_count) {
-    FX_LOGS(ERROR) << "CreateImage failed, vmo_index " << metadata.vmo_index
-                   << " must be less than vmo_count " << vmo_count;
-    return false;
-  }
-
-  if (metadata.width < image_constraints.min_coded_width ||
-      metadata.width > image_constraints.max_coded_width) {
-    FX_LOGS(ERROR) << "CreateImage failed, width " << metadata.width
-                   << " is not within valid range [" << image_constraints.min_coded_width << ","
-                   << image_constraints.max_coded_width << "]";
-    return false;
-  }
-
-  if (metadata.height < image_constraints.min_coded_height ||
-      metadata.height > image_constraints.max_coded_height) {
-    FX_LOGS(ERROR) << "CreateImage failed, height " << metadata.height
-                   << " is not within valid range [" << image_constraints.min_coded_height << ","
-                   << image_constraints.max_coded_height << "]";
-    return false;
-  }
-
-  auto vk_format = ConvertToVkFormat(image_constraints.pixel_format.type);
 
   if (metadata.is_render_target) {
-    auto image =
-        ExtractImage(metadata, vk_format, escher::RectangleCompositor::kRenderTargetUsageFlags);
+    auto image = ExtractImage(metadata, vk_itr->second,
+                              escher::RectangleCompositor::kRenderTargetUsageFlags);
+    if (!image) {
+      FX_LOGS(ERROR) << "Could not create image.";
+      return false;
+    }
+
     image->set_swapchain_layout(vk::ImageLayout::eColorAttachmentOptimal);
     render_target_map_[metadata.identifier] = image;
     depth_target_map_[metadata.identifier] = CreateDepthTexture(escher_.get(), image);
     pending_render_targets_.insert(metadata.identifier);
   } else {
-    texture_map_[metadata.identifier] = ExtractTexture(metadata, vk_format);
+    auto texture = ExtractTexture(metadata, vk_itr->second);
+    if (!texture) {
+      FX_LOGS(ERROR) << "Could not extract render target.";
+      return false;
+    }
+    texture_map_[metadata.identifier] = texture;
     pending_textures_.insert(metadata.identifier);
   }
   return true;
@@ -270,32 +243,95 @@ void VkRenderer::ReleaseBufferImage(sysmem_util::GlobalImageId image_id) {
   }
 }
 
-escher::ImagePtr VkRenderer::ExtractImage(ImageMetadata metadata, vk::Format format,
+escher::ImagePtr VkRenderer::ExtractImage(const ImageMetadata& metadata,
+                                          vk::BufferCollectionFUCHSIA collection,
                                           vk::ImageUsageFlags usage) {
   TRACE_DURATION("flatland", "VkRenderer::ExtractImage");
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
 
-  GpuImageInfo gpu_info;
-  auto collection_itr = collection_map_.find(metadata.collection_id);
-  FX_DCHECK(collection_itr != collection_map_.end());
-  auto& collection = collection_itr->second;
+  // Grab the collection Properties from Vulkan.
+  auto properties = escher::ESCHER_CHECKED_VK_RESULT(
+      vk_device.getBufferCollectionProperties2FUCHSIA(collection, vk_loader));
 
-  auto vk_itr = vk_collection_map_.find(metadata.collection_id);
-  FX_DCHECK(vk_itr != vk_collection_map_.end());
-  auto vk_collection = vk_itr->second;
+  // Check the provided index against actually allocated number of buffers.
+  if (properties.bufferCount <= metadata.vmo_index) {
+    FX_LOGS(ERROR) << "Specified vmo index is out of bounds: " << index;
+    return nullptr;
+  }
 
-  // Create the GPU info from the server side collection.
-  gpu_info = GpuImageInfo::New(vk_device, vk_loader, collection.GetSysmemInfo(), vk_collection,
-                               metadata.vmo_index);
-  FX_DCHECK(gpu_info.GetGpuMem());
+  // Setup the create info Fuchsia extension.
+  vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
+  collection_image_info.collection = collection;
+  collection_image_info.index = metadata.vmo_index;
+
+  // Setup the create info.
+  FX_DCHECK(properties.createInfoIndex < std::size(kPreferredImageFormats));
+  auto pixel_format = kPreferredImageFormats[properties.createInfoIndex];
+  bool is_protected = properties.memoryTypeBits & VK_MEMORY_PROPERTY_PROTECTED_BIT;
+  vk::ImageCreateInfo create_info =
+      escher::RectangleCompositor::GetDefaultImageConstraints(pixel_format, usage);
+  create_info.extent = vk::Extent3D{metadata.width, metadata.height, 1};
+  create_info.setPNext(&collection_image_info);
+  if (is_protected) {
+    create_info.flags = vk::ImageCreateFlagBits::eProtected;
+  }
+
+  // Create the VK Image, return nullptr if this fails.
+  auto image_result = vk_device.createImage(create_info);
+  if (image_result.result != vk::Result::eSuccess) {
+    FX_LOGS(ERROR) << "VkCreateImage failed: " << vk::to_string(image_result.result);
+    return nullptr;
+  }
+
+  // Now we have to allocate VK memory for the image. This memory is going to come from
+  // the imported buffer collection's vmo.
+  auto memory_requirements = vk_device.getImageMemoryRequirements(image_result.value);
+  uint32_t memory_type_index =
+      escher::CountTrailingZeros(memory_requirements.memoryTypeBits & properties.memoryTypeBits);
+  vk::ImportMemoryBufferCollectionFUCHSIA import_info;
+  import_info.collection = collection;
+  import_info.index = metadata.vmo_index;
+  vk::MemoryAllocateInfo alloc_info;
+  alloc_info.setPNext(&import_info);
+  alloc_info.allocationSize = memory_requirements.size;
+  alloc_info.memoryTypeIndex = memory_type_index;
+
+  vk::DeviceMemory memory = nullptr;
+  vk::Result err = vk_device.allocateMemory(&alloc_info, nullptr, &memory);
+  if (err != vk::Result::eSuccess) {
+    FX_LOGS(ERROR) << "Could not successfully allocate memory.";
+    return nullptr;
+  }
+
+  // Have escher manager the memory since this is the required format for creating
+  // an Escher image. Also we can now check if the total memory size is great enough
+  // for the image memory requirements. If it's not big enough, the client likely
+  // requested an image size that is larger than the maximum image size allowed by
+  // the sysmem collection constraints.
+  auto gpu_mem =
+      escher::GpuMem::AdoptVkMemory(vk_device, vk::DeviceMemory(memory), alloc_info.allocationSize,
+                                    /*needs_mapped_ptr*/ false);
+  if (memory_requirements.size > gpu_mem->size()) {
+    FX_LOGS(ERROR) << "Memory requirements for image exceed available memory: "
+                   << memory_requirements.size << " " << gpu_mem->size();
+    return nullptr;
+  }
 
   // Create and return an escher image.
-  auto image_ptr = escher::image_utils::NewImage(
-      vk_device, gpu_info.NewVkImageCreateInfo(metadata.width, metadata.height, format, usage),
-      gpu_info.GetGpuMem(), escher_->resource_recycler());
-  FX_DCHECK(image_ptr);
-  return image_ptr;
+  escher::ImageInfo escher_image_info;
+  escher_image_info.format = create_info.format;
+  escher_image_info.width = create_info.extent.width;
+  escher_image_info.height = create_info.extent.height;
+  escher_image_info.usage = create_info.usage;
+  escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eDeviceLocal;
+  if (create_info.flags & vk::ImageCreateFlagBits::eProtected) {
+    escher_image_info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
+  }
+  escher_image_info.is_external = true;
+  return escher::impl::NaiveImage::AdoptVkImage(escher_->resource_recycler(), escher_image_info,
+                                                image_result.value, std::move(gpu_mem),
+                                                create_info.initialLayout);
 }
 
 bool VkRenderer::RegisterRenderTargetCollection(
@@ -311,8 +347,9 @@ void VkRenderer::DeregisterRenderTargetCollection(
   ReleaseBufferCollection(collection_id);
 }
 
-escher::TexturePtr VkRenderer::ExtractTexture(ImageMetadata metadata, vk::Format format) {
-  auto image = ExtractImage(metadata, format, escher::RectangleCompositor::kTextureUsageFlags);
+escher::TexturePtr VkRenderer::ExtractTexture(const ImageMetadata& metadata,
+                                              vk::BufferCollectionFUCHSIA collection) {
+  auto image = ExtractImage(metadata, collection, escher::RectangleCompositor::kTextureUsageFlags);
   escher::SamplerPtr sampler =
       escher::image_utils::IsYuvFormat(image->format())
           ? escher_->sampler_cache()->ObtainYuvSampler(image->format(), kDefaultFilter)
@@ -372,8 +409,8 @@ void VkRenderer::Render(const ImageMetadata& render_target,
     FX_DCHECK(local_texture_map.find(image.identifier) != local_texture_map.end());
     textures.emplace_back(local_texture_map.at(image.identifier));
 
-    // TODO(fxbug.dev/52632): We are hardcoding the multiply color and transparency flag for now.
-    // Eventually these will be exposed in the API.
+    // TODO(fxbug.dev/52632): We are hardcoding the multiply color. Eventually it will
+    // be exposed in the API.
     color_data.emplace_back(
         escher::RectangleCompositor::ColorData(glm::vec4(1.f), image.has_transparency));
   }

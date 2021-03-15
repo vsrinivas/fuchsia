@@ -16,7 +16,6 @@
 #include "src/ui/scenic/lib/display/util.h"
 #include "src/ui/scenic/lib/flatland/buffers/util.h"
 #include "src/ui/scenic/lib/flatland/engine/tests/common.h"
-#include "src/ui/scenic/lib/flatland/renderer/gpu_mem.h"
 #include "src/ui/scenic/lib/flatland/renderer/vk_renderer.h"
 
 using ::testing::_;
