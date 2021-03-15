@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'package:fidl_fuchsia_sys/fidl_async.dart' as fidl_sys;
+
 import 'incoming.dart';
+import 'internal/_startup_context_impl.dart';
 import 'outgoing.dart';
 import 'startup_context.dart';
 
@@ -76,5 +79,17 @@ class ComponentContext {
   /// ```
   factory ComponentContext.createAndServe() {
     return ComponentContext.create()..outgoing.serveFromStartupInfo();
+  }
+
+  /// Creates a component context from [fidl_sys.StartupInfo].
+  ///
+  /// Typically used for testing or by implementations of [fidl_sys.Runner] to
+  /// obtain the [ComponentContext] for components being run by the runner.
+  factory ComponentContext.from(fidl_sys.StartupInfo startupInfo) {
+    final context = StartupContextImpl.from(startupInfo);
+    return ComponentContext(
+      svc: context.incoming,
+      outgoing: context.outgoing,
+    );
   }
 }

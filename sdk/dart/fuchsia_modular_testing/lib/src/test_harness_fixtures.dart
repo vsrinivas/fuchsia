@@ -10,8 +10,6 @@ import 'dart:math';
 import 'package:fidl_fuchsia_modular/fidl_async.dart' as fidl_modular;
 import 'package:fidl_fuchsia_modular_testing/fidl_async.dart' as fidl_testing;
 import 'package:fidl_fuchsia_sys/fidl_async.dart' as fidl_sys;
-import 'package:fuchsia_modular/agent.dart';
-import 'package:fuchsia_modular/src/agent/internal/_agent_impl.dart';
 import 'package:fuchsia_services/services.dart';
 import 'package:fuchsia_services/src/internal/_startup_context_impl.dart';
 
@@ -68,10 +66,10 @@ Future<fidl_modular.ComponentContextProxy> getComponentContext(
   return proxy;
 }
 
+/// Creates an instance of [ComponentContext] from the given [startupInfo]
+ComponentContext createComponentContext(fidl_sys.StartupInfo startupInfo) =>
+    ComponentContext.from(startupInfo);
+
 /// Creates an instance of [StartupContext] from the given [startupInfo]
 StartupContext createStartupContext(fidl_sys.StartupInfo startupInfo) =>
     StartupContextImpl.from(startupInfo);
-
-/// Creates an [Agent] instance from the supplied [StartupContext].
-Agent createAgentFromStartupContext(StartupContext context) =>
-    AgentImpl(startupContext: context);

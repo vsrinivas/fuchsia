@@ -6,11 +6,11 @@ import 'dart:async';
 
 import 'package:fuchsia_modular/agent.dart';
 import 'package:fuchsia_logger/logger.dart';
+import 'package:fuchsia_services/services.dart';
 import 'package:fidl/fidl.dart';
 import 'package:fidl_fuchsia_modular_testing/fidl_async.dart';
 import 'package:fidl_fuchsia_sys/fidl_async.dart' as fidl_sys;
 import 'package:fuchsia_modular/src/agent/internal/_agent_impl.dart'; // ignore: implementation_imports
-import 'package:fuchsia_services/src/internal/_startup_context_impl.dart'; // ignore: implementation_imports
 import 'package:fuchsia_modular/src/lifecycle/internal/_lifecycle_impl.dart'; // ignore: implementation_imports
 
 /// A function which is called when a new agent that is being launched.
@@ -34,7 +34,8 @@ typedef OnNewAgent = void Function(Agent? agent);
 class AgentInterceptor {
   final _registeredAgents = <String, OnNewAgent>{};
   final _mockedAgents = <String, _MockedAgent>{};
-  late StreamSubscription<TestHarness$OnNewComponent$Response> _streamSubscription;
+  late StreamSubscription<TestHarness$OnNewComponent$Response>
+      _streamSubscription;
 
   /// Creates an instance of this which will listen to the [onNewComponentStream].
   AgentInterceptor(
@@ -47,7 +48,7 @@ class AgentInterceptor {
   /// This method will cancel the onNewComponent stream subscription.
   /// The object is no longer valid after this method is called.
   void dispose() {
-      _streamSubscription.cancel();
+    _streamSubscription.cancel();
   }
 
   /// Register an [agentUrl] to be mocked.
@@ -101,9 +102,6 @@ class _MockedAgent {
   /// The instance of the [Agent] which is running in this environment
   AgentImpl? agent;
 
-  /// The startup context for this environment
-  StartupContextImpl? context;
-
   /// The lifecycle service for this environment
   LifecycleImpl? lifecycle;
 
@@ -111,13 +109,13 @@ class _MockedAgent {
     required fidl_sys.StartupInfo startupInfo,
     required InterfaceHandle<InterceptedComponent> interceptedComponentRequest,
   }) {
-    context = StartupContextImpl.from(startupInfo);
-    agent = AgentImpl(startupContext: context);
+    final outgoing = ComponentContext.from(startupInfo).outgoing;
+    agent = AgentImpl()..serve(outgoing);
 
     // Note: we want to have a exitHandler which does not call exit here
     // because this mocked agent is running inside the test process and
     // calling fuchsia.exit will cause the test process to close.
-    lifecycle = LifecycleImpl(context: context, exitHandler: (_) {})
+    lifecycle = LifecycleImpl(outgoing: outgoing, exitHandler: (_) {})
       ..addTerminateListener(() async {
         interceptedComponent.ctrl.close();
       });

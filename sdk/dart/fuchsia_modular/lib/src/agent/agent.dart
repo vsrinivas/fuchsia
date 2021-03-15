@@ -5,6 +5,7 @@
 import 'dart:async';
 
 import 'package:fidl/fidl.dart';
+import 'package:fuchsia_services/services.dart';
 
 import 'internal/_agent_impl.dart';
 
@@ -39,7 +40,9 @@ abstract class Agent {
   /// import 'src/foo_service_impl.dart';
   ///
   /// void main(List<String> args) {
-  ///   Agent().exposeService(FooServiceImpl());
+  ///   final context = ComponentContext.create();
+  ///   Agent()..exposeService(FooServiceImpl())..serve(context.outgoing);
+  ///   context.outgoing.serveFromStartupInfo();
   /// }
   ///
   /// class FooServiceImpl extends fidl.FooService { ... }
@@ -68,7 +71,11 @@ abstract class Agent {
   /// import 'src/foo_service_impl.dart';
   ///
   /// void main(List<String> args) {
-  ///   Agent().exposeServiceProvider(getService, fidl.FooServiceData());
+  ///   final context = ComponentContext.create();
+  ///   Agent()
+  ///       ..exposeServiceProvider(getService, fidl.FooServiceData())
+  ///       ..serve(context.outgoing);
+  ///   context.outgoing.serveFromStartupInfo();
   /// }
   ///
   /// FutureOr<FooServiceImpl> getService() {
@@ -80,4 +87,11 @@ abstract class Agent {
   /// ```
   void exposeServiceProvider<T extends Service>(
       ServiceProvider<T> serviceProvider, ServiceData<T> serviceData);
+
+  /// Exposes the Agent's [fidl.Agent] instance to the Outgoing directory. In
+  /// other words, advertises this as an [fidl.Agent] to the rest of the system
+  /// via [Outgoing].
+  ///
+  /// This class should be called before the Outgoing directory is served.
+  void serve(Outgoing outgoing);
 }

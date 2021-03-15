@@ -8,7 +8,6 @@ import 'package:fidl_fuchsia_ui_views/fidl_async.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:fuchsia_scenic_flutter/fuchsia_view.dart';
-import 'package:fuchsia_services/services.dart';
 import 'package:mockito/mockito.dart';
 import 'package:zircon/zircon.dart';
 
@@ -171,7 +170,5 @@ class MockViewRef extends Mock implements ViewRef {
 class MockEventPair extends Mock implements EventPair {}
 
 class MockHandle extends Mock implements Handle {}
-
-class MockStartupContext extends Mock implements StartupContext {}
 
 class MockPointerInjector extends Mock implements PointerInjector {}

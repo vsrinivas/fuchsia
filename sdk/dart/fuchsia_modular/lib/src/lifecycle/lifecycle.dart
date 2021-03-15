@@ -3,17 +3,44 @@
 // found in the LICENSE file.
 
 import 'package:fuchsia/fuchsia.dart' as fuchsia;
+import 'package:fuchsia_services/services.dart';
 
 import 'internal/_lifecycle_impl.dart';
 
 /// Allows running components to be notified when lifecycle events happen in the
 /// system.
 abstract class Lifecycle {
-  static Lifecycle? _lifecycle;
+  static Lifecycle? _singleton;
 
-  /// Initializes the shared [Lifecycle] instance
+  /// Initializes the shared [Lifecycle] instance. This is required before
+  /// Lifecycle can be constructed.
+  static void enableLifecycleEvents(Outgoing outgoing) {
+    if (_singleton == null) {
+      _singleton = LifecycleImpl(
+        outgoing: outgoing,
+        exitHandler: fuchsia.exit,
+      );
+    } else {
+      throw Exception(
+          'Attempted to call Lifecycle.enableLifecycleEvents after it has already been enabled. '
+          'Ensure that Lifecycle.enableLifecycleEvents is not called multiple times.');
+    }
+  }
+
+  /// Obtains an instance of the shared [Lifecycle] instance.
   factory Lifecycle() {
-    return _lifecycle ??= LifecycleImpl(exitHandler: fuchsia.exit);
+    // TODO(fxbug.dev/72277): Require _singleton after soft transition.
+    return _singleton ??= LifecycleImpl(
+      outgoing: StartupContext.fromStartupInfo().outgoing,
+      exitHandler: fuchsia.exit,
+    );
+    // if (_singleton == null) {
+    //   throw Exception(
+    //       'Attempted to construct Lifecycle before lifecycle events have been enabled. '
+    //       'Ensure that Lifecycle.enableLifecycleEvents is called first.');
+    // } else {
+    //   return _singleton;
+    // }
   }
 
   /// Adds a terminate [listener] which will be called when the system starts to

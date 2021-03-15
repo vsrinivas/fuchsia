@@ -4,6 +4,7 @@
 
 import 'dart:async';
 
+import 'package:fuchsia_services/services.dart';
 import 'package:test/test.dart';
 
 import 'package:fuchsia_modular/src/lifecycle/internal/_lifecycle_impl.dart'; // ignore: implementation_imports
@@ -22,10 +23,15 @@ Future<void> throwingTerminateListener() async {
 }
 
 void main() {
+  late ComponentContext context;
   late LifecycleImpl lifecycleImpl;
 
+  setUpAll(() {
+    context = ComponentContext.createAndServe();
+  });
+
   setUp(() {
-    lifecycleImpl = LifecycleImpl();
+    lifecycleImpl = LifecycleImpl(outgoing: context.outgoing);
   });
 
   test('addTerminateListener throws for null listener', () {
@@ -61,7 +67,10 @@ void main() {
 
   test('terminate invokes the exitHandler', () async {
     int exitCode = -1;
-    await LifecycleImpl(exitHandler: (c) => exitCode = c).terminate();
+    await LifecycleImpl(
+      outgoing: context.outgoing,
+      exitHandler: (c) => exitCode = c,
+    ).terminate();
     expect(exitCode, 0);
   });
 }

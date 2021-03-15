@@ -22,8 +22,6 @@ import 'package:test/test.dart';
 // Mock classes
 class MockLifecycle extends Mock implements Lifecycle {}
 
-class MockStartupContext extends Mock implements StartupContext {}
-
 class MockOutgoing extends Mock implements Outgoing {}
 
 class MockAsyncBinding extends Mock implements AsyncBinding {}
@@ -35,14 +33,6 @@ class MockInterfaceRequest<T> extends Mock implements InterfaceRequest<T> {}
 
 void main() {
   setupLogger();
-  test('verify agent is exposed during construction of AgentImpl', () {
-    final mockStartupContext = MockStartupContext();
-    final mockOutgoingImpl = MockOutgoing();
-    when(mockStartupContext.outgoing).thenReturn(mockOutgoingImpl);
-
-    AgentImpl(startupContext: mockStartupContext);
-    verify(mockOutgoingImpl.addPublicService(any, fidl.Agent.$serviceName));
-  });
 
   test('verify Lifecycle init during the construction of AgentImpl', () {
     final mockLifecycle = MockLifecycle();
@@ -156,6 +146,13 @@ void main() {
 
       await untilCalled(mockServiceBindings.bind(service, any));
     });
+  });
+
+  test('verify agent is exposed after serving', () {
+    final mockOutgoingImpl = MockOutgoing();
+
+    AgentImpl().serve(mockOutgoingImpl);
+    verify(mockOutgoingImpl.addPublicService(any, fidl.Agent.$serviceName));
   });
 }
 

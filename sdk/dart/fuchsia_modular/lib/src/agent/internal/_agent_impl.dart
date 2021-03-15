@@ -33,15 +33,11 @@ class AgentImpl extends fidl.Agent implements Agent {
       <AsyncBinding<Object>>[];
 
   /// The default constructor for this instance.
-  AgentImpl(
-      {Lifecycle? lifecycle,
-      StartupContext? startupContext,
-      ServiceProviderImpl? serviceProviderImpl})
+  AgentImpl({Lifecycle? lifecycle, ServiceProviderImpl? serviceProviderImpl})
       : _serviceProvider = serviceProviderImpl ?? ServiceProviderImpl() {
     (lifecycle ??= Lifecycle()).addTerminateListener(_terminate);
-    startupContext ??= StartupContext.fromStartupInfo();
-
-    _exposeAgent(startupContext);
+    // TODO(fxbug.dev/72277): Remove after soft transition.
+    serve(StartupContext.fromStartupInfo().outgoing);
   }
 
   @override
@@ -95,13 +91,9 @@ class AgentImpl extends fidl.Agent implements Agent {
     );
   }
 
-  /// Exposes this [fidl.Agent] instance to the
-  /// [StartupContext#addPublicService]. In other words, advertises this as an
-  /// [fidl.Agent] to the rest of the system via the [StartupContext].
-  ///
-  /// This class be must called before the first iteration of the event loop.
-  void _exposeAgent(StartupContext startupContext) {
-    startupContext.outgoing.addPublicService(
+  @override
+  void serve(Outgoing outgoing) {
+    outgoing.addPublicService(
       (InterfaceRequest<fidl.Agent> request) {
         assert(!_agentBinding.isBound);
         _agentBinding.bind(this, request);
