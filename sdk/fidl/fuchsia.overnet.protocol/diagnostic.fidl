@@ -123,6 +123,8 @@ enum Implementation {
     ASCENDD = 2;
     /// The `hoist` Rust crate embedding Overnet.
     HOIST_RUST_CRATE = 3;
+    /// The `unknown` value reported when otherwise unconfigured.
+    UNKNOWN = 4;
 };
 
 /// Diagnostic data on a single node.

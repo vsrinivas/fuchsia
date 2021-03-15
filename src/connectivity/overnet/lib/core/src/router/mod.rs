@@ -44,8 +44,8 @@ use async_utils::mutex_ticket::MutexTicket;
 use fidl::{endpoints::ClientEnd, AsHandleRef, Channel, Handle, HandleBased, Socket, SocketOpts};
 use fidl_fuchsia_overnet::{ConnectionInfo, ServiceProviderMarker, ServiceProviderProxyInterface};
 use fidl_fuchsia_overnet_protocol::{
-    ChannelHandle, LinkDiagnosticInfo, PeerConnectionDiagnosticInfo, RouteMetrics, SocketHandle,
-    SocketType, StreamId, StreamRef, ZirconHandle,
+    ChannelHandle, Implementation, LinkDiagnosticInfo, PeerConnectionDiagnosticInfo, RouteMetrics,
+    SocketHandle, SocketType, StreamId, StreamRef, ZirconHandle,
 };
 use fuchsia_async::Task;
 use futures::{future::poll_fn, lock::Mutex, prelude::*, ready};
@@ -53,7 +53,7 @@ use rand::Rng;
 use std::{
     collections::{btree_map, BTreeMap, HashMap},
     convert::TryInto,
-    sync::atomic::{AtomicU64, Ordering},
+    sync::atomic::{AtomicU32, AtomicU64, Ordering},
     sync::{Arc, Weak},
     task::{Context, Poll, Waker},
     time::Duration,
@@ -65,7 +65,7 @@ pub(crate) use self::routes::ForwardingTable;
 /// Configuration object for creating a router.
 pub struct RouterOptions {
     node_id: Option<NodeId>,
-    diagnostics: Option<fidl_fuchsia_overnet_protocol::Implementation>,
+    diagnostics: Option<Implementation>,
 }
 
 impl RouterOptions {
@@ -81,10 +81,7 @@ impl RouterOptions {
     }
 
     /// Enable diagnostics with a selected `implementation`.
-    pub fn export_diagnostics(
-        mut self,
-        implementation: fidl_fuchsia_overnet_protocol::Implementation,
-    ) -> Self {
+    pub fn export_diagnostics(mut self, implementation: Implementation) -> Self {
         self.diagnostics = Some(implementation);
         self
     }
@@ -262,6 +259,7 @@ pub struct Router {
     current_forwarding_table: Mutex<ForwardingTable>,
     task: Mutex<Option<Task<()>>>,
     connecting_links: AtomicU64,
+    implementation: AtomicU32,
 }
 
 struct ProxiedHandle {
@@ -322,9 +320,11 @@ impl Router {
             task: Mutex::new(None),
             current_forwarding_table: Mutex::new(ForwardingTable::empty()),
             connecting_links: AtomicU64::new(0),
+            implementation: AtomicU32::new(
+                options.diagnostics.unwrap_or(Implementation::Unknown).into_primitive(),
+            ),
         });
 
-        let diagnostics = options.diagnostics;
         let link_state_observable = Observable::new(BTreeMap::new());
         let weak_router = Arc::downgrade(&router);
         *router.task.lock().now_or_never().unwrap() = Some(Task::spawn(log_errors(
@@ -335,9 +335,7 @@ impl Router {
                     routes.run_planner(node_id, link_state_observable.new_observer()),
                     run_link_status_updater(node_id, link_state_observable, link_state_receiver),
                     async move {
-                        if let Some(implementation) = diagnostics {
-                            run_diagostic_service_request_handler(router, implementation).await?;
-                        }
+                        run_diagostic_service_request_handler(router).await?;
                         Ok(())
                     },
                 )
@@ -393,6 +391,19 @@ impl Router {
     /// Accessor for the node id of this router.
     pub fn node_id(&self) -> NodeId {
         self.node_id
+    }
+
+    /// Accessor for the Implementation of this router.
+    pub fn implementation(&self) -> Implementation {
+        Implementation::from_primitive(
+            self.implementation.load(std::sync::atomic::Ordering::SeqCst),
+        )
+        .unwrap_or(Implementation::Unknown)
+    }
+
+    /// Setter for the Implementation of this router.
+    pub fn set_implementation(&self, imp: Implementation) {
+        self.implementation.store(imp.into_primitive(), std::sync::atomic::Ordering::SeqCst)
     }
 
     pub(crate) fn service_map(&self) -> &ServiceMap {

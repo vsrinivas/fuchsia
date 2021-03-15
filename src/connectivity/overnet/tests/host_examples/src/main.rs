@@ -404,7 +404,8 @@ mod tests {
             println!("OUTPUT");
             println!("{}", output);
             assert_eq!(output.lines().count(), 6);
-            assert_eq!(output.matches("HoistRustCrate").count(), 6);
+            assert_eq!(output.matches("Ascendd").count(), 2);
+            assert_eq!(output.matches("HoistRustCrate").count(), 4);
             #[cfg(target_os = "linux")]
             assert_eq!(output.matches("Linux").count(), 6);
             #[cfg(target_os = "macos")]

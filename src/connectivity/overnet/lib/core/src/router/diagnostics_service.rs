@@ -32,27 +32,19 @@ async fn if_probe_has_bit<R>(
     }
 }
 
-pub async fn run_diagostic_service_request_handler(
-    router: &Weak<Router>,
-    implementation: fidl_fuchsia_overnet_protocol::Implementation,
-) -> Result<(), Error> {
+pub async fn run_diagostic_service_request_handler(router: &Weak<Router>) -> Result<(), Error> {
     let (s, p) = Channel::create().context("failed to create zx channel")?;
     let chan = AsyncChannel::from_channel(s).context("failed to make async channel")?;
     Weak::upgrade(router)
         .ok_or_else(|| format_err!("router gone"))?
         .register_service(DiagnosticMarker::NAME.to_string(), ClientEnd::new(p))
         .await?;
-    handle_diagnostic_service_requests(
-        router,
-        implementation,
-        ServiceProviderRequestStream::from_channel(chan),
-    )
-    .await
+    handle_diagnostic_service_requests(router, ServiceProviderRequestStream::from_channel(chan))
+        .await
 }
 
 async fn handle_diagnostic_service_requests(
     router: &Weak<Router>,
-    implementation: fidl_fuchsia_overnet_protocol::Implementation,
     stream: ServiceProviderRequestStream,
 ) -> Result<(), Error> {
     stream
@@ -63,7 +55,7 @@ async fn handle_diagnostic_service_requests(
                     let stream = DiagnosticRequestStream::from_channel(
                         fidl::AsyncChannel::from_channel(chan)?,
                     );
-                    handle_diagnostic_requests(router, implementation, stream).await?;
+                    handle_diagnostic_requests(router, stream).await?;
                 }
             }
             Ok(())
@@ -107,7 +99,6 @@ fn node_description(
 
 async fn handle_diagnostic_requests(
     router: &Weak<Router>,
-    implementation: fidl_fuchsia_overnet_protocol::Implementation,
     stream: DiagnosticRequestStream,
 ) -> Result<(), Error> {
     let get_router = move || Weak::upgrade(router).ok_or_else(|| format_err!("router gone"));
@@ -120,7 +111,7 @@ async fn handle_diagnostic_requests(
                         node_description: if_probe_has_bit(
                             selector,
                             ProbeSelector::NodeDescription,
-                            futures::future::ready(node_description(implementation)),
+                            futures::future::ready(node_description(get_router()?.implementation())),
                         )
                         .await,
                         links: if_probe_has_bit(

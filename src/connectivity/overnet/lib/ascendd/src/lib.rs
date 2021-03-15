@@ -104,6 +104,9 @@ async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result
         }
     };
 
+    let node = hoist().node();
+    node.set_implementation(fidl_fuchsia_overnet_protocol::Implementation::Ascendd);
+
     log::info!("ascendd listening to socket {}", sockpath);
 
     futures::future::try_join(
