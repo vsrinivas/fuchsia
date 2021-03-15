@@ -14,7 +14,6 @@
 
 #include <iterator>
 
-#include "allocator.h"
 #include "string_view.h"
 #include "vector_view.h"
 

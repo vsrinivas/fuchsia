@@ -65,12 +65,9 @@ if (is_fuchsia) {
     sdk = "source"
     sdk_headers = [
       "lib/fidl/llcpp/aligned.h",
-      "lib/fidl/llcpp/allocator.h",
       "lib/fidl/llcpp/array.h",
       "lib/fidl/llcpp/async_binding.h",
       "lib/fidl/llcpp/async_transaction.h",
-      "lib/fidl/llcpp/buffer_allocator.h",
-      "lib/fidl/llcpp/buffer_then_heap_allocator.h",
       "lib/fidl/llcpp/client_base.h",
       "lib/fidl/llcpp/client.h",
       "lib/fidl/llcpp/client_end.h",
@@ -79,9 +76,7 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/envelope.h",
       "lib/fidl/llcpp/errors.h",
       "lib/fidl/llcpp/extract_resource_on_destruction.h",
-      "lib/fidl/llcpp/failover_allocator.h",
       "lib/fidl/llcpp/fidl_allocator.h",
-      "lib/fidl/llcpp/heap_allocator.h",
       "lib/fidl/llcpp/memory.h",
       "lib/fidl/llcpp/message.h",
       "lib/fidl/llcpp/message_storage.h",
@@ -99,7 +94,6 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/transaction.h",
       "lib/fidl/llcpp/types.h",
       "lib/fidl/llcpp/unowned_ptr.h",
-      "lib/fidl/llcpp/unsafe_buffer_allocator.h",
       "lib/fidl/llcpp/vector_view.h",
     ]
     sdk_migrated = true
@@ -154,13 +148,9 @@ if (is_fuchsia) {
     sdk = "source"
     sdk_headers = [
       "lib/fidl/llcpp/aligned.h",
-      "lib/fidl/llcpp/allocator.h",
       "lib/fidl/llcpp/array.h",
-      "lib/fidl/llcpp/buffer_allocator.h",
-      "lib/fidl/llcpp/buffer_then_heap_allocator.h",
       "lib/fidl/llcpp/coding.h",
       "lib/fidl/llcpp/envelope.h",
-      "lib/fidl/llcpp/failover_allocator.h",
       "lib/fidl/llcpp/fidl_allocator.h",
       "lib/fidl/llcpp/memory.h",
       "lib/fidl/llcpp/object_view.h",
@@ -169,7 +159,6 @@ if (is_fuchsia) {
       "lib/fidl/llcpp/tracking_ptr.h",
       "lib/fidl/llcpp/traits.h",
       "lib/fidl/llcpp/unowned_ptr.h",
-      "lib/fidl/llcpp/unsafe_buffer_allocator.h",
       "lib/fidl/llcpp/vector_view.h",
     ]
     sdk_migrated = true

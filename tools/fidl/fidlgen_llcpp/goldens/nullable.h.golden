@@ -4,8 +4,6 @@
 
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/buffer_allocator.h>
-#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
@@ -96,13 +94,6 @@ class SimpleUnion {
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static SimpleUnion WithA(::fidl::Allocator& allocator, Args&&... args) {
-    SimpleUnion result;
-    result.set_a(
-        ::fidl::tracking_ptr<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   void set_a(::fidl::tracking_ptr<int32_t>&& elem) {
     ordinal_ = Ordinal::kA;
@@ -113,12 +104,6 @@ class SimpleUnion {
   void set_a(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kA;
     set_a(::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_a(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kA;
-    set_a(
-        ::fidl::tracking_ptr<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   int32_t& mutable_a() {
@@ -145,13 +130,6 @@ class SimpleUnion {
         ::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static SimpleUnion WithB(::fidl::Allocator& allocator, Args&&... args) {
-    SimpleUnion result;
-    result.set_b(
-        ::fidl::tracking_ptr<float>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   void set_b(::fidl::tracking_ptr<float>&& elem) {
     ordinal_ = Ordinal::kB;
@@ -162,11 +140,6 @@ class SimpleUnion {
   void set_b(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kB;
     set_b(::fidl::ObjectView<float>(allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_b(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kB;
-    set_b(::fidl::tracking_ptr<float>(allocator, std::forward<Args>(args)...));
   }
 
   float& mutable_b() {

@@ -7,7 +7,6 @@
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/fidl-async-2/fidl_struct.h>
 #include <lib/fidl/cpp/message_part.h>
-#include <lib/fidl/llcpp/heap_allocator.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/sysmem-version/sysmem-version.h>
 

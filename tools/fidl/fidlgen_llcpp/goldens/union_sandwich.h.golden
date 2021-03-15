@@ -4,8 +4,6 @@
 
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/buffer_allocator.h>
-#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
@@ -92,14 +90,6 @@ class UnionSize8Alignment4 {
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static UnionSize8Alignment4 WithVariant(::fidl::Allocator& allocator,
-                                          Args&&... args) {
-    UnionSize8Alignment4 result;
-    result.set_variant(
-        ::fidl::tracking_ptr<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   void set_variant(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kVariant;
@@ -111,12 +101,6 @@ class UnionSize8Alignment4 {
     ordinal_ = Ordinal::kVariant;
     set_variant(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_variant(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kVariant;
-    set_variant(
-        ::fidl::tracking_ptr<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_variant() {
@@ -199,14 +183,6 @@ class UnionSize36Alignment4 {
         allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static UnionSize36Alignment4 WithVariant(::fidl::Allocator& allocator,
-                                           Args&&... args) {
-    UnionSize36Alignment4 result;
-    result.set_variant(::fidl::tracking_ptr<::fidl::Array<uint8_t, 32>>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   void set_variant(::fidl::tracking_ptr<::fidl::Array<uint8_t, 32>>&& elem) {
     ordinal_ = Ordinal::kVariant;
@@ -217,12 +193,6 @@ class UnionSize36Alignment4 {
   void set_variant(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kVariant;
     set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 32>>(
-        allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_variant(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kVariant;
-    set_variant(::fidl::tracking_ptr<::fidl::Array<uint8_t, 32>>(
         allocator, std::forward<Args>(args)...));
   }
 
@@ -306,14 +276,6 @@ class UnionSize12Alignment4 {
         allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static UnionSize12Alignment4 WithVariant(::fidl::Allocator& allocator,
-                                           Args&&... args) {
-    UnionSize12Alignment4 result;
-    result.set_variant(::fidl::tracking_ptr<::fidl::Array<uint8_t, 6>>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   void set_variant(::fidl::tracking_ptr<::fidl::Array<uint8_t, 6>>&& elem) {
     ordinal_ = Ordinal::kVariant;
@@ -324,12 +286,6 @@ class UnionSize12Alignment4 {
   void set_variant(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kVariant;
     set_variant(::fidl::ObjectView<::fidl::Array<uint8_t, 6>>(
-        allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_variant(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kVariant;
-    set_variant(::fidl::tracking_ptr<::fidl::Array<uint8_t, 6>>(
         allocator, std::forward<Args>(args)...));
   }
 
@@ -415,15 +371,6 @@ class UnionSize24Alignment8 {
         allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static UnionSize24Alignment8 WithVariant(::fidl::Allocator& allocator,
-                                           Args&&... args) {
-    UnionSize24Alignment8 result;
-    result.set_variant(::fidl::tracking_ptr<
-                       ::fidl_test_unionsandwich::wire::StructSize16Alignment8>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   void set_variant(
       ::fidl::tracking_ptr<
@@ -436,13 +383,6 @@ class UnionSize24Alignment8 {
   void set_variant(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kVariant;
     set_variant(::fidl::ObjectView<
-                ::fidl_test_unionsandwich::wire::StructSize16Alignment8>(
-        allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_variant(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kVariant;
-    set_variant(::fidl::tracking_ptr<
                 ::fidl_test_unionsandwich::wire::StructSize16Alignment8>(
         allocator, std::forward<Args>(args)...));
   }

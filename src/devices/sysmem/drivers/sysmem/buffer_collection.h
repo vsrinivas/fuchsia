@@ -9,7 +9,6 @@
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/fidl/internal.h>
-#include <lib/fidl/llcpp/heap_allocator.h>
 
 #include <list>
 

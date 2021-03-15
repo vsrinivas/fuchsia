@@ -5,7 +5,6 @@
 #include "lib/fidl-async-2/fidl_struct.h"
 
 #include <inttypes.h>
-#include <lib/fidl/llcpp/heap_allocator.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zx/event.h>
 

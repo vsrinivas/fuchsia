@@ -14,7 +14,6 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/closure-queue/closure_queue.h>
-#include <lib/fidl/llcpp/heap_allocator.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>

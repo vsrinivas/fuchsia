@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/dsi/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
-#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/mipi-dsi/mipi-dsi.h>

@@ -4,8 +4,6 @@
 
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/buffer_allocator.h>
-#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
@@ -378,14 +376,6 @@ class Table final {
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
-  template <typename... Args>
-  Table& set_Field(::fidl::Allocator& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
-    frame_ptr_->Field_.data =
-        ::fidl::tracking_ptr<int32_t>(allocator, std::forward<Args>(args)...);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
   Table& set_Field(::fidl::tracking_ptr<int32_t> elem) {
     frame_ptr_->Field_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
@@ -401,8 +391,6 @@ class Table final {
   // another table.
   explicit Table(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  explicit Table(::fidl::Allocator& allocator)
-      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
   explicit Table(::fidl::tracking_ptr<Frame>&& frame_ptr)
       : frame_ptr_(std::move(frame_ptr)) {}
   ~Table() = default;
@@ -418,10 +406,6 @@ class Table final {
   void Allocate(::fidl::AnyAllocator& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
-  }
-  void Allocate(::fidl::Allocator& allocator) {
-    max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
   }
   void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
     max_ordinal_ = 0;
@@ -744,13 +728,6 @@ class StrictUnion {
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static StrictUnion WithField(::fidl::Allocator& allocator, Args&&... args) {
-    StrictUnion result;
-    result.set_Field(
-        ::fidl::tracking_ptr<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   // union member comment #1
   //
@@ -765,12 +742,6 @@ class StrictUnion {
     ordinal_ = Ordinal::kField;
     set_Field(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_Field(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kField;
-    set_Field(
-        ::fidl::tracking_ptr<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   // union member comment #1
@@ -859,13 +830,6 @@ class FlexibleUnion {
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static FlexibleUnion WithField(::fidl::Allocator& allocator, Args&&... args) {
-    FlexibleUnion result;
-    result.set_Field(
-        ::fidl::tracking_ptr<int32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   // union member comment #1
   //
@@ -880,12 +844,6 @@ class FlexibleUnion {
     ordinal_ = Ordinal::kField;
     set_Field(
         ::fidl::ObjectView<int32_t>(allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_Field(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kField;
-    set_Field(
-        ::fidl::tracking_ptr<int32_t>(allocator, std::forward<Args>(args)...));
   }
 
   // union member comment #1

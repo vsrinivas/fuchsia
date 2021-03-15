@@ -5,7 +5,6 @@
 #ifndef LIB_FIDL_LLCPP_STRING_VIEW_H_
 #define LIB_FIDL_LLCPP_STRING_VIEW_H_
 
-#include <lib/fidl/llcpp/allocator.h>
 #include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fidl/walker.h>
@@ -35,9 +34,6 @@ class StringView final : private VectorView<const char> {
       : VectorView(allocator, from.size()) {
     memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
   }
-  StringView(Allocator& allocator, cpp17::string_view from) : VectorView(allocator, from.size()) {
-    memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
-  }
 
   // Constructs a fidl::StringView referencing a string literal. For example:
   //
@@ -51,10 +47,6 @@ class StringView final : private VectorView<const char> {
   }
 
   void Set(AnyAllocator& allocator, cpp17::string_view from) {
-    Allocate(allocator, from.size());
-    memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
-  }
-  void Set(Allocator& allocator, cpp17::string_view from) {
     Allocate(allocator, from.size());
     memcpy(const_cast<char*>(VectorView::mutable_data()), from.data(), from.size());
   }

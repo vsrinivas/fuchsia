@@ -4,8 +4,6 @@
 
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/buffer_allocator.h>
-#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
@@ -90,13 +88,6 @@ class UnionWithHandle {
         ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static UnionWithHandle WithH(::fidl::Allocator& allocator, Args&&... args) {
-    UnionWithHandle result;
-    result.set_h(::fidl::tracking_ptr<::zx::vmo>(allocator,
-                                                 std::forward<Args>(args)...));
-    return result;
-  }
 
   void set_h(::fidl::tracking_ptr<::zx::vmo>&& elem) {
     ordinal_ = Ordinal::kH;
@@ -108,12 +99,6 @@ class UnionWithHandle {
     ordinal_ = Ordinal::kH;
     set_h(
         ::fidl::ObjectView<::zx::vmo>(allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_h(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kH;
-    set_h(::fidl::tracking_ptr<::zx::vmo>(allocator,
-                                          std::forward<Args>(args)...));
   }
 
   ::zx::vmo& mutable_h() {
@@ -203,14 +188,6 @@ class TableWithHandle final {
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
-  template <typename... Args>
-  TableWithHandle& set_h(::fidl::Allocator& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
-    frame_ptr_->h_.data =
-        ::fidl::tracking_ptr<::zx::vmo>(allocator, std::forward<Args>(args)...);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
   TableWithHandle& set_h(::fidl::tracking_ptr<::zx::vmo> elem) {
     frame_ptr_->h_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
@@ -226,8 +203,6 @@ class TableWithHandle final {
   // another table.
   explicit TableWithHandle(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  explicit TableWithHandle(::fidl::Allocator& allocator)
-      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
   explicit TableWithHandle(::fidl::tracking_ptr<Frame>&& frame_ptr)
       : frame_ptr_(std::move(frame_ptr)) {}
   ~TableWithHandle() = default;
@@ -244,10 +219,6 @@ class TableWithHandle final {
   void Allocate(::fidl::AnyAllocator& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
-  }
-  void Allocate(::fidl::Allocator& allocator) {
-    max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
   }
   void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
     max_ordinal_ = 0;

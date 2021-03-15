@@ -6,8 +6,6 @@
 
 #include <fuchsia/hardware/dsi/llcpp/fidl.h>
 #include <lib/fidl/llcpp/aligned.h>
-#include <lib/fidl/llcpp/allocator.h>
-#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 #include <lib/fidl/llcpp/memory.h>
 #include <lib/fidl/llcpp/unowned_ptr.h>
 

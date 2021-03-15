@@ -66,14 +66,6 @@ public:
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
     return *this;
   }
-  template <typename... Args>
-  {{ $.Name }}& set_{{ .Name }}(::fidl::Allocator& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
-    frame_ptr_->{{ .Name }}_.data =
-        ::fidl::tracking_ptr<{{ .Type }}>(allocator, std::forward<Args>(args)...);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
-    return *this;
-  }
   {{ $.Name }}& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type }}> elem) {
     frame_ptr_->{{ .Name }}_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
@@ -89,8 +81,6 @@ public:
   // As soon as the frame is given to the table, it must not be used directly or for another table.
   explicit {{ .Name }}(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  explicit {{ .Name }}(::fidl::Allocator& allocator)
-      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
   explicit {{ .Name }}(::fidl::tracking_ptr<Frame>&& frame_ptr)
       : frame_ptr_(std::move(frame_ptr)) {}
   ~{{ .Name }}() = default;
@@ -107,10 +97,6 @@ public:
   void Allocate(::fidl::AnyAllocator& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
-  }
-  void Allocate(::fidl::Allocator& allocator) {
-    max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
   }
   void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
     max_ordinal_ = 0;

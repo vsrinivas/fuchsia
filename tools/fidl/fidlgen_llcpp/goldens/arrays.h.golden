@@ -4,8 +4,6 @@
 
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/buffer_allocator.h>
-#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
@@ -86,13 +84,6 @@ class UnionSmallArray {
         allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static UnionSmallArray WithA(::fidl::Allocator& allocator, Args&&... args) {
-    UnionSmallArray result;
-    result.set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   void set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>>&& elem) {
     ordinal_ = Ordinal::kA;
@@ -103,12 +94,6 @@ class UnionSmallArray {
   void set_a(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kA;
     set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 2>>(
-        allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_a(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kA;
-    set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>>(
         allocator, std::forward<Args>(args)...));
   }
 
@@ -192,13 +177,6 @@ class UnionLargeArray {
         allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static UnionLargeArray WithA(::fidl::Allocator& allocator, Args&&... args) {
-    UnionLargeArray result;
-    result.set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>>(
-        allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   void set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>>&& elem) {
     ordinal_ = Ordinal::kA;
@@ -209,12 +187,6 @@ class UnionLargeArray {
   void set_a(::fidl::AnyAllocator& allocator, Args&&... args) {
     ordinal_ = Ordinal::kA;
     set_a(::fidl::ObjectView<::fidl::Array<uint32_t, 100>>(
-        allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_a(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kA;
-    set_a(::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>>(
         allocator, std::forward<Args>(args)...));
   }
 
@@ -303,14 +275,6 @@ class TableSmallArray final {
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
-  template <typename... Args>
-  TableSmallArray& set_a(::fidl::Allocator& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
-    frame_ptr_->a_.data = ::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>>(
-        allocator, std::forward<Args>(args)...);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
   TableSmallArray& set_a(
       ::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>> elem) {
     frame_ptr_->a_.data = std::move(elem);
@@ -327,8 +291,6 @@ class TableSmallArray final {
   // another table.
   explicit TableSmallArray(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  explicit TableSmallArray(::fidl::Allocator& allocator)
-      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
   explicit TableSmallArray(::fidl::tracking_ptr<Frame>&& frame_ptr)
       : frame_ptr_(std::move(frame_ptr)) {}
   ~TableSmallArray() = default;
@@ -345,10 +307,6 @@ class TableSmallArray final {
   void Allocate(::fidl::AnyAllocator& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
-  }
-  void Allocate(::fidl::Allocator& allocator) {
-    max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
   }
   void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
     max_ordinal_ = 0;
@@ -675,14 +633,6 @@ class TableLargeArray final {
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
-  template <typename... Args>
-  TableLargeArray& set_a(::fidl::Allocator& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
-    frame_ptr_->a_.data = ::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>>(
-        allocator, std::forward<Args>(args)...);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
   TableLargeArray& set_a(
       ::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>> elem) {
     frame_ptr_->a_.data = std::move(elem);
@@ -699,8 +649,6 @@ class TableLargeArray final {
   // another table.
   explicit TableLargeArray(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  explicit TableLargeArray(::fidl::Allocator& allocator)
-      : frame_ptr_(::fidl::tracking_ptr<Frame>(allocator)) {}
   explicit TableLargeArray(::fidl::tracking_ptr<Frame>&& frame_ptr)
       : frame_ptr_(std::move(frame_ptr)) {}
   ~TableLargeArray() = default;
@@ -717,10 +665,6 @@ class TableLargeArray final {
   void Allocate(::fidl::AnyAllocator& allocator) {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
-  }
-  void Allocate(::fidl::Allocator& allocator) {
-    max_ordinal_ = 0;
-    frame_ptr_ = ::fidl::tracking_ptr<Frame>(allocator);
   }
   void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
     max_ordinal_ = 0;

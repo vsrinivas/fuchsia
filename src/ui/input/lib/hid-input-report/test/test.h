@@ -5,8 +5,6 @@
 #ifndef SRC_UI_INPUT_LIB_HID_INPUT_REPORT_TEST_TEST_H_
 #define SRC_UI_INPUT_LIB_HID_INPUT_REPORT_TEST_TEST_H_
 
-#include <lib/fidl/llcpp/buffer_allocator.h>
-
 namespace hid_input_report {
 
 // This is the static size of the buffer to allocate test

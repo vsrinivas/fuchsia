@@ -4,8 +4,6 @@
 
 #include <lib/fidl/internal.h>
 #include <lib/fidl/llcpp/array.h>
-#include <lib/fidl/llcpp/buffer_allocator.h>
-#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/envelope.h>
 #include <lib/fidl/llcpp/errors.h>
@@ -85,15 +83,6 @@ class Example_foo_Result {
             allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static Example_foo_Result WithResponse(::fidl::Allocator& allocator,
-                                         Args&&... args) {
-    Example_foo_Result result;
-    result.set_response(
-        ::fidl::tracking_ptr<::fidl_test_error::wire::Example_foo_Response>(
-            allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   void set_response(
       ::fidl::tracking_ptr<::fidl_test_error::wire::Example_foo_Response>&&
@@ -107,13 +96,6 @@ class Example_foo_Result {
     ordinal_ = Ordinal::kResponse;
     set_response(
         ::fidl::ObjectView<::fidl_test_error::wire::Example_foo_Response>(
-            allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_response(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kResponse;
-    set_response(
-        ::fidl::tracking_ptr<::fidl_test_error::wire::Example_foo_Response>(
             allocator, std::forward<Args>(args)...));
   }
 
@@ -144,14 +126,6 @@ class Example_foo_Result {
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
     return result;
   }
-  template <typename... Args>
-  static Example_foo_Result WithErr(::fidl::Allocator& allocator,
-                                    Args&&... args) {
-    Example_foo_Result result;
-    result.set_err(
-        ::fidl::tracking_ptr<uint32_t>(allocator, std::forward<Args>(args)...));
-    return result;
-  }
 
   void set_err(::fidl::tracking_ptr<uint32_t>&& elem) {
     ordinal_ = Ordinal::kErr;
@@ -163,12 +137,6 @@ class Example_foo_Result {
     ordinal_ = Ordinal::kErr;
     set_err(
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...));
-  }
-  template <typename... Args>
-  void set_err(::fidl::Allocator& allocator, Args&&... args) {
-    ordinal_ = Ordinal::kErr;
-    set_err(
-        ::fidl::tracking_ptr<uint32_t>(allocator, std::forward<Args>(args)...));
   }
 
   uint32_t& mutable_err() {

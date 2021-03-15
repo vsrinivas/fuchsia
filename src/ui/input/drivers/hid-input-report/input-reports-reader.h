@@ -8,7 +8,6 @@
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/fidl/llcpp/buffer_then_heap_allocator.h>
 
 #include <fbl/mutex.h>
 #include <fbl/ring_buffer.h>

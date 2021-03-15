@@ -5,7 +5,6 @@
 #ifndef LIB_FIDL_LLCPP_VECTOR_VIEW_H_
 #define LIB_FIDL_LLCPP_VECTOR_VIEW_H_
 
-#include <lib/fidl/llcpp/allocator.h>
 #include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/walker.h>
@@ -62,9 +61,6 @@ class VectorView {
       : count_(initial_count), data_(allocator.AllocateVector<T>(capacity)) {
     ZX_DEBUG_ASSERT(initial_count <= capacity);
   }
-  VectorView(Allocator& allocator, size_t count) : VectorView(allocator.make<T[]>(count), count) {}
-  VectorView(Allocator& allocator, size_t initial_count, size_t capacity)
-      : VectorView(allocator.make<T[]>(capacity), initial_count) {}
   // Ideally these constructors wouldn't be needed, but automatic deduction into the tracking_ptr
   // doesn't currently work. A deduction guide can fix this, but it is C++17-only.
   VectorView(unowned_ptr_t<T> data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
@@ -147,10 +143,6 @@ class VectorView {
     }
     count_ = count;
     data_ = allocator.AllocateVector<T>(count);
-  }
-  void Allocate(Allocator& allocator, size_t count) {
-    set_data_internal(allocator.make<T[]>(count));
-    set_count(count);
   }
 
  private:
