@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -42,14 +42,9 @@ executable("memory_monitor_unittests") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("memory_monitor_tests") {
+fuchsia_unittest_package("memory_monitor_tests") {
+  manifest = "meta/memory_monitor_unittests.cmx"
   deps = [ ":memory_monitor_unittests" ]
-
-  tests = [
-    {
-      name = "memory_monitor_unittests"
-    },
-  ]
 }
 
 executable("bin-monitor") {
@@ -88,28 +83,20 @@ executable("test-inspect") {
   deps += [ "//build/config/sanitizers:suppress-lsan.DO-NOT-USE-THIS" ]
 }
 
-test_package("memory_monitor_inspect_integration_tests") {
-  deps = [
-    ":bin-monitor",
-    ":test-inspect",
-  ]
+fuchsia_component("memory_monitor_test_app_component") {
+  testonly = true
+  component_name = "memory_monitor_test_app"
+  manifest = "meta/memory_monitor_test_app.cmx"
+  deps = [ ":bin-monitor" ]
+}
 
-  binaries = [
-    {
-      name = "memory_monitor_test_app"
-    },
-  ]
+fuchsia_test_component("memory_monitor_inspect_integration_tests_component") {
+  component_name = "memory_monitor_inspect_integration_tests"
+  manifest = "meta/memory_monitor_inspect_integration_tests.cmx"
+  deps = [ ":test-inspect" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/memory_monitor_test_app.cmx")
-      dest = "memory_monitor_test_app.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "memory_monitor_inspect_integration_tests"
-    },
-  ]
+fuchsia_test_package("memory_monitor_inspect_integration_tests") {
+  test_components = [ ":memory_monitor_inspect_integration_tests_component" ]
+  deps = [ ":memory_monitor_test_app_component" ]
 }

@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -56,19 +56,21 @@ executable("memory_metrics_unittests") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("memory_metrics_tests") {
-  deps = [
-    ":memory_metrics_systemtests",
-    ":memory_metrics_unittests",
-  ]
+fuchsia_unittest_component("memory_metrics_unittests_component") {
+  component_name = "memory_metrics_unittests"
+  deps = [ ":memory_metrics_unittests" ]
+}
 
-  tests = [
-    {
-      name = "memory_metrics_unittests"
-    },
-    {
-      name = "memory_metrics_systemtests"
-    },
+fuchsia_test_component("memory_metrics_systemtests_component") {
+  component_name = "memory_metrics_systemtests"
+  manifest = "meta/memory_metrics_systemtests.cmx"
+  deps = [ ":memory_metrics_systemtests" ]
+}
+
+fuchsia_test_package("memory_metrics_tests") {
+  test_components = [
+    ":memory_metrics_systemtests_component",
+    ":memory_metrics_unittests_component",
   ]
 }
 
