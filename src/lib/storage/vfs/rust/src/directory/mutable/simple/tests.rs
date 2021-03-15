@@ -983,7 +983,8 @@ fn can_create_nested() {
     test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
         let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
         let create_flags = flags | OPEN_FLAG_CREATE;
-        let create_directory_flags = flags | OPEN_FLAG_DIRECTORY | OPEN_FLAG_CREATE;
+        let create_directory_flags =
+            flags | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DIRECTORY | OPEN_FLAG_CREATE;
 
         open_as_vmo_file_assert_content!(&proxy, create_flags, "etc/passwd", "passwd - 0");
         let log = open_get_directory_proxy_assert_ok!(&proxy, create_directory_flags, "tmp/log");
@@ -999,6 +1000,29 @@ fn can_create_nested() {
         }
 
         open_as_vmo_file_assert_content!(&log, create_flags, "apache/access.log", "access.log - 1");
+
+        assert_close!(log);
+        assert_close!(proxy);
+    })
+    .entry_constructor(constructor)
+    .run();
+}
+
+#[test]
+fn can_not_create_nested_when_parent_not_writable() {
+    // This tree constructor allows creation of non-leaf entries. Any intermediately missing path
+    // components are created as mutable directories.
+    let constructor = mocks::PermissiveTreeConstructor::new();
+
+    let root = mut_pseudo_directory! {};
+
+    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
+        let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        let create_flags = flags | OPEN_FLAG_CREATE;
+        let create_directory_flags = flags | OPEN_FLAG_DIRECTORY | OPEN_FLAG_CREATE;
+
+        let log = open_get_directory_proxy_assert_ok!(&proxy, create_directory_flags, "tmp/log");
+        open_as_file_assert_err!(&log, create_flags, "apache/access.log", Status::ACCESS_DENIED);
 
         assert_close!(log);
         assert_close!(proxy);

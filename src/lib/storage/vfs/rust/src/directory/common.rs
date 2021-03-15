@@ -98,6 +98,11 @@ pub fn check_child_connection_flags(parent_flags: u32, mut flags: u32) -> Result
         flags &= !OPEN_FLAG_POSIX;
     }
 
+    if flags & OPEN_FLAG_CREATE != 0 && parent_flags & OPEN_RIGHT_WRITABLE == 0 {
+        // Can only use CREATE flags if the parent connection is writable.
+        return Err(Status::ACCESS_DENIED);
+    }
+
     if stricter_or_same_rights(parent_flags, flags) {
         Ok(flags)
     } else {
@@ -145,7 +150,7 @@ pub fn encode_dirent(buf: &mut Vec<u8>, max_bytes: u64, entry: &EntryInfo, name:
 
 #[cfg(test)]
 mod tests {
-    use super::new_connection_validate_flags;
+    use super::{check_child_connection_flags, new_connection_validate_flags};
 
     use {
         fidl_fuchsia_io::{
@@ -279,5 +284,21 @@ mod tests {
     #[test]
     fn new_connection_validate_flags_mode_socket() {
         ncvf_err!(OPEN_RIGHT_READABLE, MODE_TYPE_SOCKET, Status::INVALID_ARGS);
+    }
+
+    #[test]
+    fn check_child_connection_flags_create_flags() {
+        assert!(check_child_connection_flags(OPEN_RIGHT_WRITABLE, OPEN_FLAG_CREATE).is_ok());
+        assert!(check_child_connection_flags(
+            OPEN_RIGHT_WRITABLE,
+            OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT
+        )
+        .is_ok());
+
+        assert_eq!(check_child_connection_flags(0, OPEN_FLAG_CREATE), Err(Status::ACCESS_DENIED));
+        assert_eq!(
+            check_child_connection_flags(0, OPEN_FLAG_CREATE | OPEN_FLAG_CREATE_IF_ABSENT),
+            Err(Status::ACCESS_DENIED)
+        );
     }
 }
