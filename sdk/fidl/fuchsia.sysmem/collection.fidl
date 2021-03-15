@@ -121,9 +121,9 @@ protocol BufferCollectionToken {
     /// Normally a participant will convert the token into a BufferCollection
     /// view, but a particpant is also free to Close() the token (and then close
     /// the channel immediately or shortly later in response to server closing
-    /// its end), which avoids causing LogicalBufferCollection failure.
+    /// its end), which avoids causing logical buffer collection failure.
     /// Normally an unexpected token channel close will cause
-    /// LogicalBufferCollection failure.
+    /// logical buffer collection failure.
     Close();
 
     /// Set a name for VMOs in this buffer collection. The name may be truncated shorter. The name
@@ -193,7 +193,7 @@ protocol BufferCollectionToken {
 /// BufferCollection is a connection directly from a participant to sysmem re.
 /// a logical BufferCollection; typically the logical BufferCollection is shared
 /// with other participants.  In other words, an instance of the BufferCollection
-/// interface is a view of a "LogicalBufferCollection".
+/// interface is a view of a "logical buffer collection".
 ///
 /// This connection exists to facilitate async indication of when the logical
 /// BufferCollection has been populated with buffers.
@@ -358,12 +358,12 @@ protocol BufferCollection {
     CheckSingleBufferAllocated(uint64 buffer_index);
 
     /// The server handles unexpected failure of a BufferCollection by failing
-    /// the whole LogicalBufferCollection.  Partly this is to expedite closing
+    /// the whole logical buffer collection.  Partly this is to expedite closing
     /// VMO handles.  If a participant would like to cleanly close a
-    /// BufferCollection view without causing LogicalBufferCollection failure,
+    /// BufferCollection view without causing logical buffer collection failure,
     /// the participant can send Close() before closing the client end of the
     /// BufferCollection channel.  If this is the last BufferCollection view, the
-    /// LogicalBufferCollection will still go away.
+    /// logical buffer collection will still go away.
     Close();
 
     /// Set a name for VMOs in this buffer collection. The name may be truncated shorter. The name
@@ -471,6 +471,76 @@ protocol BufferCollection {
     [Transitional = "AttachToken() not yet implemented by server"]
     AttachToken(uint32 rights_attenuation_mask,
                 request<BufferCollectionToken> token_request);
+
+    /// AttachLifetimeTracking:
+    ///
+    /// AttachLifetimeTracking() is intended to allow a client to wait until an
+    /// old logical buffer collection is fully or mostly deallocated before
+    /// attempting allocation of a new logical buffer collection.
+    ///
+    /// Attach an eventpair endpoint to the logical buffer collection, so that
+    /// the server_end will be closed when the number of buffers allocated
+    /// drops to 'buffers_remaining'.  The server_end won't close until after
+    /// logical allocation has completed.
+    ///
+    /// If logical allocation fails, such as for an attached sub-tree (using
+    /// AttachToken()), the server_end will close during that failure regardless
+    /// of the number of buffers potenitally allocated in the overall logical
+    /// buffer collection.
+    ///
+    /// Multiple eventpair endpoints can be attached, with an enforced limit of
+    /// SYSMEM_LIFETIME_TRACKING_EVENTPAIR_PER_BUFFER_COLLECTION_CHANNEL_MAX.
+    ///
+    /// The lifetime signalled by this event includes asynchronous cleanup of
+    /// allocated buffers, and this asynchronous cleanup cannot occur until all
+    /// holders of VMO handles to the buffers have closed those VMO handles.
+    /// Therefore clients should take care not to become blocked forever waiting
+    /// for ZX_EVENTPAIR_PEER_CLOSED to be signalled, especially if any of the
+    /// participants using the logical buffer collection are less trusted or
+    /// less reliable.
+    ///
+    /// The buffers_remaining parameter allows waiting for all but
+    /// buffers_remaining buffers to be fully deallocated.  This can be useful
+    /// in situations where a known number of buffers are intentionally not
+    /// closed so that the data can continue to be used, such as for keeping the
+    /// last available video picture displayed in the UI even if the video
+    /// stream was using protected output buffers.  It's outside the scope of
+    /// the BufferCollection interface (at least for now) to determine how many
+    /// buffers may be held without closing, but it'll typically be in the range
+    /// 0-2.
+    ///
+    /// This mechanism is meant to be compatible with other protocols providing
+    /// a similar AttachLifetimeTracking() mechanism, in that duplicates of the
+    /// same event can be sent to more than one AttachLifetimeTracking(), and
+    /// the ZX_EVENTPAIR_PEER_CLOSED will be signalled when all the lifetime
+    /// over conditions are met (all holders of duplicates have closed their
+    /// handle(s)).
+    ///
+    /// A maximum of
+    /// SYSMEM_LIFETIME_TRACKING_EVENTPAIR_PER_BUFFER_COLLECTION_CHANNEL_MAX
+    /// AttachLifetimeTracking() messages are allowed per BufferCollection
+    /// channel.
+    ///
+    /// There is no way to cancel an attach.  Closing the client end of the
+    /// eventpair doesn't subtract from the number of pending attach(es).
+    ///
+    /// Closing the client's end doesn't result in any action by the server.
+    /// If the server listens to events from the client end at all, it is for
+    /// debug logging only.
+    ///
+    /// The server intentionally doesn't "trust" any bits signalled by the
+    /// client.  This mechanism intentionally uses only ZX_EVENTPAIR_PEER_CLOSED
+    /// which can't be triggered early, and is only triggered when all handles
+    /// to server_end are closed.  No meaning is associated with any of the
+    /// other signal bits, and clients should functionally ignore any other
+    /// signal bits on either end of the eventpair or its peer.
+    ///
+    /// The server_end may lack ZX_RIGHT_SIGNAL or ZX_RIGHT_SIGNAL_PEER, but
+    /// must have ZX_RIGHT_DUPLICATE (and must have ZX_RIGHT_TRANSFER to
+    /// transfer without causing CodecFactory channel failure).
+    [Transitional = "AttachLifetimeTracking() not yet implemented by server"]
+    AttachLifetimeTracking(
+        zx.handle:EVENTPAIR server_end, uint32 buffers_remaining);
 };
 
 /// This interface intentionally doesn't include any event for

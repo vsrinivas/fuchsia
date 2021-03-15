@@ -336,13 +336,23 @@ protocol CodecFactory {
     /// AttachLifetimeTracking:
     ///
     /// Attach an eventpair endpoint to the next Create{X}(), so that the
-    /// codec_end will signal ZX_EVENTPAIR_PEER_CLOSED on the peer of codec_end
-    /// shortly after the created codec is gone.  Multiple eventpair endpoints
-    /// can be attached per create, with an enforced limit of
+    /// codec_end will be closed when the number of buffers allocated reaches
+    /// 'buffers_remaining'.  Multiple eventpair endpoints can be attached per
+    /// create, with an enforced limit of
     /// CODEC_FACTORY_LIFETIME_TRACKING_EVENTPAIR_PER_CREATE_MAX.
     ///
     /// The lifetime signalled by this event is intended to track all resources
-    /// used by the codec, including sysmem-allocated buffers.
+    /// used by the codec, including sysmem-allocated buffers created internally
+    /// by the codec.  The sysmem buffer collections visible to the client, for
+    /// input and output buffers, are not included in the resources tracked
+    /// here, because those can be tracked separately via
+    /// fuchsia.sysmem.BufferCollection.AttachLifetimeTracking().  It is
+    /// permitted to send a duplicate of codec_end to both this
+    /// AttachLifetimeTracking() and also to
+    /// fuchsia.sysmem.BufferCollection.AttachLifetimeTracking().
+    /// The ZX_EVENTPAIR_PEER_CLOSED will happen when both/all lifetimes are
+    /// fully over.  This conveniently avoids needing multiple separate async
+    /// waits by the client.
     ///
     /// In the case of server process crashes, or failure of a codec to plumb
     /// codec_end to sysmem, ZX_EVENTPAIR_PEER_CLOSED signalled on the peer of

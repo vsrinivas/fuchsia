@@ -322,10 +322,10 @@ void BufferCollection::AttachToken(
                  &logical_buffer_collection());
   table_set_.MitigateChurn();
   if (is_done_) {
-    // Probably a Close() followed by AttachToken(), which is not permitted and causes the whole
-    // LogicalBufferCollection to fail.
+    // This is Close() followed by AttachToken(), which is not permitted and causes the
+    // BufferCollection to fail.
     FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
-             "BufferCollectionToken::AttachToken() attempted when is_done_");
+             "BufferCollection::AttachToken() attempted when is_done_");
     return;
   }
 
@@ -356,6 +356,23 @@ void BufferCollection::AttachToken(
   new_node_properties->error_propagation_mode() = ErrorPropagationMode::kDoNotPropagate;
   logical_buffer_collection().CreateBufferCollectionToken(
       shared_logical_buffer_collection(), new_node_properties, std::move(token_request));
+}
+
+void BufferCollection::AttachLifetimeTracking(zx::eventpair server_end, uint32_t buffers_remaining,
+                                              AttachLifetimeTrackingCompleter::Sync& completer) {
+  TRACE_DURATION("gfx", "BufferCollection::AttachLifetimeTracking", "this", this,
+                 "logical_buffer_collection", &logical_buffer_collection());
+  table_set_.MitigateChurn();
+  if (is_done_) {
+    // This is Close() followed by AttachLifetimeTracking() which is not permitted and causes the
+    // BufferCollection to fail.
+    FailSync(FROM_HERE, completer, ZX_ERR_BAD_STATE,
+             "BufferCollection::AttachLifetimeTracking() attempted when is_done_");
+    return;
+  }
+  pending_lifetime_tracking_.emplace_back(PendingLifetimeTracking{
+      .server_end = std::move(server_end), .buffers_remaining = buffers_remaining});
+  MaybeFlushPendingLifetimeTracking();
 }
 
 void BufferCollection::CloseSingleBuffer(uint64_t buffer_index,
@@ -552,6 +569,9 @@ void BufferCollection::OnBuffersAllocated(const AllocationResult& allocation_res
   // reason we have FailAsync() instead of Fail().
   MaybeCompleteWaitForBuffersAllocated();
 
+  // If there are any, they'll be flushed to LogicalBufferCollection now.
+  MaybeFlushPendingLifetimeTracking();
+
   if (!events_) {
     return;
   }
@@ -662,6 +682,25 @@ void BufferCollection::MaybeCompleteWaitForBuffersAllocated() {
     }
     // ~txn
   }
+}
+
+void BufferCollection::MaybeFlushPendingLifetimeTracking() {
+  if (!node_properties().buffers_logically_allocated()) {
+    return;
+  }
+  if (logical_allocation_result_->status != ZX_OK) {
+    // We close these immediately if logical allocation failed, regardless of
+    // the number of buffers potentially allocated in the overall
+    // LogicalBufferCollection.  This is for behavior consistency between
+    // AttachToken() sub-trees and the root_.
+    pending_lifetime_tracking_.clear();
+    return;
+  }
+  for (auto& pending : pending_lifetime_tracking_) {
+    logical_buffer_collection().AttachLifetimeTracking(std::move(pending.server_end),
+                                                       pending.buffers_remaining);
+  }
+  pending_lifetime_tracking_.clear();
 }
 
 bool BufferCollection::ReadyForAllocation() { return has_constraints(); }

@@ -33,6 +33,9 @@
 #include <hw/arch_ops.h>
 #include <zxtest/zxtest.h>
 
+#include "lib/fidl/llcpp/server_end.h"
+#include "lib/zx/eventpair.h"
+
 // To dump a corpus file for sysmem_fuzz.cc test, enable SYSMEM_FUZZ_CORPUS. Files can be found
 // under /data/cache/r/sys/fuchsia.com:sysmem-test:0#meta:sysmem.cmx/ on the device.
 #define SYSMEM_FUZZ_CORPUS 0
@@ -989,6 +992,183 @@ TEST(Sysmem, TokenOneParticipantNoImageConstraints) {
       ASSERT_EQ(size_bytes, 64 * 1024, "");
     } else {
       ASSERT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+    }
+  }
+}
+
+TEST(Sysmem, AttachLifetimeTracking) {
+  zx::channel collection_client;
+  zx_status_t status = make_single_participant_collection(&collection_client);
+  ASSERT_EQ(status, ZX_OK, "");
+
+  SetDefaultCollectionName(collection_client);
+
+  fuchsia_sysmem::BufferCollection::SyncClient collection(std::move(collection_client));
+  auto sync_result = collection.Sync();
+  ASSERT_TRUE(sync_result.ok(), "");
+
+  constexpr uint32_t kNumBuffers = 3;
+  constexpr uint32_t kNumEventpairs = kNumBuffers + 3;
+  zx::eventpair client[kNumEventpairs];
+  zx::eventpair server[kNumEventpairs];
+  for (uint32_t i = 0; i < kNumEventpairs; ++i) {
+    status = zx::eventpair::create(/*options=*/0, &client[i], &server[i]);
+    ASSERT_OK(status, "");
+    collection.AttachLifetimeTracking(std::move(server[i]), i);
+  }
+
+  nanosleep_duration(zx::msec(500));
+
+  for (uint32_t i = 0; i < kNumEventpairs; ++i) {
+    zx_signals_t pending_signals;
+    status =
+        client[i].wait_one(ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite_past(), &pending_signals);
+    ASSERT_EQ(status, ZX_ERR_TIMED_OUT, "");
+    // Buffers are not allocated yet, so lifetime tracking is pending, since we don't yet know how
+    // many buffers there will be.
+    ASSERT_EQ(pending_signals & ZX_EVENTPAIR_PEER_CLOSED, 0, "");
+  }
+
+  fuchsia_sysmem::wire::BufferCollectionConstraints constraints;
+  constraints.usage.cpu =
+      fuchsia_sysmem::wire::cpuUsageReadOften | fuchsia_sysmem::wire::cpuUsageWriteOften;
+  constraints.min_buffer_count_for_camping = kNumBuffers;
+  constraints.has_buffer_memory_constraints = true;
+  constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
+      .min_size_bytes = 64 * 1024,
+      .max_size_bytes = 128 * 1024,
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = true,
+      .inaccessible_domain_supported = false,
+      .heap_permitted_count = 0,
+      .heap_permitted = {},
+  };
+  ZX_DEBUG_ASSERT(constraints.image_format_constraints_count == 0);
+  auto set_constraints_result = collection.SetConstraints(true, std::move(constraints));
+  ASSERT_TRUE(set_constraints_result.ok());
+
+  // Enough time to typically notice if server accidentally closes server 0..kNumEventpairs-1.
+  nanosleep_duration(zx::msec(200));
+
+  // Now that we've set constraints, allocation can happen, and ZX_EVENTPAIR_PEER_CLOSED should be
+  // seen for eventpair(s) >= kNumBuffers.
+  for (uint32_t i = 0; i < kNumEventpairs; ++i) {
+    zx_signals_t pending_signals;
+    status = client[i].wait_one(ZX_EVENTPAIR_PEER_CLOSED,
+                                i >= kNumBuffers ? zx::time::infinite() : zx::time::infinite_past(),
+                                &pending_signals);
+    ASSERT_TRUE(status == (i >= kNumBuffers) ? ZX_OK : ZX_ERR_TIMED_OUT, "");
+    ASSERT_TRUE(!!(pending_signals & ZX_EVENTPAIR_PEER_CLOSED) == (i >= kNumBuffers), "");
+  }
+
+  auto wait_for_buffers_allocated_result = collection.WaitForBuffersAllocated();
+  ASSERT_OK(wait_for_buffers_allocated_result.status(), "");
+  auto& response = wait_for_buffers_allocated_result.value();
+  ASSERT_OK(response.status, "");
+  auto& info = response.buffer_collection_info;
+  ASSERT_EQ(info.buffer_count, kNumBuffers, "");
+
+  // ZX_EVENTPAIR_PEER_CLOSED should be seen for eventpair(s) >= kNumBuffers.
+  for (uint32_t i = 0; i < kNumEventpairs; ++i) {
+    zx_signals_t pending_signals;
+    status = client[i].wait_one(ZX_EVENTPAIR_PEER_CLOSED,
+                                i >= kNumBuffers ? zx::time::infinite() : zx::time::infinite_past(),
+                                &pending_signals);
+    ASSERT_TRUE(status == (i >= kNumBuffers) ? ZX_OK : ZX_ERR_TIMED_OUT, "");
+    ASSERT_TRUE(!!(pending_signals & ZX_EVENTPAIR_PEER_CLOSED) == (i >= kNumBuffers), "");
+  }
+
+  zx::channel attached_token_client, attached_token_server;
+  status = zx::channel::create(/*flags=*/0, &attached_token_client, &attached_token_server);
+  ASSERT_OK(status, "");
+  fidl::ClientEnd<fuchsia_sysmem::BufferCollectionToken> attached_token_client_end(
+      std::move(attached_token_client));
+  fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> attached_token_server_end(
+      std::move(attached_token_server));
+  auto attach_result = collection.AttachToken(std::numeric_limits<uint32_t>::max(),
+                                              std::move(attached_token_server_end));
+  ASSERT_OK(attach_result.status(), "");
+  auto sync_result_2 = collection.Sync();
+  ASSERT_OK(sync_result_2.status(), "");
+  zx::channel attached_collection_client, attached_collection_server;
+  status =
+      zx::channel::create(/*flags=*/0, &attached_collection_client, &attached_collection_server);
+  ASSERT_OK(status, "");
+  fuchsia_sysmem::BufferCollection::SyncClient attached_collection(
+      std::move(attached_collection_client));
+  fidl::ServerEnd<fuchsia_sysmem::BufferCollection> attached_collection_server_end(
+      std::move(attached_collection_server));
+  zx::channel allocator_client;
+  status = connect_to_sysmem_driver(&allocator_client);
+  ASSERT_EQ(status, ZX_OK, "");
+  fuchsia_sysmem::Allocator::SyncClient allocator(std::move(allocator_client));
+  auto bind_result = allocator.BindSharedCollection(std::move(attached_token_client_end),
+                                                    std::move(attached_collection_server_end));
+  ASSERT_OK(bind_result.status());
+  auto sync_result_3 = attached_collection.Sync();
+  ASSERT_OK(sync_result_3.status());
+  zx::eventpair attached_lifetime_client, attached_lifetime_server;
+  zx::eventpair::create(/*options=*/0, &attached_lifetime_client, &attached_lifetime_server);
+  // With a buffers_remaining of 0, normally this would require 0 buffers remaining in the
+  // LogicalBuffercollection to close attached_lifetime_server, but because we're about to force
+  // logical allocation failure, it'll close as soon as we hit logical allocation failure for the
+  // attached token.  The logical allocation failure of the attached token doesn't impact collection
+  // in any way.
+  attached_collection.AttachLifetimeTracking(std::move(attached_lifetime_server),
+                                             /*buffers_remaining=*/0);
+  fuchsia_sysmem::wire::BufferCollectionConstraints attached_constraints;
+  attached_constraints.usage.cpu =
+      fuchsia_sysmem::wire::cpuUsageReadOften | fuchsia_sysmem::wire::cpuUsageWriteOften;
+  // We won't be able to logically allocate, because original allocation didn't make room for this
+  // buffer.
+  attached_constraints.min_buffer_count_for_camping = 1;
+  attached_constraints.has_buffer_memory_constraints = true;
+  attached_constraints.buffer_memory_constraints = fuchsia_sysmem::wire::BufferMemoryConstraints{
+      .min_size_bytes = 64 * 1024,
+      .max_size_bytes = 128 * 1024,
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = true,
+      .inaccessible_domain_supported = false,
+      .heap_permitted_count = 0,
+      .heap_permitted = {},
+  };
+  ZX_DEBUG_ASSERT(attached_constraints.image_format_constraints_count == 0);
+  auto attached_set_constraints_result =
+      attached_collection.SetConstraints(true, std::move(attached_constraints));
+  ASSERT_TRUE(attached_set_constraints_result.ok());
+  zx_signals_t attached_pending_signals;
+  status = attached_lifetime_client.wait_one(ZX_EVENTPAIR_PEER_CLOSED, zx::time::infinite(),
+                                             &attached_pending_signals);
+  ASSERT_OK(status, "");
+  ASSERT_TRUE(attached_pending_signals & ZX_EVENTPAIR_PEER_CLOSED, "");
+
+  collection.client_end().reset();
+
+  // ZX_EVENTPAIR_PEER_CLOSED should be seen for eventpair(s) >= kNumBuffers.
+  for (uint32_t i = 0; i < kNumEventpairs; ++i) {
+    zx_signals_t pending_signals;
+    status = client[i].wait_one(ZX_EVENTPAIR_PEER_CLOSED,
+                                i >= kNumBuffers ? zx::time::infinite() : zx::time::infinite_past(),
+                                &pending_signals);
+    ASSERT_TRUE(status == (i >= kNumBuffers) ? ZX_OK : ZX_ERR_TIMED_OUT, "");
+    ASSERT_TRUE(!!(pending_signals & ZX_EVENTPAIR_PEER_CLOSED) == (i >= kNumBuffers), "");
+  }
+
+  for (uint32_t j = 0; j < kNumBuffers; ++j) {
+    info.buffers[j].vmo.reset();
+    for (uint32_t i = 0; i < kNumBuffers; ++i) {
+      zx_signals_t pending_signals;
+      status = client[i].wait_one(
+          ZX_EVENTPAIR_PEER_CLOSED,
+          i >= kNumBuffers - (j + 1) ? zx::time::infinite() : zx::time::infinite_past(),
+          &pending_signals);
+      ASSERT_TRUE(status == (i >= kNumBuffers - (j + 1)) ? ZX_OK : ZX_ERR_TIMED_OUT, "");
+      ASSERT_TRUE(!!(pending_signals & ZX_EVENTPAIR_PEER_CLOSED) == (i >= kNumBuffers - (j + 1)),
+                  "");
     }
   }
 }

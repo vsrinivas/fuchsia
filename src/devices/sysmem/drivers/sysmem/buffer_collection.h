@@ -66,6 +66,8 @@ class BufferCollection : public Node, public fuchsia_sysmem::BufferCollection::I
   void AttachToken(uint32_t rights_attenuation_mask,
                    fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request,
                    AttachTokenCompleter::Sync& completer) override;
+  void AttachLifetimeTracking(zx::eventpair server_end, uint32_t buffers_remaining,
+                              AttachLifetimeTrackingCompleter::Sync& completer) override;
 
   //
   // LogicalBufferCollection uses these:
@@ -118,6 +120,7 @@ class BufferCollection : public Node, public fuchsia_sysmem::BufferCollection::I
   uint32_t GetClientVmoRights();
   uint32_t GetClientAuxVmoRights();
   void MaybeCompleteWaitForBuffersAllocated();
+  void MaybeFlushPendingLifetimeTracking();
 
   void FailAsync(Location location, zx_status_t status, const char* format, ...) __PRINTFLIKE(4, 5);
   // FailSync must be used instead of FailAsync if the current method has a completer that needs a
@@ -170,6 +173,12 @@ class BufferCollection : public Node, public fuchsia_sysmem::BufferCollection::I
 
   // Becomes set when OnBuffersAllocated() is called, and stays set after that.
   std::optional<AllocationResult> logical_allocation_result_;
+
+  struct PendingLifetimeTracking {
+    zx::eventpair server_end;
+    uint32_t buffers_remaining;
+  };
+  std::vector<PendingLifetimeTracking> pending_lifetime_tracking_;
 
   inspect::Node inspect_node_;
   inspect::UintProperty debug_id_property_;

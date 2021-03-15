@@ -411,6 +411,30 @@ void LogicalBufferCollection::CreateBufferCollectionToken(
   token.Bind(std::move(token_request));
 }
 
+void LogicalBufferCollection::AttachLifetimeTracking(zx::eventpair server_end,
+                                                     uint32_t buffers_remaining) {
+  lifetime_tracking_.emplace(buffers_remaining, std::move(server_end));
+  SweepLifetimeTracking();
+}
+
+void LogicalBufferCollection::SweepLifetimeTracking() {
+  while (true) {
+    if (lifetime_tracking_.empty()) {
+      return;
+    }
+    auto last_iter = lifetime_tracking_.end();
+    last_iter--;
+    uint32_t buffers_remaining = last_iter->first;
+    if (buffers_remaining < parent_vmos_.size()) {
+      return;
+    }
+    ZX_DEBUG_ASSERT(buffers_remaining >= parent_vmos_.size());
+    // This does ~server_end, which signals ZX_EVENTPAIR_PEER_CLOSED to the client_end which is
+    // typically held by the client.
+    lifetime_tracking_.erase(last_iter);
+  }
+}
+
 void LogicalBufferCollection::OnSetConstraints() {
   // MaybeAllocate() requires the caller to keep "this" alive.
   auto self = fbl::RefPtr(this);
@@ -2776,6 +2800,7 @@ fit::result<zx::vmo> LogicalBufferCollection::AllocateVmo(
         auto node_handle = parent_vmos_.extract(tracked_parent_vmo->vmo().get());
         ZX_DEBUG_ASSERT(!node_handle || node_handle.mapped().get() == tracked_parent_vmo);
         allocator->Delete(tracked_parent_vmo->TakeVmo());
+        SweepLifetimeTracking();
         // ~node_handle may delete "this".
       }));
 

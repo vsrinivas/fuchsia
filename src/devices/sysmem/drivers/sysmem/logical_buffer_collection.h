@@ -85,6 +85,9 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
       fbl::RefPtr<LogicalBufferCollection> self, NodeProperties* new_node_properties,
       fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request);
 
+  void AttachLifetimeTracking(zx::eventpair server_end, uint32_t buffers_remaining);
+  void SweepLifetimeTracking();
+
   void OnSetConstraints();
 
   void SetName(uint32_t priority, std::string name);
@@ -626,6 +629,9 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
     // Only for asserts:
     bool waiting_ = {};
   };
+
+  // From buffers_remaining to server_end.
+  std::multimap<uint32_t, zx::eventpair> lifetime_tracking_;
 
   // It's nice for members containing timers to be last for destruction order purposes, but the
   // destructor also explicitly cancels timers to avoid any brittle-ness from members potentially
