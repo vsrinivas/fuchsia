@@ -348,8 +348,10 @@ int main(int argc, char** argv) {
 
   // NOTE: This will be the only source of zx::debuglog in the system.
   // Eventually, we will receive this through a startup handle from userboot.
+  zx::resource root_resource(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+  ZX_ASSERT(root_resource.is_valid());
   zx::debuglog log;
-  zx_status_t status = zx::debuglog::create(zx::resource(), 0, &log);
+  zx_status_t status = zx::debuglog::create(root_resource, 0, &log);
   ZX_ASSERT(status == ZX_OK);
 
   status = SetupStdout(log);
@@ -382,7 +384,7 @@ int main(int argc, char** argv) {
   resources.smc.reset(zx_take_startup_handle(PA_HND(PA_SMC_RESOURCE, 0)));
   ZX_ASSERT_MSG(resources.smc.is_valid(), "Invalid SMC root resource handle\n");
 #endif
-  resources.root.reset(zx_take_startup_handle(PA_HND(PA_RESOURCE, 0)));
+  resources.root = std::move(root_resource);
   ZX_ASSERT_MSG(resources.root.is_valid(), "Invalid root resource handle\n");
 
   // Memfs attempts to read the UTC clock to set file times, but bootsvc starts
