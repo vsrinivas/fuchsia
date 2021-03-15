@@ -9,6 +9,8 @@
 
 #include <ddk/debug.h>
 
+#include "fuchsia/hardware/pci/c/banjo.h"
+
 namespace ahci {
 
 PciBus::~PciBus() {}
@@ -61,7 +63,7 @@ zx_status_t PciBus::Configure(zx_device_t* parent) {
   }
 
   // Request 1 interrupt of any mode.
-  status = pci_configure_irq_mode(&pci_, 1, nullptr);
+  status = pci_configure_irq_mode(&pci_, 1, &irq_mode_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: no interrupts available %d", status);
     return ZX_ERR_NO_RESOURCES;
@@ -106,7 +108,13 @@ zx_status_t PciBus::BtiPin(uint32_t options, const zx::unowned_vmo& vmo, uint64_
   return status;
 }
 
-zx_status_t PciBus::InterruptWait() { return irq_.wait(nullptr); }
+zx_status_t PciBus::InterruptWait() {
+  if (irq_mode_ == PCI_IRQ_MODE_LEGACY) {
+    pci_ack_interrupt(&pci_);
+  }
+
+  return irq_.wait(nullptr);
+}
 
 void PciBus::InterruptCancel() { irq_.destroy(); }
 
