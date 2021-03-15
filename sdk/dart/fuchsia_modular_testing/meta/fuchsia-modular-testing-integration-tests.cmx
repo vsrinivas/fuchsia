@@ -10,7 +10,6 @@
             "fuchsia.modular.ComponentContext",
             "fuchsia.modular.Lifecycle",
             "fuchsia.modular.ModuleContext",
-            "fuchsia.netstack.Netstack",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.testing.runner.TestRunner",
