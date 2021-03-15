@@ -15,10 +15,10 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
-#include <ddk/device.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/c/fidl.h>
 #include <fuchsia/kernel/c/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
 #include <lib/fidl/txn_header.h>

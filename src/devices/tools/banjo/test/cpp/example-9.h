@@ -8,9 +8,9 @@
 #pragma once
 
 #include <banjo/examples/example9/c/banjo.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/device-internal.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
 #include <zircon/assert.h>

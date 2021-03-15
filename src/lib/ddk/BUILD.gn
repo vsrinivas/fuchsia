@@ -12,6 +12,23 @@ group("tests") {
 
 library_headers("ddk-headers") {
   headers = [
+    "lib/ddk/binding_priv.h",
+    "lib/ddk/debug.h",
+    "lib/ddk/device.h",
+    "lib/ddk/driver.h",
+    "lib/ddk/fragment-device.h",
+    "lib/ddk/io-buffer.h",
+    "lib/ddk/metadata.h",
+    "lib/ddk/mmio-buffer.h",
+    "lib/ddk/phys-iter.h",
+    "lib/ddk/protodefs.h",
+    "lib/ddk/trace/event.h",
+    "lib/ddk/hw/arch_ops.h",
+    "lib/ddk/hw/inout.h",
+    "lib/ddk/hw/reg.h",
+
+    # TODO(fxbug.dev/64649): do not use. These will be removed
+    # after the soft transition is completed.
     "ddk/trace/event.h",
     "ddk/binding_priv.h",
     "ddk/debug.h",
@@ -87,7 +104,10 @@ library_headers("ddk-metadata-headers") {
 }
 
 library_headers("ddk-deprecated-binding-headers") {
-  headers = [ "ddk/binding.h" ]
+  headers = [
+    "ddk/binding.h",
+    "lib/ddk/binding.h",
+  ]
   public_deps = [ ":ddk" ]
   visibility = [
     "//src/connectivity/bluetooth/core/bt-host:*",
@@ -350,10 +370,13 @@ library_headers("ddk-deprecated-binding-headers") {
 # This target should only be used in vendor repositories, where we can't add the target to the
 # visibility list above.
 library_headers("ddk-deprecated-binding-headers-for-vendors") {
-  headers = [ "ddk/binding.h" ]
+  headers = [
+    "ddk/binding.h",
+    "lib/ddk/binding.h",
+  ]
   public_deps = [ ":ddk" ]
 }
 
 library_headers("ddk-device-headers") {
-  headers = [ "ddk/device.h" ]
+  headers = [ "lib/ddk/device.h" ]
 }
