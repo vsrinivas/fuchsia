@@ -544,13 +544,13 @@ void lockup_set_cs_threshold_ticks(zx_ticks_t val) {
   CriticalSectionLockupChecker::set_threshold_ticks(val);
 }
 
-void lockup_begin(const char* name) {
+void lockup_timed_begin(const char* name) {
   LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
   auto& cs_state = state.critical_section;
 
-  // We must maintain the invariant that if a call to `lockup_begin()` increments the depth, the
-  // matching call to `lockup_end()` decrements it.  The most reliable way to accomplish that is to
-  // always increment and always decrement.
+  // We must maintain the invariant that if a call to `lockup_timed_begin()` increments the depth,
+  // the matching call to `lockup_timed_end()` decrements it.  The most reliable way to accomplish
+  // that is to always increment and always decrement.
   cs_state.depth++;
   if (cs_state.depth != 1) {
     // We must be in a nested critical section.  Do nothing so that only the outermost critical
@@ -559,17 +559,17 @@ void lockup_begin(const char* name) {
   }
 
   // This is the outermost critical section.  However, we may be racing with an interrupt handler
-  // that may call into `lockup_begin()`.  Use a compiler fence to ensure that the compiler cannot
-  // reorder upcoming stores to precede the depth=1 store above.  If the compiler were to make such
-  // a reordering the `lockup_begin()` call made by the interrupt handler may incorrectly believe
-  // its critical section is the outermost critical section because it has not seen our depth=1
-  // store.
+  // that may call into `lockup_timed_begin()`.  Use a compiler fence to ensure that the compiler
+  // cannot reorder upcoming stores to precede the depth=1 store above.  If the compiler were to
+  // make such a reordering the `lockup_timed_begin()` call made by the interrupt handler may
+  // incorrectly believe its critical section is the outermost critical section because it has not
+  // seen our depth=1 store.
   //
   // Note, there is a small gap here where the CriticalSectionLockupChecker may fail to notice a
   // lockup (though the HeartbeatLockupChecker may still detect it).  Consider the following:
   //
   //   1. We have stored depth=1, but not yet stored begin_ticks.
-  //   2. An interrupt fires and the handler calls `lockup_begin()`.
+  //   2. An interrupt fires and the handler calls `lockup_timed_begin()`.
   //   3. The handler see that depth is 1 so it does nothing.
   //   4. The CPU enters an infinite loop.
   //   5. CriticalSectionLockupChecker sees that begin_time has not be set so it assumes the CPU is
@@ -600,15 +600,15 @@ void lockup_begin(const char* name) {
   cs_state.begin_ticks.store(now, ktl::memory_order_release);
 }
 
-void lockup_end() {
+void lockup_timed_end() {
   LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
   auto& cs_state = state.critical_section;
 
   // Defer decrementing until the very end of this function to protect against reentrancy hazards
   // from the calls to `KERNEL_OOPS` and `Thread::Current::PrintBacktrace`.
   //
-  // Every call to `lockup_end()` must decrement the depth because every call to `lockup_begin()` is
-  // guaranteed to increment it.
+  // Every call to `lockup_timed_end()` must decrement the depth because every call to
+  // `lockup_timed_begin()` is guaranteed to increment it.
   auto cleanup = fbl::MakeAutoCall([&cs_state]() {
     DEBUG_ASSERT(cs_state.depth > 0);
     cs_state.depth--;
@@ -622,7 +622,7 @@ void lockup_end() {
   }
 
   // This is the outermost critical section.  However, we may be racing with an interrupt handler
-  // that may call into `lockup_begin()`.  Use a compiler fence to ensure that the following
+  // that may call into `lockup_timed_begin()`.  Use a compiler fence to ensure that the following
   // cs_state operations cannot be reordered to preceded the depth operations above.
   ktl::atomic_signal_fence(std::memory_order_seq_cst);
 
@@ -733,12 +733,12 @@ void lockup_trigger_critical_section(cpu_num_t cpu, zx_duration_t duration) {
   run_lockup_func(cpu, duration, [](void* arg) -> int {
     const zx_duration_t duration = *reinterpret_cast<zx_duration_t*>(arg);
     AutoPreemptDisabler preempt_disable;
-    LOCKUP_BEGIN("trigger-tool");
+    LOCKUP_TIMED_BEGIN("trigger-tool");
     const zx_time_t deadline = zx_time_add_duration(current_time(), duration);
     while (current_time() < deadline) {
       arch::Yield();
     }
-    LOCKUP_END();
+    LOCKUP_TIMED_END();
     return 0;
   });
 }

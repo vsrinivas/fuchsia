@@ -51,7 +51,7 @@ class TA_CAP("mutex") SpinLockBase {
     static_assert(kIsMonitored, "spinlock is unmonitored, use Acquire() instead");
     DEBUG_ASSERT(arch_ints_disabled());
     DEBUG_ASSERT(!arch_spin_lock_held(&spinlock_));
-    LOCKUP_BEGIN(name);
+    LOCKUP_TIMED_BEGIN(name);
     arch_spin_lock(&spinlock_);
   }
 
@@ -70,7 +70,7 @@ class TA_CAP("mutex") SpinLockBase {
     static_assert(kIsMonitored, "spinlock is unmonitored, use TryAcquire() instead");
     bool failed_to_acquire = arch_spin_trylock(&spinlock_);
     if (!failed_to_acquire) {
-      LOCKUP_BEGIN(name);
+      LOCKUP_TIMED_BEGIN(name);
     }
     return failed_to_acquire;
   }
@@ -81,7 +81,7 @@ class TA_CAP("mutex") SpinLockBase {
   void Release() TA_REL() {
     arch_spin_unlock(&spinlock_);
     if constexpr (kIsMonitored) {
-      LOCKUP_END();
+      LOCKUP_TIMED_END();
     }
   }
 
