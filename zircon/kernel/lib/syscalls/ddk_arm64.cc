@@ -68,9 +68,11 @@ zx_status_t arch_smc_call(const zx_smc_parameters_t* params, zx_smc_result_t* re
     if (CheckForOverrun(kOverrunThreshold)) {
       printf("SMC arguments: w0=0x%" PRIx32 ", x1=0x%" PRIx64 ", x2=0x%" PRIx64 ", x3=0x%" PRIx64
              ", x4=0x%" PRIx64 ", x5=0x%" PRIx64 ", x6=0x%" PRIx64 ", w7=0x%" PRIx32
-             " duration=%ldns\n",
+             "\nSMC results:   x0=0x%" PRIx64 ", x1=0x%" PRIx64 ", x2=0x%" PRIx64 ", x3=0x%" PRIx64
+             ", x6=0x%" PRIx64 "\nduration=%ldns\n",
              params->func_id, params->arg1, params->arg2, params->arg3, params->arg4, params->arg5,
-             params->arg6, client_and_secure_os_id, delta);
+             params->arg6, client_and_secure_os_id, arm_result.x0, arm_result.x1, arm_result.x2,
+             arm_result.x3, arm_result.x6, delta);
     }
   }
 
