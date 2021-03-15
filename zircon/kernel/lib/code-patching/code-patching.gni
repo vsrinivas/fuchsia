@@ -272,7 +272,7 @@ template("code_patching_hermetic_stub") {
       case_id_header = "arch/code-patches/case-id.h"
 
       # Public to propagate to :main_target.
-      public_deps = [ "//zircon/kernel/arch/$zircon_cpu/code-patching:headers" ]
+      public_deps = [ "//zircon/kernel/arch/$zircon_cpu/code-patches:headers" ]
     }
 
     outputs = [ gen_file ]

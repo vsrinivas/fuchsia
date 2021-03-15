@@ -3,10 +3,7 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#include "arch/x86/user_copy.h"
-
 #include <assert.h>
-#include <lib/code_patching.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/types.h>
@@ -17,55 +14,9 @@
 #include <kernel/thread.h>
 #include <vm/vm.h>
 
+#include "arch/x86/user_copy.h"
+
 #define LOCAL_TRACE 0
-
-CODE_TEMPLATE(kStacInstruction, "stac")
-CODE_TEMPLATE(kClacInstruction, "clac")
-static const uint8_t kNopInstruction = 0x90;
-
-extern "C" {
-
-void fill_out_stac_instruction(const CodePatchInfo* patch) {
-  const size_t kSize = 3;
-  DEBUG_ASSERT(patch->dest_size == kSize);
-  DEBUG_ASSERT(kStacInstructionEnd - kStacInstruction == kSize);
-  if (g_x86_feature_has_smap) {
-    memcpy(patch->dest_addr, kStacInstruction, kSize);
-  } else {
-    memset(patch->dest_addr, kNopInstruction, kSize);
-  }
-}
-
-void fill_out_clac_instruction(const CodePatchInfo* patch) {
-  const size_t kSize = 3;
-  DEBUG_ASSERT(patch->dest_size == kSize);
-  DEBUG_ASSERT(kClacInstructionEnd - kClacInstruction == kSize);
-  if (g_x86_feature_has_smap) {
-    memcpy(patch->dest_addr, kClacInstruction, kSize);
-  } else {
-    memset(patch->dest_addr, kNopInstruction, kSize);
-  }
-}
-
-void x86_usercopy_select(const CodePatchInfo* patch) {
-  const ptrdiff_t kSize = 19;
-  DEBUG_ASSERT(patch->dest_size == kSize);
-  extern char _x86_usercopy_erms;
-  extern char _x86_usercopy_erms_end;
-  DEBUG_ASSERT(&_x86_usercopy_erms_end - &_x86_usercopy_erms <= kSize);
-  extern char _x86_usercopy_quad;
-  extern char _x86_usercopy_quad_end;
-  DEBUG_ASSERT(&_x86_usercopy_quad_end - &_x86_usercopy_quad <= kSize);
-
-  memset(patch->dest_addr, kNopInstruction, kSize);
-  if (x86_feature_test(X86_FEATURE_ERMS) ||
-      (x86_get_microarch_config()->x86_microarch == X86_MICROARCH_AMD_ZEN)) {
-    memcpy(patch->dest_addr, &_x86_usercopy_erms, &_x86_usercopy_erms_end - &_x86_usercopy_erms);
-  } else {
-    memcpy(patch->dest_addr, &_x86_usercopy_quad, &_x86_usercopy_quad_end - &_x86_usercopy_quad);
-  }
-}
-}
 
 enum class CopyDirection { ToUser, FromUser };
 

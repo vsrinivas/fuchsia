@@ -26,4 +26,12 @@
 // mitigation is the default and patching is equivalent to `nop`-ing it out.
 #define CASE_ID_MDS_TAA_MITIGATION 1
 
+// Encodes a decision between implementations of
+// `_x86_user_copy_to_or_from_user()`, in which we try to take advantage of
+// optimizations (e.g., in the case when `movsb` is expected to be more
+// efficient than `movsq`) and securities (e.g., SMAP) when available.
+//
+// Note: the "__" is intentional as the function name has a leading underscore.
+#define CASE_ID__X86_COPY_TO_OR_FROM_USER 2
+
 #endif  // ZIRCON_KERNEL_ARCH_X86_CODE_PATCHES_INCLUDE_ARCH_CODE_PATCHES_CASE_ID_H_

@@ -154,8 +154,6 @@ zx_library("x86") {
     "system_topology.cc",
     "thread.cc",
     "timer_freq.cc",
-    "user-copy/user-copy.S",
-    "user_copy.cc",
     "uspace_entry.S",
   ]
   deps = [
@@ -163,6 +161,7 @@ zx_library("x86") {
     ":tests",
     "code-patches",
     "cpuid",
+    "user-copy",
     "//zircon/kernel/dev/hw_rng",
     "//zircon/kernel/dev/iommu/dummy",
     "//zircon/kernel/dev/iommu/intel",

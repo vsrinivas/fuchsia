@@ -1,0 +1,105 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/cpp/library_headers.gni")
+import("//build/test.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
+import("//zircon/kernel/lib/code-patching/code-patching.gni")
+
+library_headers("headers") {
+  headers = [ "arch/x86/user-copy/selection.h" ]
+  if (is_kernel) {
+    public_deps = [ "//zircon/kernel/lib/arch:headers" ]
+  } else {
+    public_deps = [ "//zircon/kernel/lib/arch" ]
+  }
+}
+
+template("user_copy_alternative") {
+  defs = invoker.defines + [ "FUNCTION_NAME=${target_name}" ]
+
+  if (is_kernel) {
+    code_patching_hermetic_alternative(target_name) {
+      visibility = [ ":*" ]
+      sources = [ "user-copy.S" ]
+      deps = [ "//zircon/kernel/lib/arch:headers" ]
+      defines = defs
+    }
+  }
+  if (is_fuchsia) {
+    source_set("${target_name}_tests") {
+      testonly = true
+      visibility = [ ":*" ]
+      sources = [
+        "copy-tests.cc",
+        "user-copy.S",
+      ]
+      defines = defs
+      deps = [
+        "//third_party/googletest:gtest",
+        "//zircon/kernel/lib/arch",
+      ]
+    }
+  }
+}
+
+user_copy_alternative("_x86_copy_to_or_from_user_movsq") {
+  defines = []
+}
+
+user_copy_alternative("_x86_copy_to_or_from_user_movsq_smap") {
+  defines = [ "SMAP" ]
+}
+
+user_copy_alternative("_x86_copy_to_or_from_user_movsb") {
+  defines = [ "MOVSB" ]
+}
+
+user_copy_alternative("_x86_copy_to_or_from_user_movsb_smap") {
+  defines = [
+    "MOVSB",
+    "SMAP",
+  ]
+}
+
+if (is_kernel) {
+  source_set("user-copy") {
+    sources = [ "user-copy.cc" ]
+    public_deps = [ ":headers" ]
+    deps = [ ":_x86_copy_to_or_from_user" ]
+  }
+
+  code_patching_hermetic_stub("_x86_copy_to_or_from_user") {
+    deps = [
+      ":_x86_copy_to_or_from_user_movsb",
+      ":_x86_copy_to_or_from_user_movsb_smap",
+      ":_x86_copy_to_or_from_user_movsq",
+      ":_x86_copy_to_or_from_user_movsq_smap",
+    ]
+  }
+}
+
+if (is_fuchsia) {
+  fuchsia_unittest_package("tests") {
+    component_name = "x86-user-copy-tests"
+    package_name = component_name
+    deps = [ ":x86-user-copy-tests" ]
+  }
+
+  test("x86-user-copy-tests") {
+    sources = [ "selection-tests.cc" ]
+    deps = [
+      # Toggling SMAP is privileged (and very non-hermetic) so we only test
+      # the non-SMAP variants outside of the kernel.
+      ":_x86_copy_to_or_from_user_movsb_tests",
+      ":_x86_copy_to_or_from_user_movsq_tests",
+      ":headers",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+      "//zircon/kernel/lib/arch/testing",
+    ]
+  }
+}

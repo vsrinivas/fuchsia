@@ -15,6 +15,7 @@
 #include <cstdio>
 
 #include <arch/code-patches/case-id.h>
+#include <arch/x86/user-copy/selection.h>
 #include <hwreg/x86msr.h>
 
 namespace {
@@ -81,6 +82,13 @@ void ArchPatchCode(ktl::span<const code_patching::Directive> patches) {
         }
         PrintCaseInfo(patch, "MDS/TAA bug mitigation enabled");
         continue;  // No patching, so skip past sync'ing.
+      }
+      case CASE_ID__X86_COPY_TO_OR_FROM_USER: {
+        ktl::string_view name = SelectX86UserCopyAlternative(cpuid);
+        auto alternative = GetPatchAlternative(name);
+        code_patching::Patch(insns, alternative);
+        PrintCaseInfo(patch, "using user-copy alternative \"%V\"", name);
+        break;
       }
       default:
         ZX_PANIC("code-patching: unrecognized patch case ID: %u: [%#lx, %#lx)\n", patch.id,
