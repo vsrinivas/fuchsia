@@ -20,6 +20,7 @@ import (
 
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/artifacts"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/packages"
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/paver"
 	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/sl4f"
 	"go.fuchsia.dev/fuchsia/tools/net/sshutil"
 
@@ -34,13 +35,14 @@ var sshConnectBackoff = retry.NewConstantBackoff(5 * time.Second)
 
 // Client manages the connection to the device.
 type Client struct {
+	deviceFinder         *DeviceFinder
 	deviceResolver       DeviceResolver
 	sshClient            *sshutil.Client
 	initialMonotonicTime time.Time
 }
 
 // NewClient creates a new Client.
-func NewClient(ctx context.Context, deviceResolver DeviceResolver, privateKey ssh.Signer) (*Client, error) {
+func NewClient(ctx context.Context, deviceFinder *DeviceFinder, deviceResolver DeviceResolver, privateKey ssh.Signer) (*Client, error) {
 	sshConfig, err := newSSHConfig(privateKey)
 	if err != nil {
 		return nil, err
@@ -60,6 +62,7 @@ func NewClient(ctx context.Context, deviceResolver DeviceResolver, privateKey ss
 	}
 
 	c := &Client{
+		deviceFinder:   deviceFinder,
 		deviceResolver: deviceResolver,
 		sshClient:      sshClient,
 	}
@@ -468,7 +471,7 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 
 	// Configure the target to use this repository as "fuchsia-pkg://host_target_testing_sl4f".
 	repoName := "host_target_testing_sl4f"
-	repoServer, err := c.ServePackageRepository(ctx, repo, repoName, false)
+	repoServer, err := c.ServePackageRepository(ctx, repo, repoName, true)
 	if err != nil {
 		return nil, fmt.Errorf("error serving repo to device: %w", err)
 	}
@@ -479,7 +482,7 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 		return nil, fmt.Errorf("error resolving device host: %w", err)
 	}
 
-	rpcClient, err := sl4f.NewClient(ctx, c.sshClient, net.JoinHostPort(deviceHostname, "80"), repoName)
+	rpcClient, err := sl4f.NewClient(ctx, c.sshClient, net.JoinHostPort(deviceHostname, "80"), "fuchsia.com")
 	if err != nil {
 		return nil, fmt.Errorf("error creating sl4f client: %w", err)
 	}
@@ -493,7 +496,7 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 // already in recovery, since there are multiple ways to get a device into
 // recovery.
 func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
-	paver, err := build.GetPaver(ctx)
+	p, err := build.GetPaver(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get paver to pave device: %w", err)
 	}
@@ -502,8 +505,19 @@ func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
 		return fmt.Errorf("failed to reboot to recovery during paving: %w", err)
 	}
 
-	// Actually pave the device.
-	if err = paver.Pave(ctx, c.deviceResolver.Name()); err != nil {
+	// First, pave the build's zedboot onto the device.
+	logger.Infof(ctx, "waiting for device to enter zedboot")
+	listeningName := c.waitToFindDeviceInNetboot(ctx)
+
+	if err = p.PaveWithOptions(ctx, listeningName, paver.Options{Mode: paver.ZedbootOnly}); err != nil {
+		return fmt.Errorf("device failed to pave: %w", err)
+	}
+
+	// Next, pave the build onto the device.
+	logger.Infof(ctx, "paved zedboot, waiting for the device to boot into zedboot")
+	listeningName = c.waitToFindDeviceInNetboot(ctx)
+
+	if err = p.PaveWithOptions(ctx, listeningName, paver.Options{Mode: paver.SkipZedboot}); err != nil {
 		return fmt.Errorf("device failed to pave: %w", err)
 	}
 
@@ -519,19 +533,41 @@ func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
 	return nil
 }
 
+func (c *Client) waitToFindDeviceInNetboot(ctx context.Context) string {
+	nodeNames := c.deviceResolver.NodeNames()
+
+	// Wait for the device to be listening in netboot.
+	logger.Infof(ctx, "waiting for the to be listening on the nodenames: %v", nodeNames)
+
+	for {
+		if entry, err := c.deviceFinder.Resolve(ctx, Netboot, nodeNames); err == nil {
+			logger.Infof(ctx, "device %v is listening on %q", nodeNames, entry)
+			return entry.NodeName
+		} else {
+			logger.Infof(ctx, "failed to resolve nodenames %v: %v", nodeNames, err)
+		}
+	}
+}
+
+func (c *Client) Name() string {
+	return c.deviceResolver.NodeNames()[0]
+}
+
 type addrResolver struct {
 	deviceResolver DeviceResolver
 	port           string
 }
 
 func (r addrResolver) Resolve(ctx context.Context) (net.Addr, error) {
-	name, err := r.deviceResolver.ResolveName(ctx)
+	host, err := r.deviceResolver.ResolveName(ctx)
 	if err != nil {
+		logger.Warningf(ctx, "failed to resolve %v: %v", r.deviceResolver.NodeNames(), err)
 		return nil, err
 	}
 
-	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(name, r.port))
+	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(host, r.port))
 	if err != nil {
+		logger.Warningf(ctx, "failed to connet to %v (%v): %v", r.deviceResolver.NodeNames(), host, err)
 		return nil, err
 	}
 
