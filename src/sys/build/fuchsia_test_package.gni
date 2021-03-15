@@ -94,6 +94,7 @@ template("fuchsia_test_package") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "disable_elf_binaries_checks",
                              "visibility",
                            ])
     package_name = package_name

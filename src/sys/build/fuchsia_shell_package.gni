@@ -59,6 +59,7 @@ template("fuchsia_shell_package") {
     forward_variables_from(invoker,
                            [
                              "deps",
+                             "disable_elf_binaries_checks",
                              "testonly",
                              "visibility",
                            ])

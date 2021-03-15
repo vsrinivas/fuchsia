@@ -83,6 +83,7 @@ template("fuchsia_package_with_single_component") {
   fuchsia_package(target_name) {
     forward_variables_from(invoker,
                            [
+                             "disable_elf_binaries_checks",
                              "testonly",
                              "visibility",
                            ])

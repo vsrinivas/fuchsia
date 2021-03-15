@@ -166,13 +166,7 @@ generate_package_metadata("monolith_meta_far_merkle_index") {
 pkgsvr_index = "$target_out_dir/pkgsvr_index"
 
 action("pkgsvr_index") {
-  visibility = [
-    ":system_image.manifest",
-    ":system_image.manifest.runtime_deps",
-    ":system_image.manifest.runtime_deps_generate",
-    ":system_image_prime.manifest",
-    ":update_packages.manifest",
-  ]
+  visibility = [ ":*" ]
   testonly = fuchsia_zbi_testonly
   outputs = [ "$target_out_dir/$target_name" ]
   deps = [ ":monolith_meta_far_merkle_index" ]
@@ -202,11 +196,7 @@ generate_package_metadata("preinstall_meta_far_merkle_index") {
 cache_index = "$target_out_dir/cache_index"
 
 action("cache_index") {
-  visibility = [
-    ":system_image.manifest",
-    ":system_image.manifest.runtime_deps",
-    ":system_image.manifest.runtime_deps_generate",
-  ]
+  visibility = [ ":*" ]
   testonly = fuchsia_zbi_testonly
   outputs = [ "$target_out_dir/$target_name" ]
   deps = [ ":preinstall_meta_far_merkle_index" ]

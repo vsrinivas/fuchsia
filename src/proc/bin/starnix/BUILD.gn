@@ -140,6 +140,11 @@ tar_resource("android_system_image") {
 fuchsia_package_with_single_component("android_starnix") {
   manifest = "meta/android_starnix.cml"
   deps = [ ":android_system_image" ]
+
+  # This package intentionally contains many non-Fuchia ELF binaries that
+  # are not under /data/, and some of them are even unstripped, so disable
+  # theses checks to build successfully.
+  disable_elf_binaries_checks = true
 }
 
 group("tests") {

@@ -1,0 +1,60 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+import("//build/rust/config.gni")
+
+# Run a command that verifies that the ELF binaries listed in a given
+# FINI manifest. More specifically, this checks that:
+#
+#  - ELF binaries are all unstripped.
+#  - ELF executables have their dependencies available from the same
+#    manifest.
+#
+# On success, this target simply writes a stamp file. On error, it will
+# print an error message explaining the issue.
+#
+# Arguments:
+#   manifest (required)
+#     [file path] Path to input manifest to verify.
+#
+#   check_debug_files (optional)
+#     [boolean] Set to true to verify that all binaries have proper debug
+#     files.
+#
+#   deps (required)
+#     [list of GN labels] List of dependencies this target depends on.
+#     It should at the very least list the target that generates
+#     the manifest.
+#
+template("verify_manifest_elf_binaries") {
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    script = "//build/dist/verify_manifest_elf_binaries.py"
+    inputs = [ "//build/images/elfinfo.py" ]
+    sources = [ invoker.manifest ]
+    outputs = [ "$target_gen_dir/${target_name}" ]
+    depfile = outputs[0] + ".d"
+    args = [
+      "--check-stripped",
+      "--depfile=" + rebase_path(depfile, root_build_dir),
+      "--manifest=" + rebase_path(sources[0], root_build_dir),
+      "--stamp=" + rebase_path(outputs[0], root_build_dir),
+    ]
+    if (defined(invoker.check_debug_files) && invoker.check_debug_files) {
+      args += [
+        "--check-debug-files",
+
+        # NOTE: clang_prefix and rustc_prefix are already rebased!
+        "--toolchain-lib-dir=${clang_prefix}/../lib",
+        "--toolchain-lib-dir=${rustc_prefix}/../lib",
+      ]
+    }
+    deps = invoker.deps
+  }
+}

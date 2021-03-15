@@ -4,6 +4,7 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/dist/distribution_manifest.gni")
+import("//build/dist/verify_manifest_elf_binaries.gni")
 import("//build/rust/config.gni")
 import("//build/toolchain/runtime/toolchain_runtime_deps.gni")
 
@@ -106,7 +107,10 @@ template("generate_manifest") {
     outputs = [ runtime_deps_manifest ]
   }
 
-  action(target_name) {
+  temp_manifest_action = "${target_name}.temp"
+  temp_manifest = "$target_gen_dir/${target_name}.temp"
+
+  action(temp_manifest_action) {
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -121,13 +125,8 @@ template("generate_manifest") {
     if (!defined(deps)) {
       deps = []
     }
-    if (defined(invoker.output_name)) {
-      manifest_file = "$target_out_dir/${invoker.output_name}"
-    } else {
-      manifest_file = "$target_out_dir/$target_name"
-    }
-    depfile = "${manifest_file}.d"
-    stripped_dir = "${manifest_file}.stripped"
+    depfile = "${temp_manifest}.d"
+    stripped_dir = "${temp_manifest}.stripped"
 
     script = "//build/images/finalize_manifests.py"
     inputs = rebase_path([
@@ -137,7 +136,7 @@ template("generate_manifest") {
                          ],
                          "",
                          "//build/images")
-    outputs = [ manifest_file ]
+    outputs = [ temp_manifest ]
     args = extra_manifest_args + [
              "--depfile=" + rebase_path(depfile, root_build_dir),
              "--stripped-dir=" + rebase_path(stripped_dir, root_build_dir),
@@ -161,8 +160,41 @@ template("generate_manifest") {
     # `--entry` arguments in invoker.args will contribute to the output manifest.
     response_file_contents +=
         [
-          "--output=" + rebase_path(manifest_file, root_build_dir),
+          "--output=" + rebase_path(outputs[0], root_build_dir),
           "--cwd=.",
         ] + invoker.args
+  }
+
+  verify_manifest_action = "${target_name}.verify"
+  verify_manifest_elf_binaries(verify_manifest_action) {
+    forward_variables_from(invoker, [ "testonly" ])
+    manifest = temp_manifest
+    deps = [ ":$temp_manifest_action" ]
+    check_debug_files = true
+  }
+
+  if (defined(invoker.output_name)) {
+    manifest_file = "$target_out_dir/${invoker.output_name}"
+  } else {
+    manifest_file = "$target_out_dir/$target_name"
+  }
+
+  # NOTE: Other targets wants to use get_target_outputs() on $target_name
+  # to retrieve the path of the generated manifest. Meanwhile, we also need
+  # to verify its content _after_ creating it. A copy() is ideal here since
+  # it is cheap (it just creates a hard-link) and allows us to add the right
+  # dependencies.
+  copy(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    sources = [ temp_manifest ]
+    outputs = [ manifest_file ]
+    deps = [
+      ":$temp_manifest_action",
+      ":$verify_manifest_action",
+    ]
   }
 }
