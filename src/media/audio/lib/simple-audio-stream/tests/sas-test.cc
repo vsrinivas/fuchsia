@@ -187,11 +187,14 @@ TEST(SimpleAudioTest, SetAndGetGain) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
-  fidl::aligned<float> target_gain = MockSimpleAudio::kTestGain;
-  builder.set_gain_db(fidl::unowned_ptr(&target_gain));
-  auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
-  ASSERT_OK(status.status());
+  {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
+    gain_state.set_gain_db(allocator, MockSimpleAudio::kTestGain);
+    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    ASSERT_OK(status.status());
+  }
+
   auto gain_state = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state.status());
   ASSERT_EQ(MockSimpleAudio::kTestGain, gain_state->gain_state.gain_db());
@@ -210,11 +213,13 @@ TEST(SimpleAudioTest, WatchGainAndCloseStreamBeforeReply) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
-  fidl::aligned<float> target_gain = MockSimpleAudio::kTestGain;
-  builder.set_gain_db(fidl::unowned_ptr(&target_gain));
-  auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
-  ASSERT_OK(status.status());
+  {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
+    gain_state.set_gain_db(allocator, MockSimpleAudio::kTestGain);
+    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    ASSERT_OK(status.status());
+  }
 
   // One watch for initial reply.
   auto gain_state = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
@@ -252,20 +257,26 @@ TEST(SimpleAudioTest, SetAndGetAgc) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
+  {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
+    gain_state.set_agc_enabled(allocator, true);
+    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    ASSERT_OK(status.status());
+  }
 
-  fidl::aligned<bool> target_agc1 = true;
-  builder.set_agc_enabled(fidl::unowned_ptr(&target_agc1));
-  auto status1 = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
-  ASSERT_OK(status1.status());
   auto gain_state1 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state1.status());
   ASSERT_TRUE(gain_state1->gain_state.agc_enabled());
 
-  fidl::aligned<bool> target_agc2 = false;
-  builder.set_agc_enabled(fidl::unowned_ptr(&target_agc2));
-  auto status2 = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
-  ASSERT_OK(status2.status());
+  {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
+    gain_state.set_agc_enabled(allocator, false);
+    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    ASSERT_OK(status.status());
+  }
+
   auto gain_state2 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state2.status());
   ASSERT_FALSE(gain_state2->gain_state.agc_enabled());
@@ -284,20 +295,26 @@ TEST(SimpleAudioTest, SetAndGetMute) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
+  {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
+    gain_state.set_muted(allocator, true);
+    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    ASSERT_OK(status.status());
+  }
 
-  fidl::aligned<bool> muted1 = true;
-  builder.set_muted(fidl::unowned_ptr(&muted1));
-  auto status1 = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
-  ASSERT_OK(status1.status());
   auto gain_state1 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state1.status());
   ASSERT_TRUE(gain_state1->gain_state.muted());
 
-  fidl::aligned<bool> muted2 = false;
-  builder.set_muted(fidl::unowned_ptr(&muted2));
-  auto status2 = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
-  ASSERT_OK(status2.status());
+  {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
+    gain_state.set_muted(allocator, false);
+    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    ASSERT_OK(status.status());
+  }
+
   auto gain_state2 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state2.status());
   ASSERT_FALSE(gain_state2->gain_state.muted());
@@ -324,12 +341,14 @@ TEST(SimpleAudioTest, SetMuteWhenDisabled) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
+  {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
+    gain_state.set_muted(allocator, true);
+    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    ASSERT_OK(status.status());
+  }
 
-  fidl::aligned<bool> muted1 = true;
-  builder.set_muted(fidl::unowned_ptr(&muted1));
-  auto status1 = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
-  ASSERT_OK(status1.status());
   auto gain_state1 = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state1.status());
   ASSERT_FALSE(gain_state1->gain_state.has_muted());
@@ -463,10 +482,11 @@ TEST(SimpleAudioTest, CreateRingBuffer1) {
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
-  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  client.CreateRingBuffer(builder.build(), std::move(remote));
+
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+  client.CreateRingBuffer(std::move(format), std::move(remote));
 
   auto result = audio_fidl::RingBuffer::Call::GetProperties(local);
   ASSERT_OK(result.status());
@@ -505,16 +525,19 @@ TEST(SimpleAudioTest, CreateRingBuffer2) {
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
-  audio_fidl::wire::PcmFormat pcm_format = {};
+
+  audio_fidl::wire::PcmFormat pcm_format;
   pcm_format.number_of_channels = 4;
   pcm_format.channels_to_use_bitmask = 0x0f;
   pcm_format.sample_format = audio_fidl::wire::SampleFormat::PCM_UNSIGNED;
   pcm_format.frame_rate = 44100;
   pcm_format.bytes_per_sample = 4;
   pcm_format.valid_bits_per_sample = 24;
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  client.CreateRingBuffer(builder.build(), std::move(remote));
+
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, std::move(pcm_format));
+  client.CreateRingBuffer(std::move(format), std::move(remote));
 
   auto result = audio_fidl::RingBuffer::Call::GetProperties(local);
   ASSERT_OK(result.status());
@@ -541,12 +564,14 @@ TEST(SimpleAudioTest, SetBadFormat1) {
   auto [local, remote] = std::move(endpoints.value());
 
   // Define a pretty bad format.
-  audio_fidl::wire::PcmFormat pcm_format = {};
+  audio_fidl::wire::PcmFormat pcm_format;
   pcm_format.sample_format = audio_fidl::wire::SampleFormat::PCM_SIGNED;
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
 
-  auto result0 = client.CreateRingBuffer(builder.build(), std::move(remote));
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, std::move(pcm_format));
+
+  auto result0 = client.CreateRingBuffer(std::move(format), std::move(remote));
   ASSERT_EQ(ZX_OK, result0.status());  // CreateRingBuffer is sent successfully.
 
   auto result1 = client.GetSupportedFormats();
@@ -578,10 +603,12 @@ TEST(SimpleAudioTest, SetBadFormat2) {
   // Define an almost good format.
   audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
   pcm_format.frame_rate = 48001;  // Bad rate.
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
 
-  auto result0 = client.CreateRingBuffer(builder.build(), std::move(remote));
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, std::move(pcm_format));
+
+  auto result0 = client.CreateRingBuffer(std::move(format), std::move(remote));
   ASSERT_EQ(ZX_OK, result0.status());  // CreateRingBuffer is sent successfully.
 
   auto result1 = client.GetSupportedFormats();
@@ -806,15 +833,14 @@ TEST(SimpleAudioTest, MultipleChannelsGainStateNotify) {
     zx::nanosleep(zx::deadline_after(zx::msec(100)));
     audio_fidl::Device::ResultOf::GetChannel* ch1 =
         static_cast<audio_fidl::Device::ResultOf::GetChannel*>(arg);
-    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
-    fidl::aligned<bool> muted = false;
-    fidl::aligned<bool> agc = false;
-    builder.set_muted(fidl::unowned_ptr(&muted));
-    builder.set_agc_enabled(fidl::unowned_ptr(&agc));
-    fidl::aligned<float> target_gain = MockSimpleAudio::kTestGain;
-    builder.set_gain_db(fidl::unowned_ptr(&target_gain));
 
-    audio_fidl::StreamConfig::Call::SetGain((*ch1)->channel, builder.build());
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
+    gain_state.set_muted(allocator, false)
+        .set_agc_enabled(allocator, false)
+        .set_gain_db(allocator, MockSimpleAudio::kTestGain);
+    audio_fidl::StreamConfig::Call::SetGain((*ch1)->channel, std::move(gain_state));
+
     return 0;
   };
   thrd_t th;
@@ -852,10 +878,11 @@ TEST(SimpleAudioTest, RingBufferTests) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
 
-  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, builder.build(),
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, std::move(format),
                                                              std::move(remote));
   ASSERT_OK(rb.status());
 
@@ -894,10 +921,11 @@ TEST(SimpleAudioTest, WatchPositionAndCloseRingBufferBeforeReply) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
 
-  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, builder.build(),
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, std::move(format),
                                                              std::move(remote));
   ASSERT_OK(rb.status());
 
@@ -964,10 +992,12 @@ TEST(SimpleAudioTest, ClientCloseRingBufferProtocol) {
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
-  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  auto ret = client.CreateRingBuffer(builder.build(), std::move(endpoints->server));
+
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+  auto ret = client.CreateRingBuffer(std::move(format), std::move(endpoints->server));
   ASSERT_OK(ret.status());
 
   endpoints->client.reset();
@@ -991,10 +1021,12 @@ TEST(SimpleAudioTest, ClientCloseStreamConfigProtocolWithARingBufferProtocol) {
 
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
-  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  auto ret = client.CreateRingBuffer(builder.build(), std::move(endpoints->server));
+
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+  auto ret = client.CreateRingBuffer(std::move(format), std::move(endpoints->server));
   ASSERT_OK(ret.status());
 
   client.mutable_channel()->reset();
@@ -1018,16 +1050,19 @@ TEST(SimpleAudioTest, NonPriviledged) {
   ASSERT_EQ(ch2.status(), ZX_OK);
   ASSERT_EQ(ch3.status(), ZX_OK);
 
-  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-
   auto channel1 = zx::unowned_channel(ch1->channel.channel());
   audio_fidl::StreamConfig::SyncClient client1(std::move(ch1->channel));
   auto endpoints1 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints1.status_value());
-  auto ret1 = client1.CreateRingBuffer(builder.build(), std::move(endpoints1->server));
-  ASSERT_OK(ret1.status());
+
+  {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::Format format(allocator);
+    format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+    auto ret1 = client1.CreateRingBuffer(std::move(format), std::move(endpoints1->server));
+    ASSERT_OK(ret1.status());
+  }
   audio_fidl::RingBuffer::SyncClient ringbuffer1(std::move(endpoints1->client));
   auto stop1 = ringbuffer1.Stop();
   ASSERT_OK(stop1.status());  // Priviledged channel.
@@ -1036,8 +1071,15 @@ TEST(SimpleAudioTest, NonPriviledged) {
   audio_fidl::StreamConfig::SyncClient client2(std::move(ch2->channel));
   auto endpoints2 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints2.status_value());
-  auto ret2 = client2.CreateRingBuffer(builder.build(), std::move(endpoints2->server));
-  ASSERT_OK(ret2.status());
+
+  {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::Format format(allocator);
+    format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+    auto ret2 = client2.CreateRingBuffer(std::move(format), std::move(endpoints2->server));
+    ASSERT_OK(ret2.status());
+  }
   audio_fidl::RingBuffer::SyncClient ringbuffer2(std::move(endpoints2->client));
   auto stop2 = ringbuffer2.Stop();
   ASSERT_NOT_OK(stop2.status());  // Non-priviledged channel.
@@ -1046,8 +1088,15 @@ TEST(SimpleAudioTest, NonPriviledged) {
   audio_fidl::StreamConfig::SyncClient client3(std::move(ch3->channel));
   auto endpoints3 = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints3.status_value());
-  auto ret3 = client3.CreateRingBuffer(builder.build(), std::move(endpoints3->server));
-  ASSERT_OK(ret3.status());
+
+  {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::Format format(allocator);
+    format.set_pcm_format(allocator, GetDefaultPcmFormat());
+
+    auto ret3 = client3.CreateRingBuffer(std::move(format), std::move(endpoints3->server));
+    ASSERT_OK(ret3.status());
+  }
   audio_fidl::RingBuffer::SyncClient ringbuffer3(std::move(endpoints3->client));
   auto stop3 = ringbuffer3.Stop();
   ASSERT_NOT_OK(stop3.status());  // Non-priviledged channel.

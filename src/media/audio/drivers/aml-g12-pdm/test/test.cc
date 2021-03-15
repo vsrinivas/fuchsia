@@ -105,13 +105,17 @@ struct AudioStreamInTest : public zxtest::Test {
     audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
     pcm_format.channels_to_use_bitmask = channels_to_use_bitmask;
     pcm_format.number_of_channels = number_of_channels;
-    fidl::aligned<audio_fidl::wire::PcmFormat> aligned_pcm_format = std::move(pcm_format);
-    auto builder = audio_fidl::wire::Format::UnownedBuilder();
-    builder.set_pcm_format(fidl::unowned_ptr(&aligned_pcm_format));
+
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::Format format(allocator);
+    format.set_pcm_format(allocator, std::move(pcm_format));
+
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
-    client.CreateRingBuffer(builder.build(), std::move(remote));
+
+    client.CreateRingBuffer(std::move(format), std::move(remote));
+
     // To make sure we have initialized in the server make a sync call
     // (we know the server is single threaded, initialization is completed if received a reply).
     auto props = audio_fidl::RingBuffer::Call::GetProperties(local);
@@ -137,11 +141,15 @@ struct AudioStreamInTest : public zxtest::Test {
     auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
     ASSERT_OK(endpoints.status_value());
     auto [local, remote] = *std::move(endpoints);
-    fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
-    pcm_format.value.number_of_channels = number_of_channels;
-    auto builder = audio_fidl::wire::Format::UnownedBuilder();
-    builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-    client.CreateRingBuffer(builder.build(), std::move(remote));
+
+    audio_fidl::wire::PcmFormat pcm_format = GetDefaultPcmFormat();
+    pcm_format.number_of_channels = number_of_channels;
+
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::Format format(allocator);
+    format.set_pcm_format(allocator, std::move(pcm_format));
+
+    client.CreateRingBuffer(std::move(format), std::move(remote));
 
     auto vmo = audio_fidl::RingBuffer::Call::GetVmo(local, frames_req, 0);
     ASSERT_OK(vmo.status());

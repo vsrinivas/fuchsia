@@ -300,12 +300,15 @@ TEST(UsbAudioTest, SetAndGetGain) {
   audio_fidl::Device::ResultOf::GetChannel ch = client.GetChannel();
   ASSERT_EQ(ch.status(), ZX_OK);
 
-  auto builder = audio_fidl::wire::GainState::UnownedBuilder();
   constexpr float kTestGain = -12.f;
-  fidl::aligned<float> target_gain = kTestGain;
-  builder.set_gain_db(fidl::unowned_ptr(&target_gain));
-  auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
-  ASSERT_OK(status.status());
+  {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
+    gain_state.set_gain_db(allocator, kTestGain);
+    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+    ASSERT_OK(status.status());
+  }
+
   auto gain_state = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
   ASSERT_OK(gain_state.status());
 
@@ -374,10 +377,11 @@ TEST(UsbAudioTest, CreateRingBuffer) {
   auto endpoints = fidl::CreateEndpoints<audio_fidl::RingBuffer>();
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
-  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  client.CreateRingBuffer(builder.build(), std::move(remote));
+
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+  client.CreateRingBuffer(std::move(format), std::move(remote));
 
   fake_device.DdkAsyncRemove();
   EXPECT_TRUE(tester.Ok());
@@ -398,10 +402,10 @@ TEST(UsbAudioTest, RingBuffer) {
   ASSERT_OK(endpoints.status_value());
   auto [local, remote] = std::move(endpoints.value());
 
-  fidl::aligned<audio_fidl::wire::PcmFormat> pcm_format = GetDefaultPcmFormat();
-  auto builder = audio_fidl::wire::Format::UnownedBuilder();
-  builder.set_pcm_format(fidl::unowned_ptr(&pcm_format));
-  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, builder.build(),
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::Format format(allocator);
+  format.set_pcm_format(allocator, GetDefaultPcmFormat());
+  auto rb = audio_fidl::StreamConfig::Call::CreateRingBuffer(ch->channel, std::move(format),
                                                              std::move(remote));
   ASSERT_OK(rb.status());
 

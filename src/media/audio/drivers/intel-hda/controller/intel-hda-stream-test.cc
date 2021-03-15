@@ -184,11 +184,13 @@ TEST(HdaStreamTest, SetAndGetGainDefaults) {
   ASSERT_EQ(ch.status(), ZX_OK);
 
   {
-    fidl::aligned<float> target_gain = kTestGain;
-    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
-    builder.set_gain_db(fidl::unowned_ptr(&target_gain));
-    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
-    EXPECT_OK(status.status());
+    {
+      fidl::FidlAllocator allocator;
+      audio_fidl::wire::GainState gain_state(allocator);
+      gain_state.set_gain_db(allocator, kTestGain);
+      auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+      EXPECT_OK(status.status());
+    }
     auto gain_state = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
     EXPECT_OK(gain_state.status());
     EXPECT_EQ(0, gain_state->gain_state.gain_db());  // Gain was not changed, default range is 0.
@@ -318,11 +320,13 @@ TEST(HdaStreamTest, SetAndGetGain) {
   ASSERT_EQ(ch.status(), ZX_OK);
 
   {
-    fidl::aligned<float> target_gain = kTestGain;
-    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
-    builder.set_gain_db(fidl::unowned_ptr(&target_gain));
-    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
-    EXPECT_OK(status.status());
+    {
+      fidl::FidlAllocator allocator;
+      audio_fidl::wire::GainState gain_state(allocator);
+      gain_state.set_gain_db(allocator, kTestGain);
+      auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
+      EXPECT_OK(status.status());
+    }
     auto gain_state = audio_fidl::StreamConfig::Call::WatchGainState(ch->channel);
     EXPECT_OK(gain_state.status());
     EXPECT_EQ(kTestGain, gain_state->gain_state.gain_db());
@@ -334,10 +338,10 @@ TEST(HdaStreamTest, SetAndGetGain) {
       EXPECT_OK(gain_state.status());
       EXPECT_EQ(kTestGain2, gain_state->gain_state.gain_db());
     });
-    fidl::aligned<float> target_gain = kTestGain2;
-    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
-    builder.set_gain_db(fidl::unowned_ptr(&target_gain));
-    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, builder.build());
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
+    gain_state.set_gain_db(allocator, kTestGain2);
+    auto status = audio_fidl::StreamConfig::Call::SetGain(ch->channel, std::move(gain_state));
     EXPECT_OK(status.status());
     th.join();
   }

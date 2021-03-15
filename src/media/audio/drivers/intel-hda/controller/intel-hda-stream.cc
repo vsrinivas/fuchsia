@@ -279,16 +279,13 @@ void IntelHDAStream::DeactivateLocked() {
 // Ring Buffer GetProperties.
 void IntelHDAStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
   fbl::AutoLock channel_lock(&channel_lock_);
-  auto builder = audio_fidl::wire::RingBufferProperties::UnownedBuilder();
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::RingBufferProperties properties(allocator);
   // We don't know what our FIFO depth is going to be if our format has not been set yet.
-  fidl::aligned<uint32_t> fifo_depth = bytes_per_frame_ ? fifo_depth_ : 0;
-  builder.set_fifo_depth(fidl::unowned_ptr(&fifo_depth));
+  properties.set_fifo_depth(allocator, bytes_per_frame_ ? fifo_depth_ : 0);
   // Report this properly based on the codec path delay.
-  fidl::aligned<int64_t> delay = static_cast<int64_t>(0);
-  builder.set_external_delay(fidl::unowned_ptr(&delay));
-  fidl::aligned<bool> flush = true;
-  builder.set_needs_cache_flush_or_invalidate(fidl::unowned_ptr(&flush));
-  completer.Reply(builder.build());
+  properties.set_external_delay(allocator, 0).set_needs_cache_flush_or_invalidate(allocator, true);
+  completer.Reply(std::move(properties));
 }
 
 void IntelHDAStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,

@@ -327,42 +327,32 @@ void UsbAudioStream::GetSupportedFormats(
     }
   }
 
-  // Get FIDL PcmSupportedFormats from FIDL compatible vectors.
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<audio_fidl::wire::SupportedFormats> fidl_formats(allocator,
+                                                                    fidl_compatible_formats.size());
+  // Build formats compatible with FIDL for all the formats.
   // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::wire::PcmSupportedFormats> fidl_pcm_formats;
-  for (FidlCompatibleFormats& i : fidl_compatible_formats) {
+  for (size_t i = 0; i < fidl_compatible_formats.size(); ++i) {
+    FidlCompatibleFormats& src = fidl_compatible_formats[i];
+    audio_fidl::wire::SupportedFormats& dst = fidl_formats[i];
+
     audio_fidl::wire::PcmSupportedFormats formats;
     formats.number_of_channels = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(i.number_of_channels.data()), i.number_of_channels.size());
+        fidl::unowned_ptr(src.number_of_channels.data()), src.number_of_channels.size());
     formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>(
-        fidl::unowned_ptr(i.sample_formats.data()), i.sample_formats.size());
-    formats.frame_rates =
-        ::fidl::VectorView<uint32_t>(fidl::unowned_ptr(i.frame_rates.data()), i.frame_rates.size());
+        fidl::unowned_ptr(src.sample_formats.data()), src.sample_formats.size());
+    formats.frame_rates = ::fidl::VectorView<uint32_t>(fidl::unowned_ptr(src.frame_rates.data()),
+                                                       src.frame_rates.size());
     formats.bytes_per_sample = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(i.bytes_per_sample.data()), i.bytes_per_sample.size());
+        fidl::unowned_ptr(src.bytes_per_sample.data()), src.bytes_per_sample.size());
     formats.valid_bits_per_sample = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(i.valid_bits_per_sample.data()), i.valid_bits_per_sample.size());
-    fidl_pcm_formats.push_back(std::move(formats));
+        fidl::unowned_ptr(src.valid_bits_per_sample.data()), src.valid_bits_per_sample.size());
+
+    dst.Allocate(allocator);
+    dst.set_pcm_supported_formats(allocator, std::move(formats));
   }
 
-  // Get builders from PcmSupportedFormats tables.
-  // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::wire::SupportedFormats::UnownedBuilder> fidl_builders;
-  for (audio_fidl::wire::PcmSupportedFormats& i : fidl_pcm_formats) {
-    auto builder = audio_fidl::wire::SupportedFormats::UnownedBuilder();
-    builder.set_pcm_supported_formats(fidl::unowned_ptr(&i));
-    fidl_builders.push_back(std::move(builder));
-  }
-
-  // Build FIDL SupportedFormats from PcmSupportedFormats's builders.
-  // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::wire::SupportedFormats> fidl_formats;
-  for (audio_fidl::wire::SupportedFormats::UnownedBuilder& i : fidl_builders) {
-    fidl_formats.push_back(i.build());
-  }
-
-  completer.Reply(::fidl::VectorView<audio_fidl::wire::SupportedFormats>(
-      fidl::unowned_ptr(fidl_formats.data()), fidl_formats.size()));
+  completer.Reply(std::move(fidl_formats));
 }
 
 void UsbAudioStream::CreateRingBuffer(StreamChannel* channel, audio_fidl::wire::Format format,
@@ -550,19 +540,17 @@ void UsbAudioStream::WatchGainState(StreamChannel* channel,
   cur_gain_state.gain_step = path.gain_res();
   // Reply is delayed if there is no change since the last reported gain state.
   if (channel->last_reported_gain_state_ != cur_gain_state) {
-    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
-    fidl::aligned<bool> mute = cur_gain_state.cur_mute;
-    fidl::aligned<bool> agc = cur_gain_state.cur_agc;
-    fidl::aligned<float> gain = cur_gain_state.cur_gain;
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
     if (cur_gain_state.can_mute) {
-      builder.set_muted(fidl::unowned_ptr(&mute));
+      gain_state.set_muted(allocator, cur_gain_state.cur_mute);
     }
     if (cur_gain_state.can_agc) {
-      builder.set_agc_enabled(fidl::unowned_ptr(&agc));
+      gain_state.set_agc_enabled(allocator, cur_gain_state.cur_agc);
     }
-    builder.set_gain_db(fidl::unowned_ptr(&gain));
+    gain_state.set_gain_db(allocator, cur_gain_state.cur_gain);
     channel->last_reported_gain_state_ = cur_gain_state;
-    channel->gain_completer_->Reply(builder.build());
+    channel->gain_completer_->Reply(std::move(gain_state));
     channel->gain_completer_.reset();
   }
 }
@@ -614,72 +602,56 @@ void UsbAudioStream::WatchPlugState(StreamChannel* channel,
 
   // As long as the usb device is present, we are plugged. A second reply is delayed indefinitely
   // since there will be no change from the last reported plugged state.
-  fidl::aligned<bool> plugged = true;
   if (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kNotReported ||
-      (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kPlugged) != plugged) {
-    auto builder = audio_fidl::wire::PlugState::UnownedBuilder();
-    builder.set_plugged(fidl::unowned_ptr(&plugged));
-    fidl::aligned<zx_time_t> plug_time = create_time_;
-    builder.set_plug_state_time(fidl::unowned_ptr(&plug_time));
-    channel->last_reported_plugged_state_ =
-        plugged ? StreamChannel::Plugged::kPlugged : StreamChannel::Plugged::kUnplugged;
-    channel->plug_completer_->Reply(builder.build());
+      (channel->last_reported_plugged_state_ != StreamChannel::Plugged::kPlugged)) {
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::PlugState plug_state(allocator);
+    plug_state.set_plugged(allocator, true).set_plug_state_time(allocator, create_time_);
+    channel->last_reported_plugged_state_ = StreamChannel::Plugged::kPlugged;
+    channel->plug_completer_->Reply(std::move(plug_state));
     channel->plug_completer_.reset();
   }
 }
 
 void UsbAudioStream::GetProperties(StreamChannel::GetPropertiesCompleter::Sync& completer) {
-  auto builder = audio_fidl::wire::StreamProperties::UnownedBuilder();
-  fidl::Array<uint8_t, audio_fidl::wire::UNIQUE_ID_SIZE> unique_id = {};
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::StreamProperties stream_properties(allocator);
+  stream_properties.set_unique_id(allocator);
   for (size_t i = 0; i < audio_fidl::wire::UNIQUE_ID_SIZE; ++i) {
-    unique_id.data_[i] = persistent_unique_id_.data[i];
+    stream_properties.unique_id().data_[i] = persistent_unique_id_.data[i];
   }
-  fidl::aligned<fidl::Array<uint8_t, audio_fidl::wire::UNIQUE_ID_SIZE>> aligned_unique_id =
-      unique_id;
-  builder.set_unique_id(fidl::unowned_ptr(&aligned_unique_id));
-  fidl::aligned<bool> input = is_input();
-  builder.set_is_input(fidl::unowned_ptr(&input));
 
   const auto& path = *(ifc_->path());
-  fidl::aligned<bool> mute = path.has_mute();
-  builder.set_can_mute(fidl::unowned_ptr(&mute));
-  fidl::aligned<bool> agc = path.has_agc();
-  builder.set_can_agc(fidl::unowned_ptr(&agc));
-  fidl::aligned<float> min_gain = path.min_gain();
-  builder.set_min_gain_db(fidl::unowned_ptr(&min_gain));
-  fidl::aligned<float> max_gain = path.max_gain();
-  builder.set_max_gain_db(fidl::unowned_ptr(&max_gain));
-  fidl::aligned<float> gain_step = path.gain_res();
-  builder.set_gain_step_db(fidl::unowned_ptr(&gain_step));
 
   fidl::StringView product(
       fidl::unowned_ptr(reinterpret_cast<const char*>(parent_.prod_name().begin())),
       parent_.prod_name().size());
-  builder.set_product(fidl::unowned_ptr(&product));
   fidl::StringView manufacturer(
       fidl::unowned_ptr(reinterpret_cast<const char*>(parent_.mfr_name().begin())),
       parent_.mfr_name().size());
-  builder.set_manufacturer(fidl::unowned_ptr(&manufacturer));
 
-  fidl::aligned<uint32_t> domain = clock_domain_;
-  builder.set_clock_domain(fidl::unowned_ptr(&domain));
+  stream_properties.set_is_input(allocator, is_input())
+      .set_can_mute(allocator, path.has_mute())
+      .set_can_agc(allocator, path.has_agc())
+      .set_min_gain_db(allocator, path.min_gain())
+      .set_max_gain_db(allocator, path.max_gain())
+      .set_gain_step_db(allocator, path.gain_res())
+      .set_product(allocator, std::move(product))
+      .set_manufacturer(allocator, std::move(manufacturer))
+      .set_clock_domain(allocator, clock_domain_)
+      .set_plug_detect_capabilities(allocator, audio_fidl::wire::PlugDetectCapabilities::HARDWIRED);
 
-  fidl::aligned<audio_fidl::wire::PlugDetectCapabilities> cap =
-      audio_fidl::wire::PlugDetectCapabilities::HARDWIRED;
-  builder.set_plug_detect_capabilities(fidl::unowned_ptr(&cap));
-  completer.Reply(builder.build());
+  completer.Reply(std::move(stream_properties));
 }
 
 void UsbAudioStream::GetProperties(GetPropertiesCompleter::Sync& completer) {
-  auto builder = audio_fidl::wire::RingBufferProperties::UnownedBuilder();
-  fidl::aligned<uint32_t> fifo_depth = fifo_bytes_;
-  builder.set_fifo_depth(fidl::unowned_ptr(&fifo_depth));
+  fidl::FidlAllocator allocator;
+  audio_fidl::wire::RingBufferProperties ring_buffer_properties(allocator);
+  ring_buffer_properties.set_fifo_depth(allocator, fifo_bytes_);
   // TODO(johngro): Report the actual external delay.
-  fidl::aligned<int64_t> delay = static_cast<int64_t>(0);
-  builder.set_external_delay(fidl::unowned_ptr(&delay));
-  fidl::aligned<bool> flush = true;
-  builder.set_needs_cache_flush_or_invalidate(fidl::unowned_ptr(&flush));
-  completer.Reply(builder.build());
+  ring_buffer_properties.set_external_delay(allocator, 0);
+  ring_buffer_properties.set_needs_cache_flush_or_invalidate(allocator, true);
+  completer.Reply(std::move(ring_buffer_properties));
 }
 
 void UsbAudioStream::GetVmo(uint32_t min_frames, uint32_t notifications_per_ring,
