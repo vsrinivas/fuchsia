@@ -116,21 +116,31 @@ void PrettyTypeManager::AddDefaultCppPrettyTypes() {
   //
   // Because of the weirdness of std::string's definition, we need to check for both the typedef
   // source and the resolved value. The typedef won't always map to something.
+  //
+  // Furthermore, different versions of the compiler or library have included the "__2" on the
+  // template type names or not, so we also encode both variants there.
   cpp_.emplace_back(
       InternalGlob(
           "std::__2::basic_string<char, std::__2::char_traits<char>, std::__2::allocator<char> >"),
       std::make_unique<PrettyStdString>());
+  cpp_.emplace_back(
+      InternalGlob("std::__2::basic_string<char, std::char_traits<char>, std::allocator<char> >"),
+      std::make_unique<PrettyStdString>());
   cpp_.emplace_back(InternalGlob("std::__2::string"), std::make_unique<PrettyStdString>());
 
-  // std::string_view
+  // std::string_view. Like std::string, we encode variants for both "__2" and not for the nested
+  // template type names.
+  PrettyHeapString pretty_string_view("__data", "__size",
+                                      GetterList{{"back", "__data[__size - 1]"},
+                                                 {"data", "__data"},
+                                                 {"front", "*__data"},
+                                                 {"size", "__size"},
+                                                 {"length", "__size"},
+                                                 {"empty", "__size == 0"}});
+  cpp_.emplace_back(InternalGlob("std::__2::basic_string_view<char, std::char_traits<char> >"),
+                    std::make_unique<PrettyHeapString>(pretty_string_view));
   cpp_.emplace_back(InternalGlob("std::__2::basic_string_view<char, std::__2::char_traits<char> >"),
-                    std::make_unique<PrettyHeapString>("__data", "__size",
-                                                       GetterList{{"back", "__data[__size - 1]"},
-                                                                  {"data", "__data"},
-                                                                  {"front", "*__data"},
-                                                                  {"size", "__size"},
-                                                                  {"length", "__size"},
-                                                                  {"empty", "__size == 0"}}));
+                    std::make_unique<PrettyHeapString>(pretty_string_view));
 
   // std::vector
   //
