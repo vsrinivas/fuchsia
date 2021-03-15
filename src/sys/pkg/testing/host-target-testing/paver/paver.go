@@ -27,20 +27,7 @@ type BuildPaver struct {
 	stdout          io.Writer
 }
 
-type Mode int
-
-const (
-	Default Mode = iota
-	ZedbootOnly
-	SkipZedboot
-)
-
-type Options struct {
-	Mode Mode
-}
-
 type Paver interface {
-	PaveWithOptions(ctx context.Context, deviceName string, options Options) error
 	Pave(ctx context.Context, deviceName string) error
 }
 
@@ -106,11 +93,11 @@ func Stdout(writer io.Writer) BuildPaverOption {
 
 // Pave runs a paver service for one pave. If `deviceName` is not empty, the
 // pave will only be applied to the specified device.
-func (p *BuildPaver) PaveWithOptions(ctx context.Context, deviceName string, options Options) error {
+func (p *BuildPaver) Pave(ctx context.Context, deviceName string) error {
 	paverArgs := []string{"--fail-fast-if-version-mismatch"}
 
 	// Write out the public key's authorized keys.
-	if p.sshPublicKey != nil && options.Mode != ZedbootOnly {
+	if p.sshPublicKey != nil {
 		authorizedKeys, err := ioutil.TempFile("", "")
 		if err != nil {
 			return err
@@ -136,32 +123,20 @@ func (p *BuildPaver) PaveWithOptions(ctx context.Context, deviceName string, opt
 		paverArgs = append(paverArgs, "--vbmetaa", *p.overrideVBMetaA)
 	}
 
-	if options.Mode != SkipZedboot {
-		// Run bootserver with pave-zedboot mode to bootstrap the new bootloader and zedboot.
-		if err := p.runPave(ctx, deviceName, "--mode", "pave-zedboot", "--allow-zedboot-version-mismatch"); err != nil {
-			return err
-		}
+	// Run bootserver with pave-zedboot mode to bootstrap the new bootloader and zedboot.
+	if err := p.runPave(ctx, deviceName, "--mode", "pave-zedboot", "--allow-zedboot-version-mismatch"); err != nil {
+		return err
 	}
 
-	if options.Mode != ZedbootOnly {
-		// Run bootserver with pave mode to install Fuchsia.
-		paverArgs = append([]string{"--mode", "pave"}, paverArgs...)
-		return p.runPave(ctx, deviceName, paverArgs...)
-	}
-
-	return nil
-}
-
-// Pave runs a paver service for one pave and includes Zedboot. If `deviceName` is not empty, the
-// pave will only be applied to the specified device.
-func (p *BuildPaver) Pave(ctx context.Context, deviceName string) error {
-	return p.PaveWithOptions(ctx, deviceName, Options{Mode: Default})
+	// Run bootserver with pave mode to install Fuchsia.
+	paverArgs = append([]string{"--mode", "pave"}, paverArgs...)
+	return p.runPave(ctx, deviceName, paverArgs...)
 }
 
 func (p *BuildPaver) runPave(ctx context.Context, deviceName string, args ...string) error {
 	args = append([]string{"--images", filepath.Join(p.ImageDir, ImageManifest)}, args...)
 
-	logger.Infof(ctx, "paving device %q", deviceName)
+	logger.Infof(ctx, "paving device %q with %s %v", deviceName, p.BootserverPath, args)
 	path, err := exec.LookPath(p.BootserverPath)
 	if err != nil {
 		return err

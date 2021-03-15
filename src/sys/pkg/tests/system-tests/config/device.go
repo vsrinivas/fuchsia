@@ -41,27 +41,12 @@ func NewDeviceConfig(fs *flag.FlagSet) *DeviceConfig {
 	return c
 }
 
-// newDeviceFinder constructs a DeviceFinder in order to help `device.Client` discover and resolve
-// nodenames into IP addresses.
-func (c *DeviceConfig) newDeviceFinder() (*device.DeviceFinder, error) {
-	if c.deviceFinderPath == "" {
-		return nil, fmt.Errorf("--device-finder-path not specified")
-	}
-
-	return device.NewDeviceFinder(c.deviceFinderPath), nil
-}
-
 func (c *DeviceConfig) DeviceResolver(ctx context.Context) (device.DeviceResolver, error) {
 	if c.deviceHostname != "" {
-		return device.NewConstantHostResolver(ctx, c.deviceName, c.deviceHostname), nil
+		return device.NewConstantHostResolver(c.deviceName, c.deviceHostname), nil
 	}
 
-	deviceFinder, err := c.newDeviceFinder()
-	if err != nil {
-		return nil, err
-	}
-
-	return device.NewDeviceFinderResolver(ctx, deviceFinder, c.deviceName)
+	return device.NewDeviceFinderResolver(ctx, c.deviceFinderPath, c.deviceName)
 }
 
 func (c *DeviceConfig) SSHPrivateKey() (ssh.Signer, error) {
@@ -86,11 +71,6 @@ func (c *DeviceConfig) SSHPrivateKey() (ssh.Signer, error) {
 }
 
 func (c *DeviceConfig) NewDeviceClient(ctx context.Context) (*device.Client, error) {
-	deviceFinder, err := c.newDeviceFinder()
-	if err != nil {
-		return nil, err
-	}
-
 	deviceResolver, err := c.DeviceResolver(ctx)
 	if err != nil {
 		return nil, err
@@ -101,5 +81,5 @@ func (c *DeviceConfig) NewDeviceClient(ctx context.Context) (*device.Client, err
 		return nil, err
 	}
 
-	return device.NewClient(ctx, deviceFinder, deviceResolver, sshPrivateKey)
+	return device.NewClient(ctx, deviceResolver, sshPrivateKey)
 }

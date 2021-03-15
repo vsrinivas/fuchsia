@@ -39,10 +39,7 @@ go_library("host-target-testing") {
     "avb/avb.go",
     "avb/avb_test.go",
     "device/device.go",
-    "device/finder.go",
     "device/monotonic.go",
-    "device/node_names.go",
-    "device/node_names_test.go",
     "device/resolver.go",
     "omaha/omaha.go",
     "omaha/omaha_test.go",
@@ -67,9 +64,7 @@ go_library("host-target-testing") {
 }
 
 test_packages = [
-  "artifacts",
   "avb",
-  "device",
   "packages",
   "paver",
   "omaha",
@@ -78,8 +73,7 @@ test_packages = [
 ]
 foreach(testpkg, test_packages) {
   go_test("host-target-testing-${testpkg}-test") {
-    gopackages =
-        [ "go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/${testpkg}" ]
+    gopackages = [ "go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/${testpkg}" ]
     deps = [ ":host-target-testing" ]
   }
 }

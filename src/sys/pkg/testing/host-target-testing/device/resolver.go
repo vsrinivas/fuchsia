@@ -7,101 +7,110 @@ package device
 import (
 	"context"
 	"fmt"
+	"strings"
 
+	"go.fuchsia.dev/fuchsia/src/sys/pkg/testing/host-target-testing/util"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 )
 
 type DeviceResolver interface {
-	// NodeNames returns a list of nodenames for a device.
-	NodeNames() []string
-
-	// Resolve the device's nodename into a hostname.
+	Name() string
 	ResolveName(ctx context.Context) (string, error)
 }
 
-// ConstnatAddressResolver returns a fixed hostname for the specified nodename.
 type ConstantHostResolver struct {
-	nodeNames []string
-	host      string
+	name string
+	host string
 }
 
-// NewConstantAddressResolver constructs a fixed host.
-func NewConstantHostResolver(ctx context.Context, nodeName string, host string) ConstantHostResolver {
-	nodeNames := []string{nodeName}
-
-	if oldNodeName, err := translateToOldNodeName(nodeName); err == nil {
-		logger.Infof(ctx, "translated device name %q to old nodename %q", nodeName, oldNodeName)
-		nodeNames = append(nodeNames, oldNodeName)
-	} else {
-		logger.Warningf(ctx, "could not translate %q into old device name: %v", nodeName, err)
-	}
-
+func NewConstantHostResolver(name string, host string) ConstantHostResolver {
 	return ConstantHostResolver{
-		nodeNames: nodeNames,
-		host:      host,
+		name: name,
+		host: host,
 	}
 }
 
-func (r ConstantHostResolver) NodeNames() []string {
-	return r.nodeNames
+func (r ConstantHostResolver) Name() string {
+	return r.name
 }
 
 func (r ConstantHostResolver) ResolveName(ctx context.Context) (string, error) {
 	return r.host, nil
 }
 
-// DeviceFinderResolver uses `device-finder` to resolve a nodename into a hostname.
 // The logic here should match get-fuchsia-device-addr (//tools/devshell/lib/vars.sh).
 type DeviceFinderResolver struct {
-	deviceFinder *DeviceFinder
-	nodeNames    []string
+	deviceFinderPath string
+	deviceName       string
 }
 
-// NewDeviceFinderResolver constructs a new `DeviceFinderResolver` for the specific
-func NewDeviceFinderResolver(ctx context.Context, deviceFinder *DeviceFinder, nodeName string) (*DeviceFinderResolver, error) {
-	if nodeName == "" {
-		entries, err := deviceFinder.List(ctx, Mdns)
+func NewDeviceFinderResolver(ctx context.Context, deviceFinderPath string, deviceName string) (*DeviceFinderResolver, error) {
+	if deviceName == "" {
+		var err error
+		var deviceList string
+		deviceList, err = deviceFinder(
+			ctx,
+			deviceFinderPath,
+			"list",
+			"-ipv4=false",
+			"-timeout=5s",
+			"-full",
+		)
 		if err != nil {
-			return nil, fmt.Errorf("failed to list devices: %w", err)
+			return nil, fmt.Errorf("ERROR: Failed to list devices: %w", err)
 		}
-		if len(entries) == 0 {
-			return nil, fmt.Errorf("no devices found")
+		if strings.Contains(deviceList, "\n") {
+			return nil, fmt.Errorf("ERROR: Found multiple devices. Use -device to specify one.")
 		}
-
-		if len(entries) != 1 {
-			return nil, fmt.Errorf("cannot use empty nodename with multiple devices: %v", entries)
+		// Device finder (with -full) outputs in the format "<address> <domain>".
+		var entry = strings.Split(deviceList, " ")
+		if len(entry) != 2 {
+			return nil, fmt.Errorf("ERROR: device-finder return unexpected output: %s.", deviceList)
 		}
+		deviceName = entry[1]
 
-		nodeName = entries[0].NodeName
-	}
-
-	nodeNames := []string{nodeName}
-
-	// FIXME(http://fxbug.dev/71146) we can switch back to the resolver
-	// resolving a single name after we no longer support testing builds
-	// older than 2021-02-22.
-	if oldNodeName, err := translateToOldNodeName(nodeName); err == nil {
-		logger.Infof(ctx, "translated device name %q to old nodename %q", nodeName, oldNodeName)
-		nodeNames = append(nodeNames, oldNodeName)
-	} else {
-		logger.Warningf(ctx, "could not translate %q into old device name: %v", nodeName, err)
+		if deviceName == "" {
+			return nil, fmt.Errorf("unable to determine the device name")
+		}
 	}
 
 	return &DeviceFinderResolver{
-		deviceFinder: deviceFinder,
-		nodeNames:    nodeNames,
+		deviceFinderPath: deviceFinderPath,
+		deviceName:       deviceName,
 	}, nil
 }
 
-func (r *DeviceFinderResolver) NodeNames() []string {
-	return r.nodeNames
+func (r *DeviceFinderResolver) Name() string {
+	return r.deviceName
 }
 
 func (r *DeviceFinderResolver) ResolveName(ctx context.Context) (string, error) {
-	entry, err := r.deviceFinder.Resolve(ctx, Mdns, r.nodeNames)
+	deviceHostname, err := deviceFinder(
+		ctx,
+		r.deviceFinderPath,
+		"resolve",
+		"-ipv4=false",
+		"-timeout=5s",
+		"-device-limit=1",
+		r.deviceName,
+	)
 	if err != nil {
-		return "", err
+		return "", fmt.Errorf("ERROR: Failed to resolve device name %q: %w", r.deviceName, err)
 	}
 
-	return entry.Address, nil
+	logger.Infof(ctx, "resolved %q to %q", r.deviceName, deviceHostname)
+
+	if deviceHostname == "" {
+		return "", fmt.Errorf("unable to determine the device hostname")
+	}
+
+	return deviceHostname, nil
+}
+
+func deviceFinder(ctx context.Context, deviceFinderPath string, arg ...string) (string, error) {
+	stdout, stderr, err := util.RunCommand(ctx, deviceFinderPath, arg...)
+	if err != nil {
+		return "", fmt.Errorf("device-finder failed: %w: %s", err, string(stderr))
+	}
+	return strings.TrimRight(string(stdout), "\n"), nil
 }
