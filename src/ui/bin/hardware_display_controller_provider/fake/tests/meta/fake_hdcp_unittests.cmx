@@ -11,7 +11,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/fake_hdcp_unittests"
+        "binary": "bin/fake_hdcp_unittests"
     },
     "sandbox": {
         "services": [

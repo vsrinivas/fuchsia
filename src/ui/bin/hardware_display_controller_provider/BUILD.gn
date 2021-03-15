@@ -2,10 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("hardware_display_controller_provider") {
   testonly = true
@@ -15,43 +12,21 @@ group("hardware_display_controller_provider") {
   ]
 }
 
-package("fake-hardware-display-controller-provider") {
+fuchsia_package_with_single_component(
+    "fake-hardware-display-controller-provider") {
   testonly = true
+  component_name = "hdcp"
+  manifest = "meta/fake_hdcp.cmx"
   deps = [ "fake:bin" ]
-
-  binaries = [
-    {
-      name = "fake_hw_display_controller_provider"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/fake_hdcp.cmx")
-      dest = "hdcp.cmx"
-    },
-  ]
 }
 
-package("hardware-display-controller-provider") {
+fuchsia_package_with_single_component("hardware-display-controller-provider") {
+  manifest = "meta/real_hdcp.cmx"
+  component_name = "hdcp"
   deps = [ "real:bin" ]
-
-  binaries = [
-    {
-      name = "real_hw_display_controller_provider"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/real_hdcp.cmx")
-      dest = "hdcp.cmx"
-    },
-  ]
 }
 
 group("tests") {
   testonly = true
-
   public_deps = [ "fake/tests" ]
 }

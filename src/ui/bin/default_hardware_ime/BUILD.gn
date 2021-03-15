@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -40,53 +39,25 @@ rustc_binary("bin") {
   ]
 }
 
-package("default_hardware_ime") {
-  deps = [ ":bin" ]
-
-  meta = [
-    {
-      path = rebase_path("meta/default_hardware_ime.cmx")
-      dest = "default_hardware_ime.cmx"
-    },
+resource("assets") {
+  sources = [
+    "assets/us-legacy.json",
+    "assets/us.json",
   ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  resources = [
-    {
-      path = rebase_path("assets/us.json")
-      dest = "us.json"
-    },
-    {
-      path = rebase_path("assets/us-legacy.json")
-      dest = "us-legacy.json"
-    },
-  ]
-
-  binaries = [
-    {
-      name = "default_hardware_ime"
-    },
+fuchsia_package_with_single_component("default_hardware_ime") {
+  manifest = "meta/default_hardware_ime.cmx"
+  deps = [
+    ":assets",
+    ":bin",
   ]
 }
 
-test_package("default_hardware_ime_tests") {
-  resources = [
-    {
-      path = rebase_path("assets/us.json")
-      dest = "us.json"
-    },
-    {
-      path = rebase_path("assets/us-legacy.json")
-      dest = "us-legacy.json"
-    },
-  ]
-
-  deps = [ ":bin_test" ]
-
-  tests = [
-    {
-      name = "default_hardware_ime_bin_test"
-      dest = "default_hardware_ime_unittests"
-      environments = basic_envs
-    },
+fuchsia_unittest_package("default_hardware_ime_tests") {
+  deps = [
+    ":assets",
+    ":bin_test",
   ]
 }
