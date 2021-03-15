@@ -3,11 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    crate::constants::{DAEMON, DEFAULT_MAX_RETRY_COUNT, OVERNET_MAX_RETRY_COUNT},
     crate::daemon::Daemon,
-    anyhow::{bail, Context, Result},
-    ffx_config::get,
-    ffx_lib_args::Ffx,
+    anyhow::{Context, Result},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequestStream},
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
@@ -16,9 +13,8 @@ use {
     futures::prelude::*,
     hoist::OvernetInstance,
     libc,
-    std::env,
     std::os::unix::process::CommandExt,
-    std::process::{Command, Stdio},
+    std::process::Command,
 };
 
 mod constants;
@@ -36,48 +32,57 @@ mod util;
 pub mod target;
 pub use constants::{get_socket, LOG_FILE_PREFIX};
 
-async fn create_daemon_proxy(
-    overnet_instance: &dyn OvernetInstance,
-    id: &mut NodeId,
-) -> Result<DaemonProxy> {
-    let svc = overnet_instance.connect_as_service_consumer()?;
+async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
+    let svc = hoist::hoist().connect_as_service_consumer()?;
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     svc.connect_to_service(id, DaemonMarker::NAME, s)?;
     let proxy = fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
     Ok(DaemonProxy::new(proxy))
 }
 
-// Note that this function assumes the daemon has been started separately.
-pub async fn find_and_connect(overnet_instance: &dyn OvernetInstance) -> Result<DaemonProxy> {
-    let svc = overnet_instance.connect_as_service_consumer()?;
-    // Sometimes list_peers doesn't properly report the published services - retry a few times
-    // but don't loop indefinitely.
-    let max_retry_count: u64 =
-        get(OVERNET_MAX_RETRY_COUNT).await.unwrap_or(DEFAULT_MAX_RETRY_COUNT);
-    for _ in 0..max_retry_count {
+pub async fn find_next_daemon<'a>(
+    exclusions: Option<Vec<NodeId>>,
+) -> Result<(NodeId, DaemonProxy)> {
+    let svc = hoist::hoist().connect_as_service_consumer()?;
+    loop {
         let peers = svc.list_peers().await?;
-        for mut peer in peers {
-            if peer.description.services.is_none() {
-                continue;
-            }
+        for peer in peers.iter() {
             if peer
                 .description
                 .services
-                .unwrap()
+                .as_ref()
+                .unwrap_or(&Vec::new())
                 .iter()
                 .find(|name| *name == DaemonMarker::NAME)
                 .is_none()
             {
                 continue;
             }
-            return create_daemon_proxy(overnet_instance, &mut peer.id).await;
+            match exclusions {
+                Some(ref exclusions) => {
+                    if exclusions.iter().any(|n| *n == peer.id) {
+                        continue;
+                    }
+                }
+                None => {}
+            }
+            return create_daemon_proxy(&mut peer.id.clone())
+                .await
+                .map(|proxy| (peer.id.clone(), proxy));
         }
     }
+}
 
-    bail!("Timed out waiting for ffx daemon connection")
+// Note that this function assumes the daemon has been started separately.
+pub async fn find_and_connect() -> Result<DaemonProxy> {
+    find_next_daemon(None).await.map(|(_, proxy)| proxy)
 }
 
 pub async fn spawn_daemon() -> Result<()> {
+    use ffx_lib_args::Ffx;
+    use std::env;
+    use std::process::Stdio;
+
     let mut ffx_path = env::current_exe()?;
     // when we daemonize, our path will change to /, so get the canonical path before that occurs.
     ffx_path = std::fs::canonicalize(ffx_path)?;
@@ -106,7 +111,7 @@ pub async fn spawn_daemon() -> Result<()> {
     if let Some(e) = ffx.env.as_ref() {
         cmd.arg("--env").arg(e);
     }
-    cmd.arg(DAEMON);
+    cmd.arg("daemon");
     cmd.arg("start");
     daemonize(&mut cmd)
         .spawn()
@@ -124,6 +129,7 @@ async fn next_request(
 ) -> Result<Option<ServiceProviderRequest>> {
     Ok(stream.try_next().await.context("error running service provider server")?)
 }
+
 async fn exec_server(daemon: Daemon) -> Result<()> {
     let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
     let chan = fidl::AsyncChannel::from_channel(s).context("failed to make async channel")?;

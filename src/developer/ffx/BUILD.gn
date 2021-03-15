@@ -46,6 +46,13 @@ if (is_host) {
       "src/lib.rs",
       "src/main.rs",
     ]
+
+    test_deps = [
+      "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
+      "//sdk/fidl/fuchsia.overnet:fuchsia.overnet-rustc",
+      "//src/connectivity/overnet/lib/ascendd",
+      "//third_party/rust_crates:tempfile",
+    ]
   }
 
   sdk_host_tool("bin_sdk") {

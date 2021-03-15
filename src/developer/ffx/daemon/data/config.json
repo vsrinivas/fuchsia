@@ -6,7 +6,6 @@
         }
     },
     "overnet": {
-        "max_retry_count": 30,
         "socket": "/tmp/ascendd"
     },
     "proactive_log": {

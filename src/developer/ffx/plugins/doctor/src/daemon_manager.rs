@@ -70,6 +70,6 @@ impl DaemonManager for DefaultDaemonManager {
     }
 
     async fn find_and_connect(&self) -> Result<DaemonProxy> {
-        find_and_connect(hoist::hoist()).await
+        find_and_connect().await
     }
 }

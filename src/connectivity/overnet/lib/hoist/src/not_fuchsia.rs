@@ -6,7 +6,7 @@
 
 use {
     crate::HOIST,
-    anyhow::{format_err, Error},
+    anyhow::{bail, format_err, Error},
     async_std::io::ErrorKind::TimedOut,
     fidl::endpoints::{create_proxy, create_proxy_and_stream},
     fidl_fuchsia_overnet::{
@@ -19,6 +19,7 @@ use {
     fuchsia_async::{Task, Timer},
     futures::prelude::*,
     overnet_core::{log_errors, ListPeersContext, Router, RouterOptions, SecurityContext},
+    std::time::SystemTime,
     std::{
         sync::atomic::{AtomicU64, Ordering},
         sync::Arc,
@@ -83,7 +84,7 @@ pub struct Hoist {
 }
 
 impl Hoist {
-    pub(crate) fn new() -> Result<Self, Error> {
+    pub fn new() -> Result<Self, Error> {
         let node_id = overnet_core::generate_node_id();
         log::trace!("Hoist node id:  {}", node_id.0);
         let node = Router::new(
@@ -104,30 +105,48 @@ impl Hoist {
     pub fn node(&self) -> Arc<Router> {
         self.node.clone()
     }
-}
 
-/// Spawn a persistent ascendd link using the default paths and connection labels.
-#[must_use = "Dropped tasks will not run, either hold on to the reference or detach()"]
-pub fn spawn_ascendd_link() -> Task<()> {
-    Task::spawn(retry_with_backoff(
-        Duration::from_millis(100),
-        Duration::from_secs(3),
-        || async move {
-            let path = ascendd_path(Option::<String>::None);
-            let label = connection_label(Option::<String>::None);
+    /// Start a one-time ascendd connection, attempting to connect to the
+    /// unix socket a few times, but only running a single successful
+    /// connection to completion. This function will timeout with an
+    /// error after one second if no connection could be established.
+    pub async fn run_single_ascendd_link(&self) -> Result<(), Error> {
+        const MAX_SINGLE_CONNECT_TIME: u64 = 1;
+        let path = ascendd_path(Option::<String>::None);
+        let label = connection_label(Option::<String>::None);
 
-            log::trace!("Ascendd path: {}", path);
-            log::trace!("Overnet connection label: {:?}", label);
-            let uds = &async_std::os::unix::net::UnixStream::connect(path.clone())
-                .on_timeout(Duration::from_secs(1), || {
+        log::trace!("Ascendd path: {}", path);
+        log::trace!("Overnet connection label: {:?}", label);
+        let now = SystemTime::now();
+        let uds = loop {
+            match async_std::os::unix::net::UnixStream::connect(path.clone())
+                .on_timeout(Duration::from_millis(100), || {
                     Err(std::io::Error::new(TimedOut, format_err!("connecting to ascendd socket")))
                 })
-                .await?;
-            let (mut rx, mut tx) = uds.split();
+                .await
+            {
+                Ok(uds) => break uds,
+                Err(e) => {
+                    if now.elapsed()?.as_secs() > MAX_SINGLE_CONNECT_TIME {
+                        bail!(e);
+                    }
+                }
+            }
+        };
+        let (mut rx, mut tx) = uds.split();
 
-            run_ascendd_connection(&mut rx, &mut tx, Some(label), Some(path)).await
-        },
-    ))
+        run_ascendd_connection(&mut rx, &mut tx, Some(label), Some(path)).await
+    }
+}
+
+/// Spawn and return a task that will persistently keep a link connected
+/// to a local ascendd socket. For a single use variant, see
+/// Hoist.run_single_ascendd_link.
+#[must_use = "Dropped tasks will not run, either hold on to the reference or detach()"]
+pub fn spawn_ascendd_link() -> Task<()> {
+    Task::spawn(retry_with_backoff(Duration::from_millis(100), Duration::from_secs(3), || async {
+        crate::hoist().run_single_ascendd_link().await
+    }))
 }
 
 impl super::OvernetInstance for Hoist {

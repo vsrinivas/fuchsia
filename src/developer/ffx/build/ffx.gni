@@ -27,7 +27,7 @@ template("ffx") {
   suite_name = ffx_name + "_lib"
 
   ffx_plugin(suite_name) {
-    forward_variables_from(invoker, "*", [])
+    forward_variables_from(invoker, "*", [ "test_deps" ])
     args_deps = [ "core:lib" ]
     config_data = [ "data/config.json" ]
   }
@@ -46,6 +46,7 @@ template("ffx") {
              "//src/developer/ffx/plugins/daemon/start:ffx_daemon_start_args",
              "//sdk/fidl/fuchsia.developer.bridge:fuchsia.developer.bridge-rustc",
              "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
+             "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
              "//src/connectivity/overnet/lib/hoist",
              "//src/lib/analytics/rust:lib",
              "//src/lib/fidl/rust/fidl",
@@ -66,8 +67,8 @@ template("ffx") {
     forward_variables_from(invoker,
                            "*",
                            [
-                             "name",
                              "deps",
+                             "name",
                              "non_rust_deps",
                            ])
 

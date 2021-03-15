@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 use std::time::Duration;
 
-pub(crate) const DAEMON: &str = "daemon";
-
 pub(crate) const MDNS_BROADCAST_INTERVAL_SECS: u64 = 20;
 
 // How many seconds to give before dropping an MDNS target and marking it
@@ -15,15 +13,12 @@ pub(crate) const FASTBOOT_CHECK_INTERVAL_SECS: u64 = 3;
 
 pub(crate) const FASTBOOT_DROP_GRACE_PERIOD_SECS: u64 = 2;
 
-pub(crate) const DEFAULT_MAX_RETRY_COUNT: u64 = 30;
-
 // Delay between retry attempts to find the RCS.
 pub(crate) const RETRY_DELAY: Duration = Duration::from_millis(200);
 
 // Config keys
 pub(crate) const SSH_PRIV: &str = "ssh.priv";
 pub(crate) const SSH_PORT: &str = "ssh.port";
-pub(crate) const OVERNET_MAX_RETRY_COUNT: &str = "overnet.max_retry_count";
 
 pub const LOG_FILE_PREFIX: &str = "ffx.daemon";
 

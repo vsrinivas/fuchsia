@@ -12,7 +12,6 @@ use fuchsia_async::Task;
 use fuchsia_async::TimeoutExt;
 use futures::prelude::*;
 use hoist::hoist;
-use overnet_core::Router;
 use std::sync::Arc;
 use std::task::{Context, Poll};
 use std::{io::ErrorKind::TimedOut, pin::Pin, time::Duration};
@@ -53,24 +52,26 @@ impl Future for Ascendd {
     }
 }
 
-async fn run_stream(
-    node: Arc<Router>,
-    stream: Result<UnixStream, std::io::Error>,
-    sockpath: &str,
-) -> Result<(), Error> {
-    let (mut rx, mut tx) = stream?.split();
-    let sockpath = sockpath.to_string();
+/// Run an ascendd server on the given stream IOs identified by the given labels
+/// and paths, to completion.
+pub fn run_stream<'a>(
+    node: Arc<overnet_core::Router>,
+    rx: &'a mut (dyn AsyncRead + Unpin + Send),
+    tx: &'a mut (dyn AsyncWrite + Unpin + Send),
+    label: Option<String>,
+    path: Option<String>,
+) -> impl Future<Output = Result<(), Error>> + 'a {
     let config = Box::new(move || {
         Some(fidl_fuchsia_overnet_protocol::LinkConfig::AscenddServer(
             fidl_fuchsia_overnet_protocol::AscenddLinkConfig {
-                path: Some(sockpath.clone()),
-                connection_label: None,
+                path: path.clone(),
+                connection_label: label.clone(),
                 ..fidl_fuchsia_overnet_protocol::AscenddLinkConfig::EMPTY
             },
         ))
     });
-    log::trace!("Processing new Ascendd socket");
-    run_stream_link(node, &mut rx, &mut tx, Default::default(), config).await
+
+    run_stream_link(node, rx, tx, Default::default(), config)
 }
 
 async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result<(), Error> {
@@ -115,8 +116,24 @@ async fn run_ascendd(opt: Opt, stdout: impl AsyncWrite + Unpin + Send) -> Result
             incoming
                 .incoming()
                 .for_each_concurrent(None, |stream| async move {
-                    if let Err(e) = run_stream(hoist().node(), stream, sockpath).await {
-                        log::warn!("Failed processing socket: {:?}", e);
+                    match stream {
+                        Ok(stream) => {
+                            let (mut rx, mut tx) = stream.split();
+                            if let Err(e) = run_stream(
+                                hoist().node(),
+                                &mut rx,
+                                &mut tx,
+                                None,
+                                Some(sockpath.to_string()),
+                            )
+                            .await
+                            {
+                                log::warn!("Failed serving socket: {:?}", e);
+                            }
+                        }
+                        Err(e) => {
+                            log::warn!("Failed starting socket: {:?}", e);
+                        }
                     }
                 })
                 .await;
