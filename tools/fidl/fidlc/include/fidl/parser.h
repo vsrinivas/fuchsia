@@ -392,6 +392,7 @@ class Parser {
   void RecoverAllErrors() { recovered_errors_ = reporter_->errors().size(); }
   size_t recovered_errors_ = 0;
 
+  utils::Syntax syntax_ = utils::Syntax::kOld;
   Lexer* lexer_;
   Reporter* reporter_;
   const ExperimentalFlags experimental_flags_;

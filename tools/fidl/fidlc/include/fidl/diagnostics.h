@@ -28,6 +28,13 @@ constexpr ErrorDef<Token::KindAndSubkind, Token::KindAndSubkind> ErrUnexpectedId
 constexpr ErrorDef<std::string> ErrInvalidIdentifier("invalid identifier '{}'");
 constexpr ErrorDef<std::string> ErrInvalidLibraryNameComponent("Invalid library name component {}");
 constexpr ErrorDef<std::string> ErrDuplicateAttribute("duplicate attribute with name '{}'");
+
+// TODO(fxbug.dev/65978): remove when new syntax fully implemented.
+constexpr ErrorDef ErrMisplacedSyntaxVersion(
+    "syntax declaration must be at the top of the file, preceding the library declaration");
+constexpr ErrorDef ErrRemoveSyntaxVersion(
+    "the deprecated_syntax token is only recognized when the experimental allow_new_syntax flag is "
+    "enabled");
 constexpr ErrorDef ErrEmptyConstraints("no constraints specified");
 constexpr ErrorDef ErrLeadingComma("lists must not have leading commas");
 constexpr ErrorDef ErrTrailingComma("lists must not have trailing commas");

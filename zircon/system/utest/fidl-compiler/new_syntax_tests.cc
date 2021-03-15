@@ -21,13 +21,15 @@ namespace {
 // old syntax. This helper function streamlines that process. It also serves as
 // a good psuedo-test for situations where a library written in the new syntax
 // depends on one written in the old.
-TestLibrary with_fake_zx(SharedAmongstLibraries& shared, const std::string& in,
-                         const fidl::ExperimentalFlags flags) {
+TestLibrary with_fake_zx(const std::string& in, SharedAmongstLibraries& shared,
+                         fidl::ExperimentalFlags flags) {
   TestLibrary main_lib("example.fidl", in, &shared, flags);
   fidl::ExperimentalFlags zx_flags;
+  zx_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   zx_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
 
   std::string zx = R"FIDL(
+deprecated_syntax;
 library zx;
 
 enum obj_type : uint32 {
@@ -50,6 +52,129 @@ resource_definition handle : uint32 {
   zx_lib.Compile();
   main_lib.AddDependentLibrary(std::move(zx_lib));
   return main_lib;
+}
+
+TEST(NewSyntaxTests, SyntaxVersionOmitted) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type S = struct{};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_COMPILED(library);
+}
+
+TEST(NewSyntaxTests, SyntaxVersionOmittedMismatch) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+deprecated_syntax;
+library example;
+
+type S = struct{};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_FALSE(library.Compile());
+}
+
+TEST(NewSyntaxTests, SyntaxVersionDeprecated) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+deprecated_syntax;
+library example;
+
+struct S {};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_COMPILED(library);
+}
+
+TEST(NewSyntaxTests, SyntaxVersionDeprecatedMismatch) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+deprecated_syntax;
+library example;
+
+type S = struct{};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_FALSE(library.Compile());
+}
+
+TEST(NewSyntaxTests, SyntaxVersionMismatch) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+struct S {};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_FALSE(library.Compile());
+}
+
+TEST(NewSyntaxTests, SyntaxVersionWithoutFlag) {
+  TestLibrary library(R"FIDL(
+deprecated_syntax;
+library example;
+)FIDL");
+
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  EXPECT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrRemoveSyntaxVersion);
+}
+
+TEST(NewSyntaxTests, SyntaxVersionMisplaced) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+deprecated_syntax;
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  EXPECT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrMisplacedSyntaxVersion);
+}
+
+TEST(NewSyntaxTests, SyntaxVersionMisplacedWithoutFlag) {
+  TestLibrary library(R"FIDL(
+library example;
+deprecated_syntax;
+)FIDL");
+
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  EXPECT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrRemoveSyntaxVersion);
+}
+
+TEST(NewSyntaxTests, SyntaxVersionRepeated) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+deprecated_syntax;
+library example;
+deprecated_syntax;
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  EXPECT_EQ(errors.size(), 1);
+  ASSERT_ERR(errors[0], fidl::ErrMisplacedSyntaxVersion);
 }
 
 TEST(NewSyntaxTests, TypeDeclOfStructLayout) {
@@ -91,7 +216,7 @@ TEST(NewSyntaxTests, TypeDeclOfStructLayoutWithResourceness) {
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   SharedAmongstLibraries shared;
 
-  auto library = with_fake_zx(shared, R"FIDL(
+  auto library = with_fake_zx(R"FIDL(
 library example;
 using zx;
 type t1 = struct {
@@ -101,7 +226,7 @@ type t2 = resource struct {
     f1 zx.handle;
 };
 )FIDL",
-                              std::move(experimental_flags));
+                              shared, std::move(experimental_flags));
 
   ASSERT_COMPILED(library);
 
@@ -119,7 +244,7 @@ TEST(NewSyntaxTests, TypeDeclOfUnionLayoutWithResourceness) {
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   SharedAmongstLibraries shared;
 
-  auto library = with_fake_zx(shared, R"FIDL(
+  auto library = with_fake_zx(R"FIDL(
 library example;
 using zx;
 type t1 = union {
@@ -129,7 +254,7 @@ type t2 = resource union {
     1: v1 zx.handle;
 };
 )FIDL",
-                              std::move(experimental_flags));
+                              shared, std::move(experimental_flags));
 
   ASSERT_COMPILED(library);
 
@@ -185,7 +310,7 @@ TEST(NewSyntaxTests, TypeDeclOfUnionLayoutWithResourcenessAndStrictness) {
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   SharedAmongstLibraries shared;
 
-  auto library = with_fake_zx(shared, R"FIDL(
+  auto library = with_fake_zx(R"FIDL(
 library example;
 using zx;
 type t1 = resource flexible union {
@@ -201,7 +326,7 @@ type t4 = strict resource union {
     1: v1 zx.handle;
 };
 )FIDL",
-                              std::move(experimental_flags));
+                              shared, std::move(experimental_flags));
 
   ASSERT_COMPILED(library);
 
@@ -269,13 +394,12 @@ type TypeDecl = struct {
 TEST(NewSyntaxTests, LayoutMemberConstraints) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
   SharedAmongstLibraries shared;
 
   // TODO(fxbug.dev/65978): a number of fields in this struct declaration have
   //  been commented out until their respective features (client/server_end)
   //  have been added to the compiler.
-  auto library = with_fake_zx(shared, R"FIDL(
+  auto library = with_fake_zx(R"FIDL(
 library example;
 using zx;
 type t1 = resource struct {
@@ -299,7 +423,7 @@ type t1 = resource struct {
   //r17 server_end:[MyProtocol,optional];
 };
 )FIDL",
-                              std::move(experimental_flags));
+                              shared, std::move(experimental_flags));
   ASSERT_COMPILED(library);
 
   auto type_decl = library.LookupStruct("t1");

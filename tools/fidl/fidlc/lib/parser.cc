@@ -480,7 +480,7 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
     if (!Ok())
       return Fail();
   } else if (MaybeConsumeToken(OfKind(Token::Kind::kEqual))) {
-    if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax) ||
+    if (syntax_ == utils::Syntax::kNew ||
         experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kDisallowOldUsingSyntax))
       return Fail(ErrOldUsingSyntaxDeprecated, using_path->span());
     if (!Ok() || using_path->components.size() != 1u)
@@ -792,7 +792,7 @@ std::unique_ptr<raw::Parameter> Parser::ParseParameter() {
   // TODO(fxbug.dev/70247): remove branching
   std::unique_ptr<raw::TypeConstructor> type_ctor;
   std::unique_ptr<raw::Identifier> identifier;
-  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax)) {
+  if (syntax_ == utils::Syntax::kNew) {
     identifier = ParseIdentifier();
     if (!Ok())
       return Fail();
@@ -1026,7 +1026,7 @@ std::unique_ptr<raw::ResourceProperty> Parser::ParseResourcePropertyDeclaration(
   // TODO(fxbug.dev/70247): remove branching
   std::unique_ptr<raw::TypeConstructor> type_ctor;
   std::unique_ptr<raw::Identifier> identifier;
-  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax)) {
+  if (syntax_ == utils::Syntax::kNew) {
     identifier = ParseIdentifier();
     if (!Ok())
       return Fail();
@@ -1137,7 +1137,7 @@ std::unique_ptr<raw::ServiceMember> Parser::ParseServiceMember() {
   // TODO(fxbug.dev/70247): remove branching
   std::unique_ptr<raw::TypeConstructor> type_ctor;
   std::unique_ptr<raw::Identifier> identifier;
-  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax)) {
+  if (syntax_ == utils::Syntax::kNew) {
     identifier = ParseIdentifier();
     if (!Ok())
       return Fail();
@@ -1492,6 +1492,16 @@ std::unique_ptr<raw::UnionDeclaration> Parser::ParseUnionDeclaration(
 std::unique_ptr<raw::File> Parser::ParseFile() {
   ASTScope scope(this);
 
+  syntax_ = utils::Syntax::kOld;
+  if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kDeprecatedSyntax))) {
+    ConsumeTokenOrRecover(OfKind(Token::Kind::kSemicolon));
+    if (!experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax)) {
+      Fail(ErrRemoveSyntaxVersion);
+    }
+  } else if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax)) {
+    syntax_ = utils::Syntax::kNew;
+  }
+
   auto attributes = MaybeParseAttributeList();
   if (!Ok())
     return Fail();
@@ -1505,7 +1515,7 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
   if (!Ok())
     return Fail();
 
-  if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax))
+  if (syntax_ == utils::Syntax::kNew)
     return ParseFileNewSyntax(scope, std::move(attributes), std::move(library_name));
 
   bool done_with_library_imports = false;
@@ -1540,6 +1550,15 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 
       case CASE_TOKEN(Token::Kind::kEndOfFile):
         return Done;
+
+      case CASE_IDENTIFIER(Token::Subkind::kDeprecatedSyntax): {
+        if (experimental_flags_.IsFlagEnabled(ExperimentalFlags::Flag::kAllowNewSyntax)) {
+          Fail(ErrMisplacedSyntaxVersion);
+        } else {
+          Fail(ErrRemoveSyntaxVersion);
+        }
+        return More;
+      }
 
       case CASE_IDENTIFIER(Token::Subkind::kAlias): {
         done_with_library_imports = true;
@@ -1949,6 +1968,11 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
 
       case CASE_TOKEN(Token::Kind::kEndOfFile):
         return Done;
+
+      case CASE_IDENTIFIER(Token::Subkind::kDeprecatedSyntax): {
+        Fail(ErrMisplacedSyntaxVersion);
+        return More;
+      }
 
       case CASE_IDENTIFIER(Token::Subkind::kAlias): {
         done_with_library_imports = true;
