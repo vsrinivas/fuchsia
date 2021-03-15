@@ -11,6 +11,7 @@ go_library("sshutil") {
     "client_test.go",
     "conn.go",
     "conn_test.go",
+    "resolver.go",
     "sshutil.go",
     "sshutil_test.go",
     "testserver.go",
