@@ -3,11 +3,48 @@
 // found in the LICENSE file.
 
 use {
-    crate::fidl::*,
+    crate::fidl::{self, *},
     anyhow::{anyhow, Error},
     heck::SnakeCase,
     std::iter,
 };
+
+pub enum Decl<'a> {
+    Const { data: &'a fidl::Const },
+    Enum { data: &'a fidl::Enum },
+    Interface { data: &'a fidl::Interface },
+    Struct { data: &'a fidl::Struct },
+    TypeAlias { data: &'a fidl::TypeAlias },
+    Union { data: &'a fidl::Union },
+}
+
+pub fn get_declarations<'b>(ir: &'b FidlIr) -> Result<Vec<Decl<'b>>, Error> {
+    Ok(ir
+        .declaration_order
+        .iter()
+        .filter_map(|ident| match ir.get_declaration(ident).ok()? {
+            Declaration::Const => Some(Decl::Const {
+                data: ir.const_declarations.iter().filter(|c| c.name == *ident).next()?,
+            }),
+            Declaration::Enum => Some(Decl::Enum {
+                data: ir.enum_declarations.iter().filter(|e| e.name == *ident).next()?,
+            }),
+            Declaration::Interface => Some(Decl::Interface {
+                data: ir.interface_declarations.iter().filter(|e| e.name == *ident).next()?,
+            }),
+            Declaration::Struct => Some(Decl::Struct {
+                data: ir.struct_declarations.iter().filter(|e| e.name == *ident).next()?,
+            }),
+            Declaration::TypeAlias => Some(Decl::TypeAlias {
+                data: ir.type_alias_declarations.iter().filter(|e| e.name == *ident).next()?,
+            }),
+            Declaration::Union => Some(Decl::Union {
+                data: ir.union_declarations.iter().filter(|e| e.name == *ident).next()?,
+            }),
+            _ => None,
+        })
+        .collect())
+}
 
 #[derive(PartialEq, Eq)]
 pub enum ProtocolType {
@@ -31,6 +68,26 @@ impl From<&Option<Vec<Attribute>>> for ProtocolType {
         } else {
             ProtocolType::Protocol
         }
+    }
+}
+
+pub fn filter_protocol<'b>(declaration: &Decl<'b>) -> Option<&'b Interface> {
+    match declaration {
+        Decl::Interface { data } => match ProtocolType::from(&data.maybe_attributes) {
+            ProtocolType::Protocol => Some(data),
+            _ => None,
+        },
+        _ => None,
+    }
+}
+
+pub fn filter_interface<'b>(declaration: &Decl<'b>) -> Option<&'b Interface> {
+    match declaration {
+        Decl::Interface { data } => match ProtocolType::from(&data.maybe_attributes) {
+            ProtocolType::Interface => Some(data),
+            _ => None,
+        },
+        _ => None,
     }
 }
 

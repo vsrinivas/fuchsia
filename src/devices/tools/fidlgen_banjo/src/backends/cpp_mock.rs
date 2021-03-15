@@ -19,16 +19,6 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
     }
 }
 
-fn filter_protocol<'b>(declaration: &Decl<'b>) -> Option<&'b Interface> {
-    match declaration {
-        Decl::Interface { data } => match ProtocolType::from(&data.maybe_attributes) {
-            ProtocolType::Protocol => Some(data),
-            _ => None,
-        },
-        _ => None,
-    }
-}
-
 fn get_mock_out_param_types(m: &Method, ir: &FidlIr) -> Result<String, Error> {
     if !m.has_response || m.maybe_response.as_ref().unwrap().is_empty() {
         Ok("void".to_string())

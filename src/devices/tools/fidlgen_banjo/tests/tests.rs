@@ -141,28 +141,28 @@ mod cpp {
 }
 
 mod cpp_internal {
-    // macro_rules! cpp_internal_test {
-    //     ( $id:ident ) => {
-    //         codegen_test!($id, CppInternalBackend, concat!("cpp/", stringify!($id), "-internal.h"));
-    //     };
-    // }
+    macro_rules! cpp_internal_test {
+        ( $id:ident ) => {
+            codegen_test!($id, CppInternalBackend, concat!("cpp/", stringify!($id), "-internal.h"));
+        };
+    }
 
-    // cpp_internal_test!(callback);
-    // cpp_internal_test!(empty);
-    // cpp_internal_test!(example4);
-    // cpp_internal_test!(example6);
-    // cpp_internal_test!(example7);
-    // cpp_internal_test!(example9);
-    // cpp_internal_test!(handles);
-    // cpp_internal_test!(interface);
-    // cpp_internal_test!(protocolarray);
-    // cpp_internal_test!(protocolbase);
-    // cpp_internal_test!(protocolhandle);
-    // cpp_internal_test!(protocolothertypes);
-    // cpp_internal_test!(protocolprimitive);
-    // cpp_internal_test!(protocolvector);
-    // cpp_internal_test!(simple);
-    // cpp_internal_test!(view);
+    cpp_internal_test!(callback);
+    cpp_internal_test!(empty);
+    cpp_internal_test!(example4);
+    cpp_internal_test!(example6);
+    cpp_internal_test!(example7);
+    cpp_internal_test!(example9);
+    cpp_internal_test!(handles);
+    cpp_internal_test!(interface);
+    cpp_internal_test!(protocolarray);
+    cpp_internal_test!(protocolbase);
+    cpp_internal_test!(protocolhandle);
+    cpp_internal_test!(protocolothertypes);
+    cpp_internal_test!(protocolprimitive);
+    cpp_internal_test!(protocolvector);
+    cpp_internal_test!(simple);
+    cpp_internal_test!(view);
 }
 
 mod cpp_mock {

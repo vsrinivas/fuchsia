@@ -5,10 +5,10 @@
 use {
     super::{
         util::{
-            array_bounds, name_buffer, name_size, not_callback, primitive_type_to_c_str, to_c_name,
-            ProtocolType,
+            array_bounds, get_declarations, name_buffer, name_size, not_callback,
+            primitive_type_to_c_str, to_c_name, Decl, ProtocolType,
         },
-        *,
+        Backend,
     },
     crate::fidl::*,
     anyhow::{anyhow, Error},

@@ -479,6 +479,22 @@ fn filter_interface<'a>(
     None
 }
 
+/// Same as filter_interface but with a slightly different signature. This version is used with a
+/// declaration order vector as opposed to the namespace declaration vector. Ultimately only the
+/// present version will remain.
+fn filter_interface2<'a>(
+    decl: &&'a ast::Decl,
+) -> Option<(&'a Ident, &'a Vec<ast::Method>, &'a ast::Attrs)> {
+    if let ast::Decl::Protocol { ref name, ref methods, ref attributes, .. } = *decl {
+        if let Some(layout) = attributes.get_attribute("BanjoLayout") {
+            if layout == "ddk-interface" {
+                return Some((name, methods, attributes));
+            }
+        }
+    }
+    None
+}
+
 /// Checks whether a decl is a protocol, and if it is a protocol, checks that it is a "ddk-protocol".
 fn filter_protocol<'a>(
     decl: &'a ast::Decl,
@@ -495,7 +511,7 @@ fn filter_protocol<'a>(
     None
 }
 
-/// Same as filter_protocol but with a slightly different signatures. This version is used with a
+/// Same as filter_protocol but with a slightly different signature. This version is used with a
 /// declaration order vector as opposed to the namespace declaration vector. Ultimately only the
 /// present version will remain.
 fn filter_protocol2<'a>(
@@ -572,12 +588,12 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
     fn codegen_protocol(
         &self,
-        namespace: &Vec<ast::Decl>,
+        declarations: &Vec<&ast::Decl>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
-        namespace
+        declarations
             .iter()
-            .filter_map(filter_protocol)
+            .filter_map(filter_protocol2)
             .map(|(name, methods, _)| {
                 Ok(format!(
                     include_str!("templates/cpp/internal_protocol.h"),
@@ -592,12 +608,12 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
     fn codegen_interface(
         &self,
-        namespace: &Vec<ast::Decl>,
+        declarations: &Vec<&ast::Decl>,
         ast: &BanjoAst,
     ) -> Result<String, Error> {
-        namespace
+        declarations
             .iter()
-            .filter_map(filter_interface)
+            .filter_map(filter_interface2)
             .map(|(name, methods, _)| {
                 Ok(format!(
                     include_str!("templates/cpp/internal_protocol.h"),
@@ -1353,8 +1369,8 @@ impl<'a, W: io::Write> Backend<'a, W> for CppBackend<'a, W> {
             CppSubtype::Internal => {
                 self.w.write_fmt(format_args!(
                     include_str!("templates/cpp/internal.h"),
-                    protocol_static_asserts = self.codegen_protocol(namespace, &ast)?,
-                    interface_static_asserts = self.codegen_interface(namespace, &ast)?,
+                    protocol_static_asserts = self.codegen_protocol(&decl_order, &ast)?,
+                    interface_static_asserts = self.codegen_interface(&decl_order, &ast)?,
                     namespace = &ast.primary_namespace,
                 ))?;
             }

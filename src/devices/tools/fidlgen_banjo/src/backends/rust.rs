@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    super::{util::to_c_name, *},
+    super::{
+        util::{get_declarations, to_c_name, Decl},
+        Backend,
+    },
     crate::fidl::*,
     anyhow::{anyhow, Error},
     std::collections::HashSet,
