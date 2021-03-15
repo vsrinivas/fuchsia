@@ -145,6 +145,8 @@ struct adapter {
   mmio_buffer_t bar0_mmio;
   mmio_buffer_t flash_mmio;
   struct txrx_funcs* txrx;
+
+  pci_irq_mode_t irq_mode;
 };
 
 static inline void eth_enable_rx(struct adapter* adapter) {
@@ -412,6 +414,9 @@ static int e1000_irq_thread(void* arg) {
           ethernet_ifc_status(&adapter->ifc, online ? ETHERNET_STATUS_ONLINE : 0);
         }
       }
+    }
+    if (adapter->irq_mode == PCI_IRQ_MODE_LEGACY) {
+      pci_ack_interrupt(&adapter->osdep.pci);
     }
     mtx_unlock(&adapter->lock);
   }
@@ -944,7 +949,7 @@ static zx_status_t e1000_bind(void* ctx, zx_device_t* dev) {
   }
 
   // Request 1 interrupt of any mode.
-  status = pci_configure_irq_mode(pci, 1, NULL);
+  status = pci_configure_irq_mode(pci, 1, &adapter->irq_mode);
   if (status != ZX_OK) {
     zxlogf(ERROR, "failed to configure irqs");
     goto fail;
