@@ -24,9 +24,6 @@ zx_library("zbi-bootfs") {
     "//zircon/system/ulib/fzl",
     "//zircon/third_party/ulib/lz4",
   ]
-
-  # TODO(fxb/58162): delete the below and fix compiler warnings
-  configs += [ "//build/config:Wno-conversion" ]
 }
 
 group("tests") {
