@@ -13,18 +13,21 @@
 
 #include <list>
 
-#include "binding_handle.h"
 #include "logging.h"
 #include "logical_buffer_collection.h"
+#include "node.h"
+#include "src/devices/sysmem/drivers/sysmem/device.h"
 
 namespace sysmem_driver {
 
-class BufferCollection : public fuchsia_sysmem::BufferCollection::Interface,
-                         public fbl::RefCounted<BufferCollection> {
+class BufferCollection : public Node, public fuchsia_sysmem::BufferCollection::Interface {
  public:
-  ~BufferCollection();
-
-  static BindingHandle<BufferCollection> Create(fbl::RefPtr<LogicalBufferCollection> parent);
+  // Use EmplaceInTree() instead of Create() (until we switch to llcpp when we can have a new
+  // Create() that does what EmplaceInTree() currently does).  The returned reference is valid while
+  // this Node is in the tree under root_.
+  static BufferCollection& EmplaceInTree(
+      fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection, BufferCollectionToken* token);
+  ~BufferCollection() override;
 
   void SetErrorHandler(fit::function<void(zx_status_t)> error_handler) {
     error_handler_ = std::move(error_handler);
@@ -61,40 +64,53 @@ class BufferCollection : public fuchsia_sysmem::BufferCollection::Interface,
       fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers constraints_aux_buffers,
       SetConstraintsAuxBuffersCompleter::Sync& completer) override;
   void GetAuxBuffers(GetAuxBuffersCompleter::Sync& completer) override;
+  void AttachToken(uint32_t rights_attenuation_mask,
+                   fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request,
+                   AttachTokenCompleter::Sync& completer) override;
 
   //
   // LogicalBufferCollection uses these:
   //
 
-  void OnBuffersAllocated();
-
+  bool is_set_constraints_seen() const { return is_set_constraints_seen_; }
   bool has_constraints();
 
   // has_constraints() must be true to call this.
-  //
-  // this can only be called if TakeConstraints() hasn't been called yet.
   const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints();
 
-  // has_constraints() must be true to call this.
-  //
-  // this can only be called once
-  fuchsia_sysmem2::wire::BufferCollectionConstraints TakeConstraints();
+  // has_constraints() must be true to call this, and will stay true after calling this.
+  fuchsia_sysmem2::wire::BufferCollectionConstraints CloneConstraints();
 
-  LogicalBufferCollection* parent();
+  fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection_shared();
 
-  fbl::RefPtr<LogicalBufferCollection> parent_shared();
+  bool is_done() const;
 
-  void CloseChannel();
+  bool should_propagate_failure_to_parent_node() const;
 
-  bool is_done();
-
-  void SetDebugClientInfo(std::string name, uint64_t id);
-
-  const std::string& debug_name() const { return debug_info_.name; }
-  uint64_t debug_id() const { return debug_info_.id; }
+  // Node interface
+  bool ReadyForAllocation() override;
+  void OnBuffersAllocated(const AllocationResult& allocation_result) override;
+  void Fail(zx_status_t epitaph) override;
+  BufferCollectionToken* buffer_collection_token() override;
+  const BufferCollectionToken* buffer_collection_token() const override;
+  BufferCollection* buffer_collection() override;
+  const BufferCollection* buffer_collection() const override;
+  OrphanedNode* orphaned_node() override;
+  const OrphanedNode* orphaned_node() const override;
+  bool is_connected() const override;
 
  private:
-  explicit BufferCollection(fbl::RefPtr<LogicalBufferCollection> parent);
+  using V1CBufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2,
+                                             fuchsia_sysmem::wire::BufferCollectionInfo_2>;
+
+  friend class FidlServer;
+
+  explicit BufferCollection(fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,
+                            const BufferCollectionToken& token);
+
+  void CloseChannel(zx_status_t epitaph);
+
+  void SetDebugClientInfoInternal(std::string name, uint64_t id);
 
   // The rights attenuation mask driven by usage, so that read-only usage
   // doesn't get write, etc.
@@ -104,7 +120,7 @@ class BufferCollection : public fuchsia_sysmem::BufferCollection::Interface,
   uint32_t GetClientAuxVmoRights();
   void MaybeCompleteWaitForBuffersAllocated();
 
-  void FailAsync(zx_status_t status, const char* format, ...) __PRINTFLIKE(3, 4);
+  void FailAsync(Location location, zx_status_t status, const char* format, ...) __PRINTFLIKE(4, 5);
   // FailSync must be used instead of FailAsync if the current method has a completer that needs a
   // reply.
   template <typename Completer>
@@ -121,7 +137,6 @@ class BufferCollection : public fuchsia_sysmem::BufferCollection::Interface,
 
   static const fuchsia_sysmem_BufferCollection_ops_t kOps;
 
-  fbl::RefPtr<LogicalBufferCollection> parent_;
   std::optional<zx_status_t> async_failure_result_;
   fit::function<void(zx_status_t)> error_handler_;
 
@@ -138,22 +153,6 @@ class BufferCollection : public fuchsia_sysmem::BufferCollection::Interface,
   //
   std::optional<fuchsia_sysmem::BufferCollectionEvents::SyncClient> events_;
 
-  // Constraints as set by:
-  //
-  // v1:
-  //     optional SetConstraintsAuxBuffers
-  //     SetConstraints()
-  //
-  // v2 (TODO):
-  //     SetConstraints()
-  //
-  // Either way, the constraints here are in v2 form.
-  std::optional<TableHolder<fuchsia_sysmem2::wire::BufferCollectionConstraints>> constraints_;
-
-  // Stash BufferUsage aside for benefit of GetUsageBasedRightsAttenuation() despite
-  // TakeConstraints().
-  std::optional<TableHolder<fuchsia_sysmem2::wire::BufferUsage>> usage_;
-
   // Temporarily holds fuchsia.sysmem.BufferCollectionConstraintsAuxBuffers until SetConstraints()
   // arrives.
   std::optional<TableHolder<fuchsia_sysmem::wire::BufferCollectionConstraintsAuxBuffers>>
@@ -163,13 +162,6 @@ class BufferCollection : public fuchsia_sysmem::BufferCollection::Interface,
   bool is_set_constraints_seen_ = false;
   bool is_set_constraints_aux_buffers_seen_ = false;
 
-  // The rights attenuation mask driven by BufferCollectionToken::Duplicate()
-  // rights_attenuation_mask parameter(s) as the token is duplicated,
-  // potentially via multiple participants.
-  //
-  // TODO(fxbug.dev/50578): Finish plumbing this.
-  uint32_t client_rights_attenuation_mask_ = std::numeric_limits<uint32_t>::max();
-
   std::list<std::pair</*async_id*/ uint64_t, WaitForBuffersAllocatedCompleter::Async>>
       pending_wait_for_buffers_allocated_;
 
@@ -177,9 +169,10 @@ class BufferCollection : public fuchsia_sysmem::BufferCollection::Interface,
 
   std::optional<fidl::ServerBindingRef<fuchsia_sysmem::BufferCollection>> server_binding_;
 
-  LogicalBufferCollection::ClientInfo debug_info_;
+  // Becomes set when OnBuffersAllocated() is called, and stays set after that.
+  std::optional<AllocationResult> logical_allocation_result_;
 
-  inspect::Node node_;
+  inspect::Node inspect_node_;
   inspect::UintProperty debug_id_property_;
   inspect::StringProperty debug_name_property_;
   inspect::ValueList properties_;

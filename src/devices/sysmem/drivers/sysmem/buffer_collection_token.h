@@ -10,31 +10,35 @@
 #include <lib/fidl-async-2/fidl_server.h>
 #include <lib/fidl-async-2/simple_binding.h>
 
-#include "binding_handle.h"
 #include "logging.h"
 #include "logical_buffer_collection.h"
+#include "node.h"
 
 namespace sysmem_driver {
 
 class BufferCollectionToken;
 
-class BufferCollectionToken : public fuchsia_sysmem::BufferCollectionToken::RawChannelInterface,
-                              public LoggingMixin,
-                              public fbl::RefCounted<BufferCollectionToken> {
+class BufferCollectionToken : public Node,
+                              public fuchsia_sysmem::BufferCollectionToken::Interface,
+                              public LoggingMixin {
  public:
-  ~BufferCollectionToken();
+  ~BufferCollectionToken() override;
 
-  static BindingHandle<BufferCollectionToken> Create(Device* parent_device,
-                                                     fbl::RefPtr<LogicalBufferCollection> parent,
-                                                     uint32_t rights_attenuation_mask);
+  // The returned reference is owned by new_node_properties, which in turn is owned by
+  // logical_buffer_collection->root_.
+  static BufferCollectionToken& EmplaceInTree(
+      Device* parent_device, fbl::RefPtr<LogicalBufferCollection> logical_buffer_collection,
+      NodeProperties* new_node_properties);
 
   void SetErrorHandler(fit::function<void(zx_status_t)> error_handler) {
     error_handler_ = std::move(error_handler);
   }
-  void Bind(zx::channel channel);
+  void Bind(fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> token_request);
 
-  void Duplicate(uint32_t rights_attenuation_mask, zx::channel buffer_collection_token_request,
-                 DuplicateCompleter::Sync& completer) override;
+  void Duplicate(
+      uint32_t rights_attenuation_mask,
+      fidl::ServerEnd<fuchsia_sysmem::BufferCollectionToken> buffer_collection_token_request,
+      DuplicateCompleter::Sync& completer) override;
   void Sync(SyncCompleter::Sync&) override;
   void Close(CloseCompleter::Sync&) override;
   void SetName(uint32_t priority, fidl::StringView name, SetNameCompleter::Sync&) override;
@@ -42,15 +46,14 @@ class BufferCollectionToken : public fuchsia_sysmem::BufferCollectionToken::RawC
                           SetDebugClientInfoCompleter::Sync&) override;
   void SetDebugTimeoutLogDeadline(int64_t deadline,
                                   SetDebugTimeoutLogDeadlineCompleter::Sync&) override;
+  void SetDispensable(SetDispensableCompleter::Sync& completer) override;
 
-  void SetDebugClientInfo(std::string name, uint64_t id);
-
-  LogicalBufferCollection* parent();
-  fbl::RefPtr<LogicalBufferCollection> parent_shared();
+  void SetDebugClientInfoInternal(std::string name, uint64_t id);
 
   void SetServerKoid(zx_koid_t server_koid);
-
   zx_koid_t server_koid();
+
+  void SetDispensableInternal();
 
   bool is_done();
 
@@ -60,26 +63,38 @@ class BufferCollectionToken : public fuchsia_sysmem::BufferCollectionToken::RawC
 
   zx::channel TakeBufferCollectionRequest();
 
-  const std::string& debug_name() const { return debug_info_.name; }
-  uint64_t debug_id() const { return debug_info_.id; }
+  void CloseChannel(zx_status_t epitaph);
 
-  void CloseChannel();
+  // Node interface
+  bool ReadyForAllocation() override;
+  void OnBuffersAllocated(const AllocationResult& allocation_result) override;
+  void Fail(zx_status_t epitaph) override;
+  BufferCollectionToken* buffer_collection_token() override;
+  const BufferCollectionToken* buffer_collection_token() const override;
+  BufferCollection* buffer_collection() override;
+  const BufferCollection* buffer_collection() const override;
+  OrphanedNode* orphaned_node() override;
+  const OrphanedNode* orphaned_node() const override;
+  bool is_connected() const override;
 
  private:
   friend class FidlServer;
+
   BufferCollectionToken(Device* parent_device, fbl::RefPtr<LogicalBufferCollection> parent,
-                        uint32_t rights_attenuation_mask);
+                        NodeProperties* new_node_properties);
 
   void FailAsync(Location location, zx_status_t status, const char* format, ...);
 
+  template <typename Completer>
+  void FailSync(Location location, Completer& completer, zx_status_t status, const char* format,
+                ...);
+
   Device* parent_device_ = nullptr;
-  fbl::RefPtr<LogicalBufferCollection> parent_;
+
   // Cached from parent_.
   TableSet& table_set_;
-  // 1 bit means the right is allowed.  0 bit means the right is attenuated.
-  //
-  // TODO(fxbug.dev/50578): Finish plumbing this.
-  uint32_t rights_attenuation_mask_ = std::numeric_limits<uint32_t>::max();
+
+  std::optional<zx_status_t> async_failure_result_;
   fit::function<void(zx_status_t)> error_handler_;
 
   zx_koid_t server_koid_ = ZX_KOID_INVALID;
@@ -104,8 +119,7 @@ class BufferCollectionToken : public fuchsia_sysmem::BufferCollectionToken::RawC
   // buffers too soon before all tokens are gone).
   zx::channel buffer_collection_request_;
 
-  LogicalBufferCollection::ClientInfo debug_info_;
-  inspect::Node node_;
+  inspect::Node inspect_node_;
   inspect::UintProperty debug_id_property_;
   inspect::StringProperty debug_name_property_;
   inspect::ValueList properties_;

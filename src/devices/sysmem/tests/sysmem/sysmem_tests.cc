@@ -150,6 +150,9 @@ zx_koid_t get_koid(zx_handle_t handle) {
   zx_status_t status =
       zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
   EXPECT_EQ(status, ZX_OK, "");
+  if (status != ZX_OK) {
+    fprintf(stderr, "status: %d\n", status);
+  }
   ZX_ASSERT(status == ZX_OK);
   return info.koid;
 }
@@ -435,6 +438,432 @@ void SecureVmoReadTester::AttemptReadFromSecure(bool expect_read_success) {
     // at least on sherlock.  Typically we fault during the write, flush, read of byte 0 above.
     ZX_PANIC("didn't fault, but also didn't read non-zero, so pretend to fault");
   }
+}
+
+bool AttachTokenSucceeds(
+    bool attach_before_also, bool fail_attached_early,
+    fit::function<void(BufferCollectionConstraints& to_modify)> modify_constraints_initiator,
+    fit::function<void(BufferCollectionConstraints& to_modify)> modify_constraints_participant,
+    fit::function<void(BufferCollectionConstraints& to_modify)> modify_constraints_attached,
+    uint32_t expected_buffer_count = 6) {
+  ZX_DEBUG_ASSERT(!fail_attached_early || attach_before_also);
+  zx_status_t status;
+  zx::channel allocator2_client_1;
+  status = connect_to_sysmem_driver(&allocator2_client_1);
+  EXPECT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client_1;
+  zx::channel token_server_1;
+  status = zx::channel::create(0, &token_client_1, &token_server_1);
+  EXPECT_EQ(status, ZX_OK, "");
+
+  // Client 1 creates a token and new LogicalBufferCollection using
+  // AllocateSharedCollection().
+  status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client_1.get(),
+                                                            token_server_1.release());
+  EXPECT_EQ(status, ZX_OK, "");
+
+  zx::channel token_client_2;
+  zx::channel token_server_2;
+  status = zx::channel::create(0, &token_client_2, &token_server_2);
+  EXPECT_EQ(status, ZX_OK, "");
+
+  // Client 1 duplicates its token and gives the duplicate to client 2 (this
+  // test is single proc, so both clients are coming from this client
+  // process - normally the two clients would be in separate processes with
+  // token_client_2 transferred to another participant).
+  status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), ZX_RIGHT_SAME_RIGHTS,
+                                                         token_server_2.release());
+  EXPECT_EQ(status, ZX_OK, "");
+
+  // Client 3 is attached later.
+
+  zx::channel collection_client_1;
+  zx::channel collection_server_1;
+  status = zx::channel::create(0, &collection_client_1, &collection_server_1);
+  EXPECT_EQ(status, ZX_OK, "");
+
+  EXPECT_NE(token_client_1.get(), ZX_HANDLE_INVALID, "");
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
+  EXPECT_EQ(status, ZX_OK, "");
+
+  BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
+  constraints_1->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+  constraints_1->min_buffer_count_for_camping = 3;
+  constraints_1->has_buffer_memory_constraints = true;
+  constraints_1->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+      // This min_size_bytes is intentionally too small to hold the min_coded_width and
+      // min_coded_height in NV12
+      // format.
+      .min_size_bytes = 64 * 1024,
+      // Allow a max that's just large enough to accommodate the size implied
+      // by the min frame size and PixelFormat.
+      .max_size_bytes = (512 * 512) * 3 / 2,
+      .physically_contiguous_required = false,
+      .secure_required = false,
+      .ram_domain_supported = false,
+      .cpu_domain_supported = true,
+      .inaccessible_domain_supported = false,
+      .heap_permitted_count = 0,
+      .heap_permitted = {},
+  };
+  constraints_1->image_format_constraints_count = 1;
+  fuchsia_sysmem_ImageFormatConstraints& image_constraints_1 =
+      constraints_1->image_format_constraints[0];
+  image_constraints_1.pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12;
+  image_constraints_1.color_spaces_count = 1;
+  image_constraints_1.color_space[0] = fuchsia_sysmem_ColorSpace{
+      .type = fuchsia_sysmem_ColorSpaceType_REC709,
+  };
+  // The min dimensions intentionally imply a min size that's larger than
+  // buffer_memory_constraints.min_size_bytes.
+  image_constraints_1.min_coded_width = 256;
+  image_constraints_1.max_coded_width = std::numeric_limits<uint32_t>::max();
+  image_constraints_1.min_coded_height = 256;
+  image_constraints_1.max_coded_height = std::numeric_limits<uint32_t>::max();
+  image_constraints_1.min_bytes_per_row = 256;
+  image_constraints_1.max_bytes_per_row = std::numeric_limits<uint32_t>::max();
+  image_constraints_1.max_coded_width_times_coded_height = std::numeric_limits<uint32_t>::max();
+  image_constraints_1.layers = 1;
+  image_constraints_1.coded_width_divisor = 2;
+  image_constraints_1.coded_height_divisor = 2;
+  image_constraints_1.bytes_per_row_divisor = 2;
+  image_constraints_1.start_offset_divisor = 2;
+  image_constraints_1.display_width_divisor = 1;
+  image_constraints_1.display_height_divisor = 1;
+
+  // Start with constraints_2 a copy of constraints_1.  There are no handles
+  // in the constraints struct so a struct copy instead of clone is fine here.
+  BufferCollectionConstraints constraints_2(*constraints_1.get());
+  // Modify constraints_2 to require double the width and height.
+  constraints_2->image_format_constraints[0].min_coded_width = 512;
+  constraints_2->image_format_constraints[0].min_coded_height = 512;
+
+#if SYSMEM_FUZZ_CORPUS
+  FILE* ofp = fopen("/cache/sysmem_fuzz_corpus_multi_buffer_collecton_constraints.dat", "wb");
+  if (ofp) {
+    fwrite(constraints_1.get(), sizeof(fuchsia_sysmem_BufferCollectionConstraints), 1, ofp);
+    fwrite(constraints_2.get(), sizeof(fuchsia_sysmem_BufferCollectionConstraints), 1, ofp);
+    fclose(ofp);
+  } else {
+    fprintf(stderr, "Failed to write sysmem multi BufferCollectionConstraints corpus file.\n");
+    fflush(stderr);
+  }
+#endif  // SYSMEM_FUZZ_CORPUS
+
+  modify_constraints_initiator(constraints_1);
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_1.get(), true,
+                                                         constraints_1.release());
+  EXPECT_EQ(status, ZX_OK, "");
+
+  // Client 2 connects to sysmem separately.
+  zx::channel allocator2_client_2;
+  status = connect_to_sysmem_driver(&allocator2_client_2);
+  EXPECT_EQ(status, ZX_OK, "");
+
+  zx::channel collection_client_2;
+  zx::channel collection_server_2;
+  status = zx::channel::create(0, &collection_client_2, &collection_server_2);
+  EXPECT_EQ(status, ZX_OK, "");
+
+  // Just because we can, perform this sync as late as possible, just before
+  // the BindSharedCollection() via allocator2_client_2.  Without this Sync(),
+  // the BindSharedCollection() might arrive at the server before the
+  // Duplicate() that delivered the server end of token_client_2 to sysmem,
+  // which would cause sysmem to not recognize the token.
+  status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
+  EXPECT_EQ(status, ZX_OK, "");
+
+  EXPECT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
+  status = fuchsia_sysmem_AllocatorBindSharedCollection(
+      allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());
+  EXPECT_EQ(status, ZX_OK, "");
+
+  // Not all constraints have been input, so the buffers haven't been
+  // allocated yet.
+  zx_status_t check_status;
+  status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_1.get(),
+                                                                &check_status);
+  EXPECT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(check_status, ZX_ERR_UNAVAILABLE, "");
+  status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_2.get(),
+                                                                &check_status);
+  EXPECT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(check_status, ZX_ERR_UNAVAILABLE, "");
+
+  zx::channel token_client_3;
+  zx::channel token_server_3;
+
+  auto use_collection_client_2_to_attach_token_3 = [&collection_client_2, &token_client_3,
+                                                    &token_server_3] {
+    token_client_3.reset();
+    ZX_DEBUG_ASSERT(!token_server_3);
+    zx_status_t status = zx::channel::create(0, &token_client_3, &token_server_3);
+    EXPECT_EQ(status, ZX_OK, "");
+    status = fuchsia_sysmem_BufferCollectionAttachToken(
+        collection_client_2.get(), ZX_RIGHT_SAME_RIGHTS, token_server_3.release());
+    ZX_ASSERT(status == ZX_OK);
+    EXPECT_EQ(status, ZX_OK, "");
+  };
+
+  if (attach_before_also) {
+    use_collection_client_2_to_attach_token_3();
+  }
+
+  // The AttachToken() participant needs to set constraints also, but it will never hold up initial
+  // allocation.
+
+  BufferCollectionConstraints constraints_3(BufferCollectionConstraints::Default);
+  constraints_3->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+  constraints_3->has_buffer_memory_constraints = true;
+  constraints_3->buffer_memory_constraints.cpu_domain_supported = true;
+  modify_constraints_attached(constraints_3);
+
+  zx::channel collection_client_3;
+  zx::channel collection_server_3;
+
+  auto collection_client_3_set_constraints = [&allocator2_client_2, &token_client_3,
+                                              &collection_server_3, &constraints_3,
+                                              &collection_client_3] {
+    EXPECT_NE(allocator2_client_2.get(), ZX_HANDLE_INVALID, "");
+    EXPECT_NE(token_client_3.get(), ZX_HANDLE_INVALID, "");
+    collection_client_3.reset();
+    ZX_DEBUG_ASSERT(!collection_server_3);
+    zx_status_t status = zx::channel::create(0, &collection_client_3, &collection_server_3);
+    EXPECT_EQ(status, ZX_OK, "");
+    EXPECT_NE(collection_client_3.get(), ZX_HANDLE_INVALID, "");
+    EXPECT_NE(collection_server_3.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator2_client_2.get(), token_client_3.release(), collection_server_3.release());
+    EXPECT_EQ(status, ZX_OK, "");
+    BufferCollectionConstraints constraints_3_copy(*constraints_3.get());
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_3.get(), true,
+                                                           constraints_3_copy.release());
+    EXPECT_EQ(status, ZX_OK, "");
+  };
+
+  if (attach_before_also) {
+    collection_client_3_set_constraints();
+    if (fail_attached_early) {
+      // Also close the channel to simulate early client 3 failure before allocation.
+      collection_client_3.reset();
+    }
+  }
+
+  //
+  // Only after all non-AttachToken() participants have SetConstraints() will the initial allocation
+  // be successful.  The initial allocation will always succeed regardless of how uncooperative the
+  // AttachToken() client 3 is being with its constraints.
+  //
+
+  modify_constraints_participant(constraints_2);
+  status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_2.get(), true,
+                                                         constraints_2.release());
+  EXPECT_EQ(status, ZX_OK, "");
+
+  zx_status_t allocation_status;
+  BufferCollectionInfo buffer_collection_info_1(BufferCollectionInfo::Default);
+  // This helps with a later exact equality check.
+  memset(buffer_collection_info_1.get(), 0, sizeof(*buffer_collection_info_1.get()));
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+      collection_client_1.get(), &allocation_status, buffer_collection_info_1.get());
+  // This is the first round-trip to/from sysmem.  A failure here can be due
+  // to any step above failing async.
+  EXPECT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(allocation_status, ZX_OK, "");
+  if (status != ZX_OK || allocation_status != ZX_OK) {
+    // The EXPECT_EQ failures will prevent the test from passing regardless of what the caller
+    // expects the return value to be.
+    return false;
+  }
+
+  status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_1.get(),
+                                                                &check_status);
+  EXPECT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(check_status, ZX_OK, "");
+  status = fuchsia_sysmem_BufferCollectionCheckBuffersAllocated(collection_client_2.get(),
+                                                                &check_status);
+  EXPECT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(check_status, ZX_OK, "");
+
+  BufferCollectionInfo buffer_collection_info_2(BufferCollectionInfo::Default);
+  // This helps with a later exact equality check.
+  memset(buffer_collection_info_2.get(), 0, sizeof(*buffer_collection_info_2.get()));
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+      collection_client_2.get(), &allocation_status, buffer_collection_info_2.get());
+  EXPECT_EQ(status, ZX_OK, "");
+  EXPECT_EQ(allocation_status, ZX_OK, "");
+
+  //
+  // buffer_collection_info_1 and buffer_collection_info_2 should be exactly
+  // equal except their non-zero handle values, which should be different.  We
+  // verify the handle values then check that the structs are exactly the same
+  // with handle values zeroed out.
+  //
+
+  // copy_1 and copy_2 intentionally don't manage their handle values.
+
+  // struct copy
+  fuchsia_sysmem_BufferCollectionInfo_2 copy_1 = *buffer_collection_info_1.get();
+  // struct copy
+  fuchsia_sysmem_BufferCollectionInfo_2 copy_2 = *buffer_collection_info_2.get();
+  for (uint32_t i = 0; i < std::size(buffer_collection_info_1->buffers); ++i) {
+    EXPECT_EQ(buffer_collection_info_1->buffers[i].vmo != ZX_HANDLE_INVALID,
+              buffer_collection_info_2->buffers[i].vmo != ZX_HANDLE_INVALID, "");
+    if (buffer_collection_info_1->buffers[i].vmo != ZX_HANDLE_INVALID) {
+      // The handle values must be different.
+      EXPECT_NE(buffer_collection_info_1->buffers[i].vmo, buffer_collection_info_2->buffers[i].vmo,
+                "");
+      // For now, the koid(s) are expected to be equal.  This is not a
+      // fundamental check, in that sysmem could legitimately change in
+      // future to vend separate child VMOs (of the same portion of a
+      // non-copy-on-write parent VMO) to the two participants and that
+      // would still be potentially valid overall.
+      zx_koid_t koid_1 = get_koid(buffer_collection_info_1->buffers[i].vmo);
+      zx_koid_t koid_2 = get_koid(buffer_collection_info_2->buffers[i].vmo);
+      EXPECT_EQ(koid_1, koid_2, "");
+
+      // Prepare the copies for memcmp().
+      copy_1.buffers[i].vmo = ZX_HANDLE_INVALID;
+      copy_2.buffers[i].vmo = ZX_HANDLE_INVALID;
+    }
+  }
+  int32_t memcmp_result = memcmp(&copy_1, &copy_2, sizeof(copy_1));
+  // Check that buffer_collection_info_1 and buffer_collection_info_2 are
+  // consistent.
+  EXPECT_EQ(memcmp_result, 0, "");
+
+  //
+  // Verify that buffer_collection_info_1 paid attention to constraints_2, and
+  // that buffer_collection_info_2 makes sense.  This also indirectly confirms
+  // that buffer_collection_info_3 paid attention to constraints_2.
+  //
+
+  EXPECT_EQ(buffer_collection_info_1->buffer_count, expected_buffer_count, "");
+  // The size should be sufficient for the whole NV12 frame, not just
+  // min_size_bytes.  In other words, the portion of the VMO the client can
+  // use is large enough to hold the min image size, despite the min buffer
+  // size being smaller.
+  EXPECT_GE(buffer_collection_info_1->settings.buffer_settings.size_bytes, (512 * 512) * 3 / 2, "");
+  EXPECT_EQ(buffer_collection_info_1->settings.buffer_settings.is_physically_contiguous, false, "");
+  EXPECT_EQ(buffer_collection_info_1->settings.buffer_settings.is_secure, false, "");
+  // We specified image_format_constraints so the result must also have
+  // image_format_constraints.
+  EXPECT_EQ(buffer_collection_info_1->settings.has_image_format_constraints, true, "");
+
+  for (uint32_t i = 0; i < 64; ++i) {
+    if (i < expected_buffer_count) {
+      EXPECT_NE(buffer_collection_info_1->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+      EXPECT_NE(buffer_collection_info_2->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+
+      uint64_t size_bytes_1 = 0;
+      status = zx_vmo_get_size(buffer_collection_info_1->buffers[i].vmo, &size_bytes_1);
+      EXPECT_EQ(status, ZX_OK, "");
+
+      uint64_t size_bytes_2 = 0;
+      status = zx_vmo_get_size(buffer_collection_info_2->buffers[i].vmo, &size_bytes_2);
+      EXPECT_EQ(status, ZX_OK, "");
+
+      // The vmo has room for the nominal size of the portion of the VMO
+      // the client can use.  These checks should pass even if sysmem were
+      // to vend different child VMOs to the two participants.
+      EXPECT_LE(buffer_collection_info_1->buffers[i].vmo_usable_start +
+                    buffer_collection_info_1->settings.buffer_settings.size_bytes,
+                size_bytes_1, "");
+      EXPECT_LE(buffer_collection_info_2->buffers[i].vmo_usable_start +
+                    buffer_collection_info_2->settings.buffer_settings.size_bytes,
+                size_bytes_2, "");
+    } else {
+      EXPECT_EQ(buffer_collection_info_1->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+      EXPECT_EQ(buffer_collection_info_2->buffers[i].vmo, ZX_HANDLE_INVALID, "");
+    }
+  }
+
+  if (attach_before_also && !collection_client_3) {
+    // We already failed collection_client_3 early, so AttachToken() can't succeed, but we've
+    // checked that initial allocation did succeed despite the pre-allocation
+    // failure of client 3.
+    return false;
+  }
+
+  if (attach_before_also) {
+    BufferCollectionInfo buffer_collection_info_3(BufferCollectionInfo::Default);
+    // This helps with a later exact equality check.
+    memset(buffer_collection_info_3.get(), 0, sizeof(*buffer_collection_info_3.get()));
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client_3.get(), &allocation_status, buffer_collection_info_3.get());
+    if (status != ZX_OK || allocation_status != ZX_OK) {
+      return false;
+    }
+  }
+
+  const uint32_t kIterationCount = 3;
+  for (uint32_t i = 0; i < kIterationCount; ++i) {
+    if (i != 0 || !attach_before_also) {
+      // Doing a Sync() on a different channel doesn't really guarantee that the token_client_3
+      // channel close above is done being processesd by sysmem, but it might help despite the lack
+      // of guarantee.
+      status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
+      EXPECT_EQ(status, ZX_OK, "");
+
+      // Also sleep; also not a guarantee.
+      nanosleep_duration(zx::msec(250));
+
+      use_collection_client_2_to_attach_token_3();
+      collection_client_3_set_constraints();
+    }
+
+    // The collection_client_3_set_constraints() above closed the old collection_client_3, which the
+    // sysmem server treats as a client 3 failure, but becuase client 3 was created via
+    // AttachToken(), the failure of client 3 doesn't cause failure of the LogicalBufferCollection.
+    //
+    // Give some time to fail if it were going to (but it shouldn't).
+    nanosleep_duration(zx::msec(250));
+    status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
+    // LogicalBufferCollection still ok.
+    EXPECT_EQ(status, ZX_OK, "");
+
+    BufferCollectionInfo buffer_collection_info_3(BufferCollectionInfo::Default);
+    // This helps with a later exact equality check.
+    memset(buffer_collection_info_3.get(), 0, sizeof(*buffer_collection_info_3.get()));
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client_3.get(), &allocation_status, buffer_collection_info_3.get());
+    if (status != ZX_OK || allocation_status != ZX_OK) {
+      return false;
+    }
+
+    // struct copy
+    fuchsia_sysmem_BufferCollectionInfo_2 copy_3 = *buffer_collection_info_3.get();
+    for (uint32_t i = 0; i < std::size(buffer_collection_info_1->buffers); ++i) {
+      EXPECT_EQ(buffer_collection_info_1->buffers[i].vmo != ZX_HANDLE_INVALID,
+                buffer_collection_info_3->buffers[i].vmo != ZX_HANDLE_INVALID, "");
+      if (buffer_collection_info_1->buffers[i].vmo != ZX_HANDLE_INVALID) {
+        // The handle values must be different.
+        EXPECT_NE(buffer_collection_info_1->buffers[i].vmo,
+                  buffer_collection_info_3->buffers[i].vmo, "");
+        EXPECT_NE(buffer_collection_info_2->buffers[i].vmo,
+                  buffer_collection_info_3->buffers[i].vmo, "");
+        // For now, the koid(s) are expected to be equal.  This is not a
+        // fundamental check, in that sysmem could legitimately change in
+        // future to vend separate child VMOs (of the same portion of a
+        // non-copy-on-write parent VMO) to the two participants and that
+        // would still be potentially valid overall.
+        zx_koid_t koid_1 = get_koid(buffer_collection_info_1->buffers[i].vmo);
+        zx_koid_t koid_3 = get_koid(buffer_collection_info_3->buffers[i].vmo);
+        EXPECT_EQ(koid_1, koid_3, "");
+
+        // Prepare the copies for memcmp().
+        copy_3.buffers[i].vmo = ZX_HANDLE_INVALID;
+      }
+    }
+    memcmp_result = memcmp(&copy_1, &copy_3, sizeof(copy_1));
+    // Check that buffer_collection_info_1 and buffer_collection_info_3 are
+    // consistent.
+    EXPECT_EQ(memcmp_result, 0, "");
+  }
+
+  return true;
 }
 
 }  // namespace
@@ -1237,7 +1666,7 @@ TEST(Sysmem, MultipleParticipants) {
       copy_2.buffers[i].vmo = ZX_HANDLE_INVALID;
     }
 
-    // Buffer collection 3 never got a SetConstraints(), so we get no VMOs.
+    // Buffer collection 3 passed false to SetConstraints(), so we get no VMOs.
     ASSERT_EQ(ZX_HANDLE_INVALID, buffer_collection_info_3->buffers[i].vmo, "");
   }
   int32_t memcmp_result = memcmp(&copy_1, &copy_2, sizeof(copy_1));
@@ -3425,8 +3854,271 @@ TEST(Sysmem, DuplicateConstraintsFails) {
   }));
 }
 
+TEST(Sysmem, AttachToken_BeforeAllocate_Success) {
+  EXPECT_TRUE(AttachTokenSucceeds(
+      true, false, [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {}));
+}
+
+TEST(Sysmem, AttachToken_AfterAllocate_Success) {
+  EXPECT_TRUE(AttachTokenSucceeds(
+      false, false, [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {}));
+}
+
+TEST(Sysmem, AttachToken_BeforeAllocate_AttachedFailedEarly_Failure) {
+  // Despite the attached token failing early, this still verifies that the non-attached tokens
+  // are still ok and the LogicalBufferCollection is still ok.
+  EXPECT_FALSE(AttachTokenSucceeds(
+      true, true, [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {}));
+}
+
+TEST(Sysmem, AttachToken_BeforeAllocate_Failure_BufferSizes) {
+  EXPECT_FALSE(AttachTokenSucceeds(
+      true, false, [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {
+        to_modify->buffer_memory_constraints.max_size_bytes = (512 * 512) * 3 / 2 - 1;
+      }));
+}
+
+TEST(Sysmem, AttachToken_AfterAllocate_Failure_BufferSizes) {
+  EXPECT_FALSE(AttachTokenSucceeds(
+      false, false, [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {
+        to_modify->buffer_memory_constraints.max_size_bytes = (512 * 512) * 3 / 2 - 1;
+      }));
+}
+
+TEST(Sysmem, AttachToken_BeforeAllocate_Success_BufferCounts) {
+  const uint32_t kAttachTokenBufferCount = 2;
+  uint32_t buffers_needed = 0;
+  EXPECT_TRUE(AttachTokenSucceeds(
+      true, false,
+      [&buffers_needed](BufferCollectionConstraints& to_modify) {
+        // 3
+        buffers_needed += to_modify->min_buffer_count_for_camping;
+      },
+      [&buffers_needed](BufferCollectionConstraints& to_modify) {
+        // 3
+        buffers_needed += to_modify->min_buffer_count_for_camping;
+        // 8
+        to_modify->min_buffer_count = buffers_needed + kAttachTokenBufferCount;
+      },
+      [](BufferCollectionConstraints& to_modify) {
+        // 2
+        to_modify->min_buffer_count_for_camping = kAttachTokenBufferCount;
+      },
+      8  // max(8, 3 + 3 + 2)
+      ));
+}
+
+TEST(Sysmem, AttachToken_AfterAllocate_Success_BufferCounts) {
+  const uint32_t kAttachTokenBufferCount = 2;
+  uint32_t buffers_needed = 0;
+  EXPECT_TRUE(AttachTokenSucceeds(
+      false, false,
+      [&buffers_needed](BufferCollectionConstraints& to_modify) {
+        // 3
+        buffers_needed += to_modify->min_buffer_count_for_camping;
+      },
+      [&buffers_needed](BufferCollectionConstraints& to_modify) {
+        // 3
+        buffers_needed += to_modify->min_buffer_count_for_camping;
+        // 8
+        to_modify->min_buffer_count = buffers_needed + kAttachTokenBufferCount;
+      },
+      [](BufferCollectionConstraints& to_modify) {
+        // 2
+        to_modify->min_buffer_count_for_camping = kAttachTokenBufferCount;
+      },
+      8  // max(8, 3 + 3)
+      ));
+}
+
+TEST(Sysmem, AttachToken_BeforeAllocate_Failure_BufferCounts) {
+  EXPECT_FALSE(AttachTokenSucceeds(
+      true, false, [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) { to_modify->min_buffer_count_for_camping = 1; },
+      // Only 6 get allocated, despite AttachToken() before allocation, because we intentionally
+      // want AttachToken() before vs. after initial allocation to behave as close to the same as
+      // possible.
+      6));
+}
+
+TEST(Sysmem, AttachToken_AfterAllocate_Failure_BufferCounts) {
+  EXPECT_FALSE(AttachTokenSucceeds(
+      false, false, [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) {},
+      [](BufferCollectionConstraints& to_modify) { to_modify->min_buffer_count_for_camping = 1; },
+      // Only 6 get allocated at first, then AttachToken() sequence started after initial allocation
+      // fails (it would have failed even if it had started before initial allocation though).
+      6));
+}
+
+TEST(Sysmem, SetDispensable) {
+  enum class Variant { kDispensableFailureBeforeAllocation, kDispensableFailureAfterAllocation };
+  constexpr Variant variants[] = {Variant::kDispensableFailureBeforeAllocation,
+                                  Variant::kDispensableFailureAfterAllocation};
+  for (Variant variant : variants) {
+    zx_status_t status;
+    zx::channel allocator2_client_1;
+    status = connect_to_sysmem_driver(&allocator2_client_1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client_1;
+    zx::channel token_server_1;
+    status = zx::channel::create(0, &token_client_1, &token_server_1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Client 1 creates a token and new LogicalBufferCollection using
+    // AllocateSharedCollection().
+    status = fuchsia_sysmem_AllocatorAllocateSharedCollection(allocator2_client_1.get(),
+                                                              token_server_1.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel token_client_2;
+    zx::channel token_server_2;
+    status = zx::channel::create(0, &token_client_2, &token_server_2);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Client 1 duplicates its token and gives the duplicate to client 2 (this
+    // test is single proc, so both clients are coming from this client
+    // process - normally the two clients would be in separate processes with
+    // token_client_2 transferred to another participant).
+    status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
+        token_client_1.get(), ZX_RIGHT_SAME_RIGHTS, token_server_2.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Client 1 calls SetDispensable() on token 2.  Client 2's constraints will be part of the
+    // initial allocation, but post-allocation, client 2 failure won't cause failure of the
+    // LogicalBufferCollection.
+    status = fuchsia_sysmem_BufferCollectionTokenSetDispensable(token_client_2.get());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client_1;
+    zx::channel collection_server_1;
+    status = zx::channel::create(0, &collection_client_1, &collection_server_1);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client_1.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
+    constraints_1->usage.cpu = fuchsia_sysmem_cpuUsageReadOften | fuchsia_sysmem_cpuUsageWriteOften;
+    constraints_1->min_buffer_count_for_camping = 2;
+    constraints_1->has_buffer_memory_constraints = true;
+    constraints_1->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
+        .min_size_bytes = 64 * 1024,
+        .max_size_bytes = 64 * 1024,
+        .physically_contiguous_required = false,
+        .secure_required = false,
+        .ram_domain_supported = false,
+        .cpu_domain_supported = true,
+        .inaccessible_domain_supported = false,
+        .heap_permitted_count = 0,
+        .heap_permitted = {},
+    };
+
+    // constraints_2 is just a copy of constraints_1 - since both participants
+    // specify min_buffer_count_for_camping 2, the total number of allocated
+    // buffers will be 4.  There are no handles in the constraints struct so a
+    // struct copy instead of clone is fine here.
+    BufferCollectionConstraints constraints_2(*constraints_1.get());
+    ASSERT_EQ(constraints_2->min_buffer_count_for_camping, 2, "");
+
+    // Client 2 connects to sysmem separately.
+    zx::channel allocator2_client_2;
+    status = connect_to_sysmem_driver(&allocator2_client_2);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    zx::channel collection_client_2;
+    zx::channel collection_server_2;
+    status = zx::channel::create(0, &collection_client_2, &collection_server_2);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // Just because we can, perform this sync as late as possible, just before
+    // the BindSharedCollection() via allocator2_client_2.  Without this Sync(),
+    // the BindSharedCollection() might arrive at the server before the
+    // Duplicate() that delivered the server end of token_client_2 to sysmem,
+    // which would cause sysmem to not recognize the token.
+    status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    ASSERT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
+    status = fuchsia_sysmem_AllocatorBindSharedCollection(
+        allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_1.get(), true,
+                                                           constraints_1.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    if (variant == Variant::kDispensableFailureBeforeAllocation) {
+      // Client 2 will now abruptly close its channel.  Since client 2 hasn't provided constraints
+      // yet, the LogicalBufferCollection will fail.
+      collection_client_2.reset();
+    } else {
+      // Client 2 SetConstraints().
+      status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_2.get(), true,
+                                                             constraints_2.release());
+      ASSERT_EQ(status, ZX_OK, "");
+    }
+
+    //
+    // kDispensableFailureAfterAllocation - The LogicalBufferCollection won't fail.
+
+    zx_status_t allocation_status = 42;
+    BufferCollectionInfo buffer_collection_info_1(BufferCollectionInfo::Default);
+    // This helps with a later exact equality check.
+    memset(buffer_collection_info_1.get(), 0, sizeof(*buffer_collection_info_1.get()));
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client_1.get(), &allocation_status, buffer_collection_info_1.get());
+
+    if (variant == Variant::kDispensableFailureBeforeAllocation) {
+      // The LogicalBufferCollection will be failed, becuase client 2 failed before providing
+      // constraints.
+      ASSERT_EQ(status, ZX_ERR_PEER_CLOSED, "");
+      ASSERT_EQ(allocation_status, 42, "");
+      // next variant, if any
+      continue;
+    }
+    ZX_DEBUG_ASSERT(variant == Variant::kDispensableFailureAfterAllocation);
+
+    // The LogicalBufferCollection will not be failed, because client 2 didn't fail before
+    // allocation.
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_EQ(allocation_status, ZX_OK, "");
+    // This being 4 instead of 2 proves that client 2's constraints were used.
+    ASSERT_EQ(buffer_collection_info_1->buffer_count, 4, "");
+
+    // Now that we know allocation is done, client 2 will abruptly close its channel, which the
+    // server treats as client 2 failure.  Since client 2 has already provided constraints, this
+    // won't fail the LogicalBufferCollection.
+    collection_client_2.reset();
+
+    // Give the LogicalBufferCollection time to fail if it were going to fail, which it isn't.
+    nanosleep_duration(zx::msec(250));
+
+    // Verify LogicalBufferCollection still ok.
+    status = fuchsia_sysmem_BufferCollectionSync(collection_client_1.get());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    // next variant, if any
+  }
+}
+
 int main(int argc, char** argv) {
   setlinebuf(stdout);
   zxtest::Runner::GetInstance()->AddObserver(&test_observer);
+
   return RUN_ALL_TESTS(argc, argv);
 }

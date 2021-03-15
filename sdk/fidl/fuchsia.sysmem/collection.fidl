@@ -76,6 +76,11 @@ protocol BufferCollectionToken {
     /// block waiting for a response message, the other option is to notice
     /// arrival of the BufferCollectionEvents::OnBufferCollectionCreated() event
     /// after turning in this token for a BufferCollection.
+    ///
+    /// These values for rights_attenuation_mask result in no attenuation:
+    ///   * ZX_RIGHT_SAME_RIGHTS (preferred)
+    ///   * 0xFFFFFFFF (this is reasonable when an attenuation mask is computed)
+    ///   * 0 (deprecated - do not use 0 - an ERROR will go to the log)
     //
     // TODO(dustingreen): Consider other mechanisms to ensure the token created
     // here is recognized by the server.
@@ -140,6 +145,49 @@ protocol BufferCollectionToken {
     /// when the log is printed. If multiple client set the deadline, it's
     /// unspecified which deadline will take effect.
     SetDebugTimeoutLogDeadline(zx.time deadline);
+
+    /// A dispensable token can fail after buffers are logically allocated
+    /// without causing failure of its parent (if any).
+    ///
+    /// The dispensable token participates in constraints aggregation along with
+    /// its parent before logical buffer allocation.  If the dispensable token
+    /// fails before buffers are logically allocated, the failure propagates to
+    /// the dispensable token's parent.
+    ///
+    /// After buffers are logically allocated, failure of the dispensable token
+    /// (or any child of the dispensable token) does not propagate to the
+    /// dispensable token's parent.  Failure does propagate from a normal
+    /// child of a dispensable token to the dispensable token.  Failure
+    /// of a child is blocked from reaching its parent if the child is attached,
+    /// or if the child is dispensable and the failure occurred after logical
+    /// allocation.
+    ///
+    /// A dispensable token can be used in cases where a participant needs to
+    /// provide constraints, but after buffers are allocated, the participant
+    /// can fail without causing buffer collection failure from the parent's
+    /// point of view.
+    ///
+    /// In contrast, AttachToken() can be used to create a token which does not
+    /// participate in constraints aggregation with its parent, and whose
+    /// failure at any time does not propagate to its parent, and whose delay
+    /// providing constraints does not prevent the parent from completing its
+    /// buffer allocation.
+    ///
+    /// An initiator may in some scenarios choose to initially use a dispensable
+    /// token for a given instance of a participant, and then later if the first
+    /// instance of that participant fails, a new second instance of that
+    /// participant my be given a token created with AttachToken().
+    ///
+    /// If a client uses this message, the client should not rely on the
+    /// client's own BufferCollectionToken or BufferCollection channel to close
+    /// from the server end due to abrubt failure of any BufferCollectionToken
+    /// or BufferCollection that the client has SetDispensable() and given out
+    /// to another process.  For this reason, the client should take extra care
+    /// to notice failure of that other process via other means.
+    ///
+    /// SetDispensable() on an already-dispensable token is idempotent.
+    [Transitional = "SetDispensable() not yet implemented by server"]
+    SetDispensable();
 };
 
 /// BufferCollection is a connection directly from a participant to sysmem re.
@@ -363,6 +411,66 @@ protocol BufferCollection {
     GetAuxBuffers()
         -> (zx.status status,
             BufferCollectionInfo_2 buffer_collection_info_aux_buffers);
+
+    /// Create a new token, for trying to add a new participant to an existing
+    /// collection, if the existing collection's buffer counts, constraints,
+    /// and participants allow.
+    ///
+    /// This can be useful in replacing a failed participant, and/or in
+    /// adding/re-adding a participant after buffers have already been
+    /// allocated.
+    ///
+    /// Failure of an attached token / collection does not propagate to the
+    /// parent of the attached token.  Failure does propagate from a normal
+    /// child of a dispensable token to the dispensable token.  Failure
+    /// of a child is blocked from reaching its parent if the child is attached,
+    /// or if the child is dispensable and the failure occurred after logical
+    /// allocation.
+    ///
+    /// An initiator may in some scenarios choose to initially use a dispensable
+    /// token for a given instance of a participant, and then later if the first
+    /// instance of that participant fails, a new second instance of that
+    /// participant my be given a token created with AttachToken().
+    ///
+    /// From the point of view of the client end of the BufferCollectionToken
+    /// channel, the token acts like any other token.  The client can
+    /// Duplicate() the token as needed, and can send the token to a different
+    /// process.  The token should be converted to a BufferCollection channel
+    /// as normal by calling BindSharedCollection().  SetConstraints() should
+    /// be called on that BufferCollection channel.
+    ///
+    /// A success result from WaitForBuffersAllocated() means the new
+    /// participant's constraints were satisfiable using the already-existing
+    /// buffer collection, the already-established BufferCollectionInfo
+    /// including image format constraints, and the already-existing other
+    /// participants and their buffer counts.  A failure result means the new
+    /// participant's constraints cannot be satisfied using the existing
+    /// buffer collection and its already-logically-allocated participants.
+    /// Creating a new collection instead may allow all participant's
+    /// constraints to be satisfied, assuming SetDispensable() is used in place
+    /// of AttachToken(), or a normal token is used.
+    ///
+    /// A token created with AttachToken() performs constraints aggregation with
+    /// all constraints currently in effect on the buffer collection, plus the
+    /// attached token under consideration plus child tokens under the attached
+    /// token which are not themselves an attached token or under such a token.
+    ///
+    /// Allocation of buffer_count to min_buffer_count_for_camping etc is
+    /// first-come first-served, but a child can't logically allocate before
+    /// all its parents have sent SetConstraints().
+    ///
+    /// See also SetDispensable(), which in contrast to AttachToken(), has the
+    /// created token + children participate in constraints aggregation along
+    /// with its parent.
+    ///
+    /// These values for rights_attenuation_mask result in no attenuation (note
+    /// that 0 is not on this list; 0 will output an ERROR to the system log
+    /// to help diagnose the bug in client code):
+    ///   * ZX_RIGHT_SAME_RIGHTS (preferred)
+    ///   * 0xFFFFFFFF (this is reasonable when an attenuation mask is computed)
+    [Transitional = "AttachToken() not yet implemented by server"]
+    AttachToken(uint32 rights_attenuation_mask,
+                request<BufferCollectionToken> token_request);
 };
 
 /// This interface intentionally doesn't include any event for

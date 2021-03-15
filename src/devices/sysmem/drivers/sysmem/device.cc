@@ -753,9 +753,10 @@ void Device::UntrackToken(BufferCollectionToken* token) {
     // SetServerKoid().
     return;
   }
-  auto iter = tokens_by_koid_.find(server_koid);
-  ZX_DEBUG_ASSERT(iter != tokens_by_koid_.end());
-  tokens_by_koid_.erase(iter);
+  // This is intentionally idempotent, to allow un-tracking from
+  // BufferCollectionToken::CloseChannel() as well as from
+  // ~BufferCollectionToken().
+  tokens_by_koid_.erase(server_koid);
 }
 
 bool Device::TryRemoveKoidFromUnfoundTokenList(zx_koid_t token_server_koid) {

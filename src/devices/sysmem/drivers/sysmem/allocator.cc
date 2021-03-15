@@ -69,9 +69,9 @@ void Allocator::AllocateNonSharedCollection(zx::channel buffer_collection_reques
   // goes to BindSharedCollection().  The BindSharedCollection() will figure
   // out which token we're talking about based on the koid(s), as usual.
   LogicalBufferCollection::Create(std::move(token_server), parent_device_);
-  LogicalBufferCollection::BindSharedCollection(parent_device_, std::move(token_client),
-                                                std::move(buffer_collection_request),
-                                                client_info_ ? &*client_info_ : nullptr);
+  LogicalBufferCollection::BindSharedCollection(
+      parent_device_, std::move(token_client), std::move(buffer_collection_request),
+      client_debug_info_ ? &*client_debug_info_ : nullptr);
 
   // Now the client can SetConstraints() on the BufferCollection, etc.  The
   // client didn't have to hassle with the BufferCollectionToken, which is the
@@ -106,10 +106,11 @@ void Allocator::BindSharedCollection(zx::channel token, zx::channel buffer_colle
   // BufferCollection is the client end of a BufferCollectionToken channel
   // being handed in via token_param.  To find any associated BufferCollection
   // we have to look it up by koid.  The koid table is held by
-  // BufferCollection, so delegate over to BufferCollection for this request.
-  LogicalBufferCollection::BindSharedCollection(parent_device_, std::move(token),
-                                                std::move(buffer_collection_request),
-                                                client_info_ ? &*client_info_ : nullptr);
+  // LogicalBufferCollection, so delegate over to LogicalBufferCollection for
+  // this request.
+  LogicalBufferCollection::BindSharedCollection(
+      parent_device_, std::move(token), std::move(buffer_collection_request),
+      client_debug_info_ ? &*client_debug_info_ : nullptr);
 }
 
 void Allocator::ValidateBufferCollectionToken(
@@ -122,9 +123,9 @@ void Allocator::ValidateBufferCollectionToken(
 
 void Allocator::SetDebugClientInfo(fidl::StringView name, uint64_t id,
                                    SetDebugClientInfoCompleter::Sync& completer) {
-  client_info_.emplace();
-  client_info_->name = std::string(name.begin(), name.end());
-  client_info_->id = id;
+  client_debug_info_.emplace();
+  client_debug_info_->name = std::string(name.begin(), name.end());
+  client_debug_info_->id = id;
 }
 
 }  // namespace sysmem_driver

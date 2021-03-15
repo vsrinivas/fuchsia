@@ -179,6 +179,8 @@ void FakeBufferCollectionToken::SetDebugClientInfo(std::string name, uint64_t id
 
 void FakeBufferCollectionToken::SetDebugTimeoutLogDeadline(int64_t deadline) {}
 
+void FakeBufferCollectionToken::SetDispensable() {}
+
 ////////////////////////////////////////////////////////////////////////////////
 // FakeBufferCollection implementation.
 
@@ -278,6 +280,12 @@ void FakeBufferCollection::SetConstraintsAuxBuffers(
 }
 
 void FakeBufferCollection::GetAuxBuffers(GetAuxBuffersCallback callback) { FX_NOTIMPLEMENTED(); }
+
+void FakeBufferCollection::AttachToken(
+    uint32_t rights_attenuation_mask,
+    fidl::InterfaceRequest<fuchsia::sysmem::BufferCollectionToken> token_request) {
+  FX_NOTIMPLEMENTED();
+}
 
 void FakeBufferCollection::MaybeCompleteAllocation() {
   if (!all_participants_bound_ || waiter_callbacks_.size() != bindings_.size()) {
