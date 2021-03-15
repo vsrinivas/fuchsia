@@ -15,6 +15,5 @@ group("features") {
     "shell",
     "shell-commands",
     "storage",
-    "system-temp",
   ]
 }
