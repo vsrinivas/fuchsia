@@ -144,8 +144,8 @@ extern "C" const fidl_type_t
     StrictXUnionHenceResponseMayBeStackAllocated::
         StrictXUnionHenceResponseMayBeStackAllocated(
             ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client) {
-  ::fidl::internal::EncodedMessageTypes<
-      StrictXUnionHenceResponseMayBeStackAllocatedRequest>::OwnedByte
+  ::fidl::OwnedEncodedMessage<
+      StrictXUnionHenceResponseMayBeStackAllocatedRequest>
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
@@ -159,8 +159,8 @@ extern "C" const fidl_type_t
         StrictXUnionHenceResponseMayBeStackAllocated(
             ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
             zx_time_t _deadline) {
-  ::fidl::internal::EncodedMessageTypes<
-      StrictXUnionHenceResponseMayBeStackAllocatedRequest>::OwnedByte
+  ::fidl::OwnedEncodedMessage<
+      StrictXUnionHenceResponseMayBeStackAllocatedRequest>
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
@@ -177,8 +177,8 @@ extern "C" const fidl_type_t
             ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
             uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ::fidl::internal::EncodedMessageTypes<
-      StrictXUnionHenceResponseMayBeStackAllocatedRequest>::OwnedByte
+  ::fidl::OwnedEncodedMessage<
+      StrictXUnionHenceResponseMayBeStackAllocatedRequest>
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<StrictXUnionHenceResponseMayBeStackAllocatedResponse>(
@@ -193,8 +193,8 @@ extern "C" const fidl_type_t
     FlexibleXUnionHenceResponseMustBeHeapAllocated::
         FlexibleXUnionHenceResponseMustBeHeapAllocated(
             ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client) {
-  ::fidl::internal::EncodedMessageTypes<
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>::OwnedByte
+  ::fidl::OwnedEncodedMessage<
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
@@ -208,8 +208,8 @@ extern "C" const fidl_type_t
         FlexibleXUnionHenceResponseMustBeHeapAllocated(
             ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
             zx_time_t _deadline) {
-  ::fidl::internal::EncodedMessageTypes<
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>::OwnedByte
+  ::fidl::OwnedEncodedMessage<
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
@@ -226,8 +226,8 @@ extern "C" const fidl_type_t
             ::fidl::UnownedClientEnd<::fidl_test_union::TestProtocol> _client,
             uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ::fidl::internal::EncodedMessageTypes<
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>::OwnedByte
+  ::fidl::OwnedEncodedMessage<
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>
       _request(zx_txid_t(0));
   _request.GetOutgoingMessage()
       .Call<FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>(
@@ -512,8 +512,8 @@ namespace entries {
 ::fidl::Result TestProtocol::Interface::
     StrictXUnionHenceResponseMayBeStackAllocatedCompleterBase::Reply(
         ::fidl_test_union::wire::StrictBoundedXUnion xu) {
-  ::fidl::internal::EncodedMessageTypes<
-      StrictXUnionHenceResponseMayBeStackAllocatedResponse>::OwnedByte
+  ::fidl::OwnedEncodedMessage<
+      StrictXUnionHenceResponseMayBeStackAllocatedResponse>
       _response{xu};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
@@ -534,8 +534,8 @@ namespace entries {
 ::fidl::Result TestProtocol::Interface::
     FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleterBase::Reply(
         ::fidl_test_union::wire::OlderSimpleUnion xu) {
-  ::fidl::internal::EncodedMessageTypes<
-      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>::OwnedByte
+  ::fidl::OwnedEncodedMessage<
+      FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>
       _response{xu};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }

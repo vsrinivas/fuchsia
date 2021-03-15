@@ -1132,9 +1132,9 @@ void LogicalBufferCollection::TryLateLogicalAllocation(std::vector<NodePropertie
       std::make_unique<fuchsia_sysmem2::wire::BufferCollectionInfo::OwnedEncodedMessage>(
           &tmp_unpopulated_buffer_collection_info);
 
-  fidl::OutgoingByteMessage& original_linear_buffer_collection_info =
+  fidl::OutgoingMessage& original_linear_buffer_collection_info =
       linearized_buffer_collection_info_before_population_->GetOutgoingMessage();
-  fidl::OutgoingByteMessage& new_linear_buffer_collection_info =
+  fidl::OutgoingMessage& new_linear_buffer_collection_info =
       linearized_late_logical_allocation_buffer_collection_info->GetOutgoingMessage();
   if (!original_linear_buffer_collection_info.ok()) {
     LOG(ERROR, "original error: %s", original_linear_buffer_collection_info.error());

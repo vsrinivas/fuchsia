@@ -22,9 +22,7 @@
 
 namespace {
 
-static const uint8_t ZERO_BYTES[8] = {};
-
-enum class Mode { EncodeOnly, LinearizeAndEncode, IovecEncode };
+enum class Mode { EncodeOnly, LinearizeAndEncode };
 
 template <Mode mode>
 struct EncodingPosition {};
@@ -92,35 +90,6 @@ struct EncodingPosition<Mode::LinearizeAndEncode> {
   }
 };
 
-template <>
-struct EncodingPosition<Mode::IovecEncode> {
-  // |source_object| points to one of the objects from the source pile.
-  void* source_object;
-  static EncodingPosition<Mode::IovecEncode> Create(void* source_object, uint8_t* dest) {
-    ZX_DEBUG_ASSERT(dest == nullptr);
-    return {
-        .source_object = source_object,
-    };
-  }
-  EncodingPosition operator+(uint32_t size) const {
-    return {
-        .source_object = reinterpret_cast<void*>(reinterpret_cast<uint8_t*>(source_object) + size),
-    };
-  }
-  EncodingPosition& operator+=(uint32_t size) {
-    *this = *this + size;
-    return *this;
-  }
-  template <typename T>
-  constexpr T* Get() const {
-    return reinterpret_cast<T*>(source_object);
-  }
-  template <typename T>
-  constexpr T* GetFromSource() const {
-    ZX_PANIC("GetFromSource should not be used in iovec encoding");
-  }
-};
-
 struct EnvelopeCheckpoint {
   uint32_t num_bytes;
   uint32_t num_handles;
@@ -129,19 +98,6 @@ struct EnvelopeCheckpoint {
 struct BufferEncodeArgs {
   uint8_t* bytes;
   uint32_t num_bytes;
-  cpp17::variant<cpp17::monostate, zx_handle_t*, zx_handle_disposition_t*> handles;
-  uint32_t num_handles;
-  uint32_t next_out_of_line;
-  const char** out_error_msg;
-};
-
-struct IovecEncodeArgs {
-  void* object;
-  zx_channel_iovec_t* iovecs;
-  uint32_t num_used_iovecs;
-  uint32_t num_iovecs;
-  fidl_iovec_substitution_t* subs;
-  uint32_t num_subs;
   cpp17::variant<cpp17::monostate, zx_handle_t*, zx_handle_disposition_t*> handles;
   uint32_t num_handles;
   uint32_t next_out_of_line;
@@ -167,22 +123,6 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
             .bytes_ = args.bytes,
             .num_bytes_ = args.num_bytes,
         }),
-        is_({}),
-        handles_(args.handles),
-        num_handles_(args.num_handles),
-        next_out_of_line_(args.next_out_of_line),
-        out_error_msg_(args.out_error_msg) {}
-
-  FidlEncoder(IovecEncodeArgs args)
-      : bs_({}),
-        is_({
-            .object_ = args.object,
-            .iovecs_ = args.iovecs,
-            .num_iovecs_ = args.num_iovecs,
-            .subs_ = args.subs,
-            .num_subs_ = args.num_subs,
-            .iovec_idx_ = args.num_used_iovecs,
-        }),
         handles_(args.handles),
         num_handles_(args.num_handles),
         next_out_of_line_(args.next_out_of_line),
@@ -192,7 +132,7 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
   static constexpr bool kContinueAfterConstraintViolation = true;
 
   Status VisitAbsentPointerInNonNullableCollection(ObjectPointerPointer object_ptr_ptr) {
-    if (mode == Mode::IovecEncode || mode == Mode::LinearizeAndEncode) {
+    if (mode == Mode::LinearizeAndEncode) {
       // Empty LLCPP vectors and strings typically have null data portions, which differs
       // from the wire format representation (0 length out-of-line object for empty vector
       // or string).
@@ -234,31 +174,6 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
     return Status::kSuccess;
   }
 
-  Status VisitPointerIovec(Position ptr_position, PointeeType pointee_type,
-                           ObjectPointerPointer object_ptr_ptr, void* object_ptr,
-                           uint32_t inline_size, Position* out_position) {
-    ZX_DEBUG_ASSERT(mode == Mode::IovecEncode);
-    if (!is_.PushIovec(zx_channel_iovec_t{
-            .buffer = object_ptr,
-            .capacity = inline_size,
-        })) {
-      SetError("exceeded max number of iovecs");
-      return Status::kMemoryError;
-    }
-    if (inline_size % FIDL_ALIGNMENT != 0) {
-      if (!is_.PushIovec(zx_channel_iovec_t{
-              .buffer = ZERO_BYTES,
-              .capacity = static_cast<uint32_t>(FIDL_ALIGNMENT - (inline_size % FIDL_ALIGNMENT)),
-          })) {
-        SetError("exceeded max number of iovecs");
-        return Status::kMemoryError;
-      }
-    }
-
-    *out_position = Position::Create(object_ptr, nullptr);
-    return Status::kSuccess;
-  }
-
   Status VisitPointer(Position ptr_position, PointeeType pointee_type,
                       ObjectPointerPointer object_ptr_ptr, uint32_t inline_size,
                       Position* out_position) {
@@ -288,14 +203,8 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
       }
     }
 
-    Status status;
-    if (mode == Mode::IovecEncode) {
-      status = VisitPointerIovec(ptr_position, pointee_type, object_ptr_ptr, object_ptr,
-                                 inline_size, out_position);
-    } else {
-      status = VisitPointerBuffer(ptr_position, pointee_type, object_ptr, new_offset, inline_size,
-                                  out_position);
-    }
+    Status status = VisitPointerBuffer(ptr_position, pointee_type, object_ptr, new_offset,
+                                       inline_size, out_position);
     if (status != Status::kSuccess) {
       return status;
     }
@@ -339,7 +248,7 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
   }
 
   Status VisitVectorOrStringCount(CountPointer ptr) {
-    if (mode == Mode::IovecEncode || mode == Mode::LinearizeAndEncode) {
+    if (mode == Mode::LinearizeAndEncode) {
       // Clear the MSB that is used for storing ownership information for vectors and strings.
       // While this operation could be considered part of encoding, it is LLCPP specific so it
       // is done during linearization.
@@ -365,7 +274,7 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
   Status LeaveEnvelope(EnvelopePointer envelope, EnvelopeCheckpoint prev_checkpoint) {
     uint32_t num_bytes = next_out_of_line_ - prev_checkpoint.num_bytes;
     uint32_t num_handles = handle_idx_ - prev_checkpoint.num_handles;
-    if (mode == Mode::IovecEncode || mode == Mode::LinearizeAndEncode) {
+    if (mode == Mode::LinearizeAndEncode) {
       // Write the num_bytes/num_handles.
       envelope->num_bytes = num_bytes;
       envelope->num_handles = num_handles;
@@ -396,8 +305,6 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
   zx_status_t status() const { return status_; }
 
   uint32_t num_out_handles() const { return handle_idx_; }
-  uint32_t num_out_iovecs() const { return is_.iovec_idx_; }
-  uint32_t num_out_subs() const { return is_.sub_idx_; }
   uint32_t num_out_bytes() const { return next_out_of_line_; }
 
  private:
@@ -431,15 +338,6 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
   }
 
   Status SetPointerPresent(ObjectPointerPointer object_ptr_ptr, void* object_ptr) {
-    if (mode == Mode::IovecEncode) {
-      if (!is_.PushSubstitution(fidl_iovec_substitution_t{
-              .ptr = object_ptr_ptr,
-              .value = object_ptr,  // tracking bit of ptr is cleared
-          })) {
-        SetError("exceeded max number of subs");
-        return Status::kMemoryError;
-      }
-    }
     *object_ptr_ptr = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
     return Status::kSuccess;
   }
@@ -449,38 +347,9 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
     uint8_t* const bytes_ = nullptr;
     const uint32_t num_bytes_ = 0;
   };
-  // State for outputting iovecs.
-  struct IovecState final {
-    void* const object_ = nullptr;
-    zx_channel_iovec_t* iovecs_ = nullptr;
-    const uint32_t num_iovecs_ = 0;
-    fidl_iovec_substitution_t* subs_ = nullptr;
-    const uint32_t num_subs_ = 0;
-    uint32_t iovec_idx_ = 0;
-    uint32_t sub_idx_ = 0;
-
-    inline bool PushIovec(zx_channel_iovec_t iovec) {
-      if (iovec_idx_ >= num_iovecs_) {
-        return false;
-      }
-      iovecs_[iovec_idx_] = iovec;
-      ++iovec_idx_;
-      return true;
-    }
-
-    inline bool PushSubstitution(fidl_iovec_substitution_t sub) {
-      if (sub_idx_ >= num_subs_) {
-        return false;
-      }
-      subs_[sub_idx_] = sub;
-      ++sub_idx_;
-      return true;
-    }
-  };
 
   // Message state initialized in the constructor.
   BufferState bs_;
-  IovecState is_;
   cpp17::variant<cpp17::monostate, zx_handle_t*, zx_handle_disposition_t*> handles_;
   const uint32_t num_handles_;
   uint32_t next_out_of_line_;
@@ -490,88 +359,6 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
   zx_status_t status_ = ZX_OK;
   uint32_t handle_idx_ = 0;
 };
-
-template <typename HandleType>
-zx_status_t fidl_encode_iovec_impl(const fidl_type_t* type, void* object,
-                                   zx_channel_iovec_t* iovecs, uint32_t max_iovecs,
-                                   fidl_iovec_substitution_t* subs, uint32_t max_subs,
-                                   HandleType* handles, uint32_t max_handles,
-                                   uint32_t* out_actual_iovecs, uint32_t* out_actual_subs,
-                                   uint32_t* out_actual_handles, const char** out_error_msg) {
-  auto set_error = [&out_error_msg](const char* msg) {
-    if (out_error_msg)
-      *out_error_msg = msg;
-  };
-  if (unlikely(object == nullptr)) {
-    set_error("Cannot encode null object");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  if (max_iovecs < 1) {
-    set_error("Must have at least one iovec for the inline object");
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  size_t primary_size;
-  zx_status_t status;
-  if (unlikely((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK)) {
-    return status;
-  }
-  iovecs[0] = zx_channel_iovec_t{
-      .buffer = object,
-      .capacity = static_cast<uint32_t>(primary_size),
-  };
-
-  uint32_t num_used_iovecs = 1;
-
-  if (primary_size % FIDL_ALIGNMENT != 0) {
-    if (max_iovecs < 2) {
-      set_error("Insufficient space in iovec array for inline object padding");
-      return ZX_ERR_INVALID_ARGS;
-    }
-    iovecs[1] = zx_channel_iovec_t{
-        .buffer = ZERO_BYTES,
-        .capacity = static_cast<uint32_t>(FIDL_ALIGNMENT - (primary_size % FIDL_ALIGNMENT)),
-    };
-    num_used_iovecs++;
-  }
-
-  IovecEncodeArgs args = {
-      .object = object,
-      .iovecs = iovecs,
-      .num_used_iovecs = num_used_iovecs,
-      .num_iovecs = max_iovecs,
-      .subs = subs,
-      .num_subs = max_subs,
-      .num_handles = max_handles,
-      .next_out_of_line = static_cast<uint32_t>(FIDL_ALIGN(primary_size)),
-      .out_error_msg = out_error_msg,
-  };
-  if (handles != nullptr) {
-    args.handles = handles;
-  }
-  FidlEncoder<Mode::IovecEncode> encoder(args);
-  fidl::Walk(encoder, type, {.source_object = object});
-
-  if (unlikely(encoder.status() != ZX_OK)) {
-    for (uint32_t i = 0; i < encoder.num_out_subs(); i++) {
-      *subs[i].ptr = subs[i].value;
-    }
-    return encoder.status();
-  }
-
-  if (likely(out_actual_iovecs)) {
-    *out_actual_iovecs = encoder.num_out_iovecs();
-  }
-  if (likely(out_actual_subs)) {
-    *out_actual_subs = encoder.num_out_subs();
-  }
-  if (likely(out_actual_handles)) {
-    *out_actual_handles = encoder.num_out_handles();
-  }
-
-  return ZX_OK;
-}
 
 template <typename HandleType>
 zx_status_t fidl_linearize_and_encode_impl(const fidl_type_t* type, void* value, uint8_t* out_bytes,
@@ -810,25 +597,4 @@ zx_status_t fidl_linearize_and_encode_msg(const fidl_type_t* type, void* value,
                                        msg->byte.num_bytes, msg->byte.handles,
                                        msg->byte.num_handles, out_num_actual_bytes,
                                        out_num_actual_handles, out_error_msg);
-}
-
-zx_status_t fidl_encode_iovec(const fidl_type_t* type, void* object, zx_channel_iovec_t* iovecs,
-                              uint32_t max_iovecs, fidl_iovec_substitution_t* subs,
-                              uint32_t max_subs, zx_handle_t* handles, uint32_t max_handles,
-                              uint32_t* out_actual_iovecs, uint32_t* out_actual_subs,
-                              uint32_t* out_actual_handles, const char** out_error_msg) {
-  return fidl_encode_iovec_impl(type, object, iovecs, max_iovecs, subs, max_subs, handles,
-                                max_handles, out_actual_iovecs, out_actual_subs, out_actual_handles,
-                                out_error_msg);
-}
-
-zx_status_t fidl_encode_iovec_etc(const fidl_type_t* type, void* object, zx_channel_iovec_t* iovecs,
-                                  uint32_t max_iovecs, fidl_iovec_substitution_t* subs,
-                                  uint32_t max_subs, zx_handle_disposition_t* handles,
-                                  uint32_t max_handles, uint32_t* out_actual_iovecs,
-                                  uint32_t* out_actual_subs, uint32_t* out_actual_handles,
-                                  const char** out_error_msg) {
-  return fidl_encode_iovec_impl(type, object, iovecs, max_iovecs, subs, max_subs, handles,
-                                max_handles, out_actual_iovecs, out_actual_subs, out_actual_handles,
-                                out_error_msg);
 }

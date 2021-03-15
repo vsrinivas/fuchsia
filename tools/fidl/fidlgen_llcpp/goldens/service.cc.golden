@@ -20,8 +20,7 @@ extern "C" const fidl_type_t
 #ifdef __Fuchsia__
 ::fidl_test_service::SecondProtocol::ResultOf::MethodOnSecond::MethodOnSecond(
     ::fidl::UnownedClientEnd<::fidl_test_service::SecondProtocol> _client) {
-  ::fidl::internal::EncodedMessageTypes<MethodOnSecondRequest>::OwnedByte
-      _request(zx_txid_t(0));
+  ::fidl::OwnedEncodedMessage<MethodOnSecondRequest> _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -124,8 +123,7 @@ extern "C" const fidl_type_t
 #ifdef __Fuchsia__
 ::fidl_test_service::FirstProtocol::ResultOf::MethodOnFirst::MethodOnFirst(
     ::fidl::UnownedClientEnd<::fidl_test_service::FirstProtocol> _client) {
-  ::fidl::internal::EncodedMessageTypes<MethodOnFirstRequest>::OwnedByte
-      _request(zx_txid_t(0));
+  ::fidl::OwnedEncodedMessage<MethodOnFirstRequest> _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();

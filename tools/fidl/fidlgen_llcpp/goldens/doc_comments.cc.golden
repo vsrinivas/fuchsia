@@ -33,8 +33,7 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 #ifdef __Fuchsia__
 ::fidl_test_doccomments::Interface::ResultOf::Method::Method(
     ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client) {
-  ::fidl::internal::EncodedMessageTypes<MethodRequest>::OwnedByte _request(
-      zx_txid_t(0));
+  ::fidl::OwnedEncodedMessage<MethodRequest> _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -210,7 +209,7 @@ void ::fidl_test_doccomments::Interface::OnEventResponse::_InitHeader() {
 
 #ifdef __Fuchsia__
 zx_status_t Interface::EventSender::OnEvent() const {
-  ::fidl::internal::EncodedMessageTypes<OnEventResponse>::OwnedByte _response{};
+  ::fidl::OwnedEncodedMessage<OnEventResponse> _response{};
   _response.Write(server_end_);
   return _response.status();
 }

@@ -44,8 +44,7 @@ extern "C" const fidl_type_t
 #ifdef __Fuchsia__
 ::fidl_test_protocolrequest::Parent::ResultOf::GetChild::GetChild(
     ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client) {
-  ::fidl::internal::EncodedMessageTypes<GetChildRequest>::OwnedByte _request(
-      zx_txid_t(0));
+  ::fidl::OwnedEncodedMessage<GetChildRequest> _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildResponse>(_client, bytes_.data(),
                                                        bytes_.size());
   status_ = _request.status();
@@ -55,8 +54,7 @@ extern "C" const fidl_type_t
 ::fidl_test_protocolrequest::Parent::ResultOf::GetChild::GetChild(
     ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
     zx_time_t _deadline) {
-  ::fidl::internal::EncodedMessageTypes<GetChildRequest>::OwnedByte _request(
-      zx_txid_t(0));
+  ::fidl::OwnedEncodedMessage<GetChildRequest> _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildResponse>(
       _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
@@ -69,8 +67,7 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
     uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ::fidl::internal::EncodedMessageTypes<GetChildRequest>::OwnedByte _request(
-      zx_txid_t(0));
+  ::fidl::OwnedEncodedMessage<GetChildRequest> _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildResponse>(_client, _response_bytes,
                                                        _response_byte_capacity);
   status_ = _request.status();
@@ -81,8 +78,7 @@ extern "C" const fidl_type_t
 #ifdef __Fuchsia__
 ::fidl_test_protocolrequest::Parent::ResultOf::GetChildRequest::GetChildRequest(
     ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client) {
-  ::fidl::internal::EncodedMessageTypes<GetChildRequestRequest>::OwnedByte
-      _request(zx_txid_t(0));
+  ::fidl::OwnedEncodedMessage<GetChildRequestRequest> _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
       _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
@@ -92,8 +88,7 @@ extern "C" const fidl_type_t
 ::fidl_test_protocolrequest::Parent::ResultOf::GetChildRequest::GetChildRequest(
     ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
     zx_time_t _deadline) {
-  ::fidl::internal::EncodedMessageTypes<GetChildRequestRequest>::OwnedByte
-      _request(zx_txid_t(0));
+  ::fidl::OwnedEncodedMessage<GetChildRequestRequest> _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
       _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
@@ -107,8 +102,7 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ::fidl::internal::EncodedMessageTypes<GetChildRequestRequest>::OwnedByte
-      _request(zx_txid_t(0));
+  ::fidl::OwnedEncodedMessage<GetChildRequestRequest> _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Call<GetChildRequestResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -120,8 +114,7 @@ extern "C" const fidl_type_t
 ::fidl_test_protocolrequest::Parent::ResultOf::TakeChild::TakeChild(
     ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
     ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>& c) {
-  ::fidl::internal::EncodedMessageTypes<TakeChildRequest>::OwnedByte _request(
-      zx_txid_t(0), c);
+  ::fidl::OwnedEncodedMessage<TakeChildRequest> _request(zx_txid_t(0), c);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -133,7 +126,7 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
     uint8_t* _request_bytes, uint32_t _request_byte_capacity,
     ::fidl::ClientEnd<::fidl_test_protocolrequest::Child>& c) {
-  ::fidl::internal::EncodedMessageTypes<TakeChildRequest>::UnownedByte _request(
+  ::fidl::UnownedEncodedMessage<TakeChildRequest> _request(
       _request_bytes, _request_byte_capacity, 0, c);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
@@ -146,8 +139,8 @@ extern "C" const fidl_type_t
     TakeChildRequest(
         ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
         ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>& r) {
-  ::fidl::internal::EncodedMessageTypes<TakeChildRequestRequest>::OwnedByte
-      _request(zx_txid_t(0), r);
+  ::fidl::OwnedEncodedMessage<TakeChildRequestRequest> _request(zx_txid_t(0),
+                                                                r);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -160,8 +153,8 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::fidl_test_protocolrequest::Parent> _client,
         uint8_t* _request_bytes, uint32_t _request_byte_capacity,
         ::fidl::ServerEnd<::fidl_test_protocolrequest::Child>& r) {
-  ::fidl::internal::EncodedMessageTypes<TakeChildRequestRequest>::UnownedByte
-      _request(_request_bytes, _request_byte_capacity, 0, r);
+  ::fidl::UnownedEncodedMessage<TakeChildRequestRequest> _request(
+      _request_bytes, _request_byte_capacity, 0, r);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -475,8 +468,7 @@ namespace entries {
 #ifdef __Fuchsia__
 ::fidl::Result Parent::Interface::GetChildCompleterBase::Reply(
     ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c) {
-  ::fidl::internal::EncodedMessageTypes<GetChildResponse>::OwnedByte _response{
-      c};
+  ::fidl::OwnedEncodedMessage<GetChildResponse> _response{c};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
@@ -494,8 +486,7 @@ namespace entries {
 #ifdef __Fuchsia__
 ::fidl::Result Parent::Interface::GetChildRequestCompleterBase::Reply(
     ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r) {
-  ::fidl::internal::EncodedMessageTypes<GetChildRequestResponse>::OwnedByte
-      _response{r};
+  ::fidl::OwnedEncodedMessage<GetChildRequestResponse> _response{r};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif

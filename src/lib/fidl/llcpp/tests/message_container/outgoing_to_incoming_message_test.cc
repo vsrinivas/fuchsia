@@ -9,46 +9,13 @@
 
 TEST(OutgoingToIncomingMessage, ByteMessage) {
   uint8_t bytes[3] = {1, 2, 3};
-  fidl::OutgoingByteMessage msg(bytes, sizeof(bytes), sizeof(bytes), nullptr, 0, 0);
+  fidl::OutgoingMessage msg(bytes, sizeof(bytes), sizeof(bytes), nullptr, 0, 0);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
   ASSERT_EQ(sizeof(bytes), result.incoming_message()->num_bytes);
   EXPECT_EQ(0,
             memcmp(result.incoming_message()->bytes, bytes, result.incoming_message()->num_bytes));
   ASSERT_EQ(0u, result.incoming_message()->num_handles);
-}
-
-TEST(OutgoingToIncomingMessage, IovecMessage) {
-  uint8_t backing_buf[3] = {1, 2, 3};  // buffer backing the iovecs
-  zx_channel_iovec_t iovecs[2] = {
-      {
-          .buffer = &backing_buf[0],
-          .capacity = 2,
-          .reserved = 0,
-      },
-      {
-          .buffer = &backing_buf[2],
-          .capacity = 1,
-          .reserved = 0,
-      },
-  };
-  fidl::OutgoingIovecMessage msg({
-      .iovecs = iovecs,
-      .iovecs_actual = 2,
-      .iovecs_capacity = 2,
-      .substitutions = nullptr,
-      .substitutions_actual = 0,
-      .substitutions_capacity = 0,
-      .handles = nullptr,
-      .handle_actual = 0,
-      .handle_capacity = 0,
-  });
-  auto result = fidl::OutgoingToIncomingMessage(msg);
-  ASSERT_EQ(ZX_OK, result.status());
-  fidl_incoming_msg_t* output = result.incoming_message();
-  ASSERT_EQ(3u, output->num_bytes);
-  EXPECT_EQ(0, memcmp(backing_buf, output->bytes, output->num_bytes));
-  EXPECT_EQ(0u, output->num_handles);
 }
 
 #ifdef __Fuchsia__
@@ -63,7 +30,7 @@ TEST(OutgoingToIncomingMessage, Handles) {
       .rights = ZX_DEFAULT_EVENT_RIGHTS,
       .result = ZX_OK,
   }};
-  fidl::OutgoingByteMessage msg(bytes, 16, 16, hd, 1, 1);
+  fidl::OutgoingMessage msg(bytes, 16, 16, hd, 1, 1);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_OK, result.status());
   fidl_incoming_msg_t* output = result.incoming_message();
@@ -86,7 +53,7 @@ TEST(OutgoingToIncomingMessage, HandlesWrongType) {
       .rights = ZX_RIGHT_SAME_RIGHTS,
       .result = ZX_OK,
   }};
-  fidl::OutgoingByteMessage msg(bytes, 16, 16, hd, 1, 1);
+  fidl::OutgoingMessage msg(bytes, 16, 16, hd, 1, 1);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, result.status());
 }
@@ -102,7 +69,7 @@ TEST(OutgoingToIncomingMessage, HandlesWrongRights) {
       .rights = ZX_RIGHT_DESTROY,
       .result = ZX_OK,
   }};
-  fidl::OutgoingByteMessage msg(bytes, 16, 16, hd, 1, 1);
+  fidl::OutgoingMessage msg(bytes, 16, 16, hd, 1, 1);
   auto result = fidl::OutgoingToIncomingMessage(msg);
   ASSERT_EQ(ZX_ERR_INVALID_ARGS, result.status());
 }

@@ -59,9 +59,8 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s) {
-  ::fidl::internal::EncodedMessageTypes<
-      RequestStrictResponseFlexibleRequest>::OwnedByte _request(zx_txid_t(0),
-                                                                s);
+  ::fidl::OwnedEncodedMessage<RequestStrictResponseFlexibleRequest> _request(
+      zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<RequestStrictResponseFlexibleResponse>(
       _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
@@ -74,9 +73,8 @@ extern "C" const fidl_type_t
             _client,
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s,
         zx_time_t _deadline) {
-  ::fidl::internal::EncodedMessageTypes<
-      RequestStrictResponseFlexibleRequest>::OwnedByte _request(zx_txid_t(0),
-                                                                s);
+  ::fidl::OwnedEncodedMessage<RequestStrictResponseFlexibleRequest> _request(
+      zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<RequestStrictResponseFlexibleResponse>(
       _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
@@ -93,8 +91,8 @@ extern "C" const fidl_type_t
         ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ::fidl::internal::EncodedMessageTypes<RequestStrictResponseFlexibleRequest>::
-      UnownedByte _request(_request_bytes, _request_byte_capacity, 0, s);
+  ::fidl::UnownedEncodedMessage<RequestStrictResponseFlexibleRequest> _request(
+      _request_bytes, _request_byte_capacity, 0, s);
   _request.GetOutgoingMessage().Call<RequestStrictResponseFlexibleResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -108,9 +106,8 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
             _client,
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s) {
-  ::fidl::internal::EncodedMessageTypes<
-      RequestFlexibleResponseStrictRequest>::OwnedByte _request(zx_txid_t(0),
-                                                                s);
+  ::fidl::OwnedEncodedMessage<RequestFlexibleResponseStrictRequest> _request(
+      zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<RequestFlexibleResponseStrictResponse>(
       _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
@@ -123,9 +120,8 @@ extern "C" const fidl_type_t
             _client,
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s,
         zx_time_t _deadline) {
-  ::fidl::internal::EncodedMessageTypes<
-      RequestFlexibleResponseStrictRequest>::OwnedByte _request(zx_txid_t(0),
-                                                                s);
+  ::fidl::OwnedEncodedMessage<RequestFlexibleResponseStrictRequest> _request(
+      zx_txid_t(0), s);
   _request.GetOutgoingMessage().Call<RequestFlexibleResponseStrictResponse>(
       _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
@@ -142,8 +138,8 @@ extern "C" const fidl_type_t
         ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s,
         uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ::fidl::internal::EncodedMessageTypes<RequestFlexibleResponseStrictRequest>::
-      UnownedByte _request(_request_bytes, _request_byte_capacity, 0, s);
+  ::fidl::UnownedEncodedMessage<RequestFlexibleResponseStrictRequest> _request(
+      _request_bytes, _request_byte_capacity, 0, s);
   _request.GetOutgoingMessage().Call<RequestFlexibleResponseStrictResponse>(
       _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
@@ -423,8 +419,8 @@ namespace entries {
 ::fidl::Result
 Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
     ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f) {
-  ::fidl::internal::EncodedMessageTypes<
-      RequestStrictResponseFlexibleResponse>::OwnedByte _response{f};
+  ::fidl::OwnedEncodedMessage<RequestStrictResponseFlexibleResponse> _response{
+      f};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
@@ -444,8 +440,8 @@ Protocol::Interface::RequestStrictResponseFlexibleCompleterBase::Reply(
 ::fidl::Result
 Protocol::Interface::RequestFlexibleResponseStrictCompleterBase::Reply(
     ::fidl_test_requestflexibleenvelope::wire::StrictFoo f) {
-  ::fidl::internal::EncodedMessageTypes<
-      RequestFlexibleResponseStrictResponse>::OwnedByte _response{f};
+  ::fidl::OwnedEncodedMessage<RequestFlexibleResponseStrictResponse> _response{
+      f};
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif

@@ -31,7 +31,7 @@ TEST(FidlTransaction, Reply) {
   zx_txid_t txid = 1;
   fs::internal::FidlTransaction txn(txid, binding);
   uint8_t msg_bytes[sizeof(fidl_message_header_t)] = {};
-  fidl::OutgoingByteMessage message(msg_bytes, sizeof(msg_bytes), sizeof(msg_bytes), nullptr, 0, 0);
+  fidl::OutgoingMessage message(msg_bytes, sizeof(msg_bytes), sizeof(msg_bytes), nullptr, 0, 0);
   txn.Reply(&message);
 
   uint8_t received_msg_bytes[sizeof(fidl_message_header_t)] = {};

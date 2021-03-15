@@ -353,10 +353,9 @@ class Protocol final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
-   private:
-    class UnownedEncodedByteMessage final {
+    class UnownedEncodedMessage final {
      public:
-      UnownedEncodedByteMessage(
+      UnownedEncodedMessage(
           uint8_t* _bytes, uint32_t _byte_size,
           ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& f)
           : message_(_bytes, _byte_size,
@@ -365,19 +364,17 @@ class Protocol final {
         FIDL_ALIGNDECL RequestStrictResponseFlexibleResponse _response{f};
         message_.Encode<RequestStrictResponseFlexibleResponse>(&_response);
       }
-      UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                                RequestStrictResponseFlexibleResponse* response)
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                            RequestStrictResponseFlexibleResponse* response)
           : message_(bytes, byte_size,
                      sizeof(RequestStrictResponseFlexibleResponse), nullptr, 0,
                      0) {
         message_.Encode<RequestStrictResponseFlexibleResponse>(response);
       }
-      UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-      UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-      UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-          delete;
-      UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) =
-          delete;
+      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -386,7 +383,7 @@ class Protocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
 #ifdef __Fuchsia__
       template <typename ChannelLike>
@@ -396,86 +393,21 @@ class Protocol final {
 #endif
 
      private:
-      ::fidl::OutgoingByteMessage message_;
+      ::fidl::OutgoingMessage message_;
     };
 
-    class UnownedEncodedIovecMessage final {
+    class OwnedEncodedMessage final {
      public:
-      UnownedEncodedIovecMessage(
-          zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-          fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
-          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& f)
-          : message_(::fidl::OutgoingIovecMessage::constructor_args{
-                .iovecs = iovecs,
-                .iovecs_actual = 0,
-                .iovecs_capacity = iovec_size,
-                .substitutions = substitutions,
-                .substitutions_actual = 0,
-                .substitutions_capacity = substitutions_size,
-                .handles = nullptr,
-                .handle_actual = 0,
-                .handle_capacity = 0,
-            }) {
-        FIDL_ALIGNDECL RequestStrictResponseFlexibleResponse _response{f};
-        message_.Encode<RequestStrictResponseFlexibleResponse>(&_response);
-      }
-      UnownedEncodedIovecMessage(
-          zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-          fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
-          RequestStrictResponseFlexibleResponse* response)
-          : message_(::fidl::OutgoingIovecMessage::constructor_args{
-                .iovecs = iovecs,
-                .iovecs_actual = 0,
-                .iovecs_capacity = iovec_size,
-                .substitutions = substitutions,
-                .substitutions_actual = 0,
-                .substitutions_capacity = substitutions_size,
-                .handles = nullptr,
-                .handle_actual = 0,
-                .handle_capacity = 0,
-            }) {
-        message_.Encode<RequestStrictResponseFlexibleResponse>(response);
-      }
-      UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-      UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-      UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-          delete;
-      UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-          delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif
-
-     private:
-      ::fidl::OutgoingIovecMessage message_;
-    };
-
-    class OwnedEncodedByteMessage final {
-     public:
-      explicit OwnedEncodedByteMessage(
+      explicit OwnedEncodedMessage(
           ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& f)
           : message_(bytes_.data(), bytes_.size(), f) {}
-      explicit OwnedEncodedByteMessage(
+      explicit OwnedEncodedMessage(
           RequestStrictResponseFlexibleResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
-      OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-      OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-      OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
-          delete;
-      OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -484,7 +416,7 @@ class Protocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -497,57 +429,10 @@ class Protocol final {
 
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-      UnownedEncodedByteMessage message_;
-    };
-
-    class OwnedEncodedIovecMessage final {
-     public:
-      explicit OwnedEncodedIovecMessage(
-          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& f)
-          : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
-                     substitutions_, ::fidl::internal::kIovecBufferSize, f) {}
-      explicit OwnedEncodedIovecMessage(
-          RequestStrictResponseFlexibleResponse* response)
-          : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
-                     substitutions_, ::fidl::internal::kIovecBufferSize,
-                     response) {}
-      OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-      OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-      OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-          delete;
-      OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif
-
-     private:
-      zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-      fidl_iovec_substitution_t
-          substitutions_[::fidl::internal::kIovecBufferSize];
-      UnownedEncodedIovecMessage message_;
+      UnownedEncodedMessage message_;
     };
 
    public:
-    friend ::fidl::internal::EncodedMessageTypes<
-        RequestStrictResponseFlexibleResponse>;
-    using OwnedEncodedMessage = OwnedEncodedByteMessage;
-    using UnownedEncodedMessage = UnownedEncodedByteMessage;
-
     class DecodedMessage final : public ::fidl::internal::IncomingMessage {
      public:
       DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
@@ -609,10 +494,9 @@ class Protocol final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = RequestStrictResponseFlexibleResponse;
 
-   private:
-    class UnownedEncodedByteMessage final {
+    class UnownedEncodedMessage final {
      public:
-      UnownedEncodedByteMessage(
+      UnownedEncodedMessage(
           uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
           ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s)
           : message_(_bytes, _byte_size,
@@ -621,19 +505,17 @@ class Protocol final {
         FIDL_ALIGNDECL RequestStrictResponseFlexibleRequest _request(_txid, s);
         message_.Encode<RequestStrictResponseFlexibleRequest>(&_request);
       }
-      UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                                RequestStrictResponseFlexibleRequest* request)
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                            RequestStrictResponseFlexibleRequest* request)
           : message_(bytes, byte_size,
                      sizeof(RequestStrictResponseFlexibleRequest), nullptr, 0,
                      0) {
         message_.Encode<RequestStrictResponseFlexibleRequest>(request);
       }
-      UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-      UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-      UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-          delete;
-      UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) =
-          delete;
+      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -642,7 +524,7 @@ class Protocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
 #ifdef __Fuchsia__
       template <typename ChannelLike>
@@ -652,89 +534,22 @@ class Protocol final {
 #endif
 
      private:
-      ::fidl::OutgoingByteMessage message_;
+      ::fidl::OutgoingMessage message_;
     };
 
-    class UnownedEncodedIovecMessage final {
+    class OwnedEncodedMessage final {
      public:
-      UnownedEncodedIovecMessage(
-          zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-          fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
-          zx_txid_t _txid,
-          ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s)
-          : message_(::fidl::OutgoingIovecMessage::constructor_args{
-                .iovecs = iovecs,
-                .iovecs_actual = 0,
-                .iovecs_capacity = iovec_size,
-                .substitutions = substitutions,
-                .substitutions_actual = 0,
-                .substitutions_capacity = substitutions_size,
-                .handles = nullptr,
-                .handle_actual = 0,
-                .handle_capacity = 0,
-            }) {
-        FIDL_ALIGNDECL RequestStrictResponseFlexibleRequest _request(_txid, s);
-        message_.Encode<RequestStrictResponseFlexibleRequest>(&_request);
-      }
-      UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs,
-                                 uint32_t iovec_size,
-                                 fidl_iovec_substitution_t* substitutions,
-                                 uint32_t substitutions_size,
-                                 RequestStrictResponseFlexibleRequest* request)
-          : message_(::fidl::OutgoingIovecMessage::constructor_args{
-                .iovecs = iovecs,
-                .iovecs_actual = 0,
-                .iovecs_capacity = iovec_size,
-                .substitutions = substitutions,
-                .substitutions_actual = 0,
-                .substitutions_capacity = substitutions_size,
-                .handles = nullptr,
-                .handle_actual = 0,
-                .handle_capacity = 0,
-            }) {
-        message_.Encode<RequestStrictResponseFlexibleRequest>(request);
-      }
-      UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-      UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-      UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-          delete;
-      UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-          delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif
-
-     private:
-      ::fidl::OutgoingIovecMessage message_;
-    };
-
-    class OwnedEncodedByteMessage final {
-     public:
-      explicit OwnedEncodedByteMessage(
+      explicit OwnedEncodedMessage(
           zx_txid_t _txid,
           ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s)
           : message_(bytes_.data(), bytes_.size(), _txid, s) {}
-      explicit OwnedEncodedByteMessage(
+      explicit OwnedEncodedMessage(
           RequestStrictResponseFlexibleRequest* request)
           : message_(bytes_.data(), bytes_.size(), request) {}
-      OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-      OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-      OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
-          delete;
-      OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -743,7 +558,7 @@ class Protocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -756,59 +571,10 @@ class Protocol final {
 
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-      UnownedEncodedByteMessage message_;
-    };
-
-    class OwnedEncodedIovecMessage final {
-     public:
-      explicit OwnedEncodedIovecMessage(
-          zx_txid_t _txid,
-          ::fidl_test_requestflexibleenvelope::wire::StrictFoo& s)
-          : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
-                     substitutions_, ::fidl::internal::kIovecBufferSize, _txid,
-                     s) {}
-      explicit OwnedEncodedIovecMessage(
-          RequestStrictResponseFlexibleRequest* request)
-          : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
-                     substitutions_, ::fidl::internal::kIovecBufferSize,
-                     request) {}
-      OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-      OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-      OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-          delete;
-      OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif
-
-     private:
-      zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-      fidl_iovec_substitution_t
-          substitutions_[::fidl::internal::kIovecBufferSize];
-      UnownedEncodedIovecMessage message_;
+      UnownedEncodedMessage message_;
     };
 
    public:
-    friend ::fidl::internal::EncodedMessageTypes<
-        RequestStrictResponseFlexibleRequest>;
-    using OwnedEncodedMessage = OwnedEncodedByteMessage;
-    using UnownedEncodedMessage = UnownedEncodedByteMessage;
-
     class DecodedMessage final : public ::fidl::internal::IncomingMessage {
      public:
       DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
@@ -864,10 +630,9 @@ class Protocol final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
 
-   private:
-    class UnownedEncodedByteMessage final {
+    class UnownedEncodedMessage final {
      public:
-      UnownedEncodedByteMessage(
+      UnownedEncodedMessage(
           uint8_t* _bytes, uint32_t _byte_size,
           ::fidl_test_requestflexibleenvelope::wire::StrictFoo& f)
           : message_(_bytes, _byte_size,
@@ -876,19 +641,17 @@ class Protocol final {
         FIDL_ALIGNDECL RequestFlexibleResponseStrictResponse _response{f};
         message_.Encode<RequestFlexibleResponseStrictResponse>(&_response);
       }
-      UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                                RequestFlexibleResponseStrictResponse* response)
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                            RequestFlexibleResponseStrictResponse* response)
           : message_(bytes, byte_size,
                      sizeof(RequestFlexibleResponseStrictResponse), nullptr, 0,
                      0) {
         message_.Encode<RequestFlexibleResponseStrictResponse>(response);
       }
-      UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-      UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-      UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-          delete;
-      UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) =
-          delete;
+      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -897,7 +660,7 @@ class Protocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
 #ifdef __Fuchsia__
       template <typename ChannelLike>
@@ -907,86 +670,21 @@ class Protocol final {
 #endif
 
      private:
-      ::fidl::OutgoingByteMessage message_;
+      ::fidl::OutgoingMessage message_;
     };
 
-    class UnownedEncodedIovecMessage final {
+    class OwnedEncodedMessage final {
      public:
-      UnownedEncodedIovecMessage(
-          zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-          fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
-          ::fidl_test_requestflexibleenvelope::wire::StrictFoo& f)
-          : message_(::fidl::OutgoingIovecMessage::constructor_args{
-                .iovecs = iovecs,
-                .iovecs_actual = 0,
-                .iovecs_capacity = iovec_size,
-                .substitutions = substitutions,
-                .substitutions_actual = 0,
-                .substitutions_capacity = substitutions_size,
-                .handles = nullptr,
-                .handle_actual = 0,
-                .handle_capacity = 0,
-            }) {
-        FIDL_ALIGNDECL RequestFlexibleResponseStrictResponse _response{f};
-        message_.Encode<RequestFlexibleResponseStrictResponse>(&_response);
-      }
-      UnownedEncodedIovecMessage(
-          zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-          fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
-          RequestFlexibleResponseStrictResponse* response)
-          : message_(::fidl::OutgoingIovecMessage::constructor_args{
-                .iovecs = iovecs,
-                .iovecs_actual = 0,
-                .iovecs_capacity = iovec_size,
-                .substitutions = substitutions,
-                .substitutions_actual = 0,
-                .substitutions_capacity = substitutions_size,
-                .handles = nullptr,
-                .handle_actual = 0,
-                .handle_capacity = 0,
-            }) {
-        message_.Encode<RequestFlexibleResponseStrictResponse>(response);
-      }
-      UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-      UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-      UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-          delete;
-      UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-          delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif
-
-     private:
-      ::fidl::OutgoingIovecMessage message_;
-    };
-
-    class OwnedEncodedByteMessage final {
-     public:
-      explicit OwnedEncodedByteMessage(
+      explicit OwnedEncodedMessage(
           ::fidl_test_requestflexibleenvelope::wire::StrictFoo& f)
           : message_(bytes_.data(), bytes_.size(), f) {}
-      explicit OwnedEncodedByteMessage(
+      explicit OwnedEncodedMessage(
           RequestFlexibleResponseStrictResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
-      OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-      OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-      OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
-          delete;
-      OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -995,7 +693,7 @@ class Protocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -1008,57 +706,10 @@ class Protocol final {
 
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-      UnownedEncodedByteMessage message_;
-    };
-
-    class OwnedEncodedIovecMessage final {
-     public:
-      explicit OwnedEncodedIovecMessage(
-          ::fidl_test_requestflexibleenvelope::wire::StrictFoo& f)
-          : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
-                     substitutions_, ::fidl::internal::kIovecBufferSize, f) {}
-      explicit OwnedEncodedIovecMessage(
-          RequestFlexibleResponseStrictResponse* response)
-          : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
-                     substitutions_, ::fidl::internal::kIovecBufferSize,
-                     response) {}
-      OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-      OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-      OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-          delete;
-      OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif
-
-     private:
-      zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-      fidl_iovec_substitution_t
-          substitutions_[::fidl::internal::kIovecBufferSize];
-      UnownedEncodedIovecMessage message_;
+      UnownedEncodedMessage message_;
     };
 
    public:
-    friend ::fidl::internal::EncodedMessageTypes<
-        RequestFlexibleResponseStrictResponse>;
-    using OwnedEncodedMessage = OwnedEncodedByteMessage;
-    using UnownedEncodedMessage = UnownedEncodedByteMessage;
-
     class DecodedMessage final : public ::fidl::internal::IncomingMessage {
      public:
       DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
@@ -1120,10 +771,9 @@ class Protocol final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
     using ResponseType = RequestFlexibleResponseStrictResponse;
 
-   private:
-    class UnownedEncodedByteMessage final {
+    class UnownedEncodedMessage final {
      public:
-      UnownedEncodedByteMessage(
+      UnownedEncodedMessage(
           uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid,
           ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s)
           : message_(_bytes, _byte_size,
@@ -1132,19 +782,17 @@ class Protocol final {
         FIDL_ALIGNDECL RequestFlexibleResponseStrictRequest _request(_txid, s);
         message_.Encode<RequestFlexibleResponseStrictRequest>(&_request);
       }
-      UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                                RequestFlexibleResponseStrictRequest* request)
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                            RequestFlexibleResponseStrictRequest* request)
           : message_(bytes, byte_size,
                      sizeof(RequestFlexibleResponseStrictRequest), nullptr, 0,
                      0) {
         message_.Encode<RequestFlexibleResponseStrictRequest>(request);
       }
-      UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-      UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-      UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-          delete;
-      UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) =
-          delete;
+      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1153,7 +801,7 @@ class Protocol final {
       bool ok() const { return message_.status() == ZX_OK; }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
 #ifdef __Fuchsia__
       template <typename ChannelLike>
@@ -1163,89 +811,22 @@ class Protocol final {
 #endif
 
      private:
-      ::fidl::OutgoingByteMessage message_;
+      ::fidl::OutgoingMessage message_;
     };
 
-    class UnownedEncodedIovecMessage final {
+    class OwnedEncodedMessage final {
      public:
-      UnownedEncodedIovecMessage(
-          zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-          fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
-          zx_txid_t _txid,
-          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s)
-          : message_(::fidl::OutgoingIovecMessage::constructor_args{
-                .iovecs = iovecs,
-                .iovecs_actual = 0,
-                .iovecs_capacity = iovec_size,
-                .substitutions = substitutions,
-                .substitutions_actual = 0,
-                .substitutions_capacity = substitutions_size,
-                .handles = nullptr,
-                .handle_actual = 0,
-                .handle_capacity = 0,
-            }) {
-        FIDL_ALIGNDECL RequestFlexibleResponseStrictRequest _request(_txid, s);
-        message_.Encode<RequestFlexibleResponseStrictRequest>(&_request);
-      }
-      UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs,
-                                 uint32_t iovec_size,
-                                 fidl_iovec_substitution_t* substitutions,
-                                 uint32_t substitutions_size,
-                                 RequestFlexibleResponseStrictRequest* request)
-          : message_(::fidl::OutgoingIovecMessage::constructor_args{
-                .iovecs = iovecs,
-                .iovecs_actual = 0,
-                .iovecs_capacity = iovec_size,
-                .substitutions = substitutions,
-                .substitutions_actual = 0,
-                .substitutions_capacity = substitutions_size,
-                .handles = nullptr,
-                .handle_actual = 0,
-                .handle_capacity = 0,
-            }) {
-        message_.Encode<RequestFlexibleResponseStrictRequest>(request);
-      }
-      UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-      UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-      UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-          delete;
-      UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-          delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif
-      bool ok() const { return message_.status() == ZX_OK; }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif
-
-     private:
-      ::fidl::OutgoingIovecMessage message_;
-    };
-
-    class OwnedEncodedByteMessage final {
-     public:
-      explicit OwnedEncodedByteMessage(
+      explicit OwnedEncodedMessage(
           zx_txid_t _txid,
           ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s)
           : message_(bytes_.data(), bytes_.size(), _txid, s) {}
-      explicit OwnedEncodedByteMessage(
+      explicit OwnedEncodedMessage(
           RequestFlexibleResponseStrictRequest* request)
           : message_(bytes_.data(), bytes_.size(), request) {}
-      OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-      OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-      OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) =
-          delete;
-      OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
       zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1254,7 +835,7 @@ class Protocol final {
       bool ok() const { return message_.ok(); }
       const char* error() const { return message_.error(); }
 
-      ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
         return message_.GetOutgoingMessage();
       }
 
@@ -1267,59 +848,10 @@ class Protocol final {
 
      private:
       ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
-      UnownedEncodedByteMessage message_;
-    };
-
-    class OwnedEncodedIovecMessage final {
-     public:
-      explicit OwnedEncodedIovecMessage(
-          zx_txid_t _txid,
-          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& s)
-          : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
-                     substitutions_, ::fidl::internal::kIovecBufferSize, _txid,
-                     s) {}
-      explicit OwnedEncodedIovecMessage(
-          RequestFlexibleResponseStrictRequest* request)
-          : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
-                     substitutions_, ::fidl::internal::kIovecBufferSize,
-                     request) {}
-      OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-      OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-      OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-          delete;
-      OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-      zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-      const char* status_string() const { return message_.status_string(); }
-#endif
-      bool ok() const { return message_.ok(); }
-      const char* error() const { return message_.error(); }
-
-      ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-        return message_.GetOutgoingMessage();
-      }
-
-#ifdef __Fuchsia__
-      template <typename ChannelLike>
-      void Write(ChannelLike&& client) {
-        message_.Write(std::forward<ChannelLike>(client));
-      }
-#endif
-
-     private:
-      zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-      fidl_iovec_substitution_t
-          substitutions_[::fidl::internal::kIovecBufferSize];
-      UnownedEncodedIovecMessage message_;
+      UnownedEncodedMessage message_;
     };
 
    public:
-    friend ::fidl::internal::EncodedMessageTypes<
-        RequestFlexibleResponseStrictRequest>;
-    using OwnedEncodedMessage = OwnedEncodedByteMessage;
-    using UnownedEncodedMessage = UnownedEncodedByteMessage;
-
     class DecodedMessage final : public ::fidl::internal::IncomingMessage {
      public:
       DecodedMessage(uint8_t* bytes, uint32_t byte_actual,

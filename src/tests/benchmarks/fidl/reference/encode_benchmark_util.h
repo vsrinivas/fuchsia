@@ -57,7 +57,7 @@ bool EncodeBenchmark(perftest::RepeatState* state, BuilderFunc builder, EncodeFu
     return false;
   }
 
-  fidl::OutgoingByteMessage& expected_message = encoded.GetOutgoingMessage();
+  fidl::OutgoingMessage& expected_message = encoded.GetOutgoingMessage();
   if (expected_message.byte_actual() != reference_bytes.size()) {
     std::cout << "output size mismatch - encoded reference size was " << reference_bytes.size()
               << " but expected encode result size was" << expected_message.byte_actual()

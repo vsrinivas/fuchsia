@@ -84,20 +84,18 @@ struct Padding7ByteMiddle {
 
   uint64_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding7ByteMiddle* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding7ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding7ByteMiddle), nullptr, 0,
                    0) {
       message_.Encode<Padding7ByteMiddle>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -106,59 +104,20 @@ struct Padding7ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding7ByteMiddle* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding7ByteMiddle>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding7ByteMiddle* value)
+    explicit OwnedEncodedMessage(Padding7ByteMiddle* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -167,48 +126,14 @@ struct Padding7ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding7ByteMiddle* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding7ByteMiddle>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -254,19 +179,17 @@ struct Padding7ByteEnd {
 
   uint8_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding7ByteEnd* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding7ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding7ByteEnd), nullptr, 0, 0) {
       message_.Encode<Padding7ByteEnd>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -275,59 +198,20 @@ struct Padding7ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding7ByteEnd* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding7ByteEnd>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding7ByteEnd* value)
+    explicit OwnedEncodedMessage(Padding7ByteEnd* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -336,48 +220,14 @@ struct Padding7ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding7ByteEnd* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding7ByteEnd>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -423,20 +273,18 @@ struct Padding6ByteMiddle {
 
   uint64_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding6ByteMiddle* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding6ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding6ByteMiddle), nullptr, 0,
                    0) {
       message_.Encode<Padding6ByteMiddle>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -445,59 +293,20 @@ struct Padding6ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding6ByteMiddle* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding6ByteMiddle>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding6ByteMiddle* value)
+    explicit OwnedEncodedMessage(Padding6ByteMiddle* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -506,48 +315,14 @@ struct Padding6ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding6ByteMiddle* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding6ByteMiddle>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -593,19 +368,17 @@ struct Padding6ByteEnd {
 
   uint16_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding6ByteEnd* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding6ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding6ByteEnd), nullptr, 0, 0) {
       message_.Encode<Padding6ByteEnd>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -614,59 +387,20 @@ struct Padding6ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding6ByteEnd* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding6ByteEnd>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding6ByteEnd* value)
+    explicit OwnedEncodedMessage(Padding6ByteEnd* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -675,48 +409,14 @@ struct Padding6ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding6ByteEnd* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding6ByteEnd>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -764,20 +464,18 @@ struct Padding5ByteMiddle {
 
   uint64_t c = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding5ByteMiddle* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding5ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding5ByteMiddle), nullptr, 0,
                    0) {
       message_.Encode<Padding5ByteMiddle>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -786,59 +484,20 @@ struct Padding5ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding5ByteMiddle* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding5ByteMiddle>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding5ByteMiddle* value)
+    explicit OwnedEncodedMessage(Padding5ByteMiddle* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -847,48 +506,14 @@ struct Padding5ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding5ByteMiddle* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding5ByteMiddle>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -936,19 +561,17 @@ struct Padding5ByteEnd {
 
   uint8_t c = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding5ByteEnd* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding5ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding5ByteEnd), nullptr, 0, 0) {
       message_.Encode<Padding5ByteEnd>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -957,59 +580,20 @@ struct Padding5ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding5ByteEnd* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding5ByteEnd>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding5ByteEnd* value)
+    explicit OwnedEncodedMessage(Padding5ByteEnd* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1018,48 +602,14 @@ struct Padding5ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding5ByteEnd* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding5ByteEnd>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -1105,20 +655,18 @@ struct Padding4ByteMiddle {
 
   uint64_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding4ByteMiddle* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding4ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding4ByteMiddle), nullptr, 0,
                    0) {
       message_.Encode<Padding4ByteMiddle>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1127,59 +675,20 @@ struct Padding4ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding4ByteMiddle* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding4ByteMiddle>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding4ByteMiddle* value)
+    explicit OwnedEncodedMessage(Padding4ByteMiddle* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1188,48 +697,14 @@ struct Padding4ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding4ByteMiddle* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding4ByteMiddle>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -1275,19 +750,17 @@ struct Padding4ByteEnd {
 
   uint32_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding4ByteEnd* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding4ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding4ByteEnd), nullptr, 0, 0) {
       message_.Encode<Padding4ByteEnd>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1296,59 +769,20 @@ struct Padding4ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding4ByteEnd* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding4ByteEnd>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding4ByteEnd* value)
+    explicit OwnedEncodedMessage(Padding4ByteEnd* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1357,48 +791,14 @@ struct Padding4ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding4ByteEnd* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding4ByteEnd>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -1449,20 +849,18 @@ struct Padding4ByteAlignmentLength12 {
 
   uint16_t d = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding4ByteAlignmentLength12* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding4ByteAlignmentLength12* value)
         : message_(bytes, byte_size, sizeof(Padding4ByteAlignmentLength12),
                    nullptr, 0, 0) {
       message_.Encode<Padding4ByteAlignmentLength12>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1471,59 +869,20 @@ struct Padding4ByteAlignmentLength12 {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding4ByteAlignmentLength12* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding4ByteAlignmentLength12>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding4ByteAlignmentLength12* value)
+    explicit OwnedEncodedMessage(Padding4ByteAlignmentLength12* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1532,48 +891,14 @@ struct Padding4ByteAlignmentLength12 {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<16> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding4ByteAlignmentLength12* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding4ByteAlignmentLength12>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -1619,20 +944,18 @@ struct Padding3ByteMiddle {
 
   uint32_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding3ByteMiddle* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding3ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding3ByteMiddle), nullptr, 0,
                    0) {
       message_.Encode<Padding3ByteMiddle>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1641,59 +964,20 @@ struct Padding3ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding3ByteMiddle* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding3ByteMiddle>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding3ByteMiddle* value)
+    explicit OwnedEncodedMessage(Padding3ByteMiddle* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1702,48 +986,14 @@ struct Padding3ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<8> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding3ByteMiddle* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding3ByteMiddle>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -1789,19 +1039,17 @@ struct Padding3ByteEnd {
 
   uint8_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding3ByteEnd* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding3ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding3ByteEnd), nullptr, 0, 0) {
       message_.Encode<Padding3ByteEnd>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1810,59 +1058,20 @@ struct Padding3ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding3ByteEnd* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding3ByteEnd>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding3ByteEnd* value)
+    explicit OwnedEncodedMessage(Padding3ByteEnd* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1871,48 +1080,14 @@ struct Padding3ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<8> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding3ByteEnd* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding3ByteEnd>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -1958,20 +1133,18 @@ struct Padding2ByteMiddle {
 
   uint32_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding2ByteMiddle* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding2ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding2ByteMiddle), nullptr, 0,
                    0) {
       message_.Encode<Padding2ByteMiddle>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -1980,59 +1153,20 @@ struct Padding2ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding2ByteMiddle* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding2ByteMiddle>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding2ByteMiddle* value)
+    explicit OwnedEncodedMessage(Padding2ByteMiddle* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -2041,48 +1175,14 @@ struct Padding2ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<8> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding2ByteMiddle* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding2ByteMiddle>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -2128,19 +1228,17 @@ struct Padding2ByteEnd {
 
   uint16_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding2ByteEnd* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding2ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding2ByteEnd), nullptr, 0, 0) {
       message_.Encode<Padding2ByteEnd>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -2149,59 +1247,20 @@ struct Padding2ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding2ByteEnd* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding2ByteEnd>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding2ByteEnd* value)
+    explicit OwnedEncodedMessage(Padding2ByteEnd* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -2210,48 +1269,14 @@ struct Padding2ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<8> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding2ByteEnd* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding2ByteEnd>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -2300,20 +1325,18 @@ struct Padding2ByteAlignmentLength6 {
 
   uint8_t c = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding2ByteAlignmentLength6* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding2ByteAlignmentLength6* value)
         : message_(bytes, byte_size, sizeof(Padding2ByteAlignmentLength6),
                    nullptr, 0, 0) {
       message_.Encode<Padding2ByteAlignmentLength6>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -2322,59 +1345,20 @@ struct Padding2ByteAlignmentLength6 {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding2ByteAlignmentLength6* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding2ByteAlignmentLength6>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding2ByteAlignmentLength6* value)
+    explicit OwnedEncodedMessage(Padding2ByteAlignmentLength6* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -2383,48 +1367,14 @@ struct Padding2ByteAlignmentLength6 {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<8> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding2ByteAlignmentLength6* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding2ByteAlignmentLength6>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -2470,20 +1420,18 @@ struct Padding1ByteMiddle {
 
   uint16_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding1ByteMiddle* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding1ByteMiddle* value)
         : message_(bytes, byte_size, sizeof(Padding1ByteMiddle), nullptr, 0,
                    0) {
       message_.Encode<Padding1ByteMiddle>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -2492,59 +1440,20 @@ struct Padding1ByteMiddle {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding1ByteMiddle* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding1ByteMiddle>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding1ByteMiddle* value)
+    explicit OwnedEncodedMessage(Padding1ByteMiddle* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -2553,48 +1462,14 @@ struct Padding1ByteMiddle {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<8> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding1ByteMiddle* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding1ByteMiddle>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
@@ -2640,19 +1515,17 @@ struct Padding1ByteEnd {
 
   uint8_t b = {};
 
- private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size,
-                              Padding1ByteEnd* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                          Padding1ByteEnd* value)
         : message_(bytes, byte_size, sizeof(Padding1ByteEnd), nullptr, 0, 0) {
       message_.Encode<Padding1ByteEnd>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) =
-        delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -2661,59 +1534,20 @@ struct Padding1ByteEnd {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-                               fidl_iovec_substitution_t* substitutions,
-                               uint32_t substitutions_size,
-                               Padding1ByteEnd* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-              .iovecs = iovecs,
-              .iovecs_actual = 0,
-              .iovecs_capacity = iovec_size,
-              .substitutions = substitutions,
-              .substitutions_actual = 0,
-              .substitutions_capacity = substitutions_size,
-              .handles = nullptr,
-              .handle_actual = 0,
-              .handle_capacity = 0,
-          }) {
-      message_.Encode<Padding1ByteEnd>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) =
-        delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) =
-        delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage(Padding1ByteEnd* value)
+    explicit OwnedEncodedMessage(Padding1ByteEnd* value)
         : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -2722,48 +1556,14 @@ struct Padding1ByteEnd {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() {
+    ::fidl::OutgoingMessage& GetOutgoingMessage() {
       return message_.GetOutgoingMessage();
     }
 
    private:
     ::fidl::internal::InlineMessageBuffer<8> bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage(Padding1ByteEnd* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize, substitutions_,
-                   ::fidl::internal::kIovecBufferSize, value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) =
-        delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() {
-      return message_.GetOutgoingMessage();
-    }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t
-        substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
- public:
-  friend ::fidl::internal::EncodedMessageTypes<Padding1ByteEnd>;
-  using OwnedEncodedMessage = OwnedEncodedByteMessage;
-  using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:

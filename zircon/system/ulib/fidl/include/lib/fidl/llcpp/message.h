@@ -23,12 +23,6 @@ namespace fidl {
 
 namespace internal {
 
-// This is the size of the stack buffer to allocate for iovec messages.
-// Note: the kernel has a higher-performance mode for <= 16 iovecs.
-// (fxbug.dev/66977) Use a more sophisticated method to allocate iovecs
-// in generated code that covers all cases.
-constexpr uint32_t kIovecBufferSize = 64;
-
 #ifdef __Fuchsia__
 class ClientBase;
 class ResponseContext;
@@ -36,10 +30,19 @@ class ResponseContext;
 
 }  // namespace internal
 
-// Abstract class representing a FIDL message on the write path.
-// Create instances of base classes |OutgoingByteMessage| or |OutgoingIovecMessage|.
+// Class representing a FIDL message on the write path.
 class OutgoingMessage : public ::fidl::Result {
  public:
+  // Creates an object which can manage a FIDL message. |c_msg.byte.bytes| and |c_msg.byte.handles|
+  // will be used as the destination to linearize and encode the message. At this point, the data
+  // within |c_msg.byte.bytes| and |c_msg.byte.handles| is undefined.
+  explicit OutgoingMessage(const fidl_outgoing_msg_t* c_msg);
+  // Creates an object which can manage a FIDL message. |bytes| and |handles| will be used as the
+  // destination to linearize and encode the message. At this point, the data within |bytes| and
+  // |handles| is undefined.
+  OutgoingMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
+                  zx_handle_disposition_t* handles, uint32_t handle_capacity,
+                  uint32_t handle_actual);
   // Copy and move is disabled for the sake of avoiding double handle close.
   // It is possible to implement the move operations with correct semantics if they are
   // ever needed.
@@ -51,43 +54,27 @@ class OutgoingMessage : public ::fidl::Result {
   ~OutgoingMessage();
 
   // Set the txid in the message header.
-  // Requires that there are sufficient bytes to store the header:
-  // - in the buffer (OutgoingByteMessage)
-  // - in the first iovec buffer (OutgoingIovecMessage)
-  virtual void set_txid(zx_txid_t txid) = 0;
+  // Requires that there are sufficient bytes to store the header in the buffer.
+  void set_txid(zx_txid_t txid) {
+    ZX_ASSERT(byte_actual() >= sizeof(fidl_message_header_t));
+    reinterpret_cast<fidl_message_header_t*>(bytes())->txid = txid;
+  }
 
-  zx_handle_disposition_t* handles() const {
-    // Used in destructor so handled via switch rather than virtual function.
-    switch (message_.type) {
-      case FIDL_OUTGOING_MSG_TYPE_BYTE:
-        return message_.byte.handles;
-      case FIDL_OUTGOING_MSG_TYPE_IOVEC:
-        return message_.iovec.handles;
-      default:
-        ZX_PANIC("unhandled message type");
-    }
-  }
-  uint32_t handle_actual() const {
-    // Used in destructor so handled via switch rather than virtual function.
-    switch (message_.type) {
-      case FIDL_OUTGOING_MSG_TYPE_BYTE:
-        return message_.byte.num_handles;
-      case FIDL_OUTGOING_MSG_TYPE_IOVEC:
-        return message_.iovec.num_handles;
-      default:
-        ZX_PANIC("unhandled message type");
-    }
-  }
+  // TODO(fxbug.dev/66977) Replace this with iovec accessor.
+  uint8_t* bytes() const { return reinterpret_cast<uint8_t*>(message()->byte.bytes); }
+  // TODO(fxbug.dev/66977) Replace this with iovec count.
+  uint32_t byte_actual() const { return message()->byte.num_bytes; }
+
+  zx_handle_disposition_t* handles() const { return message_.byte.handles; }
+  uint32_t handle_actual() const { return message_.byte.num_handles; }
   fidl_outgoing_msg_t* message() { return &message_; }
   const fidl_outgoing_msg_t* message() const { return &message_; }
 
   // Release the handles to prevent them to be closed by CloseHandles. This method is only useful
   // when interfacing with low-level channel operations which consume the handles.
-  virtual void ReleaseHandles() = 0;
+  void ReleaseHandles() { message()->byte.num_handles = 0; }
 
-  // Encodes the data into:
-  // - the buffer after linearizing (OutgoingByteMessage)
-  // - the iovec array (OutgoingIovecMessage)
+  // Encodes the data.
   template <typename FidlType>
   void Encode(FidlType* data) {
     EncodeImpl(FidlType::Type, data);
@@ -139,170 +126,20 @@ class OutgoingMessage : public ::fidl::Result {
   OutgoingMessage(fidl_outgoing_msg_t msg, uint32_t handle_capacity)
       : ::fidl::Result(ZX_OK, nullptr), message_(msg), handle_capacity_(handle_capacity) {}
 
-  virtual void EncodeImpl(const fidl_type_t* message_type, void* data) = 0;
+  void EncodeImpl(const fidl_type_t* message_type, void* data);
+
 #ifdef __Fuchsia__
-  virtual void WriteImpl(zx_handle_t channel) = 0;
-  virtual void CallImpl(const fidl_type_t* response_type, zx_handle_t channel,
-                        uint8_t* result_bytes, uint32_t result_capacity, zx_time_t deadline) = 0;
+  void WriteImpl(zx_handle_t channel);
+  void CallImpl(const fidl_type_t* response_type, zx_handle_t channel, uint8_t* result_bytes,
+                uint32_t result_capacity, zx_time_t deadline);
 #endif
 
   uint32_t handle_capacity() const { return handle_capacity_; }
 
  private:
   fidl_outgoing_msg_t message_;
-  uint32_t handle_capacity_;
-};
-
-// Class representing an outgoing message backed by a byte array.
-// Each instantiation of the class should only be used for one message.
-class OutgoingByteMessage final : public OutgoingMessage {
- public:
-  // Creates an object which can manage a FIDL message that is backed by a byte array.
-  // |bytes| and |handles| will be used as the destination to linearize and encode the message.
-  // At this point, the data within |bytes_| and |handles_| is undefined.
-  OutgoingByteMessage(uint8_t* bytes, uint32_t byte_capacity, uint32_t byte_actual,
-                      zx_handle_disposition_t* handles, uint32_t handle_capacity,
-                      uint32_t handle_actual);
-  OutgoingByteMessage() = delete;
-
-  uint8_t* bytes() const { return reinterpret_cast<uint8_t*>(message()->byte.bytes); }
-  uint32_t byte_actual() const { return message()->byte.num_bytes; }
-  void ReleaseHandles() override { message()->byte.num_handles = 0; }
-
- private:
-  // Linearizes and encodes a message. |data| is a pointer to a buffer which holds the source
-  // message body which type is defined by |message_type|.
-  // If this function succeed:
-  // - |status_| is ZX_OK
-  // - |message_| holds the data for the linearized version of |data|.
-  // If this function fails:
-  // - |status_| is not ZX_OK
-  // - |error_message_| holds an explanation of the failure
-  // - |message_| is undefined
-  // The handles in the message are always consumed by LinearizeAndEncode. If it succeeds they will
-  // be transferred into |handles_|. If it fails, some handles may be transferred into |handles_|
-  // and the rest will be closed.
-  void EncodeImpl(const fidl_type_t* message_type, void* data) override;
-
-#ifdef __Fuchsia__
-  void WriteImpl(zx_handle_t channel) override;
-  void CallImpl(const fidl_type_t* response_type, zx_handle_t channel, uint8_t* result_bytes,
-                uint32_t result_capacity, zx_time_t deadline) override;
-#endif
-
-  void set_txid(zx_txid_t txid) override {
-    ZX_ASSERT(byte_actual() >= sizeof(fidl_message_header_t));
-    reinterpret_cast<fidl_message_header_t*>(bytes())->txid = txid;
-  }
-
   uint32_t byte_capacity_;
-};
-
-// Class representing an outgoing message backed by an iovec array.
-// Each instantiation of the class should only be used for one message.
-class OutgoingIovecMessage final : public OutgoingMessage {
- public:
-  struct constructor_args {
-    zx_channel_iovec_t* iovecs;
-    uint32_t iovecs_actual;
-    uint32_t iovecs_capacity;
-
-    fidl_iovec_substitution_t* substitutions;
-    uint32_t substitutions_actual;
-    uint32_t substitutions_capacity;
-
-    zx_handle_disposition_t* handles;
-    uint32_t handle_actual;
-    uint32_t handle_capacity;
-  };
-  // Creates an object which can manage a FIDL message that is backed by an iovec array.
-  // |args.iovecs| and |args.handles| will be used as the destination to encode the message.
-  // |args.substitutions| will back the array of patches needed to restore the encoded
-  // object after encoding.
-  // At this point, the data within |message_.iovec.iovecs|, |message_.iovec.substitutions|
-  // and |handles_| is undefined.
-  explicit OutgoingIovecMessage(constructor_args args);
-  OutgoingIovecMessage() = delete;
-  ~OutgoingIovecMessage();
-
-  zx_channel_iovec* iovecs() const { return message()->iovec.iovecs; }
-  uint32_t iovec_actual() const { return message()->iovec.num_iovecs; }
-  void ReleaseHandles() override { message()->iovec.num_handles = 0; }
-
- private:
-  // Encodes the message to an iovec array.
-  void EncodeImpl(const fidl_type_t* message_type, void* data) override;
-
-#ifdef __Fuchsia__
-  void WriteImpl(zx_handle_t channel) override;
-  void CallImpl(const fidl_type_t* response_type, zx_handle_t channel, uint8_t* result_bytes,
-                uint32_t result_capacity, zx_time_t deadline) override;
-#endif
-
-  void PatchSubstitutions();
-
-  void set_txid(zx_txid_t txid) override {
-    // For simplicity, assume that the message header fits in the first iovec.
-    ZX_ASSERT(iovec_actual() > 0 && iovecs()[0].capacity >= sizeof(fidl_message_header_t));
-    reinterpret_cast<fidl_message_header_t*>(const_cast<void*>(iovecs()[0].buffer))->txid = txid;
-  }
-
-  uint32_t iovecs_capacity_;
-
-  fidl_iovec_substitution_t* substitutions_;
-  uint32_t substitutions_capacity_;
-  uint32_t substitutions_actual_;
-};
-
-// OutgoingMessageAdaptorFromC holds an instance of any of the subclasses of
-// OutgoingMessage.
-// It is used in cases where an instance of OutgoingMessage is needed but the type
-// is not known upfront. This can happen when converting from other forms of
-// outgoing messages that can store multiple types, such as the C fidl_outgoing_msg_t.
-class OutgoingMessageAdaptorFromC {
- public:
-  // Creates an OutgoingMessageAdaptorFromC from a fidl_outgoing_msg_t.
-  // Because substitutions and capacities can't be specified, the
-  // fidl_outgoing_msg_t must already be in encoded form.
-  explicit OutgoingMessageAdaptorFromC(const fidl_outgoing_msg_t* c_msg) {
-    switch (c_msg->type) {
-      case FIDL_OUTGOING_MSG_TYPE_BYTE:
-        msg_.emplace<fidl::OutgoingByteMessage>(reinterpret_cast<uint8_t*>(c_msg->byte.bytes),
-                                                c_msg->byte.num_bytes, c_msg->byte.num_bytes,
-                                                c_msg->byte.handles, c_msg->byte.num_handles,
-                                                c_msg->byte.num_handles);
-        break;
-      case FIDL_OUTGOING_MSG_TYPE_IOVEC:
-        msg_.emplace<fidl::OutgoingIovecMessage>(fidl::OutgoingIovecMessage::constructor_args{
-            .iovecs = c_msg->iovec.iovecs,
-            .iovecs_actual = c_msg->iovec.num_iovecs,
-            .iovecs_capacity = c_msg->iovec.num_iovecs,
-            .substitutions = nullptr,
-            .substitutions_actual = 0,
-            .substitutions_capacity = 0,
-            .handles = c_msg->iovec.handles,
-            .handle_actual = c_msg->iovec.num_handles,
-            .handle_capacity = c_msg->iovec.num_iovecs,
-        });
-        break;
-      default:
-        ZX_PANIC("unknown message type");
-    }
-  }
-
-  fidl::OutgoingMessage& GetOutgoingMessage() {
-    switch (msg_.index()) {
-      case 1:
-        return cpp17::get<fidl::OutgoingByteMessage>(msg_);
-      case 2:
-        return cpp17::get<fidl::OutgoingIovecMessage>(msg_);
-      default:
-        ZX_PANIC("unhandled index");
-    }
-  }
-
- private:
-  cpp17::variant<cpp17::monostate, fidl::OutgoingByteMessage, fidl::OutgoingIovecMessage> msg_;
+  uint32_t handle_capacity_;
 };
 
 namespace internal {
@@ -360,30 +197,19 @@ class IncomingMessage : public ::fidl::Result {
   fidl_incoming_msg_t message_;
 };
 
-// Helper to access private generated classes representing encoded messsages.
-// Generally OwnedEncodedMessage or UnownedEncodedMessage should be used instead.
-template <typename T>
-struct EncodedMessageTypes {
- public:
-  using OwnedByte = typename T::OwnedEncodedByteMessage;
-  using OwnedIovec = typename T::OwnedEncodedIovecMessage;
-  using UnownedByte = typename T::UnownedEncodedByteMessage;
-  using UnownedIovec = typename T::UnownedEncodedIovecMessage;
-};
-
 }  // namespace internal
 
 // This class owns a message of |FidlType| and encodes the message automatically upon construction
 // into a byte buffer.
 template <typename FidlType>
-using OwnedEncodedMessage = typename internal::EncodedMessageTypes<FidlType>::OwnedByte;
+using OwnedEncodedMessage = typename FidlType::OwnedEncodedMessage;
 
 // This class manages the handles within |FidlType| and encodes the message automatically upon
-// construction. Different from |OwnedEncodedByteMessage|, it takes in a caller-allocated buffer and
+// construction. Different from |OwnedEncodedMessage|, it takes in a caller-allocated buffer and
 // uses that as the backing storage for the message. The buffer must outlive instances of this
 // class.
 template <typename FidlType>
-using UnownedEncodedMessage = typename internal::EncodedMessageTypes<FidlType>::UnownedByte;
+using UnownedEncodedMessage = typename FidlType::UnownedEncodedMessage;
 
 // This class manages the handles within |FidlType| and decodes the message automatically upon
 // construction. It always borrows external buffers for the backing storage of the message.

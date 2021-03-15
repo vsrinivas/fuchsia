@@ -40,10 +40,10 @@ const fragmentSyncRequestCallerAllocateTmpl = `
   ) {
   {{- end }}
   {{- if .Request -}}
-  ::fidl::internal::EncodedMessageTypes<{{ .Name }}Request>::UnownedByte _request(
+  ::fidl::UnownedEncodedMessage<{{ .Name }}Request> _request(
     _request_bytes, _request_byte_capacity, 0
   {{- else -}}
-  ::fidl::internal::EncodedMessageTypes<{{ .Name }}Request>::OwnedByte _request(zx_txid_t(0)
+  ::fidl::OwnedEncodedMessage<{{ .Name }}Request> _request(zx_txid_t(0)
   {{- end -}}
     {{- .Request | CommaParamNames -}});
   {{- if .HasResponse }}

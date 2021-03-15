@@ -345,8 +345,7 @@ static zx_status_t tap_device_reply(fidl_txn_t* txn, const fidl_outgoing_msg_t* 
 }
 
 zx_status_t TapDevice::Reply(zx_txid_t txid, const fidl_outgoing_msg_t* msg) {
-  auto adapter = fidl::OutgoingMessageAdaptorFromC(msg);
-  fidl::OutgoingMessage& message = adapter.GetOutgoingMessage();
+  fidl::OutgoingMessage message(msg);
   message.set_txid(txid);
   message.Write(channel_);
   return message.status();

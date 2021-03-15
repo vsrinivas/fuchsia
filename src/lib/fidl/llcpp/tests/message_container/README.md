@@ -5,11 +5,10 @@ responsible for encoding/decoding FIDL values and sometimes allocating storage
 for them:
 
   - `fidl::OutgoingMessage`
-  - `fidl::OutgoingByteMessage`
+  - `fidl::OutgoingMessage`
   - `fidl::OutgoingIovecMessage`
   - `fidl::OwnedEncodedMessage<Foo>`
   - `fidl::UnownedEncodedMessage<Foo>`
-  - `fidl::OutgoingMessageAdaptorFromC`
   - `fidl::OutgoingToIncomingMessage`
   - ...
 

@@ -80,8 +80,7 @@ class FidlTxn {
   FidlTxn(FidlTxn&&) = delete;
 
   zx_status_t Reply(const fidl_outgoing_msg_t* msg) {
-    auto adapter = fidl::OutgoingMessageAdaptorFromC(msg);
-    fidl::OutgoingMessage& message = adapter.GetOutgoingMessage();
+    fidl::OutgoingMessage message(msg);
     message.set_txid(txid_);
     message.Write(channel_);
     return message.status();

@@ -36,7 +36,7 @@ void HelperExpectPeerInvalid(zx::channel& channel) {
   EXPECT_EQ(channel.write(0, foo, 1, nullptr, 0), ZX_ERR_PEER_CLOSED);
 }
 
-TEST(LlcppTypesTests, EncodedByteMessageTest) {
+TEST(LlcppTypesTests, EncodedMessageTest) {
   NonNullableChannelRequest msg(0);
 
   // Capture the extra handle here; it will not be cleaned by encoded_message
@@ -53,67 +53,9 @@ TEST(LlcppTypesTests, EncodedByteMessageTest) {
   HelperExpectPeerInvalid(channel_1);
 }
 
-TEST(LlcppTypesTests, EncodedIovecMessageTest) {
-  NonNullableChannelRequest msg(0);
-
-  // Capture the extra handle here; it will not be cleaned by encoded_message
-  zx::channel channel_1;
-
-  EXPECT_EQ(zx::channel::create(0, &msg.channel, &channel_1), ZX_OK);
-
-  {
-    fidl::internal::EncodedMessageTypes<NonNullableChannelRequest>::OwnedIovec encoded(&msg);
-
-    HelperExpectPeerValid(channel_1);
-  }
-
-  HelperExpectPeerInvalid(channel_1);
-}
-
-TEST(LlcppTypesTests, DecodedMessageFromBytesTest) {
-  NonNullableChannelRequest msg(0);
-
-  // Capture the extra handle here; it will not be cleaned by encoded.
-  zx::channel channel_1;
-
-  EXPECT_EQ(zx::channel::create(0, &msg.channel, &channel_1), ZX_OK);
-
-  fidl::OwnedEncodedMessage<NonNullableChannelRequest> encoded(&msg);
-
-  {
-    auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
-    auto decoded = fidl::DecodedMessage<NonNullableChannelRequest>(converted.incoming_message());
-
-    HelperExpectPeerValid(channel_1);
-  }
-
-  HelperExpectPeerInvalid(channel_1);
-}
-
-TEST(LlcppTypesTests, DecodedMessageFromIovecTest) {
-  NonNullableChannelRequest msg(0);
-
-  // Capture the extra handle here; it will not be cleaned by encoded.
-  zx::channel channel_1;
-
-  EXPECT_EQ(zx::channel::create(0, &msg.channel, &channel_1), ZX_OK);
-
-  fidl::internal::EncodedMessageTypes<NonNullableChannelRequest>::OwnedIovec encoded(&msg);
-
-  {
-    auto converted = fidl::OutgoingToIncomingMessage(encoded.GetOutgoingMessage());
-    auto decoded = fidl::DecodedMessage<NonNullableChannelRequest>(converted.incoming_message());
-
-    HelperExpectPeerValid(channel_1);
-  }
-
-  HelperExpectPeerInvalid(channel_1);
-}
-
-template <typename OwnedEncodedType, typename UnownedState, typename BuildUnowned,
-          typename AssertBytesEqual>
-void RunRountripTest(BuildUnowned build_unowned, AssertBytesEqual assert_bytes_equal) {
-  NonNullableChannelRequest msg(10);
+// Start with a message, then encode, decode and encode again.
+TEST(LlcppTypesTests, RoundTripTest) {
+  TypesTest::NonNullableChannelRequest msg(10);
 
   // Capture the extra handle here; it will not be cleaned by encoded_message
   zx::channel channel_1;
@@ -123,9 +65,12 @@ void RunRountripTest(BuildUnowned build_unowned, AssertBytesEqual assert_bytes_e
   zx_handle_t unsafe_handle_backup(msg.channel.get());
 
   // We need to define our own storage because it is used after encoded is deleted.
-  UnownedState unowned_state;
+  FIDL_ALIGNDECL uint8_t storage[sizeof(TypesTest::NonNullableChannelRequest)];
 
-  auto encoded = build_unowned(&unowned_state, &msg);
+  auto encoded = new fidl::UnownedEncodedMessage<TypesTest::NonNullableChannelRequest>(
+      storage, sizeof(storage), &msg);
+  EXPECT_EQ(encoded->GetOutgoingMessage().byte_actual(),
+            sizeof(TypesTest::NonNullableChannelRequest));
 
   uint8_t golden_encoded[] = {0x0a, 0x00, 0x00, 0x00,   // txid
                               0x00, 0x00, 0x00, 0x01,   // flags and version
@@ -134,16 +79,18 @@ void RunRountripTest(BuildUnowned build_unowned, AssertBytesEqual assert_bytes_e
                               0xff, 0xff, 0xff, 0xff,   // handle present
                               0x00, 0x00, 0x00, 0x00};  // Padding
 
-  assert_bytes_equal(encoded->GetOutgoingMessage(), golden_encoded,
-                     sizeof(NonNullableChannelRequest));
+  // Byte-accurate comparison
+  EXPECT_EQ(memcmp(golden_encoded, encoded->GetOutgoingMessage().bytes(),
+                   encoded->GetOutgoingMessage().byte_actual()),
+            0);
 
   HelperExpectPeerValid(channel_1);
 
   // Decode
-  auto converted = fidl::OutgoingToIncomingMessage(encoded->GetOutgoingMessage());
-  ASSERT_TRUE(converted.ok());
-  auto decoded = fidl::DecodedMessage<NonNullableChannelRequest>(converted.incoming_message());
-  ASSERT_TRUE(decoded.ok());
+  auto decoded =
+      fidl::DecodedMessage<TypesTest::NonNullableChannelRequest>::FromOutgoingWithRawHandleCopy(
+          encoded);
+  EXPECT_TRUE(decoded.ok());
   EXPECT_NULL(decoded.error(), "%s", decoded.error());
   EXPECT_EQ(decoded.PrimaryObject()->_hdr.txid, 10);
   EXPECT_EQ(decoded.PrimaryObject()->_hdr.ordinal, 0x6134182769bd4a1lu);
@@ -157,13 +104,17 @@ void RunRountripTest(BuildUnowned build_unowned, AssertBytesEqual assert_bytes_e
 
   // Encode
   {
-    OwnedEncodedType encoded2(decoded.PrimaryObject());
+    fidl::OwnedEncodedMessage<TypesTest::NonNullableChannelRequest> encoded2(
+        decoded.PrimaryObject());
     EXPECT_TRUE(encoded2.ok());
     EXPECT_NULL(encoded2.error(), "%s", encoded2.error());
 
-    assert_bytes_equal(encoded2.GetOutgoingMessage(), golden_encoded,
-                       sizeof(NonNullableChannelRequest));
-
+    // Byte-level comparison
+    EXPECT_EQ(encoded2.GetOutgoingMessage().byte_actual(),
+              sizeof(TypesTest::NonNullableChannelRequest));
+    EXPECT_EQ(memcmp(golden_encoded, encoded2.GetOutgoingMessage().bytes(),
+                     encoded2.GetOutgoingMessage().byte_actual()),
+              0);
     EXPECT_EQ(encoded2.GetOutgoingMessage().handle_actual(), 1);
     EXPECT_EQ(encoded2.GetOutgoingMessage().handles()[0].handle, unsafe_handle_backup);
 
@@ -171,51 +122,6 @@ void RunRountripTest(BuildUnowned build_unowned, AssertBytesEqual assert_bytes_e
   }
   // Encoded message was destroyed, bringing down the handle with it
   HelperExpectPeerInvalid(channel_1);
-}
-
-// Start with a message, then encode to a byte buffer, decode and encode again.
-TEST(LlcppTypesTests, ByteRoundTripTest) {
-  struct UnownedState {
-    FIDL_ALIGNDECL uint8_t bytes[sizeof(NonNullableChannelRequest)];
-  };
-  auto build_unowned = [](UnownedState* unowned_state, NonNullableChannelRequest* msg) {
-    return new fidl::UnownedEncodedMessage<NonNullableChannelRequest>(
-        unowned_state->bytes, sizeof(unowned_state->bytes), msg);
-  };
-  auto assert_bytes_equal = [](fidl::OutgoingByteMessage& outgoing_msg, uint8_t* expected_bytes,
-                               uint32_t expected_size) {
-    EXPECT_EQ(outgoing_msg.byte_actual(), expected_size);
-    EXPECT_EQ(memcmp(expected_bytes, outgoing_msg.bytes(), expected_size), 0);
-  };
-  RunRountripTest<fidl::OwnedEncodedMessage<NonNullableChannelRequest>, UnownedState>(
-      build_unowned, assert_bytes_equal);
-}
-// Start with a message, then encode to an iovec array, decode and encode again.
-TEST(LlcppTypesTests, IovecRoundTripTest) {
-  constexpr uint32_t kNumIovecs = 16;
-  struct UnownedState {
-    zx_channel_iovec_t iovecs[kNumIovecs];
-    fidl_iovec_substitution_t substitutions[kNumIovecs];
-  };
-  auto build_unowned = [](UnownedState* unowned_state, NonNullableChannelRequest* msg) {
-    return new fidl::internal::EncodedMessageTypes<NonNullableChannelRequest>::UnownedIovec(
-        unowned_state->iovecs, sizeof(unowned_state->iovecs), unowned_state->substitutions,
-        sizeof(unowned_state->substitutions), msg);
-  };
-  auto assert_bytes_equal = [](fidl::OutgoingIovecMessage& outgoing_msg, uint8_t* expected_bytes,
-                               uint32_t expected_size) {
-    FIDL_ALIGNDECL uint8_t storage_bytes[sizeof(NonNullableChannelRequest)];
-    uint32_t offset = 0;
-    for (uint32_t i = 0; i < outgoing_msg.iovec_actual(); i++) {
-      zx_channel_iovec_t iovec = outgoing_msg.iovecs()[i];
-      memcpy(&storage_bytes[offset], iovec.buffer, iovec.capacity);
-      offset += iovec.capacity;
-    }
-    EXPECT_EQ(sizeof(storage_bytes), expected_size);
-    EXPECT_EQ(memcmp(expected_bytes, storage_bytes, expected_size), 0);
-  };
-  RunRountripTest<fidl::internal::EncodedMessageTypes<NonNullableChannelRequest>::OwnedIovec,
-                  UnownedState>(build_unowned, assert_bytes_equal);
 }
 
 TEST(LlcppTypesTests, ArrayLayoutTest) {

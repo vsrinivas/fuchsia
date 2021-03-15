@@ -14,7 +14,7 @@ Reply({{ .Response | Params }})
 ::fidl::Result
 {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
     {{- template "ReplyManagedMethodSignature" . }} {
-  ::fidl::internal::EncodedMessageTypes<{{ .Name }}Response>::OwnedByte _response{
+  ::fidl::OwnedEncodedMessage<{{ .Name }}Response> _response{
     {{- .Response | ParamNames -}}
   };
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());

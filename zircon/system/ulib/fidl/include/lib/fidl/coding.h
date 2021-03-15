@@ -25,25 +25,6 @@ zx_status_t fidl_encode_etc(const fidl_type_t* type, void* bytes, uint32_t num_b
                             zx_handle_disposition_t* handle_dispositions,
                             uint32_t max_handle_dispositions,
                             uint32_t* out_actual_handle_dispositions, const char** out_error_msg);
-// Populates an array of zx_channel_iovec_t and an array of zx_handle_t representing the encoded
-// object. The motivation for using this is that in some cases performance may improve when used
-// in conjuction with the ZX_CHANNEL_WRITE_IOVEC option for channel writes by avoiding
-// a buffer allocation and copy. See RFC-0010 for more background.
-// Pointers in the input object may have been overwritten during the encode process and a list of
-// substitutions to recreate the original value is appended to the fidl_iovec_substitution_t list.
-// Handles will be overwritten with ZX_HANDLE_INVALID but will not appear in the substitution
-// list.
-zx_status_t fidl_encode_iovec(const fidl_type_t* type, void* object, zx_channel_iovec_t* iovecs,
-                              uint32_t max_iovecs, fidl_iovec_substitution_t* subs,
-                              uint32_t max_subs, zx_handle_t* handles, uint32_t max_handles,
-                              uint32_t* out_actual_iovecs, uint32_t* out_actual_subs,
-                              uint32_t* out_actual_handles, const char** out_error_msg);
-zx_status_t fidl_encode_iovec_etc(const fidl_type_t* type, void* object, zx_channel_iovec_t* iovecs,
-                                  uint32_t max_iovecs, fidl_iovec_substitution_t* subs,
-                                  uint32_t max_subs, zx_handle_disposition_t* handles,
-                                  uint32_t max_handles, uint32_t* out_actual_iovecs,
-                                  uint32_t* out_actual_subs, uint32_t* out_actual_handles,
-                                  const char** out_error_msg);
 zx_status_t fidl_encode_msg(const fidl_type_t* type, fidl_outgoing_msg_byte_t* msg,
                             uint32_t* out_actual_handles, const char** out_error_msg);
 

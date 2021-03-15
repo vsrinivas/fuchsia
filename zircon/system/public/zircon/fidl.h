@@ -376,14 +376,6 @@ typedef struct fidl_message_header {
 
 #define FIDL_TXID_NO_RESPONSE 0ul
 
-// fidl_iovec_substition_t represents a pointer-width value substitution.
-// The operation *ptr = value can be performed to overwrite the current value
-// at a location with the original value.
-typedef struct fidl_iovec_substitution {
-  void** ptr;
-  void* value;
-} fidl_iovec_substitution_t;
-
 // An outgoing FIDL message represented with contiguous bytes.
 //
 // See fidl_outgoing_msg_iovec_t for a represention using iovec.

@@ -43,10 +43,9 @@ struct {{ .Name }} {
   void _CloseHandles();
   {{- end }}
 
-  private:
-  class UnownedEncodedByteMessage final {
+  class UnownedEncodedMessage final {
    public:
-    UnownedEncodedByteMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}* value)
+    UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}* value)
         : message_(bytes, byte_size, sizeof({{ .Name }}),
     {{- if gt .MaxHandles 0 }}
       handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
@@ -56,10 +55,10 @@ struct {{ .Name }} {
       ) {
       message_.Encode<{{ .Name }}>(value);
     }
-    UnownedEncodedByteMessage(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage(UnownedEncodedByteMessage&&) = delete;
-    UnownedEncodedByteMessage* operator=(const UnownedEncodedByteMessage&) = delete;
-    UnownedEncodedByteMessage* operator=(UnownedEncodedByteMessage&&) = delete;
+    UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+    UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+    UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -68,69 +67,23 @@ struct {{ .Name }} {
     bool ok() const { return message_.status() == ZX_OK; }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_; }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
 
    private:
     {{- if gt .MaxHandles 0 }}
       zx_handle_disposition_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
     {{- end }}
-    ::fidl::OutgoingByteMessage message_;
+    ::fidl::OutgoingMessage message_;
   };
 
-  class UnownedEncodedIovecMessage final {
+  class OwnedEncodedMessage final {
    public:
-    UnownedEncodedIovecMessage(
-      zx_channel_iovec_t* iovecs, uint32_t iovec_size,
-      fidl_iovec_substitution_t* substitutions, uint32_t substitutions_size,
-      {{ .Name }}* value)
-        : message_(::fidl::OutgoingIovecMessage::constructor_args{
-          .iovecs = iovecs,
-          .iovecs_actual = 0,
-          .iovecs_capacity = iovec_size,
-          .substitutions = substitutions,
-          .substitutions_actual = 0,
-          .substitutions_capacity = substitutions_size,
-          {{- if gt .MaxHandles 0 }}
-          .handles = handles_,
-          .handle_actual = 0,
-          .handle_capacity = std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles),
-          {{- else }}
-          .handles = nullptr,
-          .handle_actual = 0,
-          .handle_capacity = 0,
-          {{- end }}
-        }) {
-      message_.Encode<{{ .Name }}>(value);
-    }
-    UnownedEncodedIovecMessage(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage(UnownedEncodedIovecMessage&&) = delete;
-    UnownedEncodedIovecMessage* operator=(const UnownedEncodedIovecMessage&) = delete;
-    UnownedEncodedIovecMessage* operator=(UnownedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.status() == ZX_OK; }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_; }
-
-   private:
-    {{- if gt .MaxHandles 0 }}
-      zx_handle_disposition_t handles_[std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles)];
-    {{- end }}
-    ::fidl::OutgoingIovecMessage message_;
-  };
-
-  class OwnedEncodedByteMessage final {
-   public:
-    explicit OwnedEncodedByteMessage({{ .Name }}* value)
+    explicit OwnedEncodedMessage({{ .Name }}* value)
       : message_(bytes_.data(), bytes_.size(), value) {}
-    OwnedEncodedByteMessage(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage(OwnedEncodedByteMessage&&) = delete;
-    OwnedEncodedByteMessage* operator=(const OwnedEncodedByteMessage&) = delete;
-    OwnedEncodedByteMessage* operator=(OwnedEncodedByteMessage&&) = delete;
+    OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+    OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+    OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
 
     zx_status_t status() const { return message_.status(); }
 #ifdef __Fuchsia__
@@ -139,43 +92,12 @@ struct {{ .Name }} {
     bool ok() const { return message_.ok(); }
     const char* error() const { return message_.error(); }
 
-    ::fidl::OutgoingByteMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
+    ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
 
    private:
     {{ .ByteBufferType }} bytes_;
-    UnownedEncodedByteMessage message_;
+    UnownedEncodedMessage message_;
   };
-
-  class OwnedEncodedIovecMessage final {
-   public:
-    explicit OwnedEncodedIovecMessage({{ .Name }}* value)
-        : message_(iovecs_, ::fidl::internal::kIovecBufferSize,
-        substitutions_, ::fidl::internal::kIovecBufferSize,
-        value) {}
-    OwnedEncodedIovecMessage(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage(OwnedEncodedIovecMessage&&) = delete;
-    OwnedEncodedIovecMessage* operator=(const OwnedEncodedIovecMessage&) = delete;
-    OwnedEncodedIovecMessage* operator=(OwnedEncodedIovecMessage&&) = delete;
-
-    zx_status_t status() const { return message_.status(); }
-#ifdef __Fuchsia__
-    const char* status_string() const { return message_.status_string(); }
-#endif
-    bool ok() const { return message_.ok(); }
-    const char* error() const { return message_.error(); }
-
-    ::fidl::OutgoingIovecMessage& GetOutgoingMessage() { return message_.GetOutgoingMessage(); }
-
-   private:
-    zx_channel_iovec_t iovecs_[::fidl::internal::kIovecBufferSize];
-    fidl_iovec_substitution_t substitutions_[::fidl::internal::kIovecBufferSize];
-    UnownedEncodedIovecMessage message_;
-  };
-
-  public:
-    friend ::fidl::internal::EncodedMessageTypes<{{ .Name }}>;
-    using OwnedEncodedMessage = OwnedEncodedByteMessage;
-    using UnownedEncodedMessage = UnownedEncodedByteMessage;
 
   class DecodedMessage final : public ::fidl::internal::IncomingMessage {
    public:
