@@ -984,6 +984,43 @@ class DiagnoseStaleOutputsTest(unittest.TestCase):
             ),
         )
 
+    def test_fresh_output_with_used_input_readable_output(self):
+
+        def fake_getctime(path: str):
+            if path.startswith("read"):
+                return 100
+            if path.startswith("write"):
+                return 200
+            return 0
+
+        used_input = "read.me"
+        written_output = "write.me"
+        with mock.patch.object(os.path, 'exists',
+                               return_value=True) as mock_exists:
+            with mock.patch.object(os.path, 'getctime',
+                                   wraps=fake_getctime) as mock_ctime:
+                output_diagnostics = action_tracer.diagnose_stale_outputs(
+                    accesses=[
+                        action_tracer.Read(used_input),
+                        action_tracer.Read(written_output),
+                        action_tracer.Write(written_output),
+                    ],
+                    access_constraints=action_tracer.AccessConstraints(
+                        allowed_reads={used_input, written_output},
+                        required_writes={written_output}),
+                )
+        # There are no untouched outputs, so getctime is never called.
+        mock_exists.assert_not_called()
+        mock_ctime.assert_not_called()
+        self.assertEqual(
+            output_diagnostics,
+            action_tracer.StalenessDiagnostics(
+                required_writes={written_output},
+                # newest_input is not evaluated
+                stale_outputs=set(),
+            ),
+        )
+
 
 class UnexpectedFreshOutputsTests(unittest.TestCase):
 

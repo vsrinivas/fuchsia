@@ -609,7 +609,8 @@ def diagnose_stale_outputs(
     # not the stat() filesystem function.
     read_files = actually_read_files(accesses)
     # Ignore allowed-but-unused inputs.
-    used_inputs = access_constraints.allowed_reads.intersection(read_files)
+    # Outputs are readable, but should not be considered as inputs.
+    used_inputs = access_constraints.inputs.intersection(read_files)
 
     # Compare timestamps vs. newest input to find stale outputs.
     stale_outputs = set()
