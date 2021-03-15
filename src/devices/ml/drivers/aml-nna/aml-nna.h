@@ -9,13 +9,13 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/registers/cpp/banjo.h>
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <zircon/fidl.h>
 
 #include <ddk/mmio-buffer.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <hw/reg.h>

@@ -4,12 +4,12 @@
 
 #include <fuchsia/device/cpp/fidl.h>
 #include <fuchsia/device/test/cpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
 
-#include <ddk/platform-defs.h>
 #include <fbl/unique_fd.h>
 #include <gtest/gtest.h>
 

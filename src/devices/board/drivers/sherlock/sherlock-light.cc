@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
 #include <zircon/compiler.h>
 
 #include <bind/fuchsia/ams/platform/cpp/fidl.h>
@@ -10,7 +11,6 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/lights.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/metadata/light-sensor.h>
 #include <soc/aml-t931/t931-pwm.h>
 

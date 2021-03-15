@@ -5,12 +5,12 @@
 #include "ft8201.h"
 
 #include <endian.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/zx/profile.h>
 #include <threads.h>
 #include <zircon/threads.h>
 
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 

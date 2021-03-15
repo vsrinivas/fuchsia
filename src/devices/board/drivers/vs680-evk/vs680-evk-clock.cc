@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
+
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/clock.h>
-#include <ddk/platform-defs.h>
 #include <soc/vs680/vs680-clk.h>
 #include <soc/vs680/vs680-hw.h>
 

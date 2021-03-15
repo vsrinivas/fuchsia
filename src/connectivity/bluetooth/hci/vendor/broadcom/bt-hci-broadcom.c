@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/bt/hci/c/banjo.h>
 #include <fuchsia/hardware/bt/vendor/c/banjo.h>
 #include <fuchsia/hardware/serialimpl/async/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -21,7 +22,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 
 #include "src/connectivity/bluetooth/hci/vendor/broadcom/bcm_hci_bind.h"
 

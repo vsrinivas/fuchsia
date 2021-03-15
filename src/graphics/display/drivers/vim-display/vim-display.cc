@@ -12,6 +12,7 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/image-format/image_format.h>
 #include <stdint.h>
@@ -29,7 +30,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
-#include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/arch_ops.h>

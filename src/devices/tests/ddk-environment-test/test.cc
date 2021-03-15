@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/environment/test/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <zircon/syscalls.h>
 
 #include <unordered_set>
 
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;

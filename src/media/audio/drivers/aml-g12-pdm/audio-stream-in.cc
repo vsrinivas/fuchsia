@@ -4,6 +4,7 @@
 
 #include "audio-stream-in.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/zx/clock.h>
 #include <math.h>
 
@@ -14,7 +15,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 
 #include "src/media/audio/drivers/aml-g12-pdm/aml_g12_pdm_bind.h"
 

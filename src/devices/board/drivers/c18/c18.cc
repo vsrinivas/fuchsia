@@ -4,8 +4,9 @@
 
 #include "c18.h"
 
+#include <lib/ddk/platform-defs.h>
+
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 
 #include "src/devices/board/drivers/c18/c18_bind.h"

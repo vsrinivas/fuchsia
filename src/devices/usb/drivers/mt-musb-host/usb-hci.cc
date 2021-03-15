@@ -4,6 +4,7 @@
 
 #include "usb-hci.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/time.h>
 #include <zircon/hw/usb.h>
@@ -14,7 +15,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <soc/mt8167/mt8167-usb-phy.h>
 #include <soc/mt8167/mt8167-usb.h>

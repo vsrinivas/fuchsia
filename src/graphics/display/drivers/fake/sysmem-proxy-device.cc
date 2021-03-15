@@ -12,6 +12,7 @@
 #include <inttypes.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async-2/simple_binding.h>
 #include <lib/fidl-utils/bind.h>
@@ -24,7 +25,6 @@
 #include <memory>
 
 #include <ddk/device.h>
-#include <ddk/platform-defs.h>
 
 namespace display {
 

@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/gpio.h>
-#include <ddk/platform-defs.h>
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>
 

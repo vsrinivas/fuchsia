@@ -5,11 +5,11 @@
 #include "as370-gpio.h"
 
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

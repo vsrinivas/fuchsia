@@ -5,6 +5,7 @@
 #include "src/devices/board/drivers/vim2/vim.h"
 
 #include <assert.h>
+#include <lib/ddk/platform-defs.h>
 #include <limits.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -23,7 +24,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <hw/reg.h>

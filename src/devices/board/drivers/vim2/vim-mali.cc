@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-s912/s912-hw.h>

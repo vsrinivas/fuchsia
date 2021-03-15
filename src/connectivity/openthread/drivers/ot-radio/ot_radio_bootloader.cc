@@ -7,6 +7,7 @@
 #include <ctype.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/driver-unit-test/utils.h>
 #include <stdio.h>
 #include <string.h>
@@ -18,7 +19,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

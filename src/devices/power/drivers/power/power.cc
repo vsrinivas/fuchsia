@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/power/c/banjo.h>
 #include <fuchsia/hardware/power/cpp/banjo.h>
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -17,7 +18,6 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/power.h>
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

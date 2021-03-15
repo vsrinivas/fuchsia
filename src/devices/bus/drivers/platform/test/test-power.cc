@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -10,7 +11,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/power.h>
-#include <ddk/platform-defs.h>
 
 #include "test.h"
 

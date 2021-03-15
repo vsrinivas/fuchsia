@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/inspect/test/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/inspect/cpp/inspect.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>

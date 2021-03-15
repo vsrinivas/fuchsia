@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/i2c.h>
 #include <sys/types.h>
@@ -19,7 +20,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <soc/aml-common/aml-sdmmc.h>

@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -21,7 +22,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddk/trace/event.h>
 #include <hw/reg.h>
 

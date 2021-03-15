@@ -5,6 +5,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/hardware/btitest/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/fdio/fdio.h>
@@ -13,7 +14,6 @@
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
 
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 namespace {

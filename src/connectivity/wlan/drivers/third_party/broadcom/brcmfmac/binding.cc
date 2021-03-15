@@ -11,6 +11,7 @@
 // NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 // OF THIS SOFTWARE.
 
+#include <lib/ddk/platform-defs.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
@@ -19,7 +20,6 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <hw/pci.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"

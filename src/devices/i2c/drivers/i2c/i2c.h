@@ -5,7 +5,8 @@
 #ifndef SRC_DEVICES_I2C_DRIVERS_I2C_I2C_H_
 #define SRC_DEVICES_I2C_DRIVERS_I2C_I2C_H_
 
-#include <ddk/platform-defs.h>
+#include <lib/ddk/platform-defs.h>
+
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/ref_ptr.h>

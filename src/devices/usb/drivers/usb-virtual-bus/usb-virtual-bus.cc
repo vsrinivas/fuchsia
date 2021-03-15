@@ -5,6 +5,7 @@
 #include "src/devices/usb/drivers/usb-virtual-bus/usb-virtual-bus.h"
 
 #include <assert.h>
+#include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +14,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 

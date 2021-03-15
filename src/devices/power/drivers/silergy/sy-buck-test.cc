@@ -4,18 +4,17 @@
 
 #include "sy-buck.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 namespace silergy {
 
 class SyBuckTest : public SyBuck {
  public:
-  SyBuckTest(const ddk::I2cProtocolClient&& i2c)
-      : SyBuck(fake_ddk::kFakeParent, std::move(i2c)) {}
+  SyBuckTest(const ddk::I2cProtocolClient&& i2c) : SyBuck(fake_ddk::kFakeParent, std::move(i2c)) {}
 
   zx_status_t Init() { return SyBuck::Init(); }
 

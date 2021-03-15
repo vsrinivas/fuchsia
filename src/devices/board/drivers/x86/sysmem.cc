@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sysmem/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 
 #include "x86.h"
 

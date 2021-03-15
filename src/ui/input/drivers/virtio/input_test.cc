@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/hidbus/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
-#include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <hid/boot.h>
 #include <virtio/input.h>

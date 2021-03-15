@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/ethernet/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <limits.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-a311d/a311d-gpio.h>
 #include <soc/aml-a311d/a311d-hw.h>

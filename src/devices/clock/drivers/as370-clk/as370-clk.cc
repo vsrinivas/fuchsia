@@ -8,11 +8,11 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <numeric>
 
-#include <ddk/platform-defs.h>
 #include <fbl/auto_lock.h>
 #include <hwreg/bitfields.h>
 #include <soc/as370/as370-audio-regs.h>

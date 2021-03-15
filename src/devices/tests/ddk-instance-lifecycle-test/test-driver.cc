@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/instancelifecycle/test/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/zx/channel.h>
 #include <zircon/errors.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 

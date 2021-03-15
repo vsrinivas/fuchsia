@@ -15,6 +15,7 @@
 #include <fuchsia/hardware/spi/c/banjo.h>
 #include <fuchsia/hardware/spi/c/fidl.h>
 #include <fuchsia/hardware/vreg/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/spi/spi.h>
 #include <stdlib.h>
@@ -29,7 +30,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 
 #include "src/devices/bus/drivers/platform/test/test-composite-bind.h"
 #include "src/devices/bus/drivers/platform/test/test-metadata.h"

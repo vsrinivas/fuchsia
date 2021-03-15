@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/gpio/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
-#include <ddk/platform-defs.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"

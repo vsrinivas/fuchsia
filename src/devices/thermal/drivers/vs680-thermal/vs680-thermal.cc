@@ -4,13 +4,13 @@
 
 #include "vs680-thermal.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/clock.h>
 
 #include <algorithm>
 
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

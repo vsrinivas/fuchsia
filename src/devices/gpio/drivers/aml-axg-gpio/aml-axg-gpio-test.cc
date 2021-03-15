@@ -4,7 +4,8 @@
 
 #include "aml-axg-gpio.h"
 
-#include <ddk/platform-defs.h>
+#include <lib/ddk/platform-defs.h>
+
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>

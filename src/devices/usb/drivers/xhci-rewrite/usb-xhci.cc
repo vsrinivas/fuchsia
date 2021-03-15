@@ -4,6 +4,7 @@
 
 #include "usb-xhci.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/fit/promise.h>
 #include <lib/zx/bti.h>
@@ -22,7 +23,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <hw/arch_ops.h>

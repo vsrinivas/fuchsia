@@ -5,6 +5,7 @@
 #include "gpio-light.h"
 
 #include <assert.h>
+#include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,7 +20,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 

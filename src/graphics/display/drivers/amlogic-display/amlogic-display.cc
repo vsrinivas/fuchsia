@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/dsiimpl/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/image-format/image_format.h>
@@ -28,7 +29,6 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

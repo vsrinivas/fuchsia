@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/gpt.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-clk-regs.h>

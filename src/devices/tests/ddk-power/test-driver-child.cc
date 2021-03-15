@@ -4,6 +4,7 @@
 
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/power/test/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
@@ -14,7 +15,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>

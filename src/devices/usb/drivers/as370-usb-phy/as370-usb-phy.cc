@@ -5,6 +5,7 @@
 #include "as370-usb-phy.h"
 
 #include <assert.h>
+#include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,7 +15,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <hw/reg.h>

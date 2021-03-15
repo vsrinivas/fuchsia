@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/clock.h>
-#include <ddk/platform-defs.h>
 #include <soc/msm8x53/msm8x53-clock.h>
 #include <soc/msm8x53/msm8x53-gpio.h>
 #include <soc/msm8x53/msm8x53-hw.h>

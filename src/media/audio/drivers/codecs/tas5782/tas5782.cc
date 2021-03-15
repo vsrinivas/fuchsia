@@ -5,13 +5,13 @@
 #include "tas5782.h"
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 
 #include <algorithm>
 #include <memory>
 
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

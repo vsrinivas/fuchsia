@@ -5,6 +5,7 @@
 #include "src/devices/bus/drivers/platform/platform-device.h"
 
 #include <assert.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +17,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/function.h>
 
 #include "src/devices/bus/drivers/platform/platform-bus.h"

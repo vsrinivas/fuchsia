@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/serial/c/banjo.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
 #include <fuchsia/hardware/serialimpl/async/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/event.h>
@@ -16,7 +17,6 @@
 #include <vector>
 
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <zxtest/zxtest.h>
 

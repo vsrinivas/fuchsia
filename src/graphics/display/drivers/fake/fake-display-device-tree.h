@@ -13,11 +13,11 @@
 #include <fuchsia/sysmem/c/banjo.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
 #include <map>
 
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 
 #include "src/devices/bus/testing/fake-pdev/fake-pdev.h"

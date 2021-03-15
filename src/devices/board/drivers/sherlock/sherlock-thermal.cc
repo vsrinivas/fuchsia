@@ -4,13 +4,13 @@
 
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/camera.h>
-#include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-meson/g12b-clk.h>

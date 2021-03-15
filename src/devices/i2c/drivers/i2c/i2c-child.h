@@ -8,9 +8,9 @@
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/llcpp/fidl.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/metadata/i2c.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/ref_ptr.h>

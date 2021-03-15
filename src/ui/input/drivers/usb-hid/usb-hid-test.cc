@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/input/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
 #include <lib/usb-virtual-bus-launcher/usb-virtual-bus-launcher.h>
@@ -17,7 +18,6 @@
 #include <zircon/hw/usb.h>
 #include <zircon/syscalls.h>
 
-#include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/string.h>

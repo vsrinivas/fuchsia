@@ -8,13 +8,13 @@
 #include <fuchsia/hardware/clock/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <threads.h>
 #include <zircon/syscalls/smc.h>
 #include <zircon/types.h>
 
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/metadata/fw.h>
 #include <fbl/array.h>

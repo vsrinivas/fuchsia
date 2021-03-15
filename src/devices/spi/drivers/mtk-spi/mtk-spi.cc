@@ -4,13 +4,13 @@
 
 #include "mtk-spi.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <unistd.h>
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/spi.h>
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 

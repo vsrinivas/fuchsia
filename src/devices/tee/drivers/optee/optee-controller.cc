@@ -5,6 +5,7 @@
 #include "optee-controller.h"
 
 #include <inttypes.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/profile.h>
@@ -19,7 +20,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <ddk/platform-defs.h>
 #include <fbl/auto_lock.h>
 #include <tee-client-api/tee-client-types.h>
 

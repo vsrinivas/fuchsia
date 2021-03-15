@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 
 #include <optional>
@@ -9,7 +10,6 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/spi.h>
-#include <ddk/platform-defs.h>
 #include <soc/mt8183/mt8183-hw.h>
 
 #include "c18.h"

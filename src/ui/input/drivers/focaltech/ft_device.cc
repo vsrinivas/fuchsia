@@ -5,6 +5,7 @@
 #include "ft_device.h"
 
 #include <fuchsia/input/report/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/focaltech/focaltech.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/time.h>
@@ -22,7 +23,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>

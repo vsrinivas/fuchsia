@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/hidctl/c/fidl.h>
 #include <fuchsia/hardware/input/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -12,7 +13,6 @@
 #include <stdlib.h>
 #include <zircon/syscalls.h>
 
-#include <ddk/platform-defs.h>
 #include <hid/boot.h>
 #include <zxtest/zxtest.h>
 

@@ -4,7 +4,7 @@
 
 #include "test.h"
 
-#include <ddk/platform-defs.h>
+#include <lib/ddk/platform-defs.h>
 
 #include "test-resources.h"
 

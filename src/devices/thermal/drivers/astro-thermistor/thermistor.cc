@@ -4,6 +4,7 @@
 
 #include "thermistor.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
@@ -12,7 +13,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_counted.h>
 #include <soc/aml-common/aml-g12-saradc.h>

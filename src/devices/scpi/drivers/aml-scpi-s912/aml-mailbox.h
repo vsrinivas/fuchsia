@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/mailbox/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
@@ -18,7 +19,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <hw/reg.h>
 

@@ -5,6 +5,7 @@
 #include "src/devices/board/drivers/x86/x86.h"
 
 #include <fuchsia/hardware/acpi/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/driver-unit-test/utils.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,7 +15,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/vector.h>

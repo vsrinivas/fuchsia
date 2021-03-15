@@ -4,6 +4,7 @@
 
 #include "aml-thermal.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <string.h>
 #include <threads.h>
@@ -16,7 +17,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

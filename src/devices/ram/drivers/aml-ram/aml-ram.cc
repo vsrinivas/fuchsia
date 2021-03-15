@@ -4,13 +4,13 @@
 
 #include "aml-ram.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/clock.h>
 #include <zircon/assert.h>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

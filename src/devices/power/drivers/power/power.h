@@ -7,11 +7,11 @@
 
 #include <fuchsia/hardware/power/cpp/banjo.h>
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <memory>
 #include <vector>
 
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>

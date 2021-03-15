@@ -4,6 +4,7 @@
 
 #include "input-report.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/fidl/epitaph.h>
 #include <threads.h>
 #include <zircon/status.h>
@@ -13,7 +14,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>

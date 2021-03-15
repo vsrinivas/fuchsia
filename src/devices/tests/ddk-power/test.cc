@@ -7,6 +7,7 @@
 #include <fuchsia/device/power/test/llcpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
 #include <fuchsia/process/lifecycle/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/service/llcpp/service.h>
@@ -14,7 +15,6 @@
 #include <zircon/syscalls.h>
 
 #include <ddk/device.h>
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;

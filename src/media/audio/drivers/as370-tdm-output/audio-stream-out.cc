@@ -4,6 +4,7 @@
 
 #include "audio-stream-out.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/clock.h>
 
@@ -13,7 +14,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/metadata/audio.h>
 #include <fbl/array.h>
 #include <soc/as370/as370-audio-regs.h>

@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>

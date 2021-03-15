@@ -4,7 +4,7 @@
 
 #include "fake_bus_driver.h"
 
-#include <ddk/platform-defs.h>
+#include <lib/ddk/platform-defs.h>
 
 #include "src/devices/bus/drivers/pci/config.h"
 #include "src/devices/bus/drivers/pci/device.h"

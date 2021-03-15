@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/device/manager/test/c/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -14,7 +15,6 @@
 #include <vector>
 
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;

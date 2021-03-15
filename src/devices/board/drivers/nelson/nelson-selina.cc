@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
 #include <zircon/status.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 
 #include "nelson-gpios.h"
 #include "nelson.h"

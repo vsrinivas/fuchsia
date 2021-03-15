@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fzl/pinned-vmo.h>
@@ -28,7 +29,6 @@
 #include <ddk/metadata.h>
 #include <ddk/mmio-buffer.h>
 #include <ddk/phys-iter.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <hw/reg.h>

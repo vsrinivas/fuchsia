@@ -5,6 +5,7 @@
 #include "one-endpoint-hid-function.h"
 
 #include <assert.h>
+#include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -18,7 +19,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <usb/usb-request.h>
 

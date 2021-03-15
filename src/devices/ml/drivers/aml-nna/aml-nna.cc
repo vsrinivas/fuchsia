@@ -4,6 +4,7 @@
 
 #include "aml-nna.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <zircon/types.h>
@@ -14,7 +15,6 @@
 #include <bind/fuchsia/verisilicon/platform/cpp/fidl.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

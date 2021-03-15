@@ -6,9 +6,9 @@
 #define SRC_DEVICES_PWM_DRIVERS_PWM_PWM_H_
 
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/metadata/pwm.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 
 namespace pwm {

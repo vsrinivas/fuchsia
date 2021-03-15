@@ -4,9 +4,9 @@
 
 #include "aml-clk.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio-ptr/fake.h>
 
-#include <ddk/platform-defs.h>
 #include <soc/aml-meson/aml-clk-common.h>
 #include <soc/aml-meson/axg-clk.h>
 #include <soc/aml-meson/g12a-clk.h>

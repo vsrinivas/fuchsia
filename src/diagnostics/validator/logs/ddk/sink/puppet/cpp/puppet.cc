@@ -6,6 +6,7 @@
 #include <fuchsia/validate/logs/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
@@ -14,7 +15,6 @@
 
 #include <filesystem>
 
-#include <ddk/platform-defs.h>
 #include <fbl/ref_ptr.h>
 
 #include "fuchsia/logger/cpp/fidl.h"

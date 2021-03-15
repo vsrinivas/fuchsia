@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <zircon/syscalls/smc.h>
 
 #include <cstdint>
@@ -10,7 +11,6 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/platform-defs.h>
 
 #include "astro.h"
 

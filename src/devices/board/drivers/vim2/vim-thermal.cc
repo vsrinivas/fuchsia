@@ -4,12 +4,12 @@
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/scpi/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-s912/s912-gpio.h>

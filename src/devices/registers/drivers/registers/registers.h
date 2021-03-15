@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/registers/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <zircon/types.h>
 
@@ -16,7 +17,6 @@
 #include <optional>
 #include <vector>
 
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fidl/txn_header.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,7 +17,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <hw/pci.h>
 
 #include "src/devices/bus/drivers/pci/kpci/kpci-private.h"

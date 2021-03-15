@@ -5,6 +5,7 @@
 #include "gt92xx.h"
 
 #include <endian.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
@@ -16,7 +17,6 @@
 #include <utility>
 
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>

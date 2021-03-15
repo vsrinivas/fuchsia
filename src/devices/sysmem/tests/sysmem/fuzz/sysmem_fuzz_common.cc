@@ -5,9 +5,9 @@
 #include "sysmem_fuzz_common.h"
 
 #include <fuchsia/sysmem/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 
 #include "log_rtn.h"
 

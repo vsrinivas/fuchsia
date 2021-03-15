@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "audio-stream-in.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/zx/clock.h>
 #include <limits.h>
 
@@ -11,7 +12,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <soc/mt8167/mt8167-clk-regs.h>
 
 #include "src/media/audio/drivers/mt8167-tdm-input/mt8167_audio_in_bind.h"

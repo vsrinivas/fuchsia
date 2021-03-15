@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
 #include <zircon/compiler.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 
 #include "sherlock.h"
 #include "src/ui/backlight/drivers/ti-lp8556/ti-lp8556Metadata.h"

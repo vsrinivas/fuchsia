@@ -6,12 +6,12 @@
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
-#include <ddk/platform-defs.h>
 #include <soc/as370/as370-i2c.h>
 
 #include "as370.h"

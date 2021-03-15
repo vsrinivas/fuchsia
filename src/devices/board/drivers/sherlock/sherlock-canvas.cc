@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <limits.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/platform-defs.h>
 #include <soc/aml-t931/t931-hw.h>
 
 #include "sherlock.h"

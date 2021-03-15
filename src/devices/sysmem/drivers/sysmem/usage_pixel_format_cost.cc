@@ -5,14 +5,13 @@
 #include "usage_pixel_format_cost.h"
 
 #include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/image-format/image_format.h>
 #include <zircon/assert.h>
 
 #include <list>
 #include <map>
-
-#include <ddk/platform-defs.h>
 
 #include "macros.h"
 

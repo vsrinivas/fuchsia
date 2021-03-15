@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
+
 #include <memory>
 
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 
 #include "src/lib/isolated_devmgr/crash-device-bind.h"

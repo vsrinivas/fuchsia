@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/usb/peripheral/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
 #include <fuchsia/hardware/usb/virtualbustest/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/watcher.h>
@@ -22,7 +23,6 @@
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/syscalls.h>
 
-#include <ddk/platform-defs.h>
 #include <fbl/string.h>
 #include <zxtest/zxtest.h>
 

@@ -4,6 +4,7 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/ftdi/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fdio/fdio.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -11,8 +12,6 @@
 
 #include <filesystem>
 #include <iostream>
-
-#include <ddk/platform-defs.h>
 
 void PrintHelp() {
   printf(

@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <fuchsia/boot/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -20,7 +21,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>

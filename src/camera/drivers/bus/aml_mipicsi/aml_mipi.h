@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/mipicsi/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fzl/pinned-vmo.h>
@@ -17,7 +18,6 @@
 #include <atomic>
 
 #include <ddk/metadata/camera.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.

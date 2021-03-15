@@ -4,6 +4,7 @@
 
 #include "vim3-mcu.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
 #include <stdio.h>
 #include <string.h>
@@ -15,7 +16,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

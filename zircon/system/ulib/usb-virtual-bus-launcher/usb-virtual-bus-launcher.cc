@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
@@ -20,7 +21,6 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 namespace usb_virtual_bus_base {

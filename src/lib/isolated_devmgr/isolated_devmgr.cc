@@ -6,6 +6,7 @@
 
 #include <fcntl.h>
 #include <lib/async/default.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/unsafe.h>
@@ -15,7 +16,6 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
 
-#include <ddk/platform-defs.h>
 #include <sdk/lib/sys/cpp/component_context.h>
 
 namespace isolated_devmgr {

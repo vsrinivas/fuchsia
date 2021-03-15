@@ -4,6 +4,7 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <threads.h>
@@ -19,7 +20,6 @@
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/test.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>

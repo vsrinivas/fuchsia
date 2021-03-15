@@ -5,6 +5,7 @@
 #include "usb-qmi-function.h"
 
 #include <assert.h>
+#include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -20,7 +21,6 @@
 #include <ddk/debug.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <usb/usb-request.h>
 
 #include "src/connectivity/telephony/tests/fake-drivers/usb-qmi-function/usb_qmi_function_bind.h"

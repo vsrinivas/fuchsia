@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <bind/fuchsia/ams/platform/cpp/fidl.h>
 #include <ddk/binding.h>
@@ -10,7 +11,6 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/lights.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/metadata/light-sensor.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d3/s905d3-pwm.h>

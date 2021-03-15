@@ -5,6 +5,7 @@
 #include "intel-hda-controller.h"
 
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <string.h>
 #include <threads.h>
@@ -15,7 +16,6 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <intel-hda/utils/intel-hda-proto.h>

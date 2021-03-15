@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/ddk/platform-defs.h>
 #include <string.h>
 
 #include <limits>
@@ -14,7 +15,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 

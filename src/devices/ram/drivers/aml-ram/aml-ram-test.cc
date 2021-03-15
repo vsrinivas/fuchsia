@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>
@@ -13,7 +14,6 @@
 #include <atomic>
 #include <memory>
 
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 

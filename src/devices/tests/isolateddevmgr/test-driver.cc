@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/manager/test/c/fidl.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <vector>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 
@@ -82,4 +82,4 @@ static constexpr zx_driver_ops_t isolateddevmgr_test_driver_ops = []() -> zx_dri
   return ops;
 }();
 
-ZIRCON_DRIVER(metadata-test, isolateddevmgr_test_driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(metadata - test, isolateddevmgr_test_driver_ops, "zircon", "0.1");

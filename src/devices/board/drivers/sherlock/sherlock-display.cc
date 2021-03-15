@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/display-panel.h>
 #include <zircon/errors.h>
 
@@ -10,7 +11,6 @@
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
-#include <ddk/platform-defs.h>
 #include <soc/aml-t931/t931-gpio.h>
 
 #include "sherlock-gpios.h"

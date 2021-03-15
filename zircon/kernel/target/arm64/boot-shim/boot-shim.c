@@ -6,14 +6,13 @@
 
 #include "boot-shim.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/zbi/zbi.h>
 #include <limits.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <string.h>
 #include <zircon/boot/driver-config.h>
-
-#include <ddk/platform-defs.h>
 
 #include "debug.h"
 #include "devicetree.h"

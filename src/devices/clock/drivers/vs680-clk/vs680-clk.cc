@@ -4,9 +4,9 @@
 
 #include "vs680-clk.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <soc/vs680/vs680-clk.h>

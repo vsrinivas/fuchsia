@@ -4,10 +4,10 @@
 
 #include "lp50xx-light.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 namespace lp50xx_light {

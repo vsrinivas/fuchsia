@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/thermal/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <soc/as370/as370-clk.h>
 #include <soc/as370/as370-power.h>
 #include <soc/as370/as370-thermal.h>

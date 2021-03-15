@@ -4,13 +4,13 @@
 
 #include "syn-dhub.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/port.h>
 
 #include <limits>
 #include <utility>
 
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <soc/as370/as370-dhub-regs.h>
 #include <soc/as370/as370-hw.h>

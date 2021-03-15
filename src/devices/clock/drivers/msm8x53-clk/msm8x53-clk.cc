@@ -9,16 +9,15 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <hwreg/bitfields.h>
 
 #include "msm8x53-clk-regs.h"
-
 #include "src/devices/clock/drivers/msm8x53-clk/msm8x53-clk-bind.h"
 
 namespace clk {

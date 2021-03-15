@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "audio-stream.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/zx/clock.h>
 #include <math.h>
@@ -14,7 +15,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 
 #include "src/media/audio/drivers/aml-g12-tdm/aml_tdm-bind.h"

@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async/default.h>
+#include <lib/ddk/platform-defs.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls/object.h>
 
@@ -15,7 +16,6 @@
 #include <memory>
 
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 
 #include "log.h"

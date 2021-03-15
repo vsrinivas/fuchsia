@@ -5,6 +5,7 @@
 #include "src/devices/block/drivers/zxcrypt/device-manager.h"
 
 #include <fuchsia/hardware/block/encrypted/c/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <threads.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -13,7 +14,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

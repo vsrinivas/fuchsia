@@ -5,7 +5,7 @@
 #ifndef SRC_CAMERA_DRIVERS_HW_ACCEL_GE2D_GE2D_H_
 #define SRC_CAMERA_DRIVERS_HW_ACCEL_GE2D_GE2D_H_
 
-#include <ddk/platform-defs.h>
+#include <lib/ddk/platform-defs.h>
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE  // Enables thrd_create_with_name in <threads.h>.
 #include <threads.h>

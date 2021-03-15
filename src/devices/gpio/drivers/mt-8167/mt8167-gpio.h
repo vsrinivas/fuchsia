@@ -8,12 +8,12 @@
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
 #include <threads.h>
 
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 

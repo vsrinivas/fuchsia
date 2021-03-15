@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/power.h>
-#include <ddk/platform-defs.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"

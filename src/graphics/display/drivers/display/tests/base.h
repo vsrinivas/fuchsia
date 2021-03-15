@@ -12,12 +12,12 @@
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/zx/bti.h>
 
 #include <map>
 #include <vector>
 
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>

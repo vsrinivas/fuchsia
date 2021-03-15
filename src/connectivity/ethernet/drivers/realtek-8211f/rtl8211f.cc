@@ -4,6 +4,7 @@
 
 #include "rtl8211f.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/compiler.h>
@@ -11,7 +12,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 
 #include "mdio-regs.h"

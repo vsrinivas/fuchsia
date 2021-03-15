@@ -6,13 +6,13 @@
 
 #include <fuchsia/hardware/clock/c/fidl.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <string.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hwreg/bitfields.h>

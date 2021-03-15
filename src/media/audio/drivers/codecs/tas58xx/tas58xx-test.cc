@@ -4,6 +4,7 @@
 
 #include "tas58xx.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/simple-codec/simple-codec-client.h>
@@ -13,7 +14,6 @@
 #include <string>
 
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 namespace audio {

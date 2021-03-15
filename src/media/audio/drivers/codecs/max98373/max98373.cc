@@ -5,12 +5,12 @@
 #include "max98373.h"
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/simple-codec/simple-codec-helper.h>
 
 #include <algorithm>
 #include <memory>
 
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/zx/interrupt.h>
@@ -18,7 +19,6 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <hwreg/bitfields.h>

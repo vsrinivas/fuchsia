@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <unistd.h>
 #include <zircon/hw/gpt.h>
 
@@ -12,7 +13,6 @@
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/nand.h>
-#include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-common/aml-guid.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>

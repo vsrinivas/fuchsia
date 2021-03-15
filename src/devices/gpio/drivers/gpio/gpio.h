@@ -8,9 +8,9 @@
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/gpio/llcpp/fidl.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/mutex.h>

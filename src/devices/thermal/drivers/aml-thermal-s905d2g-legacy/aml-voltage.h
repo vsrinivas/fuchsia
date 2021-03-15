@@ -6,13 +6,13 @@
 #define SRC_DEVICES_THERMAL_DRIVERS_AML_THERMAL_S905D2G_LEGACY_AML_VOLTAGE_H_
 
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <memory>
 
-#include <ddk/platform-defs.h>
 #include <soc/aml-common/aml-pwm-regs.h>
 #include <soc/aml-common/aml-thermal.h>
 

@@ -4,8 +4,9 @@
 
 #include "realtek-codec.h"
 
+#include <lib/ddk/platform-defs.h>
+
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <fbl/auto_lock.h>
 
 #include "debug-logging.h"

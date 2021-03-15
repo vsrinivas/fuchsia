@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/test/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fdio.h>
@@ -15,7 +16,6 @@
 #include <map>
 
 #include <ddk/metadata/test.h>
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 #include "src/devices/bin/driver_host/test-metadata.h"

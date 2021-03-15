@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-launcher/launch.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/zx/vmo.h>
@@ -11,7 +12,6 @@
 #include <zircon/boot/image.h>
 #include <zircon/status.h>
 
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 
 namespace driver_integration_test {

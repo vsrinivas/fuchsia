@@ -4,12 +4,12 @@
 
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <soc/aml-common/aml-registers.h>
 #include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-gpio.h>

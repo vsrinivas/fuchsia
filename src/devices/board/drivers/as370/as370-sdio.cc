@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <soc/as370/as370-gpio.h>
 #include <soc/as370/as370-hw.h>

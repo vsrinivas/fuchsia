@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
+
 #include <optional>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 
@@ -70,4 +71,5 @@ static zx_driver_ops_t test_compatibility_hook_child_driver_ops = []() -> zx_dri
   return ops;
 }();
 
-ZIRCON_DRIVER(TestCompatibilityHookChild, test_compatibility_hook_child_driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(TestCompatibilityHookChild, test_compatibility_hook_child_driver_ops, "zircon",
+              "0.1");

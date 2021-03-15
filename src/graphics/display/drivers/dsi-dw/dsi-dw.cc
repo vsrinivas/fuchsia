@@ -5,13 +5,13 @@
 #include "dsi-dw.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/mipi-dsi/mipi-dsi.h>
 
 #include <memory>
 
 #include <ddk/metadata.h>
 #include <ddk/metadata/display.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

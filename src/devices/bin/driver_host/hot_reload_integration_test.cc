@@ -6,6 +6,7 @@
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/device/restarttest/llcpp/fidl.h>
 #include <fuchsia/device/test/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
@@ -15,7 +16,6 @@
 #include <zircon/types.h>
 
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 #include "fbl/unique_fd.h"

@@ -5,13 +5,13 @@
 #include "src/devices/tests/ddk-fidl-test/fidl-async-llcpp-driver.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <memory>
 #include <optional>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 

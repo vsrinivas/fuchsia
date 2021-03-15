@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/iommu/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/trace/event.h>
@@ -27,7 +28,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
 

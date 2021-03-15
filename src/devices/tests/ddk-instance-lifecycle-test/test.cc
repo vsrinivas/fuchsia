@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/instancelifecycle/test/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <zircon/device/vfs.h>
@@ -11,7 +12,6 @@
 
 #include <vector>
 
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 namespace {

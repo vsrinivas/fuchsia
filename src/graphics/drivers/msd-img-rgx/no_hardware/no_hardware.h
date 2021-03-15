@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DRIVERS_MSD_IMG_RGX_NO_HARDWARE_NO_HARDWARE_H_
 
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <memory>
 #include <mutex>
@@ -13,7 +14,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 
 #include "img-sys-device.h"

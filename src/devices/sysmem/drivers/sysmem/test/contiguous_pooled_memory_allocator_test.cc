@@ -5,6 +5,7 @@
 #include "contiguous_pooled_memory_allocator.h"
 
 #include <lib/async-testing/test_loop.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/zx/clock.h>
@@ -12,7 +13,6 @@
 
 #include <vector>
 
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 #include "lib/async-loop/loop.h"

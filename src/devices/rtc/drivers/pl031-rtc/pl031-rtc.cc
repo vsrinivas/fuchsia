@@ -5,6 +5,7 @@
 #include "src/devices/rtc/drivers/pl031-rtc/pl031-rtc.h"
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
@@ -14,7 +15,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 
 #include "src/devices/rtc/drivers/pl031-rtc/pl031_rtc_bind.h"

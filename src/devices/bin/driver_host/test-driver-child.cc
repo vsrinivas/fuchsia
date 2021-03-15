@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
@@ -13,7 +14,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
@@ -77,4 +77,4 @@ static zx_driver_ops_t test_devhost_child_driver_ops = []() -> zx_driver_ops_t {
   return ops;
 }();
 
-ZIRCON_DRIVER(test-devhost-child, test_devhost_child_driver_ops, "zircon", "0.1");
+ZIRCON_DRIVER(test - devhost - child, test_devhost_child_driver_ops, "zircon", "0.1");

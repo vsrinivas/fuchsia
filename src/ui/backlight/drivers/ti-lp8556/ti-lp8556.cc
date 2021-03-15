@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "ti-lp8556.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/device-protocol/pdev.h>
 #include <math.h>
@@ -11,7 +12,6 @@
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

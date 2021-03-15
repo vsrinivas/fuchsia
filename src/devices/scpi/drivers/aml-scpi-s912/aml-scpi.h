@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/mailbox/cpp/banjo.h>
 #include <fuchsia/hardware/scpi/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
@@ -17,7 +18,6 @@
 #include <optional>
 
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <hw/reg.h>
 

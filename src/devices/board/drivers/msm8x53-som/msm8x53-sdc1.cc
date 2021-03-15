@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
+
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/platform-defs.h>
 #include <soc/msm8x53/msm8x53-hw.h>
 #include <soc/msm8x53/msm8x53-sdhci.h>
 

@@ -4,12 +4,13 @@
 
 #include "sy-buck.h"
 
+#include <lib/ddk/platform-defs.h>
+
 #include <memory>
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
-#include <ddk/platform-defs.h>
 #include <hwreg/i2c.h>
 
 #include "src/devices/power/drivers/silergy/sy-buck-bind.h"

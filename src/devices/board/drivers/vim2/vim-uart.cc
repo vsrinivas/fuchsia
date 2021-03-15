@@ -6,13 +6,13 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/serial/c/banjo.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <unistd.h>
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/mmio-buffer.h>
-#include <ddk/platform-defs.h>
 #include <hw/reg.h>
 #include <soc/aml-s912/s912-gpio.h>
 #include <soc/aml-s912/s912-hw.h>

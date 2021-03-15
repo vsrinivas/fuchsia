@@ -4,13 +4,13 @@
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <zircon/syscalls/smc.h>
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <soc/aml-common/aml-thermal.h>
 #include <soc/aml-meson/sm1-clk.h>
 #include <soc/aml-s905d3/s905d3-gpio.h>

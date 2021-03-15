@@ -5,6 +5,7 @@
 #include "mtk-thermal.h"
 
 #include <fuchsia/hardware/clock/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <zircon/rights.h>
 #include <zircon/threads.h>
@@ -13,7 +14,6 @@
 #include <memory>
 
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <soc/mt8167/mt8167-hw.h>

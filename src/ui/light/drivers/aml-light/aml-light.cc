@@ -4,13 +4,13 @@
 
 #include "aml-light.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <string.h>
 
 #include <cmath>
 
 #include <ddk/metadata.h>
 #include <ddk/metadata/lights.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 

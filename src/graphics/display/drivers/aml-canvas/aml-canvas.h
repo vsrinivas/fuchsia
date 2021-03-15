@@ -7,13 +7,13 @@
 
 #include <fuchsia/hardware/amlogiccanvas/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 
 #include <array>
 
 #include <ddk/mmio-buffer.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 

@@ -4,11 +4,12 @@
 
 #include "sgm37603a.h"
 
+#include <lib/ddk/platform-defs.h>
+
 #include <algorithm>
 #include <memory>
 
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

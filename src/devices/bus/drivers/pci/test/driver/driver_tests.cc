@@ -6,6 +6,7 @@
 
 #include <fuchsia/device/test/c/fidl.h>
 #include <getopt.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
@@ -13,7 +14,6 @@
 
 #include <array>
 
-#include <ddk/platform-defs.h>
 #include <fbl/unique_fd.h>
 #include <zxtest/zxtest.h>
 

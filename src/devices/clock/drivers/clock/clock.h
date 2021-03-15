@@ -7,8 +7,8 @@
 
 #include <fuchsia/hardware/clock/cpp/banjo.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 
 class ClockDevice;

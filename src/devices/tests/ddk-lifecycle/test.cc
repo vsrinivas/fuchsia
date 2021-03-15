@@ -7,6 +7,7 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/llcpp/client_end.h>
@@ -16,7 +17,6 @@
 
 #include <vector>
 
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 using driver_integration_test::IsolatedDevmgr;

@@ -12,6 +12,7 @@
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/async/dispatcher.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fidl-async-2/simple_binding.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
@@ -25,7 +26,6 @@
 #include <thread>
 
 #include <ddk/device.h>
-#include <ddk/platform-defs.h>
 #include <fbl/string_printf.h>
 
 #include "allocator.h"

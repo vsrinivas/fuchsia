@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
 #include <zircon/boot/image.h>
 #include <zircon/hw/gpt.h>
 
@@ -10,7 +11,6 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/nand.h>
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <soc/as370/as370-nand.h>
 

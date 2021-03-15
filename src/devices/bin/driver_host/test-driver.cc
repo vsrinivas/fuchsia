@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/restarttest/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>
@@ -12,7 +13,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>

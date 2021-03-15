@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/metadata/spi.h>
-#include <ddk/platform-defs.h>
 #include <fbl/algorithm.h>
 #include <soc/vs680/vs680-spi.h>
 
@@ -18,8 +18,8 @@ namespace board_vs680_evk {
 
 static const pbus_mmio_t spi_mmios[] = {
     {
-          .base = vs680::kSpi1Base,
-          .length = vs680::kSpiSize,
+        .base = vs680::kSpi1Base,
+        .length = vs680::kSpiSize,
     },
 };
 

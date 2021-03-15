@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/rtc/c/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
 #include <librtc.h>
 
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 namespace {

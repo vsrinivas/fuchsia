@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/pciroot/c/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/zx/vmo.h>
 #include <stdint.h>
 #include <zircon/errors.h>
@@ -12,7 +13,6 @@
 #include <limits>
 
 #include <ddk/debug.h>
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 

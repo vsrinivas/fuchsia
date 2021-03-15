@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/power/cpp/banjo.h>
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/align.h>
 #include <string.h>
 #include <zircon/device/usb-peripheral.h>
@@ -15,7 +16,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
 #include <hw/reg.h>
 #include <soc/mt8167/mt8167-clk.h>

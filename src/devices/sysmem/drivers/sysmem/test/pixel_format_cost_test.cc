@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <lib/ddk/platform-defs.h>
 #include <lib/fidl/llcpp/heap_allocator.h>
 
-#include <ddk/platform-defs.h>
 #include <zxtest/zxtest.h>
 
 #include "usage_pixel_format_cost.h"

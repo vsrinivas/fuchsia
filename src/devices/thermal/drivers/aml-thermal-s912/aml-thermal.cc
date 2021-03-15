@@ -4,6 +4,7 @@
 
 #include "aml-thermal.h"
 
+#include <lib/ddk/platform-defs.h>
 #include <string.h>
 #include <zircon/syscalls/port.h>
 
@@ -11,7 +12,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/metadata.h>
-#include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
 #include <soc/aml-common/aml-thermal.h>
 

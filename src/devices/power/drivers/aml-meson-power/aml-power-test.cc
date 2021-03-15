@@ -6,10 +6,10 @@
 
 #include <fuchsia/hardware/pwm/cpp/banjo-mock.h>
 #include <fuchsia/hardware/vreg/cpp/banjo-mock.h>
+#include <lib/ddk/platform-defs.h>
 
 #include <optional>
 
-#include <ddk/platform-defs.h>
 #include <soc/aml-common/aml-pwm-regs.h>
 #include <zxtest/zxtest.h>
 
