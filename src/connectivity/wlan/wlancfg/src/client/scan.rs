@@ -682,7 +682,7 @@ mod tests {
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
                     ssid: "duplicated ssid".as_bytes().to_vec(),
-                    type_: fidl_policy::SecurityType::Wpa3,
+                    type_: fidl_policy::SecurityType::Wpa2,
                 }),
                 entries: Some(vec![
                     fidl_policy::Bss {
@@ -858,7 +858,7 @@ mod tests {
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
                     ssid: "duplicated ssid".as_bytes().to_vec(),
-                    type_: fidl_policy::SecurityType::Wpa3,
+                    type_: fidl_policy::SecurityType::Wpa2,
                 }),
                 entries: Some(vec![
                     fidl_policy::Bss {
@@ -882,7 +882,7 @@ mod tests {
             fidl_policy::ScanResult {
                 id: Some(fidl_policy::NetworkIdentifier {
                     ssid: "foo active ssid".as_bytes().to_vec(),
-                    type_: fidl_policy::SecurityType::Wpa3,
+                    type_: fidl_policy::SecurityType::Wpa2,
                 }),
                 entries: Some(vec![fidl_policy::Bss {
                     bssid: Some([9, 9, 9, 9, 9, 9]),

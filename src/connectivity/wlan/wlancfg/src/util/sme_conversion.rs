@@ -13,8 +13,7 @@ pub fn security_from_sme_protection(
     use fidl_policy::SecurityType;
     use fidl_sme::Protection::*;
     match protection {
-        Wpa3Enterprise | Wpa3Personal => Some(SecurityType::Wpa3),
-        Wpa2Wpa3Personal => {
+        Wpa3Enterprise | Wpa3Personal | Wpa2Wpa3Personal => {
             Some(if wpa3_supported { SecurityType::Wpa3 } else { SecurityType::Wpa2 })
         }
         Wpa2Enterprise
@@ -53,8 +52,8 @@ mod tests {
             (Protection::Open, wpa3_supported, Some(SecurityType::None)),
             (Protection::Unknown, wpa3_supported, None),
             // Below are pairs when WPA3 is not supported.
-            (Protection::Wpa3Enterprise, wpa3_not_supported, Some(SecurityType::Wpa3)),
-            (Protection::Wpa3Personal, wpa3_not_supported, Some(SecurityType::Wpa3)),
+            (Protection::Wpa3Enterprise, wpa3_not_supported, Some(SecurityType::Wpa2)),
+            (Protection::Wpa3Personal, wpa3_not_supported, Some(SecurityType::Wpa2)),
             (Protection::Wpa2Wpa3Personal, wpa3_not_supported, Some(SecurityType::Wpa2)),
             (Protection::Wpa2Enterprise, wpa3_not_supported, Some(SecurityType::Wpa2)),
             (Protection::Wpa2Personal, wpa3_not_supported, Some(SecurityType::Wpa2)),
