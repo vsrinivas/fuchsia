@@ -21,6 +21,7 @@ enum class Opcode : uint8_t {
   TEST_UNIT_READY = 0x00,
   INQUIRY = 0x12,
   MODE_SENSE_6 = 0x1A,
+  SYNCHRONIZE_CACHE_10 = 0x35,
   READ_16 = 0x88,
   WRITE_16 = 0x8A,
   READ_CAPACITY_16 = 0x9E,
@@ -193,6 +194,20 @@ struct Write16CDB {
 } __PACKED;
 
 static_assert(sizeof(Write16CDB) == 16, "Write 16 CDB must be 16 bytes");
+
+struct Synchronize10CDB {
+  Opcode opcode;
+  // syncnv_immed(2) - SYNC_NV - If SYNC_NV is 1 prefer write to nonvolatile cache.
+  // syncnv_immed(1) - IMMED - If IMMED is 1 return after CDB has been
+  //                           validated.
+  uint8_t syncnv_immed;
+  uint32_t logical_block_address;
+  uint8_t reserved;
+  uint16_t num_blocks;
+  uint8_t control;
+} __PACKED;
+
+static_assert(sizeof(Synchronize10CDB) == 10, "Synchronize 10 CDB must be 10 bytes");
 
 class Disk;
 using DeviceType = ddk::Device<Disk, ddk::GetSizable, ddk::Unbindable>;
