@@ -6,14 +6,10 @@ use crate::errors::{
     PackageNameError, PackagePathError, PackageVariantError, ParsePackagePathError,
     ResourcePathError,
 };
-use lazy_static::lazy_static;
-use regex::Regex;
 
 pub const MAX_OBJECT_BYTES: usize = 255;
 pub const MAX_PACKAGE_NAME_BYTES: usize = 100;
 pub const MAX_PACKAGE_VARIANT_BYTES: usize = 100;
-pub const PACKAGE_NAME_REGEX: &str = r"^[-_0-9a-z\.]{1, 100}$";
-pub const PACKAGE_VARIANT_REGEX: &str = r"^[-0-9a-z\.]{1, 100}$";
 
 /// Checks if `input` is a valid path for a file in a Fuchsia package.
 /// Fuchsia package resource paths are Fuchsia object relative paths without
@@ -62,10 +58,9 @@ pub fn check_package_name(input: &str) -> Result<&str, PackageNameError> {
     if input.is_empty() {
         return Err(PackageNameError::Empty);
     }
-    lazy_static! {
-        static ref RE: Regex = Regex::new(PACKAGE_NAME_REGEX).unwrap();
-    }
-    if !RE.is_match(input) {
+    if input.contains(|c: char| {
+        !(c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.' || c == '-' || c == '_')
+    }) {
         return Err(PackageNameError::InvalidCharacter { invalid_name: input.to_string() });
     }
     Ok(input)
@@ -80,10 +75,9 @@ pub fn check_package_variant(input: &str) -> Result<&str, PackageVariantError> {
     if input.is_empty() {
         return Err(PackageVariantError::Empty);
     }
-    lazy_static! {
-        static ref RE: Regex = Regex::new(PACKAGE_VARIANT_REGEX).unwrap();
-    }
-    if !RE.is_match(input) {
+    if input
+        .contains(|c: char| !(c.is_ascii_lowercase() || c.is_ascii_digit() || c == '.' || c == '-'))
+    {
         return Err(PackageVariantError::InvalidCharacter { invalid_variant: input.to_string() });
     }
     Ok(input)
