@@ -59,7 +59,7 @@ zx_status_t AmlSCPI::ExecuteCommand(void* rx_buf, size_t rx_size, void* tx_buf, 
   uint32_t mailbox_status = 0;
   mailbox_data_buf_t mdata;
   mdata.cmd = PACK_SCPI_CMD(cmd, client_id, 0);
-  mdata.tx_buffer = tx_buf;
+  mdata.tx_buffer = static_cast<const uint8_t*>(tx_buf);
   mdata.tx_size = tx_size;
 
   mailbox_channel_t channel;
@@ -69,7 +69,7 @@ zx_status_t AmlSCPI::ExecuteCommand(void* rx_buf, size_t rx_size, void* tx_buf, 
     return status;
   }
 
-  channel.rx_buffer = rx_buf;
+  channel.rx_buffer = static_cast<const uint8_t*>(rx_buf);
   channel.rx_size = rx_size;
 
   status = mailbox_.SendCommand(&channel, &mdata);
