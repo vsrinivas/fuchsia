@@ -394,37 +394,14 @@ ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
                                  const ImagePipe2::BufferCollectionInfo& info,
                                  uint32_t buffer_collection_index,
                                  const ::fuchsia::sysmem::ImageFormat_2& image_format) {
-  // Create Memory object pointing to the given |buffer_collection_index|.
-  zx::vmo vmo;
-  zx_status_t status = info.buffer_collection_info.buffers[buffer_collection_index].vmo.duplicate(
-      ZX_RIGHT_SAME_RIGHTS, &vmo);
-  if (status != ZX_OK) {
-    error_reporter_->ERROR() << __func__ << ": vmo duplicate failed (err=" << status << ").";
-    return nullptr;
-  }
-
   auto vk_device = session->resource_context().vk_device;
   FX_DCHECK(vk_device);
   auto vk_loader = session->resource_context().vk_loader;
   auto collection_properties =
       vk_device.getBufferCollectionPropertiesFUCHSIA(info.vk_buffer_collection, vk_loader);
   if (collection_properties.result != vk::Result::eSuccess) {
-    error_reporter_->ERROR() << __func__
-                             << ": VkGetBufferCollectionProperties failed (err=" << status << ").";
-    return nullptr;
-  }
-
-  const uint32_t memory_type_index =
-      escher::CountTrailingZeros(collection_properties.value.memoryTypeBits);
-  vk::ImportMemoryBufferCollectionFUCHSIA import_info;
-  import_info.collection = info.vk_buffer_collection;
-  import_info.index = buffer_collection_index;
-  vk::MemoryAllocateInfo alloc_info;
-  alloc_info.setPNext(&import_info);
-  alloc_info.memoryTypeIndex = memory_type_index;
-  MemoryPtr memory = Memory::New(session, 0u, std::move(vmo), alloc_info, error_reporter_.get());
-  if (!memory) {
-    error_reporter_->ERROR() << __func__ << ": Unable to create a memory object.";
+    error_reporter_->ERROR() << __func__ << ": VkGetBufferCollectionProperties failed (err="
+                             << vk::to_string(collection_properties.result) << ").";
     return nullptr;
   }
 
@@ -435,6 +412,8 @@ ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
     return nullptr;
   }
 
+  const uint32_t memory_type_index =
+      escher::CountTrailingZeros(collection_properties.value.memoryTypeBits);
   // Make a copy of |vk_image_create_info|. Set size constraint that we didn't have in
   // AddBufferCollection(). Also, check if |protected buffer| is allocated.
   vk::BufferCollectionImageCreateInfoFUCHSIA collection_image_info;
@@ -444,16 +423,42 @@ ImagePtr ImagePipe2::CreateImage(Session* session, ResourceId image_id,
       escher::image_utils::GetDefaultImageConstraints(pixel_format);
   image_create_info.setPNext(&collection_image_info);
   image_create_info.extent = vk::Extent3D{image_format.coded_width, image_format.coded_height, 1};
-
   auto memory_properties = session->resource_context().vk_physical_device.getMemoryProperties();
   if (memory_properties.memoryTypes[memory_type_index].propertyFlags &
       vk::MemoryPropertyFlagBits::eProtected) {
     image_create_info.flags = vk::ImageCreateFlagBits::eProtected;
   }
 
+  auto image_result = vk_device.createImageUnique(image_create_info);
+  if (image_result.result != vk::Result::eSuccess) {
+    error_reporter_->ERROR() << __func__ << ": Unable to create image "
+                             << vk::to_string(image_result.result);
+    return nullptr;
+  }
+
+  vk::MemoryRequirements memory_reqs;
+  vk_device.getImageMemoryRequirements(*image_result.value, &memory_reqs);
+
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+                     vk::MemoryDedicatedAllocateInfoKHR>
+      alloc_info(vk::MemoryAllocateInfo()
+                     .setAllocationSize(memory_reqs.size)
+                     .setMemoryTypeIndex(memory_type_index),
+                 vk::ImportMemoryBufferCollectionFUCHSIA()
+                     .setCollection(info.vk_buffer_collection)
+                     .setIndex(buffer_collection_index),
+                 vk::MemoryDedicatedAllocateInfoKHR().setImage(*image_result.value));
+  MemoryPtr memory =
+      Memory::New(session, 0u, alloc_info.get<vk::MemoryAllocateInfo>(), error_reporter_.get());
+  if (!memory) {
+    error_reporter_->ERROR() << __func__ << ": Unable to create a memory object.";
+    return nullptr;
+  }
+
   // Create GpuImage object since Vulkan constraints set on BufferCollection guarantee that it will
   // be device memory.
-  return GpuImage::New(session, image_id, memory, image_create_info, error_reporter_.get());
+  return GpuImage::New(session, image_id, memory, image_create_info, image_result.value.release(),
+                       error_reporter_.get());
 }
 
 void ImagePipe2::CloseConnectionAndCleanUp() {

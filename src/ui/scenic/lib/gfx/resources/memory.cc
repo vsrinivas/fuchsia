@@ -208,7 +208,8 @@ const ResourceTypeInfo Memory::kTypeInfo = {ResourceType::kMemory, "Memory"};
 Memory::Memory(Session* session, ResourceId id, bool is_host, zx::vmo vmo, uint64_t allocation_size)
     : Resource(session, session->id(), id, kTypeInfo),
       is_host_(is_host),
-      shared_vmo_(fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo), ZX_VM_PERM_READ)),
+      shared_vmo_(vmo ? fxl::MakeRefCounted<fsl::SharedVmo>(std::move(vmo), ZX_VM_PERM_READ)
+                      : nullptr),
       allocation_size_(allocation_size) {}
 
 MemoryPtr Memory::New(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args,
@@ -249,18 +250,10 @@ MemoryPtr Memory::New(Session* session, ResourceId id, ::fuchsia::ui::gfx::Memor
   return retval;
 }
 
-MemoryPtr Memory::New(Session* session, ResourceId id, zx::vmo vmo,
-                      vk::MemoryAllocateInfo alloc_info, ErrorReporter* error_reporter) {
-  uint64_t size;
-  auto status = vmo.get_size(&size);
-  if (status != ZX_OK) {
-    error_reporter->ERROR() << "Memory::New(): zx_vmo_get_size failed (err=" << status << ").";
-    return nullptr;
-  }
-  alloc_info.allocationSize = size;
-
+MemoryPtr Memory::New(Session* session, ResourceId id, vk::MemoryAllocateInfo alloc_info,
+                      ErrorReporter* error_reporter) {
   auto retval = fxl::AdoptRef(
-      new Memory(session, id, /*is_host=*/false, std::move(vmo), alloc_info.allocationSize));
+      new Memory(session, id, /*is_host=*/false, zx::vmo(), alloc_info.allocationSize));
   if (!retval->GetGpuMem(error_reporter, &alloc_info)) {
     // It is an error if we cannot map GPU memory through this factory function.
     return nullptr;

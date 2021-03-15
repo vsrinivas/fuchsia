@@ -42,7 +42,8 @@ class GpuImage : public Image {
   // |create_info| allows caller to fill out this information themselves using possible vulkan
   // extensions, i.e. vkBufferCollectionImageCreateInfoFUCHSIA.
   static GpuImagePtr New(Session* session, ResourceId id, MemoryPtr memory,
-                         vk::ImageCreateInfo create_info, ErrorReporter* error_reporter);
+                         vk::ImageCreateInfo create_info, vk::Image input_image,
+                         ErrorReporter* error_reporter);
 
   void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,
                          escher::ImageLayoutUpdater* layout_updater) override;

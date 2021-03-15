@@ -236,8 +236,8 @@ VK_TEST_F(VkMemoryTest, ImportUsingVkMemoryAllocateInfo) {
       allocation_result.size, escher::impl::GetMemoryTypeIndex(physical_device, memory_type_bits,
                                                                vk::MemoryPropertyFlags()));
   alloc_info.setPNext(&import_info);
-  auto memory_resource = Memory::New(session(), kMemoryId, std::move(device_vmo), alloc_info,
-                                     session()->shared_error_reporter().get());
+  auto memory_resource =
+      Memory::New(session(), kMemoryId, alloc_info, session()->shared_error_reporter().get());
 
   // Confirm that the resource has a valid Vulkan memory object and cleanup.
   ASSERT_TRUE(memory_resource->GetGpuMem(session()->error_reporter()));

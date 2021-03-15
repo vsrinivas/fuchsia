@@ -55,13 +55,6 @@ ImagePtr Image::New(Session* session, ResourceId id, uint32_t width, uint32_t he
     return nullptr;
   }
 
-  auto result = info.GetVMO(buffer_collection_index);
-  if (result.is_error()) {
-    return nullptr;
-  }
-
-  zx::vmo vmo = std::move(result.value());
-
   auto vk_device = session->resource_context().vk_device;
   FX_DCHECK(vk_device);
   auto vk_loader = session->resource_context().vk_loader;
@@ -74,17 +67,6 @@ ImagePtr Image::New(Session* session, ResourceId id, uint32_t width, uint32_t he
 
   const uint32_t memory_type_index =
       escher::CountTrailingZeros(collection_properties.value.memoryTypeBits);
-  vk::ImportMemoryBufferCollectionFUCHSIA import_info;
-  import_info.collection = info.GetFuchsiaCollection();
-  import_info.index = buffer_collection_index;
-  vk::MemoryAllocateInfo alloc_info;
-  alloc_info.setPNext(&import_info);
-  alloc_info.memoryTypeIndex = memory_type_index;
-  MemoryPtr memory = Memory::New(session, 0u, std::move(vmo), alloc_info, error_reporter);
-  if (!memory) {
-    FX_LOGS(ERROR) << "Failed to create Memory resource.";
-    return nullptr;
-  }
 
   vk::Format pixel_format = escher::SysmemPixelFormatTypeToVkFormat(
       info.GetSysmemInfo().settings.image_format_constraints.pixel_format.type);
@@ -103,12 +85,37 @@ ImagePtr Image::New(Session* session, ResourceId id, uint32_t width, uint32_t he
   if (info.GetSysmemInfo().settings.buffer_settings.is_secure) {
     image_create_info.flags = vk::ImageCreateFlagBits::eProtected;
   }
+  auto image_result = vk_device.createImageUnique(image_create_info);
+  if (image_result.result != vk::Result::eSuccess) {
+    FX_LOGS(ERROR) << ": Unable to create image " << vk::to_string(image_result.result);
+    return nullptr;
+  }
+
+  vk::MemoryRequirements memory_reqs;
+  vk_device.getImageMemoryRequirements(*image_result.value, &memory_reqs);
+
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+                     vk::MemoryDedicatedAllocateInfoKHR>
+      alloc_info(vk::MemoryAllocateInfo()
+                     .setAllocationSize(memory_reqs.size)
+                     .setMemoryTypeIndex(memory_type_index),
+                 vk::ImportMemoryBufferCollectionFUCHSIA()
+                     .setCollection(info.GetFuchsiaCollection())
+                     .setIndex(buffer_collection_index),
+                 vk::MemoryDedicatedAllocateInfoKHR().setImage(*image_result.value));
+  MemoryPtr memory =
+      Memory::New(session, 0u, alloc_info.get<vk::MemoryAllocateInfo>(), error_reporter);
+  if (!memory) {
+    error_reporter->ERROR() << __func__ << ": Unable to create a memory object.";
+    return nullptr;
+  }
 
   info.ImageResourceIds().insert(id);
 
   // Create GpuImage object since Vulkan constraints set on BufferCollection guarantee that it will
   // be device memory.
-  return GpuImage::New(session, id, memory, image_create_info, error_reporter);
+  return GpuImage::New(session, id, memory, image_create_info, image_result.value.release(),
+                       error_reporter);
 }
 
 void Image::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader,

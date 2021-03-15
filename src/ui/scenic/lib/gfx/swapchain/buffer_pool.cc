@@ -295,15 +295,18 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
 
     uint32_t memory_type_index = escher::CountTrailingZeros(
         memory_requirements.memoryTypeBits & collection_properties.value.memoryTypeBits);
-    vk::ImportMemoryBufferCollectionFUCHSIA import_info;
-    import_info.collection = import_result.value;
-    import_info.index = i;
-    vk::MemoryAllocateInfo alloc_info;
-    alloc_info.setPNext(&import_info);
-    alloc_info.allocationSize = memory_requirements.size;
-    alloc_info.memoryTypeIndex = memory_type_index;
+    vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+                       vk::MemoryDedicatedAllocateInfoKHR>
+        alloc_info(vk::MemoryAllocateInfo()
+                       .setAllocationSize(memory_requirements.size)
+                       .setMemoryTypeIndex(memory_type_index),
+                   vk::ImportMemoryBufferCollectionFUCHSIA()
+                       .setCollection(import_result.value)
+                       .setIndex(i),
+                   vk::MemoryDedicatedAllocateInfoKHR().setImage(image_result.value));
 
-    auto mem_result = environment->vk_device.allocateMemory(alloc_info);
+    auto mem_result =
+        environment->vk_device.allocateMemory(alloc_info.get<vk::MemoryAllocateInfo>());
 
     if (mem_result.result != vk::Result::eSuccess) {
       FX_LOGS(ERROR) << "vkAllocMemory failed: " << vk::to_string(mem_result.result);

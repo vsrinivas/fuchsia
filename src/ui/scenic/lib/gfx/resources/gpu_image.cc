@@ -138,18 +138,9 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
 }
 
 GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
-                          vk::ImageCreateInfo create_info, ErrorReporter* error_reporter) {
+                          vk::ImageCreateInfo create_info, vk::Image input_image,
+                          ErrorReporter* error_reporter) {
   auto vk_device = session->resource_context().vk_device;
-  auto image_result = vk_device.createImage(create_info);
-  if (image_result.result != vk::Result::eSuccess) {
-    error_reporter->ERROR() << "GpuImage::New(): VkCreateImage failed: "
-                            << vk::to_string(image_result.result);
-    return nullptr;
-  }
-
-  // Make sure that the image is within range of its associated memory.
-  vk::MemoryRequirements memory_reqs;
-  vk_device.getImageMemoryRequirements(image_result.value, &memory_reqs);
 
   escher::GpuMemPtr gpu_mem = memory->GetGpuMem(error_reporter);
   FX_DCHECK(gpu_mem);
@@ -166,7 +157,7 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
   image_info.is_external = true;
 
   escher::ImagePtr image = escher::impl::NaiveImage::AdoptVkImage(
-      session->resource_context().escher_resource_recycler, image_info, image_result.value,
+      session->resource_context().escher_resource_recycler, image_info, input_image,
       std::move(gpu_mem), create_info.initialLayout);
   if (!image) {
     error_reporter->ERROR() << "GpuImage::New(): failed to adopt vk image";

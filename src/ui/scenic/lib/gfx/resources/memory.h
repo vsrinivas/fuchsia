@@ -33,8 +33,8 @@ class Memory : public Resource {
 
   static MemoryPtr New(Session* session, ResourceId id, ::fuchsia::ui::gfx::MemoryArgs args,
                        ErrorReporter* error_reporter);
-  static MemoryPtr New(Session* session, ResourceId id, zx::vmo vmo,
-                       vk::MemoryAllocateInfo alloc_info, ErrorReporter* error_reporter);
+  static MemoryPtr New(Session* session, ResourceId id, vk::MemoryAllocateInfo alloc_info,
+                       ErrorReporter* error_reporter);
 
   // TODO(fxbug.dev/24225): Temporary solution to determine which image class to use.
   // If image classes can depend on MemoryArgs, then this can become a real
