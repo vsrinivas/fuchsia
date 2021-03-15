@@ -2,21 +2,21 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
-test_package("kcounter_inspect_tests") {
-  tests = [
-    {
-      name = "kcounter_inspect_unittest"
-    },
-    {
-      name = "kcounter_inspect_integration_test"
-    },
-  ]
+fuchsia_unittest_component("kcounter_inspect_unittest_component") {
+  deps = [ ":kcounter_inspect_unittest" ]
+}
 
-  deps = [
-    ":kcounter_inspect_integration_test",
-    ":kcounter_inspect_unittest",
+fuchsia_test_component("kcounter_inspect_integration_test_component") {
+  manifest = "meta/kcounter_inspect_integration_test.cmx"
+  deps = [ ":kcounter_inspect_integration_test" ]
+}
+
+fuchsia_test_package("kcounter_inspect_tests") {
+  test_components = [
+    ":kcounter_inspect_unittest_component",
+    ":kcounter_inspect_integration_test_component",
   ]
 }
 

@@ -2,23 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
-package("kcounter_inspect") {
-  binaries = [
-    {
-      name = "kcounter_inspect"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = "meta/kcounter_inspect.cmx"
-      dest = "kcounter_inspect.cmx"
-    },
-  ]
-
+fuchsia_shell_package("kcounter_inspect") {
+  manifest = "meta/kcounter_inspect.cmx"
   deps = [ ":main" ]
 }
 
