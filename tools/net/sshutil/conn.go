@@ -50,8 +50,8 @@ type Conn struct {
 
 // newConn creates a new ssh client to the address and launches a goroutine to
 // send keepalive pings as long as the client is connected.
-func newConn(ctx context.Context, resolver Resolver, config *ssh.ClientConfig, backoff retry.Backoff) (*Conn, error) {
-	conn, err := connect(ctx, resolver, config, backoff)
+func newConn(ctx context.Context, addr net.Addr, config *ssh.ClientConfig, backoff retry.Backoff) (*Conn, error) {
+	conn, err := connect(ctx, addr, config, backoff)
 	if err != nil {
 		return nil, err
 	}
@@ -77,18 +77,13 @@ func newConn(ctx context.Context, resolver Resolver, config *ssh.ClientConfig, b
 
 // connect continuously attempts to connect to a remote server, and returns an
 // ssh client if successful, or errs out if the context is canceled.
-func connect(ctx context.Context, resolver Resolver, config *ssh.ClientConfig, backoff retry.Backoff) (*Conn, error) {
+func connect(ctx context.Context, addr net.Addr, config *ssh.ClientConfig, backoff retry.Backoff) (*Conn, error) {
 	startTime := time.Now()
 
-	var addr net.Addr
 	var client *ssh.Client
 	err := retry.Retry(ctx, backoff, func() error {
-		var err error
-		addr, err = resolver.Resolve(ctx)
-		if err != nil {
-			return err
-		}
 		logger.Debugf(ctx, "trying to connect to %s...", addr)
+		var err error
 		client, err = connectToSSH(ctx, addr, config)
 		if err != nil {
 			return err

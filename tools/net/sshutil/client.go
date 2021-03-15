@@ -17,9 +17,8 @@ import (
 )
 
 type Client struct {
-	resolver Resolver
-	addr     net.Addr
-	config   *ssh.ClientConfig
+	addr   net.Addr
+	config *ssh.ClientConfig
 
 	// The backoff that will be used when trying to establish a connection to
 	// the remote.
@@ -32,19 +31,14 @@ type Client struct {
 }
 
 // NewClient creates a new ssh client to the address.
-func NewClient(
-	ctx context.Context,
-	resolver Resolver,
-	config *ssh.ClientConfig,
-	connectBackoff retry.Backoff,
-) (*Client, error) {
-	conn, err := newConn(ctx, resolver, config, connectBackoff)
+func NewClient(ctx context.Context, addr net.Addr, config *ssh.ClientConfig, connectBackoff retry.Backoff) (*Client, error) {
+	conn, err := newConn(ctx, addr, config, connectBackoff)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Client{
-		resolver:       resolver,
+		addr:           addr,
 		config:         config,
 		connectBackoff: connectBackoff,
 		conn:           conn,
@@ -90,7 +84,7 @@ func (c *Client) ReconnectWithBackoff(ctx context.Context, backoff retry.Backoff
 		c.connected = false
 	}
 
-	conn, err := newConn(ctx, c.resolver, c.config, backoff)
+	conn, err := newConn(ctx, c.addr, c.config, backoff)
 	if err != nil {
 		return err
 	}
