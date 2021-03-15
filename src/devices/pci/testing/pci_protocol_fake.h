@@ -68,6 +68,8 @@ class FakePciProtocol : public ddk::PciProtocol<FakePciProtocol> {
     return ZX_OK;
   }
 
+  zx_status_t PciAckInterrupt() { return ZX_ERR_NOT_SUPPORTED; }
+
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
     if (!out_handle) {
       return ZX_ERR_INVALID_ARGS;

@@ -25,7 +25,7 @@ class DeviceProxy : public PciDeviceProxyType,
   DeviceProxy(zx_device_t* parent, zx_handle_t rpcch) : PciDeviceProxyType(parent), rpcch_(rpcch) {}
   static zx_status_t Create(zx_device_t* parent, zx_handle_t rpcch, const char* name);
   // A helper method to reduce the complexity of each individual PciProtocol method.
-  zx_status_t RpcRequest(PciRpcOp op, zx_handle_t* rd_handle, zx_handle_t* wr_handle,
+  zx_status_t RpcRequest(PciRpcOp op, zx_handle_t* rd_handle, const zx_handle_t* wr_handle,
                          PciRpcMsg* req, PciRpcMsg* resp);
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
   void DdkRelease() { delete this; }
@@ -34,6 +34,7 @@ class DeviceProxy : public PciDeviceProxyType,
   zx_status_t PciGetBar(uint32_t bar_id, pci_bar_t* out_res);
   zx_status_t PciEnableBusMaster(bool enable);
   zx_status_t PciResetDevice();
+  zx_status_t PciAckInterrupt();
   zx_status_t PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle);
   zx_status_t PciConfigureIrqMode(uint32_t requested_irq_count, pci_irq_mode_t* mode);
   zx_status_t PciQueryIrqMode(pci_irq_mode_t mode, uint32_t* out_max_irqs);

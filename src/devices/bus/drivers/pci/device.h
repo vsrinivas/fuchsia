@@ -112,6 +112,7 @@ class Device : public PciDeviceType,
   zx_status_t RpcQueryIrqMode(const zx::unowned_channel& ch);
   zx_status_t RpcResetDevice(const zx::unowned_channel& ch);
   zx_status_t RpcSetIrqMode(const zx::unowned_channel& ch);
+  zx_status_t RpcAckInterrupt(const zx::unowned_channel& ch);
   zx_status_t DdkRxrpc(zx_handle_t channel);
 
   // DDK mix-in impls
@@ -226,7 +227,8 @@ class Device : public PciDeviceType,
   zx_status_t DisableLegacy() __TA_REQUIRES(dev_lock_);
   zx_status_t DisableMsi() __TA_REQUIRES(dev_lock_);
   zx_status_t DisableMsix() __TA_REQUIRES(dev_lock_);
-  // Signals the device's zx::interrupt, effectively triggering an interrupt for the device driver.
+  // Signals the device's zx::interrupt, effectively triggering an interrupt for the device
+  // driver.
   zx_status_t SignalLegacyIrq(zx_time_t timestamp) const __TA_REQUIRES(dev_lock_);
 
   // Devices need to exist in both the top level bus driver class, as well

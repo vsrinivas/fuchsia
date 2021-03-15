@@ -121,6 +121,7 @@ protocol Pci {
     GetBar(uint32 bar_id) -> (zx.status s, fuchsia.hardware.syscalls.pci.PciBar res);
     EnableBusMaster(bool enable) -> (zx.status s);
     ResetDevice() -> (zx.status s);
+    AckInterrupt() -> (zx.status s);
     MapInterrupt(uint32 which_irq) -> (zx.status s, zx.handle:INTERRUPT @handle);
     QueryIrqMode(fuchsia.hardware.syscalls.pci.PciIrqMode mode) -> (zx.status s, uint32 max_irqs);
     SetIrqMode(fuchsia.hardware.syscalls.pci.PciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);

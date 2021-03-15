@@ -267,6 +267,8 @@ static zx_status_t pci_op_map_interrupt(void* ctx, uint32_t which_irq, zx_handle
   return st;
 }
 
+static zx_status_t pci_op_ack_interrupt(void* ctx) { return ZX_ERR_NOT_SUPPORTED; }
+
 static zx_status_t pci_op_get_bti(void* ctx, uint32_t index, zx_handle_t* out_handle) {
   if (!out_handle) {
     return ZX_ERR_INVALID_ARGS;
@@ -343,6 +345,7 @@ static pci_protocol_ops_t _pci_protocol = {
     .reset_device = pci_op_reset_device,
     .get_bar = pci_op_get_bar,
     .map_interrupt = pci_op_map_interrupt,
+    .ack_interrupt = pci_op_ack_interrupt,
     .configure_irq_mode = pci_op_configure_irq_mode,
     .query_irq_mode = pci_op_query_irq_mode,
     .set_irq_mode = pci_op_set_irq_mode,

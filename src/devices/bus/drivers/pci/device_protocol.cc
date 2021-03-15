@@ -86,6 +86,8 @@ zx_status_t Device::DdkRxrpc(zx_handle_t channel) {
       return RpcResetDevice(ch);
     case PCI_OP_SET_IRQ_MODE:
       return RpcSetIrqMode(ch);
+    case PCI_OP_ACK_INTERRUPT:
+      return RpcAckInterrupt(ch);
     default:
       return RpcReply(ch, ZX_ERR_INVALID_ARGS);
   };
@@ -367,6 +369,17 @@ zx_status_t Device::RpcMapInterrupt(const zx::unowned_channel& ch) {
   zxlogf(DEBUG, "[%s] MapInterrupt { irq = %u, status = %s }", cfg_->addr(), request_.irq.which_irq,
          zx_status_get_string(result.status_value()));
   return RpcReply(ch, result.status_value(), &handle, handle_cnt);
+}
+
+zx_status_t Device::RpcAckInterrupt(const zx::unowned_channel& ch) {
+  fbl::AutoLock dev_lock(&dev_lock_);
+
+  if (irqs_.mode != PCI_IRQ_MODE_LEGACY) {
+    return RpcReply(ch, ZX_ERR_BAD_STATE, nullptr, 0);
+  }
+
+  ModifyCmdLocked(/*clr_bits=*/PCI_CFG_COMMAND_INT_DISABLE, /*set_bits=*/0);
+  return RpcReply(ch, ZX_OK, nullptr, 0);
 }
 
 zx_status_t Device::RpcResetDevice(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }

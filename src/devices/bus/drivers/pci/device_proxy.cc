@@ -31,8 +31,9 @@ zx_status_t DeviceProxy::Create(zx_device_t* parent, zx_handle_t rpcch, const ch
   return dp->DdkAdd(name);
 }
 
-zx_status_t DeviceProxy::RpcRequest(PciRpcOp op, zx_handle_t* rd_handle, zx_handle_t* wr_handle,
-                                    PciRpcMsg* req, PciRpcMsg* resp) {
+zx_status_t DeviceProxy::RpcRequest(PciRpcOp op, zx_handle_t* rd_handle,
+                                    const zx_handle_t* wr_handle, PciRpcMsg* req, PciRpcMsg* resp) {
+  ZX_DEBUG_ASSERT(req != nullptr);
   if (rpcch_ == ZX_HANDLE_INVALID) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -55,7 +56,7 @@ zx_status_t DeviceProxy::RpcRequest(PciRpcOp op, zx_handle_t* rd_handle, zx_hand
   cc_args.wr_bytes = req;
   cc_args.wr_num_bytes = sizeof(*req);
   cc_args.rd_bytes = resp;
-  cc_args.rd_num_bytes = sizeof(*resp);
+  cc_args.rd_num_bytes = (resp) ? sizeof(*resp) : 0;
   cc_args.rd_handles = rd_handle;
   cc_args.rd_num_handles = rd_handle_cnt;
   cc_args.wr_handles = wr_handle;
@@ -151,6 +152,12 @@ zx_status_t DeviceProxy::PciEnableBusMaster(bool enable) {
 }
 
 zx_status_t DeviceProxy::PciResetDevice() { DEVICE_PROXY_UNIMPLEMENTED; }
+
+zx_status_t DeviceProxy::PciAckInterrupt() {
+  PciRpcMsg req = {};
+  return RpcRequest(PCI_OP_ACK_INTERRUPT, /*rd_handle=*/nullptr, /*wr_handle=*/nullptr,
+                    /*req=*/&req, /*resp=*/nullptr);
+}
 
 zx_status_t DeviceProxy::PciMapInterrupt(uint32_t which_irq, zx::interrupt* out_handle) {
   PciRpcMsg req = {};
