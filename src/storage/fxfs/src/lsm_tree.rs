@@ -10,7 +10,6 @@ pub mod types;
 use {
     crate::object_handle::ObjectHandle,
     anyhow::Error,
-    fuchsia_syslog::fx_log_debug,
     simple_persistent_layer::SimplePersistentLayerWriter,
     std::{
         ops::Bound,
@@ -99,7 +98,7 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
             let mut merger = merge::Merger::new(iterators, self.merge_fn);
             merger.advance().await?;
             while let Some(item_ref) = merger.get() {
-                fx_log_debug!("compact: writing {:?}", item_ref);
+                log::debug!("compact: writing {:?}", item_ref);
                 writer.write(item_ref).await?;
                 merger.advance().await?;
             }

@@ -10,7 +10,6 @@ use {
     anyhow::{bail, Error},
     async_trait::async_trait,
     byteorder::{ByteOrder, LittleEndian, ReadBytesExt},
-    fuchsia_syslog::{fx_log_debug, fx_log_warn},
     serde::Serialize,
     std::{
         ops::{Bound, Drop},
@@ -120,7 +119,7 @@ impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
             }
             let mut buf = vec![0u8; self.layer.block_size as usize];
             self.layer.object_handle.read(self.pos, &mut buf[..]).await?;
-            fx_log_debug!(
+            log::debug!(
                 "pos={}, object size={}, object id={}",
                 self.pos,
                 self.layer.object_handle.get_size(),
@@ -215,7 +214,7 @@ impl<'handle> SimplePersistentLayerWriter<'handle> {
         }
         LittleEndian::write_u16(&mut self.buf[0..2], self.item_count);
         self.object_handle.write(self.offset, &self.buf[..len]).await?;
-        fx_log_debug!("wrote {} items, {} bytes", self.item_count, len);
+        log::debug!("wrote {} items, {} bytes", self.item_count, len);
         self.buf.drain(..len - 2); // 2 bytes are used for the next item count.
         self.item_count = 0;
         self.offset += self.block_size as u64;
@@ -230,7 +229,7 @@ impl<'handle> SimplePersistentLayerWriter<'handle> {
 impl Drop for SimplePersistentLayerWriter<'_> {
     fn drop(&mut self) {
         if self.item_count > 0 {
-            fx_log_warn!("Dropping unwritten items; did you forget to flush?");
+            log::warn!("Dropping unwritten items; did you forget to flush?");
         }
     }
 }

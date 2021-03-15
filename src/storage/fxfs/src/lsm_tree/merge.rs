@@ -7,7 +7,6 @@ use {
         BoxedLayerIterator, Item, ItemRef, LayerIterator, LayerIteratorMut, OrdLowerBound,
     },
     anyhow::Error,
-    fuchsia_syslog::fx_log_debug,
     futures::try_join,
     std::{
         cmp::Ordering, collections::BinaryHeap, convert::From, ops::Bound, pin::Pin, ptr::NonNull,
@@ -401,7 +400,7 @@ impl<
             {
                 // In this branch the mutable layer is left and the item we're merging-in is right.
                 let merge_result = merge_fn(&mut_merge_iter, &item_merge_iter);
-                fx_log_debug!(
+                log::debug!(
                     "(1) merge for {:?} {:?} -> {:?}",
                     mut_merge_iter.key(),
                     item_merge_iter.key(),
@@ -454,7 +453,7 @@ impl<
             } else {
                 // In this branch, the item we're merging-in is left and the mutable layer is right.
                 let merge_result = merge_fn(&item_merge_iter, &mut_merge_iter);
-                fx_log_debug!(
+                log::debug!(
                     "(2) merge for {:?} {:?} -> {:?}",
                     item_merge_iter.key(),
                     mut_merge_iter.key(),
