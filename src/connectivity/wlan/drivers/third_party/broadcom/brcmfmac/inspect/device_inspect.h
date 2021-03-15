@@ -67,6 +67,7 @@ class DeviceInspect {
   void LogConnAuthFail();
   void LogConnOtherFail();
   void LogArpRequestFrame(zx_time_t time, const uint8_t* frame, size_t frame_size);
+  void LogRxFreeze();
 
  private:
   void AllocTimers(struct brcmf_bus* bus_if, async_dispatcher_t* dispatcher);
@@ -83,6 +84,8 @@ class DeviceInspect {
   ArpFrameMetrics arp_frame_metrics_;
   inspect::UintProperty tx_qfull_;
   WindowedUintProperty tx_qfull_24hrs_;
+  inspect::UintProperty rx_freeze_;
+  WindowedUintProperty rx_freeze_24hrs_;
 };
 
 }  // namespace wlan::brcmfmac

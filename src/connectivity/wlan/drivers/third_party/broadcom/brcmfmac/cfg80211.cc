@@ -1926,9 +1926,30 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
     BRCMF_INFO("Unable to get FW packet counts err: %s fw err %s", zx_status_get_string(err),
                brcmf_fil_get_errstr(fw_err));
   }
+
   BRCMF_INFO("FW Stats: Rx - Good: %d Bad: %d Ocast: %d; Tx - Good: %d Bad: %d",
              fw_pktcnt.rx_good_pkt, fw_pktcnt.rx_bad_pkt, fw_pktcnt.rx_ocast_good_pkt,
              fw_pktcnt.tx_good_pkt, fw_pktcnt.tx_bad_pkt);
+
+  if (ndev->stats.rx_packets != ndev->stats.rx_last_log) {
+    if (ndev->stats.rx_packets < ndev->stats.rx_last_log) {
+      BRCMF_INFO(
+          "Current value for rx_packets is smaller than the last one, an overflow might happened.");
+    }
+    ndev->stats.rx_last_log = ndev->stats.rx_packets;
+    // Clear the freeze count once the device gets out of the bad state.
+    ndev->stats.rx_freeze_count = 0;
+  } else if (ndev->stats.tx_packets > ndev->stats.tx_last_log) {
+    // Increase the rx freeze count only when tx_packets is still increasing while rx_packets
+    // is unchanged. This pattern is expected if a scan happens when the device is not connected to
+    // an AP, but this function will not be called in this case, so no false positive will occur.
+    ndev->stats.rx_freeze_count++;
+  }
+
+  // Increase inspect counter when the rx freeze counter first reach threshold.
+  if (ndev->stats.rx_freeze_count == BRCMF_RX_FREEZE_THRESHOLD / BRCMF_CONNECT_LOG_DUR) {
+    ifp->drvr->inspect->LogRxFreeze();
+  }
 
   BRCMF_INFO("Driver Stats: Rx - Good: %d Bad: %d; Tx - Sent to FW: %d Conf: %d Drop: %d Bad: %d",
              ndev->stats.rx_packets, ndev->stats.rx_errors, ndev->stats.tx_packets,
