@@ -3,7 +3,7 @@
 This document provides an overview of the tools available to manage memory when
 using the LLCPP bindings.
 
-##Memory ownership {#memory-ownership}
+## Memory ownership {#memory-ownership}
 
 LLCPP keeps references to objects using:
 
@@ -42,10 +42,10 @@ The standard patern for using the allocator is:
 *   Leave the function; everything is deallocated.
 
 Example:
--```c++
--{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
--```
 
+```c++
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
+```
 
 ### Unowned pointers
 
