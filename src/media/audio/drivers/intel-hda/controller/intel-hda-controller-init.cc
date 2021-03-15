@@ -219,14 +219,16 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
   REG_WR(&regs()->intctl, 0u);
 
   // Configure our IRQ mode and map our IRQ handle.
-  zx_status_t res = pci_configure_irq_mode(&pci_, 1, nullptr);
+  ddk::Pci pci(pci_);
+  zx_status_t res = pci.ConfigureIrqMode(1, &irq_mode_);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to set IRQ mode (%d)!", res);
     return res;
   }
 
   // Retrieve our PCI interrupt, then use it to activate our IRQ dispatcher.
-  res = pci_map_interrupt(&pci_, 0, irq_.reset_and_get_address());
+  zx::interrupt irq;
+  res = pci.MapInterrupt(0, &irq);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to map IRQ! (res %d)", res);
     return res;
@@ -235,7 +237,7 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
   irq_handler_.set_object(irq_.get());
 
   // Enable Bus Mastering so we can DMA data and receive MSIs
-  res = pci_enable_bus_master(&pci_, true);
+  res = pci.EnableBusMaster(true);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to enable PCI bus mastering!");
     return res;

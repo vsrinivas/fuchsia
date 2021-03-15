@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <endian.h>
+#include <fuchsia/hardware/pci/c/banjo.h>
 #include <string.h>
 #include <zircon/assert.h>
 
@@ -365,6 +366,9 @@ void IntelHDAController::HandleIrq(async_dispatcher_t* dispatcher, async::IrqBas
   ProcessCORB();
 
   irq_.ack();
+  if (irq_mode_ == PCI_IRQ_MODE_LEGACY) {
+    pci_ack_interrupt(&pci_);
+  }
 }
 
 }  // namespace intel_hda
