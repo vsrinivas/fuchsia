@@ -131,10 +131,10 @@ impl<'a> FemuGraphics<'a> {
         }
 
         let driver_version = self.linux_get_nvidia_driver_version()?;
-        Ok(if driver_version == NVIDIA_REQ_DRIVER_VERSION {
+        Ok(if driver_version >= NVIDIA_REQ_DRIVER_VERSION {
             Success(format!("Found supported graphics hardware: {}", cards.join(", ")))
         } else {
-            Warning(format!("Found supported graphics hardware but Nvidia driver version {}.{} does not match required version {}.{}. Download the required version at https://www.nvidia.com/download/driverResults.aspx/160175",
+            Warning(format!("Found supported graphics hardware but Nvidia driver version {}.{} is older than required version {}.{}. Download the required version at https://www.nvidia.com/download/driverResults.aspx/160175",
                 driver_version.0, driver_version.1, NVIDIA_REQ_DRIVER_VERSION.0, NVIDIA_REQ_DRIVER_VERSION.1))
         })
     }
@@ -258,6 +258,44 @@ Intel Iris Plus Graphics 650:
                 vec!["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"]
             );
             Ok((ExitStatus(0), "440.100\n".to_string(), "".to_string()))
+        };
+
+        let check = FemuGraphics::new(&run_command);
+        let response = check.run(&PreflightConfig { system: OperatingSystem::Linux }).await;
+        assert!(matches!(response?, PreflightCheckResult::Success(..)));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_linux_success_newer_driver_version() -> Result<()> {
+        let run_command: CommandRunner = |args| {
+            if args.to_vec() == vec!["lspci"] {
+                return Ok((ExitStatus(0), LSPCI_OUTPUT_GOOD.to_string(), "".to_string()));
+            }
+            assert_eq!(
+                args.to_vec(),
+                vec!["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"]
+            );
+            Ok((ExitStatus(0), "440.200\n".to_string(), "".to_string()))
+        };
+
+        let check = FemuGraphics::new(&run_command);
+        let response = check.run(&PreflightConfig { system: OperatingSystem::Linux }).await;
+        assert!(matches!(response?, PreflightCheckResult::Success(..)));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_linux_success_newer_driver_version_2() -> Result<()> {
+        let run_command: CommandRunner = |args| {
+            if args.to_vec() == vec!["lspci"] {
+                return Ok((ExitStatus(0), LSPCI_OUTPUT_GOOD.to_string(), "".to_string()));
+            }
+            assert_eq!(
+                args.to_vec(),
+                vec!["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"]
+            );
+            Ok((ExitStatus(0), "480.000\n".to_string(), "".to_string()))
         };
 
         let check = FemuGraphics::new(&run_command);
