@@ -17,6 +17,7 @@ ffx_plugin("ffx_emulator") {
     "src/portpicker.rs",
     "src/types.rs",
     "src/vdl_files.rs",
+    "src/vdl_proto_parser.rs",
   ]
   deps = [
     "//src/lib/fuchsia-async",
