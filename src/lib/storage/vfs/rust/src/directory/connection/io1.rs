@@ -27,7 +27,7 @@ use {
         DirectoryRequestStream, DirectoryRewindResponder, DirectorySetAttrResponder,
         DirectorySyncResponder, DirectoryUnlinkResponder, DirectoryWatchResponder, NodeAttributes,
         NodeInfo, NodeMarker, INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_CREATE,
-        OPEN_FLAG_NODE_REFERENCE,
+        OPEN_FLAG_NODE_REFERENCE, OPEN_RIGHT_WRITABLE,
     },
     fuchsia_async::Channel,
     fuchsia_zircon::{
@@ -517,6 +517,10 @@ where
             None => return responder(Status::NOT_SUPPORTED),
             Some(registry) => registry,
         };
+
+        if self.flags & OPEN_RIGHT_WRITABLE == 0 {
+            return responder(Status::BAD_HANDLE);
+        }
 
         let res = {
             let directory = self.directory.clone();

@@ -756,3 +756,63 @@ async fn rename_with_insufficient_rights() {
         assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
 }
+
+#[fasync::run_singlethreaded(test)]
+async fn link_with_sufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_link.unwrap_or_default() {
+        return;
+    }
+    let contents = "abcdef".as_bytes();
+
+    for dir_flags in harness.writable_flag_combos() {
+        let root = root_directory(vec![
+            directory("src", vec![file("old.txt", contents.to_vec())]),
+            directory("dest", vec![]),
+        ]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
+        let dest_dir = open_rw_dir(&test_dir, "dest").await;
+        let dest_token = get_token(&dest_dir).await;
+
+        // Link src/old.txt -> dest/new.txt.
+        let status = src_dir.link("old.txt", dest_token, "new.txt").await.expect("link failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        // Check dest/new.txt was created and has correct contents.
+        assert_eq!(read_file(&test_dir, "dest/new.txt").await, contents);
+
+        // Check src/old.txt still exists.
+        assert_eq!(read_file(&test_dir, "src/old.txt").await, contents);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn link_with_insufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_link.unwrap_or_default() {
+        return;
+    }
+    let contents = "abcdef".as_bytes();
+
+    for dir_flags in harness.non_writable_flag_combos() {
+        let root = root_directory(vec![
+            directory("src", vec![file("old.txt", contents.to_vec())]),
+            directory("dest", vec![]),
+        ]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let src_dir = open_dir_with_flags(&test_dir, dir_flags, "src").await;
+        let dest_dir = open_rw_dir(&test_dir, "dest").await;
+        let dest_token = get_token(&dest_dir).await;
+
+        // Link src/old.txt -> dest/new.txt.
+        let status = src_dir.link("old.txt", dest_token, "new.txt").await.expect("link failed");
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+
+        // Check dest/new.txt was not created.
+        assert_file_not_found(&test_dir, "dest/new.txt").await;
+
+        // Check src/old.txt still exists.
+        assert_eq!(read_file(&test_dir, "src/old.txt").await, contents);
+    }
+}

@@ -803,6 +803,35 @@ fn link_from_immutable_to_mutable() {
 }
 
 #[test]
+fn link_fails_for_read_only_source() {
+    let root = mut_pseudo_directory! {
+        "etc" => mut_pseudo_directory! {
+            "fstab" => read_only_static(b"/dev/fs /"),
+        },
+        "tmp" => mut_pseudo_directory! {},
+    };
+
+    test_server_client(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, root, |proxy| async move {
+        let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+        let rw_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
+
+        let etc = open_get_directory_proxy_assert_ok!(&proxy, ro_flags, "etc");
+
+        let tmp = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "tmp");
+        let tmp_token = assert_get_token!(&tmp);
+
+        assert_link_err!(&etc, "fstab", tmp_token, "fstab", Status::BAD_HANDLE);
+
+        assert_close!(etc);
+        assert_close!(tmp);
+        assert_close!(proxy);
+
+    })
+    .token_registry(token_registry::Simple::new())
+    .run();
+}
+
+#[test]
 fn can_not_hardlink_directories() {
     let root = mut_pseudo_directory! {
         "etc" => mut_pseudo_directory! {

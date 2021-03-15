@@ -746,7 +746,7 @@ fn link_from_lazy_into_mutable() {
         let ro_flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
         let rw_flags = OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE | OPEN_FLAG_DESCRIBE;
 
-        let etc = open_get_directory_proxy_assert_ok!(&proxy, ro_flags, "etc");
+        let etc = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "etc");
         let tmp = open_get_directory_proxy_assert_ok!(&proxy, rw_flags, "tmp");
 
         let tmp_watcher_client = {
