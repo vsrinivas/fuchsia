@@ -89,7 +89,6 @@ class FuchsiaWebServices {
       'fuchsia.memorypressure.Provider',
       'fuchsia.net.NameLookup',
       'fuchsia.net.interfaces.State',
-      'fuchsia.netstack.Netstack',
       'fuchsia.posix.socket.Provider',
       'fuchsia.process.Launcher',
       'fuchsia.sysmem.Allocator',
