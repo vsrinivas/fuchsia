@@ -530,6 +530,14 @@ impl Facade for AvrcpFacade {
                 let result = self.inform_battery_status(battery_status.clone()).await?;
                 Ok(to_value(result)?)
             }
+            "AvrcpSetAddressedPlayer" => {
+                let player_id: u16 = match from_value(args.clone()) {
+                    Ok(settings) => settings,
+                    _ => bail!("Invalid json argument to AvrcpSetAddressedPlayer! - {}", args),
+                };
+                let result = self.set_addressed_player(player_id.clone()).await?;
+                Ok(to_value(result)?)
+            }
             "AvrcpSetPlayerApplicationSettings" => {
                 let settings: CustomPlayerApplicationSettings = match from_value(args.clone()) {
                     Ok(settings) => settings,

@@ -217,6 +217,24 @@ impl AvrcpFacade {
         }
     }
 
+    /// Sets addressed player on the controller.
+    ///
+    /// # Arguments
+    /// * `player_id` - the player id to set as the addressed player.
+    pub async fn set_addressed_player(&self, player_id: u16) -> Result<(), Error> {
+        let tag = "AvrcpFacade::set_addressed_player";
+        match self.inner.read().controller_proxy.clone() {
+            Some(proxy) => match proxy.set_addressed_player(player_id).await? {
+                Ok(()) => Ok(()),
+                Err(e) => fx_err_and_bail!(
+                    &with_line!(tag),
+                    format!("Error setting addressed player: {:?}", e)
+                ),
+            },
+            None => fx_err_and_bail!(&with_line!(tag), "No AVRCP service proxy available"),
+        }
+    }
+
     /// A function to remove the profile service proxy and clear connected devices.
     fn clear(&self) {
         self.inner.write().avrcp_service_proxy = None;
@@ -374,6 +392,16 @@ mod tests {
                 _ => {}
             })
         }
+
+        fn expect_set_addressed_player(self, input: u16) -> Self {
+            self.push(move |req| match req {
+                ControllerRequest::SetAddressedPlayer { player_id, responder } => {
+                    assert_eq!(input, player_id);
+                    responder.send(&mut Ok(())).unwrap();
+                }
+                _ => {}
+            })
+        }
     }
     #[fasync::run_singlethreaded(test)]
     async fn test_get_play_status() {
@@ -431,5 +459,16 @@ mod tests {
             facade.inform_battery_status(CustomBatteryStatus::Normal).await.unwrap();
         };
         future::join(facade_fut, battery_status_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_addressed_player() {
+        let addressed_player = 5;
+        let (facade, addressed_player_fut) =
+            MockAvrcpTester::new().expect_set_addressed_player(addressed_player).build_controller();
+        let facade_fut = async move {
+            facade.set_addressed_player(addressed_player).await.unwrap();
+        };
+        future::join(facade_fut, addressed_player_fut).await;
     }
 }
