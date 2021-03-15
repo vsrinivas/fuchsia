@@ -44,6 +44,7 @@ typedef struct ethernet_device {
   mtx_t tx_lock;
   cnd_t tx_cond;
   pci_protocol_t pci;
+  pci_irq_mode_t irq_mode;
   zx_handle_t irqh;
   mmio_buffer_t mmio;
   thrd_t irq_thread;
@@ -196,6 +197,10 @@ static int irq_thread(void* arg) {
     }
 
     WRITE16(RTL_ISR, 0xffff);
+
+    if (edev->irq_mode == PCI_IRQ_MODE_LEGACY) {
+      pci_ack_interrupt(&edev->pci);
+    }
 
     mtx_unlock(&edev->lock);
   }
@@ -356,7 +361,7 @@ static zx_status_t rtl8111_bind(void* ctx, zx_device_t* dev) {
     goto fail;
   }
 
-  res = pci_configure_irq_mode(&edev->pci, 1, NULL);
+  res = pci_configure_irq_mode(&edev->pci, 1, &edev->irq_mode);
   if (res != ZX_OK) {
     zxlogf(ERROR, "rtl8111: failed to configure irqs");
     res = ZX_ERR_INTERNAL;
