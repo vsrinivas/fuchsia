@@ -18,3 +18,5 @@ toc:
   path: /docs/concepts/packages/garbage_collection.md
 - title: "Update package"
   path: /docs/concepts/packages/update_pkg.md
+- title: "System updates"
+  path: /docs/concepts/packages/ota.md
