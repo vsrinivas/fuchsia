@@ -6,7 +6,7 @@ import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import(
     "//third_party/go/src/syscall/zx/fidl/fidl_test/conformance_test_files.gni")
@@ -61,18 +61,8 @@ go_test("fidl_go_conformance_tests") {
   use_prebuilt_go = false
 }
 
-test_package("fidl_go_conformance") {
+fuchsia_unittest_package("fidl_go_conformance") {
   deps = [ ":fidl_go_conformance_tests" ]
-  binaries = [
-    {
-      name = "fidl_go_conformance_tests"
-    },
-  ]
-  tests = [
-    {
-      name = "fidl_go_conformance_tests"
-    },
-  ]
 }
 
 group("tests") {
