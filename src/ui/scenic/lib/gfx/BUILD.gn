@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//third_party/flatbuffers/flatbuffer.gni")
+import("build_args.gni")
 
 declare_args() {
   scenic_ignore_vsync = false
@@ -208,6 +209,12 @@ source_set("gfx") {
   public_configs = [ ":common_include_dirs" ]
 
   configs += [ ":swapchain" ]
+
+  defines = []
+
+  if (scenic_enable_vulkan_validation) {
+    defines += [ "SCENIC_ENABLE_VULKAN_VALIDATION" ]
+  }
 
   public_deps = [
     ":gfx_always_optimized",

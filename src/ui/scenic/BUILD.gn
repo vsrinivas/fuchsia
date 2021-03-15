@@ -9,6 +9,7 @@ import("//src/graphics/lib/magma/gnbuild/magma.gni")
 import("//src/lib/vulkan/layers.gni")
 import("//src/ui/lib/escher/build_args.gni")
 import("//src/ui/lib/escher/shaders/shaders.gni")
+import("//src/ui/scenic/lib/gfx/build_args.gni")
 
 # Runtime is the set of package dependencies typically desired for the
 # construction of a product that includes scenic, and is included in
@@ -150,11 +151,6 @@ test_package("scenic_tests") {
   } else {
     resources += escher_shaders_spirv_resources
   }
-}
-
-declare_args() {
-  # Include the vulkan validation layers in scenic.
-  scenic_enable_vulkan_validation = is_debug
 }
 
 # For migration purposes only.  To be moved to src/ui/scenic/bin:scenic
