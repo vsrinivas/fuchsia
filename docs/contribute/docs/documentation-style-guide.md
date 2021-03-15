@@ -11,10 +11,10 @@ structure, see the [Fuchsia documentation style guide][style-guide].
 
 ## Text and links
 
-### Follow the 80 character limit
+### Follow the 100 character limit
 
 In the Fuchsia project, the maximum line length for documentation and code is
-80 characters.
+100 characters.
 
 ### Mark external links
 
