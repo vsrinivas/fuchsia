@@ -110,6 +110,9 @@ zx::status<uint32_t> PciBackend::WaitForInterrupt() {
 void PciBackend::InterruptAck(uint32_t key) {
   ZX_DEBUG_ASSERT(key < irq_handles().size());
   irq_handles()[key].ack();
+  if (irq_mode() == PCI_IRQ_MODE_LEGACY) {
+    pci().AckInterrupt();
+  }
 }
 
 }  // namespace virtio
