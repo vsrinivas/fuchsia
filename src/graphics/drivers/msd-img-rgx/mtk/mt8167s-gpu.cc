@@ -17,7 +17,6 @@
 #include <memory>
 #include <mutex>
 
-#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
@@ -32,6 +31,7 @@
 #include "platform_trace.h"
 #include "platform_trace_provider.h"
 #include "platform_trace_provider_with_fdio.h"
+#include "src/graphics/drivers/msd-img-rgx/mtk/mt8167s-gpu-bind.h"
 #include "sys_driver/magma_driver.h"
 
 #define GPU_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -484,9 +484,4 @@ static constexpr zx_driver_ops_t mt8167s_gpu_driver_ops = []() {
   return ops;
 }();
 
-// clang-format off
-ZIRCON_DRIVER_BEGIN(mt8167s_gpu, mt8167s_gpu_driver_ops, "zircon", "0.1", 3)
-    BI_ABORT_IF(NE, BIND_COMPOSITE, 1),
-    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
-    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_GPU),
-ZIRCON_DRIVER_END(mt8167s_gpu)
+ZIRCON_DRIVER(mt8167s_gpu, mt8167s_gpu_driver_ops, "zircon", "0.1");
