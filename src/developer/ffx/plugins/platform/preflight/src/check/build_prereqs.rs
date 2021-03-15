@@ -6,7 +6,7 @@ use {
     crate::check::{PreflightCheck, PreflightCheckResult, PreflightCheckResult::*},
     crate::command_runner::CommandRunner,
     crate::config::*,
-    anyhow::{Context, Result},
+    anyhow::{anyhow, Context, Result},
     async_trait::async_trait,
 };
 
@@ -69,6 +69,18 @@ impl<'a> BuildPrereqs<'a> {
                 ),
                 None,
             ));
+        }
+
+        // Check for Apple Silicon.
+        {
+            let (status, stdout, stderr) =
+                (self.command_runner)(&vec!["uname", "-p"]).context("Failed to run uname -p")?;
+            if !status.success() {
+                return Err(anyhow!("uname -p exited with {}: {}", status.code(), stderr));
+            }
+            if stdout == "arm" {
+                return Ok(Warning("Apple Silicon is not officially supported. Unofficially, try from a terminal started with `arch -x86_64 /bin/zsh`.".to_string()));
+            }
         }
 
         let (status, stdout, _stderr) = (self.command_runner)(&vec!["xcode-select", "-p"])
@@ -160,6 +172,9 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_success_macos_10_15_and_newer() -> Result<()> {
         let run_command: CommandRunner = |args| {
+            if args.to_vec() == vec!["uname", "-p"] {
+                return Ok((ExitStatus(0), "i386".to_string(), "".to_string()));
+            }
             assert_eq!(args.to_vec(), vec!["xcode-select", "-p"]);
             Ok((ExitStatus(0), "".to_string(), "".to_string()))
         };
@@ -178,8 +193,24 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_warning_macos_10_15_m1_chipset() -> Result<()> {
+        let run_command: CommandRunner = |args| {
+            assert_eq!(args.to_vec(), vec!["uname", "-p"]);
+            Ok((ExitStatus(0), "arm".to_string(), "".to_string()))
+        };
+
+        let check = BuildPrereqs::new(&run_command);
+        let response = check.run(&PreflightConfig { system: OperatingSystem::MacOS(10, 15) }).await;
+        assert!(matches!(response?, PreflightCheckResult::Warning(..)));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_failure_macos_10_15_and_older() -> Result<()> {
         let run_command: CommandRunner = |args| {
+            if args.to_vec() == vec!["uname", "-p"] {
+                return Ok((ExitStatus(0), "i386".to_string(), "".to_string()));
+            }
             assert_eq!(args.to_vec(), vec!["xcode-select", "-p"]);
             Ok((ExitStatus(1), "".to_string(), "".to_string()))
         };
