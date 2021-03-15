@@ -130,6 +130,7 @@ class VulkanExtensionTest : public testing::Test {
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   vk::UniqueImage vk_image_;
+  vk::UniqueBuffer vk_buffer_;
   vk::UniqueDeviceMemory vk_device_memory_;
   vk::DispatchLoaderDynamic loader_;
 };
@@ -387,9 +388,13 @@ void VulkanExtensionTest::InitializeDirectImageMemory(vk::BufferCollectionFUCHSI
   uint32_t memory_type;
   ValidateBufferProperties(requirements, collection, expected_count, &memory_type);
 
-  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA> alloc_info(
-      vk::MemoryAllocateInfo().setAllocationSize(requirements.size).setMemoryTypeIndex(memory_type),
-      vk::ImportMemoryBufferCollectionFUCHSIA().setCollection(collection).setIndex(0));
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+                     vk::MemoryDedicatedAllocateInfoKHR>
+      alloc_info(vk::MemoryAllocateInfo()
+                     .setAllocationSize(requirements.size)
+                     .setMemoryTypeIndex(memory_type),
+                 vk::ImportMemoryBufferCollectionFUCHSIA().setCollection(collection).setIndex(0),
+                 vk::MemoryDedicatedAllocateInfoKHR().setImage(*vk_image_).setBuffer(*vk_buffer_));
 
   auto [result, vk_device_memory] =
       ctx_->device()->allocateMemoryUnique(alloc_info.get<vk::MemoryAllocateInfo>());
@@ -543,37 +548,40 @@ bool VulkanExtensionTest::ExecBuffer(uint32_t size) {
       .index = 1};
   buffer_create_info.pNext = &collection_buffer_create_info;
 
-  VkBuffer buffer;
+  {
+    auto [result, vk_buffer] = ctx_->device()->createBufferUnique(buffer_create_info, nullptr);
 
-  result = vkCreateBuffer(device, &static_cast<const VkBufferCreateInfo &>(buffer_create_info),
-                          nullptr, &buffer);
-  if (result != VK_SUCCESS) {
-    RTN_MSG(false, "vkCreateBuffer failed: %d\n", result);
+    if (result != vk::Result::eSuccess) {
+      RTN_MSG(false, "vkCreateBuffer failed: %d\n", result);
+    }
+    vk_buffer_ = std::move(vk_buffer);
   }
 
-  VkMemoryRequirements requirements;
-  vkGetBufferMemoryRequirements(device, buffer, &requirements);
+  vk::MemoryRequirements requirements;
+  ctx_->device()->getBufferMemoryRequirements(*vk_buffer_, &requirements);
   uint32_t memory_type;
   ValidateBufferProperties(requirements, collection, kMinBufferCount, &memory_type);
   vk::BufferCollectionProperties2FUCHSIA properties;
   EXPECT_EQ(vk::Result::eSuccess, ctx_->device()->getBufferCollectionProperties2FUCHSIA(
                                       collection, &properties, loader_));
 
-  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA> alloc_info(
-      vk::MemoryAllocateInfo().setAllocationSize(requirements.size).setMemoryTypeIndex(memory_type),
-      vk::ImportMemoryBufferCollectionFUCHSIA().setCollection(collection).setIndex(1));
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+                     vk::MemoryDedicatedAllocateInfoKHR>
+      alloc_info(vk::MemoryAllocateInfo()
+                     .setAllocationSize(requirements.size)
+                     .setMemoryTypeIndex(memory_type),
+                 vk::ImportMemoryBufferCollectionFUCHSIA().setCollection(collection).setIndex(1),
+                 vk::MemoryDedicatedAllocateInfoKHR().setImage(*vk_image_).setBuffer(*vk_buffer_));
 
   auto [vk_result, vk_device_memory] =
       ctx_->device()->allocateMemoryUnique(alloc_info.get<vk::MemoryAllocateInfo>());
   EXPECT_EQ(vk_result, vk::Result::eSuccess);
   vk_device_memory_ = std::move(vk_device_memory);
 
-  result = vkBindBufferMemory(device, buffer, *vk_device_memory_, 0u);
+  result = vkBindBufferMemory(device, *vk_buffer_, *vk_device_memory_, 0u);
   if (result != VK_SUCCESS) {
     RTN_MSG(false, "vkBindBufferMemory failed: %d\n", result);
   }
-
-  vkDestroyBuffer(device, buffer, nullptr);
 
   ctx_->device()->destroyBufferCollectionFUCHSIA(collection, nullptr, loader_);
   return true;
