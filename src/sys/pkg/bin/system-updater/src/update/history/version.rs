@@ -119,7 +119,7 @@ impl Version {
         boot_manager: &BootManagerProxy,
         build_info: &impl BuildInfo,
         pkgfs_system: &Option<pkgfs::system::Client>,
-        current_epoch_raw: &str,
+        source_epoch_raw: &str,
     ) -> Self {
         let system_image_hash =
             get_system_image_hash_from_pkgfs_system(pkgfs_system).await.unwrap_or_else(|e| {
@@ -160,10 +160,10 @@ impl Version {
             }
             None => "".to_string(),
         };
-        let epoch = match serde_json::from_str(current_epoch_raw) {
+        let epoch = match serde_json::from_str(source_epoch_raw) {
             Ok(EpochFile::Version1 { epoch }) => epoch.to_string(),
             Err(e) => {
-                fx_log_err!("Failed to parse current epoch: {:#}", anyhow!(e));
+                fx_log_err!("Failed to parse source epoch: {:#}", anyhow!(e));
                 "".to_string()
             }
         };

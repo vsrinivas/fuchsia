@@ -15,7 +15,7 @@ async fn test_resolve_error_maps_to_cobalt_status_code(
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([pkg_url]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi");
 
     env.resolver.url(pkg_url).fail(status);
@@ -78,7 +78,7 @@ async fn succeeds_even_if_metrics_fail_to_send() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi");
 
     env.run_update().await.expect("run system updater");

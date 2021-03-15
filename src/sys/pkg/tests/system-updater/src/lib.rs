@@ -663,10 +663,10 @@ const UPDATE_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 
 // We specifically make the integration tests dependent on this (rather than e.g. u64::MAX) so that
 // when we bump the epoch, most of the integration tests will fail. To fix this, simply bump this
-// constant to match the current epoch. This will encourage developers to think critically about
+// constant to match the SOURCE epoch. This will encourage developers to think critically about
 // bumping the epoch and follow the policy documented on fuchsia.dev.
 // TODO(fxbug.dev/68409) publish the policy for bumping epoch and link here.
-const CURRENT_EPOCH: u64 = 0;
+const SOURCE_EPOCH: u64 = 0;
 
 fn resolved_urls(interactions: SystemUpdaterInteractions) -> Vec<String> {
     (*interactions.lock())

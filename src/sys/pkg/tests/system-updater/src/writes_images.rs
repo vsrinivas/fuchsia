@@ -44,7 +44,7 @@ async fn fails_on_image_write_error() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake_zbi");
 
     let result = env.run_update().await;
@@ -99,7 +99,7 @@ async fn skip_recovery_does_not_write_recovery_or_vbmeta() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi")
         .add_file("zedboot", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
@@ -155,7 +155,7 @@ async fn writes_to_both_configs_if_abr_not_supported() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake_zbi");
 
     env.run_update().await.expect("success");
@@ -325,7 +325,7 @@ async fn writes_recovery_called_legacy_zedboot() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi")
         .add_file("zedboot", "new recovery");
 
@@ -379,7 +379,7 @@ async fn writes_recovery() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi")
         .add_file("recovery", "new recovery");
 
@@ -432,7 +432,7 @@ async fn writes_recovery_vbmeta() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi")
         .add_file("zedboot", "new recovery")
         .add_file("recovery.vbmeta", "new recovery vbmeta");
@@ -491,7 +491,7 @@ async fn writes_fuchsia_vbmeta() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi")
         .add_file("fuchsia.vbmeta", "fake zbi vbmeta");
 
@@ -547,7 +547,7 @@ async fn update_with_current_config(
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake_zbi");
 
     env.run_update().await.expect("success");

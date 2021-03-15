@@ -13,7 +13,7 @@ async fn validates_board() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("board", "x64")
         .add_file("zbi", "fake zbi")
         .add_file("bootloader", "new bootloader");

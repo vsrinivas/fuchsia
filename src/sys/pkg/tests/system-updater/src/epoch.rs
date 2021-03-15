@@ -46,7 +46,7 @@ async fn invalid_epoch() {
 //     env.resolver
 //         .register_package("update", "upd4t3")
 //         .add_file("packages.json", make_packages_json([]))
-//         .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH - 1));
+//         .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH - 1));
 
 //     let mut attempt = env.start_update().await.unwrap();
 

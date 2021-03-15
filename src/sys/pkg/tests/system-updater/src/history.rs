@@ -21,7 +21,7 @@ async fn succeeds_without_writable_data() {
     env.resolver
         .register_package("update", "upd4t3")
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi");
 
     env.run_update().await.expect("run system updater");
@@ -130,7 +130,7 @@ async fn writes_history() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json(["fuchsia-pkg://fuchsia.com/system_image/0?hash=838b5199d12c8ff4ef92bfd9771d2f8781b7b8fd739dd59bcf63f353a1a93f67"]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi")
         .add_file("fuchsia.vbmeta", "vbmeta")
         .add_file("version", "0.2");
@@ -161,7 +161,7 @@ async fn writes_history() {
                     "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "build_version": "0.1.0.0",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "target": {
                     "update_hash": UPDATE_HASH,
@@ -169,7 +169,7 @@ async fn writes_history() {
                     "vbmeta_hash": "a0c6f07a4b3a17fb9348db981de3c5602e2685d626599be1bd909195c694a57b",
                     "zbi_hash": "543b8066d52d734f69794fd0594ba78a5b8e11124d51f4d549dd6534d46da73e",
                     "build_version": "0.2.0.0",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "options": {
                     "allow_attach_to_existing_attempt": false,
@@ -203,7 +203,7 @@ async fn replaces_bogus_history() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi");
 
     env.run_update().await.unwrap();
@@ -219,7 +219,7 @@ async fn replaces_bogus_history() {
                     "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "build_version": "",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "target": {
                     "update_hash": UPDATE_HASH,
@@ -227,7 +227,7 @@ async fn replaces_bogus_history() {
                     "vbmeta_hash": "",
                     "zbi_hash": "543b8066d52d734f69794fd0594ba78a5b8e11124d51f4d549dd6534d46da73e",
                     "build_version": "",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "options": {
                     "allow_attach_to_existing_attempt": true,
@@ -258,7 +258,7 @@ async fn increments_attempts_counter_on_retry() {
     env.resolver
         .register_package("update", UPDATE_HASH)
         .add_file("packages.json", make_packages_json([]))
-        .add_file("epoch.json", make_epoch_json(CURRENT_EPOCH))
+        .add_file("epoch.json", make_epoch_json(SOURCE_EPOCH))
         .add_file("zbi", "fake zbi");
 
     let _ = env
@@ -287,7 +287,7 @@ async fn increments_attempts_counter_on_retry() {
                     "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "build_version": "",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "target": {
                     "update_hash": UPDATE_HASH,
@@ -295,7 +295,7 @@ async fn increments_attempts_counter_on_retry() {
                     "vbmeta_hash": "",
                     "zbi_hash": "543b8066d52d734f69794fd0594ba78a5b8e11124d51f4d549dd6534d46da73e",
                     "build_version": "",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "options": {
                     "allow_attach_to_existing_attempt": true,
@@ -321,7 +321,7 @@ async fn increments_attempts_counter_on_retry() {
                     "vbmeta_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "zbi_hash": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
                     "build_version": "",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "target": {
                     "update_hash": "",
@@ -329,7 +329,7 @@ async fn increments_attempts_counter_on_retry() {
                     "vbmeta_hash": "",
                     "zbi_hash": "",
                     "build_version": "",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "options": {
                     "allow_attach_to_existing_attempt": false,
@@ -362,7 +362,7 @@ async fn serves_fidl_with_history_present() {
                     "vbmeta_hash": "",
                     "zbi_hash": "",
                     "build_version": "",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "target": {
                     "update_hash": "",
@@ -370,7 +370,7 @@ async fn serves_fidl_with_history_present() {
                     "vbmeta_hash": "",
                     "zbi_hash": "",
                     "build_version": "",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "options": {
                     "allow_attach_to_existing_attempt": false,
@@ -398,7 +398,7 @@ async fn serves_fidl_with_history_present() {
                     "vbmeta_hash": "",
                     "zbi_hash": "",
                     "build_version": "",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "target": {
                     "update_hash": "",
@@ -406,7 +406,7 @@ async fn serves_fidl_with_history_present() {
                     "vbmeta_hash": "",
                     "zbi_hash": "",
                     "build_version": "",
-                    "epoch": CURRENT_EPOCH.to_string()
+                    "epoch": SOURCE_EPOCH.to_string()
                 },
                 "options": {
                     "allow_attach_to_existing_attempt": false,

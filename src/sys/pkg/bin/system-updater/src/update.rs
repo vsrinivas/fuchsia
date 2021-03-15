@@ -54,13 +54,13 @@ pub(super) use {
 };
 
 const COBALT_FLUSH_TIMEOUT: Duration = Duration::from_secs(30);
-const CURRENT_EPOCH_RAW: &str = &include_str!(env!("EPOCH_PATH"));
+const SOURCE_EPOCH_RAW: &str = &include_str!(env!("EPOCH_PATH"));
 
 /// Error encountered in the Prepare state.
 #[derive(Debug, Error)]
 enum PrepareError {
-    #[error("while determining current epoch: '{0:?}'")]
-    ParseCurrentEpochError(String, #[source] serde_json::Error),
+    #[error("while determining source epoch: '{0:?}'")]
+    ParseSourceEpochError(String, #[source] serde_json::Error),
 
     #[error("while determining target epoch")]
     ParseTargetEpochError(#[source] update_package::ParseEpochError),
@@ -77,8 +77,8 @@ enum PrepareError {
     #[error("while resolving the update package")]
     ResolveUpdate(#[source] ResolveError),
 
-    #[error("downgrades from epoch {current} to {target} are not allowed")]
-    UnsupportedDowngrade { current: u64, target: u64 },
+    #[error("downgrades from epoch {src} to {target} are not allowed")]
+    UnsupportedDowngrade { src: u64, target: u64 },
 
     #[error("while verifying board name")]
     VerifyBoard(#[source] anyhow::Error),
@@ -444,7 +444,7 @@ impl<'a> Attempt<'a> {
             UpdateMode::ForceRecovery => vec![],
         };
 
-        let () = validate_epoch(CURRENT_EPOCH_RAW, &update_pkg).await?;
+        let () = validate_epoch(SOURCE_EPOCH_RAW, &update_pkg).await?;
 
         Ok((update_pkg, mode, packages_to_fetch, current_config))
     }
@@ -611,9 +611,9 @@ async fn update_mode(
 
 /// Verify that epoch is non-decreasing. For more context, see
 /// [RFC-0071](https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0071_ota_backstop).
-async fn validate_epoch(current_epoch_raw: &str, pkg: &UpdatePackage) -> Result<(), PrepareError> {
-    let current = match serde_json::from_str(current_epoch_raw)
-        .map_err(|e| PrepareError::ParseCurrentEpochError(current_epoch_raw.to_string(), e))?
+async fn validate_epoch(source_epoch_raw: &str, pkg: &UpdatePackage) -> Result<(), PrepareError> {
+    let src = match serde_json::from_str(source_epoch_raw)
+        .map_err(|e| PrepareError::ParseSourceEpochError(source_epoch_raw.to_string(), e))?
     {
         EpochFile::Version1 { epoch } => epoch,
     };
@@ -622,8 +622,8 @@ async fn validate_epoch(current_epoch_raw: &str, pkg: &UpdatePackage) -> Result<
             fx_log_info!("no epoch in update package, assuming it's 0");
             0
         });
-    if target < current {
-        return Err(PrepareError::UnsupportedDowngrade { current, target });
+    if target < src {
+        return Err(PrepareError::UnsupportedDowngrade { src, target });
     }
     Ok(())
 }
@@ -647,35 +647,35 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn validate_epoch_success() {
-        let current = make_epoch_json(1);
+        let source = make_epoch_json(1);
         let target = make_epoch_json(2);
         let p = TestUpdatePackage::new().add_file("epoch.json", target).await;
 
-        let res = validate_epoch(&current, &p).await;
+        let res = validate_epoch(&source, &p).await;
 
         assert_matches!(res, Ok(()));
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn validate_epoch_fail_unsupported_downgrade() {
-        let current = make_epoch_json(2);
+        let source = make_epoch_json(2);
         let target = make_epoch_json(1);
         let p = TestUpdatePackage::new().add_file("epoch.json", target).await;
 
-        let res = validate_epoch(&current, &p).await;
+        let res = validate_epoch(&source, &p).await;
 
-        assert_matches!(res, Err(PrepareError::UnsupportedDowngrade { current: 2, target: 1 }));
+        assert_matches!(res, Err(PrepareError::UnsupportedDowngrade { src: 2, target: 1 }));
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn validate_epoch_fail_parse_current() {
+    async fn validate_epoch_fail_parse_source() {
         let p = TestUpdatePackage::new().add_file("epoch.json", make_epoch_json(1)).await;
 
-        let res = validate_epoch("invalid current epoch.json", &p).await;
+        let res = validate_epoch("invalid source epoch.json", &p).await;
 
         assert_matches!(
             res,
-            Err(PrepareError::ParseCurrentEpochError(s, _)) if s == "invalid current epoch.json"
+            Err(PrepareError::ParseSourceEpochError(s, _)) if s == "invalid source epoch.json"
         );
     }
 
@@ -696,7 +696,7 @@ mod tests {
 
         assert_matches!(
             validate_epoch(&make_epoch_json(1), &p).await,
-            Err(PrepareError::UnsupportedDowngrade { current: 1, target: 0 })
+            Err(PrepareError::UnsupportedDowngrade { src: 1, target: 0 })
         );
     }
 }

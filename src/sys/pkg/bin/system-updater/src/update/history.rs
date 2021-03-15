@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::update::{BuildInfo, CURRENT_EPOCH_RAW},
+    crate::update::{BuildInfo, SOURCE_EPOCH_RAW},
     anyhow::{anyhow, Error},
     bounded_node::BoundedNode,
     fidl_fuchsia_paver::{BootManagerProxy, DataSinkProxy},
@@ -203,7 +203,7 @@ impl UpdateHistory {
                 boot_manager,
                 build_info,
                 pkgfs_system,
-                CURRENT_EPOCH_RAW,
+                SOURCE_EPOCH_RAW,
             )
             .await;
             PendingAttempt { attempt_id, source_version, options, update_url, start_time }
