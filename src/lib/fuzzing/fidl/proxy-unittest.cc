@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "coverage.h"
+#include "proxy.h"
 
 #include <lib/gtest/test_loop_fixture.h>
 
@@ -10,23 +10,23 @@
 #include <thread>
 
 #include "sanitizer-cov.h"
-#include "test/fake-sanitizer-cov-proxy.h"
+#include "test/fake-remote.h"
 
 namespace fuzzing {
 
-using fuchsia::fuzzer::CoveragePtr;
+using fuchsia::fuzzer::ProxyPtr;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Test fixture
 
-class CoverageTest : public gtest::TestLoopFixture {
+class ProxyTest : public gtest::TestLoopFixture {
  public:
   void SetUp() override {
     TestLoopFixture::SetUp();
     FakeSanitizerCovProxy::Reset();
   }
 
-  void Connect(CoveragePtr *proxy, zx_status_t *epitaph) {
+  void Connect(ProxyPtr *proxy, zx_status_t *epitaph) {
     auto handler = aggregate_.GetHandler();
     handler(proxy->NewRequest());
     *epitaph = ZX_OK;
@@ -34,7 +34,7 @@ class CoverageTest : public gtest::TestLoopFixture {
     RunLoopUntilIdle();
   }
 
-  void ConnectAndAddTraces(CoveragePtr *proxy, zx_status_t *epitaph, SharedMemory *traces) {
+  void ConnectAndAddTraces(ProxyPtr *proxy, zx_status_t *epitaph, SharedMemory *traces) {
     Connect(proxy, epitaph);
     ASSERT_EQ(traces->Create(kMaxInstructions * sizeof(Instruction)), ZX_OK);
     zx::vmo vmo;
@@ -49,10 +49,10 @@ class CoverageTest : public gtest::TestLoopFixture {
   void ConnectAndAddTraces2() { ConnectAndAddTraces(&proxy2_, &epitaph2_, &traces2_); }
 
  protected:
-  AggregatedCoverage aggregate_;
+  AggregatedProxy aggregate_;
 
-  CoveragePtr proxy1_;
-  CoveragePtr proxy2_;
+  ProxyPtr proxy1_;
+  ProxyPtr proxy2_;
 
   zx_status_t epitaph1_;
   zx_status_t epitaph2_;
@@ -64,7 +64,7 @@ class CoverageTest : public gtest::TestLoopFixture {
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Unit tests
 
-TEST_F(CoverageTest, AddInline8BitCounters) {
+TEST_F(ProxyTest, AddInline8BitCounters) {
   // An invalid request disconnects.
   Connect1();
 
@@ -90,7 +90,7 @@ TEST_F(CoverageTest, AddInline8BitCounters) {
   EXPECT_TRUE(FakeSanitizerCovProxy::HasInit(size));
 }
 
-TEST_F(CoverageTest, AddPcTable) {
+TEST_F(ProxyTest, AddPcTable) {
   // An invalid request disconnects.
   Connect1();
 
@@ -116,7 +116,7 @@ TEST_F(CoverageTest, AddPcTable) {
   EXPECT_TRUE(FakeSanitizerCovProxy::HasInit(size));
 }
 
-TEST_F(CoverageTest, AddTraces) {
+TEST_F(ProxyTest, AddTraces) {
   // An invalid request disconnects (invalid size).
   Connect1();
 
@@ -127,7 +127,7 @@ TEST_F(CoverageTest, AddTraces) {
   RunLoopUntilIdle();
   EXPECT_EQ(epitaph1_, ZX_ERR_BUFFER_TOO_SMALL);
 
-  // Make a valid request
+  // Make a valid request.
   Connect2();
 
   ASSERT_EQ(zx::vmo::create(sizeof(Instruction) * kMaxInstructions, 0, &vmo), ZX_OK);
@@ -137,7 +137,7 @@ TEST_F(CoverageTest, AddTraces) {
   EXPECT_EQ(epitaph2_, ZX_OK);
 }
 
-TEST_F(CoverageTest, ProcessAll) {
+TEST_F(ProxyTest, ProcessAll) {
   // Fill with some instruction data.
   ConnectAndAddTraces1();
   Instruction *traces = traces1_.begin<Instruction>();
@@ -183,8 +183,8 @@ TEST_F(CoverageTest, ProcessAll) {
             kInstructionBufferLen * 2);
 }
 
-TEST_F(CoverageTest, CompleteIteration) {
-  // Completing an itertion should result in all proxies writing a sentinel, and then being able to
+TEST_F(ProxyTest, CompleteIteration) {
+  // Completing an itertion should result in all remotes writing a sentinel, and then being able to
   // continue.
   ConnectAndAddTraces1();
   Instruction *traces = traces1_.begin<Instruction>();

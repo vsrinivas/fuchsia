@@ -5,8 +5,8 @@
 source_set("fake_sanitizer_cov") {
   testonly = true
   sources = [
-    "fake-coverage.cc",
     "fake-libfuzzer.cc",
+    "fake-proxy.cc",
     "fake-sanitizer-cov.cc",
   ]
   deps = [
@@ -15,12 +15,12 @@ source_set("fake_sanitizer_cov") {
   ]
 }
 
-source_set("fake_sanitizer_cov_proxy") {
+source_set("fake_remote") {
   testonly = true
   sources = [
     "fake-inline-8bit-counters.cc",
     "fake-libfuzzer.cc",
-    "fake-sanitizer-cov-proxy.cc",
+    "fake-remote.cc",
   ]
-  deps = [ "//src/lib/fuzzing/fidl:proxy_lib_public_deps" ]
+  deps = [ "//src/lib/fuzzing/fidl:remote_lib_public_deps" ]
 }

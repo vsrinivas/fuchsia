@@ -3,6 +3,6 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/fidl_fuzzer_engine_unittests"
+        "binary": "test/fidl_fuzzer_remote_unittests"
     }
 }

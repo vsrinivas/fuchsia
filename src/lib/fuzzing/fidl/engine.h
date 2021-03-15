@@ -16,8 +16,8 @@
 
 #include <memory>
 
-#include "coverage.h"
 #include "data-provider.h"
+#include "proxy.h"
 
 namespace fuzzing {
 namespace {
@@ -27,7 +27,7 @@ using ::fuchsia::fuzzer::LlvmFuzzerPtr;
 
 }  // namespace
 
-// This class integrates the Coverage, DataProvider, and LlvmFuzzer FIDL services into a single
+// This class integrates the Proxy, DataProvider, and LlvmFuzzer FIDL services into a single
 // object that can perform fuzzing iterations. See also libfuzzer.cc, which integrates the
 // libFuzzer compiler runtime with this class.
 class EngineImpl : public Engine {
@@ -43,7 +43,7 @@ class EngineImpl : public Engine {
   }
 
   // Accessors
-  AggregatedCoverage &coverage() { return coverage_; }
+  AggregatedProxy &coverage() { return coverage_; }
   DataProviderImpl &data_provider() { return data_provider_; }
 
   // Sets the LlvmFuzzer service this engine is connected to. Used for testing (autoconnect=false).
@@ -71,7 +71,7 @@ class EngineImpl : public Engine {
   std::unique_ptr<sys::ComponentContext> context_;
   async_dispatcher_t *dispatcher_;
 
-  AggregatedCoverage coverage_;
+  AggregatedProxy coverage_;
   DataProviderImpl data_provider_;
   LlvmFuzzerPtr llvm_fuzzer_;
 

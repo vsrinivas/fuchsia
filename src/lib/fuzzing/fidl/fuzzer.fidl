@@ -38,7 +38,7 @@ const int32 MAX_OPTION_COUNT = 128;
 
 /// Fuzzing engine interface to FIDL framework
 ///
-/// When started, the fuzzing engine provides the |Coverage| and |DataProvider| interfaces, and
+/// When started, the fuzzing engine provides the |Proxy| and |DataProvider| interfaces, and
 /// invokes the |LlvmFuzzer| interface to set up and begin fuzzing. This interface allows the
 /// framework to provide the overall fuzzer configuration and wait for the engine to exit.
 [Discoverable]
@@ -56,8 +56,8 @@ protocol Engine {
 
 /// Aggregated sanitizer coverage data proxied from other processes.
 ///
-/// For cross-process fuzzing. the code under test needs to proxy its code coverage data back to
-/// fuzzing engine. The Coverage protocol describes this action, with the code under test as the
+/// For cross-process fuzzing, the code under test needs to copy its code coverage data back to
+/// fuzzing engine. The Proxy protocol describes this action, with the code under test as the
 /// client and the fuzzing engine as the server. There are two types of methods:
 ///   1. Some coverage, such as inline 8-bit counters and PC tables, is written to specific memory
 ///      locations. This data is forwarded to engine by setting up shared buffers. These methods
@@ -68,7 +68,7 @@ protocol Engine {
 ///      call, a shared buffer is set up and the instructions are batched. The traced instructions
 ///      correspond to the LLVM compiler_rt `__sanitizer_cov_trace_*` functions.
 [Discoverable]
-protocol Coverage {
+protocol Proxy {
     /// Registers the provided VMO to be used for inline 8-bit edge counters.
     ///
     /// This should be called for each element in a process's DSO map, i.e. for the process itself

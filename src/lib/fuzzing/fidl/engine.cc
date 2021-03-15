@@ -13,9 +13,9 @@
 namespace fuzzing {
 namespace {
 
-using ::fuchsia::fuzzer::Coverage;
 using ::fuchsia::fuzzer::DataProvider;
 using ::fuchsia::fuzzer::LlvmFuzzerPtr;
+using ::fuchsia::fuzzer::Proxy;
 
 // Usage message for direct invocation.
 void Usage(const char *argv0) {
@@ -47,7 +47,7 @@ EngineImpl::~EngineImpl() {
 }
 
 zx_status_t EngineImpl::SetLlvmFuzzer(LlvmFuzzerPtr llvm_fuzzer) {
-  // Set the pointer to the Coverage service.
+  // Set the pointer to the Proxy service.
   if (!llvm_fuzzer.is_bound()) {
     return ZX_ERR_INVALID_ARGS;
   }

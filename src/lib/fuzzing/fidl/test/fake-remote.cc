@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fake-sanitizer-cov-proxy.h"
+#include "fake-remote.h"
 
 #include <lib/syslog/cpp/macros.h>
 
@@ -43,7 +43,7 @@ void FakeSanitizerCovProxy::TraceImpl(uint64_t type, uint64_t pc, uint64_t arg0,
 }
 
 void FakeSanitizerCovProxy::TraceSwitch(uintptr_t pc, uint64_t val, uint64_t *cases) {
-  // __sanitizer_cov_trace_switch should not be called by Coverage.
+  // __sanitizer_cov_trace_switch should not be called by Proxy.
   FX_NOTREACHED();
 }
 

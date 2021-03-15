@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FUZZING_FIDL_COVERAGE_H_
-#define SRC_LIB_FUZZING_FIDL_COVERAGE_H_
+#ifndef SRC_LIB_FUZZING_FIDL_PROXY_H_
+#define SRC_LIB_FUZZING_FIDL_PROXY_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
@@ -26,20 +26,20 @@
 namespace fuzzing {
 namespace {
 
-using ::fuchsia::fuzzer::Coverage;
+using ::fuchsia::fuzzer::Proxy;
 using ::fuchsia::mem::Buffer;
 
 }  // namespace
 
 // Forward declaration
-class AggregatedCoverage;
+class AggregatedProxy;
 
-// The Coverage service aggregates coverage information from multiple processes and passes it to the
-// __sanitizer_cov_* interface. See also |SanitizerCovProxy|, the per-process client of the service.
-class CoverageImpl : public Coverage {
+// The Proxy service aggregates coverage information from multiple processes and passes it to the
+// __sanitizer_cov_* interface. See also |Remote|, the per-process client of the service.
+class ProxyImpl : public Proxy {
  public:
-  explicit CoverageImpl(AggregatedCoverage *aggregate);
-  virtual ~CoverageImpl();
+  explicit ProxyImpl(AggregatedProxy *aggregate);
+  virtual ~ProxyImpl();
 
   // FIDL Methods
   void AddInline8BitCounters(Buffer ctrs, AddInline8BitCountersCallback callback) override;
@@ -47,7 +47,7 @@ class CoverageImpl : public Coverage {
   void AddTraces(zx::vmo traces, AddTracesCallback callback) override;
 
  private:
-  // If |status| indicates an error, asks the AggregatedCoverage to close its binding and returns
+  // If |status| indicates an error, asks the AggregatedProxy to close its binding and returns
   // false, otherwise returns true.
   bool Check(zx_status_t status);
 
@@ -56,17 +56,17 @@ class CoverageImpl : public Coverage {
   SharedMemory traces_;
 
   // Interface to the __sanitizer_cov_trace_* calls.
-  AggregatedCoverage *aggregate_;
+  AggregatedProxy *aggregate_;
 };
 
-// The AggregatedCoverage class manages a collection of single-client Coverage connections. It also
+// The AggregatedProxy class manages a collection of single-client Proxy connections. It also
 // coordinates and provides thread-safety for invoking the __sanitizer_cov_trace_* interface.
-class AggregatedCoverage final {
+class AggregatedProxy final {
  public:
-  AggregatedCoverage();
-  ~AggregatedCoverage();
+  AggregatedProxy();
+  ~AggregatedProxy();
 
-  fidl::InterfaceRequestHandler<Coverage> GetHandler();
+  fidl::InterfaceRequestHandler<Proxy> GetHandler();
 
   // Signals all connected proxies that the current iteration is complete, i.e. they should ensure
   // their coverage data is updated.
@@ -76,13 +76,13 @@ class AggregatedCoverage final {
   void Reset();
 
  protected:
-  friend class CoverageImpl;
+  friend class ProxyImpl;
 
-  // Adds a wait item for the shared memory from a call to |Coverage::AddTraces|.
+  // Adds a wait item for the shared memory from a call to |Proxy::AddTraces|.
   zx_status_t Add(const SharedMemory &traces) FXL_LOCKS_EXCLUDED(lock_);
 
   // Close and removes the binding for an associated coverage instance.
-  void Close(CoverageImpl *coverage, zx_status_t epitaph);
+  void Close(ProxyImpl *coverage, zx_status_t epitaph);
 
  private:
   // Starts processing coverage.
@@ -95,13 +95,13 @@ class AggregatedCoverage final {
   // Stops processing coverage.
   void Stop();
 
-  // Binding set that owns the Coverage objects.
-  fidl::BindingSet<Coverage, std::unique_ptr<Coverage>> bindings_;
+  // Binding set that owns the Proxy objects.
+  fidl::BindingSet<Proxy, std::unique_ptr<Proxy>> bindings_;
 
   // Thread used to run |ProcessAll|.
   std::thread processor_;
 
-  // An array of wait items used to monitor connected Coverage/Proxy pairs.
+  // An array of wait items used to monitor connected Proxy/Remote pairs.
   zx_wait_item_t items_[ZX_WAIT_MANY_MAX_ITEMS];
   std::atomic<size_t> num_items_;
 
@@ -124,4 +124,4 @@ class AggregatedCoverage final {
 
 }  // namespace fuzzing
 
-#endif  // SRC_LIB_FUZZING_FIDL_COVERAGE_H_
+#endif  // SRC_LIB_FUZZING_FIDL_PROXY_H_

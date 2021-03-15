@@ -8,8 +8,8 @@
 // To generate a header file, include it with SANITIZER_COV_HEADER_ONLY #defined.
 //
 // To generate a source file, include it with SANITIZER_COV_PROXY #defined to be a class with static
-// methods like |fuzzing::SanitizerCovProxy|, and GET_CALLER_PC to produce values like the return
-// address of the current function.
+// methods like |fuzzing::Remote|, and GET_CALLER_PC to produce values like the return address of
+// the current function.
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 
 #include <stdint.h>
@@ -19,14 +19,14 @@
 
 #ifdef SANITIZER_COV_HEADER_ONLY
 
-#define SANITIZER_COV_INTERFACE(sancov_suffix, sancov_args, proxy_method, proxy_args) \
+#define SANITIZER_COV_INTERFACE(sancov_suffix, sancov_args, remote_method, remote_args) \
   __EXPORT extern "C" void __sanitizer_cov_##sancov_suffix sancov_args;
 
 #else  // SANITIZER_COV_HEADER_ONLY
 
-#define SANITIZER_COV_INTERFACE(sancov_suffix, sancov_args, proxy_method, proxy_args) \
+#define SANITIZER_COV_INTERFACE(sancov_suffix, sancov_args, remote_method, remote_args) \
   __EXPORT extern "C" void __sanitizer_cov_##sancov_suffix sancov_args {              \
-    ::fuzzing::SANITIZER_COV_PROXY::proxy_method proxy_args;                          \
+    ::fuzzing::SANITIZER_COV_PROXY::remote_method remote_args;                          \
   }
 
 #endif  // SANITIZER_COV_HEADER_ONLY

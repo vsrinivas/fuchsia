@@ -35,7 +35,7 @@ struct Instruction {
   uint64_t args[2];
 };
 
-// This is the agreed upon size between the Coverage and Instrumented objects of how much buffer to
+// This is the agreed upon size between the Proxy and Instrumented objects of how much buffer to
 // reserve for traces per process. Chosen to be 1 MB of memory to avoid overly-frequent updates.
 const size_t kInstructionBufferLen = 16384;
 const size_t kNumInstructionBuffers = 2;

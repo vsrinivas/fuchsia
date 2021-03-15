@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "coverage.h"
+#include "proxy.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/object.h>
@@ -14,7 +14,7 @@
 namespace fuzzing {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// CoverageImpl
+// ProxyImpl
 
 namespace {
 
@@ -24,12 +24,12 @@ const zx_signals_t kItemAdded = ZX_USER_SIGNAL_7;
 
 // Public methods
 
-CoverageImpl::CoverageImpl(AggregatedCoverage *aggregate) : aggregate_(aggregate) {}
+ProxyImpl::ProxyImpl(AggregatedProxy *aggregate) : aggregate_(aggregate) {}
 
-CoverageImpl::~CoverageImpl() {}
+ProxyImpl::~ProxyImpl() {}
 
-void CoverageImpl::AddInline8BitCounters(Buffer inline_8bit_counters,
-                                         AddInline8BitCountersCallback callback) {
+void ProxyImpl::AddInline8BitCounters(Buffer inline_8bit_counters,
+                                      AddInline8BitCountersCallback callback) {
   SharedMemory shmem;
   if (Check(shmem.Link(inline_8bit_counters.vmo, inline_8bit_counters.size))) {
     __sanitizer_cov_8bit_counters_init(shmem.begin<uint8_t>(), shmem.end<uint8_t>());
@@ -38,7 +38,7 @@ void CoverageImpl::AddInline8BitCounters(Buffer inline_8bit_counters,
   }
 }
 
-void CoverageImpl::AddPcTable(Buffer pc_table, AddPcTableCallback callback) {
+void ProxyImpl::AddPcTable(Buffer pc_table, AddPcTableCallback callback) {
   SharedMemory shmem;
   if (Check(shmem.Link(pc_table.vmo, pc_table.size))) {
     __sanitizer_cov_pcs_init(shmem.begin<const uintptr_t>(), shmem.end<const uintptr_t>());
@@ -47,7 +47,7 @@ void CoverageImpl::AddPcTable(Buffer pc_table, AddPcTableCallback callback) {
   }
 }
 
-void CoverageImpl::AddTraces(zx::vmo traces, AddTracesCallback callback) {
+void ProxyImpl::AddTraces(zx::vmo traces, AddTracesCallback callback) {
   if ((!traces_.is_mapped() || Check(ZX_ERR_BAD_STATE)) &&
       Check(traces_.Link(traces, kMaxInstructions * sizeof(Instruction))) &&
       Check(aggregate_->Add(traces_))) {
@@ -59,7 +59,7 @@ void CoverageImpl::AddTraces(zx::vmo traces, AddTracesCallback callback) {
 
 // Private methods
 
-bool CoverageImpl::Check(zx_status_t status) {
+bool ProxyImpl::Check(zx_status_t status) {
   if (status != ZX_OK) {
     aggregate_->Close(this, status);
     return false;
@@ -69,7 +69,7 @@ bool CoverageImpl::Check(zx_status_t status) {
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-// AggregatedCoverage
+// AggregatedProxy
 
 namespace {
 
@@ -83,18 +83,18 @@ bool IsValidItem(zx_wait_item_t *item) {
 
 // Public methods
 
-AggregatedCoverage::AggregatedCoverage() { Start(); }
+AggregatedProxy::AggregatedProxy() { Start(); }
 
-AggregatedCoverage::~AggregatedCoverage() { Stop(); }
+AggregatedProxy::~AggregatedProxy() { Stop(); }
 
-fidl::InterfaceRequestHandler<Coverage> AggregatedCoverage::GetHandler() {
-  return [this](fidl::InterfaceRequest<Coverage> request) {
-    auto coverage = std::make_unique<CoverageImpl>(this);
+fidl::InterfaceRequestHandler<Proxy> AggregatedProxy::GetHandler() {
+  return [this](fidl::InterfaceRequest<Proxy> request) {
+    auto coverage = std::make_unique<ProxyImpl>(this);
     bindings_.AddBinding(std::move(coverage), std::move(request));
   };
 }
 
-zx_status_t AggregatedCoverage::CompleteIteration() {
+zx_status_t AggregatedProxy::CompleteIteration() {
   sync_completion_reset(&sync_);
   zx_status_t status;
   if ((status = controller_.signal(0, kBetweenIterations)) != ZX_OK) {
@@ -109,7 +109,7 @@ zx_status_t AggregatedCoverage::CompleteIteration() {
 
 // Friend methods
 
-zx_status_t AggregatedCoverage::Add(const SharedMemory &traces) {
+zx_status_t AggregatedProxy::Add(const SharedMemory &traces) {
   std::lock_guard<std::mutex> lock(lock_);
   size_t index = num_items_.load();
   if (index == ZX_WAIT_MANY_MAX_ITEMS ||
@@ -126,18 +126,18 @@ zx_status_t AggregatedCoverage::Add(const SharedMemory &traces) {
   return controller_.signal(0, kItemAdded);
 }
 
-void AggregatedCoverage::Close(CoverageImpl *coverage, zx_status_t epitaph) {
+void AggregatedProxy::Close(ProxyImpl *coverage, zx_status_t epitaph) {
   bindings_.CloseBinding(coverage, epitaph);
 }
 
-void AggregatedCoverage::Reset() {
+void AggregatedProxy::Reset() {
   Stop();
   Start();
 }
 
 // Private methods
 
-void AggregatedCoverage::Start() {
+void AggregatedProxy::Start() {
   std::lock_guard<std::mutex> lock(lock_);
 
   memset(items_, 0, sizeof(items_));
@@ -157,7 +157,7 @@ void AggregatedCoverage::Start() {
   processor_ = std::thread([this]() { ProcessAll(); });
 }
 
-void AggregatedCoverage::ProcessAll() {
+void AggregatedProxy::ProcessAll() {
   bool in_iteration = true;
   while (true) {
     size_t num_items = num_items_.load();
@@ -255,7 +255,7 @@ void AggregatedCoverage::ProcessAll() {
   }
 }
 
-void AggregatedCoverage::ProcessTraces(Instruction *traces, uint64_t distinguisher) {
+void AggregatedProxy::ProcessTraces(Instruction *traces, uint64_t distinguisher) {
   for (size_t i = 0; i < kInstructionBufferLen; ++i) {
     Instruction *trace = &traces[i];
     if (trace->type == Instruction::kSentinel) {
@@ -316,7 +316,7 @@ void AggregatedCoverage::ProcessTraces(Instruction *traces, uint64_t distinguish
   }
 }
 
-void AggregatedCoverage::Stop() {
+void AggregatedProxy::Stop() {
   std::lock_guard<std::mutex> lock(lock_);
   controller_.signal(0, kShutdown);
   ZX_ASSERT(processor_.joinable());

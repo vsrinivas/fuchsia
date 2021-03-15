@@ -10,7 +10,7 @@
 
 #include <algorithm>
 
-#include "sanitizer-cov-proxy.h"
+#include "remote.h"
 
 namespace fuzzing {
 namespace {
@@ -52,8 +52,8 @@ uint8_t FakeInline8BitCounters::AtImpl(size_t offset) {
 
 zx_status_t FakeInline8BitCounters::ResetImpl(zx_duration_t timeout) {
   // It'd be nice to use the real __sanitizer_cov_* symbols, but since this test runs in a single
-  // process those symbols are already used by the Coverage service to record trace data with the
-  // FakeSanitizerCovProxy. Use the static methods of the (real) SanitizerCovProxy class instead.
+  // process those symbols are already used by the Proxy service to record trace data with the
+  // FakeRemote. Use the static methods of the (real) Remote class instead.
   if (!resetter_.joinable()) {
     sync_completion_reset(&sync_);
     data_.reset(new uint8_t[kLength]);

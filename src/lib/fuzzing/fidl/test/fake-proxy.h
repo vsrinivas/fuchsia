@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FUZZING_FIDL_TEST_FAKE_COVERAGE_H_
-#define SRC_LIB_FUZZING_FIDL_TEST_FAKE_COVERAGE_H_
+#ifndef SRC_LIB_FUZZING_FIDL_TEST_FAKE_PROXY_H_
+#define SRC_LIB_FUZZING_FIDL_TEST_FAKE_PROXY_H_
 
 #include <fuchsia/fuzzer/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -18,23 +18,23 @@
 namespace fuzzing {
 namespace {
 
-using ::fuchsia::fuzzer::Coverage;
+using ::fuchsia::fuzzer::Proxy;
 using ::fuchsia::mem::Buffer;
 
 }  // namespace
 
-// This class provides a faked implementation of the fuchsia::fuzzer::Coverage FIDL interface. It
+// This class provides a faked implementation of the fuchsia::fuzzer::Proxy FIDL interface. It
 // differs from the real implementation in that it does NOT call the __sanitizer_cov_* interface.
 // Instead, it simply tracks what memory was shared with it and what traced instructions were
 // provided.
-class FakeCoverage final : public Coverage {
+class FakeProxy final : public Proxy {
  public:
-  FakeCoverage();
-  ~FakeCoverage();
+  FakeProxy();
+  ~FakeProxy();
 
   Instruction *traces() { return traces_; }
 
-  fidl::InterfaceRequestHandler<Coverage> GetHandler();
+  fidl::InterfaceRequestHandler<Proxy> GetHandler();
   void Configure();
 
   // FIDL methods
@@ -60,7 +60,7 @@ class FakeCoverage final : public Coverage {
   bool HasCompleted();
 
  private:
-  fidl::Binding<Coverage> binding_;
+  fidl::Binding<Proxy> binding_;
   std::deque<Buffer> pending_;
   const zx::vmo *vmo_;
   Instruction *traces_;
@@ -69,4 +69,4 @@ class FakeCoverage final : public Coverage {
 
 }  // namespace fuzzing
 
-#endif  // SRC_LIB_FUZZING_FIDL_TEST_FAKE_COVERAGE_H_
+#endif  // SRC_LIB_FUZZING_FIDL_TEST_FAKE_PROXY_H_

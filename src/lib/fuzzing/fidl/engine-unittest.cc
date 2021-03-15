@@ -10,14 +10,14 @@
 #include <vector>
 
 #include "llvm-fuzzer.h"
-#include "sanitizer-cov-proxy.h"
+#include "remote.h"
 #include "test/fake-inline-8bit-counters.h"
-#include "test/fake-sanitizer-cov-proxy.h"
+#include "test/fake-remote.h"
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::CoveragePtr;
 using ::fuchsia::fuzzer::DataProviderPtr;
+using ::fuchsia::fuzzer::ProxyPtr;
 
 // Globals to control the behavior of |LLVMFuzzerInitialize| below.
 static const size_t kMaxOptionLength = 32;
@@ -42,18 +42,18 @@ class EngineTest : public gtest::TestLoopFixture {
     EngineImpl::UseContext(std::move(context));
     engine_ = EngineImpl::GetInstance();
 
-    // Connect the engine to the client
+    // Connect the engine to the client.
     LlvmFuzzerPtr llvm_fuzzer;
     provider_.ConnectToPublicService(llvm_fuzzer.NewRequest());
     EXPECT_EQ(engine_->SetLlvmFuzzer(std::move(llvm_fuzzer)), ZX_OK);
 
-    // Start the proxy, and connect to engine.
-    FakeSanitizerCovProxy::Reset();
-    auto proxy = SanitizerCovProxy::GetInstance(false /* autoconnect */);
+    // Start the remote, and connect to proxy.
+    FakeRemote::Reset();
+    auto proxy = Remote::GetInstance(false /* autoconnect */);
 
-    CoveragePtr coverage;
+    ProxyPtr coverage;
     provider_.ConnectToPublicService(coverage.NewRequest());
-    ASSERT_EQ(proxy->SetCoverage(std::move(coverage)), ZX_OK);
+    ASSERT_EQ(proxy->SetProxy(std::move(coverage)), ZX_OK);
 
     // Fake call to __sanitizer_cov_8bit_counters_init.
     while (!FakeInline8BitCounters::Reset()) {
@@ -71,7 +71,7 @@ class EngineTest : public gtest::TestLoopFixture {
   }
 
   // Test helper that does a complete roundtrip from the DataProvider in the engine, to the fuzz
-  // target function, to the SanitizerCovProxy, back to the Coverage in the engine.
+  // target function, to the Remote, back to the Proxy in the engine.
   void PerformFuzzingIteration(const std::vector<uint8_t> &data);
 
   void TearDown() override {

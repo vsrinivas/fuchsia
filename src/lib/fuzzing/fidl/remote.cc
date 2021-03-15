@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sanitizer-cov-proxy.h"
+#include "remote.h"
 
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/service_directory.h>
@@ -139,8 +139,8 @@ constexpr struct BufferParameters {
 
 SanitizerCovProxy::~SanitizerCovProxy() { Reset(); }
 
-zx_status_t SanitizerCovProxy::SetCoverage(CoveragePtr coverage) {
-  // Set the pointer to the Coverage service.
+zx_status_t SanitizerCovProxy::SetProxy(ProxyPtr coverage) {
+  // Set the pointer to the Proxy service.
   if (!coverage.is_bound()) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -151,7 +151,7 @@ zx_status_t SanitizerCovProxy::SetCoverage(CoveragePtr coverage) {
   coverage_ = std::move(coverage);
   coverage_.set_error_handler([this](zx_status_t status) {
     if (status != ZX_ERR_CANCELED) {
-      FX_LOGS(WARNING) << "Coverage service returned " << zx_status_get_string(status);
+      FX_LOGS(WARNING) << "Proxy service returned " << zx_status_get_string(status);
       Reset();
     }
   });
@@ -166,7 +166,7 @@ zx_status_t SanitizerCovProxy::SetCoverage(CoveragePtr coverage) {
   traces_ = reinterpret_cast<Instruction *>(shmem_.addr());
   state_.fetch_or(kMappedFlag);
 
-  // Add the trace array to the Coverage service.
+  // Add the trace array to the Proxy service.
   coverage_->AddTraces(std::move(vmo), []() {});
 
   // Start thread to sync with fuzzing engine.
@@ -279,7 +279,7 @@ void SanitizerCovProxy::TraceImpl(Instruction::Type type, uintptr_t pc, uint64_t
   state = s.to_u64();
 
   // If this thread grabbed the first offset, it should now check if it is writable and unblock any
-  // other threads once it is. If |Reset| is called during the wait (e.g. the Coverage connection is
+  // other threads once it is. If |Reset| is called during the wait (e.g. the Proxy connection is
   // closed), the wait will return a non-ZX_OK status, and the thread must avoid writing to
   // previously shared memory.
   zx_status_t status = ZX_OK;
@@ -318,7 +318,7 @@ void SanitizerCovProxy::TraceImpl(Instruction::Type type, uintptr_t pc, uint64_t
       // Last writer following a call to |Reset|.
       sync_completion_signal(&sync->reset);
     } else if (readable) {
-      // Last writer for a buffer that needs to be sent to the |Coverage| service.
+      // Last writer for a buffer that needs to be sent to the |Proxy| service.
       vmo_->signal(0, buffer->readable_signal);
     }
   }
@@ -408,7 +408,7 @@ void SanitizerCovProxy::Reset() {
     collector_.join();
   }
   {
-    // Disconnect from and unmap the VMOs shared with the Coverage service.
+    // Disconnect from and unmap the VMOs shared with the Proxy service.
     std::lock_guard<std::mutex> lock(lock_);
     coverage_.Unbind();
     regions_.clear();
@@ -427,9 +427,9 @@ SanitizerCovProxy::SanitizerCovProxy(bool autoconnect)
     loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     FX_CHECK(loop_->StartThread() == ZX_OK);
     auto svc = sys::ServiceDirectory::CreateFromNamespace();
-    CoveragePtr coverage;
+    ProxyPtr coverage;
     svc->Connect(coverage.NewRequest(loop_->dispatcher()));
-    FX_CHECK(SetCoverage(std::move(coverage)) == ZX_OK);
+    FX_CHECK(SetProxy(std::move(coverage)) == ZX_OK);
   }
 }
 

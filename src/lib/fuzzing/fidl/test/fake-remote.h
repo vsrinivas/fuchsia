@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_FUZZING_FIDL_TEST_FAKE_SANITIZER_COV_PROXY_H_
-#define SRC_LIB_FUZZING_FIDL_TEST_FAKE_SANITIZER_COV_PROXY_H_
+#ifndef SRC_LIB_FUZZING_FIDL_TEST_FAKE_REMOTE_H_
+#define SRC_LIB_FUZZING_FIDL_TEST_FAKE_REMOTE_H_
 
 #include <stdint.h>
 
@@ -55,4 +55,4 @@ class FakeSanitizerCovProxy {
 
 }  // namespace fuzzing
 
-#endif  // SRC_LIB_FUZZING_FIDL_TEST_FAKE_SANITIZER_COV_PROXY_H_
+#endif  // SRC_LIB_FUZZING_FIDL_TEST_FAKE_REMOTE_H_

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "sanitizer-cov-proxy.h"
+#include "remote.h"
 
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
@@ -14,12 +14,12 @@
 
 #include "libfuzzer.h"
 #include "sanitizer-cov.h"
-#include "test/fake-coverage.h"
 #include "test/fake-libfuzzer.h"
+#include "test/fake-proxy.h"
 
 namespace fuzzing {
 
-using ::fuchsia::fuzzer::Coverage;
+using ::fuchsia::fuzzer::Proxy;
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 // Test fixture
@@ -31,17 +31,17 @@ class SanitizerCovProxyTest : public gtest::TestLoopFixture {
     context_ = provider_.TakeContext();
     context_->outgoing()->AddPublicService(coverage_.GetHandler());
 
-    CoveragePtr coverage;
+    ProxyPtr coverage;
     provider_.ConnectToPublicService(coverage.NewRequest());
 
     auto proxy = SanitizerCovProxy::GetInstance(false /* autoconnect */);
-    ASSERT_EQ(proxy->SetCoverage(std::move(coverage)), ZX_OK);
+    ASSERT_EQ(proxy->SetProxy(std::move(coverage)), ZX_OK);
     coverage_.Configure();
     RunLoopUntilIdle();
   }
 
  protected:
-  FakeCoverage coverage_;
+  FakeProxy coverage_;
 
  private:
   sys::testing::ComponentContextProvider provider_;
@@ -415,7 +415,7 @@ TEST_F(SanitizerCovProxyTest, AddTrace_ExceedThreshold) {
 
 TEST_F(SanitizerCovProxyTest, AddTrace_ExhaustUnresolved) {
   // Trace more than |kMaxInstructions| instructions without resolution. This should cause some
-  // calls to block until the Coverage service can free up some of the trace array.
+  // calls to block until the Proxy service can free up some of the trace array.
   sync_completion_t sync;
   std::thread t1([&sync]() {
     for (size_t i = 0; i < kMaxInstructions + 1; i++) {
