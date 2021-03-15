@@ -2794,7 +2794,7 @@ From //src/recovery/system/system_recovery_args.gni:7
 
 **Current value (from the default):** `false`
 
-From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/c5e65a950e98c1ca863862992ab31d9aecf85616/BUILD.gn#14)
+From [//third_party/boringssl/BUILD.gn:14](https://fuchsia.googlesource.com/third_party/boringssl/+/e32d1314b8d3d0b713eca6f0da3b793c2b235c58/BUILD.gn#14)
 
 ### rust_cap_lints
 Sets the maximum lint level.
@@ -2897,7 +2897,7 @@ toolchain, so that recompilations with the new compiler can be triggered.
 When using the prebuilt, this is ignored and the CIPD instance ID of the
 prebuilt is used.
 
-**Current value (from the default):** `"w57uFBk1KUKPBZYyWcc1_LaGPzuyrUaA8bdoZhTD5TYC"`
+**Current value (from the default):** `"FlDVyifY7RCI-jRIWr51oZ2oqNKH7Yj6JFhYBOOGNIYC"`
 
 From //build/rust/config.gni:32
 
