@@ -110,7 +110,9 @@ func main() {
 			log.Fatalf("failed to split swarming output into per-test logs: %s", err)
 		}
 	}
-	if *outputsDir != "" {
+	// inputSummary is empty if -test-summary-json is not specified. This happens
+	// when the recipe detects no summary.json exists.
+	if *outputsDir != "" && *inputSummaryPath != "" {
 		for i := range swarmingOutputPerTest {
 			test := &inputSummary.Tests[i]
 			testLog := &swarmingOutputPerTest[i]
