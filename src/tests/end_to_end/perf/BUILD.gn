@@ -30,7 +30,10 @@ test_list = [
 ]
 foreach(target_name, test_list) {
   dart_test(target_name) {
-    sources = [ "$target_name.dart" ]
+    sources = [
+      "$target_name.dart",
+      "helpers.dart",
+    ]
 
     deps = [
       "//sdk/testing/sl4f/client",
@@ -96,7 +99,10 @@ foreach(test, shard_test_list) {
   foreach(shard, shards) {
     target_name = test + "_shard_" + shard
     dart_test(target_name) {
-      sources = [ test + ".dart" ]
+      sources = [
+        test + ".dart",
+        "helpers.dart",
+      ]
 
       args = [
         "--total-shards=" + total_shards,
@@ -195,10 +201,14 @@ group("touch_input_test") {
 
 # Runs the benchmark for touch latency
 dart_test("touch_input_latency_benchmarks_test") {
-  sources = [ "touch_input_latency_benchmarks_test.dart" ]
+  sources = [
+    "helpers.dart",
+    "touch_input_latency_benchmarks_test.dart",
+  ]
 
   deps = [
     "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/test",
   ]
@@ -221,20 +231,32 @@ group("tests") {
 }
 
 dart_test("touch_input_latency_metric_test") {
-  sources = [ "touch_input_latency_metric_test.dart" ]
+  sources = [
+    "helpers.dart",
+    "touch_input_latency_metric_test.dart",
+  ]
 
   deps = [
     "//sdk/testing/sl4f/client",
+    "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/test",
   ]
 }
 
 dart_test("flutter_startup_time_metric_test") {
-  sources = [ "flutter/flutter_startup_time_metric_test.dart" ]
+  sources = [
+    "flutter/flutter_startup_time_metric_test.dart",
+    "flutter/helpers.dart",
+    "helpers.dart",
+  ]
 
   deps = [
     "//sdk/testing/sl4f/client",
     "//sdk/testing/sl4f/flutter_driver_sl4f",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
+    "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/logging",
     "//third_party/dart-pkg/pub/test",
   ]
 }

@@ -6,7 +6,10 @@ import("//build/dart/test.gni")
 import("//build/testing/environments.gni")
 
 dart_test("blobfs_metrics_test") {
-  sources = [ "blobfs_metrics_test.dart" ]
+  sources = [
+    "blobfs_metrics_test.dart",
+    "util.dart",
+  ]
 
   deps = [
     "//sdk/testing/sl4f/client",
@@ -29,7 +32,10 @@ dart_test("blobfs_metrics_test") {
 }
 
 dart_test("inspect_metrics_test") {
-  sources = [ "inspect_metrics_test.dart" ]
+  sources = [
+    "inspect_metrics_test.dart",
+    "util.dart",
+  ]
 
   deps = [
     "//sdk/testing/sl4f/client",
@@ -52,7 +58,10 @@ dart_test("inspect_metrics_test") {
 }
 
 dart_test("archivist_reader_test") {
-  sources = [ "archivist_reader_test.dart" ]
+  sources = [
+    "archivist_reader_test.dart",
+    "util.dart",
+  ]
 
   deps = [
     "//sdk/testing/sl4f/client",
@@ -75,7 +84,10 @@ dart_test("archivist_reader_test") {
 }
 
 dart_test("inspect_metrics_emulator_test") {
-  sources = [ "appmgr_cpu_metrics_test.dart" ]
+  sources = [
+    "appmgr_cpu_metrics_test.dart",
+    "util.dart",
+  ]
 
   deps = [
     "//sdk/testing/sl4f/client",
@@ -98,7 +110,10 @@ dart_test("inspect_metrics_emulator_test") {
 }
 
 dart_test("archivist_metrics_test") {
-  sources = [ "archivist_metrics_test.dart" ]
+  sources = [
+    "archivist_metrics_test.dart",
+    "util.dart",
+  ]
 
   deps = [
     "//sdk/testing/sl4f/client",
@@ -121,7 +136,10 @@ dart_test("archivist_metrics_test") {
 }
 
 dart_test("log_stats_test") {
-  sources = [ "log_stats_test.dart" ]
+  sources = [
+    "log_stats_test.dart",
+    "util.dart",
+  ]
 
   deps = [
     "//sdk/testing/sl4f/client",
@@ -144,7 +162,10 @@ dart_test("log_stats_test") {
 }
 
 dart_test("legacy_metrics_test") {
-  sources = [ "legacy_metrics_test.dart" ]
+  sources = [
+    "legacy_metrics_test.dart",
+    "util.dart",
+  ]
 
   deps = [
     "//sdk/testing/sl4f/client",

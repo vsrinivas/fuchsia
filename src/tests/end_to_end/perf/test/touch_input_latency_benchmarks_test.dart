@@ -3,40 +3,12 @@
 // found in the LICENSE file.
 
 import 'package:sl4f/sl4f.dart';
-import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
-import 'package:logging/logging.dart';
 
 import 'helpers.dart';
 
 const String _catapultConverterPath = 'runtime_deps/catapult_converter';
 const String _trace2jsonPath = 'runtime_deps/trace2json';
-
-final _log = Logger('TouchInputLatencyMetricsProcessor');
-
-// Custom MetricsProcessor for this test that relies on trace events tagged with the
-// "touch-input-test" category.
-List<TestCaseResults> touchInputLatencyMetricsProcessor(
-    Model model, Map<String, dynamic> extraArgs) {
-  final inputLatency = getArgValuesFromEvents<num>(
-          filterEventsTyped<InstantEvent>(getAllEvents(model),
-              category: 'touch-input-test', name: 'input_latency'),
-          'elapsed_time')
-      .map((t) => t.toDouble())
-      .toList();
-
-  if (inputLatency.length != 1) {
-    throw ArgumentError("touch-input-test didn't log an elapsed time.");
-  }
-
-  _log.info('Elapsed time: ${inputLatency.first} ns.');
-
-  final List<TestCaseResults> testCaseResults = [
-    TestCaseResults('touch_input_latency', Unit.nanoseconds, inputLatency)
-  ];
-
-  return testCaseResults;
-}
 
 const _touchInputLatencyMetricsRegistry = {
   'touch_input_latency': touchInputLatencyMetricsProcessor,

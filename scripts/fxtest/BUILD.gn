@@ -96,7 +96,9 @@ dart_test("test_runner_test") {
 dart_test("fxtest_tests") {
   sources = [
     "args_test.dart",
+    "fake_fx_env.dart",
     "helper_test.dart",
+    "helpers.dart",
     "output_formatter_test.dart",
     "output_test.dart",
     "package_repository_test.dart",
@@ -115,6 +117,7 @@ dart_test("fxtest_tests") {
     "//third_party/dart-pkg/pub/io",
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/mockito",
+    "//third_party/dart-pkg/pub/path",
     "//third_party/dart-pkg/pub/test",
   ]
 }

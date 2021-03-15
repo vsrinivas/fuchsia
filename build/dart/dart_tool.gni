@@ -169,6 +169,10 @@ template("dart_tool") {
     package_root = package_root
     source_dir = source_dir
 
+    # TODO(jayzhuang): This target accesses a generated packge_config.json,
+    # figure out how to includ it in input.
+    hermetic_deps = false
+
     sources = []
     if (defined(invoker.sources)) {
       sources += invoker.sources
@@ -208,7 +212,6 @@ template("dart_tool") {
     deps = _dart_deps
   }
 
-  _package_config_output = []
   _package_config_output =
       get_target_outputs(":$_dart_package_config_target_name")
   _packages_path = _package_config_output[0]

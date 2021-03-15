@@ -10,6 +10,7 @@ import 'dart:io' show Platform;
 import 'package:args/args.dart';
 import 'package:logging/logging.dart';
 import 'package:sl4f/sl4f.dart' as sl4f;
+import 'package:sl4f/trace_processing.dart';
 import 'package:test/test.dart';
 
 void enableLoggingOutput() {
@@ -73,4 +74,30 @@ class PerfTestHelper {
     await performance.convertResults('runtime_deps/catapult_converter',
         localResultsFile, Platform.environment);
   }
+}
+
+final _log = Logger('TouchInputLatencyMetricsProcessor');
+
+// Custom MetricsProcessor for input latency tests that rely on trace events
+// tagged with the "touch-input-test" category.
+List<TestCaseResults> touchInputLatencyMetricsProcessor(
+    Model model, Map<String, dynamic> extraArgs) {
+  final inputLatency = getArgValuesFromEvents<num>(
+          filterEventsTyped<InstantEvent>(getAllEvents(model),
+              category: 'touch-input-test', name: 'input_latency'),
+          'elapsed_time')
+      .map((t) => t.toDouble())
+      .toList();
+
+  if (inputLatency.length != 1) {
+    throw ArgumentError("touch-input-test didn't log an elapsed time.");
+  }
+
+  _log.info('Elapsed time: ${inputLatency.first} ns.');
+
+  final List<TestCaseResults> testCaseResults = [
+    TestCaseResults('touch_input_latency', Unit.nanoseconds, inputLatency)
+  ];
+
+  return testCaseResults;
 }

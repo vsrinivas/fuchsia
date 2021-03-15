@@ -817,12 +817,21 @@ def main():
         # not necessarily stable and doesn't make a good contract.
         os.path.join(src_root, ".git"),
         os.path.join(src_root, "integration", ".git"),
+        # Allow actions to read .fx-build-dir to figure out the current build
+        # directory.
+        os.path.join(src_root, ".fx-build-dir"),
+        # TODO(jayzhuang): flutter's dart_libraries currently don't have sources
+        # listed, fix that and remove this exception.
+        os.path.join(src_root, "third_party", "dart-pkg", "git", "flutter")
     }
     ignored_suffixes = {
         # TODO(fxb/71190): The following is a temporary symlink.
         # fsatrace fails to detect writing this symlink, and trace analysis
         # thinks it is a read that violates hermeticity, but it is ok.
         "src/github.com/pkg",
+        # TODO(jayzhuang): Figure out whether `.dart_tool/package_config.json`
+        # should be included in inputs.
+        ".dart_tool/package_config.json",
     }
     ignored_path_parts = {
         # Python creates these directories with bytecode caches

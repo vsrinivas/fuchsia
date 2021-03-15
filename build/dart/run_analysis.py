@@ -7,6 +7,7 @@ import argparse
 import os
 import subprocess
 import sys
+import json
 
 FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.dirname(             # build
@@ -14,9 +15,9 @@ FUCHSIA_ROOT = os.path.dirname(  # $root
     os.path.abspath(__file__))))
 
 if sys.version_info[0] >= 3:
-  sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib3')]
+    sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib3')]
 else:
-  sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
+    sys.path += [os.path.join(FUCHSIA_ROOT, 'third_party', 'pyyaml', 'lib')]
 
 import yaml
 
@@ -36,45 +37,58 @@ def main():
     parser.add_argument(
         '--options', help='Path to analysis options', required=True)
     parser.add_argument(
-        '--stamp', help='File to touch when analysis succeeds', required=True)
+        '--stamp',
+        type=argparse.FileType('w'),
+        help='File to touch when analysis succeeds',
+        required=True)
     parser.add_argument(
         '--depname', help='Name of the depfile target', required=True)
     parser.add_argument(
-        '--depfile', help='Path to the depfile to generate', required=True)
+        '--depfile',
+        type=argparse.FileType('w'),
+        help='Path to the depfile to generate',
+        required=True)
+    parser.add_argument(
+        '--all-deps-sources-file',
+        type=argparse.FileType('r'),
+        help=
+        'Path to a file containing sources this target and all of its direct and transitive dependencies',
+        required=True)
     args = parser.parse_args()
 
     with open(args.source_file, 'r') as source_file:
         sources = source_file.read().strip().split('\n')
 
-    with open(args.depfile, 'w') as depfile:
-        depfile.write('%s: ' % args.depname)
+    args.depfile.write(
+        '{}: {}'.format(
+            args.depname,
+            ' '.join(json.load(args.all_deps_sources_file)),
+        ),
+    )
 
-        def add_dep(path):
-            depfile.write('%s ' % path)
-
-        options = args.options
-        while True:
-            if not os.path.isabs(options):
-                print('Expected absolute path, got %s' % options)
-                return 1
-            if not os.path.exists(options):
-                print('Could not find options file: %s' % options)
-                return 1
-            add_dep(options)
-            with open(options, 'r') as options_file:
-                content = yaml.safe_load(options_file)
-                if not 'include' in content:
-                    break
-                included = content['include']
-                if not os.path.isabs(included):
-                    included = os.path.join(os.path.dirname(options), included)
-                options = included
+    options = args.options
+    while True:
+        if not os.path.isabs(options):
+            print('Expected absolute path, got {}'.format(options))
+            return 1
+        if not os.path.exists(options):
+            print('Could not find options file: {}'.format(options))
+            return 1
+        args.depfile.write(' {}'.format(options))
+        with open(options, 'r') as options_file:
+            content = yaml.safe_load(options_file)
+            if not 'include' in content:
+                break
+            included = content['include']
+            if not os.path.isabs(included):
+                included = os.path.join(os.path.dirname(options), included)
+            options = included
 
     call_args = [
         args.dartanalyzer,
-        '--packages=%s' % args.dot_packages,
-        '--dart-sdk=%s' % args.dart_sdk,
-        '--options=%s' % args.options,
+        '--packages={}'.format(args.dot_packages),
+        '--dart-sdk={}'.format(args.dart_sdk),
+        '--options={}'.format(args.options),
         '--fatal-warnings',
         '--fatal-hints',
         '--fatal-lints',
@@ -95,8 +109,8 @@ def main():
         print(stdout + stderr)
         return 1
 
-    with open(args.stamp, 'w') as stamp:
-        stamp.write('Success!')
+    args.stamp.write('Success!')
+    return 0
 
 
 if __name__ == '__main__':
