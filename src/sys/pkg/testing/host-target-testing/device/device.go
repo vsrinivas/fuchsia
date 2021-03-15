@@ -34,31 +34,33 @@ var sshConnectBackoff = retry.NewConstantBackoff(5 * time.Second)
 
 // Client manages the connection to the device.
 type Client struct {
-	Name                 string
-	deviceHostname       string
+	deviceResolver       DeviceResolver
 	sshClient            *sshutil.Client
 	initialMonotonicTime time.Time
 }
 
 // NewClient creates a new Client.
-func NewClient(ctx context.Context, deviceHostname string, name string, privateKey ssh.Signer) (*Client, error) {
+func NewClient(ctx context.Context, deviceResolver DeviceResolver, privateKey ssh.Signer) (*Client, error) {
 	sshConfig, err := newSSHConfig(privateKey)
 	if err != nil {
 		return nil, err
 	}
 
-	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(deviceHostname, "22"))
-	if err != nil {
-		return nil, err
-	}
-	sshClient, err := sshutil.NewClient(ctx, addr, sshConfig, sshConnectBackoff)
+	sshClient, err := sshutil.NewClient(
+		ctx,
+		&addrResolver{
+			deviceResolver: deviceResolver,
+			port:           "22",
+		},
+		sshConfig,
+		sshConnectBackoff,
+	)
 	if err != nil {
 		return nil, err
 	}
 
 	c := &Client{
-		Name:           name,
-		deviceHostname: deviceHostname,
+		deviceResolver: deviceResolver,
 		sshClient:      sshClient,
 	}
 
@@ -472,7 +474,12 @@ func (c *Client) StartRpcSession(ctx context.Context, repo *packages.Repository)
 	}
 	defer repoServer.Shutdown(ctx)
 
-	rpcClient, err := sl4f.NewClient(ctx, c.sshClient, net.JoinHostPort(c.deviceHostname, "80"), repoName)
+	deviceHostname, err := c.deviceResolver.ResolveName(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("error resolving device host: %w", err)
+	}
+
+	rpcClient, err := sl4f.NewClient(ctx, c.sshClient, net.JoinHostPort(deviceHostname, "80"), repoName)
 	if err != nil {
 		return nil, fmt.Errorf("error creating sl4f client: %w", err)
 	}
@@ -496,7 +503,7 @@ func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
 	}
 
 	// Actually pave the device.
-	if err = paver.Pave(ctx, c.Name); err != nil {
+	if err = paver.Pave(ctx, c.deviceResolver.Name()); err != nil {
 		return fmt.Errorf("device failed to pave: %w", err)
 	}
 
@@ -510,4 +517,23 @@ func (c *Client) Pave(ctx context.Context, build artifacts.Build) error {
 	logger.Infof(ctx, "device booted")
 
 	return nil
+}
+
+type addrResolver struct {
+	deviceResolver DeviceResolver
+	port           string
+}
+
+func (r addrResolver) Resolve(ctx context.Context) (net.Addr, error) {
+	name, err := r.deviceResolver.ResolveName(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	addr, err := net.ResolveTCPAddr("tcp", net.JoinHostPort(name, r.port))
+	if err != nil {
+		return nil, err
+	}
+
+	return addr, nil
 }
