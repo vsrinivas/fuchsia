@@ -163,7 +163,7 @@ impl MutableConnection {
     ) -> Result<ConnectionState, Error> {
         match request {
             DerivedDirectoryRequest::Unlink { path, responder } => {
-                self.handle_unlink(path, |status| responder.send(status.into_raw()))?;
+                self.handle_unlink(path, |status| responder.send(status.into_raw())).await?;
             }
             DerivedDirectoryRequest::GetToken { responder } => {
                 self.handle_get_token(|status, token| responder.send(status.into_raw(), token))?;
@@ -171,32 +171,38 @@ impl MutableConnection {
             DerivedDirectoryRequest::Rename { src, dst_parent_token, dst, responder } => {
                 self.handle_rename(src, dst_parent_token, dst, |status| {
                     responder.send(status.into_raw())
-                })?;
+                })
+                .await?;
             }
             DerivedDirectoryRequest::SetAttr { flags, attributes, responder } => {
-                let status = match self.handle_setattr(flags, attributes) {
+                let status = match self.handle_setattr(flags, attributes).await {
                     Ok(()) => Status::OK,
                     Err(status) => status,
                 };
                 responder.send(status.into_raw())?;
             }
             DerivedDirectoryRequest::Sync { responder } => {
-                responder
-                    .send(self.base.directory.sync().err().unwrap_or(Status::OK).into_raw())?;
+                responder.send(
+                    self.base.directory.sync().await.err().unwrap_or(Status::OK).into_raw(),
+                )?;
             }
         }
         Ok(ConnectionState::Alive)
     }
 
-    fn handle_setattr(&mut self, flags: u32, attributes: NodeAttributes) -> Result<(), Status> {
+    async fn handle_setattr(
+        &mut self,
+        flags: u32,
+        attributes: NodeAttributes,
+    ) -> Result<(), Status> {
         if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
             return Err(Status::BAD_HANDLE);
         }
 
-        self.base.directory.set_attrs(flags, attributes)
+        self.base.directory.set_attrs(flags, attributes).await
     }
 
-    fn handle_unlink<R>(&mut self, path: String, responder: R) -> Result<(), fidl::Error>
+    async fn handle_unlink<R>(&mut self, path: String, responder: R) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
@@ -230,7 +236,7 @@ impl MutableConnection {
             return responder(Status::BAD_PATH);
         }
 
-        match self.base.directory.clone().unlink(path) {
+        match self.base.directory.clone().unlink(path).await {
             Ok(()) => responder(Status::OK),
             Err(status) => responder(status),
         }
@@ -260,7 +266,7 @@ impl MutableConnection {
         responder(Status::OK, Some(token))
     }
 
-    fn handle_rename<R>(
+    async fn handle_rename<R>(
         &self,
         src: String,
         dst_parent_token: Handle,
@@ -298,7 +304,7 @@ impl MutableConnection {
             Ok(Some(entry)) => entry,
         };
 
-        match self.base.directory.clone().into_mutable_directory().get_filesystem().rename(
+        match self.base.directory.clone().into_mutable_directory().get_filesystem().await.rename(
             self.base.directory.clone().into_mutable_directory().into_any(),
             src,
             dst_parent.into_mutable_directory().into_any(),
@@ -403,7 +409,7 @@ mod tests {
             panic!("Not implemented");
         }
 
-        fn register_watcher(
+        async fn register_watcher(
             self: Arc<Self>,
             _scope: ExecutionScope,
             _mask: u32,
@@ -412,7 +418,7 @@ mod tests {
             panic!("Not implemented");
         }
 
-        fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+        async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
             panic!("Not implemented");
         }
 
@@ -425,20 +431,21 @@ mod tests {
         }
     }
 
+    #[async_trait]
     impl MutableDirectory for MockDirectory {
-        fn link(&self, path: String, _entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+        async fn link(&self, path: String, _entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
             self.fs.handle_event(MutableDirectoryAction::Link { id: self.id, path })
         }
 
-        fn unlink(&self, path: Path) -> Result<(), Status> {
+        async fn unlink(&self, path: Path) -> Result<(), Status> {
             self.fs.handle_event(MutableDirectoryAction::Unlink { id: self.id, path })
         }
 
-        fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
+        async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
             self.fs.handle_event(MutableDirectoryAction::SetAttr { id: self.id, flags, attrs })
         }
 
-        fn get_filesystem(&self) -> &dyn Filesystem {
+        async fn get_filesystem(&self) -> &dyn Filesystem {
             &*self.fs
         }
 
@@ -446,7 +453,7 @@ mod tests {
             self as Arc<dyn Any + Send + Sync>
         }
 
-        fn sync(&self) -> Result<(), Status> {
+        async fn sync(&self) -> Result<(), Status> {
             self.fs.handle_event(MutableDirectoryAction::Sync)
         }
     }

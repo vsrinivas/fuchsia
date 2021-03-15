@@ -344,7 +344,7 @@ where
                 responder.send(&mut info)?;
             }
             BaseDirectoryRequest::GetAttr { responder } => {
-                let (mut attrs, status) = match self.directory.get_attrs() {
+                let (mut attrs, status) = match self.directory.get_attrs().await {
                     Ok(attrs) => (attrs, ZX_OK),
                     Err(status) => (
                         NodeAttributes {
@@ -393,7 +393,8 @@ where
                     responder.send(ZX_ERR_INVALID_ARGS)?;
                 } else {
                     let channel = Channel::from_channel(watcher)?;
-                    self.handle_watch(mask, channel, |status| responder.send(status.into_raw()))?;
+                    self.handle_watch(mask, channel, |status| responder.send(status.into_raw()))
+                        .await?;
                 }
             }
             _ => {}
@@ -545,13 +546,13 @@ where
             Ok(Some(entry)) => entry,
         };
 
-        match dst_parent.link(dst, entry) {
+        match dst_parent.link(dst, entry).await {
             Ok(()) => responder(Status::OK),
             Err(status) => responder(status),
         }
     }
 
-    fn handle_watch<R>(
+    async fn handle_watch<R>(
         &mut self,
         mask: u32,
         channel: Channel,
@@ -564,6 +565,7 @@ where
         responder(
             directory
                 .register_watcher(self.scope.clone(), mask, channel)
+                .await
                 .err()
                 .unwrap_or(Status::OK),
         )

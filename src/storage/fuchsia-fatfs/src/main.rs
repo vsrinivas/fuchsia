@@ -28,7 +28,7 @@ async fn handle(stream: Services, fs: Arc<FatFs>, scope: &ExecutionScope) -> Res
     match stream {
         Services::Admin(mut stream) => {
             while let Some(request) = stream.try_next().await.context("Reading request")? {
-                fs.handle_admin(scope, request)?;
+                fs.handle_admin(scope, request).await?;
             }
         }
         Services::Query(mut stream) => {

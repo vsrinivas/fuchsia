@@ -310,7 +310,7 @@ pub mod test {
         fs.unmount().expect("Unmount succeeds");
     }
 
-    fn open_root(dev: &FatDevice, channel: zx::Channel) {
+    async fn open_root(dev: &FatDevice, channel: zx::Channel) {
         let root = dev.get_root().unwrap();
         root.clone().open(
             dev.scope.clone(),
@@ -334,7 +334,7 @@ pub mod test {
             FatDevice::new().await.expect("Create fat device OK").expect("Found a fat device");
 
         let (proxy, remote) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        open_root(&dev, remote.into_channel());
+        open_root(&dev, remote.into_channel()).await;
 
         let mut children: Vec<_> = files_async::readdir(&proxy)
             .await
@@ -375,7 +375,7 @@ pub mod test {
             FatDevice::new().await.expect("Create fat device OK").expect("Found a fat device");
 
         let (proxy, remote) = fidl::endpoints::create_proxy::<DirectoryMarker>().unwrap();
-        open_root(&dev, remote.into_channel());
+        open_root(&dev, remote.into_channel()).await;
 
         let mut children: Vec<_> = files_async::readdir(&proxy)
             .await

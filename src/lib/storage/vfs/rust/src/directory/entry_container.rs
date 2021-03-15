@@ -64,7 +64,7 @@ pub trait Directory: Any + Send + Sync {
 
     /// Register a watcher for this directory.
     /// Implementations will probably want to use a `Watcher` to manage watchers.
-    fn register_watcher(
+    async fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
         mask: u32,
@@ -77,7 +77,7 @@ pub trait Directory: Any + Send + Sync {
 
     /// Get this directory's attributes.
     /// The "mode" field will be filled in by the connection.
-    fn get_attrs(&self) -> Result<NodeAttributes, Status>;
+    async fn get_attrs(&self) -> Result<NodeAttributes, Status>;
 
     /// Called when the directory is closed.
     fn close(&self) -> Result<(), Status>;
@@ -86,24 +86,25 @@ pub trait Directory: Any + Send + Sync {
 /// This trait indicates a directory that can be mutated by adding and removing entries.
 /// This trait must be implemented to use a `MutableConnection`, however, a directory could also
 /// implement the `DirectlyMutable` type, which provides a blanket implementation of this trait.
+#[async_trait]
 pub trait MutableDirectory: Directory {
     /// Adds a child entry to this directory, even if it already exists.  The target is discarded
     /// if it exists.
-    fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>;
+    async fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>;
 
     /// Set the attributes of this directory based on the values in `attrs`.
     /// The attributes to update are specified in flags, see fidl_fuchsia_io::NODE_ATTRIBUTE_FLAG_*.
-    fn set_attrs(&self, flags: u32, attributes: NodeAttributes) -> Result<(), Status>;
+    async fn set_attrs(&self, flags: u32, attributes: NodeAttributes) -> Result<(), Status>;
 
     /// Removes an entry from this directory.
-    fn unlink(&self, name: Path) -> Result<(), Status>;
+    async fn unlink(&self, name: Path) -> Result<(), Status>;
 
     /// Gets the filesystem this directory belongs to.
-    fn get_filesystem(&self) -> &dyn Filesystem;
+    async fn get_filesystem(&self) -> &dyn Filesystem;
 
     /// Gets this directory as an Any.
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync>;
 
     /// Syncs the directory.
-    fn sync(&self) -> Result<(), Status>;
+    async fn sync(&self) -> Result<(), Status>;
 }

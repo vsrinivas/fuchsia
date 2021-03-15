@@ -145,7 +145,11 @@ impl FatFs {
         Ok(())
     }
 
-    pub fn handle_admin(&self, scope: &ExecutionScope, req: AdminRequest) -> Result<(), Error> {
+    pub async fn handle_admin(
+        &self,
+        scope: &ExecutionScope,
+        req: AdminRequest,
+    ) -> Result<(), Error> {
         match req {
             AdminRequest::Shutdown { responder } => {
                 scope.shutdown();

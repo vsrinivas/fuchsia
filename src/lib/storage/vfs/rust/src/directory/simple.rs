@@ -310,7 +310,7 @@ where
         Ok((TraversalPosition::End, sink.seal().into()))
     }
 
-    fn register_watcher(
+    async fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
         mask: u32,
@@ -335,7 +335,7 @@ where
         this.watchers.remove(key);
     }
 
-    fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+    async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
         Ok(NodeAttributes {
             mode: 0,
             id: INO_UNKNOWN,

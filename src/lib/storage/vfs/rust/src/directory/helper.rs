@@ -11,6 +11,7 @@ use {
         filesystem::Filesystem,
         path::Path,
     },
+    async_trait::async_trait,
     fidl_fuchsia_io::NodeAttributes,
     fuchsia_zircon::Status,
     std::{any::Any, sync::Arc},
@@ -117,12 +118,13 @@ pub trait DirectlyMutable: Directory + Send + Sync {
     fn into_any(self: Arc<Self>) -> Arc<Any + Send + Sync>;
 }
 
+#[async_trait]
 impl<T: DirectlyMutable> MutableDirectory for T {
-    fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+    async fn link(&self, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
         (self as &dyn DirectlyMutable).link(name, entry)
     }
 
-    fn unlink(&self, mut name: Path) -> Result<(), Status> {
+    async fn unlink(&self, mut name: Path) -> Result<(), Status> {
         match self.remove_entry_impl(name.next().unwrap().into()) {
             Ok(Some(_)) => Ok(()),
             Ok(None) => Err(Status::NOT_FOUND),
@@ -130,11 +132,11 @@ impl<T: DirectlyMutable> MutableDirectory for T {
         }
     }
 
-    fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), Status> {
+    async fn set_attrs(&self, _flags: u32, _attrs: NodeAttributes) -> Result<(), Status> {
         Err(Status::NOT_SUPPORTED)
     }
 
-    fn get_filesystem(&self) -> &dyn Filesystem {
+    async fn get_filesystem(&self) -> &dyn Filesystem {
         (self as &dyn DirectlyMutable).get_filesystem()
     }
 
@@ -142,7 +144,7 @@ impl<T: DirectlyMutable> MutableDirectory for T {
         (self as Arc<dyn DirectlyMutable>).into_any()
     }
 
-    fn sync(&self) -> Result<(), Status> {
+    async fn sync(&self) -> Result<(), Status> {
         Err(Status::NOT_SUPPORTED)
     }
 }

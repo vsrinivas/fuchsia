@@ -243,7 +243,7 @@ impl<T: LazyDirectory> Directory for Lazy<T> {
         self.inner.read_dirents(pos, sink).await
     }
 
-    fn register_watcher(
+    async fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
         mask: u32,
@@ -262,7 +262,7 @@ impl<T: LazyDirectory> Directory for Lazy<T> {
         let _ = self.watchers.unbounded_send(WatcherCommand::UnregisterWatcher { key });
     }
 
-    fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+    async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
         Ok(NodeAttributes {
             mode: 0,
             id: INO_UNKNOWN,

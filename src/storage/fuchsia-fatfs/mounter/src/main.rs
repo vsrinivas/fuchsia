@@ -77,7 +77,7 @@ impl FatServer {
                 break;
             }
             let device = device.as_ref().unwrap();
-            device.handle_admin(&device.scope, req)?;
+            device.handle_admin(&device.scope, req).await?;
         }
         Ok(())
     }

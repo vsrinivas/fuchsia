@@ -55,6 +55,8 @@ impl Watchers {
         let key = entry.key();
 
         let done = move || {
+            // Add tests.
+            // TODO(72292)
             directory.unregister_watcher(key);
         };
 

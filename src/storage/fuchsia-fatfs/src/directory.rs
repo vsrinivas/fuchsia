@@ -476,12 +476,13 @@ impl Debug for FatDirectory {
     }
 }
 
+#[async_trait]
 impl MutableDirectory for FatDirectory {
-    fn link(&self, _name: String, _entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+    async fn link(&self, _name: String, _entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
         Err(Status::NOT_SUPPORTED)
     }
 
-    fn unlink(&self, path: Path) -> Result<(), Status> {
+    async fn unlink(&self, path: Path) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let name = path.peek().unwrap();
         let parent = self.borrow_dir(&fs_lock)?;
@@ -529,7 +530,7 @@ impl MutableDirectory for FatDirectory {
         Ok(())
     }
 
-    fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
+    async fn set_attrs(&self, flags: u32, attrs: NodeAttributes) -> Result<(), Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let dir = self.borrow_dir_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 
@@ -544,7 +545,7 @@ impl MutableDirectory for FatDirectory {
         Ok(())
     }
 
-    fn get_filesystem(&self) -> &dyn Filesystem {
+    async fn get_filesystem(&self) -> &dyn Filesystem {
         &*self.filesystem
     }
 
@@ -552,7 +553,7 @@ impl MutableDirectory for FatDirectory {
         self as Arc<dyn Any + Sync + Send>
     }
 
-    fn sync(&self) -> Result<(), Status> {
+    async fn sync(&self) -> Result<(), Status> {
         // TODO(fxbug.dev/55291): Support sync on root of fatfs volume.
         Ok(())
     }
@@ -681,7 +682,7 @@ impl Directory for FatDirectory {
         return Ok((TraversalPosition::End, cur_sink.seal()));
     }
 
-    fn register_watcher(
+    async fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
         mask: u32,
@@ -728,7 +729,7 @@ impl Directory for FatDirectory {
         self.data.write().unwrap().watchers.remove(key);
     }
 
-    fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+    async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let dir = self.borrow_dir(&fs_lock)?;
 
@@ -765,8 +766,8 @@ mod tests {
 
     const TEST_DISK_SIZE: u64 = 2048 << 10; // 2048K
 
-    #[test]
-    fn test_link_fails() {
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_link_fails() {
         let disk = TestFatDisk::empty_disk(TEST_DISK_SIZE);
         let structure = TestDiskContents::dir().add_child("test_file", "test file contents".into());
         structure.create(&disk.root_dir());
@@ -779,7 +780,10 @@ mod tests {
         {
             let entry = entry.expect("Getting test file");
 
-            assert_eq!(dir.link("test2".to_owned(), entry).unwrap_err(), Status::NOT_SUPPORTED);
+            assert_eq!(
+                dir.link("test2".to_owned(), entry).await.unwrap_err(),
+                Status::NOT_SUPPORTED
+            );
         } else {
             panic!("Unsupported AsyncGetEntry type");
         }

@@ -329,7 +329,7 @@ mod tests {
                 panic!("Not implemented!")
             }
 
-            fn register_watcher(
+            async fn register_watcher(
                 self: Arc<Self>,
                 _scope: ExecutionScope,
                 _mask: u32,
@@ -338,7 +338,7 @@ mod tests {
                 panic!("Not implemented!")
             }
 
-            fn get_attrs(&self) -> Result<NodeAttributes, Status> {
+            async fn get_attrs(&self) -> Result<NodeAttributes, Status> {
                 panic!("Not implemented!")
             }
 
@@ -351,20 +351,29 @@ mod tests {
             }
         }
 
+        #[async_trait]
         impl MutableDirectory for MockDirectory {
-            fn link(&self, _name: String, _entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+            async fn link(
+                &self,
+                _name: String,
+                _entry: Arc<dyn DirectoryEntry>,
+            ) -> Result<(), Status> {
                 panic!("Not implemented!")
             }
 
-            fn unlink(&self, _name: Path) -> Result<(), Status> {
+            async fn unlink(&self, _name: Path) -> Result<(), Status> {
                 panic!("Not implemented!")
             }
 
-            fn set_attrs(&self, _flags: u32, _attributes: NodeAttributes) -> Result<(), Status> {
+            async fn set_attrs(
+                &self,
+                _flags: u32,
+                _attributes: NodeAttributes,
+            ) -> Result<(), Status> {
                 panic!("Not implemented!")
             }
 
-            fn get_filesystem(&self) -> &dyn Filesystem {
+            async fn get_filesystem(&self) -> &dyn Filesystem {
                 panic!("Not implemented!")
             }
 
@@ -372,7 +381,7 @@ mod tests {
                 panic!("Not implemented!");
             }
 
-            fn sync(&self) -> Result<(), Status> {
+            async fn sync(&self) -> Result<(), Status> {
                 panic!("Not implemented!");
             }
         }
