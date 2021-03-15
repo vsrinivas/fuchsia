@@ -15,7 +15,7 @@ zx_library("ffl") {
     "ffl/utility.h",
   ]
   sdk_migrated = true
-  sources = []
+  sources = [ "string.cc" ]
   host = true
   kernel = true
   static = true
