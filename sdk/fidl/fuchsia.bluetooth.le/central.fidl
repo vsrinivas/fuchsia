@@ -9,6 +9,8 @@ using fuchsia.bluetooth.gatt;
 
 [Discoverable]
 protocol Central {
+    /// **This method is not implemented by the Fuchsia core stack- TODO(fxbug.dev/1424)**
+    ///
     /// Returns the list of peripherals that are known to the system from previous scan, connection,
     /// and/or bonding procedures. The results can be filtered based on service UUIDs that are known to
     /// be present on the peripheral.
@@ -16,6 +18,8 @@ protocol Central {
     /// This method only returns peripherals (i.e. connectable devices).
     GetPeripherals(vector<bt.UuidString>:MAX? service_uuids) -> (vector<RemoteDevice>:MAX peripherals);
 
+    /// **This method is not implemented by the Fuchsia core stack- TODO(fxbug.dev/1424)**
+    ///
     /// Returns information about a single peripheral that is known to the system from previous scan,
     /// connection, and/or bonding procedures based on its unique identifier. Returns null if
     /// `identifier` is not recognized.
