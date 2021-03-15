@@ -2,26 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
 #include <errno.h>
-#include <fuchsia/io/llcpp/fidl.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fdio/inotify.h>
-#include <lib/fdio/unsafe.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <poll.h>
-#include <threads.h>
-#include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
 
-#include <cerrno>
 #include <map>
-#include <string>
-#include <unordered_map>
 #include <vector>
 
 #include <fbl/auto_call.h>
@@ -30,8 +20,7 @@
 
 #include "fdio_unistd.h"
 #include "internal.h"
-
-namespace fio = fuchsia_io;
+#include "zxio.h"
 
 namespace {
 
@@ -86,18 +75,18 @@ zx_status_t inotify_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_co
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-static constexpr zxio_ops_t inotify_ops = []() {
+constexpr zxio_ops_t inotify_ops = []() {
   zxio_ops_t ops = zxio_default_ops;
   ops.close = inotify_close;
   ops.readv = inotify_readv;
   return ops;
 }();
 
-bool fdio_is_inotify(fdio_t* io) {
+bool fdio_is_inotify(const fdio_ptr& io) {
   if (!io) {
     return false;
   }
-  return zxio_get_ops(fdio_get_zxio(io)) == &inotify_ops;
+  return zxio_get_ops(&io->zxio_storage().io) == &inotify_ops;
 }
 
 }  // namespace
@@ -110,33 +99,28 @@ int inotify_init1(int flags) {
   if (flags & ~(IN_CLOEXEC | IN_NONBLOCK)) {
     return ERRNO(EINVAL);
   }
-  zxio_storage_t* storage = nullptr;
-  fdio_t* fdio = fdio_zxio_create(&storage);
-  if (fdio == nullptr) {
-    return ERRNO(ENOMEM);
+  zx::status io = fdio_internal::zxio::create();
+  if (io.is_error()) {
+    return ERROR(io.status_value());
   }
 
-  zx::socket client;
-  zx::socket server;
+  zx::socket client, server;
 
   // Create a common socket shared between all the filters in an inotify instance.
   zx_status_t status = zx::socket::create(ZX_SOCKET_STREAM, &client, &server);
   if (status != ZX_OK) {
-    fdio_unsafe_release(fdio);
-    // TODO Use fdio_status_to_errno once inotify is moved to fdio.
-    // Return generic error for now.
-    return ERRNO(EIO);
+    return ERROR(status);
   }
 
-  auto inotify = new (storage) FdioInotify(storage->io, std::move(client), std::move(server));
+  auto inotify = new (&io->zxio_storage())
+      FdioInotify(io->zxio_storage().io, std::move(client), std::move(server));
   zxio_init(&inotify->io, &inotify_ops);
 
-  int fd = fdio_bind_to_fd(fdio, -1, 0);
-  if (fd < 0) {
-    fdio_unsafe_release(fdio);
-    return ERRNO(ENOMEM);
+  std::optional fd = bind_to_fd(io.value());
+  if (fd.has_value()) {
+    return fd.value();
   }
-  return fd;
+  return ERRNO(EMFILE);
 }
 
 __EXPORT
@@ -169,17 +153,12 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
     return ERRNO(EINVAL);
   }
 
-  fdio_t* io = fdio_unsafe_fd_to_io(fd);
-  auto clean_io = fbl::MakeAutoCall([io] {
-    if (io) {
-      fdio_unsafe_release(io);
-    }
-  });
+  fdio_ptr io = fd_to_io(fd);
   if (!fdio_is_inotify(io)) {
     return ERRNO(EBADF);
   }
 
-  FdioInotify* inotify = zxio_to_inotify(fdio_get_zxio(io));
+  FdioInotify* inotify = zxio_to_inotify(&io->zxio_storage().io);
   fbl::AutoLock lock(&inotify->lock);
 
   int watch_descriptor_to_use = inotify->next_watch_descriptor++;
@@ -190,18 +169,14 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
   zx_status_t status =
       inotify->server.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_server_socket_per_filter);
   if (status != ZX_OK) {
-    // TODO use fdio_status_to_errno once inotify is moved to fdio.
-    // Return generic error for now.
-    return ERRNO(EIO);
+    return ERROR(status);
   }
 
   // Create a new inotify request channel for the filter.
   zx::channel server_request;
   status = zx::channel::create(0, &wd->client_request, &server_request);
   if (status != ZX_OK) {
-    // TODO use fdio_status_to_errno once inotify is moved to fdio.
-    // Return generic error for now.
-    return ERRNO(EIO);
+    return ERROR(status);
   }
 
   // Check if filter already exists and simply needs modification.
@@ -211,14 +186,14 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
     uint32_t old_mask = res.first->second->mask;
     if (old_mask == mask || (mask & IN_MASK_CREATE)) {
       return ERRNO(EEXIST);
-    } else {
-      // remove wd to path mapping.
-      auto old_watch_descriptor = res.first->second->watch_descriptor;
-      inotify->watch_descriptors->erase(old_watch_descriptor);
-
-      // Update filter.
-      inotify->filepath_to_filter->insert({path, std::move(wd)});
     }
+
+    // remove wd to path mapping.
+    auto old_watch_descriptor = res.first->second->watch_descriptor;
+    inotify->watch_descriptors->erase(old_watch_descriptor);
+
+    // Update filter.
+    inotify->filepath_to_filter->insert({path, std::move(wd)});
   }
   // Update watch_descriptor to filepath mapping.
   inotify->watch_descriptors->insert({watch_descriptor_to_use, path});
@@ -231,17 +206,12 @@ int inotify_add_watch(int fd, const char* pathname, uint32_t mask) {
 
 __EXPORT
 int inotify_rm_watch(int fd, int wd) {
-  fdio_t* io = fdio_unsafe_fd_to_io(fd);
-  auto clean_io = fbl::MakeAutoCall([io] {
-    if (io) {
-      fdio_unsafe_release(io);
-    }
-  });
+  fdio_ptr io = fd_to_io(fd);
   if (!fdio_is_inotify(io)) {
     return ERRNO(EBADF);
   }
 
-  FdioInotify* inotify = zxio_to_inotify(fdio_get_zxio(io));
+  FdioInotify* inotify = zxio_to_inotify(&io->zxio_storage().io);
   fbl::AutoLock lock(&inotify->lock);
 
   auto iter_wd = inotify->watch_descriptors->find(wd);

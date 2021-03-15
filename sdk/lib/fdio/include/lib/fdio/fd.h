@@ -33,7 +33,7 @@ zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out);
 // Clones the current working directory.
 //
 // Upon success, |out_handle| contains a handle that represents the current
-// working directory. This handle is suitable for tranferring to another
+// working directory. This handle is suitable for transferring to another
 // process.
 //
 // # Errors

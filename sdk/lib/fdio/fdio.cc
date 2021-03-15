@@ -5,9 +5,106 @@
 #include <lib/fdio/fdio.h>
 #include <lib/zxio/ops.h>
 
-#include "internal.h"
+#include <fbl/auto_lock.h>
 
-fdio::~fdio() = default;
+#include "fdio_unistd.h"
+#include "internal.h"
+#include "zxio.h"
+
+__EXPORT
+fdio_t* fdio_null_create(void) {
+  zx::status io = fdio_internal::zxio::create();
+  if (io.is_error()) {
+    return nullptr;
+  }
+  return GetLastReference(std::move(io.value())).value().ExportToRawPtr();
+}
+
+__EXPORT
+zx_status_t fdio_create(zx_handle_t h, fdio_t** out_io) {
+  zx::status io = fdio::create(zx::handle(h));
+  if (io.is_ok()) {
+    *out_io = GetLastReference(std::move(io.value())).value().ExportToRawPtr();
+  }
+  return io.status_value();
+}
+
+__EXPORT
+int fdio_fd_create_null(void) {
+  zx::status io = fdio_internal::zxio::create();
+  if (io.is_error()) {
+    return ERROR(io.status_value());
+  }
+  std::optional fd = bind_to_fd(io.value());
+  if (fd.has_value()) {
+    return fd.value();
+  }
+  return ERRNO(EMFILE);
+}
 
 __EXPORT
 extern "C" zxio_t* fdio_get_zxio(fdio_t* io) { return &io->zxio_storage().io; }
+
+__EXPORT
+int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd) {
+  fdio_ptr owned = fbl::ImportFromRawPtr(io);
+  // If we are not given an |fd|, the |starting_fd| must be non-negative.
+  if ((fd < 0 && starting_fd < 0) || fd >= FDIO_MAX_FD) {
+    return ERRNO(EINVAL);
+  }
+
+  // Don't release under lock.
+  fdio_ptr io_to_close = nullptr;
+  {
+    fbl::AutoLock lock(&fdio_lock);
+    if (fd < 0) {
+      // A negative fd implies that any free fd value can be used
+      // TODO: bitmap, ffs, etc
+      for (fd = starting_fd; fd < FDIO_MAX_FD; fd++) {
+        if (fdio_fdtab[fd].try_set(owned)) {
+          return fd;
+        }
+      }
+      return ERRNO(EMFILE);
+    }
+    io_to_close = fdio_fdtab[fd].replace(owned);
+  }
+  return fd;
+}
+
+__EXPORT
+zx_status_t fdio_unbind_from_fd(int fd, fdio_t** out) {
+  fdio_ptr io = unbind_from_fd(fd);
+  if (io == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  std::optional ptr = GetLastReference(std::move(io));
+  if (ptr.has_value()) {
+    *out = ptr.value().ExportToRawPtr();
+    return ZX_OK;
+  }
+  return ZX_ERR_UNAVAILABLE;
+}
+
+__EXPORT
+zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
+  fdio_ptr io = unbind_from_fd(fd);
+  if (io == nullptr) {
+    return ZX_ERR_NOT_FOUND;
+  }
+  std::optional ptr = GetLastReference(std::move(io));
+  if (ptr.has_value()) {
+    return ptr.value().unwrap(out);
+  }
+  return ZX_ERR_UNAVAILABLE;
+}
+
+__EXPORT
+fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) {
+  zx::status io = fdio_internal::zxio::create();
+  if (io.is_error()) {
+    return nullptr;
+  }
+  *out_storage = &io->zxio_storage();
+  return GetLastReference(std::move(io.value())).value().ExportToRawPtr();
+}

@@ -38,35 +38,21 @@ static int checkfileat(int fd, const char* path, int flags, int err) {
   return seterr(err);
 }
 
-static bool fdok(int fd) {
-  fdio_t* io = fd_to_io(fd);
-  if (io) {
-    io->release();
-    return true;
-  }
-  return false;
-}
+static bool fdok(int fd) { return fd_to_io(fd) != nullptr; }
 
 static int checkfd(int fd, int err) {
   if (!fdok(fd)) {
-    errno = EBADF;
-    return -1;
+    return ERRNO(EBADF);
   }
   return seterr(err);
 }
 
 static int check2fds(int fd1, int fd2, int err) {
-  fdio_t* io;
-  if ((io = fd_to_io(fd1)) == nullptr) {
-    errno = EBADF;
-    return -1;
+  for (int fd : {fd1, fd2}) {
+    if (!fdok(fd)) {
+      return ERRNO(EBADF);
+    }
   }
-  io->release();
-  if ((io = fd_to_io(fd2)) == nullptr) {
-    errno = EBADF;
-    return -1;
-  }
-  io->release();
   return seterr(err);
 }
 
@@ -75,23 +61,16 @@ static int checkfilefd(const char* path, int fd, int err) {
   if (stat(path, &s)) {
     return -1;
   }
-  fdio_t* io;
-  if ((io = fd_to_io(fd)) == nullptr) {
-    errno = EBADF;
-    return -1;
-  }
-  io->release();
-  return seterr(err);
+  return checkfd(fd, err);
 }
 
 static int checksocket(int fd, int sock_err, int err) {
-  fdio_t* io = fd_to_io(fd);
+  fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     errno = EBADF;
     return -1;
   }
-  bool is_socket = fdio_is_socket(io);
-  io->release();
+  bool is_socket = fdio_is_socket(io.get());
   if (!is_socket) {
     errno = sock_err;
     return -1;

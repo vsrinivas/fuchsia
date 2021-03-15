@@ -3,43 +3,47 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/llcpp/fidl.h>
-#include <lib/fdio/unsafe.h>
 #include <lib/fdio/watcher.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include "fdio_unistd.h"
+
 namespace fio = fuchsia_io;
 
-typedef struct fdio_watcher {
+using fdio_watcher_t = struct fdio_watcher {
   zx_handle_t h;
   watchdir_func_t func;
   void* cookie;
   int fd;
-} fdio_watcher_t;
+};
 
 static zx_status_t fdio_watcher_create(int dirfd, fdio_watcher_t** out) {
-  fdio_t* io = fdio_unsafe_fd_to_io(dirfd);
+  fdio_ptr io = fd_to_io(dirfd);
   if (io == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
 
-  auto directory = fidl::UnownedClientEnd<fio::Directory>(fdio_unsafe_borrow_channel(io));
+  zx_handle_t handle;
+  zx_status_t status = io->borrow_channel(&handle);
+  if (status != ZX_OK) {
+    return status;
+  }
+  auto directory = fidl::UnownedClientEnd<fio::Directory>(handle);
   if (!directory.is_valid()) {
-    fdio_unsafe_release(io);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
+  zx::status endpoints = fidl::CreateEndpoints<fio::DirectoryWatcher>();
   if (endpoints.is_error()) {
     return endpoints.status_value();
   }
 
   auto result = fio::Directory::Call::Watch(directory, fio::wire::WATCH_MASK_ALL, 0,
                                             endpoints->server.TakeChannel());
-  fdio_unsafe_release(io);
-  zx_status_t status = result.status();
+  status = result.status();
   if (status != ZX_OK) {
     return status;
   }

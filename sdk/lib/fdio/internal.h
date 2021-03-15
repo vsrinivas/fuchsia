@@ -10,6 +10,7 @@
 #include <fuchsia/posix/socket/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/limits.h>
+#include <lib/fdio/namespace.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zx/debuglog.h>
 #include <lib/zxio/ops.h>
@@ -19,7 +20,10 @@
 #include <threads.h>
 #include <zircon/types.h>
 
-using fdio_ns_t = struct fdio_namespace;
+#include <fbl/auto_call.h>
+#include <fbl/ref_counted.h>
+
+using fdio_ptr = fbl::RefPtr<fdio>;
 
 // FDIO provides POSIX I/O functionality over various transports
 // via the fdio_t interface abstraction.
@@ -68,54 +72,24 @@ struct Errno {
 // Static assertions in unistd.cc ensure we aren't colliding.
 #define IOFLAG_FD_FLAGS IOFLAG_CLOEXEC
 
+// The |mode| argument used for |fuchsia.io.Directory/Open| calls.
+#define FDIO_CONNECT_MODE ((uint32_t)0755)
+
 // Waits until one or more |events| are signalled, or the |deadline| passes.
 // The |events| are of the form |FDIO_EVT_*|, defined in io.h.
 // If not NULL, |out_pending| returns a bitmap of all observed events.
-zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx::time deadline, uint32_t* out_pending);
+zx_status_t fdio_wait(const fdio_ptr& io, uint32_t events, zx::time deadline,
+                      uint32_t* out_pending);
 
-// Wraps a channel with an fdio_t using remote io.
-fdio_t* fdio_remote_create(fidl::ClientEnd<fuchsia_io::Node> node, zx::eventpair event);
+fdio_ptr fdio_datagram_socket_create(zx::eventpair event,
+                                     fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
 
-// Creates an |fdio_t| from a remote directory connection.
-fdio_t* fdio_dir_create(fidl::ClientEnd<fuchsia_io::Directory> dir);
-
-// Creates an |fdio_t| from a remote file connection.
-fdio_t* fdio_file_create(fidl::ClientEnd<fuchsia_io::File> file, zx::event event,
-                         zx::stream stream);
-
-// Creates an |fdio_t| from a remote PTY connection.
-fdio_t* fdio_pty_create(fidl::ClientEnd<fuchsia_hardware_pty::Device> device, zx::eventpair event);
-
-// Creates a pipe backed by a socket.
-fdio_t* fdio_pipe_create(zx::socket socket);
-
-// Creates an |fdio_t| from a VMO and a stream.
-//
-// The stream should be backed by the given VMO.
-fdio_t* fdio_vmo_create(zx::vmo vmo, zx::stream stream);
-
-// Creates an |fdio_t| for a VMO file.
-//
-// * |vmo| is the VMO that contains the contents of the file.
-// * |offset| is the index of the first byte of the file in the VMO.
-// * |length| is the number of bytes in the file.
-// * |seek| is the initial seek offset within the file (i.e., relative to
-//   |offset| within the underlying VMO).
-fdio_t* fdio_vmofile_create(fidl::ClientEnd<fuchsia_io::File> file, zx::vmo vmo, zx_off_t offset,
-                            zx_off_t length, zx_off_t seek);
-
-fdio_t* fdio_datagram_socket_create(zx::eventpair event,
-                                    fidl::ClientEnd<fuchsia_posix_socket::DatagramSocket> client);
-
-fdio_t* fdio_stream_socket_create(zx::socket socket,
-                                  fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
-                                  zx_info_socket_t info);
-
-// Creates a message port and pair of simple io fdio_t's
-zx_status_t fdio_pipe_pair(fdio_t** a, fdio_t** b, uint32_t options);
+fdio_ptr fdio_stream_socket_create(zx::socket socket,
+                                   fidl::ClientEnd<fuchsia_posix_socket::StreamSocket> client,
+                                   zx_info_socket_t info);
 
 // Creates an |fdio_t| referencing the root of the |ns| namespace.
-fdio_t* fdio_ns_open_root(fdio_ns_t* ns);
+zx::status<fdio_ptr> fdio_ns_open_root(fdio_ns_t* ns);
 
 // Change the root of the given namespace |ns| to match |io|.
 //
@@ -132,35 +106,11 @@ zx_status_t fdio_ns_set_root(fdio_ns_t* ns, fdio_t* io);
 // Otherwise, returns |ZX_ERR_INVALID_ARGS|.
 zx_status_t fdio_validate_path(const char* path, size_t* out_length);
 
-// Create an |fdio_t| from a |node| and an |info|.
-//
-// Uses |info| to determine what kind of |fdio_t| to create.
-//
-// Upon success, |out_io| receives ownership of all handles.
-//
-// Upon failure, consumes all handles.
-zx_status_t fdio_from_node_info(fidl::ClientEnd<fuchsia_io::Node> node,
-                                fuchsia_io::wire::NodeInfo info, fdio_t** out_io);
+void fdio_chdir(fdio_ptr io, const char* path);
 
-// Creates an |fdio_t| from a |node|.
-zx_status_t fdio_from_channel(fidl::ClientEnd<fuchsia_io::Node> node, fdio_t** out_io);
-
-// Creates an |fdio_t| by waiting for a |fuchsia.io/Node.OnOpen| event on |channel|.
-//
-// Uses the contents of the event to determine what kind of |fdio_t| to create.
-//
-// Upon success, |out_io| receives ownership of all handles.
-//
-// Upon failure, consumes all handles.
-zx_status_t fdio_from_on_open_event(fidl::ClientEnd<fuchsia_io::Node> client_end, fdio_t** out_io);
-
-// io will be consumed by this and must not be shared
-void fdio_chdir(fdio_t* io, const char* path);
-
-// Wraps an arbitrary handle with a fdio_t that works with wait hooks.
-// Takes ownership of handle unless shared_handle is true.
-fdio_t* fdio_waitable_create(zx_handle_t h, zx_signals_t signals_in, zx_signals_t signals_out,
-                             bool shared_handle);
+// Wraps an arbitrary handle with an object that works with wait hooks.
+zx::status<fdio_ptr> fdio_waitable_create(std::variant<zx::handle, zx::unowned_handle> h,
+                                          zx_signals_t signals_in, zx_signals_t signals_out);
 
 // Returns the sum of the capacities of all the entries in |vector|.
 size_t fdio_iovec_get_capacity(const zx_iovec_t* vector, size_t vector_count);
@@ -180,24 +130,6 @@ void fdio_iovec_copy_from(const zx_iovec_t* vector, size_t vector_count, uint8_t
 using two_path_op = zx_status_t(const char* src, size_t srclen, zx_handle_t dst_token,
                                 const char* dst, size_t dstlen);
 
-namespace fdio_internal {
-
-template <typename T>
-class AllocHelper final {
- public:
-  template <typename... Args>
-  static fdio_t* alloc(Args&&... args) {
-    return new T(std::forward<Args>(args)...);
-  }
-};
-
-template <typename T, typename... Args>
-fdio_t* alloc(Args&&... args) {
-  return AllocHelper<T>::alloc(std::forward<Args>(args)...);
-}
-
-}  // namespace fdio_internal
-
 // Lifecycle notes:
 //
 // Upon creation, objects have a refcount of 1. |acquire| and |release| are used to upref and
@@ -209,9 +141,18 @@ fdio_t* alloc(Args&&... args) {
 // unless somebody is holding a ref due to an ongoing io transaction, which will certainly fail due
 // to underlying handles being closed at which point a downref will happen and destruction will
 // follow.
-struct fdio {
-  virtual zx_status_t close() = 0;
-  virtual zx_status_t open(const char* path, uint32_t flags, uint32_t mode, fdio_t** out);
+struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
+  static zx::status<fdio_ptr> create(zx::handle handle);
+  static zx::status<fdio_ptr> create(fidl::ClientEnd<fuchsia_io::Node> node,
+                                     fuchsia_io::wire::NodeInfo info);
+
+  // Uses |fuchsia.io/Node.Describe| to obtain a |fuchsia.io/NodeInfo|.
+  static zx::status<fdio_ptr> create_with_describe(fidl::ClientEnd<fuchsia_io::Node> node);
+
+  // Waits for a |fuchsia.io/Node.OnOpen| event on channel.
+  static zx::status<fdio_ptr> create_with_on_open(fidl::ClientEnd<fuchsia_io::Node> node);
+
+  virtual zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode);
   virtual zx_status_t clone(zx_handle_t* out_handle);
 
   // |unwrap| releases the underlying handle if applicable.  The caller must ensure there are no
@@ -277,30 +218,51 @@ struct fdio {
   // Used to implement SO_SNDTIMEO. See `man 7 socket` for details.
   zx::duration& sndtimeo() { return sndtimeo_; }
 
-  void acquire() { refcount_.fetch_add(1); }
-
-  zx_status_t release() {
-    if (refcount_.fetch_sub(1) == 1) {
-      zx_status_t status = close();
-      delete this;
-      return status;
+  // Automatically calls |fdio_t::Close| on drop.
+  struct last_reference {
+   public:
+    explicit last_reference(fdio_t* ptr) : ptr_(ptr, deleter) {}
+    ~last_reference() {
+      if (ptr_) {
+        ptr_->close();
+      }
     }
-    return ZX_OK;
-  }
 
-  bool is_last_reference() { return refcount_.load() == 1; }
+    fdio_t* ExportToRawPtr() { return ptr_.release(); }
+
+    zx_status_t unwrap(zx_handle_t* out_handle) { return ptr_->unwrap(out_handle); }
+
+    // Close and destroy the underlying object.
+    zx_status_t Close() { return std::exchange(ptr_, nullptr)->close(); }
+
+   private:
+    // Custom deleter to keep the destructor buried.
+    std::unique_ptr<fdio_t, void (*)(fdio_t*)> ptr_;
+  };
 
  protected:
-  friend class fdio_internal::AllocHelper<fdio>;
+  friend class fbl::internal::MakeRefCountedHelper<fdio>;
+  // TODO(tamird/johngro): can we bury ExportToRawPtr? The only user outside of |fdio_slot| and
+  // |last_reference| is |fdio_unsafe_fd_to_io|.
+  //
+  // TODO(tamird/johngro): can we bury ImportFromRawPtr? The only users outside of |fdio_slot| are
+  // |fdio_bind_to_fd| and |fdio_unsafe_release|.
+  friend class fbl::RefPtr<fdio>;
+  friend class fbl::Recyclable<fdio>;
+  friend std::optional<last_reference> GetLastReference(fdio_ptr io);
+
+  static void deleter(fdio_t* ptr) { delete ptr; }
 
   fdio() = default;
   virtual ~fdio();
 
+  void fbl_recycle() {
+    close();
+    delete this;
+  }
+
  private:
-  // The number of references on this object. Note that each appearance
-  // in the fd table counts as one reference on the corresponding object.
-  // Ongoing operations will also contribute to the refcount.
-  std::atomic_int_fast32_t refcount_ = 1;
+  virtual zx_status_t close() = 0;
 
   uint32_t ioflag_ = 0;
 
@@ -312,20 +274,91 @@ struct fdio {
 };
 
 namespace fdio_internal {
+
 using base = fdio_t;
+
 }  // namespace fdio_internal
 
-using fdio_available = struct {};
-using fdio_reserved = struct {};
+// TODO(tamird): every operation on this type should require the global lock.
+struct fdio_slot {
+ public:
+  DISALLOW_COPY_ASSIGN_AND_MOVE(fdio_slot);
+
+  fdio_slot() = default;
+
+  fdio_ptr get() {
+    fdio_t** ptr = std::get_if<fdio_t*>(&inner_);
+    if (ptr != nullptr) {
+      return fbl::RefPtr(*ptr);
+    }
+    return nullptr;
+  }
+
+  fdio_ptr release() {
+    fdio_t** ptr = std::get_if<fdio_t*>(&inner_);
+    if (ptr != nullptr) {
+      fdio_ptr io = fbl::ImportFromRawPtr(*ptr);
+      inner_ = available{};
+      return io;
+    }
+    return nullptr;
+  }
+
+  bool try_set(fdio_ptr io) {
+    if (std::holds_alternative<available>(inner_)) {
+      inner_ = fbl::ExportToRawPtr(&io);
+      return true;
+    }
+    return false;
+  }
+
+  fdio_ptr replace(fdio_ptr io) {
+    auto previous = std::exchange(inner_, fbl::ExportToRawPtr(&io));
+    fdio_t** ptr = std::get_if<fdio_t*>(&previous);
+    if (ptr != nullptr) {
+      return fbl::ImportFromRawPtr(*ptr);
+    }
+    return nullptr;
+  }
+
+  std::optional<void (fdio_slot::*)()> try_reserve() {
+    if (std::holds_alternative<available>(inner_)) {
+      inner_ = reserved{};
+      return &fdio_slot::release_reservation;
+    }
+    return std::nullopt;
+  }
+
+  bool try_fill(fdio_ptr io) {
+    if (std::holds_alternative<reserved>(inner_)) {
+      inner_ = fbl::ExportToRawPtr(&io);
+      return true;
+    }
+    return false;
+  }
+
+ private:
+  struct available {};
+  struct reserved {};
+
+  void release_reservation() {
+    if (std::holds_alternative<reserved>(inner_)) {
+      inner_ = available{};
+    }
+  }
+
+  // TODO(https::/fxbug.dev/72214): clang incorrectly rejects std::variant<.., fdio_ptr> as a
+  // non-literal type. When that is fixed, change this |fdio_t*| to |fdio_ptr|.
+  std::variant<available, reserved, fdio_t*> inner_;
+};
 
 using fdio_state_t = struct {
   mtx_t lock;
   mtx_t cwd_lock __TA_ACQUIRED_BEFORE(lock);
   mode_t umask __TA_GUARDED(lock);
-  fdio_t* root __TA_GUARDED(lock);
-  fdio_t* cwd __TA_GUARDED(lock);
-  std::array<std::variant<fdio_available, fdio_reserved, fdio_t*>, FDIO_MAX_FD> fdtab
-      __TA_GUARDED(lock);
+  fdio_slot root __TA_GUARDED(lock);
+  fdio_slot cwd __TA_GUARDED(lock);
+  std::array<fdio_slot, FDIO_MAX_FD> fdtab __TA_GUARDED(lock);
   fdio_ns_t* ns __TA_GUARDED(lock);
   char cwd_path[PATH_MAX] __TA_GUARDED(cwd_lock);
 };
@@ -339,20 +372,6 @@ extern fdio_state_t __fdio_global_state;
 #define fdio_cwd_path (__fdio_global_state.cwd_path)
 #define fdio_fdtab (__fdio_global_state.fdtab)
 #define fdio_root_ns (__fdio_global_state.ns)
-
-// Returns an fd number greater than or equal to |starting_fd|, following the
-// same rules as fdio_bind_fd. If there are no free file descriptors, -1 is
-// returned and |errno| is set to EMFILE. The returned |fd| is not valid for
-// use outside of |fdio_assign_reserved| and |fdio_release_reserved|.
-int fdio_reserve_fd(int starting_fd);
-
-// Assign the given |io| to the reserved |fd|. If |fd| is not reserved, then -1
-// is returned and errno is set to EINVAL.
-int fdio_assign_reserved(int fd, fdio_t* io);
-
-// Unassign the reservation at |fd|. If |fd| does not resolve to a reservation
-// then -1 is returned and errno is set to EINVAL, otherwise |fd| is returned.
-int fdio_release_reserved(int fd);
 
 template <class T>
 zx::status<typename T::SyncClient>& get_client() {

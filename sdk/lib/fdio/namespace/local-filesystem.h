@@ -15,6 +15,7 @@
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 
+#include "../internal.h"
 #include "local-vnode.h"
 
 namespace fdio_internal {
@@ -35,10 +36,10 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   static fbl::RefPtr<fdio_namespace> Create() { return fbl::AdoptRef(new fdio_namespace()); }
   ~fdio_namespace();
 
-  // Create a new |fdio_t| object referring to the root of this namespace.
+  // Create a new object referring to the root of this namespace.
   //
   // Returns |nullptr| on failure.
-  fdio_t* OpenRoot() const;
+  zx::status<fdio_ptr> OpenRoot() const;
 
   // Change the root of this namespace to match |io|.
   //
@@ -55,11 +56,11 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
   zx_status_t Readdir(const LocalVnode& vn, DirentIteratorState* state, void* buffer, size_t length,
                       zxio_dirent_t** out_entry) const;
 
-  // Create a new |fdio_t| object referring to the object at |path|.
+  // Create a new object referring to the object at |path|.
   //
   // This object may represent either a local node, or a remote object.
-  zx_status_t Open(fbl::RefPtr<LocalVnode> vn, const char* path, uint32_t flags, uint32_t mode,
-                   fdio_t** out) const;
+  zx::status<fdio_ptr> Open(fbl::RefPtr<LocalVnode> vn, const char* path, uint32_t flags,
+                            uint32_t mode) const;
 
   // Connect to a remote object within the namespace.
   //
@@ -81,10 +82,10 @@ struct fdio_namespace : public fbl::RefCounted<fdio_namespace> {
  private:
   fdio_namespace();
 
-  // Creates a local |fdio_t| object with a connection to a vnode.
+  // Creates a local object with a connection to a vnode.
   // This object will increase the number of references to the namespace by
   // one.
-  fdio_t* CreateConnection(fbl::RefPtr<LocalVnode> vn) const;
+  zx::status<fdio_ptr> CreateConnection(fbl::RefPtr<LocalVnode> vn) const;
 
   // Lookup repeatedly to traverse vnodes within the local filesystem.
   //

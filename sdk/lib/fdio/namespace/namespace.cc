@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <zircon/types.h>
@@ -13,11 +12,11 @@
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 
-#include "../internal.h"
+#include "../fdio_unistd.h"
 #include "local-connection.h"
 #include "local-filesystem.h"
 
-fdio_t* fdio_ns_open_root(fdio_ns_t* ns) { return ns->OpenRoot(); }
+zx::status<fdio_ptr> fdio_ns_open_root(fdio_ns_t* ns) { return ns->OpenRoot(); }
 
 zx_status_t fdio_ns_set_root(fdio_ns_t* ns, fdio_t* io) { return ns->SetRoot(io); }
 
@@ -70,26 +69,25 @@ zx_status_t fdio_ns_bind_fd(fdio_ns_t* ns, const char* path, int fd) {
 
 __EXPORT
 int fdio_ns_opendir(fdio_ns_t* ns) {
-  fdio_t* io = ns->OpenRoot();
-  if (io == nullptr) {
+  zx::status io = ns->OpenRoot();
+  if (io.is_error()) {
     errno = ENOMEM;
     return -1;
   }
-  int fd = fdio_bind_to_fd(io, -1, 0);
-  if (fd < 0) {
-    io->release();
-    errno = ENOMEM;
+  std::optional fd = bind_to_fd(io.value());
+  if (fd.has_value()) {
+    return fd.value();
   }
-  return fd;
+  return ERRNO(EMFILE);
 }
 
 __EXPORT
 zx_status_t fdio_ns_chdir(fdio_ns_t* ns) {
-  fdio_t* io = ns->OpenRoot();
-  if (io == nullptr) {
+  zx::status io = ns->OpenRoot();
+  if (io.is_error()) {
     return ZX_ERR_NO_MEMORY;
   }
-  fdio_chdir(io, "/");
+  fdio_chdir(io.value(), "/");
   return ZX_OK;
 }
 

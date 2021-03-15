@@ -14,7 +14,6 @@
 
 #include <fbl/ref_ptr.h>
 
-#include "../internal.h"
 #include "local-filesystem.h"
 #include "local-vnode.h"
 
@@ -70,9 +69,9 @@ struct local_connection : public base {
 
   // Expects a canonical path (no ..) with no leading
   // slash and no trailing slash
-  zx_status_t open(const char* path, uint32_t flags, uint32_t mode, fdio_t** out) override {
+  zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode) override {
     auto& dir = local_dir();
-    return dir.fs->Open(fbl::RefPtr(dir.vn), path, flags, mode, out);
+    return dir.fs->Open(fbl::RefPtr(dir.vn), path, flags, mode);
   }
 
   zx_status_t get_attr(zxio_node_attributes_t* out) override {
@@ -122,7 +121,8 @@ struct local_connection : public base {
   bool is_local_dir() override { return true; }
 
  protected:
-  friend class AllocHelper<local_connection>;
+  friend class fbl::internal::MakeRefCountedHelper<local_connection>;
+  friend class fbl::RefPtr<local_connection>;
 
   local_connection() = default;
   ~local_connection() override = default;
@@ -142,10 +142,11 @@ struct local_connection : public base {
 
 }  // namespace
 
-fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs, fbl::RefPtr<LocalVnode> vn) {
-  auto* io = fdio_internal::alloc<local_connection>();
+zx::status<fdio_ptr> CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs,
+                                           fbl::RefPtr<LocalVnode> vn) {
+  fdio_ptr io = fbl::MakeRefCounted<local_connection>();
   if (io == nullptr) {
-    return nullptr;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   // Invoke placement new on the new LocalConnection. Since the object is trivially
   // destructible, we can avoid invoking the destructor.
@@ -159,7 +160,7 @@ fdio_t* CreateLocalConnection(fbl::RefPtr<const fdio_namespace> fs, fbl::RefPtr<
   // in |zxio_dir_close()|.
   dir->fs = fbl::ExportToRawPtr(&fs);
   dir->vn = fbl::ExportToRawPtr(&vn);
-  return io;
+  return zx::ok(io);
 }
 
 fbl::RefPtr<LocalVnode> GetLocalNodeFromConnectionIfAny(fdio_t* io) {

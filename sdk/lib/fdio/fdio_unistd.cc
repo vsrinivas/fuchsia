@@ -4,6 +4,61 @@
 
 #include "fdio_unistd.h"
 
+#include <fbl/auto_lock.h>
+
+#include "internal.h"
+
+std::optional<int> bind_to_fd(const fdio_ptr& io) {
+  fbl::AutoLock lock(&fdio_lock);
+  return bind_to_fd_locked(io);
+}
+
+std::optional<int> bind_to_fd_locked(const fdio_ptr& io) {
+  for (size_t fd = 0; fd < fdio_fdtab.size(); ++fd) {
+    if (fdio_fdtab[fd].try_set(io)) {
+      return fd;
+    }
+  }
+  return std::nullopt;
+}
+
+namespace {
+
+fdio_slot* slot_locked(int fd) __TA_REQUIRES(fdio_lock) {
+  if ((fd < 0) || (fd >= FDIO_MAX_FD)) {
+    return nullptr;
+  }
+  return &fdio_fdtab[fd];
+}
+
+}  // namespace
+
+fdio_ptr fd_to_io(int fd) {
+  fbl::AutoLock lock(&fdio_lock);
+  return fd_to_io_locked(fd);
+}
+
+fdio_ptr fd_to_io_locked(int fd) {
+  fdio_slot* slot = slot_locked(fd);
+  if (slot == nullptr) {
+    return nullptr;
+  }
+  return slot->get();
+}
+
+fdio_ptr unbind_from_fd(int fd) {
+  fbl::AutoLock lock(&fdio_lock);
+  return unbind_from_fd_locked(fd);
+}
+
+fdio_ptr unbind_from_fd_locked(int fd) __TA_REQUIRES(fdio_lock) {
+  fdio_slot* slot = slot_locked(fd);
+  if (slot == nullptr) {
+    return nullptr;
+  }
+  return slot->release();
+}
+
 // TODO(fxbug.dev/30921): determine complete correct mapping
 int fdio_status_to_errno(zx_status_t status) {
   switch (status) {

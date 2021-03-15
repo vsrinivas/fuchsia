@@ -5,33 +5,33 @@
 #ifndef LIB_FDIO_FDIO_UNISTD_H_
 #define LIB_FDIO_FDIO_UNISTD_H_
 
-#include <lib/fdio/unsafe.h>
+#include <zircon/compiler.h>
 
 #include <cerrno>
 
-// needed for e.g. fdio_release; see fd_to_io below.
 #include "internal.h"
 
-// fd_to_io calls fdio_acquire on the fd, must call fdio_release() when done.
-#define fd_to_io(n) fdio_unsafe_fd_to_io(n)
+std::optional<int> bind_to_fd_locked(const fdio_ptr& io) __TA_REQUIRES(fdio_lock);
+std::optional<int> bind_to_fd(const fdio_ptr& io) __TA_EXCLUDES(fdio_lock);
+fdio_ptr fd_to_io_locked(int fd) __TA_REQUIRES(fdio_lock);
+fdio_ptr fd_to_io(int fd) __TA_EXCLUDES(fdio_lock);
+fdio_ptr unbind_from_fd_locked(int fd) __TA_REQUIRES(fdio_lock);
+fdio_ptr unbind_from_fd(int fd) __TA_EXCLUDES(fdio_lock);
 
 int fdio_status_to_errno(zx_status_t status);
 
-// set errno to the closest match for error and return -1
-static inline int ERROR(zx_status_t error) {
-  errno = fdio_status_to_errno(error);
+// Sets |errno| to the nearest match for |status| and returns -1;
+static inline int ERROR(zx_status_t status) {
+  errno = fdio_status_to_errno(status);
   return -1;
 }
 
-// if status is negative, set errno as appropriate and return -1
-// otherwise return status
+// Returns 0 if |status| is |ZX_OK|, otherwise delegates to |ERROR|.
 static inline int STATUS(zx_status_t status) {
-  if (status < 0) {
-    errno = fdio_status_to_errno(status);
-    return -1;
-  } else {
-    return status;
+  if (status == ZX_OK) {
+    return 0;
   }
+  return ERROR(status);
 }
 
 // set errno to e, return -1

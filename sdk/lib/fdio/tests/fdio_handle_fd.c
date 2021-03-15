@@ -208,25 +208,23 @@ TEST(HandleFDTest, CreateFDFromConnectedSocket) {
 }
 
 TEST(HandleFDTest, BindToFDInvalid) {
-  fdio_t* fdio = fdio_null_create();
-  EXPECT_NOT_NULL(fdio, "");
+  {
+    fdio_t* fdio = fdio_null_create();
+    EXPECT_NOT_NULL(fdio);
 
-  // When binding and not providing a specific |fd|, the
-  // |starting_fd| must be nonnegative.
-  int fd = fdio_bind_to_fd(fdio, -1, -1);
-  int err = errno;
-  EXPECT_LT(fd, 0, "");
-  EXPECT_EQ(err, EINVAL, "");
+    // When binding and not providing a specific |fd|, the
+    // |starting_fd| must be nonnegative.
+    EXPECT_LT(fdio_bind_to_fd(fdio, -1, -1), 0);
+    EXPECT_EQ(errno, EINVAL, "%s", strerror(errno));
+  }
 
-  // Starting with a huge |starting_fd| will fail since the table
-  // does not hold so many.
-  fd = fdio_bind_to_fd(fdio, -1, INT_MAX);
-  err = errno;
-  EXPECT_LT(fd, 0, "");
-  EXPECT_EQ(err, EMFILE, "");
+  {
+    fdio_t* fdio = fdio_null_create();
+    EXPECT_NOT_NULL(fdio);
 
-  // Do a successful one just to clean up the fdio and not leak it.
-  fd = fdio_bind_to_fd(fdio, -1, 0);
-  EXPECT_GE(fd, 0, "");
-  EXPECT_EQ(0, close(fd), "");
+    // Starting with a huge |starting_fd| will fail since the table
+    // does not hold so many.
+    EXPECT_LT(fdio_bind_to_fd(fdio, -1, INT_MAX), 0);
+    EXPECT_EQ(errno, EMFILE, "%s", strerror(errno));
+  }
 }

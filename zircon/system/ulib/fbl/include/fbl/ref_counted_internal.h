@@ -83,6 +83,10 @@ class RefCountedBase {
     return false;
   }
 
+  bool IsLastReference() const __WARN_UNUSED_RESULT {
+    return ref_count_.load(std::memory_order_seq_cst) == 1;
+  }
+
   void Adopt() const {
     if constexpr (EnableAdoptionValidator) {
       int32_t expected = kPreAdoptSentinel;

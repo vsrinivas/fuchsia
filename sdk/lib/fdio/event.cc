@@ -5,19 +5,19 @@
 #include <fuchsia/io2/llcpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/sync/mutex.h>
 #include <lib/zx/event.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/ops.h>
 #include <sys/eventfd.h>
 #include <zircon/assert.h>
-#include <zircon/syscalls.h>
 
 #include <algorithm>
-#include <utility>
+
+#include <fbl/auto_lock.h>
 
 #include "fdio_unistd.h"
 #include "internal.h"
+#include "zxio.h"
 
 namespace fio2 = fuchsia_io2;
 
@@ -25,25 +25,22 @@ namespace fio2 = fuchsia_io2;
 #define FDIO_EVENT_WRITABLE static_cast<zx_signals_t>(fio2::wire::DeviceSignal::WRITABLE)
 
 // An implementation of a POSIX eventfd.
-typedef struct fdio_event {
+struct fdio_event_t {
   zxio_t io;
 
-  // The zx::event object that implements the eventfd.
-  zx_handle_t handle;
+  zx::event handle;
 
-  sync_mutex_t lock;
+  mtx_t lock;
   eventfd_t value __TA_GUARDED(lock);
   int flags __TA_GUARDED(lock);
-} fdio_event_t;
+};
 
 static_assert(sizeof(fdio_event_t) <= sizeof(zxio_storage_t),
               "fdio_event_t must fit inside zxio_storage_t.");
 
 static zx_status_t fdio_event_close(zxio_t* io) {
   fdio_event_t* event = reinterpret_cast<fdio_event_t*>(io);
-  zx_handle_t handle = event->handle;
-  event->handle = ZX_HANDLE_INVALID;
-  zx_handle_close(handle);
+  event->handle.reset();
   return ZX_OK;
 }
 
@@ -55,9 +52,8 @@ static void fdio_event_update_signals(fdio_event_t* event) __TA_REQUIRES(event->
   if (event->value < UINT64_MAX - 1) {
     set_mask |= FDIO_EVENT_WRITABLE;
   }
-  zx_status_t status =
-      zx_object_signal(event->handle, FDIO_EVENT_READABLE | FDIO_EVENT_WRITABLE, set_mask);
-  ZX_ASSERT(status == ZX_OK);
+  zx_status_t status = event->handle.signal(FDIO_EVENT_READABLE | FDIO_EVENT_WRITABLE, set_mask);
+  ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
 }
 
 static zx_status_t fdio_event_readv(zxio_t* io, const zx_iovec_t* vector, size_t vector_count,
@@ -68,9 +64,8 @@ static zx_status_t fdio_event_readv(zxio_t* io, const zx_iovec_t* vector, size_t
 
   fdio_event_t* event = reinterpret_cast<fdio_event_t*>(io);
 
-  sync_mutex_lock(&event->lock);
+  fbl::AutoLock lock(&event->lock);
   if (event->value == 0u) {
-    sync_mutex_unlock(&event->lock);
     return ZX_ERR_SHOULD_WAIT;
   }
 
@@ -87,7 +82,6 @@ static zx_status_t fdio_event_readv(zxio_t* io, const zx_iovec_t* vector, size_t
                      vector_count, out_actual);
 
   fdio_event_update_signals(event);
-  sync_mutex_unlock(&event->lock);
   return ZX_OK;
 }
 
@@ -107,7 +101,7 @@ static zx_status_t fdio_event_writev(zxio_t* io, const zx_iovec_t* vector, size_
 
   fdio_event_t* event = reinterpret_cast<fdio_event_t*>(io);
 
-  sync_mutex_lock(&event->lock);
+  fbl::AutoLock lock(&event->lock);
   uint64_t new_value = 0u;
   if (add_overflow(event->value, increment, &new_value) || new_value == UINT64_MAX) {
     // If we overflow, we need to block until the next read, which means we need to clear the
@@ -133,17 +127,15 @@ static zx_status_t fdio_event_writev(zxio_t* io, const zx_iovec_t* vector, size_
     // to be useful. If not, we might need to restructure how we do blocking
     // read and write operations (e.g., by including the "should block" flag in
     // zxio_flags_t.
-    zx_status_t status = zx_object_signal(event->handle, FDIO_EVENT_WRITABLE, ZX_SIGNAL_NONE);
-    ZX_ASSERT(status == ZX_OK);
+    zx_status_t status = event->handle.signal(FDIO_EVENT_WRITABLE, ZX_SIGNAL_NONE);
+    ZX_ASSERT_MSG(status == ZX_OK, "%s", zx_status_get_string(status));
 
-    sync_mutex_unlock(&event->lock);
     return ZX_ERR_SHOULD_WAIT;
   }
 
   event->value = new_value;
 
   fdio_event_update_signals(event);
-  sync_mutex_unlock(&event->lock);
   *out_actual = actual;
   return ZX_OK;
 }
@@ -158,7 +150,7 @@ static void fdio_event_wait_begin(zxio_t* io, zxio_signals_t zxio_signals, zx_ha
   if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
     zx_signals |= FDIO_EVENT_WRITABLE;
   }
-  *out_handle = event->handle;
+  *out_handle = event->handle.get();
   *out_zx_signals = zx_signals;
 }
 
@@ -184,39 +176,32 @@ static constexpr zxio_ops_t fdio_event_ops = []() {
   return ops;
 }();
 
-static fdio_t* fdio_event_create(zx::event handle, eventfd_t initial_value, int flags) {
-  zxio_storage_t* storage = nullptr;
-  fdio_t* io = fdio_zxio_create(&storage);
-  if (io == nullptr) {
-    return nullptr;
-  }
-  fdio_event_t* event = reinterpret_cast<fdio_event_t*>(storage);
-  zxio_init(&event->io, &fdio_event_ops);
-  event->handle = handle.release();
-  event->lock = {};
-  sync_mutex_lock(&event->lock);
-  event->value = initial_value;
-  event->flags = flags;
-  fdio_event_update_signals(event);
-  sync_mutex_unlock(&event->lock);
-  return io;
-}
-
 __EXPORT
 int eventfd(unsigned int initval, int flags) {
   if (flags & ~(EFD_CLOEXEC | EFD_NONBLOCK | EFD_SEMAPHORE)) {
     return ERRNO(EINVAL);
   }
 
-  zx::event event;
-  zx_status_t status = zx::event::create(0, &event);
+  zx::event handle;
+  zx_status_t status = zx::event::create(0, &handle);
   if (status != ZX_OK) {
     return ERROR(status);
   }
 
-  fdio_t* io = nullptr;
-  if ((io = fdio_event_create(std::move(event), initval, flags)) == nullptr) {
-    return ERROR(ZX_ERR_NO_MEMORY);
+  zx::status io = fdio_internal::zxio::create();
+  if (io.is_error()) {
+    return ERROR(io.status_value());
+  }
+
+  fdio_event_t* event = new (&io->zxio_storage()) fdio_event_t{
+      .handle = std::move(handle),
+      .value = initval,
+      .flags = flags,
+  };
+  zxio_init(&event->io, &fdio_event_ops);
+  {
+    fbl::AutoLock lock(&event->lock);
+    fdio_event_update_signals(event);
   }
 
   if (flags & EFD_CLOEXEC) {
@@ -227,12 +212,11 @@ int eventfd(unsigned int initval, int flags) {
     io->ioflag() |= IOFLAG_NONBLOCK;
   }
 
-  int fd = fdio_bind_to_fd(io, -1, 0);
-  if (fd < 0) {
-    io->release();
+  std::optional fd = bind_to_fd(io.value());
+  if (fd.has_value()) {
+    return fd.value();
   }
-  // fdio_bind_to_fd already sets errno.
-  return fd;
+  return ERRNO(EMFILE);
 }
 
 __EXPORT

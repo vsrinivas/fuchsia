@@ -20,15 +20,12 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
+#include <sdk/lib/fdio/zxio.h>
 
-#include "../internal.h"
 #include "local-connection.h"
 #include "local-vnode.h"
 
 namespace fio = fuchsia_io;
-
-// The |mode| argument used for |fuchsia.io.Directory/Open| calls.
-#define FDIO_CONNECT_MODE ((uint32_t)0755)
 
 namespace {
 
@@ -115,48 +112,45 @@ zx_status_t fdio_namespace::WalkLocked(fbl::RefPtr<LocalVnode>* in_out_vn,
   }
 }
 
-// Open |path| relative to |vn| as an |fdio_t|.
+// Open |path| relative to |vn|.
 //
 // |flags| and |mode| are passed to |fuchsia.io.Directory/Open| as |flags| and |mode|, respectively.
 //
 // If |flags| includes |ZX_FS_FLAG_DESCRIBE|, this function reads the resulting
 // |fuchsia.io.Node/OnOpen| event from the newly created channel and creates an
-// appropriate |fdio_t| object to interact with the remote object.
+// appropriate object to interact with the remote object.
 //
-// Otherwise, this function creates a generic "remote" |fdio_t| object.
-zx_status_t fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char* path, uint32_t flags,
-                                 uint32_t mode, fdio_t** out) const {
+// Otherwise, this function creates a generic "remote" object.
+zx::status<fdio_ptr> fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char* path,
+                                          uint32_t flags, uint32_t mode) const {
   {
     fbl::AutoLock lock(&lock_);
     zx_status_t status = WalkLocked(&vn, &path);
     if (status != ZX_OK) {
-      return status;
+      return zx::error(status);
     }
 
     if (!vn->Remote().is_valid()) {
       // The Vnode exists, but it has no remote object. Open a local reference.
-      if ((*out = CreateConnection(vn)) == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-      }
-      return ZX_OK;
+      return CreateConnection(vn);
     }
   }
 
   // If we're trying to mkdir over top of a mount point,
   // the correct error is EEXIST
   if ((flags & ZX_FS_FLAG_CREATE) && !strcmp(path, ".")) {
-    return ZX_ERR_ALREADY_EXISTS;
+    return zx::error(ZX_ERR_ALREADY_EXISTS);
   }
 
   size_t length;
   zx_status_t status = fdio_validate_path(path, &length);
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
-  auto endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
   if (endpoints.is_error()) {
-    return endpoints.status_value();
+    return endpoints.take_error();
   }
 
   // Active remote connections are immutable, so referencing remote here
@@ -165,19 +159,14 @@ zx_status_t fdio_namespace::Open(fbl::RefPtr<LocalVnode> vn, const char* path, u
                                       std::move(endpoints->server))
                .status();
   if (status != ZX_OK) {
-    return status;
+    return zx::error(status);
   }
 
   if (flags & ZX_FS_FLAG_DESCRIBE) {
-    return fdio_from_on_open_event(std::move(endpoints->client), out);
+    return fdio::create_with_on_open(std::move(endpoints->client));
   }
 
-  fdio_t* io = fdio_remote_create(std::move(endpoints->client), zx::eventpair{});
-  if (io == nullptr) {
-    return ZX_ERR_NO_RESOURCES;
-  }
-  *out = io;
-  return ZX_OK;
+  return fdio_internal::remote::create(std::move(endpoints->client), zx::eventpair{});
 }
 
 zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* state, void* buffer,
@@ -228,7 +217,7 @@ zx_status_t fdio_namespace::Readdir(const LocalVnode& vn, DirentIteratorState* s
   return ZX_OK;
 }
 
-fdio_t* fdio_namespace::CreateConnection(fbl::RefPtr<LocalVnode> vn) const {
+zx::status<fdio_ptr> fdio_namespace::CreateConnection(fbl::RefPtr<LocalVnode> vn) const {
   return fdio_internal::CreateLocalConnection(fbl::RefPtr(this), std::move(vn));
 }
 
@@ -413,21 +402,19 @@ zx_status_t fdio_namespace::Bind(const char* path, fidl::ClientEnd<fio::Director
   return ZX_OK;
 }
 
-fdio_t* fdio_namespace::OpenRoot() const {
-  fbl::AutoLock lock(&lock_);
-  if (!root_->Remote().is_valid()) {
-    return CreateConnection(root_);
+zx::status<fdio_ptr> fdio_namespace::OpenRoot() const {
+  fbl::RefPtr<LocalVnode> vn = [this]() {
+    fbl::AutoLock lock(&lock_);
+    return root_;
+  }();
+
+  if (!vn->Remote().is_valid()) {
+    return CreateConnection(vn);
   }
 
-  // We may safely access Remote() after unlocking because:
-  // - Remotes are immutable on LocalVnodes once they have been set (immutability is
-  // guaranteed).
-  fbl::RefPtr<LocalVnode> vn = root_;
-  lock.release();
-
-  auto endpoints = fidl::CreateEndpoints<fio::Node>();
+  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
   if (endpoints.is_error()) {
-    return nullptr;
+    return endpoints.take_error();
   }
 
   zx_status_t status =
@@ -436,15 +423,10 @@ fdio_t* fdio_namespace::OpenRoot() const {
                                   std::move(endpoints->server))
           .status();
   if (status != ZX_OK) {
-    return nullptr;
+    return zx::error(status);
   }
 
-  fdio_t* io;
-  status = fdio_from_on_open_event(std::move(endpoints->client), &io);
-  if (status != ZX_OK) {
-    return nullptr;
-  }
-  return io;
+  return fdio::create_with_on_open(std::move(endpoints->client));
 }
 
 zx_status_t fdio_namespace::SetRoot(fdio_t* io) {
@@ -477,7 +459,10 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
   es.bytes = sizeof(fdio_flat_namespace_t);
   es.count = 0;
 
-  fbl::AutoLock lock(&lock_);
+  fbl::RefPtr<LocalVnode> vn = [this]() {
+    fbl::AutoLock lock(&lock_);
+    return root_;
+  }();
 
   auto count_callback = [&es](const fbl::StringPiece& path,
                               const fidl::ClientEnd<fio::Directory>& client_end) {
@@ -488,7 +473,9 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
     es.count += 1;
     return ZX_OK;
   };
-  fdio_internal::EnumerateRemotes(*root_, count_callback);
+  if (zx_status_t status = fdio_internal::EnumerateRemotes(*vn, count_callback); status != ZX_OK) {
+    return status;
+  }
 
   fdio_flat_namespace_t* flat = static_cast<fdio_flat_namespace_t*>(malloc(es.bytes));
   if (flat == nullptr) {
@@ -520,19 +507,16 @@ zx_status_t fdio_namespace::Export(fdio_flat_namespace_t** out) const {
     return ZX_OK;
   };
 
-  zx_status_t status = fdio_internal::EnumerateRemotes(*root_, export_callback);
-  lock.release();
-
-  if (status != ZX_OK) {
+  if (zx_status_t status = fdio_internal::EnumerateRemotes(*vn, export_callback); status != ZX_OK) {
     zx_handle_close_many(es.handle, es.count);
     free(flat);
-  } else {
-    flat->count = es.count;
-    flat->handle = es.handle;
-    flat->type = es.type;
-    flat->path = (const char* const*)es.path;
-    *out = flat;
+    return status;
   }
 
-  return status;
+  flat->count = es.count;
+  flat->handle = es.handle;
+  flat->type = es.type;
+  flat->path = es.path;
+  *out = flat;
+  return ZX_OK;
 }

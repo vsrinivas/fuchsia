@@ -2,62 +2,55 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
-#include <lib/fdio/unsafe.h>
-#include <zircon/assert.h>
 
 #include <fbl/auto_lock.h>
 
+#include "fdio_unistd.h"
 #include "internal.h"
 
 __EXPORT
 zx_status_t fdio_fd_create(zx_handle_t handle, int* fd_out) {
-  fdio_t* io = nullptr;
-  zx_status_t status = fdio_create(handle, &io);
-  if (status != ZX_OK) {
-    return status;
+  zx::status io = fdio::create(zx::handle(handle));
+  if (io.is_error()) {
+    return io.status_value();
   }
-  int fd = fdio_bind_to_fd(io, -1, 0);
-  if (fd < 0) {
-    io->release();
-    return ZX_ERR_BAD_STATE;
+  std::optional fd = bind_to_fd(io.value());
+  if (fd.has_value()) {
+    *fd_out = fd.value();
+    return ZX_OK;
   }
-  *fd_out = fd;
-  return ZX_OK;
+  return ZX_ERR_BAD_STATE;
 }
 
 __EXPORT
 zx_status_t fdio_cwd_clone(zx_handle_t* out_handle) {
-  fdio_t* cwd = []() {
+  fdio_ptr cwd = []() {
     fbl::AutoLock lock(&fdio_lock);
-    return fdio_cwd_handle;
+    return fdio_cwd_handle.get();
   }();
   return cwd->clone(out_handle);
 }
 
 __EXPORT
 zx_status_t fdio_fd_clone(int fd, zx_handle_t* out_handle) {
-  fdio_t* io;
-  if ((io = fdio_unsafe_fd_to_io(fd)) == nullptr) {
+  fdio_ptr io = fd_to_io(fd);
+  if (io == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
   // TODO(fxbug.dev/30920): implement/honor close-on-exec flag
-  zx_status_t status = io->clone(out_handle);
-  io->release();
-  return status;
+  return io->clone(out_handle);
 }
 
 __EXPORT
 zx_status_t fdio_fd_transfer(int fd, zx_handle_t* out_handle) {
-  fdio_t* io;
-  zx_status_t status = fdio_unbind_from_fd(fd, &io);
-  if (status != ZX_OK) {
-    return status;
+  fdio_ptr io = unbind_from_fd(fd);
+  if (io == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
   }
-  // Unwrapping here is safe, because |fdio_unbind_from_fd| will only succeed
-  // if we have the last unique reference to |io|.
-  status = io->unwrap(out_handle);
-  io->release();
-  return status;
+  std::optional ptr = GetLastReference(std::move(io));
+  if (ptr.has_value()) {
+    return ptr.value().unwrap(out_handle);
+  }
+  return ZX_ERR_UNAVAILABLE;
 }

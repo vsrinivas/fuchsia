@@ -5,7 +5,6 @@
 #include <fcntl.h>
 #include <fuchsia/net/llcpp/fidl.h>
 #include <ifaddrs.h>
-#include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
 #include <netdb.h>
 #include <poll.h>
@@ -19,6 +18,7 @@
 #include <mutex>
 
 #include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 
 #include "fdio_unistd.h"
 #include "internal.h"
@@ -108,10 +108,9 @@ int socket(int domain, int type, int protocol) {
       return ERRNO(EPROTONOSUPPORT);
   }
 
-  fdio_t* io;
-  zx_status_t status = fdio_from_channel(std::move(client_end), &io);
-  if (status != ZX_OK) {
-    return ERROR(status);
+  zx::status io = fdio::create_with_describe(std::move(client_end));
+  if (io.is_error()) {
+    return ERROR(io.status_value());
   }
 
   // TODO(tamird): we're not handling this flag in fdio_from_channel, which seems bad.
@@ -123,17 +122,16 @@ int socket(int domain, int type, int protocol) {
   // if (type & SOCK_CLOEXEC) {
   // }
 
-  int fd = fdio_bind_to_fd(io, -1, 0);
-  if (fd < 0) {
-    io->release();
-    return ERRNO(EMFILE);
+  std::optional fd = bind_to_fd(io.value());
+  if (fd.has_value()) {
+    return fd.value();
   }
-  return fd;
+  return ERRNO(EMFILE);
 }
 
 __EXPORT
 int connect(int fd, const struct sockaddr* addr, socklen_t len) {
-  fdio_t* io = fd_to_io(fd);
+  fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
@@ -141,7 +139,6 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
   int16_t out_code;
   zx_status_t status;
   if ((status = io->connect(addr, len, &out_code)) != ZX_OK) {
-    io->release();
     return ERROR(status);
   }
   if (out_code == EINPROGRESS) {
@@ -149,12 +146,10 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
     ioflag = (ioflag & ~IOFLAG_SOCKET_LISTENING) | IOFLAG_SOCKET_CONNECTING;
     if (!(ioflag & IOFLAG_NONBLOCK)) {
       if ((status = fdio_wait(io, FDIO_EVT_WRITABLE, zx::time::infinite(), nullptr)) != ZX_OK) {
-        io->release();
         return ERROR(status);
       }
       // Call Connect() again after blocking to find connect's result.
       if ((status = io->connect(addr, len, &out_code)) != ZX_OK) {
-        io->release();
         return ERROR(status);
       }
     }
@@ -163,12 +158,10 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
   switch (out_code) {
     case 0: {
       io->ioflag() |= IOFLAG_SOCKET_CONNECTED;
-      io->release();
       return out_code;
     }
 
     default: {
-      io->release();
       return ERRNO(out_code);
     }
   }
@@ -176,13 +169,12 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
 
 template <typename F>
 static int delegate(int fd, F fn) {
-  fdio_t* io = fd_to_io(fd);
+  fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
   int16_t out_code;
   zx_status_t status = fn(io, &out_code);
-  io->release();
   if (status != ZX_OK) {
     return ERROR(status);
   }
@@ -194,12 +186,14 @@ static int delegate(int fd, F fn) {
 
 __EXPORT
 int bind(int fd, const struct sockaddr* addr, socklen_t len) {
-  return delegate(fd, [&](fdio_t* io, int16_t* out_code) { return io->bind(addr, len, out_code); });
+  return delegate(
+      fd, [&](const fdio_ptr& io, int16_t* out_code) { return io->bind(addr, len, out_code); });
 }
 
 __EXPORT
 int listen(int fd, int backlog) {
-  return delegate(fd, [&](fdio_t* io, int16_t* out_code) { return io->listen(backlog, out_code); });
+  return delegate(
+      fd, [&](const fdio_ptr& io, int16_t* out_code) { return io->listen(backlog, out_code); });
 }
 
 __EXPORT
@@ -211,19 +205,33 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     return ERRNO(EINVAL);
   }
 
-  int nfd = fdio_reserve_fd(0);
-  if (nfd < 0) {
-    return nfd;
+  std::optional reservation = []() -> std::optional<std::pair<int, void (fdio_slot::*)()>> {
+    fbl::AutoLock lock(&fdio_lock);
+    for (int i = 0; i < FDIO_MAX_FD; ++i) {
+      std::optional cleanup = fdio_fdtab[i].try_reserve();
+      if (cleanup.has_value()) {
+        return std::make_pair(i, cleanup.value());
+      }
+    }
+    return std::nullopt;
+  }();
+  if (!reservation.has_value()) {
+    return ERRNO(EMFILE);
   }
+  auto [nfd, cleanup_getter] = reservation.value();
+  // Lambdas are not allowed to reference local bindings.
+  auto release = fbl::MakeAutoCall([nfd = nfd, cleanup_getter = cleanup_getter]() {
+    fbl::AutoLock lock(&fdio_lock);
+    (fdio_fdtab[nfd].*cleanup_getter)();
+  });
 
   zx::handle accepted;
   {
     zx_status_t status;
     int16_t out_code;
 
-    fdio_t* io = fd_to_io(fd);
+    fdio_ptr io = fd_to_io(fd);
     if (io == nullptr) {
-      fdio_release_reserved(nfd);
       return ERRNO(EBADF);
     }
 
@@ -249,23 +257,19 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
       }
       break;
     }
-    io->release();
 
     if (status != ZX_OK) {
-      fdio_release_reserved(nfd);
       return ERROR(status);
     }
     if (out_code) {
-      fdio_release_reserved(nfd);
       return ERRNO(out_code);
     }
   }
 
-  fdio_t* accepted_io;
-  zx_status_t status = fdio_create(accepted.release(), &accepted_io);
-  if (status != ZX_OK) {
-    fdio_release_reserved(nfd);
-    return ERROR(status);
+  zx::status accepted_io =
+      fdio::create_with_describe(fidl::ClientEnd<fio::Node>(zx::channel(std::move(accepted))));
+  if (accepted_io.is_error()) {
+    return ERROR(accepted_io.status_value());
   }
 
   // TODO(tamird): we're not handling this flag in fdio_from_channel, which seems bad.
@@ -273,11 +277,28 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict addr
     accepted_io->ioflag() |= IOFLAG_NONBLOCK;
   }
 
-  nfd = fdio_assign_reserved(nfd, accepted_io);
-  if (nfd < 0) {
-    accepted_io->release();
+  fbl::AutoLock lock(&fdio_lock);
+  if (fdio_fdtab[nfd].try_fill(accepted_io.value())) {
+    return nfd;
   }
-  return nfd;
+
+  // Someone stomped our reservation. Try to find a new slot.
+  //
+  // Note that this reservation business is subtle but sound; consider the following scenario:
+  // - T1: a reservation is made, |accept| is called but doesn't return (remote is slow)
+  // - T2: |dup2| is called and evicts the reservation
+  // - T2: |close| is called and closes the file descriptor created by |dup2|
+  // - T2: a reservation is made, |accept| is called but doesn't return (remote is slow)
+  // - T1: |accept| returns and fulfills the reservation which no longer belongs to it
+  // - T2: |accept| returns and discovers its reservation is gone, and looks for a new slot
+  //
+  // Ownership of reservations isn't maintained, but that should be OK as long as it isn't assumed.
+  for (int i = 0; i < FDIO_MAX_FD; ++i) {
+    if (fdio_fdtab[nfd].try_set(accepted_io.value())) {
+      return i;
+    }
+  }
+  return ERRNO(EMFILE);
 }
 
 __EXPORT
@@ -366,8 +387,9 @@ int getsockname(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
     return ERRNO(EINVAL);
   }
 
-  return delegate(
-      fd, [&](fdio_t* io, int16_t* out_code) { return io->getsockname(addr, len, out_code); });
+  return delegate(fd, [&](const fdio_ptr& io, int16_t* out_code) {
+    return io->getsockname(addr, len, out_code);
+  });
 }
 
 __EXPORT
@@ -376,8 +398,9 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
     return ERRNO(EINVAL);
   }
 
-  return delegate(
-      fd, [&](fdio_t* io, int16_t* out_code) { return io->getpeername(addr, len, out_code); });
+  return delegate(fd, [&](const fdio_ptr& io, int16_t* out_code) {
+    return io->getpeername(addr, len, out_code);
+  });
 }
 
 __EXPORT
@@ -387,11 +410,10 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
     return ERRNO(EFAULT);
   }
 
-  fdio_t* io = fd_to_io(fd);
+  fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  auto clean_io = fbl::MakeAutoCall([io] { io->release(); });
 
   // Handle client-maintained socket options.
   if (level == SOL_SOCKET) {
@@ -431,11 +453,10 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
 
 __EXPORT
 int setsockopt(int fd, int level, int optname, const void* optval, socklen_t optlen) {
-  fdio_t* io = fd_to_io(fd);
+  fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  auto clean_io = fbl::MakeAutoCall([io] { io->release(); });
 
   // Handle client-maintained socket options.
   switch (level) {

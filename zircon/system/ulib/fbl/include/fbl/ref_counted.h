@@ -6,6 +6,7 @@
 #define FBL_REF_COUNTED_H_
 
 #include <zircon/assert.h>
+
 #include <fbl/macros.h>
 #include <fbl/ref_counted_internal.h>
 
@@ -38,6 +39,7 @@ class RefCounted : private internal::RefCountedBase<EnableAdoptionValidator> {
 
   using internal::RefCountedBase<EnableAdoptionValidator>::AddRef;
   using internal::RefCountedBase<EnableAdoptionValidator>::Release;
+  using internal::RefCountedBase<EnableAdoptionValidator>::IsLastReference;
   using internal::RefCountedBase<EnableAdoptionValidator>::Adopt;
   using internal::RefCountedBase<EnableAdoptionValidator>::ref_count_debug;
 

@@ -6,8 +6,10 @@
 
 #include "internal.h"
 
-zx_status_t fdio::open(const char* path, uint32_t flags, uint32_t mode, fdio_t** out) {
-  return ZX_ERR_NOT_SUPPORTED;
+fdio::~fdio() = default;
+
+zx::status<fdio_ptr> fdio::open(const char* path, uint32_t flags, uint32_t mode) {
+  return zx::error(ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t fdio::clone(zx_handle_t* out_handle) { return ZX_ERR_NOT_SUPPORTED; }
@@ -119,3 +121,10 @@ zx_status_t fdio::sendmsg(const struct msghdr* msg, int flags, size_t* out_actua
 }
 
 zx_status_t fdio::shutdown(int how, int16_t* out_code) { return ZX_ERR_WRONG_TYPE; }
+
+std::optional<fdio::last_reference> GetLastReference(fdio_ptr io) {
+  if (io->IsLastReference()) {
+    return std::make_optional<fdio::last_reference>(fbl::ExportToRawPtr(&io));
+  }
+  return std::nullopt;
+}

@@ -69,13 +69,14 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
     shared = true
     sources = [
       "bsdsocket.cc",
+      "directory.cc",
       "errno.cc",
       "event.cc",
       "fd.cc",
       "fdio.cc",
       "fdio_unistd.cc",
-      "get-vmo.cc",
       "inotify.cc",
+      "io.cc",
       "iovec.cc",
       "mem.cc",
       "namespace/local-connection.cc",
@@ -90,6 +91,7 @@ if (toolchain_variant.configs + fuzzer_configs - fuzzer_configs !=
       "timer.cc",
       "uname.cc",
       "unistd.cc",
+      "unsafe.cc",
       "waitable.cc",
       "watcher.cc",
       "zxio.cc",

@@ -3,8 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/sync/mutex.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/time.h>
 #include <lib/zx/timer.h>
@@ -13,28 +11,27 @@
 #include <sys/timerfd.h>
 #include <time.h>
 #include <zircon/assert.h>
-#include <zircon/syscalls.h>
 
 #include <algorithm>
-#include <utility>
 
-#include <fbl/auto_call.h>
+#include <fbl/auto_lock.h>
 
 #include "fdio_unistd.h"
 #include "internal.h"
+#include "zxio.h"
 
 // An implementation of a POSIX timerfd.
-typedef struct fdio_timer {
+struct fdio_timer_t {
   zxio_t io;
 
   // The zx::timer object that implements the timerfd.
   zx::timer handle;
 
-  sync_mutex_t lock;
+  mtx_t lock;
 
   zx::time current_deadline __TA_GUARDED(lock);
   zx::duration interval __TA_GUARDED(lock);
-} fdio_timer_t;
+};
 
 static_assert(sizeof(fdio_timer_t) <= sizeof(zxio_storage_t),
               "fdio_timer_t must fit inside zxio_storage_t.");
@@ -68,16 +65,14 @@ static zx_status_t fdio_timer_readv(zxio_t* io, const zx_iovec_t* vector, size_t
 
   fdio_timer_t* timer = reinterpret_cast<fdio_timer_t*>(io);
 
-  sync_mutex_lock(&timer->lock);
+  fbl::AutoLock lock(&timer->lock);
   if (timer->current_deadline == zx::time()) {
     // The timer was never set.
-    sync_mutex_unlock(&timer->lock);
     return ZX_ERR_SHOULD_WAIT;
   }
 
   zx::time now = zx::clock::get_monotonic();
   if (timer->current_deadline > now) {
-    sync_mutex_unlock(&timer->lock);
     return ZX_ERR_SHOULD_WAIT;
   }
 
@@ -100,7 +95,6 @@ static zx_status_t fdio_timer_readv(zxio_t* io, const zx_iovec_t* vector, size_t
   fdio_iovec_copy_to(reinterpret_cast<const uint8_t*>(&count), sizeof(count), vector, vector_count,
                      out_actual);
 
-  sync_mutex_unlock(&timer->lock);
   return ZX_OK;
 }
 
@@ -133,37 +127,15 @@ static constexpr zxio_ops_t fdio_timer_ops = []() {
   return ops;
 }();
 
-static void fdio_timer_init(zxio_storage_t* storage, zx::timer handle) {
-  auto timer = new (storage) fdio_timer_t{
-      .io = storage->io,
-      .handle = std::move(handle),
-      .lock = {},
-      .current_deadline = {},
-      .interval = {},
-  };
-  zxio_init(&timer->io, &fdio_timer_ops);
-}
-
-static fdio_t* fdio_timer_create(zx::timer handle) {
-  zxio_storage_t* storage = nullptr;
-  fdio_t* io = fdio_zxio_create(&storage);
-  if (io == nullptr) {
+static fdio_timer_t* to_timer(const fdio_ptr& io) {
+  if (!io) {
     return nullptr;
   }
-  fdio_timer_init(storage, std::move(handle));
-  return io;
-}
-
-static bool to_timer(fdio_t* io, fdio_timer_t** out_timer) {
-  if (!io) {
-    return false;
+  auto& zxio = io->zxio_storage().io;
+  if (zxio_get_ops(&zxio) != &fdio_timer_ops) {
+    return nullptr;
   }
-  const zxio_ops_t* ops = zxio_get_ops(fdio_get_zxio(io));
-  if (ops != &fdio_timer_ops) {
-    return false;
-  }
-  *out_timer = reinterpret_cast<fdio_timer_t*>(fdio_get_zxio(io));
-  return true;
+  return reinterpret_cast<fdio_timer_t*>(&zxio);
 }
 
 __EXPORT
@@ -184,16 +156,25 @@ int timerfd_create(int clockid, int flags) {
     return ERRNO(EINVAL);
   }
 
-  zx::timer timer;
-  zx_status_t status = zx::timer::create(ZX_TIMER_SLACK_LATE, zx_clock_id, &timer);
+  zx::timer handle;
+  zx_status_t status = zx::timer::create(ZX_TIMER_SLACK_LATE, zx_clock_id, &handle);
   if (status != ZX_OK) {
     return ERROR(status);
   }
 
-  fdio_t* io = nullptr;
-  if ((io = fdio_timer_create(std::move(timer))) == nullptr) {
-    return ERROR(ZX_ERR_NO_MEMORY);
+  zx::status io = fdio_internal::zxio::create();
+  if (io.is_error()) {
+    return ERROR(status);
   }
+  auto storage = &io->zxio_storage();
+  auto timer = new (storage) fdio_timer_t{
+      .io = storage->io,
+      .handle = std::move(handle),
+      .lock = {},
+      .current_deadline = {},
+      .interval = {},
+  };
+  zxio_init(&timer->io, &fdio_timer_ops);
 
   if (flags & TFD_CLOEXEC) {
     io->ioflag() |= IOFLAG_CLOEXEC;
@@ -203,12 +184,11 @@ int timerfd_create(int clockid, int flags) {
     io->ioflag() |= IOFLAG_NONBLOCK;
   }
 
-  int fd = fdio_bind_to_fd(io, -1, 0);
-  if (fd < 0) {
-    io->release();
+  std::optional fd = bind_to_fd(io.value());
+  if (fd.has_value()) {
+    return fd.value();
   }
-  // fdio_bind_to_fd already sets errno.
-  return fd;
+  return ERRNO(EMFILE);
 }
 
 static void fdio_timer_get_current_timespec(fdio_timer_t* timer, struct itimerspec* out_timespec)
@@ -225,14 +205,13 @@ static void fdio_timer_get_current_timespec(fdio_timer_t* timer, struct itimersp
 
 __EXPORT int timerfd_settime(int fd, int flags, const struct itimerspec* new_value,
                              struct itimerspec* old_value) {
-  fdio_t* io = fd_to_io(fd);
+  fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  auto clean_io = fbl::MakeAutoCall([io] { io->release(); });
 
-  fdio_timer_t* timer = nullptr;
-  if (!to_timer(io, &timer)) {
+  fdio_timer_t* timer = to_timer(io);
+  if (!timer) {
     return ERRNO(EINVAL);
   }
 
@@ -250,7 +229,7 @@ __EXPORT int timerfd_settime(int fd, int flags, const struct itimerspec* new_val
     return ERRNO(EINVAL);
   }
 
-  sync_mutex_lock(&timer->lock);
+  fbl::AutoLock lock(&timer->lock);
 
   struct itimerspec old = {};
   if (old_value) {
@@ -265,15 +244,12 @@ __EXPORT int timerfd_settime(int fd, int flags, const struct itimerspec* new_val
   } else {
     status = timer->handle.cancel();
   }
-
   if (status != ZX_OK) {
-    sync_mutex_unlock(&timer->lock);
-    return STATUS(status);
+    return ERROR(status);
   }
 
   timer->current_deadline = current_deadline;
   timer->interval = interval;
-  sync_mutex_unlock(&timer->lock);
 
   if (old_value) {
     *old_value = old;
@@ -283,18 +259,16 @@ __EXPORT int timerfd_settime(int fd, int flags, const struct itimerspec* new_val
 
 __EXPORT
 int timerfd_gettime(int fd, struct itimerspec* curr_value) {
-  fdio_t* io = fd_to_io(fd);
+  fdio_ptr io = fd_to_io(fd);
   if (io == nullptr) {
     return ERRNO(EBADF);
   }
-  auto clean_io = fbl::MakeAutoCall([io] { io->release(); });
 
-  fdio_timer_t* timer = nullptr;
-  if (!to_timer(io, &timer)) {
+  fdio_timer_t* timer = to_timer(io);
+  if (!timer) {
     return ERRNO(EINVAL);
   }
-  sync_mutex_lock(&timer->lock);
+  fbl::AutoLock lock(&timer->lock);
   fdio_timer_get_current_timespec(timer, curr_value);
-  sync_mutex_unlock(&timer->lock);
   return 0;
 }

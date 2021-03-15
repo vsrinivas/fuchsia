@@ -137,7 +137,7 @@ struct BaseSocket {
   T& client() { return client_; }
 
   zx_status_t clone(zx_handle_t* out_handle) {
-    auto endpoints = fidl::CreateEndpoints<fio::Node>();
+    zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
     if (endpoints.is_error()) {
       return endpoints.status_value();
     }
@@ -798,7 +798,8 @@ struct datagram_socket : public zxio {
   }
 
  protected:
-  friend class AllocHelper<datagram_socket>;
+  friend class fbl::internal::MakeRefCountedHelper<datagram_socket>;
+  friend class fbl::RefPtr<datagram_socket>;
 
   datagram_socket() = default;
   ~datagram_socket() override = default;
@@ -831,9 +832,9 @@ static constexpr zxio_ops_t zxio_datagram_socket_ops = []() {
   return ops;
 }();
 
-fdio_t* fdio_datagram_socket_create(zx::eventpair event,
-                                    fidl::ClientEnd<fsocket::DatagramSocket> client) {
-  auto* io = fdio_internal::alloc<fdio_internal::datagram_socket>();
+fdio_ptr fdio_datagram_socket_create(zx::eventpair event,
+                                     fidl::ClientEnd<fsocket::DatagramSocket> client) {
+  fdio_ptr io = fbl::MakeRefCounted<fdio_internal::datagram_socket>();
   if (io == nullptr) {
     return nullptr;
   }
@@ -1149,7 +1150,8 @@ struct stream_socket : public pipe {
   }
 
  protected:
-  friend class AllocHelper<stream_socket>;
+  friend class fbl::internal::MakeRefCountedHelper<stream_socket>;
+  friend class fbl::RefPtr<stream_socket>;
 
   stream_socket() = default;
   ~stream_socket() override = default;
@@ -1198,9 +1200,9 @@ static constexpr zxio_ops_t zxio_stream_socket_ops = []() {
   return ops;
 }();
 
-fdio_t* fdio_stream_socket_create(zx::socket socket, fidl::ClientEnd<fsocket::StreamSocket> client,
-                                  zx_info_socket_t info) {
-  auto* io = fdio_internal::alloc<fdio_internal::stream_socket>();
+fdio_ptr fdio_stream_socket_create(zx::socket socket, fidl::ClientEnd<fsocket::StreamSocket> client,
+                                   zx_info_socket_t info) {
+  fdio_ptr io = fbl::MakeRefCounted<fdio_internal::stream_socket>();
   if (io == nullptr) {
     return nullptr;
   }

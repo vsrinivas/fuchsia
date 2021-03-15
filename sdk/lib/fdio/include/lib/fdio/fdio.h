@@ -51,13 +51,9 @@ int fdio_fd_create_null(void);
 //
 // Upon success, returns the allocated file descriptor. Returns -1 on failure.
 //
-// Upon success, takes ownership of the given reference to the |fdio_t|. That
-// reference is owned by the file descriptor table. Upon failure, the caller
-// retains ownership of that reference. Specifically, the caller is responsible
-// for calling |fdio_unsafe_release| upon failure.
-//
-// TODO(REVIEW): This function should always take ownership of the given
-// |fdio_t| reference.
+// Always takes ownership of the given reference to the |fdio_t|. Upon success,
+// that reference is owned by the file descriptor table. Upon failure, the
+// reference is released.
 int fdio_bind_to_fd(fdio_t* io, int fd, int starting_fd);
 
 // Removes a file descriptor from the file descriptor table for this process.

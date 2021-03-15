@@ -8,7 +8,6 @@
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/io.h>
-#include <lib/fdio/unsafe.h>
 #include <lib/zxio/inception.h>
 #include <lib/zxio/null.h>
 #include <lib/zxio/zxio.h>
@@ -27,9 +26,16 @@
 namespace fio = fuchsia_io;
 namespace fpty = fuchsia_hardware_pty;
 
-// Generic ---------------------------------------------------------------------
-
 namespace fdio_internal {
+
+zx::status<fdio_ptr> zxio::create() {
+  fdio_ptr io = fbl::MakeRefCounted<zxio>();
+  if (io == nullptr) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  zxio_null_init(&io->zxio_storage().io);
+  return zx::ok(io);
+}
 
 zx_status_t zxio::close() { return zxio_close(&zxio_storage().io); }
 
@@ -195,336 +201,248 @@ zx_status_t zxio::sendmsg(const struct msghdr* msg, int flags, size_t* out_actua
   return sendmsg_inner(msg, flags, out_actual);
 }
 
-}  // namespace fdio_internal
-
-__EXPORT
-fdio_t* fdio_zxio_create(zxio_storage_t** out_storage) {
-  auto* io = fdio_internal::alloc<fdio_internal::zxio>();
-  if (io == nullptr) {
-    return nullptr;
+zx::status<fdio_ptr> remote::open(const char* path, uint32_t flags, uint32_t mode) {
+  size_t length;
+  zx_status_t status = fdio_validate_path(path, &length);
+  if (status != ZX_OK) {
+    return zx::error(status);
   }
-  zxio_storage_t& storage = io->zxio_storage();
-  zxio_null_init(&storage.io);
-  *out_storage = &storage;
-  return io;
+
+  zx::status endpoints = fidl::CreateEndpoints<fio::Node>();
+  if (endpoints.is_error()) {
+    return endpoints.take_error();
+  }
+
+  status = zxio_open_async(&zxio_storage().io, flags, mode, path, length,
+                           endpoints->server.channel().release());
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+
+  if (flags & ZX_FS_FLAG_DESCRIBE) {
+    return fdio::create_with_on_open(std::move(endpoints->client));
+  }
+
+  return remote::create(std::move(endpoints->client), zx::eventpair{});
 }
 
-// Null ------------------------------------------------------------------------
-
-__EXPORT
-fdio_t* fdio_null_create(void) {
-  zxio_storage_t* storage = nullptr;
-  return fdio_zxio_create(&storage);
+zx_status_t remote::borrow_channel(zx_handle_t* out_borrowed) {
+  *out_borrowed = zxio_remote().control;
+  return ZX_OK;
 }
 
-__EXPORT
-int fdio_fd_create_null(void) { return fdio_bind_to_fd(fdio_null_create(), -1, 0); }
+void remote::wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* out_signals) {
+  // POLLERR is always detected.
+  events |= POLLERR;
 
-// Remote ----------------------------------------------------------------------
-
-namespace fdio_internal {
-
-struct remote : public zxio {
-  zx_status_t open(const char* path, uint32_t flags, uint32_t mode, fdio_t** out) override {
-    size_t length;
-    zx_status_t status = fdio_validate_path(path, &length);
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    auto endpoints = fidl::CreateEndpoints<fio::Node>();
-    if (endpoints.is_error()) {
-      return endpoints.status_value();
-    }
-
-    status = zxio_open_async(&zxio_storage().io, flags, mode, path, length,
-                             endpoints->server.channel().release());
-    if (status != ZX_OK) {
-      return status;
-    }
-
-    if (flags & ZX_FS_FLAG_DESCRIBE) {
-      return fdio_from_on_open_event(std::move(endpoints->client), out);
-    }
-
-    fdio_t* remote_io = fdio_remote_create(std::move(endpoints->client), zx::eventpair{});
-    if (remote_io == nullptr) {
-      return ZX_ERR_NO_RESOURCES;
-    }
-    *out = remote_io;
-    return ZX_OK;
+  zxio_signals_t signals = ZXIO_SIGNAL_NONE;
+  if (events & POLLIN) {
+    signals |= ZXIO_SIGNAL_READABLE;
   }
-
-  zx_status_t borrow_channel(zx_handle_t* out_borrowed) override {
-    *out_borrowed = zxio_remote().control;
-    return ZX_OK;
+  if (events & POLLPRI) {
+    signals |= ZXIO_SIGNAL_OUT_OF_BAND;
   }
+  if (events & POLLOUT) {
+    signals |= ZXIO_SIGNAL_WRITABLE;
+  }
+  if (events & POLLERR) {
+    signals |= ZXIO_SIGNAL_ERROR;
+  }
+  if (events & POLLHUP) {
+    signals |= ZXIO_SIGNAL_PEER_CLOSED;
+  }
+  if (events & POLLRDHUP) {
+    signals |= ZXIO_SIGNAL_READ_DISABLED;
+  }
+  zxio_wait_begin(&zxio_storage().io, signals, handle, out_signals);
+}
 
-  void wait_begin(uint32_t events, zx_handle_t* handle, zx_signals_t* signals) override {
-    // POLLERR is always detected.
+void remote::wait_end(zx_signals_t signals, uint32_t* out_events) {
+  zxio_signals_t zxio_signals = 0;
+  zxio_wait_end(&zxio_storage().io, signals, &zxio_signals);
+
+  uint32_t events = 0;
+  if (zxio_signals & ZXIO_SIGNAL_READABLE) {
+    events |= POLLIN;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_OUT_OF_BAND) {
+    events |= POLLPRI;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_WRITABLE) {
+    events |= POLLOUT;
+  }
+  if (zxio_signals & ZXIO_SIGNAL_ERROR) {
     events |= POLLERR;
-    zxio_signals_t zxio_signals = poll_events_to_zxio_signals(events);
-    zxio_wait_begin(&zxio_storage().io, zxio_signals, handle, signals);
   }
-
-  void wait_end(zx_signals_t signals, uint32_t* events) override {
-    zxio_signals_t zxio_signals = 0;
-    zxio_wait_end(&zxio_storage().io, signals, &zxio_signals);
-    *events = zxio_signals_to_poll_events(zxio_signals);
+  if (zxio_signals & ZXIO_SIGNAL_PEER_CLOSED) {
+    events |= POLLHUP;
   }
-
- protected:
-  friend class AllocHelper<remote>;
-
-  remote() = default;
-  ~remote() override = default;
-
-  const zxio_remote_t& zxio_remote() {
-    return *reinterpret_cast<zxio_remote_t*>(&zxio_storage().io);
+  if (zxio_signals & ZXIO_SIGNAL_READ_DISABLED) {
+    events |= POLLRDHUP;
   }
+  *out_events = events;
+}
 
- private:
-  static zxio_signals_t poll_events_to_zxio_signals(uint32_t events) {
-    zxio_signals_t signals = ZXIO_SIGNAL_NONE;
-    if (events & POLLIN) {
-      signals |= ZXIO_SIGNAL_READABLE;
-    }
-    if (events & POLLPRI) {
-      signals |= ZXIO_SIGNAL_OUT_OF_BAND;
-    }
-    if (events & POLLOUT) {
-      signals |= ZXIO_SIGNAL_WRITABLE;
-    }
-    if (events & POLLERR) {
-      signals |= ZXIO_SIGNAL_ERROR;
-    }
-    if (events & POLLHUP) {
-      signals |= ZXIO_SIGNAL_PEER_CLOSED;
-    }
-    if (events & POLLRDHUP) {
-      signals |= ZXIO_SIGNAL_READ_DISABLED;
-    }
-    return signals;
-  }
-
-  static zxio_signals_t zxio_signals_to_poll_events(zxio_signals_t signals) {
-    uint32_t events = 0;
-    if (signals & ZXIO_SIGNAL_READABLE) {
-      events |= POLLIN;
-    }
-    if (signals & ZXIO_SIGNAL_OUT_OF_BAND) {
-      events |= POLLPRI;
-    }
-    if (signals & ZXIO_SIGNAL_WRITABLE) {
-      events |= POLLOUT;
-    }
-    if (signals & ZXIO_SIGNAL_ERROR) {
-      events |= POLLERR;
-    }
-    if (signals & ZXIO_SIGNAL_PEER_CLOSED) {
-      events |= POLLHUP;
-    }
-    if (signals & ZXIO_SIGNAL_READ_DISABLED) {
-      events |= POLLRDHUP;
-    }
-    return events;
-  }
-};
-
-}  // namespace fdio_internal
-
-fdio_t* fdio_remote_create(fidl::ClientEnd<fio::Node> node, zx::eventpair event) {
-  auto* io = fdio_internal::alloc<fdio_internal::remote>();
+zx::status<fdio_ptr> remote::create(fidl::ClientEnd<fuchsia_io::Node> node, zx::eventpair event) {
+  fdio_ptr io = fbl::MakeRefCounted<remote>();
   if (io == nullptr) {
-    return nullptr;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   zx_status_t status =
       zxio_remote_init(&io->zxio_storage(), node.channel().release(), event.release());
   if (status != ZX_OK) {
-    return nullptr;
+    return zx::error(status);
   }
-  return io;
+  return zx::ok(io);
 }
 
-namespace fdio_internal {
-
-struct dir : public remote {
-  // Override |convert_to_posix_mode| for directories, since directories
-  // have different semantics for the "rwx" bits.
-  uint32_t convert_to_posix_mode(zxio_node_protocols_t protocols,
-                                 zxio_abilities_t abilities) override {
-    return zxio_node_protocols_to_posix_type(protocols) |
-           zxio_abilities_to_posix_permissions_for_directory(abilities);
-  }
-
- protected:
-  friend class AllocHelper<dir>;
-
-  dir() = default;
-  ~dir() override = default;
-};
-
-}  // namespace fdio_internal
-
-fdio_t* fdio_dir_create(fidl::ClientEnd<fio::Directory> dir) {
-  auto* io = fdio_internal::alloc<fdio_internal::dir>();
+zx::status<fdio_ptr> remote::create(fidl::ClientEnd<fio::File> file, zx::event event,
+                                    zx::stream stream) {
+  fdio_ptr io = fbl::MakeRefCounted<remote>();
   if (io == nullptr) {
-    return nullptr;
-  }
-  zx_status_t status = zxio_dir_init(&io->zxio_storage(), dir.channel().release());
-  if (status != ZX_OK) {
-    return nullptr;
-  }
-  return io;
-}
-
-fdio_t* fdio_file_create(fidl::ClientEnd<fio::File> file, zx::event event, zx::stream stream) {
-  auto* io = fdio_internal::alloc<fdio_internal::remote>();
-  if (io == nullptr) {
-    return nullptr;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   zx_status_t status = zxio_file_init(&io->zxio_storage(), file.channel().release(),
                                       event.release(), stream.release());
   if (status != ZX_OK) {
-    return nullptr;
+    return zx::error(status);
   }
-  return io;
+  return zx::ok(io);
 }
 
-namespace fdio_internal {
-
-struct pty : public remote {
-  Errno posix_ioctl(int request, va_list va) override {
-    switch (request) {
-      case TIOCGWINSZ: {
-        fidl::UnownedClientEnd<fpty::Device> device(zxio_remote().control);
-        if (!device.is_valid()) {
-          return Errno(ENOTTY);
-        }
-
-        auto result = fpty::Device::Call::GetWindowSize(device);
-        if (result.status() != ZX_OK || result->status != ZX_OK) {
-          return Errno(ENOTTY);
-        }
-
-        struct winsize size = {
-            .ws_row = static_cast<uint16_t>(result->size.height),
-            .ws_col = static_cast<uint16_t>(result->size.width),
-        };
-        struct winsize* out_size = va_arg(va, struct winsize*);
-        *out_size = size;
-        return Errno(Errno::Ok);
-      }
-      case TIOCSWINSZ: {
-        fidl::UnownedClientEnd<fpty::Device> device(zxio_remote().control);
-        if (!device.is_valid()) {
-          return Errno(ENOTTY);
-        }
-
-        const struct winsize* in_size = va_arg(va, const struct winsize*);
-        fpty::wire::WindowSize size = {};
-        size.width = in_size->ws_col;
-        size.height = in_size->ws_row;
-
-        auto result = fpty::Device::Call::SetWindowSize(device, size);
-        if (result.status() != ZX_OK || result->status != ZX_OK) {
-          return Errno(ENOTTY);
-        }
-        return Errno(Errno::Ok);
-      }
-      default:
-        return Errno(ENOTTY);
-    }
-  }
-
- protected:
-  friend class AllocHelper<pty>;
-
-  pty() = default;
-  ~pty() override = default;
-};
-
-}  // namespace fdio_internal
-
-fdio_t* fdio_pty_create(fidl::ClientEnd<fpty::Device> device, zx::eventpair event) {
-  auto* io = fdio_internal::alloc<fdio_internal::pty>();
+zx::status<fdio_ptr> remote::create(zx::vmo vmo, zx::stream stream) {
+  fdio_ptr io = fbl::MakeRefCounted<remote>();
   if (io == nullptr) {
-    return nullptr;
-  }
-  zx_status_t status =
-      zxio_remote_init(&io->zxio_storage(), device.channel().release(), event.release());
-  if (status != ZX_OK) {
-    io->release();
-    return nullptr;
-  }
-  return io;
-}
-
-__EXPORT
-zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
-  fdio_t* io;
-  zx_status_t status = fdio_unbind_from_fd(fd, &io);
-  if (status != ZX_OK) {
-    if (status == ZX_ERR_INVALID_ARGS) {
-      status = ZX_ERR_NOT_FOUND;
-    }
-    return status;
-  }
-  auto* base = reinterpret_cast<fdio_internal::base*>(io);
-  status = base->unwrap(out);
-  base->release();
-  return status;
-}
-
-__EXPORT
-zx_handle_t fdio_unsafe_borrow_channel(fdio_t* io) {
-  if (io == nullptr) {
-    return ZX_HANDLE_INVALID;
-  }
-
-  auto* base = reinterpret_cast<fdio_internal::base*>(io);
-  zx_handle_t handle = ZX_HANDLE_INVALID;
-  if (base->borrow_channel(&handle) != ZX_OK) {
-    return ZX_HANDLE_INVALID;
-  }
-  return handle;
-}
-
-// Vmo -------------------------------------------------------------------------
-
-fdio_t* fdio_vmo_create(zx::vmo vmo, zx::stream stream) {
-  auto* io = fdio_internal::alloc<fdio_internal::zxio>();
-  if (io == nullptr) {
-    return nullptr;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   zx_status_t status = zxio_vmo_init(&io->zxio_storage(), std::move(vmo), std::move(stream));
   if (status != ZX_OK) {
-    io->release();
-    return nullptr;
+    return zx::error(status);
   }
-  return io;
+  return zx::ok(io);
 }
 
-// Vmofile ---------------------------------------------------------------------
-
-fdio_t* fdio_vmofile_create(fidl::ClientEnd<fio::File> file, zx::vmo vmo, zx_off_t offset,
-                            zx_off_t length, zx_off_t seek) {
+zx::status<fdio_ptr> remote::create(fidl::ClientEnd<fio::File> file, zx::vmo vmo, zx_off_t offset,
+                                    zx_off_t length, zx_off_t seek) {
   // NB: vmofile doesn't support some of the operations, but it can fail in zxio.
-  auto* io = fdio_internal::alloc<fdio_internal::zxio>();
+  fdio_ptr io = fbl::MakeRefCounted<remote>();
   if (io == nullptr) {
-    return nullptr;
+    return zx::error(ZX_ERR_NO_MEMORY);
   }
   zx_status_t status = zxio_vmofile_init(&io->zxio_storage(), fidl::BindSyncClient(std::move(file)),
                                          std::move(vmo), offset, length, seek);
   if (status != ZX_OK) {
-    return nullptr;
+    return zx::error(status);
   }
-  return io;
+  return zx::ok(io);
 }
 
-// Pipe ------------------------------------------------------------------------
+zx::status<fdio_ptr> dir::create(fidl::ClientEnd<fio::Directory> directory) {
+  fdio_ptr io = fbl::MakeRefCounted<dir>();
+  if (io == nullptr) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  zx_status_t status = zxio_dir_init(&io->zxio_storage(), directory.channel().release());
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(io);
+}
 
-namespace fdio_internal {
+uint32_t dir::convert_to_posix_mode(zxio_node_protocols_t protocols, zxio_abilities_t abilities) {
+  return zxio_node_protocols_to_posix_type(protocols) |
+         zxio_abilities_to_posix_permissions_for_directory(abilities);
+}
+
+zx::status<fdio_ptr> pty::create(fidl::ClientEnd<fpty::Device> device, zx::eventpair event) {
+  fdio_ptr io = fbl::MakeRefCounted<pty>();
+  if (io == nullptr) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  zx_status_t status =
+      zxio_remote_init(&io->zxio_storage(), device.channel().release(), event.release());
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(io);
+}
+
+Errno pty::posix_ioctl(int request, va_list va) {
+  switch (request) {
+    case TIOCGWINSZ: {
+      fidl::UnownedClientEnd<fpty::Device> device(zxio_remote().control);
+      if (!device.is_valid()) {
+        return Errno(ENOTTY);
+      }
+
+      auto result = fpty::Device::Call::GetWindowSize(device);
+      if (result.status() != ZX_OK || result->status != ZX_OK) {
+        return Errno(ENOTTY);
+      }
+
+      struct winsize size = {
+          .ws_row = static_cast<uint16_t>(result->size.height),
+          .ws_col = static_cast<uint16_t>(result->size.width),
+      };
+      struct winsize* out_size = va_arg(va, struct winsize*);
+      *out_size = size;
+      return Errno(Errno::Ok);
+    }
+    case TIOCSWINSZ: {
+      fidl::UnownedClientEnd<fpty::Device> device(zxio_remote().control);
+      if (!device.is_valid()) {
+        return Errno(ENOTTY);
+      }
+
+      const struct winsize* in_size = va_arg(va, const struct winsize*);
+      fpty::wire::WindowSize size = {};
+      size.width = in_size->ws_col;
+      size.height = in_size->ws_row;
+
+      auto result = fpty::Device::Call::SetWindowSize(device, size);
+      if (result.status() != ZX_OK || result->status != ZX_OK) {
+        return Errno(ENOTTY);
+      }
+      return Errno(Errno::Ok);
+    }
+    default:
+      return Errno(ENOTTY);
+  }
+}
+
+zx::status<fdio_ptr> pipe::create(zx::socket socket) {
+  fdio_ptr io = fbl::MakeRefCounted<pipe>();
+  if (io == nullptr) {
+    return zx::error(ZX_ERR_NO_MEMORY);
+  }
+  zx_info_socket_t info;
+  zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  status = zxio_pipe_init(&io->zxio_storage(), std::move(socket), info);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  return zx::ok(io);
+}
+
+zx::status<std::pair<fdio_ptr, fdio_ptr>> pipe::create_pair(uint32_t options) {
+  zx::socket h0, h1;
+  zx_status_t status = zx::socket::create(options, &h0, &h1);
+  if (status != ZX_OK) {
+    return zx::error(status);
+  }
+  zx::status a = pipe::create(std::move(h0));
+  if (a.is_error()) {
+    return a.take_error();
+  }
+  zx::status b = pipe::create(std::move(h1));
+  if (b.is_error()) {
+    return b.take_error();
+  }
+  return zx::ok(std::make_pair(a.value(), b.value()));
+}
 
 Errno pipe::posix_ioctl(int request, va_list va) {
   return posix_ioctl_inner(zxio_pipe().socket, request, va);
@@ -573,64 +491,4 @@ zx_status_t pipe::shutdown_inner(const zx::socket& socket, int how) {
   return socket.shutdown(options);
 }
 
-const zxio_pipe_t& pipe::zxio_pipe() { return *reinterpret_cast<zxio_pipe_t*>(&zxio_storage().io); }
-
 }  // namespace fdio_internal
-
-fdio_t* fdio_pipe_create(zx::socket socket) {
-  auto* io = fdio_internal::alloc<fdio_internal::pipe>();
-  if (io == nullptr) {
-    return nullptr;
-  }
-  zx_info_socket_t info;
-  zx_status_t status = socket.get_info(ZX_INFO_SOCKET, &info, sizeof(info), nullptr, nullptr);
-  if (status != ZX_OK) {
-    io->release();
-    return nullptr;
-  }
-  status = zxio_pipe_init(&io->zxio_storage(), std::move(socket), info);
-  if (status != ZX_OK) {
-    io->release();
-    return nullptr;
-  }
-  return io;
-}
-
-zx_status_t fdio_pipe_pair(fdio_t** _a, fdio_t** _b, uint32_t options) {
-  zx::socket h0, h1;
-  zx_status_t status = zx::socket::create(options, &h0, &h1);
-  if (status != ZX_OK) {
-    return status;
-  }
-  fdio_t* a = fdio_pipe_create(std::move(h0));
-  if (a == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  fdio_t* b = fdio_pipe_create(std::move(h1));
-  if (b == nullptr) {
-    a->release();
-    return ZX_ERR_NO_MEMORY;
-  }
-  *_a = a;
-  *_b = b;
-  return 0;
-}
-
-__EXPORT
-zx_status_t fdio_pipe_half(int* out_fd, zx_handle_t* out_handle) {
-  zx::socket h0, h1;
-  zx_status_t status = zx::socket::create(0, &h0, &h1);
-  if (status != ZX_OK) {
-    return status;
-  }
-  fdio_t* io = fdio_pipe_create(std::move(h0));
-  if (io == nullptr) {
-    return ZX_ERR_NO_MEMORY;
-  }
-  if ((*out_fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
-    io->release();
-    return ZX_ERR_NO_RESOURCES;
-  }
-  *out_handle = h1.release();
-  return ZX_OK;
-}
