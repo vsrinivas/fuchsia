@@ -57,6 +57,7 @@ class SwipeRecognizerTest : public gtest::TestLoopFixture,
   bool gesture_won() const { return gesture_won_; }
   const a11y::GestureContext& gesture_context() const { return gesture_context_; }
   Recognizer* recognizer() { return &recognizer_; }
+  MockContestMember* member() { return &member_; }
 
   void SendPointerEvents(const std::vector<PointerParams>& events) {
     for (const auto& event : events) {
@@ -69,6 +70,9 @@ class SwipeRecognizerTest : public gtest::TestLoopFixture,
   }
 
  private:
+  MockContestMember member_;
+  // recognizer_ must follow member_, since recognizer_ may internally hold a raw pointer
+  // to member_
   Recognizer recognizer_;
   bool gesture_won_ = false;
   a11y::GestureContext gesture_context_;
@@ -108,13 +112,12 @@ TEST_P(SwipeRecognizerBaseTest, RejectLessThanExpectedFinger) {
   if (GetParam() == 1) {
     return;
   }
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam() - 1; finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  ASSERT_TRUE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 
   // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
   // a swipe.
@@ -122,25 +125,24 @@ TEST_P(SwipeRecognizerBaseTest, RejectLessThanExpectedFinger) {
     SendPointerEvent({finger, Phase::UP, {0, .7f}});
   }
 
-  EXPECT_FALSE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_FALSE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Tests Gesture Detection failure when more fingers are detected than expected.
 TEST_P(SwipeRecognizerBaseTest, RejectMoreThanExpectedFinger) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
 
   // New pointer ID added, but it did not make contact with the screen yet.
   SendPointerEvent({GetParam() + 1, Phase::ADD, {}});
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 
   // Sends a down event with the new pointer ID, causing the gesture to be rejected.
   SendPointerEvent({GetParam() + 1, Phase::DOWN, {}});
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Test Gesture detection failure when a Down event for a finger is detected after Up event was
@@ -150,16 +152,15 @@ TEST_P(SwipeRecognizerBaseTest, RejectDownEventAfterFirstUp) {
   if (GetParam() == 1) {
     return;
   }
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
 
   // Send Down events for all but 1 finger.
   for (uint32_t finger = 0; finger < GetParam() - 1; finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
 
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  ASSERT_TRUE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 
   // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
   // a swipe.
@@ -169,8 +170,8 @@ TEST_P(SwipeRecognizerBaseTest, RejectDownEventAfterFirstUp) {
   // Send the last Down event.
   SendPointerEvents(DownEvents(GetParam(), {}));
 
-  EXPECT_FALSE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_FALSE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Test Gesture detection failure when a Move event for a finger is detected before Down event.
@@ -179,8 +180,7 @@ TEST_P(SwipeRecognizerBaseTest, RejectMoveEventBeforeDown) {
   if (GetParam() == 1) {
     return;
   }
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
 
   // Send the first Down event.
   SendPointerEvents(DownEvents(0, {}));
@@ -188,24 +188,22 @@ TEST_P(SwipeRecognizerBaseTest, RejectMoveEventBeforeDown) {
   // Send Move event for the next finger.
   SendPointerEvent({1, Phase::MOVE, {}});
 
-  EXPECT_FALSE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_FALSE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 TEST_P(SwipeRecognizerBaseTest, Timeout) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
 
   RunLoopFor(a11y::SwipeRecognizerBase::kDefaultSwipeGestureTimeout);
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 TEST_P(SwipeRecognizerBaseTest, NoTimeoutAfterDetected) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
 
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
@@ -223,8 +221,7 @@ TEST_P(SwipeRecognizerBaseTest, NoTimeoutAfterDetected) {
 
 // Tests rejection case in which the swipe gesture does not cover long enough distance.
 TEST_P(SwipeRecognizerBaseTest, RejectWhenDistanceTooSmall) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -234,21 +231,20 @@ TEST_P(SwipeRecognizerBaseTest, RejectWhenDistanceTooSmall) {
     SendPointerEvent({finger, Phase::UP, {0, .2f}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Ensures that the test recognizer, which considers all swipe paths valid by default, calls
 // |Accept| on |UP|. The base recognizer still validates swipe distance.
 TEST_P(SwipeRecognizerBaseTest, Accept) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
 
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
 
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  ASSERT_TRUE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 
   // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
   // a swipe.
@@ -256,15 +252,14 @@ TEST_P(SwipeRecognizerBaseTest, Accept) {
     SendPointerEvent({finger, Phase::UP, {0, .7f}});
   }
 
-  EXPECT_FALSE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+  EXPECT_FALSE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
 // Tests case in which swipe gesture covers a large distance. We are using the entire upper range,
 // so there is no case where the distance between Up and Down is more than 1NDC.
 TEST_P(SwipeRecognizerBaseTest, AcceptWhenDistanceIsLarge) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -274,24 +269,22 @@ TEST_P(SwipeRecognizerBaseTest, AcceptWhenDistanceIsLarge) {
     SendPointerEvent({finger, Phase::UP, {0, 1}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
 TEST_P(UpSwipeRecognizerTest, MoveEventAtSameLocationAsDown) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
 
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
     SendPointerEvent({finger, Phase::MOVE, {}});
   }
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  ASSERT_TRUE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 }
 
 TEST_P(UpSwipeRecognizerTest, GestureDetected) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -304,7 +297,7 @@ TEST_P(UpSwipeRecognizerTest, GestureDetected) {
     SendPointerEvent({finger, Phase::UP, {0, -.7f}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
 // Test Gesture detection case when a long move event is detected for a finger after first UP
@@ -315,8 +308,7 @@ TEST_P(UpSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     return;
   }
 
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
 
   // Send all the down events.
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
@@ -328,8 +320,8 @@ TEST_P(UpSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     SendPointerEvents(MoveEvents(finger, {}, {0, -.7f}));
   }
 
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  ASSERT_TRUE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 
   // Send first Up event.
   SendPointerEvent({0, Phase::UP, {0, -.7f}});
@@ -344,24 +336,22 @@ TEST_P(UpSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     SendPointerEvent({finger, Phase::UP, {0, -.9f}});
   }
 
-  EXPECT_FALSE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+  EXPECT_FALSE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
 TEST_P(DownSwipeRecognizerTest, MoveEventAtSameLocationAsDown) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
     SendPointerEvent({finger, Phase::MOVE, {}});
   }
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  ASSERT_TRUE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 }
 
 TEST_P(DownSwipeRecognizerTest, GestureDetected) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -374,7 +364,7 @@ TEST_P(DownSwipeRecognizerTest, GestureDetected) {
     SendPointerEvent({finger, Phase::UP, {0, .7f}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
 // Test Gesture detection case when a long move event is detected for a finger after first UP
@@ -385,8 +375,7 @@ TEST_P(DownSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     return;
   }
 
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
 
   // Send all the down events.
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
@@ -398,8 +387,8 @@ TEST_P(DownSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     SendPointerEvents(MoveEvents(finger, {}, {0, .7f}));
   }
 
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  ASSERT_TRUE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 
   // Send first Up event.
   SendPointerEvent({0, Phase::UP, {0, .7f}});
@@ -414,24 +403,22 @@ TEST_P(DownSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     SendPointerEvent({finger, Phase::UP, {0, .9f}});
   }
 
-  EXPECT_FALSE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+  EXPECT_FALSE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
 TEST_P(RightSwipeRecognizerTest, MoveEventAtSameLocationAsDown) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
     SendPointerEvent({finger, Phase::MOVE, {}});
   }
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  ASSERT_TRUE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 }
 
 TEST_P(RightSwipeRecognizerTest, GestureDetected) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -444,7 +431,7 @@ TEST_P(RightSwipeRecognizerTest, GestureDetected) {
     SendPointerEvent({finger, Phase::UP, {.7f, 0}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
 // Test Gesture detection case when a long move event is detected for a finger after first UP
@@ -455,8 +442,7 @@ TEST_P(RightSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     return;
   }
 
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
 
   // Send all the down events.
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
@@ -468,8 +454,8 @@ TEST_P(RightSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     SendPointerEvents(MoveEvents(finger, {}, {.7f, 0}));
   }
 
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  ASSERT_TRUE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 
   // Send first Up event.
   SendPointerEvent({0, Phase::UP, {.7f, 0}});
@@ -484,24 +470,22 @@ TEST_P(RightSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     SendPointerEvent({finger, Phase::UP, {.9f, 0}});
   }
 
-  EXPECT_FALSE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+  EXPECT_FALSE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
 TEST_P(LeftSwipeRecognizerTest, MoveEventAtSameLocationAsDown) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
     SendPointerEvent({finger, Phase::MOVE, {}});
   }
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  ASSERT_TRUE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 }
 
 TEST_P(LeftSwipeRecognizerTest, GestureDetected) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -514,7 +498,7 @@ TEST_P(LeftSwipeRecognizerTest, GestureDetected) {
     SendPointerEvent({finger, Phase::UP, {-.7f, 0}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
 // Test Gesture detection case when a long move event is detected for a finger after first UP
@@ -525,8 +509,7 @@ TEST_P(LeftSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     return;
   }
 
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
 
   // Send all the down events.
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
@@ -538,8 +521,8 @@ TEST_P(LeftSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     SendPointerEvents(MoveEvents(finger, {}, {-.7f, 0}));
   }
 
-  ASSERT_TRUE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kUndecided);
+  ASSERT_TRUE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kUndecided);
 
   // Send first Up event.
   SendPointerEvent({0, Phase::UP, {-.7f, 0}});
@@ -554,14 +537,13 @@ TEST_P(LeftSwipeRecognizerTest, RejectLongMoveEventAfterFirstUp) {
     SendPointerEvent({finger, Phase::UP, {-.9f, 0}});
   }
 
-  EXPECT_FALSE(member.is_held());
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kAccepted);
+  EXPECT_FALSE(member()->is_held());
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
 // Tests rejection case for upward swipe in which up gesture ends too far from vertical.
 TEST_P(UpSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -569,15 +551,14 @@ TEST_P(UpSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
     SendPointerEvent({finger, Phase::UP, {.5f, -.5f}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Tests rejection case for upward swipe in which gesture takes invalid path. Every swipe has cone
 // like area in which the gesture is valid. This test is checking that if swipe falls outside of
 // this cone then its rejected.
 TEST_P(UpSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -585,13 +566,12 @@ TEST_P(UpSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
     SendPointerEvent({finger, Phase::MOVE, {0, .3f}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Tests rejection case for downward swipe in which gesture ends in an invalid location.
 TEST_P(DownSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -599,15 +579,14 @@ TEST_P(DownSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
     SendPointerEvent({finger, Phase::UP, {-.5f, .5f}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Tests rejection case for downward swipe in which gesture takes invalid path. Every swipe has cone
 // like area in which the gesture is valid. This test is checking that if swipe falls outside of
 // this cone then its rejected.
 TEST_P(DownSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -615,13 +594,12 @@ TEST_P(DownSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
     SendPointerEvent({finger, Phase::MOVE, {0, -.3f}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Tests rejection case for right swipe in which gesture ends in an invalid location.
 TEST_P(RightSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -629,15 +607,14 @@ TEST_P(RightSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
     SendPointerEvent({finger, Phase::UP, {.5f, .5f}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Tests rejection case for right swipe in which gesture takes invalid path. Every swipe has cone
 // like area in which the gesture is valid. This test is checking that if swipe falls outside of
 // this cone then its rejected.
 TEST_P(RightSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -645,13 +622,12 @@ TEST_P(RightSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
     SendPointerEvent({finger, Phase::MOVE, {-.3f, 0}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Tests rejection case for left swipe in which gesture ends in an invalid location.
 TEST_P(LeftSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -659,15 +635,14 @@ TEST_P(LeftSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
     SendPointerEvent({finger, Phase::UP, {-.5f, -.5f}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 // Tests rejection case for left swipe in which gesture takes invalid path. Every swipe has cone
 // like area in which the gesture is valid. This test is checking that if swipe falls outside of
 // this cone then its rejected.
 TEST_P(LeftSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
-  MockContestMember member;
-  recognizer()->OnContestStarted(member.TakeInterface());
+  recognizer()->OnContestStarted(member()->TakeInterface());
   for (uint32_t finger = 0; finger < GetParam(); finger++) {
     SendPointerEvents(DownEvents(finger, {}));
   }
@@ -675,7 +650,7 @@ TEST_P(LeftSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
     SendPointerEvent({finger, Phase::MOVE, {.3f, 0}});
   }
 
-  EXPECT_EQ(member.status(), a11y::ContestMember::Status::kRejected);
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kRejected);
 }
 
 }  // namespace
