@@ -202,7 +202,7 @@ OutputBuffer FormatAsmSourceForRange(Process* process,
   opts.dim_others = true;  // Dim everything (we didn't specify an active line).
   opts.module_for_time_warning = std::move(module_for_time_warning);
 
-  FileLine start_line(line.file(), first_num);
+  FileLine start_line(line.file(), line.comp_dir(), first_num);
   OutputBuffer out;
   if (FormatSourceFileContext(start_line, file_provider, opts, &out).ok()) {
     // The formatted table will end in a newline which will combine with our table's newline and
