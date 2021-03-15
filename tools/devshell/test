@@ -140,11 +140,17 @@ if ! $skip_slow_setup; then
   export FUCHSIA_TEST_OUTDIR="${FUCHSIA_OUT_DIR}/test_out/$(date +'%F-%H:%M:%S')"
 fi
 
+# Merge our package config with the one in third_party/dart-pkg/pub
+fx-command-run merge-package-config \
+  --first "$FUCHSIA_DIR/third_party/dart-pkg/pub/package_config.json" \
+  --second "${FUCHSIA_DIR}/scripts/fxtest/package_config.json" \
+  --out "${FUCHSIA_BUILD_DIR}/fx_test.package_config.json"
+
 _args=(
   "${PREBUILT_DART_DIR}/bin/dart"
   "--enable-experiment=non-nullable"
   "--no-sound-null-safety"
-  "--packages=${FUCHSIA_DIR}/scripts/fxtest/package_config.json"
+  "--packages=${FUCHSIA_BUILD_DIR}/fx_test.package_config.json"
   "${FUCHSIA_DIR}/scripts/fxtest/bin/main.dart"
 )
 

@@ -1,0 +1,58 @@
+#!/usr/bin/env python3
+
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Other
+
+import argparse
+import json
+import os
+import sys
+import textwrap
+
+def parse_package_config(input, out, packages):
+    with open(input, 'r') as f:
+      entries = json.load(f)['packages']
+
+    rel_to_out = os.path.relpath(os.path.dirname(input), start=os.path.dirname(out))
+    for entry in entries:
+        root_uri = entry['rootUri']
+        rel_root_uri = os.path.join(rel_to_out, root_uri)
+        entry['rootUri'] = rel_root_uri
+        packages.append(entry)
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=(textwrap.dedent('''\
+            Combines two package_config.json files and outputs them as one.
+        ''')),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument('--first',
+                        help='The path to the first package_config.json file',
+                        required=True)
+    parser.add_argument('--second',
+                        help='The path to the second package_config.json file',
+                        required=True)
+    parser.add_argument('--out',
+                        help='The path to the output file',
+                        required=True)
+    args = parser.parse_args()
+
+    packages = []
+    parse_package_config(args.first, args.out, packages)
+    parse_package_config(args.second, args.out, packages)
+
+    package_config = {
+        'configVersion': 2,
+        'packages': packages,
+        'generator': os.path.basename(__file__)
+    }
+
+    with open(args.out, 'w') as package_config_json:
+          package_config_json.write(json.dumps(package_config, sort_keys=True, indent=2))
+
+if __name__ == '__main__':
+    sys.exit(main())
