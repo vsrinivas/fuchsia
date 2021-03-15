@@ -47,8 +47,8 @@ cache_package_labels += [
 universe_package_labels += [
   "//examples/fidl:tests",
 
-  "//src/ui/examples:bouncing_ball",
-  "//src/ui/examples:spinning_square_view",
+  "//src/ui/examples/bouncing_ball",
+  "//src/ui/examples/spinning_square_view",
   "//src/virtualization",
 ]
 

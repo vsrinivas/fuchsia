@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("bouncing_ball") {
+import("//src/sys/build/components.gni")
+
+executable("bin") {
   output_name = "bouncing_ball"
 
   sources = [ "main.cc" ]
@@ -17,4 +19,9 @@ executable("bouncing_ball") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+fuchsia_package_with_single_component("bouncing_ball") {
+  manifest = "meta/bouncing_ball.cmx"
+  deps = [ ":bin" ]
 }

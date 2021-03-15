@@ -7,7 +7,7 @@
 #include <lib/trace-provider/provider.h>
 
 #include "src/lib/ui/base_view/view_provider_component.h"
-#include "src/ui/examples/spinning_square/spinning_square_view.h"
+#include "src/ui/examples/spinning_square_view/spinning_square_view.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

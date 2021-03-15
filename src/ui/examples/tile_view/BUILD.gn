@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("tile") {
+import("//src/sys/build/components.gni")
+
+executable("bin") {
   output_name = "tile_view"
 
   sources = [
@@ -34,4 +36,9 @@ executable("tile") {
   # Please migrate to typed channel APIs (fidl::ClientEnd<T>, fidl::ServerEnd<T>).
   # See linked bug for details.
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
+}
+
+fuchsia_package_with_single_component("tile_view") {
+  manifest = "meta/tile_view.cmx"
+  deps = [ ":bin" ]
 }

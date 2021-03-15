@@ -264,7 +264,7 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/ui/bin/hardware_display_controller_provider/fake:bin",
     "//src/ui/bin/hardware_display_controller_provider/fake:lib",
     "//src/ui/bin/hardware_display_controller_provider/fake/tests:unittests",
-    "//src/ui/examples/tile:tile",
+    "//src/ui/examples/tile_view:bin",
     "//src/ui/input/bin/hid:hid",
     "//src/ui/input/drivers/ft8201:ft8201-module",
     "//src/ui/input/drivers/ft8201:ft8201-test-bin",

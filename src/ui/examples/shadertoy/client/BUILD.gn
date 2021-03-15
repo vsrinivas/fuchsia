@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("client") {
+import("//src/sys/build/components.gni")
+
+executable("bin") {
   output_name = "shadertoy_client"
 
   sources = [
@@ -33,4 +35,9 @@ executable("client") {
   ]
 
   include_dirs = [ "//lib" ]
+}
+
+fuchsia_package_with_single_component("client") {
+  manifest = "meta/shadertoy_client.cmx"
+  deps = [ ":bin" ]
 }

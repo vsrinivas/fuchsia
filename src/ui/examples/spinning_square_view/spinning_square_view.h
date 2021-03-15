@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_EXAMPLES_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
-#define SRC_UI_EXAMPLES_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
+#ifndef SRC_UI_EXAMPLES_SPINNING_SQUARE_VIEW_SPINNING_SQUARE_VIEW_H_
+#define SRC_UI_EXAMPLES_SPINNING_SQUARE_VIEW_SPINNING_SQUARE_VIEW_H_
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/ui/scenic/cpp/resources.h>
@@ -35,4 +35,4 @@ class SpinningSquareView : public scenic::BaseView {
 
 }  // namespace examples
 
-#endif  // SRC_UI_EXAMPLES_SPINNING_SQUARE_SPINNING_SQUARE_VIEW_H_
+#endif  // SRC_UI_EXAMPLES_SPINNING_SQUARE_VIEW_SPINNING_SQUARE_VIEW_H_

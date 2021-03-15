@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("simplest_app") {
+import("//src/sys/build/components.gni")
+
+executable("bin") {
   output_name = "simplest_app"
 
   sources = [
@@ -25,4 +27,9 @@ executable("simplest_app") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+}
+
+fuchsia_package_with_single_component("simplest_app") {
+  manifest = "meta/simplest_app.cmx"
+  deps = [ ":bin" ]
 }

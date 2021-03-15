@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("simplest_embedder") {
+import("//src/sys/build/components.gni")
+
+executable("bin") {
   output_name = "simplest_embedder"
 
   sources = [
@@ -24,5 +26,13 @@ executable("simplest_embedder") {
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+  ]
+}
+
+fuchsia_package_with_single_component("simplest_embedder") {
+  manifest = "meta/simplest_embedder.cmx"
+  deps = [
+    ":bin",
+    "//src/ui/examples/shadertoy/client:bin",
   ]
 }

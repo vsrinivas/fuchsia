@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("spinning_square") {
+import("//src/sys/build/components.gni")
+
+executable("bin") {
   output_name = "spinning_square_view"
 
   sources = [
@@ -22,4 +24,9 @@ executable("spinning_square") {
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+}
+
+fuchsia_package_with_single_component("spinning_square_view") {
+  manifest = "meta/spinning_square_view.cmx"
+  deps = [ ":bin" ]
 }

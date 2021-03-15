@@ -8,7 +8,7 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/ui/base_view/view_provider_component.h"
-#include "src/ui/examples/tile/tile_view.h"
+#include "src/ui/examples/tile_view/tile_view.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);

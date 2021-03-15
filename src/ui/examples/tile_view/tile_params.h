@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_EXAMPLES_TILE_TILE_PARAMS_H_
-#define SRC_UI_EXAMPLES_TILE_TILE_PARAMS_H_
+#ifndef SRC_UI_EXAMPLES_TILE_VIEW_TILE_PARAMS_H_
+#define SRC_UI_EXAMPLES_TILE_VIEW_TILE_PARAMS_H_
 
 #include <string>
 #include <vector>
@@ -27,4 +27,4 @@ struct TileParams {
 
 }  // namespace examples
 
-#endif  // SRC_UI_EXAMPLES_TILE_TILE_PARAMS_H_
+#endif  // SRC_UI_EXAMPLES_TILE_VIEW_TILE_PARAMS_H_

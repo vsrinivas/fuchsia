@@ -67,7 +67,7 @@ test_package("scenic-stress-tests") {
   deps = [
     ":input-stressor-bin",
     "//src/ui/bin/root_presenter:bin",
-    "//src/ui/examples/simplest_app",
+    "//src/ui/examples/simplest_app:bin",
     "//src/ui/scenic/bin",
   ]
 

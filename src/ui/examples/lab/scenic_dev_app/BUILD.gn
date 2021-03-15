@@ -2,9 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//src/sys/build/components.gni")
 import("//src/ui/lib/escher/build_args.gni")
 
-executable("scenic_dev_app") {
+executable("bin") {
   output_name = "scenic_dev_app"
 
   sources = [
@@ -36,4 +37,9 @@ executable("scenic_dev_app") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+fuchsia_package_with_single_component("scenic_dev_app") {
+  manifest = "meta/scenic_dev_app.cmx"
+  deps = [ ":bin" ]
 }

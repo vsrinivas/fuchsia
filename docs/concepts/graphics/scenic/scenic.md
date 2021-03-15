@@ -248,8 +248,8 @@ examples of how to use it.
 
 * [bouncing_ball](/src/ui/examples/bouncing_ball/README.md): Simple example that doesn't use any wrapper library.
 * [simplest_app](/src/ui/examples/simplest_app/README.md): Draws a background color that changes with user input.
-* [spinning_square](/src/ui/examples/spinning_square/README.md): Draws a square and animates it.
-* [tile](/src/ui/examples/tile/README.md): Simple window-manager-like app that embeds child views.
+* [spinning_square](/src/ui/examples/spinning_square_view/README.md): Draws a square and animates it.
+* [tile](/src/ui/examples/tile_view/README.md): Simple window-manager-like app that embeds child views.
 * Other examples: [`//src/ui/examples`](/src/ui/examples)
 
 # API Guide {#api-guide}
@@ -258,7 +258,7 @@ examples of how to use it.
 
 Scenic has convenience wrapper libraries for some languages. These can be used instead of using the FIDL API directly.
 
-* [C++ client library](/sdk/lib/ui/scenic/cpp) (see also examples: [simplest_app](/src/ui/examples/simplest_app/README.md), [spinning_square](/src/ui/examples/spinning_square/README.md), [simplest_embedder](/src/ui/examples/simplest_embedder/README.md), [tile](/src/ui/examples/tile/README.md))
+* [C++ client library](/sdk/lib/ui/scenic/cpp) (see also examples: [simplest_app](/src/ui/examples/simplest_app/README.md), [spinning_square](/src/ui/examples/spinning_square_view/README.md), [simplest_embedder](/src/ui/examples/simplest_embedder/README.md), [tile](/src/ui/examples/tile_view/README.md))
 * [Rust client library](/src/lib/ui/fuchsia-scenic)
 
 ## FIDL protocols {#fidl-protocols}

@@ -16,7 +16,7 @@ group("tests") {
     ":viewstate_apptests",
     "//src/graphics/examples:vkcube-on-scenic",
     "//src/ui/bin/hardware_display_controller_provider",
-    "//src/ui/examples:bouncing_ball",
+    "//src/ui/examples/bouncing_ball",
   ]
 }
 

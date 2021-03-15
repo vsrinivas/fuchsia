@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_EXAMPLES_TILE_TILE_VIEW_H_
-#define SRC_UI_EXAMPLES_TILE_TILE_VIEW_H_
+#ifndef SRC_UI_EXAMPLES_TILE_VIEW_TILE_VIEW_H_
+#define SRC_UI_EXAMPLES_TILE_VIEW_TILE_VIEW_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
@@ -21,7 +21,7 @@
 #include "src/lib/storage/vfs/cpp/pseudo_dir.h"
 #include "src/lib/storage/vfs/cpp/synchronous_vfs.h"
 #include "src/lib/ui/base_view/base_view.h"
-#include "src/ui/examples/tile/tile_params.h"
+#include "src/ui/examples/tile_view/tile_params.h"
 
 namespace examples {
 
@@ -104,4 +104,4 @@ class TileView : public scenic::BaseView, public fuchsia::ui::policy::Presenter 
 
 }  // namespace examples
 
-#endif  // SRC_UI_EXAMPLES_TILE_TILE_VIEW_H_
+#endif  // SRC_UI_EXAMPLES_TILE_VIEW_TILE_VIEW_H_

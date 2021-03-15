@@ -3,7 +3,9 @@
 # found in the LICENSE file.
 # this has to match the binary name in examples/ui/Build.gn
 
-executable("yuv_to_image_pipe") {
+import("//src/sys/build/components.gni")
+
+executable("bin") {
   output_name = "yuv_to_image_pipe"
 
   sources = [
@@ -35,4 +37,9 @@ executable("yuv_to_image_pipe") {
     "//zircon/system/ulib/trace",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
+}
+
+fuchsia_package_with_single_component("yuv_to_image_pipe") {
+  manifest = "meta/yuv_to_image_pipe.cmx"
+  deps = [ ":bin" ]
 }

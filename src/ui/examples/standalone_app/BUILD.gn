@@ -2,7 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-executable("standalone_app") {
+import("//src/sys/build/components.gni")
+
+executable("bin") {
   output_name = "standalone_app"
 
   sources = [
@@ -34,4 +36,9 @@ executable("standalone_app") {
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
+}
+
+fuchsia_package_with_single_component("standalone_app") {
+  manifest = "meta/standalone_app.cmx"
+  deps = [ ":bin" ]
 }

@@ -189,13 +189,13 @@ There are some examples available:
   - Basic example of creating `ViewProvider` and `View`, and creating a UI by using
     Scenic commands.
   - **Source:** [`//src/ui/examples/bouncing_ball`](/src/ui/examples/bouncing_ball)
-  - **Build dependency:** `//src/ui/examples:bouncing_ball`
+  - **Build dependency:** `//src/ui/examples/bouncing_ball`
   - **Package URI:** `fuchsia-pkg://fuchsia.com/bouncing_ball#meta/bouncing_ball.cmx`
 
 * **spinning_square_view**
   - Example that shows the use of [`BaseView`](/src/lib/ui/base_view).
-  - **Source:** [`//src/ui/examples/spinning_square`](/src/ui/examples/spinning_square)
-  - **Build dependency:** `//src/ui/examples:spinning_square_view`
+  - **Source:** [`//src/ui/examples/spinning_square_view`](/src/ui/examples/spinning_square_view)
+  - **Build dependency:** `//src/ui/examples/spinning_square_view`
   - **Package URI:** `fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx`
 
 * **spinning_square_rs**
@@ -217,13 +217,13 @@ There are some examples available:
     presenter for its implementation of `BaseView`. It tracks input callbacks from Scenic and draws
     elements using `scenic::Material`.
   - **Source:** [`//src/ui/examples/simplest_app`](/src/ui/examples/simplest_app)
-  - **Build dependency:** `//src/ui/examples:simplest_app`
+  - **Build dependency:** `//src/ui/examples/simplest_app`
   - **Package URI:** `fuchsia-pkg://fuchsia.com/simplest_app#meta/simplest_app.cmx`
 
 * **yuv_to_image_pipe**
   - An application that updates the scene using an ImagePipe.
   - **Source:** [`//src/ui/examples/yuv_to_image_pipe`](/src/ui/examples/yuv_to_image_pipe)
-  - **Build dependency:** `//src/ui/examples:yuv_to_image_pipe`
+  - **Build dependency:** `//src/ui/examples/yuv_to_image_pipe`
   - **Package URI:** `fuchsia-pkg://fuchsia.com/yuv_to_image_pipe#meta/yuv_to_image_pipe.cmx`
 
 To run these applications, you need to include the following dependency in your `fx set`

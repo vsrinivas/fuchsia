@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/examples/tile/tile_view.h"
+#include "src/ui/examples/tile_view/tile_view.h"
 
 #include <fuchsia/math/cpp/fidl.h>
 #include <lib/async/default.h>

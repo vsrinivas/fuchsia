@@ -155,8 +155,8 @@ group("package_deps") {
 
     # These are used by garnet_input_latency_benchmarks.
     "//src/sys/activity",
-    "//src/ui/examples:simplest_app",
-    "//src/ui/examples:yuv_to_image_pipe",
+    "//src/ui/examples/simplest_app",
+    "//src/ui/examples/yuv_to_image_pipe",
     "//src/ui/tools:present_view",
 
     # These are used by the flutter benchmarks.
