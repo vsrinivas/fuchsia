@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/pci/hw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -24,7 +25,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
-#include <hw/pci.h>
 
 // implement display controller protocol
 static constexpr uint64_t kDisplayId = 1;

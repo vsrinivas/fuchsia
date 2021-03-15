@@ -41,6 +41,7 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <inttypes.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/pci/hw.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -57,7 +58,6 @@
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
 #include <hw/inout.h>
-#include <hw/pci.h>
 #include <hw/reg.h>
 
 #define ASSERT(x) assert(x)

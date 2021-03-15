@@ -41,8 +41,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 
-#include <hw/pci.h>
-
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/dbg.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/error-dump.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-agn-hw.h"

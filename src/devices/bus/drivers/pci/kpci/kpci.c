@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fidl/txn_header.h>
+#include <lib/pci/hw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -17,7 +18,6 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <hw/pci.h>
 
 #include "src/devices/bus/drivers/pci/kpci/kpci-private.h"
 #include "src/devices/bus/drivers/pci/pci_bind.h"

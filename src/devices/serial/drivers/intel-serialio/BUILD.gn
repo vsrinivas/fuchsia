@@ -40,6 +40,7 @@ driver_module("intel-serialio") {
     "//sdk/banjo/fuchsia.hardware.serial",
     "//src/devices/lib/driver",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
   ]
 }

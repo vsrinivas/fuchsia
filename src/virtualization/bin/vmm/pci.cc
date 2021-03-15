@@ -5,10 +5,9 @@
 #include "src/virtualization/bin/vmm/pci.h"
 
 #include <endian.h>
+#include <lib/pci/hw.h>
 #include <stdio.h>
 #include <zircon/assert.h>
-
-#include <hw/pci.h>
 
 __BEGIN_CDECLS;
 #include <libfdt.h>

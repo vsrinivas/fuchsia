@@ -4,6 +4,7 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/pci/hw.h>
 #include <zircon/pixelformat.h>
 #include <zircon/process.h>
 
@@ -11,7 +12,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/mmio-buffer.h>
-#include <hw/pci.h>
 
 #include "simple-display.h"
 #include "src/graphics/display/drivers/simple/simple-bochs-bind.h"

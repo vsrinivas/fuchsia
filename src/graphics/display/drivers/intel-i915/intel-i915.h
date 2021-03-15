@@ -13,6 +13,7 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <lib/mmio/mmio.h>
+#include <lib/pci/hw.h>
 #include <lib/zx/channel.h>
 #include <threads.h>
 
@@ -21,7 +22,6 @@
 
 #include <ddk/mmio-buffer.h>
 #include <fbl/vector.h>
-#include <hw/pci.h>
 
 #include "display-device.h"
 #include "dp-display.h"

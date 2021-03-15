@@ -20,7 +20,6 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <hw/pci.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 

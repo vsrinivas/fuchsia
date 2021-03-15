@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_DDK_INCLUDE_HW_PCI_H_
-#define SRC_LIB_DDK_INCLUDE_HW_PCI_H_
+#ifndef SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_HW_H_
+#define SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_HW_H_
 
 // clang-format off
 
@@ -215,4 +215,4 @@ static inline void pcie_write32(volatile uint32_t* reg, uint32_t val) { *reg = h
 
 __END_CDECLS
 
-#endif  // SRC_LIB_DDK_INCLUDE_HW_PCI_H_
+#endif  // SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_HW_H_

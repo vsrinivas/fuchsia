@@ -5,9 +5,9 @@
 #include "src/virtualization/bin/vmm/pci.h"
 
 #include <lib/async/default.h>
+#include <lib/pci/hw.h>
 
 #include <gtest/gtest.h>
-#include <hw/pci.h>
 
 #include "src/virtualization/bin/vmm/bits.h"
 

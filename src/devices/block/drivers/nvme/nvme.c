@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/pci/hw.h>
 #include <lib/sync/completion.h>
 #include <limits.h>
 #include <stdio.h>
@@ -21,7 +22,6 @@
 #include <ddk/driver.h>
 #include <ddk/io-buffer.h>
 #include <ddk/mmio-buffer.h>
-#include <hw/pci.h>
 #include <hw/reg.h>
 
 #include "nvme-hw.h"

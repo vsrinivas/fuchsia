@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/pci/hw.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <sys/types.h>
@@ -23,7 +24,6 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
-#include <hw/pci.h>
 #include <region-alloc/region-alloc.h>
 
 #include "src/devices/bus/drivers/pci/allocation.h"

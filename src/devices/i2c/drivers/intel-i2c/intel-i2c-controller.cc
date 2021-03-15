@@ -12,6 +12,7 @@
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/pci/hw.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,7 +35,6 @@
 #include <ddk/metadata/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <hw/pci.h>
 
 #include "binding.h"
 #include "src/devices/i2c/drivers/intel-i2c/intel_i2c_bind.h"

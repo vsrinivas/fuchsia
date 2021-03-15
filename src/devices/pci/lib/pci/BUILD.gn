@@ -9,6 +9,7 @@ import("//src/sys/build/components.gni")
 zx_library("pci") {
   sdk = "source"
   sdk_headers = [
+    "lib/pci/hw.h",
     "lib/pci/pio.h",
     "lib/pci/pciroot.h",
     "lib/pci/root_host.h",

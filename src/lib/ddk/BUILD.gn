@@ -25,7 +25,6 @@ library_headers("ddk-headers") {
     "ddk/protodefs.h",
     "hw/arch_ops.h",
     "hw/inout.h",
-    "hw/pci.h",
     "hw/reg.h",
     "hw/sdio.h",
     "hw/sdmmc.h",

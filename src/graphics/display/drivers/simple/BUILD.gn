@@ -14,6 +14,7 @@ source_set("shared") {
     "//src/devices/lib/driver",
     "//src/devices/lib/mmio",
     "//src/devices/pci/lib/device-protocol-pci",
+    "//src/devices/pci/lib/pci",
     "//src/lib/ddk",
     "//src/lib/ddktl",
   ]
@@ -52,6 +53,7 @@ foreach(driver, simple_drivers) {
       "//sdk/banjo/fuchsia.hardware.display.controller",
       "//sdk/banjo/fuchsia.hardware.pci",
       "//src/devices/pci/lib/device-protocol-pci",
+      "//src/devices/pci/lib/pci",
       "//src/lib/ddk",
     ]
 

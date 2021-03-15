@@ -4,12 +4,12 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/pci/hw.h>
 #include <stdio.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <hw/pci.h>
 #include <intel-serialio/serialio.h>
 
 #include "src/devices/serial/drivers/intel-serialio/intel_serialio_bind.h"
