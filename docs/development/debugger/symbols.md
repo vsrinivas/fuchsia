@@ -14,7 +14,7 @@ previous values, which become unavailable.
 
 You can see the valid ranges for a variable with the "sym-info" command:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] sym-info my_variable
 Variable: my_variable
   Type: int
@@ -38,7 +38,7 @@ The `sym-stat` command will tell you status for symbols. With no running process
 information on the different symbol locations you have specified. If your symbols aren't found, make
 sure this matches your expectations:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] sym-stat
 Symbol index status
 
@@ -61,7 +61,7 @@ When you have a running program, `sym-stat` will additionally print symbol infor
 binary loaded into the process. If you're not getting symbols, find the entry for the binary or
 shared library in this list. If it says:
 
-```
+```none {:.devsite-disable-click-to-copy}
     Symbols loaded: No
 ```
 
@@ -71,7 +71,7 @@ in any of the locations listed in "Symbol index status". You may need to add a n
 
 If instead it says something like this:
 
-```
+```none {:.devsite-disable-click-to-copy}
     Symbols loaded: Yes
     Symbol file: /home/foo/bar/...
     Source files indexed: 1
@@ -96,7 +96,7 @@ Some people have multiple checkouts. If it's finding a file in the wrong one, ov
 
 To display the file name of the file it found from `list`, use the `-f` option:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] list -f
 /home/me/fuchsia/out/x64/../../src/foo/bar.cc
  ... <source code> ...
@@ -107,7 +107,7 @@ You can also set the `show-file-paths` option. This will increase file path info
   * It will show the full resolved path in source listings as in `list -f`.
   * It will show the full path instead of just the file name in other places such as backtraces.
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] set show-file-paths true
 ```
 
@@ -116,7 +116,7 @@ breakpoint location doesn't match the line number you typed. In most cases, this
 symbols did not identify any code on the specified line so the debugger used the next line. It can
 happen even in unoptimized builds, and is most common for variable declarations.
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] b file.cc:138
 Breakpoint 1 (Software) @ file.cc:138
    138   int my_value = 0;          <- Breakpoint was requested here.

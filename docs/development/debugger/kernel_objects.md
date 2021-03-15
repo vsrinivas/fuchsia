@@ -3,7 +3,7 @@
 List all handles and [VMOs](/docs/reference/kernel_objects/vm_object.md) (some of these "Virtual
 Memory Objects" can be mapped but won't have open handles) with the `handles` command.
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] handles
       Handle  Type                  Koid
       <none>  ZX_OBJ_TYPE_VMO      30040
@@ -14,7 +14,7 @@ Memory Objects" can be mapped but won't have open handles) with the `handles` co
 
 You can look up more detailed information by handle value:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] handle 4166674259
   Handle  4166674259
     Type  ZX_OBJ_TYPE_TIMER
@@ -28,7 +28,7 @@ Or you can look up an object by koid. Koid lookup will only search the objects i
 process and won't match arbitrary kernel objects owned by other processes. Koid lookup is the only
 way to show detailed information for mapped VMOs that have no open handles.
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] handle -k 30108
                    Handle  <none>
                      Type  ZX_OBJ_TYPE_VMO

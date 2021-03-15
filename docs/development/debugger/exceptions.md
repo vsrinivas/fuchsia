@@ -26,7 +26,7 @@ done with the `--forward` (`-f` for short) flag to the `continue` command:
 
 For example, upon the expected crash, a death test will report:
 
-```
+```none {:.devsite-disable-click-to-copy}
 ══════════════════════════
  Invalid opcode exception
 ══════════════════════════
@@ -43,7 +43,7 @@ For example, upon the expected crash, a death test will report:
 
 And to continue on with the test:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] continue --forward
 
 [zxdb] c -f             # Alternate Short form.
@@ -65,7 +65,7 @@ handled only as second-chance by default. This setting holds a list of exception
 See the debugger's `help get` and `help set` for more details on dealing with list settings. Some
 examples:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] get second-chance-exceptions           # List the current values.
 
 [zxdb] set second-chance-exceptions += gen    # Add "general" to the list.

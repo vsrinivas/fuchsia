@@ -25,20 +25,20 @@ your symbols. See "Running out-of-tree" below for more.
 A Fuchsia "core" build includes (as of this writing) the necessary targets for the debugger. So this
 build configuration is sufficient:
 
-```sh
+```posix-terminal
 fx --dir=out/x64 set core.x64
 ```
 
 If you're compiling with another product, you may not get it by default. If you don't have the
 debugger in your build, add `//bundles:tools` to your "universe", either with:
 
-```
+```posix-terminal
 fx <normal_stuff_you_use> --with //bundles:tools
 ```
 
 Or you can edit your GN args directly by editing `<build_dir>/args.gn` and adding to the bottom:
 
-```
+```none
 universe_package_labels += [ "//bundles:tools" ]
 ```
 
@@ -49,7 +49,7 @@ You can use the fx utility to start the debug agent and connect automatically.
 For most build configurations, the debug agent will be in the "universe" (i.e. "available to use")
 but not in the base build so won't be on the system before boot. You will need to run:
 
-```sh
+```posix-terminal
 fx serve
 ```
 
@@ -58,7 +58,7 @@ message "Timed out trying to find the Debug Agent".
 
 Once the server is running, launch the debugger in another terminal window:
 
-```sh
+```posix-terminal
 fx debug
 ```
 
@@ -74,7 +74,7 @@ steps:
 
 On the target system pick a port and run the debug agent:
 
-```sh
+```posix-terminal
 run fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx --port=2345
 ```
 
@@ -97,8 +97,8 @@ interface (should be the name of the bridge device).
 
 The address should look like `fe80::5054:ff:fe63:5e7a%br0`
 
-```sh
-fx zxdb
+```none {:.devsite-disable-click-to-copy}
+$ fx zxdb
 
 or
 
@@ -111,7 +111,7 @@ out/<out_dir>/host_x64/zxdb
 
 If you're connecting or running many times, there are command-line switches:
 
-```sh
+```posix-terminal
 zxdb -c [fe80::5054:ff:fe63:5e7a%br0]:2345
 ```
 
@@ -143,13 +143,13 @@ settings that can be manipulated using `set` or `get`.
 
 For example, to add a ".build-id" directory, either use `--build-id-dir` flag:
 
-```sh
+```posix-terminal
 zxdb --build-id-dir some/other_location/.build-id
 ```
 
 Or add it to the `build-id-dirs` list option in the interactive UI:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] set build-id-dirs += some/other_location/.build-id
 ```
 
@@ -187,20 +187,20 @@ symbol file.
 
 You can add additional build directories on the command line:
 
-```sh
+```posix-terminal
 zxdb -b /home/me/fuchsia/out/x64
 ```
 
 Or interactively from within the debugger:
 
-```
+```none
 [zxdb] set build-dirs += /home/me/fuchsia/out/x64
 ```
 
 If debugger is finding the wrong file, you can replace the entire build directory list by omitting
 the `+=`:
 
-```
+```none
 [zxdb] set build-dirs /home/me/fuchsia/out/x64
 ```
 

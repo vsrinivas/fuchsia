@@ -18,7 +18,7 @@ You can also debug the client on GDB or LLDB on your host machine.
     initialization, copy the command-line from "ps". Otherwise, it's easiest to attach after
     starting the debugger in the normal fashion.
 
-```sh
+```posix-terminal
 cd out/x64    # Substitute your build directory as needed.
 sudo gdb host_x64/exe.unstripped/zxdb
 ... GDB startup messages ...
@@ -30,14 +30,14 @@ sudo gdb host_x64/exe.unstripped/zxdb
 There are tests for the debugger that run on the host. These are relevant if you're working on the
 debugger client.
 
-```sh
+```posix-terminal
 cd out/x64    # Substitute your build directory as needed.
 host_x64/zxdb_tests
 ```
 
 To run the unit tests in the debugger:
 
-```sh
+```posix-terminal
 cd out/x64
 cp host_x64/exe.unstripped/zxdb_tests host_x64/
 gdb host_x64/zxdb_tests
@@ -52,7 +52,7 @@ at a certain place relative to the test binary and these will fail.
 Similar as with the client, the debug agent is programmed to log many debug statements when run with
 the `--debug-mode` flag:
 
-```
+```posix-terminal
 run fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx --debug-mode
 ```
 
@@ -60,7 +60,7 @@ It is also possible to attach the debugger to the debugger. The preferred way to
 zxdb catch the debugger on launch using the filtering feature. This is done frequently by the
 debugger team.
 
-```
+```none {:.devsite-disable-click-to-copy}
 // Run the debugger that will attach to the "to-be-debugged" debug agent.
 fx debug
 
@@ -90,6 +90,6 @@ one, only attach to them.
 
 To run the debug agent tests:
 
-```
+```posix-terminal
 fx test debug_agent_tests
 ```

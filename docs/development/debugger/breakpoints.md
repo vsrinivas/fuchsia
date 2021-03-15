@@ -3,7 +3,7 @@
 Breakpoints stop execution when some code is executed. To create a breakpoint, use the `break`
 command (`b` for short) and give it a location:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] break main
 Breakpoint 3 (Software) on Global, Enabled, stop=All, @ main
    180
@@ -15,45 +15,45 @@ A location can be expressed in many different ways.
 
   * Plain function name. This will match functions with the name in any namespace:
 
-    ```
-    break main
+    ```none {:.devsite-disable-click-to-copy}
+    [zxdb] break main
     ```
 
   * Member function or functions inside a specific namespace or class:
 
-    ```
-    break my_namespace::MyClass::MyFunction
-    break ::OtherFunction
+    ```none {:.devsite-disable-click-to-copy}
+    [zxdb] break {{"<var>my_namespace</var>"}}::{{"<var>MyClass</var>"}}::{{"<var>MyFunction</var>"}}
+    [zxdb] break ::{{"<var>OtherFunction</var>"}}
     ```
 
   * Source file + line number (separate with a colon):
 
-    ```
-    break mymain.cc:22
+    ```none {:.devsite-disable-click-to-copy}
+    [zxdb] break mymain.cc:22
     ```
 
   * Line number within the current frame’s current source file (useful when stepping):
 
-    ```
-    break 23
+    ```none {:.devsite-disable-click-to-copy}
+    [zxdb] break 23
     ```
 
   * Memory address:
 
-    ```
-    break 0xf72419a01
+    ```none {:.devsite-disable-click-to-copy}
+    [zxdb] break 0xf72419a01
     ```
 
   * Expression: Prefixing with "*" will treat the following input as an expression that evaluates to
     an address. This is most often used with hardware breakpoints.
 
-    ```
-    break --type=write *&foo
+    ```none {:.devsite-disable-click-to-copy}
+    [zxdb] break --type=write *&foo
     ```
 
 To list all breakpoints:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] breakpoint
 ```
 
@@ -63,13 +63,13 @@ To list all breakpoints:
 To clear a specific breakpoint, give that breakpoint index as the context for the clear command (see
 “Interaction model” above). Here’s we’re using the abbreviation for `breakpoint` (`bp`):
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] bp 2 clear
 ```
 
 Or you can clear the current breakpoint:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] clear
 ```
 
@@ -84,14 +84,14 @@ clear all breakpoints at that location and ignore the default breakpoint context
 
 Breakpoints can also be enabled or disabled:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] disable
 [zxdb] bp 4 enable
 ```
 
 Other properties can be modified via the "get" and "set" commands.
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] bp 1 set location = Frobulator::GetThing
 ```
 
@@ -103,14 +103,14 @@ particularly useful to track down memory corruption. Create a hardware breakpoin
 debuggers, hardware breakpoints are exposed as a type of breakpoint rather than as a separate
 "watchpoint" concept).
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] break --type=read-write --size=4 0x12345670
 ```
 
 As a shortcut, the "watch" command will take the contents of a variable or the result of an
 expression and set a data write breakpoint over its range:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] watch i
 [zxdb] watch foo[5]->bar
 ```
@@ -135,7 +135,7 @@ Notes:
 You can insert a hardcoded breakpoint in your code if you want to catch some specific condition.
 Clang has a builtin (it won't work in GCC Zircon builds):
 
-```
+```cpp
 __builtin_debugtrap();
 ```
 

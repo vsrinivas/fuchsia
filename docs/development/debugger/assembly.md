@@ -5,7 +5,7 @@
 The `disassemble` command (`di` for short) disassembles from the current location. If available, the
 instructions and call destinations are annotated with source line information:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] di
 miscsvc.cc:118
  ▶ 0x20bc1c7aa60a  mov     dword ptr [rbx + 0x10c], eax
@@ -22,7 +22,7 @@ miscsvc.cc:122
 The `di` command can also accept an address or symbol as a parameter. If given a function name,
 it disassembles the entire function:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] di main
 miscsvc.cc:88
    0x20bc1c7aa000  push    rbp
@@ -54,22 +54,22 @@ Machine instructions can be stepped using the following Zxdb commands:
 
 For example:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] ni
 🛑 main(int, const char**) • main.cc:102
 main.cc:99
- ▶ 0x23f711346233  mov   edx, 0x20 
+ ▶ 0x23f711346233  mov   edx, 0x20
    0x23f711346238  call  0x35a3a3  ➔ __asan_memcpy
-   0x23f71134623d  mov   rdi, qword ptr [rbx + 0x258] 
+   0x23f71134623d  mov   rdi, qword ptr [rbx + 0x258]
    0x23f711346244  call  0x1677    ➔ $anon::DecodeCommandLine
 
 [zxdb] ni
 🛑 main(int, const char**) • main.cc:102
 main.cc:99
  ▶ 0x23f711346238  call  0x35a3a3 ➔ __asan_memcpy
-   0x23f71134623d  mov   rdi, qword ptr [rbx + 0x258] 
+   0x23f71134623d  mov   rdi, qword ptr [rbx + 0x258]
    0x23f711346244  call  0x1677   ➔ $anon::DecodeCommandLine
-   0x23f711346249  mov   rdi, qword ptr [rbx + 0x260] 
+   0x23f711346249  mov   rdi, qword ptr [rbx + 0x260]
 ```
 
 Zxdb maintains information about whether the last command was an assembly command or a source-code
@@ -80,17 +80,17 @@ type `disassemble`, and to switch back to source-code mode, type `list`.
 
 The `regs` command shows the most common CPU registers.
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] regs
 General Purpose Registers
       rax  0xfffffffffffffffa = -6
-      rbx          0x50b7085b 
+      rbx          0x50b7085b
       rcx                 0x0 = 0
-      rdx      0x2023de8c87a0 
-      rsi  0x7fffffffffffffff 
-      rdi          0x50b7085b 
-      rbp      0x224bb1e0b950 
-      rsp      0x224bb1e0b928 
+      rdx      0x2023de8c87a0
+      rsi  0x7fffffffffffffff
+      rdi          0x50b7085b
+      rbp      0x224bb1e0b950
+      rsp      0x224bb1e0b928
       ...
 ```
 
@@ -115,22 +115,23 @@ command:
 Registers can be used in [expressions](printing.md) like variables. The canonical name of a register
 is `$reg(register name)`.
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] print $reg(x3)
 79
 ```
 
 In addition, the raw register name can be used if there is no variable with the same name:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] print x3
 79
 ```
 
 Registers can be assigned using the normal expression evaluation syntax:
 
-```
-print x3 = 0
+```none {:.devsite-disable-click-to-copy}
+[zxdb] print x3 = 0
+0
 ```
 
 ### Vector registers
@@ -147,7 +148,7 @@ The `regs --vector` command displays vector registers in a table according to th
   * `float`: Array of single-precision floating point.
   * `double`: Array of double-precision floating point. This is the default.
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] set vector-format double
 
 [zxdb] regs -v
@@ -166,7 +167,7 @@ Vector registers can also be used like arrays in expressions. The `vector-format
 how each register is converted into an array value. For example, to show the low 32 bits interpreted
 as a floating-point value of the x86 vector register `ymm1`:
 
-```
+```none {:.devsite-disable-click-to-copy}
 [zxdb] set vector-format float
 
 [zxdb] print ymm1[0]
