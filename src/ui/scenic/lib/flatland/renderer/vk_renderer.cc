@@ -289,16 +289,19 @@ escher::ImagePtr VkRenderer::ExtractImage(const ImageMetadata& metadata,
   auto memory_requirements = vk_device.getImageMemoryRequirements(image_result.value);
   uint32_t memory_type_index =
       escher::CountTrailingZeros(memory_requirements.memoryTypeBits & properties.memoryTypeBits);
-  vk::ImportMemoryBufferCollectionFUCHSIA import_info;
-  import_info.collection = collection;
-  import_info.index = metadata.vmo_index;
-  vk::MemoryAllocateInfo alloc_info;
-  alloc_info.setPNext(&import_info);
-  alloc_info.allocationSize = memory_requirements.size;
-  alloc_info.memoryTypeIndex = memory_type_index;
+  vk::StructureChain<vk::MemoryAllocateInfo, vk::ImportMemoryBufferCollectionFUCHSIA,
+                     vk::MemoryDedicatedAllocateInfoKHR>
+      alloc_info(vk::MemoryAllocateInfo()
+                     .setAllocationSize(memory_requirements.size)
+                     .setMemoryTypeIndex(memory_type_index),
+                 vk::ImportMemoryBufferCollectionFUCHSIA()
+                     .setCollection(collection)
+                     .setIndex(metadata.vmo_index),
+                 vk::MemoryDedicatedAllocateInfoKHR().setImage(image_result.value));
 
   vk::DeviceMemory memory = nullptr;
-  vk::Result err = vk_device.allocateMemory(&alloc_info, nullptr, &memory);
+  vk::Result err =
+      vk_device.allocateMemory(&alloc_info.get<vk::MemoryAllocateInfo>(), nullptr, &memory);
   if (err != vk::Result::eSuccess) {
     FX_LOGS(ERROR) << "Could not successfully allocate memory.";
     return nullptr;
@@ -310,7 +313,7 @@ escher::ImagePtr VkRenderer::ExtractImage(const ImageMetadata& metadata,
   // requested an image size that is larger than the maximum image size allowed by
   // the sysmem collection constraints.
   auto gpu_mem =
-      escher::GpuMem::AdoptVkMemory(vk_device, vk::DeviceMemory(memory), alloc_info.allocationSize,
+      escher::GpuMem::AdoptVkMemory(vk_device, vk::DeviceMemory(memory), memory_requirements.size,
                                     /*needs_mapped_ptr*/ false);
   if (memory_requirements.size > gpu_mem->size()) {
     FX_LOGS(ERROR) << "Memory requirements for image exceed available memory: "
