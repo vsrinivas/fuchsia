@@ -45,7 +45,7 @@ import("fuchsia_package.gni")
 #   component_name (optional)
 #     The name of the component.
 #     Type: string
-#     Default: target_name
+#     Default: package_name
 #
 #   manifest (required)
 #     The component manifest.
@@ -63,7 +63,7 @@ template("fuchsia_package_with_single_component") {
   if (defined(invoker.package_name)) {
     package_name = invoker.package_name
   }
-  component_name = target_name
+  component_name = package_name
   if (defined(invoker.component_name)) {
     component_name = invoker.component_name
   }

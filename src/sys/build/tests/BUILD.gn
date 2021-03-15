@@ -11,6 +11,7 @@ import("//src/sys/build/components.gni")
 group("tests") {
   deps = [
     ":echo-integration-test",
+    ":launcher-integration-tests",
     ":readfile-unittest",
     ":return_zero_package",
     ":twoplustwo-cpp-unittest",
@@ -25,7 +26,7 @@ executable("return_zero") {
 }
 
 fuchsia_component("return_zero_component") {
-  manifest = "return_zero.cmx"
+  manifest = "meta/return_zero.cmx"
   testonly = true
   deps = [ ":return_zero" ]
 }
@@ -77,7 +78,7 @@ fuchsia_unittest_package("readfile-unittest") {
 }
 
 fuchsia_component("echo-server") {
-  manifest = "echo_server_go.cmx"
+  manifest = "meta/echo_server_go.cmx"
   deps = [ "//garnet/examples/fidl/echo_server_go:echo_server_go_bin" ]
 }
 
@@ -95,7 +96,7 @@ rustc_test("echo_client_test") {
 }
 
 fuchsia_test_component("echo-client-test") {
-  manifest = "echo_client_test.cmx"
+  manifest = "meta/echo_client_test.cmx"
   deps = [ ":echo_client_test" ]
 }
 
@@ -110,4 +111,69 @@ fuchsia_test_package("echo-integration-test") {
   test_specs = {
     environments = [ emu_env ]
   }
+}
+
+group("launcher-integration-tests") {
+  testonly = true
+  deps = [
+    ":launcher-integration-test",
+    ":return-zero-component-named",
+    ":return-zero-package-component-named",
+    ":return-zero-package-named",
+    ":return-zero-unnamed",
+  ]
+}
+
+rustc_test("launcher_test") {
+  source_root = "launcher.rs"
+  deps = [
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/testing/fidl:placeholders-rustc",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:clap",
+  ]
+
+  sources = [ "launcher.rs" ]
+}
+
+fuchsia_package_with_single_component("return-zero-unnamed") {
+  testonly = true
+  manifest = "meta/return_zero.cmx"
+  deps = [ ":return_zero" ]
+}
+
+fuchsia_package_with_single_component("return-zero-package-named") {
+  testonly = true
+  package_name = "return-zero"
+  manifest = "meta/return_zero.cmx"
+  deps = [ ":return_zero" ]
+}
+
+fuchsia_package_with_single_component("return-zero-component-named") {
+  testonly = true
+  component_name = "return-zero"
+  manifest = "meta/return_zero.cmx"
+  deps = [ ":return_zero" ]
+}
+
+fuchsia_package_with_single_component("return-zero-package-component-named") {
+  testonly = true
+  package_name = "return-zero-package-name"
+  component_name = "return-zero-component-name"
+  manifest = "meta/return_zero.cmx"
+  deps = [ ":return_zero" ]
+}
+
+fuchsia_test_component("launcher-test") {
+  manifest = "meta/launcher_test.cmx"
+  deps = [ ":launcher_test" ]
+}
+
+fuchsia_test_package("launcher-integration-test") {
+  # Demonstrate that `fuchsia_package_with_single_component` generates packages
+  # with single components and those packages have the expected names. See the
+  # launcher test binary to learn more.
+  test_components = [ ":launcher-test" ]
 }
