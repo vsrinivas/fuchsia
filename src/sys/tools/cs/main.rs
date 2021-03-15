@@ -11,7 +11,10 @@ mod log_stats;
 
 use {
     anyhow::{format_err, Error},
-    cs::{io::Directory, v2::V2Component, IncludeDetails, COMPONENT_SHOW_HELP},
+    cs::{
+        io::Directory, v2::V2Component, ComponentType, IncludeDetails, COMPONENT_SHOW_HELP,
+        CS_TREE_HELP,
+    },
     freq::BlobFrequencies,
     fuchsia_async as fasync,
     log_stats::{LogSeverity, LogStats},
@@ -27,7 +30,14 @@ use {
 enum Opt {
     /// Output the component tree.
     #[structopt(name = "tree")]
-    Tree,
+    Tree {
+        // Output only cmx/cml components depending on the flag.
+        #[structopt(short = "o", long = "only")]
+        component_type: Option<String>,
+        // whether or not to display a column showing component type
+        #[structopt(short = "v", long = "verbose")]
+        verbose: bool,
+    },
 
     /// Output detailed information about components on the system.
     #[structopt(name = "info")]
@@ -82,10 +92,24 @@ async fn main() -> Result<(), Error> {
                 })?
             }
         }
-        Opt::Tree => {
+        Opt::Tree { component_type, verbose } => {
             if let Some(hub_dir) = validate_hub_directory() {
                 let component = V2Component::explore(hub_dir, IncludeDetails::No).await;
-                component.print_tree();
+                if let Some(component_type) = component_type {
+                    let component_type =
+                        ComponentType::from_string(&component_type).map_err(|e| {
+                            format_err!(
+                                "Invalid argument '{}' for '--only': {}\n{}",
+                                component_type,
+                                e,
+                                CS_TREE_HELP
+                            )
+                        })?;
+                    component.print_tree(component_type, verbose);
+                } else {
+                    // Default option is printing both components
+                    component.print_tree(ComponentType::Both, verbose);
+                }
             }
         }
         Opt::PageInFrequencies => {

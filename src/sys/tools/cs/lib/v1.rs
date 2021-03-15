@@ -4,7 +4,9 @@
 
 use {
     crate::io::Directory,
-    crate::{get_capabilities, get_capabilities_timeout, IncludeDetails},
+    crate::{
+        get_capabilities, get_capabilities_timeout, ComponentType, IncludeDetails, WIDTH_CS_TREE,
+    },
     futures::future::{join_all, BoxFuture, FutureExt},
     std::sync::Arc,
 };
@@ -131,14 +133,20 @@ impl V1Realm {
         V1Realm { name, job_id, child_realms, child_components }
     }
 
-    pub fn print_tree_recursive(&self, level: usize) {
+    pub fn print_tree_recursive(&self, level: usize, component_type: ComponentType, verbose: bool) {
         let space = SPACER.repeat(level - 1);
-        println!("{}{} (realm)", space, self.name);
+        if component_type == ComponentType::CMX || component_type == ComponentType::Both {
+            if verbose {
+                println!("{:<width$}{}{}", "Realm", space, self.name, width = WIDTH_CS_TREE);
+            } else {
+                println!("{}{}", space, self.name);
+            }
+        }
         for child in &self.child_components {
-            child.print_tree_recursive(level + 1);
+            child.print_tree_recursive(level + 1, component_type, verbose);
         }
         for child in &self.child_realms {
-            child.print_tree_recursive(level + 1);
+            child.print_tree_recursive(level + 1, component_type, verbose);
         }
     }
 
@@ -265,11 +273,17 @@ impl V1Component {
         V1Component { name, child_components, details }
     }
 
-    fn print_tree_recursive(&self, level: usize) {
+    fn print_tree_recursive(&self, level: usize, component_type: ComponentType, verbose: bool) {
         let space = SPACER.repeat(level - 1);
-        println!("{}{}", space, self.name);
+        if component_type == ComponentType::CMX || component_type == ComponentType::Both {
+            if verbose {
+                println!("{:<width$}{}{}", "CMX", space, self.name, width = WIDTH_CS_TREE);
+            } else {
+                println!("{}{}", space, self.name);
+            }
+        }
         for child in &self.child_components {
-            child.print_tree_recursive(level + 1);
+            child.print_tree_recursive(level + 1, component_type, verbose);
         }
     }
 

@@ -6,7 +6,34 @@ pub mod io;
 pub mod v1;
 pub mod v2;
 
-use {crate::io::Directory, fuchsia_async::TimeoutExt, futures::future::FutureExt};
+use {
+    crate::io::Directory,
+    anyhow::{format_err, Error},
+    fuchsia_async::TimeoutExt,
+    futures::future::FutureExt,
+};
+
+#[derive(Copy, Debug, Eq, PartialEq, Clone)]
+pub enum ComponentType {
+    CMX,
+    CML,
+    Both,
+}
+
+// TODO(66157): Implement FromArgValue for ComponentType after cs is formally deprecated
+// and move this to args.rs in ffx component list.
+impl ComponentType {
+    pub fn from_string(component_type: &str) -> Result<ComponentType, Error> {
+        match component_type {
+            "cmx" => Ok(ComponentType::CMX),
+            "cml" => Ok(ComponentType::CML),
+            _ => Err(format_err!("component_type should be 'cmx' or 'cml'.",)),
+        }
+    }
+}
+
+pub const CS_TREE_HELP: &str = "component_type format: 'cmx' / 'cml'.
+Default option is displaying both cmx and cml components if no argument is entered.";
 
 #[derive(Copy, Debug, Eq, PartialEq, Clone)]
 pub enum IncludeDetails {
@@ -20,6 +47,7 @@ Example:
 'appmgr', 'appmgr.cm', 'fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm'
 will all return information about the appmgr component.";
 
+pub static WIDTH_CS_TREE: usize = 19;
 static CAPABILITY_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(1);
 
 pub(crate) async fn get_capabilities(capability_dir: Directory) -> Vec<String> {

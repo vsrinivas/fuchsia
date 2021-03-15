@@ -5,7 +5,9 @@
 use {
     crate::io::Directory,
     crate::v1::V1Realm,
-    crate::{get_capabilities, get_capabilities_timeout, IncludeDetails},
+    crate::{
+        get_capabilities, get_capabilities_timeout, ComponentType, IncludeDetails, WIDTH_CS_TREE,
+    },
     anyhow::{format_err, Error},
     futures::future::{join_all, BoxFuture, FutureExt},
 };
@@ -208,20 +210,29 @@ impl V2Component {
         explore("<root>".to_string(), hub_dir, include_details.clone()).await
     }
 
-    pub fn print_tree(&self) {
-        self.print_tree_recursive(1);
+    pub fn print_tree(&self, component_type: ComponentType, verbose: bool) {
+        if verbose {
+            println!("{:<width$}Component Name", "Component Type", width = WIDTH_CS_TREE);
+        }
+        self.print_tree_recursive(1, component_type, verbose);
     }
 
-    fn print_tree_recursive(&self, level: usize) {
+    fn print_tree_recursive(&self, level: usize, component_type: ComponentType, verbose: bool) {
         let space = SPACER.repeat(level - 1);
-        println!("{}{}", space, self.name);
+        if component_type == ComponentType::CML || component_type == ComponentType::Both {
+            if verbose {
+                println!("{:<width$}{}{}", "CML", space, self.name, width = WIDTH_CS_TREE);
+            } else {
+                println!("{}{}", space, self.name);
+            }
+        }
         for child in &self.children {
-            child.print_tree_recursive(level + 1);
+            child.print_tree_recursive(level + 1, component_type, verbose);
         }
 
         // If this component is appmgr, generate tree for all v1 components
         if let Some(v1_realm) = &self.appmgr_root_v1_realm {
-            v1_realm.print_tree_recursive(level + 1);
+            v1_realm.print_tree_recursive(level + 1, component_type, verbose);
         }
     }
 
