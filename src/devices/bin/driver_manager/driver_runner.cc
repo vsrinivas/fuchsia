@@ -566,16 +566,14 @@ zx::status<fidl::ClientEnd<fio::Directory>> DriverRunner::CreateComponent(std::s
       LOGF(ERROR, "Failed to bind component '%s': %s", name.data(), bind.error());
     }
   };
-  auto unowned_name = fidl::unowned_str(name);
-  auto unowned_url = fidl::unowned_str(url);
-  auto startup = fsys::wire::StartupMode::LAZY;
-  auto child_decl = fsys::wire::ChildDecl::UnownedBuilder()
-                        .set_name(fidl::unowned_ptr(&unowned_name))
-                        .set_url(fidl::unowned_ptr(&unowned_url))
-                        .set_startup(fidl::unowned_ptr(&startup));
+  fidl::FidlAllocator allocator;
+  fsys::wire::ChildDecl child_decl(allocator);
+  child_decl.set_name(allocator, fidl::unowned_str(name))
+      .set_url(allocator, fidl::unowned_str(url))
+      .set_startup(allocator, fsys::wire::StartupMode::LAZY);
   auto create =
       realm_->CreateChild(fsys::wire::CollectionRef{.name = fidl::unowned_str(collection)},
-                          child_decl.build(), std::move(create_callback));
+                          std::move(child_decl), std::move(create_callback));
   if (!create.ok()) {
     LOGF(ERROR, "Failed to create component '%s': %s", name.data(), create.error());
     return zx::error(ZX_ERR_INTERNAL);
