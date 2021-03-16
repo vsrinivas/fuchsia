@@ -23,7 +23,7 @@ FEMU looks and behaves like a Fuchsia device, with the exception that no paving 
 FEMU features include:
 
 *   **GUI Support:** You can run Fuchsia with the GUI (by default) or without the GUI
-    (using the `--headless` argument.
+    (using the `--headless` argument).
 *   **GPU Support:** You can run with the host’s GPU (by default) with full
     [Vulkan](/docs/concepts/graphics/magma/vulkan.md) support, or you can choose
     software rendering using [SwiftShader](https://swiftshader.googlesource.com/SwiftShader/).
