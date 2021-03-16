@@ -19,7 +19,7 @@ const (
 	// The program on fuchsia used to stream system logs through a shell, not to
 	// be confused with the zircon host tool "loglistener" (no underscore) used
 	// to stream zircon-level logs to host.
-	logListener = "/bin/log_listener"
+	LogListener = "/bin/log_listener"
 
 	// Time to wait between attempts to reconnect after losing the connection.
 	defaultReconnectInterval = 5 * time.Second
@@ -46,7 +46,7 @@ func NewSyslogger(client *sshutil.Client) *Syslogger {
 // of the system's uptime. It blocks until the context is canceled or until an
 // unexpected (not SSH-related) error occurs.
 func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
-	cmd := []string{logListener}
+	cmd := []string{LogListener}
 	for {
 		// Note: Fuchsia's log_listener does not write to stderr.
 		err := s.client.Run(ctx, cmd, output, nil)
@@ -57,7 +57,7 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 				logger.Debugf(ctx, "log_listener exited successfully, will rerun")
 				// Don't stream from the beginning of the system's uptime, since
 				// that would include logs that we've already streamed.
-				cmd = []string{logListener, "--since_now", "yes"}
+				cmd = []string{LogListener, "--since_now", "yes"}
 				continue
 			}
 		}
@@ -83,7 +83,7 @@ func (s *Syslogger) Stream(ctx context.Context, output io.Writer) error {
 		}
 		// Start streaming from the beginning of the system's uptime again now that
 		// we're rebooting.
-		cmd = []string{logListener}
+		cmd = []string{LogListener}
 		logger.Infof(ctx, "syslog: refreshed ssh connection")
 		io.WriteString(output, "\n\n<< SYSLOG STREAM INTERRUPTED; RECONNECTING NOW >>\n\n")
 	}

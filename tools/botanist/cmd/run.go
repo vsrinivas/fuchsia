@@ -350,6 +350,22 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 			return fmt.Errorf("%s for %s", constants.FailedToResolveIPErrorMsg, t.Nodename())
 		}
 
+		dumpSyslogOverSerial := func() {
+			socket, err := serial.NewSocket(ctx, socketPath)
+			if err != nil {
+				logger.Errorf(ctx, "newSerialSocket failed: %v", err)
+				return
+			}
+			defer socket.Close()
+			if err := serial.RunDiagnostics(ctx, socket); err != nil {
+				logger.Errorf(ctx, "failed to run serial diagnostics: %v", err)
+			}
+			// Dump the existing syslog buffer. This may not work if pkg-resolver is not
+			// up yet, in which case it will just print nothing.
+			if err := serial.RunCommands(ctx, socket, []serial.Command{{[]string{syslog.LogListener, "--dump_logs", "yes"}, 5 * time.Second}}); err != nil {
+				logger.Errorf(ctx, "failed to dump syslog over serial: %w", err)
+			}
+		}
 		client, err := sshutil.NewClient(
 			ctx,
 			sshutil.ConstantAddrResolver{
@@ -359,12 +375,14 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 			sshutil.DefaultConnectBackoff(),
 		)
 		if err != nil {
+			dumpSyslogOverSerial()
 			return err
 		}
 		defer client.Close()
 
 		if r.repoURL != "" {
 			if err := botanist.AddPackageRepository(ctx, client, r.repoURL, r.blobURL); err != nil {
+				dumpSyslogOverSerial()
 				return fmt.Errorf("%s: %w", constants.PackageRepoSetupErrorMsg, err)
 			}
 		}
@@ -372,6 +390,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 		if r.syslogFile != "" {
 			stopStreaming, err := r.startSyslogStream(ctx, client)
 			if err != nil {
+				dumpSyslogOverSerial()
 				return err
 			}
 			// Stop streaming syslogs after we've finished running the command.
