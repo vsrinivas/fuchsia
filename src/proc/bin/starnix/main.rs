@@ -175,7 +175,6 @@ async fn start_component(
         name: CString::new(binary_path.clone())?,
         argv: vec![CString::new(binary_path.clone())?],
         environ: vec![],
-        aux: vec![AT_UID, 3, AT_EUID, 3, AT_GID, 3, AT_EGID, 3, AT_SECURE, 0],
     };
 
     run_process(Arc::new(load_executable(&job, executable_vmo, ldsvc_client, &params).await?))

@@ -18,76 +18,73 @@ pub struct ProcessParameters {
     pub name: CString,
     pub argv: Vec<CString>,
     pub environ: Vec<CString>,
-    pub aux: Vec<u64>,
 }
 
 fn populate_initial_stack(
     stack_vmo: &zx::Vmo,
     params: &ProcessParameters,
+    mut auxv: Vec<(u64, u64)>,
     stack_base: usize,
     original_stack_start_addr: usize,
 ) -> Result<usize, Status> {
-    let mut string_data_size = 0usize;
-    for env in &params.environ {
-        string_data_size += env.as_bytes_with_nul().len();
-    }
+    let mut stack_pointer = original_stack_start_addr;
+    let write_stack = |data: &[u8], addr: usize| stack_vmo.write(data, (addr - stack_base) as u64);
+
+    let mut string_data = vec![];
     for arg in &params.argv {
-        string_data_size += arg.as_bytes_with_nul().len();
+        string_data.extend_from_slice(arg.as_bytes_with_nul());
     }
-    string_data_size += string_data_size % 8; // Pad to 8-byte boundary
-
-    let random_seed_size = 2 * std::mem::size_of::<u64>(); // Random seed
-
-    let mut header_size = 0usize;
-    header_size += (params.aux.len() + 4) * std::mem::size_of::<u64>(); // +4 for AT_RANDOM and AT_NULL.
-    header_size += (params.environ.len() + 1) * std::mem::size_of::<u64>();
-    header_size += (params.argv.len() + 1) * std::mem::size_of::<u64>();
-    header_size += std::mem::size_of::<u64>(); // argc
-
-    let stack_start_addr =
-        original_stack_start_addr - header_size - random_seed_size - string_data_size;
-    let random_seed_addr = stack_start_addr + header_size;
-    let mut next_string_addr = stack_start_addr + header_size + random_seed_size;
-
-    const ZERO: [u8; 8] = [0; 8];
-    let mut initial_data = Vec::<u8>::new();
-
-    let argc = params.argv.len();
-    initial_data.extend_from_slice(&argc.to_ne_bytes());
-    for arg in &params.argv {
-        initial_data.extend_from_slice(&next_string_addr.to_ne_bytes());
-        next_string_addr += arg.as_bytes_with_nul().len();
-    }
-    initial_data.extend_from_slice(&ZERO);
-
     for env in &params.environ {
-        initial_data.extend_from_slice(&next_string_addr.to_ne_bytes());
-        next_string_addr += env.as_bytes_with_nul().len();
+        string_data.extend_from_slice(env.as_bytes_with_nul());
     }
-
-    initial_data.extend_from_slice(&ZERO);
-
-    for val in &params.aux {
-        initial_data.extend_from_slice(&val.to_ne_bytes());
-    }
-    initial_data.extend_from_slice(&AT_RANDOM.to_ne_bytes());
-    initial_data.extend_from_slice(&random_seed_addr.to_ne_bytes());
-    initial_data.extend_from_slice(&AT_NULL.to_ne_bytes());
-    initial_data.extend_from_slice(&ZERO);
+    stack_pointer -= string_data.len();
+    let strings_addr = stack_pointer;
+    write_stack(string_data.as_slice(), strings_addr)?;
 
     let mut random_seed = [0; 16];
     zx::cprng_draw(&mut random_seed)?;
-    initial_data.extend_from_slice(&random_seed);
+    stack_pointer -= random_seed.len();
+    let random_seed_addr = stack_pointer;
+    write_stack(&random_seed, random_seed_addr)?;
 
+    auxv.push((AT_RANDOM, random_seed_addr as u64));
+    auxv.push((AT_NULL, 0));
+
+    // After the remainder (argc/argv/environ/auxv) is pushed, the stack pointer must be 16 byte
+    // aligned. This is required by the ABI and assumed by the compiler to correctly align SSE
+    // operations. But this can't be done after it's pushed, since it has to be right at the top of
+    // the stack. So we collect it all, align the stack appropriately now that we know the size,
+    // and push it all at once.
+    let mut main_data = vec![];
+    // argc
+    let argc: u64 = params.argv.len() as u64;
+    main_data.extend_from_slice(&argc.to_ne_bytes());
+    // argv
+    const ZERO: [u8; 8] = [0; 8];
+    let mut next_string_addr = strings_addr;
     for arg in &params.argv {
-        initial_data.extend_from_slice(arg.as_bytes_with_nul());
+        main_data.extend_from_slice(&next_string_addr.to_ne_bytes());
+        next_string_addr += arg.as_bytes_with_nul().len();
     }
+    main_data.extend_from_slice(&ZERO);
+    // environ
     for env in &params.environ {
-        initial_data.extend_from_slice(env.as_bytes_with_nul());
+        main_data.extend_from_slice(&next_string_addr.to_ne_bytes());
+        next_string_addr += env.as_bytes_with_nul().len();
+    }
+    main_data.extend_from_slice(&ZERO);
+    // auxv
+    for (tag, val) in auxv {
+        main_data.extend_from_slice(&tag.to_ne_bytes());
+        main_data.extend_from_slice(&val.to_ne_bytes());
     }
 
-    stack_vmo.write(&initial_data.as_slice(), (stack_start_addr - stack_base) as u64)?;
-    return Ok(stack_start_addr);
+    // Time to push.
+    stack_pointer -= main_data.len();
+    stack_pointer -= stack_pointer % 16;
+    write_stack(main_data.as_slice(), stack_pointer)?;
+
+    return Ok(stack_pointer);
 }
 
 pub async fn load_executable(
@@ -100,9 +97,8 @@ pub async fn load_executable(
 
     let mut builder = ProcessBuilder::new(&params.name, &job, executable)?;
     builder.set_loader_service(loader_service)?;
+    builder.set_min_stack_size(0x2000);
     let mut built = builder.build().await?;
-
-    built.stack = populate_initial_stack(&built.stack_vmo, &params, built.stack_base, built.stack)?;
 
     let process = ProcessContext {
         handle: built.process.duplicate_handle(zx::Rights::SAME_RIGHTS)?,
@@ -110,6 +106,18 @@ pub async fn load_executable(
         mm: MemoryManager::new(built.root_vmar.duplicate_handle(zx::Rights::SAME_RIGHTS)?),
         security: SecurityContext { uid: 3, gid: 3, euid: 3, egid: 3 },
     };
+
+    let auxv = vec![
+        (AT_UID, process.security.uid as u64),
+        (AT_EUID, process.security.euid as u64),
+        (AT_GID, process.security.gid as u64),
+        (AT_EGID, process.security.egid as u64),
+        (AT_PHDR, (built.elf_base + built.elf_headers.file_header().phoff) as u64),
+        (AT_PHNUM, built.elf_headers.file_header().phnum as u64),
+        (AT_SECURE, 0),
+    ];
+    built.stack =
+        populate_initial_stack(&built.stack_vmo, &params, auxv, built.stack_base, built.stack)?;
 
     built.start()?;
 
@@ -130,12 +138,16 @@ mod tests {
             name: CString::new("trivial").unwrap(),
             argv: vec![],
             environ: vec![],
-            aux: vec![],
         };
 
-        let stack_start_addr =
-            populate_initial_stack(&stack_vmo, &params, stack_base, original_stack_start_addr)
-                .expect("Populate initial stack should succeed.");
+        let stack_start_addr = populate_initial_stack(
+            &stack_vmo,
+            &params,
+            vec![],
+            stack_base,
+            original_stack_start_addr,
+        )
+        .expect("Populate initial stack should succeed.");
 
         let argc_size: usize = 8;
         let argv_terminator_size: usize = 8;
@@ -144,12 +156,13 @@ mod tests {
         let aux_null: usize = 16;
         let random_seed: usize = 16;
 
-        let payload_size = argc_size
+        let mut payload_size = argc_size
             + argv_terminator_size
             + environ_terminator_size
             + aux_random
             + aux_null
             + random_seed;
+        payload_size += payload_size % 16;
 
         assert_eq!(stack_start_addr, original_stack_start_addr - payload_size);
     }

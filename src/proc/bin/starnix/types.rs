@@ -233,6 +233,8 @@ pub const ARCH_SET_GS: i32 = 0x1001;
 pub const ARCH_SET_FS: i32 = 0x1002;
 
 pub const AT_NULL: u64 = 0;
+pub const AT_PHDR: u64 = 3;
+pub const AT_PHNUM: u64 = 5;
 pub const AT_PAGESZ: u64 = 6;
 pub const AT_UID: u64 = 11;
 pub const AT_EUID: u64 = 12;
