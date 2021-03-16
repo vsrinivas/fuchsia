@@ -34,6 +34,9 @@ void main() {
     // Get the device into fastboot.
     await sl4fDriver.ssh.run('dm reboot-bootloader');
 
+    // Wait 30 seconds for the device to enter fastboot.
+    sleep(Duration(seconds: 30));
+
     // Run flash.sh.
     var process = Process.runSync('./flash.sh', ['-s', fbSernum]);
     stdout.write(process.stdout);
