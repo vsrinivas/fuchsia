@@ -29,20 +29,6 @@ impl ClientConfig {
         bss: &BssDescription,
         wmm_param: Option<ie::WmmParam>,
     ) -> BssInfo {
-        let mut probe_resp_wsc = None;
-        match bss.find_wsc_ie() {
-            Some(ie) => match wsc::parse_probe_resp_wsc(ie) {
-                Ok(wsc) => probe_resp_wsc = Some(wsc),
-                Err(_e) => {
-                    // Parsing could fail because the WSC IE comes from a beacon, which does
-                    // not contain all the information that a probe response WSC is expected
-                    // to have. We don't have the information to distinguish between a beacon
-                    // and a probe response, so we let this case fail silently.
-                }
-            },
-            None => (),
-        }
-
         BssInfo {
             bssid: bss.bssid.clone(),
             ssid: bss.ssid().to_vec(),
@@ -54,7 +40,7 @@ impl ClientConfig {
             compatible: self.is_bss_compatible(bss),
             ht_cap: bss.raw_ht_cap(),
             vht_cap: bss.raw_vht_cap(),
-            probe_resp_wsc,
+            probe_resp_wsc: bss.probe_resp_wsc(),
             wmm_param,
             bss_desc: Some(bss.clone().to_fidl()),
         }

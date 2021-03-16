@@ -20,7 +20,11 @@ use {
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_sme as fidl_sme,
     fuchsia_zircon::{self as zx, prelude::DurationNum},
-    wlan_common::{self, bss::BssDescription},
+    wlan_common::{
+        self,
+        bss::{BssDescription, Protection},
+        ie::wsc::ProbeRespWsc,
+    },
 };
 
 #[derive(Debug, PartialEq)]
@@ -348,6 +352,8 @@ pub struct DisconnectInfo {
     pub channel: wlan_common::channel::Channel,
     pub disconnect_source: DisconnectSource,
     pub time_since_channel_switch: Option<zx::Duration>,
+    pub protection: Protection,
+    pub wsc: Option<ProbeRespWsc>,
 }
 
 #[derive(Debug, Clone, PartialEq)]

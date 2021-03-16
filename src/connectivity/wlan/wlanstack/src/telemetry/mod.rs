@@ -671,6 +671,16 @@ pub fn log_disconnect(
         bssid_hash: inspect_tree.hasher.hash_mac_addr(&info.bssid),
         ssid: String::from_utf8_lossy(&info.ssid[..]).to_string(),
         ssid_hash: inspect_tree.hasher.hash(&info.ssid[..]),
+        wsc?: match &info.wsc {
+            None => None,
+            Some(wsc) => Some(make_inspect_loggable!(
+                device_name: String::from_utf8_lossy(&wsc.device_name[..]).to_string(),
+                manufacturer: String::from_utf8_lossy(&wsc.manufacturer[..]).to_string(),
+                model_name: String::from_utf8_lossy(&wsc.model_name[..]).to_string(),
+                model_number: String::from_utf8_lossy(&wsc.model_number[..]).to_string(),
+            )),
+        },
+        protection: format!("{:?}", info.protection),
         channel: {
             primary: info.channel.primary,
             cbw: format!("{:?}", info.channel.cbw.to_fidl().0),
@@ -776,6 +786,7 @@ mod tests {
             bss::Protection as BssProtection,
             channel::{Cbw, Channel},
             fake_bss,
+            ie::fake_ies::fake_probe_resp_wsc_ie,
         },
         wlan_sme::client::{
             info::{
@@ -1226,6 +1237,8 @@ mod tests {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
             ssid: b"foo".to_vec(),
+            wsc: Some(fake_probe_resp_wsc_ie()),
+            protection: BssProtection::Open,
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
             last_rssi: -90,
             last_snr: 1,
@@ -1244,6 +1257,13 @@ mod tests {
                         bssid_hash: AnyProperty,
                         ssid: "foo",
                         ssid_hash: AnyProperty,
+                        wsc: {
+                            device_name: "ASUS Router",
+                            manufacturer: "ASUSTek Computer Inc.",
+                            model_name: "RT-AC58U",
+                            model_number: "123",
+                        },
+                        protection: "Open",
                         channel: {
                             primary: 1u64,
                             cbw: "Cbw20",
@@ -1273,6 +1293,8 @@ mod tests {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
             ssid: b"foo".to_vec(),
+            wsc: None,
+            protection: BssProtection::Open,
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
             last_rssi: -90,
             last_snr: 1,
@@ -1291,6 +1313,7 @@ mod tests {
                         bssid_hash: AnyProperty,
                         ssid: "foo",
                         ssid_hash: AnyProperty,
+                        protection: "Open",
                         channel: {
                             primary: 1u64,
                             cbw: "Cbw20",
@@ -1321,6 +1344,8 @@ mod tests {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
             ssid: b"foo".to_vec(),
+            wsc: None,
+            protection: BssProtection::Open,
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
             last_rssi: -90,
             last_snr: 1,
@@ -1339,6 +1364,7 @@ mod tests {
                         bssid_hash: AnyProperty,
                         ssid: "foo",
                         ssid_hash: AnyProperty,
+                        protection: "Open",
                         channel: {
                             primary: 1u64,
                             cbw: "Cbw20",
@@ -1666,6 +1692,8 @@ mod tests {
             connected_duration: 30.seconds(),
             bssid: [1u8; 6],
             ssid: b"foo".to_vec(),
+            wsc: None,
+            protection: BssProtection::Open,
             channel: Channel { primary: 1, cbw: Cbw::Cbw20 },
             last_rssi: -90,
             last_snr: 1,
