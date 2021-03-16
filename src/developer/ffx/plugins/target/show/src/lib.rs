@@ -4,15 +4,19 @@
 
 use {
     crate::show::{ShowEntry, ShowValue},
-    anyhow::{bail, Result},
+    anyhow::{anyhow, bail, Result},
     ffx_core::ffx_plugin,
+    ffx_daemon::target::TargetAddr,
     ffx_target_show_args as args,
     fidl_fuchsia_buildinfo::ProviderProxy,
+    fidl_fuchsia_developer_bridge::DaemonProxy,
+    fidl_fuchsia_developer_remotecontrol::RemoteControlProxy,
     fidl_fuchsia_feedback::DeviceIdProviderProxy,
     fidl_fuchsia_hwinfo::{BoardProxy, DeviceProxy, ProductProxy},
     fidl_fuchsia_intl::RegulatoryDomain,
     fidl_fuchsia_update_channelcontrol::ChannelControlProxy,
     std::io::{stdout, Write},
+    std::time::Duration,
 };
 
 mod show;
@@ -33,6 +37,8 @@ pub async fn show_cmd(
     product_proxy: ProductProxy,
     build_info_proxy: ProviderProxy,
     device_id_proxy: DeviceIdProviderProxy,
+    remote_proxy: RemoteControlProxy,
+    daemon_proxy: DaemonProxy,
     target_show_args: args::TargetShow,
 ) -> Result<()> {
     show_cmd_impl(
@@ -42,6 +48,8 @@ pub async fn show_cmd(
         product_proxy,
         build_info_proxy,
         device_id_proxy,
+        remote_proxy,
+        daemon_proxy,
         target_show_args,
         Box::new(stdout()),
     )
@@ -56,6 +64,8 @@ async fn show_cmd_impl<W: Write>(
     product_proxy: ProductProxy,
     build_info_proxy: ProviderProxy,
     device_id_proxy: DeviceIdProviderProxy,
+    remote_proxy: RemoteControlProxy,
+    daemon_proxy: DaemonProxy,
     target_show_args: args::TargetShow,
     mut writer: W,
 ) -> Result<()> {
@@ -66,6 +76,7 @@ async fn show_cmd_impl<W: Write>(
     // To add more show information, add a `gather_*_show(*) call to this
     // list, as well as the labels in the Ok() and vec![] just below.
     let show = match futures::try_join!(
+        gather_target_show(remote_proxy, daemon_proxy),
         gather_board_show(board_proxy),
         gather_device_show(device_proxy),
         gather_product_show(product_proxy),
@@ -73,8 +84,8 @@ async fn show_cmd_impl<W: Write>(
         gather_build_info_show(build_info_proxy),
         gather_device_id_show(device_id_proxy),
     ) {
-        Ok((board, build, device, device_id, product, update)) => {
-            vec![board, build, device, device_id, product, update]
+        Ok((target, board, build, device, device_id, product, update)) => {
+            vec![target, board, build, device, device_id, product, update]
         }
         Err(e) => bail!(e),
     };
@@ -84,6 +95,37 @@ async fn show_cmd_impl<W: Write>(
         show::output_for_human(&show, &target_show_args, &mut writer)?;
     }
     Ok(())
+}
+
+/// Determine target information.
+async fn gather_target_show(
+    remote_proxy: RemoteControlProxy,
+    daemon_proxy: DaemonProxy,
+) -> Result<ShowEntry> {
+    let host =
+        remote_proxy.identify_host().await?.map_err(|_| anyhow!("Could not identify host"))?;
+    let name = host.nodename;
+    let timeout = Duration::from_secs(1);
+    let res = daemon_proxy
+        .get_ssh_address(name.as_deref(), timeout.as_nanos() as i64)
+        .await?
+        .map_err(|e| anyhow!("Failed to get ssh address: {:?}", e))?;
+    let out = TargetAddr::from(res);
+    let ifaces_str = format!("{}", out);
+    Ok(ShowEntry::group(
+        "Target",
+        "target",
+        "",
+        vec![
+            ShowEntry::str_value_with_highlight("Name", "name", "Target name.", &name),
+            ShowEntry::str_value_with_highlight(
+                "SSH Address",
+                "ssh_address",
+                "Interface address",
+                &Some(ifaces_str),
+            ),
+        ],
+    ))
 }
 
 /// Determine the device id for the target.
@@ -269,15 +311,23 @@ async fn gather_update_show(channel_control: ChannelControlProxy) -> Result<Show
 mod tests {
     use super::*;
     use fidl_fuchsia_buildinfo::{BuildInfo, ProviderRequest};
+    use fidl_fuchsia_developer_bridge::{DaemonRequest, TargetAddrInfo, TargetIp};
+    use fidl_fuchsia_developer_remotecontrol::{IdentifyHostResponse, RemoteControlRequest};
     use fidl_fuchsia_feedback::DeviceIdProviderRequest;
     use fidl_fuchsia_hwinfo::{
         BoardInfo, BoardRequest, DeviceInfo, DeviceRequest, ProductInfo, ProductRequest,
     };
+    use fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet};
     use fidl_fuchsia_update_channelcontrol::ChannelControlRequest;
     use serde_json::Value;
 
-    const TEST_OUTPUT_HUMAN: &'static [u8] = b"\
-        Board: \
+    const IPV4_ADDR: [u8; 4] = [127, 0, 0, 1];
+
+    const TEST_OUTPUT_HUMAN: &'static str = "\
+        Target: \
+        \n    Name: \u{1b}[38;5;2m\"fake_fuchsia_device\"\u{1b}[m\
+        \n    SSH Address: \u{1b}[38;5;2m\"127.0.0.1\"\u{1b}[m\
+        \nBoard: \
         \n    Name: \"fake_name\"\
         \n    Revision: \"fake_revision\"\
         \nDevice: \
@@ -312,6 +362,37 @@ mod tests {
         \nFeedback: \
         \n    Device ID: \"fake_device_id\"\
         \n";
+
+    fn setup_fake_daemon_server() -> DaemonProxy {
+        setup_fake_daemon_proxy(move |req| match req {
+            DaemonRequest::GetSshAddress { responder, .. } => {
+                responder
+                    .send(&mut Ok(TargetAddrInfo::Ip(TargetIp {
+                        ip: IpAddress::Ipv4(Ipv4Address { addr: IPV4_ADDR }),
+                        scope_id: 1,
+                    })))
+                    .expect("fake ssh address");
+            }
+            _ => assert!(false),
+        })
+    }
+
+    fn setup_fake_remote_control_server() -> RemoteControlProxy {
+        setup_fake_remote_proxy(move |req| match req {
+            RemoteControlRequest::IdentifyHost { responder } => {
+                let result: Vec<Subnet> = vec![];
+                let nodename = Some("fake_fuchsia_device".to_string());
+                responder
+                    .send(&mut Ok(IdentifyHostResponse {
+                        nodename,
+                        addresses: Some(result),
+                        ..IdentifyHostResponse::EMPTY
+                    }))
+                    .unwrap();
+            }
+            _ => assert!(false),
+        })
+    }
 
     fn setup_fake_device_id_server() -> DeviceIdProviderProxy {
         setup_fake_device_id_proxy(move |req| match req {
@@ -362,12 +443,17 @@ mod tests {
             setup_fake_product_server(),
             setup_fake_build_info_server(),
             setup_fake_device_id_server(),
+            setup_fake_remote_control_server(),
+            setup_fake_daemon_server(),
             args::TargetShow::default(),
             &mut output,
         )
         .await
         .expect("show_cmd_impl");
-        assert_eq!(output, TEST_OUTPUT_HUMAN);
+        // Convert to a readable string instead of using a byte string and comparing that. Unless
+        // you can read u8 arrays well, this helps debug the output.
+        let readable = String::from_utf8(output).expect("output is utf-8");
+        assert_eq!(readable, TEST_OUTPUT_HUMAN);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -380,6 +466,8 @@ mod tests {
             setup_fake_product_server(),
             setup_fake_build_info_server(),
             setup_fake_device_id_server(),
+            setup_fake_remote_control_server(),
+            setup_fake_daemon_server(),
             args::TargetShow { json: true, ..Default::default() },
             &mut output,
         )
@@ -388,21 +476,23 @@ mod tests {
         let v: Value =
             serde_json::from_str(std::str::from_utf8(&output).unwrap()).expect("Valid JSON");
         assert!(v.is_array());
-        assert_eq!(v.as_array().unwrap().len(), 6);
+        assert_eq!(v.as_array().unwrap().len(), 7);
 
-        assert_eq!(v[0]["label"], Value::String("board".to_string()));
-        assert_eq!(v[1]["label"], Value::String("device".to_string()));
-        assert_eq!(v[2]["label"], Value::String("product".to_string()));
-        assert_eq!(v[3]["label"], Value::String("update".to_string()));
-        assert_eq!(v[4]["label"], Value::String("build".to_string()));
-        assert_eq!(v[5]["label"], Value::String("feedback".to_string()));
+        assert_eq!(v[0]["label"], Value::String("target".to_string()));
+        assert_eq!(v[1]["label"], Value::String("board".to_string()));
+        assert_eq!(v[2]["label"], Value::String("device".to_string()));
+        assert_eq!(v[3]["label"], Value::String("product".to_string()));
+        assert_eq!(v[4]["label"], Value::String("update".to_string()));
+        assert_eq!(v[5]["label"], Value::String("build".to_string()));
+        assert_eq!(v[6]["label"], Value::String("feedback".to_string()));
 
         assert_eq!(v[0]["child"].as_array().unwrap().len(), 2);
-        assert_eq!(v[1]["child"].as_array().unwrap().len(), 3);
-        assert_eq!(v[2]["child"].as_array().unwrap().len(), 16);
-        assert_eq!(v[3]["child"].as_array().unwrap().len(), 2);
-        assert_eq!(v[4]["child"].as_array().unwrap().len(), 4);
-        assert_eq!(v[5]["child"].as_array().unwrap().len(), 1);
+        assert_eq!(v[1]["child"].as_array().unwrap().len(), 2);
+        assert_eq!(v[2]["child"].as_array().unwrap().len(), 3);
+        assert_eq!(v[3]["child"].as_array().unwrap().len(), 16);
+        assert_eq!(v[4]["child"].as_array().unwrap().len(), 2);
+        assert_eq!(v[5]["child"].as_array().unwrap().len(), 4);
+        assert_eq!(v[6]["child"].as_array().unwrap().len(), 1);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

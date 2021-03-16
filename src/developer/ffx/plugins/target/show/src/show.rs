@@ -2,7 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {anyhow::Result, ffx_target_show_args::TargetShow, serde::Serialize, std::io::Write};
+use {
+    anyhow::Result,
+    ffx_target_show_args::TargetShow,
+    serde::Serialize,
+    std::default::Default,
+    std::io::Write,
+    //TODO(fxbug.dev/72421): Consider switching to crossterm.
+    termion::{color, style},
+};
 
 /// Store, organize, and display hierarchical show information. Output may be
 /// formatted for a human reader or structured as JSON for machine consumption.
@@ -29,7 +37,7 @@ impl std::fmt::Display for ShowValue {
 }
 
 /// A node in a hierarchy of show information or groupings.
-#[derive(Debug, PartialEq, Serialize)]
+#[derive(Default, Debug, PartialEq, Serialize)]
 pub struct ShowEntry {
     pub title: String,
     pub label: String,
@@ -38,6 +46,8 @@ pub struct ShowEntry {
     pub value: Option<ShowValue>,
     #[serde(skip_serializing_if = "Vec::is_empty")]
     pub child: Vec<ShowEntry>,
+    #[serde(skip_serializing)]
+    pub highlight: bool,
 }
 
 impl ShowEntry {
@@ -46,8 +56,7 @@ impl ShowEntry {
             title: title.to_string(),
             label: label.to_string(),
             description: description.to_string(),
-            value: None,
-            child: vec![],
+            ..Default::default()
         }
     }
 
@@ -81,6 +90,19 @@ impl ShowEntry {
         entry.value = value.as_ref().map(|v| ShowValue::StringValue(v.to_string()));
         entry
     }
+
+    // Create a string ShowEntry with color.
+    pub fn str_value_with_highlight(
+        human_name: &str,
+        id_name: &str,
+        desc: &str,
+        value: &Option<String>,
+    ) -> ShowEntry {
+        let mut entry = ShowEntry::new(human_name, id_name, desc);
+        entry.value = value.as_ref().map(|v| ShowValue::StringValue(v.to_string()));
+        entry.highlight = true;
+        entry
+    }
 }
 
 /// Write output for easy reading by humans.
@@ -101,7 +123,26 @@ fn output_list<W: Write>(
         }
         match &show.value {
             Some(value) => {
-                writeln!(*writer, "{: <5$}{}{}: {}{}", "", show.title, label, value, desc, indent)?;
+                if show.highlight {
+                    writeln!(
+                        *writer,
+                        "{: <7$}{}{}: {}{}{}{}",
+                        "",
+                        show.title,
+                        label,
+                        color::Fg(color::Green),
+                        value,
+                        style::Reset,
+                        desc,
+                        indent
+                    )?;
+                } else {
+                    writeln!(
+                        *writer,
+                        "{: <5$}{}{}: {}{}",
+                        "", show.title, label, value, desc, indent
+                    )?;
+                }
             }
             None => writeln!(*writer, "{: <4$}{}{}: {}", "", show.title, label, desc, indent)?,
         }

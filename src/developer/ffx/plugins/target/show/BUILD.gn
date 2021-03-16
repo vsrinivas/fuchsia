@@ -13,8 +13,10 @@ ffx_plugin("ffx_target_show") {
     "//sdk/fidl/fuchsia.feedback:fuchsia.feedback-rustc",
     "//sdk/fidl/fuchsia.hwinfo:fuchsia.hwinfo-rustc",
     "//sdk/fidl/fuchsia.intl:fuchsia.intl-rustc",
+    "//sdk/fidl/fuchsia.net:fuchsia.net-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
     "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
+    "//src/developer/ffx/daemon:lib",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/sys/pkg/lib/fidl-fuchsia-update-ext",
@@ -24,6 +26,7 @@ ffx_plugin("ffx_target_show") {
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
+    "//third_party/rust_crates:termion",
     "//third_party/rust_crates:thiserror",
   ]
 
