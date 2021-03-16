@@ -97,7 +97,8 @@ impl MinfsEnvironment {
             Arc::new(Mutex::new(DeletionActor::new(rng, home_dir)))
         };
 
-        let instance_actor = Arc::new(Mutex::new(InstanceActor { fvm, minfs }));
+        let instance_actor =
+            Arc::new(Mutex::new(InstanceActor { fvm, minfs, instance_killed: false }));
 
         Self { seed, args, vmo, volume_guid, file_actor, deletion_actor, instance_actor }
     }
@@ -139,6 +140,10 @@ impl Environment for MinfsEnvironment {
         {
             let mut actor = self.instance_actor.lock().await;
 
+            // The environment is only reset when the instance is killed.
+            // TODO(72385): Pass the actor error here, so it can be printed out on assert failure.
+            assert!(actor.instance_killed);
+
             // Kill the minfs process in case it was still running
             let _ = actor.minfs.kill();
 
@@ -165,6 +170,7 @@ impl Environment for MinfsEnvironment {
             // Replace the fvm and minfs instances
             actor.fvm = fvm;
             actor.minfs = minfs;
+            actor.instance_killed = false;
         }
 
         {

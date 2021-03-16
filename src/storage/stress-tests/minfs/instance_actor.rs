@@ -14,12 +14,15 @@ use {
 pub struct InstanceActor {
     pub fvm: FvmInstance,
     pub minfs: Filesystem<Minfs>,
+    pub instance_killed: bool,
 }
 
 #[async_trait]
 impl Actor for InstanceActor {
     async fn perform(&mut self) -> Result<(), ActorError> {
+        assert!(!self.instance_killed);
         self.fvm.kill_component_manager();
+        self.instance_killed = true;
         Err(ActorError::ResetEnvironment)
     }
 }

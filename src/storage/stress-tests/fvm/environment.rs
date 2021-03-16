@@ -68,7 +68,7 @@ impl FvmEnvironment {
             volume_actors.push((volume_guid, volume_actor));
         }
 
-        let instance_actor = Arc::new(Mutex::new(InstanceActor { fvm }));
+        let instance_actor = Arc::new(Mutex::new(InstanceActor { fvm, instance_killed: false }));
 
         Self { seed, args, vmo, instance_actor, volume_actors }
     }
@@ -113,6 +113,10 @@ impl Environment for FvmEnvironment {
         let block_path = {
             let mut actor = self.instance_actor.lock().await;
 
+            // The environment is only reset when the instance is killed.
+            // TODO(72385): Pass the actor error here, so it can be printed out on assert failure.
+            assert!(actor.instance_killed);
+
             // Start isolated-devmgr and FVM
             let fvm = FvmInstance::new(
                 false,
@@ -126,6 +130,7 @@ impl Environment for FvmEnvironment {
 
             // Replace the FVM instance
             actor.fvm = fvm;
+            actor.instance_killed = false;
 
             block_path
         };

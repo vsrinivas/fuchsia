@@ -84,7 +84,9 @@ impl Actor for FileActor {
         match result {
             Ok(()) => Ok(()),
             Err(Status::NO_SPACE) => Ok(()),
-            Err(Status::PEER_CLOSED) => Err(ActorError::ResetEnvironment),
+            Err(Status::PEER_CLOSED) | Err(Status::IO) | Err(Status::IO_REFUSED) => {
+                Err(ActorError::ResetEnvironment)
+            }
             Err(s) => panic!("Error occurred during {:?}: {}", operation, s),
         }
     }

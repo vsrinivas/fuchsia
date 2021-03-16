@@ -75,7 +75,8 @@ impl BlobfsEnvironment {
         blobfs.mount(BLOBFS_MOUNT_PATH).unwrap();
 
         // Create the instance actor
-        let instance_actor = Arc::new(Mutex::new(InstanceActor { fvm, blobfs }));
+        let instance_actor =
+            Arc::new(Mutex::new(InstanceActor { fvm, blobfs, instance_killed: false }));
 
         let mut rng = SmallRng::from_seed(seed.to_le_bytes());
 
@@ -132,6 +133,10 @@ impl Environment for BlobfsEnvironment {
         {
             let mut actor = self.instance_actor.lock().await;
 
+            // The environment is only reset when the instance is killed.
+            // TODO(72385): Pass the actor error here, so it can be printed out on assert failure.
+            assert!(actor.instance_killed);
+
             // Kill the blobfs process in case it was still running
             let _ = actor.blobfs.kill();
 
@@ -158,6 +163,7 @@ impl Environment for BlobfsEnvironment {
             // Replace the fvm and blobfs instances
             actor.fvm = fvm;
             actor.blobfs = blobfs;
+            actor.instance_killed = false;
         }
 
         {

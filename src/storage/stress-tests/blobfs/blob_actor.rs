@@ -246,7 +246,10 @@ impl Actor for BlobActor {
             Ok(()) => Ok(()),
             Err(Status::NOT_FOUND) => Ok(()),
             Err(Status::NO_SPACE) => Ok(()),
-            Err(Status::CONNECTION_ABORTED) | Err(Status::PEER_CLOSED) => {
+            Err(Status::CONNECTION_ABORTED)
+            | Err(Status::PEER_CLOSED)
+            | Err(Status::IO)
+            | Err(Status::IO_REFUSED) => {
                 // Drain out all the open handles.
                 // Do not bother closing them properly. They are about to become invalid.
                 for blob in &mut self.blobs {
