@@ -33,7 +33,7 @@
 namespace storage::volume_image {
 namespace {
 
-TEST(FvmSparseImageTest, GetImageFlagsMapsLz4CompressionCorrectly) {
+TEST(GetImageFlagsTest, MapsLz4CompressionCorrectly) {
   FvmOptions options;
   options.compression.schema = CompressionSchema::kLz4;
 
@@ -41,7 +41,7 @@ TEST(FvmSparseImageTest, GetImageFlagsMapsLz4CompressionCorrectly) {
   EXPECT_EQ(flag & fvm::kSparseFlagLz4, fvm::kSparseFlagLz4);
 }
 
-TEST(FvmSparseImageTest, GetImageFlagsMapsNoCompressionCorrectly) {
+TEST(GetImageFlagsTest, MapsNoCompressionCorrectly) {
   FvmOptions options;
   options.compression.schema = CompressionSchema::kNone;
 
@@ -49,7 +49,7 @@ TEST(FvmSparseImageTest, GetImageFlagsMapsNoCompressionCorrectly) {
   EXPECT_EQ(flag, 0u);
 }
 
-TEST(FvmSparseImageTest, GetImageFlagsMapsUnknownCompressionCorrectly) {
+TEST(GetImageFlagsTest, MapsUnknownCompressionCorrectly) {
   FvmOptions options;
   options.compression.schema = static_cast<CompressionSchema>(-1);
 
@@ -57,7 +57,7 @@ TEST(FvmSparseImageTest, GetImageFlagsMapsUnknownCompressionCorrectly) {
   EXPECT_EQ(flag, 0u);
 }
 
-TEST(FvmSparseImageTest, GetPartitionFlagMapsEncryptionCorrectly) {
+TEST(GetPartitionFlagsTest, MapsEncryptionCorrectly) {
   VolumeDescriptor descriptor;
   descriptor.encryption = EncryptionType::kZxcrypt;
   AddressDescriptor address;
@@ -67,7 +67,7 @@ TEST(FvmSparseImageTest, GetPartitionFlagMapsEncryptionCorrectly) {
   EXPECT_EQ(flag & fvm::kSparseFlagZxcrypt, fvm::kSparseFlagZxcrypt);
 }
 
-TEST(FvmSparseImageTest, GetPartitionFlagMapsNoEncryptionCorrectly) {
+TEST(GetPartitionFlagsTest, FlagMapsNoEncryptionCorrectly) {
   VolumeDescriptor descriptor = {};
   descriptor.encryption = EncryptionType::kNone;
   AddressDescriptor address = {};
@@ -77,7 +77,7 @@ TEST(FvmSparseImageTest, GetPartitionFlagMapsNoEncryptionCorrectly) {
   EXPECT_EQ(flag, 0u);
 }
 
-TEST(FvmSparseImageTest, GetPartitionFlagMapsUnknownEncryptionCorrectly) {
+TEST(GetPartitionFlagsTest, MapsUnknownEncryptionCorrectly) {
   VolumeDescriptor descriptor = {};
   descriptor.encryption = static_cast<EncryptionType>(-1);
   AddressDescriptor address = {};
@@ -189,9 +189,9 @@ FvmDescriptor MakeDescriptor() {
   return descriptor_result.take_value();
 }
 
-TEST(FvmSparseImageTest, FvmSparseGenerateHeaderMatchersFvmDescriptor) {
+TEST(FvmSparseGenerateHeaderTest, MatchesFvmDescriptor) {
   FvmDescriptor descriptor = MakeDescriptor();
-  auto header = FvmSparseGenerateHeader(descriptor);
+  auto header = fvm_sparse_internal::GenerateHeader(descriptor);
 
   EXPECT_EQ(header.partition_count, descriptor.partitions().size());
   EXPECT_EQ(header.maximum_disk_size, descriptor.options().max_volume_size.value());
@@ -210,12 +210,12 @@ TEST(FvmSparseImageTest, FvmSparseGenerateHeaderMatchersFvmDescriptor) {
   EXPECT_EQ(header.header_length, expected_header_length);
 }
 
-TEST(FvmSparseImageTest, FvmSparGeneratePartitionEntryMatchesPartition) {
+TEST(FvmSparGeneratePartitionEntryTest, MatchesPartition) {
   FvmDescriptor descriptor = MakeDescriptor();
   const auto& partition = *descriptor.partitions().begin();
 
   auto partition_entry_result =
-      FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition);
+      fvm_sparse_internal::GeneratePartitionEntry(descriptor.options().slice_size, partition);
   ASSERT_TRUE(partition_entry_result.is_ok()) << partition_entry_result.error();
   auto partition_entry = partition_entry_result.take_value();
 
@@ -228,15 +228,15 @@ TEST(FvmSparseImageTest, FvmSparGeneratePartitionEntryMatchesPartition) {
   EXPECT_EQ(partition.address().mappings.size(), partition_entry.descriptor.extent_count);
 }
 
-TEST(FvmSparseImageTest, FvmSparseCalculateUncompressedImageSizeForEmptyDescriptorIsHeaderSize) {
+TEST(FvmSparseCalculateUncompressedImageSizeTest, EmptyDescriptorIsHeaderSize) {
   FvmDescriptor descriptor;
-  EXPECT_EQ(sizeof(fvm::SparseImage), FvmSparseCalculateUncompressedImageSize(descriptor));
+  EXPECT_EQ(sizeof(fvm::SparseImage),
+            fvm_sparse_internal::CalculateUncompressedImageSize(descriptor));
 }
 
-TEST(FvmSparseImageTest,
-     FvmSparseCalculateUncompressedImageSizeWithParitionsAndExtentsMatchesSerializedContent) {
+TEST(FvmSparseCalculateUncompressedImageSizeTest, ParitionsAndExtentsMatchesSerializedContent) {
   FvmDescriptor descriptor = MakeDescriptor();
-  uint64_t header_length = FvmSparseGenerateHeader(descriptor).header_length;
+  uint64_t header_length = fvm_sparse_internal::GenerateHeader(descriptor).header_length;
   uint64_t data_length = 0;
   for (const auto& partition : descriptor.partitions()) {
     for (const auto& mapping : partition.address().mappings) {
@@ -244,7 +244,8 @@ TEST(FvmSparseImageTest,
     }
   }
 
-  EXPECT_EQ(FvmSparseCalculateUncompressedImageSize(descriptor), header_length + data_length);
+  EXPECT_EQ(fvm_sparse_internal::CalculateUncompressedImageSize(descriptor),
+            header_length + data_length);
 }
 
 // Fake implementation for reader that delegates operations to a function after performing bound
@@ -342,11 +343,12 @@ FvmOptions MakeOptions(uint64_t slice_size, CompressionSchema schema) {
   return options;
 }
 
-std::vector<FvmSparsePartitionEntry> GetExpectedPartitionEntries(const FvmDescriptor& descriptor,
-                                                                 uint64_t slice_size) {
-  std::vector<FvmSparsePartitionEntry> partitions;
+std::vector<fvm_sparse_internal::PartitionEntry> GetExpectedPartitionEntries(
+    const FvmDescriptor& descriptor, uint64_t slice_size) {
+  std::vector<fvm_sparse_internal::PartitionEntry> partitions;
   for (const auto& partition : descriptor.partitions()) {
-    auto partition_entry_result = FvmSparseGeneratePartitionEntry(slice_size, partition);
+    auto partition_entry_result =
+        fvm_sparse_internal::GeneratePartitionEntry(slice_size, partition);
     partitions.push_back(partition_entry_result.take_value());
   }
   return partitions;
@@ -396,7 +398,8 @@ auto PartitionDescriptorEq(const fvm::PartitionDescriptor& expected_descriptor) 
                          testing::ElementsAreArray(expected_descriptor.type))));
 }
 
-auto PartitionDescriptorMatchesEntry(const FvmSparsePartitionEntry& expected_descriptor) {
+auto PartitionDescriptorMatchesEntry(
+    const fvm_sparse_internal::PartitionEntry& expected_descriptor) {
   return PartitionDescriptorEq(expected_descriptor.descriptor);
 }
 
@@ -419,21 +422,21 @@ MATCHER(ExtentDescriptorsAreEq, "Compares to Extent Descriptors") {
   return testing::ExplainMatchResult(ExtentDescriptorEq(b), a, result_listener);
 };
 
-auto ExtentDescriptorsMatchesEntry(const FvmSparsePartitionEntry& expected_entry) {
+auto ExtentDescriptorsMatchesEntry(const fvm_sparse_internal::PartitionEntry& expected_entry) {
   return testing::Pointwise(ExtentDescriptorsAreEq(), expected_entry.extents);
 }
 
-TEST(FvmSparseImageTest, FvmSparseWriteImageDataUncompressedCompliesWithFormat) {
+TEST(FvmSparseWriteImageTest, DataUncompressedCompliesWithFormat) {
   SerializedImageContainer container;
   auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
-  auto header = FvmSparseGenerateHeader(descriptor);
+  auto header = fvm_sparse_internal::GenerateHeader(descriptor);
 
-  std::vector<FvmSparsePartitionEntry> expected_partition_entries =
+  std::vector<fvm_sparse_internal::PartitionEntry> expected_partition_entries =
       GetExpectedPartitionEntries(descriptor, descriptor.options().slice_size);
 
   auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
   ASSERT_TRUE(write_result.is_ok()) << write_result.error();
-  ASSERT_EQ(write_result.value(), FvmSparseCalculateUncompressedImageSize(descriptor));
+  ASSERT_EQ(write_result.value(), fvm_sparse_internal::CalculateUncompressedImageSize(descriptor));
 
   EXPECT_THAT(container.serialized_image().header, HeaderEq(header));
 
@@ -441,9 +444,9 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataUncompressedCompliesWithFormat) 
   auto it = descriptor.partitions().begin();
   const auto& partition_1 = *it++;
   auto partition_1_entry_result =
-      FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition_1);
+      fvm_sparse_internal::GeneratePartitionEntry(descriptor.options().slice_size, partition_1);
   ASSERT_TRUE(partition_1_entry_result.is_ok()) << partition_1_entry_result.error();
-  FvmSparsePartitionEntry partition_1_entry = partition_1_entry_result.take_value();
+  fvm_sparse_internal::PartitionEntry partition_1_entry = partition_1_entry_result.take_value();
   EXPECT_THAT(container.serialized_image().partition_1.descriptor,
               PartitionDescriptorMatchesEntry(partition_1_entry));
   EXPECT_THAT(container.serialized_image().partition_1.extents,
@@ -451,9 +454,9 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataUncompressedCompliesWithFormat) 
 
   const auto& partition_2 = *it++;
   auto partition_2_entry_result =
-      FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition_2);
+      fvm_sparse_internal::GeneratePartitionEntry(descriptor.options().slice_size, partition_2);
   ASSERT_TRUE(partition_2_entry_result.is_ok()) << partition_2_entry_result.error();
-  FvmSparsePartitionEntry partition_2_entry = partition_2_entry_result.take_value();
+  fvm_sparse_internal::PartitionEntry partition_2_entry = partition_2_entry_result.take_value();
   EXPECT_THAT(container.serialized_image().partition_2.descriptor,
               PartitionDescriptorMatchesEntry(partition_2_entry));
   EXPECT_THAT(container.serialized_image().partition_2.extents,
@@ -476,18 +479,18 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataUncompressedCompliesWithFormat) 
   }
 }
 
-TEST(FvmSparseImageTest, FvmSparseWriteImageDataCompressedCompliesWithFormat) {
+TEST(FvmSparseWriteImageTest, DataCompressedCompliesWithFormat) {
   SerializedImageContainer container;
   auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
-  auto header = FvmSparseGenerateHeader(descriptor);
+  auto header = fvm_sparse_internal::GenerateHeader(descriptor);
 
-  std::vector<FvmSparsePartitionEntry> expected_partition_entries =
+  std::vector<fvm_sparse_internal::PartitionEntry> expected_partition_entries =
       GetExpectedPartitionEntries(descriptor, descriptor.options().slice_size);
 
   Lz4Compressor compressor = Lz4Compressor::Create(descriptor.options().compression).take_value();
   auto write_result = FvmSparseWriteImage(descriptor, &container.writer(), &compressor);
   ASSERT_TRUE(write_result.is_ok()) << write_result.error();
-  ASSERT_LE(write_result.value(), FvmSparseCalculateUncompressedImageSize(descriptor));
+  ASSERT_LE(write_result.value(), fvm_sparse_internal::CalculateUncompressedImageSize(descriptor));
 
   EXPECT_THAT(container.serialized_image().header, HeaderEq(header));
   uint64_t compressed_extents_size = write_result.value() - header.header_length;
@@ -496,9 +499,9 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataCompressedCompliesWithFormat) {
   auto it = descriptor.partitions().begin();
   const auto& partition_1 = *it++;
   auto partition_1_entry_result =
-      FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition_1);
+      fvm_sparse_internal::GeneratePartitionEntry(descriptor.options().slice_size, partition_1);
   ASSERT_TRUE(partition_1_entry_result.is_ok()) << partition_1_entry_result.error();
-  FvmSparsePartitionEntry partition_1_entry = partition_1_entry_result.take_value();
+  fvm_sparse_internal::PartitionEntry partition_1_entry = partition_1_entry_result.take_value();
   EXPECT_THAT(container.serialized_image().partition_1.descriptor,
               PartitionDescriptorMatchesEntry(partition_1_entry));
   EXPECT_THAT(container.serialized_image().partition_1.extents,
@@ -506,9 +509,9 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageDataCompressedCompliesWithFormat) {
 
   const auto& partition_2 = *it++;
   auto partition_2_entry_result =
-      FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition_2);
+      fvm_sparse_internal::GeneratePartitionEntry(descriptor.options().slice_size, partition_2);
   ASSERT_TRUE(partition_2_entry_result.is_ok()) << partition_2_entry_result.error();
-  FvmSparsePartitionEntry partition_2_entry = partition_2_entry_result.take_value();
+  fvm_sparse_internal::PartitionEntry partition_2_entry = partition_2_entry_result.take_value();
   EXPECT_THAT(container.serialized_image().partition_2.descriptor,
               PartitionDescriptorMatchesEntry(partition_2_entry));
   EXPECT_THAT(container.serialized_image().partition_2.extents,
@@ -576,7 +579,7 @@ class ErrorWriter final : public Writer {
 constexpr std::string_view kWriteError = "Write Error";
 constexpr std::string_view kReadError = "Read Error";
 
-TEST(FvmSparseImageTest, FvmSparseWriteImageWithReadErrorIsError) {
+TEST(FvmSparseWriteImageTest, WithReadErrorIsError) {
   FvmOptions options;
   options.compression.schema = CompressionSchema::kNone;
   options.max_volume_size = 20 * (1 << 20);
@@ -602,7 +605,7 @@ TEST(FvmSparseImageTest, FvmSparseWriteImageWithReadErrorIsError) {
   ASSERT_EQ(kReadError, write_result.error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseWriteImageWithWriteErrorIsError) {
+TEST(FvmSparseImageTest, WithWriteErrorIsError) {
   ErrorWriter writer(/**error_offset=**/ 0, kWriteError);
   FvmOptions options;
   options.compression.schema = CompressionSchema::kNone;
@@ -667,7 +670,7 @@ class BufferReader final : public Reader {
   fbl::Span<const uint8_t> image_buffer_;
 };
 
-TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithBadMagicIsError) {
+TEST(GeHeaderTest, FromReaderWithBadMagicIsError) {
   constexpr uint64_t kImageOffset = 12345678;
   fvm::SparseImage header = {};
   header.magic = fvm::kSparseFormatMagic - 1;
@@ -678,10 +681,10 @@ TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithBadMagicIsError) {
 
   BufferReader reader(kImageOffset, &header);
 
-  ASSERT_TRUE(FvmSparseImageGetHeader(kImageOffset, reader).is_error());
+  ASSERT_TRUE(fvm_sparse_internal::GetHeader(kImageOffset, reader).is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithVersionMismatchIsError) {
+TEST(GetHeaderTest, FromReaderWithVersionMismatchIsError) {
   constexpr uint64_t kImageOffset = 12345678;
   fvm::SparseImage header = {};
   header.magic = fvm::kSparseFormatMagic;
@@ -692,10 +695,10 @@ TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithVersionMismatchIsE
 
   BufferReader reader(kImageOffset, &header);
 
-  ASSERT_TRUE(FvmSparseImageGetHeader(kImageOffset, reader).is_error());
+  ASSERT_TRUE(fvm_sparse_internal::GetHeader(kImageOffset, reader).is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithUnknownFlagIsError) {
+TEST(GetHeaderTest, FromReaderWithUnknownFlagIsError) {
   constexpr uint64_t kImageOffset = 12345678;
   fvm::SparseImage header = {};
   header.magic = fvm::kSparseFormatMagic;
@@ -711,10 +714,10 @@ TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithUnknownFlagIsError
 
   BufferReader reader(kImageOffset, &header);
 
-  ASSERT_TRUE(FvmSparseImageGetHeader(kImageOffset, reader).is_error());
+  ASSERT_TRUE(fvm_sparse_internal::GetHeader(kImageOffset, reader).is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithZeroSliceSizeIsError) {
+TEST(GetHeaderTest, FromReaderWithZeroSliceSizeIsError) {
   constexpr uint64_t kImageOffset = 12345678;
   fvm::SparseImage header = {};
   header.magic = fvm::kSparseFormatMagic;
@@ -730,10 +733,10 @@ TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithZeroSliceSizeIsErr
 
   BufferReader reader(kImageOffset, &header);
 
-  ASSERT_TRUE(FvmSparseImageGetHeader(kImageOffset, reader).is_error());
+  ASSERT_TRUE(fvm_sparse_internal::GetHeader(kImageOffset, reader).is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithHeaderLengthTooSmallIsError) {
+TEST(GetHeaderTest, FromReaderWithHeaderLengthTooSmallIsError) {
   constexpr uint64_t kImageOffset = 12345678;
   fvm::SparseImage header = {};
   header.magic = fvm::kSparseFormatMagic;
@@ -749,10 +752,10 @@ TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderWithHeaderLengthTooSma
 
   BufferReader reader(kImageOffset, &header);
 
-  ASSERT_TRUE(FvmSparseImageGetHeader(kImageOffset, reader).is_error());
+  ASSERT_TRUE(fvm_sparse_internal::GetHeader(kImageOffset, reader).is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderIsOk) {
+TEST(GetHeaderTest, FromValidReaderIsOk) {
   constexpr uint64_t kImageOffset = 12345678;
   fvm::SparseImage header = {};
   header.magic = fvm::kSparseFormatMagic;
@@ -765,7 +768,7 @@ TEST(FvmSparseImageTest, FvmSparseImageGetHeaderFromReaderIsOk) {
 
   BufferReader reader(kImageOffset, &header);
 
-  auto header_or = FvmSparseImageGetHeader(kImageOffset, reader);
+  auto header_or = fvm_sparse_internal::GetHeader(kImageOffset, reader);
   ASSERT_TRUE(header_or.is_ok()) << header_or.error();
   ASSERT_THAT(header_or.value(), HeaderEq(header));
 }
@@ -842,7 +845,7 @@ fvm::SparseImage GetHeader() {
   return header;
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithBadPartitionMagicIsError) {
+TEST(GetPartitions, WithBadPartitionMagicIsError) {
   constexpr uint64_t kImageOffset = 123456;
   auto header = GetHeader();
   auto partitions = GetPartitions();
@@ -851,10 +854,10 @@ TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithBadPartitionMagicIsError
   // The partition data starts at a random spot.
   BufferReader reader(kImageOffset, &partitions);
 
-  ASSERT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+  ASSERT_TRUE(fvm_sparse_internal::GetPartitions(kImageOffset, reader, header).is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithUnknownFlagIsError) {
+TEST(GetPartitionsTest, WithUnknownFlagIsError) {
   constexpr uint64_t kImageOffset = 123456;
   auto header = GetHeader();
   auto partitions = GetPartitions();
@@ -864,10 +867,10 @@ TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithUnknownFlagIsError) {
   // The partition data starts at a random spot.
   BufferReader reader(kImageOffset, &partitions);
 
-  ASSERT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+  ASSERT_TRUE(fvm_sparse_internal::GetPartitions(kImageOffset, reader, header).is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithBadExtentMagicIsError) {
+TEST(GetPartitionsTest, WithBadExtentMagicIsError) {
   constexpr uint64_t kImageOffset = 123456;
   auto header = GetHeader();
   auto partitions = GetPartitions();
@@ -876,10 +879,10 @@ TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithBadExtentMagicIsError) {
   // The partition data starts at a random spot.
   BufferReader reader(kImageOffset, &partitions);
 
-  ASSERT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+  ASSERT_TRUE(fvm_sparse_internal::GetPartitions(kImageOffset, reader, header).is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithExtentLengthSliceCountMismatchIsError) {
+TEST(GetPartitionsTest, WithExtentLengthSliceCountMismatchIsError) {
   constexpr uint64_t kImageOffset = 123456;
   auto header = GetHeader();
   auto partitions = GetPartitions();
@@ -888,10 +891,10 @@ TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithExtentLengthSliceCountMi
   // The partition data starts at a random spot.
   BufferReader reader(kImageOffset, &partitions);
 
-  ASSERT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+  ASSERT_TRUE(fvm_sparse_internal::GetPartitions(kImageOffset, reader, header).is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithOverlapingSlicesInPartitionExtentsIsError) {
+TEST(GetPartitionsTest, WithOverlapingSlicesInPartitionExtentsIsError) {
   constexpr uint64_t kImageOffset = 123456;
   auto header = GetHeader();
   auto partitions = GetPartitions();
@@ -911,41 +914,41 @@ TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsWithOverlapingSlicesInPartit
   //    * extent overlaps before range.
   extent.slice_start = 0;
   extent.slice_count = 3;
-  EXPECT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+  EXPECT_TRUE(fvm_sparse_internal::GetPartitions(kImageOffset, reader, header).is_error());
 
   // Case 2:
   //    * extent overlaps after range.
   extent.slice_start = 4;
   extent.slice_count = 2;
-  EXPECT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+  EXPECT_TRUE(fvm_sparse_internal::GetPartitions(kImageOffset, reader, header).is_error());
 
   // Case 3:
   //    * extent overlaps in the middle of range
   extent.slice_start = 2;
   extent.slice_count = 1;
-  EXPECT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+  EXPECT_TRUE(fvm_sparse_internal::GetPartitions(kImageOffset, reader, header).is_error());
 
   // Case 4:
   //    * extent overlaps multiple ranges
   extent.slice_start = 4;
   extent.slice_count = 8;
-  EXPECT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+  EXPECT_TRUE(fvm_sparse_internal::GetPartitions(kImageOffset, reader, header).is_error());
 
   // Case 5:
   //    * extent covers same range
   extent.slice_start = 1;
   extent.slice_count = 4;
-  EXPECT_TRUE(FvmSparseImageGetPartitions(kImageOffset, reader, header).is_error());
+  EXPECT_TRUE(fvm_sparse_internal::GetPartitions(kImageOffset, reader, header).is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageGetPartitionsIsOk) {
+TEST(GetPartitionsTest, WithValidReaderAndHeaderIsOk) {
   constexpr uint64_t kImageOffset = 123456;
   auto header = GetHeader();
   auto partitions = GetPartitions();
 
   // The partition data starts at a random spot.
   BufferReader reader(kImageOffset, &partitions);
-  auto partitions_or = FvmSparseImageGetPartitions(kImageOffset, reader, header);
+  auto partitions_or = fvm_sparse_internal::GetPartitions(kImageOffset, reader, header);
 
   ASSERT_TRUE(partitions_or.is_ok()) << partitions_or.error();
   auto actual_partitions = partitions_or.take_value();
@@ -983,7 +986,7 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseUncompressedSerializedData) {
   SerializedImageContainer container;
   auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
 
-  std::vector<FvmSparsePartitionEntry> expected_partition_entries =
+  std::vector<fvm_sparse_internal::PartitionEntry> expected_partition_entries =
       GetExpectedPartitionEntries(descriptor, descriptor.options().slice_size);
 
   auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
@@ -1044,11 +1047,11 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseUncompressedSerializedData) {
   }
 }
 
-TEST(FvmSparseImageTest, SparseReaderIsAbleToParseCompressedSerializedData) {
+TEST(FvmSparseWriteImageTest, WrittenImageIsCompatibleWithLegacyImplementation) {
   SerializedImageContainer container;
   auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
 
-  std::vector<FvmSparsePartitionEntry> expected_partition_entries =
+  std::vector<fvm_sparse_internal::PartitionEntry> expected_partition_entries =
       GetExpectedPartitionEntries(descriptor, descriptor.options().slice_size);
 
   Lz4Compressor compressor = Lz4Compressor::Create(descriptor.options().compression).take_value();
@@ -1129,13 +1132,14 @@ auto FvmHeaderEq(const fvm::Header& expected_header) {
       testing::Field(&Header::generation, testing::Eq(expected_header.generation)));
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithNulloptIsOk) {
+TEST(ConvertToFvmHeaderTest, WithNulloptIsOk) {
   constexpr uint64_t kMinSliceCount = 20;
   fvm::SparseImage sparse_header = GetHeader();
   auto expected_header = fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, kMinSliceCount,
                                                      sparse_header.slice_size);
 
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, std::nullopt);
+  auto header_or =
+      fvm_sparse_internal::ConvertToFvmHeader(sparse_header, kMinSliceCount, std::nullopt);
   ASSERT_TRUE(header_or.is_ok()) << header_or.error();
   auto header = header_or.take_value();
 
@@ -1145,13 +1149,13 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithNulloptIsOk) {
                                                     << header.ToString();
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderOverloadIsOk) {
+TEST(ConvertToFvmHeaderTest, OverloadIsOk) {
   constexpr uint64_t kMinSliceCount = 20;
   fvm::SparseImage sparse_header = GetHeader();
   auto expected_header = fvm::Header::FromSliceCount(fvm::kMaxUsablePartitions, kMinSliceCount,
                                                      sparse_header.slice_size);
 
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, kMinSliceCount);
   ASSERT_TRUE(header_or.is_ok()) << header_or.error();
   auto header = header_or.take_value();
 
@@ -1161,7 +1165,7 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderOverloadIsOk) {
                                                     << header.ToString();
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithTargetDiskIsOk) {
+TEST(ConvertToFvmHeaderTest, WithTargetDiskIsOk) {
   constexpr uint64_t kMinSliceCount = 20;
   constexpr uint64_t kTargetVolumeSize = 20ull << 32;
 
@@ -1171,7 +1175,7 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithTargetDiskIsOk) {
   fvm::SparseImage sparse_header = GetHeader();
   auto expected_header = fvm::Header::FromDiskSize(fvm::kMaxUsablePartitions, kTargetVolumeSize,
                                                    sparse_header.slice_size);
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, kMinSliceCount, options);
   ASSERT_TRUE(header_or.is_ok()) << header_or.error();
   auto header = header_or.take_value();
 
@@ -1181,7 +1185,7 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithTargetDiskIsOk) {
                                                     << header.ToString();
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithTooSmallTargetDiskIsError) {
+TEST(ConvertToFvmHeaderTest, WithTooSmallTargetDiskIsError) {
   constexpr uint64_t kMinSliceCount = 16;
   constexpr uint64_t kTargetVolumeSize = 16ull << 20;
 
@@ -1190,11 +1194,11 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithTooSmallTargetDiskI
 
   fvm::SparseImage sparse_header = GetHeader();
   sparse_header.slice_size = 1ull << 20;
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, kMinSliceCount, options);
   ASSERT_TRUE(header_or.is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithTargetAndMaxVolumeSizeIsOk) {
+TEST(ConvertToFvmHeaderTest, WithTargetAndMaxVolumeSizeIsOk) {
   constexpr uint64_t kMinSliceCount = 20;
   constexpr uint64_t kTargetVolumeSize = 20ull << 32;
   constexpr uint64_t kMaxVolumeSize = 40ull << 32;
@@ -1206,7 +1210,7 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithTargetAndMaxVolumeS
   fvm::SparseImage sparse_header = GetHeader();
   auto expected_header = fvm::Header::FromGrowableDiskSize(
       fvm::kMaxUsablePartitions, kTargetVolumeSize, kMaxVolumeSize, sparse_header.slice_size);
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, kMinSliceCount, options);
   ASSERT_TRUE(header_or.is_ok()) << header_or.error();
   auto header = header_or.take_value();
 
@@ -1216,8 +1220,7 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithTargetAndMaxVolumeS
                                                     << header.ToString();
 }
 
-TEST(FvmSparseImageTest,
-     FvmSparseImageConvertToFvmHeaderWithTargetAndMaxVolumeOnSparseHeaderSizeIsOk) {
+TEST(ConvertToFvmHeaderTest, WithTargetAndMaxVolumeOnSparseHeaderSizeIsOk) {
   constexpr uint64_t kMinSliceCount = 20;
   constexpr uint64_t kTargetVolumeSize = 20ull << 32;
   constexpr uint64_t kMaxVolumeSize = 40ull << 32;
@@ -1229,7 +1232,7 @@ TEST(FvmSparseImageTest,
   sparse_header.maximum_disk_size = kMaxVolumeSize;
   auto expected_header = fvm::Header::FromGrowableDiskSize(
       fvm::kMaxUsablePartitions, kTargetVolumeSize, kMaxVolumeSize, sparse_header.slice_size);
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, kMinSliceCount, options);
   ASSERT_TRUE(header_or.is_ok()) << header_or.error();
   auto header = header_or.take_value();
 
@@ -1239,8 +1242,7 @@ TEST(FvmSparseImageTest,
                                                     << header.ToString();
 }
 
-TEST(FvmSparseImageTest,
-     FvmSparseImageConvertToFvmHeaderWithHMaxVolumeSizeInOptionsOverridesOneInsSparseHeader) {
+TEST(ConvertToFvmHeaderTest, WithHMaxVolumeSizeInOptionsOverridesOneInsSparseHeader) {
   constexpr uint64_t kMinSliceCount = 20;
   constexpr uint64_t kTargetVolumeSize = 20ull << 32;
   constexpr uint64_t kMaxVolumeSize = 40ull << 32;
@@ -1253,7 +1255,7 @@ TEST(FvmSparseImageTest,
   sparse_header.maximum_disk_size = kTargetVolumeSize;
   auto expected_header = fvm::Header::FromGrowableDiskSize(
       fvm::kMaxUsablePartitions, kTargetVolumeSize, kMaxVolumeSize, sparse_header.slice_size);
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, kMinSliceCount, options);
   ASSERT_TRUE(header_or.is_ok()) << header_or.error();
   auto header = header_or.take_value();
 
@@ -1263,9 +1265,7 @@ TEST(FvmSparseImageTest,
                                                     << header.ToString();
 }
 
-TEST(
-    FvmSparseImageTest,
-    FvmSparseImageConvertToFvmHeaderWithHMaxVolumeSizeAndNoTargetVolumeSizeDefaultsToMinSliceCountSize) {
+TEST(ConvertToFvmHeaderTest, WithHMaxVolumeSizeAndNoTargetVolumeSizeDefaultsToMinSliceCountSize) {
   constexpr uint64_t kMinSliceCount = 20;
   constexpr uint64_t kMaxVolumeSize = 40ull << 32;
 
@@ -1283,7 +1283,7 @@ TEST(
       fvm::kMaxUsablePartitions, expected_volume_size, kMaxVolumeSize, sparse_header.slice_size);
   expected_header.SetSliceCount(kMinSliceCount);
 
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, kMinSliceCount, options);
   ASSERT_TRUE(header_or.is_ok()) << header_or.error();
   auto header = header_or.take_value();
 
@@ -1293,7 +1293,7 @@ TEST(
                                                     << header.ToString();
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithMaxVolumeSizeTooSmallIsError) {
+TEST(ConvertToFvmHeaderTest, WithMaxVolumeSizeTooSmallIsError) {
   constexpr uint64_t kMinSliceCount = 20;
   constexpr uint64_t kMaxVolumeSize = 20 << 20;
 
@@ -1303,21 +1303,21 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmHeaderWithMaxVolumeSizeTooSma
   fvm::SparseImage sparse_header = GetHeader();
   // Emough space for 20 slices, but no metadata.
   sparse_header.slice_size = 1 << 20;
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, kMinSliceCount, options);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, kMinSliceCount, options);
   ASSERT_TRUE(header_or.is_error());
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithNoPartitionsIsOk) {
+TEST(ConvertToFvmMetadataTest, WithNoPartitionsIsOk) {
   fvm::SparseImage sparse_header = GetHeader();
   sparse_header.partition_count = 0;
   sparse_header.header_length = sizeof(fvm::SparseImage);
 
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, 100);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, 100);
   EXPECT_TRUE(header_or.is_ok()) << header_or.error();
   auto header = header_or.take_value();
 
-  auto metadata_or =
-      FvmSparseImageConvertToFvmMetadata(header, fbl::Span<FvmSparsePartitionEntry>());
+  auto metadata_or = fvm_sparse_internal::ConvertToFvmMetadata(
+      header, fbl::Span<fvm_sparse_internal::PartitionEntry>());
   ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error();
   auto metadata = metadata_or.take_value();
 
@@ -1334,12 +1334,12 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithNoPartitionsIsOk)
   }
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithSinglePartitionsAndNoSlicesIsOk) {
+TEST(ConvertToFvmMetadataTest, WithSinglePartitionsAndNoSlicesIsOk) {
   fvm::SparseImage sparse_header = GetHeader();
   sparse_header.partition_count = 1;
   sparse_header.header_length = sizeof(fvm::SparseImage) + sizeof(fvm::PartitionDescriptor);
 
-  FvmSparsePartitionEntry entry = {};
+  fvm_sparse_internal::PartitionEntry entry = {};
   entry.descriptor.flags = 0;
   entry.descriptor.magic = fvm::kPartitionDescriptorMagic;
   entry.descriptor.type[0] = 1;
@@ -1348,12 +1348,12 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithSinglePartitionsA
   std::string_view kPartitionName = "mypartition";
   memcpy(entry.descriptor.name, kPartitionName.data(), kPartitionName.size());
 
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, 100);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, 100);
   EXPECT_TRUE(header_or.is_ok()) << header_or.error();
   auto header = header_or.take_value();
 
-  auto metadata_or =
-      FvmSparseImageConvertToFvmMetadata(header, fbl::Span<FvmSparsePartitionEntry>(&entry, 1));
+  auto metadata_or = fvm_sparse_internal::ConvertToFvmMetadata(
+      header, fbl::Span<fvm_sparse_internal::PartitionEntry>(&entry, 1));
   ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error();
   auto metadata = metadata_or.take_value();
 
@@ -1384,12 +1384,12 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithSinglePartitionsA
   EXPECT_EQ(used_entries, 1);
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithSinglePartitionsAndSlicesIsOk) {
+TEST(ConvertToFvmMetadataTest, WithSinglePartitionsAndSlicesIsOk) {
   fvm::SparseImage sparse_header = GetHeader();
   sparse_header.partition_count = 1;
   sparse_header.header_length = sizeof(fvm::SparseImage) + sizeof(fvm::PartitionDescriptor);
 
-  FvmSparsePartitionEntry entry = {};
+  fvm_sparse_internal::PartitionEntry entry = {};
   entry.descriptor.flags = 0;
   entry.descriptor.magic = fvm::kPartitionDescriptorMagic;
   entry.descriptor.type[0] = 1;
@@ -1408,12 +1408,12 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithSinglePartitionsA
   std::string_view kPartitionName = "mypartition";
   memcpy(entry.descriptor.name, kPartitionName.data(), kPartitionName.size());
 
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, 100);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, 100);
   EXPECT_TRUE(header_or.is_ok()) << header_or.error();
   auto header = header_or.take_value();
 
-  auto metadata_or =
-      FvmSparseImageConvertToFvmMetadata(header, fbl::Span<FvmSparsePartitionEntry>(&entry, 1));
+  auto metadata_or = fvm_sparse_internal::ConvertToFvmMetadata(
+      header, fbl::Span<fvm_sparse_internal::PartitionEntry>(&entry, 1));
   ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error();
   auto metadata = metadata_or.take_value();
 
@@ -1444,19 +1444,19 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithSinglePartitionsA
   EXPECT_EQ(used_entries, 1);
 }
 
-TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithsMultiplePartitionsAndSlicesIsOk) {
+TEST(ConvertToFvmMetadataTest, WithsMultiplePartitionsAndSlicesIsOk) {
   constexpr size_t kUsedPartitions = 4;
   fvm::SparseImage sparse_header = GetHeader();
   sparse_header.partition_count = kUsedPartitions;
 
-  std::vector<FvmSparsePartitionEntry> entries;
+  std::vector<fvm_sparse_internal::PartitionEntry> entries;
 
   auto get_expected_partition_name = [](int index) {
     return std::string("partition") + std::to_string(index);
   };
 
   for (auto i = 0u; i < kUsedPartitions; ++i) {
-    FvmSparsePartitionEntry entry = {};
+    fvm_sparse_internal::PartitionEntry entry = {};
     entry.descriptor.magic = fvm::kPartitionDescriptorMagic;
     entry.descriptor.flags = 0;
     // Shifted so partition 1 has the ith value for first bit.
@@ -1480,11 +1480,11 @@ TEST(FvmSparseImageTest, FvmSparseImageConvertToFvmMetadataWithsMultiplePartitio
     entries.push_back(entry);
   }
 
-  auto header_or = FvmSparseImageConvertToFvmHeader(sparse_header, 100);
+  auto header_or = fvm_sparse_internal::ConvertToFvmHeader(sparse_header, 100);
   EXPECT_TRUE(header_or.is_ok()) << header_or.error();
   auto header = header_or.take_value();
 
-  auto metadata_or = FvmSparseImageConvertToFvmMetadata(header, entries);
+  auto metadata_or = fvm_sparse_internal::ConvertToFvmMetadata(header, entries);
   ASSERT_TRUE(metadata_or.is_ok()) << metadata_or.error();
   auto metadata = metadata_or.take_value();
 

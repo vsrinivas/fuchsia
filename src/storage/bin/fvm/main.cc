@@ -564,6 +564,7 @@ int main(int argc, char** argv) {
       usage();
       return -1;
     }
+    // Temporary usage of internal symbols.
     auto sparse_image_reader_or = storage::volume_image::FdReader::Create(input_path);
     if (sparse_image_reader_or.is_error()) {
       fprintf(stderr, "%s\n", sparse_image_reader_or.error().c_str());
@@ -571,7 +572,7 @@ int main(int argc, char** argv) {
     }
 
     auto header_or =
-        storage::volume_image::FvmSparseImageGetHeader(0, sparse_image_reader_or.value());
+        storage::volume_image::fvm_sparse_internal::GetHeader(0, sparse_image_reader_or.value());
     if (header_or.is_error()) {
       fprintf(stderr, "Failed to parse sparse image header. %s\n", header_or.error().c_str());
       return -1;
@@ -584,7 +585,7 @@ int main(int argc, char** argv) {
       return -1;
     }
 
-    auto partitions_or = storage::volume_image::FvmSparseImageGetPartitions(
+    auto partitions_or = storage::volume_image::fvm_sparse_internal::GetPartitions(
         sizeof(header), sparse_image_reader_or.value(), header);
     if (partitions_or.is_error()) {
       fprintf(stderr, "Failed to parse sparse image partition metadata. %s\n",
@@ -601,7 +602,8 @@ int main(int argc, char** argv) {
       }
     }
 
-    auto compression_options = storage::volume_image::FvmSparseImageGetCompressionOptions(header);
+    auto compression_options =
+        storage::volume_image::fvm_sparse_internal::GetCompressionOptions(header);
     // Decompress the image.
     if (compression_options.schema != storage::volume_image::CompressionSchema::kNone) {
       std::unique_ptr<SparseContainer> compressedContainer;

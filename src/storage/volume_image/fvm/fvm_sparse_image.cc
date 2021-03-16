@@ -21,45 +21,7 @@
 #include "src/storage/volume_image/utils/compressor.h"
 
 namespace storage::volume_image {
-namespace fvm_sparse_internal {
-
-uint32_t GetImageFlags(const FvmOptions& options) {
-  uint32_t flags = 0;
-  switch (options.compression.schema) {
-    case CompressionSchema::kLz4:
-      flags |= fvm::kSparseFlagLz4;
-      break;
-    case CompressionSchema::kNone:
-      flags &= ~fvm::kSparseFlagLz4;
-      break;
-    default:
-      break;
-  }
-  return flags;
-}
-
-uint32_t GetPartitionFlags(const Partition& partition) {
-  uint32_t flags = 0;
-
-  // TODO(jfsulliv): Propagate all kSparseFlags.
-  switch (partition.volume().encryption) {
-    case EncryptionType::kZxcrypt:
-      flags |= fvm::kSparseFlagZxcrypt;
-      break;
-    case EncryptionType::kNone:
-      flags &= ~fvm::kSparseFlagZxcrypt;
-      break;
-    default:
-      break;
-  }
-
-  return flags;
-}
-
-}  // namespace fvm_sparse_internal
-
 namespace {
-
 // Dedicated memory for reading to and from the underlying media.
 constexpr uint64_t kReadBufferSize = 4096;
 
@@ -100,7 +62,7 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
   uint64_t current_offset = 0;
 
   // Write the header.
-  fvm::SparseImage header = FvmSparseGenerateHeader(descriptor);
+  fvm::SparseImage header = fvm_sparse_internal::GenerateHeader(descriptor);
   auto result = writer->Write(current_offset, FixedSizeStructToSpan(header));
   if (result.is_error()) {
     return result.take_error_result();
@@ -109,12 +71,12 @@ fit::result<uint64_t, std::string> FvmSparseWriteImageInternal(const FvmDescript
 
   for (const auto& partition : descriptor.partitions()) {
     auto partition_entry_result =
-        FvmSparseGeneratePartitionEntry(descriptor.options().slice_size, partition);
+        fvm_sparse_internal::GeneratePartitionEntry(descriptor.options().slice_size, partition);
     if (partition_entry_result.is_error()) {
       return partition_entry_result.take_error_result();
     }
 
-    FvmSparsePartitionEntry entry = partition_entry_result.take_value();
+    fvm_sparse_internal::PartitionEntry entry = partition_entry_result.take_value();
     auto partition_result = writer->Write(current_offset, FixedSizeStructToSpan(entry.descriptor));
     if (partition_result.is_error()) {
       return partition_result.take_error_result();
@@ -193,7 +155,42 @@ bool AddRange(std::map<uint64_t, uint64_t>& existing_ranges, uint64_t start, uin
 
 }  // namespace
 
-fvm::SparseImage FvmSparseGenerateHeader(const FvmDescriptor& descriptor) {
+namespace fvm_sparse_internal {
+
+uint32_t GetImageFlags(const FvmOptions& options) {
+  uint32_t flags = 0;
+  switch (options.compression.schema) {
+    case CompressionSchema::kLz4:
+      flags |= fvm::kSparseFlagLz4;
+      break;
+    case CompressionSchema::kNone:
+      flags &= ~fvm::kSparseFlagLz4;
+      break;
+    default:
+      break;
+  }
+  return flags;
+}
+
+uint32_t GetPartitionFlags(const Partition& partition) {
+  uint32_t flags = 0;
+
+  // TODO(jfsulliv): Propagate all kSparseFlags.
+  switch (partition.volume().encryption) {
+    case EncryptionType::kZxcrypt:
+      flags |= fvm::kSparseFlagZxcrypt;
+      break;
+    case EncryptionType::kNone:
+      flags &= ~fvm::kSparseFlagZxcrypt;
+      break;
+    default:
+      break;
+  }
+
+  return flags;
+}
+
+fvm::SparseImage GenerateHeader(const FvmDescriptor& descriptor) {
   fvm::SparseImage sparse_image_header = {};
   sparse_image_header.magic = fvm::kSparseFormatMagic;
   sparse_image_header.version = fvm::kSparseFormatVersion;
@@ -213,9 +210,9 @@ fvm::SparseImage FvmSparseGenerateHeader(const FvmDescriptor& descriptor) {
   return sparse_image_header;
 }
 
-fit::result<FvmSparsePartitionEntry, std::string> FvmSparseGeneratePartitionEntry(
-    uint64_t slice_size, const Partition& partition) {
-  FvmSparsePartitionEntry partition_entry = {};
+fit::result<PartitionEntry, std::string> GeneratePartitionEntry(uint64_t slice_size,
+                                                                const Partition& partition) {
+  PartitionEntry partition_entry = {};
 
   partition_entry.descriptor.magic = fvm::kPartitionDescriptorMagic;
   memcpy(partition_entry.descriptor.name, partition.volume().name.data(),
@@ -247,16 +244,7 @@ fit::result<FvmSparsePartitionEntry, std::string> FvmSparseGeneratePartitionEntr
   return fit::ok(partition_entry);
 }
 
-fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor,
-                                                       Writer* writer, Compressor* compressor) {
-  if (compressor == nullptr) {
-    NoopCompressor noop_compressor;
-    return FvmSparseWriteImageInternal(descriptor, writer, &noop_compressor);
-  }
-  return FvmSparseWriteImageInternal(descriptor, writer, compressor);
-}
-
-uint64_t FvmSparseCalculateUncompressedImageSize(const FvmDescriptor& descriptor) {
+uint64_t CalculateUncompressedImageSize(const FvmDescriptor& descriptor) {
   uint64_t image_size = sizeof(fvm::SparseImage);
 
   for (const auto& partition : descriptor.partitions()) {
@@ -273,8 +261,7 @@ uint64_t FvmSparseCalculateUncompressedImageSize(const FvmDescriptor& descriptor
   return image_size;
 }
 
-fit::result<fvm::SparseImage, std::string> FvmSparseImageGetHeader(uint64_t offset,
-                                                                   const Reader& reader) {
+fit::result<fvm::SparseImage, std::string> GetHeader(uint64_t offset, const Reader& reader) {
   fvm::SparseImage header = {};
   auto header_buffer = FixedSizeStructToSpan(header);
 
@@ -315,14 +302,14 @@ fit::result<fvm::SparseImage, std::string> FvmSparseImageGetHeader(uint64_t offs
   return fit::ok(header);
 }
 
-fit::result<std::vector<FvmSparsePartitionEntry>, std::string> FvmSparseImageGetPartitions(
+fit::result<std::vector<PartitionEntry>, std::string> GetPartitions(
     uint64_t offset, const Reader& reader, const fvm::SparseImage& header) {
-  std::vector<FvmSparsePartitionEntry> partitions(header.partition_count);
+  std::vector<PartitionEntry> partitions(header.partition_count);
   uint64_t current_offset = offset;
 
   // Check partitions and extents.
   for (uint64_t i = 0; i < header.partition_count; ++i) {
-    FvmSparsePartitionEntry& partition = partitions[i];
+    PartitionEntry& partition = partitions[i];
     auto partition_read_result =
         reader.Read(current_offset, FixedSizeStructToSpan(partition.descriptor));
     if (partition_read_result.is_error()) {
@@ -381,7 +368,7 @@ fit::result<std::vector<FvmSparsePartitionEntry>, std::string> FvmSparseImageGet
   return fit::ok(partitions);
 }
 
-CompressionOptions FvmSparseImageGetCompressionOptions(const fvm::SparseImage& header) {
+CompressionOptions GetCompressionOptions(const fvm::SparseImage& header) {
   CompressionOptions options;
   options.schema = CompressionSchema::kNone;
   if ((header.flags & fvm::kSparseFlagLz4) != 0) {
@@ -391,9 +378,9 @@ CompressionOptions FvmSparseImageGetCompressionOptions(const fvm::SparseImage& h
   return options;
 }
 
-fit::result<fvm::Header, std::string> FvmSparseImageConvertToFvmHeader(
-    const fvm::SparseImage& sparse_header, uint64_t slice_count,
-    const std::optional<FvmOptions>& options) {
+fit::result<fvm::Header, std::string> ConvertToFvmHeader(const fvm::SparseImage& sparse_header,
+                                                         uint64_t slice_count,
+                                                         const std::optional<FvmOptions>& options) {
   // Generate the appropiate FVM header.
 
   std::optional<uint64_t> max_volume_size;
@@ -453,8 +440,8 @@ fit::result<fvm::Header, std::string> FvmSparseImageConvertToFvmHeader(
   return fit::ok(header);
 }
 
-fit::result<fvm::Metadata, std::string> FvmSparseImageConvertToFvmMetadata(
-    const fvm::Header& header, fbl::Span<const FvmSparsePartitionEntry> partition_entries) {
+fit::result<fvm::Metadata, std::string> ConvertToFvmMetadata(
+    const fvm::Header& header, fbl::Span<const PartitionEntry> partition_entries) {
   std::vector<fvm::VPartitionEntry> vpartition_entries;
   std::vector<fvm::SliceEntry> slice_entries;
 
@@ -495,6 +482,17 @@ fit::result<fvm::Metadata, std::string> FvmSparseImageConvertToFvmMetadata(
                       std::to_string(metadata_or.error_value()));
   }
   return fit::ok(std::move(metadata_or.value()));
+}
+
+}  // namespace fvm_sparse_internal
+
+fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor,
+                                                       Writer* writer, Compressor* compressor) {
+  if (compressor == nullptr) {
+    NoopCompressor noop_compressor;
+    return FvmSparseWriteImageInternal(descriptor, writer, &noop_compressor);
+  }
+  return FvmSparseWriteImageInternal(descriptor, writer, compressor);
 }
 
 }  // namespace storage::volume_image
