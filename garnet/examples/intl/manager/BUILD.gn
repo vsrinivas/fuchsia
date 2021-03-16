@@ -2,9 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("manager") {
   testonly = true
@@ -36,34 +35,38 @@ rustc_binary("intl_property_manager_bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("intl_property_manager") {
+fuchsia_component("intl_property_manager_component") {
+  component_name = "intl_property_manager"
+  manifest = "meta/intl_property_manager.cmx"
   deps = [ ":intl_property_manager_bin" ]
-  binaries = [
-    {
-      name = "intl_property_manager"
-    },
-  ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/intl_property_manager.cmx")
-      dest = "intl_property_manager.cmx"
-    },
-    {
-      path = rebase_path("meta/intl_property_manager_without_flags.cmx")
-      dest = "intl_property_manager_without_flags.cmx"
-    },
+fuchsia_component("intl_property_manager_without_flags_component") {
+  component_name = "intl_property_manager_without_flags"
+  manifest = "meta/intl_property_manager_without_flags.cmx"
+  deps = [ ":intl_property_manager_bin" ]
+}
+
+fuchsia_package("intl_property_manager") {
+  deps = [
+    ":intl_property_manager_component",
+    ":intl_property_manager_without_flags_component",
   ]
 }
 
-test_package("intl_property_manager_tests") {
+fuchsia_test_component("intl_property_manager_tests_component") {
+  component_name = "intl_property_manager_tests"
+  manifest = "meta/intl_property_manager_bin_test.cmx"
   deps = [ ":intl_property_manager_bin_test" ]
+}
 
-  tests = [
-    {
-      name = "intl_property_manager_bin_test"
-    },
-  ]
+fuchsia_test_package("intl_property_manager_tests") {
+  test_components = [ ":intl_property_manager_tests_component" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

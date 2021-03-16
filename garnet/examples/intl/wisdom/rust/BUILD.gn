@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 group("rust") {
   deps = [
@@ -21,37 +21,26 @@ group("tests") {
   ]
 }
 
+fuchsia_component("intl_wisdom_client_rust") {
+  manifest = "meta/intl_wisdom_client_rust.cmx"
+  deps = [ "client:intl_wisdom_client_rust" ]
+}
+
+fuchsia_component("intl_wisdom_server_rust") {
+  manifest = "meta/intl_wisdom_server_rust.cmx"
+  deps = [ "server:intl_wisdom_server_rust" ]
+}
+
 # Package that contains all binaries for the wisdom example.
-package("intl_wisdom_rust") {
+fuchsia_package("intl_wisdom_rust") {
   deps = [
-    "client:intl_wisdom_client_rust",
-    "server:intl_wisdom_server_rust",
+    ":intl_wisdom_client_rust",
+    ":intl_wisdom_rust_resources",
+    ":intl_wisdom_server_rust",
   ]
+}
 
-  binaries = [
-    {
-      name = "intl_wisdom_server_rust"
-    },
-    {
-      name = "intl_wisdom_client_rust"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/intl_wisdom_server_rust.cmx")
-      dest = "intl_wisdom_server_rust.cmx"
-    },
-    {
-      path = rebase_path("meta/intl_wisdom_client_rust.cmx")
-      dest = "intl_wisdom_client_rust.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
-  ]
+resource("intl_wisdom_rust_resources") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/{{source_file_part}}" ]
 }

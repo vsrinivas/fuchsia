@@ -50,7 +50,7 @@ fx serve
 If all of the above are running, you can now test the implementation using:
 
 ```shell
-$ fx run-test intl_property_manager_tests
+$ fx test intl_property_manager_tests
 ```
 
 [1]: https://fuchsia.googlesource.com/fuchsia/+/HEAD/sdk/fidl/fuchsia.intl/property_provider.fidl

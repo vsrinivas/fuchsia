@@ -10,7 +10,7 @@ start a component from a different URL.
 
 A prerequisite for building the tests is having the correct `fx set` command.
 
-You can add the flag: `--with=//garnet/examples/intl/wisdom/test:tests` to include
+You can add the flag: `--with=//garnet/examples/intl/wisdom/tests:tests` to include
 all the needed tests.
 
 # Running the tests
@@ -20,6 +20,6 @@ Once done, the following sequence will run the test:
 ```
 fx build
 fx serve -v  # You want to run this synchronously in a different terminal.
-fx run-test intl_wisdom_test
+fx test intl_wisdom_test
 ```
 

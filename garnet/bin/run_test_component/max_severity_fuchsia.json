@@ -294,10 +294,6 @@
         },
         {
             "max_severity": "ERROR",
-            "url": "fuchsia-pkg://fuchsia.com/intl_property_manager_tests#meta/intl_property_manager_bin_test.cmx"
-        },
-        {
-            "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/intl_services_tests#meta/intl_services_test.cmx"
         },
         {

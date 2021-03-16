@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 # This is the main target in this BUILD file.  It implicitly contains everything
 # in the src/ directory, and implicitly looks for src/main.rs as entry point.
@@ -41,20 +41,16 @@ rustc_binary("intl_wisdom_client_rust") {
   ]
 }
 
-test_package("intl_wisdom_client_rust_tests") {
-  deps = [ ":intl_wisdom_client_rust_test" ]
-  tests = [
-    {
-      name = "intl_wisdom_client_rust_bin_test"
-      dest = "intl_wisdom_client_rust_bin_test"
-    },
+fuchsia_unittest_package("intl_wisdom_client_rust_tests") {
+  deps = [
+    ":intl_wisdom_client_rust_test",
+    ":intl_wisdom_client_rust_tests_resources",
   ]
-  resources = [
-    {
-      path = rebase_path("//third_party/icu/common/icudtl.dat")
-      dest = "icudtl.dat"
-    },
-  ]
+}
+
+resource("intl_wisdom_client_rust_tests_resources") {
+  sources = [ "//third_party/icu/common/icudtl.dat" ]
+  outputs = [ "data/{{source_file_part}}" ]
 }
 
 group("client") {
