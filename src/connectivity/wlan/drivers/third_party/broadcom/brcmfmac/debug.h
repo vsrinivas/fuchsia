@@ -41,7 +41,7 @@
 #define BRCMF_DBG(filter, fmt, ...)                                \
   do {                                                             \
     if (BRCMF_IS_ON(filter)) {                                     \
-      BRCMF_DBG_UNFILTERED("(%s): " fmt, __func__, ##__VA_ARGS__); \
+      BRCMF_DBG_UNFILTERED(fmt, ##__VA_ARGS__);                    \
     }                                                              \
   } while (0)
 
