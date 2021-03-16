@@ -67,7 +67,7 @@ zx_ticks_t current_ticks(void) {
 
 namespace {
 
-SpinLock timer_lock __CPU_ALIGN_EXCLUSIVE;
+MonitoredSpinLock timer_lock __CPU_ALIGN_EXCLUSIVE;
 DECLARE_SINGLETON_LOCK_WRAPPER(TimerLock, timer_lock);
 
 affine::Ratio gTicksToTime;
@@ -226,7 +226,7 @@ void Timer::Set(const Deadline& deadline, Callback callback, void* arg) {
   const zx_time_t latest_deadline = deadline.latest();
   const zx_time_t earliest_deadline = deadline.earliest();
 
-  Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{TimerLock::Get(), SOURCE_TAG};
 
   cpu_num_t cpu = arch_curr_cpu_num();
   cpu_num_t active_cpu = active_cpu_.load(ktl::memory_order_relaxed);
@@ -271,7 +271,7 @@ void TimerQueue::PreemptReset(zx_time_t deadline) {
 bool Timer::Cancel() {
   DEBUG_ASSERT(magic_ == kMagic);
 
-  Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{TimerLock::Get(), SOURCE_TAG};
 
   cpu_num_t cpu = arch_curr_cpu_num();
 
@@ -366,7 +366,7 @@ void TimerQueue::Tick(zx_time_t now, cpu_num_t cpu) {
     Scheduler::TimerTick(SchedTime{now});
   }
 
-  Guard<SpinLock, NoIrqSave> guard{TimerLock::Get()};
+  Guard<MonitoredSpinLock, NoIrqSave> guard{TimerLock::Get(), SOURCE_TAG};
 
   for (;;) {
     // See if there's an event to process.
@@ -448,7 +448,7 @@ zx_status_t Timer::TrylockOrCancel(MonitoredSpinLock* lock) {
 }
 
 void TimerQueue::TransitionOffCpu(TimerQueue& source) {
-  Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{TimerLock::Get(), SOURCE_TAG};
 
   Timer* old_head = nullptr;
   if (!timer_list_.is_empty()) {
@@ -484,7 +484,7 @@ void TimerQueue::TransitionOffCpu(TimerQueue& source) {
 
 void TimerQueue::ThawPercpu(void) {
   DEBUG_ASSERT(arch_ints_disabled());
-  Guard<SpinLock, NoIrqSave> guard{TimerLock::Get()};
+  Guard<MonitoredSpinLock, NoIrqSave> guard{TimerLock::Get(), SOURCE_TAG};
 
   // Reset next_timer_deadline_ so that UpdatePlatformTimer will reconfigure the timer.
   next_timer_deadline_ = ZX_TIME_INFINITE;
@@ -506,7 +506,7 @@ void TimerQueue::PrintTimerQueues(char* buf, size_t len) {
   size_t ptr = 0;
   zx_time_t now = current_time();
 
-  Guard<SpinLock, IrqSave> guard{TimerLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{TimerLock::Get(), SOURCE_TAG};
   for (cpu_num_t i = 0; i < percpu::processor_count(); i++) {
     if (mp_is_cpu_online(i)) {
       ptr += snprintf(buf + ptr, len - ptr, "cpu %u:\n", i);
