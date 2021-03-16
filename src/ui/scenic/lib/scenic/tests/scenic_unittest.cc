@@ -8,6 +8,7 @@
 #include "src/ui/scenic/lib/scenic/take_screenshot_delegate_deprecated.h"
 #include "src/ui/scenic/lib/scenic/tests/dummy_system.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
+#include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 
 namespace {
 
@@ -40,6 +41,8 @@ namespace test {
 
 TEST_F(ScenicTest, CreateAndDestroySession) {
   auto mock_system = scenic()->RegisterSystem<DummySystem>();
+  const auto frame_scheduler = std::make_shared<scheduling::test::MockFrameScheduler>();
+  scenic()->SetFrameScheduler(frame_scheduler);
   scenic()->SetInitialized();
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 
@@ -48,8 +51,13 @@ TEST_F(ScenicTest, CreateAndDestroySession) {
   EXPECT_EQ(mock_system->GetNumDispatchers(), 1U);
   EXPECT_NE(mock_system->GetLastSessionId(), -1);
 
+  // Closing the session should cause another update to be scheduled.
+  bool update_scheduled = false;
+  frame_scheduler->set_schedule_update_for_session_callback(
+      [&update_scheduled](auto...) { update_scheduled = true; });
   scenic()->CloseSession(mock_system->GetLastSessionId());
   EXPECT_EQ(scenic()->num_sessions(), 0U);
+  EXPECT_TRUE(update_scheduled);
 }
 
 TEST_F(ScenicTest, CreateAndDestroyMultipleSessions) {

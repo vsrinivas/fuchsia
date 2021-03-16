@@ -42,6 +42,10 @@ void Scenic::CloseSession(scheduling::SessionId session_id) {
 
   if (frame_scheduler_) {
     frame_scheduler_->RemoveSession(session_id);
+    // Schedule a final update to clean up any session leftovers from last frame.
+    auto present_id = frame_scheduler_->RegisterPresent(session_id, /*release_fences*/ {});
+    frame_scheduler_->ScheduleUpdateForSession(zx::time(0), {session_id, present_id},
+                                               /*squashable*/ false);
   }
   if (view_focuser_registry_) {
     view_focuser_registry_->UnregisterViewFocuser(session_id);
