@@ -94,6 +94,15 @@ impl Component {
         !self.children.is_empty()
     }
 
+    /// Returns the number of child components in this entire subtree.
+    pub fn num_descendants(&self) -> usize {
+        let mut num_children = self.children.len();
+        for child in &self.children {
+            num_children += child.num_descendants();
+        }
+        return num_children;
+    }
+
     /// Traverse the topology and at a random position, delete a component.
     /// `rng` is used for traversal.
     pub fn traverse_and_destroy_random_child<'a>(

@@ -24,7 +24,11 @@ pub struct TreeStressorEnvironment {
 }
 
 impl TreeStressorEnvironment {
-    pub async fn new(time_limit_secs: Option<u64>, num_operations: Option<u64>) -> Self {
+    pub async fn new(
+        time_limit_secs: Option<u64>,
+        num_operations: Option<u64>,
+        component_limit: usize,
+    ) -> Self {
         let test_realm_svc = connect_to_service::<fsys::RealmMarker>()
             .expect("Could not connect to Realm service in test namespace");
 
@@ -32,7 +36,7 @@ impl TreeStressorEnvironment {
 
         let seed = random_seed();
         let rng = SmallRng::from_seed(seed.to_le_bytes());
-        let tree_actor = Arc::new(Mutex::new(TreeActor::new(tree_root, rng)));
+        let tree_actor = Arc::new(Mutex::new(TreeActor::new(tree_root, rng, component_limit)));
 
         Self { num_operations, time_limit_secs, test_realm_svc, tree_actor, seed }
     }

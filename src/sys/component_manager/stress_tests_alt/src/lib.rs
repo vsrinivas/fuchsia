@@ -19,7 +19,7 @@ pub async fn test() {
     StdoutLogger::init(LevelFilter::Info);
 
     // Setup the environment to run for 22 hours with no limit on operation count
-    let env = TreeStressorEnvironment::new(Some(79200), None).await;
+    let env = TreeStressorEnvironment::new(Some(79200), None, 2000).await;
 
     // Run the test
     run_test(env).await;
