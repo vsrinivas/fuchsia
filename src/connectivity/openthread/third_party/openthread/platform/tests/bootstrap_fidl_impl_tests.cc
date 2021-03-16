@@ -1,7 +1,11 @@
-#include <fuchsia/lowpan/bootstrap/cpp/fidl_test_base.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fidl/llcpp/client.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/syslog/cpp/macros.h>
+#include <lib/service/llcpp/service.h>
+#include <lib/svc/dir.h>
+#include <lib/svc/outgoing.h>
 
 #include <unordered_map>
 
@@ -21,7 +25,7 @@ static constexpr char kContents[] =
 
 class TestableBootstrapThreadImpl : public ot::Fuchsia::BootstrapThreadImpl {
  public:
-  TestableBootstrapThreadImpl(sys::ComponentContext* context) : BootstrapThreadImpl(context) {}
+  TestableBootstrapThreadImpl() : BootstrapThreadImpl() {}
   void SetShouldServe(bool value) { should_serve_ = value; }
 
   void SetSettingsPath(std::string config_path) { config_path_ = std::move(config_path); }
@@ -39,110 +43,148 @@ class BootstrapThreadImplTest : public gtest::TestLoopFixture {
   void SetUp() override {
     TestLoopFixture::SetUp();
 
-    // Set up BootstrapThreadImpl.
-    ResetImpl(/*should_serve*/ true);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_lowpan_bootstrap::Thread>();
+    ASSERT_FALSE(endpoints.is_error());
 
-    // Connect to the interface under test.
-    bootstrap_.set_error_handler([this](zx_status_t error) { last_error_ = error; });
-    ReconnectBootstrapThreadPtr();
-    ASSERT_TRUE(bootstrap_.is_bound());
+    ResetServerImpl(/* ShouldServe */ true, std::move(endpoints->server));
+    ReconnectClient(std::move(endpoints->client));
   }
 
  protected:
-  fuchsia::lowpan::bootstrap::ThreadPtr& bootstrap() { return bootstrap_; }
+  fidl::Client<fuchsia_lowpan_bootstrap::Thread>& bootstrap_client() { return bootstrap_client_; }
   TestableBootstrapThreadImpl& bootstrap_impl() { return *bootstrap_impl_; }
 
-  void ResetImpl(bool should_serve) {
-    bootstrap_impl_ = std::make_unique<TestableBootstrapThreadImpl>(provider_.context());
+  void ResetServerImpl(bool should_serve,
+                       fidl::ServerEnd<fuchsia_lowpan_bootstrap::Thread> request) {
+    bootstrap_impl_ = std::make_unique<TestableBootstrapThreadImpl>();
     bootstrap_impl_->SetShouldServe(should_serve);
-    bootstrap_impl_->Init();
+    auto bind_status = bootstrap_impl_->Bind(std::move(request), dispatcher(), std::nullopt);
+    EXPECT_EQ(bind_status, ZX_OK);
     RunLoopUntilIdle();
   }
 
-  void ReconnectBootstrapThreadPtr() {
-    last_error_ = ZX_OK;
-    provider_.ConnectToPublicService(bootstrap_.NewRequest());
+  void ReconnectClient(fidl::ClientEnd<fuchsia_lowpan_bootstrap::Thread> client_end) {
+    event_handler_ = std::make_shared<EventHandler>();
+    event_handler_->client_bound_ = true;
+    event_handler_->client_unbind_status_ = ZX_OK;
+    bootstrap_client_ = fidl::Client(std::move(client_end), dispatcher(), event_handler_);
     RunLoopUntilIdle();
   }
 
-  zx_status_t last_error() { return last_error_; }
+  bool client_bound() { return event_handler_->client_bound_; }
+  zx_status_t client_unbind_status() { return event_handler_->client_unbind_status_; }
 
  private:
-  sys::testing::ComponentContextProvider provider_;
-  fuchsia::lowpan::bootstrap::ThreadPtr bootstrap_;
+  fidl::Client<fuchsia_lowpan_bootstrap::Thread> bootstrap_client_;
   std::unique_ptr<TestableBootstrapThreadImpl> bootstrap_impl_;
-  zx_status_t last_error_;
+
+  // Event handler on client side:
+  class EventHandler : public fuchsia_lowpan_bootstrap::Thread::AsyncEventHandler {
+   public:
+    EventHandler() = default;
+
+    void Unbound(fidl::UnbindInfo info) override {
+      client_bound_ = false;
+      client_unbind_status_ = info.status;
+    }
+
+    bool client_bound_ = false;
+    zx_status_t client_unbind_status_ = ZX_OK;
+  };
+
+  std::shared_ptr<EventHandler> event_handler_;
 };
 
 // Test Cases ------------------------------------------------------------------
 
 TEST_F(BootstrapThreadImplTest, NoServe) {
-  ResetImpl(/*should_serve*/ false);
-  EXPECT_FALSE(bootstrap().is_bound());
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, last_error());
-  ReconnectBootstrapThreadPtr();
-  EXPECT_FALSE(bootstrap().is_bound());
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, last_error());
+  EXPECT_TRUE(client_bound());
+
+  auto endpoints = fidl::CreateEndpoints<fuchsia_lowpan_bootstrap::Thread>();
+  EXPECT_FALSE(endpoints.is_error());
+
+  ResetServerImpl(/*should_serve*/ false, std::move(endpoints->server));
+
+  EXPECT_FALSE(client_bound());
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, client_unbind_status());
+
+  ReconnectClient(std::move(endpoints->client));
+
+  EXPECT_FALSE(client_bound());
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, client_unbind_status());
 }
 
 TEST_F(BootstrapThreadImplTest, ImportSettingsHappy) {
   constexpr char kSettingsPath[] = "/data/config-happy.json";
   bootstrap_impl().SetSettingsPath(kSettingsPath);
 
-  fuchsia::mem::Buffer buffer;
+  // Get the variables prepared for calling the fidl function
+  fuchsia_mem::wire::Buffer buffer;
+  {
+    fuchsia::mem::Buffer temp_buffer;
+    ASSERT_TRUE(fsl::VmoFromString(kContents, &temp_buffer));
+    buffer.vmo = std::move(temp_buffer.vmo);
+    buffer.size = temp_buffer.size;
+  }
 
-  ASSERT_TRUE(fsl::VmoFromString(kContents, &buffer));
-
-  EXPECT_TRUE(bootstrap().is_bound());
+  // Make the call from client side and ensure callback gets called:
+  EXPECT_TRUE(client_bound());
   bool called = false;
-  bootstrap()->ImportSettings(std::move(buffer), [&called]() { called = true; });
-  RunLoopUntilIdle();
+  auto result_async = bootstrap_client()->ImportSettings(
+      std::move(buffer),
+      [&called](fuchsia_lowpan_bootstrap::Thread::ImportSettingsResponse* response) {
+        called = true;
+      });
 
-  // Confirm that callback function was called
+  EXPECT_TRUE(result_async.ok());
+  RunLoopUntilIdle();
   EXPECT_TRUE(called);
 
+  // Confirm the contents of the file are as expected:
   std::string contents;
   files::ReadFileToString(kSettingsPath, &contents);
-
   EXPECT_EQ(kContents, contents);
 
-  // Ensure binding is closed and FIDL is no longer serving.
-  EXPECT_FALSE(bootstrap().is_bound());
-  EXPECT_EQ(ZX_OK, last_error());
-
-  ReconnectBootstrapThreadPtr();
-  EXPECT_FALSE(bootstrap().is_bound());
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, last_error());
+  EXPECT_FALSE(client_bound());
+  EXPECT_EQ(client_unbind_status(), ZX_OK);
 }
 
 TEST_F(BootstrapThreadImplTest, ImportSettingsFailUnreadable) {
   constexpr char kSettingsPath[] = "/data/config-fail.json";
   bootstrap_impl().SetSettingsPath(kSettingsPath);
 
-  fuchsia::mem::Buffer buffer;
+  // Get the variables prepared for calling the fidl function
+  fuchsia_mem::wire::Buffer buffer;
+  {
+    fuchsia::mem::Buffer temp_buffer;
+    ASSERT_TRUE(fsl::VmoFromString(kContents, &temp_buffer));
 
-  ASSERT_TRUE(fsl::VmoFromString(kContents, &buffer));
+    // Restrict rights to cause read failure:
+    zx::vmo vmo_restricted;
+    temp_buffer.vmo.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER, &vmo_restricted);
 
-  // Restrict rights to cause read failure.
-  zx::vmo temp;
-  buffer.vmo.duplicate(ZX_RIGHT_DUPLICATE | ZX_RIGHT_TRANSFER, &temp);
-  buffer.vmo = std::move(temp);
+    buffer.vmo = std::move(vmo_restricted);
+    buffer.size = temp_buffer.size;
+  }
 
-  EXPECT_TRUE(bootstrap().is_bound());
+  // Make the call from client side:
+  EXPECT_TRUE(client_bound());
   bool called = false;
-  bootstrap()->ImportSettings(std::move(buffer), [&called]() { called = true; });
+  auto result_async = bootstrap_client()->ImportSettings(
+      std::move(buffer),
+      [&called](fuchsia_lowpan_bootstrap::Thread::ImportSettingsResponse* response) {
+        called = true;
+      });
+
+  EXPECT_TRUE(result_async.ok());
   RunLoopUntilIdle();
 
   // Confirm that callback wasn't called:
   EXPECT_FALSE(called);
-  EXPECT_EQ(last_error(), ZX_ERR_IO);
 
-  // Ensure binding closed. So if binding is closed but callback isn't called
-  // this indicates that there was some error
-  EXPECT_FALSE(bootstrap().is_bound());
-
-  ReconnectBootstrapThreadPtr();
-  EXPECT_FALSE(bootstrap().is_bound());
+  // Confirm that channel was closed with error:
+  EXPECT_FALSE(client_bound());
+  EXPECT_EQ(client_unbind_status(), ZX_ERR_IO);
 }
 
 TEST_F(BootstrapThreadImplTest, ImportSettingsFailNonWritable) {
@@ -150,23 +192,30 @@ TEST_F(BootstrapThreadImplTest, ImportSettingsFailNonWritable) {
   constexpr char kSettingsPath[] = "/non-existent-dir/config-fail.json";
   bootstrap_impl().SetSettingsPath(kSettingsPath);
 
-  fuchsia::mem::Buffer buffer;
+  // Get the variables prepared for calling the fidl function
+  fuchsia_mem::wire::Buffer buffer;
+  {
+    fuchsia::mem::Buffer temp_buffer;
+    ASSERT_TRUE(fsl::VmoFromString(kContents, &temp_buffer));
+    buffer.vmo = std::move(temp_buffer.vmo);
+    buffer.size = temp_buffer.size;
+  }
 
-  ASSERT_TRUE(fsl::VmoFromString(kContents, &buffer));
-
-  EXPECT_TRUE(bootstrap().is_bound());
+  // Make the call from client side:
+  EXPECT_TRUE(client_bound());
   bool called = false;
-  bootstrap()->ImportSettings(std::move(buffer), [&called]() { called = true; });
-  RunLoopUntilIdle();
+  auto result_async = bootstrap_client()->ImportSettings(
+      std::move(buffer),
+      [&called](fuchsia_lowpan_bootstrap::Thread::ImportSettingsResponse* response) {
+        called = true;
+      });
 
+  EXPECT_TRUE(result_async.ok());
+  RunLoopUntilIdle();
   // Confirm that callback wasn't called:
   EXPECT_FALSE(called);
-  EXPECT_EQ(last_error(), ZX_ERR_IO);
 
-  // Ensure binding closed. So if binding is closed but callback isn't called
-  // this indicates that there was some error
-  EXPECT_FALSE(bootstrap().is_bound());
-
-  ReconnectBootstrapThreadPtr();
-  EXPECT_FALSE(bootstrap().is_bound());
+  // Confirm that channel was closed with error:
+  EXPECT_FALSE(client_bound());
+  EXPECT_EQ(client_unbind_status(), ZX_ERR_IO);
 }

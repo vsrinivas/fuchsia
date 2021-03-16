@@ -1,30 +1,39 @@
 #ifndef SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_BOOTSTRAP_FIDL_IMPL_H_
 #define SRC_CONNECTIVITY_OPENTHREAD_THIRD_PARTY_OPENTHREAD_PLATFORM_BOOTSTRAP_FIDL_IMPL_H_
 
-#include <fuchsia/lowpan/bootstrap/cpp/fidl.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <lib/sys/cpp/component_context.h>
+#include <fuchsia/lowpan/bootstrap/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
+#include <lib/fidl/llcpp/server.h>
 
 #include <string>
+
+#include <fbl/ref_ptr.h>
+#include <src/lib/storage/vfs/cpp/pseudo_dir.h>
 
 namespace ot {
 namespace Fuchsia {
 
 /// Handler for all fuchsia.lowpan.bootstrap/Thread FIDL protocol calls. Registers as a
 /// public service with the ComponentContext and handles incoming connections.
-class BootstrapThreadImpl : public fuchsia::lowpan::bootstrap::Thread {
+class BootstrapThreadImpl : public fuchsia_lowpan_bootstrap::Thread::Interface {
  public:
   // Construct a new instance of |BootstrapThreadImpl|.
-  // This method does not take ownership of the context.
-  explicit BootstrapThreadImpl(sys::ComponentContext* context);
+  explicit BootstrapThreadImpl();
+
   ~BootstrapThreadImpl();
 
-  // Initialize and register this instance as FIDL handler.
-  zx_status_t Init();
+  // Bind this implementation to a server end of the channel.
+  // |svc_dir| should be passed if server is added to it using AddEntry call.
+  // This is used to RemoveEntry when FIDL channel is about to be closed.
+  // |request| and |dispatcher| are needed for BindServer call.
+  zx_status_t Bind(fidl::ServerEnd<fuchsia_lowpan_bootstrap::Thread> request,
+                   async_dispatcher_t* dispatcher,
+                   cpp17::optional<const fbl::RefPtr<fs::PseudoDir>> svc_dir);
 
-  // Implementation of the fuchsia.thread.Bootstrap interface.
-  void ImportSettings(fuchsia::mem::Buffer thread_settings_json,
-                      ImportSettingsCallback callback) override;
+  // Implementation of the fuchsia.lowpan.bootstrap.Thread interface.
+  void ImportSettings(fuchsia_mem::wire::Buffer thread_settings_json,
+                      ImportSettingsCompleter::Sync& completer) override;
 
  private:
   // Prevent copy/move construction
@@ -40,12 +49,18 @@ class BootstrapThreadImpl : public fuchsia::lowpan::bootstrap::Thread {
   virtual bool ShouldServe();
 
   void StopServingFidl();
-  void StopServingFidlAndCloseBindings(zx_status_t close_bindings_status);
+  void CloseBinding(zx_status_t close_bindings_status);
 
-  // FIDL servicing related state
-  fidl::BindingSet<fuchsia::lowpan::bootstrap::Thread> bindings_;
-  sys::ComponentContext* context_;
-  bool serving_ = false;
+  // Closes binding using a completer. This should be used if there is a
+  // communication in progress.
+  void CloseBinding(zx_status_t close_bindings_status, ImportSettingsCompleter::Sync& completer);
+
+  // A reference back to the Binding that this class is bound to, which is used
+  // to send events to the client.
+  cpp17::optional<fidl::ServerBindingRef<fuchsia_lowpan_bootstrap::Thread>> binding_;
+
+  // If set, this is used to call RemoveEntry when closing down FIDL
+  cpp17::optional<fbl::RefPtr<fs::PseudoDir>> svc_dir_;
 };
 
 }  // namespace Fuchsia

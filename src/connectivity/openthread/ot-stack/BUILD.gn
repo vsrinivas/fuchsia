@@ -27,6 +27,7 @@ source_set("app") {
   ]
 
   public_deps = [
+    "//sdk/fidl/fuchsia.lowpan.bootstrap:fuchsia.lowpan.bootstrap_llcpp",
     "//sdk/fidl/fuchsia.lowpan.spinel:fuchsia.lowpan.spinel_llcpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/svc",

@@ -27,6 +27,7 @@ fuchsia_unittest_package("threadstack-unittests") {
 fuchsia_unittest_package("threadstack-bootstrap-unittests") {
   manifest = "meta/threadstack-bootstrap-unittests.cmx"
   deps = [ ":bootstrap-unittests-bin" ]
+
   test_specs = {
     log_settings = {
       max_severity = "ERROR"
@@ -73,9 +74,6 @@ executable("bootstrap-unittests-bin") {
   sources = [ "bootstrap_fidl_impl_tests.cc" ]
 
   deps = [
-    "//sdk/lib/sys/cpp",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//sdk/lib/syslog/cpp",
     "//src/connectivity/openthread/third_party/openthread/platform",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
@@ -84,6 +82,7 @@ executable("bootstrap-unittests-bin") {
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/svc",
   ]
 
   include_dirs =

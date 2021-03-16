@@ -4,6 +4,8 @@
 
 #include "bootstrap_fidl_impl.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/status.h>
 
@@ -20,63 +22,88 @@ constexpr char kMigrationConfigPath[] = "/config/data/migration_config.json";
 
 // BootstrapThreadImpl definitions -------------------------------------------------------
 
-BootstrapThreadImpl::BootstrapThreadImpl(sys::ComponentContext* context) : context_(context) {}
+BootstrapThreadImpl::BootstrapThreadImpl() {}
 
 BootstrapThreadImpl::~BootstrapThreadImpl() {
-  if (serving_) {
-    StopServingFidl();
+  StopServingFidl();
+
+  if (binding_) {
+    // If server is getting destroyed when there is
+    // still an active binding, close binding with epitaph
+    // informing client that the server has closed down:
+    CloseBinding(ZX_ERR_PEER_CLOSED);
   }
 }
 
-zx_status_t BootstrapThreadImpl::Init() {
+zx_status_t BootstrapThreadImpl::Bind(fidl::ServerEnd<fuchsia_lowpan_bootstrap::Thread> request,
+                                      async_dispatcher_t* dispatcher,
+                                      cpp17::optional<const fbl::RefPtr<fs::PseudoDir>> svc_dir) {
   if (!ShouldServe()) {
     return ZX_OK;
   }
 
-  // Register with the context.
-  zx_status_t status = context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Failed to register BootstrapThreadImpl handler with status = "
-                   << zx_status_get_string(status);
-  } else {
-    serving_ = true;
+  auto result = fidl::BindServer(dispatcher, std::move(request), this);
+  if (!result.is_ok()) {
+    return result.error();
   }
-  return status;
+  binding_ = result.take_value();
+
+  // Note the svc_dir_ with which AddEntry was done, so that RemoveEntry can
+  // be done when we want to stop serving this FIDL:
+  svc_dir_ = svc_dir;
+
+  return ZX_OK;
 }
 
 void BootstrapThreadImpl::StopServingFidl() {
-  // Stop serving this FIDL and close all active bindings.
-  auto status = context_->outgoing()->RemovePublicService<fuchsia::lowpan::bootstrap::Thread>();
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "Could not remove service from outgoing directory.";
-  } else {
-    serving_ = false;
+  if (svc_dir_) {
+    FX_LOGS(INFO) << "Removing svc entry";
+    svc_dir_.value()->RemoveEntry(fuchsia_lowpan_bootstrap::Thread::Name);
+    svc_dir_.reset();
   }
 }
 
-void BootstrapThreadImpl::StopServingFidlAndCloseBindings(zx_status_t close_bindings_status) {
-  StopServingFidl();
-  bindings_.CloseAll(close_bindings_status);
+void BootstrapThreadImpl::CloseBinding(zx_status_t close_binding_status) {
+  if (binding_) {
+    FX_LOGS(INFO) << "Closing server binding";
+    binding_->Close(close_binding_status);
+    binding_.reset();
+  }
 }
 
-void BootstrapThreadImpl::ImportSettings(fuchsia::mem::Buffer thread_settings_json,
-                                         ImportSettingsCallback callback) {
+void BootstrapThreadImpl::CloseBinding(zx_status_t close_binding_status,
+                                       ImportSettingsCompleter::Sync& completer) {
+  if (binding_) {
+    FX_LOGS(INFO) << "Closing server binding";
+    completer.Close(close_binding_status);
+    binding_.reset();
+  }
+}
+
+void BootstrapThreadImpl::ImportSettings(fuchsia_mem::wire::Buffer thread_settings_json,
+                                         ImportSettingsCompleter::Sync& completer) {
   std::string data;
 
-  if (!fsl::StringFromVmo(thread_settings_json, &data)) {
+  fsl::SizedVmo sized_vmo(std::move(thread_settings_json.vmo), thread_settings_json.size);
+
+  if (!fsl::StringFromVmo(sized_vmo, &data)) {
     FX_LOGS(ERROR) << "Failed to get data from VMO.";
-    StopServingFidlAndCloseBindings(ZX_ERR_IO);
+    StopServingFidl();
+    CloseBinding(ZX_ERR_IO, completer);
     return;
   }
 
   if (!files::WriteFile(GetSettingsPath(), data.data(), data.size())) {
     FX_LOGS(ERROR) << "Failed to write data to internal config location";
-    StopServingFidlAndCloseBindings(ZX_ERR_IO);
+    StopServingFidl();
+    CloseBinding(ZX_ERR_IO, completer);
     return;
   }
 
-  callback();
-  StopServingFidlAndCloseBindings(ZX_OK);
+  completer.Reply();
+  FX_LOGS(INFO) << "Done with ImportSettings!";
+  StopServingFidl();
+  CloseBinding(ZX_OK);
 }
 
 bool BootstrapThreadImpl::ShouldServe() { return files::IsFile(kMigrationConfigPath); }

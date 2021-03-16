@@ -25,8 +25,7 @@ source_set("platform") {
   ]
 
   public_deps = [
-    "//sdk/fidl/fuchsia.lowpan.bootstrap",
-    "//sdk/lib/sys/cpp",
+    "//sdk/fidl/fuchsia.lowpan.bootstrap:fuchsia.lowpan.bootstrap_llcpp",
     "//src/connectivity/openthread/lib/ot-stack:ot-stack-callback",
     "//src/lib/files",
     "//src/lib/fsl",
@@ -34,5 +33,9 @@ source_set("platform") {
     "//third_party/modp_b64",
     "//third_party/openthread:lib-ot-core",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/svc",
   ]
 }

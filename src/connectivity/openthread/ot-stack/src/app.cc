@@ -300,6 +300,27 @@ zx_status_t OtStackApp::SetupFidlService() {
     FX_PLOGS(ERROR, status) << "Error adding service in ot-stack";
     return status;
   }
+
+  // Now add entry for bootstrap fidl:
+  bootstrap_impl_ = std::make_unique<ot::Fuchsia::BootstrapThreadImpl>();
+
+  status = outgoing_->svc_dir()->AddEntry(
+      fuchsia_lowpan_bootstrap::Thread::Name,
+      fbl::MakeRefCounted<fs::Service>(
+          [this](fidl::ServerEnd<fuchsia_lowpan_bootstrap::Thread> request) {
+            zx_status_t status =
+                bootstrap_impl_->Bind(std::move(request), loop_.dispatcher(), outgoing_->svc_dir());
+            if (status != ZX_OK) {
+              FX_LOGS(ERROR) << "error binding new server: " << status << std::endl;
+            }
+            return status;
+          }));
+
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Error adding service in ot-stack for bootstrap fidl";
+    return status;
+  }
+
   return ZX_OK;
 }
 
@@ -362,15 +383,6 @@ zx_status_t OtStackApp::Init(const std::string& path, bool is_test_env) {
 
   status = SetupFidlService();
   if (status != ZX_OK) {
-    return status;
-  }
-
-  // Init bootstrap fidl:
-  auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
-  bootstrap_impl_ = std::make_unique<ot::Fuchsia::BootstrapThreadImpl>(context.get());
-  status = bootstrap_impl_->Init();
-  if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "BootstrapImpl Init() failed with status = " << zx_status_get_string(status);
     return status;
   }
 
