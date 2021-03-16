@@ -5,7 +5,13 @@
 #include <assert.h>
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/pci/hw.h>
 #include <lib/sync/completion.h>
 #include <limits.h>
@@ -16,13 +22,6 @@
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/io-buffer.h>
-#include <ddk/mmio-buffer.h>
-#include <hw/reg.h>
 
 #include "nvme-hw.h"
 #include "src/devices/block/drivers/nvme/nvme_bind.h"

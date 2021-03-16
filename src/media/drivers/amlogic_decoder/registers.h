@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_REGISTERS_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_REGISTERS_H_
 
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/mmio/mmio.h>
 
-#include <ddk/mmio-buffer.h>
 #include <hwreg/bitfields.h>
 
 template <class RegType>

@@ -5,12 +5,12 @@
 #include "bma253.h"
 
 #include <endian.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <memory>
 
-#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 

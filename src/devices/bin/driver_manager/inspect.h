@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_INSPECT_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_INSPECT_H_
 
+#include <lib/ddk/binding.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 
-#include <ddk/binding.h>
 #include <fbl/array.h>
 #include <fbl/ref_ptr.h>
 
@@ -28,7 +28,7 @@ struct ProtocolInfo {
 
 static const inline ProtocolInfo kProtoInfos[] = {
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) {name, nullptr, val, flags, 0},
-#include <ddk/protodefs.h>
+#include <lib/ddk/protodefs.h>
 };
 
 class InspectDevfs {

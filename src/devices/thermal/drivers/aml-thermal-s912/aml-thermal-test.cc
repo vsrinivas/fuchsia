@@ -10,7 +10,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 namespace {

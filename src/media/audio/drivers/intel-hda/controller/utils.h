@@ -5,6 +5,7 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_UTILS_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_UTILS_H_
 
+#include <lib/ddk/device.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/channel.h>
@@ -12,7 +13,6 @@
 #include <limits.h>
 #include <zircon/types.h>
 
-#include <ddk/device.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <intel-hda/codec-utils/channel.h>

@@ -4,8 +4,8 @@
 
 #include "zircon_platform_pci_device.h"
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"

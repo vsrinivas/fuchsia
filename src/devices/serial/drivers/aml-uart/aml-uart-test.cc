@@ -16,7 +16,7 @@
 
 #include <vector>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <zxtest/zxtest.h>
 

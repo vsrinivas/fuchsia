@@ -4,9 +4,9 @@
 
 #include "iface-device.h"
 
+#include <lib/ddk/debug.h>
 #include <stdio.h>
 
-#include <ddk/debug.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 
 namespace wlan {

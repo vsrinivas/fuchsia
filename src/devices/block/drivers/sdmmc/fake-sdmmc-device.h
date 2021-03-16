@@ -7,13 +7,13 @@
 
 #include <fuchsia/hardware/sdio/cpp/banjo.h>
 #include <fuchsia/hardware/sdmmc/cpp/banjo.h>
+#include <lib/ddk/binding.h>
 #include <lib/fake_ddk/fake_ddk.h>
 
 #include <array>
 #include <map>
 #include <vector>
 
-#include <ddk/binding.h>
 #include <ddktl/device.h>
 #include <fbl/span.h>
 

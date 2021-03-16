@@ -5,6 +5,7 @@
 #include <fuchsia/hardware/nand/c/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <fuchsia/nand/c/fidl.h>
+#include <lib/ddk/debug.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,7 +14,6 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 

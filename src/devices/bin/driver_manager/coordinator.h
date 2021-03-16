@@ -10,6 +10,8 @@
 #include <fuchsia/fshost/llcpp/fidl.h>
 #include <fuchsia/power/manager/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/device.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/svc/outgoing.h>
@@ -25,8 +27,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>

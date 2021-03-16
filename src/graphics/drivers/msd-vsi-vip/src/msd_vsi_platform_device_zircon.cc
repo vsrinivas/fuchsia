@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/device.h>
+
 #include <optional>
 
-#include <ddk/device.h>
 #include <magma_util/platform/zircon/zircon_platform_device.h>
 
 #include "msd_vsi_platform_device.h"

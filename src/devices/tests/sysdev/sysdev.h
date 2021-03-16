@@ -5,9 +5,8 @@
 #ifndef SRC_DEVICES_TESTS_SYSDEV_SYSDEV_H_
 #define SRC_DEVICES_TESTS_SYSDEV_SYSDEV_H_
 
+#include <lib/ddk/device.h>
 #include <zircon/compiler.h>
-
-#include <ddk/device.h>
 
 __BEGIN_CDECLS
 

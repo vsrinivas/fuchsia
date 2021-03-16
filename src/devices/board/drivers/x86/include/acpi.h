@@ -6,9 +6,8 @@
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_ACPI_H_
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/device.h>
 #include <zircon/compiler.h>
-
-#include <ddk/device.h>
 
 zx_status_t publish_acpi_devices(zx_device_t* parent, zx_device_t* sys_root,
                                  zx_device_t* acpi_root);

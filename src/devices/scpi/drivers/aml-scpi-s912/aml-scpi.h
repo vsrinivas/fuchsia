@@ -8,18 +8,18 @@
 #include <fuchsia/hardware/mailbox/cpp/banjo.h>
 #include <fuchsia/hardware/scpi/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 
 #include <optional>
 
-#include <ddk/debug.h>
 #include <ddktl/device.h>
-#include <hw/reg.h>
 
 #define SCPI_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define SCPI_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)

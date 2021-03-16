@@ -4,7 +4,7 @@
 
 #include "device.h"
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 #include <zircon/errors.h>
 
 #include "rtl8821c_device.h"

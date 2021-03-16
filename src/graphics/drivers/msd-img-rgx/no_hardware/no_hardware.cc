@@ -5,12 +5,12 @@
 #include "no_hardware.h"
 
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
+#include <lib/ddk/hw/reg.h>
 
 #include <memory>
 #include <mutex>
 
 #include <ddktl/fidl.h>
-#include <hw/reg.h>
 
 #include "img-sys-device.h"
 #include "magma_util/macros.h"

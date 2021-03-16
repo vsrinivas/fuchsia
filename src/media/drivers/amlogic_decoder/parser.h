@@ -6,6 +6,7 @@
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_PARSER_H_
 
 #include <assert.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/event.h>
 #include <lib/zx/handle.h>
@@ -14,8 +15,6 @@
 #include <memory>
 #include <mutex>
 #include <thread>
-
-#include <ddk/io-buffer.h>
 
 #include "macros.h"
 

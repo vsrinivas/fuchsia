@@ -5,6 +5,10 @@
 #include "src/devices/bus/drivers/platform/platform-device.h"
 
 #include <assert.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/align.h>
 #include <stdio.h>
@@ -12,11 +16,7 @@
 #include <string.h>
 #include <zircon/syscalls/resource.h>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/function.h>
 
 #include "src/devices/bus/drivers/platform/platform-bus.h"

@@ -6,6 +6,10 @@
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_DECODER_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fit/function.h>
 #include <lib/media/codec_impl/codec_adapter.h>
 #include <lib/media/codec_impl/codec_frame.h>
@@ -16,11 +20,6 @@
 #include <zircon/syscalls.h>
 
 #include <functional>
-
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "amlogic_decoder_test_hooks.h"
 #include "decoder_core.h"

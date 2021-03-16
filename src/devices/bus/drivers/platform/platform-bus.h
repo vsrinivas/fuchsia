@@ -13,6 +13,7 @@
 #include <fuchsia/hardware/powerimpl/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/iommu.h>
@@ -27,7 +28,6 @@
 #include <optional>
 #include <vector>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>

@@ -6,10 +6,10 @@
 #define SRC_DEVICES_TEMPERATURE_DRIVERS_SHTV3_SHTV3_H_
 
 #include <fuchsia/hardware/temperature/llcpp/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/zx/status.h>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 

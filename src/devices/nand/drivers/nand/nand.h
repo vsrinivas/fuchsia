@@ -7,13 +7,13 @@
 
 #include <fuchsia/hardware/nand/cpp/banjo.h>
 #include <fuchsia/hardware/rawnand/cpp/banjo.h>
+#include <lib/ddk/driver.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/operation/nand.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <fbl/condition_variable.h>
 #include <fbl/intrusive_double_list.h>

@@ -5,7 +5,7 @@
 #ifndef SRC_LIB_DDK_INCLUDE_LIB_DDK_BINDING_H_
 #define SRC_LIB_DDK_INCLUDE_LIB_DDK_BINDING_H_
 
-#include <ddk/binding_priv.h>
+#include <lib/ddk/binding_priv.h>
 
 #define ZIRCON_DRIVER_BEGIN(Driver, Ops, VendorName, Version, BindCount) \
   ZIRCON_DRIVER_BEGIN_PRIV_V1(Driver, Ops, VendorName, Version, BindCount)

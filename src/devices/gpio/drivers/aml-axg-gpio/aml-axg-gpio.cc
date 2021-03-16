@@ -4,13 +4,13 @@
 
 #include "aml-axg-gpio.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
 
 #include <cstdint>
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
 #include "a113-blocks.h"

@@ -12,8 +12,14 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/ddk/hw/arch_ops.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/image-format/image_format.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -26,14 +32,8 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/io-buffer.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <hw/arch_ops.h>
-#include <hw/reg.h>
 
 #include "hdmitx.h"
 #include "src/graphics/display/drivers/vim-display/vim-display-bind.h"

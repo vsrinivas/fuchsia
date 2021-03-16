@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -13,7 +14,6 @@
 #include <utility>
 
 #include <acpica/acpi.h>
-#include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>

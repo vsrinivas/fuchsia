@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_THERMAL_DRIVERS_ASTRO_THERMISTOR_THERMISTOR_H_
 #define SRC_DEVICES_THERMAL_DRIVERS_ASTRO_THERMISTOR_THERMISTOR_H_
 
+#include <lib/ddk/device.h>
 #include <lib/thermal/ntc.h>
 
-#include <ddk/device.h>
 #include <fbl/ref_ptr.h>
 #include <soc/aml-common/aml-g12-saradc.h>
 

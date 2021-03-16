@@ -6,8 +6,7 @@
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
-
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
 
 namespace internal {
 

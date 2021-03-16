@@ -6,8 +6,8 @@
 #define SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_USB_VIRTUAL_HOST_H_
 
 #include <fuchsia/hardware/usb/hci/cpp/banjo.h>
+#include <lib/ddk/device.h>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/macros.h>
 

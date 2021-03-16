@@ -5,15 +5,15 @@
 #include "qcom-pil.h"
 
 #include <elf.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/align.h>
 
 #include <algorithm>
 #include <limits>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string_buffer.h>

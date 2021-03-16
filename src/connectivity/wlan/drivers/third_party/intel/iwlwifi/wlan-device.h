@@ -8,8 +8,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_WLAN_DEVICE_H_
 
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
-
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
 
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-eeprom-parse.h"

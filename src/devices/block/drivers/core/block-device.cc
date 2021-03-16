@@ -10,6 +10,8 @@
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/hardware/block/volume/cpp/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/operation/block.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -28,9 +30,7 @@
 #include <limits>
 #include <new>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

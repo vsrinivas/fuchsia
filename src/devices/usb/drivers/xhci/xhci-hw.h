@@ -7,7 +7,7 @@
 
 // clang-format off
 
-#include <hw/reg.h>
+#include <lib/ddk/hw/reg.h>
 
 namespace usb_xhci {
 

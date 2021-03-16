@@ -4,10 +4,9 @@
 
 #include "device.h"
 
+#include <lib/ddk/debug.h>
 #include <stdio.h>
 #include <zircon/errors.h>
-
-#include <ddk/debug.h>
 
 namespace wlan::simulation {
 

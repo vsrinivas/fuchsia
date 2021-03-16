@@ -10,6 +10,7 @@
 #include <fuchsia/tee/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake-object/object.h>
 #include <lib/fake-resource/resource.h>
@@ -20,7 +21,6 @@
 #include <lib/zx/bti.h>
 #include <stdlib.h>
 
-#include <ddk/mmio-buffer.h>
 #include <ddktl/suspend-txn.h>
 #include <zxtest/zxtest.h>
 

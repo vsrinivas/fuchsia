@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/hw/reg.h>
 #include <limits.h>
 #include <stdio.h>
 
 #include <gpio/pl061/pl061.h>
-#include <hw/reg.h>
 
 // GPIO register offsets
 #define GPIODATA(mask) ((mask) << 2)  // Data registers, mask provided as index

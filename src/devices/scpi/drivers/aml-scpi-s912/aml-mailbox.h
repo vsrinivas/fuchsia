@@ -7,9 +7,12 @@
 
 #include <fuchsia/hardware/mailbox/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
@@ -17,10 +20,7 @@
 
 #include <optional>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
-#include <hw/reg.h>
 
 #define GET_NUM_WORDS(x) ((x) / 4 + (((x) % 4) ? 1 : 0))
 

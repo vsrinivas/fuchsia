@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
-
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 extern zx_status_t amlogic_video_init(void** out_ctx);
 extern zx_status_t amlogic_video_bind(void* ctx, zx_device_t* parent);

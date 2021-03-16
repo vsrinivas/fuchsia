@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
@@ -18,7 +19,6 @@
 #include <memory>
 
 #include <audio-proto/audio-proto.h>
-#include <ddk/io-buffer.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/metadata/audio.h>

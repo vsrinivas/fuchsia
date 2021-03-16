@@ -6,6 +6,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/input/llcpp/fidl.h>
 #include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -21,7 +22,6 @@
 
 #include <utility>
 
-#include <ddk/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>

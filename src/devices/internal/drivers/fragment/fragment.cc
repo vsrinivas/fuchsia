@@ -5,6 +5,9 @@
 #include "fragment.h"
 
 #include <fuchsia/hardware/goldfish/addressspace/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/fragment-device.h>
+#include <lib/ddk/trace/event.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -14,9 +17,6 @@
 #include <iterator>
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/fragment-device.h>
-#include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 
 #include "proxy-protocol.h"

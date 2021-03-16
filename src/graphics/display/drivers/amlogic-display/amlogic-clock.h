@@ -6,6 +6,7 @@
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_AMLOGIC_DISPLAY_AMLOGIC_CLOCK_H_
 
 #include <fuchsia/hardware/dsiimpl/c/banjo.h>
+#include <lib/ddk/driver.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <unistd.h>
@@ -13,7 +14,6 @@
 
 #include <optional>
 
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <hwreg/mmio.h>
 

@@ -8,6 +8,9 @@
 #include <fuchsia/hardware/display/capture/cpp/banjo.h>
 #include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/trace/event.h>
 #include <threads.h>
 #include <zircon/threads.h>
 #include <zircon/time.h>
@@ -19,9 +22,6 @@
 #include <vector>
 
 #include <audio-proto-utils/format-utils.h>
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <ddk/trace/event.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/array.h>

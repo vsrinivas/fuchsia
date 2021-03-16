@@ -4,8 +4,9 @@
 
 #include "network_device.h"
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
+
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>

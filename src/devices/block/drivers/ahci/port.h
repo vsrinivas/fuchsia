@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_STORAGE_BLOCK_DRIVERS_AHCI_PORT_H_
-#define SRC_STORAGE_BLOCK_DRIVERS_AHCI_PORT_H_
+#ifndef SRC_DEVICES_BLOCK_DRIVERS_AHCI_PORT_H_
+#define SRC_DEVICES_BLOCK_DRIVERS_AHCI_PORT_H_
 
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <ddk/io-buffer.h>
-#include <ddk/mmio-buffer.h>
 #include <fbl/mutex.h>
 
 #include "bus.h"
@@ -134,4 +134,4 @@ class Port {
 
 }  // namespace ahci
 
-#endif  // SRC_STORAGE_BLOCK_DRIVERS_AHCI_PORT_H_
+#endif  // SRC_DEVICES_BLOCK_DRIVERS_AHCI_PORT_H_

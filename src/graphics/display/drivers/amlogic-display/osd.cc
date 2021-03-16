@@ -6,6 +6,7 @@
 
 #include <float.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/time.h>
 #include <math.h>
@@ -21,7 +22,6 @@
 #include <cmath>
 #include <cstdint>
 
-#include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>

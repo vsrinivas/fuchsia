@@ -5,19 +5,19 @@
 #include "as370-usb-phy.h"
 
 #include <assert.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/hw/reg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
-#include <hw/reg.h>
 #include <soc/as370/as370-reset.h>
 #include <soc/as370/as370-usb.h>
 #include <soc/vs680/vs680-reset.h>

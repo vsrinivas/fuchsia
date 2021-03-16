@@ -8,11 +8,11 @@
 #include <endian.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/string_buffer.h>

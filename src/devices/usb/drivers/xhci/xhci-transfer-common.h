@@ -6,8 +6,7 @@
 #define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRANSFER_COMMON_H_
 
 #include <fuchsia/hardware/usb/request/c/banjo.h>
-
-#include <ddk/phys-iter.h>
+#include <lib/ddk/phys-iter.h>
 
 #include "xhci-trb.h"
 

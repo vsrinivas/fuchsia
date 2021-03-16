@@ -6,14 +6,13 @@
 
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
-
-#include <ddk/debug.h>
 
 #include "src/devices/block/drivers/zxcrypt/debug.h"
 

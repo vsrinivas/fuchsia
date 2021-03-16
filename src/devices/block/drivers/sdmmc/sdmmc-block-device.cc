@@ -5,6 +5,7 @@
 #include "sdmmc-block-device.h"
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/llcpp/unowned_ptr.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -12,7 +13,6 @@
 #include <zircon/process.h>
 #include <zircon/threads.h>
 
-#include <ddk/debug.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

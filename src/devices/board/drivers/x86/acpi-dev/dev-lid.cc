@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/status.h>
@@ -15,7 +16,6 @@
 #include <utility>
 
 #include <acpica/acpi.h>
-#include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <hid/descriptor.h>

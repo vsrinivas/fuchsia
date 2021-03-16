@@ -5,6 +5,9 @@
 #ifndef SRC_DEVICES_TESTING_FAKE_DDK_INCLUDE_LIB_FAKE_DDK_FAKE_DDK_H_
 #define SRC_DEVICES_TESTING_FAKE_DDK_INCLUDE_LIB_FAKE_DDK_FAKE_DDK_H_
 
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/fragment-device.h>
 #include <lib/fidl/llcpp/client_end.h>
 #include <lib/sync/completion.h>
 #include <lib/syslog/logger.h>
@@ -15,9 +18,6 @@
 #include <utility>
 #include <vector>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/fragment-device.h>
 #include <fbl/array.h>
 
 #include "fidl-helper.h"

@@ -4,6 +4,7 @@
 
 #include "usb-audio-stream.h"
 
+#include <lib/ddk/device.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/vmar.h>
 #include <string.h>
@@ -18,7 +19,6 @@
 #include <utility>
 
 #include <audio-proto-utils/format-utils.h>
-#include <ddk/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

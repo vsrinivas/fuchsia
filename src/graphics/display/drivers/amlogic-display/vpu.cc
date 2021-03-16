@@ -4,7 +4,8 @@
 
 #include "vpu.h"
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
+
 #include <ddktl/device.h>
 
 #include "common.h"

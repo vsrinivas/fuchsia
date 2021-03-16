@@ -6,6 +6,8 @@
 
 #include <fuchsia/hardware/pci/llcpp/fidl.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/msi.h>
@@ -18,8 +20,6 @@
 #include <thread>
 #include <unordered_map>
 
-#include <ddk/device.h>
-#include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/intrusive_double_list.h>

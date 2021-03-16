@@ -8,10 +8,10 @@
 #include <fuchsia/hardware/ftdi/llcpp/fidl.h>
 #include <fuchsia/hardware/serialimpl/cpp/banjo.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
+#include <lib/ddk/device.h>
 
 #include <thread>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 #include <usb/request-cpp.h>

@@ -4,6 +4,9 @@
 
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <fuchsia/hardware/input/c/fidl.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/hw/inout.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -12,11 +15,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <hid/boot.h>
 #include <hid/usages.h>
-#include <hw/inout.h>
 
 #include "src/ui/input/drivers/pc-ps2/i8042_bind.h"
 

@@ -9,6 +9,8 @@
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
@@ -19,8 +21,6 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 

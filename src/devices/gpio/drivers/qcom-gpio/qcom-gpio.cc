@@ -4,10 +4,11 @@
 
 #include "qcom-gpio.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+
 #include <algorithm>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 

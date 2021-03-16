@@ -3,12 +3,11 @@
 // found in the LICENSE file.
 #include "processing_node.h"
 
+#include <lib/ddk/trace/event.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
-
-#include <ddk/trace/event.h>
 
 #include "stream_protocol.h"
 

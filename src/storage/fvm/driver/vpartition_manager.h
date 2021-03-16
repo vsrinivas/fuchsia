@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
@@ -23,7 +24,6 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/intrusive_wavl_tree.h>

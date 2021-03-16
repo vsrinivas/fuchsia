@@ -6,13 +6,12 @@
 #define SRC_DEVICES_TESTS_LIBDRIVER_INTEGRATION_TEST_ACTION_LIST_H_
 
 #include <fuchsia/device/mock/cpp/fidl.h>
+#include <lib/ddk/binding.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 
 #include <string>
 #include <vector>
-
-#include <ddk/binding.h>
 
 namespace libdriver_integration_test {
 

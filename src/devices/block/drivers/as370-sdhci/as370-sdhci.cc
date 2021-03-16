@@ -6,13 +6,13 @@
 
 #include <fuchsia/hardware/clock/cpp/banjo.h>
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <hwreg/bitfields.h>

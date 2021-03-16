@@ -7,10 +7,9 @@
 
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/device.h>
 #include <zircon/fidl.h>
 #include <zircon/types.h>
-
-#include <ddk/device.h>
 
 typedef struct kpci_device {
   zx_device_t* zxdev;

@@ -5,6 +5,9 @@
 #include "src/devices/bus/drivers/pci/bus.h"
 
 #include <fuchsia/hardware/pciroot/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zx/time.h>
 #include <zircon/hw/pci.h>
@@ -14,9 +17,6 @@
 #include <list>
 #include <thread>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/mmio-buffer.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

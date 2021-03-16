@@ -11,9 +11,11 @@
 #include <fuchsia/hardware/i2c/c/fidl.h>
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/pci/hw.h>
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
@@ -28,10 +30,7 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>

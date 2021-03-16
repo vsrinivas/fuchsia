@@ -5,9 +5,9 @@
 #include "ti-ina231.h"
 
 #include <endian.h>
+#include <lib/ddk/debug.h>
 
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 
 #include "src/devices/power/drivers/ti-ina231/ti-ina231-bind.h"

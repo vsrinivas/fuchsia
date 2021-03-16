@@ -9,13 +9,13 @@
 #include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <fuchsia/hardware/serialimpl/async/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/event.h>
 #include <lib/zx/socket.h>
 #include <zircon/types.h>
 
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/mutex.h>

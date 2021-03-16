@@ -7,10 +7,10 @@
 
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/block/cpp/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdint.h>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 
 #include "scsilib_controller.h"

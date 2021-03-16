@@ -5,11 +5,10 @@
 #ifndef DRIVER_INFO_DRIVER_INFO_H_
 #define DRIVER_INFO_DRIVER_INFO_H_
 
+#include <lib/ddk/binding.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <ddk/binding.h>
 
 __BEGIN_CDECLS
 

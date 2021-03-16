@@ -5,7 +5,12 @@
 #include "amlogic-video.h"
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/trace/event.h>
 #include <lib/zx/channel.h>
 #include <memory.h>
@@ -19,11 +24,6 @@
 #include <optional>
 #include <thread>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <hw/reg.h>
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
 

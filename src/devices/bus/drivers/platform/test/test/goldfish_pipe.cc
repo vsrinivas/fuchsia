@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/zx/event.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
@@ -11,8 +13,6 @@
 #include <memory>
 #include <unordered_set>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 
 #include "src/devices/bus/drivers/platform/test/test-goldfish-pipe-bind.h"

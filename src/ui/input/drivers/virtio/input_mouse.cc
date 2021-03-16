@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/debug.h>
 #include <zircon/status.h>
 
 #include <cstdint>
 #include <iterator>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <virtio/input.h>
 

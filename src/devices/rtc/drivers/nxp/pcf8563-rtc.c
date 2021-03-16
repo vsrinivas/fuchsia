@@ -3,15 +3,14 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
 #include <librtc.h>
 #include <stdlib.h>
 #include <zircon/assert.h>
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "src/devices/rtc/drivers/nxp/pcf8563_rtc_bind.h"
 

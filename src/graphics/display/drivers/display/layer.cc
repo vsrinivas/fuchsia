@@ -4,9 +4,10 @@
 
 #include "layer.h"
 
+#include <lib/ddk/debug.h>
+
 #include <algorithm>
 
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
 #include "fence.h"

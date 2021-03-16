@@ -8,6 +8,8 @@
 #include <fuchsia/hardware/clock/c/fidl.h>
 #include <fuchsia/hardware/clockimpl/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -15,8 +17,6 @@
 #include <optional>
 #include <vector>
 
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>

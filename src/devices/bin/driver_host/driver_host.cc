@@ -12,6 +12,10 @@
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/debuglog.h>
@@ -38,10 +42,6 @@
 #include <utility>
 #include <vector>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>

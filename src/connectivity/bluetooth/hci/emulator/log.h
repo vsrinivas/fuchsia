@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_LOG_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_HCI_EMULATOR_LOG_H_

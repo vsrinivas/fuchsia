@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/syslog/logger.h>
 #include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/syscalls/log.h>
 #include <zircon/types.h>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 namespace no_ddk {
 

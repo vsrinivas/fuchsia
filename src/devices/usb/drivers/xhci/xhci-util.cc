@@ -4,10 +4,9 @@
 
 #include "xhci-util.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/hw/arch_ops.h>
 #include <stdio.h>
-
-#include <ddk/debug.h>
-#include <hw/arch_ops.h>
 
 namespace usb_xhci {
 

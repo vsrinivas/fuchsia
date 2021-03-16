@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <fuchsia/hardware/block/volume/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/zx/port.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -20,7 +21,6 @@
 
 #include <bitmap/raw-bitmap.h>
 #include <bitmap/storage.h>
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>

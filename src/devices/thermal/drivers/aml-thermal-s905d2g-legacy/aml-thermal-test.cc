@@ -5,6 +5,8 @@
 #include "aml-thermal.h"
 
 #include <fuchsia/hardware/pwm/cpp/banjo-mock.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mmio/mmio.h>
 #include <stdint.h>
@@ -15,8 +17,6 @@
 #include <cstddef>
 #include <memory>
 
-#include <ddk/device.h>
-#include <ddk/mmio-buffer.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>

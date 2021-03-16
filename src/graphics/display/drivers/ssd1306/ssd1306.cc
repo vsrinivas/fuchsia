@@ -5,11 +5,11 @@
 #include "src/graphics/display/drivers/ssd1306/ssd1306.h"
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 

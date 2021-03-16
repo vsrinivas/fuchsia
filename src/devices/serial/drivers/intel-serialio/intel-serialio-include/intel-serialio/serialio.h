@@ -5,10 +5,9 @@
 #ifndef SRC_DEVICES_SERIAL_DRIVERS_INTEL_SERIALIO_INTEL_SERIALIO_INCLUDE_INTEL_SERIALIO_SERIALIO_H_
 #define SRC_DEVICES_SERIAL_DRIVERS_INTEL_SERIALIO_INTEL_SERIALIO_INCLUDE_INTEL_SERIALIO_SERIALIO_H_
 
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <zircon/types.h>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #define INTEL_VID (0x8086)
 #define INTEL_WILDCAT_POINT_SERIALIO_DMA_DID (0x9ce0)

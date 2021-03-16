@@ -5,10 +5,10 @@
 #include "dev-pwrsrc.h"
 
 #include <dirent.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <zircon/syscalls/port.h>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <zxtest/zxtest.h>
 
 #define SIGNAL_WAIT_TIMEOUT (5000u)

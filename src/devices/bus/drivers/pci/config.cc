@@ -7,8 +7,8 @@
 #include <assert.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 
-#include <ddk/debug.h>
 #include <pretty/hexdump.h>
 
 #include "src/devices/bus/drivers/pci/common.h"

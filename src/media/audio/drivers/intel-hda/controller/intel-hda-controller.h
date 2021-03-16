@@ -9,6 +9,8 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/irq.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/fzl/vmar-manager.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -22,8 +24,6 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/recycler.h>
 #include <intel-hda/utils/codec-commands.h>

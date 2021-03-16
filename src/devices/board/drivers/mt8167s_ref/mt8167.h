@@ -7,10 +7,10 @@
 
 #include <fuchsia/hardware/gpioimpl/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/mmio/mmio.h>
 #include <threads.h>
 
-#include <ddk/device.h>
 #include <ddk/usb-peripheral-config.h>
 #include <ddktl/device.h>
 #include <fbl/macros.h>

@@ -5,9 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_WLANTAP_PHY_H_
 #define SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_WLANTAP_PHY_H_
 
-#include <ddk/device.h>
 #include <fuchsia/wlan/tap/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <lib/ddk/device.h>
 #include <lib/zx/channel.h>
 
 namespace wlan {

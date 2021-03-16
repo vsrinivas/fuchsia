@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/mmio-buffer.h>
+#include <lib/ddk/hw/reg.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/debug.h>
-#include <ddk/mmio-buffer.h>
-#include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-hiu-regs.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
 #include <soc/aml-s905d2/s905d2-hw.h>

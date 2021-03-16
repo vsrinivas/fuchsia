@@ -5,6 +5,9 @@
 #include "dev-battery.h"
 
 #include <fuchsia/hardware/power/c/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <threads.h>
@@ -12,9 +15,6 @@
 #include <zircon/types.h>
 
 #include <acpica/acpi.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "dev.h"
 #include "errors.h"

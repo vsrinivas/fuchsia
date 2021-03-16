@@ -4,6 +4,7 @@
 
 #include "ram-nand.h"
 
+#include <lib/ddk/binding.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,8 +15,7 @@
 #include <algorithm>
 #include <utility>
 
-#include <ddk/binding.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/bad-block.h>
 #include <ddk/metadata/nand.h>
 #include <fbl/algorithm.h>

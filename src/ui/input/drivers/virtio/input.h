@@ -6,13 +6,13 @@
 
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
 #include <stdlib.h>
 
 #include <memory>
 
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 #include <hid/boot.h>
 #include <virtio/input.h>

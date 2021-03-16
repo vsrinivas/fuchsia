@@ -5,6 +5,8 @@
 #include "max98927.h"
 
 #include <endian.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/fidl-utils/bind.h>
@@ -12,8 +14,6 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 
 #include "max98927-registers.h"

@@ -8,7 +8,7 @@
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/align.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

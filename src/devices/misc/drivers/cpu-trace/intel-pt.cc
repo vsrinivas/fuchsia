@@ -9,6 +9,10 @@
 #include <fuchsia/hardware/cpu/insntrace/llcpp/fidl.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <lib/zircon-internal/mtrace.h>
@@ -26,10 +30,6 @@
 #include <memory>
 #include <new>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>

@@ -8,6 +8,8 @@
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/edid/edid.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>
@@ -27,8 +29,6 @@
 #include <utility>
 #include <vector>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

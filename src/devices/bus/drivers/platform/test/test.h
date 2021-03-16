@@ -6,9 +6,9 @@
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_TEST_TEST_H_
 
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <threads.h>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/macros.h>
 

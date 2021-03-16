@@ -5,9 +5,9 @@
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl-async/cpp/bind.h>
 
-#include <ddk/driver.h>
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>
 

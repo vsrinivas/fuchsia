@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_MACROS_H_
 #define SRC_DEVICES_SYSMEM_DRIVERS_SYSMEM_MACROS_H_
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 
 // severity can be ERROR, WARN, INFO, DEBUG, TRACE.  See ddk/debug.h.
 #define LOG(severity, fmt, ...) zxlogf(severity, fmt, ##__VA_ARGS__)

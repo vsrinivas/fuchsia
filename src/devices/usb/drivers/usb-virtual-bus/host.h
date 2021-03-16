@@ -7,10 +7,10 @@
 
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <fuchsia/hardware/usb/virtualbustest/llcpp/fidl.h>
+#include <lib/ddk/device.h>
 
 #include <thread>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <ddktl/protocol/empty-protocol.h>

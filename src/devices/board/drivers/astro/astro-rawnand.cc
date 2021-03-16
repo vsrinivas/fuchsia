@@ -4,16 +4,16 @@
 
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/hw/reg.h>
 #include <unistd.h>
 #include <zircon/hw/gpt.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/nand.h>
-#include <hw/reg.h>
 #include <soc/aml-common/aml-guid.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>

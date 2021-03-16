@@ -5,12 +5,11 @@
 #ifndef SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_S905D2_S905D2_HIU_H_
 #define SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_S905D2_S905D2_HIU_H_
 
+#include <lib/ddk/mmio-buffer.h>
+#include <lib/ddk/hw/reg.h>
 #include <stdint.h>
 #include <unistd.h>
 #include <zircon/assert.h>
-
-#include <ddk/mmio-buffer.h>
-#include <hw/reg.h>
 
 typedef enum {
   GP0_PLL = 0,

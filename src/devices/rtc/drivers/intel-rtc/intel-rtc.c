@@ -3,6 +3,10 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/rtc/c/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/hw/inout.h>
 #include <librtc.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,11 +14,6 @@
 #include <threads.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <hw/inout.h>
 
 #include "src/devices/rtc/drivers/intel-rtc/intel_rtc_bind.h"
 

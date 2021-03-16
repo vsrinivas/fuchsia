@@ -5,13 +5,13 @@
 #include "usb-mass-storage.h"
 
 #include <endian.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb/ums.h>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

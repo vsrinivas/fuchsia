@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/hw/inout.h>
 
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
-#include <hw/inout.h>
 
 #include "../include/lib/virtio/backends/pci.h"
 

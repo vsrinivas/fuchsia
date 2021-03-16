@@ -7,9 +7,9 @@
 
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <soc/aml-common/aml-pwm-regs.h>
 

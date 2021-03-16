@@ -7,7 +7,7 @@
 
 #include <zircon/compiler.h>
 
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
 
 __BEGIN_CDECLS
 

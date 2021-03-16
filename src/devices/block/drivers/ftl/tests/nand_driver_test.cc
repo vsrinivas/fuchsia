@@ -6,11 +6,11 @@
 
 #include <fuchsia/hardware/badblock/cpp/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
+#include <lib/ddk/driver.h>
 
 #include <memory>
 #include <vector>
 
-#include <ddk/driver.h>
 #include <fbl/array.h>
 #include <zxtest/zxtest.h>
 

@@ -5,6 +5,7 @@
 #include "scsi.h"
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/scsi/scsilib.h>
 #include <lib/scsi/scsilib_controller.h>
 #include <netinet/in.h>
@@ -17,7 +18,6 @@
 #include <algorithm>
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

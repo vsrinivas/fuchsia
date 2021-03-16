@@ -5,14 +5,14 @@
 #include "xhci-transfer.h"
 
 #include <fuchsia/hardware/usb/hci/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/phys-iter.h>
 #include <stdio.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/hw/usb.h>
 
-#include <ddk/debug.h>
-#include <ddk/phys-iter.h>
 #include <fbl/auto_lock.h>
 
 #include "xhci-trb.h"

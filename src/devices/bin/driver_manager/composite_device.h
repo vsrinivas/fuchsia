@@ -7,10 +7,10 @@
 
 #include <fuchsia/device/manager/c/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
+#include <lib/ddk/binding.h>
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <fbl/array.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>

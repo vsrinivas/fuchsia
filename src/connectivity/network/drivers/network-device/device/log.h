@@ -6,7 +6,7 @@
 #define SRC_CONNECTIVITY_NETWORK_DRIVERS_NETWORK_DEVICE_DEVICE_LOG_H_
 
 #ifdef NETDEV_DDK
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 #define LOG_ERROR(msg) zxlogf(ERROR, msg "")
 #define LOG_WARN(msg) zxlogf(WARNING, msg "")
 #define LOG_INFO(msg) zxlogf(INFO, msg "")

@@ -6,15 +6,14 @@
 #define SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_USB_REQUEST_H_
 
 #include <fuchsia/hardware/usb/request/c/banjo.h>
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/phys-iter.h>
 #include <stdint.h>
 #include <sys/types.h>
 #include <threads.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
-
-#include <ddk/io-buffer.h>
-#include <ddk/phys-iter.h>
 
 __BEGIN_CDECLS
 

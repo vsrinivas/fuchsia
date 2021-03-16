@@ -14,7 +14,7 @@
 
 #include <cstddef>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
 #include <zxtest/zxtest.h>
 

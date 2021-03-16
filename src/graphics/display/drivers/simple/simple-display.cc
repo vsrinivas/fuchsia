@@ -7,6 +7,9 @@
 #include <assert.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/pci/hw.h>
 #include <stdio.h>
@@ -21,9 +24,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 
 // implement display controller protocol

@@ -8,6 +8,10 @@
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/usb/dci/cpp/banjo.h>
 #include <fuchsia/hardware/usb/phy/cpp/banjo.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
@@ -16,10 +20,6 @@
 
 #include <atomic>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 #include <usb/dwc2/metadata.h>

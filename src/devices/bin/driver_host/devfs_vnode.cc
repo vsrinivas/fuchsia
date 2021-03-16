@@ -4,7 +4,8 @@
 
 #include "devfs_vnode.h"
 
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
+
 #include <fbl/string_buffer.h>
 
 #include "driver_host.h"

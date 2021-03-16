@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/interrupt.h>
@@ -16,7 +17,6 @@
 
 #include <atomic>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 #include <hid/ft3x27.h>

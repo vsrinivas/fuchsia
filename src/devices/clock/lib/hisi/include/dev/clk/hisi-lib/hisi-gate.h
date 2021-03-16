@@ -4,9 +4,8 @@
 #ifndef SRC_DEVICES_CLOCK_LIB_HISI_INCLUDE_DEV_CLK_HISI_LIB_HISI_GATE_H_
 #define SRC_DEVICES_CLOCK_LIB_HISI_INCLUDE_DEV_CLK_HISI_LIB_HISI_GATE_H_
 
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
-
-#include <ddk/device.h>
 
 namespace hisi_clock {
 

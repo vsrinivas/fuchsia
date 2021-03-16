@@ -8,6 +8,7 @@
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
+#include <lib/ddk/debug.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
@@ -22,12 +23,11 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <utf_conversion/utf_conversion.h>
 
-#include "ddk/driver.h"
+#include "lib/ddk/driver.h"
 #include "src/devices/block/drivers/gpt/gpt_bind.h"
 #include "zircon/errors.h"
 #include "zircon/status.h"

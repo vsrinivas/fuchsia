@@ -5,11 +5,10 @@
 #include "src/devices/block/drivers/block-verity/superblock-verifier.h"
 
 #include <endian.h>
+#include <lib/ddk/debug.h>
 #include <zircon/status.h>
 
 #include <array>
-
-#include <ddk/debug.h>
 
 #include "src/devices/block/drivers/block-verity/constants.h"
 #include "src/devices/block/drivers/block-verity/superblock.h"

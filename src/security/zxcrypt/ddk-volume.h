@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZXCRYPT_DDK_VOLUME_H_
-#define ZXCRYPT_DDK_VOLUME_H_
+#ifndef SRC_SECURITY_ZXCRYPT_DDK_VOLUME_H_
+#define SRC_SECURITY_ZXCRYPT_DDK_VOLUME_H_
+
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 
 #include <memory>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "src/security/zxcrypt/volume.h"
 
@@ -57,4 +57,4 @@ class DdkVolume final : public Volume {
 
 }  // namespace zxcrypt
 
-#endif  // ZXCRYPT_DDK_VOLUME_H_
+#endif  // SRC_SECURITY_ZXCRYPT_DDK_VOLUME_H_

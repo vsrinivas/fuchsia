@@ -6,15 +6,15 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/serial/c/banjo.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/mmio/mmio.h>
 #include <unistd.h>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/init-step.h>
-#include <hw/reg.h>
 #include <soc/aml-s905d3/s905d3-gpio.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
 

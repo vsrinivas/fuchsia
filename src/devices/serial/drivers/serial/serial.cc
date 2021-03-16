@@ -5,6 +5,7 @@
 #include "serial.h"
 
 #include <fuchsia/hardware/serial/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/time.h>
@@ -13,7 +14,6 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>
 

@@ -7,7 +7,7 @@
 #include <fuchsia/sysmem/c/banjo.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 
 #include "log_rtn.h"
 

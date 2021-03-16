@@ -5,7 +5,11 @@
 #include "aml-usb-phy.h"
 
 #include <assert.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/zx/time.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -17,15 +21,11 @@
 #include <sstream>
 #include <string>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <hw/reg.h>
 
 #include "src/devices/usb/drivers/aml-usb-phy-v2/aml_usb_phy_bind.h"
 #include "usb-phy-regs.h"

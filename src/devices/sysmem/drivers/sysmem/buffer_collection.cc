@@ -4,13 +4,12 @@
 
 #include "buffer_collection.h"
 
+#include <lib/ddk/trace/event.h>
 #include <lib/sysmem-version/sysmem-version.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 
 #include <atomic>
-
-#include <ddk/trace/event.h>
 
 #include "buffer_collection_token.h"
 #include "fbl/ref_ptr.h"

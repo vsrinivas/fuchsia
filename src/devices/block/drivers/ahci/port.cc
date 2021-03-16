@@ -5,13 +5,13 @@
 #include "port.h"
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/phys-iter.h>
 #include <lib/zx/clock.h>
 #include <unistd.h>
 
 #include <algorithm>
 
-#include <ddk/debug.h>
-#include <ddk/phys-iter.h>
 #include <fbl/auto_lock.h>
 
 #include "controller.h"

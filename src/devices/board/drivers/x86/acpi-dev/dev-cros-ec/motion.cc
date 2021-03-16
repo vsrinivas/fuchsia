@@ -16,6 +16,7 @@
 
 #include "motion.h"
 
+#include <lib/ddk/debug.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/status.h>
@@ -27,7 +28,6 @@
 
 #include <acpica/acpi.h>
 #include <chromiumos-platform-ec/ec_commands.h>
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>

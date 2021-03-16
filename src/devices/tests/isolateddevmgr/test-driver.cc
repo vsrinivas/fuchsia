@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/device/manager/test/c/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 
 #include <vector>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 

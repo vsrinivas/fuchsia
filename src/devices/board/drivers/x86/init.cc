@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/debug.h>
 #include <limits.h>
 
 #include <acpica/acpi.h>
-#include <ddk/debug.h>
 
 #include "acpi-private.h"
 #include "dev.h"

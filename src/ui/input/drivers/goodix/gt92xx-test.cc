@@ -11,7 +11,7 @@
 
 #include <atomic>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
 #include <hid/gt92xx.h>
 #include <zxtest/zxtest.h>

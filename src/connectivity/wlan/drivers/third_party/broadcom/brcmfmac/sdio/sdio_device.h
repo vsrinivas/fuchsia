@@ -16,9 +16,8 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/dispatcher.h>
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
-
-#include <ddk/device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
 

@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <fuchsia/hardware/sdmmc/cpp/banjo.h>
+#include <lib/ddk/phys-iter.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/interrupt.h>
@@ -17,7 +18,6 @@
 #include <optional>
 #include <vector>
 
-#include <ddk/phys-iter.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>

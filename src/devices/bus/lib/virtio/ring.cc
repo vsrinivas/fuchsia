@@ -4,6 +4,8 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
 #include <lib/zx/vmar.h>
@@ -11,8 +13,6 @@
 #include <stdint.h>
 #include <string.h>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <fbl/algorithm.h>
 
 namespace virtio {

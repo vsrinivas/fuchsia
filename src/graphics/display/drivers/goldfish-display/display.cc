@@ -6,6 +6,8 @@
 
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/zircon-internal/align.h>
 #include <zircon/pixelformat.h>
 #include <zircon/threads.h>
@@ -14,8 +16,6 @@
 #include <sstream>
 #include <vector>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
 
 #include "src/graphics/display/drivers/goldfish-display/goldfish-display-bind.h"

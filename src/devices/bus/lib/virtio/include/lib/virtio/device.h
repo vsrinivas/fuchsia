@@ -5,6 +5,8 @@
 #define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_DEVICE_H_
 
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/virtio/backends/backend.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/handle.h>
@@ -14,8 +16,6 @@
 #include <atomic>
 #include <memory>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/mutex.h>
 #include <virtio/virtio.h>
 

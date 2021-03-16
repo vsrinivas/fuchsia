@@ -4,6 +4,7 @@
 #ifndef SRC_DEVICES_MISC_DRIVERS_VIRTIO_RNG_RNG_H_
 #define SRC_DEVICES_MISC_DRIVERS_VIRTIO_RNG_RNG_H_
 
+#include <lib/ddk/io-buffer.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
 #include <stdlib.h>
@@ -11,7 +12,6 @@
 
 #include <memory>
 
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 
 namespace virtio {

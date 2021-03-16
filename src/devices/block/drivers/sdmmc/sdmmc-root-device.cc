@@ -5,11 +5,11 @@
 #include "sdmmc-root-device.h"
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <zircon/threads.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/auto_call.h>
 
 #include "src/devices/block/drivers/sdmmc/sdmmc-bind.h"

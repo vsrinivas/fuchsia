@@ -5,7 +5,8 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_HOST_COMPOSITE_DEVICE_H_
 #define SRC_DEVICES_BIN_DRIVER_HOST_COMPOSITE_DEVICE_H_
 
-#include <ddk/driver.h>
+#include <lib/ddk/driver.h>
+
 #include <fbl/array.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

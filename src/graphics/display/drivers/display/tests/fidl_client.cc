@@ -5,8 +5,8 @@
 #include "fidl_client.h"
 
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
 
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
 namespace fhd = fuchsia_hardware_display;

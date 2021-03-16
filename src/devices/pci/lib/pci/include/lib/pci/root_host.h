@@ -5,9 +5,8 @@
 #define SRC_DEVICES_PCI_LIB_PCI_INCLUDE_LIB_PCI_ROOT_HOST_H_
 
 #include <fuchsia/hardware/pciroot/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <zircon/compiler.h>
-
-#include <ddk/debug.h>
 
 // Userspace ACPI/PCI support is entirely in C++, but the legacy kernel pci support
 // still has kpci.c. In lieu of needlessly porting that, it's simpler to ifdef the

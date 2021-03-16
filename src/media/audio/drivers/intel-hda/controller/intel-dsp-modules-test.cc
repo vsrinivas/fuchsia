@@ -4,6 +4,7 @@
 
 #include "intel-dsp-modules.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/zx/time.h>
 #include <threads.h>
 #include <zircon/assert.h>
@@ -13,7 +14,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <ddk/debug.h>
 #include <zxtest/zxtest.h>
 
 #include "debug-logging.h"

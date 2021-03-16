@@ -5,11 +5,10 @@
 #ifndef SRC_LIB_DDKTL_INCLUDE_DDKTL_SUSPEND_TXN_H_
 #define SRC_LIB_DDKTL_INCLUDE_DDKTL_SUSPEND_TXN_H_
 
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 #include <zircon/assert.h>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 namespace ddk {
 

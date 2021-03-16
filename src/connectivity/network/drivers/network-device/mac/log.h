@@ -17,7 +17,7 @@
 #define LOGF_INFO(fmt, ...) FX_LOGF(INFO, "network-mac", fmt, ##__VA_ARGS__)
 #define LOGF_TRACE(fmt, ...) FX_VLOGF(1, "network-mac", fmt, ##__VA_ARGS__)
 #else
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 #define LOG_ERROR(msg) zxlogf(ERROR, msg "")
 #define LOG_WARN(msg) zxlogf(WARNING, msg "")
 #define LOG_INFO(msg) zxlogf(INFO, msg "")

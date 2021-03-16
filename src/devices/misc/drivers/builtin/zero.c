@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/types.h>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 static zx_status_t zero_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
   memset(buf, 0, count);

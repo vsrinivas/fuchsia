@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/i2c/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
@@ -19,7 +20,6 @@
 #include <optional>
 
 #include <audio-proto/audio-proto.h>
-#include <ddk/io-buffer.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>

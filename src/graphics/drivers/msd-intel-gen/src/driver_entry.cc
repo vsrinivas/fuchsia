@@ -4,6 +4,8 @@
 
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <fuchsia/hardware/intelgpucore/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -16,8 +18,6 @@
 #include <set>
 #include <thread>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/fidl.h>
 
 #include "magma_util/dlog.h"

@@ -4,10 +4,10 @@
 
 #include "power.h"
 
+#include <lib/ddk/debug.h>
 #include <zircon/syscalls/system.h>
 
 #include <acpica/acpi.h>
-#include <ddk/debug.h>
 
 void poweroff(void) {
   ACPI_STATUS status = AcpiEnterSleepStatePrep(5);

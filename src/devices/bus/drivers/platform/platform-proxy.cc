@@ -4,6 +4,7 @@
 
 #include "src/devices/bus/drivers/platform/platform-proxy.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/zircon-internal/align.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,7 +14,6 @@
 
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 

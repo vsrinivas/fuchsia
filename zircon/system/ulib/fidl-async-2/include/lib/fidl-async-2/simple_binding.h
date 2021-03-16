@@ -5,7 +5,7 @@
 #ifndef LIB_FIDL_ASYNC_2_SIMPLE_BINDING_H_
 #define LIB_FIDL_ASYNC_2_SIMPLE_BINDING_H_
 
-//#include <ddk/debug.h>
+//#include <lib/ddk/debug.h>
 #include <fbl/intrusive_double_list.h>
 //#include <lib/async/cpp/task.h>
 //#include <lib/async/dispatcher.h>

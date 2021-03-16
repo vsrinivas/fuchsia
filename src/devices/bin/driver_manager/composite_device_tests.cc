@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/driver.h>
 
 #include <vector>
 
-#include <ddk/binding.h>
-#include <ddk/driver.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 

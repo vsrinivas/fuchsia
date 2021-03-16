@@ -10,7 +10,7 @@
 #include <lib/zx/pmt.h>
 #include <zircon/pixelformat.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/display.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>

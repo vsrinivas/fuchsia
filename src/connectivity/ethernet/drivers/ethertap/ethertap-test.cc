@@ -4,6 +4,8 @@
 
 #include "ethertap.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/process.h>
 
@@ -11,8 +13,6 @@
 #include <thread>
 #include <vector>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <zxtest/zxtest.h>
 
 class FakeEthertapMiscParent : public ddk::Device<FakeEthertapMiscParent>, public fake_ddk::Bind {

@@ -5,9 +5,8 @@
 #ifndef SRC_DEVICES_MISC_DRIVERS_CPU_TRACE_CPU_TRACE_PRIVATE_H_
 #define SRC_DEVICES_MISC_DRIVERS_CPU_TRACE_CPU_TRACE_PRIVATE_H_
 
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
-
-#include <ddk/device.h>
 
 #ifdef __x86_64__
 

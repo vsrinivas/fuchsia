@@ -4,8 +4,10 @@
 
 #include "aml-thermal.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/ddk/hw/reg.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/errors.h>
@@ -15,12 +17,10 @@
 
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <hw/reg.h>
 
 #include "src/devices/thermal/drivers/aml-thermal-s905d2g/aml-thermal-s905d2g-bind.h"
 

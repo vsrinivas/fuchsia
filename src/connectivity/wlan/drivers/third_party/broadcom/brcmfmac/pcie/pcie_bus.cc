@@ -5,7 +5,7 @@
 
 #include <zircon/errors.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/firmware.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"

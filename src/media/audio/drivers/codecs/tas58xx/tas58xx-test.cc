@@ -13,7 +13,7 @@
 
 #include <string>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 namespace audio {

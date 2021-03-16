@@ -7,8 +7,8 @@
 
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
+#include <lib/ddk/driver.h>
 
-#include <ddk/driver.h>
 #include <wlan/common/dispatcher.h>
 
 namespace wlanphy {

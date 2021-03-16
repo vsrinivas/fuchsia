@@ -5,6 +5,8 @@
 #include "aml-usb-phy.h"
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/interrupt.h>
@@ -16,9 +18,7 @@
 #include <queue>
 #include <thread>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
@@ -247,7 +247,8 @@ class AmlUsbPhyTest : public zxtest::Test {
 
     fbl::Array<fake_ddk::FragmentEntry> fragments(new fake_ddk::FragmentEntry[kNumBindFragments],
                                                   kNumBindFragments);
-    fragments[0].name = "fuchsia.hardware.platform.device.PDev";;
+    fragments[0].name = "fuchsia.hardware.platform.device.PDev";
+    ;
     fragments[0].protocols.emplace_back(fake_ddk::ProtocolEntry{
         ZX_PROTOCOL_PDEV, *reinterpret_cast<const fake_ddk::Protocol*>(pdev_.proto())});
     fragments[1].name = "register-reset";

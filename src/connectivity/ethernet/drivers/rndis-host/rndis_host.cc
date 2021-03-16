@@ -6,6 +6,9 @@
 
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -14,9 +17,6 @@
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/listnode.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>

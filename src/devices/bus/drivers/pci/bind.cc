@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
-
-#include <ddk/device.h>
 
 #include "src/devices/bus/drivers/pci/bus.h"
 #include "src/devices/bus/drivers/pci/pci_bind.h"

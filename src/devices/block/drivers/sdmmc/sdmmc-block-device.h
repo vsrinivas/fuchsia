@@ -11,6 +11,7 @@
 #include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/operation/block.h>
 #include <lib/sdmmc/hw.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -21,7 +22,6 @@
 #include <deque>
 #include <memory>
 
-#include <ddk/trace/event.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/auto_lock.h>

@@ -4,6 +4,7 @@
 
 #include "input.h"
 
+#include <lib/ddk/debug.h>
 #include <limits.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -13,7 +14,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

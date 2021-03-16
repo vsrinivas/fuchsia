@@ -1,6 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <librtc.h>
 #include <string.h>
@@ -8,9 +10,7 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 

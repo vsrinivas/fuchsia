@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FRAME_H_
-#define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FRAME_H_
+#ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_FRAME_H_
+#define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_FRAME_H_
+
+#include <lib/ddk/io-buffer.h>
 
 #include <cstdint>
-
-#include <ddk/io-buffer.h>
 
 class CodecBuffer;
 struct VideoFrame {
@@ -47,4 +47,4 @@ struct VideoFrame {
 // mplayer -demuxer rawvideo -rawvideo w=320:h=240:format=nv12
 void DumpVideoFrameToFile(VideoFrame* frame, const char* filename);
 
-#endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VIDEO_FRAME_H_
+#endif  // SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_VIDEO_FRAME_H_

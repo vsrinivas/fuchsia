@@ -9,11 +9,10 @@
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl/cpp/binding.h>
 
 #include <mutex>
-
-#include <ddk/driver.h>
 
 namespace wlanif {
 

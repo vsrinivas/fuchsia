@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <sys/stat.h>
@@ -12,7 +13,6 @@
 #include <cstdio>
 #include <iostream>
 
-#include <ddk/driver.h>
 #include <fbl/unique_fd.h>
 
 #include "commands.h"

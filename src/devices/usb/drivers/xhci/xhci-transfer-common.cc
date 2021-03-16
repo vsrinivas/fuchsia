@@ -4,9 +4,9 @@
 
 #include "xhci-transfer-common.h"
 
+#include <lib/ddk/debug.h>
 #include <string.h>
 
-#include <ddk/debug.h>
 #include <usb/usb-request.h>
 
 namespace usb_xhci {

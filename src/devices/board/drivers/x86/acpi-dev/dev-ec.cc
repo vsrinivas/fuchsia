@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/hw/inout.h>
 #include <stdio.h>
 #include <threads.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <fbl/auto_call.h>
-#include <hw/inout.h>
 
 #include "acpi-private.h"
 #include "dev.h"

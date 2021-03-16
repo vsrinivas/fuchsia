@@ -4,11 +4,10 @@
 
 #include "vdec1.h"
 
+#include <lib/ddk/io-buffer.h>
 #include <lib/trace/event.h>
 
 #include <algorithm>
-
-#include <ddk/io-buffer.h>
 
 #include "macros.h"
 #include "registers.h"

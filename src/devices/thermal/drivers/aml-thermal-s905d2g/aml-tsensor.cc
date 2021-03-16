@@ -4,6 +4,8 @@
 
 #include "aml-tsensor.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/hw/reg.h>
 #include <string.h>
 #include <threads.h>
 #include <unistd.h>
@@ -13,9 +15,7 @@
 
 #include <cmath>
 
-#include <ddk/debug.h>
 #include <fbl/auto_call.h>
-#include <hw/reg.h>
 
 #include "aml-tsensor-regs.h"
 

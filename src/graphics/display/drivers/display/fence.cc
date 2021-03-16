@@ -4,10 +4,10 @@
 
 #include "fence.h"
 
-#include <utility>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
+#include <utility>
 
 #include "client.h"
 #include "zircon/assert.h"

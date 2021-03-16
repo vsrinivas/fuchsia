@@ -11,6 +11,7 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/power/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/device-protocol/display-panel.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
@@ -24,7 +25,6 @@
 #include <array>
 #include <memory>
 
-#include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>

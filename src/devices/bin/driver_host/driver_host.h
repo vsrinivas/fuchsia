@@ -9,6 +9,9 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
@@ -19,9 +22,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/fidl.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_counted.h>

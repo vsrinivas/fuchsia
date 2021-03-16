@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/hw/reg.h>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
-#include <hw/reg.h>
 #include <soc/aml-a113/a113-hw.h>
 #include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-s912/s912-gpio.h>

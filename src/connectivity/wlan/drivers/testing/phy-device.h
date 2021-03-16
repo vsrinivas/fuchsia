@@ -6,13 +6,13 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_PHY_DEVICE_H_
 
 #include <fuchsia/wlan/device/cpp/fidl.h>
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <mutex>
 #include <unordered_map>
 
-#include <ddk/device.h>
 #include <wlan/common/dispatcher.h>
 
 namespace wlan {

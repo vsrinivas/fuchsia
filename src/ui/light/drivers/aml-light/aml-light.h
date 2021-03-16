@@ -8,13 +8,13 @@
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/light/llcpp/fidl.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
+#include <lib/ddk/debug.h>
 #include <threads.h>
 
 #include <optional>
 #include <string>
 #include <vector>
 
-#include <ddk/debug.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/array.h>

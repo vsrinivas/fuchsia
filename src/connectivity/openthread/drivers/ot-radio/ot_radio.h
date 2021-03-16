@@ -12,6 +12,7 @@
 #include <fuchsia/hardware/spi/cpp/banjo.h>
 #include <fuchsia/lowpan/spinel/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/interrupt.h>
 #include <threads.h>
@@ -22,7 +23,6 @@
 #include <atomic>
 #include <vector>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 

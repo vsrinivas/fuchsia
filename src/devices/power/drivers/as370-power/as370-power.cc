@@ -6,10 +6,10 @@
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <soc/as370/as370-power.h>
 

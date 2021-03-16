@@ -4,9 +4,8 @@
 
 #include "table_set.h"
 
+#include <lib/ddk/trace/event.h>
 #include <zircon/compiler.h>
-
-#include <ddk/trace/event.h>
 
 #include "macros.h"
 #include "table_holder.h"

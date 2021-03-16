@@ -10,7 +10,10 @@
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <inttypes.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/ddk/hw/inout.h>
 #include <lib/image-format/image_format.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
@@ -26,10 +29,7 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/vector.h>
-#include <hw/inout.h>
 
 #include "dp-display.h"
 #include "hdmi-display.h"

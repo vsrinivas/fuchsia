@@ -4,8 +4,7 @@
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_control_impl.h"
 
 #include <lib/async/cpp/task.h>
-
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream.h"

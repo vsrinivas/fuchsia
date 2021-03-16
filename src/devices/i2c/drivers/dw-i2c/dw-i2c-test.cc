@@ -7,9 +7,13 @@
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -21,14 +25,10 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/mmio-buffer.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
-#include <hw/reg.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>
 

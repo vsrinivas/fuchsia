@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/ethernet/mac/cpp/banjo.h>
 #include <fuchsia/hardware/test/c/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
@@ -21,7 +22,6 @@
 #include <atomic>
 #include <optional>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 

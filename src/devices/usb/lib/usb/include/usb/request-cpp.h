@@ -5,6 +5,8 @@
 #ifndef SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_REQUEST_CPP_H_
 #define SRC_DEVICES_USB_LIB_USB_INCLUDE_USB_REQUEST_CPP_H_
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/phys-iter.h>
 #include <lib/fit/function.h>
 #include <lib/operation/operation.h>
 #include <lib/zx/bti.h>
@@ -14,8 +16,6 @@
 
 #include <optional>
 
-#include <ddk/debug.h>
-#include <ddk/phys-iter.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>

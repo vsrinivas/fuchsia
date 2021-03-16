@@ -4,7 +4,7 @@
 
 #include "bus.h"
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 

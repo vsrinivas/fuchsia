@@ -6,6 +6,7 @@
 #define SRC_DEVICES_SHAREDDMA_DRIVERS_SYN_DMA_SYN_DHUB_H_
 #include <assert.h>
 #include <fuchsia/hardware/shareddma/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -17,7 +18,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <soc/as370/as370-dma.h>

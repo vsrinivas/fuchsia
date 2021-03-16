@@ -7,6 +7,9 @@
 #include <fuchsia/hardware/usb/hub/c/banjo.h>
 #include <fuchsia/hardware/usb/hubdescriptor/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/sync/completion.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,9 +18,6 @@
 #include <unistd.h>
 #include <zircon/listnode.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 

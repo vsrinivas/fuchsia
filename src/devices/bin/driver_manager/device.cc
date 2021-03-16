@@ -8,13 +8,13 @@
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <fuchsia/driver/test/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/clock.h>
 #include <zircon/status.h>
 
 #include <memory>
 
-#include <ddk/driver.h>
 #include <fbl/auto_call.h>
 
 #include "coordinator.h"

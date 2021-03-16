@@ -8,11 +8,17 @@
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/mmio-buffer.h>
+#include <lib/ddk/phys-iter.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fzl/pinned-vmo.h>
 #include <lib/sdmmc/hw.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/sync/completion.h>
 #include <stdint.h>
 #include <string.h>
@@ -24,15 +30,9 @@
 #include <algorithm>
 
 #include <bits/limits.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
-#include <ddk/metadata.h>
-#include <ddk/mmio-buffer.h>
-#include <ddk/phys-iter.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <hw/reg.h>
 #include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>

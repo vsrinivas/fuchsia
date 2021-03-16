@@ -4,6 +4,8 @@
 
 #include "i2c-bus.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
@@ -18,8 +20,6 @@
 
 #include <mutex>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>

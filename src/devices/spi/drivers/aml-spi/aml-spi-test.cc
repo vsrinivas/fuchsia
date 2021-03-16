@@ -13,7 +13,7 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 #include "registers.h"

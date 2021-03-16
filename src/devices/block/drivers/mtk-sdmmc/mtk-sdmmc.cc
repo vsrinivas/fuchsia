@@ -4,6 +4,8 @@
 
 #include "mtk-sdmmc.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -15,9 +17,7 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/io-buffer.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

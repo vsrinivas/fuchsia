@@ -4,7 +4,7 @@
 
 #include "amlogic-clock.h"
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 
 namespace amlogic_display {
 

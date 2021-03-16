@@ -6,6 +6,8 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_TAS58XX_TAS58XX_H_
 
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <lib/simple-codec/simple-codec-server.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -13,8 +15,6 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

@@ -4,6 +4,9 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/usb/function/cpp/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <stdio.h>
@@ -21,10 +24,7 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddktl/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/condition_variable.h>

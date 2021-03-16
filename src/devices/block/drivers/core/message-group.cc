@@ -4,9 +4,9 @@
 
 #include "message-group.h"
 
+#include <lib/ddk/debug.h>
 #include <zircon/status.h>
 
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
 #include "server.h"

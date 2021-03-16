@@ -6,11 +6,11 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 #include <usb/request-cpp.h>
 #include <usb/usb-request.h>

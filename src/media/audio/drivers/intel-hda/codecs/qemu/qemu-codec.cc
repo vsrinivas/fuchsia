@@ -4,9 +4,9 @@
 
 #include "qemu-codec.h"
 
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <ddk/driver.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/auto_lock.h>
 

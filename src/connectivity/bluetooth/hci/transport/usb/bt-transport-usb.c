@@ -5,6 +5,9 @@
 #include <assert.h>
 #include <fuchsia/hardware/bt/hci/c/banjo.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/sync/completion.h>
 #include <stdatomic.h>
 #include <stdio.h>
@@ -16,9 +19,6 @@
 #include <zircon/status.h>
 #include <zircon/syscalls/port.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <usb/usb-request.h>
 #include <usb/usb.h>
 

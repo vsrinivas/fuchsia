@@ -7,6 +7,7 @@
 #include <fuchsia/hardware/display/capture/cpp/banjo.h>
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/ddk/binding.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/image-format/image_format.h>
@@ -21,7 +22,6 @@
 #include <iterator>
 #include <memory>
 
-#include <ddk/binding.h>
 #include <ddktl/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

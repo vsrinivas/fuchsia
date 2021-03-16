@@ -4,9 +4,8 @@
 
 #include "zircon_platform_bus_mapper.h"
 
+#include <lib/ddk/driver.h>
 #include <lib/zx/process.h>
-
-#include <ddk/driver.h>
 
 #include "platform_logger.h"
 #include "platform_trace.h"

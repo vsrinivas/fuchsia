@@ -6,8 +6,7 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_DEBUG_LOGGING_H_
 
 #include <inttypes.h>
-
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 
 // Notes: The TRACE and SPEW levels of logging are disabled by default.  In
 // order to enable them, you can pass something like the following in the kernel

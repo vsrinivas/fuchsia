@@ -5,8 +5,8 @@
 #include "input_touch.h"
 
 #include <fuchsia/hardware/hidbus/c/banjo.h>
+#include <lib/ddk/debug.h>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 
 #include "src/devices/bus/lib/virtio/trace.h"

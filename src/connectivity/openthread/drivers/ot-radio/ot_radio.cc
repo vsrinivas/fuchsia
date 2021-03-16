@@ -6,8 +6,11 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fidl/llcpp/server.h>
+#include <lib/ddk/hw/reg.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -16,15 +19,12 @@
 
 #include <iterator>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <hw/reg.h>
 
 #include "src/connectivity/openthread/drivers/ot-radio/ot_radio_bind.h"
 #include "src/connectivity/openthread/drivers/ot-radio/ot_radio_bootloader.h"

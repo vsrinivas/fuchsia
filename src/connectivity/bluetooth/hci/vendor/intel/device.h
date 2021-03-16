@@ -8,10 +8,10 @@
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <fuchsia/hardware/bt/hci/c/banjo.h>
 #include <fuchsia/hardware/bt/hci/cpp/banjo.h>
+#include <lib/ddk/driver.h>
 
 #include <optional>
 
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 
 #include "vendor_hci.h"

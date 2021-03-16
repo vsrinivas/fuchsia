@@ -10,6 +10,8 @@
 #include <fuchsia/hardware/power/statecontrol/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/coding.h>
@@ -23,8 +25,6 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
-#include <ddk/binding.h>
-#include <ddk/driver.h>
 #include <fbl/algorithm.h>
 #include <mock-boot-arguments/server.h>
 

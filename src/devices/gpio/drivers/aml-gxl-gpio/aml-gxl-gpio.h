@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/cpp/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
@@ -18,7 +19,6 @@
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
-#include <hw/reg.h>
 
 namespace gpio {
 

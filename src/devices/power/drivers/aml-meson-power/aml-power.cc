@@ -6,12 +6,12 @@
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/pwm/cpp/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 
 #include <algorithm>
 
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <soc/aml-common/aml-pwm-regs.h>
 

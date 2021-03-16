@@ -7,6 +7,8 @@
 #include <fuchsia/hardware/sdio/c/banjo.h>
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/sdio/hw.h>
 #include <lib/zx/clock.h>
@@ -17,8 +19,6 @@
 
 #include <algorithm>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 

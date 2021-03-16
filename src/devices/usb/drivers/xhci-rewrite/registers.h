@@ -5,9 +5,9 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_REGISTERS_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_REWRITE_REGISTERS_H_
 
+#include <lib/ddk/hw/arch_ops.h>
 #include <zircon/types.h>
 
-#include <hw/arch_ops.h>
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
 

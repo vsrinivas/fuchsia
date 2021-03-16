@@ -5,7 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CODECS_REALTEK_REALTEK_CODEC_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CODECS_REALTEK_REALTEK_CODEC_H_
 
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
+
 #include <fbl/ref_ptr.h>
 #include <intel-hda/codec-utils/codec-driver-base.h>
 

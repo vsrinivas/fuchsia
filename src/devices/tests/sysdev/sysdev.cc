@@ -5,6 +5,8 @@
 #include "src/devices/tests/sysdev/sysdev.h"
 
 #include <fuchsia/boot/c/fidl.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmar.h>
@@ -15,8 +17,6 @@
 
 #include <memory>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 
 #include "src/devices/tests/sysdev/sysdev-bind.h"

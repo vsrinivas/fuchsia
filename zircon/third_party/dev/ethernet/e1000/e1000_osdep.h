@@ -40,7 +40,15 @@
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/ddk/hw/inout.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/pci/hw.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -50,15 +58,6 @@
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/io-buffer.h>
-#include <ddk/mmio-buffer.h>
-#include <hw/inout.h>
-#include <hw/reg.h>
 
 #define ASSERT(x) assert(x)
 

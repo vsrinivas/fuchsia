@@ -5,14 +5,14 @@
 #include "src/devices/usb/drivers/usb-virtual-bus/usb-virtual-host.h"
 
 #include <assert.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>
 

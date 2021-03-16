@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/compiler.h>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
 #include "nelson.h"

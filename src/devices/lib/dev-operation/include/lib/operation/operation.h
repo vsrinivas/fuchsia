@@ -5,6 +5,7 @@
 #ifndef SRC_DEVICES_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_
 #define SRC_DEVICES_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_
 
+#include <lib/ddk/debug.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
@@ -12,7 +13,6 @@
 #include <tuple>
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>

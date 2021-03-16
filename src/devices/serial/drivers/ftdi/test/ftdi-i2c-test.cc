@@ -6,12 +6,12 @@
 
 #include <fuchsia/hardware/ftdi/llcpp/fidl.h>
 #include <fuchsia/hardware/serialimpl/cpp/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <stdio.h>
 
 #include <list>
 
-#include <ddk/debug.h>
 #include <zxtest/zxtest.h>
 
 #include "ftdi.h"

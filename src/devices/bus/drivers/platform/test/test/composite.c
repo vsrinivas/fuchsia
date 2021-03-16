@@ -15,6 +15,9 @@
 #include <fuchsia/hardware/spi/c/banjo.h>
 #include <fuchsia/hardware/spi/c/fidl.h>
 #include <fuchsia/hardware/vreg/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/spi/spi.h>
@@ -26,10 +29,7 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 
 #include "src/devices/bus/drivers/platform/test/test-composite-bind.h"
 #include "src/devices/bus/drivers/platform/test/test-metadata.h"

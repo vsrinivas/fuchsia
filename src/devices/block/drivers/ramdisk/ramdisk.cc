@@ -5,6 +5,7 @@
 #include "ramdisk.h"
 
 #include <inttypes.h>
+#include <lib/ddk/driver.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <threads.h>
@@ -17,7 +18,6 @@
 #include <memory>
 #include <random>
 
-#include <ddk/driver.h>
 #include <fbl/auto_lock.h>
 
 #include "zircon/errors.h"

@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/test/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -20,8 +22,6 @@
 #include <type_traits>
 #include <variant>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>

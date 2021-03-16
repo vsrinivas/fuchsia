@@ -7,6 +7,8 @@
 
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -20,8 +22,6 @@
 #include <map>
 #include <optional>
 
-#include <ddk/device.h>
-#include <ddk/mmio-buffer.h>
 #include <ddktl/device.h>
 
 #include "intel-i2c-subordinate.h"

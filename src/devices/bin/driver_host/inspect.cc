@@ -333,7 +333,7 @@ void DeviceInspect::set_protocol_id(uint32_t protocol_id) {
     break;
 
   switch (protocol_id) {
-#include <ddk/protodefs.h>
+#include <lib/ddk/protodefs.h>
     default:
       protocol_name = std::string("unknown-").append(std::to_string(protocol_id));
   }

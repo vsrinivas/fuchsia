@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 #include <fuchsia/hardware/pciroot/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/pci/pciroot.h>
 #include <lib/pci/root_host.h>
 #include <lib/zx/object.h>
@@ -20,7 +21,6 @@
 #include <array>
 #include <thread>
 
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <region-alloc/region-alloc.h>

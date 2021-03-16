@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async/dispatcher.h>
+#include <lib/ddk/debug.h>
 #include <lib/fidl/llcpp/connect_service.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/simple-audio-stream/simple-audio-stream.h>
@@ -15,7 +16,6 @@
 #include <utility>
 
 #include <audio-proto-utils/format-utils.h>
-#include <ddk/debug.h>
 namespace audio {
 
 void SimpleAudioStream::Shutdown() {

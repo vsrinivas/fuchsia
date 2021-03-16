@@ -9,11 +9,11 @@
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <threads.h>
 
 #include <optional>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/macros.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>

@@ -5,10 +5,10 @@
 #include "src/devices/block/drivers/zxcrypt/device-info.h"
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/zx/vmar.h>
 #include <zircon/status.h>
 
-#include <ddk/debug.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
 

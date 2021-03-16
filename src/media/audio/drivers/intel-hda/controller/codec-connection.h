@@ -8,6 +8,8 @@
 #include <fuchsia/hardware/intel/hda/c/fidl.h>
 #include <fuchsia/hardware/intelhda/codec/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/device.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/handle.h>
 #include <stdint.h>
@@ -15,8 +17,6 @@
 
 #include <memory>
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>

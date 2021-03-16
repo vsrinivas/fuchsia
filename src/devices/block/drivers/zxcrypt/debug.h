@@ -5,7 +5,7 @@
 #ifndef SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEBUG_H_
 #define SRC_DEVICES_BLOCK_DRIVERS_ZXCRYPT_DEBUG_H_
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 
 // Verbose logging macros useful when debugging driver behavior.  Enable by
 // adding "driver.zxcrypt.log=trace" to the kernel command line arguments when

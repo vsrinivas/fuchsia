@@ -5,10 +5,9 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_SIMPLE_SIMPLE_DISPLAY_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_SIMPLE_SIMPLE_DISPLAY_H_
 
+#include <lib/ddk/driver.h>
 #include <zircon/compiler.h>
 #include <zircon/pixelformat.h>
-
-#include <ddk/driver.h>
 
 #if __cplusplus
 

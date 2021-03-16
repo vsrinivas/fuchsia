@@ -6,6 +6,9 @@
 
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <string.h>
@@ -15,9 +18,6 @@
 
 #include <thread>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 #include <usb/usb-request.h>

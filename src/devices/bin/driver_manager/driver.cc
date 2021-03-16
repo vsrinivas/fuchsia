@@ -7,6 +7,7 @@
 #include <dirent.h>
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/ddk/binding.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <stdio.h>
@@ -19,7 +20,6 @@
 #include <new>
 #include <string>
 
-#include <ddk/binding.h>
 #include <driver-info/driver-info.h>
 #include <fbl/string_printf.h>
 

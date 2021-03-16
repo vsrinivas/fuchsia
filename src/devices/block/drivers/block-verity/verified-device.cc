@@ -4,10 +4,10 @@
 
 #include "src/devices/block/drivers/block-verity/verified-device.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/zx/vmo.h>
 #include <zircon/status.h>
 
-#include <ddk/debug.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 

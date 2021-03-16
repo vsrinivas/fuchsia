@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/align.h>
 #include <stdlib.h>
@@ -10,10 +13,7 @@
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/cdc.h>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
-#include <ddk/mmio-buffer.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/usb-peripheral-config.h>
 #include <soc/aml-s905d3/s905d3-hw.h>
 #include <usb/dwc2/metadata.h>

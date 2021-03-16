@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
 #include <fuchsia/hardware/hidctl/c/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/zx/socket.h>
 #include <threads.h>
 #include <zircon/compiler.h>
@@ -14,7 +15,6 @@
 
 #include <optional>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>

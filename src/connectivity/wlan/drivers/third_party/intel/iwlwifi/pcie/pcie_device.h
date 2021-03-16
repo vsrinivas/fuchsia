@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_PCIE_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_PCIE_PCIE_DEVICE_H_
 
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/device.h"
 

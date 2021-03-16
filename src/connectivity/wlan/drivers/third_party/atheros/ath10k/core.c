@@ -19,6 +19,7 @@
 
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/driver.h>
 #include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <string.h>
@@ -26,7 +27,6 @@
 #include <zircon/process.h>
 #include <zircon/status.h>
 
-#include <ddk/driver.h>
 #include <wlan/protocol/mac.h>
 
 #include "bmi.h"

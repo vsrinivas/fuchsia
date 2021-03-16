@@ -4,7 +4,7 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_STREAM_BUFFER_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_STREAM_BUFFER_H_
 
-#include <ddk/io-buffer.h>
+#include <lib/ddk/io-buffer.h>
 
 #include "src/media/lib/internal_buffer/internal_buffer.h"
 

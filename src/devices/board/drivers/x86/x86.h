@@ -7,12 +7,12 @@
 
 #include <fuchsia/hardware/acpi/llcpp/fidl.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <threads.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/macros.h>
 #include <fbl/vector.h>

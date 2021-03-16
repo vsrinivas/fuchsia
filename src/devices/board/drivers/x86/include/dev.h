@@ -5,10 +5,10 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_DEV_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_DEV_H_
 
+#include <lib/ddk/device.h>
 #include <zircon/compiler.h>
 
 #include <acpica/acpi.h>
-#include <ddk/device.h>
 
 #define BATTERY_HID_STRING "PNP0C0A"
 #define LID_HID_STRING "PNP0C0D"

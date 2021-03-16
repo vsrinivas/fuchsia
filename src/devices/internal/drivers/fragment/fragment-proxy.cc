@@ -4,12 +4,11 @@
 
 #include "fragment-proxy.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/sync/completion.h>
 
 #include <memory>
-
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 
 namespace fragment {
 

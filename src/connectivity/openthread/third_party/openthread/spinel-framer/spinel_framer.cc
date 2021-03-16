@@ -27,9 +27,8 @@
 
 #include "spinel_framer.h"
 
+#include <lib/ddk/debug.h>
 #include <string.h>
-
-#include <ddk/debug.h>
 
 namespace ot {
 

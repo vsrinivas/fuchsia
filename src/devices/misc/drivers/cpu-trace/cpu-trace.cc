@@ -5,13 +5,12 @@
 // See the README.md in this directory for documentation.
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/syscalls.h>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "cpu-trace-private.h"
 #include "src/devices/misc/drivers/cpu-trace/cpu_trace_bind.h"

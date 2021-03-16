@@ -14,7 +14,7 @@
 
 #include <map>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/span.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <zxtest/zxtest.h>

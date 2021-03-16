@@ -17,7 +17,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_SWAP_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_SWAP_H_
 
-#include <ddk/io-buffer.h>
+#include <lib/ddk/io-buffer.h>
 
 // clang-format off
 #define ATH10K_SWAP_CODE_SEG_BIN_LEN_MAX    (512 * 1024)

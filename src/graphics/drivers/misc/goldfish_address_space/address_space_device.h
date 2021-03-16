@@ -8,6 +8,8 @@
 #include <fuchsia/hardware/goldfish/addressspace/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
@@ -16,8 +18,6 @@
 
 #include <map>
 
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 

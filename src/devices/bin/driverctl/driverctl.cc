@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <stdio.h>
@@ -12,8 +13,6 @@
 #include <string.h>
 #include <unistd.h>
 #include <zircon/syscalls.h>
-
-#include <ddk/debug.h>
 
 static void usage(void) {
   fprintf(stderr,

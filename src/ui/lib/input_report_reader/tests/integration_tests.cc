@@ -6,11 +6,11 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/default.h>
+#include <lib/ddk/device.h>
 #include <lib/fidl-async/cpp/bind.h>
 
 #include <set>
 
-#include <ddk/device.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

@@ -13,7 +13,7 @@
 
 #include <map>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/spi.h>
 #include <zxtest/zxtest.h>
 

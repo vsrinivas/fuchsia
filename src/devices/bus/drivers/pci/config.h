@@ -6,6 +6,7 @@
 
 #include <endian.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/status.h>
 #include <stdio.h>
@@ -13,7 +14,6 @@
 #include <zircon/hw/pci.h>
 #include <zircon/types.h>
 
-#include <ddk/mmio-buffer.h>
 #include <hwreg/bitfields.h>
 
 namespace pci {

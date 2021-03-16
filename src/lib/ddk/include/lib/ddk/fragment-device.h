@@ -5,9 +5,8 @@
 #ifndef SRC_LIB_DDK_INCLUDE_LIB_DDK_FRAGMENT_DEVICE_H_
 #define SRC_LIB_DDK_INCLUDE_LIB_DDK_FRAGMENT_DEVICE_H_
 
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
-
-#include <ddk/device.h>
 
 // This header is only meant to be used in fragment driver which can maintain the protocol
 // contexts. It is not needed/not intended to be used elsewhere.

@@ -4,10 +4,9 @@
 
 #include "pci-bus.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/pci/hw.h>
-
-#include <ddk/debug.h>
 
 #include "fuchsia/hardware/pci/c/banjo.h"
 

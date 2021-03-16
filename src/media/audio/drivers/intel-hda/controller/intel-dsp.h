@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/intelhda/codec/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/ddk/device.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/mmio/mmio.h>
 #include <limits.h>
@@ -17,7 +18,6 @@
 #include <map>
 #include <optional>
 
-#include <ddk/device.h>
 #include <fbl/mutex.h>
 #include <fbl/string.h>
 #include <intel-hda/codec-utils/codec-driver-base.h>

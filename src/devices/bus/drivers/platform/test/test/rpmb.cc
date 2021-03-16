@@ -4,11 +4,11 @@
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <fuchsia/hardware/rpmb/cpp/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 
 #include "src/devices/bus/drivers/platform/test/test-rpmb-bind.h"

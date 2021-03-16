@@ -4,11 +4,10 @@
 
 #include "src/storage/fvm/driver/diagnostics.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/inspect/cpp/inspect.h>
 
 #include <string>
-
-#include <ddk/debug.h>
 
 namespace fvm {
 

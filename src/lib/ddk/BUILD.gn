@@ -78,7 +78,7 @@ static_library("ddk") {
 
 library_headers("ddk-metadata-headers") {
   headers = [
-    "ddk/binding_priv.h",  # for i2c.h
+    "lib/ddk/binding_priv.h",  # for i2c.h
     "ddk/metadata/bad-block.h",
     "ddk/metadata/buttons.h",
     "ddk/metadata/camera.h",

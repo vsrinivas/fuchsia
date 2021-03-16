@@ -9,10 +9,10 @@
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
 #include <fuchsia/hardware/iommu/cpp/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/macros.h>
 #include <soc/aml-t931/t931-hw.h>

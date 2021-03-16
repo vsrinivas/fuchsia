@@ -8,6 +8,9 @@
 #include <fuchsia/hardware/usb/dci/c/banjo.h>
 #include <fuchsia/hardware/usb/function/c/banjo.h>
 #include <fuchsia/hardware/usb/modeswitch/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,10 +22,7 @@
 #include <zircon/hw/usb/cdc.h>
 #include <zircon/listnode.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/usb-peripheral-config.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>

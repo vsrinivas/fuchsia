@@ -5,7 +5,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DRIVER_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANIF_DRIVER_H_
 
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
 #include <zircon/compiler.h>
 
 // Callbacks for wlanif_driver_ops

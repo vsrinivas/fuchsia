@@ -4,6 +4,7 @@
 
 #include "utils.h"
 
+#include <lib/ddk/driver.h>
 #include <lib/zx/channel.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -12,7 +13,6 @@
 
 #include <utility>
 
-#include <ddk/driver.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <intel-hda/utils/intel-hda-registers.h>

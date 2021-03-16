@@ -6,11 +6,11 @@
 
 #include <fuchsia/sysmem/c/banjo.h>
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/ddk/debug.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 
-#include <ddk/debug.h>
 #include <gtest/gtest.h>
 
 namespace camera {

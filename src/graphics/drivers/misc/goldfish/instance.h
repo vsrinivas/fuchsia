@@ -9,13 +9,13 @@
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/device.h>
 #include <threads.h>
 #include <zircon/types.h>
 
 #include <map>
 #include <memory>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 
 namespace goldfish {

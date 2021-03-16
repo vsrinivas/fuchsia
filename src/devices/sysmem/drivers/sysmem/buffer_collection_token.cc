@@ -4,11 +4,10 @@
 
 #include "buffer_collection_token.h"
 
+#include <lib/ddk/trace/event.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/llcpp/server.h>
 #include <zircon/errors.h>
-
-#include <ddk/trace/event.h>
 
 #include "lib/fidl/llcpp/types.h"
 #include "node_properties.h"

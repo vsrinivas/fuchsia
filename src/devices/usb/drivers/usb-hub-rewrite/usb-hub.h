@@ -11,6 +11,8 @@
 #include <lib/async-loop/loop.h>
 #include <lib/async/cpp/executor.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/fit/result.h>
@@ -23,8 +25,6 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/hard_int.h>

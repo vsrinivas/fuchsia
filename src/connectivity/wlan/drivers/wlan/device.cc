@@ -4,6 +4,7 @@
 
 #include "device.h"
 
+#include <lib/ddk/device.h>
 #include <lib/zx/thread.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
@@ -21,7 +22,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>

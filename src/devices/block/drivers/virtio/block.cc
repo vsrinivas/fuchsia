@@ -5,6 +5,7 @@
 #include "block.h"
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/zircon-internal/align.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -15,7 +16,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

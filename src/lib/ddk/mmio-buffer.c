@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/driver.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/types.h>
-
-#include <ddk/driver.h>
-#include <ddk/mmio-buffer.h>
 
 #include "macros.h"
 

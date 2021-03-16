@@ -12,7 +12,7 @@
 #include <map>
 #include <utility>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>

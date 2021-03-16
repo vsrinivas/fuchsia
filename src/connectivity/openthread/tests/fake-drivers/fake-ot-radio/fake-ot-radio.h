@@ -7,6 +7,7 @@
 
 #include <fuchsia/lowpan/spinel/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/ddk/device.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zx/port.h>
 #include <zircon/compiler.h>
@@ -17,7 +18,6 @@
 #include <queue>
 #include <thread>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 

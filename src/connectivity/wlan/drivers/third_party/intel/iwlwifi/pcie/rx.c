@@ -33,11 +33,10 @@
  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
  *
  *****************************************************************************/
+#include <lib/ddk/io-buffer.h>
 #include <lib/sync/condition.h>
 #include <lib/zircon-internal/align.h>
 #include <zircon/assert.h>
-
-#include <ddk/io-buffer.h>
 
 #if 0  // NEEDS_PORTING
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-context-info-gen3.h"

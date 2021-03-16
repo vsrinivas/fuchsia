@@ -6,11 +6,11 @@
 
 #include <fuchsia/hardware/wlanphyimpl/c/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
+#include <lib/ddk/debug.h>
 #include <zircon/status.h>
 
 #include <array>
 
-#include <ddk/debug.h>
 #include <wlan/common/dispatcher.h>
 #include <wlan/common/phy.h>
 #include <wlan/protocol/mac.h>

@@ -5,12 +5,12 @@
 #ifndef SRC_DEVICES_MCU_DRIVERS_VIM3_MCU_VIM3_MCU_H_
 #define SRC_DEVICES_MCU_DRIVERS_VIM3_MCU_VIM3_MCU_H_
 
+#include <lib/ddk/device.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <threads.h>
 
 #include <optional>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 

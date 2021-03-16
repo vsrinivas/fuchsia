@@ -4,6 +4,7 @@
 
 #include "dev.h"
 
+#include <lib/ddk/debug.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/status.h>
@@ -15,7 +16,6 @@
 
 #include <acpica/acpi.h>
 #include <chromiumos-platform-ec/ec_commands.h>
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -68,8 +68,8 @@ zx_status_t RealEmbeddedController::Create(fbl::RefPtr<EmbeddedController>* out)
     // Please do not use get_root_resource() in new code. See fxbug.dev/31358.
     zx_status_t status = zx_ioports_request(get_root_resource(), region.base, region.size);
     if (status != ZX_OK) {
-      zxlogf(ERROR, "acpi-cros-ec-core: ioports request for range %d--%d failed: %s",
-             region.base, region.base + region.size - 1, zx_status_get_string(status));
+      zxlogf(ERROR, "acpi-cros-ec-core: ioports request for range %d--%d failed: %s", region.base,
+             region.base + region.size - 1, zx_status_get_string(status));
       return status;
     }
   }

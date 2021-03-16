@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 
 #include "src/devices/misc/drivers/builtin/root_drivers_bind.h"
 

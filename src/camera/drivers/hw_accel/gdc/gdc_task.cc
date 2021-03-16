@@ -4,13 +4,12 @@
 
 #include "src/camera/drivers/hw_accel/gdc/gdc_task.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/syslog/global.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
 #include <memory>
-
-#include <ddk/debug.h>
 
 constexpr auto kTag = "gdc";
 

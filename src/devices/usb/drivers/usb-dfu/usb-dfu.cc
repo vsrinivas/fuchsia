@@ -7,13 +7,13 @@
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <fuchsia/hardware/usb/fwloader/c/fidl.h>
 #include <fuchsia/mem/c/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/zx/vmo.h>
 #include <zircon/hw/usb/dfu.h>
 
 #include <algorithm>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

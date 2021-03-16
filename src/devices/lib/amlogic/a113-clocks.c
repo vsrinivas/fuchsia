@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/debug.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <threads.h>
@@ -10,7 +11,6 @@
 #include <zircon/types.h>
 
 #include <bits/limits.h>
-#include <ddk/debug.h>
 #include <soc/aml-a113/a113-clocks.h>
 
 #define DIV_ROUND_UP(n, d) ((n + d - 1) / d)

@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
 #include <fuchsia/wlan/minstrel/cpp/fidl.h>
+#include <lib/ddk/driver.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/port.h>
 #include <zircon/compiler.h>
@@ -18,7 +19,6 @@
 #include <tuple>
 #include <unordered_set>
 
-#include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>

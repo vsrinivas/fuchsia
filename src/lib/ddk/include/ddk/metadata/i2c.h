@@ -5,9 +5,8 @@
 #ifndef SRC_LIB_DDK_INCLUDE_DDK_METADATA_I2C_H_
 #define SRC_LIB_DDK_INCLUDE_DDK_METADATA_I2C_H_
 
+#include <lib/ddk/binding_priv.h>
 #include <stdint.h>
-
-#include <ddk/binding_priv.h>
 
 #ifdef __cplusplus
 #include <string.h>

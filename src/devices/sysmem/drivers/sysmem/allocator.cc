@@ -4,12 +4,11 @@
 
 #include "allocator.h"
 
+#include <lib/ddk/trace/event.h>
 #include <lib/fidl/internal.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <zircon/fidl.h>
-
-#include <ddk/trace/event.h>
 
 #include "logical_buffer_collection.h"
 

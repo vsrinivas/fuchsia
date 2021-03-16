@@ -6,9 +6,9 @@
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_THERMAL_H_
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
+#include <lib/ddk/device.h>
 
 #include <acpica/acpi.h>
-#include <ddk/device.h>
 
 namespace acpi_thermal {
 

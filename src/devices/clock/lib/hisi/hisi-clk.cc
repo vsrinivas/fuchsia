@@ -4,24 +4,24 @@
 #include <fuchsia/hardware/clockimpl/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/ddk/hw/reg.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/threads.h>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/mmio-buffer.h>
 #include <dev/clk/hisi-lib/hisi-clk.h>
 #include <dev/clk/hisi-lib/hisi-gate.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <hw/reg.h>
 
 // HiSilicon has two different types of clock gates:
 //

@@ -8,7 +8,7 @@
 #include <lib/sdmmc/hw.h>
 #include <zircon/compiler.h>
 
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
 
 #define SDIO_IO_RW_DIRECT 52
 #define SDIO_IO_RW_DIRECT_EXTENDED 53

@@ -9,7 +9,7 @@
 // specific implementation.
 #if defined(__aarch64__)
 #elif defined(__Fuchsia__)
-#include <hw/arch_ops.h>
+#include <lib/ddk/hw/arch_ops.h>
 #else
 #error Platform not handled.
 #endif

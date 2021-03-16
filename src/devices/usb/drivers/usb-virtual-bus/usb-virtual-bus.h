@@ -9,13 +9,13 @@
 #include <fuchsia/hardware/usb/dci/cpp/banjo.h>
 #include <fuchsia/hardware/usb/hci/cpp/banjo.h>
 #include <fuchsia/hardware/usb/virtual/bus/llcpp/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 
 #include <memory>
 #include <optional>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>

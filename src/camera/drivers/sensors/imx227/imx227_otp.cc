@@ -3,9 +3,9 @@
 // found in the LICENSE file.
 
 #include <endian.h>
+#include <lib/ddk/debug.h>
 #include <lib/fzl/vmo-mapper.h>
 
-#include <ddk/debug.h>
 #include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/sensors/imx227/imx227.h"

@@ -5,6 +5,8 @@
 #include "block_device.h"
 
 #include <fuchsia/hardware/block/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -15,8 +17,6 @@
 
 #include <iostream>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>

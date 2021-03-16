@@ -4,6 +4,7 @@
 #include "dai-test.h"
 
 #include <lib/async-loop/default.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/clock.h>
@@ -13,8 +14,7 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 
 #include "src/media/audio/drivers/dai-test/dai_test_bind.h"
 

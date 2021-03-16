@@ -5,8 +5,9 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_I2C_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_I2C_H_
 
+#include <lib/ddk/driver.h>
+
 #include <acpica/acpi.h>
-#include <ddk/driver.h>
 #include <ddk/metadata/i2c.h>
 
 // Look at the metadata for an I2Cx device, find the address information for any

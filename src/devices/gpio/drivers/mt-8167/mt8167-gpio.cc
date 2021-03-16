@@ -4,15 +4,15 @@
 
 #include "mt8167-gpio.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/hw/reg.h>
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <fbl/alloc_checker.h>
-#include <hw/reg.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 namespace gpio {

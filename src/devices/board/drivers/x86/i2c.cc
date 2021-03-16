@@ -4,6 +4,7 @@
 
 #include "i2c.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <zircon/hw/i2c.h>
@@ -12,8 +13,7 @@
 #include <vector>
 
 #include <acpica/acpi.h>
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 
 #include "acpi-private.h"
 #include "dev.h"

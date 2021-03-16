@@ -6,6 +6,7 @@
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/image-format/image_format.h>
 #include <lib/zircon-internal/align.h>
 #include <string.h>
@@ -16,7 +17,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

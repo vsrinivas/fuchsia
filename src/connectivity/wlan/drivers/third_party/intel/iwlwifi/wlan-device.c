@@ -48,12 +48,11 @@
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/wlan-device.h"
 
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/status.h>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/ieee80211.h"
 #include "garnet/lib/wlan/protocol/include/wlan/protocol/mac.h"

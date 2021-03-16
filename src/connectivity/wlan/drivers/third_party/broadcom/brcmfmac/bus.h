@@ -16,13 +16,12 @@
 
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BUS_H_
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <zircon/time.h>
 
 #include <functional>
 #include <memory>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "netbuf.h"
 

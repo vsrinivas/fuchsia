@@ -5,6 +5,8 @@
 #include "src/devices/block/drivers/block-verity/device-manager.h"
 
 #include <fuchsia/hardware/block/verified/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <threads.h>
 #include <zircon/assert.h>
@@ -13,8 +15,6 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>

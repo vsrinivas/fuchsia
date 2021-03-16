@@ -5,11 +5,10 @@
 #include "src/camera/drivers/controller/input_node.h"
 
 #include <fuchsia/hardware/isp/c/banjo.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/syslog/cpp/macros.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
-
-#include <ddk/trace/event.h>
 
 #include "src/camera/drivers/controller/graph_utils.h"
 #include "src/camera/lib/format_conversion/buffer_collection_helper.h"

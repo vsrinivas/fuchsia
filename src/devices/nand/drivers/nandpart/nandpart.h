@@ -8,11 +8,11 @@
 #include <fuchsia/hardware/badblock/cpp/banjo.h>
 #include <fuchsia/hardware/nand/c/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
 
 #include <utility>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/macros.h>

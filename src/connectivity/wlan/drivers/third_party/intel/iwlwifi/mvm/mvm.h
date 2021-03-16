@@ -40,11 +40,11 @@
 #include <fuchsia/hardware/wlan/info/c/banjo.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>
+#include <lib/ddk/driver.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/time.h>
 
-#include <ddk/driver.h>
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 

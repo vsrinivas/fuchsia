@@ -7,14 +7,14 @@
 
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/event.h>
 #include <lib/zx/pmt.h>
 #include <stdarg.h>
 
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>

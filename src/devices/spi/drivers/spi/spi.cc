@@ -4,8 +4,9 @@
 
 #include "spi.h"
 
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/debug.h>
+
+#include <lib/ddk/metadata.h>
 
 #include "src/devices/spi/drivers/spi/spi_bind.h"
 

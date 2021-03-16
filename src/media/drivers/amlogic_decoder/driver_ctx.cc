@@ -4,12 +4,11 @@
 
 #include "driver_ctx.h"
 
+#include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
 #include <lib/media/codec_impl/codec_metrics.h>
 #include <stdarg.h>
 #include <stdio.h>
-
-#include <ddk/driver.h>
 
 #include "amlogic-video.h"
 #include "macros.h"

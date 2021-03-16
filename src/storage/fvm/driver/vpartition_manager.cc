@@ -7,6 +7,9 @@
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -28,9 +31,6 @@
 #include <sstream>
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

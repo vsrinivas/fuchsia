@@ -5,14 +5,13 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mmio-ptr/fake.h>
 #include <lib/mock-sysmem/mock-buffer-collection.h>
 
 #include <type_traits>
 #include <vector>
-
-#include <ddk/driver.h>
 
 #include "interrupts.h"
 #include "zxtest/zxtest.h"

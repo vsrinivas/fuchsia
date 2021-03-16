@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/virtio/device.h>
 #include <lib/virtio/ring.h>
 #include <lib/zircon-internal/thread_annotations.h>
@@ -18,7 +19,6 @@
 
 #include <memory>
 
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 #include <fbl/macros.h>
 #include <virtio/net.h>

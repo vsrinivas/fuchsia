@@ -6,6 +6,9 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,9 +16,6 @@
 #include <string.h>
 #include <zircon/threads.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 
 #include "src/devices/board/drivers/qemu-arm64/qemu_bus_bind.h"

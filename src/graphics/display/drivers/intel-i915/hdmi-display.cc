@@ -4,11 +4,10 @@
 
 #include "hdmi-display.h"
 
+#include <lib/ddk/driver.h>
 #include <lib/edid/edid.h>
 
 #include <iterator>
-
-#include <ddk/driver.h>
 
 #include "intel-i915.h"
 #include "macros.h"
@@ -308,8 +307,7 @@ bool GMBusI2c::I2cFinish() {
 
 bool GMBusI2c::I2cWaitForHwReady() {
   auto gmbus2 = registers::GMBus2::Get().FromValue(0);
-  if (!WAIT_ON_MS((gmbus2.ReadFrom(mmio_space_),
-                   gmbus2.nack() || gmbus2.hw_ready()), 50)) {
+  if (!WAIT_ON_MS((gmbus2.ReadFrom(mmio_space_), gmbus2.nack() || gmbus2.hw_ready()), 50)) {
     zxlogf(TRACE, "hdmi: GMBus i2c wait for hwready timeout");
     return false;
   }

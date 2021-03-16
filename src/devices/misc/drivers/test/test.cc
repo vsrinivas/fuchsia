@@ -4,6 +4,7 @@
 
 #include <fuchsia/device/test/c/fidl.h>
 #include <fuchsia/hardware/test/cpp/banjo.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/channel.h>
@@ -14,7 +15,6 @@
 
 #include <algorithm>
 
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>

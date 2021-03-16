@@ -11,7 +11,7 @@
 #include <lib/simple-codec/simple-codec-helper.h>
 #include <lib/sync/completion.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 namespace audio {

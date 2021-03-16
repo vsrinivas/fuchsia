@@ -4,7 +4,8 @@
 
 #include "usb-transaction.h"
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
+
 #include <fbl/auto_lock.h>
 #include <soc/mt8167/mt8167-usb.h>
 

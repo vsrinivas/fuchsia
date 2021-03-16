@@ -4,7 +4,8 @@
 
 #include "aml-mipi-phy.h"
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
+
 #include <fbl/algorithm.h>
 
 namespace amlogic_display {

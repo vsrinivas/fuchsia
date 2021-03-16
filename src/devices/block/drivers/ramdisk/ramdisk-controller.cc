@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/status.h>
 #include <lib/zx/vmo.h>
@@ -11,7 +12,6 @@
 #include <memory>
 #include <string>
 
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 
 #include "ramdisk.h"

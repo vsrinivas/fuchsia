@@ -5,13 +5,13 @@
 #include "cadence-hpnfc.h"
 
 #include <endian.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/time.h>
 #include <zircon/threads.h>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

@@ -5,12 +5,11 @@
 #ifndef SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_LOG_H_
 #define SRC_MEDIA_LIB_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_LOG_H_
 
+#include <lib/ddk/debug.h>
 #include <lib/syslog/global.h>
 #include <lib/syslog/logger.h>
 
 #include <string_view>
-
-#include <ddk/debug.h>
 
 #define VLOG_ENABLED 0
 

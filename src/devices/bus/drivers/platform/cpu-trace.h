@@ -5,9 +5,8 @@
 #ifndef SRC_DEVICES_BUS_DRIVERS_PLATFORM_CPU_TRACE_H_
 #define SRC_DEVICES_BUS_DRIVERS_PLATFORM_CPU_TRACE_H_
 
+#include <lib/ddk/device.h>
 #include <zircon/compiler.h>
-
-#include <ddk/device.h>
 
 // This value is passed to bti_create as a marker; it does not have a particular
 // meaning to anything in the system, it just needs to be unique.

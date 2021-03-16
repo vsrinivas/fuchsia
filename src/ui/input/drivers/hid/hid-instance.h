@@ -10,6 +10,9 @@
 #include <fuchsia/hardware/input/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl-async/cpp/bind.h>
 
 #include <array>
@@ -17,9 +20,6 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/intrusive_double_list.h>

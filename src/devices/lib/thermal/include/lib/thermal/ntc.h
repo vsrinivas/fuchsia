@@ -11,7 +11,7 @@
 #include <algorithm>
 #include <vector>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 
 #define NTC_CHANNELS_METADATA_PRIVATE (0x4e544300 | DEVICE_METADATA_PRIVATE)  // NTCd
 #define NTC_PROFILE_METADATA_PRIVATE (0x4e545000 | DEVICE_METADATA_PRIVATE)   // NTPd

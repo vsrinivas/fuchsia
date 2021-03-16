@@ -5,14 +5,14 @@
 #include "nhlt.h"
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/zircon-internal/align.h>
 #include <limits.h>
 #include <stdio.h>
 #include <zircon/process.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 
 #include "acpi-private.h"
 #include "errors.h"

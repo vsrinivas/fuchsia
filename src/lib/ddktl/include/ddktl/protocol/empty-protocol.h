@@ -5,9 +5,9 @@
 #ifndef SRC_LIB_DDKTL_INCLUDE_DDKTL_PROTOCOL_EMPTY_PROTOCOL_H_
 #define SRC_LIB_DDKTL_INCLUDE_DDKTL_PROTOCOL_EMPTY_PROTOCOL_H_
 
+#include <lib/ddk/driver.h>
 #include <zircon/assert.h>
 
-#include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 
 // Mixin for protocol which have no protocol ops.

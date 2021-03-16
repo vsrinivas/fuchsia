@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/debug.h>
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fit/function.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -11,7 +12,6 @@
 #include <memory>
 #include <vector>
 
-#include <ddk/debug.h>
 #include <safemath/safe_conversions.h>
 #include <zxtest/zxtest.h>
 

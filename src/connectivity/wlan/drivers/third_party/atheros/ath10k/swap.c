@@ -19,10 +19,9 @@
  * memory to store some of the code segments.
  */
 
+#include <lib/ddk/io-buffer.h>
 #include <string.h>
 #include <zircon/status.h>
-
-#include <ddk/io-buffer.h>
 
 #include "bmi.h"
 #include "core.h"

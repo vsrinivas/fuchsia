@@ -4,6 +4,7 @@
 
 #include "hdmi-stream.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/edid/edid.h>
 #include <lib/zx/clock.h>
 
@@ -11,7 +12,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/vector.h>
 #include <intel-hda/utils/codec-caps.h>
 #include <intel-hda/utils/codec-commands.h>

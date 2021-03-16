@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/resource.h>
 
-#include <ddk/debug.h>
 #include <soc/aml-common/aml-usb-phy.h>
 #include <soc/aml-s912/s912-hw.h>
 

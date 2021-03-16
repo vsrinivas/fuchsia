@@ -5,13 +5,12 @@
 #include "zircon_platform_device.h"
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 #include <zircon/process.h>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"

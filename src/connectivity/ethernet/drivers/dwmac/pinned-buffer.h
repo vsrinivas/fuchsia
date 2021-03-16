@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_PINNED_BUFFER_H_
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_DWMAC_PINNED_BUFFER_H_
 
+#include <lib/ddk/debug.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/pmt.h>
@@ -14,7 +15,6 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/ref_ptr.h>
 
 class PinnedBuffer : public fbl::RefCounted<PinnedBuffer> {

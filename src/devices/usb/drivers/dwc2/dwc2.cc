@@ -14,7 +14,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <usb/usb-request.h>

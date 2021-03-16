@@ -8,6 +8,7 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zircon-internal/mtrace.h>
 #include <stddef.h>
@@ -20,7 +21,6 @@
 #include <limits>
 #include <memory>
 
-#include <ddk/debug.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>

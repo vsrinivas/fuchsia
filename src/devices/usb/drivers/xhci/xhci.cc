@@ -4,6 +4,10 @@
 
 #include "xhci.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/hw/arch_ops.h>
+#include <lib/ddk/hw/reg.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -16,12 +20,8 @@
 #include <zircon/types.h>
 
 #include <bits/limits.h>
-#include <ddk/debug.h>
-#include <ddk/io-buffer.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
-#include <hw/arch_ops.h>
-#include <hw/reg.h>
 #include <usb/usb-request.h>
 
 #include "xhci-device-manager.h"

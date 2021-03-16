@@ -4,12 +4,12 @@
 
 #include "logging.h"
 
+#include <lib/ddk/debug.h>
 #include <stdio.h>
 #include <zircon/assert.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/string_printf.h>
 
 namespace sysmem_driver {

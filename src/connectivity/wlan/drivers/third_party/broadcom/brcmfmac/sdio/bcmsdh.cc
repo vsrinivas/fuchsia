@@ -18,6 +18,8 @@
 #include <fuchsia/hardware/gpio/cpp/banjo.h>
 #include <fuchsia/hardware/sdio/cpp/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/vmo.h>
@@ -29,9 +31,7 @@
 #include <atomic>
 #include <limits>
 
-#include <ddk/device.h>
-#include <ddk/metadata.h>
-#include <ddk/trace/event.h>
+#include <lib/ddk/metadata.h>
 #include <wifi/wifi-config.h>
 
 #ifndef _ALL_SOURCE

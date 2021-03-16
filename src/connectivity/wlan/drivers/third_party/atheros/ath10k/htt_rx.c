@@ -16,11 +16,10 @@
  */
 
 #include <assert.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/hw/arch_ops.h>
 #include <lib/zircon-internal/fnv1hash.h>
 #include <string.h>
-
-#include <ddk/driver.h>
-#include <hw/arch_ops.h>
 
 #include "core.h"
 #include "debug.h"
@@ -1343,8 +1342,8 @@ static void ath10k_htt_rx_h_deliver(struct ath10k* ar, list_node_t* amsdu) {
     memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
     // TODO(gbonik): fill in rx_info from rx_desc
 
-    wlanmac_ifc_recv(&ar->wlanmac, 0, msdu->vaddr + msdu->rx.frame_offset,
-                     msdu->rx.frame_size, &rx_info);
+    wlanmac_ifc_recv(&ar->wlanmac, 0, msdu->vaddr + msdu->rx.frame_offset, msdu->rx.frame_size,
+                     &rx_info);
     ath10k_msg_buf_free(msdu);
   }
 }

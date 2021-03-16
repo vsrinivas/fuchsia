@@ -6,6 +6,9 @@
 
 #include <fuchsia/hardware/mailbox/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -14,9 +17,6 @@
 #include <unistd.h>
 #include <zircon/assert.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>

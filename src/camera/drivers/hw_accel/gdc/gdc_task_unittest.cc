@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/ddk/debug.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/mmio/mmio.h>
 #include <lib/syslog/global.h>
@@ -12,7 +13,6 @@
 #include <utility>
 #include <vector>
 
-#include <ddk/debug.h>
 #include <fbl/condition_variable.h>
 #include <fbl/mutex.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>

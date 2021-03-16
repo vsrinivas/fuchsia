@@ -5,12 +5,11 @@
 #ifndef SRC_LIB_DDK_INCLUDE_LIB_DDK_DEBUG_H_
 #define SRC_LIB_DDK_INCLUDE_LIB_DDK_DEBUG_H_
 
+#include <lib/ddk/driver.h>
 #include <lib/syslog/logger.h>
 #include <stdarg.h>
 #include <stdint.h>
 #include <zircon/compiler.h>
-
-#include <ddk/driver.h>
 
 __BEGIN_CDECLS
 

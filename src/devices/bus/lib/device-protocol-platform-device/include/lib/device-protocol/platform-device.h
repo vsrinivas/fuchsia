@@ -6,11 +6,10 @@
 #define SRC_DEVICES_BUS_LIB_DEVICE_PROTOCOL_PLATFORM_DEVICE_INCLUDE_LIB_DEVICE_PROTOCOL_PLATFORM_DEVICE_H_
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
-
-#include <ddk/io-buffer.h>
-#include <ddk/mmio-buffer.h>
 
 __BEGIN_CDECLS
 

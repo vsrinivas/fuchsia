@@ -5,14 +5,13 @@
 #include <assert.h>
 #include <fuchsia/hardware/bluetooth/c/fidl.h>
 #include <fuchsia/hardware/bt/hci/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/status.h>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "src/connectivity/bluetooth/hci/passthrough/bt_hci_passthrough_bind.h"
 

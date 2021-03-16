@@ -4,12 +4,12 @@
 
 #include "src/devices/tests/ddk-fidl-test/fidl-llcpp-driver.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/function.h>

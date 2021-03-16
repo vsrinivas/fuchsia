@@ -13,12 +13,12 @@
 
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/phys-iter.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/pmt.h>
 #include <lib/zx/time.h>
 
-#include <ddk/debug.h>
-#include <ddk/phys-iter.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

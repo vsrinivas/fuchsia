@@ -6,6 +6,10 @@
 
 #include <assert.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/hw/arch_ops.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,14 +23,10 @@
 
 #include <optional>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <hw/arch_ops.h>
 
 #include "src/devices/usb/drivers/usb-peripheral-test/usb_peripheral_test-bind.h"
 

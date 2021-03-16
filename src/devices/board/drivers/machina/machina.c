@@ -6,6 +6,9 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -17,10 +20,6 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 #include <zircon/threads.h>
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "src/devices/board/drivers/machina/machina_board_bind.h"
 

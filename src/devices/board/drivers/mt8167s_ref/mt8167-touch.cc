@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/focaltech/focaltech.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <soc/mt8167/mt8167-hw.h>
 #include <soc/mt8167/mt8167-power.h>

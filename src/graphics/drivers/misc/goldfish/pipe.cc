@@ -5,10 +5,10 @@
 #include "src/graphics/drivers/misc/goldfish/pipe.h"
 
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/zx/bti.h>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
 
 #include "lib/fidl/llcpp/types.h"

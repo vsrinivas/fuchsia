@@ -4,13 +4,13 @@
 
 #include "image.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/zx/handle.h>
 
 #include <atomic>
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 #include <fbl/string_printf.h>
 
 #include "controller.h"

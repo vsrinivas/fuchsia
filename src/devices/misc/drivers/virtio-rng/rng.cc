@@ -5,13 +5,13 @@
 #include "rng.h"
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <limits.h>
 #include <zircon/status.h>
 
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
 #define LOCAL_TRACE 0

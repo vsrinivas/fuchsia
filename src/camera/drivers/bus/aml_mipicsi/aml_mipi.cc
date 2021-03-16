@@ -4,13 +4,12 @@
 
 #include "src/camera/drivers/bus/aml_mipicsi/aml_mipi.h"
 
+#include <lib/ddk/debug.h>
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/types.h>
 
 #include <memory>
-
-#include <ddk/debug.h>
 
 #include "src/camera/drivers/bus/aml_mipicsi/aml_mipi_regs.h"
 #include "src/camera/drivers/bus/aml_mipicsi/bind.h"

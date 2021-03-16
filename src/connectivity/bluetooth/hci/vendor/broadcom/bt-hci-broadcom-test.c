@@ -4,7 +4,8 @@
 
 #include "bt-hci-broadcom.c"
 
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
+
 #include <zxtest/zxtest.h>
 
 static bcm_hci_t* dev;

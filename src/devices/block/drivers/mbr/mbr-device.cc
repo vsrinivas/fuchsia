@@ -7,6 +7,9 @@
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/block/partition/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <string.h>
@@ -22,9 +25,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>

@@ -6,6 +6,8 @@
 #include <fuchsia/driver/test/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
 #include <lib/fidl/cpp/message.h>
@@ -16,8 +18,6 @@
 
 #include <vector>
 
-#include <ddk/binding.h>
-#include <ddk/driver.h>
 #include <fbl/algorithm.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>

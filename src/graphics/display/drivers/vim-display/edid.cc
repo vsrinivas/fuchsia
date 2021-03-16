@@ -4,7 +4,7 @@
 
 #include "edid.h"
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 
 #include "vim-display.h"
 

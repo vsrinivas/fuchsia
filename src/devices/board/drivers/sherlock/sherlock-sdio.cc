@@ -3,18 +3,18 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/gpioimpl/cpp/banjo.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/handle.h>
 
 #include <optional>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/init-step.h>
 #include <fbl/algorithm.h>
-#include <hw/reg.h>
 #include <hwreg/bitfields.h>
 #include <soc/aml-common/aml-sdmmc.h>
 #include <soc/aml-t931/t931-gpio.h>

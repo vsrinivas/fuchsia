@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
 
 typedef struct cpu_trace_dev {
   zx_device_t* zxdev;

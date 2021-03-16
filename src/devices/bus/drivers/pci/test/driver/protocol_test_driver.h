@@ -6,8 +6,8 @@
 
 #include <fuchsia/device/test/c/fidl.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/ddk/device.h>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <pretty/hexdump.h>
 #include <zxtest/base/observer.h>

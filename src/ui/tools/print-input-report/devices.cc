@@ -5,10 +5,9 @@
 #include "src/ui/tools/print-input-report/devices.h"
 
 #include <fuchsia/input/report/llcpp/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/trace/event.h>
 #include <zircon/status.h>
-
-#include <ddk/device.h>
 
 namespace print_input_report {
 

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/device-protocol/pci.h>
+#include <lib/ddk/hw/arch_ops.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/thread.h>
@@ -14,7 +15,6 @@
 #include <algorithm>
 #include <utility>
 
-#include <hw/arch_ops.h>
 #include <intel-hda/utils/status.h>
 
 #include "debug-logging.h"

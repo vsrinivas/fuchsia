@@ -6,13 +6,13 @@
 #define SRC_DEVICES_USB_DRIVERS_USB_VIRTUAL_BUS_PERIPHERAL_H_
 
 #include <fuchsia/hardware/usb/function/cpp/banjo.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddktl/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/condition_variable.h>

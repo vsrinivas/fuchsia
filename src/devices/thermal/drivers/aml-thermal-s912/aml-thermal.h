@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/scpi/cpp/banjo.h>
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <fuchsia/hardware/thermal/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/port.h>
@@ -13,7 +14,6 @@
 
 #include <utility>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 

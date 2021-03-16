@@ -4,6 +4,7 @@
 
 #include "gpio-test.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdint.h>
 #include <stdio.h>
@@ -13,7 +14,6 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
 #include "src/devices/gpio/drivers/gpio-test/gpio_test_bind.h"

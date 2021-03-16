@@ -8,7 +8,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/sync/completion.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <zxtest/zxtest.h>
 
 class FakeFunction : public ddk::UsbFunctionProtocol<FakeFunction, ddk::base_protocol> {

@@ -5,12 +5,12 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_DRIVER_H_
 
+#include <lib/ddk/binding.h>
 #include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
 
-#include <ddk/binding.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 

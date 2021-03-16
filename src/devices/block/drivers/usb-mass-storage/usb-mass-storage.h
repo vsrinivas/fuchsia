@@ -11,6 +11,8 @@
 #include <inttypes.h>
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/fidl-async/bind.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
@@ -23,8 +25,6 @@
 #include <memory>
 #include <thread>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/condition_variable.h>

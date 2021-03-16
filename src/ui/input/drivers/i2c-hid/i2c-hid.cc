@@ -5,6 +5,10 @@
 #include "i2c-hid.h"
 
 #include <endian.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/zx/time.h>
 #include <stdbool.h>
 #include <stdlib.h>
@@ -15,10 +19,6 @@
 
 #include <vector>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 

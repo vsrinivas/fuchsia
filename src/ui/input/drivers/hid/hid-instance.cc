@@ -4,6 +4,10 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/hidbus/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/trace/event.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
@@ -11,10 +15,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hid/boot.h>

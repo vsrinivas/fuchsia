@@ -5,11 +5,10 @@
 #include "manager.h"
 
 #include <assert.h>
+#include <lib/ddk/debug.h>
 #include <zircon/threads.h>
 
 #include <utility>
-
-#include <ddk/debug.h>
 
 Manager::Manager() = default;
 

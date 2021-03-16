@@ -5,7 +5,7 @@
 #ifndef SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_MACROS_H_
 #define SRC_GRAPHICS_DISPLAY_DRIVERS_INTEL_I915_MACROS_H_
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 
 #define WAIT_ON(COND, N, UNITS)                            \
   ({                                                       \

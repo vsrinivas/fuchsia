@@ -4,9 +4,10 @@
 
 #include "src/devices/lib/iommu/iommu.h"
 
+#include <lib/ddk/debug.h>
+
 #include <vector>
 
-#include <ddk/debug.h>
 #include <zxtest/zxtest.h>
 
 namespace x86 {

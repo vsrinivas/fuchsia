@@ -10,6 +10,8 @@
 #include <fuchsia/hardware/goldfish/sync/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/bti.h>
@@ -23,8 +25,6 @@
 #include <optional>
 #include <unordered_set>
 
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>

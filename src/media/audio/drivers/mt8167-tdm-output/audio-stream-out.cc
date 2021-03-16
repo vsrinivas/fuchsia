@@ -4,15 +4,15 @@
 
 #include "audio-stream-out.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/zx/clock.h>
 
 #include <optional>
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddktl/metadata/audio.h>
 #include <fbl/array.h>
 #include <soc/mt8167/mt8167-clk-regs.h>

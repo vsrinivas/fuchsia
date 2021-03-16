@@ -4,7 +4,8 @@
 
 #include "sdio-function-device.h"
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
+
 #include <fbl/alloc_checker.h>
 
 #include "sdio-controller-device.h"

@@ -9,6 +9,7 @@
 #include <fuchsia/hardware/rpmb/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <fuchsia/tee/manager/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fidl/coding.h>
 #include <lib/fidl/llcpp/string_view.h>
@@ -30,7 +31,6 @@
 #include <utility>
 #include <vector>
 
-#include <ddk/debug.h>
 #include <ddktl/fidl.h>
 #include <fbl/string_buffer.h>
 #include <tee-client-api/tee-client-types.h>

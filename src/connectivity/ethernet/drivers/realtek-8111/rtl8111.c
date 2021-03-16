@@ -6,19 +6,18 @@
 
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/device-protocol/pci.h>
+#include <lib/ddk/hw/reg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/types.h>
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/io-buffer.h>
-#include <ddk/mmio-buffer.h>
-#include <hw/reg.h>
 
 #include "src/connectivity/ethernet/drivers/realtek-8111/realtek_rtl8111-bind.h"
 

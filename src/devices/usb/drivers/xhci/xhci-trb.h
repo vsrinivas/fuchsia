@@ -5,13 +5,13 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRB_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_XHCI_TRB_H_
 
+#include <lib/ddk/io-buffer.h>
 #include <zircon/listnode.h>
 
 #include <cassert>
 #include <memory>
 
 #include <bits/limits.h>
-#include <ddk/io-buffer.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 

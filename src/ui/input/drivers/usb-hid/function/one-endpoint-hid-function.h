@@ -7,12 +7,12 @@
 
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <fuchsia/hardware/usb/function/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <zircon/hw/usb/hid.h>
 
 #include <memory>
 #include <vector>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 
 namespace one_endpoint_hid_function {

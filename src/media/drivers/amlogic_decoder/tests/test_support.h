@@ -5,13 +5,12 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_TEST_SUPPORT_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_TESTS_TEST_SUPPORT_H_
 
+#include <lib/ddk/device.h>
 #include <lib/zx/vmo.h>
 #include <zircon/errors.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
-
-#include <ddk/device.h>
 
 class TestSupport {
  public:

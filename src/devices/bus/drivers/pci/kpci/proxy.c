@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/pci/hw.h>
 #include <limits.h>
 #include <stdio.h>
@@ -13,9 +15,6 @@
 #include <zircon/assert.h>
 #include <zircon/fidl.h>
 #include <zircon/process.h>
-
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 
 #include "src/devices/bus/drivers/pci/kpci/kpci-private.h"
 #include "src/devices/bus/drivers/pci/pci_proxy_bind.h"

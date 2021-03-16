@@ -5,8 +5,9 @@
 #ifndef SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_WLANTAP_MAC_H_
 #define SRC_CONNECTIVITY_WLAN_TESTING_WLANTAP_DRIVER_WLANTAP_MAC_H_
 
-#include <ddk/device.h>
 #include <fuchsia/wlan/tap/cpp/fidl.h>
+#include <lib/ddk/device.h>
+
 #include <wlan/protocol/mac.h>
 
 namespace wlan {

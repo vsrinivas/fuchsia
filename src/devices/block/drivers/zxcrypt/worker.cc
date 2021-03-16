@@ -5,6 +5,7 @@
 #include "src/devices/block/drivers/zxcrypt/worker.h"
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/trace/event.h>
 #include <lib/zircon-internal/align.h>
 #include <lib/zx/port.h>
@@ -18,7 +19,6 @@
 
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/auto_call.h>
 
 #include "src/devices/block/drivers/zxcrypt/debug.h"

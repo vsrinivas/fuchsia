@@ -4,8 +4,8 @@
 
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
+#include <lib/ddk/debug.h>
 
-#include <ddk/debug.h>
 #include <soc/aml-t931/t931-gpio.h>
 
 #include "sherlock.h"

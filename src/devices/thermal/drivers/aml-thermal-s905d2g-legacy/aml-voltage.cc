@@ -4,13 +4,13 @@
 
 #include "aml-voltage.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/device-protocol/pdev.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
 namespace thermal {

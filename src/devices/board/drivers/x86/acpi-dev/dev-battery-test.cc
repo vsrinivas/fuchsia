@@ -5,10 +5,10 @@
 #include "dev-battery.h"
 
 #include <dirent.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <zircon/syscalls/port.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <fbl/auto_call.h>
 #include <zxtest/zxtest.h>
 

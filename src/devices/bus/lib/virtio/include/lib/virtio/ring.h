@@ -4,11 +4,11 @@
 #ifndef SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_RING_H_
 #define SRC_DEVICES_BUS_LIB_VIRTIO_INCLUDE_LIB_VIRTIO_RING_H_
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/hw/arch_ops.h>
 #include <zircon/types.h>
 
-#include <ddk/debug.h>
-#include <ddk/io-buffer.h>
-#include <hw/arch_ops.h>
 #include <virtio/virtio_ring.h>
 
 namespace virtio {

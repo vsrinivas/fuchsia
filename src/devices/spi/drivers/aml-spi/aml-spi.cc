@@ -5,20 +5,20 @@
 #include "aml-spi.h"
 
 #include <fuchsia/hardware/spiimpl/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
+#include <lib/ddk/hw/reg.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/types.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
-#include <hw/reg.h>
 
 #include "registers.h"
 #include "src/devices/spi/drivers/aml-spi/aml_spi_bind.h"

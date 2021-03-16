@@ -7,12 +7,11 @@
 #include <fuchsia/hardware/test/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 
 #include <memory>
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "phy-device.h"
 #include "src/connectivity/wlan/drivers/testing/wlanphy_test_bind.h"

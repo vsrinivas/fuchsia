@@ -4,7 +4,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_WLAN_PHY_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_WLAN_PHY_H_
 
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
 
 #ifdef __cplusplus
 extern "C" {

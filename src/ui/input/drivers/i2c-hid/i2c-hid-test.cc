@@ -7,6 +7,10 @@
 #include <endian.h>
 #include <fuchsia/hardware/hidbus/c/banjo.h>
 #include <fuchsia/hardware/i2c/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/fake-hidbus-ifc/fake-hidbus-ifc.h>
 #include <lib/fake-i2c/fake-i2c.h>
@@ -26,10 +30,6 @@
 
 #include <vector>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/trace/event.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <zxtest/zxtest.h>

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/usb/c/banjo.h>
+#include <ddk/hw/physiter/c/banjo.h>
 #include <lib/fake-bti/bti.h>
 #include <limits.h>
 #include <zircon/syscalls/iommu.h>
 
-#include <ddk/hw/physiter/c/banjo.h>
 #include <usb/usb-request.h>
 #include <zxtest/zxtest.h>
 

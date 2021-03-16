@@ -6,10 +6,10 @@
 
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 
-#include <ddk/debug.h>
 #include <soc/mt8167/mt8167-power-regs.h>
 #include <soc/mt8167/mt8167-power.h>
 

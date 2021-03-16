@@ -4,9 +4,9 @@
 
 #include "src/devices/block/drivers/block-verity/device.h"
 
+#include <lib/ddk/debug.h>
 #include <zircon/status.h>
 
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/block/drivers/block-verity/constants.h"

@@ -6,15 +6,15 @@
 
 #include <fuchsia/hardware/thermal/c/fidl.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <zircon/types.h>
 
 #include <acpica/acpi.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "dev.h"
 #include "errors.h"

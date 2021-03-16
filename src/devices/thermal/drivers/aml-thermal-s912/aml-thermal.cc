@@ -4,14 +4,14 @@
 
 #include "aml-thermal.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <string.h>
 #include <zircon/syscalls/port.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/auto_call.h>
 #include <soc/aml-common/aml-thermal.h>
 

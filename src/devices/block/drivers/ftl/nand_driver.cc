@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/badblock/cpp/banjo.h>
 #include <fuchsia/hardware/nand/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/ftl/ndm-driver.h>
 #include <stdint.h>
 #include <zircon/assert.h>
@@ -15,7 +16,6 @@
 #include <new>
 #include <vector>
 
-#include <ddk/debug.h>
 #include <fbl/array.h>
 
 #include "nand_operation.h"

@@ -6,6 +6,11 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/phys-iter.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/zx/clock.h>
 #include <stdio.h>
@@ -19,11 +24,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/io-buffer.h>
-#include <ddk/phys-iter.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 

@@ -6,6 +6,8 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/ethernet/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/operation/ethernet.h>
 #include <lib/virtio/ring.h>
 #include <lib/zircon-internal/align.h>
@@ -21,8 +23,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/io-buffer.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

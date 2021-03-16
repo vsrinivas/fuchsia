@@ -8,10 +8,10 @@
 #include <fuchsia/wlan/ieee80211/cpp/fidl.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/device.h>
 #include <net/ethernet.h>
 #include <zircon/status.h>
 
-#include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/ieee80211_codes.h>
 

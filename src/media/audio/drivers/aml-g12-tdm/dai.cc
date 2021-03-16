@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 #include "dai.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fit/result.h>
@@ -14,8 +15,7 @@
 #include <optional>
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 
 #include "src/media/audio/drivers/aml-g12-tdm/aml_tdm_dai_bind.h"

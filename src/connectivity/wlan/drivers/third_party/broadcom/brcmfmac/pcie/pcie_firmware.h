@@ -4,13 +4,12 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_FIRMWARE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_FIRMWARE_H_
 
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
 
 #include <atomic>
 #include <memory>
 #include <string>
-
-#include <ddk/device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_buffer.h"
 

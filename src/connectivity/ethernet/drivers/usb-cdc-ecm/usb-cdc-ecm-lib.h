@@ -6,12 +6,12 @@
 #define SRC_CONNECTIVITY_ETHERNET_DRIVERS_USB_CDC_ECM_USB_CDC_ECM_LIB_H_
 
 #include <fuchsia/hardware/ethernet/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/hw/usb/cdc.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <usb/usb.h>
 
 #include "src/lib/listnode/listnode.h"

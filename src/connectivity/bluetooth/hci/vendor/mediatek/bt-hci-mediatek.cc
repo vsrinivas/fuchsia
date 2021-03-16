@@ -5,6 +5,8 @@
 #include "bt-hci-mediatek.h"
 
 #include <endian.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -14,8 +16,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 

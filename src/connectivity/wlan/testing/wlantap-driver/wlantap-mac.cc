@@ -6,11 +6,11 @@
 
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 
 #include <mutex>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <wlan/common/channel.h>
 
 #include "utils.h"

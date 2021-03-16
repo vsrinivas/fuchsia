@@ -3,9 +3,10 @@
 // found in the LICENSE file.
 #include "aml-tdm-config-device.h"
 
+#include <lib/ddk/debug.h>
+
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/auto_call.h>
 
 namespace audio::aml_g12 {

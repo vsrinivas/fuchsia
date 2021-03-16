@@ -4,6 +4,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_INTERRUPT_PROVIDER_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_INTERRUPT_PROVIDER_H_
 
+#include <lib/ddk/device.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
 #include <zircon/types.h>
@@ -12,8 +13,6 @@
 #include <list>
 #include <memory>
 #include <thread>
-
-#include <ddk/device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/msgbuf/msgbuf_interfaces.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"

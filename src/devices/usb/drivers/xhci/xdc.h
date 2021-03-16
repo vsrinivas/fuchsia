@@ -5,12 +5,12 @@
 #ifndef SRC_DEVICES_USB_DRIVERS_XHCI_XDC_H_
 #define SRC_DEVICES_USB_DRIVERS_XHCI_XDC_H_
 
+#include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 
 #include <atomic>
 
-#include <ddk/device.h>
 #include <usb/usb-request.h>
 #include <xdc-server-utils/packet.h>
 

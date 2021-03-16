@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/pci/pio.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/i2c.h>
@@ -16,7 +17,6 @@
 #include <memory>
 
 #include <acpica/acpi.h>
-#include <ddk/debug.h>
 
 #include "acpi-private.h"
 #include "dev.h"

@@ -6,6 +6,8 @@
 #define SRC_DEVICES_MISC_DRIVERS_CPU_TRACE_PERF_MON_H_
 
 #include <fuchsia/perfmon/cpu/llcpp/fidl.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/zx/bti.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -14,8 +16,6 @@
 
 #include <memory>
 
-#include <ddk/driver.h>
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 
 #if defined(__x86_64__)

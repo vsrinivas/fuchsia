@@ -5,11 +5,11 @@
 #ifndef SRC_DEVICES_BIN_DRIVER_MANAGER_BINDING_INTERNAL_H_
 #define SRC_DEVICES_BIN_DRIVER_MANAGER_BINDING_INTERNAL_H_
 
+#include <lib/ddk/binding.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/array.h>
 #include <fbl/macros.h>
 
@@ -66,8 +66,7 @@ class FragmentMatchState {
 
   // Create the bookkeeping state for the fragment matching algorithm.  This
   // preinitializes the state with Match::None,
-  static zx_status_t Create(size_t fragments_count, size_t devices_count,
-                            FragmentMatchState* out) {
+  static zx_status_t Create(size_t fragments_count, size_t devices_count, FragmentMatchState* out) {
     FragmentMatchState state;
     state.fragments_count_ = fragments_count;
     state.devices_count_ = devices_count;

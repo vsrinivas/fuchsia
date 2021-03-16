@@ -4,6 +4,10 @@
 
 #include <inttypes.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/ddk/platform-defs.h>
 #include <string.h>
 
@@ -11,10 +15,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/io-buffer.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 

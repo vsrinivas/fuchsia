@@ -6,13 +6,12 @@
 
 #include <endian.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <string.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
-
-#include <ddk/debug.h>
 
 namespace mbr {
 
@@ -25,8 +24,8 @@ zx_status_t Parse(const uint8_t* buffer, size_t bufsz, Mbr* out) {
   uint16_t boot_signature =
       le16toh(*reinterpret_cast<const uint16_t*>(buffer + offsetof(Mbr, boot_signature)));
   if (boot_signature != kMbrBootSignature) {
-    zxlogf(ERROR, "mbr: invalid mbr boot signature, expected 0x%04x got 0x%04x",
-           kMbrBootSignature, boot_signature);
+    zxlogf(ERROR, "mbr: invalid mbr boot signature, expected 0x%04x got 0x%04x", kMbrBootSignature,
+           boot_signature);
     return ZX_ERR_NOT_SUPPORTED;
   }
   memcpy(out, buffer, kMbrSize);

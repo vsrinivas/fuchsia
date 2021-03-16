@@ -6,6 +6,7 @@
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <limits.h>
 #include <sys/types.h>
 #include <zircon/assert.h>
@@ -20,7 +21,6 @@
 #include <vector>
 
 #include <acpica/acpi.h>
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
 #include "acpi-private.h"

@@ -5,6 +5,8 @@
 #include "address_space_device.h"
 
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/device-protocol/pci.h>
 #include <lib/fidl-utils/bind.h>
 #include <limits.h>
@@ -12,8 +14,6 @@
 #include <map>
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

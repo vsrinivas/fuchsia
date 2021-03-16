@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/platform/bus/cpp/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 
 #include "src/devices/bus/drivers/platform/test/test-bti-board-bind.h"

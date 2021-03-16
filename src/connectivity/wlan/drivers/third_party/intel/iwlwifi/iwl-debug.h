@@ -35,9 +35,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DEBUG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_INTEL_IWLWIFI_IWL_DEBUG_H_
 
+#include <lib/ddk/debug.h>
 #include <stdbool.h>
-
-#include <ddk/debug.h>
 
 #include "iwl-modparams.h"
 

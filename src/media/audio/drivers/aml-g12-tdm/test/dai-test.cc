@@ -12,7 +12,7 @@
 
 #include <thread>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fake-mmio-reg/fake-mmio-reg.h>
 #include <soc/aml-common/aml-audio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>

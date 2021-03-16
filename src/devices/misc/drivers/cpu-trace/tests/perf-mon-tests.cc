@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <fuchsia/perfmon/cpu/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zircon-internal/device/cpu-trace/perf-mon.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/clock.h>
 
-#include <ddk/debug.h>
 #include <zxtest/zxtest.h>
 
 #include "../perf-mon.h"

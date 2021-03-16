@@ -5,6 +5,7 @@
 #include "ge2d_task.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/ddk/debug.h>
 #include <lib/syslog/global.h>
 #include <stdint.h>
 #include <zircon/pixelformat.h>
@@ -12,7 +13,6 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 
 constexpr uint32_t kEndianness = 7;

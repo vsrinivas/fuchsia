@@ -6,8 +6,8 @@
 #define SRC_DIAGNOSTICS_VALIDATOR_LOGS_DDK_LOG_TEST_DRIVER_LOG_TESTER_H_
 
 #include <fuchsia/validate/logs/llcpp/fidl.h>
+#include <lib/ddk/device.h>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/macros.h>

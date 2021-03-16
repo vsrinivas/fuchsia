@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/phys-iter.h>
 #include <string.h>
 #include <sys/param.h>
 #include <zircon/assert.h>
-
-#include <ddk/phys-iter.h>
 
 // Returns the buffer offset of the start of the current segment being iterated over.
 static size_t segment_offset(phys_iter_t* iter) {

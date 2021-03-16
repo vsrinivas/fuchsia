@@ -6,13 +6,12 @@
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_MACROS_H_
 
 #include <assert.h>
+#include <lib/ddk/debug.h>
 #include <lib/syslog/global.h>
 #include <zircon/syscalls.h>
 
 #include <chrono>
 #include <thread>
-
-#include <ddk/debug.h>
 
 // Using the global logger helps keep messages in order when debugging interaction between driver
 // code and library code used by the driver which is using the global logger (via chromium_utils.h).

@@ -4,8 +4,12 @@
 
 #include <fuchsia/hardware/i2cimpl/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/device-protocol/platform-device.h>
+#include <lib/ddk/hw/reg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -19,11 +23,7 @@
 #include <zircon/types.h>
 
 #include <bits/limits.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/metadata.h>
-#include <ddk/trace/event.h>
-#include <hw/reg.h>
+#include <lib/ddk/metadata.h>
 
 #include "src/devices/i2c/drivers/aml-i2c/aml_i2c_bind.h"
 

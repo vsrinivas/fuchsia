@@ -6,12 +6,11 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/zx/bti.h>
 #include <zircon/types.h>
 
 #include <cstring>
-
-#include <ddk/debug.h>
 
 #include "src/devices/bus/drivers/pci/common.h"
 #include "src/devices/bus/drivers/pci/pci_proxy_bind.h"

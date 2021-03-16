@@ -4,6 +4,8 @@
 
 #include "src/devices/nand/drivers/nand/nand.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/zx/time.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
@@ -12,8 +14,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/io-buffer.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 

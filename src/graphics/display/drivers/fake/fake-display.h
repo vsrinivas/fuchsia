@@ -11,6 +11,8 @@
 #include <fuchsia/hardware/display/clamprgb/cpp/banjo.h>
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <sys/types.h>
@@ -23,8 +25,6 @@
 #include <cstdint>
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_double_list.h>

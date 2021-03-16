@@ -4,7 +4,8 @@
 
 #include "test-driver-child.h"
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
+
 #include <ddktl/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/ref_counted.h>

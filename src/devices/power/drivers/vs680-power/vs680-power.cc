@@ -4,11 +4,11 @@
 
 #include "vs680-power.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>

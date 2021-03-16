@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/coding.h>
 #include <lib/fidl/txn_header.h>
@@ -23,7 +24,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fbl/string_buffer.h>
@@ -250,7 +250,7 @@ struct ProtocolInfo {
 
 ProtocolInfo proto_infos[] = {
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) {name, nullptr, val, flags},
-#include <ddk/protodefs.h>
+#include <lib/ddk/protodefs.h>
 };
 
 Devnode* proto_dir(uint32_t id) {

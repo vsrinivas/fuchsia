@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlan/mac/cpp/banjo.h>
+#include <lib/ddk/device.h>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/mvm/mvm.h"

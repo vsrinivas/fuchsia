@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
 #include <lib/async/default.h>
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_bind.h"
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_control_impl.h"

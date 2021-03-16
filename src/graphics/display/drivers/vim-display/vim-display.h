@@ -10,6 +10,7 @@
 #include <fuchsia/hardware/display/controller/c/banjo.h>
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
@@ -20,8 +21,6 @@
 #include <zircon/pixelformat.h>
 
 #include <optional>
-
-#include <ddk/debug.h>
 
 #include "edid.h"
 #include "vim-audio.h"

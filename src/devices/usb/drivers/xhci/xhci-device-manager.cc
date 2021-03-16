@@ -5,13 +5,13 @@
 #include "xhci-device-manager.h"
 
 #include <endian.h>
+#include <lib/ddk/debug.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 #include <zircon/hw/usb.h>
 
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 

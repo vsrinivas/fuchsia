@@ -13,7 +13,7 @@
 #include <cmath>
 #include <memory>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>
 #include <soc/mt8167/mt8167-hw.h>

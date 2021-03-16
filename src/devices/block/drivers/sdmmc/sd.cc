@@ -4,13 +4,12 @@
 
 #include <fuchsia/hardware/sdmmc/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
 
 #include "sdmmc-block-device.h"
 

@@ -6,14 +6,14 @@
 
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <zircon/assert.h>
 #include <zircon/syscalls/iommu.h>
 #include <zircon/threads.h>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
 
 #include "src/graphics/drivers/misc/goldfish/goldfish-bind.h"

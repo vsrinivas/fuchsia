@@ -5,11 +5,11 @@
 #ifndef SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_H_
 #define SRC_MEDIA_AUDIO_DRIVERS_USB_AUDIO_USB_AUDIO_H_
 
+#include <lib/ddk/device.h>
 #include <zircon/compiler.h>
 #include <zircon/hw/usb.h>
 #include <zircon/hw/usb/audio.h>
 
-#include <ddk/device.h>
 #include <fbl/array.h>
 #include <usb/usb.h>
 

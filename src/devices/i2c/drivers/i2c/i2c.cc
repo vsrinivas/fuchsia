@@ -4,15 +4,15 @@
 
 #include "i2c.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 #include <zircon/types.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/i2c.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/mutex.h>

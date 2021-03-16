@@ -4,11 +4,11 @@
 
 #include "usb-bus.h"
 
+#include <lib/ddk/debug.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
 #include "src/devices/usb/drivers/usb-bus/usb_bus_bind.h"

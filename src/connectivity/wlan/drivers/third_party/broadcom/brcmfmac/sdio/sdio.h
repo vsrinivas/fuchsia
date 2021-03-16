@@ -19,10 +19,9 @@
 
 #include <fuchsia/hardware/gpio/c/banjo.h>
 #include <fuchsia/hardware/sdio/c/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
-
-#include <ddk/device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcmu_utils.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipset/firmware.h"

@@ -26,9 +26,9 @@
  * SUCH DAMAGE.
  */
 
-#include "ddk/device.h"
-#include "ddk/driver.h"
 #include "e1000_api.h"
+#include "lib/ddk/device.h"
+#include "lib/ddk/driver.h"
 #include "src/lib/listnode/listnode.h"
 #include "zircon/third_party/dev/ethernet/e1000/e1000_bind.h"
 

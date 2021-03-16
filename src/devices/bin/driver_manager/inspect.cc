@@ -4,9 +4,9 @@
 
 #include "inspect.h"
 
+#include <lib/ddk/driver.h>
 #include <lib/inspect/service/cpp/service.h>
 
-#include <ddk/driver.h>
 #include <driver-info/driver-info.h>
 
 #include "device.h"

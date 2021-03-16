@@ -3,11 +3,10 @@
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_device_impl.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/zx/clock.h>
 
 #include <memory>
-
-#include <ddk/debug.h>
 
 #include "src/media/audio/drivers/virtual_audio/virtual_audio_stream.h"
 

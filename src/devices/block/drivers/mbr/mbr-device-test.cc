@@ -6,14 +6,14 @@
 
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <zircon/errors.h>
 #include <zircon/hw/gpt.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>

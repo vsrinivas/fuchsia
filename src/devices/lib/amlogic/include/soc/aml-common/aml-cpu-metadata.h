@@ -6,7 +6,7 @@
 #define SRC_DEVICES_LIB_AMLOGIC_INCLUDE_SOC_AML_COMMON_AML_CPU_METADATA_H_
 
 #include <zircon/types.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 
 namespace amlogic_cpu {
 

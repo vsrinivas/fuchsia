@@ -4,10 +4,10 @@
 
 #include "block.h"
 
+#include <lib/ddk/debug.h>
 #include <stdio.h>
 #include <string.h>
 
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 
 #include "usb-mass-storage.h"

@@ -4,12 +4,12 @@
 #include "display.h"
 
 #include <fuchsia/hardware/display/controller/c/banjo.h>
+#include <lib/ddk/device.h>
 #include <stdio.h>
 
 #include <array>
 #include <memory>
 
-#include <ddk/device.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/vector.h>

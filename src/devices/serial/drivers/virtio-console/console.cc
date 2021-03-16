@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/pty/c/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
 #include <lib/fs-pty/service.h>
 #include <lib/zx/vmar.h>
 #include <string.h>
@@ -14,7 +15,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
 #include <ddktl/fidl.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>

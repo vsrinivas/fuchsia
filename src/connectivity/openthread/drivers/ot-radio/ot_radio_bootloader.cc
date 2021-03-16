@@ -7,8 +7,12 @@
 #include <ctype.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-unit-test/utils.h>
+#include <lib/ddk/hw/arch_ops.h>
+#include <lib/ddk/hw/reg.h>
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
@@ -16,16 +20,12 @@
 
 #include <iostream>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <hw/arch_ops.h>
-#include <hw/reg.h>
 
 namespace ot {
 

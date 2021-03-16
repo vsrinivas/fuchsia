@@ -4,13 +4,13 @@
 
 #include "aml-cpufreq.h"
 
+#include <lib/ddk/debug.h>
 #include <unistd.h>
 #include <zircon/types.h>
 
 #include <string>
 #include <vector>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 
 #include "aml-fclk.h"

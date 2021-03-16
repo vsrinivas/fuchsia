@@ -8,20 +8,20 @@
 #include <fuchsia/gpu/magma/llcpp/fidl.h>
 #include <fuchsia/hardware/clock/cpp/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/mmio/mmio.h>
 
 #include <memory>
 #include <mutex>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <hw/reg.h>
 
 #include "img-sys-device.h"
 #include "magma_util/macros.h"

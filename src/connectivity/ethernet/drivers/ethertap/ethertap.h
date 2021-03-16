@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/ethertap/c/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 #include <threads.h>
@@ -15,7 +16,6 @@
 
 #include <optional>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <fbl/mutex.h>
 

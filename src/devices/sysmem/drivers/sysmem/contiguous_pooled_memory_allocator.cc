@@ -5,9 +5,9 @@
 #include "contiguous_pooled_memory_allocator.h"
 
 #include <fuchsia/sysmem2/llcpp/fidl.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/zx/clock.h>
 
-#include <ddk/trace/event.h>
 #include <fbl/string_printf.h>
 
 #include "lib/fidl/llcpp/fidl_allocator.h"

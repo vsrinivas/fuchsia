@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/gpt.h>
 #include <fbl/algorithm.h>
 #include <soc/mt8167/mt8167-sdmmc.h>

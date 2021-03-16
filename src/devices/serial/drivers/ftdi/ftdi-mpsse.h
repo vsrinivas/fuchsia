@@ -6,6 +6,8 @@
 #define SRC_DEVICES_SERIAL_DRIVERS_FTDI_FTDI_MPSSE_H_
 
 #include <fuchsia/hardware/serialimpl/cpp/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/event.h>
 #include <lib/zx/time.h>
@@ -14,9 +16,6 @@
 #include <zircon/types.h>
 
 #include <vector>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 namespace ftdi_mpsse {
 

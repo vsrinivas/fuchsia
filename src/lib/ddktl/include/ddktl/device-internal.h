@@ -5,9 +5,10 @@
 #ifndef SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_INTERNAL_H_
 #define SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_INTERNAL_H_
 
+#include <lib/ddk/device.h>
+
 #include <type_traits>
 
-#include <ddk/device.h>
 #include <ddktl/init-txn.h>
 #include <ddktl/resume-txn.h>
 #include <ddktl/suspend-txn.h>

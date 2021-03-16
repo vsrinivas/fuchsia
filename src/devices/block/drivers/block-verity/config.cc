@@ -4,7 +4,7 @@
 
 #include "src/devices/block/drivers/block-verity/config.h"
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
 
 #include "src/devices/block/drivers/block-verity/constants.h"
 

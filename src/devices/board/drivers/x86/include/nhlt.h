@@ -5,8 +5,9 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_NHLT_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_INCLUDE_NHLT_H_
 
+#include <lib/ddk/driver.h>
+
 #include <acpica/acpi.h>
-#include <ddk/driver.h>
 
 // Look for NHLT blob in the device pointed to by object and publish
 // it as metadata on the PCI device.

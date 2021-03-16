@@ -6,13 +6,13 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/status.h>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

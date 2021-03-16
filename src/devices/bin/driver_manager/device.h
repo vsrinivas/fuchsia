@@ -10,13 +10,13 @@
 #include <fuchsia/device/manager/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/ddk/device.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 
 #include <memory>
 #include <variant>
 
-#include <ddk/device.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>

@@ -5,12 +5,12 @@
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/cpp/fidl.h>
 #include <fuchsia/device/test/llcpp/fidl.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/driver.h>
 #include <lib/devmgr-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
 #include <lib/sys/cpp/component_context.h>
 
-#include <ddk/binding.h>
-#include <ddk/driver.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/fxl/strings/string_printf.h"

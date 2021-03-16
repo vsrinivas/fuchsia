@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/driver-unit-test/utils.h>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <zxtest/zxtest.h>
 
 #include "x86.h"

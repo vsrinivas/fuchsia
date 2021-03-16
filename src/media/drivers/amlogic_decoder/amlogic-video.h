@@ -10,6 +10,10 @@
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/hardware/tee/cpp/banjo.h>
 #include <fuchsia/tee/cpp/fidl.h>
+#include <lib/ddk/binding.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/handle.h>
 #include <zircon/errors.h>
@@ -21,10 +25,6 @@
 #include <mutex>
 #include <thread>
 
-#include <ddk/binding.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <tee-client-api/tee-client-types.h>
 
 #include "decoder_core.h"

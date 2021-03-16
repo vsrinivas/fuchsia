@@ -4,6 +4,10 @@
 
 #include "src/camera/drivers/hw_accel/gdc/gdc.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/trace/event.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/image-format/image_format.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
@@ -13,12 +17,8 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <hw/reg.h>
 
 #include "src/camera/drivers/hw_accel/gdc/bind.h"
 #include "src/camera/drivers/hw_accel/gdc/gdc_regs.h"

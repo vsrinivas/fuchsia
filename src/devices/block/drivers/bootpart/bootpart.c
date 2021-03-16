@@ -6,16 +6,16 @@
 #include <fuchsia/hardware/block/c/banjo.h>
 #include <fuchsia/hardware/block/partition/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/boot/image.h>
 #include <zircon/types.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 
 #include "src/devices/block/drivers/bootpart/bootpart_bind.h"
 

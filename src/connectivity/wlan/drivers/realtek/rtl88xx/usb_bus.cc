@@ -4,6 +4,7 @@
 #include "usb_bus.h"
 
 #include <fuchsia/hardware/usb/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/zx/time.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
@@ -13,7 +14,6 @@
 #include <algorithm>
 #include <iterator>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <usb/usb.h>
 

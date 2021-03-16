@@ -9,12 +9,12 @@
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <fuchsia/hardware/block/partition/c/banjo.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/sync/completion.h>
 #include <zircon/types.h>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/gpt.h>
 #include <ddktl/device.h>
 #include <fbl/ref_counted.h>

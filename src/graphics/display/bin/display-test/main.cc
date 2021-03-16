@@ -33,7 +33,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
-#include "ddk/driver.h"
+#include "lib/ddk/driver.h"
 #include "fuchsia/hardware/display/llcpp/fidl.h"
 #include "lib/fdio/directory.h"
 #include "lib/fzl/vmo-mapper.h"

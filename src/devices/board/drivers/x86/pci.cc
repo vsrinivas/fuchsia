@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/pciroot/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <lib/pci/pciroot.h>
 #include <lib/pci/pio.h>
 #include <lib/pci/root_host.h>
@@ -23,7 +24,6 @@
 #include <acpica/actypes.h>
 #include <acpica/acuuid.h>
 #include <bits/limits.h>
-#include <ddk/debug.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/string_buffer.h>

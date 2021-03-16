@@ -7,11 +7,11 @@
 
 #include <fuchsia/hardware/adc/llcpp/fidl.h>
 #include <fuchsia/hardware/temperature/llcpp/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/mmio/mmio.h>
 #include <lib/thermal/ntc.h>
 #include <lib/zx/interrupt.h>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>

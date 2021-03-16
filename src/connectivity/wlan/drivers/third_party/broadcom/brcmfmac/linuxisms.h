@@ -24,6 +24,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_LINUXISMS_H_
 
+#include <lib/ddk/debug.h>
 #include <netinet/if_ether.h>
 #include <pthread.h>
 #include <stdarg.h>
@@ -35,8 +36,6 @@
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-
-#include <ddk/debug.h>
 
 typedef uint16_t __be16;
 typedef uint32_t __be32;

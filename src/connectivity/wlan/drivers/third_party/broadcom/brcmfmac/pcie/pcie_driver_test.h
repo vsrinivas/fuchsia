@@ -4,9 +4,8 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_DRIVER_TEST_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_PCIE_PCIE_DRIVER_TEST_H_
 
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
-
-#include <ddk/device.h>
 
 namespace wlan {
 namespace brcmfmac {

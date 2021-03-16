@@ -8,12 +8,12 @@
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <fuchsia/wlan/device/llcpp/fidl.h>
 #include <fuchsia/wlan/internal/cpp/fidl.h>
+#include <lib/ddk/device.h>
 #include <net/ethernet.h>
 #include <zircon/status.h>
 
 #include <iterator>
 
-#include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>

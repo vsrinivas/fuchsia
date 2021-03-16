@@ -5,22 +5,22 @@
 #include "aml-ethernet.h"
 
 #include <fuchsia/hardware/ethernet/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/i2c.h>
+#include <lib/ddk/hw/reg.h>
 #include <stdio.h>
 #include <string.h>
 #include <zircon/compiler.h>
 
 #include <iterator>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <hw/reg.h>
 #include <soc/aml-s912/s912-hw.h>
 
 #include "aml-regs.h"

@@ -357,7 +357,7 @@ zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw
 // Protocol Identifiers
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) ZX_PROTOCOL_##tag = val,
 enum {
-#include <ddk/protodefs.h>
+#include <lib/ddk/protodefs.h>
 };
 
 __END_CDECLS

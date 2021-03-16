@@ -5,14 +5,14 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/mmio-buffer.h>
+#include <lib/ddk/hw/reg.h>
 
 #include <cstdint>
 
-#include <ddk/debug.h>
-#include <ddk/mmio-buffer.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <hw/reg.h>
 
 #include "../include/lib/virtio/backends/pci.h"
 

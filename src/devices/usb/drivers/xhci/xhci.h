@@ -8,6 +8,8 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/usb/bus/c/banjo.h>
 #include <fuchsia/hardware/usb/request/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/bti.h>
@@ -21,8 +23,6 @@
 
 #include <atomic>
 
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <usb/usb-request.h>

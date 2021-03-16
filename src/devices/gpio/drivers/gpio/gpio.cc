@@ -4,13 +4,13 @@
 
 #include "gpio.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/gpio.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

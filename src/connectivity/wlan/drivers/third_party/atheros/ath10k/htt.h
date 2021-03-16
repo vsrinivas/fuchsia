@@ -18,7 +18,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_HTT_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_HTT_H_
 
-#include <ddk/driver.h>
+#include <lib/ddk/driver.h>
 #include <lib/zircon-internal/align.h>
 
 #include "htc.h"

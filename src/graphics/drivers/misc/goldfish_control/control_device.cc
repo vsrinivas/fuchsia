@@ -5,13 +5,13 @@
 #include "src/graphics/drivers/misc/goldfish_control/control_device.h"
 
 #include <fuchsia/hardware/goldfish/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/trace/event.h>
 #include <zircon/syscalls.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

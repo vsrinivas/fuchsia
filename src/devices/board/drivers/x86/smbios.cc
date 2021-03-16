@@ -4,6 +4,7 @@
 
 #include "smbios.h"
 
+#include <lib/ddk/driver.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/smbios/smbios.h>
 #include <lib/zx/resource.h>
@@ -11,7 +12,6 @@
 #include <lib/zx/vmo.h>
 #include <limits.h>
 
-#include <ddk/driver.h>
 #include <fbl/algorithm.h>
 
 namespace {

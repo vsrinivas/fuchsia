@@ -16,6 +16,7 @@
 
 #include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-function/mock-function.h>
@@ -28,7 +29,6 @@
 #include <array>
 #include <thread>
 
-#include <ddk/io-buffer.h>
 #include <zxtest/zxtest.h>
 
 extern "C" {

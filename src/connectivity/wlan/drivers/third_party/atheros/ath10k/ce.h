@@ -18,7 +18,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_CE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_CE_H_
 
-#include <ddk/io-buffer.h>
+#include <lib/ddk/io-buffer.h>
 
 #include "hif.h"
 

@@ -5,6 +5,7 @@
 #include <fuchsia/device/inspect/test/llcpp/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fdio/directory.h>
@@ -13,7 +14,6 @@
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
-#include <ddk/device.h>
 #include <sdk/lib/inspect/testing/cpp/zxtest/inspect.h>
 #include <zxtest/zxtest.h>
 

@@ -4,10 +4,9 @@
 
 #include "onfi.h"
 
+#include <lib/ddk/debug.h>
 #include <string.h>
 #include <unistd.h>
-
-#include <ddk/debug.h>
 
 // Database of settings for the NAND flash devices we support.
 // Note on chip_delay: chip_delay is the delay after we enqueue certain ONFI

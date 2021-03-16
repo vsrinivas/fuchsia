@@ -5,14 +5,13 @@
 #include "dp-display.h"
 
 #include <endian.h>
+#include <lib/ddk/driver.h>
 #include <math.h>
 #include <string.h>
 #include <zircon/assert.h>
 
 #include <algorithm>
 #include <iterator>
-
-#include <ddk/driver.h>
 
 #include "intel-i915.h"
 #include "macros.h"

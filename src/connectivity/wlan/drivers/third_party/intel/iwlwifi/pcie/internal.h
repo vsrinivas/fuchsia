@@ -38,13 +38,12 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <lib/async/task.h>
+#include <lib/ddk/io-buffer.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/sync/completion.h>
 #include <lib/sync/condition.h>
 #include <threads.h>
 #include <zircon/listnode.h>
-
-#include <ddk/io-buffer.h>
-#include <ddk/mmio-buffer.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-csr.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-debug.h"

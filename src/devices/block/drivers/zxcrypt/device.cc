@@ -5,6 +5,7 @@
 #include "src/devices/block/drivers/zxcrypt/device.h"
 
 #include <inttypes.h>
+#include <lib/ddk/debug.h>
 #include <string.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
@@ -13,7 +14,6 @@
 #include <algorithm>
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

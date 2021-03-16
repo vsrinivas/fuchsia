@@ -4,11 +4,11 @@
 
 #include "serial-ppp.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/time.h>
 #include <zircon/hw/usb.h>
 
-#include <ddk/debug.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_call.h>
 

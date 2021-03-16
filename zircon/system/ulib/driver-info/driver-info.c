@@ -4,13 +4,13 @@
 
 #include <elf.h>
 #include <fcntl.h>
+#include <lib/ddk/binding.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include <zircon/types.h>
 
-#include <ddk/binding.h>
 #include <driver-info/driver-info.h>
 
 typedef zx_status_t (*note_func_t)(void* note, size_t sz, void* cookie);

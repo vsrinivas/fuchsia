@@ -8,6 +8,8 @@
 #include <fuchsia/hardware/display/controller/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/control/cpp/banjo.h>
 #include <fuchsia/hardware/goldfish/pipe/cpp/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/io-buffer.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/pmt.h>
 #include <threads.h>
@@ -15,8 +17,6 @@
 
 #include <map>
 
-#include <ddk/device.h>
-#include <ddk/io-buffer.h>
 #include <ddktl/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>

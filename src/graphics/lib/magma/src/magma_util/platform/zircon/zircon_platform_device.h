@@ -6,8 +6,7 @@
 #define ZIRCON_PLATFORM_DEVICE_H
 
 #include <fuchsia/hardware/platform/device/c/banjo.h>
-
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
 
 #include "platform_device.h"
 

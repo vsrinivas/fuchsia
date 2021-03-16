@@ -7,6 +7,7 @@
 #include <fcntl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/fdio/cpp/caller.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -25,7 +26,6 @@
 
 #include <utility>
 
-#include <ddk/device.h>
 #include <hid-parser/usages.h>
 #include <hid/hid.h>
 #include <hid/usages.h>

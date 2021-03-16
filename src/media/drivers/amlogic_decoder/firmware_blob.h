@@ -5,13 +5,12 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_FIRMWARE_BLOB_H_
 
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/zx/vmo.h>
 
 #include <map>
 #include <string>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 class FirmwareBlob {
  public:

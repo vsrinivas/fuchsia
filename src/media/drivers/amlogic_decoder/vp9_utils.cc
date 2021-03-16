@@ -5,10 +5,9 @@
 #include "vp9_utils.h"
 
 #include <byteswap.h>
+#include <lib/ddk/debug.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-
-#include <ddk/debug.h>
 
 #include "macros.h"
 

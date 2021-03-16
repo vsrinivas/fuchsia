@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <endian.h>
+#include <lib/ddk/binding.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fit/function.h>
 #include <lib/scsi/scsilib.h>
@@ -12,7 +13,6 @@
 
 #include <map>
 
-#include <ddk/binding.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <zxtest/zxtest.h>

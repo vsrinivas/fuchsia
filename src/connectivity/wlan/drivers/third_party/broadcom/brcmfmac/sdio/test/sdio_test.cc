@@ -20,14 +20,14 @@
 #include <fuchsia/hardware/gpio/cpp/banjo-mock.h>
 #include <fuchsia/hardware/sdio/c/banjo.h>
 #include <fuchsia/hardware/sdio/cpp/banjo-mock.h>
+#include <lib/ddk/device.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include <array>
 #include <tuple>
 
-#include <ddk/device.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <wifi/wifi-config.h>
 #include <zxtest/zxtest.h>
 

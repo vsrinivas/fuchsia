@@ -33,7 +33,7 @@
 
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <wifi/wifi-config.h>
 #include <wlan/common/ieee80211_codes.h>
 #include <wlan/common/macaddr.h>

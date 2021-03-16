@@ -6,12 +6,11 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <zircon/status.h>
 
 #include <mutex>
-
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 
 #include "device.h"
 #include "src/connectivity/wlan/drivers/wlanphy/wlanphy-bind.h"

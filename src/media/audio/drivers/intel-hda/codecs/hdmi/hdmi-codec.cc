@@ -4,10 +4,10 @@
 
 #include "hdmi-codec.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/auto_lock.h>
 

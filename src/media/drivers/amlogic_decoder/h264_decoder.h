@@ -5,9 +5,9 @@
 #ifndef SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_DECODER_H_
 #define SRC_MEDIA_DRIVERS_AMLOGIC_DECODER_H264_DECODER_H_
 
-#include <vector>
+#include <lib/ddk/io-buffer.h>
 
-#include <ddk/io-buffer.h>
+#include <vector>
 
 #include "registers.h"
 #include "src/media/lib/internal_buffer/internal_buffer.h"

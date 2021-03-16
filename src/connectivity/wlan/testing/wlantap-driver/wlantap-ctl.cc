@@ -7,14 +7,14 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/dispatcher.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <zircon/fidl.h>
 #include <zircon/status.h>
 
 #include <memory>
 #include <mutex>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <ddktl/fidl.h>
 
 #include "src/connectivity/wlan/testing/wlantap-driver/wlantapctl_bind.h"

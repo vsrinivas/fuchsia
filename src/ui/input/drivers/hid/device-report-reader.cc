@@ -4,7 +4,7 @@
 
 #include "device-report-reader.h"
 
-#include <ddk/trace/event.h>
+#include <lib/ddk/trace/event.h>
 
 #include "hid.h"
 

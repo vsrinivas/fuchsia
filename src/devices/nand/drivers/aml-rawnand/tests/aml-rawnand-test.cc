@@ -4,6 +4,7 @@
 
 #include "src/devices/nand/drivers/aml-rawnand/aml-rawnand.h"
 
+#include <lib/ddk/io-buffer.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/bti.h>
@@ -13,7 +14,6 @@
 #include <memory>
 #include <queue>
 
-#include <ddk/io-buffer.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/aml-common/aml-rawnand.h>
 #include <zxtest/zxtest.h>

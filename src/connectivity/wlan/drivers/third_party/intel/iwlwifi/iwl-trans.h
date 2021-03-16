@@ -38,8 +38,7 @@
 
 #include <fuchsia/hardware/wlan/mac/c/banjo.h>
 #include <lib/async-loop/loop.h>
-
-#include <ddk/io-buffer.h>
+#include <lib/ddk/io-buffer.h>
 
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/fw/img.h"
 #include "src/connectivity/wlan/drivers/third_party/intel/iwlwifi/iwl-config.h"

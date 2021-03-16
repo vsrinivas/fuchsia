@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
+#include <lib/ddk/fragment-device.h>
 #include <lib/syslog/logger.h>
 #include <stdarg.h>
 #include <stdio.h>
@@ -10,10 +14,6 @@
 
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/fragment-device.h>
 #include <fbl/auto_lock.h>
 
 #include "src/devices/bin/driver_host/composite_device.h"

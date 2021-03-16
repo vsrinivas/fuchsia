@@ -5,13 +5,13 @@
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/device.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
 
 #include <string>
 #include <vector>
 
-#include <ddk/device.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <gtest/gtest.h>

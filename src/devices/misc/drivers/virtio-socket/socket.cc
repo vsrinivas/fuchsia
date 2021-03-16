@@ -7,6 +7,8 @@
 #include <assert.h>
 #include <fuchsia/hardware/vsock/c/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/io-buffer.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -18,8 +20,6 @@
 #include <algorithm>
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/io-buffer.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>

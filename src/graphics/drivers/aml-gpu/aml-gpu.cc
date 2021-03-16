@@ -9,10 +9,14 @@
 #include <fuchsia/hardware/iommu/c/banjo.h>
 #include <fuchsia/hardware/platform/bus/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/trace/event.h>
+#include <lib/ddk/hw/reg.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -25,10 +29,6 @@
 
 #include <bind/fuchsia/arm/platform/cpp/fidl.h>
 #include <bind/fuchsia/platform/cpp/fidl.h>
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <hw/reg.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
 
 #include "s905d2-gpu.h"

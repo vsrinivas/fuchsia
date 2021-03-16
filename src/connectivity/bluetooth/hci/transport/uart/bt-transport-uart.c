@@ -6,6 +6,9 @@
 #include <fuchsia/hardware/bt/hci/c/banjo.h>
 #include <fuchsia/hardware/serial/c/fidl.h>
 #include <fuchsia/hardware/serialimpl/async/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,10 +18,6 @@
 #include <zircon/assert.h>
 #include <zircon/device/bt-hci.h>
 #include <zircon/status.h>
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "src/connectivity/bluetooth/hci/transport/uart/bt_transport_uart_bind.h"
 

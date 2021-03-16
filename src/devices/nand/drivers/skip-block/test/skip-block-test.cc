@@ -13,7 +13,7 @@
 
 #include <optional>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/vector.h>
 #include <zxtest/zxtest.h>
 

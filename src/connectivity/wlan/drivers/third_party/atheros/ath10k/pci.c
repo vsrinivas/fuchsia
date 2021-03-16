@@ -19,6 +19,8 @@
 
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/device-protocol/pci.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -27,8 +29,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddk/hw/wlan/ieee80211/c/banjo.h>
 #include <wlan/protocol/mac.h>
 

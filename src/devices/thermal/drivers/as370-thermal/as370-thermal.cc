@@ -4,12 +4,12 @@
 
 #include "as370-thermal.h"
 
+#include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
 #include <lib/device-protocol/pdev.h>
 #include <lib/zx/time.h>
 
-#include <ddk/device.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/alloc_checker.h>
 

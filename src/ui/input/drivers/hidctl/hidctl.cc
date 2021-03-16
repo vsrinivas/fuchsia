@@ -5,6 +5,8 @@
 #include "hidctl.h"
 
 #include <fuchsia/hardware/hidctl/c/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <stdio.h>
 #include <string.h>
@@ -13,8 +15,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>

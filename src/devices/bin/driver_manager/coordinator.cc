@@ -15,6 +15,7 @@
 #include <lib/async/cpp/receiver.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
+#include <lib/ddk/driver.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl-async/bind.h>
@@ -42,7 +43,6 @@
 #include <memory>
 #include <utility>
 
-#include <ddk/driver.h>
 #include <driver-info/driver-info.h>
 #include <fbl/auto_call.h>
 #include <fbl/string_printf.h>

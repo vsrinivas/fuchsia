@@ -5,9 +5,9 @@
 #include "usb-harriet.h"
 
 #include <fuchsia/hardware/usb/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <fbl/alloc_checker.h>
 
 #include "src/devices/ml/drivers/usb-harriet/usb_harriet_bind.h"

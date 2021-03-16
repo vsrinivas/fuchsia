@@ -6,6 +6,7 @@
 
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <inttypes.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/image-format/image_format.h>
 #include <lib/sysmem-version/sysmem-version.h>
@@ -17,7 +18,6 @@
 #include <type_traits>
 #include <unordered_map>
 
-#include <ddk/trace/event.h>
 #include <fbl/algorithm.h>
 #include <fbl/string_printf.h>
 

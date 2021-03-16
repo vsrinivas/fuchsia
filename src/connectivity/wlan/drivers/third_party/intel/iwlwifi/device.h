@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
+#include <lib/ddk/device.h>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 
 extern "C" {

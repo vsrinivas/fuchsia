@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/binding.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/array.h>
 
 #include "binding_internal.h"

@@ -6,8 +6,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/executor.h>
+#include <lib/ddk/binding.h>
 
-#include <ddk/binding.h>
 #include <zxtest/zxtest.h>
 
 #include "multiple_device_test.h"

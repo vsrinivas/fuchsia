@@ -4,12 +4,12 @@
 
 #include "wlan_phy.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <wlan/common/phy.h>
 
 #include "bus.h"

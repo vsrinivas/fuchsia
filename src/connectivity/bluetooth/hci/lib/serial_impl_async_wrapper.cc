@@ -3,11 +3,10 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/serialimpl/async/c/banjo.h>
+#include <lib/ddk/device.h>
 #include <stdint.h>
 #include <stdlib.h>
 #include <zircon/status.h>
-
-#include <ddk/device.h>
 
 extern "C" {
 // defined in rust

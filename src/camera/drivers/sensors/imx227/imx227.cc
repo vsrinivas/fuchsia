@@ -6,19 +6,19 @@
 
 #include <endian.h>
 #include <fuchsia/hardware/camera/sensor/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/device-protocol/i2c.h>
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fit/result.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/trace/event.h>
 #include <threads.h>
 #include <zircon/types.h>
 
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddk/metadata/camera.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <hw/reg.h>
 #include <safemath/safe_conversions.h>
 
 #include "src/camera/drivers/sensors/imx227/bind.h"

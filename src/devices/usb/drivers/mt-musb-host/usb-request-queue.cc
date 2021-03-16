@@ -4,11 +4,11 @@
 
 #include "usb-request-queue.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/zx/time.h>
 #include <zircon/hw/usb.h>
 #include <zircon/status.h>
 
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 
 #include "trace.h"

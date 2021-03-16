@@ -4,10 +4,10 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_USB_BUS_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_REALTEK_RTL88XX_USB_BUS_H_
 
-#include <memory>
-
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
+
+#include <memory>
 
 #include "bus.h"
 

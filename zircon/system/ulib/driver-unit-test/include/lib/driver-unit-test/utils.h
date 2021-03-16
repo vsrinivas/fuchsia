@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef LIB_DRIVER_UNIT_TEST_UTILS_H_
+#define LIB_DRIVER_UNIT_TEST_UTILS_H_
 
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
 
 namespace driver_unit_test {
 
@@ -25,3 +26,5 @@ zx_device_t* GetParent();
 bool RunZxTests(const char* name, zx_device_t* parent, zx_handle_t channel);
 
 }  // namespace driver_unit_test
+
+#endif  // LIB_DRIVER_UNIT_TEST_UTILS_H_

@@ -4,6 +4,6 @@
 
 #include "driver.h"
 
-#include <ddk/device.h>
+#include <lib/ddk/device.h>
 
 // Nothing here yet.

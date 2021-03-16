@@ -8,12 +8,12 @@
 #include <fuchsia/hardware/block/cpp/banjo.h>
 #include <fuchsia/hardware/block/partition/cpp/banjo.h>
 #include <fuchsia/hardware/block/volume/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/zx/vmo.h>
 #include <stddef.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
-#include <ddk/device.h>
 #include <fbl/macros.h>
 
 #include "src/security/zxcrypt/ddk-volume.h"

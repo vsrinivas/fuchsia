@@ -8,10 +8,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
 #include <lib/zx/bti.h>
 #include <zircon/threads.h>
 
-#include <ddk/debug.h>
 #include <ddktl/fidl.h>
 
 #include "src/graphics/drivers/misc/goldfish/pipe.h"

@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/backlight/llcpp/fidl.h>
 #include <lib/device-protocol/i2c-channel.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/mmio/mmio.h>
 
@@ -14,7 +15,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
-#include <hw/reg.h>
 #include <hwreg/bitfields.h>
 
 #include "ti-lp8556Metadata.h"

@@ -5,12 +5,12 @@
 #include "aml-bad-block.h"
 
 #include <fuchsia/hardware/nand/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/sync/completion.h>
 #include <stdlib.h>
 
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_lock.h>

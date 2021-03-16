@@ -7,12 +7,12 @@
 
 #include <fuchsia/hardware/tee/c/banjo.h>
 #include <fuchsia/tee/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
 
 #include <array>
 #include <cinttypes>
 #include <cstddef>
 
-#include <ddk/debug.h>
 #include <fbl/string_buffer.h>
 
 namespace optee {

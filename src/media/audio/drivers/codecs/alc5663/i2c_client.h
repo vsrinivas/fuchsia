@@ -6,13 +6,13 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_CODECS_ALC5663_I2C_CLIENT_H_
 
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/device-protocol/i2c-channel.h>
 #include <sys/types.h>
 #include <zircon/status.h>
 
 #include <type_traits>
 
-#include <ddk/debug.h>
 #include <hwreg/bitfields.h>
 
 namespace audio::alc5663 {

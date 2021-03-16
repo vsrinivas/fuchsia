@@ -5,6 +5,7 @@
 #ifndef SRC_LIB_DDKTL_INCLUDE_DDKTL_FIDL_H_
 #define SRC_LIB_DDKTL_INCLUDE_DDKTL_FIDL_H_
 
+#include <lib/ddk/device.h>
 #include <lib/fidl/llcpp/message.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/channel.h>
@@ -12,8 +13,6 @@
 
 #include <memory>
 #include <type_traits>
-
-#include <ddk/device.h>
 
 namespace ddk {
 

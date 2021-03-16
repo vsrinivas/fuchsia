@@ -8,12 +8,12 @@
 #include <fuchsia/sysmem2/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
+#include <lib/ddk/debug.h>
 #include <lib/fidl/llcpp/server.h>
 #include <lib/fit/function.h>
 
 #include <memory>
 
-#include <ddk/debug.h>
 #include <fbl/intrusive_double_list.h>
 
 #include "src/graphics/drivers/misc/goldfish_control/heap.h"

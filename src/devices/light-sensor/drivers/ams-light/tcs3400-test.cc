@@ -9,7 +9,7 @@
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <ddktl/metadata/light-sensor.h>
 #include <zxtest/zxtest.h>
 

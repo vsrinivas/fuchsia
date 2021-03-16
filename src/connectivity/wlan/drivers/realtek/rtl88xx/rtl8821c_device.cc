@@ -1,13 +1,14 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
+#include "rtl8821c_device.h"
+
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
 #include "bus_util.h"
-#include "rtl8821c_device.h"
 #include "rtl88xx_registers.h"
 
 namespace wlan {

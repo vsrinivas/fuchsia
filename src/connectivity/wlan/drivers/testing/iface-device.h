@@ -5,11 +5,11 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_TESTING_IFACE_DEVICE_H_
 
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
 
 #include <mutex>
 
-#include <ddk/device.h>
 #include <ddk/hw/wlan/wlaninfo/c/banjo.h>
 #include <wlan/protocol/mac.h>
 

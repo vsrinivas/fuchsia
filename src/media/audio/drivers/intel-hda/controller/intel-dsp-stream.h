@@ -6,8 +6,8 @@
 #define SRC_MEDIA_AUDIO_DRIVERS_INTEL_HDA_CONTROLLER_INTEL_DSP_STREAM_H_
 
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
+#include <lib/ddk/device.h>
 
-#include <ddk/device.h>
 #include <intel-hda/codec-utils/stream-base.h>
 
 #include "debug-logging.h"

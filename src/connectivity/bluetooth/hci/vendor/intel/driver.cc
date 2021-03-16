@@ -4,15 +4,14 @@
 
 #include <fuchsia/hardware/bt/hci/c/banjo.h>
 #include <fuchsia/hardware/usb/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <zircon/status.h>
 
 #include <cstdint>
 #include <cstdio>
 #include <future>
 #include <thread>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "device.h"
 #include "logging.h"

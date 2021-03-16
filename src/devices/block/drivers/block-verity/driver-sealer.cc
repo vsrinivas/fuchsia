@@ -4,12 +4,12 @@
 
 #include "src/devices/block/drivers/block-verity/driver-sealer.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zircon/status.h>
 
-#include <ddk/debug.h>
 #include <fbl/auto_call.h>
 
 namespace block_verity {

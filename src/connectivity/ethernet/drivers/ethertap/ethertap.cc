@@ -4,6 +4,8 @@
 
 #include "ethertap.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_builder.h>
 #include <lib/fidl/llcpp/message.h>
@@ -14,8 +16,6 @@
 
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <fbl/auto_lock.h>
 #include <pretty/hexdump.h>
 

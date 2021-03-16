@@ -4,7 +4,8 @@
 
 #include "usb-function.h"
 
-#include <ddk/debug.h>
+#include <lib/ddk/debug.h>
+
 #include <fbl/array.h>
 
 #include "usb-peripheral.h"

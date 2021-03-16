@@ -7,8 +7,7 @@
 
 #include <fuchsia/hardware/nand/c/banjo.h>
 #include <fuchsia/hardware/nand/cpp/banjo.h>
-
-#include <ddk/driver.h>
+#include <lib/ddk/driver.h>
 
 namespace ftl {
 

@@ -4,6 +4,7 @@
 
 #include "usb-root-hub.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
@@ -11,7 +12,6 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/debug.h>
 #include <soc/mt8167/mt8167-usb.h>
 
 namespace mt_usb_hci {

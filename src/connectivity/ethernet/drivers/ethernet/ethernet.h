@@ -8,6 +8,9 @@
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/operation/ethernet.h>
@@ -30,9 +33,6 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/auto_lock.h>

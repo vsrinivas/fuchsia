@@ -5,8 +5,13 @@
 #include "ft_device.h"
 
 #include <fuchsia/input/report/llcpp/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/ddk/platform-defs.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/focaltech/focaltech.h>
+#include <lib/ddk/hw/arch_ops.h>
+#include <lib/ddk/hw/reg.h>
 #include <lib/zx/profile.h>
 #include <lib/zx/time.h>
 #include <stdio.h>
@@ -20,17 +25,12 @@
 #include <algorithm>
 #include <iterator>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/metadata.h>
-#include <ddk/trace/event.h>
+#include <lib/ddk/metadata.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
-#include <hw/arch_ops.h>
-#include <hw/reg.h>
 
 #include "src/ui/input/drivers/focaltech/focaltech_touch_bind.h"
 

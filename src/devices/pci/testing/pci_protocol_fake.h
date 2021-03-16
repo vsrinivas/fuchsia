@@ -5,6 +5,7 @@
 #define SRC_DEVICES_PCI_TESTING_PCI_PROTOCOL_FAKE_H_
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
@@ -16,7 +17,6 @@
 #include <optional>
 #include <vector>
 
-#include <ddk/device.h>
 #include <fbl/algorithm.h>
 
 // These are here to prevent a large dependency chain from including the userspace

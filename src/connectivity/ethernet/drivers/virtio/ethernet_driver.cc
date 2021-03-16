@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/driver.h>
 #include <lib/virtio/driver_utils.h>
 #include <zircon/types.h>
-
-#include <ddk/driver.h>
 
 #include "ethernet.h"
 #include "src/connectivity/ethernet/drivers/virtio/virtio_ethernet-bind.h"

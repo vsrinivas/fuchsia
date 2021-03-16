@@ -5,6 +5,7 @@
 #include "intel-hda-stream.h"
 
 #include <lib/fidl/llcpp/server.h>
+#include <lib/ddk/hw/arch_ops.h>
 #include <lib/zx/clock.h>
 #include <string.h>
 #include <zircon/syscalls.h>
@@ -13,7 +14,6 @@
 #include <limits>
 #include <utility>
 
-#include <hw/arch_ops.h>
 #include <intel-hda/utils/utils.h>
 
 #include "codec-connection.h"

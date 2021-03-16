@@ -5,8 +5,9 @@
 #ifndef SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_PWRSRC_H_
 #define SRC_DEVICES_BOARD_DRIVERS_X86_ACPI_DEV_DEV_PWRSRC_H_
 
+#include <lib/ddk/device.h>
+
 #include <acpica/acpi.h>
-#include <ddk/device.h>
 
 #include "power.h"
 

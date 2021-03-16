@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/audio/cpp/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/debug.h>
 #include <lib/simple-codec/simple-codec-server-internal.h>
 #include <lib/zx/status.h>
 #include <lib/zx/time.h>
@@ -17,7 +18,6 @@
 #include <optional>
 #include <vector>
 
-#include <ddk/debug.h>
 #include <ddktl/device.h>
 
 namespace audio {

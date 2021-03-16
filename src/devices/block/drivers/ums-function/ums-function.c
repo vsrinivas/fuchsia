@@ -6,6 +6,9 @@
 #include <assert.h>
 #include <fuchsia/hardware/usb/function/c/banjo.h>
 #include <fuchsia/hardware/usb/peripheral/block/c/fidl.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -15,9 +18,6 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <usb/usb-request.h>
 
 #include "src/devices/block/drivers/ums-function/usb_ums_bind.h"

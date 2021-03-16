@@ -6,6 +6,7 @@
 #define LIB_SIMPLEHID_SIMPLEHID_H_
 
 #include <fuchsia/hardware/hidbus/cpp/banjo.h>
+#include <lib/ddk/debug.h>
 #include <lib/fit/function.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/port.h>
@@ -14,7 +15,6 @@
 #include <zircon/syscalls/types.h>
 #include <zircon/threads.h>
 
-#include <ddk/debug.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 

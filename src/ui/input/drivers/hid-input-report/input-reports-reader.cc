@@ -4,8 +4,9 @@
 
 #include "input-reports-reader.h"
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
+
 #include <fbl/auto_lock.h>
 
 namespace hid_input_report_dev {

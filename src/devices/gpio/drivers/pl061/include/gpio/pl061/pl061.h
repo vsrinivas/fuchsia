@@ -7,11 +7,10 @@
 
 #include <fuchsia/hardware/gpioimpl/c/banjo.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <threads.h>
 #include <zircon/listnode.h>
 #include <zircon/types.h>
-
-#include <ddk/mmio-buffer.h>
 
 typedef struct {
   list_node_t node;

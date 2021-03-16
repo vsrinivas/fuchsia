@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/input/report/cpp/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/framebuffer/framebuffer.h>
@@ -20,7 +21,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <ddk/device.h>
 #include <fbl/unique_fd.h>
 
 namespace simple_touch {

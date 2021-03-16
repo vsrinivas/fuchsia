@@ -4,11 +4,11 @@
 
 #include "nandpart-utils.h"
 
+#include <lib/ddk/debug.h>
 #include <stdlib.h>
 #include <string.h>
 #include <zircon/assert.h>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 
 // Checks that the partition map is valid, sorts it in partition order, and

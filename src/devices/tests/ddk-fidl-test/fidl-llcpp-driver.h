@@ -6,12 +6,12 @@
 #define SRC_DEVICES_TESTS_DDK_FIDL_TEST_FIDL_LLCPP_DRIVER_H_
 
 #include <fuchsia/hardware/test/llcpp/fidl.h>
+#include <lib/ddk/driver.h>
 #include <lib/zircon-internal/thread_annotations.h>
 #include <lib/zx/event.h>
 #include <lib/zx/socket.h>
 #include <zircon/types.h>
 
-#include <ddk/driver.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
 #include <fbl/mutex.h>

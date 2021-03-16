@@ -3,15 +3,14 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/test/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <zircon/status.h>
 
 #include <cstdio>
 #include <future>
 #include <memory>
 #include <thread>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "device.h"
 #include "src/connectivity/bluetooth/hci/emulator/bt-hci-emulator-bind.h"

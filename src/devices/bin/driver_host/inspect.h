@@ -7,10 +7,10 @@
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/device/manager/llcpp/fidl.h>
+#include <lib/ddk/driver.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/zx/clock.h>
 
-#include <ddk/driver.h>
 #include <fbl/ref_ptr.h>
 
 #include "defaults.h"

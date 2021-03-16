@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/ddk/binding.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <limits.h>
 #include <stddef.h>
 #include <stdio.h>
@@ -9,9 +12,6 @@
 #include <string.h>
 #include <zircon/assert.h>
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <zxtest/zxtest.h>
 
 zx_status_t ddk_test_bind(void* ctx, zx_device_t* parent) {

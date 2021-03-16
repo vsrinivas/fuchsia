@@ -17,12 +17,12 @@
 #include <fuchsia/factory/wlan/llcpp/fidl.h>
 #include <fuchsia/hardware/wlanphyimpl/cpp/banjo.h>
 #include <lib/async/dispatcher.h>
+#include <lib/ddk/device.h>
 #include <zircon/types.h>
 
 #include <memory>
 #include <mutex>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"

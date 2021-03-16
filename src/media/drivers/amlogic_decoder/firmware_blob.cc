@@ -4,10 +4,9 @@
 
 #include "firmware_blob.h"
 
+#include <lib/ddk/debug.h>
 #include <lib/zx/vmar.h>
 #include <zircon/assert.h>
-
-#include <ddk/debug.h>
 
 #include "macros.h"
 

@@ -17,11 +17,10 @@
 
 #include "bmi.h"
 
-#include <string.h>
+#include <lib/ddk/driver.h>
 #include <lib/zircon-internal/align.h>
+#include <string.h>
 #include <zircon/status.h>
-
-#include <ddk/driver.h>
 
 #include "debug.h"
 #include "hif.h"

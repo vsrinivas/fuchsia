@@ -7,10 +7,10 @@
 
 #include <fuchsia/hardware/i2c/cpp/banjo.h>
 #include <fuchsia/hardware/i2cimpl/cpp/banjo.h>
+#include <lib/ddk/driver.h>
 #include <lib/sync/completion.h>
 #include <threads.h>
 
-#include <ddk/driver.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_counted.h>
 

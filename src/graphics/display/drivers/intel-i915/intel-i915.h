@@ -12,6 +12,7 @@
 #include <fuchsia/hardware/intelgpucore/c/banjo.h>
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sysmem/c/banjo.h>
+#include <lib/ddk/mmio-buffer.h>
 #include <lib/mmio/mmio.h>
 #include <lib/pci/hw.h>
 #include <lib/zx/channel.h>
@@ -20,7 +21,6 @@
 #include <memory>
 #include <optional>
 
-#include <ddk/mmio-buffer.h>
 #include <fbl/vector.h>
 
 #include "display-device.h"

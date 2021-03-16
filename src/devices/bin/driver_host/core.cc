@@ -5,6 +5,8 @@
 #include <assert.h>
 #include <errno.h>
 #include <fcntl.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -22,8 +24,6 @@
 #include <new>
 #include <utility>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/resume-txn.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>

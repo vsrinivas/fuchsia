@@ -10,7 +10,7 @@
 #include <lib/fake-hidbus-ifc/fake-hidbus-ifc.h>
 #include <lib/mock-i2c/mock-i2c.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 #include <hid/visalia-touch.h>
 #include <zxtest/zxtest.h>
 

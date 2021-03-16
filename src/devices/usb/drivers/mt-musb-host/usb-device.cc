@@ -4,9 +4,9 @@
 
 #include "usb-device.h"
 
+#include <lib/ddk/debug.h>
 #include <zircon/status.h>
 
-#include <ddk/debug.h>
 #include <soc/mt8167/mt8167-usb.h>
 
 #include "trace.h"

@@ -6,12 +6,12 @@
 #define SRC_CONNECTIVITY_TELEPHONY_TESTS_FAKE_DRIVERS_USB_QMI_FUNCTION_USB_QMI_FUNCTION_H_
 
 #include <fuchsia/hardware/usb/function/cpp/banjo.h>
+#include <lib/ddk/device.h>
 
 #include <memory>
 #include <optional>
 #include <vector>
 
-#include <ddk/device.h>
 #include <ddktl/device.h>
 
 namespace usb_qmi_function {

@@ -9,6 +9,8 @@
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/dispatcher.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/trace/event.h>
 #include <threads.h>
 #include <zircon/assert.h>
 #include <zircon/errors.h>
@@ -16,8 +18,6 @@
 
 #include <iterator>
 
-#include <ddk/debug.h>
-#include <ddk/trace/event.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_lock.h>
 

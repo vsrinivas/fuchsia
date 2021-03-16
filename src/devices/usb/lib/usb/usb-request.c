@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/usb/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/phys-iter.h>
 #include <lib/zircon-internal/align.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,9 +12,7 @@
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
-#include <ddk/debug.h>
 #include <ddk/hw/physiter/c/banjo.h>
-#include <ddk/phys-iter.h>
 #include <usb/usb-request.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))

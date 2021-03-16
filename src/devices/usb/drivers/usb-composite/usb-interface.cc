@@ -6,11 +6,11 @@
 
 #include <fuchsia/hardware/usb/c/banjo.h>
 #include <fuchsia/hardware/usb/composite/c/banjo.h>
+#include <lib/ddk/debug.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
-#include <ddk/debug.h>
 #include <usb/usb-request.h>
 
 #include "usb-composite.h"

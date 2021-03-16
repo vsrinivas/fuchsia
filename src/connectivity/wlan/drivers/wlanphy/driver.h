@@ -6,9 +6,8 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_WLANPHY_DRIVER_H_
 
 #include <lib/async/dispatcher.h>
+#include <lib/ddk/device.h>
 #include <zircon/compiler.h>
-
-#include <ddk/device.h>
 
 // Retrieves the async_t* for this driver.
 //

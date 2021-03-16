@@ -16,6 +16,7 @@
 #ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEBUG_H_
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_DEBUG_H_
 
+#include <lib/ddk/debug.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
@@ -23,8 +24,6 @@
 #include <cinttypes>
 #include <cstring>
 #include <utility>
-
-#include <ddk/debug.h>
 
 #include "throttle_counter.h"
 #include "token_bucket.h"

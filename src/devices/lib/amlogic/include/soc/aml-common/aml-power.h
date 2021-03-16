@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 
 // Note: The voltage table must be sorted in descending order.
 #define DEVICE_METADATA_AML_VOLTAGE_TABLE (0x41565400 | (DEVICE_METADATA_PRIVATE))  // AVTp

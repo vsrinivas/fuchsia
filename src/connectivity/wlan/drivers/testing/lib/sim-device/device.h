@@ -8,12 +8,11 @@
 /* Add an abstracted device interface that can be used for wlan driver tests without involving
  * devmgr.
  */
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <zircon/assert.h>
 
 #include <unordered_map>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 namespace wlan::simulation {
 

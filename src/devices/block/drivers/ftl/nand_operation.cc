@@ -4,12 +4,11 @@
 
 #include "nand_operation.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <zircon/errors.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
-
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 
 #include "lib/zx/status.h"
 

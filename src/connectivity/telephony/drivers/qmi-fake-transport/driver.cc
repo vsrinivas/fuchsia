@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include <fuchsia/hardware/test/c/banjo.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/ddk/platform-defs.h>
 #include <zircon/status.h>
 
@@ -10,9 +12,6 @@
 #include <future>
 #include <memory>
 #include <thread>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "fake-device.h"
 #include "src/connectivity/telephony/drivers/qmi-fake-transport/qmi_fake_bind.h"

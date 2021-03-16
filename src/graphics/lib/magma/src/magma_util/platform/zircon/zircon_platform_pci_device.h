@@ -6,9 +6,8 @@
 #define ZIRCON_PLATFORM_PCI_DEVICE_H
 
 #include <fuchsia/hardware/pci/c/banjo.h>
+#include <lib/ddk/device.h>
 #include <lib/device-protocol/pci.h>
-
-#include <ddk/device.h>
 
 #include "platform_pci_device.h"
 

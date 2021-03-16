@@ -5,14 +5,14 @@
 #ifndef SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_H_
 #define SRC_LIB_DDKTL_INCLUDE_DDKTL_DEVICE_H_
 
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 
 #include <type_traits>
 
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/init-txn.h>
 #include <ddktl/resume-txn.h>

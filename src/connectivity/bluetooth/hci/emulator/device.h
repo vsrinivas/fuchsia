@@ -11,6 +11,9 @@
 #include <fuchsia/hardware/test/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/fidl/cpp/binding.h>
 #include <zircon/compiler.h>
 #include <zircon/syscalls.h>
@@ -18,10 +21,6 @@
 
 #include <queue>
 #include <unordered_map>
-
-#include <ddk/debug.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "src/connectivity/bluetooth/core/bt-host/testing/fake_controller.h"
 #include "src/connectivity/bluetooth/hci/emulator/peer.h"

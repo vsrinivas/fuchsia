@@ -4,14 +4,14 @@
 
 #include "ethernet.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/process.h>
 
 #include <memory>
 #include <thread>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <zxtest/zxtest.h>
 
 class FakeEthernetImplProtocol

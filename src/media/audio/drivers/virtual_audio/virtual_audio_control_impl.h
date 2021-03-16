@@ -6,11 +6,10 @@
 
 #include <fuchsia/virtualaudio/c/fidl.h>
 #include <fuchsia/virtualaudio/cpp/fidl.h>
+#include <lib/ddk/device.h>
 #include <lib/fidl/cpp/binding_set.h>
 
 #include <memory>
-
-#include <ddk/device.h>
 
 namespace virtual_audio {
 

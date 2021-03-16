@@ -13,6 +13,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fidl-async-2/fidl_struct.h>
+#include <lib/ddk/hw/arch_ops.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
@@ -30,7 +31,6 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <hw/arch_ops.h>
 #include <zxtest/zxtest.h>
 
 #include "lib/fidl/llcpp/server_end.h"

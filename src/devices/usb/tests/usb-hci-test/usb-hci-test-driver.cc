@@ -5,6 +5,8 @@
 #include "usb-hci-test-driver.h"
 
 #include <fuchsia/hardware/usb/c/banjo.h>
+#include <lib/ddk/debug.h>
+#include <lib/ddk/device.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <unistd.h>
@@ -14,8 +16,6 @@
 #include <limits>
 #include <memory>
 
-#include <ddk/debug.h>
-#include <ddk/device.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <usb/request-cpp.h>

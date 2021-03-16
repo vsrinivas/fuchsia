@@ -4,13 +4,13 @@
 
 #include "src/storage/fvm/driver/vpartition.h"
 
+#include <lib/ddk/debug.h>
 #include <zircon/assert.h>
 
 #include <memory>
 #include <type_traits>
 #include <utility>
 
-#include <ddk/debug.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/vector.h>

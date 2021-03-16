@@ -8,13 +8,13 @@
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <fuchsia/hardware/intelhda/codec/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/zx/channel.h>
 
 #include <utility>
 
 #include <audio-proto/audio-proto.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>

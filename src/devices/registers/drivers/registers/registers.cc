@@ -9,7 +9,7 @@
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/epitaph.h>
 
-#include <ddk/metadata.h>
+#include <lib/ddk/metadata.h>
 
 #include "src/devices/registers/drivers/registers/registers-bind.h"
 

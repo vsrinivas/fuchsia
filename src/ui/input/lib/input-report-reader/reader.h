@@ -6,11 +6,11 @@
 #define SRC_UI_INPUT_LIB_INPUT_REPORT_READER_READER_H_
 
 #include <fuchsia/input/report/llcpp/fidl.h>
+#include <lib/ddk/trace/event.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <list>
 
-#include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/ring_buffer.h>

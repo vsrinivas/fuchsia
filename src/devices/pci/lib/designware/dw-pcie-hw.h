@@ -5,7 +5,8 @@
 #ifndef SRC_DEVICES_PCI_LIB_DESIGNWARE_DW_PCIE_HW_H_
 #define SRC_DEVICES_PCI_LIB_DESIGNWARE_DW_PCIE_HW_H_
 
-#include <hw/reg.h>
+#include <lib/ddk/hw/reg.h>
+
 #include <hwreg/bitfields.h>
 #include <hwreg/mmio.h>
 

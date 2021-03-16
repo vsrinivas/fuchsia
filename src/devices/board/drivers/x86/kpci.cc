@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <assert.h>
+#include <lib/ddk/debug.h>
 #include <lib/pci/pciroot.h>
 #include <stdio.h>
 
 #include <array>
 
 #include <acpica/acpi.h>
-#include <ddk/debug.h>
 
 #include "acpi-private.h"
 #include "methods.h"

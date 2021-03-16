@@ -4,8 +4,9 @@
 
 #include "pwm.h"
 
-#include <ddk/debug.h>
-#include <ddk/metadata.h>
+#include <lib/ddk/debug.h>
+
+#include <lib/ddk/metadata.h>
 #include <fbl/alloc_checker.h>
 
 #include "src/devices/pwm/drivers/pwm/pwm-bind.h"

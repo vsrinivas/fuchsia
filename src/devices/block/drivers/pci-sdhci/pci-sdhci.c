@@ -5,6 +5,8 @@
 #include <fuchsia/hardware/pci/c/banjo.h>
 #include <fuchsia/hardware/sdhci/c/banjo.h>
 #include <inttypes.h>
+#include <lib/ddk/device.h>
+#include <lib/ddk/driver.h>
 #include <lib/device-protocol/pci.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,9 +14,6 @@
 #include <sys/param.h>
 #include <threads.h>
 #include <unistd.h>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
 
 #include "src/devices/block/drivers/pci-sdhci/pci-sdhci-bind.h"
 

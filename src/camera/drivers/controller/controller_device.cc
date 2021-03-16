@@ -4,13 +4,13 @@
 
 #include "src/camera/drivers/controller/controller_device.h"
 
+#include <lib/ddk/debug.h>
+#include <lib/ddk/driver.h>
 #include <lib/syslog/cpp/macros.h>
 #include <stdint.h>
 #include <zircon/threads.h>
 #include <zircon/types.h>
 
-#include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddktl/fidl.h>
 
 #include "src/camera/drivers/controller/bind.h"
