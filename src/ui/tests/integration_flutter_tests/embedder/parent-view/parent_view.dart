@@ -76,9 +76,9 @@ class TestApp extends StatelessWidget {
               child: Stack(
                 alignment: Alignment.center,
                 children: [
-                  SizedBox(
-                    width: 200,
-                    height: 200,
+                  FractionallySizedBox(
+                    widthFactor: 0.33,
+                    heightFactor: 0.33,
                     child: ChildView(
                       connection: connection,
                       hitTestable: hitTestable,
@@ -86,11 +86,19 @@ class TestApp extends StatelessWidget {
                     ),
                   ),
                   if (showOverlay)
-                    Container(
-                      margin: EdgeInsets.only(left: 200, bottom: 200),
-                      width: 200,
-                      height: 200,
-                      color: Color.fromARGB(255, 0, 255, 0),
+                    FractionallySizedBox(
+                      widthFactor: 0.66,
+                      heightFactor: 0.66,
+                      child: Container(
+                        alignment: Alignment.topRight,
+                        child: FractionallySizedBox(
+                          widthFactor: 0.5,
+                          heightFactor: 0.5,
+                          child: Container(
+                            color: Color.fromARGB(255, 0, 255, 0),
+                          ),
+                        ),
+                      ),
                     ),
                 ],
               ),

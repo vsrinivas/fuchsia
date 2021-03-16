@@ -27,7 +27,7 @@ namespace flutter_embedder_test {
 /// Defines a list of services that are injected into the test environment. Unlike the
 /// injected-services in CMX which are injected per test package, these are injected per test and
 /// result in a more hermetic test environment.
-constexpr std::size_t NUM_SERVICES = 13;
+constexpr std::size_t NUM_SERVICES = 14;
 constexpr std::array<std::pair<const char*, const char*>, NUM_SERVICES> kInjectedServices = {{
     // clang-format off
     {
@@ -39,6 +39,9 @@ constexpr std::array<std::pair<const char*, const char*>, NUM_SERVICES> kInjecte
     },{
       "fuchsia.fonts.Provider",
       "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx"
+    },{
+      "fuchsia.hardware.display.Provider",
+      "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"
     },{
       "fuchsia.intl.PropertyProvider",
       "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx"

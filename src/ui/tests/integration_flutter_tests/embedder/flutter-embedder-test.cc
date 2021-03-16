@@ -25,8 +25,7 @@ TEST_F(FlutterEmbedderTests, BasicLegacyEmbedding) {
         EXPECT_GT(histogram[kChildBackgroundColor], 0u);
         EXPECT_GT(histogram[kParentBackgroundColor], histogram[kChildBackgroundColor]);
       }));
-
-}  // namespace flutter_embedder_test
+}
 
 TEST_F(FlutterEmbedderTests, HittestLegacyEmbedding) {
   RunAppWithArgs(kParentViewUrl, {"--no-usePlatformView"});
