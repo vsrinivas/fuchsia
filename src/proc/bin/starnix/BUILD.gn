@@ -47,6 +47,7 @@ if (target_cpu == "x64") {
       "executive.rs",
       "loader.rs",
       "main.rs",
+      "syscall_table.rs",
       "syscalls.rs",
       "types.rs",
     ]

@@ -111,7 +111,8 @@ pub fn sys_mmap(
         zx::Status::NO_MEMORY => ENOMEM,
         _ => impossible_error(s),
     })?;
-    vmo.set_name(CStr::from_bytes_with_nul(b"starnix-anon\0").unwrap()).map_err(impossible_error)?;
+    vmo.set_name(CStr::from_bytes_with_nul(b"starnix-anon\0").unwrap())
+        .map_err(impossible_error)?;
 
     let addr = ctx.process.mm.root_vmar.map(addr.ptr(), &vmo, 0, length, zx_flags).map_err(
         |s| match s {
@@ -270,4 +271,3 @@ pub fn sys_unknown(
 pub fn impossible_error(status: zx::Status) -> Errno {
     panic!("encountered impossible error: {}", status);
 }
-
