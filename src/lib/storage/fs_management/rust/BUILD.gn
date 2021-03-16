@@ -1,0 +1,56 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+
+rustc_library("fs_management") {
+  with_unit_tests = true
+  edition = "2018"
+  deps = [
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/cstr",
+    "//src/lib/fdio/rust:fdio",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/isolated_devmgr/v2_component/rust:isolated-driver-manager",
+    "//src/lib/storage/ramdevice_client",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:thiserror",
+  ]
+
+  sources = [ "src/lib.rs" ]
+}
+
+isolated_devmgr_unittest_v2_component("fs-management-rust-tests-component") {
+  component_name = "fs-management-rust-tests"
+  executable_path = "bin/fs_management_lib_test"
+  runner = "rust_test_runner"
+  deps = [
+    ":fs_management_test",
+    "//src/storage/bin/blobfs",
+    "//src/storage/bin/factoryfs",
+    "//src/storage/bin/minfs",
+  ]
+}
+
+fuchsia_test_package("fs-management-rust-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [ ":fs-management-rust-tests-component" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":fs-management-rust-tests",
+    "//src/lib/isolated_devmgr/v2_component",
+  ]
+}

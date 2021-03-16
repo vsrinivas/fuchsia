@@ -4,7 +4,6 @@
 
 group("storage") {
   deps = [
-    "fs_management",
     "pseudo-fs",
     "ramdevice_client",
     "vfs/cpp",

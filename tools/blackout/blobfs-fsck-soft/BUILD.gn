@@ -40,7 +40,7 @@ rustc_binary("blobfs-fsck-soft-target-bin") {
     "//src/lib/cstr",
     "//src/lib/fdio/rust:fdio",
     "//src/lib/scoped_task",
-    "//src/lib/storage/fs_management",
+    "//src/lib/storage/fs_management/rust:fs_management",
     "//src/lib/storage/ramdevice_client",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//third_party/rust_crates:anyhow",
