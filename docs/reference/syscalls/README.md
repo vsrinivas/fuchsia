@@ -65,12 +65,12 @@
 + [socket_write](socket_write.md) - write data to a socket
 
 ## Stream
-+ [zx_stream_create](stream_create.md) - create a stream from a VMO
-+ [zx_stream_readv](stream_readv.md) - read data from the stream at the current seek offset
-+ [zx_stream_readv_at](stream_readv_at.md) - read data from the stream at a given offset
-+ [zx_stream_writev](stream_writev.md) - write data to the stream at the current seek offset
-+ [zx_stream_writev_at](stream_writev_at.md) - write data to the stream at a given offset
-+ [zx_stream_seek](stream_seek.md) - modify the current seek offset of the stream
++ [stream_create](stream_create.md) - create a stream from a VMO
++ [stream_readv](stream_readv.md) - read data from the stream at the current seek offset
++ [stream_readv_at](stream_readv_at.md) - read data from the stream at a given offset
++ [stream_writev](stream_writev.md) - write data to the stream at the current seek offset
++ [stream_writev_at](stream_writev_at.md) - write data to the stream at a given offset
++ [stream_seek](stream_seek.md) - modify the current seek offset of the stream
 
 ## Fifos
 + [fifo_create](fifo_create.md) - create a new fifo
