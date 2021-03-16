@@ -19,7 +19,11 @@ import("//src/chromium/build_args.gni")
 
 template("generate_flavors") {
   prebuilt_package_with_flavors("${target_name}_pkg") {
-    forward_variables_from(invoker, [ "selections" ])
+    forward_variables_from(invoker,
+                           [
+                             "selections",
+                             "testonly",
+                           ])
     package_name = invoker.target_name
     visibility = [ rebase_path(":${invoker.target_name}") ]
     default = "release"
@@ -38,7 +42,7 @@ template("generate_flavors") {
       },
       {
         name = "custom"
-        archive = chromium_build_dir + invoker.custom_package_path
+        archive = "$chromium_build_dir${invoker.custom_package_path}"
       },
     ]
   }
@@ -52,8 +56,9 @@ template("generate_config") {
     forward_variables_from(invoker,
                            [
                              "for_pkg",
-                             "sources",
                              "outputs",
+                             "sources",
+                             "testonly",
                            ])
     visibility = [ rebase_path(":${invoker.target_name}") ]
   }
@@ -67,18 +72,20 @@ template("generate_pkg_and_config") {
   generate_flavors(target_name) {
     forward_variables_from(invoker,
                            [
-                             "prebuilt_archive_base_path",
-                             "debug_archive_base_path",
                              "custom_package_path",
+                             "debug_archive_base_path",
+                             "prebuilt_archive_base_path",
                              "selections",
+                             "testonly",
                            ])
   }
   generate_config(target_name) {
     forward_variables_from(invoker,
                            [
                              "for_pkg",
-                             "sources",
                              "outputs",
+                             "sources",
+                             "testonly",
                            ])
   }
 }

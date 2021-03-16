@@ -18,7 +18,7 @@ group("cast_runner") {
 }
 
 prebuilt_archive_base_path = "//prebuilt/third_party/cast_runner"
-debug_archive_base_path = "//prebuilt/build_ids/" + target_cpu + "/chromium"
+debug_archive_base_path = "//prebuilt/build_ids/$target_cpu/chromium"
 
 # TODO(fxbug.dev/70573): Remove when use_cast_runner_canary is deprecated.
 if (use_cast_runner_canary) {
