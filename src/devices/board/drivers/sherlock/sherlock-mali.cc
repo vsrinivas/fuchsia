@@ -75,9 +75,9 @@ zx_status_t Sherlock::MaliInit() {
   mali_dev.bti_list = mali_btis;
   mali_dev.bti_count = countof(mali_btis);
   using fuchsia_hardware_gpu_amlogic::wire::Metadata;
-  auto metadata = Metadata::Builder(std::make_unique<Metadata::Frame>())
-                      .set_supports_protected_mode(std::make_unique<bool>(true))
-                      .build();
+  fidl::FidlAllocator allocator;
+  Metadata metadata(allocator);
+  metadata.set_supports_protected_mode(allocator, true);
   fidl::OwnedEncodedMessage<Metadata> encoded_metadata(&metadata);
   if (!encoded_metadata.ok() || (encoded_metadata.error() != nullptr)) {
     zxlogf(ERROR, "%s: Could not build metadata %s\n", __func__, encoded_metadata.error());

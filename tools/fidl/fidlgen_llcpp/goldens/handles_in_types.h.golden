@@ -314,7 +314,6 @@ class TableWithHandle final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  class Builder;
   class UnownedBuilder;
 
   // Frames are managed automatically by the FidlAllocator class.
@@ -337,7 +336,6 @@ class TableWithHandle final {
     ::fidl::Envelope<::zx::vmo> h_;
 
     friend class TableWithHandle;
-    friend class TableWithHandle::Builder;
     friend class TableWithHandle::UnownedBuilder;
   };
 
@@ -346,58 +344,6 @@ class TableWithHandle final {
       : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
-};
-
-// TableWithHandle::Builder builds TableWithHandle.
-// Usage:
-// TableWithHandle val =
-// TableWithHandle::Builder(std::make_unique<TableWithHandle::Frame>())
-// .set_h(ptr)
-// .build();
-class TableWithHandle::Builder final {
- public:
-  ~Builder() = default;
-  Builder() = delete;
-  Builder(::fidl::tracking_ptr<TableWithHandle::Frame>&& frame_ptr)
-      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
-
-  Builder(Builder&& other) noexcept = default;
-  Builder& operator=(Builder&& other) noexcept = default;
-
-  Builder(const Builder& other) = delete;
-  Builder& operator=(const Builder& other) = delete;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  Builder&& set_h(::fidl::tracking_ptr<::zx::vmo> elem) {
-    frame_ptr_->h_.data = std::move(elem);
-    if (max_ordinal_ < 1) {
-      // Note: the table size is not currently reduced if nullptr is set.
-      // This is possible to reconsider in the future.
-      max_ordinal_ = 1;
-    }
-    return std::move(*this);
-  }
-  const ::zx::vmo& h() const {
-    ZX_ASSERT(has_h());
-    return *frame_ptr_->h_.data;
-  }
-  ::zx::vmo& h() {
-    ZX_ASSERT(has_h());
-    return *frame_ptr_->h_.data;
-  }
-  bool has_h() const {
-    return max_ordinal_ >= 1 && frame_ptr_->h_.data != nullptr;
-  }
-
-  TableWithHandle build() {
-    return TableWithHandle(max_ordinal_, std::move(frame_ptr_));
-  }
-
- private:
-  uint64_t max_ordinal_ = 0;
-  ::fidl::tracking_ptr<TableWithHandle::Frame> frame_ptr_;
 };
 
 // UnownedBuilder acts like Builder but directly owns its Frame, simplifying

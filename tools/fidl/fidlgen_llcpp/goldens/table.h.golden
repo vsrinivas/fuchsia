@@ -238,7 +238,6 @@ class SimpleTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  class Builder;
   class UnownedBuilder;
 
   // Frames are managed automatically by the FidlAllocator class.
@@ -265,7 +264,6 @@ class SimpleTable final {
     ::fidl::Envelope<int64_t> y_;
 
     friend class SimpleTable;
-    friend class SimpleTable::Builder;
     friend class SimpleTable::UnownedBuilder;
   };
 
@@ -274,78 +272,6 @@ class SimpleTable final {
       : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
-};
-
-// SimpleTable::Builder builds SimpleTable.
-// Usage:
-// SimpleTable val =
-// SimpleTable::Builder(std::make_unique<SimpleTable::Frame>()) .set_x(ptr)
-// .build();
-class SimpleTable::Builder final {
- public:
-  ~Builder() = default;
-  Builder() = delete;
-  Builder(::fidl::tracking_ptr<SimpleTable::Frame>&& frame_ptr)
-      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
-
-  Builder(Builder&& other) noexcept = default;
-  Builder& operator=(Builder&& other) noexcept = default;
-
-  Builder(const Builder& other) = delete;
-  Builder& operator=(const Builder& other) = delete;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  Builder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
-    frame_ptr_->x_.data = std::move(elem);
-    if (max_ordinal_ < 1) {
-      // Note: the table size is not currently reduced if nullptr is set.
-      // This is possible to reconsider in the future.
-      max_ordinal_ = 1;
-    }
-    return std::move(*this);
-  }
-  const int64_t& x() const {
-    ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
-  }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
-  }
-  bool has_x() const {
-    return max_ordinal_ >= 1 && frame_ptr_->x_.data != nullptr;
-  }
-
-  Builder&& set_y(::fidl::tracking_ptr<int64_t> elem) {
-    frame_ptr_->y_.data = std::move(elem);
-    if (max_ordinal_ < 5) {
-      // Note: the table size is not currently reduced if nullptr is set.
-      // This is possible to reconsider in the future.
-      max_ordinal_ = 5;
-    }
-    return std::move(*this);
-  }
-  const int64_t& y() const {
-    ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
-  }
-  int64_t& y() {
-    ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
-  }
-  bool has_y() const {
-    return max_ordinal_ >= 5 && frame_ptr_->y_.data != nullptr;
-  }
-
-  SimpleTable build() {
-    return SimpleTable(max_ordinal_, std::move(frame_ptr_));
-  }
-
- private:
-  uint64_t max_ordinal_ = 0;
-  ::fidl::tracking_ptr<SimpleTable::Frame> frame_ptr_;
 };
 
 // UnownedBuilder acts like Builder but directly owns its Frame, simplifying
@@ -634,7 +560,6 @@ class ReverseOrdinalTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  class Builder;
   class UnownedBuilder;
 
   // Frames are managed automatically by the FidlAllocator class.
@@ -659,7 +584,6 @@ class ReverseOrdinalTable final {
     ::fidl::Envelope<int64_t> x_;
 
     friend class ReverseOrdinalTable;
-    friend class ReverseOrdinalTable::Builder;
     friend class ReverseOrdinalTable::UnownedBuilder;
   };
 
@@ -669,100 +593,6 @@ class ReverseOrdinalTable final {
       : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
-};
-
-// ReverseOrdinalTable::Builder builds ReverseOrdinalTable.
-// Usage:
-// ReverseOrdinalTable val =
-// ReverseOrdinalTable::Builder(std::make_unique<ReverseOrdinalTable::Frame>())
-// .set_z(ptr)
-// .build();
-class ReverseOrdinalTable::Builder final {
- public:
-  ~Builder() = default;
-  Builder() = delete;
-  Builder(::fidl::tracking_ptr<ReverseOrdinalTable::Frame>&& frame_ptr)
-      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
-
-  Builder(Builder&& other) noexcept = default;
-  Builder& operator=(Builder&& other) noexcept = default;
-
-  Builder(const Builder& other) = delete;
-  Builder& operator=(const Builder& other) = delete;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  Builder&& set_z(::fidl::tracking_ptr<int64_t> elem) {
-    frame_ptr_->z_.data = std::move(elem);
-    if (max_ordinal_ < 1) {
-      // Note: the table size is not currently reduced if nullptr is set.
-      // This is possible to reconsider in the future.
-      max_ordinal_ = 1;
-    }
-    return std::move(*this);
-  }
-  const int64_t& z() const {
-    ZX_ASSERT(has_z());
-    return *frame_ptr_->z_.data;
-  }
-  int64_t& z() {
-    ZX_ASSERT(has_z());
-    return *frame_ptr_->z_.data;
-  }
-  bool has_z() const {
-    return max_ordinal_ >= 1 && frame_ptr_->z_.data != nullptr;
-  }
-
-  Builder&& set_y(::fidl::tracking_ptr<int64_t> elem) {
-    frame_ptr_->y_.data = std::move(elem);
-    if (max_ordinal_ < 2) {
-      // Note: the table size is not currently reduced if nullptr is set.
-      // This is possible to reconsider in the future.
-      max_ordinal_ = 2;
-    }
-    return std::move(*this);
-  }
-  const int64_t& y() const {
-    ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
-  }
-  int64_t& y() {
-    ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
-  }
-  bool has_y() const {
-    return max_ordinal_ >= 2 && frame_ptr_->y_.data != nullptr;
-  }
-
-  Builder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
-    frame_ptr_->x_.data = std::move(elem);
-    if (max_ordinal_ < 3) {
-      // Note: the table size is not currently reduced if nullptr is set.
-      // This is possible to reconsider in the future.
-      max_ordinal_ = 3;
-    }
-    return std::move(*this);
-  }
-  const int64_t& x() const {
-    ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
-  }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
-  }
-  bool has_x() const {
-    return max_ordinal_ >= 3 && frame_ptr_->x_.data != nullptr;
-  }
-
-  ReverseOrdinalTable build() {
-    return ReverseOrdinalTable(max_ordinal_, std::move(frame_ptr_));
-  }
-
- private:
-  uint64_t max_ordinal_ = 0;
-  ::fidl::tracking_ptr<ReverseOrdinalTable::Frame> frame_ptr_;
 };
 
 // UnownedBuilder acts like Builder but directly owns its Frame, simplifying
@@ -995,7 +825,6 @@ class OlderSimpleTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  class Builder;
   class UnownedBuilder;
 
   // Frames are managed automatically by the FidlAllocator class.
@@ -1018,7 +847,6 @@ class OlderSimpleTable final {
     ::fidl::Envelope<int64_t> x_;
 
     friend class OlderSimpleTable;
-    friend class OlderSimpleTable::Builder;
     friend class OlderSimpleTable::UnownedBuilder;
   };
 
@@ -1028,58 +856,6 @@ class OlderSimpleTable final {
       : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
-};
-
-// OlderSimpleTable::Builder builds OlderSimpleTable.
-// Usage:
-// OlderSimpleTable val =
-// OlderSimpleTable::Builder(std::make_unique<OlderSimpleTable::Frame>())
-// .set_x(ptr)
-// .build();
-class OlderSimpleTable::Builder final {
- public:
-  ~Builder() = default;
-  Builder() = delete;
-  Builder(::fidl::tracking_ptr<OlderSimpleTable::Frame>&& frame_ptr)
-      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
-
-  Builder(Builder&& other) noexcept = default;
-  Builder& operator=(Builder&& other) noexcept = default;
-
-  Builder(const Builder& other) = delete;
-  Builder& operator=(const Builder& other) = delete;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  Builder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
-    frame_ptr_->x_.data = std::move(elem);
-    if (max_ordinal_ < 1) {
-      // Note: the table size is not currently reduced if nullptr is set.
-      // This is possible to reconsider in the future.
-      max_ordinal_ = 1;
-    }
-    return std::move(*this);
-  }
-  const int64_t& x() const {
-    ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
-  }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
-  }
-  bool has_x() const {
-    return max_ordinal_ >= 1 && frame_ptr_->x_.data != nullptr;
-  }
-
-  OlderSimpleTable build() {
-    return OlderSimpleTable(max_ordinal_, std::move(frame_ptr_));
-  }
-
- private:
-  uint64_t max_ordinal_ = 0;
-  ::fidl::tracking_ptr<OlderSimpleTable::Frame> frame_ptr_;
 };
 
 // UnownedBuilder acts like Builder but directly owns its Frame, simplifying
@@ -1348,7 +1124,6 @@ class NewerSimpleTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  class Builder;
   class UnownedBuilder;
 
   // Frames are managed automatically by the FidlAllocator class.
@@ -1376,7 +1151,6 @@ class NewerSimpleTable final {
     ::fidl::Envelope<int64_t> z_;
 
     friend class NewerSimpleTable;
-    friend class NewerSimpleTable::Builder;
     friend class NewerSimpleTable::UnownedBuilder;
   };
 
@@ -1386,100 +1160,6 @@ class NewerSimpleTable final {
       : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
-};
-
-// NewerSimpleTable::Builder builds NewerSimpleTable.
-// Usage:
-// NewerSimpleTable val =
-// NewerSimpleTable::Builder(std::make_unique<NewerSimpleTable::Frame>())
-// .set_x(ptr)
-// .build();
-class NewerSimpleTable::Builder final {
- public:
-  ~Builder() = default;
-  Builder() = delete;
-  Builder(::fidl::tracking_ptr<NewerSimpleTable::Frame>&& frame_ptr)
-      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
-
-  Builder(Builder&& other) noexcept = default;
-  Builder& operator=(Builder&& other) noexcept = default;
-
-  Builder(const Builder& other) = delete;
-  Builder& operator=(const Builder& other) = delete;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  Builder&& set_x(::fidl::tracking_ptr<int64_t> elem) {
-    frame_ptr_->x_.data = std::move(elem);
-    if (max_ordinal_ < 1) {
-      // Note: the table size is not currently reduced if nullptr is set.
-      // This is possible to reconsider in the future.
-      max_ordinal_ = 1;
-    }
-    return std::move(*this);
-  }
-  const int64_t& x() const {
-    ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
-  }
-  int64_t& x() {
-    ZX_ASSERT(has_x());
-    return *frame_ptr_->x_.data;
-  }
-  bool has_x() const {
-    return max_ordinal_ >= 1 && frame_ptr_->x_.data != nullptr;
-  }
-
-  Builder&& set_y(::fidl::tracking_ptr<int64_t> elem) {
-    frame_ptr_->y_.data = std::move(elem);
-    if (max_ordinal_ < 5) {
-      // Note: the table size is not currently reduced if nullptr is set.
-      // This is possible to reconsider in the future.
-      max_ordinal_ = 5;
-    }
-    return std::move(*this);
-  }
-  const int64_t& y() const {
-    ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
-  }
-  int64_t& y() {
-    ZX_ASSERT(has_y());
-    return *frame_ptr_->y_.data;
-  }
-  bool has_y() const {
-    return max_ordinal_ >= 5 && frame_ptr_->y_.data != nullptr;
-  }
-
-  Builder&& set_z(::fidl::tracking_ptr<int64_t> elem) {
-    frame_ptr_->z_.data = std::move(elem);
-    if (max_ordinal_ < 6) {
-      // Note: the table size is not currently reduced if nullptr is set.
-      // This is possible to reconsider in the future.
-      max_ordinal_ = 6;
-    }
-    return std::move(*this);
-  }
-  const int64_t& z() const {
-    ZX_ASSERT(has_z());
-    return *frame_ptr_->z_.data;
-  }
-  int64_t& z() {
-    ZX_ASSERT(has_z());
-    return *frame_ptr_->z_.data;
-  }
-  bool has_z() const {
-    return max_ordinal_ >= 6 && frame_ptr_->z_.data != nullptr;
-  }
-
-  NewerSimpleTable build() {
-    return NewerSimpleTable(max_ordinal_, std::move(frame_ptr_));
-  }
-
- private:
-  uint64_t max_ordinal_ = 0;
-  ::fidl::tracking_ptr<NewerSimpleTable::Frame> frame_ptr_;
 };
 
 // UnownedBuilder acts like Builder but directly owns its Frame, simplifying
@@ -1674,7 +1354,6 @@ class EmptyTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  class Builder;
   class UnownedBuilder;
 
   // Frames are managed automatically by the FidlAllocator class.
@@ -1696,7 +1375,6 @@ class EmptyTable final {
     Frame& operator=(Frame&&) noexcept = default;
 
     friend class EmptyTable;
-    friend class EmptyTable::Builder;
     friend class EmptyTable::UnownedBuilder;
   };
 
@@ -1705,34 +1383,6 @@ class EmptyTable final {
       : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
-};
-
-// EmptyTable::Builder builds EmptyTable.
-// Usage:
-// EmptyTable val = EmptyTable::Builder(std::make_unique<EmptyTable::Frame>())
-
-// .build();
-class EmptyTable::Builder final {
- public:
-  ~Builder() = default;
-  Builder() = delete;
-  Builder(::fidl::tracking_ptr<EmptyTable::Frame>&& frame_ptr)
-      : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
-
-  Builder(Builder&& other) noexcept = default;
-  Builder& operator=(Builder&& other) noexcept = default;
-
-  Builder(const Builder& other) = delete;
-  Builder& operator=(const Builder& other) = delete;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  EmptyTable build() { return EmptyTable(max_ordinal_, std::move(frame_ptr_)); }
-
- private:
-  uint64_t max_ordinal_ = 0;
-  ::fidl::tracking_ptr<EmptyTable::Frame> frame_ptr_;
 };
 
 // UnownedBuilder acts like Builder but directly owns its Frame, simplifying

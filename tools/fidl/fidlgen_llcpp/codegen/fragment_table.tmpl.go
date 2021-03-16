@@ -197,7 +197,6 @@ public:
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  class Builder;
   class UnownedBuilder;
 
   // Frames are managed automatically by the FidlAllocator class.
@@ -227,7 +226,6 @@ public:
     {{- end }}
 
     friend class {{ .Name }};
-    friend class {{ .Name }}::Builder;
     friend class {{ .Name }}::UnownedBuilder;
   };
 
@@ -235,85 +233,6 @@ public:
   {{ .Name }}(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
-};
-
-// {{ .Name }}::Builder builds {{ .Name }}.
-// Usage:
-// {{ .Name }} val = {{ .Name }}::Builder(std::make_unique<{{ .Name }}::Frame>())
-{{ if ne (len .Members) 0 }}// .set_{{ (index .Members 0).Name }}(ptr){{ end }}
-// .build();
-class {{ .Name }}::Builder final {
- public:
-  ~Builder() = default;
-  Builder() = delete;
-  Builder(::fidl::tracking_ptr<{{ .Name }}::Frame>&& frame_ptr) : max_ordinal_(0), frame_ptr_(std::move(frame_ptr)) {}
-
-  Builder(Builder&& other) noexcept = default;
-  Builder& operator=(Builder&& other) noexcept = default;
-
-  Builder(const Builder& other) = delete;
-  Builder& operator=(const Builder& other) = delete;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  {{- range .Members }}
-{{ "" }}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
-    {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
-  Builder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type }}> elem) {
-    frame_ptr_->{{ .Name }}_.data = std::move(elem);
-    if (max_ordinal_ < {{ .Ordinal }}) {
-      // Note: the table size is not currently reduced if nullptr is set.
-      // This is possible to reconsider in the future.
-      max_ordinal_ = {{ .Ordinal }};
-    }
-    return std::move(*this);
-  }
-  const {{ .Type }}& {{ .Name }}() const {
-    ZX_ASSERT({{ .MethodHasName }}());
-    return *frame_ptr_->{{ .Name }}_.data;
-  }
-  {{ .Type }}& {{ .Name }}() {
-    ZX_ASSERT({{ .MethodHasName }}());
-    return *frame_ptr_->{{ .Name }}_.data;
-  }
-  bool {{ .MethodHasName }}() const {
-    return max_ordinal_ >= {{ .Ordinal }} && frame_ptr_->{{ .Name }}_.data != nullptr;
-  }
-  {{- if eq .Type.Kind TypeKinds.Table }}
-  {{ .Type }}::Builder& get_builder_{{ .Name }}() {
-    ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<{{ .Type }}::Builder*>(&*frame_ptr_->{{ .Name }}_.data);
-  }
-  {{- end }}
-  {{- if eq .Type.Kind TypeKinds.Array }}
-  {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::Array<{{ .Type.ElementType }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
-    ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_ptr_->{{ .Name }}_.data);
-  }
-  {{- end }}
-  {{- end }}
-  {{- if eq .Type.Kind TypeKinds.Vector }}
-  {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::VectorView<{{ .Type.ElementType }}::Builder>& get_builders_{{ .Name }}() {
-    ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType }}::Builder>*>(&*frame_ptr_->{{ .Name }}_.data);
-  }
-  {{- end }}
-  {{- end }}
-  {{- end }}
-
-  {{ .Name }} build() {
-    return {{ .Name }}(max_ordinal_, std::move(frame_ptr_));
-  }
-
-private:
-  uint64_t max_ordinal_ = 0;
-  ::fidl::tracking_ptr<{{ .Name }}::Frame> frame_ptr_;
 };
 
 // UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
@@ -353,28 +272,6 @@ public:
   bool {{ .MethodHasName }}() const {
     return max_ordinal_ >= {{ .Ordinal }} && frame_.{{ .Name }}_.data != nullptr;
   }
-  {{- if eq .Type.Kind TypeKinds.Table }}
-  {{ .Type }}::Builder& get_builder_{{ .Name }}() {
-    ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<{{ .Type }}::Builder*>(&*frame_.{{ .Name }}_.data);
-  }
-  {{- end }}
-  {{- if eq .Type.Kind TypeKinds.Array }}
-  {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::Array<{{ .Type.ElementType }}::Builder, {{ .Type.ElementCount }}>& get_builders_{{ .Name }}() {
-    ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::Array<{{ .Type.ElementType }}::Builder, {{ .Type.ElementCount }}>*>(&*frame_.{{ .Name }}_.data);
-  }
-  {{- end }}
-  {{- end }}
-  {{- if eq .Type.Kind TypeKinds.Vector }}
-  {{- if eq .Type.ElementType.Kind TypeKinds.Table }}
-  ::fidl::VectorView<{{ .Type.ElementType }}::Builder>& get_builders_{{ .Name }}() {
-    ZX_ASSERT({{ .MethodHasName }}());
-    return *reinterpret_cast<::fidl::VectorView<{{ .Type.ElementType }}::Builder>*>(&*frame_.{{ .Name }}_.data);
-  }
-  {{- end }}
-  {{- end }}
   {{- end }}
 
   {{ .Name }} build() {
