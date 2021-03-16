@@ -117,29 +117,28 @@ mod tests {
     use super::*;
     use crate::errors::{PackageNameError, PackageVariantError};
     use lazy_static::lazy_static;
+    use matches::assert_matches;
     use proptest::prelude::*;
     use regex::Regex;
 
     #[test]
     fn test_reject_invalid_name() {
-        let invalid_name = "name-with-question-mark?".to_string();
         assert_matches!(
-            MetaPackage::from_name_and_variant(invalid_name.clone(), "valid-variant"),
-            Err(MetaPackageError::PackageName(PackageNameError::InvalidCharacter{invalid_name: name})) => assert_eq!(invalid_name, name)
-        )
+            MetaPackage::from_name_and_variant("name-with-question-mark?", "valid-variant"),
+            Err(MetaPackageError::PackageName(PackageNameError::InvalidCharacter {
+                invalid_name
+            })) if invalid_name == "name-with-question-mark?"
+        );
     }
 
     #[test]
     fn test_reject_invalid_variant() {
-        let invalid_variant = "variant-with-question-mark?".to_string();
         assert_matches!(
-            MetaPackage::from_name_and_variant(
-                "valid-name",
-                invalid_variant.clone()),
-            Err(MetaPackageError::PackageVariant(
-                PackageVariantError::InvalidCharacter { invalid_variant: variant } ))
-                => assert_eq!(invalid_variant, variant)
-        )
+            MetaPackage::from_name_and_variant("valid-name", "variant-with-question-mark?"),
+            Err(MetaPackageError::PackageVariant(PackageVariantError::InvalidCharacter {
+                invalid_variant
+            })) if invalid_variant == "variant-with-question-mark?"
+        );
     }
 
     #[test]

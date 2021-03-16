@@ -140,6 +140,7 @@ mod tests {
     use crate::errors::ResourcePathError::PathStartsWithSlash;
     use crate::test::*;
     use maplit::btreemap;
+    use matches::assert_matches;
     use proptest::prelude::*;
     use serde_json::json;
 
@@ -153,7 +154,7 @@ mod tests {
     fn test_malformed_json() {
         assert_matches!(
             CreationManifest::from_json("<invalid json document>".as_bytes()),
-            Err(CreationManifestError::Json(err)) => assert!(err.is_syntax())
+            Err(CreationManifestError::Json(err)) if err.is_syntax()
         );
     }
 
@@ -161,7 +162,8 @@ mod tests {
     fn test_invalid_version() {
         assert_matches!(
             from_json_value(json!({"version": "2", "content": {}})),
-            Err(CreationManifestError::Json(err)) => assert!(err.is_data()));
+            Err(CreationManifestError::Json(err)) if err.is_data()
+        );
     }
 
     #[test]
@@ -182,8 +184,8 @@ mod tests {
             Err(CreationManifestError::ResourcePath {
                 cause: PathStartsWithSlash,
                 path: s
-            })
-                => assert_eq!(s, "/starts-with-slash"));
+            }) if s == "/starts-with-slash"
+        );
     }
 
     #[test]
@@ -200,8 +202,8 @@ mod tests {
                     }
                 )
             ),
-            Err(CreationManifestError::ExternalContentInMetaDirectory{path: s})
-                => assert_eq!(s, "meta/foo"));
+            Err(CreationManifestError::ExternalContentInMetaDirectory{path: s}) if s == "meta/foo"
+        );
     }
 
     #[test]

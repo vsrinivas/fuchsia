@@ -154,6 +154,7 @@ mod tests {
     use crate::errors::ResourcePathError;
     use crate::test::*;
     use maplit::btreemap;
+    use matches::assert_matches;
     use proptest::prelude::*;
     use std::str::FromStr;
 
@@ -198,8 +199,8 @@ mod tests {
                 MetaContents::from_map(map),
                 Err(MetaContentsError::ResourcePath {
                     cause: ResourcePathError::PathEndsWithSlash,
-                    path })
-                    => prop_assert_eq!(path, invalid_path));
+                    path }) if path == invalid_path
+            );
         }
 
         #[test]
@@ -214,8 +215,8 @@ mod tests {
             };
             assert_matches!(
                 MetaContents::from_map(map),
-                Err(MetaContentsError::ExternalContentInMetaDirectory { path })
-                    => prop_assert_eq!(path, invalid_path));
+                Err(MetaContentsError::ExternalContentInMetaDirectory { path }) if path == invalid_path
+            );
         }
 
         #[test]

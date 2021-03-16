@@ -7,22 +7,6 @@ use {
     proptest::prelude::*,
 };
 
-/// Helper to assist asserting a single match branch.
-///
-/// Ex:
-///
-/// let arg = Arg::Uint(8);
-/// assert_matches!(arg, Arg::Uint(x) => assert_eq!(x, 8));
-#[cfg(test)]
-macro_rules! assert_matches(
-    ($e:expr, $p:pat => $a:expr) => (
-        match $e {
-            $p => $a,
-            v => panic!("Failed to match '{:?}'", v),
-        }
-    )
-);
-
 // TODO(fxbug.dev/22531) allow newline once meta/contents supports it in blob paths
 pub(crate) const ANY_UNICODE_EXCEPT_SLASH_NULL_DOT_OR_NEWLINE: &str = "[^/\0\\.\n]";
 

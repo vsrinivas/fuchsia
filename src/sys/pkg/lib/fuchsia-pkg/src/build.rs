@@ -118,6 +118,7 @@ mod test_build_with_file_system {
     use super::*;
     use crate::test::*;
     use maplit::{btreemap, hashmap};
+    use matches::assert_matches;
     use proptest::prelude::*;
     use rand::SeedableRng;
     use std::collections::{HashMap, HashSet};
@@ -239,7 +240,8 @@ mod test_build_with_file_system {
                 result,
                 Err(BuildError::ConflictingResource {
                     conflicting_resource_path: path
-                }) => assert_eq!(path, generated_file.to_string()));
+                }) if path == generated_file.to_string()
+            );
         }
     }
 

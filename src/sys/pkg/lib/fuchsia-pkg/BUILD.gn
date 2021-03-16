@@ -23,6 +23,7 @@ rustc_library("fuchsia-pkg") {
   test_deps = [
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:matches",
     "//third_party/rust_crates:proptest-derive",
     "//third_party/rust_crates:rand",
     "//third_party/rust_crates:regex",
