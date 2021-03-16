@@ -94,29 +94,6 @@ source_set("proxy_lib") {
 }
 
 ########################################
-# Fuzz target function/client for code under test
-# TODO(71013): Update and replace.
-
-source_set("client_lib") {
-  sources = [ "llvm-fuzzer.cc" ]
-  public_deps = [
-    ":core_lib",
-    "//sdk/lib/fidl/cpp",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/sync",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-  ]
-}
-
-source_set("client_main") {
-  sources = [ "llvm-fuzzer-main.cc" ]
-  deps = [
-    ":client_lib",
-    "//zircon/system/ulib/async-loop:async-loop-default",
-  ]
-}
-
-########################################
 # Instrumentation proxy for code under test
 # TODO(71013): Update and replace.
 
