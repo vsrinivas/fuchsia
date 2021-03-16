@@ -23,7 +23,7 @@ bool NestedCriticalSectionTest() {
       [orig = lockup_get_cs_threshold_ticks()]() { lockup_set_cs_threshold_ticks(orig); });
   lockup_set_cs_threshold_ticks(INT64_MAX);
 
-  const LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
+  const LockupDetectorState& state = gLockupDetectorPerCpuState[arch_curr_cpu_num()];
   const auto& cs_state = state.critical_section;
 
   EXPECT_EQ(0u, cs_state.depth);
@@ -65,7 +65,7 @@ bool NestedTimedCriticalSectionTest() {
       [orig = lockup_get_cs_threshold_ticks()]() { lockup_set_cs_threshold_ticks(orig); });
   lockup_set_cs_threshold_ticks(INT64_MAX);
 
-  const LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
+  const LockupDetectorState& state = gLockupDetectorPerCpuState[arch_curr_cpu_num()];
   const auto& cs_state = state.critical_section;
 
   EXPECT_EQ(0u, cs_state.depth);
