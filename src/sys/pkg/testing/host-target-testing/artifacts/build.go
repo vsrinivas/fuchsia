@@ -146,7 +146,7 @@ func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context) (*packages.Re
 	artifact := "packages"
 	packagesDir := filepath.Join(b.dir, b.id, artifact)
 	if err := b.archive.download(ctx, b.id, false, packagesDir, []string{artifact}); err != nil {
-		logger.Infof(ctx, "failed to fetch artifacts for build %s. Using archives.", b.id)
+		logger.Infof(ctx, "failed to fetch artifacts for build %d. Using archives.", b.id)
 		b.packages, err = b.backupArchiveBuild.GetPackageRepository(ctx)
 		return b.packages, err
 	}
@@ -154,7 +154,7 @@ func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context) (*packages.Re
 	blobsData, err := ioutil.ReadFile(blobsManifest)
 	if err != nil {
 		if os.IsNotExist(err) {
-			logger.Infof(ctx, "blobs manifest doesn't exist for build %s yet. Using archives.", b.id)
+			logger.Infof(ctx, "blobs manifest doesn't exist for build %d yet. Using archives.", b.id)
 			b.packages, err = b.backupArchiveBuild.GetPackageRepository(ctx)
 			return b.packages, err
 		}
@@ -180,7 +180,7 @@ func (b *ArtifactsBuild) GetPackageRepository(ctx context.Context) (*packages.Re
 
 	repoDir := filepath.Join(packagesDir, "repository")
 	if err := b.archive.download(ctx, b.id, true, repoDir, blobsList); err != nil {
-		logger.Errorf(ctx, "failed to download blobs to %s: %v", repoDir, err)
+		logger.Errorf(ctx, "failed to download blobs to %s: %w", repoDir, err)
 	}
 
 	return b.packages, nil
@@ -196,7 +196,7 @@ func (b *ArtifactsBuild) GetBuildImages(ctx context.Context) (string, error) {
 	artifact := "images"
 	imageDir := filepath.Join(b.dir, b.id, artifact)
 	if err := b.archive.download(ctx, b.id, false, imageDir, []string{artifact}); err != nil {
-		logger.Infof(ctx, "failed to fetch artifacts for build %s. Using archives.", b.id)
+		logger.Infof(ctx, "failed to fetch artifacts for build %d. Using archives.", b.id)
 		b.buildImageDir, err = b.backupArchiveBuild.GetBuildArchive(ctx)
 		return b.buildImageDir, err
 	}
