@@ -818,6 +818,7 @@ def main():
         # not necessarily stable and doesn't make a good contract.
         os.path.join(src_root, ".git"),
         os.path.join(src_root, "integration", ".git"),
+        os.path.join(src_root, "third_party", "mesa", ".git"),
         # Allow actions to read .fx-build-dir to figure out the current build
         # directory.
         os.path.join(src_root, ".fx-build-dir"),
