@@ -32,14 +32,7 @@ func setUpConn(
 	}
 	t.Cleanup(server.stop)
 
-	conn, err := connect(
-		ctx,
-		ConstantAddrResolver{
-			Addr: server.addr,
-		},
-		server.clientConfig,
-		retry.NoRetries(),
-	)
+	conn, err := connect(ctx, server.addr, server.clientConfig, retry.NoRetries())
 	if err != nil {
 		t.Fatalf("failed to create conn: %v", err)
 	}
@@ -262,14 +255,7 @@ func TestRun(t *testing.T) {
 		connectErrs := make(chan error)
 
 		go func() {
-			client, err := connect(
-				connectCtx,
-				ConstantAddrResolver{
-					Addr: listener.Addr(),
-				},
-				clientConfig,
-				retry.NoRetries(),
-			)
+			client, err := connect(connectCtx, listener.Addr(), clientConfig, retry.NoRetries())
 			if client != nil {
 				client.Close()
 			}
