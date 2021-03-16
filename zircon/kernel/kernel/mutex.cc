@@ -23,6 +23,7 @@
 #include <lib/affine/utils.h>
 #include <lib/arch/intrin.h>
 #include <lib/ktrace.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <trace.h>
 #include <zircon/errors.h>
@@ -185,7 +186,7 @@ __NO_INLINE void Mutex::AcquireContendedMutex(zx_duration_t spin_max_duration,
 
   {
     // we contended with someone else, will probably need to block
-    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
     // Check if the queued flag is currently set. The contested flag can only be changed
     // whilst the thread lock is held so we know we aren't racing with anyone here. This
@@ -278,7 +279,7 @@ __NO_INLINE void Mutex::ReleaseContendedMutex(const bool allow_reschedule,
   // the state variable needs to exit in either path.
   __UNUSED interrupt_saved_state_t irq_state;
   if constexpr (TLS == ThreadLockState::NotHeld) {
-    thread_lock.AcquireIrqSave(irq_state);
+    thread_lock.AcquireIrqSave(irq_state, SOURCE_TAG);
   }
 
   // Attempt to release a thread. If there are still waiters in the queue

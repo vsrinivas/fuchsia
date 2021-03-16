@@ -26,6 +26,7 @@
 #include <lib/affine/ratio.h>
 #include <lib/arch/intrin.h>
 #include <lib/counters.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <stdlib.h>
 #include <trace.h>
@@ -430,10 +431,10 @@ void TimerQueue::Tick(zx_time_t now, cpu_num_t cpu) {
   UpdatePlatformTimer(deadline);
 }
 
-zx_status_t Timer::TrylockOrCancel(SpinLock* lock) {
+zx_status_t Timer::TrylockOrCancel(MonitoredSpinLock* lock) {
   // spin trylocking on the passed in spinlock either waiting for it
   // to grab or the passed in timer to be canceled.
-  while (unlikely(lock->TryAcquire())) {
+  while (unlikely(lock->TryAcquire(SOURCE_TAG))) {
     // we failed to grab it, check for cancel
     if (cancel_.load(ktl::memory_order_relaxed)) {
       // we were canceled, so bail immediately

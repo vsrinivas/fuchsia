@@ -8,6 +8,7 @@
 #include <assert.h>
 #include <debug.h>
 #include <lib/unittest/unittest.h>
+#include <lib/zircon-internal/macros.h>
 #include <pow2.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -407,7 +408,7 @@ bool set_migrate_ready_threads_test() {
       thread_state state;
       cpu_num_t curr_cpu;
       {
-        Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+        Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
         state = worker->state();
         curr_cpu = worker->scheduler_state().curr_cpu();
       }

@@ -12,7 +12,7 @@
 #include <kernel/lockdep.h>
 #include <kernel/spinlock.h>
 
-extern SpinLock thread_lock;
+extern MonitoredSpinLock thread_lock;
 DECLARE_SINGLETON_LOCK_WRAPPER(ThreadLock, thread_lock,
                                (LockFlagsReportingDisabled | LockFlagsTrackingDisabled));
 

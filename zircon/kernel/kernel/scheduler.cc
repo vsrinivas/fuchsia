@@ -11,6 +11,7 @@
 #include <inttypes.h>
 #include <lib/counters.h>
 #include <lib/ktrace.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
@@ -327,12 +328,12 @@ void Scheduler::Dump(FILE* output_target) {
 }
 
 SchedWeight Scheduler::GetTotalWeight() const {
-  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
   return weight_total_;
 }
 
 size_t Scheduler::GetRunnableTasks() const {
-  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
   const int64_t total_runnable_tasks = runnable_fair_task_count_ + runnable_deadline_task_count_;
   return static_cast<size_t>(total_runnable_tasks);
 }
@@ -2083,6 +2084,6 @@ void Scheduler::ChangeDeadline(Thread* thread, const zx_sched_deadline_params_t&
 zx_time_t Scheduler::GetTargetPreemptionTime() {
   DEBUG_ASSERT(Thread::Current::preemption_state().PreemptDisableCount() > 0);
   Scheduler* const current = Get();
-  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
   return current->target_preemption_time_ns_.raw_value();
 }

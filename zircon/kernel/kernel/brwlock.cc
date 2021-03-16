@@ -6,6 +6,8 @@
 
 #include "kernel/brwlock.h"
 
+#include <lib/zircon-internal/macros.h>
+
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/thread_lock.h>
 #include <ktl/limits.h>
@@ -111,7 +113,7 @@ void BrwLock<PI>::ContendedReadAcquire() {
   // holding the thread_lock, so disable local rescheduling.
   AutoPreemptDisabler preempt_disable;
   {
-    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     // Remove our optimistic reader from the count, and put a waiter on there instead.
     uint64_t prev =
         state_.state_.fetch_add(-kBrwLockReader + kBrwLockWaiter, ktl::memory_order_relaxed);
@@ -145,7 +147,7 @@ void BrwLock<PI>::ContendedWriteAcquire() {
   // holding the thread_lock, so disable local rescheduling.
   AutoPreemptDisabler preempt_disable;
   {
-    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     // Mark ourselves as waiting
     uint64_t prev = state_.state_.fetch_add(kBrwLockWaiter, ktl::memory_order_relaxed);
     // If there is a writer then we just block, they will wake us up
@@ -227,7 +229,7 @@ void BrwLock<PI>::ReleaseWakeup() {
   // several readers available then we'd like to get them all out of the wait queue.
   AutoPreemptDisabler preempt_disable;
   {
-    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     uint64_t count = state_.state_.load(ktl::memory_order_relaxed);
     if ((count & kBrwLockWaiterMask) != 0 && (count & kBrwLockWriter) == 0 &&
         (count & kBrwLockReaderMask) == 0) {
@@ -238,7 +240,7 @@ void BrwLock<PI>::ReleaseWakeup() {
 
 template <BrwLockEnablePi PI>
 void BrwLock<PI>::ContendedReadUpgrade() {
-  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
   // Convert our reading into waiting
   uint64_t prev =

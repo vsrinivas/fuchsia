@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/unittest/unittest.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <pow2.h>
 #include <stdio.h>
@@ -291,7 +292,7 @@ struct timer_args {
   ktl::atomic<int> timer_fired;
   ktl::atomic<int> remaining;
   ktl::atomic<int> wait;
-  SpinLock* lock;
+  DECLARE_SPINLOCK_WITH_TYPE(timer_args, MonitoredSpinLock) lock;
 };
 
 static void timer_cb(Timer*, zx_time_t now, void* void_arg) {
@@ -376,9 +377,9 @@ static void timer_trylock_cb(Timer* t, zx_time_t now, void* void_arg) {
   while (arg->wait.load()) {
   }
 
-  int result = t->TrylockOrCancel(arg->lock);
+  int result = t->TrylockOrCancel(&arg->lock.lock());
   if (!result) {
-    arg->lock->Release();
+    arg->lock.lock().Release();
   }
 
   arg->result.store(result);
@@ -397,8 +398,6 @@ static bool trylock_or_cancel_canceled() {
   timer_args arg{};
   Timer t;
 
-  SpinLock lock;
-  arg.lock = &lock;
   arg.wait = 1;
 
   interrupt_saved_state_t int_state = arch_interrupt_save();
@@ -415,7 +414,7 @@ static bool trylock_or_cancel_canceled() {
   arch_interrupt_restore(int_state);
 
   {
-    AutoSpinLock guard(&lock);
+    Guard<MonitoredSpinLock, IrqSave> guard{&arg.lock, SOURCE_TAG};
 
     while (!arg.timer_fired.load()) {
     }
@@ -445,8 +444,6 @@ static bool trylock_or_cancel_get_lock() {
   timer_args arg{};
   Timer t;
 
-  SpinLock lock;
-  arg.lock = &lock;
   arg.wait = 1;
 
   interrupt_saved_state_t int_state = arch_interrupt_save();
@@ -463,7 +460,7 @@ static bool trylock_or_cancel_get_lock() {
   arch_interrupt_restore(int_state);
 
   {
-    AutoSpinLock guard(&lock);
+    Guard<MonitoredSpinLock, IrqSave> guard{&arg.lock, SOURCE_TAG};
 
     while (!arg.timer_fired.load()) {
     }

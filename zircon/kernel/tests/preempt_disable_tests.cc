@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/unittest/unittest.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 
 #include <kernel/auto_preempt_disabler.h>
@@ -37,7 +38,7 @@ static void timer_callback_func(Timer* timer, zx_time_t now, void* arg) {
   // preempt_disable is set.
   preemption_state.preempt_pending() = false;
   {
-    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     Scheduler::Reschedule();
   }
   ASSERT(preemption_state.preempt_pending());
