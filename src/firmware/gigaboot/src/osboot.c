@@ -518,7 +518,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   if (zircon_a_filename != NULL) {
     static uint16_t zircon_a_wfilename[128];
     size_t wfilename_converted_size = sizeof(zircon_a_wfilename);
-    if (utf8_to_utf16((const uint8_t*)zircon_a_filename, strlen(zircon_a_filename),
+    if (utf8_to_utf16((const uint8_t*)zircon_a_filename, strlen(zircon_a_filename) + 1,
                       zircon_a_wfilename, &wfilename_converted_size) == ZX_OK) {
       if (wfilename_converted_size >= sizeof(zircon_a_wfilename)) {
         printf("Warning: bootloader.zircon-a string truncated\n");
@@ -534,7 +534,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   if (zircon_b_filename != NULL) {
     static uint16_t zircon_b_wfilename[128];
     size_t wfilename_converted_size = sizeof(zircon_b_wfilename);
-    if (utf8_to_utf16((const uint8_t*)zircon_b_filename, strlen(zircon_b_filename),
+    if (utf8_to_utf16((const uint8_t*)zircon_b_filename, strlen(zircon_b_filename) + 1,
                       zircon_b_wfilename, &wfilename_converted_size) == ZX_OK) {
       if (wfilename_converted_size >= sizeof(zircon_b_wfilename)) {
         printf("Warning: bootloader.zircon-b string truncated\n");
@@ -550,7 +550,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   if (zircon_r_filename != NULL) {
     static uint16_t zircon_r_wfilename[128];
     size_t wfilename_converted_size = sizeof(zircon_r_wfilename);
-    if (utf8_to_utf16((const uint8_t*)zircon_r_filename, strlen(zircon_r_filename),
+    if (utf8_to_utf16((const uint8_t*)zircon_r_filename, strlen(zircon_r_filename) + 1,
                       zircon_r_wfilename, &wfilename_converted_size) == ZX_OK) {
       if (wfilename_converted_size >= sizeof(zircon_r_wfilename)) {
         printf("Warning: bootloader.zircon-r string truncated\n");
