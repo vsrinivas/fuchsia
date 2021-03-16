@@ -7,7 +7,6 @@
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_PERCPU_H_
 
 #include <lib/lazy_init/lazy_init.h>
-#include <lib/lockup_detector/state.h>
 #include <stddef.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -76,8 +75,17 @@ struct percpu {
   // consistent snapshot of these counters, it should be good enough for diagnostic uses.
   vm_page_counts_t vm_page_counts;
 
-  // Used to detect if this CPU has locked up.
-  LockupDetectorState lockup_detector_state;
+  // lockup_detector state.
+  //
+  // Every active CPU wakes up periodically to record a heartbeat, as well as
+  // to check to see if any of its peers are showing signs of problems.  The
+  // lockup detector timer is the timer used for this.
+  //
+  // This field is not a member of LockupDetectorState because Timer depends on
+  // SpinLock, which depends on lockup_detector.  By pulling it out of
+  // LockupDetectorState we can inline performance critical lockup_detector
+  // functions.  See also gLockupDetectorPerCpuState.
+  Timer lockup_detector_timer;
 
   // Returns a reference to the percpu instance for given CPU number.
   static percpu& Get(cpu_num_t cpu_num) {

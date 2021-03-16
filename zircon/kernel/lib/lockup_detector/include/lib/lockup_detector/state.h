@@ -7,22 +7,18 @@
 #ifndef ZIRCON_KERNEL_LIB_LOCKUP_DETECTOR_INCLUDE_LIB_LOCKUP_DETECTOR_STATE_H_
 #define ZIRCON_KERNEL_LIB_LOCKUP_DETECTOR_INCLUDE_LIB_LOCKUP_DETECTOR_STATE_H_
 
+#include <kernel/align.h>
+#include <kernel/cpu.h>
 #include <kernel/event_limiter.h>
-#include <kernel/timer.h>
 #include <ktl/atomic.h>
 
 // Per CPU state for lockup detector.
-struct LockupDetectorState {
+struct __CPU_ALIGN LockupDetectorState {
   /////////////////////////////////////////////////////////////////////////////
   //
   // Common per-cpu lockup detector state
   //
   /////////////////////////////////////////////////////////////////////////////
-
-  // Every active CPU wakes up periodically to record a heartbeat, as well as
-  // to check to see if any of its peers are showing signs of problems.  The
-  // lockup detector timer is the timer used for this.
-  Timer lockup_detector_timer;
 
   // The ID of CPU who is currently performing a check of this CPUs conditions,
   // or INVALID_CPU if no CPU currently is. Used to prevent multiple CPUs from
@@ -135,5 +131,7 @@ struct LockupDetectorState {
     EventLimiter<ZX_SEC(1)> worst_case_alert_limiter;
   } critical_section;
 };
+
+extern LockupDetectorState gLockupDetectorPerCpuState[SMP_MAX_CPUS];
 
 #endif  // ZIRCON_KERNEL_LIB_LOCKUP_DETECTOR_INCLUDE_LIB_LOCKUP_DETECTOR_STATE_H_

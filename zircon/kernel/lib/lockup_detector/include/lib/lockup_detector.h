@@ -8,32 +8,29 @@
 #define ZIRCON_KERNEL_LIB_LOCKUP_DETECTOR_INCLUDE_LIB_LOCKUP_DETECTOR_H_
 
 #include <assert.h>
+#include <lib/lockup_detector/inline_impl.h>
 #include <zircon/time.h>
 
 // Documentation for this library can be found in kernel/lib/lockup_detector/README.md.
-
-// TODO(fxbug.dev/59395): This header is still included (transitively) by some C code.  Once the
-// dependency is eliminated, drop the __BEGIN_CDECLS/__END_CDECLS/__cplusplus guards.
-__BEGIN_CDECLS
 
 // Initialize the lockup detector for the primary CPU.
 //
 // This should be called once on the boot CPU (|BOOT_CPU_ID|), before we've gone SMP, but after the
 // platform timer has been initialized since it needs to perform ticks to time conversion.
-void lockup_primary_init(void);
+void lockup_primary_init();
 
 // Initialize the lockup detector for a secondary CPU.
 //
 // This should be called once on each secondary CPU after the platform timer has been initialized.
-void lockup_secondary_init(void);
+void lockup_secondary_init();
 
 // Shutdown the lockup detector for a secondary CPU.
 //
 // This should be called once on each secondary CPU prior to taking it offline.
-void lockup_secondary_shutdown(void);
+void lockup_secondary_shutdown();
 
 // Accessors exposed for testing.
-zx_ticks_t lockup_get_cs_threshold_ticks(void);
+zx_ticks_t lockup_get_cs_threshold_ticks();
 void lockup_set_cs_threshold_ticks(zx_ticks_t ticks);
 
 #define LOCKUP_CRITICAL_SECTION_ENALBED 1
@@ -70,27 +67,25 @@ void lockup_set_cs_threshold_ticks(zx_ticks_t ticks);
 // Must be called with preemption disabled or interrupts disabled.
 //
 // Do not use directly.  Use |LOCKUP_BEGIN| macro instead.
-void lockup_begin(const char* name);
+inline void lockup_begin(const char* name);
 
 // Used to indicate the CPU has left a critical section.
 //
 // Must be called with preemption disabled or interrupts disabled.
 //
 // Do not use directly.  Use |LOCKUP_END| macro instead.
-void lockup_end(void);
+inline void lockup_end();
 
 // Same as lockup_begin except the critical section is timed.
 void lockup_timed_begin(const char* name);
 
 // Same as lockup_end except the critical section is timed.
-void lockup_timed_end(void);
+void lockup_timed_end();
 
 // Returns the number of times a "critical section threshold exceeded" oops was triggered.
-int64_t lockup_get_critical_section_oops_count(void);
+int64_t lockup_get_critical_section_oops_count();
 
 // Returns the number of times a "no heartbeat" oops was triggered.
-int64_t lockup_get_no_heartbeat_oops_count(void);
-
-__END_CDECLS
+int64_t lockup_get_no_heartbeat_oops_count();
 
 #endif  // ZIRCON_KERNEL_LIB_LOCKUP_DETECTOR_INCLUDE_LIB_LOCKUP_DETECTOR_H_

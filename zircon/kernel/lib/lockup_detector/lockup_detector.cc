@@ -12,6 +12,7 @@
 #include <lib/console.h>
 #include <lib/counters.h>
 #include <lib/crashlog.h>
+#include <lib/lockup_detector/inline_impl.h>
 #include <lib/lockup_detector/state.h>
 #include <lib/relaxed_atomic.h>
 #include <lib/version.h>
@@ -47,6 +48,8 @@ KCOUNTER(counter_lockup_cs_exceeding_100000ms,
 
 // Counts the number of times the lockup detector has emitted a "no heartbeat" oops.
 KCOUNTER(counter_lockup_no_heartbeat_oops, "lockup_detector.no_heartbeat_oops")
+
+LockupDetectorState gLockupDetectorPerCpuState[SMP_MAX_CPUS];
 
 namespace {
 
@@ -493,11 +496,11 @@ void DoHeartbeatAndCheckPeerCpus(Timer* timer, zx_time_t now_mono, void* arg) {
   }
 
   // Now, check each of the lockup conditions for each of our peers.
-  percpu::ForEach([current_cpu, now_ticks, now_mono](cpu_num_t cpu, percpu* percpu_state) {
+  for (cpu_num_t cpu = 0; cpu < percpu::processor_count(); ++cpu) {
     if (cpu == current_cpu || !mp_is_cpu_online(cpu) || !mp_is_cpu_active(cpu)) {
-      return;
+      continue;
     }
-    LockupDetectorState& state = percpu_state->lockup_detector_state;
+    LockupDetectorState& state = gLockupDetectorPerCpuState[cpu];
 
     // Attempt to claim the role of the "checker" for this CPU.  If we fail to
     // do so, then another CPU is checking this CPU already, so we will just
@@ -532,7 +535,7 @@ void DoHeartbeatAndCheckPeerCpus(Timer* timer, zx_time_t now_mono, void* arg) {
       // Next, release our role as checker for this CPU.
       state.current_checker_id.store(INVALID_CPU);
     }
-  });
+  }
 
   // If heartbeats are still enabled for this core, schedule the next check.
   if (checker_state.heartbeat.active.load()) {
@@ -543,9 +546,9 @@ void DoHeartbeatAndCheckPeerCpus(Timer* timer, zx_time_t now_mono, void* arg) {
 // Stop the process of having the current CPU recording heartbeats and checking
 // in on other CPUs.
 void stop_heartbeats() {
-  LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
+  LockupDetectorState& state = gLockupDetectorPerCpuState[arch_curr_cpu_num()];
   state.heartbeat.active.store(false);
-  state.lockup_detector_timer.Cancel();
+  get_local_percpu()->lockup_detector_timer.Cancel();
 }
 
 // Start the process of recording heartbeats and checking in on other CPUs on
@@ -557,7 +560,7 @@ void start_heartbeats() {
   }
 
   // To be safe, make sure we have a recent last heartbeat before activating.
-  LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
+  LockupDetectorState& state = gLockupDetectorPerCpuState[arch_curr_cpu_num()];
   auto& hb_state = state.heartbeat;
   const zx_time_t now = current_time();
   hb_state.last_heartbeat.store(now);
@@ -565,7 +568,7 @@ void start_heartbeats() {
 
   // Use a deadline with some jitter to avoid having all CPUs heartbeat at the same time.
   const Deadline deadline = DeadlineWithJitterAfter(HeartbeatLockupChecker::period(), 10);
-  state.lockup_detector_timer.Set(deadline, DoHeartbeatAndCheckPeerCpus, &state);
+  get_local_percpu()->lockup_detector_timer.Set(deadline, DoHeartbeatAndCheckPeerCpus, &state);
 }
 
 }  // namespace
@@ -629,86 +632,9 @@ void lockup_set_cs_threshold_ticks(zx_ticks_t val) {
   CriticalSectionLockupChecker::set_threshold_ticks(val);
 }
 
-// Enter a critical section.
-//
-// Returns true if this is the outermost critical section.
-//
-// Don't forget to call |CallIfOuterAndLeave| (regardless of this function's return value).
-static bool Enter(LockupDetectorState& state, const char* name) {
-  auto& cs_state = state.critical_section;
-
-  // We must maintain the invariant that if a call to `Enter` increments the depth, the matching
-  // call to `CallIfOuterAndLeave` decrements it.  The most reliable way to accomplish that is to
-  // always increment and always decrement.
-  cs_state.depth++;
-  if (cs_state.depth != 1) {
-    return false;
-  }
-
-  // This is the outermost critical section.  However, we may be racing with an interrupt handler
-  // that may call into `Enter`.  Use a compiler fence to ensure that the compiler cannot
-  // reorder upcoming stores to precede the depth=1 store above.  If the compiler were to make such
-  // a reordering the `Enter` call made by the interrupt handler may incorrectly believe
-  // its critical section is the outermost critical section because it has not seen our depth=1
-  // store.
-  //
-  // Note, there is a small gap here where the CriticalSectionLockupChecker may fail to notice a
-  // lockup (though the HeartbeatLockupChecker may still detect it).  Consider the following:
-  //
-  //   1. We have stored depth=1, but not yet stored begin_ticks.
-  //   2. An interrupt fires and the handler calls `Enter`.
-  //   3. The handler see that depth is 1 so it does nothing.
-  //   4. The CPU enters an infinite loop.
-  //   5. CriticalSectionLockupChecker sees that begin_time has not be set so it assumes the CPU is
-  //      not in a section.
-  //
-  // If interrupts are enabled at the time of the infinite loop in step 4, the system may never
-  // detect the problem.  If instead of an infinite loop we just spend a lot of time in the
-  // interrupt handler, we may never know it because the begin_time would only get set by the outer
-  // critical section *after* returning from the handler.
-  //
-  // One way to close the gap would be to use begin_ticks rather than depth to determine if we're
-  // already critical section.  Instead of storing begin_ticks when depth=1, we would store
-  // begin_ticks only if it's currently unset (i.e. use an atomic compare and exchange with an
-  // expected value of 0).  However, this would increase the cost of critical section
-  // instrumentation.  Because the gap is small and we have heartbeats we have chosen to live with
-  // it rather than pay the price of atomic compare and exchange.
-  ktl::atomic_signal_fence(std::memory_order_seq_cst);
-
-  return true;
-}
-
-// Call |func| if in the outmost critical section then leave the current critical section.
-template <typename Func>
-static void CallIfOuterAndLeave(LockupDetectorState& state, Func&& func) {
-  auto& cs_state = state.critical_section;
-  if (cs_state.depth == 1) {
-    // This is the outermost critical section.  However, we may be racing with an interrupt handler
-    // that may call into `Enter`.  Use a compiler fence to ensure that any operations performed by
-    // |func| cannot be compiler reordered to preceded the depth operations above.
-    ktl::atomic_signal_fence(std::memory_order_seq_cst);
-    ktl::forward<Func>(func)(state);
-  }
-  DEBUG_ASSERT(cs_state.depth > 0);
-  cs_state.depth--;
-}
-
-void lockup_begin(const char* name) {
-  LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
-  const bool outermost = Enter(state, name);
-  if (likely(outermost)) {
-    auto& cs_state = state.critical_section;
-    // We're using memory_order_relaxed instead of memory_order_release to
-    // minimize performance impact.  As a result, HeartbeatLockupChecker and
-    // CriticalSectionLockupChecker may see stale name values because there is
-    // nothing for them to synchronize-with.
-    cs_state.name.store(name, ktl::memory_order_relaxed);
-  }
-}
-
 void lockup_timed_begin(const char* name) {
-  LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
-  const bool outermost = Enter(state, name);
+  LockupDetectorState& state = gLockupDetectorPerCpuState[arch_curr_cpu_num()];
+  const bool outermost = lockup_internal::Enter(state, name);
   if (likely(outermost)) {
     auto& cs_state = state.critical_section;
     // We're using memory_order_relaxed instead of memory_order_release to
@@ -727,22 +653,12 @@ void lockup_timed_begin(const char* name) {
   }
 }
 
-void lockup_end() {
-  LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
-  CallIfOuterAndLeave(state, [](LockupDetectorState& state) {
-    auto& cs_state = state.critical_section;
-    // See comment in lockup_begin at the point where name is stored.
-    cs_state.name.store(nullptr, ktl::memory_order_relaxed);
-  });
-}
-
 void lockup_timed_end() {
-  LockupDetectorState& state = get_local_percpu()->lockup_detector_state;
-  CallIfOuterAndLeave(state, [](LockupDetectorState& state) {
-    auto& cs_state = state.critical_section;
-
+  LockupDetectorState& state = gLockupDetectorPerCpuState[arch_curr_cpu_num()];
+  lockup_internal::CallIfOuterAndLeave(state, [](LockupDetectorState& state) {
     // Is this a new worst for us?
     const zx_ticks_t now_ticks = current_ticks();
+    auto& cs_state = state.critical_section;
     const zx_ticks_t begin = cs_state.begin_ticks.load(ktl::memory_order_relaxed);
     zx_ticks_t delta = zx_time_sub_time(now_ticks, begin);
 
@@ -782,7 +698,7 @@ void lockup_status() {
         continue;
       }
 
-      const auto& cs_state = percpu::Get(i).lockup_detector_state.critical_section;
+      const auto& cs_state = gLockupDetectorPerCpuState[i].critical_section;
       const zx_ticks_t begin_ticks = cs_state.begin_ticks.load(ktl::memory_order_acquire);
       const char* name = cs_state.name.load(ktl::memory_order_relaxed);
       const zx_ticks_t now = current_ticks();
@@ -803,15 +719,15 @@ void lockup_status() {
          HeartbeatLockupChecker::period() / ZX_MSEC(1),
          HeartbeatLockupChecker::threshold() / ZX_MSEC(1));
 
-  percpu::ForEach([](cpu_num_t cpu, percpu* percpu_state) {
+  for (cpu_num_t cpu = 0; cpu < percpu::processor_count(); ++cpu) {
     if (!mp_is_cpu_online(cpu) | !mp_is_cpu_active(cpu)) {
-      return;
+      continue;
     }
 
-    const auto& hb_state = percpu_state->lockup_detector_state.heartbeat;
+    const auto& hb_state = gLockupDetectorPerCpuState[cpu].heartbeat;
     if (!hb_state.active.load()) {
       printf("CPU-%u heartbeats disabled\n", cpu);
-      return;
+      continue;
     }
     const zx_time_t last_heartbeat = hb_state.last_heartbeat.load();
     const zx_duration_t age = zx_time_sub_time(current_time(), last_heartbeat);
@@ -819,7 +735,7 @@ void lockup_status() {
     printf("CPU-%u last heartbeat at %" PRId64 " ms, age is %" PRId64 " ms, max gap is %" PRId64
            " ms\n",
            cpu, last_heartbeat / ZX_MSEC(1), age / ZX_MSEC(1), max_gap / ZX_MSEC(1));
-  });
+  }
 }
 
 // Runs |func| on |cpu|, passing |duration| as an argument.
