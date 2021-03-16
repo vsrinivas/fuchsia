@@ -8,6 +8,7 @@ import (
 	_ "embed"
 	"fmt"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
@@ -133,47 +134,28 @@ func TestSplitTestLogs(t *testing.T) {
 	if err := os.MkdirAll(logDir, 0700); err != nil {
 		t.Fatal("failed to create unifiedLogDir:", err)
 	}
-	tests := []struct {
-		name       string
-		wantPrefix string
-	}{
-		{
-			name:       "default",
-			wantPrefix: logDir,
-		},
-	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			testLogs, err := SplitTestLogs([]byte(validLog), logDir)
-			if err != nil {
-				t.Fatal("SplitTestLogs() failed:", err)
-			}
-			if len(testLogs) == 0 {
-				t.Fatal("SplitTestLogs() returned an empty slice")
-			}
-			for testIndex, testLog := range testLogs {
-				if !strings.HasPrefix(testLog.FilePath, tt.wantPrefix) {
-					t.Errorf("expected per-test log path to start with baseDir. got: %s\nwant: %s", testLog.FilePath, tt.wantPrefix)
-				}
-				actualLastLine := lastLine(testLog.Bytes)
-				expectedRE, err := regexp.Compile(fmt.Sprintf("(not )?ok %d ", testIndex+1))
-				if err != nil {
-					t.Errorf("failed to compile regexp for expecated last line: %v", err)
-				} else if !expectedRE.Match([]byte(actualLastLine)) {
-					t.Errorf("wrong final log line. got:%s\nwant:%s", actualLastLine, expectedRE.String())
-				}
-			}
-		})
+	const baseName = "valid.txt"
+	testLogs, err := SplitTestLogs([]byte(validLog), baseName, logDir)
+	if err != nil {
+		t.Fatal("SplitTestLogs() failed:", err)
 	}
-}
-
-func TestTestLogPath(t *testing.T) {
-	logDir := "foo"
-	testName := "fuchsia-pkg://fuchsia.com/a11y_lib_tests#meta/configuration_tests.cmx"
-	got := testLogPath(logDir, testName, 1)
-	want := "foo/1/fuchsia-pkg/fuchsia.com/a11y_lib_tests/meta/configuration_tests.cmx"
-	if got != want {
-		t.Errorf("testLogPath(%q, %q) = %q; want %q", logDir, testName, got, want)
+	if len(testLogs) == 0 {
+		t.Fatal("SplitTestLogs() returned an empty slice")
+	}
+	for testIndex, testLog := range testLogs {
+		if !strings.HasPrefix(testLog.FilePath, logDir) {
+			t.Errorf("expected per-test log path to start with baseDir. got: %s\nwant: %s", testLog.FilePath, logDir)
+		}
+		if filepath.Base(testLog.FilePath) != baseName {
+			t.Errorf("expected per-test log path to end with baseName. got: %s\n want: %s", testLog.FilePath, baseName)
+		}
+		actualLastLine := lastLine(testLog.Bytes)
+		expectedRE, err := regexp.Compile(fmt.Sprintf("(not )?ok %d ", testIndex+1))
+		if err != nil {
+			t.Errorf("failed to compile regexp for expecated last line: %v", err)
+		} else if !expectedRE.Match([]byte(actualLastLine)) {
+			t.Errorf("wrong final log line. got:%s\nwant:%s", actualLastLine, expectedRE.String())
+		}
 	}
 }

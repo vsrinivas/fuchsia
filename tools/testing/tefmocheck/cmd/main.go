@@ -103,9 +103,9 @@ func main() {
 		}
 		var perTestLogDir string
 		if *outputsDir != "" {
-			perTestLogDir = filepath.Join(*outputsDir, "per-test", filepath.Base(*swarmingOutputPath))
+			perTestLogDir = filepath.Join(*outputsDir, "per-test")
 		}
-		swarmingOutputPerTest, err = tefmocheck.SplitTestLogs(swarmingOutput, perTestLogDir)
+		swarmingOutputPerTest, err = tefmocheck.SplitTestLogs(swarmingOutput, filepath.Base(*swarmingOutputPath), perTestLogDir)
 		if err != nil {
 			log.Fatalf("failed to split swarming output into per-test logs: %s", err)
 		}

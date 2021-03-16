@@ -13,22 +13,14 @@ import (
 	"path/filepath"
 	"regexp"
 	"strconv"
-	"strings"
 
 	"golang.org/x/sync/errgroup"
 )
 
-func testLogPath(logDir, testName string, testIndex int) string {
-	// Sponge doesn't seem to like the path if we just put testName in there.
-	testNameForPath := strings.ReplaceAll(testName, ":", "")
-	testNameForPath = strings.ReplaceAll(testNameForPath, "#", string(filepath.Separator))
-	return filepath.Join(logDir, strconv.Itoa(testIndex), testNameForPath)
-}
-
 // SplitTestLogs splits logBytes into per-test logs,
 // writes those per-test logs to files in outDir, and returns a slice of TestLogs.
 // The logs will be written to the parent directory of path.
-func SplitTestLogs(logBytes []byte, outDir string) ([]TestLog, error) {
+func SplitTestLogs(logBytes []byte, logBaseName, outDir string) ([]TestLog, error) {
 	testLogs, err := splitLogByTest(logBytes)
 	if err != nil {
 		return nil, err
@@ -42,7 +34,7 @@ func SplitTestLogs(logBytes []byte, outDir string) ([]TestLog, error) {
 		testIndex := ti // capture
 		g.Go(func() error {
 			testLog := &testLogs[testIndex]
-			destPath := testLogPath(outDir, testLog.TestName, testIndex)
+			destPath := filepath.Join(outDir, strconv.Itoa(testIndex), logBaseName)
 			if err = os.MkdirAll(filepath.Dir(destPath), 0766); err != nil {
 				return err
 			}
