@@ -138,14 +138,24 @@ TEST(BacktraceRequest, IgnoreNormalException) {
 
   zx::channel exception_channel;
   const void* exit_address = nullptr;
+  bool should_be_true = true;
 
   std::thread thread([&] {
-    exit_address = &&exit;   // clang and gcc extension to obtain address of a label.
+    exit_address = &&exit;  // clang and gcc extension to obtain address of a label.
     ASSERT_OK(zx::thread::self()->create_exception_channel(0, &exception_channel));
     ASSERT_OK(event.signal(0, kChannelReadySignal));
-    // Segfault.
-    volatile int* p = 0;
-    *p = 0;
+    // Cause a non-breakpoint machine exception.  The `asm goto` tells the
+    // compiler that the code can jump to the exit: label below.  The test code
+    // below will mutate the PC to that label when it catches the exception.
+#if defined(__aarch64__)
+    __asm__ goto("mov x0, xzr; brk #1" : : : "x0" : exit);
+#elif defined(__x86_64__)
+    __asm__ goto("ud2" : : : : exit);
+#else
+#error "what machine?"
+#endif
+    // This should never be reached.
+    should_be_true = false;
   exit:
     ;
   });
@@ -181,6 +191,7 @@ TEST(BacktraceRequest, IgnoreNormalException) {
   exception.reset();
 
   thread.join();
+  ASSERT_TRUE(should_be_true);
 }
 
 }  // namespace
