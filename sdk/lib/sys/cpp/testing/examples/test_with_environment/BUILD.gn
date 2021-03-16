@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("fake_echo_app") {
   testonly = true
@@ -38,28 +38,20 @@ executable("test_with_environment_example_test_bin") {
   ]
 }
 
-test_package("test_with_environment_example_test") {
-  deps = [
-    ":fake_echo_app",
-    ":test_with_environment_example_test_bin",
-  ]
+fuchsia_component("fake_echo_app_component") {
+  testonly = true
+  component_name = "fake_echo_app"
+  manifest = "meta/fake_echo_app.cmx"
+  deps = [ ":fake_echo_app" ]
+}
 
-  binaries = [
-    {
-      name = "fake_echo_app"
-    },
-  ]
+fuchsia_test_component("test_with_environment_example_component") {
+  component_name = "test_with_environment_example"
+  manifest = "meta/test_with_environment_example_test.cmx"
+  deps = [ ":test_with_environment_example_test_bin" ]
+}
 
-  meta = [
-    {
-      path = rebase_path("meta/fake_echo_app.cmx")
-      dest = "fake_echo_app.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "test_with_environment_example_test"
-    },
-  ]
+fuchsia_test_package("test_with_environment_example_test") {
+  test_components = [ ":test_with_environment_example_component" ]
+  deps = [ ":fake_echo_app_component" ]
 }

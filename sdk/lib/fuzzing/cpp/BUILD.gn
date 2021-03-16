@@ -5,7 +5,7 @@
 import("//build/cpp/sdk_source_set.gni")
 import("//build/host.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("cpp") {
   testonly = true
@@ -43,13 +43,9 @@ test("fuzzing_traits_unittests") {
   ]
 }
 
-test_package("fuzzing_traits_tests") {
+fuchsia_unittest_package("fuzzing_traits_tests") {
+  manifest = "meta/fuzzing_traits_unittests.cmx"
   deps = [ ":fuzzing_traits_unittests" ]
-  tests = [
-    {
-      name = "fuzzing_traits_unittests"
-    },
-  ]
 }
 
 test("fuzz_input_unittests") {

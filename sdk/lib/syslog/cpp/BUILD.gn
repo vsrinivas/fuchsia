@@ -6,7 +6,7 @@ import("//build/cpp/sdk_shared_library.gni")
 import("//build/cpp/sdk_source_set.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 sdk_source_set("cpp") {
   # TODO(fxbug.dev/59937): Remove when Mac links OK against this.
@@ -254,20 +254,26 @@ executable("logging_cpp_unittests_structured") {
   ]
 }
 
-test_package("logging-cpp-tests") {
-  deps = [
-    ":logging_cpp_unittests",
-    ":logging_cpp_unittests_structured",
-  ]
+fuchsia_unittest_component("logging-cpp-unittests") {
+  manifest = "meta/logging_cpp_unittests.cmx"
+  deps = [ ":logging_cpp_unittests" ]
+}
 
-  tests = [
-    {
-      name = "logging_cpp_unittests"
-    },
-    {
-      name = "logging_cpp_unittests_structured"
-    },
+fuchsia_unittest_component("logging-cpp-unittests-structured") {
+  manifest = "meta/logging_cpp_unittests_structured.cmx"
+  deps = [ ":logging_cpp_unittests_structured" ]
+}
+
+fuchsia_test_package("logging-cpp-tests") {
+  test_components = [
+    ":logging-cpp-unittests",
+    ":logging-cpp-unittests-structured",
   ]
+  test_specs = {
+    log_settings = {
+      max_severity = "FATAL"
+    }
+  }
 }
 
 group("tests") {
