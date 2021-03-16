@@ -29,6 +29,7 @@ enum {
 
 AmlG12TdmDai::AmlG12TdmDai(zx_device_t* parent)
     : AmlG12TdmDaiDeviceType(parent), loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+  ddk_proto_id_ = ZX_PROTOCOL_DAI;
   loop_.StartThread();
 }
 
@@ -56,6 +57,12 @@ void AmlG12TdmDai::InitDaiFormats() {
     default:
       ZX_ASSERT(0);  // Not supported.
   }
+}
+void AmlG12TdmDai::Connect(::fidl::ServerEnd<fuchsia_hardware_audio::Dai> dai_protocol,
+                           ConnectCompleter::Sync& completer) {
+  ::fidl::InterfaceRequest<::fuchsia::hardware::audio::Dai> dai;
+  dai.set_channel(dai_protocol.TakeChannel());
+  dai_binding_.emplace(this, std::move(dai), loop_.dispatcher());
 }
 
 zx_status_t AmlG12TdmDai::DaiConnect(zx::channel channel) {
@@ -245,11 +252,12 @@ zx_status_t AmlG12TdmDai::InitBuffer(size_t size) {
   return ZX_OK;
 }
 
-void AmlG12TdmDai::GetInfo(GetInfoCallback callback) {
-  ::fuchsia::hardware::audio::DaiInfo info;
-  info.manufacturer = metadata_.manufacturer;
-  info.product_name = metadata_.product_name;
-  callback(std::move(info));
+void AmlG12TdmDai::GetProperties(::fuchsia::hardware::audio::Dai::GetPropertiesCallback callback) {
+  ::fuchsia::hardware::audio::DaiProperties props;
+  props.set_is_input(metadata_.is_input);
+  props.set_manufacturer(metadata_.manufacturer);
+  props.set_product_name(metadata_.product_name);
+  callback(std::move(props));
 }
 
 void AmlG12TdmDai::GetRingBufferFormats(GetRingBufferFormatsCallback callback) {
@@ -319,7 +327,8 @@ void AmlG12TdmDai::CreateRingBuffer(
   Reset([]() {});
 }
 
-void AmlG12TdmDai::GetProperties(GetPropertiesCallback callback) {
+void AmlG12TdmDai::GetProperties(
+    ::fuchsia::hardware::audio::RingBuffer::GetPropertiesCallback callback) {
   ::fuchsia::hardware::audio::RingBufferProperties prop;
   prop.set_external_delay(0);
   prop.set_fifo_depth(aml_audio_->fifo_depth());

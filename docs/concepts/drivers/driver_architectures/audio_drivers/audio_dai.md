@@ -54,6 +54,9 @@ for communication, we define a way to get a channel through
 [Banjo](/docs/development/drivers/tutorials/banjo-tutorial.md) at
 [fuchsia.hardware.audio](/sdk/banjo/fuchsia.hardware.audio/audio.banjo).
 
+Direct connection to a DAI protocol server is provided by
+[dai_connect.fidl](/sdk/fidl/fuchsia.hardware.audio/dai_connect.fidl).
+
 ### Reset {#reset}
 
 A DAI can be reset by a client at any time by issuing the `Reset` function.

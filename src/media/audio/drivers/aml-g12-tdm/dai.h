@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/audio/cpp/banjo.h>
 #include <fuchsia/hardware/audio/cpp/fidl.h>
+#include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <fuchsia/hardware/platform/device/c/banjo.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -20,6 +21,7 @@
 
 #include <ddktl/device-internal.h>
 #include <ddktl/device.h>
+#include <ddktl/fidl.h>
 #include <ddktl/metadata/audio.h>
 #include <sdk/lib/fidl/cpp/binding.h>
 #include <soc/aml-common/aml-tdm-audio.h>
@@ -29,12 +31,13 @@
 namespace audio::aml_g12 {
 
 class AmlG12TdmDai;
-using AmlG12TdmDaiDeviceType = ddk::Device<AmlG12TdmDai>;
+using AmlG12TdmDaiDeviceType = ddk::Device<AmlG12TdmDai, ddk::Messageable>;
 
 class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
                      public ddk::DaiProtocol<AmlG12TdmDai, ddk::base_protocol>,
                      public ::fuchsia::hardware::audio::RingBuffer,
-                     public ::fuchsia::hardware::audio::Dai {
+                     public ::fuchsia::hardware::audio::Dai,
+                     public fuchsia_hardware_audio::DaiConnect::Interface {
  public:
   explicit AmlG12TdmDai(zx_device_t* parent);
 
@@ -42,11 +45,20 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
   zx_status_t DaiConnect(zx::channel channel);
   zx_status_t InitPDev();
   void Shutdown();
+  zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
+    DdkTransaction transaction(txn);
+    fuchsia_hardware_audio::DaiConnect::Dispatch(this, msg, &transaction);
+    return transaction.Status();
+  }
 
  private:
+  // FIDL LLCPP method for fuchsia.hardware.audio.DaiConnect.
+  void Connect(::fidl::ServerEnd<::fuchsia_hardware_audio::Dai> dai_protocol,
+               ConnectCompleter::Sync& completer) override;
+
   // FIDL HLCPP methods for fuchsia.hardware.audio.Dai.
   void Reset(ResetCallback callback) override;
-  void GetInfo(GetInfoCallback callback) override;
+  void GetProperties(::fuchsia::hardware::audio::Dai::GetPropertiesCallback callback) override;
   void GetRingBufferFormats(GetRingBufferFormatsCallback callback) override;
   void GetDaiFormats(GetDaiFormatsCallback callback) override;
   void CreateRingBuffer(
@@ -55,7 +67,8 @@ class AmlG12TdmDai : public AmlG12TdmDaiDeviceType,
       ::fidl::InterfaceRequest<::fuchsia::hardware::audio::RingBuffer> ring_buffer) override;
 
   // FIDL HLCPP methods for fuchsia.hardware.audio.ringbuffer.
-  void GetProperties(GetPropertiesCallback callback) override;
+  void GetProperties(
+      ::fuchsia::hardware::audio::RingBuffer::GetPropertiesCallback callback) override;
   void WatchClockRecoveryPositionInfo(WatchClockRecoveryPositionInfoCallback callback) override;
   void GetVmo(uint32_t min_frames, uint32_t clock_recovery_notifications_per_ring,
               GetVmoCallback callback) override;

@@ -291,6 +291,68 @@ TEST_F(AmlG12TdmDaiTest, InitializePcmOut) {
   EXPECT_EQ(step, 11);
 }
 
+TEST_F(AmlG12TdmDaiTest, GetPropertiesOutputDai) {
+  metadata::AmlConfig metadata = {};
+  metadata.is_input = false;
+  const std::string kTestString("test");
+  strncpy(metadata.manufacturer, kTestString.c_str(), sizeof(metadata.manufacturer));
+  metadata.mClockDivFactor = 10;
+  metadata.sClockDivFactor = 25;
+  metadata.ring_buffer.number_of_channels = 2;
+  metadata.lanes_enable_mask[0] = 3;
+  metadata.bus = metadata::AmlBus::TDM_C;
+  metadata.version = metadata::AmlVersion::kS905D2G;
+  metadata.dai.type = metadata::DaiType::I2s;
+  metadata.dai.number_of_channels = 2;
+  metadata.dai.bits_per_sample = 16;
+  metadata.dai.bits_per_slot = 32;
+  tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+
+  auto dai = std::make_unique<TestAmlG12TdmDai>();
+  auto dai_proto = dai->GetProto();
+  ASSERT_OK(dai->InitPDev());
+  ASSERT_OK(dai->DdkAdd("test"));
+
+  DaiClient client(&dai_proto);
+
+  ::fuchsia::hardware::audio::DaiProperties properties_out;
+  ASSERT_OK(client.dai_->GetProperties(&properties_out));
+  ASSERT_FALSE(properties_out.is_input());
+  ASSERT_TRUE(properties_out.manufacturer() == kTestString);
+  ASSERT_TRUE(properties_out.product_name() == std::string(""));
+}
+
+TEST_F(AmlG12TdmDaiTest, GetPropertiesInputDai) {
+  metadata::AmlConfig metadata = {};
+  metadata.is_input = true;
+  const std::string kTestString("test product");
+  strncpy(metadata.product_name, kTestString.c_str(), sizeof(metadata.product_name));
+  metadata.mClockDivFactor = 10;
+  metadata.sClockDivFactor = 25;
+  metadata.ring_buffer.number_of_channels = 2;
+  metadata.lanes_enable_mask[0] = 3;
+  metadata.bus = metadata::AmlBus::TDM_C;
+  metadata.version = metadata::AmlVersion::kS905D2G;
+  metadata.dai.type = metadata::DaiType::I2s;
+  metadata.dai.number_of_channels = 2;
+  metadata.dai.bits_per_sample = 16;
+  metadata.dai.bits_per_slot = 32;
+  tester_.SetMetadata(DEVICE_METADATA_PRIVATE, &metadata, sizeof(metadata));
+
+  auto dai = std::make_unique<TestAmlG12TdmDai>();
+  auto dai_proto = dai->GetProto();
+  ASSERT_OK(dai->InitPDev());
+  ASSERT_OK(dai->DdkAdd("test"));
+
+  DaiClient client(&dai_proto);
+
+  ::fuchsia::hardware::audio::DaiProperties properties_out;
+  ASSERT_OK(client.dai_->GetProperties(&properties_out));
+  ASSERT_TRUE(properties_out.is_input());
+  ASSERT_TRUE(properties_out.product_name() == kTestString);
+  ASSERT_TRUE(properties_out.manufacturer() == std::string(""));
+}
+
 TEST_F(AmlG12TdmDaiTest, GetFormatsAndVmo) {
   metadata::AmlConfig metadata = {};
   metadata.is_input = false;

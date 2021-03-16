@@ -9,11 +9,15 @@ using zx;
 const uint32 MAX_DAI_UI_STRING_SIZE = 256;
 const uint32 MAX_COUNT_DAI_FORMATS = 64;
 
-struct DaiInfo {
+table DaiProperties {
+    /// Dai type is input or output. Required.
+    1: bool is_input;
+
     /// Name of the DAI interface provider manufacturer.
-    string:MAX_DAI_UI_STRING_SIZE manufacturer;
+    2: string:MAX_DAI_UI_STRING_SIZE manufacturer;
+
     /// Product name of the DAI interface provider.
-    string:MAX_DAI_UI_STRING_SIZE product_name;
+    3: string:MAX_DAI_UI_STRING_SIZE product_name;
 };
 
 /// For an overview see
@@ -27,8 +31,8 @@ protocol Dai {
     /// protocol channel and retry.
     Reset() -> ();
 
-    /// Retrieves textual information about the DAI.
-    GetInfo() -> (DaiInfo info);
+    /// Retrieves top level static properties.
+    GetProperties() -> (DaiProperties properties);
 
     /// Retrieves the DAI formats supported by the DAI, if not available at the time the DAI
     /// may reply with an error status and the client may retry at a later time.
