@@ -84,7 +84,11 @@ async fn test_enable_and_disable_scan(central: CentralHarness) -> Result<(), Err
     let _ = central.when_satisfied(expect::scan_enabled(), timeout_duration()).await?;
     let _ = central.aux().central.stop_scan()?;
     let _ = central.when_satisfied(expect::scan_disabled(), timeout_duration()).await?;
-    Ok(())
+    // TODO(fxbug.dev/71995): These tests are flaky and run on flaky builders only, but FlakeFetcher
+    // posts spammy messages to related bugs about these tests every day. Until FlakeFetcher stops
+    // doing that, cause these tests to fail consistently.
+    panic!("I'm only here to stop FlakeFetcher");
+    // Ok(())
 }
 
 /// Run all test cases.
