@@ -178,6 +178,7 @@ class IntelI2cController : public IntelI2cControllerType,
  private:
   zx_status_t Init();
   ddk::Pci pci_;
+  pci_irq_mode_t irq_mode_;
 
   thrd_t irq_thread_;
   zx::interrupt irq_handle_;

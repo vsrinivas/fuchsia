@@ -100,7 +100,7 @@ zx_status_t IntelI2cController::Init() {
 
   regs_ = reinterpret_cast<MMIO_PTR I2cRegs*>(mmio_->get());
 
-  status = pci_.ConfigureIrqMode(1, nullptr);
+  status = pci_.ConfigureIrqMode(1, &irq_mode_);
   if (status != ZX_OK) {
     zxlogf(ERROR, "i2c: failed to set irq mode: %d", status);
     return status;
@@ -416,6 +416,10 @@ zx_status_t IntelI2cController::SetBusFrequency(const uint32_t frequency) {
 int IntelI2cController::IrqThread() {
   zx_status_t status;
   for (;;) {
+    if (irq_mode_ == PCI_IRQ_MODE_LEGACY) {
+      pci_.AckInterrupt();
+    }
+
     status = irq_handle_.wait(nullptr);
     if (status != ZX_OK) {
       zxlogf(ERROR, "i2c: error waiting for interrupt: %d", status);
