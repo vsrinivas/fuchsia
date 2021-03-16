@@ -1,6 +1,6 @@
 # Troubleshooting components (Components v2) {#troubleshooting-components}
 
-<<../../../concepts/components/_v1_banner.md>>
+<<../../../concepts/components/_v2_banner.md>>
 
 This document contains tips for troubleshooting the following kinds of problems
 when using the [component framework][doc-intro]:
