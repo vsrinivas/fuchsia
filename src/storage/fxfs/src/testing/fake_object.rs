@@ -22,13 +22,13 @@ impl FakeObject {
         FakeObject { buf: Vec::new() }
     }
 
-    fn read(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Error> {
+    pub fn read(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Error> {
         let to_do = min(buf.len(), self.buf.len() - offset as usize);
         buf[0..to_do].copy_from_slice(&self.buf[offset as usize..offset as usize + to_do]);
         Ok(to_do)
     }
 
-    fn write(&mut self, offset: u64, buf: &[u8]) -> Result<(), Error> {
+    pub fn write(&mut self, offset: u64, buf: &[u8]) -> Result<(), Error> {
         let required_len = offset as usize + buf.len();
         if self.buf.len() < required_len {
             self.buf.resize(required_len, 0);
@@ -37,7 +37,7 @@ impl FakeObject {
         Ok(())
     }
 
-    fn get_size(&self) -> u64 {
+    pub fn get_size(&self) -> u64 {
         self.buf.len() as u64
     }
 }
