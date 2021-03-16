@@ -13,6 +13,7 @@ go_library("fidlgen_cpp") {
     "ir.go",
     "names.go",
     "namespace.go",
+    "reserved_names.go",
     "typed_channel_migration.go",
   ]
 }
@@ -25,6 +26,7 @@ go_library("cpp_test") {
   sources = [
     "enum_test.go",
     "ir_test.go",
+    "reserved_names_test.go",
   ]
 }
 

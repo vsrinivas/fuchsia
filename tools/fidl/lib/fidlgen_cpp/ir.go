@@ -558,7 +558,7 @@ func (inner methodInner) build() Method {
 
 	callbackType := ""
 	if inner.HasResponse {
-		callbackType = changeIfReserved(fidl.Identifier(inner.Name), "Callback")
+		callbackType = changeIfReserved(fidl.Identifier(inner.Name + "Callback"))
 	}
 
 	var computedResponseReceivedMaxSize int
@@ -692,262 +692,6 @@ func (m *Method) CallbackWrapper() string {
 	return "fit::function"
 }
 
-var reservedWords = map[string]struct{}{
-	"alignas":          {},
-	"alignof":          {},
-	"and":              {},
-	"and_eq":           {},
-	"asm":              {},
-	"assert":           {},
-	"atomic_cancel":    {},
-	"atomic_commit":    {},
-	"atomic_noexcept":  {},
-	"auto":             {},
-	"bitand":           {},
-	"bitor":            {},
-	"bool":             {},
-	"break":            {},
-	"case":             {},
-	"catch":            {},
-	"char":             {},
-	"char16_t":         {},
-	"char32_t":         {},
-	"class":            {},
-	"compl":            {},
-	"concept":          {},
-	"const":            {},
-	"constexpr":        {},
-	"const_cast":       {},
-	"continue":         {},
-	"co_await":         {},
-	"co_return":        {},
-	"co_yield":         {},
-	"decltype":         {},
-	"default":          {},
-	"delete":           {},
-	"do":               {},
-	"double":           {},
-	"dynamic_cast":     {},
-	"else":             {},
-	"enum":             {},
-	"explicit":         {},
-	"export":           {},
-	"extern":           {},
-	"false":            {},
-	"float":            {},
-	"for":              {},
-	"friend":           {},
-	"goto":             {},
-	"if":               {},
-	"import":           {},
-	"inline":           {},
-	"int":              {},
-	"long":             {},
-	"module":           {},
-	"mutable":          {},
-	"namespace":        {},
-	"new":              {},
-	"noexcept":         {},
-	"not":              {},
-	"not_eq":           {},
-	"NULL":             {},
-	"nullptr":          {},
-	"offsetof":         {},
-	"operator":         {},
-	"or":               {},
-	"or_eq":            {},
-	"private":          {},
-	"protected":        {},
-	"public":           {},
-	"register":         {},
-	"reinterpret_cast": {},
-	"requires":         {},
-	"return":           {},
-	"short":            {},
-	"signed":           {},
-	"sizeof":           {},
-	"static":           {},
-	"static_assert":    {},
-	"static_cast":      {},
-	"struct":           {},
-	"switch":           {},
-	"synchronized":     {},
-	"template":         {},
-	"this":             {},
-	"thread_local":     {},
-	"throw":            {},
-	"true":             {},
-	"try":              {},
-	"typedef":          {},
-	"typeid":           {},
-	"typename":         {},
-	"union":            {},
-	"unsigned":         {},
-	"using":            {},
-	"virtual":          {},
-	"void":             {},
-	"volatile":         {},
-	"wchar_t":          {},
-	"while":            {},
-	"xor":              {},
-	"xor_eq":           {},
-	"xunion":           {},
-
-	// names used in specific contexts e.g. union accessors
-	"FidlType":        {},
-	"New":             {},
-	"Tag":             {},
-	"Which":           {},
-	"has_invalid_tag": {},
-	"which":           {},
-	"Unknown":         {},
-	"unknown":         {},
-	"UnknownBytes":    {},
-	"UnknownData":     {},
-	"IsEmpty":         {},
-	"HandleEvents":    {},
-	// TODO(ianloic) add: "Clone"
-	// There are Clone methods on a couple of protocols that are used
-	// across layers so this will be a breaking change.
-	// fxbug.dev/7785
-
-	// All names from errno definitions.
-	"EPERM":           {},
-	"ENOENT":          {},
-	"ESRCH":           {},
-	"EINTR":           {},
-	"EIO":             {},
-	"ENXIO":           {},
-	"E2BIG":           {},
-	"ENOEXEC":         {},
-	"EBADF":           {},
-	"ECHILD":          {},
-	"EAGAIN":          {},
-	"ENOMEM":          {},
-	"EACCES":          {},
-	"EFAULT":          {},
-	"ENOTBLK":         {},
-	"EBUSY":           {},
-	"EEXIST":          {},
-	"EXDEV":           {},
-	"ENODEV":          {},
-	"ENOTDIR":         {},
-	"EISDIR":          {},
-	"EINVAL":          {},
-	"ENFILE":          {},
-	"EMFILE":          {},
-	"ENOTTY":          {},
-	"ETXTBSY":         {},
-	"EFBIG":           {},
-	"ENOSPC":          {},
-	"ESPIPE":          {},
-	"EROFS":           {},
-	"EMLINK":          {},
-	"EPIPE":           {},
-	"EDOM":            {},
-	"ERANGE":          {},
-	"EDEADLK":         {},
-	"ENAMETOOLONG":    {},
-	"ENOLCK":          {},
-	"ENOSYS":          {},
-	"ENOTEMPTY":       {},
-	"ELOOP":           {},
-	"EWOULDBLOCK":     {},
-	"ENOMSG":          {},
-	"EIDRM":           {},
-	"ECHRNG":          {},
-	"EL2NSYNC":        {},
-	"EL3HLT":          {},
-	"EL3RST":          {},
-	"ELNRNG":          {},
-	"EUNATCH":         {},
-	"ENOCSI":          {},
-	"EL2HLT":          {},
-	"EBADE":           {},
-	"EBADR":           {},
-	"EXFULL":          {},
-	"ENOANO":          {},
-	"EBADRQC":         {},
-	"EBADSLT":         {},
-	"EDEADLOCK":       {},
-	"EBFONT":          {},
-	"ENOSTR":          {},
-	"ENODATA":         {},
-	"ETIME":           {},
-	"ENOSR":           {},
-	"ENONET":          {},
-	"ENOPKG":          {},
-	"EREMOTE":         {},
-	"ENOLINK":         {},
-	"EADV":            {},
-	"ESRMNT":          {},
-	"ECOMM":           {},
-	"EPROTO":          {},
-	"EMULTIHOP":       {},
-	"EDOTDOT":         {},
-	"EBADMSG":         {},
-	"EOVERFLOW":       {},
-	"ENOTUNIQ":        {},
-	"EBADFD":          {},
-	"EREMCHG":         {},
-	"ELIBACC":         {},
-	"ELIBBAD":         {},
-	"ELIBSCN":         {},
-	"ELIBMAX":         {},
-	"ELIBEXEC":        {},
-	"EILSEQ":          {},
-	"ERESTART":        {},
-	"ESTRPIPE":        {},
-	"EUSERS":          {},
-	"ENOTSOCK":        {},
-	"EDESTADDRREQ":    {},
-	"EMSGSIZE":        {},
-	"EPROTOTYPE":      {},
-	"ENOPROTOOPT":     {},
-	"EPROTONOSUPPORT": {},
-	"ESOCKTNOSUPPORT": {},
-	"EOPNOTSUPP":      {},
-	"ENOTSUP":         {},
-	"EPFNOSUPPORT":    {},
-	"EAFNOSUPPORT":    {},
-	"EADDRINUSE":      {},
-	"EADDRNOTAVAIL":   {},
-	"ENETDOWN":        {},
-	"ENETUNREACH":     {},
-	"ENETRESET":       {},
-	"ECONNABORTED":    {},
-	"ECONNRESET":      {},
-	"ENOBUFS":         {},
-	"EISCONN":         {},
-	"ENOTCONN":        {},
-	"ESHUTDOWN":       {},
-	"ETOOMANYREFS":    {},
-	"ETIMEDOUT":       {},
-	"ECONNREFUSED":    {},
-	"EHOSTDOWN":       {},
-	"EHOSTUNREACH":    {},
-	"EALREADY":        {},
-	"EINPROGRESS":     {},
-	"ESTALE":          {},
-	"EUCLEAN":         {},
-	"ENOTNAM":         {},
-	"ENAVAIL":         {},
-	"EISNAM":          {},
-	"EREMOTEIO":       {},
-	"EDQUOT":          {},
-	"ENOMEDIUM":       {},
-	"EMEDIUMTYPE":     {},
-	"ECANCELED":       {},
-	"ENOKEY":          {},
-	"EKEYEXPIRED":     {},
-	"EKEYREVOKED":     {},
-	"EKEYREJECTED":    {},
-	"EOWNERDEAD":      {},
-	"ENOTRECOVERABLE": {},
-	"ERFKILL":         {},
-	"EHWPOISON":       {},
-}
-
 var primitiveTypes = map[fidl.PrimitiveSubtype]string{
 	fidl.Bool:    "bool",
 	fidl.Int8:    "int8_t",
@@ -998,19 +742,6 @@ func TypeNameForPrimitive(t fidl.PrimitiveSubtype) TypeName {
 	return PrimitiveTypeName(primitiveTypes[t])
 }
 
-func isReservedWord(str string) bool {
-	_, ok := reservedWords[str]
-	return ok
-}
-
-func changeIfReserved(i fidl.Identifier, ext string) string {
-	str := string(i) + ext
-	if isReservedWord(str) {
-		return str + "_"
-	}
-	return str
-}
-
 type identifierTransform bool
 
 const (
@@ -1022,7 +753,7 @@ func libraryParts(library fidl.LibraryIdentifier, identifierTransform identifier
 	parts := []string{}
 	for _, part := range library {
 		if identifierTransform == changePartIfReserved {
-			parts = append(parts, changeIfReserved(part, ""))
+			parts = append(parts, changeIfReserved(part))
 		} else {
 			parts = append(parts, string(part))
 		}
@@ -1054,7 +785,7 @@ func naturalLibraryNamespace(library fidl.LibraryIdentifier) Namespace {
 
 func formatLibrary(library fidl.LibraryIdentifier, sep string, identifierTransform identifierTransform) string {
 	name := strings.Join(libraryParts(library, identifierTransform), sep)
-	return changeIfReserved(fidl.Identifier(name), "")
+	return changeIfReserved(fidl.Identifier(name))
 }
 
 func commonLibraryNamespace(library fidl.LibraryIdentifier) Namespace {
@@ -1105,7 +836,7 @@ func (c *compiler) compileDeclName(eci fidl.EncodedCompoundIdentifier) DeclName 
 	if ci.Member != fidl.Identifier("") {
 		panic(fmt.Sprintf("unexpected compound identifier with member: %v", eci))
 	}
-	name := changeIfReserved(ci.Name, "")
+	name := changeIfReserved(ci.Name)
 	declInfo, ok := c.decls[eci]
 	if !ok {
 		panic(fmt.Sprintf("unknown identifier: %v", eci))
@@ -1177,7 +908,7 @@ func (c *compiler) compileConstant(val fidl.Constant, t *Type, typ fidl.Type) Co
 	case fidl.IdentifierConstant:
 		ci := fidl.ParseCompoundIdentifier(val.Identifier)
 		if len(ci.Member) > 0 {
-			member := changeIfReserved(ci.Member, "")
+			member := changeIfReserved(ci.Member)
 			ci.Member = ""
 			dn := c.compileDeclName(ci.Encode())
 			return ConstantValue{
@@ -1368,7 +1099,7 @@ func (c *compiler) compileBits(val fidl.Bits) Bits {
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{
 			v.Attributes,
-			changeIfReserved(v.Name, ""),
+			changeIfReserved(v.Name),
 			c.compileConstant(v.Value, nil, val.Type),
 		})
 	}
@@ -1410,7 +1141,7 @@ func (c *compiler) compileEnum(val fidl.Enum) Enum {
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
 			EnumMember: v,
-			Name:       changeIfReserved(v.Name, ""),
+			Name:       changeIfReserved(v.Name),
 			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
 			// will not need to plug this here.
 			Value: c.compileConstant(v.Value, nil, fidl.Type{
@@ -1427,7 +1158,7 @@ func (c *compiler) compileParameterArray(val []fidl.Parameter) []Parameter {
 	for _, v := range val {
 		params = append(params, Parameter{
 			Type:              c.compileType(v.Type),
-			Name:              changeIfReserved(v.Name, ""),
+			Name:              changeIfReserved(v.Name),
 			Offset:            v.FieldShapeV1.Offset,
 			HandleInformation: c.fieldHandleInformation(&v.Type),
 		})
@@ -1481,7 +1212,7 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 	methods := []Method{}
 	maxResponseSize := 0
 	for _, v := range val.Methods {
-		name := changeIfReserved(v.Name, "")
+		name := changeIfReserved(v.Name)
 		requestTable := tableBase.AppendName(string(v.Name) + "RequestTable")
 		responseTable := tableBase.AppendName(string(v.Name) + "ResponseTable")
 		if !v.HasRequest {
@@ -1560,7 +1291,7 @@ func (c *compiler) compileServiceMember(val fidl.ServiceMember) ServiceMember {
 		Attributes:   val.Attributes,
 		ProtocolType: c.compileDeclName(val.Type.Identifier),
 		Name:         string(val.Name),
-		MethodName:   changeIfReserved(val.Name, ""),
+		MethodName:   changeIfReserved(val.Name),
 	}
 }
 
@@ -1575,7 +1306,7 @@ func (c *compiler) compileStructMember(val fidl.StructMember) StructMember {
 	return StructMember{
 		Attributes:        val.Attributes,
 		Type:              t,
-		Name:              changeIfReserved(val.Name, ""),
+		Name:              changeIfReserved(val.Name),
 		DefaultValue:      defaultValue,
 		Offset:            val.FieldShapeV1.Offset,
 		HandleInformation: c.fieldHandleInformation(&val.Type),
@@ -1662,7 +1393,7 @@ func (c *compiler) compileTableMember(val fidl.TableMember, index int) TableMemb
 	return TableMember{
 		Attributes:         val.Attributes,
 		Type:               t,
-		Name:               changeIfReserved(val.Name, ""),
+		Name:               changeIfReserved(val.Name),
 		DefaultValue:       defaultValue,
 		Ordinal:            val.Ordinal,
 		FieldPresenceIsSet: fmt.Sprintf("field_presence_.IsSet<%d>()", val.Ordinal-1),
@@ -1710,13 +1441,13 @@ func (c *compiler) compileTable(val fidl.Table) Table {
 }
 
 func (c *compiler) compileUnionMember(val fidl.UnionMember) UnionMember {
-	n := changeIfReserved(val.Name, "")
+	n := changeIfReserved(val.Name)
 	return UnionMember{
 		Attributes:        val.Attributes,
 		Ordinal:           uint64(val.Ordinal),
 		Type:              c.compileType(val.Type),
 		Name:              n,
-		StorageName:       changeIfReserved(val.Name, "_"),
+		StorageName:       changeIfReserved(val.Name + "_"),
 		TagName:           fmt.Sprintf("k%s", fidl.ToUpperCamelCase(n)),
 		Offset:            val.Offset,
 		HandleInformation: c.fieldHandleInformation(&val.Type),
@@ -1777,7 +1508,7 @@ func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc) Root {
 	library := make(fidl.LibraryIdentifier, 0)
 	rawLibrary := make(fidl.LibraryIdentifier, 0)
 	for _, identifier := range fidl.ParseLibraryName(r.Name) {
-		safeName := changeIfReserved(identifier, "")
+		safeName := changeIfReserved(identifier)
 		library = append(library, fidl.Identifier(safeName))
 		rawLibrary = append(rawLibrary, identifier)
 	}
