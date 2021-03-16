@@ -6,104 +6,133 @@
 ///
 /// A fuzzer can be described in three parts:
 ///   1. The code under test.
-///   2. A fuzz target client that maps each test input to the interface of the code under test.
+///   2. A fuzz target function that maps each test input to the interface of the code under test.
 ///   3. A fuzzing engine that generates new test inputs.
-///
-/// Each execution of the code under test with a test input is a single fuzzing iteration. A fuzzer
-/// will perform iterations repeatedly until a defect is found or some other stopping condition is
-/// reached (e.g. a time limit).
-///
-/// In coverage-guided fuzzing, the code under test is instrumented to provide code coverage
-/// information back to the fuzzing engine. The engine maintains a set of coverage-increasing inputs
-/// called a corpus, and mutates these inputs to create new ones.
-///
-/// Source-based instrumentation can be added by the compiler, but this generally assumes all three
-/// parts are combined into a single process. For general-purpose FIDL fuzzing on Fuchsia, these
-/// parts need to be able to reside in different processes. The protocols in this library allow
-/// the interactions between those parts to happen over FIDL interfaces.
-///
 /// For more details, see https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/overview
+///
+/// LLVM's libFuzzer is a coverage-guided fuzzing engine. It includes a pair of interfaces for
+/// coordinating test execution and coverage collection from one or more remote processes. LibFuzzer
+/// refers to the methods invoked by the engine process and executed in a remote process as the
+/// "FuzzerRemote" interface, and to the methods invoked by remote processes and executed in the
+/// engine processto the "FuzzerProxy" interface.
+///
+/// Notably, these interfaces do NOT specify how calls are forwarded from the one process to the
+/// other. Instead, the libFuzzer runtime (in the engine process) and the libFuzzerRemote runtime
+/// (in the remote processes) both assume they will be linked against a transport library that
+/// implements the each interface in the other process, i.e.:
+///   * The engine process is linked against an implementation of the FuzzerRemote interface that
+///     forwards to the remote process.
+///   * The remote process is linked against an implementation of the FuzzerProxy interface that
+///     forwards to the engine process.
+///
+/// The protocols in this library are designed to match these interfaces expectations and provide
+/// a compatible Fuchsia transport library for libFuzzer using FIDL and Zircon objects.
+///
+/// See also:
+///   https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/fuzzer/FuzzerRemoteInterface.h
 library fuchsia.fuzzer;
 
 using fuchsia.mem;
 using zx;
 
+/// libFuzzer's FuzzerProxiedOptions are sent from the FuzzerProxy to the FuzzerRemote as an opaque
+/// sequence of bytes.
+///
+/// See also:
+///   https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/fuzzer/FuzzerRemoteInterface.h
+const int32 MAX_OPTIONS_SIZE = 64;
+alias FuzzerProxiedOptions = bytes:MAX_OPTIONS_SIZE;
+
+// These errors correspond to the subset of libFuzzer's error callback that are expected to be
+// detected in a remote process.
+enum FuzzerError : uint8 {
+    CRASH = 1;
+    DEATH = 2;
+    EXIT = 3;
+    LEAK = 4;
+    MALLOC_LIMIT = 5;
+    RSS_LIMIT = 6;
+};
+
+/// Underlying transport for libFuzzer's FuzzerProxy interface on Fuchsia.
+///
+/// This protocol provides methods that remote processes can use to register themselves, their
+/// coverage data, and any encountered errors with the fuzzing engine process. These methods should
+/// only be used during set-up (Connect, AddCoverage) or tear-down (HandleError). All other
+/// coordination between processes during fuzzing should use the objects shared during set-up, e.g.
+/// the eventpair and VMOs.
+[Discoverable]
+protocol Proxy {
+    /// Registers the remote process with the fuzzing engine.
+    ///
+    /// This method is called once per connection by the remote process to register its process ID,
+    /// as used by the libFuzzer interfaces, and an eventpair by which the engine and remote
+    /// processes can signal each other. The engine returns the subset of the fuzzing options that
+    /// are needed by the remote process.
+    ///
+    /// The channel is closed on error. Clients should not attempt to reconnect.
+    Connect(uint64 pid, zx.handle:EVENTPAIR paired) -> (FuzzerProxiedOptions options);
+
+    /// Registers the provided VMOs to be used for inline 8-bit edge counters and PC tables.
+    ///
+    /// This should be called for each element in a process's DSO map, i.e. for the process itself
+    /// and any shared objects it loads. The fuzzing engine will exit if it encounters any errors in
+    /// setting up the shared coverage.
+    ///
+    /// The channel is closed on error. Clients should not attempt to reconnect.
+    ///
+    /// See also:
+    ///   https://clang.llvm.org/docs/SanitizerCoverage.html#inline-8bit-counters
+    ///   https://clang.llvm.org/docs/SanitizerCoverage.html#pc-table
+    AddCoverage(fuchsia.mem.Buffer inline_8bit_counters, fuchsia.mem.Buffer pcs) -> ();
+
+    /// Reports detection of a monitored error condition.
+    ///
+    /// libFuzzer has a number of error conditions it monitors. It will halt fuzzing and report
+    /// detailed error information when these conditions are detected. With this method, the remote
+    /// process can notify the engine process of one of these errors. It also includes a generic
+    /// parameter used by some of the libFuzzer error callbacks (e.g. FuzzerMallocLimitCallback),
+    /// and a tear-off protocol for requesting further diagnostic information from the remote
+    /// process.
+    ///
+    /// The channel is closed on error. Clients should not attempt to reconnect.
+    ///
+    /// See also:
+    ///   https://github.com/llvm/llvm-project/blob/main/compiler-rt/lib/fuzzer/FuzzerMonitor.h
+    HandleError(FuzzerError error, uint64 param, RemoteDiagnostics diagnostics);
+};
+
+/// Tear-off protocol for requesting diagnostics from a remote process.
+///
+/// When handling errors, libFuzzer will request that the remote process print certain types of
+/// information as part of dumping detailed information related to the error. This protocol provides
+/// the engine process a means to send these requests back to the remote process.
+///
+/// Implementations should take care to track the thread and/or other execution context that
+/// instantiates the service, as requests should be satisfied from the same context.
+protocol RemoteDiagnostics {
+    /// Prints the call stack from the thread that invoked Proxy.HandleError to the remote process's
+    /// standard output, which is either the engine process's stdout or logfile.
+    PrintStackTrace() -> ();
+
+    /// Prints the memory statistics from the thread that invoked Proxy.HandleError to the remote
+    /// process's standard output, which is either the engine process's stdout or logfile.
+    PrintMemoryProfile() -> ();
+};
+
 // Maximum data consumer label length.
 const int32 MAX_LABEL_SIZE = 128;
 
-/// A list of libFuzzer options, as defined in https://llvm.org/docs/LibFuzzer.html#options.
-alias EngineOptions = vector<string:MAX_OPTION_SIZE>:MAX_OPTION_COUNT;
-const int32 MAX_OPTION_SIZE = 128;
-const int32 MAX_OPTION_COUNT = 128;
-
-/// Fuzzing engine interface to FIDL framework
-///
-/// When started, the fuzzing engine provides the |Proxy| and |DataProvider| interfaces, and
-/// invokes the |LlvmFuzzer| interface to set up and begin fuzzing. This interface allows the
-/// framework to provide the overall fuzzer configuration and wait for the engine to exit.
-[Discoverable]
-protocol Engine {
-    /// Starts the fuzzing engine.
-    ///
-    /// This method takes the data consumer labels and libFuzzer options described in |Arguments|
-    /// above. It performs fuzzing iterations repeatedly in a loop, and does not return until:
-    ///   * The engine reaches a stopping condition, e.g. `-max_total_time=3600`.
-    ///   * The engine detects an error, e.g. libFuzzer's crash handler is invoked.
-    ///
-    /// This method can only be called once. Additional calls will return an error.
-    Start(EngineOptions options) -> (zx.status result);
-};
-
-/// Aggregated sanitizer coverage data proxied from other processes.
-///
-/// For cross-process fuzzing, the code under test needs to copy its code coverage data back to
-/// fuzzing engine. The Proxy protocol describes this action, with the code under test as the
-/// client and the fuzzing engine as the server. There are two types of methods:
-///   1. Some coverage, such as inline 8-bit counters and PC tables, is written to specific memory
-///      locations. This data is forwarded to engine by setting up shared buffers. These methods
-///      correspond to the LLVM compiler_rt `__sanitizer_cov_*_init` functions supported by
-///      libFuzzer.
-///   2. Other coverage is associated with specific machine instructions being called, e.g. CMP
-///      instructions. Rather than provide each traced instruction to the engine in a separate FIDL
-///      call, a shared buffer is set up and the instructions are batched. The traced instructions
-///      correspond to the LLVM compiler_rt `__sanitizer_cov_trace_*` functions.
-[Discoverable]
-protocol Proxy {
-    /// Registers the provided VMO to be used for inline 8-bit edge counters.
-    ///
-    /// This should be called for each element in a process's DSO map, i.e. for the process itself
-    /// and any shared objects it loads. On error, the fuzzing engine will close the channel with an
-    /// epitaph.
-    ///
-    /// See https://clang.llvm.org/docs/SanitizerCoverage.html#inline-8bit-counters
-    AddInline8BitCounters(fuchsia.mem.Buffer inline_8bit_counters) -> ();
-
-    /// Registers the provided VMO to be used for a table of instrumented PCs.
-    ///
-    /// This should be called for each element in a process's DSO map, i.e. for the process itself
-    /// and any shared objects it loads. On error, the fuzzing engine will close the channel with an
-    /// epitaph.
-    ///
-    /// See https://clang.llvm.org/docs/SanitizerCoverage.html#pc-table
-    AddPcTable(fuchsia.mem.Buffer pcs) -> ();
-
-    /// Registers the provided VMO to be used as a circular buffer of traced instructions.
-    ///
-    /// This should be called once per client. Subsequent calls will replace the previous VMO.
-    /// On error, the fuzzing engine will close the channel with an epitaph.
-    ///
-    /// See https://clang.llvm.org/docs/SanitizerCoverage.html#tracing-data-flow
-    AddTraces(zx.handle:VMO instruction_traces) -> ();
-};
-
-/// Partitions fuzzer test inputs for multiple consumers based on in-place labels.
+/// Splits the engine process's fuzzer test input between multiple remote processes.
 ///
 /// For traditional single-process fuzzers, the fuzzing engine generates a sequence of bytes known
 /// as a test input that the fuzz target function uses to exercise the interface to the code under
-/// test. For multi-process FIDL fuzzing, it may need to provide data to fake dependencies of the
-/// code under test in addition to the fuzz target function. To achieve this, the fuzzing engine can
-/// acts as a server for this protocol with the fuzz target function and one or more of the proxies
-/// as clients.
+/// test. For multi-process FIDL fuzzing, it may also need to provide data to fake dependencies of
+/// the code under test, or "fakes", in addition to the fuzz target function.
+///
+/// When possible, these fakes should be implemented within the engine process itself and draw
+/// directly from the provided test input. If the fakes must be executed in a separate process, they
+/// can consume a portion of the test input using this protocol.
 ///
 /// Implementations should split the single test input between the different consumers in a way that
 /// is "fuzzer-stable", i.e. most mutations such as adding or removing bytes shouldn't radically
@@ -113,49 +142,12 @@ protocol DataProvider {
     /// Associates a shared VMO with a partition label.
     ///
     /// Registers the provided VMO to be used for transferring the test input of an additional data
-    /// consumer. The labels are typically provided as command-line arguments to the engine.
+    /// consumer. The DataProvider implementation must provide a way to add labels before consumers
+    /// connect, and fuzzer authors must add them during initialization. This is required for the
+    /// DataProvider to be able to partition the test input in the same manner regardless of when
+    /// a data consumer connects. The provided eventpair should be used to signal when test input
+    /// data is available.
     ///
-    /// Returns ZX_ERR_INVALID_ARGS if the engine does not recognize the label.
-    AddConsumer(string:MAX_LABEL_SIZE label, zx.handle:VMO vmo) -> (zx.status result);
-};
-
-/// FIDL interface for the libFuzzer interface function.
-///
-/// This protocol is the analogue of the LLVMFuzzer* C ABI defined by
-/// https://github.com/llvm/llvm-project/blob/HEAD/compiler-rt/lib/fuzzer/FuzzerInterface.h.
-/// Currently, only the method corresponding to the mandatory fuzz target function is defined, i.e.
-/// `extern "C" int LLVMFuzzerTestOneInput(const uint8_t *data, size_t size);`
-///
-/// The fuzzing engine is the client of this protocol.
-[Discoverable]
-protocol LlvmFuzzer {
-    /// FIDL equivalent of the startup initializtion function.
-    ///
-    /// The provided VMO will be used by the |DataProvider| to provide test input data for each
-    /// fuzzing iteration.
-    ///
-    /// The libFuzzer options, as described by https://llvm.org/docs/LibFuzzer.html#options are also
-    /// provided so that the client may modify and return them as described in
-    /// https://llvm.org/docs/LibFuzzer.html#startup-initialization.
-    ///
-    /// It is an error to call this method more than once. The channel is closed on error.
-    ///
-    /// This method should always return 0. The C ABI has reserved non-zero return values for future
-    /// use.
-    Initialize(zx.handle:VMO vmo, EngineOptions options) -> (int32 result, EngineOptions options);
-
-    /// FIDL equivalent of the fuzz target function.
-    ///
-    /// See https://llvm.org/docs/LibFuzzer.html#fuzz-target for the C ABI equivalent. This method
-    /// should use the data provided by the |DataProvider| protocol above to invoke one or more FIDL
-    /// methods for the service under test.
-    ///
-    /// As with C ABI function, the fuzzing engine will invoke this protocol and method many
-    /// times with each invocation corresponding to a different fuzzing iteration. For each
-    /// iteration inputs, the engine's |DataProvider| will generate a test input by examining the
-    /// coverage data returned by the proxy associated with the code under test.
-    ///
-    /// This method should always return 0, even if the code under test encounters a recoverable
-    /// error. The C ABI has reserved non-zero return values for future use.
-    TestOneInput() -> (int32 result);
+    /// The channel is closed on error. Clients should not attempt to reconnect.
+    Register(string:MAX_LABEL_SIZE label, zx.handle:EVENTPAIR ep, fuchsia.mem.Buffer buf) -> ();
 };
