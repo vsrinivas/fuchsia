@@ -5,8 +5,8 @@
 # https://opensource.org/licenses/MIT
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -33,13 +33,9 @@ test("zxc_unittests") {
   }
 }
 
-unittest_package("zxc-tests") {
+fuchsia_unittest_package("zxc-tests") {
   deps = [ ":zxc_unittests" ]
-
-  tests = [
-    {
-      name = "zxc_unittests"
-      environments = [ emu_env ]
-    },
-  ]
+  test_specs = {
+    environments = [ emu_env ]
+  }
 }
