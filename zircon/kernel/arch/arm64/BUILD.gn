@@ -109,6 +109,7 @@ if (toolchain.environment == "physmem" ||
       "asm.S",
       "cache-ops.S",
       "coresight.cc",
+      "dap.cc",
       "debugger.cc",
       "exceptions.S",
       "exceptions_c.cc",

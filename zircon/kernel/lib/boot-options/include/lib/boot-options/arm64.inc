@@ -26,3 +26,8 @@ If the event stream is enabled, specifies the frequency at which it will attempt
 to run. The resolution is limited, so the driver will only be able to pick the
 nearest power of 2 from the cpu timer counter.
 )""")
+
+DEFINE_OPTION("kernel.arm64.debug.dap-rom-soc", SmallString, arm64_debug_dap_rom_soc, {""}, R"""(
+If set, tries to initialize the dap debug aperture at a hard coded address for the particular
+system on chip. Currently accepted value is amlogic-t931g.
+)""")
