@@ -52,15 +52,17 @@ The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks lik
     of the target OS image. The update package looks at `/packages.json` to determine what
     (and in what order) needs to be updated.
     For example:
-        ```
-        {
-	        “version”: “1”,
-	        “content”: [
-                "fuchsia-pkg://fuchsia.com/component_index/0?hash=40da91deffd7531391dd067ed89a19703a73d4fdf19fe72651ff30e414c4ef0a",
-                "fuchsia-pkg://fuchsia.com/system_image/0?hash=c391b60a35f680b1cf99107309ded12a8219aedb4d296b7fa8a9c5e95ade5e85"
-            ]
-        }
-        ```
+
+    ```json
+    {
+        “version”: “1”,
+        “content”: [
+            "fuchsia-pkg://fuchsia.com/component_index/0?hash=40da91deffd7531391dd067ed89a19703a73d4fdf19fe72651ff30e414c4ef0a",
+            "fuchsia-pkg://fuchsia.com/system_image/0?hash=c391b60a35f680b1cf99107309ded12a8219aedb4d296b7fa8a9c5e95ade5e85"
+        ]
+    }
+    ```
+
 *   `/version`
     Same format as the [`/config/build-info/version`](/docs/development/build/build_information.md) file.
 *   `/zbi\[.signed\]`
@@ -75,6 +77,12 @@ The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks lik
     ForceRecovery, which writes a recovery image and reboots into it. Any other update-mode
     is invalid.
     For example:
-        ```
-        { version: "1", content: { "mode" : "force-recovery" } }
-        ```
+
+    ```json
+    {
+        "version": "1",
+        "content": {
+            "mode" : "force-recovery"
+        }
+    }
+    ```
