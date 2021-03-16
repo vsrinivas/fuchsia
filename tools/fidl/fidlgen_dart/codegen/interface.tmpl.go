@@ -92,7 +92,7 @@ $async.Future<void>
   {{- end -}}
 {{ end -}}
 
-{{- define "InterfaceAsyncDeclaration" -}}
+{{- define "ProtocolAsyncDeclaration" -}}
 
 {{ range .Methods }}
 // {{ .Name }}: {{ if .HasRequest }}({{ template "AsyncParams" .Request }}){{ end -}}
@@ -469,7 +469,7 @@ class {{ .BindingName }} extends $fidl.AsyncBinding<{{ .Name }}> {
 
 
 
-{{- define "InterfaceTestDeclaration" -}}
+{{- define "ProtocolTestDeclaration" -}}
 
 class {{ .Name }}$TestBase extends {{ .Name }} {
   {{- $protocolName := .Name }}

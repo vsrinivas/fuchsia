@@ -46,10 +46,6 @@ func DecodeJSONIr(r io.Reader) (Root, error) {
 		return Root{}, fmt.Errorf("Error parsing JSON IR: %w", err)
 	}
 
-	// TODO(fxbug.dev/50195): This is for backward compatibility with fidlgen_dart in
-	// Topaz, and should be removed after fidlgen_dart code has been updated.
-	root.Interfaces = root.Protocols
-
 	return root, nil
 }
 
@@ -723,10 +719,6 @@ type Protocol struct {
 	Methods []Method                  `json:"methods"`
 }
 
-// TODO(fxbug.dev/50195): This is for backward compatibility with fidlgen_dart in
-// Topaz, and should be removed after fidlgen_dart code has been updated.
-type Interface = Protocol
-
 func (d *Protocol) GetServiceName() string {
 	_, found := d.LookupAttribute("Discoverable")
 	if found {
@@ -942,10 +934,6 @@ const (
 	StructDeclType   DeclType = "struct"
 	TableDeclType    DeclType = "table"
 	UnionDeclType    DeclType = "union"
-
-	// TODO(fxbug.dev/50195): This is for backward compatibility with fidlgen_dart in
-	// Topaz, and should be removed after fidlgen_dart code has been updated.
-	InterfaceDeclType DeclType = "interface"
 )
 
 type DeclInfo struct {
@@ -987,10 +975,6 @@ type Root struct {
 	DeclOrder []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
 	Decls     DeclMap                     `json:"declarations,omitempty"`
 	Libraries []Library                   `json:"library_dependencies,omitempty"`
-
-	// TODO(fxbug.dev/50195): This is for backward compatibility with fidlgen_dart in
-	// Topaz, and should be removed after fidlgen_dart code has been updated.
-	Interfaces []Protocol
 }
 
 // DeclsWithDependencies returns a single DeclInfoMap containing the FIDL

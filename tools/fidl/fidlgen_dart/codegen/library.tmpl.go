@@ -77,8 +77,8 @@ import '{{ .AsyncURL }}' as {{ .LocalName }};
 // ignore: unused_element, avoid_private_typedef_functions
 typedef _VoidCallback = void Function();
 
-{{ range $interface := .Interfaces -}}
-{{ template "InterfaceAsyncDeclaration" $interface }}
+{{ range $protocol := .Protocols -}}
+{{ template "ProtocolAsyncDeclaration" $protocol }}
 {{ end -}}
 
 {{- end -}}
@@ -110,8 +110,8 @@ import './fidl_async.dart';
 // ignore_for_file: library_prefixes
 // ignore_for_file: unused_shown_name
 
-{{ range $interface := .Interfaces -}}
-{{ template "InterfaceTestDeclaration" $interface }}
+{{ range $protocol := .Protocols -}}
+{{ template "ProtocolTestDeclaration" $protocol }}
 {{ end -}}
 
 {{- end -}}

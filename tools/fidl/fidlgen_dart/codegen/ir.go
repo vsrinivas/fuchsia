@@ -143,8 +143,8 @@ type TableMember struct {
 	Documented
 }
 
-// Interface represents an interface declaration.
-type Interface struct {
+// Protocol represents an protocol declaration.
+type Protocol struct {
 	Name        string
 	ServiceName string
 	ServiceData string
@@ -171,7 +171,7 @@ type MethodResponse struct {
 	ErrorType        Type
 }
 
-// Method represents a method declaration within an interface declaration.
+// Method represents a method declaration within an protocol declaration.
 type Method struct {
 	Ordinal     uint64
 	OrdinalName string
@@ -205,7 +205,7 @@ type Root struct {
 	Consts      []Const
 	Enums       []Enum
 	Bits        []Bits
-	Interfaces  []Interface
+	Protocols   []Protocol
 	Structs     []Struct
 	Tables      []Table
 	Unions      []Union
@@ -768,8 +768,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 			} else {
 				r.typeExpr = c.typeSymbolForCompoundIdentifier(fidl.ParseCompoundIdentifier(val.Identifier))
 			}
-		case fidl.InterfaceDeclType:
-
+		case fidl.ProtocolDeclType:
 			r.Decl = fmt.Sprintf("$fidl.InterfaceHandle<%s>", t)
 			if c.inExternalLibrary(compound) {
 				r.SyncDecl = fmt.Sprintf("$fidl.InterfaceHandle<sync$%s>", t)
@@ -953,7 +952,7 @@ NotAResult:
 	}
 }
 
-func (c *compiler) compileMethod(val fidl.Method, protocol Interface, fidlProtocol fidl.Interface) Method {
+func (c *compiler) compileMethod(val fidl.Method, protocol Protocol, fidlProtocol fidl.Protocol) Method {
 	var (
 		name               = c.compileLowerCamelIdentifier(val.Name, methodContext)
 		request            []StructMember
@@ -1002,9 +1001,9 @@ func (c *compiler) compileMethod(val fidl.Method, protocol Interface, fidlProtoc
 	}
 }
 
-func (c *compiler) compileInterface(val fidl.Interface) Interface {
+func (c *compiler) compileProtocol(val fidl.Protocol) Protocol {
 	ci := fidl.ParseCompoundIdentifier(val.Name)
-	r := Interface{
+	r := Protocol{
 		c.compileUpperCamelCompoundIdentifier(ci, "", declarationContext),
 		val.GetServiceName(),
 		c.compileUpperCamelCompoundIdentifier(ci, "Data", declarationContext),
@@ -1209,7 +1208,7 @@ func Compile(r fidl.Root) Root {
 	}
 
 	for _, v := range r.Protocols {
-		root.Interfaces = append(root.Interfaces, c.compileInterface(v))
+		root.Protocols = append(root.Protocols, c.compileProtocol(v))
 	}
 
 	for _, l := range r.Libraries {
