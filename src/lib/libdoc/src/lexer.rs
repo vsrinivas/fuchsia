@@ -587,14 +587,6 @@ fn reduce_single_quote_string(
                     });
                     return current;
                 }
-                '\\' => {
-                    // At this level we ignore any character after the backslash. The validity of
-                    // the escape sequence is checked at the next level.
-                    current = iter.next();
-                    if current == None {
-                        break;
-                    }
-                }
                 _ => {}
             },
             None => {
@@ -652,14 +644,6 @@ fn reduce_double_quote_string(
                         ),
                     });
                     return current;
-                }
-                '\\' => {
-                    // At this level we ignore any character after the backslash. The validity of
-                    // the escape sequence is checked at the next level.
-                    current = iter.next();
-                    if current == None {
-                        break;
-                    }
                 }
                 _ => {}
             },
@@ -1098,7 +1082,7 @@ sdk/foo/foo.fidl: 10:9: Name <'s>
             "sdk/foo/foo.fidl".to_owned(),
             10,
             4,
-            "'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s".to_owned(),
+            "'abcd' ' abc's 'xyz' '' `abc`'s".to_owned(),
         ));
         let items = reduce_lexems(&mut compiler, &source);
         assert!(!items.is_none());
@@ -1106,30 +1090,46 @@ sdk/foo/foo.fidl: 10:9: Name <'s>
         assert_eq!(
             compiler.errors,
             "\
-'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+'abcd' ' abc's 'xyz' '' `abc`'s
 ^^^^^^
 sdk/foo/foo.fidl: 10:4: SingleQuoteString <abcd>
-'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+'abcd' ' abc's 'xyz' '' `abc`'s
        ^
 sdk/foo/foo.fidl: 10:11: SingleQuote
-'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+'abcd' ' abc's 'xyz' '' `abc`'s
          ^^^^^
 sdk/foo/foo.fidl: 10:13: Name <abc's>
-'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+'abcd' ' abc's 'xyz' '' `abc`'s
                ^^^^^
 sdk/foo/foo.fidl: 10:19: SingleQuoteString <xyz>
-'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
+'abcd' ' abc's 'xyz' '' `abc`'s
                      ^^
 sdk/foo/foo.fidl: 10:25: SingleQuoteString <>
-'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
-                        ^^^^^^^
-sdk/foo/foo.fidl: 10:28: SingleQuoteString <\\' \\x>
-'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
-                                 ^^^
-sdk/foo/foo.fidl: 10:37: Reference <abc>
-'abcd' ' abc's 'xyz' '' '\\' \\x' `abc`'s
-                                     ^^
-sdk/foo/foo.fidl: 10:41: Name <'s>
+'abcd' ' abc's 'xyz' '' `abc`'s
+                         ^^^
+sdk/foo/foo.fidl: 10:29: Reference <abc>
+'abcd' ' abc's 'xyz' '' `abc`'s
+                             ^^
+sdk/foo/foo.fidl: 10:33: Name <'s>
+"
+        );
+    }
+
+    #[test]
+    /// Checks that we can have a backslashes including at the end of a string
+    fn lexer_single_quotes_with_backslash() {
+        let mut compiler = DocCompiler::new();
+        let source =
+            Rc::new(Source::new("sdk/foo/foo.fidl".to_owned(), 10, 4, "'xxx\\ \\'".to_owned()));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(!items.is_none());
+        lexical_items_to_errors(&mut compiler, &items.unwrap(), /*with_spaces=*/ false);
+        assert_eq!(
+            compiler.errors,
+            "\
+'xxx\\ \\'
+^^^^^^^^
+sdk/foo/foo.fidl: 10:4: SingleQuoteString <xxx\\ \\>
 "
         );
     }
@@ -1174,7 +1174,7 @@ sdk/foo/foo.fidl: 10:4: Unterminated string (character <'> expected).
             "sdk/foo/foo.fidl".to_owned(),
             10,
             4,
-            "\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"".to_owned(),
+            "\"abcd\" \" \"\" \"xyz\"".to_owned(),
         ));
         let items = reduce_lexems(&mut compiler, &source);
         assert!(!items.is_none());
@@ -1182,21 +1182,37 @@ sdk/foo/foo.fidl: 10:4: Unterminated string (character <'> expected).
         assert_eq!(
             compiler.errors,
             "\
-\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"
+\"abcd\" \" \"\" \"xyz\"
 ^^^^^^
 sdk/foo/foo.fidl: 10:4: DoubleQuoteString <abcd>
-\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"
+\"abcd\" \" \"\" \"xyz\"
        ^
 sdk/foo/foo.fidl: 10:11: DoubleQuote
-\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"
+\"abcd\" \" \"\" \"xyz\"
          ^^
 sdk/foo/foo.fidl: 10:13: DoubleQuoteString <>
-\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"
+\"abcd\" \" \"\" \"xyz\"
             ^^^^^
 sdk/foo/foo.fidl: 10:16: DoubleQuoteString <xyz>
-\"abcd\" \" \"\" \"xyz\" \"\\\" \\x\"
-                  ^^^^^^^
-sdk/foo/foo.fidl: 10:22: DoubleQuoteString <\\\" \\x>
+"
+        );
+    }
+
+    #[test]
+    /// Checks that we can have a backslashes including at the end of a string
+    fn lexer_double_quotes_with_backslash() {
+        let mut compiler = DocCompiler::new();
+        let source =
+            Rc::new(Source::new("sdk/foo/foo.fidl".to_owned(), 10, 4, "\"xxx\\ \\\"".to_owned()));
+        let items = reduce_lexems(&mut compiler, &source);
+        assert!(!items.is_none());
+        lexical_items_to_errors(&mut compiler, &items.unwrap(), /*with_spaces=*/ false);
+        assert_eq!(
+            compiler.errors,
+            "\
+\"xxx\\ \\\"
+^^^^^^^^
+sdk/foo/foo.fidl: 10:4: DoubleQuoteString <xxx\\ \\>
 "
         );
     }
