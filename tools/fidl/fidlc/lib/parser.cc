@@ -26,7 +26,6 @@ namespace fidl {
   case CASE_IDENTIFIER(Token::Subkind::kArray):  \
   case CASE_IDENTIFIER(Token::Subkind::kVector): \
   case CASE_IDENTIFIER(Token::Subkind::kString): \
-  case CASE_IDENTIFIER(Token::Subkind::kHandle): \
   case CASE_IDENTIFIER(Token::Subkind::kRequest)
 
 #define TOKEN_ATTR_CASES         \
@@ -506,18 +505,9 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructorOf(
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     if (!Ok())
       return Fail();
-    bool is_handle_identifier =
-        identifier->components.size() == 1 && identifier->components[0]->span().data() == "handle";
-    if (is_handle_identifier) {
-      // Always fail on old handle<subtype> syntax now.
-      // TODO(fxbug.dev/51001): Completely remove this code path and the
-      // experimental flag `kDisallowOldHandleSyntax`.
-      return Fail(ErrOldHandleSyntax);
-    } else {
-      maybe_arg_type_ctor = ParseTypeConstructor();
-      if (!Ok())
-        return Fail();
-    }
+    maybe_arg_type_ctor = ParseTypeConstructor();
+    if (!Ok())
+      return Fail();
     ConsumeToken(OfKind(Token::Kind::kRightAngle));
     if (!Ok())
       return Fail();

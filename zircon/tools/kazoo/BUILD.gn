@@ -153,8 +153,6 @@ zx_host_tool_action_foreach("test_files_fidl_to_json_zxio") {
   args = [
     "--json",
     rebase_path("$target_gen_dir") + "/{{source_name_part}}.json",
-    "--experimental",
-    "disallow_old_handle_syntax",
     "--files",
     "{{source}}",
 

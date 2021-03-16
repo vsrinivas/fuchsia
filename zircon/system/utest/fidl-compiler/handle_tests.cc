@@ -249,7 +249,7 @@ struct MyStruct {
   EXPECT_FALSE(library.Compile());
   const auto& errors = library.errors();
   ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrOldHandleSyntax);
+  ASSERT_ERR(errors[0], fidl::ErrUnknownType);
 }
 
 }  // namespace

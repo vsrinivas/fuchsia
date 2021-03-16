@@ -51,7 +51,6 @@ TOKEN_SUBKIND(Library, "library")
 TOKEN_SUBKIND(Using, "using")
 
 TOKEN_SUBKIND(Array, "array")
-TOKEN_SUBKIND(Handle, "handle")
 TOKEN_SUBKIND(Request, "request")
 TOKEN_SUBKIND(String, "string")
 TOKEN_SUBKIND(Vector, "vector")
