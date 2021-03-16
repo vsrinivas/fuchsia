@@ -11,6 +11,7 @@ import("//build/zircon/migrated_targets.gni")
 source_set("src") {
   sources = [
     "abr.c",
+    "avb.c",
     "cmdline.c",
     "compression.c",
     "device_id.c",
@@ -30,6 +31,8 @@ source_set("src") {
   deps = [
     "../lib",
     "//src/firmware/lib/abr",
+    "//src/firmware/lib/zbi",
+    "//src/firmware/lib/zircon_boot",
     "//third_party/android/platform/external/avb",
     "//zircon/kernel/lib/efi",
     "//zircon/system/public",
@@ -40,27 +43,37 @@ source_set("src") {
   ]
 }
 
-test("gigaboot_test") {
-  # In order to make it easier to add tests incrementally, just add the source
-  # files we need here rather than depending on :src in full. This allows us to
-  # stub out the UEFI APIs as we need them, rather than all at once.
-  #
-  # Once we have enough functionality stubbed out host-side we can just depend
-  # on ":src" directly instead.
-  sources = [
-    "compression.c",
-    "compression_test.cc",
-    "diskio.c",
-    "diskio_test.cc",
-    "utf_conversion.c",
-  ]
-  include_dirs = [ "." ]
-  deps = [
-    "../host",
-    "//src/lib/fxl/test:gtest_main",
-    "//third_party/googletest:gmock",
-    "//zircon/kernel/lib/efi",
-    "//zircon/kernel/lib/efi/testing",
-    "//zircon/third_party/ulib/lz4",
-  ]
+# MacOS is missing <endian.h>, so we don't build the tests for it.
+if (!is_mac) {
+  test("gigaboot_test") {
+    # In order to make it easier to add tests incrementally, just add the source
+    # files we need here rather than depending on :src in full. This allows us to
+    # stub out the UEFI APIs as we need them, rather than all at once.
+    #
+    # Once we have enough functionality stubbed out host-side we can just depend
+    # on ":src" directly instead.
+    sources = [
+      "avb.c",
+      "avb_test.cc",
+      "compression.c",
+      "compression_test.cc",
+      "diskio.c",
+      "diskio_test.cc",
+      "utf_conversion.c",
+    ]
+    include_dirs = [ "." ]
+    deps = [
+      "../host",
+      "//src/firmware/lib/zbi",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/android/platform/external/avb",
+      "//third_party/googletest:gmock",
+      "//zircon/kernel/lib/efi",
+      "//zircon/kernel/lib/efi/testing",
+      "//zircon/third_party/ulib/lz4",
+    ]
+  }
+} else {
+  group("gigaboot_test") {
+  }
 }

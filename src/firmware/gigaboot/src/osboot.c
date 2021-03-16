@@ -26,6 +26,7 @@
 #include <efi/system-table.h>
 
 #include "abr.h"
+#include "avb.h"
 #include "bootbyte.h"
 #include "diskio.h"
 
@@ -566,8 +567,9 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   // Look for ZIRCON-A/B/R partitions
   for (i = 0; i < sizeof(boot_list) / sizeof(*boot_list); i++) {
     *boot_list[i].ktype = IMAGE_INVALID;
-    *boot_list[i].kernel = image_load_from_disk(img, sys, boot_list[i].size,
+    *boot_list[i].kernel = image_load_from_disk(img, sys, EXTRA_ZBI_ITEM_SPACE, boot_list[i].size,
                                                 boot_list[i].guid_value, boot_list[i].guid_name);
+
     if (*boot_list[i].kernel != NULL) {
       printf("zircon image loaded from zircon partition %s\n", boot_list[i].guid_name);
       *boot_list[i].ktype = IMAGE_COMBO;
@@ -741,6 +743,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
           zircon_abr_set_slot_active(kAbrSlotIndexA);
         }
         zircon_abr_update_boot_slot_metadata();
+        append_avb_zbi_items(img, sys, kernel, ksz, "-a");
         print_cmdline();
 
         if (ktype == IMAGE_COMBO) {
@@ -769,6 +772,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
           zircon_abr_set_slot_active(kAbrSlotIndexB);
         }
         zircon_abr_update_boot_slot_metadata();
+        append_avb_zbi_items(img, sys, kernel_b, ksz_b, "-b");
         print_cmdline();
 
         if (ktype_b == IMAGE_COMBO) {
@@ -797,6 +801,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
           zircon_abr_set_oneshot_recovery();
         }
         zircon_abr_update_boot_slot_metadata();
+        append_avb_zbi_items(img, sys, zedboot_kernel, zedboot_size, "-r");
         print_cmdline();
 
         if (zedboot_ktype == IMAGE_COMBO) {

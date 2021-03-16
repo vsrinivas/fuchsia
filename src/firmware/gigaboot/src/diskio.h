@@ -13,6 +13,9 @@
 
 __BEGIN_CDECLS
 
+// Max number of UTF-16 chars in a GPT partition name.
+#define GPT_NAME_LEN_U16 (GPT_NAME_LEN / sizeof(uint16_t))
+
 typedef struct {
   efi_disk_io_protocol* io;
   efi_handle h;
@@ -31,7 +34,17 @@ efi_status write_partition(efi_handle img, efi_system_table* sys, const uint8_t*
                            const char* guid_name, uint64_t offset, const unsigned char* data,
                            size_t size);
 
-void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* sz,
+// Load a ZBI from the disk that contains the bootloader.
+//
+// img: efi_handle passed to efi_main
+// sys: efi system table
+// extra_space: extra padding to add to the end of the ZBI, e.g. for appending ZBI items.
+// sz: set to loaded size of the ZBI + extra_space (i.e. the maximum size available for the ZBI).
+// guid_value: GUID of partition to load from.
+// guid_name: user-friendly name for guid_value.
+//
+// Returns a pointer to the loaded ZBI, or NULL if no ZBI was loaded.
+void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t extra_space, size_t* sz,
                            const uint8_t* guid_value, const char* guid_name);
 
 // Returns true if the disk device that was used to load the bootloader
@@ -59,7 +72,30 @@ int disk_find_boot(efi_handle img, efi_system_table* sys, bool verbose, disk_t* 
 int disk_find_partition(const disk_t* disk, bool verbose, const uint8_t* type, const uint8_t* guid,
                         const char* name, gpt_entry_t* partition);
 
+// Matcher callback for disk_find_partition_custom.
+// Returns true to continue iterating, false to stop iteration.
+typedef bool (*partition_matcher_cb)(void* ctx, const gpt_entry_t* partition);
+
+// Reads the GPT from the front of |disk| and calls a callback for each partition.
+//
+// disk: the disk to search.
+// verbose: true to print additional debug info.
+// matcher: callback that is called with each partition's gpt_entry_t.
+// matcher_ctx: extra context passed to |matcher|.
+//
+// Returns 0 if scan succeeded, -1 if scan failed (e.g. invalid GPT).
+int disk_scan_partitions(const disk_t* disk, bool verbose, partition_matcher_cb matcher,
+                         void* matcher_ctx);
+
 efi_status disk_write(disk_t* disk, size_t offset, void* data, size_t length);
+
+// Reads data from |disk|.
+//
+// disk: disk to read from.
+// offset: start position, in bytes.
+// data: pointer to buffer to read into.
+// length: amount of data to read, in bytes (must be <= size of the `data` buffer).
+efi_status disk_read(const disk_t* disk, size_t offset, void* data, size_t length);
 
 // Converts a user-facing partition name into a type GUID.
 //

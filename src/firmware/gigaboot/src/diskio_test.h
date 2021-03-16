@@ -26,7 +26,7 @@ namespace gigaboot {
 // The block size just has to be 8-byte aligned for easy casting.
 inline constexpr uint32_t kBootMediaId = 3;
 inline constexpr uint32_t kBootMediaBlockSize = 512;
-inline constexpr uint64_t kBootMediaNumBlocks = 8;
+inline constexpr uint64_t kBootMediaNumBlocks = 141;
 inline constexpr uint64_t kBootMediaSize = kBootMediaBlockSize * kBootMediaNumBlocks;
 static_assert(kBootMediaBlockSize % 8 == 0, "Block size must be 8-byte aligned");
 
@@ -68,6 +68,15 @@ inline constexpr gpt_entry_t kFvmGptEntry = {
     .first = 9,
     .last = 11,
     .name = "f\0v\0m\0",
+};
+const gpt_entry_t kVbmetaAGptEntry = {
+    .type = GPT_VBMETA_ABR_TYPE_GUID,
+    .guid = {0x05},
+    // The libavb code is hardcoded to read 64k of vbmeta data, so this partition needs to be big
+    // enough.
+    .first = 12,
+    .last = 140,
+    .name = "v\0b\0m\0e\0t\0a\0-\0a\0",
 };
 
 // The state necessary to set up mocks for disk_find_boot().

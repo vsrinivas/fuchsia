@@ -23,6 +23,9 @@
 
 #define CMDLINE_MAX PAGE_SIZE
 
+// Space for extra ZBI items.
+#define EXTRA_ZBI_ITEM_SPACE (8 * PAGE_SIZE)
+
 int boot_kernel(efi_handle img, efi_system_table* sys, void* image, size_t sz, void* ramdisk,
                 size_t rsz);
 

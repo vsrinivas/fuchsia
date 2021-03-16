@@ -26,9 +26,6 @@
 #include "osboot.h"
 #include "utf_conversion.h"
 
-// Max number of UTF-16 chars in a GPT partition name.
-#define GPT_NAME_LEN_U16 (GPT_NAME_LEN / sizeof(uint16_t))
-
 static bool path_node_match(efi_device_path_protocol* a, efi_device_path_protocol* b) {
   size_t alen = a->Length[0] | (a->Length[1] << 8);
   size_t blen = b->Length[0] | (b->Length[1] << 8);
@@ -83,7 +80,7 @@ static void print_path(efi_boot_services* bs, efi_device_path_protocol* path) {
   bs->FreePool(txt);
 }
 
-static efi_status disk_read(const disk_t* disk, size_t offset, void* data, size_t length) {
+efi_status disk_read(const disk_t* disk, size_t offset, void* data, size_t length) {
   if (disk->first > disk->last) {
     return EFI_VOLUME_CORRUPTED;
   }
@@ -258,8 +255,8 @@ fail_open_devpath:
   return found ? 0 : -1;
 }
 
-int disk_find_partition(const disk_t* disk, bool verbose, const uint8_t* type, const uint8_t* guid,
-                        const char* name, gpt_entry_t* partition) {
+int disk_scan_partitions(const disk_t* disk, bool verbose, partition_matcher_cb matcher,
+                         void* matcher_ctx) {
   // Block 0 is MBR, read from block 1 to get GPT header.
   gpt_header_t gpt;
   efi_status status = disk_read(disk, disk->blksz, &gpt, sizeof(gpt));
@@ -285,19 +282,6 @@ int disk_find_partition(const disk_t* disk, bool verbose, const uint8_t* type, c
     return -1;
   }
 
-  // If the user gave a name, convert to UTF-16 so we can compare it to
-  // the GPT entry directly with memcmp().
-  uint16_t name_utf16[GPT_NAME_LEN_U16];
-  size_t name_utf16_len = sizeof(name_utf16);
-  if (name) {
-    zx_status_t status =
-        utf8_to_utf16((const uint8_t*)name, strlen(name) + 1, name_utf16, &name_utf16_len);
-    if (status != ZX_OK) {
-      printf("gpt - failed to convert name '%s' to UTF-16: %d\n", name, status);
-      return -1;
-    }
-  }
-
   // Allocate memory to hold the partition entry table and read it from disk.
   gpt_entry_t* table;
   size_t tsize = gpt.entries_count * gpt.entries_size;
@@ -314,24 +298,10 @@ int disk_find_partition(const disk_t* disk, bool verbose, const uint8_t* type, c
     return -1;
   }
 
-  bool found = false;
   for (unsigned n = 0; n < gpt.entries_count; n++) {
     if ((table[n].first == 0) || (table[n].last == 0) || (table[n].last < table[n].first)) {
       // Ignore empty or bogus entries.
       continue;
-    }
-
-    if ((!type || memcmp(table[n].type, type, GPT_GUID_LEN) == 0) &&
-        (!guid || memcmp(table[n].guid, guid, GPT_GUID_LEN) == 0) &&
-        (!name || memcmp(table[n].name, name_utf16, name_utf16_len) == 0)) {
-      // Multi-partition match is an error.
-      if (found) {
-        disk->bs->FreePool(table);
-        return -1;
-      }
-
-      found = true;
-      memcpy(partition, &table[n], sizeof(*partition));
     }
 
     if (verbose) {
@@ -347,13 +317,70 @@ int disk_find_partition(const disk_t* disk, bool verbose, const uint8_t* type, c
       printf("#%03d %" PRIu64 "..%" PRIu64 " %16s %" PRIx64 "\n", n, table[n].first, table[n].last,
              gpt_name, table[n].flags);
     }
+    if (!matcher(matcher_ctx, &table[n])) {
+      break;
+    }
   }
-  disk->bs->FreePool(table);
 
-  return found ? 0 : -1;
+  disk->bs->FreePool(table);
+  return 0;
 }
 
-void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz,
+struct disk_find_partition_ctx {
+  const uint8_t* type_guid;
+  const uint8_t* part_guid;
+  const uint16_t* part_name;
+  const size_t part_name_len;
+  gpt_entry_t* partition_out;
+  size_t matches;
+};
+
+static bool disk_find_partition_cb(void* ctx, const gpt_entry_t* partition) {
+  struct disk_find_partition_ctx* params = (struct disk_find_partition_ctx*)ctx;
+  if ((!params->type_guid || memcmp(partition->type, params->type_guid, GPT_GUID_LEN) == 0) &&
+      (!params->part_guid || memcmp(partition->guid, params->part_guid, GPT_GUID_LEN) == 0) &&
+      (!params->part_name ||
+       memcmp(partition->name, params->part_name, params->part_name_len) == 0)) {
+    memcpy(params->partition_out, partition, sizeof(*partition));
+    params->matches++;
+    return true;
+  }
+
+  return true;
+}
+
+int disk_find_partition(const disk_t* disk, bool verbose, const uint8_t* type, const uint8_t* guid,
+                        const char* name, gpt_entry_t* partition) {
+  // If the user gave a name, convert to UTF-16 so we can compare it to
+  // the GPT entry directly with memcmp().
+  uint16_t name_utf16[GPT_NAME_LEN_U16];
+  size_t name_utf16_len = sizeof(name_utf16);
+  if (name) {
+    zx_status_t status =
+        utf8_to_utf16((const uint8_t*)name, strlen(name) + 1, name_utf16, &name_utf16_len);
+    if (status != ZX_OK) {
+      printf("gpt - failed to convert name '%s' to UTF-16: %d\n", name, status);
+      return -1;
+    }
+  }
+
+  struct disk_find_partition_ctx ctx = {
+      .type_guid = type,
+      .part_guid = guid,
+      .part_name = name ? name_utf16 : NULL,
+      .part_name_len = name_utf16_len,
+      .partition_out = partition,
+      .matches = 0,
+  };
+
+  int ret = disk_scan_partitions(disk, verbose, disk_find_partition_cb, &ctx);
+  if (ret == -1) {
+    return -1;
+  }
+  return (ctx.matches == 1) ? 0 : -1;
+}
+
+void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t extra_space, size_t* _sz,
                            const uint8_t* guid_value, const char* guid_name) {
   static bool verbose = false;
   uint8_t sector[512];
@@ -385,6 +412,7 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz,
   }
 
   size_t pages = (sz + 4095) / 4096;
+  pages += (extra_space + 4095) / 4096;
   void* image;
   status = bs->AllocatePages(AllocateAnyPages, EfiLoaderData, pages, (efi_physical_addr*)&image);
   if (status != EFI_SUCCESS) {
@@ -403,7 +431,7 @@ void* image_load_from_disk(efi_handle img, efi_system_table* sys, size_t* _sz,
     goto fail1;
   }
 
-  *_sz = sz;
+  *_sz = sz + extra_space;
   return image;
 
 fail1:
