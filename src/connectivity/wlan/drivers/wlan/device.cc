@@ -434,6 +434,7 @@ void Device::WlanmacIndication(uint32_t ind) {
 }
 
 void Device::WlanmacReportTxStatus(const wlan_tx_status_t* tx_status) {
+  std::lock_guard<std::mutex> minstrel_lock_guard(minstrel_lock_);
   ZX_DEBUG_ASSERT(minstrel_ != nullptr);
   if (minstrel_ != nullptr) {
     minstrel_->HandleTxStatusReport(*tx_status);
@@ -543,8 +544,11 @@ zx_status_t Device::SendWlan(std::unique_ptr<Packet> packet, uint32_t flags) {
   ZX_DEBUG_ASSERT(packet->len() <= std::numeric_limits<uint16_t>::max());
   ZX_DEBUG_ASSERT(ValidateFrame("Transmitting a malformed frame", *packet));
 
-  auto tv = GetTxVector(minstrel_, packet, flags);
-  packet->CopyCtrlFrom(MakeTxInfo(packet, tv, minstrel_ != nullptr, flags));
+  {
+    std::lock_guard<std::mutex> minstrel_lock_guard(minstrel_lock_);
+    auto tv = GetTxVector(minstrel_, packet, flags);
+    packet->CopyCtrlFrom(MakeTxInfo(packet, tv, minstrel_ != nullptr, flags));
+  }
   wlan_tx_packet_t tx_pkt = packet->AsWlanTxPacket();
   auto status = wlanmac_proxy_.QueueTx(0u, &tx_pkt);
   // TODO(tkilbourn): remove this once we implement WlanmacCompleteTx and allow
@@ -649,8 +653,11 @@ zx_status_t Device::ConfigureAssoc(wlan_assoc_ctx_t* assoc_ctx) {
 }
 
 zx_status_t Device::ClearAssoc(const wlan::common::MacAddr& peer_addr) {
-  if (minstrel_ != nullptr) {
-    minstrel_->RemovePeer(peer_addr);
+  {
+    std::lock_guard<std::mutex> minstrel_lock_guard(minstrel_lock_);
+    if (minstrel_ != nullptr) {
+      minstrel_->RemovePeer(peer_addr);
+    }
   }
 
   uint8_t mac[wlan::common::kMacAddrLen];
@@ -663,6 +670,7 @@ fbl::RefPtr<DeviceState> Device::GetState() { return state_; }
 const wlanmac_info_t& Device::GetWlanMacInfo() const { return wlanmac_info_; }
 
 zx_status_t Device::GetMinstrelPeers(wlan_minstrel::Peers* peers_fidl) {
+  std::lock_guard<std::mutex> minstrel_lock_guard(minstrel_lock_);
   if (minstrel_ == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -670,6 +678,7 @@ zx_status_t Device::GetMinstrelPeers(wlan_minstrel::Peers* peers_fidl) {
 }
 
 zx_status_t Device::GetMinstrelStats(const common::MacAddr& addr, wlan_minstrel::Peer* peer_fidl) {
+  std::lock_guard<std::mutex> minstrel_lock_guard(minstrel_lock_);
   if (minstrel_ == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -754,6 +763,7 @@ void Device::MainLoop() {
             dispatcher_->HandlePortPacket(pkt.key);
             break;
           case PortKeyType::kDevice: {
+            std::lock_guard<std::mutex> minstrel_lock_guard(minstrel_lock_);
             ZX_DEBUG_ASSERT(minstrel_ != nullptr);
             minstrel_->HandleTimeout();
             break;
@@ -892,12 +902,14 @@ zx_status_t Device::CreateMinstrel(uint32_t features) {
   const zx::duration minstrel_update_interval = (features & WLAN_INFO_DRIVER_FEATURE_SYNTH) != 0
                                                     ? kMinstrelUpdateIntervalForHwSim
                                                     : kMinstrelUpdateIntervalNormal;
+  std::lock_guard<std::mutex> minstrel_lock_guard(minstrel_lock_);
   minstrel_.reset(new MinstrelRateSelector(std::move(timer), ProbeSequence::RandomSequence(),
                                            minstrel_update_interval));
   return ZX_OK;
 }
 
 void Device::AddMinstrelPeer(const wlan_assoc_ctx_t& assoc_ctx) {
+  std::lock_guard<std::mutex> minstrel_lock_guard(minstrel_lock_);
   if (minstrel_ == nullptr) {
     return;
   }

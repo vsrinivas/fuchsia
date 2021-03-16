@@ -149,7 +149,8 @@ class Device : public DeviceInterface {
   std::thread work_thread_;
   zx::port port_;
 
-  std::unique_ptr<MinstrelRateSelector> minstrel_;
+  std::mutex minstrel_lock_;
+  std::unique_ptr<MinstrelRateSelector> minstrel_ __TA_GUARDED(minstrel_lock_);
 
   std::unique_ptr<Dispatcher> dispatcher_ __TA_GUARDED(lock_);
 
