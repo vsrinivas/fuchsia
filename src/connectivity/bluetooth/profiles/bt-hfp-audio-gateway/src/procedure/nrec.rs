@@ -72,7 +72,7 @@ impl Procedure for NrecProcedure {
             (State::SetRequest, update @ at::Response::Ok)
             | (State::SetRequest, update @ at::Response::Error) => {
                 self.state.transition();
-                ProcedureRequest::SendMessages(vec![update])
+                update.into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedAg(update)),
         }

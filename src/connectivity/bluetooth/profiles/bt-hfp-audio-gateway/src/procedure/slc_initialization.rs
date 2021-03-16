@@ -193,7 +193,7 @@ struct AvailableCodecsReceived;
 
 impl SlcProcedureState for AvailableCodecsReceived {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessages(vec![at::Response::Ok])
+        at::Response::Ok.into()
     }
 
     fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
@@ -322,7 +322,7 @@ struct AgIndicatorStatusEnableReceived {
 
 impl SlcProcedureState for AgIndicatorStatusEnableReceived {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessages(vec![at::Response::Ok])
+        at::Response::Ok.into()
     }
 
     fn hf_update(&self, update: at::Command, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
@@ -387,7 +387,7 @@ struct HfSupportedIndicatorsReceived;
 
 impl SlcProcedureState for HfSupportedIndicatorsReceived {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessages(vec![at::Response::Ok])
+        at::Response::Ok.into()
     }
 
     fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {

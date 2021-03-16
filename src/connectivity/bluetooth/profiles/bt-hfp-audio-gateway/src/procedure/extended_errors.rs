@@ -62,7 +62,7 @@ impl Procedure for ExtendedErrorsProcedure {
             (State::Start, at::Command::Cmee { enable }) => {
                 self.state.transition();
                 state.extended_errors = enable;
-                ProcedureRequest::SendMessages(vec![at::Response::Ok])
+                at::Response::Ok.into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
         }

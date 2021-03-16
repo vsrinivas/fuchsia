@@ -146,8 +146,20 @@ impl ProcedureRequest {
         }
     }
 
-    pub fn send_one_message_and_ok(message: at::Response) -> ProcedureRequest {
-        ProcedureRequest::SendMessages(vec![message, at::Response::Ok])
+    pub fn send_one_message_and_ok(message: at::Response) -> Self {
+        vec![message, at::Response::Ok].into()
+    }
+}
+
+impl From<at::Response> for ProcedureRequest {
+    fn from(message: at::Response) -> Self {
+        vec![message].into()
+    }
+}
+
+impl From<Vec<at::Response>> for ProcedureRequest {
+    fn from(messages: Vec<at::Response>) -> Self {
+        Self::SendMessages(messages)
     }
 }
 
@@ -208,5 +220,34 @@ pub trait Procedure {
     /// Returns true if the Procedure is finished.
     fn is_terminated(&self) -> bool {
         false
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use matches::assert_matches;
+
+    /// A single response converts to the expected request
+    #[test]
+    fn at_response_to_procedure_request_conversion() {
+        let message = at::Response::Ok;
+        let request: ProcedureRequest = message.into();
+        assert_matches!(
+            request,
+            ProcedureRequest::SendMessages(messages) if messages == vec![at::Response::Ok]
+        );
+    }
+
+    /// A vec of responses converts to the expected request
+    #[test]
+    fn at_responses_to_procedure_request_conversion() {
+        let messages = vec![at::Response::Ok, at::Response::Error];
+        let request: ProcedureRequest = messages.into();
+        assert_matches!(
+            request,
+            ProcedureRequest::SendMessages(messages)
+                if messages == vec![at::Response::Ok, at::Response::Error]
+        );
     }
 }
