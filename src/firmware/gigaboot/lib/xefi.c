@@ -31,16 +31,100 @@ void xefi_init(efi_handle img, efi_system_table* sys) {
   }
 }
 
-void xefi_wait_any_key(void) {
-  efi_simple_text_input_protocol* sii = gSys->ConIn;
-  efi_input_key key;
-  while (sii->ReadKeyStroke(sii, &key) != EFI_SUCCESS)
-    ;
+// Super basic single-character UTF-16 to ASCII conversion. Anything outside of
+// the [0x00, 0x7F] range just gets converted to '\0'.
+static char simple_utf16_to_ascii(uint16_t utf16) {
+  if ((utf16 & 0xFF80) == 0) {
+    return (char)(utf16 & 0x7F);
+  }
+  return '\0';
+}
+
+// Inner loop for xefi_getc().
+static int xefi_getc_loop(int64_t timeout_ms) {
+  int result = -1;
+  efi_status status;
+  efi_event timer_event;
+
+  if (timeout_ms > 0) {
+    status = gBS->CreateEvent(EVT_TIMER, 0, NULL, NULL, &timer_event);
+    if (status != EFI_SUCCESS) {
+      printf("%s: failed to create timer event: %s\n", __func__, xefi_strerror(status));
+      return -1;
+    }
+    // SetTimer() is in 100ns time units.
+    status = gBS->SetTimer(timer_event, TimerRelative, timeout_ms * 10000);
+    if (status != EFI_SUCCESS) {
+      printf("%s: failed to set timer: %s\n", __func__, xefi_strerror(status));
+      gBS->CloseEvent(timer_event);
+      return -1;
+    }
+  }
+
+  // Run the checks at least once so we poll if timeout == 0.
+  do {
+    // Console input gets priority, check it first.
+    efi_input_key key;
+    if (gSys->ConIn->ReadKeyStroke(gSys->ConIn, &key) == EFI_SUCCESS && key.UnicodeChar != 0) {
+      result = simple_utf16_to_ascii(key.UnicodeChar);
+      break;
+    }
+
+    if (gSerial) {
+      char read_char;
+      uint64_t read_len = 1;
+      status = gSerial->Read(gSerial, &read_len, &read_char);
+      if (status == EFI_SUCCESS && read_len == 1) {
+        result = read_char;
+        break;
+      }
+    }
+  } while ((timeout_ms < 0) || (timeout_ms > 0 && gBS->CheckEvent(timer_event) == EFI_NOT_READY));
+
+  if (timeout_ms > 0) {
+    gBS->CloseEvent(timer_event);
+  }
+
+  return result;
+}
+
+int xefi_getc(int64_t timeout_ms) {
+  serial_io_mode mode;
+  if (gSerial) {
+    // Serial I/O protocol doesn't seem to have any support for on-key events,
+    // so we need to poll. The default timeout is 1 second, drop it down so we
+    // can alternate checking console and serial.
+    mode = *gSerial->Mode;
+    efi_status status = gSerial->SetAttributes(gSerial, mode.BaudRate, mode.ReceiveFifoDepth,
+                                               1000 /* 1000us = 1ms */, mode.Parity,
+                                               (uint8_t)mode.DataBits, mode.StopBits);
+    if (status != EFI_SUCCESS) {
+      printf("%s: failed to set serial timeout: %s\n", __func__, xefi_strerror(status));
+      return -1;
+    }
+  }
+
+  int result = xefi_getc_loop(timeout_ms);
+
+  if (gSerial) {
+    // Restore serial attributes to the previous values.
+    efi_status status =
+        gSerial->SetAttributes(gSerial, mode.BaudRate, mode.ReceiveFifoDepth, mode.Timeout,
+                               mode.Parity, (uint8_t)mode.DataBits, mode.StopBits);
+    if (status != EFI_SUCCESS) {
+      // Even though we already completed the function at this point, return
+      // an error code because the serial might be broken from now on.
+      printf("%s: failed to restore serial attributes: %s\n", __func__, xefi_strerror(status));
+      return -1;
+    }
+  }
+
+  return result;
 }
 
 void xefi_fatal(const char* msg, efi_status status) {
   printf("\nERROR: %s (%s)\n", msg, xefi_strerror(status));
-  xefi_wait_any_key();
+  xefi_getc(-1);
   gBS->Exit(gImg, 1, 0, NULL);
 }
 

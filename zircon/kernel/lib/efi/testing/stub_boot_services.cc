@@ -37,6 +37,10 @@ StubBootServices::StubBootServices()
     : services_{
           .AllocatePool = Wrap<&StubBootServices::AllocatePool>,
           .FreePool = Wrap<&StubBootServices::FreePool>,
+          .CreateEvent = Wrap<&StubBootServices::CreateEvent>,
+          .SetTimer = Wrap<&StubBootServices::SetTimer>,
+          .CloseEvent = Wrap<&StubBootServices::CloseEvent>,
+          .CheckEvent = Wrap<&StubBootServices::CheckEvent>,
           .OpenProtocol = Wrap<&StubBootServices::OpenProtocol>,
           .CloseProtocol = Wrap<&StubBootServices::CloseProtocol>,
           .LocateHandleBuffer = Wrap<&StubBootServices::LocateHandleBuffer>,

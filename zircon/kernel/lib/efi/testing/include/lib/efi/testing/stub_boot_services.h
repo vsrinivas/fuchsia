@@ -55,13 +55,20 @@ class StubBootServices {
   virtual efi_status AllocatePool(efi_memory_type pool_type, size_t size, void** buf);
   virtual efi_status FreePool(void* buf);
 
-  //   efi_status (*CreateEvent)(uint32_t type, efi_tpl notify_tpl, efi_event_notify notify_fn,
-  //                             void* notify_ctx, efi_event* event);
-  //   efi_status (*SetTimer)(efi_event event, efi_timer_delay type, uint64_t trigger_time);
+  virtual efi_status CreateEvent(uint32_t type, efi_tpl notify_tpl, efi_event_notify notify_fn,
+                                 void* notify_ctx, efi_event* event) {
+    return EFI_UNSUPPORTED;
+  }
+  virtual efi_status SetTimer(efi_event event, efi_timer_delay type, uint64_t trigger_time) {
+    return EFI_UNSUPPORTED;
+  }
+
   //   efi_status (*WaitForEvent)(size_t num_events, efi_event* event, size_t* index);
   //   efi_status (*SignalEvent)(efi_event event);
-  //   efi_status (*CloseEvent)(efi_event event);
-  //   efi_status (*CheckEvent)(efi_event event);
+
+  virtual efi_status CloseEvent(efi_event event) { return EFI_UNSUPPORTED; }
+  virtual efi_status CheckEvent(efi_event event) { return EFI_UNSUPPORTED; }
+
   //   efi_status (*InstallProtocolInterface)(efi_handle* handle, efi_guid* protocol,
   //                                          efi_interface_type intf_type, void* intf);
   //   efi_status (*ReinstallProtocolInterface)(efi_handle hadle, efi_guid* protocol,
@@ -150,6 +157,15 @@ constexpr auto MatchGuid = MatchGuidT<efi_guid>;
 // to avoid it, so the base class is still available for direct use.
 class MockBootServices : public StubBootServices {
  public:
+  MOCK_METHOD(efi_status, CreateEvent,
+              (uint32_t type, efi_tpl notify_tpl, efi_event_notify notify_fn, void* notify_ctx,
+               efi_event* event),
+              (override));
+  MOCK_METHOD(efi_status, SetTimer, (efi_event event, efi_timer_delay type, uint64_t trigger_time),
+              (override));
+  MOCK_METHOD(efi_status, CloseEvent, (efi_event event), (override));
+  MOCK_METHOD(efi_status, CheckEvent, (efi_event event), (override));
+
   MOCK_METHOD(efi_status, OpenProtocol,
               (efi_handle handle, efi_guid* protocol, void** intf, efi_handle agent_handle,
                efi_handle controller_handle, uint32_t attributes),

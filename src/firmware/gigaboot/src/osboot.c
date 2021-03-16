@@ -94,75 +94,57 @@ char key_prompt(const char* valid_keys, int timeout_s) {
   if (timeout_s <= 0)
     return valid_keys[0];
 
-  efi_event TimerEvent;
-  efi_event WaitList[2];
-
   efi_status status;
-  size_t Index;
-  efi_input_key key;
-  memset(&key, 0, sizeof(key));
+  efi_event timer_event = NULL;
+  if (timeout_s < INT_MAX) {
+    status = gBS->CreateEvent(EVT_TIMER, 0, NULL, NULL, &timer_event);
+    if (status != EFI_SUCCESS) {
+      printf("could not create event timer: %s\n", xefi_strerror(status));
+      return 0;
+    }
 
-  status = gBS->CreateEvent(EVT_TIMER, 0, NULL, NULL, &TimerEvent);
-  if (status != EFI_SUCCESS) {
-    printf("could not create event timer: %s\n", xefi_strerror(status));
-    return 0;
+    status = gBS->SetTimer(timer_event, TimerPeriodic, 10000000);
+    if (status != EFI_SUCCESS) {
+      printf("could not set timer: %s\n", xefi_strerror(status));
+      return 0;
+    }
   }
-
-  status = gBS->SetTimer(TimerEvent, TimerPeriodic, 10000000);
-  if (status != EFI_SUCCESS) {
-    printf("could not set timer: %s\n", xefi_strerror(status));
-    return 0;
-  }
-
-  size_t wait_idx = 0;
-  size_t key_idx = wait_idx;
-  WaitList[wait_idx++] = gSys->ConIn->WaitForKey;
-  size_t timer_idx = wait_idx;  // timer should always be last
-  WaitList[wait_idx++] = TimerEvent;
 
   bool cur_vis = gConOut->Mode->CursorVisible;
   int32_t col = gConOut->Mode->CursorColumn;
   int32_t row = gConOut->Mode->CursorRow;
   gConOut->EnableCursor(gConOut, false);
 
-  // TODO: better event loop
   char pressed = 0;
   if (timeout_s < INT_MAX) {
-    printf("%-10d", timeout_s);
+    printf("Auto-boot in %ds\n", timeout_s);
   }
   do {
-    status = gBS->WaitForEvent(wait_idx, WaitList, &Index);
-
-    // Check the timer
-    if (!EFI_ERROR(status)) {
-      if (Index == timer_idx) {
-        if (timeout_s < INT_MAX) {
-          timeout_s--;
-          gConOut->SetCursorPosition(gConOut, col, row);
-          printf("%-10d", timeout_s);
-        }
-        continue;
-      } else if (Index == key_idx) {
-        status = gSys->ConIn->ReadKeyStroke(gSys->ConIn, &key);
-        if (EFI_ERROR(status)) {
-          // clear the key and wait for another event
-          memset(&key, 0, sizeof(key));
-        } else {
-          char* which_key = strchr(valid_keys, key.UnicodeChar);
-          if (which_key) {
-            pressed = *which_key;
-            break;
-          }
-        }
-      }
+    int key;
+    if (timeout_s == INT_MAX) {
+      key = xefi_getc(-1);
     } else {
-      printf("Error waiting for event: %s\n", xefi_strerror(status));
-      gConOut->EnableCursor(gConOut, cur_vis);
-      return 0;
+      key = xefi_getc(0);
+    }
+
+    if (key > 0) {
+      char* which_key = strchr(valid_keys, key);
+      if (which_key) {
+        pressed = *which_key;
+        break;
+      }
+    }
+
+    if (timer_event != NULL && gBS->CheckEvent(timer_event) == EFI_SUCCESS) {
+      timeout_s--;
+      gConOut->SetCursorPosition(gConOut, col, row);
+      printf("Auto-boot in %ds\n", timeout_s);
     }
   } while (timeout_s);
 
-  gBS->CloseEvent(TimerEvent);
+  if (timer_event != NULL) {
+    gBS->CloseEvent(timer_event);
+  }
   gConOut->EnableCursor(gConOut, cur_vis);
   if (timeout_s > 0 && pressed) {
     return pressed;
@@ -704,23 +686,21 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
   int timeout_s = cmdline_get_uint32("bootloader.timeout", DEFAULT_TIMEOUT);
 
   while (true) {
-    printf("\nPress (b) for the boot menu, (f) for fastboot");
+    printf("\nBoot options:\n");
+    printf("  b) boot menu\n");
+    printf("  f) fastboot\n");
     if (have_network) {
-      printf(", ");
-      if (!kernel)
-        printf("or ");
-      printf("(n) for network boot");
+      printf("  n) network boot\n");
     }
     if (kernel) {
-      printf(", ");
-      // TODO(jonmayo): remove obsolete term 'zircon.bin'. use ZIRCON-A
-      printf("or (m) to boot the zircon.bin on the device");
+      printf("  1) boot A slot (alternate: m)\n");
+    }
+    if (kernel_b) {
+      printf("  2) boot B slot\n");
     }
     if (zedboot_kernel) {
-      printf(", ");
-      printf("or (z)/(r) to launch recovery");
+      printf("  r) boot R slot (alternate: z)\n");
     }
-    printf(" ...");
 
     char key = key_prompt(valid_keys, timeout_s);
     printf("\n\n");
@@ -817,6 +797,6 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
 
 fail:
   printf("\nBoot Failure\n");
-  xefi_wait_any_key();
+  xefi_getc(-1);
   return EFI_SUCCESS;
 }
