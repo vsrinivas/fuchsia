@@ -74,14 +74,16 @@ void Driver::set_binding(fidl::ServerBindingRef<fuchsia_driver_framework::Driver
   binding_.emplace(std::move(binding));
 }
 
-zx::status<> Driver::Start(fidl::OutgoingMessage& message, async_dispatcher_t* dispatcher) {
-  auto converted = fidl::OutgoingToIncomingMessage(message);
+zx::status<> Driver::Start(fidl::OutgoingMessage& start_args, async_dispatcher_t* dispatcher) {
+  auto converted = fidl::OutgoingToIncomingMessage(start_args);
   if (converted.status() != ZX_OK) {
-    return zx::make_status(converted.status());
+    return zx::error(converted.status());
   }
-  record_->start(converted.incoming_message(), dispatcher, &opaque_);
+  zx_status_t status = record_->start(converted.incoming_message(), dispatcher, &opaque_);
+  // After calling |record_->start|, we assume it has taken ownership of
+  // the handles from |start_args|, and can therefore relinquish ownership.
   converted.ReleaseHandles();
-  return zx::make_status(converted.status());
+  return zx::make_status(status);
 }
 
 DriverHost::DriverHost(inspect::Inspector* inspector, async::Loop* loop) : loop_(loop) {
@@ -227,9 +229,6 @@ void DriverHost::Start(fdf::wire::DriverStartArgs start_args,
       completer.Close(start.error_value());
       return;
     }
-    // After the driver successfully starts, we assume it has taken ownership of
-    // the handles from |start_args|, and can therefore relinquish ownership.
-    message->GetOutgoingMessage().ReleaseHandles();
     LOGF(INFO, "Started '%s'", binary.data());
   };
   file->GetBuffer(fio::wire::VMO_FLAG_READ | fio::wire::VMO_FLAG_EXEC | fio::wire::VMO_FLAG_PRIVATE,
