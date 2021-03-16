@@ -63,7 +63,7 @@ zx_status_t RndisHost::SendControlCommand(void* command) {
 
   return usb_.ControlOut(USB_DIR_OUT | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
                          USB_CDC_SEND_ENCAPSULATED_COMMAND, 0, control_intf_, RNDIS_CONTROL_TIMEOUT,
-                         command, header->msg_length);
+                         reinterpret_cast<uint8_t*>(command), header->msg_length);
 }
 
 zx_status_t RndisHost::ReceiveControlMessage(uint32_t request_id) {
