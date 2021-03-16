@@ -180,9 +180,9 @@ pub struct TargetLogDirectory {
 
 impl TargetLogDirectory {
     async fn new(nodename: String) -> Result<Self> {
-        let mut root = get::<std::path::PathBuf, &str>(CACHE_DIRECTORY_CONFIG).await?;
+        let mut root: PathBuf = get(CACHE_DIRECTORY_CONFIG).await?;
         root.push(nodename);
-        Ok(Self { root: root.into() })
+        Ok(Self { root })
     }
 
     #[cfg(test)]
@@ -489,9 +489,9 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
         self.setup_stream_with_config(
             TargetLogDirectory::new(target_nodename).await?,
             target_boot_time_nanos,
-            get::<u64, &str>(MAX_LOG_SIZE_CONFIG).await? as usize,
-            get::<u64, &str>(MAX_SESSION_SIZE_CONFIG).await? as usize,
-            get::<u64, &str>(MAX_SESSIONS_CONFIG).await? as usize,
+            get(MAX_LOG_SIZE_CONFIG).await?,
+            get(MAX_SESSION_SIZE_CONFIG).await?,
+            get(MAX_SESSIONS_CONFIG).await?,
         )
         .await
     }

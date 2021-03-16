@@ -9,6 +9,7 @@ use {
     },
     crate::mapping::{filter::filter, flatten::flatten},
     anyhow::anyhow,
+    async_std::path::PathBuf as AsyncPathBuf,
     serde_json::Value,
     std::{
         convert::{From, TryFrom, TryInto},
@@ -124,6 +125,40 @@ impl TryFrom<ConfigValue> for Option<String> {
     }
 }
 
+impl ValueStrategy for usize {
+    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
+    }
+
+    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
+        match query.select {
+            SelectMode::First => Ok(()),
+            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
+        }
+    }
+}
+
+impl TryFrom<ConfigValue> for usize {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        value
+            .0
+            .and_then(|v| {
+                v.as_u64().and_then(|v| usize::try_from(v).ok()).or_else(|| {
+                    if let Value::String(s) = v {
+                        s.parse().ok()
+                    } else {
+                        None
+                    }
+                })
+            })
+            .ok_or(anyhow!("no configuration usize value found").into())
+    }
+}
+
 impl ValueStrategy for u64 {
     fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
         next: &'a T,
@@ -230,6 +265,32 @@ impl TryFrom<ConfigValue> for PathBuf {
         value
             .0
             .and_then(|v| v.as_str().map(|s| PathBuf::from(s.to_string())))
+            .ok_or(anyhow!("no configuration value found").into())
+    }
+}
+
+impl ValueStrategy for AsyncPathBuf {
+    fn handle_arrays<'a, T: Fn(Value) -> Option<Value> + Sync>(
+        next: &'a T,
+    ) -> Box<dyn Fn(Value) -> Option<Value> + Send + Sync + 'a> {
+        flatten(next)
+    }
+
+    fn validate_query(query: &ConfigQuery<'_>) -> std::result::Result<(), ConfigError> {
+        match query.select {
+            SelectMode::First => Ok(()),
+            SelectMode::All => Err(anyhow!(ADDITIVE_RETURN_ERR).into()),
+        }
+    }
+}
+
+impl TryFrom<ConfigValue> for AsyncPathBuf {
+    type Error = ConfigError;
+
+    fn try_from(value: ConfigValue) -> std::result::Result<Self, Self::Error> {
+        value
+            .0
+            .and_then(|v| v.as_str().map(|s| AsyncPathBuf::from(s.to_string())))
             .ok_or(anyhow!("no configuration value found").into())
     }
 }
