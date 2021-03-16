@@ -91,7 +91,6 @@ golden_test("my-component-v2-rust") {
   golden_files = [
     "my-component-v2-rust/BUILD.gn",
     "my-component-v2-rust/meta/my-component-v2-rust.cml",
-    "my-component-v2-rust/meta/my-component-v2-rust-unittests.cml",
     "my-component-v2-rust/README.md",
     "my-component-v2-rust/src/main.rs",
   ]

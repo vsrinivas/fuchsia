@@ -27,7 +27,6 @@ if (host_toolchain == current_toolchain) {
       "component-v2/README.md.tmpl",
       "component-v2/main.cc.tmpl-cpp",
       "component-v2/meta/{{PROJECT_NAME}}-unittests.cml.tmpl-cpp",
-      "component-v2/meta/{{PROJECT_NAME}}-unittests.cml.tmpl-rust",
       "component-v2/meta/{{PROJECT_NAME}}.cml.tmpl-cpp",
       "component-v2/meta/{{PROJECT_NAME}}.cml.tmpl-rust",
       "component-v2/src/main.rs.tmpl-rust",
