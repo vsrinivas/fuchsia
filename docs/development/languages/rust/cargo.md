@@ -13,7 +13,9 @@ all or needing manual tweaks. Because of this, cargo in the Fuchsia tree is
 ### Generating `Cargo.toml` files {#cargo-toml-gen}
 
 In order to generate the cargo files based on the build graph of GN, add `--cargo-toml-gen` to
-the `fx set` and `fx args` commands. This adds a few seconds at `gn gen` time. For example:
+the `fx set` command or the `//build/rust:cargo_toml_gen` target to `$OUT_DIR/args.gn`'s
+`universe_package_labels`. This adds a few seconds to `gn gen`. Make sure to run
+a full `fx build` after updating the setting:
 
 ```sh
 fx set PRODUCT.BOARD --cargo-toml-gen <other fx args>
@@ -22,7 +24,7 @@ fx build
 
 **Note:** If a `Cargo.toml` is required to complete an `fx build`, such as in the
 case `cbindgen` needs to be run to generate new C bindings for a Rust crate, you may
-use the `//build/rust:cargo_toml_gen` build target instead. This target will only
+need to use the `//build/rust:cargo_toml_gen` build target instead. This target will only
 build the `Cargo.toml` files.
 
 Most editors require the `Cargo.toml` file to be in a location that is adjacent to
