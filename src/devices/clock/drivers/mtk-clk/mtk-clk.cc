@@ -222,7 +222,8 @@ zx_status_t MtkClk::Bind() {
       .ctx = this,
   };
 
-  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
+  status = pbus_register_protocol(&pbus, ZX_PROTOCOL_CLOCK_IMPL,
+                                  reinterpret_cast<uint8_t*>(&clk_proto), sizeof(clk_proto));
   if (status != ZX_OK) {
     zxlogf(ERROR, "MtkClk::Create: pbus_register_protocol failed, st = %d", status);
     return status;
