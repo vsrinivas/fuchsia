@@ -40,7 +40,7 @@ zx_status_t As370::ClockInit() {
   static const pbus_metadata_t clock_metadata[] = {
       {
           .type = DEVICE_METADATA_CLOCK_IDS,
-          .data_buffer = &clock_ids,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&clock_ids),
           .data_size = sizeof(clock_ids),
       },
   };

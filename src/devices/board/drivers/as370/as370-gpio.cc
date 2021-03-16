@@ -484,7 +484,7 @@ zx_status_t As370::GpioInit() {
       },
       {
           .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = &pinmux_metadata,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&pinmux_metadata),
           .data_size = sizeof(pinmux_metadata),
       },
   };

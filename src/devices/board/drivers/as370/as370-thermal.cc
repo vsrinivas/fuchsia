@@ -16,10 +16,10 @@
 
 namespace board_as370 {
 
-using fuchsia_hardware_thermal::OperatingPoint;
-using fuchsia_hardware_thermal::OperatingPointEntry;
-using fuchsia_hardware_thermal::PowerDomain;
-using fuchsia_hardware_thermal::ThermalDeviceInfo;
+using fuchsia_hardware_thermal::wire::OperatingPoint;
+using fuchsia_hardware_thermal::wire::OperatingPointEntry;
+using fuchsia_hardware_thermal::wire::PowerDomain;
+using fuchsia_hardware_thermal::wire::ThermalDeviceInfo;
 
 zx_status_t As370::ThermalInit() {
   constexpr pbus_mmio_t thermal_mmios[] = {
@@ -65,7 +65,7 @@ zx_status_t As370::ThermalInit() {
   const pbus_metadata_t thermal_metadata[] = {
       {
           .type = DEVICE_METADATA_THERMAL_CONFIG,
-          .data_buffer = &kThermalDeviceInfo,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&kThermalDeviceInfo),
           .data_size = sizeof(kThermalDeviceInfo),
       },
   };

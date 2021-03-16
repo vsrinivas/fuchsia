@@ -124,7 +124,7 @@ zx_status_t As370::I2cInit() {
   const pbus_metadata_t synaptics_i2c_metadata[] = {
       {
           .type = DEVICE_METADATA_I2C_CHANNELS,
-          .data_buffer = &synaptics_i2c_channels,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&synaptics_i2c_channels),
           .data_size = sizeof(synaptics_i2c_channels),
       },
   };
@@ -132,7 +132,7 @@ zx_status_t As370::I2cInit() {
   const pbus_metadata_t visalia_i2c_metadata[] = {
       {
           .type = DEVICE_METADATA_I2C_CHANNELS,
-          .data_buffer = &visalia_i2c_channels,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&visalia_i2c_channels),
           .data_size = sizeof(visalia_i2c_channels),
       },
   };

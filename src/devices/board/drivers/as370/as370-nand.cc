@@ -79,10 +79,10 @@ zx_status_t As370::NandInit() {
 
   const pbus_metadata_t nand_metadata[] = {
       {.type = DEVICE_METADATA_PRIVATE,
-       .data_buffer = &nand_config,
+       .data_buffer = reinterpret_cast<const uint8_t*>(&nand_config),
        .data_size = sizeof(nand_config)},
       {.type = DEVICE_METADATA_PARTITION_MAP,
-       .data_buffer = nand_partition_map.get(),
+       .data_buffer = reinterpret_cast<const uint8_t*>(nand_partition_map.get()),
        .data_size = kPartitionMapSize},
   };
 

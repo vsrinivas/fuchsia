@@ -42,12 +42,12 @@ zx_status_t As370::LightInit() {
   static const pbus_metadata_t light_metadata[] = {
       {
           .type = DEVICE_METADATA_LIGHTS,
-          .data_buffer = &kConfigs,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&kConfigs),
           .data_size = sizeof(kConfigs),
       },
       {
           .type = DEVICE_METADATA_LIGHTS_GROUP_NAME,
-          .data_buffer = &kLightGroupNames,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&kLightGroupNames),
           .data_size = sizeof(kLightGroupNames),
       },
   };
