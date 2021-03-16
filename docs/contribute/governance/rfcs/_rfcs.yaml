@@ -314,6 +314,19 @@
   submitted: '2021-01-29'
   reviewed: '2021-03-05'
 
+- name: 'RFC-0074'
+  title: 'Expose Process Start Time'
+  short_description: 'Make process start time queryable from userspace.'
+  authors: ['joshuaseaton@google.com']
+  file: '0074_expose_process_start_time.md'
+  area: ['Zircon']
+  issue: []
+  gerrit_change_id: ['488412']
+  status: 'Accepted'
+  reviewers: ['cpu@google.com', 'maniscalco@google.com']
+  submitted: '2021-02-19'
+  reviewed: '2021-03-11'
+
 - name: 'RFC-0075'
   title: 'Deprecate Zedboot-based paving for provisioning devices'
   short_description: 'Standardize device provisioning around fastboot and deprecate Zedboot-based paving.'
