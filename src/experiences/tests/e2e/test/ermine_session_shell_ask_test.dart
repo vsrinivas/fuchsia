@@ -36,7 +36,7 @@ void main() {
     final askResult =
         await ermine.driver.getText(find.text('spinning_square_view'));
     expect(askResult, 'spinning_square_view');
-  });
+  }, skip: true);
 
   test('use ask to launch terminal and verify focus', () async {
     await ermine.gotoOverview();
