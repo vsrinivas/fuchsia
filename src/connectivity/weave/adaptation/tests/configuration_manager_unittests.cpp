@@ -35,10 +35,13 @@ namespace nl::Weave::DeviceLayer::Internal {
 namespace testing {
 namespace {
 
+using nl::Weave::WeaveKeyId;
 using nl::Weave::DeviceLayer::ConfigurationManager;
 using nl::Weave::DeviceLayer::ConfigurationManagerImpl;
 using nl::Weave::DeviceLayer::Internal::EnvironmentConfig;
+using nl::Weave::DeviceLayer::Internal::GroupKeyStoreImpl;
 using nl::Weave::Profiles::DeviceDescription::WeaveDeviceDescriptor;
+using nl::Weave::Profiles::Security::AppKeys::WeaveGroupKey;
 
 // Below expected values are from testdata JSON files and should be
 // consistent with the file for the related tests to pass.
@@ -54,12 +57,28 @@ constexpr uint16_t kMaxPairingCodeSize = ConfigurationManager::kMaxPairingCodeLe
 const std::string kPkgDataPath = "/pkg/data/";
 const std::string kDataPath = "/data/";
 
+constexpr uint32_t kTestKeyId = WeaveKeyId::kFabricSecret + 1u;
+constexpr uint8_t kWeaveAppGroupKeySize =
+    nl::Weave::Profiles::Security::AppKeys::kWeaveAppGroupKeySize;
+
 // The required size of a buffer supplied to GetPrimaryWiFiMACAddress.
 constexpr size_t kWiFiMacAddressBufSize =
     sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::PrimaryWiFiMACAddress);
 // The required size of a buffer supplied to GetPrimary802154MACAddress.
 constexpr size_t k802154MacAddressBufSize =
     sizeof(Profiles::DeviceDescription::WeaveDeviceDescriptor::Primary802154MACAddress);
+
+WeaveGroupKey CreateGroupKey(uint32_t key_id, uint8_t key_byte = 0,
+                             uint8_t key_len = kWeaveAppGroupKeySize, uint32_t start_time = 0) {
+  WeaveGroupKey group_key{
+      .KeyId = key_id,
+      .KeyLen = key_len,
+      .StartTime = start_time,
+  };
+  memset(group_key.Key, 0, sizeof(group_key.Key));
+  memset(group_key.Key, key_byte, key_len);
+  return group_key;
+}
 
 }  // namespace
 
@@ -633,6 +652,27 @@ TEST_F(ConfigurationManagerTest, GetThreadJoinableDuration) {
 
   EXPECT_EQ(ConfigurationMgrImpl().GetThreadJoinableDuration(&duration), WEAVE_NO_ERROR);
   EXPECT_EQ(duration, expected);
+}
+
+TEST_F(ConfigurationManagerTest, FactoryResetIfFailSafeArmed) {
+  bool fail_safe_armed = true;
+  WeaveGroupKey retrieved_key;
+  GroupKeyStoreImpl group_key_store;
+  const WeaveGroupKey test_key = CreateGroupKey(kTestKeyId, 0, kWeaveAppGroupKeySize, 0xABCDEF);
+
+  // Store the fabric secret and set fail-safe-armed. Verify that erasing
+  // weave data erases all of them from the environment.
+  EXPECT_EQ(group_key_store.StoreGroupKey(test_key), WEAVE_NO_ERROR);
+  EXPECT_EQ(EnvironmentConfig::WriteConfigValue(EnvironmentConfig::kConfigKey_FailSafeArmed, true),
+            WEAVE_NO_ERROR);
+  ConfigurationMgrImpl().SetDelegate(nullptr);
+  ConfigurationMgrImpl().SetDelegate(std::make_unique<ConfigurationManagerDelegateImpl>());
+  EXPECT_EQ(ConfigurationMgrImpl().GetDelegate()->Init(), WEAVE_NO_ERROR);
+  EXPECT_EQ(EnvironmentConfig::ReadConfigValue(EnvironmentConfig::kConfigKey_FailSafeArmed,
+                                               fail_safe_armed),
+            WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
+  EXPECT_EQ(group_key_store.RetrieveGroupKey(kTestKeyId, retrieved_key),
+            WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND);
 }
 
 }  // namespace testing

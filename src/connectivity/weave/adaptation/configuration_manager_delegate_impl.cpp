@@ -77,6 +77,7 @@ ConfigurationManagerDelegateImpl::ConfigurationManagerDelegateImpl()
 WEAVE_ERROR ConfigurationManagerDelegateImpl::Init() {
   WEAVE_ERROR err = WEAVE_NO_ERROR;
   auto context = PlatformMgrImpl().GetComponentContextForProcess();
+  bool fail_safe_armed = false;
 
   FX_CHECK(context->svc()->Connect(hwinfo_device_.NewRequest()) == ZX_OK)
       << "Failed to connect to hwinfo device service.";
@@ -88,6 +89,14 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::Init() {
   err = EnvironmentConfig::Init();
   if (err != WEAVE_NO_ERROR) {
     return err;
+  }
+
+  // If the fail-safe was armed when the device last shutdown or weavestack crashed,
+  // erase weave data.
+  if (GetFailSafeArmed(fail_safe_armed) == WEAVE_NO_ERROR && fail_safe_armed) {
+    FX_LOGS(WARNING)
+        << "Fail safe was not disarmed before weavestack was shutdown, erasing Weave data.";
+    InitiateFactoryReset();
   }
 
   err = static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)->_Init();
@@ -473,6 +482,11 @@ WEAVE_ERROR ConfigurationManagerDelegateImpl::GetPrimaryWiFiMACAddress(uint8_t* 
 
 WEAVE_ERROR ConfigurationManagerDelegateImpl::GetThreadJoinableDuration(uint32_t* duration) {
   return device_info_->ReadConfigValue(kDeviceInfoConfigKey_ThreadJoinableDurationSec, duration);
+}
+
+WEAVE_ERROR ConfigurationManagerDelegateImpl::GetFailSafeArmed(bool& fail_safe_armed) {
+  return static_cast<GenericConfigurationManagerImpl<ConfigurationManagerImpl>*>(impl_)
+      ->_GetFailSafeArmed(fail_safe_armed);
 }
 
 }  // namespace DeviceLayer

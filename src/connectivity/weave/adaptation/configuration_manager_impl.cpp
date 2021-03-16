@@ -125,6 +125,10 @@ WEAVE_ERROR ConfigurationManagerImpl::GetThreadJoinableDuration(uint32_t* durati
   return delegate_->GetThreadJoinableDuration(duration);
 }
 
+WEAVE_ERROR ConfigurationManagerImpl::GetFailSafeArmed(bool& fail_safe_armed) {
+  return delegate_->GetFailSafeArmed(fail_safe_armed);
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl

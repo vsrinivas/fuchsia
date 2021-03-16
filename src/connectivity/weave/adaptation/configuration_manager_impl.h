@@ -154,6 +154,9 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
     // enter joinable mode (in seconds).
     virtual WEAVE_ERROR GetThreadJoinableDuration(uint32_t* duration) = 0;
 
+    // Gets the fail safe armed state of the device.
+    virtual WEAVE_ERROR GetFailSafeArmed(bool& fail_safe_armed) = 0;
+
    protected:
     ConfigurationManagerImpl* impl_;
   };
@@ -190,6 +193,9 @@ class NL_DLL_EXPORT ConfigurationManagerImpl final
 
   // Returns the Thread joinable duration, see definition in delegate.
   WEAVE_ERROR GetThreadJoinableDuration(uint32_t* duration);
+
+  // Returns the fail safe armed state of the device.
+  WEAVE_ERROR GetFailSafeArmed(bool& fail_safe_armed);
 
  private:
   using GroupKeyStoreBase = ::nl::Weave::Profiles::Security::AppKeys::GroupKeyStoreBase;

@@ -54,6 +54,7 @@ class NL_DLL_EXPORT ConfigurationManagerDelegateImpl : public ConfigurationManag
   // Reads the list of applets from the config file and populates |out| with the same.
   zx_status_t GetAppletPathList(std::vector<std::string>& out) override;
   WEAVE_ERROR GetThreadJoinableDuration(uint32_t* duration) override;
+  WEAVE_ERROR GetFailSafeArmed(bool& fail_safe_armed) override;
 
  protected:
   // Read up to |buf_size| bytes from the file |path| in the factory partition
