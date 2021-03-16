@@ -23,6 +23,7 @@ driver_module("mtk-clk") {
   configs += [ "//build/unification/config:zircon-migrated" ]
   sources = [ "mtk-clk.cc" ]
   deps = [
+    ":mtk-clk-bind",
     "//sdk/banjo/fuchsia.hardware.clockimpl",
     "//sdk/banjo/fuchsia.hardware.gpio",
     "//sdk/banjo/fuchsia.hardware.i2c",
