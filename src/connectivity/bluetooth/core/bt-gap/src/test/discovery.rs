@@ -78,6 +78,13 @@ where
 }
 
 proptest! {
+    #![proptest_config(ProptestConfig{
+        // Disable persistence to avoid the warning for not running in the
+        // source code directory (since we're running on a Fuchsia target)
+        failure_persistence: None,
+        .. ProptestConfig::default()
+    })]
+
     #[test]
     fn test_discovery_invariants(execution in execution_sequences(MAX_NUM_MOCK_CLIENTS)) {
         let mut executor = fasync::Executor::new().expect("error creating executor");

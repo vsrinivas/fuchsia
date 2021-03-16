@@ -777,6 +777,12 @@ mod tests {
         use proptest::prelude::*;
 
         proptest! {
+            #![proptest_config(ProptestConfig{
+                // Disable persistence to avoid the warning for not running in the
+                // source code directory (since we're running on a Fuchsia target)
+                failure_persistence: None,
+                .. ProptestConfig::default()
+            })]
             #[test]
             fn bonding_data(bonding_data in any_bonding_data()) {
                 let serialized = serde_json::to_string(&BondingDataSerializer::new(&bonding_data)).unwrap();
