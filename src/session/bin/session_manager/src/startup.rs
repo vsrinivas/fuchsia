@@ -50,7 +50,7 @@ const SESSION_NAME: &str = "session";
 const SESSION_CHILD_COLLECTION: &str = "session";
 
 /// The path to the configuration file for the session.
-const CONFIG_PATH: &str = "/config/data/startup.config";
+const CONFIG_PATH: &str = "/config/data/session_manager/startup.config";
 
 /// Gets the session url from `/config/data/startup.config`.
 ///

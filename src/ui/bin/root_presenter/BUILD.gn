@@ -6,9 +6,23 @@ import("//build/config.gni")
 import("//build/package.gni")
 import("//src/sys/build/components.gni")
 
-fuchsia_package_with_single_component("root_presenter") {
+fuchsia_component("component_v1") {
+  component_name = "root_presenter"
   manifest = "meta/root_presenter.cmx"
   deps = [ ":bin" ]
+}
+
+fuchsia_component("component_v2") {
+  component_name = "root_presenter"
+  manifest = "meta/root_presenter.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_package("root_presenter") {
+  deps = [
+    ":component_v1",
+    ":component_v2",
+  ]
 }
 
 group("configs") {

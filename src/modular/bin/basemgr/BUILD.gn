@@ -64,11 +64,28 @@ resource("icudtl") {
   outputs = [ "data/icudtl.dat" ]
 }
 
-fuchsia_package_with_single_component("basemgr") {
+fuchsia_component("component_v1") {
+  component_name = "basemgr"
   manifest = "meta/basemgr.cmx"
   deps = [
     ":basemgr_bin",
     ":icudtl",
+  ]
+}
+
+fuchsia_component("component_v2") {
+  component_name = "basemgr"
+  manifest = "meta/basemgr.cml"
+  deps = [
+    ":basemgr_bin",
+    ":icudtl",
+  ]
+}
+
+fuchsia_package("basemgr") {
+  deps = [
+    ":component_v1",
+    ":component_v2",
   ]
 }
 

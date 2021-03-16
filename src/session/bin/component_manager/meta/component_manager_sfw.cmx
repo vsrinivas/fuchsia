@@ -23,7 +23,7 @@
             "root-ssl-certificates"
         ],
         "pkgfs": [
-            "packages/config-data/0/meta/data/session_manager"
+            "packages/config-data/0/meta/data"
         ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
