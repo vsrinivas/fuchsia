@@ -87,8 +87,9 @@ fuchsia-5254-0063-5e7a  Unknown    Unknown    [fe80::5054:ff:fe63:5e7a%4]    0m0
 NOTE: Ignore the `TYPE` and `STATE` columns - they have no values besides
 `UNKNOWN` right now.
 
-A couple columns worth explanation:
-- `AGE`: this is the time since `ffx` was last able to reach the device.
+A couple of columns are worth explanation:
+
+- `AGE`: This is the time since `ffx` was last able to reach the device.
 - `RCS`: Indicates whether there is a reachable instance of the
   Remote Control Service (RCS) running on the device.
 
