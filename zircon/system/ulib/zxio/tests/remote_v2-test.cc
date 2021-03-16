@@ -114,12 +114,13 @@ TEST_F(RemoteV2, GetAttributes) {
       EXPECT_EQ(query, fio2::wire::NodeAttributesQuery::kMask);
       uint64_t content_size = kContentSize;
       uint64_t id = kId;
-      fio2::wire::NodeProtocols protocols = fio2::wire::NodeProtocols::FILE;
-      auto builder = fio2::wire::NodeAttributes::UnownedBuilder()
-                         .set_content_size(fidl::unowned_ptr(&content_size))
-                         .set_protocols(fidl::unowned_ptr(&protocols))
-                         .set_id(fidl::unowned_ptr(&id));
-      completer.ReplySuccess(builder.build());
+
+      fidl::FidlAllocator allocator;
+      fio2::wire::NodeAttributes nodes_attributes(allocator);
+      nodes_attributes.set_content_size(allocator, content_size)
+          .set_protocols(allocator, fio2::wire::NodeProtocols::FILE)
+          .set_id(allocator, id);
+      completer.ReplySuccess(std::move(nodes_attributes));
     }
   };
   ASSERT_NO_FAILURES(StartServer<TestServer>());

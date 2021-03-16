@@ -147,39 +147,28 @@ TEST_F(DirV2, Enumerate) {
 
         // Sends a different entry every time.
         void GetNext(GetNextCompleter::Sync& completer) override {
-          auto builder = fio2::wire::DirectoryEntry::UnownedBuilder();
-          fidl::StringView name;
-          fio2::wire::NodeProtocols protocols;
-          fio2::wire::Operations abilities;
-          uint64_t id;
+          fidl::FidlAllocator allocator;
+          fidl::VectorView<fio2::wire::DirectoryEntry> entry(allocator, 1);
+          entry[0].Allocate(allocator);
           switch (count_) {
             case 0:
-              name = fidl::StringView("zero");
-              builder.set_name(fidl::unowned_ptr(&name));
-              protocols = fio2::wire::NodeProtocols::DIRECTORY;
-              builder.set_protocols(fidl::unowned_ptr(&protocols));
-              abilities = fio2::wire::Operations::ENUMERATE;
-              builder.set_abilities(fidl::unowned_ptr(&abilities));
-              id = 0;
-              builder.set_id(fidl::unowned_ptr(&id));
+              entry[0].set_name(allocator, fidl::StringView("zero"));
+              entry[0].set_protocols(allocator, fio2::wire::NodeProtocols::DIRECTORY);
+              entry[0].set_abilities(allocator, fio2::wire::Operations::ENUMERATE);
+              entry[0].set_id(allocator, 0);
               break;
             case 1:
-              name = fidl::StringView("one");
-              builder.set_name(fidl::unowned_ptr(&name));
-              protocols = fio2::wire::NodeProtocols::FILE;
-              builder.set_protocols(fidl::unowned_ptr(&protocols));
-              abilities = fio2::wire::Operations::READ_BYTES;
-              builder.set_abilities(fidl::unowned_ptr(&abilities));
-              id = 1;
-              builder.set_id(fidl::unowned_ptr(&id));
+              entry[0].set_name(allocator, fidl::StringView("one"));
+              entry[0].set_protocols(allocator, fio2::wire::NodeProtocols::FILE);
+              entry[0].set_abilities(allocator, fio2::wire::Operations::READ_BYTES);
+              entry[0].set_id(allocator, 1);
               break;
             default:
               completer.ReplySuccess(fidl::VectorView<fio2::wire::DirectoryEntry>());
               return;
           }
           count_++;
-          fio2::wire::DirectoryEntry entry[1] = {builder.build()};
-          completer.ReplySuccess(fidl::unowned_vec(entry));
+          completer.ReplySuccess(std::move(entry));
         }
 
         ~IteratorServer() { sync_completion_signal(completion_); }
