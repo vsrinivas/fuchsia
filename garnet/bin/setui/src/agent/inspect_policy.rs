@@ -416,7 +416,7 @@ mod tests {
                     client
                         .reply(
                             Payload::Response(Ok(policy_base::response::Payload::PolicyInfo(
-                                PolicyInfo::Unknown(UnknownInfo(true)),
+                                UnknownInfo(true).into(),
                             )))
                             .into(),
                         )

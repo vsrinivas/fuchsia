@@ -182,7 +182,7 @@ mod tests {
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_zircon::Time;
 
-    use crate::base::{SettingInfo, UnknownInfo};
+    use crate::base::UnknownInfo;
     use crate::service::message::{create_hub, Receptor};
 
     use super::*;
@@ -237,7 +237,7 @@ mod tests {
         )
         .await;
         inspect_broker_client
-            .reply(Payload::Result(Ok(Some(SettingInfo::Unknown(UnknownInfo(true))))).into())
+            .reply(Payload::Result(Ok(Some(UnknownInfo(true).into()))).into())
             .send()
             .next()
             .await
@@ -283,7 +283,7 @@ mod tests {
         // TODO(fxb/66294): Remove get call from inspect broker.
         setting_handler
             .message(
-                Payload::Event(Event::Changed(SettingInfo::Unknown(UnknownInfo(true)))).into(),
+                Payload::Event(Event::Changed(UnknownInfo(true).into())).into(),
                 Audience::Messenger(proxy_signature),
             )
             .send();
@@ -295,7 +295,7 @@ mod tests {
         )
         .await;
         inspect_broker_client
-            .reply(Payload::Result(Ok(Some(SettingInfo::Unknown(UnknownInfo(true))))).into())
+            .reply(Payload::Result(Ok(Some(UnknownInfo(true).into()))).into())
             .send()
             .next()
             .await

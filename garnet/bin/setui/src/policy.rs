@@ -81,6 +81,14 @@ generate_inspect_with_info! {
 #[cfg(test)]
 pub struct UnknownInfo(pub bool);
 
+/// This trait implementation is reserved for testing purposes.
+#[cfg(test)]
+impl Into<PolicyInfo> for UnknownInfo {
+    fn into(self) -> PolicyInfo {
+        PolicyInfo::Unknown(self)
+    }
+}
+
 #[derive(PartialEq, Copy, Clone, Debug, Eq, Hash)]
 pub enum Address {
     //    Policy(PolicyType),

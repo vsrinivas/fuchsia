@@ -10,7 +10,7 @@ use crate::policy::policy_handler::{
     ClientProxy, Create, PolicyHandler, RequestTransform, ResponseTransform,
 };
 use crate::policy::response::{Payload, Response};
-use crate::policy::{PolicyInfo, PolicyType, Request as PolicyRequest, UnknownInfo};
+use crate::policy::{PolicyType, Request as PolicyRequest, UnknownInfo};
 use crate::privacy::types::PrivacyInfo;
 use crate::service;
 use anyhow::Error;
@@ -82,7 +82,7 @@ async fn test_write() {
     handler.set_handle_policy_request_callback(Box::new(move |_, client_proxy| {
         Box::pin(async move {
             client_proxy.write(&expected_value, false).await.expect("write failed");
-            Ok(Payload::PolicyInfo(PolicyInfo::Unknown(UnknownInfo(true))))
+            Ok(Payload::PolicyInfo(UnknownInfo(true).into()))
         })
     }));
 

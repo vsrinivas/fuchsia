@@ -104,7 +104,7 @@ impl FactoryResetManager {
     }
 
     fn get(&self) -> SettingHandlerResult {
-        Ok(Some(SettingInfo::FactoryReset(FactoryResetInfo::new(self.is_local_reset_allowed))))
+        Ok(Some(FactoryResetInfo::new(self.is_local_reset_allowed).into()))
     }
 
     async fn set_local_reset_allowed(

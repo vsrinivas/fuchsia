@@ -159,3 +159,11 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
     ])
     .collect();
 }
+
+// This trait implementation is reserved for testing purposes.
+#[cfg(test)]
+impl Into<SettingInfo> for UnknownInfo {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Unknown(self)
+    }
+}

@@ -373,7 +373,7 @@ async fn test_rebroadcast() {
     ClientImpl::create(
         context,
         StubControllerBuilder::new()
-            .add_request_mapping(Request::Get, Ok(Some(SettingInfo::Unknown(UnknownInfo(true)))))
+            .add_request_mapping(Request::Get, Ok(Some(UnknownInfo(true).into())))
             .build(),
     )
     .await
@@ -398,7 +398,7 @@ async fn test_rebroadcast() {
         .ack();
 
     verify_payload(
-        Payload::Event(Event::Changed(SettingInfo::Unknown(UnknownInfo(true)))).into(),
+        Payload::Event(Event::Changed(UnknownInfo(true).into())).into(),
         &mut receptor,
         None,
     )

@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::base::SettingInfo;
 use crate::device::types::DeviceInfo;
 use crate::handler::base::Request;
 use crate::handler::device_storage::DeviceStorageAccess;
@@ -37,7 +36,7 @@ impl controller::Handle for DeviceController {
                     fs::read_to_string(BUILD_TAG_FILE_PATH).expect("Could not read build tag file");
                 let device_info = DeviceInfo { build_tag: contents.trim().to_string() };
 
-                Some(Ok(Some(SettingInfo::Device(device_info))))
+                Some(Ok(Some(device_info.into())))
             }
             _ => None,
         }

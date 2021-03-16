@@ -11,7 +11,7 @@ use crate::policy::policy_handler::{PolicyHandler, RequestTransform, ResponseTra
 use crate::policy::policy_handler_factory_impl::PolicyHandlerFactoryImpl;
 use crate::policy::policy_proxy::PolicyProxy;
 use crate::policy::{
-    self as policy_base, BoxedHandler, PolicyHandlerFactory, PolicyInfo, PolicyType, UnknownInfo,
+    self as policy_base, BoxedHandler, PolicyHandlerFactory, PolicyType, UnknownInfo,
 };
 use crate::service;
 use crate::tests::message_utils::verify_payload;
@@ -28,7 +28,6 @@ static SETTING_REQUEST: Request = Request::Get;
 static SETTING_REQUEST_PAYLOAD: Payload = Payload::Request(Request::Get);
 static SETTING_REQUEST_PAYLOAD_2: Payload = Payload::Request(Request::Listen);
 
-// TODO(fxbug.dev/70657): Implementing trait from *Info -> SettingInfo.
 static SETTING_RESPONSE: SettingResponse = Ok(Some(SettingInfo::Unknown(SettingUnknownInfo(true))));
 
 static SETTING_RESPONSE_PAYLOAD: Payload =
@@ -193,7 +192,7 @@ async fn test_policy_proxy_creation() {
             InMemoryStorageFactory::new(),
             FakePolicyHandlerBuilder::new()
                 .set_policy_response(Ok(policy_base::response::Payload::PolicyInfo(
-                    PolicyInfo::Unknown(UnknownInfo(true)),
+                    UnknownInfo(true).into(),
                 )))
                 .build(),
         ),
@@ -210,8 +209,7 @@ async fn test_policy_proxy_creation() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_policy_messages_passed_to_handler() {
     let policy_request = policy_base::Request::Get;
-    let policy_payload =
-        policy_base::response::Payload::PolicyInfo(PolicyInfo::Unknown(UnknownInfo(true)));
+    let policy_payload = policy_base::response::Payload::PolicyInfo(UnknownInfo(true).into());
 
     let service_messenger_factory = service::message::create_hub();
     // Initialize the policy proxy and a messenger to communicate with it.
@@ -534,8 +532,7 @@ async fn test_setting_response_replace() {
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_multiple_messages() {
     let policy_request = policy_base::Request::Get;
-    let policy_payload =
-        policy_base::response::Payload::PolicyInfo(PolicyInfo::Unknown(UnknownInfo(true)));
+    let policy_payload = policy_base::response::Payload::PolicyInfo(UnknownInfo(true).into());
 
     let messenger_factory = service::message::create_hub();
 

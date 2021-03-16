@@ -191,7 +191,7 @@ mod tests {
     #[test]
     fn test_response_to_vector_empty() {
         let response: Vec<fidl_fuchsia_settings::LightGroup> =
-            SettingInfo::into(SettingInfo::Light(LightInfo { light_groups: Default::default() }));
+            SettingInfo::into((LightInfo { light_groups: Default::default() }).into());
 
         assert_eq!(response, vec![]);
     }
@@ -220,7 +220,7 @@ mod tests {
         light_groups.insert("test2".to_string(), light_group_2.clone());
 
         let mut response: Vec<fidl_fuchsia_settings::LightGroup> =
-            SettingInfo::into(SettingInfo::Light(LightInfo { light_groups }));
+            SettingInfo::into((LightInfo { light_groups }).into());
 
         // Sort so light groups are in a predictable order.
         response.sort_by_key(|l| l.name.clone());

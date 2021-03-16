@@ -168,9 +168,9 @@ impl PolicyHandler for AudioPolicyHandler {
                         return None;
                     }
                 };
-                Some(RequestTransform::Result(Ok(Some(SettingInfo::Audio(
-                    self.transform_internal_audio_info(audio_info),
-                )))))
+                Some(RequestTransform::Result(Ok(Some(
+                    self.transform_internal_audio_info(audio_info).into(),
+                ))))
             }
             _ => None,
         }
@@ -184,9 +184,9 @@ impl PolicyHandler for AudioPolicyHandler {
             Ok(Some(SettingInfo::Audio(audio_info))) => {
                 // The setting changed in response to a Set. Note that this is
                 // is not sent if there are no listeners.
-                Some(ResponseTransform::Response(Ok(Some(SettingInfo::Audio(
-                    self.transform_internal_audio_info(audio_info),
-                )))))
+                Some(ResponseTransform::Response(Ok(Some(
+                    self.transform_internal_audio_info(audio_info).into(),
+                ))))
             }
             _ => None,
         }

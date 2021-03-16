@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::base::SettingInfo;
 use serde::{Deserialize, Serialize};
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
@@ -12,5 +13,11 @@ pub struct DeviceInfo {
 impl DeviceInfo {
     pub const fn new(build_tag: String) -> DeviceInfo {
         DeviceInfo { build_tag }
+    }
+}
+
+impl Into<SettingInfo> for DeviceInfo {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Device(self)
     }
 }

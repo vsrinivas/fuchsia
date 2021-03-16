@@ -11,7 +11,7 @@ use crate::audio::policy::{
 use crate::audio::types::AudioStreamType;
 use crate::audio::types::{AudioInfo, AudioSettingSource, AudioStream};
 use crate::audio::utils::round_volume_level;
-use crate::base::{SettingInfo, SettingType};
+use crate::base::SettingType;
 use crate::handler::base::{Payload as SettingPayload, Request as SettingRequest};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::{
@@ -179,7 +179,7 @@ impl TestEnvironment {
                                 SettingRequest::Get => {
                                     client
                                         .reply(SettingPayload::Response(Ok(Some(
-                                            SettingInfo::Audio(audio_info.clone())))).into())
+                                            audio_info.clone().into()))).into())
                                         .send();
                                 }
                                 SettingRequest::Rebroadcast => {
@@ -187,7 +187,7 @@ impl TestEnvironment {
                                     for listener in &listeners {
                                         listener
                                         .reply(SettingPayload::Response(Ok(Some(
-                                            SettingInfo::Audio(audio_info.clone())))).into())
+                                            audio_info.clone().into()))).into())
                                         .send();
                                     }
                                 }
@@ -313,10 +313,7 @@ async fn get_and_verify_media_volume(
 
     // Modify the audio info to contain the expected volume level.
     audio_info.replace_stream(create_media_stream(expected_volume_level, false));
-    assert_eq!(
-        request_transform,
-        Some(RequestTransform::Result(Ok(Some(SettingInfo::Audio(audio_info)))))
-    );
+    assert_eq!(request_transform, Some(RequestTransform::Result(Ok(Some(audio_info.into())))));
 }
 
 /// Asks the handler in the environment to handle a set request and verifies that the transformed
@@ -652,12 +649,8 @@ async fn verify_media_volume_changed(
     receptor: &mut service::message::Receptor,
     audio_info: AudioInfo,
 ) {
-    verify_payload(
-        SettingPayload::Response(Ok(Some(SettingInfo::Audio(audio_info)))).into(),
-        receptor,
-        None,
-    )
-    .await;
+    verify_payload(SettingPayload::Response(Ok(Some(audio_info.into()))).into(), receptor, None)
+        .await;
 }
 
 // Verifies that when a max volume policy is removed, listeners will receive a changed event with
