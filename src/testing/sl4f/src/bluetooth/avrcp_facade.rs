@@ -11,7 +11,7 @@ use anyhow::Error;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_avrcp::{
-    ControllerMarker, ControllerProxy, PeerManagerMarker, PeerManagerProxy,
+    ControllerMarker, ControllerProxy, Notifications, PeerManagerMarker, PeerManagerProxy,
 };
 use fuchsia_component::client;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
@@ -235,6 +235,42 @@ impl AvrcpFacade {
         }
     }
 
+    /// Sets notification filter on the controller.
+    ///
+    /// # Arguments
+    /// * `notifications_filter` - the notification ids as bit flags for which to filter.
+    /// * `position_change_interval` - the `position_change_interval` argument is used to set the interval in seconds that the
+    /// controller client would like to be notified of `TRACK_POS_CHANGED` events.  It is ignored if 'TRACK_POS' bit flag is not set.
+    pub async fn set_notification_filter(
+        &self,
+        notifications_filter: u32,
+        position_change_interval: u32,
+    ) -> Result<(), Error> {
+        let tag = "AvrcpFacade::set_notification_filter";
+        let notifications = match Notifications::from_bits(notifications_filter) {
+            Some(notifications) => notifications,
+            _ => fx_err_and_bail!(
+                &with_line!(tag),
+                format!(
+                    "Invalid bit flags value for notifications filter: {:?}",
+                    notifications_filter
+                )
+            ),
+        };
+        match self.inner.read().controller_proxy.clone() {
+            Some(proxy) => {
+                match proxy.set_notification_filter(notifications, position_change_interval) {
+                    Ok(()) => Ok(()),
+                    Err(e) => fx_err_and_bail!(
+                        &with_line!(tag),
+                        format!("Error setting notification filter: {:?}", e)
+                    ),
+                }
+            }
+            None => fx_err_and_bail!(&with_line!(tag), "No AVRCP service proxy available"),
+        }
+    }
+
     /// A function to remove the profile service proxy and clear connected devices.
     fn clear(&self) {
         self.inner.write().avrcp_service_proxy = None;
@@ -259,7 +295,9 @@ mod tests {
     };
     use super::*;
     use fidl::endpoints::create_proxy_and_stream;
-    use fidl_fuchsia_bluetooth_avrcp::{BatteryStatus, ControllerRequest, PlayStatus};
+    use fidl_fuchsia_bluetooth_avrcp::{
+        BatteryStatus, ControllerRequest, Notifications, PlayStatus,
+    };
     use fuchsia_async as fasync;
     use futures::prelude::*;
     use futures::Future;
@@ -402,6 +440,27 @@ mod tests {
                 _ => {}
             })
         }
+
+        fn expect_set_notification_filter(
+            self,
+            input_notification_filter: u32,
+            input_position_change_interval: u32,
+        ) -> Self {
+            self.push(move |req| match req {
+                ControllerRequest::SetNotificationFilter {
+                    notifications,
+                    position_change_interval,
+                    ..
+                } => {
+                    assert_eq!(
+                        Notifications::from_bits(input_notification_filter).unwrap(),
+                        notifications
+                    );
+                    assert_eq!(input_position_change_interval, position_change_interval);
+                }
+                _ => {}
+            })
+        }
     }
     #[fasync::run_singlethreaded(test)]
     async fn test_get_play_status() {
@@ -470,5 +529,24 @@ mod tests {
             facade.set_addressed_player(addressed_player).await.unwrap();
         };
         future::join(facade_fut, addressed_player_fut).await;
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_set_notification_filter() {
+        let input_notification_filter = 3;
+        let input_position_change_interval = 1;
+        let (facade, notification_filter_fut) = MockAvrcpTester::new()
+            .expect_set_notification_filter(
+                input_notification_filter,
+                input_position_change_interval,
+            )
+            .build_controller();
+        let facade_fut = async move {
+            facade
+                .set_notification_filter(input_notification_filter, input_position_change_interval)
+                .await
+                .unwrap();
+        };
+        future::join(facade_fut, notification_filter_fut).await;
     }
 }

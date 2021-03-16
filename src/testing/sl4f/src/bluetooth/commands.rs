@@ -24,8 +24,8 @@ use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 use crate::bluetooth::types::{
     BleAdvertiseResponse, BleConnectPeripheralResponse, CustomBatteryStatus,
-    CustomPlayerApplicationSettings, CustomPlayerApplicationSettingsAttributeIds,
-    GattcDiscoverCharacteristicResponse,
+    CustomNotificationsFilter, CustomPlayerApplicationSettings,
+    CustomPlayerApplicationSettingsAttributeIds, GattcDiscoverCharacteristicResponse,
 };
 
 use crate::common_utils::common::{
@@ -562,6 +562,23 @@ impl Facade for AvrcpFacade {
                 };
                 let result =
                     self.set_absolute_volume(absolute_volume_command.absolute_volume).await?;
+                Ok(to_value(result)?)
+            }
+            "AvrcpSetNotificationFilter" => {
+                let custom_notifications: CustomNotificationsFilter = match from_value(args.clone())
+                {
+                    Ok(custom_notifications) => custom_notifications,
+                    _ => bail!("Invalid json argument to AvrcpSetNotificationFilter! - {}", args),
+                };
+                let result = self
+                    .set_notification_filter(
+                        custom_notifications.notifications,
+                        match custom_notifications.position_change_interval {
+                            Some(position_change_interval) => position_change_interval,
+                            _ => 0,
+                        },
+                    )
+                    .await?;
                 Ok(to_value(result)?)
             }
             _ => bail!("Invalid AVRCP FIDL method: {:?}", method),

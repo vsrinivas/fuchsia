@@ -14,7 +14,6 @@ use fidl_fuchsia_bluetooth_gatt::{
     ServiceInfo,
 };
 use fidl_fuchsia_bluetooth_sys::Peer;
-//use num_traits::FromPrimitive;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -782,4 +781,10 @@ impl From<CustomBatteryStatus> for BatteryStatus {
             CustomBatteryStatus::Reserved => BatteryStatus::Reserved,
         }
     }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct CustomNotificationsFilter {
+    pub notifications: u32,
+    pub position_change_interval: Option<u32>,
 }
