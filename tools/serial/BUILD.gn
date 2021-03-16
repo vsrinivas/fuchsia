@@ -10,11 +10,13 @@ go_library("serial") {
     "serial.go",
     "serial_darwin.go",
     "serial_linux.go",
+    "serial_test.go",
     "server.go",
     "server_test.go",
   ]
   deps = [
     "//third_party/golibs:golang.org/x/sys",
+    "//tools/lib/iomisc",
     "//tools/lib/logger",
   ]
 }
@@ -22,5 +24,9 @@ go_library("serial") {
 go_test("tests") {
   output_name = "serial_tests"
   gopackages = [ "go.fuchsia.dev/fuchsia/tools/serial" ]
-  deps = [ ":serial" ]
+  deps = [
+    ":serial",
+    "//third_party/golibs:github.com/google/go-cmp",
+    "//third_party/golibs:golang.org/x/sync",
+  ]
 }
