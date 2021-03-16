@@ -1065,7 +1065,7 @@ mod test {
 
         let mut info = bridge::TargetAddrInfo::Ip(bridge::TargetIp {
             ip: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
-                addr: [254, 128, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+                addr: [254, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
             }),
             scope_id: 0,
         });

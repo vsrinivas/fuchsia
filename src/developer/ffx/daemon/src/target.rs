@@ -616,6 +616,22 @@ impl Target {
         addrs.drain(..).map(|e| e.addr).collect()
     }
 
+    pub async fn drop_unscoped_link_local_addrs(&self) {
+        let mut addrs = self.inner.addrs.write().await;
+
+        *addrs = addrs
+            .clone()
+            .into_iter()
+            .filter(|entry| {
+                if let IpAddr::V6(v) = &entry.addr.ip {
+                    entry.addr.scope_id != 0 || !v.is_link_local_addr()
+                } else {
+                    true
+                }
+            })
+            .collect();
+    }
+
     #[cfg(test)]
     pub(crate) async fn addrs_insert(&self, t: TargetAddr) {
         self.inner.addrs.write().await.replace(t.into());
@@ -1240,7 +1256,9 @@ impl TargetCollection {
             None => {
                 std::mem::drop(nodename);
                 if let Some(name) = t.nodename().await.as_ref() {
-                    inner.named.insert(name.to_owned(), t.clone());
+                    let insertable = t.clone();
+                    insertable.drop_unscoped_link_local_addrs().await;
+                    inner.named.insert(name.to_owned(), insertable);
                     log::info!("New target: {}", name);
                     if let Some(e) = self.events.read().await.as_ref() {
                         e.push(DaemonEvent::NewTarget(t.nodename().await)).await.unwrap_or_else(
@@ -1259,7 +1277,9 @@ impl TargetCollection {
                         }
                     }
 
-                    inner.unnamed.push(t.clone());
+                    let insertable = t.clone();
+                    insertable.drop_unscoped_link_local_addrs().await;
+                    inner.unnamed.push(insertable);
                 }
 
                 t
@@ -1472,6 +1492,29 @@ mod test {
         tc.merge_insert(clone_target(&t3).await).await;
         let merged_target = tc.get(nodename.clone()).await.unwrap();
         assert_eq!(merged_target.addrs().await.iter().filter(|addr| addr.scope_id == 3).count(), 1);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_collection_no_scopeless_ipv6() {
+        let tc = TargetCollection::new();
+        let nodename = String::from("bananas");
+        let t1 = Target::new_with_time(&nodename, fake_now());
+        let t2 = Target::new_with_time(&nodename, fake_elapsed());
+        let a1 = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 1));
+        let a2 = IpAddr::V6(Ipv6Addr::new(
+            0xfe80, 0x0000, 0x0000, 0x0000, 0xb412, 0xb455, 0x1337, 0xfeed,
+        ));
+        t1.addrs_insert((a1.clone(), 0).into()).await;
+        t2.addrs_insert((a2.clone(), 0).into()).await;
+        tc.merge_insert(clone_target(&t2).await).await;
+        tc.merge_insert(clone_target(&t1).await).await;
+        let merged_target = tc.get(nodename.clone()).await.unwrap();
+        assert_ne!(&merged_target, &t1);
+        assert_ne!(&merged_target, &t2);
+        assert_eq!(merged_target.addrs().await.len(), 1);
+        assert_eq!(*merged_target.inner.last_response.read().await, fake_elapsed());
+        assert!(merged_target.addrs().await.contains(&(a1, 0).into()));
+        assert!(!merged_target.addrs().await.contains(&(a2, 0).into()));
     }
 
     fn setup_fake_remote_control_service(
