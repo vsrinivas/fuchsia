@@ -4,9 +4,8 @@
 
 import("//build/config.gni")
 import("//build/json/validate_json.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 template("temperature_logger_config") {
   config_data("${target_name}_config_data") {
@@ -64,31 +63,14 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-package("temperature-logger") {
+fuchsia_package_with_single_component("temperature-logger") {
+  manifest = "meta/temperature-logger.cml"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "temperature_logger"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/temperature-logger.cml")
-      dest = "temperature-logger.cm"
-    },
-  ]
 }
 
-test_package("temperature-logger-tests") {
+fuchsia_unittest_package("temperature-logger-tests") {
+  manifest = "meta/temperature_logger_bin_test.cml"
   deps = [ ":bin_test" ]
-
-  v2_tests = [
-    {
-      name = "temperature_logger_bin_test"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {
