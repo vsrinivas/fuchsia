@@ -11,56 +11,38 @@ import("//src/sys/build/components.gni")
 import("//src/ui/lib/escher/build_args.gni")
 import("//src/ui/lib/escher/shaders/shaders.gni")
 
-rustc_library("scenic-stress-tests-lib") {
-  edition = "2018"
-  source_root = "lib/mod.rs"
-  testonly = true
-  deps = [
-    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
-    "//src/lib/fidl/rust/fidl",
-    "//src/lib/fuchsia-async",
-    "//src/lib/fuchsia-component",
-    "//src/lib/syslog/rust:syslog",
-    "//src/lib/zircon/rust:fuchsia-zircon",
-    "//src/sys/component_manager/testing:test_utils_lib",
-    "//src/sys/lib/component-events",
-    "//third_party/rust_crates:anyhow",
-    "//third_party/rust_crates:async-trait",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
-  ]
-
-  sources = [
-    "lib/display_provider.rs",
-    "lib/mod.rs",
-    "lib/utils.rs",
-  ]
-}
-
 rustc_binary("input-stressor-bin") {
   name = "input_stressor"
   edition = "2018"
-  source_root = "input_stressor.rs"
   testonly = true
 
   deps = [
-    ":scenic-stress-tests-lib",
+    "//sdk/fidl/fuchsia.hardware.display:fuchsia.hardware.display-rustc",
+    "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
     "//src/lib/syslog/rust:syslog",
     "//src/lib/ui/input-synthesis",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
+    "//src/sys/lib/stress-test",
     "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:log",
     "//third_party/rust_crates:matches",
     "//third_party/rust_crates:rand",
-    "//third_party/rust_crates:structopt",
   ]
 
-  sources = [ "input_stressor.rs" ]
+  sources = [
+    "src/display_provider.rs",
+    "src/environment.rs",
+    "src/main.rs",
+    "src/tap_actor.rs",
+  ]
 }
 
 test_package("scenic-stress-tests") {
@@ -109,7 +91,14 @@ test_package("scenic-stress-tests") {
         max_severity = "ERROR"
       }
       name = "input_stressor"
-      environments = [ aemu_env ]
+      environments = [
+        {
+          dimensions = {
+            device_type = "AEMU"
+          }
+          tags = [ "stress-tests" ]
+        },
+      ]
     },
   ]
 

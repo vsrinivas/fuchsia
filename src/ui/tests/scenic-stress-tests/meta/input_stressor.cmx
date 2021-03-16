@@ -4,6 +4,10 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
+        "args": [
+            "--time-limit-secs",
+            "79200"
+        ],
         "binary": "test/input_stressor"
     },
     "sandbox": {
