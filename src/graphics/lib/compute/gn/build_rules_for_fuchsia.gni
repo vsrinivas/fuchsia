@@ -8,6 +8,7 @@ import("//build/testing/environments.gni")
 import("//src/lib/vulkan/image_pipe_swapchain.gni")
 import("//src/lib/vulkan/layers.gni")
 import("//src/sys/build/components.gni")
+import("//src/sys/component_index/component_index.gni")
 import("build_settings.gni")
 
 # A target providing access to Vulkan at compile time when added to deps.
@@ -248,14 +249,21 @@ template("graphics_compute_single_component_package") {
     testonly = _testonly
   }
 
+  _component_index_target = "${target_name}_component_index"
   _component_target = "${target_name}_component"
   _resource_target = "${target_name}_data"
 
+  add_to_component_index(_component_index_target) {
+    package_name = _component_name
+    manifest = "meta/${_component_name}.cmx"
+  }
+
   fuchsia_component(_component_target) {
-    component_name = target_name
+    component_name = _component_name
     manifest = _component_manifest
     deps = [
       ":${_binary_target}",
+      ":${_component_index_target}",
       ":${_component_manifest_target}",
     ]
     testonly = _testonly
