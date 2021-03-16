@@ -14,11 +14,13 @@
 #include <lib/crashlog.h>
 #include <lib/lockup_detector/state.h>
 #include <lib/relaxed_atomic.h>
+#include <lib/version.h>
 #include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <zircon/time.h>
 
 #include <dev/hw_watchdog.h>
+#include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/mp.h>
@@ -29,6 +31,10 @@
 #include <ktl/iterator.h>
 #include <object/process_dispatcher.h>
 #include <object/thread_dispatcher.h>
+
+#if defined(__aarch64__)
+#include <arch/arm64/dap.h>
+#endif
 
 // Counter for the number of lockups detected.
 KCOUNTER(counter_lockup_cs_count, "lockup_detector.critical_section.count")
@@ -54,7 +60,71 @@ inline zx_ticks_t DurationToTicks(zx_duration_t duration) {
   return platform_get_ticks_to_time_ratio().Inverse().Scale(duration);
 }
 
-void DumpSchedulerDiagnostics(cpu_num_t cpu, FILE* output_target) {
+#if defined(__aarch64__)
+void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
+  arm64_dap_processor_state state;
+  zx_status_t result = arm64_dap_read_processor_state(cpu, &state);
+
+  if (result != ZX_OK) {
+    fprintf(output_target, "Failed to read DAP state (res %d)\n", result);
+    return;
+  }
+
+  fprintf(output_target, "DAP state:\n");
+  state.Dump(output_target);
+  fprintf(output_target, "\n");
+
+  if constexpr (__has_feature(shadow_call_stack)) {
+    constexpr const char* bt_fmt = "{{{bt:%u:%p}}}\n";
+    uint32_t n = 0;
+
+    // Don't attempt to do any backtracking unless this looks like the thread is
+    // in the kernel right now.  The PC might be completely bogus, but even if
+    // it is in a legit user mode process, I'm not sure of a good way to print
+    // the symbolizer context for that process, or to figure out if the process
+    // is using a shadow call stack or not.
+    if (state.get_el_level() != 1u) {
+      fprintf(output_target, "Skipping backtrace, CPU-%u EL is %u, not 1\n", cpu,
+              state.get_el_level());
+      return;
+    }
+
+    PrintSymbolizerContext(output_target);
+    fprintf(output_target, bt_fmt, n++, reinterpret_cast<void*>(state.pc));
+
+    constexpr size_t PtrSize = sizeof(void*);
+    uintptr_t ret_addr_ptr = state.r[18];
+    if (ret_addr_ptr & (PtrSize - 1)) {
+      fprintf(output_target, "Skipping backtrace, x18 (0x%" PRIu64 ") is not %zu byte aligned.\n",
+              ret_addr_ptr, PtrSize);
+      return;
+    }
+
+    constexpr uint32_t MAX_BACKTRACE = 32;
+    for (; n < MAX_BACKTRACE; ++n) {
+      // Print out this level
+      fprintf(output_target, bt_fmt, n, reinterpret_cast<void**>(ret_addr_ptr)[0]);
+
+      // Attempt to back up one level.  Never cross a page boundary when we do this.
+      static_assert(fbl::is_pow2(static_cast<uint64_t>(PAGE_SIZE)),
+                    "PAGE_SIZE is not a power of 2!  Wut??");
+      if ((ret_addr_ptr & (PAGE_SIZE - 1)) == 0) {
+        break;
+      }
+
+      ret_addr_ptr -= PtrSize;
+    }
+  }
+}
+#elif defined(__x86_64__)
+void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
+  fprintf(output_target, "Regs and Backtrace unavailable for CPU-%u on x64\n", cpu);
+}
+#else
+#error "Unknown architecture! Neither __aarch64__ nor __x86_64__ are defined"
+#endif
+
+void DumpCommonDiagnostics(cpu_num_t cpu, FILE* output_target, FailureSeverity severity) {
   DEBUG_ASSERT(arch_ints_disabled());
 
   auto& percpu = percpu::Get(cpu);
@@ -78,6 +148,11 @@ void DumpSchedulerDiagnostics(cpu_num_t cpu, FILE* output_target) {
       process->get_name(name);
       fprintf(output_target, "process: name=%s\n", name);
     }
+  }
+
+  if (severity == FailureSeverity::Fatal) {
+    fprintf(output_target, "\n");
+    DumpRegistersAndBacktrace(cpu, output_target);
   }
 }
 
@@ -281,7 +356,7 @@ void HeartbeatLockupChecker::PerformCheck(LockupDetectorState& state, cpu_num_t 
             " observed now=%" PRId64 " name=%s.\nReported by [CPU-%u] (message rate limited)\n",
             cpu, observed_age / ZX_MSEC(1), observed_last_heartbeat, now_mono,
             (observed_name ? observed_name : "unknown"), arch_curr_cpu_num());
-    DumpSchedulerDiagnostics(cpu, output_target);
+    DumpCommonDiagnostics(cpu, output_target, severity);
   };
 
   // If we have a fatal threshold configured, and we have exceeded that
@@ -340,7 +415,7 @@ void CriticalSectionLockupChecker::PerformCheck(LockupDetectorState& state, cpu_
               TicksToDuration(observed_begin_ticks), TicksToDuration(now_ticks),
               (observed_name ? observed_name : "unknown"), arch_curr_cpu_num());
 
-      DumpSchedulerDiagnostics(cpu, output_target);
+      DumpCommonDiagnostics(cpu, output_target, severity);
     };
 
     // Check the fatal condition first.
