@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
 import("//src/graphics/lib/compute/gn/build_settings.gni")
+import("//src/sys/build/components.gni")
 
 # Raw Spinel Rust bindings that offer little more than just access to Spinel's
 # C types.
@@ -70,11 +70,6 @@ action("spinel_c_api_header_hashes") {
          ]
 }
 
-unittest_package("spinel-rs-sys-tests") {
+fuchsia_unittest_package("spinel-rs-sys-tests") {
   deps = [ ":spinel-rs-sys_test" ]
-  tests = [
-    {
-      name = "spinel_rs_sys_lib_test"
-    },
-  ]
 }

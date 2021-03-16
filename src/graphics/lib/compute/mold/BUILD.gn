@@ -3,9 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/board.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_library("mold") {
   name = "mold"
@@ -48,12 +47,6 @@ config("mold-performance") {
   }
 }
 
-unittest_package("mold-tests") {
+fuchsia_unittest_package("mold-tests") {
   deps = [ ":mold_test" ]
-  tests = [
-    {
-      name = "mold_lib_test"
-      environments = basic_envs
-    },
-  ]
 }
