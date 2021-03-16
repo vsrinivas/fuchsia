@@ -1,8 +1,9 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-
 use {
+    at_commands as at,
+    at_commands::SerDe,
     core::{
         pin::Pin,
         task::{Context, Poll},
@@ -13,15 +14,14 @@ use {
         stream::{FusedStream, Stream, StreamExt},
         AsyncWriteExt,
     },
+    log,
     std::collections::HashMap,
+    std::io::Cursor,
 };
 
 use crate::{
-    at::{AtAgMessage, AtHfMessage, IndicatorStatus, Parser},
-    procedure::{
-        query_operator_selection::NetworkOperatorNameFormat, Procedure, ProcedureError,
-        ProcedureMarker, ProcedureRequest,
-    },
+    indicator_status::IndicatorStatus,
+    procedure::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
     protocol::features::{AgFeatures, HfFeatures},
 };
 
@@ -39,7 +39,7 @@ pub struct SlcState {
     /// The current indicator status of the AG.
     pub ag_indicator_status: IndicatorStatus,
     /// The format used when representing the network operator name on the AG.
-    pub ag_network_operator_name_format: Option<NetworkOperatorNameFormat>,
+    pub ag_network_operator_name_format: Option<at::NetworkOperatorNameFormat>,
     /// Use AG Extended Error Codes.
     pub extended_errors: bool,
 }
@@ -71,8 +71,6 @@ pub struct ServiceLevelConnection {
     channel: Option<Channel>,
     /// The current state associated with this connection.
     state: SlcState,
-    /// An AT Command parser instance.
-    parser: Parser,
     /// The current active procedures serviced by this SLC.
     procedures: HashMap<ProcedureMarker, Box<dyn Procedure>>,
 }
@@ -80,12 +78,7 @@ pub struct ServiceLevelConnection {
 impl ServiceLevelConnection {
     /// Create a new, unconnected `ServiceLevelConnection`.
     pub fn new() -> Self {
-        Self {
-            channel: None,
-            state: SlcState::default(),
-            parser: Parser::default(),
-            procedures: HashMap::new(),
-        }
+        Self { channel: None, state: SlcState::default(), procedures: HashMap::new() }
     }
 
     /// Returns `true` if an active connection exists between the peers.
@@ -118,7 +111,7 @@ impl ServiceLevelConnection {
         self.state.initialized = true;
     }
 
-    pub fn network_operator_name_format(&self) -> &Option<NetworkOperatorNameFormat> {
+    pub fn network_operator_name_format(&self) -> &Option<at::NetworkOperatorNameFormat> {
         &self.state.ag_network_operator_name_format
     }
 
@@ -127,12 +120,19 @@ impl ServiceLevelConnection {
         *self = Self::new();
     }
 
-    pub async fn send_message_to_peer(&mut self, message: AtAgMessage) {
-        let bytes = message.into_bytes();
+    pub async fn send_message_to_peer(
+        &mut self,
+        message: at::Response,
+    ) -> Result<(), at::SerializeError> {
+        let mut bytes = Vec::new();
+        message.serialize(&mut bytes)?;
+
         if let Some(ch) = &mut self.channel {
             log::info!("Sent {:?}", String::from_utf8_lossy(&bytes));
             ch.write_all(&bytes).await.unwrap();
         }
+
+        Ok(())
     }
 
     /// Garbage collects the provided `procedure` and returns true if it has terminated.
@@ -150,15 +150,22 @@ impl ServiceLevelConnection {
         is_terminated
     }
 
-    /// Consume bytes from the peer, producing a parsed AtHfMessage from the bytes and
+    /// Consume bytes from the peer, producing a parsed AT Command from the bytes and
     /// handling it.
     pub fn receive_data(
         &mut self,
-        bytes: Vec<u8>,
+        bytes: &mut Vec<u8>,
     ) -> Result<(ProcedureMarker, ProcedureRequest), ProcedureError> {
         // Parse the byte buffer into a HF message.
-        let command = self.parser.parse(&bytes);
-        log::info!("Received {:?} from peer", command);
+        let parse_result = at::Command::deserialize(&mut Cursor::new(bytes));
+
+        if let Err(err) = parse_result {
+            log::warn!("Received unparseable AT command: {:?}", err);
+            return Err(ProcedureError::UnparsableHf(err));
+        }
+
+        let command = parse_result.unwrap();
+        log::info!("Received {:?}", command);
 
         // Attempt to match the received message to a procedure.
         let procedure_id = self.match_command_to_procedure(&command)?;
@@ -192,7 +199,7 @@ impl ServiceLevelConnection {
     /// for the given `command` or an error if the command couldn't be matched.
     pub fn match_command_to_procedure(
         &self,
-        command: &AtHfMessage,
+        command: &at::Command,
     ) -> Result<ProcedureMarker, ProcedureError> {
         // If we haven't initialized the SLC yet, the only valid procedure to match is
         // the SLCI Procedure.
@@ -220,7 +227,7 @@ impl ServiceLevelConnection {
     pub fn ag_message(
         &mut self,
         marker: ProcedureMarker,
-        message: AtAgMessage,
+        message: at::Response,
     ) -> ProcedureRequest {
         self.procedures
             .entry(marker)
@@ -234,7 +241,7 @@ impl ServiceLevelConnection {
     pub fn hf_message(
         &mut self,
         marker: ProcedureMarker,
-        message: AtHfMessage,
+        message: at::Command,
     ) -> ProcedureRequest {
         self.procedures
             .entry(marker)
@@ -251,11 +258,9 @@ impl Stream for ServiceLevelConnection {
             panic!("Cannot poll a terminated stream");
         }
         if let Some(channel) = &mut self.channel {
-            Poll::Ready(
-                ready!(channel.poll_next_unpin(cx)).map(|item| {
-                    item.map_or_else(|e| Err(e.into()), |data| self.receive_data(data))
-                }),
-            )
+            Poll::Ready(ready!(channel.poll_next_unpin(cx)).map(|item| {
+                item.map_or_else(|e| Err(e.into()), |mut data| self.receive_data(&mut data))
+            }))
         } else {
             Poll::Pending
         }
@@ -273,7 +278,7 @@ mod tests {
     use {
         super::*,
         crate::{
-            at::IndicatorStatus,
+            indicator_status::IndicatorStatus,
             protocol::features::{AgFeatures, HfFeatures},
         },
         fuchsia_async as fasync,
@@ -332,7 +337,7 @@ mod tests {
         let (mut slc, remote) = create_and_connect_slc();
 
         // Peer sends an unexpected AT command.
-        let unexpected = format!("AT+CIND=\r").into_bytes();
+        let unexpected = format!("AT+CIND=?\r").into_bytes();
         let _ = remote.as_ref().write(&unexpected);
 
         {
@@ -348,7 +353,7 @@ mod tests {
 
     async fn expect_outgoing_message_to_peer(slc: &mut ServiceLevelConnection) {
         match slc.next().await {
-            Some(Ok((_, ProcedureRequest::SendMessage(_)))) => {}
+            Some(Ok((_, ProcedureRequest::SendMessages(_)))) => {}
             x => panic!("Expected SendMessage but got: {:?}", x),
         }
     }
@@ -373,17 +378,17 @@ mod tests {
         };
         // At this point, the SLC Initialization procedure should be in progress.
         assert!(slc.is_active(&slci_marker));
+
         // Simulate local response with AG Features - expect these to be sent to the peer.
         let features = AgFeatures::empty();
         let next_request = slc.ag_message(slci_marker, response_fn1(features));
-        assert_matches!(next_request, ProcedureRequest::SendMessage(_));
+        assert_matches!(next_request, ProcedureRequest::SendMessages(_));
 
         // Peer sends us an HF supported indicators request - expect an outgoing message
         // to the peer.
         let command2 = format!("AT+CIND=?\r").into_bytes();
         let _ = remote.as_ref().write(&command2);
         expect_outgoing_message_to_peer(&mut slc).await;
-
         // We then expect the HF to request the indicator status which will result
         // in the procedure asking the AG for the status.
         let command3 = format!("AT+CIND?\r").into_bytes();
@@ -397,7 +402,7 @@ mod tests {
         // Simulate local response with AG status - expect this to go to the peer.
         let status = IndicatorStatus::default();
         let next_request = slc.ag_message(slci_marker, response_fn2(status));
-        assert_matches!(next_request, ProcedureRequest::SendMessage(_));
+        assert_matches!(next_request, ProcedureRequest::SendMessages(_));
 
         // We then expect HF to request enabling Ind Status update in the AG - expect an outgoing
         // message to the peer.
@@ -420,12 +425,12 @@ mod tests {
 
         // Receiving an AT command associated with the SLCI procedure thereafter should
         // be an error.
-        let cmd1 = AtHfMessage::HfFeatures(HfFeatures::empty());
+        let cmd1 = at::Command::Brsf { features: HfFeatures::empty().bits() as i64 };
         assert_matches!(
             slc.match_command_to_procedure(&cmd1),
             Err(ProcedureError::UnexpectedHf(_))
         );
-        let cmd2 = AtHfMessage::AgIndStat;
+        let cmd2 = at::Command::CindTest {};
         assert_matches!(
             slc.match_command_to_procedure(&cmd2),
             Err(ProcedureError::UnexpectedHf(_))

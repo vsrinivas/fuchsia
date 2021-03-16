@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_bluetooth_bredr as bredr,
+    at_commands as at, fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::{NetworkInformation, PeerHandlerProxy},
     fuchsia_async::Task,
     fuchsia_bluetooth::{
@@ -21,9 +21,9 @@ use super::{
     PeerRequest,
 };
 use crate::{
-    at::{AtAgMessage, IndicatorStatus},
     config::AudioGatewayFeatureSupport,
     error::Error,
+    indicator_status::IndicatorStatus,
     procedure::{ProcedureMarker, ProcedureRequest},
     profile::ProfileEvent,
 };
@@ -170,12 +170,20 @@ impl PeerTask {
                 ProcedureRequest::None => return,
                 ProcedureRequest::Error(e) => {
                     log::warn!("Error processing procedure update: {:?}", e);
-                    self.connection.send_message_to_peer(AtAgMessage::Error).await;
+                    if let Err(err) =
+                        self.connection.send_message_to_peer(at::Response::Error).await
+                    {
+                        log::warn!("Unable to serialize AT error response with {:}", err);
+                    }
                     return;
                 }
-                ProcedureRequest::SendMessage(message) => {
-                    // Message to be sent to the peer via the Service Level RFCOMM Connection.
-                    self.connection.send_message_to_peer(message).await;
+                ProcedureRequest::SendMessages(messages) => {
+                    // Messages to be sent to the peer via the Service Level RFCOMM Connection.
+                    for message in messages {
+                        if let Err(err) = self.connection.send_message_to_peer(message).await {
+                            log::warn!("Unable to serialize AT response with {:}", err);
+                        }
+                    }
                     return;
                 }
                 ProcedureRequest::GetAgFeatures { response } => {
@@ -191,28 +199,32 @@ impl PeerTask {
                         callheld: (),
                         signal: self.network.signal_strength.map(|ss| ss as u8).unwrap_or(0),
                         roam: self.network.roaming.unwrap_or(false),
-                        batt: 5, // TODO: Retrieve battery status from Fuchsia power service.
+                        battchg: 5, // TODO: Retrieve battery status from Fuchsia power service.
                     };
                     // Update the procedure with the retrieved AG update.
                     request = self.connection.ag_message(marker, response(status));
                 }
                 ProcedureRequest::GetNetworkOperatorName { response } => {
                     let format = self.connection.network_operator_name_format();
-                    let result = match format {
-                        Some(f) => {
-                            if let Some(handler) = &mut self.handler {
-                                handler
-                                    .query_operator()
-                                    .await
-                                    .map_or(None, |name| name.map(|n| f.format_name(n)))
-                            } else {
-                                None
-                            }
+                    let name = match &self.handler {
+                        Some(h) => {
+                            let result = h.query_operator().await;
+                            if let Err(err) = &result {
+                                log::warn!(
+                                    "Got error attempting to retrieve operator name from AG: {:}",
+                                    err
+                                );
+                            };
+                            result.ok().flatten()
                         }
-                        None => None, // The format must be set before getting the network name.
+                        None => None,
+                    };
+                    let name_option = match (name, format) {
+                        (Some(n), Some(_)) => Some(n),
+                        _ => None, // The format must be set before getting the network name.
                     };
                     // Update the procedure with the result of retrieving the AG network name.
-                    request = self.connection.ag_message(marker, response(result));
+                    request = self.connection.ag_message(marker, response(name_option));
                 }
                 ProcedureRequest::SetNrec { enable, response } => {
                     let result = if let Some(handler) = &mut self.handler {

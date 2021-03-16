@@ -25,6 +25,7 @@ pub fn raise_response(
             let hl = raise_success(lowlevel)?;
             highlevel::Response::Success(hl)
         }
+        lowlevel::Response::RawBytes(bytes) => highlevel::Response::RawBytes(bytes.clone()),
     };
 
     Ok(highlevel)
@@ -49,6 +50,7 @@ pub fn lower_response(highlevel: &highlevel::Response) -> lowlevel::Response {
         }
         highlevel::Response::CmeError(err_code) => lowlevel::Response::CmeError(*err_code),
         highlevel::Response::Success(success) => lower_success(success),
+        highlevel::Response::RawBytes(bytes) => lowlevel::Response::RawBytes(bytes.clone()),
     }
 }
 

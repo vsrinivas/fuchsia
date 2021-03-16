@@ -7,8 +7,11 @@
 
 use {
     crate::{
-        highlevel, lowlevel, lowlevel::write_to::WriteTo as _, parser::response_parser,
-        serde::SerDe, translate,
+        highlevel, lowlevel,
+        lowlevel::write_to::WriteTo as _,
+        parser::response_parser,
+        serde::{success, SerDe},
+        translate,
     },
     std::{collections::HashMap, io::Cursor},
 };
@@ -367,5 +370,13 @@ fn multiple_paren_kv_args() {
             ]),
         },
         cr_lf_delimit("+TESTPMPIL: (1=abc)(2,3,4)"),
+    )
+}
+
+#[test]
+fn success_succeeds() {
+    assert_eq!(
+        success(highlevel::Success::Test {}),
+        highlevel::Response::Success(highlevel::Success::Test {},)
     )
 }

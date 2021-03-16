@@ -23,14 +23,15 @@ use {
 
 /// Errors that can occur while deserializing AT commands into high level generated AT command
 /// and response types.
-#[derive(Debug, Error)]
+#[derive(Clone, Debug, Error)]
 pub enum DeserializeError {
     // Just store the parse errors as Strings so as to not require clients to know about the
     // pest parser types.
     #[error("Parse error: {0:?}")]
     ParseError(String),
+    // IO errors aren't Clone, so just use a String.
     #[error("IO error: {0:?}")]
-    IoError(io::Error),
+    IoError(String),
     #[error("Parsed unknown command: {0:?}")]
     UnknownCommand(lowlevel::Command),
     #[error("Parsed unknown response: {0:?}")]
@@ -48,7 +49,8 @@ impl<RT: pest::RuleType> From<ParseError<RT>> for DeserializeError {
 
 impl From<io::Error> for DeserializeError {
     fn from(io_error: io::Error) -> DeserializeError {
-        DeserializeError::IoError(io_error)
+        let string = format!("{:?}", io_error);
+        DeserializeError::IoError(string)
     }
 }
 
@@ -109,4 +111,9 @@ impl SerDe for highlevel::Response {
 
         Ok(())
     }
+}
+
+/// Wrap a Success case in a Response.
+pub fn success(success: highlevel::Success) -> highlevel::Response {
+    highlevel::Response::Success(success)
 }

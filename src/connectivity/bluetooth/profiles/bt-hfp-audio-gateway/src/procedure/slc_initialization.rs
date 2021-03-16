@@ -5,10 +5,23 @@
 use super::{Procedure, ProcedureError as Error, ProcedureMarker, ProcedureRequest};
 
 use crate::{
-    at::{AtAgMessage, AtHfMessage, IndicatorStatus},
+    indicator_status::IndicatorStatus,
     peer::service_level_connection::SlcState,
-    protocol::features::AgFeatures,
+    protocol::features::{AgFeatures, HfFeatures},
 };
+
+use at_commands as at;
+
+// TODO(fxb/71668) Stop using raw bytes.
+static CIND_TEST_RESPONSE_BYTES: &[u8] = b"+CIND: \
+(\"service\",(0,1)),\
+(\"call\",(0,1)),\
+(\"callsetup\",(0,3)),\
+(\"callheld\",(0,2)),\
+(\"signal\",(0,5)),\
+(\"roam\",(0,1)),\
+(\"battchg\",(0,5)\
+)";
 
 /// A singular state within the SLC Initialization Procedure.
 pub trait SlcProcedureState {
@@ -16,7 +29,7 @@ pub trait SlcProcedureState {
     /// AG `update`.
     /// By default, the state transition will return an error. Implementors should only
     /// implement this for valid transitions.
-    fn ag_update(&self, update: AtAgMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn ag_update(&self, update: at::Response, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         SlcErrorState::unexpected_ag(update)
     }
 
@@ -24,7 +37,7 @@ pub trait SlcProcedureState {
     /// HF `update`.
     /// By default, the state transition will return an error. Implementors should only
     /// implement this for valid transitions.
-    fn hf_update(&self, update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         SlcErrorState::unexpected_hf(update)
     }
 
@@ -77,7 +90,7 @@ impl Procedure for SlcInitProcedure {
         ProcedureMarker::SlcInitialization
     }
 
-    fn hf_update(&mut self, update: AtHfMessage, state: &mut SlcState) -> ProcedureRequest {
+    fn hf_update(&mut self, update: at::Command, state: &mut SlcState) -> ProcedureRequest {
         if self.is_terminated() {
             return ProcedureRequest::Error(Error::AlreadyTerminated);
         }
@@ -86,7 +99,7 @@ impl Procedure for SlcInitProcedure {
         self.state.request()
     }
 
-    fn ag_update(&mut self, update: AtAgMessage, state: &mut SlcState) -> ProcedureRequest {
+    fn ag_update(&mut self, update: at::Response, state: &mut SlcState) -> ProcedureRequest {
         if self.is_terminated() {
             return ProcedureRequest::Error(Error::AlreadyTerminated);
         }
@@ -110,11 +123,11 @@ impl SlcProcedureState for SlcInitStart {
         ProcedureRequest::None
     }
 
-    fn hf_update(&self, update: AtHfMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: at::Command, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only the HF request containing its features can continue the SLC initialization process.
         match update {
-            AtHfMessage::HfFeatures(f) => {
-                state.hf_features = f;
+            at::Command::Brsf { features } => {
+                state.hf_features = HfFeatures::from_bits_truncate(features as u32);
                 Box::new(HfFeaturesReceived)
             }
             m => SlcErrorState::unexpected_hf(m),
@@ -129,15 +142,18 @@ struct HfFeaturesReceived;
 impl SlcProcedureState for HfFeaturesReceived {
     fn request(&self) -> ProcedureRequest {
         ProcedureRequest::GetAgFeatures {
-            response: Box::new(|features: AgFeatures| AtAgMessage::AgFeatures(features)),
+            response: Box::new(|features: AgFeatures| {
+                at::success(at::Success::Brsf { features: features.bits() as i64 })
+            }),
         }
     }
 
-    fn ag_update(&self, update: AtAgMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn ag_update(&self, update: at::Response, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only the AG request containing its features can continue the process.
         match update {
-            AtAgMessage::AgFeatures(f) => {
-                state.ag_features = f;
+            at::Response::Success(at::Success::Brsf { features }) => {
+                state.ag_features = AgFeatures::from_bits_truncate(features as u32);
+
                 Box::new(AgFeaturesReceived { state: state.clone() })
             }
             m => SlcErrorState::unexpected_ag(m),
@@ -152,18 +168,20 @@ struct AgFeaturesReceived {
 
 impl SlcProcedureState for AgFeaturesReceived {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessage(AtAgMessage::AgFeatures(self.state.ag_features))
+        ProcedureRequest::send_one_message_and_ok(at::success(at::Success::Brsf {
+            features: self.state.ag_features.bits() as i64,
+        }))
     }
 
-    fn hf_update(&self, update: AtHfMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: at::Command, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // The codec negotiation step of this procedure is optional and is determined by the
         // availability specified in the feature flags of the HF and AG.
         match (update, state.codec_negotiation()) {
-            (AtHfMessage::HfCodecSup(codecs), true) => {
-                state.hf_supported_codecs = Some(codecs);
+            (at::Command::Bac { codecs }, true) => {
+                state.hf_supported_codecs = Some(codecs.into_iter().map(|x| x as u32).collect());
                 Box::new(AvailableCodecsReceived)
             }
-            (AtHfMessage::AgIndSupRequest, false) => Box::new(AgSupportedIndicatorsRequested),
+            (at::Command::CindTest {}, false) => Box::new(AgSupportedIndicatorsRequested),
             (m, _) => SlcErrorState::unexpected_hf(m),
         }
     }
@@ -175,13 +193,13 @@ struct AvailableCodecsReceived;
 
 impl SlcProcedureState for AvailableCodecsReceived {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessage(AtAgMessage::Ok)
+        ProcedureRequest::SendMessages(vec![at::Response::Ok])
     }
 
-    fn hf_update(&self, update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only a HF request for AG indicators can continue the procedure.
         match update {
-            AtHfMessage::AgIndSupRequest => Box::new(AgSupportedIndicatorsRequested),
+            at::Command::CindTest {} => Box::new(AgSupportedIndicatorsRequested),
             m => SlcErrorState::unexpected_hf(m),
         }
     }
@@ -192,14 +210,16 @@ struct AgSupportedIndicatorsRequested;
 
 impl SlcProcedureState for AgSupportedIndicatorsRequested {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessage(AtAgMessage::AgSupportedIndicators)
+        ProcedureRequest::send_one_message_and_ok(at::Response::RawBytes(
+            CIND_TEST_RESPONSE_BYTES.to_vec(),
+        ))
     }
 
-    fn hf_update(&self, update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only a HF request for the current status of the AG indicators will
         // continue the procedure.
         match update {
-            AtHfMessage::AgIndStat => Box::new(AgIndicatorStatusRequestReceived),
+            at::Command::CindRead {} => Box::new(AgIndicatorStatusRequestReceived),
             m => SlcErrorState::unexpected_hf(m),
         }
     }
@@ -208,18 +228,54 @@ impl SlcProcedureState for AgSupportedIndicatorsRequested {
 #[derive(Debug, Clone)]
 struct AgIndicatorStatusRequestReceived;
 
+// Callers are responsible for making sure that the Response is, in fact, at::Response::Cind
+fn indicator_status_from_cind(cind: &at::Response) -> IndicatorStatus {
+    if let at::Response::Success(at::Success::Cind {
+        service,
+        call,
+        callsetup: _,
+        callheld: _,
+        signal,
+        roam,
+        battchg,
+    }) = cind.clone()
+    {
+        IndicatorStatus {
+            service,
+            call,
+            callsetup: (),
+            callheld: (),
+            signal: signal as u8,
+            roam,
+            battchg: battchg as u8,
+        }
+    } else {
+        unreachable!()
+    }
+}
+
 impl SlcProcedureState for AgIndicatorStatusRequestReceived {
     fn request(&self) -> ProcedureRequest {
         ProcedureRequest::GetAgIndicatorStatus {
-            response: Box::new(|status: IndicatorStatus| AtAgMessage::AgIndStat(status)),
+            response: Box::new(|status: IndicatorStatus| {
+                at::success(at::Success::Cind {
+                    service: status.service,
+                    call: status.call,
+                    callsetup: false,
+                    callheld: false,
+                    signal: status.signal as i64,
+                    roam: status.roam,
+                    battchg: status.battchg as i64,
+                })
+            }),
         }
     }
 
-    fn ag_update(&self, update: AtAgMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn ag_update(&self, update: at::Response, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only the current status information from the AG will continue the procedure.
         match update {
-            AtAgMessage::AgIndStat(status) => {
-                state.ag_indicator_status = status;
+            at::Response::Success(at::Success::Cind { .. }) => {
+                state.ag_indicator_status = indicator_status_from_cind(&update);
                 Box::new(AgIndicatorStatusReceived { state: state.clone() })
             }
             m => SlcErrorState::unexpected_ag(m),
@@ -234,13 +290,22 @@ struct AgIndicatorStatusReceived {
 
 impl SlcProcedureState for AgIndicatorStatusReceived {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessage(AtAgMessage::AgIndStat(self.state.ag_indicator_status))
+        let status = &self.state.ag_indicator_status;
+        ProcedureRequest::send_one_message_and_ok(at::success(at::Success::Cind {
+            service: status.service,
+            call: status.call,
+            callsetup: false,
+            callheld: false,
+            signal: status.signal as i64,
+            roam: status.roam,
+            battchg: status.battchg as i64,
+        }))
     }
 
-    fn hf_update(&self, update: AtHfMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: at::Command, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only a HF request to enable the AG Indicator Status will continue the procedure.
         match update {
-            AtHfMessage::HfIndStatusAgEnable => {
+            at::Command::Cmer {} => {
                 Box::new(AgIndicatorStatusEnableReceived { state: state.clone() })
             }
             m => SlcErrorState::unexpected_hf(m),
@@ -257,10 +322,10 @@ struct AgIndicatorStatusEnableReceived {
 
 impl SlcProcedureState for AgIndicatorStatusEnableReceived {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessage(AtAgMessage::Ok)
+        ProcedureRequest::SendMessages(vec![at::Response::Ok])
     }
 
-    fn hf_update(&self, update: AtHfMessage, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: at::Command, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         if self.is_terminal() {
             return SlcErrorState::already_terminated();
         }
@@ -269,7 +334,7 @@ impl SlcProcedureState for AgIndicatorStatusEnableReceived {
         // from the HF.
         if state.three_way_calling() {
             return match update {
-                AtHfMessage::ThreeWaySupport => {
+                at::Command::ChldTest {} => {
                     Box::new(ThreeWaySupportReceived { state: state.clone() })
                 }
                 m => SlcErrorState::unexpected_hf(m),
@@ -279,7 +344,7 @@ impl SlcProcedureState for AgIndicatorStatusEnableReceived {
         // Otherwise, both parties must be supporting HF Indicators (or else self.is_terminal()
         // would be true).
         match update {
-            AtHfMessage::HfIndSup(_, _) => Box::new(HfSupportedIndicatorsReceived),
+            at::Command::CindRead {} => Box::new(HfSupportedIndicatorsReceived),
             m => SlcErrorState::unexpected_hf(m),
         }
     }
@@ -296,16 +361,18 @@ struct ThreeWaySupportReceived {
 
 impl SlcProcedureState for ThreeWaySupportReceived {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessage(AtAgMessage::AgThreeWaySupport)
+        let commands: Vec<_> =
+            vec!["0", "1", "1X", "2", "2X", "3", "4"].into_iter().map(String::from).collect();
+        ProcedureRequest::send_one_message_and_ok(at::success(at::Success::Chld { commands }))
     }
 
-    fn hf_update(&self, update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         if self.is_terminal() {
             return SlcErrorState::already_terminated();
         }
 
         match update {
-            AtHfMessage::HfIndSup(_, _) => Box::new(HfSupportedIndicatorsReceived),
+            at::Command::Bind { .. } => Box::new(HfSupportedIndicatorsReceived),
             m => SlcErrorState::unexpected_hf(m),
         }
     }
@@ -320,12 +387,12 @@ struct HfSupportedIndicatorsReceived;
 
 impl SlcProcedureState for HfSupportedIndicatorsReceived {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessage(AtAgMessage::Ok)
+        ProcedureRequest::SendMessages(vec![at::Response::Ok])
     }
 
-    fn hf_update(&self, update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         match update {
-            AtHfMessage::HfIndAgSup => Box::new(ListSupportedGenericIndicatorsReceived),
+            at::Command::BindRead {} => Box::new(ListSupportedGenericIndicatorsReceived),
             m => SlcErrorState::unexpected_hf(m),
         }
     }
@@ -335,17 +402,23 @@ struct ListSupportedGenericIndicatorsReceived;
 
 impl SlcProcedureState for ListSupportedGenericIndicatorsReceived {
     fn request(&self) -> ProcedureRequest {
-        ProcedureRequest::SendMessage(AtAgMessage::AgSupportedHfSupResp {
-            safety: true,
-            battery: true,
-        })
+        ProcedureRequest::send_one_message_and_ok(at::success(at::Success::Bind {
+            indicators: vec![
+                at::BluetoothHFIndicator::BatteryLevel,
+                at::BluetoothHFIndicator::EnhancedSafety,
+            ],
+        }))
     }
 
-    fn ag_update(&self, _update: AtAgMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn ag_update(
+        &self,
+        _update: at::Response,
+        _state: &mut SlcState,
+    ) -> Box<dyn SlcProcedureState> {
         SlcErrorState::already_terminated()
     }
 
-    fn hf_update(&self, _update: AtHfMessage, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+    fn hf_update(&self, _update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         SlcErrorState::already_terminated()
     }
 
@@ -363,12 +436,12 @@ struct SlcErrorState {
 
 impl SlcErrorState {
     /// Builds and returns the error state for an unexpected AG message.
-    fn unexpected_ag(m: AtAgMessage) -> Box<dyn SlcProcedureState> {
+    fn unexpected_ag(m: at::Response) -> Box<dyn SlcProcedureState> {
         Box::new(SlcErrorState { error: Error::UnexpectedAg(m) })
     }
 
     /// Builds and returns the error state for an unexpected HF message.
-    fn unexpected_hf(m: AtHfMessage) -> Box<dyn SlcProcedureState> {
+    fn unexpected_hf(m: at::Command) -> Box<dyn SlcProcedureState> {
         Box::new(SlcErrorState { error: Error::UnexpectedHf(m) })
     }
 
@@ -405,12 +478,12 @@ mod tests {
         };
         let mut procedure =
             SlcInitProcedure::new_at_state(AgFeaturesReceived { state: state.clone() });
-        let update = AtHfMessage::HfCodecSup(Vec::new());
+        let update = at::Command::Bac { codecs: Vec::new() };
         // Both parties support codec negotiation, so upon receiving the Codec HF message, we
         // expect to successfully transition to the codec state and the resulting event
         // should be an Ack to the codecs.
         let event = procedure.hf_update(update, &mut state);
-        assert_matches!(event, ProcedureRequest::SendMessage(AtAgMessage::Ok));
+        assert_matches!(event, ProcedureRequest::SendMessages(msgs) if msgs == vec![at::Response::Ok]);
     }
 
     #[test]
@@ -422,7 +495,7 @@ mod tests {
         };
         let mut procedure =
             SlcInitProcedure::new_at_state(AgFeaturesReceived { state: state.clone() });
-        let update = AtHfMessage::AgIndSupRequest;
+        let update = at::Command::CindTest {};
         // Both parties support codec negotiation, but we receive an invalid HF message.
         assert_matches!(procedure.hf_update(update, &mut state), ProcedureRequest::Error(_));
     }
@@ -441,11 +514,8 @@ mod tests {
 
         // Since one party doesn't support codec negotiation, we expect the next update to
         // be a request for the AG supported indicators.
-        let update = AtHfMessage::AgIndSupRequest;
-        assert_matches!(
-            procedure.hf_update(update, &mut state),
-            ProcedureRequest::SendMessage(AtAgMessage::AgSupportedIndicators)
-        );
+        let update = at::Command::CindTest {};
+        assert_matches!(procedure.hf_update(update, &mut state), ProcedureRequest::SendMessages(_));
     }
 
     #[test]
@@ -456,10 +526,9 @@ mod tests {
             ag_features: AgFeatures::NR_EC,
             ..SlcState::default()
         };
-
         let mut procedure =
             SlcInitProcedure::new_at_state(AgFeaturesReceived { state: state.clone() });
-        let update = AtHfMessage::HfCodecSup(Vec::new());
+        let update = at::Command::Bac { codecs: Vec::new() };
         // One party doesn't support codec negotiation, so it is an error if the HF sends
         // a codec negotiation AT message.
         assert_matches!(procedure.hf_update(update, &mut state), ProcedureRequest::Error(_));
@@ -484,35 +553,43 @@ mod tests {
         let ag_features = AgFeatures::IN_BAND_RING;
 
         // First update should be an HF Feature request.
-        let update1 = AtHfMessage::HfFeatures(hf_features);
+        let update1 = at::Command::Brsf { features: hf_features.bits() as i64 };
         assert_matches!(
             slc_proc.hf_update(update1, &mut state),
             ProcedureRequest::GetAgFeatures { .. }
         );
 
         // Next update should be an AG Feature response.
-        let update2 = AtAgMessage::AgFeatures(ag_features);
-        assert_matches!(slc_proc.ag_update(update2, &mut state), ProcedureRequest::SendMessage(_));
+        let update2 = at::success(at::Success::Brsf { features: ag_features.bits() as i64 });
+        assert_matches!(slc_proc.ag_update(update2, &mut state), ProcedureRequest::SendMessages(_));
 
         // Since the AG doesn't support codec negotiation (see `ag_features`), we expect to
         // skip to the Hf Indicator support stage.
-        let update3 = AtHfMessage::AgIndSupRequest;
-        assert_matches!(slc_proc.hf_update(update3, &mut state), ProcedureRequest::SendMessage(_));
+        let update3 = at::Command::CindTest {};
+        assert_matches!(slc_proc.hf_update(update3, &mut state), ProcedureRequest::SendMessages(_));
 
         // We then expect the HF to request the indicator status which will result
         // in the procedure asking the AG for the status.
-        let update4 = AtHfMessage::AgIndStat;
+        let update4 = at::Command::CindRead {};
         assert_matches!(
             slc_proc.hf_update(update4, &mut state),
             ProcedureRequest::GetAgIndicatorStatus { .. }
         );
         let status = IndicatorStatus::default();
-        let update5 = AtAgMessage::AgIndStat(status);
-        assert_matches!(slc_proc.ag_update(update5, &mut state), ProcedureRequest::SendMessage(_));
+        let update5 = at::success(at::Success::Cind {
+            service: status.service,
+            call: status.call,
+            callsetup: false,
+            callheld: false,
+            signal: status.signal as i64,
+            roam: status.roam,
+            battchg: status.battchg as i64,
+        });
+        assert_matches!(slc_proc.ag_update(update5, &mut state), ProcedureRequest::SendMessages(_));
 
         // Lastly, the HF should request to enable the indicator status update on the AG.
-        let update6 = AtHfMessage::HfIndStatusAgEnable;
-        assert_matches!(slc_proc.hf_update(update6, &mut state), ProcedureRequest::SendMessage(_));
+        let update6 = at::Command::Cmer {};
+        assert_matches!(slc_proc.hf_update(update6, &mut state), ProcedureRequest::SendMessages(_));
 
         // Since both the AG and HF don't support 3-way calling and HF-indicators flags, we
         // expect the procedure to be terminated.
@@ -528,29 +605,24 @@ mod tests {
         let hf_features = HfFeatures::all();
         let ag_features = AgFeatures::all();
 
-        // First update should be an HF Feature request - the shared state should be updated.
-        let update1 = AtHfMessage::HfFeatures(hf_features);
+        // First update should be an HF Feature request.
+        let update1 = at::Command::Brsf { features: hf_features.bits() as i64 };
         assert_matches!(
             slc_proc.hf_update(update1, &mut state),
             ProcedureRequest::GetAgFeatures { .. }
         );
-        assert_eq!(state.hf_features, hf_features);
 
-        // Next update should be an AG Feature response - the shared state should be updated.
-        let update2 = AtAgMessage::AgFeatures(ag_features);
-        assert_matches!(slc_proc.ag_update(update2, &mut state), ProcedureRequest::SendMessage(_));
-        assert_eq!(state.ag_features, ag_features);
+        // Next update should be an AG Feature response.
+        let update2 = at::success(at::Success::Brsf { features: ag_features.bits() as i64 });
+        assert_matches!(slc_proc.ag_update(update2, &mut state), ProcedureRequest::SendMessages(_));
 
-        // Codec information should update shared state.
-        let codecs = vec![];
-        let update3 = AtHfMessage::HfCodecSup(codecs.clone());
-        assert_matches!(slc_proc.hf_update(update3, &mut state), ProcedureRequest::SendMessage(_));
-        assert_eq!(state.hf_supported_codecs, Some(codecs));
+        let update3 = at::Command::Bac { codecs: vec![] };
+        assert_matches!(slc_proc.hf_update(update3, &mut state), ProcedureRequest::SendMessages(_));
 
-        let update4 = AtHfMessage::AgIndSupRequest;
-        assert_matches!(slc_proc.hf_update(update4, &mut state), ProcedureRequest::SendMessage(_));
+        let update4 = at::Command::CindTest {};
+        assert_matches!(slc_proc.hf_update(update4, &mut state), ProcedureRequest::SendMessages(_));
 
-        let update5 = AtHfMessage::AgIndStat;
+        let update5 = at::Command::CindRead {};
         assert_matches!(
             slc_proc.hf_update(update5, &mut state),
             ProcedureRequest::GetAgIndicatorStatus { .. }
@@ -558,22 +630,38 @@ mod tests {
 
         // Indicator status should be updated.
         let status = IndicatorStatus::default();
-        let update6 = AtAgMessage::AgIndStat(status);
-        assert_matches!(slc_proc.ag_update(update6, &mut state), ProcedureRequest::SendMessage(_));
-        assert_eq!(state.ag_indicator_status, status);
 
-        let update7 = AtHfMessage::HfIndStatusAgEnable;
-        assert_matches!(slc_proc.hf_update(update7, &mut state), ProcedureRequest::SendMessage(_));
+        let update6 = at::success(at::Success::Cind {
+            service: status.service,
+            call: status.call,
+            callsetup: false,
+            callheld: false,
+            signal: status.signal as i64,
+            roam: status.roam,
+            battchg: status.battchg as i64,
+        });
+        assert_matches!(slc_proc.ag_update(update6, &mut state), ProcedureRequest::SendMessages(_));
+
+        let update7 = at::Command::Cmer {};
+        assert_matches!(slc_proc.hf_update(update7, &mut state), ProcedureRequest::SendMessages(_));
 
         // Optional
-        let update8 = AtHfMessage::ThreeWaySupport;
-        assert_matches!(slc_proc.hf_update(update8, &mut state), ProcedureRequest::SendMessage(_));
+        let update8 = at::Command::ChldTest {};
+        assert_matches!(slc_proc.hf_update(update8, &mut state), ProcedureRequest::SendMessages(_));
         // Optional
-        let update9 = AtHfMessage::HfIndSup(true, true);
-        assert_matches!(slc_proc.hf_update(update9, &mut state), ProcedureRequest::SendMessage(_));
+        let update9 = at::Command::Bind {
+            indicators: vec![
+                at::BluetoothHFIndicator::BatteryLevel,
+                at::BluetoothHFIndicator::EnhancedSafety,
+            ],
+        };
+        assert_matches!(slc_proc.hf_update(update9, &mut state), ProcedureRequest::SendMessages(_));
         // Optional
-        let update10 = AtHfMessage::HfIndAgSup;
-        assert_matches!(slc_proc.hf_update(update10, &mut state), ProcedureRequest::SendMessage(_));
+        let update10 = at::Command::BindRead {};
+        assert_matches!(
+            slc_proc.hf_update(update10, &mut state),
+            ProcedureRequest::SendMessages(_)
+        );
 
         assert!(slc_proc.is_terminated());
     }
@@ -585,15 +673,17 @@ mod tests {
 
         // We don't expect this AT command to be received in the starting
         // state of the SLC Initialization Procedure.
-        let unexpected_update1 = AtHfMessage::AgIndStat;
+        let unexpected_update1 = at::Command::CindTest {};
         assert_matches!(
             slc_proc.hf_update(unexpected_update1, &mut state),
             ProcedureRequest::Error(_)
         );
 
         // Jump to a different state and test an unexpected update.
+        let mut state =
+            SlcState { hf_features: HfFeatures::CODEC_NEGOTIATION, ..SlcState::default() };
         slc_proc = SlcInitProcedure::new_at_state(HfFeaturesReceived);
-        let unexpected_update2 = AtHfMessage::CurrentCalls;
+        let unexpected_update2 = at::Command::Cmer {};
         assert_matches!(
             slc_proc.hf_update(unexpected_update2, &mut state),
             ProcedureRequest::Error(_)

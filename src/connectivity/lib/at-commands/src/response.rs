@@ -21,6 +21,8 @@ pub enum Response {
     CmeError(i64),
     /// All other non-error responses.  These are described throughout the HFP v1.8 spec.
     Success(highlevel::Success),
+    /// Just send the raw byte buffer as a response.
+    RawBytes(Vec<u8>),
 }
 
 // Hardedcoded error indications described in HFP v1.8 Section 4.34.2

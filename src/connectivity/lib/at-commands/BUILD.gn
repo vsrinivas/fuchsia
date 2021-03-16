@@ -26,6 +26,7 @@ compiled_action("generate_sources") {
   sources = [
     "definitions/example1.at",
     "definitions/example2.at",
+    "definitions/hfp.at",
   ]
   output_dir = "$target_gen_dir/src/generated/"
   output_types = output_dir + "types.rs"

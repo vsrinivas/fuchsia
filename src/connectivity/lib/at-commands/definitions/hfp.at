@@ -1,0 +1,109 @@
+#AT Commands used by Bluetooth HFP profiles.
+
+
+# Bluetooth Retrieve Supported Features command
+# HFP 1.8 4.35.1
+# TODO(fxb/71403) Guarantee this int is 32 bits.
+command { AT+BRSF=features: Integer }
+
+# Bluetooth Retrieve Supported Features response
+# HFP 1.8 4.35.1
+# TODO(fxb/71403) Guarantee this int is 32 bits.
+response { +BRSF: features: Integer}
+
+# Standard Indicator Update read command
+# HFP 1.8 4.34.2
+command { AT+CIND=?}
+
+# Standard Indicator Update test command
+# HFP 1.8 4.34.2
+command { AT+CIND? }
+
+# Standard Indicator Update response
+# HFP 1.8 4.34.2
+response { +CIND:
+    service: BoolAsInt,
+    call: BoolAsInt,
+    callsetup: BoolAsInt,
+    callheld: BoolAsInt,
+    signal: Integer,
+    roam: BoolAsInt,
+    battchg: Integer,
+}
+
+# Standard List Current Calls command
+# HFP 1.8 4.34.2
+command { AT+CLCC }
+
+# Standard List Current Calls response
+# HFP 1.8 4.34.2
+response { +CLCC: current_calls: Map<String, Integer> }
+
+# Bluetooth Available Codecs command
+# HFP 1.8 4.35.1
+command { AT+BAC=codecs: List<Integer> }
+
+# Bluetooth HF Indicators
+# Bluetooth Assigned Numbers - HF Indicators
+# via https://www.bluetooth.com/specifications/assigned-numbers/hands-free-profile/
+enum BluetoothHFIndicator {
+    EnhancedSafety = 1,
+    BatteryLevel = 2,
+}
+
+# Bluetooth Indicators Feature set command
+# HFP 1.8 4.35.1
+command { AT+BIND=indicators: List<BluetoothHFIndicator> }
+
+# Bluetooth Indicators Feature read command
+# HFP 1.8 4.35.1
+command { AT+BIND=? }
+
+# Bluetooth Indicators Feature test command
+# HFP 1.8 4.35.1
+command { AT+BIND? }
+
+# Bluetooth Indicators Feature read response
+# HFP 1.8 4.35.1
+response { +BIND: (indicators: List<BluetoothHFIndicator>) }
+
+# Standard Call hold read command.
+# HFP 1.8 4.34.2
+command { AT+CHLD=? }
+
+# Standard Call hold read response.
+# HFP 1.8 4.34.2
+response { +CHLD: commands: List<String>}
+
+# Standard Event Reporting command
+# HFP 1.8 4.34.2
+command { AT+CMER }
+
+# Standard Noise Cancelling command
+# HFP 1.8 4.34.2
+command { AT+NREC=nrec:BoolAsInt }
+
+# Standard Set Network Operator Format command
+# HFP 1.8 4.34.2
+command { AT+COPS=three: Integer, format: NetworkOperatorNameFormat}
+
+# Standard Query Operator Selection read command
+# HFP 1.8 4.34.2
+command { AT+COPS? }
+
+# Standard Query Operator Selection read response
+# HFP 1.8 4.34.2
+response { +COPS: format: NetworkOperatorNameFormat, zero: Integer, operator: String}
+
+# The parameter used to determine how the network operator name should be defined.
+# This is defined in HFP v1.8, Section 4.8.
+# Note: The HFP specification does not provide alternate formats besides the Long
+# Alphanumeric format. For the sake of strong type safety and to provide forward-looking
+# flexibility, this is represented as an enum with a single variant.
+enum NetworkOperatorNameFormat {
+    LongAlphanumeric = 0,
+}
+
+# Standard Set Extended Error Reporting command
+# HFP 1.8 4.34.2
+command { AT+CMEE=enable: BoolAsInt }

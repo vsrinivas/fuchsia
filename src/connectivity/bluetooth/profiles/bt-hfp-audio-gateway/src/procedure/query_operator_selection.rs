@@ -4,39 +4,25 @@
 
 use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::at::{AtAgMessage, AtHfMessage};
 use crate::peer::service_level_connection::SlcState;
 
-/// The parameter used to determine how the network operator name should be defined.
-/// This is defined in HFP v1.8, Section 4.8.
-/// Note: The HFP specification does not provide alternate formats besides the Long
-/// Alphanumeric format. For the sake of strong type safety and to provide forward-looking
-/// flexibility, this is represented as an enum with a single variant.
-#[derive(Debug, Clone, Copy, PartialEq)]
-pub enum NetworkOperatorNameFormat {
-    // TODO(fxbug.dev/71412): Remove this once the library-based AT definition constructs
-    // this variant after parsing the raw AT command.
-    #[allow(unused)]
-    LongAlphanumeric,
-}
+use at_commands as at;
 
-impl NetworkOperatorNameFormat {
-    /// The maximum number of characters of a long alphanumeric name.
-    /// Defined in HFP v1.9, Section 4.8.
-    pub const MAX_LONG_ALPHANUMERIC_NAME_SIZE: usize = 16;
+/// The maximum number of characters of a long alphanumeric name.
+/// Defined in HFP v1.9, Section 4.8.
+pub const MAX_LONG_ALPHANUMERIC_NAME_SIZE: usize = 16;
 
-    /// Formats the provided `name` to conform to the current network operator format.
-    pub fn format_name(&self, mut name: String) -> String {
-        match &self {
-            Self::LongAlphanumeric => {
-                if name.len() > Self::MAX_LONG_ALPHANUMERIC_NAME_SIZE {
-                    log::info!("Truncating network operator name: {}", name);
-                    name.truncate(Self::MAX_LONG_ALPHANUMERIC_NAME_SIZE);
-                }
+/// Formats the provided `name` to conform to the current network operator format.
+pub fn format_operator_name(format: at::NetworkOperatorNameFormat, mut name: String) -> String {
+    match format {
+        at::NetworkOperatorNameFormat::LongAlphanumeric => {
+            if name.len() > MAX_LONG_ALPHANUMERIC_NAME_SIZE {
+                log::info!("Truncating network operator name: {}", name);
+                name.truncate(MAX_LONG_ALPHANUMERIC_NAME_SIZE);
             }
         }
-        name
     }
+    name
 }
 
 #[derive(Clone, Copy, Debug, PartialEq)]
@@ -89,43 +75,65 @@ impl Procedure for QueryOperatorProcedure {
         ProcedureMarker::QueryOperatorSelection
     }
 
-    fn hf_update(&mut self, update: AtHfMessage, state: &mut SlcState) -> ProcedureRequest {
+    fn hf_update(&mut self, update: at::Command, state: &mut SlcState) -> ProcedureRequest {
+        // This format is required to be used by the spec, so it's the default if none is set.
+        let format = state
+            .ag_network_operator_name_format
+            .unwrap_or(at::NetworkOperatorNameFormat::LongAlphanumeric);
         match (self.state, update) {
-            (State::Start, AtHfMessage::SetNetworkOperatorFormat(format)) => {
+            (State::Start, at::Command::Cops { three: _, format }) => {
                 // The remote peer has requested to set the network name format.
                 state.ag_network_operator_name_format = Some(format);
                 self.state.transition(/* skip_set_format= */ false);
-                ProcedureRequest::SendMessage(AtAgMessage::Ok)
+                ProcedureRequest::SendMessages(vec![at::Response::Ok])
             }
-            (State::Start, AtHfMessage::GetNetworkOperator) => {
+            (State::Start, at::Command::CopsRead {}) => {
                 // The remote peer wants to skip setting the network name format and is querying
                 // the network operator name directly.
                 self.state.transition(/* skip_set_format= */ true);
-                let response =
-                    Box::new(|network_name| AtAgMessage::AgNetworkOperatorName(network_name));
+                let response = Box::new(move |network_name: Option<_>| {
+                    at::Response::Success(at::Success::Cops {
+                        format,
+                        zero: 0,
+                        // TODO(fxbug.dev/72112) Make this optional if it's not set.
+                        operator: format_operator_name(
+                            format.clone(),
+                            network_name.unwrap_or(String::from("")),
+                        ),
+                    })
+                });
                 ProcedureRequest::GetNetworkOperatorName { response }
             }
-            (State::SetFormatRequest, AtHfMessage::GetNetworkOperator) => {
+            (State::SetFormatRequest, at::Command::CopsRead { .. }) => {
                 self.state.transition(/* skip_set_format= */ false);
-                let response =
-                    Box::new(|network_name| AtAgMessage::AgNetworkOperatorName(network_name));
+                let response = Box::new(move |network_name: Option<_>| {
+                    at::Response::Success(at::Success::Cops {
+                        format: format,
+                        zero: 0,
+                        // TODO(fxbug.dev/72112) Make this optional if it's not set.
+                        operator: format_operator_name(
+                            format,
+                            network_name.unwrap_or(String::from("")),
+                        ),
+                    })
+                });
                 ProcedureRequest::GetNetworkOperatorName { response }
             }
-            (State::Terminated, AtHfMessage::SetNetworkOperatorFormat(_))
-            | (State::Terminated, AtHfMessage::GetNetworkOperator) => {
+            (State::Terminated, at::Command::Cops { .. })
+            | (State::Terminated, at::Command::CopsRead {}) => {
                 ProcedureRequest::Error(ProcedureError::AlreadyTerminated)
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
         }
     }
 
-    fn ag_update(&mut self, update: AtAgMessage, _state: &mut SlcState) -> ProcedureRequest {
+    fn ag_update(&mut self, update: at::Response, _state: &mut SlcState) -> ProcedureRequest {
         match (self.state, update) {
-            (State::GetName, update @ AtAgMessage::AgNetworkOperatorName(_)) => {
+            (State::GetName, update @ at::Response::Success(at::Success::Cops { .. })) => {
                 self.state.transition(/* skip_set_format= */ false);
-                ProcedureRequest::SendMessage(update)
+                ProcedureRequest::send_one_message_and_ok(update)
             }
-            (State::Terminated, AtAgMessage::AgNetworkOperatorName(_)) => {
+            (State::Terminated, at::Response::Success(at::Success::Cops { .. })) => {
                 ProcedureRequest::Error(ProcedureError::AlreadyTerminated)
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedAg(update)),
@@ -190,7 +198,7 @@ mod tests {
         let mut procedure = QueryOperatorProcedure::new();
         let mut state = SlcState::default();
         // SLCI AT command.
-        let random_hf = AtHfMessage::AgIndStat;
+        let random_hf = at::Command::CindRead {};
         assert_matches!(
             procedure.hf_update(random_hf, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedHf(_))
@@ -202,7 +210,7 @@ mod tests {
         let mut procedure = QueryOperatorProcedure::new();
         let mut state = SlcState::default();
         // SLCI AT command.
-        let random_ag = AtAgMessage::AgThreeWaySupport;
+        let random_ag = at::Response::Success(at::Success::Brsf { features: 0 });
         assert_matches!(
             procedure.ag_update(random_ag, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedAg(_))
@@ -216,30 +224,42 @@ mod tests {
         let mut state = SlcState::default();
 
         // The HF request to set the format should update the shared state.
-        let expected_format = NetworkOperatorNameFormat::LongAlphanumeric;
-        let update1 = AtHfMessage::SetNetworkOperatorFormat(expected_format);
-        assert_matches!(p.hf_update(update1, &mut state), ProcedureRequest::SendMessage(_));
+        let expected_format = at::NetworkOperatorNameFormat::LongAlphanumeric;
+        let update1 = at::Command::Cops { three: 3, format: expected_format };
+        assert_matches!(p.hf_update(update1, &mut state), ProcedureRequest::SendMessages(_));
         assert_eq!(state.ag_network_operator_name_format, Some(expected_format));
 
-        let update2 = AtHfMessage::GetNetworkOperator;
+        let update2 = at::Command::CopsRead {};
         let update3 = match p.hf_update(update2, &mut state) {
             ProcedureRequest::GetNetworkOperatorName { response } => response(test_operator_name),
-            x => panic!("Expected get network operator request but got: {:?}", x),
+            x => {
+                panic!("Expected get network operator request but got: {:?}", x);
+            }
         };
 
-        assert_matches!(p.ag_update(update3, &mut state), ProcedureRequest::SendMessage(_));
+        assert_matches!(p.ag_update(update3, &mut state), ProcedureRequest::SendMessages(_));
 
         // Check that the procedure is terminated and any new messages produce an error.
         assert!(p.is_terminated());
         assert_matches!(
             p.hf_update(
-                AtHfMessage::SetNetworkOperatorFormat(NetworkOperatorNameFormat::LongAlphanumeric,),
+                at::Command::Cops {
+                    three: 3,
+                    format: at::NetworkOperatorNameFormat::LongAlphanumeric
+                },
                 &mut state
             ),
             ProcedureRequest::Error(ProcedureError::AlreadyTerminated)
         );
         assert_matches!(
-            p.ag_update(AtAgMessage::AgNetworkOperatorName(Some("foo".to_string())), &mut state),
+            p.ag_update(
+                at::Response::Success(at::Success::Cops {
+                    format: at::NetworkOperatorNameFormat::LongAlphanumeric,
+                    zero: 0,
+                    operator: "foo".to_string()
+                }),
+                &mut state
+            ),
             ProcedureRequest::Error(ProcedureError::AlreadyTerminated)
         );
     }
@@ -250,12 +270,12 @@ mod tests {
         let mut state = SlcState::default();
         let test_operator_name = Some("Bar".to_string());
 
-        let update1 = AtHfMessage::GetNetworkOperator;
+        let update1 = at::Command::CopsRead {};
         let update2 = match p.hf_update(update1, &mut state) {
             ProcedureRequest::GetNetworkOperatorName { response } => response(test_operator_name),
             x => panic!("Expected get network operator request but got: {:?}", x),
         };
-        assert_matches!(p.ag_update(update2, &mut state), ProcedureRequest::SendMessage(_));
+        assert_matches!(p.ag_update(update2, &mut state), ProcedureRequest::SendMessages(_));
         assert!(p.is_terminated());
     }
 
@@ -265,12 +285,12 @@ mod tests {
         let mut state = SlcState::default();
         let test_operator_name = None;
 
-        let update1 = AtHfMessage::GetNetworkOperator;
+        let update1 = at::Command::CopsRead {};
         let update2 = match p.hf_update(update1, &mut state) {
             ProcedureRequest::GetNetworkOperatorName { response } => response(test_operator_name),
             x => panic!("Expected get network operator request but got: {:?}", x),
         };
-        assert_matches!(p.ag_update(update2, &mut state), ProcedureRequest::SendMessage(_));
+        assert_matches!(p.ag_update(update2, &mut state), ProcedureRequest::SendMessages(_));
         assert!(p.is_terminated());
     }
 }

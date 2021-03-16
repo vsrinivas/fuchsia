@@ -16,6 +16,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",
     "//src/connectivity/bluetooth/lib/async-helpers",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/connectivity/lib/at-commands",
     "//src/lib/async-utils",
     "//src/lib/diagnostics/inspect/rust",
     "//src/lib/fidl/rust/fidl",
@@ -40,12 +41,12 @@ rustc_binary("bin") {
   ]
 
   sources = [
-    "src/at.rs",
     "src/call_manager.rs",
     "src/config.rs",
     "src/error.rs",
     "src/fidl_service.rs",
     "src/hfp.rs",
+    "src/indicator_status.rs",
     "src/main.rs",
     "src/peer.rs",
     "src/peer/calls.rs",

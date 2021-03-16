@@ -4,8 +4,8 @@
 
 use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::at::{AtAgMessage, AtHfMessage};
 use crate::peer::service_level_connection::SlcState;
+use at_commands as at;
 
 /// Represents the current state of the Hf request to enable or disable the AG EC and NR functions
 /// as defined in HFP v1.8, Section 4.24.
@@ -54,12 +54,12 @@ impl Procedure for NrecProcedure {
         ProcedureMarker::Nrec
     }
 
-    fn hf_update(&mut self, update: AtHfMessage, _state: &mut SlcState) -> ProcedureRequest {
+    fn hf_update(&mut self, update: at::Command, _state: &mut SlcState) -> ProcedureRequest {
         match (self.state, update) {
-            (State::Start, AtHfMessage::Nrec(enable)) => {
+            (State::Start, at::Command::Nrec { nrec: enable }) => {
                 self.state.transition();
                 let response = Box::new(|res: Result<(), ()>| {
-                    res.map(|()| AtAgMessage::Ok).unwrap_or(AtAgMessage::Error)
+                    res.map(|()| at::Response::Ok).unwrap_or(at::Response::Error)
                 });
                 ProcedureRequest::SetNrec { enable, response }
             }
@@ -67,12 +67,12 @@ impl Procedure for NrecProcedure {
         }
     }
 
-    fn ag_update(&mut self, update: AtAgMessage, _state: &mut SlcState) -> ProcedureRequest {
+    fn ag_update(&mut self, update: at::Response, _state: &mut SlcState) -> ProcedureRequest {
         match (self.state, update) {
-            (State::SetRequest, update @ AtAgMessage::Ok)
-            | (State::SetRequest, update @ AtAgMessage::Error) => {
+            (State::SetRequest, update @ at::Response::Ok)
+            | (State::SetRequest, update @ at::Response::Error) => {
                 self.state.transition();
-                ProcedureRequest::SendMessage(update)
+                ProcedureRequest::send_one_message_and_ok(update)
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedAg(update)),
         }
@@ -121,7 +121,7 @@ mod tests {
         let mut state = SlcState::default();
 
         // SLCI AT command.
-        let random_hf = AtHfMessage::AgIndStat;
+        let random_hf = at::Command::CindRead {};
         assert_matches!(
             proc.hf_update(random_hf, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedHf(_))
@@ -133,7 +133,7 @@ mod tests {
         let mut proc = NrecProcedure::new();
         let mut state = SlcState::default();
         // SLCI AT command.
-        let random_ag = AtAgMessage::AgThreeWaySupport;
+        let random_ag = at::Response::Success(at::Success::Brsf { features: 0 });
         assert_matches!(
             proc.ag_update(random_ag, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedAg(_))
@@ -145,22 +145,22 @@ mod tests {
         let mut proc = NrecProcedure::new();
         let mut state = SlcState::default();
 
-        let req = proc.hf_update(AtHfMessage::Nrec(true), &mut state);
+        let req = proc.hf_update(at::Command::Nrec { nrec: true }, &mut state);
         let update = match req {
             ProcedureRequest::SetNrec { enable: true, response } => response(Ok(())),
             x => panic!("Unexpected message: {:?}", x),
         };
         let req = proc.ag_update(update, &mut state);
-        assert_matches!(req, ProcedureRequest::SendMessage(_));
+        assert_matches!(req, ProcedureRequest::SendMessages(_));
 
         // Check that the procedure is termianted and any new messages produce an error.
         assert!(proc.is_terminated());
         assert_matches!(
-            proc.hf_update(AtHfMessage::Nrec(true), &mut state),
+            proc.hf_update(at::Command::Nrec { nrec: true }, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedHf(_))
         );
         assert_matches!(
-            proc.ag_update(AtAgMessage::Ok, &mut state),
+            proc.ag_update(at::Response::Ok, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedAg(_))
         );
     }

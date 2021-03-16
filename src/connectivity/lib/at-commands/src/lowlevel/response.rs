@@ -27,6 +27,8 @@ pub enum Response {
     CmeError(i64),
     /// All other non-error responses.  These are described throughout the HFP v1.8 spec.
     Success { name: String, is_extension: bool, arguments: arguments::Arguments },
+    /// Raw bytes to use as a response.  Should only be used for testing and development
+    RawBytes(Vec<u8>),
 }
 
 impl WriteTo for Response {
@@ -49,6 +51,7 @@ impl WriteTo for Response {
                 sink.write_all(b": ")?;
                 arguments.write_to(sink)?;
             }
+            Response::RawBytes(bytes) => sink.write_all(bytes)?,
         };
         // Responses are delimited on both sides by CRLF.
         sink.write_all(b"\r\n")
