@@ -453,4 +453,19 @@ class __TA_SCOPED_CAPABILITY Guard<LockType, Option, internal::EnableIfShared<Lo
   typename LockPolicy<LockType, Option>::State state_;
 };
 
+// NullGuard is a stub class that has the same API as Guard but does nothing.
+class NullGuard {
+ public:
+  NullGuard(NullGuard&&) = delete;
+  NullGuard(const NullGuard&) = delete;
+  NullGuard& operator=(NullGuard&&) = delete;
+  NullGuard& operator=(const NullGuard&) = delete;
+
+  template <typename Lockable, typename... Args>
+  NullGuard(Lockable* lock, Args&&... state_args) {}
+  NullGuard(lockdep::AdoptLockTag, NullGuard&& other) {}
+  template <typename... Args>
+  void Release(Args&&... args) {}
+};
+
 }  // namespace lockdep

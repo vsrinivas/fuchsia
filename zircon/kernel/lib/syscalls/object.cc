@@ -6,6 +6,7 @@
 
 #include <inttypes.h>
 #include <lib/heap.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <trace.h>
 #include <zircon/errors.h>
@@ -594,7 +595,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
 
         // account for idle time if a cpu is currently idle
         {
-          Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
+          Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
 
           zx_time_t idle_time = cpu->stats.idle_time;
           bool is_idle = mp_is_cpu_idle(i);

@@ -13,6 +13,7 @@
 #include <lib/arch/intrin.h>
 #include <lib/console.h>
 #include <lib/lockup_detector.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <stdlib.h>
 #include <trace.h>
@@ -526,7 +527,7 @@ static int cmd_mp(int argc, const cmd_args* argv, uint32_t flags) {
     cpu_mask_t mask = cpu_num_to_mask(target_cpu);
     cpu_num_t sending_cpu;
     {
-      Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
+      Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
       sending_cpu = arch_curr_cpu_num();
       mp_reschedule(mask, 0);
     }

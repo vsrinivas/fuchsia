@@ -7,6 +7,7 @@
 #ifndef ZIRCON_KERNEL_INCLUDE_KERNEL_SEMAPHORE_H_
 #define ZIRCON_KERNEL_INCLUDE_KERNEL_SEMAPHORE_H_
 
+#include <lib/zircon-internal/macros.h>
 #include <stdint.h>
 #include <zircon/types.h>
 
@@ -38,13 +39,13 @@ class Semaphore {
 
   // Observe the current internal count of the semaphore.
   uint64_t count() {
-    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     return count_;
   }
 
   // Observe the current internal count of waiters
   uint64_t num_waiters() {
-    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     return waitq_.Count();
   }
 

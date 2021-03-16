@@ -9,6 +9,7 @@
 #include <inttypes.h>
 #include <lib/console.h>
 #include <lib/ktrace.h>
+#include <lib/zircon-internal/macros.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/errors.h>
@@ -108,18 +109,19 @@ static void vmm_set_active_aspace_internal(VmAspace* aspace, Lock lock) {
   }
 
   // grab the thread lock and switch to the new address space
-  GuardType __UNUSED lock_guard{lock};
+  GuardType __UNUSED lock_guard{lock, SOURCE_TAG};
 
   VmAspace* old = t->switch_aspace(aspace);
   vmm_context_switch(old, t->aspace());
 }
 
 void vmm_set_active_aspace(VmAspace* aspace) {
-  vmm_set_active_aspace_internal<Guard<SpinLock, IrqSave>>(aspace, ThreadLock::Get());
+  vmm_set_active_aspace_internal<Guard<MonitoredSpinLock, IrqSave>>(aspace, ThreadLock::Get());
 }
 
 void vmm_set_active_aspace_locked(VmAspace* aspace) {
-  vmm_set_active_aspace_internal<fbl::NullLock>(aspace, fbl::NullLock());
+  fbl::NullLock null_lock;
+  vmm_set_active_aspace_internal<NullGuard>(aspace, &null_lock);
 }
 
 static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {

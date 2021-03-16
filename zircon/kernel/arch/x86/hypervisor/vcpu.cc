@@ -779,7 +779,7 @@ Vcpu::~Vcpu() {
   {
     // Taking the ThreadLock guarantees that thread_ isn't going to be freed
     // while we access it.
-    Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+    Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
     Thread* thread = thread_.load();
     if (thread != nullptr) {
       thread->set_vcpu(false);

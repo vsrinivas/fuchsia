@@ -12,7 +12,7 @@
 #include <kernel/thread_lock.h>
 
 void Semaphore::Post() {
-  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
   // Either the number of waiters in the wait queue, or the semaphore count,
   // must be 0.  It should never be possible for there to be waiters, and a
@@ -28,7 +28,7 @@ void Semaphore::Post() {
 }
 
 zx_status_t Semaphore::Wait(const Deadline& deadline) {
-  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
   DEBUG_ASSERT((count_ == 0) || waitq_.IsEmpty());
 

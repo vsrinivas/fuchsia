@@ -5,6 +5,7 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/unittest/unittest.h>
+#include <lib/zircon-internal/macros.h>
 
 #include <kernel/event.h>
 #include <kernel/thread.h>
@@ -58,7 +59,7 @@ static bool event_signal_result_after_wait_test() {
     {
       // Check if the waiter thread is in the blocked state, indicating that the event
       // has latched.
-      Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+      Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
       if (waiter->state() == THREAD_BLOCKED) {
         break;
       }

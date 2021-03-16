@@ -22,6 +22,7 @@ using lockdep::Lock;
 using lockdep::LockFlagsActiveListDisabled;
 using lockdep::LockFlagsReportingDisabled;
 using lockdep::LockFlagsTrackingDisabled;
+using lockdep::NullGuard;
 
 // Defines a singleton lock with the given name that wraps a raw global lock.
 // The singleton instance may be retrieved using the static Get() method

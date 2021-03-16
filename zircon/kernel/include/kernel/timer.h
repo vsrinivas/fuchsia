@@ -71,7 +71,7 @@ class Timer : public fbl::DoublyLinkedListable<Timer*, fbl::NodeOptions::AllowRe
   // Special helper routine to simultaneously try to acquire a spinlock and check for
   // timer cancel, which is needed in a few special cases.
   // returns ZX_OK if spinlock was acquired, ZX_ERR_TIMED_OUT if timer was canceled.
-  zx_status_t TrylockOrCancel(SpinLock* lock) TA_TRY_ACQ(false, lock);
+  zx_status_t TrylockOrCancel(MonitoredSpinLock* lock) TA_TRY_ACQ(false, lock);
 
   // Private accessors for timer tests.
   zx_duration_t slack_for_test() const { return slack_; }

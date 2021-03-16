@@ -28,6 +28,7 @@
 
 #include <assert.h>
 #include <debug.h>
+#include <lib/zircon-internal/macros.h>
 #include <sys/types.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
@@ -55,7 +56,7 @@ zx_status_t Event::WaitWorker(const Deadline& deadline, Interruptible interrupti
   DEBUG_ASSERT(magic_ == kMagic);
   DEBUG_ASSERT(!arch_blocking_disallowed());
 
-  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
 
   zx_status_t ret = result_.load(ktl::memory_order_relaxed);
   if (ret == kNotSignalled) {
@@ -112,7 +113,7 @@ void Event::SignalInternal(bool reschedule, zx_status_t wait_result) TA_REQ(thre
  *                    thread or threads that are woken up.
  */
 void Event::SignalEtc(bool reschedule, zx_status_t wait_result) {
-  Guard<SpinLock, IrqSave> guard{ThreadLock::Get()};
+  Guard<MonitoredSpinLock, IrqSave> guard{ThreadLock::Get(), SOURCE_TAG};
   SignalInternal(reschedule, wait_result);
 }
 

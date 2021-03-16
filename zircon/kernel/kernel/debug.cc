@@ -18,6 +18,7 @@
 #include <debug.h>
 #include <inttypes.h>
 #include <lib/console.h>
+#include <lib/zircon-internal/macros.h>
 #include <platform.h>
 #include <stdio.h>
 #include <string.h>
@@ -205,7 +206,7 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
         " ints (hw  tmr tmr_cb)"
         " ipi (rs  gen)\n");
     for (cpu_num_t i = 0; i < percpu::processor_count(); i++) {
-      Guard<SpinLock, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
+      Guard<MonitoredSpinLock, NoIrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
 
       // dont display time for inactive cpus
       if (!mp_is_cpu_active(i)) {
@@ -266,7 +267,7 @@ static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
   static RecurringCallback callback([]() {
     printf("----------------------------------------------------\n");
     for (cpu_num_t i = 0; i < percpu::processor_count(); i++) {
-      Guard<SpinLock, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
+      Guard<MonitoredSpinLock, NoIrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
 
       if (!mp_is_cpu_active(i)) {
         continue;

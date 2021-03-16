@@ -7,6 +7,7 @@
 #include <lib/affine/ratio.h>
 #include <lib/arch/intrin.h>
 #include <lib/unittest/unittest.h>
+#include <lib/zircon-internal/macros.h>
 #include <lib/zx/time.h>
 #include <platform.h>
 
@@ -114,7 +115,7 @@ bool mutex_spin_time_test(void) {
       thread_state s;
       while (true) {
         {
-          Guard<SpinLock, IrqSave> thread_lock_guard{ThreadLock::Get()};
+          Guard<MonitoredSpinLock, IrqSave> thread_lock_guard{ThreadLock::Get(), SOURCE_TAG};
           s = test_thread->state();
         }
 
