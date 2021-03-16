@@ -1,0 +1,24 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/mock_cobalt",
+    },
+    capabilities: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.cobalt.test.LoggerQuerier",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: [
+                "fuchsia.cobalt.LoggerFactory",
+                "fuchsia.cobalt.test.LoggerQuerier",
+            ],
+            from: "self",
+        },
+    ],
+}

@@ -142,7 +142,7 @@ fuchsia_test_package("timekeeper-integration") {
     ":timekeeper_for_integration",
     ":timekeeper_with_fake_time",
     "dev_time_source",
-    "//src/cobalt/bin/testing/mock_cobalt:component",
+    "//src/cobalt/bin/testing/mock_cobalt:component_v1",
     "//src/lib/fake-clock/svc",
   ]
 
