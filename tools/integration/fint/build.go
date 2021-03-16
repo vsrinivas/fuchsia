@@ -153,7 +153,7 @@ func isTestingImage(image build.Image, pave bool) bool {
 		return true
 	case image.Name == "uefi-disk": // Used for GCE.
 		return true
-	case image.Type == "scripts":
+	case image.Type == "script":
 		// In order for a user to provision without Zedboot the scripts are
 		// needed too, so we want to include them such that artifactory can
 		// upload them. This covers scripts like "pave.sh", "flash.sh", etc.
