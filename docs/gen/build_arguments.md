@@ -676,7 +676,7 @@ Path to Clang lib directory.
 
 **Current value (from the default):** `"../../prebuilt/third_party/clang/linux-x64/lib"`
 
-From //build/images/manifest.gni:12
+From //build/images/manifest.gni:13
 
 ### clang_ml_inliner
 Controls whether to use the ML inliner in Clang to reduce size. Note that
@@ -1080,7 +1080,7 @@ Extra args to globally apply to the manifest generation script.
 
 **Current value (from the default):** `[]`
 
-From //build/images/manifest.gni:18
+From //build/images/manifest.gni:19
 
 ### extra_package_labels
 
@@ -2869,7 +2869,7 @@ Path to rustc lib directory.
 
 **Current value (from the default):** `"../../prebuilt/third_party/rust/linux-x64/lib"`
 
-From //build/images/manifest.gni:15
+From //build/images/manifest.gni:16
 
 ### rustc_prefix
 Sets a custom base directory for `rustc` and `cargo`.
@@ -2906,20 +2906,20 @@ Draws the current frame number in the top-left corner.
 
 **Current value (from the default):** `false`
 
-From //src/ui/scenic/lib/gfx/BUILD.gn:11
+From //src/ui/scenic/lib/gfx/BUILD.gn:12
 
 ### scenic_enable_vulkan_validation
 Include the vulkan validation layers in scenic.
 
 **Current value (from the default):** `false`
 
-From //src/ui/scenic/BUILD.gn:157
+From //src/ui/scenic/lib/gfx/build_args.gni:7
 
 ### scenic_ignore_vsync
 
 **Current value (from the default):** `false`
 
-From //src/ui/scenic/lib/gfx/BUILD.gn:8
+From //src/ui/scenic/lib/gfx/BUILD.gn:9
 
 ### scheduler_queue_tracing_enabled
 Enables scheduler queue tracing for trace-based scheduler performance
@@ -3523,7 +3523,7 @@ git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 
 **Current value (from the default):** `true`
 
-From //src/media/lib/ffmpeg/BUILD.gn:20
+From //src/media/lib/ffmpeg/BUILD.gn:36
 
 ### use_swiftshader_vulkan_icd_on_host
 
