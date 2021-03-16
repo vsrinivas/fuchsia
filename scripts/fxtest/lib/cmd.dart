@@ -321,15 +321,21 @@ class FuchsiaTestCommand {
         _exitCodeSetter(failureExitCode);
         continue;
       }
-      await testBundle.run().forEach((TestEvent event) {
-        emitEvent(event);
-        if (event is FatalError) {
-          _exitCodeSetter(failureExitCode);
-        } else if (event is TestResult && !event.isSuccess) {
-          _exitCodeSetter(event.exitCode ?? failureExitCode);
-        }
-      });
-      _numberOfTests += 1;
+      try {
+        await testBundle.run().forEach((TestEvent event) {
+          emitEvent(event);
+          if (event is FatalError) {
+            _exitCodeSetter(failureExitCode);
+          } else if (event is TestResult && !event.isSuccess) {
+            _exitCodeSetter(event.exitCode ?? failureExitCode);
+          }
+        });
+        _numberOfTests += 1;
+      } on Exception catch (e) {
+        throw FxRunException(
+            'Exception in ${testBundle.testDefinition.name}: $e',
+            failureExitCode);
+      }
     }
   }
 

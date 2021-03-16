@@ -47,10 +47,11 @@ class TestRunner {
       workingDirectory: workingDirectory,
     );
 
+    var utf8decoder = Utf8Decoder(allowMalformed: true);
     var _stdOut = StringBuffer();
     var stdOutFinish = Future(() async {
       var lines =
-          process.stdout.transform(utf8.decoder).transform(LineSplitter());
+          process.stdout.transform(utf8decoder).transform(LineSplitter());
       await for (var val in lines) {
         _stdOut.writeln(val);
         addOutput(val);
@@ -60,7 +61,7 @@ class TestRunner {
     var _stdErr = StringBuffer();
     var stdErrFinish = Future(() async {
       var lines =
-          process.stderr.transform(utf8.decoder).transform(LineSplitter());
+          process.stderr.transform(utf8decoder).transform(LineSplitter());
       await for (var val in lines) {
         _stdErr.writeln(val);
         addOutput(val);
