@@ -15,7 +15,7 @@ import("//build/images/system_image_fuchsia_packages.gni")
 import("//build/info/info.gni")
 import("//build/packages/package_metadata.gni")
 import("//build/unification/future/images/devmgr_config.gni")
-import("//build/zbi/kernel_cmdline_verify.gni")
+import("//build/zbi/verify_zbi.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
 import("//src/sys/pkg/bin/pm/pm.gni")
@@ -77,7 +77,10 @@ import("//src/sys/pkg/bin/pm/pm.gni")
 #     [string] The name of the final system ZBI file.
 #
 #   cmdline_golden (optional)
-#     [string] The path to the kernel cmdline golden file to comapre against.
+#     [string] The path to the kernel cmdline golden file to compare against.
+#
+#   bootfs_golden (optional)
+#     [string] The path to the bootFS golden file list to compare against.
 #
 #   include_component_id_index (default: false)
 #     [bool] Collect and merges a component id index from the base
@@ -480,22 +483,37 @@ template("assemble_system") {
       assert_no_deps = [ "//build/validate:non_production_tag" ]
     }
   }
+  if (defined(invoker.cmdline_golden) || defined(invoker.bootfs_golden)) {
+    zbi_outputs = get_target_outputs(":${image_name}_zbi")
+  }
 
   if (defined(invoker.cmdline_golden)) {
-    zbi_outputs = get_target_outputs(":${image_name}_zbi")
-    kernel_cmdline_verify("${image_name}_zbi_verify") {
+    verify_kernel_cmdline("${image_name}_cmdline_verify") {
       forward_variables_from(invoker, [ "testonly" ])
       zbi = zbi_outputs[0]
       golden = invoker.cmdline_golden
-      deps = [ ":${image_name}_zbi" ]
+      zbi_target = ":${image_name}_zbi"
+    }
+  }
+
+  if (defined(invoker.bootfs_golden)) {
+    verify_bootfs_filelist("${image_name}_bootfs_verify") {
+      forward_variables_from(invoker, [ "testonly" ])
+      zbi = zbi_outputs[0]
+      golden = invoker.bootfs_golden
+      zbi_target = ":${image_name}_zbi"
     }
   }
 
   group(image_name) {
     forward_variables_from(invoker, [ "testonly" ])
     public_deps = [ ":${image_name}_zbi" ]
+    deps = []
     if (defined(invoker.cmdline_golden)) {
-      deps = [ ":${image_name}_zbi_verify" ]
+      deps += [ ":${image_name}_cmdline_verify" ]
+    }
+    if (defined(invoker.bootfs_golden)) {
+      deps += [ ":${image_name}_bootfs_verify" ]
     }
   }
 }

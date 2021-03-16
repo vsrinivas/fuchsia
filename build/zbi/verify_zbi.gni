@@ -1,0 +1,149 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dev.gni")
+
+# Check the kernel cmdline extracted from ZBI against a golden file.
+#
+# The target that generates 'zbi' needs to be added to deps.
+#
+# Parameters
+#
+#   zbi
+#     Required: Path to the ZBI image to extract kernel cmdline from.
+#   golden
+#     Required: Path to the golden file that contains golden kernel cmdline in
+#       a format of one cmdline entry per line.
+#   zbi_target
+#     Required: The target to build the 'zbi'.
+#   deps, public_deps, data_deps (optional)
+#     Usual GN meaning.
+
+template("verify_kernel_cmdline") {
+  assert(defined(invoker.zbi), "verify_kernel_cmdline() must specify zbi")
+  assert(defined(invoker.golden), "verify_kernel_cmdline() must specify golden")
+  assert(defined(invoker.zbi_target),
+         "verify_kernel_cmdline() must specify zbi_target")
+
+  action("${target_name}") {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "deps",
+                             "public_deps",
+                             "data_deps",
+                             "visibility",
+                           ])
+
+    script = "//build/zbi/verify_zbi.py"
+    stamp_file = "$target_gen_dir/$target_name.verified"
+    scrutiny_target = "//src/security/scrutiny/bin($host_toolchain)"
+    scrutiny_tool =
+        get_label_info(scrutiny_target, "root_out_dir") + "/scrutiny"
+
+    inputs = [
+      scrutiny_tool,
+      invoker.golden,
+      invoker.zbi,
+    ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--type",
+      "kernel_cmdline",
+      "--zbi-file",
+      rebase_path(inputs[2], root_build_dir),
+      "--golden-file",
+      rebase_path(invoker.golden, root_build_dir),
+      "--scrutiny",
+      rebase_path(scrutiny_tool, root_build_dir),
+      "--fuchsia-dir",
+      rebase_path("//", root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+    ]
+    if (!defined(invoker.deps)) {
+      deps = []
+    }
+
+    deps += [
+      invoker.zbi_target,
+      scrutiny_target,
+    ]
+  }
+}
+
+# Check the bootfs filelist extracted from ZBI against a golden file.
+#
+# The target that generates 'zbi' needs to be added to deps.
+#
+# Parameters
+#
+#   zbi
+#     Required: Path to the ZBI image to extract kernel cmdline from.
+#   golden
+#     Required: Path to the golden file that contains golden kernel cmdline in
+#       a format of one cmdline entry per line.
+#   zbi_target
+#     Required: The target to build the 'zbi'.
+#   deps, public_deps, data_deps (optional)
+#     Usual GN meaning.
+
+template("verify_bootfs_filelist") {
+  assert(defined(invoker.zbi), "verify_bootfs_filelist() must specify zbi")
+  assert(defined(invoker.golden),
+         "verify_bootfs_filelist() must specify golden")
+  assert(defined(invoker.zbi_target),
+         "verify_bootfs_filelist() must specify zbi_target")
+
+  action("${target_name}") {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "deps",
+                             "public_deps",
+                             "data_deps",
+                             "visibility",
+                           ])
+
+    script = "//build/zbi/verify_zbi.py"
+    stamp_file = "$target_gen_dir/$target_name.verified"
+    scrutiny_target = "//src/security/scrutiny/bin($host_toolchain)"
+    scrutiny_tool =
+        get_label_info(scrutiny_target, "root_out_dir") + "/scrutiny"
+
+    inputs = [
+      scrutiny_tool,
+      invoker.golden,
+      invoker.zbi,
+    ]
+
+    outputs = [ stamp_file ]
+
+    args = [
+      "--type",
+      "bootfs_filelist",
+      "--zbi-file",
+      rebase_path(inputs[2], root_build_dir),
+      "--golden-file",
+      rebase_path(invoker.golden, root_build_dir),
+      "--scrutiny",
+      rebase_path(scrutiny_tool, root_build_dir),
+      "--fuchsia-dir",
+      rebase_path("//", root_build_dir),
+      "--stamp",
+      rebase_path(stamp_file, root_build_dir),
+    ]
+
+    if (!defined(invoker.deps)) {
+      deps = []
+    }
+
+    deps += [
+      invoker.zbi_target,
+      scrutiny_target,
+    ]
+  }
+}

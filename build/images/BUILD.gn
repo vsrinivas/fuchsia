@@ -26,7 +26,7 @@ import("//build/packages/package_metadata.gni")
 import("//build/product.gni")
 import("//build/unification/future/images/devmgr_config.gni")
 import("//build/unification/zx_host_tool.gni")
-import("//build/zbi/kernel_cmdline_verify.gni")
+import("//build/zbi/verify_zbi.gni")
 import("//build/zbi/zbi.gni")
 import("//build/zbi/zbi_input.gni")
 import("//build/zircon/tools.gni")
@@ -565,11 +565,19 @@ zbi("fuchsia_unverified") {
 }
 
 if (dev_fuchsia_zbi_kernel_cmdline_golden != "") {
-  kernel_cmdline_verify("fuchsia_zbi_verify") {
+  verify_kernel_cmdline("kernel_cmdline_verify") {
     testonly = fuchsia_zbi_testonly
     zbi = "$root_out_dir/fuchsia_unverified.zbi"
     golden = dev_fuchsia_zbi_kernel_cmdline_golden
-    deps = [ ":fuchsia_unverified" ]
+    zbi_target = ":fuchsia_unverified"
+  }
+}
+if (dev_fuchsia_zbi_bootfs_filelist_golden != "") {
+  verify_bootfs_filelist("bootfs_filelist_verify") {
+    testonly = fuchsia_zbi_testonly
+    zbi = "$root_out_dir/fuchsia_unverified.zbi"
+    golden = dev_fuchsia_zbi_bootfs_filelist_golden
+    zbi_target = ":fuchsia_unverified"
   }
 }
 
@@ -636,7 +644,10 @@ copy("fuchsia") {
   }
 
   if (dev_fuchsia_zbi_kernel_cmdline_golden != "") {
-    deps += [ ":fuchsia_zbi_verify" ]
+    deps += [ ":kernel_cmdline_verify" ]
+  }
+  if (dev_fuchsia_zbi_bootfs_filelist_golden != "") {
+    deps += [ ":bootfs_filelist_verify" ]
   }
 }
 default_image_deps += [ ":fuchsia" ]
