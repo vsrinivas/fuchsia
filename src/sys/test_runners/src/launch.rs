@@ -6,12 +6,12 @@
 
 use {
     crate::errors::FdioError,
-    crate::logs::{create_log_stream, LoggerError},
+    crate::logs::{create_log_stream, LoggerError, LoggerStream},
     anyhow::Error,
     fidl_fuchsia_process as fproc,
     fuchsia_component::client::connect_to_service,
     fuchsia_runtime as runtime, fuchsia_zircon as zx,
-    runner::{component::ComponentNamespace, log::LoggerStream},
+    runner::component::ComponentNamespace,
     runtime::{HandleInfo, HandleType},
     thiserror::Error,
     zx::{AsHandleRef, HandleBased, Process, Rights, Task},

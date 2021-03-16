@@ -21,9 +21,9 @@ use {
     lazy_static::lazy_static,
     log::{debug, error},
     regex::bytes::Regex,
-    runner::log::{LogError, LogWriter, LoggerStream},
     std::{
         collections::HashSet,
+        num::NonZeroUsize,
         str::from_utf8,
         sync::{Arc, Weak},
     },
@@ -35,7 +35,7 @@ use {
         },
         errors::*,
         launch,
-        logs::{LogStreamReader, SocketLogWriter},
+        logs::{LogError, LogStreamReader, LoggerStream, SocketLogWriter},
     },
     zx::HandleBased,
 };
@@ -121,6 +121,10 @@ impl SuiteServer for TestServer {
         test_suite_abortable_handle
     }
 }
+
+const NEWLINE: u8 = b'\n';
+const SOCKET_BUFFER_SIZE: usize = 4096;
+const BUF_THRESHOLD: usize = 2048;
 
 lazy_static! {
     static ref RESTRICTED_FLAGS: HashSet<&'static str> =
@@ -241,20 +245,19 @@ impl TestServer {
 
         // run test.
         // Load bearing to hold job guard.
-        let (process, _job, mut stdlogger, _stdin_socket) =
+        let (process, _job, stdlogger, _stdin_socket) =
             launch_component_process::<RunTestError>(&component, args).await?;
 
         let mut buffer = vec![];
-        const NEWLINE: u8 = b'\n';
-        const BUF_THRESHOLD: usize = 2048;
         let test_start_re = Regex::new(&format!(r"^=== RUN\s+{}$", test)).unwrap();
         let test_end_re = Regex::new(&format!(r"^\s*--- (\w*?): {} \(.*\)$", test)).unwrap();
         let mut skipped = false;
-        while let Some(bytes) = stdlogger.try_next().await.map_err(LogError::Read)? {
-            if bytes.is_empty() {
-                continue;
-            }
-
+        let mut socket_buf = vec![0u8; SOCKET_BUFFER_SIZE];
+        let mut socket = stdlogger.take_socket();
+        while let Some(bytes_read) =
+            NonZeroUsize::new(socket.read(&mut socket_buf[..]).await.map_err(LogError::Read)?)
+        {
+            let bytes = &socket_buf[..bytes_read.get()];
             let is_last_byte_newline = *bytes.last().unwrap() == NEWLINE;
             let mut iter = bytes.split(|&x| x == NEWLINE).peekable();
             while let Some(b) = iter.next() {

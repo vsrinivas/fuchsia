@@ -15,8 +15,8 @@ use {
 
 const BASE_PACKAGE_URL: &str = "fuchsia-pkg://fuchsia.com/elf_runner_stdout_test";
 const COLLECTION_NAME: &str = "puppets";
-const EXPECTED_STDOUT_PAYLOAD: &str = "Hello Stdout!\n";
-const EXPECTED_STDERR_PAYLOAD: &str = "Hello Stderr!\n";
+const EXPECTED_STDOUT_PAYLOAD: &str = "Hello Stdout!";
+const EXPECTED_STDERR_PAYLOAD: &str = "Hello Stderr!";
 const TESTED_LANGUAGUES: [&str; 3] = ["cpp", "rust", "go"];
 
 #[derive(Debug)]

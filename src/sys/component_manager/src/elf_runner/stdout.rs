@@ -14,13 +14,10 @@ use {
     fidl_fuchsia_process as fproc, fuchsia_async as fasync,
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon as zx,
+    futures::AsyncReadExt,
     log::Level,
-    runner::{
-        component::ComponentNamespace,
-        log::{buffer_and_drain_logger, LogError, LogWriter, LoggerStream},
-        StreamSink,
-    },
-    std::sync::Arc,
+    runner::{component::ComponentNamespace, StreamSink},
+    std::{boxed::Box, num::NonZeroUsize, sync::Arc},
     zx::HandleBased,
 };
 
@@ -28,6 +25,11 @@ const STDOUT_FD: i32 = 1;
 const STDERR_FD: i32 = 2;
 const SVC_DIRECTORY_NAME: &str = "/svc";
 const SYSLOG_PROTOCOL_NAME: &str = LogSinkMarker::NAME;
+const NEWLINE: u8 = b'\n';
+
+/// Max size for message when draining input stream socket. This number is
+/// slightly smaller than size allowed by Archivist (LogSink service implementation).
+const MAX_MESSAGE_SIZE: usize = 30720;
 
 /// Bind stdout or stderr streams to syslog. This function binds either or both
 /// output streams to syslog depending on value provided for each streams'
@@ -90,10 +92,10 @@ fn forward_fd_to_syslog(
     fd: i32,
     level: Level,
 ) -> Result<(fasync::Task<()>, fproc::HandleInfo), Error> {
-    let (stream, hnd) = new_stream_bound_to_fd(fd)?;
+    let (rx, hnd) = new_socket_bound_to_fd(fd)?;
     let mut writer = SyslogWriter::new(logger, level);
     let task = fasync::Task::spawn(async move {
-        if let Err(err) = buffer_and_drain_logger(stream, Box::new(&mut writer)).await {
+        if let Err(err) = drain_lines(rx, &mut writer).await {
             log::warn!("Draining output stream, fd {}, failed: {}", fd, err);
         }
     });
@@ -101,18 +103,72 @@ fn forward_fd_to_syslog(
     Ok((task, hnd))
 }
 
-fn new_stream_bound_to_fd(fd: i32) -> Result<(LoggerStream, fproc::HandleInfo), Error> {
-    let (client, log) = zx::Socket::create(zx::SocketOpts::STREAM)
+fn new_socket_bound_to_fd(fd: i32) -> Result<(zx::Socket, fproc::HandleInfo), Error> {
+    let (tx, rx) = zx::Socket::create(zx::SocketOpts::STREAM)
         .map_err(|s| anyhow!("Failed to create socket: {}", s))?;
 
     Ok((
-        LoggerStream::new(client)
-            .map_err(|s| anyhow!("Failed to create LoggerStream from socket: {}", s))?,
+        rx,
         fproc::HandleInfo {
-            handle: log.into_handle(),
+            handle: tx.into_handle(),
             id: HandleInfo::new(HandleType::FileDescriptor, fd as u16).as_raw(),
         },
     ))
+}
+
+/// Drains all bytes from socket and writes messages to writer. Bytes read
+/// are split into lines and separated into chunks no greater than
+/// MAX_MESSAGE_SIZE.
+async fn drain_lines(socket: zx::Socket, writer: &mut dyn LogWriter) -> Result<(), Error> {
+    let mut buffer = vec![0; MAX_MESSAGE_SIZE * 2];
+    let mut offset = 0;
+
+    let mut socket = fasync::Socket::from_socket(socket)
+        .map_err(|s| anyhow!("Failed to create fasync::socket from zx::socket: {}", s))?;
+    while let Some(bytes_read) = NonZeroUsize::new(
+        socket
+            .read(&mut buffer[offset..])
+            .await
+            .map_err(|err| anyhow!("Failed to read socket: {}", err))?,
+    ) {
+        let bytes_read = bytes_read.get();
+        let end_pos = offset + bytes_read;
+
+        if let Some(last_newline_pos) = buffer[..end_pos].iter().rposition(|&x| x == NEWLINE) {
+            for line in buffer[..last_newline_pos].split(|&x| x == NEWLINE) {
+                for chunk in line.chunks(MAX_MESSAGE_SIZE) {
+                    let () = writer.write(chunk).await?;
+                }
+            }
+
+            buffer.copy_within(last_newline_pos + 1..end_pos, 0);
+            offset = end_pos - last_newline_pos - 1;
+        } else {
+            offset += bytes_read;
+
+            while offset >= MAX_MESSAGE_SIZE {
+                let () = writer.write(&buffer[..MAX_MESSAGE_SIZE]).await?;
+                buffer.copy_within(MAX_MESSAGE_SIZE..offset, 0);
+                offset -= MAX_MESSAGE_SIZE;
+            }
+        }
+    }
+
+    // We need to write any remaining bytes, while still maintaining
+    // constraints of MAX_MESSAGE_SIZE.
+    if offset != 0 {
+        for chunk in buffer[..offset].chunks(MAX_MESSAGE_SIZE) {
+            let () = writer.write(&chunk).await?;
+        }
+    }
+
+    Ok(())
+}
+
+/// Object capable of writing a stream of bytes.
+#[async_trait]
+trait LogWriter: Send {
+    async fn write(&mut self, bytes: &[u8]) -> Result<(), Error>;
 }
 
 struct SyslogWriter {
@@ -128,10 +184,10 @@ impl SyslogWriter {
 
 #[async_trait]
 impl LogWriter for SyslogWriter {
-    async fn write(&mut self, bytes: &[u8]) -> Result<usize, LogError> {
+    async fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
         let msg = String::from_utf8_lossy(&bytes);
         self.logger.log(self.level, format_args!("{}", msg));
-        Ok(bytes.len())
+        Ok(())
     }
 }
 
@@ -143,17 +199,32 @@ mod tests {
             create_fs_with_mock_logsink, get_message_logged_to_socket, MockServiceFs,
             MockServiceRequest,
         },
-        anyhow::{anyhow, Context, Error},
+        anyhow::{anyhow, format_err, Context, Error},
+        async_trait::async_trait,
         fidl_fuchsia_component_runner as fcrunner,
         fidl_fuchsia_logger::LogSinkRequest,
-        fuchsia_async::futures::try_join,
-        futures::StreamExt,
+        fuchsia_async::futures::{channel::mpsc, try_join},
+        fuchsia_zircon as zx,
+        futures::{FutureExt, SinkExt, StreamExt},
         log::Level,
+        matches::assert_matches,
+        rand::{distributions::Alphanumeric, thread_rng, Rng},
         std::{
             convert::TryFrom,
             sync::{Arc, Mutex},
         },
     };
+
+    #[async_trait]
+    impl LogWriter for mpsc::Sender<String> {
+        async fn write(&mut self, bytes: &[u8]) -> Result<(), Error> {
+            let message =
+                std::str::from_utf8(&bytes).expect("Failed to decode bytes to utf8.").to_owned();
+            let () =
+                self.send(message).await.expect("Failed to send message to other end of mpsc.");
+            Ok(())
+        }
+    }
 
     #[fuchsia::test]
     async fn syslog_writer_decodes_valid_utf8_message() -> Result<(), Error> {
@@ -178,6 +249,112 @@ mod tests {
         )?;
 
         assert_eq!(actual, Some("Hello �World!".to_owned()));
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn drain_lines_splits_into_max_size_chunks() -> Result<(), Error> {
+        let (tx, rx) = create_sockets()?;
+        let (mut sender, recv) = create_mock_logger();
+        let msg = get_random_string(MAX_MESSAGE_SIZE * 4);
+
+        let () = take_and_write_to_socket(tx, &msg)?;
+        let (actual, ()) =
+            try_join!(recv.collect().map(Result::<Vec<String>, Error>::Ok), async move {
+                drain_lines(rx, &mut sender).await
+            })?;
+
+        assert_eq!(
+            actual,
+            msg.as_bytes()
+                .chunks(MAX_MESSAGE_SIZE)
+                .map(|bytes| std::str::from_utf8(bytes).expect("Bytes are not utf8.").to_owned())
+                .collect::<Vec<String>>()
+        );
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn drain_lines_splits_at_newline() -> Result<(), Error> {
+        let (tx, rx) = create_sockets()?;
+        let (mut sender, recv) = create_mock_logger();
+        let msg = thread_rng()
+            .sample_iter(&Alphanumeric)
+            .take(MAX_MESSAGE_SIZE - 1)
+            .chain(std::iter::once('\n'))
+            .chain(thread_rng().sample_iter(&Alphanumeric).take(MAX_MESSAGE_SIZE - 1))
+            .chain(std::iter::once('\n'))
+            .chain(thread_rng().sample_iter(&Alphanumeric).take(MAX_MESSAGE_SIZE - 1))
+            .collect::<String>();
+
+        let () = take_and_write_to_socket(tx, &msg)?;
+        let (actual, ()) =
+            try_join!(recv.collect().map(Result::<Vec<String>, Error>::Ok), async move {
+                drain_lines(rx, &mut sender).await
+            })?;
+
+        assert_eq!(actual, msg.split("\n").map(str::to_owned).collect::<Vec<String>>());
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn drain_lines_writes_when_message_is_received() -> Result<(), Error> {
+        let (tx, rx) = create_sockets()?;
+        let (mut sender, mut recv) = create_mock_logger();
+        let messages: Vec<String> = vec!["Hello!\n".to_owned(), "World!\n".to_owned()];
+
+        let ((), ()) = try_join!(async move { drain_lines(rx, &mut sender).await }, async move {
+            for mut message in messages.into_iter() {
+                let () = write_to_socket(&tx, &message)?;
+                let logged_messaged =
+                    recv.next().await.context("Receiver channel closed. Got no message.")?;
+                // Logged message should strip '\n' so we need to do the same before assertion.
+                message.pop();
+                assert_eq!(logged_messaged, message);
+            }
+
+            Ok(())
+        })?;
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn drain_lines_waits_for_entire_lines() -> Result<(), Error> {
+        let (tx, rx) = create_sockets()?;
+        let (mut sender, mut recv) = create_mock_logger();
+
+        let ((), ()) = try_join!(async move { drain_lines(rx, &mut sender).await }, async move {
+            let () = write_to_socket(&tx, "Hello\nWorld")?;
+            let logged_messaged =
+                recv.next().await.context("Receiver channel closed. Got no message.")?;
+            assert_eq!(logged_messaged, "Hello");
+            let () = write_to_socket(&tx, "Hello\nAgain")?;
+            std::mem::drop(tx);
+            let logged_messaged =
+                recv.next().await.context("Receiver channel closed. Got no message.")?;
+            assert_eq!(logged_messaged, "WorldHello");
+            let logged_messaged =
+                recv.next().await.context("Receiver channel closed. Got no message.")?;
+            assert_eq!(logged_messaged, "Again");
+            Ok(())
+        })?;
+
+        Ok(())
+    }
+
+    #[fuchsia::test]
+    async fn drain_lines_return_error_if_stream_polls_err() -> Result<(), Error> {
+        let (tx, rx) = create_sockets()?;
+        // A closed socket should yield an error when stream is polled.
+        let () = rx.half_close()?;
+        let () = tx.half_close()?;
+        let (mut sender, _recv) = create_mock_logger();
+
+        let result = drain_lines(rx, &mut sender).await;
+
+        assert_matches!(result, Err(_));
         Ok(())
     }
 
@@ -220,5 +397,30 @@ mod tests {
         let message_logged =
             message_logged.lock().map_err(|_| anyhow!("Failed to lock mutex"))?.clone();
         Ok(message_logged)
+    }
+
+    fn take_and_write_to_socket(socket: zx::Socket, message: &str) -> Result<(), Error> {
+        write_to_socket(&socket, &message)
+    }
+
+    fn write_to_socket(socket: &zx::Socket, message: &str) -> Result<(), Error> {
+        let bytes_written =
+            socket.write(message.as_bytes()).context("Failed to write to socket")?;
+        match bytes_written == message.len() {
+            true => Ok(()),
+            false => Err(format_err!("Bytes written to socket doesn't match len of message. Message len = {}. Bytes written = {}", message.len(), bytes_written)),
+        }
+    }
+
+    fn create_mock_logger() -> (mpsc::Sender<String>, mpsc::Receiver<String>) {
+        mpsc::channel::<String>(20)
+    }
+
+    fn create_sockets() -> Result<(zx::Socket, zx::Socket), Error> {
+        zx::Socket::create(zx::SocketOpts::STREAM).context("Failed to create socket")
+    }
+
+    fn get_random_string(size: usize) -> String {
+        thread_rng().sample_iter(&Alphanumeric).take(size).collect::<String>()
     }
 }

@@ -15,7 +15,6 @@ use {
     lazy_static::lazy_static,
     log::{debug, error},
     regex::Regex,
-    runner::log::{buffer_and_drain_logger, LoggerStream},
     std::{
         collections::HashSet,
         str::from_utf8,
@@ -29,7 +28,7 @@ use {
         },
         errors::*,
         launch,
-        logs::{LogStreamReader, SocketLogWriter},
+        logs::{LogStreamReader, LoggerStream, SocketLogWriter},
     },
 };
 
@@ -351,7 +350,7 @@ impl TestServer {
         let (process, _job, stdlogger) =
             launch_component_process::<RunTestError>(&test_component, args, test_invoke).await?;
 
-        buffer_and_drain_logger(stdlogger, Box::new(test_logger)).await?;
+        let () = stdlogger.buffer_and_drain(test_logger).await?;
 
         fasync::OnSignals::new(&process, zx::Signals::PROCESS_TERMINATED)
             .await

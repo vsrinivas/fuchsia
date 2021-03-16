@@ -5,9 +5,9 @@
 //! Type definitions for common errors related to running component or tests.
 
 use {
-    crate::{elf::KernelError, launch::LaunchError},
+    crate::{elf::KernelError, launch::LaunchError, logs::LogError},
     fuchsia_zircon as zx,
-    runner::{component::ComponentNamespaceError, log::LogError},
+    runner::component::ComponentNamespaceError,
     serde_json,
     std::sync::Arc,
     thiserror::Error,

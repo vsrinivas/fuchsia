@@ -40,7 +40,6 @@ rustc_library("runner") {
   sources = [
     "src/component.rs",
     "src/lib.rs",
-    "src/log.rs",
   ]
 }
 

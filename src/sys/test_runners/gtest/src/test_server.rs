@@ -22,9 +22,9 @@ use {
     },
     lazy_static::lazy_static,
     log::{debug, error, info},
-    runner::log::{LogError, LogWriter, LoggerStream},
     serde::{Deserialize, Serialize},
     std::{
+        num::NonZeroUsize,
         path::Path,
         str::from_utf8,
         sync::{Arc, Weak},
@@ -37,7 +37,7 @@ use {
         },
         errors::*,
         launch,
-        logs::{LogStreamReader, SocketLogWriter},
+        logs::{LogError, LogStreamReader, LoggerStream, SocketLogWriter},
     },
 };
 
@@ -246,6 +246,21 @@ impl SuiteServer for TestServer {
     }
 }
 
+const NEWLINE: u8 = b'\n';
+const PREFIXES_TO_EXCLUDE: [&[u8]; 10] = [
+    "Note: Google Test filter".as_bytes(),
+    " 1 FAILED TEST".as_bytes(),
+    "  YOU HAVE 1 DISABLED TEST".as_bytes(),
+    "[==========]".as_bytes(),
+    "[----------]".as_bytes(),
+    "[ RUN      ]".as_bytes(),
+    "[  PASSED  ]".as_bytes(),
+    "[  FAILED  ]".as_bytes(),
+    "[  SKIPPED ]".as_bytes(),
+    "[       OK ]".as_bytes(),
+];
+const SOCKET_BUFFER_SIZE: usize = 4096;
+
 lazy_static! {
     static ref RESTRICTED_FLAGS: Vec<&'static str> = vec![
         "--gtest_filter",
@@ -388,32 +403,20 @@ impl TestServer {
         }
         // run test.
         // Load bearing to hold job guard.
-        let (process, _job, mut stdlogger) =
+        let (process, _job, stdlogger) =
             launch_component_process::<RunTestError>(&component, names, args).await?;
 
-        const NEWLINE: u8 = b'\n';
-        const PREFIXES_TO_EXCLUDE: [&[u8]; 10] = [
-            "Note: Google Test filter".as_bytes(),
-            " 1 FAILED TEST".as_bytes(),
-            "  YOU HAVE 1 DISABLED TEST".as_bytes(),
-            "[==========]".as_bytes(),
-            "[----------]".as_bytes(),
-            "[ RUN      ]".as_bytes(),
-            "[  PASSED  ]".as_bytes(),
-            "[  FAILED  ]".as_bytes(),
-            "[  SKIPPED ]".as_bytes(),
-            "[       OK ]".as_bytes(),
-        ];
-
         let mut last_line_excluded = false;
-        while let Some(mut bytes) = stdlogger.try_next().await.map_err(LogError::Read)? {
-            if bytes.is_empty() {
-                continue;
-            }
+        let mut socket_buf = vec![0u8; SOCKET_BUFFER_SIZE];
+        let mut socket = stdlogger.take_socket();
+        while let Some(bytes_read) =
+            NonZeroUsize::new(socket.read(&mut socket_buf[..]).await.map_err(LogError::Read)?)
+        {
+            let mut bytes = &socket_buf[..bytes_read.get()];
 
             // Avoid printing trailing empty line
             if *bytes.last().unwrap() == NEWLINE {
-                bytes.truncate(bytes.len() - 1);
+                bytes = &bytes[..bytes.len() - 1];
             }
 
             let mut iter = bytes.split(|&x| x == NEWLINE);
