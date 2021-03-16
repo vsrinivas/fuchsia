@@ -13,6 +13,7 @@
 #include "src/connectivity/wlan/drivers/testing/lib/sim-env/sim-env.h"
 #include "src/connectivity/wlan/drivers/testing/lib/sim-fake-ap/sim-fake-ap.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/cfg80211.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/macaddr.h"
@@ -176,11 +177,6 @@ void ArpTest::Tx(const std::vector<uint8_t>& ethFrame) {
 void ArpTest::ScheduleArpFrameTx(zx::duration when, bool expect_rx) {
   ether_arp arp_frame = kSampleArpReq;
 
-  // If we don't expect to receive this frame, corrupt it so that it will fail if it does arrive
-  if (!expect_rx) {
-    arp_frame.arp_tpa[0] = ~arp_frame.arp_tpa[0];
-  }
-
   std::vector<uint8_t> frame_bytes =
       CreateEthernetFrame(common::kBcastMac, kTheirMac, ETH_P_ARP,
                           reinterpret_cast<const uint8_t*>(&arp_frame), sizeof(arp_frame));
@@ -227,10 +223,51 @@ TEST_F(ArpTest, SoftApArpOffload) {
   EXPECT_EQ(sim_ifc_.non_arp_frames_received_, 2U);
 }
 
-// On a client interface, we expect all ARP frames to be offloaded to firmware, regardless of
-// the multicast promiscuous setting.
+// On a client interface, we expect no ARP frames to be offloaded to firmware, regardless of
+// the multicast promiscuous setting, since SoftAP feature disables ARP offload by default.
 TEST_F(ArpTest, ClientArpOffload) {
   Init();
+
+  ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &sim_ifc_, std::nullopt, kOurMac),
+            ZX_OK);
+
+  // Start a fake AP
+  simulation::FakeAp ap(env_.get(), kTheirMac, SimInterface::kDefaultSoftApSsid,
+                        SimInterface::kDefaultSoftApChannel);
+
+  // Associate with fake AP
+  sim_ifc_.AssociateWith(ap, zx::sec(1));
+
+  // Send an ARP frame that we expect to receive (not get offloaded)
+  ScheduleArpFrameTx(zx::sec(2), false);
+  ScheduleNonArpFrameTx(zx::sec(3));
+
+  env_->ScheduleNotification(std::bind(&ArpTest::SetMulticastPromisc, this, true), zx::sec(4));
+
+  // Send another ARP frame that we expect to receive (not get offloaded)
+  ScheduleArpFrameTx(zx::sec(5), false);
+  ScheduleNonArpFrameTx(zx::sec(6));
+
+  env_->Run(kTestDuration);
+
+  // Verify that we completed the association process
+  EXPECT_EQ(sim_ifc_.stats_.assoc_successes, 1U);
+
+  // Verify that all ARP frames were received, and not offloaded
+  EXPECT_EQ(sim_ifc_.arp_frames_received_, 2U);
+
+  // Verify that no non-ARP frames were suppressed
+  EXPECT_EQ(sim_ifc_.non_arp_frames_received_, 2U);
+}
+
+// On a client interface, we expect all ARP frames to be offloaded to firmware, regardless of
+// the multicast promiscuous setting, when SoftAP feature is not available.
+TEST_F(ArpTest, ClientArpOffloadNoSoftApFeat) {
+  Init();
+
+  // We disable SoftAP feature, so that our driver enabled Arp offload.
+  device_->GetSim()->drvr->feat_flags &= (!BIT(BRCMF_FEAT_AP));
+
   ASSERT_EQ(SimTest::StartInterface(WLAN_INFO_MAC_ROLE_CLIENT, &sim_ifc_, std::nullopt, kOurMac),
             ZX_OK);
 

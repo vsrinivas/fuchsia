@@ -75,7 +75,7 @@ struct IovarMetadata {
  *    Else: Increase the kIovarInfoTableCount and add an entry for your new iovar in
  * kIovarInfoTable.
  */
-constexpr uint16_t kIovarInfoTableCount = 33;
+constexpr uint16_t kIovarInfoTableCount = 34;
 
 // The table initialized with information of all iovars. Note: passing std::nullopt to the second
 // field means that the size check is customized by handler functions, passing std::nullptr to the
@@ -84,6 +84,7 @@ static const IovarMetadata kIovarInfoTable[kIovarInfoTableCount] = {
     {"allmulti", sizeof(uint32_t), &SimFirmware::IovarAllmultiSet, &SimFirmware::IovarAllmultiGet},
     {"arp_ol", sizeof(uint32_t), &SimFirmware::IovarArpolSet, &SimFirmware::IovarArpolGet},
     {"arpoe", sizeof(uint32_t), &SimFirmware::IovarArpoeSet, &SimFirmware::IovarArpoeGet},
+    {"ndoe", sizeof(uint32_t), &SimFirmware::IovarNdoeSet, &SimFirmware::IovarNdoeGet},
     {"assoc_info", sizeof(brcmf_cfg80211_assoc_ielen_le), nullptr, &SimFirmware::IovarAssocInfoGet},
     {"assoc_mgr_cmd", sizeof(assoc_mgr_cmd_t), &SimFirmware::IovarAssocMgrCmdSet, nullptr},
     {"assoc_resp_ies", std::nullopt, nullptr, &SimFirmware::IovarAssocRespIesGet},
@@ -1859,6 +1860,22 @@ zx_status_t SimFirmware::IovarAllmultiGet(uint16_t ifidx, void* value_out, size_
   }
   uint32_t* result_ptr = static_cast<uint32_t*>(value_out);
   *result_ptr = iface_tbl_[ifidx].allmulti;
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::IovarNdoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                      size_t value_len) {
+  if (!iface_tbl_[ifidx].allocated) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  iface_tbl_[ifidx].ndoe = *(reinterpret_cast<const uint32_t*>(value));
+  return ZX_OK;
+}
+zx_status_t SimFirmware::IovarNdoeGet(uint16_t ifidx, void* value_out, size_t value_len) {
+  if (!iface_tbl_[ifidx].allocated) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  memcpy(value_out, &iface_tbl_[ifidx].ndoe, sizeof(uint32_t));
   return ZX_OK;
 }
 

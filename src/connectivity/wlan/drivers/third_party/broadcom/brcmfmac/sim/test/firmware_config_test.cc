@@ -30,12 +30,49 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/common.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/core.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/defs.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/feature.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/fwil.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/sim_device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sim/test/sim_test.h"
 
 namespace wlan {
 namespace brcmfmac {
 namespace {
+
+class FirmwareConfigTest : public SimTest {
+ public:
+  static constexpr bool kArpNdOffloadEnabled = true;
+  static constexpr bool kArpNdOffloadDisabled = false;
+  void ArpNdOffloadConfigValidate(wlan_info_mac_role_t role, bool expect_enabled);
+};
+
+void FirmwareConfigTest::ArpNdOffloadConfigValidate(wlan_info_mac_role_t role, bool expected) {
+  uint32_t mode = 0;
+  bool arpoe = false;
+  bool ndoe = false;
+  SimInterface ifc;
+  uint32_t iovar;
+
+  if (expected == kArpNdOffloadEnabled) {
+    mode = BRCMF_ARP_OL_AGENT | BRCMF_ARP_OL_PEER_AUTO_REPLY;
+    arpoe = true;
+    ndoe = true;
+  }
+
+  EXPECT_EQ(StartInterface(role, &ifc), ZX_OK);
+
+  brcmf_pub* drvr = device_->GetSim()->drvr;
+  struct brcmf_if* ifp = brcmf_get_ifp(drvr, ifc.iface_id_);
+  brcmf_fil_iovar_int_get(ifp, "arp_ol", &iovar, nullptr);
+  EXPECT_EQ(mode, iovar);
+
+  brcmf_fil_iovar_int_get(ifp, "arpoe", &iovar, nullptr);
+  EXPECT_EQ(arpoe, iovar);
+
+  brcmf_fil_iovar_int_get(ifp, "ndoe", &iovar, nullptr);
+  EXPECT_EQ(ndoe, iovar);
+}
 
 std::pair<zx::channel, zx::channel> make_channel() {
   zx::channel local;
@@ -44,7 +81,7 @@ std::pair<zx::channel, zx::channel> make_channel() {
   return {std::move(local), std::move(remote)};
 }
 
-TEST(FirmwareConfigTest, StartWithSmeChannel) {
+TEST_F(FirmwareConfigTest, StartWithSmeChannel) {
   auto env = std::make_shared<simulation::Environment>();
   auto dev_mgr = std::make_unique<simulation::FakeDevMgr>();
 
@@ -78,6 +115,28 @@ TEST(FirmwareConfigTest, StartWithSmeChannel) {
   brcmf_simdev* sim = device->GetSim();
   EXPECT_EQ(sim->sim_fw->GetPM(), PM_OFF);
   ASSERT_EQ(device->WlanphyImplDestroyIface(iface_id), ZX_OK);
+}
+
+TEST_F(FirmwareConfigTest, ArpNdOffloadClientConfigTestWithoutSoftApFeat) {
+  Init();
+
+  // When SoftAP feature is unavailable, we expect driver to enable arp/nd offload.
+  device_->GetSim()->drvr->feat_flags &= (!BIT(BRCMF_FEAT_AP));
+  ArpNdOffloadConfigValidate(WLAN_INFO_MAC_ROLE_CLIENT, kArpNdOffloadEnabled);
+}
+
+TEST_F(FirmwareConfigTest, ArpNdOffloadClientConfigTestWithSoftApFeat) {
+  Init();
+
+  // When SoftAP feature is available, we expect driver to not enable arp/nd offload.
+  device_->GetSim()->drvr->feat_flags |= BIT(BRCMF_FEAT_AP);
+  ArpNdOffloadConfigValidate(WLAN_INFO_MAC_ROLE_CLIENT, kArpNdOffloadDisabled);
+}
+
+TEST_F(FirmwareConfigTest, ArpNdOffloadApConfigTestWithSoftApFeat) {
+  Init();
+  device_->GetSim()->drvr->feat_flags |= BIT(BRCMF_FEAT_AP);
+  ArpNdOffloadConfigValidate(WLAN_INFO_MAC_ROLE_AP, kArpNdOffloadDisabled);
 }
 
 }  // namespace

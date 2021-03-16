@@ -247,6 +247,8 @@ class SimFirmware {
   zx_status_t IovarAllmultiSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
                                size_t value_len);
   zx_status_t IovarAllmultiGet(uint16_t ifidx, void* value_out, size_t value_len);
+  zx_status_t IovarNdoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
+  zx_status_t IovarNdoeGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarArpoeSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
   zx_status_t IovarArpoeGet(uint16_t ifidx, void* value_out, size_t value_len);
   zx_status_t IovarArpolSet(uint16_t ifidx, int32_t bsscfgidx, const void* value, size_t value_len);
@@ -365,6 +367,7 @@ class SimFirmware {
     uint32_t tlv = 0;
     uint32_t arpoe = 0;
     uint32_t arp_ol = 0;
+    uint32_t ndoe = 0;
     uint16_t auth_type = BRCMF_AUTH_MODE_OPEN;
     uint32_t allmulti = 0;
   } sim_iface_entry_t;

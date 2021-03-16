@@ -1910,7 +1910,7 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
                brcmf_fil_get_errstr(fw_err));
   }
   zxlogf(INFO, "Client IF up: %d channel: %d Rate: %d Mbps RSSI: %d dBm SNR: %d dB  noise: %d dBm",
-             is_up, ctl_chan, rate / 2, ndev->last_known_rssi_dbm, ndev->last_known_snr_db, noise);
+         is_up, ctl_chan, rate / 2, ndev->last_known_rssi_dbm, ndev->last_known_snr_db, noise);
 
   // Get the FW packet counts
   brcmf_pktcnt_le fw_pktcnt = {};
@@ -1921,12 +1921,12 @@ static void brcmf_log_client_stats(struct brcmf_cfg80211_info* cfg) {
                brcmf_fil_get_errstr(fw_err));
   }
   zxlogf(INFO, "FW Stats: Rx - Good: %d Bad: %d Ocast: %d; Tx - Good: %d Bad: %d",
-             fw_pktcnt.rx_good_pkt, fw_pktcnt.rx_bad_pkt, fw_pktcnt.rx_ocast_good_pkt,
-             fw_pktcnt.tx_good_pkt, fw_pktcnt.tx_bad_pkt);
+         fw_pktcnt.rx_good_pkt, fw_pktcnt.rx_bad_pkt, fw_pktcnt.rx_ocast_good_pkt,
+         fw_pktcnt.tx_good_pkt, fw_pktcnt.tx_bad_pkt);
 
   zxlogf(INFO, "Driver Stats: Rx - Good: %d Bad: %d; Tx - Sent to FW: %d Conf: %d Drop: %d Bad: %d",
-             ndev->stats.rx_packets, ndev->stats.rx_errors, ndev->stats.tx_packets,
-             ndev->stats.tx_confirmed, ndev->stats.tx_dropped, ndev->stats.tx_errors);
+         ndev->stats.rx_packets, ndev->stats.rx_errors, ndev->stats.tx_packets,
+         ndev->stats.tx_confirmed, ndev->stats.tx_dropped, ndev->stats.tx_errors);
 
   brcmf_bus_log_stats(cfg->pub->bus_if);
 }
@@ -5717,6 +5717,7 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
   struct brcmf_if* ifp;
   int32_t power_mode;
   zx_status_t err = ZX_OK;
+  bool enable_arp_nd_offload;
 
   BRCMF_DBG(TEMP, "Enter");
   if (cfg->dongle_up) {
@@ -5749,7 +5750,8 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
     goto default_conf_out;
   }
 
-  brcmf_configure_arp_nd_offload(ifp, true);
+  enable_arp_nd_offload = !brcmf_feat_is_enabled(ifp, BRCMF_FEAT_AP);
+  brcmf_configure_arp_nd_offload(ifp, enable_arp_nd_offload);
 
   cfg->dongle_up = true;
 default_conf_out:
