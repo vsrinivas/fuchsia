@@ -115,6 +115,8 @@ pub struct ProcessBuilder {
     /// Handles that are common to both the linker and main processargs messages, wrapped in an
     /// inner struct for code organization and clarity around borrows.
     common: CommonMessageHandles,
+    /// Minimum size of the stack for the new process, in bytes.
+    min_stack_size: usize,
 }
 
 struct CommonMessageHandles {
@@ -165,6 +167,9 @@ pub struct BuiltProcess {
     /// The base address where the ELF executable, or the dynamic linker if the ELF was dynamically
     /// linked, was loaded in the process's VMAR.
     pub elf_base: usize,
+
+    /// The ELF headers of the main module of the newly created process.
+    pub elf_headers: elf_parse::Elf64Headers,
 }
 
 struct StackInfo {
@@ -223,6 +228,7 @@ impl ProcessBuilder {
             non_default_vdso: None,
             msg_contents,
             common: CommonMessageHandles { process, thread, root_vmar },
+            min_stack_size: 0,
         };
         pb.common.add_to_message(&mut pb.msg_contents)?;
         Ok(pb)
@@ -276,6 +282,11 @@ impl ProcessBuilder {
     /// replace) environment variables.
     pub fn add_environment_variables(&mut self, mut vars: Vec<CString>) {
         self.msg_contents.environment_vars.append(&mut vars);
+    }
+
+    /// Set the minimum size of the stack for the new process, in bytes.
+    pub fn set_min_stack_size(&mut self, size: usize) {
+        self.min_stack_size = size;
     }
 
     /// Add handles to the process's bootstrap message. Successive calls append (not replace)
@@ -485,11 +496,11 @@ impl ProcessBuilder {
         let vdso_base = self.load_vdso()?;
 
         // Calculate initial stack size.
-        let stack_size;
+        let mut stack_size;
         let stack_vmo_name;
         if dynamic {
             // Calculate the initial stack size for the dynamic linker. This factors in the size of
-            // an extra handle for the stac) that hasn't yet been added to the message contents,
+            // an extra handle for the stack that hasn't yet been added to the message contents,
             // since creating the stack requires this size.
             stack_size = calculate_initial_linker_stack_size(&mut self.msg_contents, 1)?;
             stack_vmo_name = format!("stack: msg of {:#x?}", stack_size);
@@ -509,6 +520,9 @@ impl ProcessBuilder {
             // Stack size must be page aligned.
             stack_size = util::page_end(ss.1);
             stack_vmo_name = format!("stack: {} {:#x?}", ss.0, stack_size);
+        }
+        if stack_size < self.min_stack_size {
+            stack_size = util::page_end(self.min_stack_size);
         }
 
         // Allocate the initial thread's stack, map it, and add a handle to the bootstrap message.
@@ -537,6 +551,7 @@ impl ProcessBuilder {
             bootstrap: bootstrap_rd,
             vdso_base: vdso_base,
             elf_base: loaded_elf.vmar_base,
+            elf_headers,
         })
     }
 
@@ -1178,6 +1193,33 @@ mod tests {
         assert_eq!(zx::sys::ZX_KOID_INVALID, reported_koid);
         mem::drop(proxy);
         check_process_exited_ok(&process).await?;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn start_util_with_big_stack() -> Result<(), Error> {
+        const STACK_SIZE: usize = util::PAGE_SIZE * 10;
+
+        let (mut builder, proxy) = setup_test_util_builder(true)?;
+        builder.set_min_stack_size(STACK_SIZE);
+        let built = builder.build().await?;
+        assert!(built.stack_vmo.get_size()? >= STACK_SIZE as u64);
+
+        let process = built.start()?;
+        check_process_running(&process)?;
+        mem::drop(proxy);
+        check_process_exited_ok(&process).await?;
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn elf_headers() -> Result<(), Error> {
+        let (builder, _) = setup_test_util_builder(true)?;
+        let built = builder.build().await?;
+        assert!(
+            built.elf_headers.file_header().phnum
+                == built.elf_headers.program_headers().len() as u16
+        );
         Ok(())
     }
 
