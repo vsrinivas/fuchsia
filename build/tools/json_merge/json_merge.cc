@@ -12,8 +12,8 @@
 #include "rapidjson/prettywriter.h"
 #include "rapidjson/writer.h"
 
-int JSONMerge(const std::vector<struct input_file>& inputs,
-              std::ostream& output, std::ostream& errors, bool minify) {
+int JSONMerge(const std::vector<struct input_file>& inputs, std::ostream& output,
+              std::ostream& errors, bool minify) {
   rapidjson::Document merged;
   merged.SetObject();
   auto& allocator = merged.GetAllocator();
@@ -33,16 +33,14 @@ int JSONMerge(const std::vector<struct input_file>& inputs,
       return 1;
     }
 
-    for (auto value_it = input_doc.MemberBegin();
-         value_it != input_doc.MemberEnd(); ++value_it) {
+    for (auto value_it = input_doc.MemberBegin(); value_it != input_doc.MemberEnd(); ++value_it) {
       if (merged.HasMember(value_it->name)) {
         errors << input_it->name << " has a conflicting value for key \""
                << value_it->name.GetString() << "\"!\n";
         return 1;
       }
-      merged.AddMember(value_it->name,
-                       rapidjson::Value(value_it->value, allocator).Move(),
-                       allocator);
+      merged.AddMember(rapidjson::Value(value_it->name, allocator).Move(),
+                       rapidjson::Value(value_it->value, allocator).Move(), allocator);
     }
   }
 
