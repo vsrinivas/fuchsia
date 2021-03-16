@@ -31,6 +31,8 @@ __BEGIN_CDECLS
   (((cluster << MPIDR_AFF1_SHIFT) & MPIDR_AFF1_MASK) | \
    ((cpu << MPIDR_AFF0_SHIFT) & MPIDR_AFF0_MASK))
 
+#define ARM64_MPIDR_MASK (MPIDR_AFF3_MASK | MPIDR_AFF2_MASK | MPIDR_AFF1_MASK | MPIDR_AFF0_MASK)
+
 // TODO: add support for AFF2 and AFF3
 
 struct percpu;
