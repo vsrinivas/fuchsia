@@ -426,51 +426,34 @@ func newEndpointWithSocket(ep tcpip.Endpoint, wq *waiter.Queue, transProto tcpip
 		linger:  make(chan struct{}),
 	}
 
-	onHUp := func() {
-		eps.onHUpOnce.Do(func() {
-			if !eps.endpoint.ns.onRemoveEndpoint(eps.endpoint.key) {
-				_ = syslog.Errorf("endpoint map delete error, endpoint with key %d does not exist", eps.endpoint.key)
-			}
-			// Run this in a separate goroutine to avoid deadlock.
-			//
-			// The waiter.Queue lock is held by the caller of this callback.
-			// close() blocks on completions of `loop*`, which
-			// depend on acquiring waiter.Queue lock to unregister events.
-			go func() {
-				eps.wq.EventUnregister(&eps.onHUp)
-				eps.close()
-			}()
-		})
-	}
-
 	// Add the endpoint before registering callback for hangup event.
 	// The callback could be called soon after registration, where the
 	// endpoint is attempted to be removed from the map.
 	ns.onAddEndpoint(&eps.endpoint)
 
 	eps.onHUp.Callback = callback(func(*waiter.Entry, waiter.EventMask) {
-		onHUp()
+		eps.HUp()
 	})
 	eps.wq.EventRegister(&eps.onHUp, waiter.EventHUp)
 
-	// Accepted endpoints which are already reset would not notify hangup event.
-	// Check for the hard error state and handle any cleanup.
-	//
-	// Note that we register a callback for hangup event and add the endpoint
-	// to the internal map before checking for the error state. This is to avoid
-	// losing notification of hangup event with a race between checking for hard
-	// error state in gVisor endpoint and the same endpoint's error state being
-	// updated because of processing of an incoming RST.
-	//
-	// Acquire hard error lock across ep calls to avoid races and store the
-	// hard error deterministically.
-	eps.endpoint.hardError.mu.Lock()
-	hardError := eps.endpoint.hardError.storeAndRetrieveLocked(eps.ep.LastError())
-	eps.endpoint.hardError.mu.Unlock()
-	if hardError != nil {
-		onHUp()
-	}
 	return eps, nil
+}
+
+func (eps *endpointWithSocket) HUp() {
+	eps.onHUpOnce.Do(func() {
+		if !eps.endpoint.ns.onRemoveEndpoint(eps.endpoint.key) {
+			_ = syslog.Errorf("endpoint map delete error, endpoint with key %d does not exist", eps.endpoint.key)
+		}
+		// Run this in a separate goroutine to avoid deadlock.
+		//
+		// The waiter.Queue lock is held by the caller of this callback.
+		// close() blocks on completions of `loop*`, which
+		// depend on acquiring waiter.Queue lock to unregister events.
+		go func() {
+			eps.wq.EventUnregister(&eps.onHUp)
+			eps.close()
+		}()
+	})
 }
 
 func (eps *endpointWithSocket) loopPoll(ch chan<- struct{}) {
@@ -811,7 +794,24 @@ func (eps *endpointWithSocket) Accept(wantAddr bool) (posix.Errno, *tcpip.FullAd
 			return 0, nil, nil, err
 		}
 
+		// NB: signal connectedness before handling any error below to ensure
+		// correct interpretation in fdio.
+		//
+		// See //sdk/lib/fdio/socket.cc:stream_socket::wait_begin/wait_end for
+		// details on how fdio infers the error code from asserted signals.
 		eps.onConnect.Do(func() { eps.startReadWriteLoops(zxsocket.SignalOutgoing | zxsocket.SignalConnected) })
+
+		// Check if the endpoint has already encountered an error since
+		// our installed callback will not fire in this case.
+		//
+		// Acquire hard error lock across ep calls to avoid races and store the
+		// hard error deterministically.
+		eps.endpoint.hardError.mu.Lock()
+		hardError := eps.endpoint.hardError.storeAndRetrieveLocked(eps.ep.LastError())
+		eps.endpoint.hardError.mu.Unlock()
+		if hardError != nil {
+			eps.HUp()
+		}
 
 		return 0, addr, eps, nil
 	}

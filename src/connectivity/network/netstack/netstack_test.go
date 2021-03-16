@@ -425,35 +425,29 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 		t.Fatalf("ns.addLoopback() = %s", err)
 	}
 
-	var listenerWQ waiter.Queue
-	listener, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, &listenerWQ)
-	if err != nil {
-		t.Fatalf("NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, _) = %s", err)
-	}
-	if err := listener.Bind(tcpip.FullAddress{}); err != nil {
+	listener := createEP(t, ns, new(waiter.Queue))
+
+	if err := listener.ep.Bind(tcpip.FullAddress{}); err != nil {
 		t.Fatalf("Bind({}) = %s", err)
 	}
-	if err := listener.Listen(1); err != nil {
+	if err := listener.ep.Listen(1); err != nil {
 		t.Fatalf("Listen(1) = %s", err)
 	}
 
-	client, err := ns.stack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, new(waiter.Queue))
-	if err != nil {
-		t.Fatalf("NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, _) = %s", err)
-	}
+	client := createEP(t, ns, new(waiter.Queue))
 
 	// Connect and wait for the incoming connection.
 	func() {
-		connectAddr, err := listener.GetLocalAddress()
+		connectAddr, err := listener.ep.GetLocalAddress()
 		if err != nil {
 			t.Fatalf("GetLocalAddress() = %s", err)
 		}
 
 		waitEntry, notifyCh := waiter.NewChannelEntry(nil)
-		listenerWQ.EventRegister(&waitEntry, waiter.EventIn)
-		defer listenerWQ.EventUnregister(&waitEntry)
+		listener.wq.EventRegister(&waitEntry, waiter.EventIn)
+		defer listener.wq.EventUnregister(&waitEntry)
 
-		switch err := client.Connect(connectAddr); err.(type) {
+		switch err := client.ep.Connect(connectAddr); err.(type) {
 		case *tcpip.ErrConnectStarted:
 		default:
 			t.Fatalf("Connect(%#v) = %s", connectAddr, err)
@@ -461,63 +455,49 @@ func TestTCPEndpointMapAcceptAfterReset(t *testing.T) {
 		<-notifyCh
 	}()
 
-	// Hang up and wait for RST. We need an already-reset endpoint to test with.
-	accepted, acceptedWQ := func() (tcpip.Endpoint, *waiter.Queue) {
-		server, wq, err := listener.Accept(nil)
-		if err != nil {
-			t.Fatalf("Accept(nil) = %s", err)
-		}
+	// Initiate a RST of the connection sitting in the accept queue.
+	client.ep.SocketOptions().SetLinger(tcpip.LingerOption{
+		Enabled: true,
+		Timeout: 0,
+	})
+	client.ep.Close()
 
-		listener.Close()
+	// Wait for the RST to be processed by the stack.
+	time.Sleep(100 * time.Millisecond)
 
-		waitEntry, notifyCh := waiter.NewChannelEntry(nil)
-		wq.EventRegister(&waitEntry, waiter.EventHUp)
-		defer wq.EventUnregister(&waitEntry)
+	_, _, eps, err := listener.Accept(false)
+	if err != nil {
+		t.Fatalf("ep.Accept(nil) = %s", err)
+	}
+	defer eps.close()
 
-		client.SocketOptions().SetLinger(tcpip.LingerOption{
-			Enabled: true,
-			Timeout: 0,
-		})
-		client.Close()
-		<-notifyCh
+	// Expect the `Accept` to have removed the endpoint from the map.
+	if _, ok := ns.endpoints.Load(eps.endpoint.key); ok {
+		t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.endpoint.key)
+	}
 
-		return server, wq
-	}()
+	eps.mu.Lock()
+	channels := []struct {
+		ch   <-chan struct{}
+		name string
+	}{
+		{ch: eps.closing, name: "closing"},
+		{ch: eps.mu.loopReadDone, name: "loopReadDone"},
+		{ch: eps.mu.loopWriteDone, name: "loopWriteDone"},
+		{ch: eps.mu.loopPollDone, name: "loopPollDone"},
+	}
+	eps.mu.Unlock()
 
-	{
-		eps, err := newEndpointWithSocket(accepted, acceptedWQ, tcp.ProtocolNumber, ipv4.ProtocolNumber, ns)
-		if err != nil {
-			t.Fatal(err)
-		}
-		defer eps.close()
-
-		eps.mu.Lock()
-		channels := []struct {
-			ch   <-chan struct{}
-			name string
-		}{
-			{ch: eps.closing, name: "closing"},
-			{ch: eps.mu.loopReadDone, name: "loopReadDone"},
-			{ch: eps.mu.loopWriteDone, name: "loopWriteDone"},
-			{ch: eps.mu.loopPollDone, name: "loopPollDone"},
-		}
-		eps.mu.Unlock()
-
-		// Give a generous timeout for the closed channel to be detected.
-		timeout := make(chan struct{})
-		time.AfterFunc(5*time.Second, func() { close(timeout) })
-		for _, ch := range channels {
-			if ch.ch != nil {
-				select {
-				case <-ch.ch:
-				case <-timeout:
-					t.Errorf("%s not cleaned up", ch.name)
-				}
+	// Give a generous timeout for the closed channel to be detected.
+	timeout := make(chan struct{})
+	time.AfterFunc(5*time.Second, func() { close(timeout) })
+	for _, ch := range channels {
+		if ch.ch != nil {
+			select {
+			case <-ch.ch:
+			case <-timeout:
+				t.Errorf("%s not cleaned up", ch.name)
 			}
-		}
-
-		if _, ok := ns.endpoints.Load(eps.endpoint.key); ok {
-			t.Fatalf("got endpoints.Load(%d) = (_, true)", eps.endpoint.key)
 		}
 	}
 }
