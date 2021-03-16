@@ -211,7 +211,7 @@ async fn open<'a>(
 
     let pkg =
         pkgfs_versions.open_package(&meta_far_blob_id.into()).await.map_err(|err| match err {
-            pkgfs::package::OpenError::NotFound => {
+            pkgfs::versions::OpenError::NotFound => {
                 cobalt_sender.log_event_count(
                     metrics::PKG_CACHE_OPEN_METRIC_ID,
                     metrics::PkgCacheOpenMetricDimensionResult::NotFound,

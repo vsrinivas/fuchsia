@@ -5,7 +5,6 @@
 //! Typesafe wrappers around the /pkgfs/versions filesystem.
 
 use {
-    crate::package,
     fidl::{
         endpoints::{Proxy, RequestStream},
         AsHandleRef,
@@ -18,6 +17,8 @@ use {
     fuchsia_zircon::Status,
     futures::prelude::*,
 };
+
+pub use crate::packages::OpenError;
 
 /// An open handle to /pkgfs/versions
 #[derive(Debug, Clone)]
@@ -76,20 +77,18 @@ impl Client {
     pub async fn open_package(
         &self,
         meta_far_merkle: &Hash,
-    ) -> Result<package::Directory, package::OpenError> {
+    ) -> Result<fuchsia_pkg::PackageDirectory, OpenError> {
         // TODO(fxbug.dev/37858) allow opening as executable too
         let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
         let dir =
             io_util::directory::open_directory(&self.proxy, &meta_far_merkle.to_string(), flags)
                 .await
                 .map_err(|e| match e {
-                    io_util::node::OpenError::OpenError(Status::NOT_FOUND) => {
-                        package::OpenError::NotFound
-                    }
-                    other => package::OpenError::Io(other),
+                    io_util::node::OpenError::OpenError(Status::NOT_FOUND) => OpenError::NotFound,
+                    other => OpenError::Io(other),
                 })?;
 
-        Ok(package::Directory::new(dir))
+        Ok(fuchsia_pkg::PackageDirectory::from_proxy(dir))
     }
 }
 
@@ -216,7 +215,7 @@ mod tests {
         let client = Client::open_from_pkgfs_root(&root).unwrap();
 
         let merkle = fuchsia_merkle::MerkleTree::from_reader(std::io::empty()).unwrap().root();
-        assert_matches!(client.open_package(&merkle).await, Err(package::OpenError::NotFound));
+        assert_matches!(client.open_package(&merkle).await, Err(OpenError::NotFound));
 
         pkgfs.stop().await.unwrap();
     }
@@ -260,7 +259,7 @@ mod tests {
         install.write_meta_far(&pkg).await;
 
         // Package is not complete yet, so opening fails.
-        assert_matches!(client.open_package(&pkg_merkle).await, Err(package::OpenError::NotFound));
+        assert_matches!(client.open_package(&pkg_merkle).await, Err(OpenError::NotFound));
 
         install
             .write_blob(

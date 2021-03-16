@@ -148,7 +148,7 @@ pub async fn load_cache_packages(
     for (path, package_hash) in cache_packages.into_contents() {
         let package = match versions.open_package(&package_hash).await {
             Ok(package) => package,
-            Err(pkgfs::package::OpenError::NotFound) => continue,
+            Err(pkgfs::versions::OpenError::NotFound) => continue,
             Err(err) => {
                 return Err(err)
                     .with_context(|| format!("error opening package of {}", package_hash))

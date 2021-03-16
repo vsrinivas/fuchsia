@@ -142,7 +142,8 @@ impl MetaContents {
         self.contents
     }
 
-    /// Take the Merkle Tree root hashes in a iterator.
+    /// Take the Merkle Tree root hashes in a iterator. The returned iterator may include
+    /// duplicates.
     pub fn into_hashes(self) -> impl Iterator<Item = Hash> {
         self.contents.into_iter().map(|(_, hash)| hash)
     }

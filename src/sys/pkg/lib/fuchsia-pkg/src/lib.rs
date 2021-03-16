@@ -10,6 +10,7 @@ mod creation_manifest;
 mod errors;
 mod meta_contents;
 mod meta_package;
+mod package_directory;
 mod package_manifest;
 mod path;
 
@@ -22,6 +23,7 @@ pub use crate::{
     },
     meta_contents::MetaContents,
     meta_package::MetaPackage,
+    package_directory::{LoadMetaContentsError, OpenRights, PackageDirectory, ReadHashError},
     package_manifest::PackageManifest,
     path::{check_package_name, check_package_variant, check_resource_path, PackagePath},
 };

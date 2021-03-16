@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/dist/resource.gni")
 import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
@@ -11,6 +12,9 @@ rustc_library("fuchsia-pkg") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
     "//src/sys/pkg/lib/far/rust:fuchsia-archive",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-merkle",
@@ -21,6 +25,7 @@ rustc_library("fuchsia-pkg") {
   ]
 
   test_deps = [
+    "//src/lib/fuchsia-async",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:matches",
@@ -37,17 +42,34 @@ rustc_library("fuchsia-pkg") {
     "src/lib.rs",
     "src/meta_contents.rs",
     "src/meta_package.rs",
+    "src/package_directory.rs",
     "src/package_manifest.rs",
     "src/path.rs",
     "src/test.rs",
   ]
 }
 
+resource("dup1") {
+  testonly = true
+  sources = [ "duplicate-blob.txt" ]
+  outputs = [ "data/dup1" ]
+}
+
+resource("dup2") {
+  testonly = true
+  sources = [ "duplicate-blob.txt" ]
+  outputs = [ "data/dup2" ]
+}
+
 fuchsia_component("test-component") {
   component_name = "fuchsia-pkg-lib-test"
   visibility = [ ":*" ]
   testonly = true
-  deps = [ ":fuchsia-pkg_test" ]
+  deps = [
+    ":dup1",
+    ":dup2",
+    ":fuchsia-pkg_test",
+  ]
   manifest = "meta/fuchsia-pkg-tests.cml"
 }
 

@@ -7,12 +7,11 @@
 //! Typesafe wrappers around the /pkgfs filesystem.
 
 /// Re-exports of wrapped types from io_util.
-pub use io_util::node::{Kind, OpenError};
+pub use io_util::node::OpenError;
 
 pub mod control;
 pub mod install;
 pub mod needs;
-pub mod package;
 pub mod packages;
 pub mod system;
 pub mod versions;

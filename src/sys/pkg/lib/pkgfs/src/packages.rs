@@ -5,10 +5,21 @@
 //! Typesafe wrappers around the /pkgfs/packages filesystem.
 
 use {
-    crate::package,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy, DirectoryRequestStream},
     fuchsia_zircon::Status,
+    thiserror::Error,
 };
+
+/// An error encountered while opening a package
+#[derive(Debug, Error)]
+#[allow(missing_docs)]
+pub enum OpenError {
+    #[error("the package does not exist")]
+    NotFound,
+
+    #[error("while opening the package")]
+    Io(#[source] io_util::node::OpenError),
+}
 
 /// An open handle to /pkgfs/packages
 #[derive(Debug, Clone)]
@@ -56,20 +67,18 @@ impl Client {
         &self,
         name: &str,
         variant: Option<&str>,
-    ) -> Result<package::Directory, package::OpenError> {
+    ) -> Result<fuchsia_pkg::PackageDirectory, OpenError> {
         // TODO(fxbug.dev/37858) allow opening as executable too
         let flags = fidl_fuchsia_io::OPEN_RIGHT_READABLE;
         let path = format!("{}/{}", name, variant.unwrap_or("0"));
         let dir = io_util::directory::open_directory(&self.proxy, &path, flags).await.map_err(
             |e| match e {
-                io_util::node::OpenError::OpenError(Status::NOT_FOUND) => {
-                    package::OpenError::NotFound
-                }
-                other => package::OpenError::Io(other),
+                io_util::node::OpenError::OpenError(Status::NOT_FOUND) => OpenError::NotFound,
+                other => OpenError::Io(other),
             },
         )?;
 
-        Ok(package::Directory::new(dir))
+        Ok(fuchsia_pkg::PackageDirectory::from_proxy(dir))
     }
 }
 
@@ -86,10 +95,10 @@ mod tests {
         let root = pkgfs.root_dir_proxy().unwrap();
         let client = Client::open_from_pkgfs_root(&root).unwrap();
 
-        assert_matches!(client.open_package("fake", None).await, Err(package::OpenError::NotFound));
+        assert_matches!(client.open_package("fake", None).await, Err(OpenError::NotFound));
         assert_matches!(
             client.open_package("fake", Some("package")).await,
-            Err(package::OpenError::NotFound)
+            Err(OpenError::NotFound)
         );
 
         pkgfs.stop().await.unwrap();
@@ -136,10 +145,7 @@ mod tests {
         install.write_meta_far(&pkg).await;
 
         // Package is not complete yet, so opening fails.
-        assert_matches!(
-            client.open_package("multiblob", None).await,
-            Err(package::OpenError::NotFound)
-        );
+        assert_matches!(client.open_package("multiblob", None).await, Err(OpenError::NotFound));
 
         install
             .write_blob(

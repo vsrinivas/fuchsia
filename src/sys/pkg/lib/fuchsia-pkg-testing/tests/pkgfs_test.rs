@@ -8,10 +8,10 @@ use {
     blobfs_ramdisk::BlobfsRamdisk,
     fuchsia_async as fasync,
     fuchsia_merkle::Hash,
+    fuchsia_pkg::{OpenRights, PackageDirectory},
     fuchsia_pkg_testing::{Package, PackageBuilder, SystemImageBuilder, VerificationError},
     fuchsia_zircon::Status,
     matches::assert_matches,
-    pkgfs::package::OpenRights,
     pkgfs_ramdisk::PkgfsRamdisk,
     std::{
         fmt::Debug,
@@ -1241,7 +1241,7 @@ enum Executability {
 }
 
 async fn verify_executable_package_rights_on_pkg_dir(
-    pkgdir: pkgfs::package::Directory,
+    pkgdir: PackageDirectory,
     executability: Executability,
 ) {
     // All resources should be openable without execute rights.
@@ -1711,9 +1711,10 @@ async fn test_walking_the_pkg_dir() {
         .expect("open meta dir");
 
         for path in &paths {
-            let file = io_util::directory::open_file(&pkg_directory, path, io_util::OPEN_RIGHT_READABLE)
-                .await
-                .unwrap();
+            let file =
+                io_util::directory::open_file(&pkg_directory, path, io_util::OPEN_RIGHT_READABLE)
+                    .await
+                    .unwrap();
 
             let body = io_util::file::read_to_string(&file).await.unwrap();
             assert_eq!(path, &body);
@@ -1734,16 +1735,15 @@ async fn test_walking_the_pkg_dir() {
         let mut entry = entries.next().unwrap();
 
         while let Some(child) = entries.next() {
-            d = io_util::directory::open_directory(
-                &d,
-                entry,
-                io_util::OPEN_RIGHT_READABLE,
-            ).await.unwrap();
+            d = io_util::directory::open_directory(&d, entry, io_util::OPEN_RIGHT_READABLE)
+                .await
+                .unwrap();
 
             entry = child;
         }
 
-        let file = io_util::directory::open_file(&d, entry, io_util::OPEN_RIGHT_READABLE).await.unwrap();
+        let file =
+            io_util::directory::open_file(&d, entry, io_util::OPEN_RIGHT_READABLE).await.unwrap();
         let body = io_util::file::read_to_string(&file).await.unwrap();
         assert_eq!(path, &body);
     }

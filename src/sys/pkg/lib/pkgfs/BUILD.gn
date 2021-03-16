@@ -46,7 +46,6 @@ rustc_library("pkgfs") {
     "src/install.rs",
     "src/lib.rs",
     "src/needs.rs",
-    "src/package.rs",
     "src/packages.rs",
     "src/system.rs",
     "src/versions.rs",
