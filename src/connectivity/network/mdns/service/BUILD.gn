@@ -125,6 +125,7 @@ test("mdns_test") {
     "test/interface_transceiver_test.cc",
     "test/mdns_transceiver_test.cc",
     "test/mdns_unit_tests.cc",
+    "test/responder_publisher_test.cc",
   ]
 
   deps = [
