@@ -120,6 +120,8 @@ template("fidl_adapter") {
     # Exposes the bindings as C sources to the rest of the build.
     # Eventually this target will be surfaced via the `fidl` template.
     source_set(c_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
       public = [ c_header_file ]
 
       public_configs = [ ":$c_config_target_name" ]
@@ -190,6 +192,8 @@ template("fidl_adapter") {
     }
 
     rustc_library(rust_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
       name = rust_library_name
       version = "0.1.0"
       edition = "2018"
@@ -218,6 +222,200 @@ template("fidl_adapter") {
             _name = get_label_info(dep, "name")
             _dir = get_label_info(dep, "dir")
             deps += [ "$_dir:${_name}_banjo_rust" ]
+          }
+        }
+      }
+    }
+
+    ##############################################################################
+    # C++ backend
+
+    cpp_target_name = "${original_target_name}_banjo_cpp"
+    cpp_mock_target_name = "${original_target_name}_banjo_cpp_mock"
+    cpp_public_fidlgen_target_name = "$cpp_target_name.public.gen"
+    cpp_private_fidlgen_target_name = "$cpp_target_name.private.gen"
+    cpp_mock_fidlgen_target_name = "$cpp_target_name.mock.gen"
+    cpp_public_verification_target_name = "$cpp_target_name.public.verify"
+    cpp_private_verification_target_name = "$cpp_target_name.private.verify"
+    cpp_mock_verification_target_name = "$cpp_target_name.mock.verify"
+
+    cpp_header_path = c_header_path
+    cpp_header_include_base = c_header_include_base
+    cpp_public_file = "$cpp_header_include_base/$cpp_header_path/cpp/banjo.h"
+    cpp_private_file =
+        "$cpp_header_include_base/$cpp_header_path/cpp/banjo-internal.h"
+    cpp_mock_file = "$cpp_header_include_base/$cpp_header_path/cpp/banjo-mock.h"
+
+    # Run fidlgen_banjo on the IR and generate C++ code.
+
+    compiled_action(cpp_public_fidlgen_target_name) {
+      tool = "//src/devices/tools/fidlgen_banjo:bin"
+      tool_output_name = "fidlgen_banjo"
+
+      inputs = [ ir_file ]
+
+      outputs = [ cpp_public_file ]
+
+      deps = [ ir_dep ]
+
+      args = [
+        "--ir",
+        rebase_path(ir_file, root_build_dir),
+        "--output",
+        rebase_path(cpp_public_file, root_build_dir),
+        "--backend",
+        "cpp",
+      ]
+    }
+
+    compiled_action(cpp_private_fidlgen_target_name) {
+      tool = "//src/devices/tools/fidlgen_banjo:bin"
+      tool_output_name = "fidlgen_banjo"
+
+      inputs = [ ir_file ]
+
+      outputs = [ cpp_private_file ]
+
+      deps = [ ir_dep ]
+
+      args = [
+        "--ir",
+        rebase_path(ir_file, root_build_dir),
+        "--output",
+        rebase_path(cpp_private_file, root_build_dir),
+        "--backend",
+        "cpp_internal",
+      ]
+    }
+
+    compiled_action(cpp_mock_fidlgen_target_name) {
+      tool = "//src/devices/tools/fidlgen_banjo:bin"
+      tool_output_name = "fidlgen_banjo"
+
+      inputs = [ ir_file ]
+
+      outputs = [ cpp_mock_file ]
+
+      deps = [ ir_dep ]
+
+      args = [
+        "--ir",
+        rebase_path(ir_file, root_build_dir),
+        "--output",
+        rebase_path(cpp_mock_file, root_build_dir),
+        "--backend",
+        "cpp_mock",
+      ]
+    }
+
+    cpp_public_banjo_dep = ":${target_name}_cpp_compile($banjo_toolchain)"
+    cpp_private_banjo_dep = ":${target_name}_cpp_i_compile($banjo_toolchain)"
+    cpp_mock_banjo_dep = ":${target_name}_cpp_mock($banjo_toolchain)"
+    cpp_banjo_gen_dir = get_label_info(cpp_public_banjo_dep, "root_gen_dir")
+    cpp_public_banjo_header_file =
+        "$cpp_banjo_gen_dir/$cpp_header_path/cpp/banjo.h"
+    cpp_private_banjo_header_file =
+        "$cpp_banjo_gen_dir/$cpp_header_path/cpp/banjo-internal.h"
+    cpp_mock_banjo_header_file =
+        "$cpp_banjo_gen_dir/$cpp_header_path/cpp/banjo-mock.h"
+
+    # Verify that the new-style and old-style bindings are identical.
+
+    golden_file(cpp_public_verification_target_name) {
+      golden = cpp_public_banjo_header_file
+
+      current = cpp_public_file
+
+      deps = [
+        ":$cpp_public_fidlgen_target_name",
+        cpp_public_banjo_dep,
+      ]
+    }
+
+    golden_file(cpp_private_verification_target_name) {
+      golden = cpp_private_banjo_header_file
+
+      current = cpp_private_file
+
+      deps = [
+        ":$cpp_private_fidlgen_target_name",
+        cpp_private_banjo_dep,
+      ]
+    }
+
+    golden_file(cpp_mock_verification_target_name) {
+      golden = cpp_mock_banjo_header_file
+
+      current = cpp_mock_file
+
+      deps = [
+        ":$cpp_mock_fidlgen_target_name",
+        cpp_mock_banjo_dep,
+      ]
+    }
+
+    source_set(cpp_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      public = [ cpp_public_file ]
+
+      sources = [ cpp_private_file ]
+
+      public_deps = [
+        ":$c_target_name",
+
+        # The generated headers #include <ddk/*.h> and #include <ddktl/*.h>
+        # files from the libraries (that aren't generated).
+        "//src/lib/ddk",
+        "//src/lib/ddktl",
+        "//zircon/system/ulib/zx",
+      ]
+
+      # Let dependencies use `#include "$file_stem.h"`.
+      public_configs = [ "//build/c:banjo_gen_config" ]
+
+      deps = [
+        ":$cpp_private_fidlgen_target_name",
+        ":$cpp_private_verification_target_name",
+        ":$cpp_public_fidlgen_target_name",
+        ":$cpp_public_verification_target_name",
+        "//src/zircon/lib/zircon",
+      ]
+
+      if (defined(invoker.deps)) {
+        foreach(dep, invoker.deps) {
+          if (dep != "//sdk/banjo/zx") {
+            _name = get_label_info(dep, "name")
+            _dir = get_label_info(dep, "dir")
+            deps += [ "$_dir:${_name}_banjo_cpp" ]
+          }
+        }
+      }
+    }
+
+    source_set(cpp_mock_target_name) {
+      testonly = true
+
+      public = [ cpp_mock_file ]
+
+      public_deps = [
+        "//zircon/system/ulib/fbl",
+        "//zircon/system/ulib/mock-function",
+        "//zircon/system/ulib/zxtest",
+      ]
+
+      deps = [
+        ":$cpp_mock_fidlgen_target_name",
+        ":$cpp_mock_verification_target_name",
+        ":$cpp_target_name",
+      ]
+
+      if (defined(invoker.deps)) {
+        foreach(dep, invoker.deps) {
+          if (dep != "//sdk/banjo/zx") {
+            _name = get_label_info(dep, "name")
+            _dir = get_label_info(dep, "dir")
+            deps += [ "$_dir:${_name}_banjo_cpp" ]
           }
         }
       }
