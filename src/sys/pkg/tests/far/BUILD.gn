@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_test("driver") {
   name = "far_integration_test"
@@ -18,32 +18,22 @@ rustc_test("driver") {
   sources = [ "src/lib.rs" ]
 }
 
-test_package("far-integration-tests") {
-  deps = [
-    ":driver",
-    "//src/sys/pkg/bin/far:bin",
-  ]
+fuchsia_component("far-component") {
+  testonly = true
+  component_name = "far"
+  manifest = "meta/far.cmx"
+  deps = [ "//src/sys/pkg/bin/far:bin" ]
+}
 
-  binaries = [
-    {
-      name = "far"
-      dest = "far"
-    },
-  ]
+fuchsia_test_component("far-integration-tests-component") {
+  component_name = "far-integration-tests"
+  manifest = "meta/far-integration-test.cmx"
+  deps = [ ":driver" ]
+}
 
-  meta = [
-    {
-      path = "meta/far.cmx"
-      dest = "far.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "far_integration_test"
-      dest = "far-integration-test"
-    },
-  ]
+fuchsia_test_package("far-integration-tests") {
+  test_components = [ ":far-integration-tests-component" ]
+  deps = [ ":far-component" ]
 }
 
 group("tests") {
