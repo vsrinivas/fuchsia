@@ -19,10 +19,8 @@
 
 namespace weavestack {
 namespace {
-using fidl::Binding;
 
 using fuchsia::weave::ErrorCode;
-using fuchsia::weave::Host;
 using fuchsia::weave::HostPort;
 using fuchsia::weave::PairingState;
 using fuchsia::weave::PairingStateWatcher;
@@ -37,8 +35,11 @@ using fuchsia::weave::SvcDirectoryWatcher;
 using nl::Weave::DeviceLayer::ConfigurationMgr;
 using nl::Weave::DeviceLayer::PlatformMgrImpl;
 using nl::Weave::DeviceLayer::WeaveDeviceEvent;
+using nl::Weave::DeviceLayer::DeviceEventType::kAccountPairingChange;
+using nl::Weave::DeviceLayer::DeviceEventType::kFabricMembershipChange;
+using nl::Weave::DeviceLayer::DeviceEventType::kServiceProvisioningChange;
+using nl::Weave::DeviceLayer::DeviceEventType::kServiceTunnelStateChange;
 using nl::Weave::Profiles::DeviceControl::DeviceControlDelegate;
-using nl::Weave::Profiles::ServiceDirectory::WeaveServiceManager;
 
 // Size of the buffer for retrieving the QR code.
 constexpr size_t kQrCodeBufSize = fuchsia::weave::MAX_QR_CODE_SIZE + 1;
@@ -125,7 +126,7 @@ zx_status_t StackImpl::Init() {
   }
 
   // Register event handler with Weave Device Layer.
-  err = PlatformMgrImpl().AddEventHandler(TrampolineEvent, reinterpret_cast<uintptr_t>(this));
+  err = PlatformMgrImpl().AddEventHandler(TrampolineEvent, reinterpret_cast<intptr_t>(this));
   if (err != WEAVE_NO_ERROR) {
     FX_LOGS(ERROR) << "Failed to register event handler with device layer: " << nl::ErrorStr(err);
     return ZX_ERR_INTERNAL;
@@ -201,9 +202,6 @@ void StackImpl::NotifySvcDirectory() {
 }
 
 void StackImpl::HandleWeaveDeviceEvent(const WeaveDeviceEvent* event) {
-  // Import event type constants.
-  using namespace nl::Weave::DeviceLayer::DeviceEventType;
-
   // Handle events.
   switch (event->Type) {
     case kServiceTunnelStateChange:
@@ -245,7 +243,8 @@ zx_status_t StackImpl::LookupHostPorts(uint64_t endpoint_id, std::vector<HostPor
   if (err == WEAVE_ERROR_INVALID_SERVICE_EP) {
     FX_LOGS(WARNING) << "Invalid service directory endpoint: " << endpoint_id;
     return ZX_ERR_INVALID_ARGS;
-  } else if (err != WEAVE_NO_ERROR) {
+  }
+  if (err != WEAVE_NO_ERROR) {
     FX_LOGS(ERROR) << "Failed to lookup service directory: " << nl::ErrorStr(err);
     return ZX_ERR_INTERNAL;
   }

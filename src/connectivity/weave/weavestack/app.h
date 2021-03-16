@@ -25,11 +25,11 @@ namespace weavestack {
 
 class App {
  public:
-  App();
+  App() = default;
   ~App();
 
-  void Quit(void);
-  zx_status_t Init(void);
+  void Quit();
+  zx_status_t Init();
   zx_status_t Run(zx::time deadline = zx::time::infinite(), bool once = false);
   async::Loop* loop() { return &loop_; }
 
@@ -38,7 +38,7 @@ class App {
   App& operator=(const App&) = delete;
 
   zx_status_t WaitForFd(int fd, uint32_t events);
-  zx_status_t StartFdWaiters(void);
+  zx_status_t StartFdWaiters();
   void ClearWaiters();
   void ClearFds();
   void FdHandler(zx_status_t status, uint32_t zero);

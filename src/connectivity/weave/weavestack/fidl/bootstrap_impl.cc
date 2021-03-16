@@ -64,10 +64,11 @@ void BootstrapImpl::ImportWeaveConfig(fuchsia::mem::Buffer config_json,
   }
 
   // Write data out.
-  if (!files::WriteFile(GetConfigPath(), data.data(), data.size())) {
+  if (!files::WriteFile(GetConfigPath(), data.data(), static_cast<ssize_t>(data.size()))) {
     FX_LOGS(ERROR) << "Failed to write data to internal config location";
     result.set_err(ZX_ERR_IO);
     callback(std::move(result));
+    return;
   }
 
   // Respond to the caller.

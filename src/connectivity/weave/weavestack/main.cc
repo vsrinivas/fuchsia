@@ -24,10 +24,9 @@ using nl::Weave::DeviceLayer::ThreadStackMgrImpl;
 using nl::Weave::DeviceLayer::TraitUpdater;
 using nl::Weave::DeviceLayer::TraitUpdaterDelegateImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerDelegateImpl;
-using nl::Weave::DeviceLayer::Internal::NetworkProvisioningServerImpl;
 using nl::Weave::DeviceLayer::Internal::NetworkProvisioningSvrImpl;
 
-int main(void) {
+int main() {
   weavestack::App app;
   zx_status_t status;
 
