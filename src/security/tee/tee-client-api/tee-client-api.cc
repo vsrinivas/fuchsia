@@ -28,138 +28,6 @@
 
 namespace {
 
-// LLCPP FIDL Type Construction Helpers
-
-class Value {
- public:
-  fuchsia_tee::wire::Value to_llcpp() {
-    if (direction_.has_value()) {
-      llcpp_builder_.set_direction(fidl::unowned_ptr(&direction_.value()));
-    }
-    if (a_.has_value()) {
-      llcpp_builder_.set_a(fidl::unowned_ptr(&a_.value()));
-    }
-    if (b_.has_value()) {
-      llcpp_builder_.set_b(fidl::unowned_ptr(&b_.value()));
-    }
-    if (c_.has_value()) {
-      llcpp_builder_.set_c(fidl::unowned_ptr(&c_.value()));
-    }
-
-    return llcpp_builder_.build();
-  }
-
-  void set_direction(fuchsia_tee::wire::Direction direction) { direction_ = direction; }
-
-  void set_a(uint64_t a) { a_ = a; }
-
-  void set_b(uint64_t b) { b_ = b; }
-
-  void set_c(uint64_t c) { c_ = c; }
-
- private:
-  fuchsia_tee::wire::Value::UnownedBuilder llcpp_builder_;
-
-  std::optional<fuchsia_tee::wire::Direction> direction_{};
-  std::optional<uint64_t> a_{};
-  std::optional<uint64_t> b_{};
-  std::optional<uint64_t> c_{};
-};
-
-class Buffer {
- public:
-  fuchsia_tee::wire::Buffer to_llcpp() {
-    if (direction_.has_value()) {
-      llcpp_builder_.set_direction(fidl::unowned_ptr(&direction_.value()));
-    }
-    if (vmo_.has_value()) {
-      llcpp_builder_.set_vmo(fidl::unowned_ptr(&vmo_.value()));
-    }
-    if (offset_.has_value()) {
-      llcpp_builder_.set_offset(fidl::unowned_ptr(&offset_.value()));
-    }
-    if (size_.has_value()) {
-      llcpp_builder_.set_size(fidl::unowned_ptr(&size_.value()));
-    }
-
-    return llcpp_builder_.build();
-  }
-
-  void set_direction(fuchsia_tee::wire::Direction direction) { direction_ = direction; }
-
-  void set_vmo(zx::vmo vmo) { vmo_ = std::move(vmo); }
-
-  void set_offset(uint64_t offset) { offset_ = offset; }
-
-  void set_size(uint64_t size) { size_ = size; }
-
- private:
-  fuchsia_tee::wire::Buffer::UnownedBuilder llcpp_builder_;
-
-  std::optional<fuchsia_tee::wire::Direction> direction_{};
-  std::optional<zx::vmo> vmo_{};
-  std::optional<uint64_t> offset_{};
-  std::optional<uint64_t> size_{};
-};
-
-class Parameter {
- public:
-  fuchsia_tee::wire::Parameter to_llcpp() {
-    if (std::holds_alternative<fidl::aligned<fuchsia_tee::wire::None>>(data_)) {
-      llcpp_data_ = std::get<fidl::aligned<fuchsia_tee::wire::None>>(data_);
-      return fuchsia_tee::wire::Parameter::WithNone(
-          fidl::unowned_ptr(&std::get<fidl::aligned<fuchsia_tee::wire::None>>(llcpp_data_)));
-    }
-    if (std::holds_alternative<Value>(data_)) {
-      llcpp_data_ = std::get<Value>(data_).to_llcpp();
-      return fuchsia_tee::wire::Parameter::WithValue(
-          fidl::unowned_ptr(&std::get<fuchsia_tee::wire::Value>(llcpp_data_)));
-    }
-    if (std::holds_alternative<Buffer>(data_)) {
-      llcpp_data_ = std::get<Buffer>(data_).to_llcpp();
-      return fuchsia_tee::wire::Parameter::WithBuffer(
-          fidl::unowned_ptr(&std::get<fuchsia_tee::wire::Buffer>(llcpp_data_)));
-    }
-
-    return fuchsia_tee::wire::Parameter();
-  }
-
-  void set_none() { data_ = fuchsia_tee::wire::None{}; }
-
-  void set_value(Value value) { data_ = std::move(value); }
-
-  void set_buffer(Buffer buffer) { data_ = std::move(buffer); }
-
- private:
-  std::variant<std::monostate, fidl::aligned<fuchsia_tee::wire::None>, fuchsia_tee::wire::Value,
-               fuchsia_tee::wire::Buffer>
-      llcpp_data_{};
-
-  std::variant<std::monostate, fidl::aligned<fuchsia_tee::wire::None>, Value, Buffer> data_{};
-};
-
-class ParameterSet {
- public:
-  fidl::VectorView<fuchsia_tee::wire::Parameter> to_llcpp() {
-    ZX_DEBUG_ASSERT(parameters_.has_value());
-
-    llcpp_parameters_.clear();
-    llcpp_parameters_.reserve(parameters_->size());
-    for (auto& parameter : parameters_.value()) {
-      llcpp_parameters_.push_back(parameter.to_llcpp());
-    }
-
-    return fidl::unowned_vec(llcpp_parameters_);
-  }
-
-  void set_parameters(std::vector<Parameter> parameters) { parameters_ = std::move(parameters); }
-
- private:
-  std::vector<fuchsia_tee::wire::Parameter> llcpp_parameters_;
-
-  std::optional<std::vector<Parameter>> parameters_;
-};
-
 struct UuidEqualityComparator {
   bool operator()(const fuchsia_tee::wire::Uuid& lhs, const fuchsia_tee::wire::Uuid& rhs) const {
     if (lhs.time_low != rhs.time_low) {
@@ -331,7 +199,8 @@ zx_status_t CreateVmoWithName(uint64_t size, uint32_t options, std::string_view 
   return s;
 }
 
-void PreprocessValue(uint32_t param_type, const TEEC_Value& teec_value, Parameter* out_parameter) {
+void PreprocessValue(fidl::AnyAllocator& allocator, uint32_t param_type,
+                     const TEEC_Value& teec_value, fuchsia_tee::wire::Parameter* out_parameter) {
   ZX_DEBUG_ASSERT(out_parameter);
 
   fuchsia_tee::wire::Direction direction;
@@ -349,21 +218,21 @@ void PreprocessValue(uint32_t param_type, const TEEC_Value& teec_value, Paramete
       ZX_PANIC("Unknown param type");
   }
 
-  Value value;
-  value.set_direction(direction);
+  fuchsia_tee::wire::Value value(allocator);
+  value.set_direction(allocator, direction);
   if (IsDirectionInput(direction)) {
     // The TEEC_Value type only includes two generic fields, whereas the Fuchsia TEE interface
     // supports three. The c field cannot be used by the TEE Client API.
-    value.set_a(teec_value.a);
-    value.set_b(teec_value.b);
+    value.set_a(allocator, teec_value.a);
+    value.set_b(allocator, teec_value.b);
   }
 
-  out_parameter->set_value(std::move(value));
+  out_parameter->set_value(allocator, std::move(value));
 }
 
-TEEC_Result PreprocessTemporaryMemref(uint32_t param_type,
+TEEC_Result PreprocessTemporaryMemref(fidl::AnyAllocator& allocator, uint32_t param_type,
                                       const TEEC_TempMemoryReference& temp_memory_ref,
-                                      Parameter* out_parameter) {
+                                      fuchsia_tee::wire::Parameter* out_parameter) {
   ZX_DEBUG_ASSERT(out_parameter);
 
   fuchsia_tee::wire::Direction direction;
@@ -401,20 +270,21 @@ TEEC_Result PreprocessTemporaryMemref(uint32_t param_type,
     }
   }
 
-  Buffer buffer;
-  buffer.set_direction(direction);
+  fuchsia_tee::wire::Buffer buffer(allocator);
+  buffer.set_direction(allocator, direction);
   if (vmo.is_valid()) {
-    buffer.set_vmo(std::move(vmo));
+    buffer.set_vmo(allocator, std::move(vmo));
   }
-  buffer.set_offset(0);
-  buffer.set_size(temp_memory_ref.size);
+  buffer.set_offset(allocator, 0);
+  buffer.set_size(allocator, temp_memory_ref.size);
 
-  out_parameter->set_buffer(std::move(buffer));
+  out_parameter->set_buffer(allocator, std::move(buffer));
   return TEEC_SUCCESS;
 }
 
-TEEC_Result PreprocessWholeMemref(const TEEC_RegisteredMemoryReference& memory_ref,
-                                  Parameter* out_parameter) {
+TEEC_Result PreprocessWholeMemref(fidl::AnyAllocator& allocator,
+                                  const TEEC_RegisteredMemoryReference& memory_ref,
+                                  fuchsia_tee::wire::Parameter* out_parameter) {
   ZX_DEBUG_ASSERT(out_parameter);
 
   if (!memory_ref.parent) {
@@ -439,19 +309,19 @@ TEEC_Result PreprocessWholeMemref(const TEEC_RegisteredMemoryReference& memory_r
     return ConvertStatusToResult(status);
   }
 
-  Buffer buffer;
-  buffer.set_direction(direction);
-  buffer.set_vmo(std::move(vmo));
-  buffer.set_offset(0);
-  buffer.set_size(shared_mem->size);
+  fuchsia_tee::wire::Buffer buffer(allocator);
+  buffer.set_direction(allocator, direction);
+  buffer.set_vmo(allocator, std::move(vmo));
+  buffer.set_offset(allocator, 0);
+  buffer.set_size(allocator, shared_mem->size);
 
-  out_parameter->set_buffer(std::move(buffer));
+  out_parameter->set_buffer(allocator, std::move(buffer));
   return TEEC_SUCCESS;
 }
 
-TEEC_Result PreprocessPartialMemref(uint32_t param_type,
+TEEC_Result PreprocessPartialMemref(fidl::AnyAllocator& allocator, uint32_t param_type,
                                     const TEEC_RegisteredMemoryReference& memory_ref,
-                                    Parameter* out_parameter) {
+                                    fuchsia_tee::wire::Parameter* out_parameter) {
   ZX_DEBUG_ASSERT(out_parameter);
 
   if (!memory_ref.parent) {
@@ -491,54 +361,56 @@ TEEC_Result PreprocessPartialMemref(uint32_t param_type,
     return ConvertStatusToResult(status);
   }
 
-  Buffer buffer;
-  buffer.set_direction(direction);
-  buffer.set_vmo(std::move(vmo));
-  buffer.set_offset(memory_ref.offset);
-  buffer.set_size(memory_ref.size);
+  fuchsia_tee::wire::Buffer buffer(allocator);
+  buffer.set_direction(allocator, direction);
+  buffer.set_vmo(allocator, std::move(vmo));
+  buffer.set_offset(allocator, memory_ref.offset);
+  buffer.set_size(allocator, memory_ref.size);
 
-  out_parameter->set_buffer(std::move(buffer));
+  out_parameter->set_buffer(allocator, std::move(buffer));
   return TEEC_SUCCESS;
 }
 
-TEEC_Result PreprocessOperation(const TEEC_Operation* operation, ParameterSet* out_parameter_set) {
+TEEC_Result PreprocessOperation(fidl::AnyAllocator& allocator, const TEEC_Operation* operation,
+                                fidl::VectorView<fuchsia_tee::wire::Parameter>* out_parameter_set) {
   ZX_DEBUG_ASSERT(out_parameter_set);
-  std::vector<Parameter> parameters;
 
   if (!operation) {
-    out_parameter_set->set_parameters(std::move(parameters));
+    out_parameter_set->Allocate(allocator, 0);
     return TEEC_SUCCESS;
   }
 
   size_t num_params = CountOperationParameters(*operation);
-  parameters.reserve(num_params);
+  out_parameter_set->Allocate(allocator, num_params);
 
   TEEC_Result rc = TEEC_SUCCESS;
   for (size_t i = 0; i < num_params; i++) {
     uint32_t param_type = GetParamTypeForIndex(operation->paramTypes, i);
-    Parameter parameter;
+    fuchsia_tee::wire::Parameter& parameter = (*out_parameter_set)[i];
 
     switch (param_type) {
       case TEEC_NONE:
-        parameter.set_none();
+        parameter.set_none(allocator);
         break;
       case TEEC_VALUE_INPUT:
       case TEEC_VALUE_OUTPUT:
       case TEEC_VALUE_INOUT:
-        PreprocessValue(param_type, operation->params[i].value, &parameter);
+        PreprocessValue(allocator, param_type, operation->params[i].value, &parameter);
         break;
       case TEEC_MEMREF_TEMP_INPUT:
       case TEEC_MEMREF_TEMP_OUTPUT:
       case TEEC_MEMREF_TEMP_INOUT:
-        rc = PreprocessTemporaryMemref(param_type, operation->params[i].tmpref, &parameter);
+        rc = PreprocessTemporaryMemref(allocator, param_type, operation->params[i].tmpref,
+                                       &parameter);
         break;
       case TEEC_MEMREF_WHOLE:
-        rc = PreprocessWholeMemref(operation->params[i].memref, &parameter);
+        rc = PreprocessWholeMemref(allocator, operation->params[i].memref, &parameter);
         break;
       case TEEC_MEMREF_PARTIAL_INPUT:
       case TEEC_MEMREF_PARTIAL_OUTPUT:
       case TEEC_MEMREF_PARTIAL_INOUT:
-        rc = PreprocessPartialMemref(param_type, operation->params[i].memref, &parameter);
+        rc =
+            PreprocessPartialMemref(allocator, param_type, operation->params[i].memref, &parameter);
         break;
       default:
         rc = TEEC_ERROR_BAD_PARAMETERS;
@@ -548,11 +420,8 @@ TEEC_Result PreprocessOperation(const TEEC_Operation* operation, ParameterSet* o
     if (rc != TEEC_SUCCESS) {
       return rc;
     }
-
-    parameters.push_back(std::move(parameter));
   }
 
-  out_parameter_set->set_parameters(std::move(parameters));
   return rc;
 }
 
@@ -1032,8 +901,9 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
   fuchsia_tee::wire::Uuid app_uuid_fidl;
   ConvertTeecUuidToZxUuid(*destination, &app_uuid_fidl);
 
-  ParameterSet parameter_set;
-  TEEC_Result processing_rc = PreprocessOperation(operation, &parameter_set);
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
+  TEEC_Result processing_rc = PreprocessOperation(allocator, operation, &parameter_set);
   if (processing_rc != TEEC_SUCCESS) {
     if (returnOrigin) {
       *returnOrigin = TEEC_ORIGIN_COMMS;
@@ -1048,7 +918,7 @@ TEEC_Result TEEC_OpenSession(TEEC_Context* context, TEEC_Session* session,
   }
 
   auto result = fuchsia_tee::Application::Call::OpenSession2(zx::unowned_channel(app_channel),
-                                                             parameter_set.to_llcpp());
+                                                             std::move(parameter_set));
   zx_status_t status = result.status();
 
   if (status != ZX_OK) {
@@ -1127,8 +997,9 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
     return TEEC_ERROR_BAD_PARAMETERS;
   }
 
-  ParameterSet parameter_set;
-  TEEC_Result processing_rc = PreprocessOperation(operation, &parameter_set);
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<fuchsia_tee::wire::Parameter> parameter_set;
+  TEEC_Result processing_rc = PreprocessOperation(allocator, operation, &parameter_set);
   if (processing_rc != TEEC_SUCCESS) {
     if (returnOrigin) {
       *returnOrigin = TEEC_ORIGIN_COMMS;
@@ -1138,7 +1009,7 @@ TEEC_Result TEEC_InvokeCommand(TEEC_Session* session, uint32_t commandID, TEEC_O
 
   auto result = fuchsia_tee::Application::Call::InvokeCommand(
       zx::unowned_channel(session->imp.application_channel), session->imp.session_id, commandID,
-      parameter_set.to_llcpp());
+      std::move(parameter_set));
   zx_status_t status = result.status();
   if (status != ZX_OK) {
     if (returnOrigin) {
