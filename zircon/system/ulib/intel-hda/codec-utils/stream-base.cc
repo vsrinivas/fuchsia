@@ -417,42 +417,29 @@ void IntelHDAStreamBase::GetSupportedFormats(
     }
   }
 
-  // Get FIDL PcmSupportedFormats from FIDL compatible vectors.
-  // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::wire::PcmSupportedFormats> fidl_pcm_formats;
-  for (auto& i : fidl_compatible_formats) {
+  fidl::FidlAllocator allocator;
+  fidl::VectorView<audio_fidl::wire::SupportedFormats> fidl_formats(allocator,
+                                                                    fidl_compatible_formats.size());
+  for (size_t i = 0; i < fidl_compatible_formats.size(); ++i) {
+    // Get FIDL PcmSupportedFormats from FIDL compatible vectors.
+    // Needs to be alive until the reply is sent.
+    FidlCompatibleFormats& src = fidl_compatible_formats[i];
     audio_fidl::wire::PcmSupportedFormats formats;
     formats.number_of_channels = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(i.number_of_channels.data()), i.number_of_channels.size());
+        fidl::unowned_ptr(src.number_of_channels.data()), src.number_of_channels.size());
     formats.sample_formats = ::fidl::VectorView<audio_fidl::wire::SampleFormat>(
-        fidl::unowned_ptr(i.sample_formats.data()), i.sample_formats.size());
-    formats.frame_rates =
-        ::fidl::VectorView<uint32_t>(fidl::unowned_ptr(i.frame_rates.data()), i.frame_rates.size());
+        fidl::unowned_ptr(src.sample_formats.data()), src.sample_formats.size());
+    formats.frame_rates = ::fidl::VectorView<uint32_t>(fidl::unowned_ptr(src.frame_rates.data()),
+                                                       src.frame_rates.size());
     formats.bytes_per_sample = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(i.bytes_per_sample.data()), i.bytes_per_sample.size());
+        fidl::unowned_ptr(src.bytes_per_sample.data()), src.bytes_per_sample.size());
     formats.valid_bits_per_sample = ::fidl::VectorView<uint8_t>(
-        fidl::unowned_ptr(i.valid_bits_per_sample.data()), i.valid_bits_per_sample.size());
-    fidl_pcm_formats.push_back(std::move(formats));
+        fidl::unowned_ptr(src.valid_bits_per_sample.data()), src.valid_bits_per_sample.size());
+    fidl_formats[i].Allocate(allocator);
+    fidl_formats[i].set_pcm_supported_formats(allocator, std::move(formats));
   }
 
-  // Get builders from PcmSupportedFormats tables.
-  // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::wire::SupportedFormats::UnownedBuilder> fidl_builders;
-  for (auto& i : fidl_pcm_formats) {
-    auto builder = audio_fidl::wire::SupportedFormats::UnownedBuilder();
-    builder.set_pcm_supported_formats(fidl::unowned_ptr(&i));
-    fidl_builders.push_back(std::move(builder));
-  }
-
-  // Build FIDL SupportedFormats from PcmSupportedFormats's builders.
-  // Needs to be alive until the reply is sent.
-  fbl::Vector<audio_fidl::wire::SupportedFormats> fidl_formats;
-  for (auto& i : fidl_builders) {
-    fidl_formats.push_back(i.build());
-  }
-
-  completer.Reply(::fidl::VectorView<audio_fidl::wire::SupportedFormats>(
-      fidl::unowned_ptr(fidl_formats.data()), fidl_formats.size()));
+  completer.Reply(std::move(fidl_formats));
 }
 
 void IntelHDAStreamBase::CreateRingBuffer(
@@ -580,19 +567,17 @@ void IntelHDAStreamBase::WatchGainState(StreamChannel* channel,
 
   // Reply is delayed if there is no change since the last reported gain state.
   if (channel->last_reported_gain_state_ != cur_gain_state_) {
-    auto builder = audio_fidl::wire::GainState::UnownedBuilder();
-    fidl::aligned<bool> mute = cur_gain_state_.cur_mute;
-    fidl::aligned<bool> agc = cur_gain_state_.cur_agc;
-    fidl::aligned<float> gain = cur_gain_state_.cur_gain;
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::GainState gain_state(allocator);
     if (cur_gain_state_.can_mute) {
-      builder.set_muted(fidl::unowned_ptr(&mute));
+      gain_state.set_muted(allocator, cur_gain_state_.cur_mute);
     }
     if (cur_gain_state_.can_agc) {
-      builder.set_agc_enabled(fidl::unowned_ptr(&agc));
+      gain_state.set_agc_enabled(allocator, cur_gain_state_.cur_mute);
     }
-    builder.set_gain_db(fidl::unowned_ptr(&gain));
+    gain_state.set_gain_db(allocator, cur_gain_state_.cur_gain);
     channel->last_reported_gain_state_ = cur_gain_state_;
-    channel->gain_completer_->Reply(builder.build());
+    channel->gain_completer_->Reply(std::move(gain_state));
     channel->gain_completer_.reset();
   }
 }
@@ -665,30 +650,27 @@ void IntelHDAStreamBase::WatchPlugState(StreamChannel* channel,
   fbl::AutoLock lock(obj_lock());
   OnPlugDetectLocked(channel, &plug);
 
-  fidl::aligned<bool> plugged = plug.flags & AUDIO_PDNF_PLUGGED;
+  bool plugged = plug.flags & AUDIO_PDNF_PLUGGED;
   // Reply is delayed if there is no change since the last reported plugged state.
   if (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kNotReported ||
       (channel->last_reported_plugged_state_ == StreamChannel::Plugged::kPlugged) != plugged) {
-    auto builder = audio_fidl::wire::PlugState::UnownedBuilder();
-    builder.set_plugged(fidl::unowned_ptr(&plugged));
-    fidl::aligned<zx_time_t> plug_time = plug.plug_state_time;
-    builder.set_plug_state_time(fidl::unowned_ptr(&plug_time));
+    fidl::FidlAllocator allocator;
+    audio_fidl::wire::PlugState plug_state(allocator);
+    plug_state.set_plugged(allocator, plugged).set_plug_state_time(allocator, plug.plug_state_time);
     channel->last_reported_plugged_state_ =
         plugged ? StreamChannel::Plugged::kPlugged : StreamChannel::Plugged::kUnplugged;
-    channel->plug_completer_->Reply(builder.build());
+    channel->plug_completer_->Reply(std::move(plug_state));
     channel->plug_completer_.reset();
   }
 }
 
 void IntelHDAStreamBase::NotifyPlugStateLocked(bool plugged, int64_t plug_time) {
-  auto builder = audio_fidl::wire::PlugState::UnownedBuilder();
-  fidl::aligned<bool> plugged2 = plugged;
-  builder.set_plugged(fidl::unowned_ptr(&plugged2));
-  builder.set_plug_state_time(fidl::unowned_ptr(&plug_time));
-
   for (auto& channel : stream_channels_) {
     if (channel.plug_completer_) {
-      channel.plug_completer_->Reply(builder.build());
+      fidl::FidlAllocator allocator;
+      audio_fidl::wire::PlugState plug_state(allocator);
+      plug_state.set_plugged(allocator, plugged).set_plug_state_time(allocator, plug_time);
+      channel.plug_completer_->Reply(std::move(plug_state));
       channel.plug_completer_.reset();
     }
   }
