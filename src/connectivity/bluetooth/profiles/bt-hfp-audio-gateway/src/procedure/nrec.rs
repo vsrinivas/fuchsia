@@ -72,7 +72,7 @@ impl Procedure for NrecProcedure {
             (State::SetRequest, update @ at::Response::Ok)
             | (State::SetRequest, update @ at::Response::Error) => {
                 self.state.transition();
-                ProcedureRequest::send_one_message_and_ok(update)
+                ProcedureRequest::SendMessages(vec![update])
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedAg(update)),
         }
@@ -151,7 +151,10 @@ mod tests {
             x => panic!("Unexpected message: {:?}", x),
         };
         let req = proc.ag_update(update, &mut state);
-        assert_matches!(req, ProcedureRequest::SendMessages(_));
+        assert_matches!(
+            req,
+            ProcedureRequest::SendMessages(resp) if resp == vec![at::Response::Ok]
+        );
 
         // Check that the procedure is termianted and any new messages produce an error.
         assert!(proc.is_terminated());
