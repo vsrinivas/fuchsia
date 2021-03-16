@@ -51,3 +51,6 @@ shayba@google.com
 teisenbe@google.com
 thatguy@google.com
 tmandry@google.com
+
+per-file go.mod = maruel@google.com,olivernewman@google.com,tamird@google.com
+per-file go.sum = maruel@google.com,olivernewman@google.com,tamird@google.com
