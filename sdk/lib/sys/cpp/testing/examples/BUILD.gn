@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//src/sys/build/components.gni")
+import("//build/test/test_package.gni")
 
 executable("component_context_provider_example_bin") {
   testonly = true
@@ -18,6 +18,12 @@ executable("component_context_provider_example_bin") {
   ]
 }
 
-fuchsia_unittest_package("component_context_provider_example_test") {
+test_package("component_context_provider_example_test") {
   deps = [ ":component_context_provider_example_bin" ]
+
+  tests = [
+    {
+      name = "component_context_provider_example_test"
+    },
+  ]
 }
