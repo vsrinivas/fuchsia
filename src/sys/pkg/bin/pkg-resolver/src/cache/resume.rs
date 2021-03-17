@@ -101,7 +101,6 @@ pub(super) async fn resuming_get<'a>(
                         // This will never overflow, because expected_len is const and if
                         // expected_len is 0 then this while loop can never be entered.
                         let last_byte_pos = expected_len - 1;
-                        // TODO(fxbug.dev/71333) use open-ended range ("bytes={}-")
                         let request = Request::get(uri)
                             .header(
                                 http::header::RANGE,

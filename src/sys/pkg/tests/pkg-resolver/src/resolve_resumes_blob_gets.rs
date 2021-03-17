@@ -19,8 +19,6 @@ fn meta_far_size(pkg: &Package) -> u64 {
     pkg.meta_far().unwrap().metadata().unwrap().len()
 }
 
-// TODO(fxbug.dev/71333) these test cases have a lot of repeated code, find an abstraction.
-
 fn for_range_requests<T: fuchsia_pkg_testing::serve::HttpResponder>(
     responder: T,
 ) -> impl fuchsia_pkg_testing::serve::HttpResponder {
