@@ -1,0 +1,58 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Set this to true to profile sdk_source_set() instances reachable from the
+  # top-level //sdk target. This will ensure that the build generates a profile
+  # list file, and add its path to 'profile_source_files_list_files' automatically.
+  #
+  # NOTE: This is ignored if the "profile" build variant is not enabled!
+  # Example usage:
+  #
+  #  fx set core.x64 --with //sdk --variant profile --args 'coverage_sdk_source_sets = true'
+  #  fx build
+  #
+  coverage_sdk_source_sets = false
+}
+
+# Location of a file listing SDK sources in the format described by
+# https://clang.llvm.org/docs/SanitizerSpecialCaseList.html
+#
+# This is used to restrict profiling instrumentation to the SDK sources
+# only, while compiling the CTS tests, as well as the rest of the platform
+# uninstrumented, significantly speeding up profiling / code coverage analysis.
+#
+# The content of this file should always reflect the state of the BUILD.gn
+# files defining sdk_source_set() instances in our tree, because unfortunately
+# circular dependency issues prevent the build from using GN to generate that
+# file at 'gn gen' time, and use it at build time.
+#
+# So instead, the following approach is implemented:
+#
+#   1) The //sdk:generate_profile_list generated_file() target is used to
+#      generate the file's correct content, using GN metadata collection, and
+#      store it in the build output directory, as
+#      '$root_build_dir/sdk_source_set.profile_list'
+#
+#   2) The //sdk:verify_profile_list action() target is used to check that
+#      the content of //sdk/sdk_source_set.profile_list is the same as the
+#      generated file above.
+#
+#      In case of error, a human friendly message explains the situation
+#      and describes how to solve the issue (i.e. copy the generated file
+#      to //sdk/sdk_source_set.profile_list).
+#
+#   3) Both targets are added to //sdk builds, even when
+#      coverage_sdk_source_sets is set to false. This ensures that the file
+#      is kept updated properly over time.
+#
+# In practice, this means that whenever someone changes the list of sources
+# used by sdk_source_set() instances in our build tree, the auto-generated
+# $root_build_dir/sdk_source_set.profile_list file will need to be manually
+# copied into our source tree, into //sdk/source_sets_profile_list.
+#
+# If coverage_sdk_source_sets is false (the default), running 'fx build' after
+# the copy will not require a full rebuild and will be very fast.
+#
+coverage_sdk_source_sets_profile_list = "//sdk/sdk_source_set.profile_list"

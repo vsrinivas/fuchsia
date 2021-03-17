@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config/profile/config.gni")
+import("//build/config/profile/sdk.gni")
 import("//build/toolchain/variant.gni")
 
 if (profile_source_files != []) {
@@ -19,6 +20,11 @@ if (profile_source_files != []) {
              _profile_source_files_lines,
              "list lines")
   profile_source_files_list_files += [ _profile_source_files_file ]
+}
+
+# NOTE: See //build/config/profile/sdk.gni to understand why this is needed.
+if (coverage_sdk_source_sets) {
+  profile_source_files_list_files += [ coverage_sdk_source_sets_profile_list ]
 }
 
 variant("profile") {
