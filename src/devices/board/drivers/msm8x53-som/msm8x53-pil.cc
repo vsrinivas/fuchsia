@@ -52,7 +52,7 @@ zx_status_t Msm8x53::PilInit() {
 
   pbus_metadata_t metadata[] = {{
       .type = DEVICE_METADATA_PRIVATE,
-      .data_buffer = &fw_list,
+      .data_buffer = reinterpret_cast<const uint8_t*>(&fw_list),
       .data_size = sizeof(fw_list),
   }};
 
