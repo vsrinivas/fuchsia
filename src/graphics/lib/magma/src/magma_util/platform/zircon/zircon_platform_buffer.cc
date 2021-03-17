@@ -521,7 +521,8 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Create(uint64_t size, const char
   zx::vmo vmo;
   zx_status_t status = zx::vmo::create(size, 0, &vmo);
   if (status != ZX_OK)
-    return DRETP(nullptr, "failed to allocate vmo size %" PRId64 ": %d", size, status);
+    return DRETP(nullptr, "failed to allocate vmo size %" PRIu64 ": %d", size, status);
+
   vmo.set_property(ZX_PROP_NAME, name, strlen(name));
 
   DLOG("allocated vmo size %ld handle 0x%x", size, vmo.get());
@@ -536,6 +537,16 @@ std::unique_ptr<PlatformBuffer> PlatformBuffer::Import(uint32_t handle) {
   zx_status_t status = vmo.get_size(&size);
   if (status != ZX_OK)
     return DRETP(nullptr, "zx_vmo_get_size failed: %d", status);
+
+  {
+    zx_info_vmo_t info;
+    status = vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+    if (status != ZX_OK)
+      return DRETP(nullptr, "vmo get_info failed");
+
+    if (info.flags & ZX_INFO_VMO_RESIZABLE)
+      return DRETP(nullptr, "Can't import resizable VMOs");
+  }
 
   if (!magma::is_page_aligned(size))
     return DRETP(nullptr, "attempting to import vmo with invalid size");

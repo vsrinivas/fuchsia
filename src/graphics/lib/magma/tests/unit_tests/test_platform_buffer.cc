@@ -32,7 +32,7 @@ static uint32_t GetVmarHandle(uint64_t size) {
                                             0,                                         // offset,
                                             size,                                      // size
                                             &test_vmar,                                // child
-                                            &child_addr  // child_addr
+                                            &child_addr                                // child_addr
                                             ));
   return test_vmar.release();
 }
@@ -673,5 +673,11 @@ TEST(PlatformBuffer, Padding) { TestPlatformBuffer::Padding(); }
 #endif
 
 TEST(PlatformBuffer, Name) { TestPlatformBuffer::Name(); }
+
+TEST(PlatformBuffer, Resizable) {
+  zx::vmo vmo;
+  ASSERT_EQ(ZX_OK, zx::vmo::create(magma::page_size(), ZX_VMO_RESIZABLE, &vmo));
+  ASSERT_FALSE(magma::PlatformBuffer::Import(vmo.release()));
+}
 
 #endif
