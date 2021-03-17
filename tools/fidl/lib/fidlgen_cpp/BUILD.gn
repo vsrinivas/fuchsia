@@ -16,6 +16,7 @@ go_library("fidlgen_cpp") {
     "ir.go",
     "names.go",
     "namespace.go",
+    "namespaced_enum.go",
     "reserved_names.go",
     "typed_channel_migration.go",
   ]
@@ -27,9 +28,9 @@ go_library("cpp_test") {
     "//third_party/golibs:github.com/google/go-cmp",
   ]
   sources = [
-    "enum_test.go",
     "ir_test.go",
     "names_test.go",
+    "namespaced_enum_test.go",
     "reserved_names_test.go",
   ]
 }

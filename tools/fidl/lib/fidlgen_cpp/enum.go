@@ -1,72 +1,55 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
 package fidlgen_cpp
 
 import (
-	"fmt"
-	"reflect"
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-// enumMember should be the base type of all namespaced enumeration types.
-type namespacedEnumMember int
+type Enum struct {
+	fidl.Attributes
+	fidl.Strictness
+	DeclName
+	Enum    fidl.Enum
+	Type    TypeName
+	Members []EnumMember
 
-var enumMemberBaseType = reflect.TypeOf(namespacedEnumMember(0))
+	// Kind should be default initialized.
+	Kind enumKind
+}
 
-// namespacedEnum helps to create a group of values nested under one container
-// object, such that the entire group can be easily injected into templates
-// by injecting the container object, and referenced using the
-// `{{ MyEnum.MyEnumMember }}` pattern.
-//
-// It requires that `namespace` is a struct used as container for enumerations,
-// and assigns each enum member field an ordinal increasing from 1.
-//
-// Every enum member must be exported, and the struct should only contain fields
-// of the same enum member type.
-//
-// Here is an example:
-//
-// Defining:
-//
-//     type color namespacedEnumMember
-//     type colors struct {
-//         Red   color
-//         Green color
-//         Blue  color
-//     }
-//     Colors := namespacedEnum(colors{}).(colors)
-//
-// Using:
-//
-//     // Instantiating the template
-//     template.FuncMap{
-//         "Colors": func() interface{} { return Colors },
-//     }
-//
-//     // Authoring the template
-//     {{ if eq .Color Colors.Red }} ... {{ end }}
-//
-func namespacedEnum(namespace interface{}) interface{} {
-	ns := reflect.New(reflect.TypeOf(namespace)).Elem()
-	if ns.Kind() != reflect.Struct {
-		panic(fmt.Sprintf("Must use a struct as namespace. Got %v", ns.Kind()))
+func (e *Enum) UnknownValueForTmpl() interface{} {
+	return e.Enum.UnknownValueForTmpl()
+}
+
+type EnumMember struct {
+	fidl.EnumMember
+	Name  string
+	Value ConstantValue
+}
+
+func (c *compiler) compileEnum(val fidl.Enum) Enum {
+	name := c.compileDeclName(val.Name)
+	r := Enum{
+		Attributes: val.Attributes,
+		Strictness: val.Strictness,
+		DeclName:   name,
+		Enum:       val,
+		Type:       TypeNameForPrimitive(val.Type),
 	}
-	var fieldType reflect.Type
-	for i := 0; i < ns.NumField(); i++ {
-		f := ns.Field(i)
-		if !f.Type().ConvertibleTo(enumMemberBaseType) ||
-			f.Type() == enumMemberBaseType {
-			panic(fmt.Sprintf("Each struct field type must be an alias of %s", enumMemberBaseType))
-		}
-		if fieldType == nil {
-			fieldType = f.Type()
-		} else if fieldType != f.Type() {
-			panic("Each struct field must be of the same type")
-		}
-		v := reflect.New(f.Type()).Elem()
-		v.SetInt(int64(i + 1))
-		f.Set(v)
+	for _, v := range val.Members {
+		r.Members = append(r.Members, EnumMember{
+			EnumMember: v,
+			Name:       changeIfReserved(v.Name),
+			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
+			// will not need to plug this here.
+			Value: c.compileConstant(v.Value, nil, fidl.Type{
+				Kind:             fidl.PrimitiveType,
+				PrimitiveSubtype: val.Type,
+			}),
+		})
 	}
-	return ns.Interface()
+	return r
 }

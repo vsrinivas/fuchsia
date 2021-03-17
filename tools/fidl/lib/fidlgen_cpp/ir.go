@@ -153,28 +153,6 @@ type Member interface {
 	NameAndType() (string, Type)
 }
 
-type Enum struct {
-	fidl.Attributes
-	fidl.Strictness
-	DeclName
-	Enum    fidl.Enum
-	Type    TypeName
-	Members []EnumMember
-
-	// Kind should be default initialized.
-	Kind enumKind
-}
-
-func (e *Enum) UnknownValueForTmpl() interface{} {
-	return e.Enum.UnknownValueForTmpl()
-}
-
-type EnumMember struct {
-	fidl.EnumMember
-	Name  string
-	Value ConstantValue
-}
-
 type Union struct {
 	fidl.Attributes
 	fidl.Strictness
@@ -892,30 +870,6 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		}
 	default:
 		panic(fmt.Sprintf("unknown type kind: %v", val.Kind))
-	}
-	return r
-}
-
-func (c *compiler) compileEnum(val fidl.Enum) Enum {
-	name := c.compileDeclName(val.Name)
-	r := Enum{
-		Attributes: val.Attributes,
-		Strictness: val.Strictness,
-		DeclName:   name,
-		Enum:       val,
-		Type:       TypeNameForPrimitive(val.Type),
-	}
-	for _, v := range val.Members {
-		r.Members = append(r.Members, EnumMember{
-			EnumMember: v,
-			Name:       changeIfReserved(v.Name),
-			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
-			// will not need to plug this here.
-			Value: c.compileConstant(v.Value, nil, fidl.Type{
-				Kind:             fidl.PrimitiveType,
-				PrimitiveSubtype: val.Type,
-			}),
-		})
 	}
 	return r
 }
