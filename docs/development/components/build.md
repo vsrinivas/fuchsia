@@ -1115,67 +1115,50 @@ The examples below demonstrate migration scenarios from the legacy
 ### Simple `package()` example
 
 This example is adapted from
-[`//src/sys/time/timekeeper/BUILD.gn`](/src/sys/time/timekeeper/BUILD.gn).
-
-{# Disable variable substition to avoid {{ being interpreted by the template engine #}
-{% verbatim %}
+[`//src/sys/component_index/BUILD.gn`](/src/sys/component_index/BUILD.gn).
 
 * {Pre-migration}
 
   ```gn
   import("//build/config.gni")
-  import("//build/package.gni")                            # <1>
+  import("//build/package.gni")                              # <1>
   import("//build/rust/rustc_binary.gni")
-  import("//build/test/test_package.gni")                  # <1>
+  import("//build/test/test_package.gni")                    # <1>
 
-  rustc_binary("bin") {                                    # <2>
-    output_name = "timekeeper"
-    edition = "2018"
+  rustc_binary("component_index_bin") {                      # <2>
+    name = "component_index"
     # Generate a ":bin_test" target for unit tests
     with_unit_tests = true
+    edition = "2018"
     deps = [ ... ]
   }
 
-  config_data("timekeeper_config") {
-    for_pkg = "sysmgr"
-    outputs = [ "timekeeper.config" ]
-    sources = [ "service.config" ]
-  }
+  package("component_index") {                               # <3>
+    deps = [ ":component_index_bin" ]
 
-  package("timekeeper") {
-    meta = [
-      {
-        path = "meta/service.cmx"                          # <3>
-        dest = "timekeeper.cmx"                            # <3>
-      },
-    ]
-    deps = [
-      ":bin",
-      ":timekeeper_config",
-    ]
     binaries = [
       {
-        name = "timekeeper"
+        name = "component_index"
       },
     ]
+
+    meta = [
+      {
+        path = rebase_path("meta/component_index.cmx")       # <4>
+        dest = "component_index.cmx"                         # <4>
+      },
+    ]
+
+    resources = [ ... ]
   }
 
-  test_package("timekeeper_bin_test") {
-    deps = [ ":bin_test" ]
+  test_package("component_index_tests") {                    # <5>
+    deps = [ ":component_index_bin_test" ]
+
     tests = [
       {
-        name = "timekeeper_bin_test"
-        environments = basic_envs
-      },
-    ]
-    resources = [                                          # <4>
-      {
-        path = "test/y2k"
-        dest = "y2k"                                       # <4>
-      },
-      {
-        path = "test/end-of-unix-time"
-        dest = "end-of-unix-time"                          # <4>
+        name = "component_index_bin_test"                    # <5>
+        dest = "component_index_tests"                       # <5>
       },
     ]
   }
@@ -1186,72 +1169,42 @@ This example is adapted from
   ```gn
   import("//build/config.gni")
   import("//build/rust/rustc_binary.gni")
-  import("//src/sys/build/components.gni")                 # <1>
+  import("//src/sys/build/components.gni")                   # <1>
 
-  rustc_binary("bin") {                                    # <2>
-    output_name = "timekeeper"
-    edition = "2018"
+  rustc_binary("component_index_bin") {                      # <2>
+    name = "component_index"
     # Generate a ":bin_test" target for unit tests
     with_unit_tests = true
+    edition = "2018"
     deps = [ ... ]
   }
 
-  config_data("timekeeper_config") {
-    for_pkg = "sysmgr"
-    outputs = [ "timekeeper.config" ]
-    sources = [ "service.config" ]
+  fuchsia_package_with_single_component("component_index") { # <3>
+    manifest = "meta/component_index.cmx"                    # <4>
+    deps = [ ":component_index_bin" ]
   }
 
-  fuchsia_component("service") {
-    component_name = "timekeeper"                          # <3>
-    manifest = "meta/service.cmx"                          # <3>
-    deps = [ ":bin" ]
-  }
-
-  fuchsia_package("timekeeper") {
-    deps = [ ":service" ]
-  }
-
-  resource("testdata") {                                   # <4>
-    sources = [
-      "test/y2k",
-      "test/end-of-unix-time",
-    ]
-    outputs = [ "data/{{source_file_part}}" ]              # <4>
-  }
-
-  fuchsia_unittest_package("timekeeper_unittests") {
-    manifest = "meta/unittests.cmx"
-    deps = [
-      ":bin_test",
-      ":testdata",                                         # <4>
-    ]
+  fuchsia_unittest_package("component_index_tests") {        # <5>
+    deps = [ ":component_index_bin_test" ]
   }
   ```
-{# Re-enable variable substition #}
-{% endverbatim %}
 
 The following key elements are called out in the code example above:
 
 > 1.  Necessary imports are replaced by `//src/sys/build/components.gni`.
 > 2.  Targets that generate executables or data files are not expected to change
 >     in a migration.
-> 3.  Previously, `meta/service.cmx` was given the destination `"timekeeper.cmx"`
->     which placed it in `meta/timekeeper.cmx`. With `fuchsia_component()`, the
->     given manifest is automatically renamed per the `component_name` field
->     (`"timekeeper"`) and `meta/` is prepended. As a result, the launch URL for
->     the timekeeper component remains the same:
->     `fuchsia-pkg://fuchsia.com/timekeeper#meta/timekeeper.cmx`
->
->     Note: If you do not provide a `component_name`, the manifest is named
->     according to the `fuchsia_component()` target name.
->
-> 4.  Additional resources (in this case, the data asset files used in the test
->     such as the `test/y2k` file) are included in the unit test. Their
->     destination path is a full packaged path, whereas before it would have had
->     `data/` automatically prepended to it. In both cases, the data file can
->     be read by the test at runtime from the paths `/pkg/data/y2k` and
->     `/pkg/data/end-of-unix-time`.
+> 3.  The original `package()` declaration contains a single component manifest
+>     (listed under `meta`). The `fuchsia_package_with_single_component()`
+>     template can replace this, referencing the same manifest file.
+> 4.  Under `package()`, the manifest is given a specific destination
+>     (`"component_index.cmx"`) to place it in the final package. With the new
+>     templates, the manifest is renamed according to the **target name**.
+>     As a result, the launch URL for the component remains the same.
+> 5.  For a simple test package that does not contain multiple test components,
+>     the `fuchsia_unittest_package()` template replaces `test_package()`. A
+>     basic test component manifest is automatically generated and
+>     `meta/component_index_tests.cmx` is no longer needed.
 
 ### Complex `package()` example
 
@@ -1369,7 +1322,8 @@ The following key elements are called out in the code example above:
 > 4.  Each `fuchsia_component()` uses the `component_name` field to map the
 >     manifest destination in the final package. Without this, they are placed
 >     according to the **target name**, which affects the launch URL of the
->     component. This is true for both `fuchsia_package()` and `fuchsia_test_package()`.
+>     component.
+>     This is true for both `fuchsia_package()` and `fuchsia_test_package()`.
 
 Note: The new build templates allow targets that produce files, such as
 `executable()`, to decide which files they produce and where the targets place
