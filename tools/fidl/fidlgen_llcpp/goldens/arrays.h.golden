@@ -392,8 +392,6 @@ class TableSmallArray final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  class UnownedBuilder;
-
   // Frames are managed automatically by the FidlAllocator class.
   // The only direct usage is when performance is key and a frame needs to be
   // allocated outside a FidlAllocator. Once created, a frame can only be used
@@ -414,7 +412,6 @@ class TableSmallArray final {
     ::fidl::Envelope<::fidl::Array<uint32_t, 2>> a_;
 
     friend class TableSmallArray;
-    friend class TableSmallArray::UnownedBuilder;
   };
 
  private:
@@ -422,46 +419,6 @@ class TableSmallArray final {
       : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
-};
-
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying
-// working with unowned data.
-class TableSmallArray::UnownedBuilder final {
- public:
-  ~UnownedBuilder() = default;
-  UnownedBuilder() noexcept = default;
-  UnownedBuilder(UnownedBuilder&& other) noexcept = default;
-  UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  UnownedBuilder&& set_a(
-      ::fidl::tracking_ptr<::fidl::Array<uint32_t, 2>> elem) {
-    ZX_ASSERT(elem);
-    frame_.a_.data = std::move(elem);
-    if (max_ordinal_ < 1) {
-      max_ordinal_ = 1;
-    }
-    return std::move(*this);
-  }
-  const ::fidl::Array<uint32_t, 2>& a() const {
-    ZX_ASSERT(has_a());
-    return *frame_.a_.data;
-  }
-  ::fidl::Array<uint32_t, 2>& a() {
-    ZX_ASSERT(has_a());
-    return *frame_.a_.data;
-  }
-  bool has_a() const { return max_ordinal_ >= 1 && frame_.a_.data != nullptr; }
-
-  TableSmallArray build() {
-    return TableSmallArray(max_ordinal_, ::fidl::unowned_ptr(&frame_));
-  }
-
- private:
-  uint64_t max_ordinal_ = 0;
-  TableSmallArray::Frame frame_;
 };
 
 extern "C" const fidl_type_t fidl_test_arrays_TableLargeArrayTable;
@@ -621,8 +578,6 @@ class TableLargeArray final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  class UnownedBuilder;
-
   // Frames are managed automatically by the FidlAllocator class.
   // The only direct usage is when performance is key and a frame needs to be
   // allocated outside a FidlAllocator. Once created, a frame can only be used
@@ -643,7 +598,6 @@ class TableLargeArray final {
     ::fidl::Envelope<::fidl::Array<uint32_t, 100>> a_;
 
     friend class TableLargeArray;
-    friend class TableLargeArray::UnownedBuilder;
   };
 
  private:
@@ -651,46 +605,6 @@ class TableLargeArray final {
       : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
-};
-
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying
-// working with unowned data.
-class TableLargeArray::UnownedBuilder final {
- public:
-  ~UnownedBuilder() = default;
-  UnownedBuilder() noexcept = default;
-  UnownedBuilder(UnownedBuilder&& other) noexcept = default;
-  UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  UnownedBuilder&& set_a(
-      ::fidl::tracking_ptr<::fidl::Array<uint32_t, 100>> elem) {
-    ZX_ASSERT(elem);
-    frame_.a_.data = std::move(elem);
-    if (max_ordinal_ < 1) {
-      max_ordinal_ = 1;
-    }
-    return std::move(*this);
-  }
-  const ::fidl::Array<uint32_t, 100>& a() const {
-    ZX_ASSERT(has_a());
-    return *frame_.a_.data;
-  }
-  ::fidl::Array<uint32_t, 100>& a() {
-    ZX_ASSERT(has_a());
-    return *frame_.a_.data;
-  }
-  bool has_a() const { return max_ordinal_ >= 1 && frame_.a_.data != nullptr; }
-
-  TableLargeArray build() {
-    return TableLargeArray(max_ordinal_, ::fidl::unowned_ptr(&frame_));
-  }
-
- private:
-  uint64_t max_ordinal_ = 0;
-  TableLargeArray::Frame frame_;
 };
 
 extern "C" const fidl_type_t fidl_test_arrays_StructSmallArrayTable;

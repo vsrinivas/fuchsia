@@ -494,8 +494,6 @@ class ExampleTable final {
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  class UnownedBuilder;
-
   // Frames are managed automatically by the FidlAllocator class.
   // The only direct usage is when performance is key and a frame needs to be
   // allocated outside a FidlAllocator. Once created, a frame can only be used
@@ -516,7 +514,6 @@ class ExampleTable final {
     ::fidl::Envelope<uint32_t> member_;
 
     friend class ExampleTable;
-    friend class ExampleTable::UnownedBuilder;
   };
 
  private:
@@ -524,47 +521,6 @@ class ExampleTable final {
       : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
-};
-
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying
-// working with unowned data.
-class ExampleTable::UnownedBuilder final {
- public:
-  ~UnownedBuilder() = default;
-  UnownedBuilder() noexcept = default;
-  UnownedBuilder(UnownedBuilder&& other) noexcept = default;
-  UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  UnownedBuilder&& set_member(::fidl::tracking_ptr<uint32_t> elem) {
-    ZX_ASSERT(elem);
-    frame_.member_.data = std::move(elem);
-    if (max_ordinal_ < 1) {
-      max_ordinal_ = 1;
-    }
-    return std::move(*this);
-  }
-  const uint32_t& member() const {
-    ZX_ASSERT(has_member());
-    return *frame_.member_.data;
-  }
-  uint32_t& member() {
-    ZX_ASSERT(has_member());
-    return *frame_.member_.data;
-  }
-  bool has_member() const {
-    return max_ordinal_ >= 1 && frame_.member_.data != nullptr;
-  }
-
-  ExampleTable build() {
-    return ExampleTable(max_ordinal_, ::fidl::unowned_ptr(&frame_));
-  }
-
- private:
-  uint64_t max_ordinal_ = 0;
-  ExampleTable::Frame frame_;
 };
 
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;

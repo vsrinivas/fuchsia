@@ -197,8 +197,6 @@ public:
     void ReleasePrimaryObject() { ResetBytes(); }
   };
 
-  class UnownedBuilder;
-
   // Frames are managed automatically by the FidlAllocator class.
   // The only direct usage is when performance is key and a frame needs to be allocated outside a
   // FidlAllocator.
@@ -226,67 +224,12 @@ public:
     {{- end }}
 
     friend class {{ .Name }};
-    friend class {{ .Name }}::UnownedBuilder;
   };
 
  private:
   {{ .Name }}(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
   ::fidl::tracking_ptr<Frame> frame_ptr_;
-};
-
-// UnownedBuilder acts like Builder but directly owns its Frame, simplifying working with unowned
-// data.
-class {{ .Name }}::UnownedBuilder final {
-public:
-  ~UnownedBuilder() = default;
-  UnownedBuilder() noexcept = default;
-  UnownedBuilder(UnownedBuilder&& other) noexcept = default;
-  UnownedBuilder& operator=(UnownedBuilder&& other) noexcept = default;
-
-  // Returns whether no field is set.
-  bool IsEmpty() const { return max_ordinal_ == 0; }
-
-  {{- range .Members }}
-{{ "" }}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
-    {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
-  UnownedBuilder&& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type }}> elem) {
-    ZX_ASSERT(elem);
-    frame_.{{ .Name }}_.data = std::move(elem);
-    if (max_ordinal_ < {{ .Ordinal }}) {
-      max_ordinal_ = {{ .Ordinal }};
-    }
-    return std::move(*this);
-  }
-  const {{ .Type }}& {{ .Name }}() const {
-    ZX_ASSERT({{ .MethodHasName }}());
-    return *frame_.{{ .Name }}_.data;
-  }
-  {{ .Type }}& {{ .Name }}() {
-    ZX_ASSERT({{ .MethodHasName }}());
-    return *frame_.{{ .Name }}_.data;
-  }
-  bool {{ .MethodHasName }}() const {
-    return max_ordinal_ >= {{ .Ordinal }} && frame_.{{ .Name }}_.data != nullptr;
-  }
-  {{- end }}
-
-  {{ .Name }} build() {
-    {{ if eq (len .Members) 0 -}}
-    return {{ .Name }}(max_ordinal_, nullptr);
-    {{- else -}}
-    return {{ .Name }}(max_ordinal_, ::fidl::unowned_ptr(&frame_));
-    {{- end }}
-  }
-
-private:
-  uint64_t max_ordinal_ = 0;
-  {{ if ne (len .Members) 0 -}}
-  {{ .Name }}::Frame frame_;
-  {{- end }}
 };
 
 {{- if .IsResourceType }}
