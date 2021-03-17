@@ -61,3 +61,11 @@ _debuginfo_valid = [
 
 assert(_debuginfo_valid + [ debuginfo ] - [ debuginfo ] != _debuginfo_valid,
        "`debuginfo=\"...\"` must be one of $_debuginfo_valid")
+
+declare_args() {
+  # Explicitly specify DWARF version used.
+  dwarf_version = 4
+}
+
+assert(dwarf_version >= 2 && dwarf_version <= 5,
+       "`dwarf_version=\"...\"` must be between 2 and 5")

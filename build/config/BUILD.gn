@@ -515,7 +515,11 @@ config("debuginfo_debug") {
 
 config("default_debuginfo") {
   configs = [ ":debuginfo_${debuginfo}" ]
-  if (debuginfo != "none" && current_os == "win") {
+  if (current_os != "win") {
+    cflags = [ "-gdwarf-${dwarf_version}" ]
+    asmflags = cflags
+    ldflags = cflags
+  } else if (debuginfo != "none" && current_os == "win") {
     # TODO(fxbug.dev/55244): This produces the .pdb file, but it doesn't seem
     # to get the DWARF data out of the main output file.
     ldflags = [ "-Wl,/debug:full" ]
