@@ -810,9 +810,9 @@ void DevfsFidlServer::Clone(uint32_t flags, fidl::ServerEnd<fio::Node> object,
 }
 
 void DevfsFidlServer::QueryFilesystem(QueryFilesystemCompleter::Sync& completer) {
-  fidl::tracking_ptr<fio::wire::FilesystemInfo> info(std::make_unique<fio::wire::FilesystemInfo>());
-  strlcpy(reinterpret_cast<char*>(info->name.data()), "devfs", fio::wire::MAX_FS_NAME_BUFFER);
-  completer.Reply(ZX_OK, std::move(info));
+  fio::wire::FilesystemInfo info;
+  strlcpy(reinterpret_cast<char*>(info.name.data()), "devfs", fio::wire::MAX_FS_NAME_BUFFER);
+  completer.Reply(ZX_OK, fidl::unowned_ptr(&info));
 }
 
 void DevfsFidlServer::Watch(uint32_t mask, uint32_t options, zx::channel watcher,
