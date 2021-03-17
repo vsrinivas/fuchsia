@@ -53,11 +53,13 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
   const display_setting_t* init_disp_table;
   switch (panel_type) {
     case PANEL_TV070WSM_FT:
+    case PANEL_TV070WSM_FT_9365:
       init_disp_table = &kDisplaySettingTV070WSM_FT;
       break;
     case PANEL_P070ACB_FT:
       init_disp_table = &kDisplaySettingP070ACB_FT;
       break;
+    case PANEL_TV101WXM_FT_9365:
     case PANEL_TV101WXM_FT:
       init_disp_table = &kDisplaySettingTV101WXM_FT;
       break;
@@ -66,9 +68,6 @@ zx_status_t Vout::InitDsi(zx_device_t* parent, uint32_t panel_type, uint32_t wid
       break;
     case PANEL_TV080WXM_FT:
       init_disp_table = &kDisplaySettingTV080WXM_FT;
-      break;
-    case PANEL_TV101WXM_FT_9365:
-      init_disp_table = &kDisplaySettingTV101WXM_FT;
       break;
     default:
       DISP_ERROR("Unsupported panel detected!\n");
