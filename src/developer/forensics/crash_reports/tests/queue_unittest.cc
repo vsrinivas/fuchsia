@@ -144,14 +144,10 @@ class QueueTest : public UnitTestFixture {
   void SetUpQueue(std::vector<CrashServer::UploadStatus> upload_attempt_results =
                       std::vector<CrashServer::UploadStatus>{}) {
     report_id_ = 1;
-    reporting_policy_ = QueueOps::SetReportingPolicyUndecided;
-    expected_queue_contents_.clear();
-    upload_attempt_results_ = upload_attempt_results;
-    next_upload_attempt_result_ = upload_attempt_results_.cbegin();
     snapshot_manager_ = std::make_unique<SnapshotManager>(
         dispatcher(), services(), &clock_, zx::sec(5), kGarbageCollectedSnapshotsPath,
         StorageSize::Gigabytes(1), StorageSize::Gigabytes(1));
-    crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results_);
+    crash_server_ = std::make_unique<StubCrashServer>(upload_attempt_results);
     crash_server_->AddSnapshotManager(snapshot_manager_.get());
 
     InitQueue();
@@ -164,86 +160,14 @@ class QueueTest : public UnitTestFixture {
     queue_->WatchNetwork(&network_watcher_);
   }
 
-  enum class QueueOps {
-    AddNewReport,
-    AddHourlyReport,
-    DeleteOneReport,
-    SetReportingPolicyArchive,
-    SetReportingPolicyDelete,
-    SetReportingPolicyUpload,
-    SetReportingPolicyUndecided,
-    StopUploading,
-  };
+  std::optional<ReportId> AddNewReport(const bool is_hourly_report) {
+    ++report_id_;
+    Report report = (is_hourly_report) ? MakeHourlyReport(report_id_) : MakeReport(report_id_);
 
-  void ApplyQueueOps(const std::vector<QueueOps>& ops) {
-    for (auto const& op : ops) {
-      switch (op) {
-        case QueueOps::AddNewReport:
-          FX_CHECK(queue_->Add(MakeReport(report_id_)));
-          AddExpectedReport(report_id_);
-          RunLoopUntilIdle();
-          ++report_id_;
-          break;
-        case QueueOps::AddHourlyReport:
-          FX_CHECK(queue_->Add(MakeHourlyReport(report_id_)));
-          AddExpectedReport(report_id_);
-          RunLoopUntilIdle();
-          ++report_id_;
-          break;
-        case QueueOps::DeleteOneReport:
-          if (!expected_queue_contents_.empty()) {
-            std::optional<std::string> report_id = DeleteReportFromStore();
-            if (report_id.has_value()) {
-              expected_queue_contents_.erase(
-                  std::remove(expected_queue_contents_.begin(), expected_queue_contents_.end(),
-                              std::stoull(report_id.value())),
-                  expected_queue_contents_.end());
-            }
-          }
-          break;
-        case QueueOps::SetReportingPolicyDelete:
-          reporting_policy_ = QueueOps::SetReportingPolicyDelete;
-          reporting_policy_watcher_.Set(ReportingPolicy::kDoNotFileAndDelete);
-          expected_queue_contents_.clear();
-          break;
-        case QueueOps::SetReportingPolicyArchive:
-          reporting_policy_ = QueueOps::SetReportingPolicyArchive;
-          reporting_policy_watcher_.Set(ReportingPolicy::kArchive);
-          break;
-        case QueueOps::SetReportingPolicyUpload:
-          reporting_policy_ = QueueOps::SetReportingPolicyUpload;
-          reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
-          SimulateUploadAll();
-          break;
-        case QueueOps::SetReportingPolicyUndecided:
-          reporting_policy_ = QueueOps::SetReportingPolicyUndecided;
-          reporting_policy_watcher_.Set(ReportingPolicy::kUndecided);
-          break;
-        case QueueOps::StopUploading:
-          reporting_policy_ = QueueOps::StopUploading;
-          queue_->StopUploading();
-          break;
-      }
+    if (queue_->Add(std::move(report))) {
+      return report_id_;
     }
-    RunLoopUntilIdle();
-  }
-
-  void SimulatePerioidUpload() {
-    RunLoopFor(kPeriodicUploadDuration);
-    SimulateUploadAll();
-  }
-
-  void SimulateNetworkReachable() {
-    network_reachability_provider_->TriggerOnNetworkReachable(true);
-    RunLoopUntilIdle();
-    SimulateUploadAll();
-  }
-
-  void CheckQueueContents() {
-    for (const auto& id : expected_queue_contents_) {
-      EXPECT_TRUE(queue_->Contains(id));
-    }
-    EXPECT_EQ(queue_->Size(), expected_queue_contents_.size());
+    return std::nullopt;
   }
 
   void CheckAnnotationsOnServer() {
@@ -267,56 +191,10 @@ class QueueTest : public UnitTestFixture {
 
   LogTags tags_;
   std::unique_ptr<Queue> queue_;
-  std::vector<ReportId> expected_queue_contents_;
-
- private:
-  void SimulateUploadAll() {
-    if (reporting_policy_ != QueueOps::SetReportingPolicyUpload) {
-      return;
-    }
-
-    std::vector<ReportId> new_expected_queue_contents;
-    for (const auto& id : expected_queue_contents_) {
-      if (*next_upload_attempt_result_ == CrashServer::UploadStatus::kFailure) {
-        new_expected_queue_contents.push_back(id);
-      }
-
-      ++next_upload_attempt_result_;
-    }
-    expected_queue_contents_.swap(new_expected_queue_contents);
-  }
-
-  void AddExpectedReport(const ReportId& uuid) {
-    // Add a report to the back of the expected queue contents if and only if it is expected
-    // to be in the queue after processing.
-    switch (reporting_policy_) {
-      case QueueOps::SetReportingPolicyUpload:
-        if (*next_upload_attempt_result_ == CrashServer::UploadStatus::kFailure) {
-          expected_queue_contents_.push_back(uuid);
-        }
-        ++next_upload_attempt_result_;
-        break;
-      case QueueOps::SetReportingPolicyUndecided:
-      case QueueOps::StopUploading:
-        expected_queue_contents_.push_back(uuid);
-        break;
-      case QueueOps::SetReportingPolicyDelete:
-      case QueueOps::SetReportingPolicyArchive:
-        break;
-      case QueueOps::AddNewReport:
-      case QueueOps::AddHourlyReport:
-      case QueueOps::DeleteOneReport:
-        FX_CHECK(false);
-        break;
-    }
-  }
+  TestReportingPolicyWatcher reporting_policy_watcher_;
 
   size_t report_id_ = 1;
-  QueueOps reporting_policy_ = QueueOps::SetReportingPolicyUndecided;
-  std::vector<CrashServer::UploadStatus> upload_attempt_results_;
-  std::vector<CrashServer::UploadStatus>::const_iterator next_upload_attempt_result_;
 
-  TestReportingPolicyWatcher reporting_policy_watcher_;
   NetworkWatcher network_watcher_;
   timekeeper::TestClock clock_;
   std::unique_ptr<stubs::NetworkReachabilityProvider> network_reachability_provider_;
@@ -326,59 +204,91 @@ class QueueTest : public UnitTestFixture {
   std::shared_ptr<cobalt::Logger> cobalt_;
 };
 
-TEST_F(QueueTest, Check_Add_ReportingPolicyUndecided) {
+TEST_F(QueueTest, Add_ReportingPolicyUndecided) {
   SetUpQueue();
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyUndecided,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
-  EXPECT_EQ(queue_->Size(), 1u);
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kUndecided);
+  const auto report_id = AddNewReport(/*is_hourly_report=*/false);
+
+  ASSERT_TRUE(*report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty());
 }
 
-TEST_F(QueueTest, Check_Add_ReportingPolicyDoNotFileAndDelete) {
-  SetUpQueue({kUploadFailed});
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyUpload,
-      QueueOps::AddNewReport,
-      QueueOps::SetReportingPolicyDelete,
-  });
-  CheckQueueContents();
-  EXPECT_TRUE(queue_->IsEmpty());
-
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::CrashState::kDeleted),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kDeleted, 1u),
-              }));
-}
-
-TEST_F(QueueTest, Check_Add_ReportingPolicyArchive) {
+TEST_F(QueueTest, Add_ReportingPolicyUndecided_HourlyReport) {
   SetUpQueue();
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyArchive,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
-  EXPECT_TRUE(queue_->IsEmpty());
 
+  reporting_policy_watcher_.Set(ReportingPolicy::kUndecided);
+  const auto report_id_1 = AddNewReport(/*is_hourly_report=*/true);
+
+  ASSERT_TRUE(*report_id_1);
+  EXPECT_TRUE(queue_->Contains(*report_id_1));
+
+  // Later hourly reports shouldn't be kept in the queue.
+  const auto report_id_2 = AddNewReport(/*is_hourly_report=*/true);
+
+  ASSERT_TRUE(*report_id_2);
+
+  EXPECT_TRUE(queue_->Contains(*report_id_1));
+  EXPECT_FALSE(queue_->Contains(*report_id_2));
+
+  RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          cobalt::Event(cobalt::CrashState::kDeleted),
+                                      }));
+}
+
+TEST_F(QueueTest, Add_ReportingPolicyDoNotFileAndDelete) {
+  SetUpQueue();
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kDoNotFileAndDelete);
+  const auto report_id = AddNewReport(/*is_hourly_report=*/false);
+
+  ASSERT_TRUE(*report_id);
+  EXPECT_FALSE(queue_->Contains(*report_id));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          cobalt::Event(cobalt::CrashState::kDeleted),
+                                      }));
+}
+
+TEST_F(QueueTest, Add_ReportingPolicyArchive) {
+  SetUpQueue();
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kArchive);
+  auto report_id = AddNewReport(/*is_hourly_report=*/false);
+
+  ASSERT_TRUE(*report_id);
+  EXPECT_FALSE(queue_->Contains(*report_id));
+
+  report_id = AddNewReport(/*is_hourly_report=*/true);
+
+  ASSERT_TRUE(*report_id);
+  EXPECT_FALSE(queue_->Contains(*report_id));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), UnorderedElementsAreArray({
+                                          cobalt::Event(cobalt::CrashState::kArchived),
                                           cobalt::Event(cobalt::CrashState::kArchived),
                                       }));
 }
 
-TEST_F(QueueTest, Check_Add_ReportingPolicyUpload_SuccessfulEarlyUpload) {
+TEST_F(QueueTest, Add_ReportingPolicyUpload_Successful) {
   SetUpQueue({kUploadSuccessful});
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyUpload,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+  const auto report_id = AddNewReport(/*is_hourly_report=*/false);
+
+  ASSERT_TRUE(*report_id);
+  EXPECT_FALSE(queue_->Contains(*report_id));
+
   CheckAnnotationsOnServer();
   CheckAttachmentKeysOnServer();
-  EXPECT_TRUE(queue_->IsEmpty());
 
+  RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
                   cobalt::Event(cobalt::CrashState::kUploaded),
@@ -387,63 +297,81 @@ TEST_F(QueueTest, Check_Add_ReportingPolicyUpload_SuccessfulEarlyUpload) {
               }));
 }
 
-TEST_F(QueueTest, Check_Add_ReportingPolicyUpload_FailedEarlyUpload) {
+TEST_F(QueueTest, Add_ReportingPolicyUpload_Failure) {
   SetUpQueue({kUploadFailed});
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyUpload,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
-  EXPECT_EQ(queue_->Size(), 1u);
 
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+  const auto report_id = AddNewReport(/*is_hourly_report=*/false);
+
+  ASSERT_TRUE(*report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
               }));
 }
 
-TEST_F(QueueTest, Check_AddHourlyReport) {
-  SetUpQueue({kUploadFailed, kUploadFailed});
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyUpload,
-      QueueOps::AddHourlyReport,
-      QueueOps::AddHourlyReport,
-  });
+TEST_F(QueueTest, Add_ReportingPolicyUpload_AfterStopUploading) {
+  SetUpQueue();
 
-  // The new hourly report should overwrite the old one.
-  EXPECT_EQ(queue_->Size(), 1u);
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+  queue_->StopUploading();
 
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::CrashState::kDeleted),
-                  cobalt::Event(cobalt::UploadAttemptState::kDeleted, 1u),
-              }));
+  const auto report_id = AddNewReport(/*is_hourly_report=*/false);
+
+  ASSERT_TRUE(*report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  RunLoopUntilIdle();
+  EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty());
 }
 
-TEST_F(QueueTest, Check_UploadTaskRunsPeriodically) {
-  SetUpQueue({kUploadSuccessful, kUploadSuccessful});
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::SetReportingPolicyUpload,
+TEST_F(QueueTest, PeriodicUpload) {
+  SetUpQueue({
+      kUploadSuccessful,
+      kUploadFailed,
+      kUploadFailed,
+      kUploadSuccessful,
+      kUploadSuccessful,
   });
-  SimulatePerioidUpload();
+  reporting_policy_watcher_.Set(ReportingPolicy::kUndecided);
 
-  CheckQueueContents();
+  auto report_id = AddNewReport(/*is_hourly_upload=*/false);
+  ASSERT_TRUE(report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+
+  ASSERT_TRUE(queue_->IsPeriodicUploadScheduled());
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(queue_->Contains(*report_id));
+
   CheckAnnotationsOnServer();
   CheckAttachmentKeysOnServer();
-  EXPECT_TRUE(queue_->IsEmpty());
+  EXPECT_THAT(ReceivedCobaltEvents(),
+              UnorderedElementsAreArray({
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+              }));
 
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-  });
-  SimulatePerioidUpload();
+  report_id = AddNewReport(/*is_hourly_upload=*/false);
+  ASSERT_TRUE(report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
 
-  CheckQueueContents();
+  const auto hourly_report_id = AddNewReport(/*is_hourly_upload=*/true);
+  ASSERT_TRUE(hourly_report_id);
+  EXPECT_TRUE(queue_->Contains(*hourly_report_id));
+
+  RunLoopFor(kPeriodicUploadDuration);
+  EXPECT_FALSE(queue_->Contains(*report_id));
+  EXPECT_FALSE(queue_->Contains(*hourly_report_id));
+
   CheckAnnotationsOnServer();
   CheckAttachmentKeysOnServer();
-  EXPECT_TRUE(queue_->IsEmpty());
 
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
@@ -452,126 +380,96 @@ TEST_F(QueueTest, Check_UploadTaskRunsPeriodically) {
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
                   cobalt::Event(cobalt::CrashState::kUploaded),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
+                  cobalt::Event(cobalt::CrashState::kUploaded),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
               }));
-
-  // The reports should not be eligible for later upload.
-  InitQueue();
-  ASSERT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_HourlyReportUploadedPeriodically) {
-  SetUpQueue({kUploadFailed, kUploadSuccessful});
-  ApplyQueueOps({
-      QueueOps::AddHourlyReport,
-      QueueOps::SetReportingPolicyUpload,
-  });
-  EXPECT_FALSE(queue_->IsEmpty());
-  SimulatePerioidUpload();
+TEST_F(QueueTest, PeriodicUpload_ReportingPolicyChanges) {
+  SetUpQueue();
 
-  EXPECT_TRUE(queue_->IsEmpty());
+  EXPECT_FALSE(queue_->IsPeriodicUploadScheduled());
 
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+  EXPECT_TRUE(queue_->IsPeriodicUploadScheduled());
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kUndecided);
+  EXPECT_FALSE(queue_->IsPeriodicUploadScheduled());
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+  EXPECT_TRUE(queue_->IsPeriodicUploadScheduled());
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kDoNotFileAndDelete);
+  EXPECT_FALSE(queue_->IsPeriodicUploadScheduled());
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+  EXPECT_TRUE(queue_->IsPeriodicUploadScheduled());
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kArchive);
+  EXPECT_TRUE(queue_->IsPeriodicUploadScheduled());
+}
+
+TEST_F(QueueTest, PeriodicUpload_AfterStopUploading) {
+  SetUpQueue();
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+  ASSERT_TRUE(queue_->IsPeriodicUploadScheduled());
+
+  queue_->StopUploading();
+  EXPECT_FALSE(queue_->IsPeriodicUploadScheduled());
+}
+
+TEST_F(QueueTest, UploadOnNetworkReachable) {
+  SetUpQueue({kUploadFailed, kUploadFailed, kUploadSuccessful, kUploadSuccessful});
+
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+  const auto report_id = AddNewReport(/*is_hourly_report=*/false);
+  ASSERT_TRUE(report_id);
+
+  const auto hourly_report_id = AddNewReport(/*is_hourly_report=*/true);
+  ASSERT_TRUE(hourly_report_id);
+
+  network_reachability_provider_->TriggerOnNetworkReachable(true);
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(queue_->Contains(*report_id));
+  EXPECT_FALSE(queue_->Contains(*hourly_report_id));
+
+  RunLoopUntilIdle();
+  CheckAnnotationsOnServer();
+  CheckAttachmentKeysOnServer();
   EXPECT_THAT(ReceivedCobaltEvents(),
               UnorderedElementsAreArray({
                   cobalt::Event(cobalt::CrashState::kUploaded),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
-              }));
-
-  // The report should not be eligible for later upload.
-  InitQueue();
-  ASSERT_TRUE(queue_->IsEmpty());
-}
-
-TEST_F(QueueTest, Check_ReportingPolicyChangesCancelUploadTask) {
-  SetUpQueue({kUploadFailed, kUploadFailed});
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::SetReportingPolicyUpload,
-      QueueOps::SetReportingPolicyUndecided,
-  });
-  SimulatePerioidUpload();
-
-  CheckQueueContents();
-  EXPECT_EQ(queue_->Size(), 1u);
-
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyUpload,
-      QueueOps::SetReportingPolicyDelete,
-  });
-  SimulatePerioidUpload();
-
-  CheckQueueContents();
-  EXPECT_TRUE(queue_->IsEmpty());
-
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::CrashState::kDeleted),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
-                  cobalt::Event(cobalt::UploadAttemptState::kDeleted, 2u),
-              }));
-}
-
-TEST_F(QueueTest, Check_UploadOnNetworkReachable) {
-  SetUpQueue({kUploadFailed, kUploadSuccessful});
-
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::SetReportingPolicyUpload,
-  });
-  EXPECT_EQ(queue_->Size(), 1u);
-
-  SimulateNetworkReachable();
-
-  CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
-  EXPECT_TRUE(queue_->IsEmpty());
-
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
                   cobalt::Event(cobalt::CrashState::kUploaded),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
               }));
-
-  // The report should not be eligible for later upload.
-  InitQueue();
-  ASSERT_TRUE(queue_->IsEmpty());
 }
 
-TEST_F(QueueTest, Check_ReportGarbageCollected) {
-  SetUpQueue({kUploadSuccessful});
-  ApplyQueueOps({
-      QueueOps::AddNewReport,
-      QueueOps::DeleteOneReport,
-      QueueOps::SetReportingPolicyUpload,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
-  EXPECT_TRUE(queue_->IsEmpty());
+TEST_F(QueueTest, UploadThrottled) {
+  SetUpQueue({kUploadThrottled, kUploadFailed, kUploadThrottled});
 
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  cobalt::Event(cobalt::CrashState::kUploaded),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
-              }));
-}
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
 
-TEST_F(QueueTest, Check_EarlyUploadThrottled) {
-  SetUpQueue({kUploadThrottled});
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyUpload,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
-  CheckAnnotationsOnServer();
-  CheckAttachmentKeysOnServer();
-  EXPECT_TRUE(queue_->IsEmpty());
+  auto report_id = AddNewReport(/*is_hourly_report=*/false);
+  ASSERT_TRUE(report_id);
+  EXPECT_FALSE(queue_->Contains(*report_id));
+
+  report_id = AddNewReport(/*is_hourly_report=*/false);
+  ASSERT_TRUE(report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  RunLoopFor(kPeriodicUploadDuration);
+  EXPECT_FALSE(queue_->Contains(*report_id));
 
   RunLoopUntilIdle();
   EXPECT_THAT(ReceivedCobaltEvents(),
@@ -579,72 +477,41 @@ TEST_F(QueueTest, Check_EarlyUploadThrottled) {
                   cobalt::Event(cobalt::CrashState::kUploadThrottled),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadThrottled, 1u),
-              }));
-}
-
-TEST_F(QueueTest, Check_StopUploading) {
-  SetUpQueue({});
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyUpload,
-      QueueOps::StopUploading,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
-  EXPECT_EQ(queue_->Size(), 1u);
-
-  RunLoopUntilIdle();
-  EXPECT_THAT(ReceivedCobaltEvents(), IsEmpty());
-}
-
-TEST_F(QueueTest, Check_InitializesFromStore) {
-  // This test cannot call RunLoopUntilIdle in any capacity one IntiQueue has been called been
-  // called for the second time. The watchers still hold callbacks tied to the old, deleted queue
-  // and will crash if they attempt to execute the callbacks.
-  SetUpQueue({});
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyUndecided,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
-  EXPECT_EQ(queue_->Size(), 3u);
-
-  InitQueue();
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyUndecided,
-      QueueOps::AddNewReport,
-  });
-  CheckQueueContents();
-  EXPECT_EQ(queue_->Size(), 4u);
-}
-
-TEST_F(QueueTest, Check_CobaltMultipleUploadAttempts) {
-  SetUpQueue({
-      kUploadFailed,
-      kUploadSuccessful,
-      kUploadSuccessful,
-  });
-  ApplyQueueOps({
-      QueueOps::SetReportingPolicyUpload,
-      QueueOps::AddNewReport,
-      QueueOps::AddNewReport,
-  });
-
-  RunLoopFor(kPeriodicUploadDuration);
-  EXPECT_THAT(ReceivedCobaltEvents(),
-              UnorderedElementsAreArray({
-                  // Two reports were eventually uploaded.
-                  cobalt::Event(cobalt::CrashState::kUploaded),
-                  cobalt::Event(cobalt::CrashState::kUploaded),
-                  // The first report required two tries.
+                  cobalt::Event(cobalt::CrashState::kUploadThrottled),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
                   cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 2u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 2u),
-                  // The second report only needed one try.
-                  cobalt::Event(cobalt::UploadAttemptState::kUploadAttempt, 1u),
-                  cobalt::Event(cobalt::UploadAttemptState::kUploaded, 1u),
+                  cobalt::Event(cobalt::UploadAttemptState::kUploadThrottled, 2u),
               }));
+}
+
+TEST_F(QueueTest, InitializeFromStore) {
+  // This test cannot call RunLoopUntilIdle in any capacity once InitQueue has been called been
+  // called for the second time. The watchers still hold callbacks tied to the old, deleted queue
+  // and will crash if they attempt to execute the callbacks.
+  SetUpQueue();
+  reporting_policy_watcher_.Set(ReportingPolicy::kUndecided);
+
+  const auto report_id = AddNewReport(/*is_hourly_report=*/false);
+  ASSERT_TRUE(report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  SetUpQueue();
+  EXPECT_TRUE(queue_->Contains(*report_id));
+}
+
+TEST_F(QueueTest, ReportDeletedByStore) {
+  SetUpQueue();
+  reporting_policy_watcher_.Set(ReportingPolicy::kUndecided);
+
+  const auto report_id = AddNewReport(/*is_hourly_report=*/false);
+  ASSERT_TRUE(report_id);
+  EXPECT_TRUE(queue_->Contains(*report_id));
+
+  ASSERT_TRUE(DeleteReportFromStore().has_value());
+  reporting_policy_watcher_.Set(ReportingPolicy::kUpload);
+  RunLoopFor(kPeriodicUploadDuration);
+
+  EXPECT_FALSE(queue_->Contains(*report_id));
 }
 
 }  // namespace

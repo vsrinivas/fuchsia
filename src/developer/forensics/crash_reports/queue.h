@@ -47,6 +47,9 @@ class Queue {
   bool Contains(ReportId report_id) const;
   ReportId LatestReport() { return pending_reports_.back(); }
   bool HasHourlyReport() const { return hourly_report_.has_value(); }
+  bool IsPeriodicUploadScheduled() const {
+    return upload_all_every_fifteen_minutes_task_.is_pending();
+  }
 
   // Forces the queue to automatically put all reports in the store and stop all uploads.
   void StopUploading();
