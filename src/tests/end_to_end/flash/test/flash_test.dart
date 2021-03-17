@@ -45,7 +45,7 @@ void main() {
         reason: 'flash.sh exited with nonzero exit code');
 
     // Verify that the device came back by checking the nodename.
-    expect(deviceController.getDeviceName, equals(nodename),
+    expect(await deviceController.getDeviceName(), equals(nodename),
         reason: 'could not get nodename via sl4f');
   }, timeout: Timeout(Duration(minutes: 2)));
 }
