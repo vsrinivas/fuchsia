@@ -36,6 +36,9 @@ class ExamplePresenter : private fuchsia::ui::policy::Presenter {
   void PresentOrReplaceView(
       fuchsia::ui::views::ViewHolderToken view_holder_token,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
+  void PresentOrReplaceView2(
+      fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
 
   void Init(float width, float height);
 

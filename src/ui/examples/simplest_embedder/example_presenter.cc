@@ -50,6 +50,14 @@ void ExamplePresenter::PresentOrReplaceView(
   PresentView(std::move(view_holder_token), std::move(presentation_request));
 };
 
+void ExamplePresenter::PresentOrReplaceView2(
+    fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  FX_LOGS(WARNING) << "PresentOrReplaceView2() not fully implemented. Dropping ViewRef and "
+                      "delegating to PresentOrReplaceView()";
+  PresentOrReplaceView(std::move(view_holder_token), std::move(presentation_request));
+}
+
 void ExamplePresenter::MaybeSetPresentationSize() {
   if (compositor_ && presentation_) {
     presentation_->SetSize(width_, height_);

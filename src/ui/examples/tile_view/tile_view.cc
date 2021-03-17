@@ -36,12 +36,19 @@ void TileView::PresentView(fuchsia::ui::views::ViewHolderToken view_holder_token
   AddChildView("tile_view child(Presented view)", std::move(view_holder_token), nullptr);
 }
 
-// |fuchsia::ui::policy::Presenter|
 void TileView::PresentOrReplaceView(
     fuchsia::ui::views::ViewHolderToken view_holder_token,
     fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
   FX_LOGS(WARNING)
       << "PresentOrReplaceView not fully supported by TileView. Using PresentView instead.";
+  PresentView(std::move(view_holder_token), std::move(presentation_request));
+}
+
+void TileView::PresentOrReplaceView2(
+    fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  FX_LOGS(WARNING)
+      << "PresentOrReplaceView2 not fully supported by TileView. Using PresentView instead.";
   PresentView(std::move(view_holder_token), std::move(presentation_request));
 }
 

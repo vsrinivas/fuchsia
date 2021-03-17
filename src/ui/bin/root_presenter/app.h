@@ -67,14 +67,19 @@ class App : public fuchsia::ui::policy::Presenter,
   // |fuchsia.ui.views.accessibility.FocuserRegistry|
   void RegisterFocuser(fidl::InterfaceRequest<fuchsia::ui::views::Focuser> view_focuser) override;
 
-  // |Presenter|
+  // |fuchsia.ui.policy.Presenter|
   void PresentView(
       fuchsia::ui::views::ViewHolderToken view_holder_token,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
 
-  // |Presenter|
+  // |fuchsia.ui.policy.Presenter|
   void PresentOrReplaceView(
       fuchsia::ui::views::ViewHolderToken view_holder_token,
+      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
+
+  // |fuchsia.ui.policy.Presenter|
+  void PresentOrReplaceView2(
+      fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
       fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) override;
 
   // For testing.

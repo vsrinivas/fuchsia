@@ -13,13 +13,20 @@ using fuchsia.ui.views;
 protocol Presenter {
     /// Request that the View's contents be displayed on the screen as a `Presentation`.
     /// Each call to `PresentView` creates a new `Presentation`. Having more than one simultaneous
-    /// `Presentation` (i.e. calling `PresentView` more than once) is deprecated, and will
-    /// print a warning. In the future, this will result in an error and the channel being closed.
+    /// `Presentation` (i.e. calling `PresentView` more than once) is not allowed and will result
+    // in an error and channel closure.
     PresentView(fuchsia.ui.views.ViewHolderToken view_holder_token, request<Presentation>? presentation_request);
 
     /// Request that the View's contents be displayed on the screen as a `Presentation`.
     /// Destroys any existing presentations and replaces them with the new one.
     /// This is true whether the existing view was created by a call to
-    /// PresentOrReplaceView or to PresentView.
+    /// PresentView, PresentOrReplaceView or PresentOrReplaceView2.
     PresentOrReplaceView(fuchsia.ui.views.ViewHolderToken view_holder_token, request<Presentation>? presentation_request);
+
+    // Same as PresentOrReplaceView, except it also takes a ViewRef.
+    // The ViewRef should be referring to the same View as the ViewHolderToken.
+    // The ViewRef is used for transfering focus the View after initialization.
+    PresentOrReplaceView2(fuchsia.ui.views.ViewHolderToken view_holder_token,
+                          fuchsia.ui.views.ViewRef view_ref,
+                          request<Presentation>? presentation_request);
 };

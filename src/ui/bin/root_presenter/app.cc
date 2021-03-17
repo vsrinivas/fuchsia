@@ -101,6 +101,15 @@ void App::PresentOrReplaceView(
   PresentView(std::move(view_holder_token), std::move(presentation_request));
 }
 
+void App::PresentOrReplaceView2(
+    fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
+    fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) {
+  // TODO(fxbug.dev/70214): Use |view_ref| to focus client view at scene setup completion.
+  FX_LOGS(WARNING) << "PresentOrReplaceView2() not fully implemented. Dropping ViewRef and "
+                      "delegating to PresentOrReplaceView()";
+  PresentOrReplaceView(std::move(view_holder_token), std::move(presentation_request));
+}
+
 void App::SetPresentation(std::unique_ptr<Presentation> presentation) {
   FX_DCHECK(presentation);
   FX_DCHECK(!presentation_);
