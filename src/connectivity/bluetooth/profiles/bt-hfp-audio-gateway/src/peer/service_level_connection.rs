@@ -25,6 +25,27 @@ use crate::{
     protocol::features::{AgFeatures, HfFeatures},
 };
 
+/// An update that can be received from either the Audio Gateway (AG) or the Hands Free (HF).
+#[derive(Debug, Clone)]
+pub enum Command {
+    /// A command received from the AG.
+    Ag(at::Response),
+    /// A command received from the HF.
+    Hf(at::Command),
+}
+
+impl From<at::Response> for Command {
+    fn from(src: at::Response) -> Self {
+        Self::Ag(src)
+    }
+}
+
+impl From<at::Command> for Command {
+    fn from(src: at::Command) -> Self {
+        Self::Hf(src)
+    }
+}
+
 /// The state associated with this service level connection.
 #[derive(Clone, Debug, Default)]
 pub struct SlcState {
@@ -150,8 +171,20 @@ impl ServiceLevelConnection {
         is_terminated
     }
 
-    /// Consume bytes from the peer, producing a parsed AT Command from the bytes and
+    /// Consume and handle a command received from the local device.
+    /// On success, returns the identifier and request from handling the `command`.
+    // TODO(fxbug.dev/70591): Remove this allow once it is used by procedures initiated by the local device.
+    #[allow(unused)]
+    pub fn receive_ag_request(
+        &mut self,
+        command: at::Response,
+    ) -> Result<(ProcedureMarker, ProcedureRequest), ProcedureError> {
+        self.handle_command(command.into())
+    }
+
+    /// Consume bytes from the peer (HF), producing a parsed at::Command from the bytes and
     /// handling it.
+    /// On success, returns the identifier and request from handling the `command`.
     pub fn receive_data(
         &mut self,
         bytes: &mut Vec<u8>,
@@ -166,11 +199,28 @@ impl ServiceLevelConnection {
 
         let command = parse_result.unwrap();
         log::info!("Received {:?}", command);
+        self.handle_command(command.into())
+    }
 
+    /// Handles the provided `command`:
+    ///   - Matches the command to a procedure or returns an Error if not supported.
+    ///   - Progresses the matched procedure with the `command`.
+    ///   - Garbage collects the procedure if completed.
+    ///
+    /// Returns the identifier of the procedure and a subsequent request (to be handled) or
+    /// Error if any steps fail.
+    fn handle_command(
+        &mut self,
+        command: Command,
+    ) -> Result<(ProcedureMarker, ProcedureRequest), ProcedureError> {
         // Attempt to match the received message to a procedure.
         let procedure_id = self.match_command_to_procedure(&command)?;
         // Progress the procedure with the message.
-        let request = self.hf_message(procedure_id, command);
+        let request = match command {
+            Command::Hf(cmd) => self.hf_message(procedure_id, cmd),
+            Command::Ag(cmd) => self.ag_message(procedure_id, cmd),
+        };
+
         // Potentially clean up the procedure if this was the last stage. Procedures that
         // have been cleaned up cannot require additional responses, as this would violate
         // the `Procedure::is_terminated()` guarantee.
@@ -195,11 +245,11 @@ impl ServiceLevelConnection {
         Ok((procedure_id, request))
     }
 
-    /// Matches the incoming HF message to a procedure. Returns the procedure identifier
+    /// Matches the incoming message to a procedure. Returns the procedure identifier
     /// for the given `command` or an error if the command couldn't be matched.
-    pub fn match_command_to_procedure(
+    fn match_command_to_procedure(
         &self,
-        command: &at::Command,
+        command: &Command,
     ) -> Result<ProcedureMarker, ProcedureError> {
         // If we haven't initialized the SLC yet, the only valid procedure to match is
         // the SLCI Procedure.
@@ -215,7 +265,7 @@ impl ServiceLevelConnection {
                     "Received unexpected SLCI command after SLC initialization: {:?}",
                     command
                 );
-                Err(ProcedureError::UnexpectedHf(command.clone()))
+                Err(command.into())
             }
             res => res,
         }
@@ -358,7 +408,6 @@ mod tests {
         }
     }
 
-    // TODO(fxbug.dev/71412): Migrate regex-based AT to library definitions.
     #[fasync::run_until_stalled(test)]
     async fn completing_slc_init_procedure_initializes_channel() {
         let (mut slc, remote) = create_and_connect_slc();
@@ -415,7 +464,6 @@ mod tests {
         assert!(!slc.is_active(&slci_marker));
     }
 
-    // TODO(fxbug.dev/71412): Migrate regex-based AT to library definitions.
     #[test]
     fn slci_command_after_initialization_returns_error() {
         let _exec = fasync::Executor::new().unwrap();
@@ -427,13 +475,25 @@ mod tests {
         // be an error.
         let cmd1 = at::Command::Brsf { features: HfFeatures::empty().bits() as i64 };
         assert_matches!(
-            slc.match_command_to_procedure(&cmd1),
+            slc.match_command_to_procedure(&cmd1.into()),
             Err(ProcedureError::UnexpectedHf(_))
         );
         let cmd2 = at::Command::CindTest {};
         assert_matches!(
-            slc.match_command_to_procedure(&cmd2),
+            slc.match_command_to_procedure(&cmd2.into()),
             Err(ProcedureError::UnexpectedHf(_))
         );
+    }
+
+    // TODO(fxbug.dev/70591): Remove this test once locally-initiated procedures are implemented.
+    #[fasync::run_singlethreaded(test)]
+    async fn local_request_returns_error_because_not_implemented() {
+        let (mut slc, _remote) = create_and_connect_slc();
+        // Bypass the SLCI procedure by setting the channel to initialized.
+        slc.set_initialized();
+
+        let random_at = at::Response::Ok;
+        let res = slc.receive_ag_request(random_at);
+        assert_matches!(res, Err(ProcedureError::NotImplemented));
     }
 }

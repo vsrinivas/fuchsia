@@ -5,7 +5,8 @@
 use {at_commands as at, std::fmt, thiserror::Error};
 
 use crate::{
-    indicator_status::IndicatorStatus, peer::service_level_connection::SlcState,
+    indicator_status::IndicatorStatus,
+    peer::service_level_connection::{Command, SlcState},
     protocol::features::AgFeatures,
 };
 
@@ -51,6 +52,15 @@ impl From<fuchsia_zircon::Status> for ProcedureError {
     }
 }
 
+impl From<&Command> for ProcedureError {
+    fn from(src: &Command) -> Self {
+        match src {
+            Command::Ag(cmd) => Self::UnexpectedAg(cmd.clone()),
+            Command::Hf(cmd) => Self::UnexpectedHf(cmd.clone()),
+        }
+    }
+}
+
 /// A unique identifier associated with an HFP procedure.
 // TODO(fxbug.dev/70591): Add to this enum as more procedures are implemented.
 #[derive(Copy, Clone, Debug, Hash, Eq, PartialEq)]
@@ -76,9 +86,9 @@ impl ProcedureMarker {
         }
     }
 
-    /// Matches the `command` to a procedure. Returns an error if the command is
+    /// Matches the HF `command` to a procedure. Returns an error if the command is
     /// unable to be matched.
-    pub fn match_command(command: &at::Command) -> Result<Self, ProcedureError> {
+    fn match_hf_command(command: &at::Command) -> Result<Self, ProcedureError> {
         match command {
             at::Command::Brsf { .. }
             | at::Command::Bac { .. }
@@ -94,6 +104,19 @@ impl ProcedureMarker {
             }
             at::Command::Cmee { .. } => Ok(Self::ExtendedErrors),
             _ => Err(ProcedureError::NotImplemented),
+        }
+    }
+
+    /// Matches the AG `command` to a procedure. Returns an error if the command is
+    /// unable to be matched.
+    fn match_ag_command(_command: &at::Response) -> Result<Self, ProcedureError> {
+        Err(ProcedureError::NotImplemented)
+    }
+
+    pub fn match_command(command: &Command) -> Result<Self, ProcedureError> {
+        match command {
+            Command::Ag(cmd) => Self::match_ag_command(cmd),
+            Command::Hf(cmd) => Self::match_hf_command(cmd),
         }
     }
 }
