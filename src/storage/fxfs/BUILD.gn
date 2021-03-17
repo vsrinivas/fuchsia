@@ -7,18 +7,21 @@ import("//src/sys/build/components.gni")
 
 fxfs_deps = [
   "//src/lib/fuchsia-async",
-  "//src/lib/zircon/rust:fuchsia-zircon",
   "//third_party/rust_crates:anyhow",
   "//third_party/rust_crates:async-trait",
   "//third_party/rust_crates:bincode",
   "//third_party/rust_crates:byteorder",
   "//third_party/rust_crates:futures",
   "//third_party/rust_crates:log",
+  "//third_party/rust_crates:num",
   "//third_party/rust_crates:rand",
   "//third_party/rust_crates:serde",
 ]
 
 fxfs_sources = [
+  "src/device.rs",
+  "src/device/buffer.rs",
+  "src/device/buffer_allocator.rs",
   "src/lib.rs",
   "src/lsm_tree.rs",
   "src/lsm_tree/merge.rs",
@@ -34,6 +37,13 @@ fxfs_sources = [
   "src/testing.rs",
   "src/testing/fake_object.rs",
 ]
+
+if (is_fuchsia) {
+  fxfs_deps += [
+    "//src/lib/fuchsia-runtime",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+  ]
+}
 
 rustc_library("lib") {
   edition = "2018"

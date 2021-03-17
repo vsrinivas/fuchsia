@@ -175,6 +175,7 @@ impl Drop for ResponseFuture {
 }
 
 /// Wraps a vmo-id. Will panic if you forget to detach.
+#[derive(Debug, Eq, PartialEq)]
 pub struct VmoId(u16);
 
 impl VmoId {
