@@ -166,30 +166,6 @@ bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr) 
          (microarch_config->x86_microarch == X86_MICROARCH_UNKNOWN);
 }
 
-bool x86_intel_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
-  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
-    uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
-    if (arch_capabilities & X86_ARCH_CAPABILITIES_SSB_NO) {
-      return false;
-    }
-  }
-
-  auto* const microarch_config = get_microarch_config(cpuid);
-  return microarch_config->has_ssb;
-}
-
-bool x86_intel_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
-  return cpuid->ReadFeatures().HasFeature(cpu_id::Features::SSBD);
-}
-
-void x86_intel_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
-  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::SSBD)) {
-    uint64_t spec_ctrl = msr->read_msr(X86_MSR_IA32_SPEC_CTRL);
-    spec_ctrl |= X86_SPEC_CTRL_SSBD;
-    msr->write_msr(/*msr_index=*/X86_MSR_IA32_SPEC_CTRL, /*value=*/spec_ctrl);
-  }
-}
-
 bool x86_intel_cpu_has_enhanced_ibrs(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
     uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);

@@ -937,6 +937,33 @@ struct CpuidL3CacheInformation
 // Extended Feature Identification.
 //---------------------------------------------------------------------------//
 
+// [amd/ibc] details bits [18:14] and 12.
+// [amd/ssbd] details bits [26:24].
+struct CpuidExtendedAmdFeatureFlagsB
+    : public CpuidIoValueBase<CpuidExtendedAmdFeatureFlagsB, 0x8000'0008, 0x0, CpuidIo::kEbx> {
+  // Bits [32:27] are reserved.
+  DEF_BIT(26, ssb_no);
+  DEF_BIT(25, virt_ssbd);
+  DEF_BIT(24, ssbd);
+  // Bits [23:19] are reserved.
+  DEF_BIT(18, prefers_ibrs);
+  DEF_BIT(17, stibp_always_on);
+  DEF_BIT(16, ibrs_always_on);
+  DEF_BIT(15, stibp);
+  DEF_BIT(14, ibrs);
+  // Bit 13 is reserved.
+  DEF_BIT(12, ibpb);
+  // Bits [11:10] are reserved.
+  DEF_BIT(9, wbnoinvd);
+  DEF_BIT(8, mcommit);
+  // Bits [7:5] are reserved.
+  DEF_BIT(4, rdpru);
+  // Bit 3 is reserved.
+  DEF_BIT(2, rstr_fp_err_ptrs);
+  DEF_BIT(1, inst_ret_cnt_msr);
+  DEF_BIT(0, clzero);
+};
+
 struct CpuidExtendedSizeInfo
     : public CpuidIoValueBase<CpuidExtendedSizeInfo, 0x8000'0008, 0x0, CpuidIo::kEcx> {
   enum class PerfTimestampCounterSize : uint8_t {

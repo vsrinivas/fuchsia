@@ -324,7 +324,6 @@ typedef struct {
   // be overriden by a more specific enumeration mechanism (ex: IA32_ARCH_CAPABILITIES)
   bool has_meltdown;
   bool has_l1tf;
-  bool has_ssb;
 
   // Whether the idle loop should prefer HLT to MWAIT.
   // TODO(fxbug.dev/61265): Allow idle predictor/governor to drive this from a table
@@ -393,12 +392,6 @@ void x86_intel_init_percpu(void);
 bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr);
-bool x86_intel_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);
-bool x86_amd_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);
-bool x86_intel_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
-bool x86_amd_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
-void x86_intel_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
-void x86_amd_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 void x86_amd_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state);
 void x86_intel_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state);
 void x86_cpu_ibpb(MsrAccess* msr);

@@ -19,7 +19,7 @@ namespace arch {
 // the static members of this struct.
 struct X86NopTraits {
   // [intel/vol3]: Table 4-12.  Recommended Multi-Byte Sequence of NOP Instruction.
-  // [amd/sog/0x17]: 2.8.3.1   Encoding Padding for Loop Alignment.
+  // [amd/sog/17h]: 2.8.3.1   Encoding Padding for Loop Alignment.
   // clang-format off
   static constexpr uint8_t kNop1[]  = {0x90};
   static constexpr uint8_t kNop2[]  = {0x66, 0x90};

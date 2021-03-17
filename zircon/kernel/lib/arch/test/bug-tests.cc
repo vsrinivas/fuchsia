@@ -129,4 +129,104 @@ TEST(BugTests, MdsTaa) {
   }
 }
 
+TEST(BugTests, SsbPresence) {
+  // Intel Atom x5-Z8350 (Airmont).
+  // Expectation: not present.
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelAtomX5_Z8350);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_FALSE(arch::HasX86SsbBug(cpuid, msr));
+  }
+
+  // Intel Xeon E5-2690 V4 (Broadwell).
+  {
+    // Older microcode: No IA32_ARCH_CAPABILITIES.
+    // Expectation: present.
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelXeonE5_2690_V4);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_TRUE(arch::HasX86SsbBug(cpuid, msr));
+
+    // Newer microcode: IA32_ARCH_CAPABILITIES, but still susceptible.
+    MakeArchCapabilitiesAvailable(cpuid);
+    msr.Populate(arch::X86Msr::IA32_ARCH_CAPABILITIES, 0);
+    EXPECT_TRUE(arch::HasX86SsbBug(cpuid, msr));
+
+    // Even newer microcode: IA32_ARCH_CAPABILITIES with SSB_NO.
+    // Expectation: no longer present.
+    msr.Populate(arch::X86Msr::IA32_ARCH_CAPABILITIES, uint64_t{1} << 4);
+    EXPECT_FALSE(arch::HasX86SsbBug(cpuid, msr));
+  }
+
+  // AMD Ryzen 5 1500X.
+  // Expectation: present.
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen5_1500x);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_TRUE(arch::HasX86SsbBug(cpuid, msr));
+  }
+}
+
+TEST(BugTests, SsbMitigation) {
+  // Intel Atom 330 (Bonnell).
+  // Expectation: too old to mitigate.
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelAtom330);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_FALSE(arch::MitigateX86SsbBug(cpuid, msr));
+    EXPECT_FALSE(arch::CanMitigateX86SsbBug(cpuid));
+  }
+
+  // Intel Xeon E5-2690 V4 (Broadwell).
+  // Expectation: SSBD is advertised.
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelXeonE5_2690_V4);
+    arch::testing::FakeMsrIo msr;
+    msr.Populate(arch::X86Msr::IA32_SPEC_CTRL, 0b11);
+
+    EXPECT_TRUE(arch::MitigateX86SsbBug(cpuid, msr));
+    EXPECT_EQ(0b111u, msr.Peek(arch::X86Msr::IA32_SPEC_CTRL));
+
+    EXPECT_TRUE(arch::CanMitigateX86SsbBug(cpuid));
+  }
+
+  // AMD Ryzen 5 1500X.
+  // Expectation: SSBD is not advertised (non-architectural means are used).
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen5_1500x);
+    arch::testing::FakeMsrIo msr;
+    msr.Populate(arch::X86Msr::MSRC001_1020, 0b10101);
+
+    EXPECT_TRUE(arch::MitigateX86SsbBug(cpuid, msr));
+    EXPECT_EQ(0b10101u | uint64_t{1} << 10, msr.Peek(arch::X86Msr::MSRC001_1020));
+
+    EXPECT_TRUE(arch::CanMitigateX86SsbBug(cpuid));
+  }
+
+  // AMD Ryzen 9 3950X.
+  // Expectation: SSBD is advertised.
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950x);
+    arch::testing::FakeMsrIo msr;
+    msr.Populate(arch::X86Msr::IA32_SPEC_CTRL, 0b11);
+
+    EXPECT_TRUE(arch::MitigateX86SsbBug(cpuid, msr));
+    EXPECT_EQ(0b111u, msr.Peek(arch::X86Msr::IA32_SPEC_CTRL));
+
+    EXPECT_TRUE(arch::CanMitigateX86SsbBug(cpuid));
+  }
+
+  // AMD Ryzen 9 3950X beneath WSL2.
+  // Expectation: VIRT_SSBD is advertised.
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950xWsl2);
+    arch::testing::FakeMsrIo msr;
+    msr.Populate(arch::X86Msr::MSR_VIRT_SPEC_CTRL, 0);
+
+    EXPECT_TRUE(arch::MitigateX86SsbBug(cpuid, msr));
+    EXPECT_EQ(0b100u, msr.Peek(arch::X86Msr::MSR_VIRT_SPEC_CTRL));
+
+    EXPECT_TRUE(arch::CanMitigateX86SsbBug(cpuid));
+  }
+}
+
 }  // namespace

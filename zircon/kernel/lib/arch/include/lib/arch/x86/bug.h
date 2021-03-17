@@ -10,6 +10,7 @@
 #include <lib/arch/x86/cpuid.h>
 #include <lib/arch/x86/extension.h>
 #include <lib/arch/x86/feature.h>
+#include <lib/arch/x86/speculation.h>
 
 // This file contains utilities related to probing and mitigating architectural
 // bugs and vulnerabilities.
@@ -33,6 +34,23 @@
 // unknown architectures.
 
 namespace arch {
+
+namespace internal {
+
+// A trivial MSR I/O provider that can be used in instances in which we do not
+// wish MSR writes to take effect but still wish to observe the result (e.g., a
+// dry-run context of sorts).
+struct NullMsrIo {
+  template <typename IntType>
+  void Write(IntType value, uint32_t msr) const {}
+
+  template <typename IntType>
+  IntType Read(uint32_t msr) const {
+    return 0;
+  }
+};
+
+}  // namespace internal
 
 // Whether the CPU is susceptible to swapgs speculation attacks:
 // https://software.intel.com/security-software-guidance/advisory-guidance/speculative-behavior-swapgs-and-segment-registers
@@ -148,6 +166,105 @@ inline bool HasX86MdsTaaBugs(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
 template <typename CpuidIoProvider>
 inline bool CanMitigateX86MdsTaaBugs(CpuidIoProvider&& cpuid) {
   return cpuid.template Read<CpuidExtendedFeatureFlagsD>().md_clear();
+}
+
+// Whether the CPU is susceptible to the Speculative Store Bypass (SSB) bug:
+// https://software.intel.com/security-software-guidance/advisory-guidance/speculative-store-bypass
+//
+// CVE-2018-3639.
+template <typename CpuidIoProvider, typename MsrIoProvider>
+inline bool HasX86SsbBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
+  // Check if the processor explicitly advertises that it is not affected, in
+  // both the Intel and AMD ways.
+  if (ArchCapabilitiesMsr::IsSupported(cpuid) &&
+      ArchCapabilitiesMsr::Get().ReadFrom(&msr).ssb_no()) {
+    return false;
+  }
+  if (cpuid.template Read<CpuidMaximumExtendedLeaf>().leaf() >=
+          CpuidExtendedAmdFeatureFlagsB::kLeaf &&
+      cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>().ssb_no()) {
+    return false;
+  }
+  switch (GetMicroarchitecture(cpuid)) {
+    case Microarchitecture::kUnknown:
+    case Microarchitecture::kIntelCore2:
+    case Microarchitecture::kIntelNehalem:
+    case Microarchitecture::kIntelWestmere:
+    case Microarchitecture::kIntelSandyBridge:
+    case Microarchitecture::kIntelIvyBridge:
+    case Microarchitecture::kIntelHaswell:
+    case Microarchitecture::kIntelBroadwell:
+    case Microarchitecture::kIntelSkylake:
+    case Microarchitecture::kIntelSkylakeServer:
+    case Microarchitecture::kIntelCannonLake:
+    case Microarchitecture::kIntelBonnell:
+    case Microarchitecture::kIntelGoldmont:
+    case Microarchitecture::kIntelGoldmontPlus:
+    case Microarchitecture::kIntelTremont:
+    case Microarchitecture::kAmdFamily0x15:
+    case Microarchitecture::kAmdFamily0x16:
+    case Microarchitecture::kAmdFamily0x17:
+    case Microarchitecture::kAmdFamily0x19:
+      return true;
+    case Microarchitecture::kIntelSilvermont:
+    case Microarchitecture::kIntelAirmont:
+      break;
+  }
+  return false;
+}
+
+// Attempt to mitigate the SSB bug. Return true if the bug was successfully
+// mitigated.
+template <typename CpuidIoProvider, typename MsrIoProvider>
+inline bool MitigateX86SsbBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
+  if (cpuid.template Read<CpuidExtendedFeatureFlagsD>().ssbd()) {
+    ZX_DEBUG_ASSERT(SpeculationControlMsr::IsSupported(cpuid));
+    SpeculationControlMsr::Get().ReadFrom(&msr).set_ssbd(1).WriteTo(&msr);
+    return true;
+  }
+
+  if (cpuid.template Read<CpuidMaximumExtendedLeaf>().leaf() >=
+      CpuidExtendedAmdFeatureFlagsB::kLeaf) {
+    const auto amd_features = cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>();
+    if (amd_features.ssbd()) {
+      ZX_DEBUG_ASSERT(SpeculationControlMsr::IsSupported(cpuid));
+      SpeculationControlMsr::Get().ReadFrom(&msr).set_ssbd(1).WriteTo(&msr);
+      return true;
+    }
+
+    if (amd_features.virt_ssbd()) {
+      ZX_DEBUG_ASSERT(AmdVirtualSpeculationControlMsr::IsSupported(cpuid));
+      AmdVirtualSpeculationControlMsr::Get().ReadFrom(&msr).set_ssbd(1).WriteTo(&msr);
+      return true;
+    }
+  }
+
+  // [amd/ssbd]: NON-ARCHITECTURAL MSRS.
+  //
+  // There are non-architectural mechanisms to disable SSB for AMD families
+  // 0x15-0x17.
+  switch (GetMicroarchitecture(cpuid)) {
+    case arch::Microarchitecture::kAmdFamily0x15:
+      AmdLoadStoreConfigurationMsr::Get().ReadFrom(&msr).set_ssbd_15h(1).WriteTo(&msr);
+      return true;
+    case arch::Microarchitecture::kAmdFamily0x16:
+      AmdLoadStoreConfigurationMsr::Get().ReadFrom(&msr).set_ssbd_16h(1).WriteTo(&msr);
+      return true;
+    case arch::Microarchitecture::kAmdFamily0x17:
+      AmdLoadStoreConfigurationMsr::Get().ReadFrom(&msr).set_ssbd_17h(1).WriteTo(&msr);
+      return true;
+    default:
+      break;
+  }
+
+  return false;
+}
+
+template <typename CpuidIoProvider>
+inline bool CanMitigateX86SsbBug(CpuidIoProvider&& cpuid) {
+  // With a null I/O provider, we can make the requisite checks without
+  // actually committing the writes.
+  return MitigateX86SsbBug(cpuid, internal::NullMsrIo{});
 }
 
 }  // namespace arch
