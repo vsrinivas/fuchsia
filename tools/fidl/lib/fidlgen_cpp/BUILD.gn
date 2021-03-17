@@ -8,6 +8,7 @@ import("//build/go/go_test.gni")
 go_library("fidlgen_cpp") {
   deps = [ "//tools/fidl/lib/fidlgen" ]
   sources = [
+    "bits.go",
     "clang_formatter.go",
     "const.go",
     "enum.go",

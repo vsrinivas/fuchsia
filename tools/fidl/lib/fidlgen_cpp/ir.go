@@ -153,25 +153,6 @@ type Member interface {
 	NameAndType() (string, Type)
 }
 
-type Bits struct {
-	fidl.Attributes
-	fidl.Strictness
-	DeclName
-	Type     TypeName
-	Mask     string
-	MaskName DeclName
-	Members  []BitsMember
-
-	// Kind should be default initialized.
-	Kind bitsKind
-}
-
-type BitsMember struct {
-	fidl.Attributes
-	Name  string
-	Value ConstantValue
-}
-
 type Enum struct {
 	fidl.Attributes
 	fidl.Strictness
@@ -911,26 +892,6 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		}
 	default:
 		panic(fmt.Sprintf("unknown type kind: %v", val.Kind))
-	}
-	return r
-}
-
-func (c *compiler) compileBits(val fidl.Bits) Bits {
-	name := c.compileDeclName(val.Name)
-	r := Bits{
-		Attributes: val.Attributes,
-		Strictness: val.Strictness,
-		DeclName:   name,
-		Type:       c.compileType(val.Type).TypeName,
-		Mask:       val.Mask,
-		MaskName:   name.AppendName("Mask"),
-	}
-	for _, v := range val.Members {
-		r.Members = append(r.Members, BitsMember{
-			v.Attributes,
-			changeIfReserved(v.Name),
-			c.compileConstant(v.Value, nil, val.Type),
-		})
 	}
 	return r
 }
