@@ -189,8 +189,11 @@ var primitiveTypes = map[fidl.PrimitiveSubtype]string{
 }
 
 // TypeNameForPrimitive returns the C++ name of a FIDL primitive type.
-func TypeNameForPrimitive(t fidl.PrimitiveSubtype) TypeName {
-	return PrimitiveTypeName(primitiveTypes[t])
+func TypeNameForPrimitive(val fidl.PrimitiveSubtype) TypeName {
+	if t, ok := primitiveTypes[val]; ok {
+		return PrimitiveTypeName(t)
+	}
+	panic(fmt.Sprintf("unknown primitive type: %v", val))
 }
 
 type identifierTransform bool
@@ -210,16 +213,6 @@ func libraryParts(library fidl.LibraryIdentifier, identifierTransform identifier
 		}
 	}
 	return parts
-}
-
-func oldLlLibraryNamepace(library fidl.LibraryIdentifier) Namespace {
-	parts := libraryParts(library, changePartIfReserved)
-	// Avoid user-defined llcpp library colliding with the llcpp namespace, by appending underscore.
-	if len(parts) > 0 && parts[0] == "llcpp" {
-		parts[0] = "llcpp_"
-	}
-	parts = append([]string{"llcpp"}, parts...)
-	return Namespace(parts)
 }
 
 func wireLibraryNamespace(library fidl.LibraryIdentifier) Namespace {
@@ -312,13 +305,6 @@ func (c *compiler) compileCodingTableType(eci fidl.EncodedCompoundIdentifier) st
 	}
 
 	return fmt.Sprintf("%s_%sTable", c.symbolPrefix, val.Name)
-}
-
-func (c *compiler) compilePrimitiveSubtype(val fidl.PrimitiveSubtype) string {
-	if t, ok := primitiveTypes[val]; ok {
-		return t
-	}
-	panic(fmt.Sprintf("unknown primitive type: %v", val))
 }
 
 func (c *compiler) compileType(val fidl.Type) Type {
