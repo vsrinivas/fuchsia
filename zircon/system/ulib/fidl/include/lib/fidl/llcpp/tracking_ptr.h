@@ -97,10 +97,6 @@ class tracking_ptr final {
     set_marked(reinterpret_cast<marked_ptr>(
         static_cast<T*>(reinterpret_cast<U*>(other.release_marked_ptr()))));
   }
-  template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
-  tracking_ptr(std::unique_ptr<U>&& other) {
-    set_owned(other.release());
-  }
   tracking_ptr(unowned_ptr_t<T> other) {
     static_assert(std::alignment_of<T>::value >= kMinAlignment,
                   "unowned_ptr_t must point to an aligned value. "
@@ -220,10 +216,6 @@ class tracking_ptr<T[]> final {
   tracking_ptr(tracking_ptr<std::remove_const_t<U>[]>&& other) noexcept {
     reset(other.is_owned_, other.ptr_);
     other.release();
-  }
-  template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
-  tracking_ptr(std::unique_ptr<U>&& other) {
-    reset(true, other.release());
   }
   tracking_ptr(unowned_ptr_t<T> other) { reset(false, other.get()); }
   template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>

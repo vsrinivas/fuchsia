@@ -67,8 +67,6 @@ class VectorView {
   template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
   VectorView(unowned_ptr_t<std::remove_const_t<U>> data, uint64_t count)
       : VectorView(tracking_ptr<T[]>(data), count) {}
-  VectorView(std::unique_ptr<T[]>&& data, uint64_t count)
-      : VectorView(tracking_ptr<T[]>(std::move(data)), count) {}
   VectorView(std::nullptr_t data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
   // This constructor triggers a static assertion in tracking_ptr.
   template <typename U, typename = std::enable_if_t<!std::is_array<U>::value>>

@@ -49,25 +49,6 @@ TEST(TrackingPtr, UnownedSingleValueLifecycle) {
   EXPECT_FALSE(ds2.destructor_called);
 }
 
-TEST(TrackingPtr, OwnedSingleValueLifecycle) {
-  DestructionState ds1, ds2;
-  auto obj1 = std::make_unique<DestructableObject>(&ds1);
-  auto obj2 = std::make_unique<DestructableObject>(&ds2);
-  DestructableObject* obj1_raw = obj1.get();
-  {
-    fidl::tracking_ptr<DestructableObject> ptr1 = std::move(obj1);
-    fidl::tracking_ptr<DestructableObject> ptr2 = std::move(obj2);
-    EXPECT_FALSE(ds1.destructor_called);
-    EXPECT_FALSE(ds2.destructor_called);
-    ptr2 = std::move(ptr1);
-    EXPECT_FALSE(ds1.destructor_called);
-    EXPECT_TRUE(ds2.destructor_called);
-    EXPECT_EQ(ptr1.get(), nullptr);
-    EXPECT_EQ(ptr2.get(), obj1_raw);
-  }
-  EXPECT_TRUE(ds1.destructor_called);
-}
-
 TEST(TrackingPtr, UnownedArrayLifecycle) {
   DestructionState ds1[2] = {};
   DestructionState ds2[2] = {};
@@ -84,35 +65,6 @@ TEST(TrackingPtr, UnownedArrayLifecycle) {
   EXPECT_FALSE(ds1[1].destructor_called);
   EXPECT_FALSE(ds2[0].destructor_called);
   EXPECT_FALSE(ds2[1].destructor_called);
-}
-
-TEST(TrackingPtr, OwnedArrayLifecycle) {
-  DestructionState ds1[2] = {};
-  DestructionState ds2[2] = {};
-  auto arr1 = std::make_unique<DestructableObject[]>(2);
-  arr1[0].ds = &ds1[0];
-  arr1[1].ds = &ds1[1];
-  auto arr2 = std::make_unique<DestructableObject[]>(2);
-  arr2[0].ds = &ds2[0];
-  arr2[1].ds = &ds2[1];
-  DestructableObject* arr1_raw = arr1.get();
-  {
-    fidl::tracking_ptr<DestructableObject[]> ptr1(std::move(arr1));
-    fidl::tracking_ptr<DestructableObject[]> ptr2(std::move(arr2));
-    EXPECT_FALSE(ds1[0].destructor_called);
-    EXPECT_FALSE(ds1[1].destructor_called);
-    EXPECT_FALSE(ds2[0].destructor_called);
-    EXPECT_FALSE(ds2[1].destructor_called);
-    ptr2 = std::move(ptr1);
-    EXPECT_FALSE(ds1[0].destructor_called);
-    EXPECT_FALSE(ds1[1].destructor_called);
-    EXPECT_TRUE(ds2[0].destructor_called);
-    EXPECT_TRUE(ds2[1].destructor_called);
-    EXPECT_EQ(ptr1.get(), nullptr);
-    EXPECT_EQ(ptr2.get(), arr1_raw);
-  }
-  EXPECT_TRUE(ds1[0].destructor_called);
-  EXPECT_TRUE(ds1[1].destructor_called);
 }
 
 TEST(TrackingPtr, SingleValueOperatorBool) {
