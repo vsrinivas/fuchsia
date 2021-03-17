@@ -15,6 +15,8 @@ import sys
 
 from gen_library_metadata import get_sources
 
+FUCHSIA_MODULE = 'go.fuchsia.dev/fuchsia'
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -53,6 +55,10 @@ def main():
         '--go-root', help='The go root to use for builds.', required=True)
     parser.add_argument(
         '--go-cache', help='Cache directory to use for builds.', required=False)
+    parser.add_argument(
+        '--golibs-dir',
+        help='The directory containing third party libraries.',
+        required=True)
     parser.add_argument(
         '--is-test', help='True if the target is a go test', default=False)
     parser.add_argument('--buildmode', help='Build mode to use')
@@ -130,7 +136,15 @@ def main():
     gopath_src = os.path.join(project_path, 'src')
     if os.path.exists(gopath_src):
         shutil.rmtree(gopath_src)
-    os.makedirs(gopath_src)
+    dst_vendor = os.path.join(gopath_src, 'vendor')
+    os.makedirs(dst_vendor)
+    for src in ['go.mod', 'go.sum']:
+        os.symlink(
+            os.path.join(args.golibs_dir, src), os.path.join(gopath_src, src))
+    src_vendor = os.path.join(args.golibs_dir, 'vendor')
+    os.symlink(
+        os.path.join(src_vendor, 'modules.txt'),
+        os.path.join(dst_vendor, 'modules.txt'))
 
     link_to_source_list = []
     if args.go_dep_files:
@@ -142,6 +156,13 @@ def main():
 
         # Create a GOPATH for the packages dependency tree.
         for dst, src in sorted(get_sources(args.go_dep_files).items()):
+            # If the destination is part of the "main module", strip off the
+            # module path. Otherwise, put it in the vendor directory.
+            if dst.startswith(FUCHSIA_MODULE):
+                dst = os.path.relpath(dst, FUCHSIA_MODULE)
+            else:
+                dst = os.path.join('vendor', dst)
+
             # Determine if the src path should
             # - be mapped as-is which, if src is a directory, includes all subdirectories
             # - have its contents enumerated and mapped directly
@@ -220,18 +241,30 @@ def main():
     cflags_joined = ' '.join(cflags)
     ldflags_joined = ' '.join(ldflags)
 
-    gopath = os.path.abspath(project_path)
     build_goroot = os.path.abspath(args.go_root)
 
     env = {
         # /usr/bin:/bin are required for basic things like bash(1) and env(1). Note
         # that on Mac, ld is also found from /usr/bin.
         'PATH': os.path.join(build_goroot, 'bin') + ':/usr/bin:/bin',
-        # Disable modules to ensure Go doesn't try to download dependencies.
-        'GO111MODULE': 'off',
         'GOARCH': goarch,
         'GOOS': goos,
-        'GOPATH': gopath,
+        # GOPATH won't be used, but Go still insists that we set it. Without it,
+        # Go emits the succinct error: `missing $GOPATH`. Go further insists
+        # that $GOPATH/go.mod not exist; if we pass `gopath_src` here (which
+        # is where we symlinked our go.mod), we get another succinct error:
+        # `$GOPATH/go.mod exists but should not`. Finally, GOPATH must be
+        # absolute, otherwise:
+        #
+        # go: GOPATH entry is relative; must be absolute path: ...
+        # For more details see: 'go help gopath'
+        #
+        # and here we are.
+        'GOPATH': os.path.abspath(project_path),
+        # Disallow downloading modules from any source.
+        #
+        # See https://golang.org/ref/mod#environment-variables under `GOPROXY`.
+        'GOPROXY': 'off',
         # Some users have GOROOT set in their parent environment, which can break
         # things, so it is always set explicitly here.
         'GOROOT': build_goroot,
@@ -257,7 +290,8 @@ def main():
     go_tool = os.path.join(build_goroot, 'bin', 'go')
 
     if args.vet:
-        retcode = subprocess.call([go_tool, 'vet', args.package], env=env)
+        retcode = subprocess.call(
+            [go_tool, 'vet', args.package], env=env, cwd=gopath_src)
         if retcode != 0:
             return retcode
 
@@ -283,10 +317,10 @@ def main():
         '-pkgdir',
         os.path.join(project_path, 'pkg'),
         '-o',
-        args.output_path,
+        os.path.relpath(args.output_path, gopath_src),
         args.package,
     ]
-    retcode = subprocess.call(cmd, env=env)
+    retcode = subprocess.call(cmd, env=env, cwd=gopath_src)
 
     if retcode == 0 and args.stripped_output_path:
         if args.current_os == 'mac':
@@ -335,7 +369,8 @@ def main():
         if args.is_test:
             go_list_args += ['-test']
         go_list_args += [args.package]
-        output = subprocess.check_output(go_list_args, env=env, text=True)
+        output = subprocess.check_output(
+            go_list_args, env=env, cwd=gopath_src, text=True)
         with open(args.depfile, 'w') as into:
             into.write(dist)
             into.write(':')

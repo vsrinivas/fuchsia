@@ -193,6 +193,8 @@ template("go_build") {
       rebase_path(sysroot),
       "--target",
       clang_target,
+      "--golibs-dir",
+      rebase_path("//"),
     ]
 
     if (!(defined(invoker.cgo) && !invoker.cgo)) {
