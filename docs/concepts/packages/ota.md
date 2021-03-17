@@ -107,6 +107,7 @@ look like this:
 
 ```
 /board
+/epoch.json
 /firmware
 /fuchsia.vbmeta
 /meta
@@ -117,6 +118,7 @@ look like this:
 /zedboot.signed
 ```
 
+#### Mode
 Update packages may optionally contain an update-mode file. This file controls whether the system
 update happens in Normal or ForceRecovery mode. If the update-mode file is not present, the
 system-updater defaults to the Normal mode.
@@ -126,6 +128,13 @@ marks slots A and B as unbootable, then boots to recovery. For simplicity, we wo
 nuances of ForceRecovery in this doc (see the [code] for more info).
 
 The rest of this document assumes the system update is happening in Normal mode.
+
+#### Epoch
+Update packages also contain an epoch file. If the epoch of the update package (AKA the target
+epoch) is less than the epoch of the system-updater (AKA the source epoch), the OTA will fail. For
+more context, see [RFC-0071](/docs/contribute/governance/rfcs/0071_ota_backstop.md).
+
+The rest of this document assumes the system is updating to a supported epoch.
 
 ![Figure: Step 2: Fetch update package](images/staging-2.png)
 

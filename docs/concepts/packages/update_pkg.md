@@ -38,6 +38,17 @@ The structure of the update package--fuchsia-pkg://fuchsia.com/update--looks lik
 *   `/bootloader`
     Image of the bootloader firmware. DEPRECATED: please use `firmware` instead.
 
+*   `/epoch.json`
+    Epoch that the system cannot downgrade across via OTA. See
+    [RFC-0071](/docs/contribute/governance/rfcs/0071_ota_backstop.md) for more context. For example:
+
+    ```json
+    {
+        "version": "1",
+        "epoch": 5
+    }
+    ```
+
 *   `/firmware[_<type>]`
     Firmware image. For example: `firmware`, `firmware_bl2`, `firmware_full`. Each device
     supports a custom set of firmware types, and unsupported types are ignored. This serves
