@@ -50,7 +50,7 @@ constexpr bool kTraceComputation = false;
 float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients,
                                      int64_t frac_offset, float* center) {
   FX_DCHECK(frac_offset <= frac_size_) << frac_offset;
-  if constexpr (kTraceComputation) {
+  if (kTraceComputation) {
     FX_LOGS(INFO) << "For frac_offset " << std::hex << frac_offset << " ("
                   << (static_cast<double>(frac_offset) / static_cast<double>(frac_size_)) << "):";
   }
@@ -64,14 +64,20 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
   // Ex:
   //  coefficient_ptr[1] == filter_coefficients[frac_offset + frac_size_];
   //
-  // Negative side first
+  // For frac_offset in [0.0, 1.0), we require source frames on both sides depending on filter
+  // width. Source frames are at integral position, but we treat frac_offset as the filter's center
+  // so they appear to be fractionally positioned. We first "look backwards" in the negative
+  // direction (we include the center frame here), then "look forwards" in positive direction.
+  //
+  // Negative side -- for side_width_ 1.500 and frac_offset 0.250, we would require sources in range
+  // [-1.250, 0.250]: frames -1 and 0.
   float* sample_ptr = center;
   int64_t source_frames = (side_width_ + (frac_size_ - 1) - frac_offset) >> num_frac_bits_;
   const float* coefficient_ptr = filter_coefficients.ReadSlice(frac_offset, source_frames);
   for (int64_t source_idx = 0; source_idx < source_frames; ++source_idx) {
     FX_CHECK(coefficient_ptr != nullptr);
     auto contribution = (*sample_ptr) * coefficient_ptr[source_idx];
-    if constexpr (kTraceComputation) {
+    if (kTraceComputation) {
       FX_LOGS(INFO) << "Adding source[" << -static_cast<ssize_t>(source_idx) << "] "
                     << (*sample_ptr) << " x " << coefficient_ptr[source_idx] << " = "
                     << contribution;
@@ -80,22 +86,22 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
     --sample_ptr;
   }
 
-  // Then positive side
+  // Positive side -- for side_width_ 1.500 and frac_offset 0.250, we would require sources in range
+  // (0.250, 1.750]: frame 1.
   sample_ptr = center + 1;
-  // Reduction of:
-  //   side_width_ + (frac_size_ - 1) - (frac_size_ - frac_offset)
+  // Reduction of: side_width_ + (frac_size_-1) - (frac_size_-frac_offset)
   source_frames = (side_width_ + frac_offset - 1) >> num_frac_bits_;
   coefficient_ptr = filter_coefficients.ReadSlice(frac_size_ - frac_offset, source_frames);
-  for (ssize_t source_idx = 0; source_idx < source_frames; ++source_idx) {
+  for (int64_t source_idx = 0; source_idx < source_frames; ++source_idx) {
     FX_CHECK(coefficient_ptr != nullptr);
     auto contribution = sample_ptr[source_idx] * coefficient_ptr[source_idx];
-    if constexpr (kTraceComputation) {
+    if (kTraceComputation) {
       FX_LOGS(INFO) << "Adding source[" << 1 + source_idx << "] " << sample_ptr[source_idx] << " x "
                     << coefficient_ptr[source_idx] << " = " << contribution;
     }
     result += contribution;
   }
-  if constexpr (kTraceComputation) {
+  if (kTraceComputation) {
     FX_LOGS(INFO) << "... to get " << result;
   }
   return result;
@@ -108,27 +114,21 @@ CoefficientTable* CreatePointFilterTable(PointFilter::Inputs inputs) {
   TRACE_DURATION("audio", "CreatePointFilterTable");
   auto out = new CoefficientTable(inputs.side_width, inputs.num_frac_bits);
   auto& table = *out;
-  auto width = inputs.side_width;
-  auto frac_size = 1 << inputs.num_frac_bits;
 
-  const int64_t kTransitionIdx = frac_size >> 1;
+  // kHalfFrameIdx should always be the last idx in the filter table, because our ctor sets
+  // side_width to (1 << (num_frac_bits - 1)), which == (frac_size >> 1)
+  const int64_t kHalfFrameIdx = 1 << (inputs.num_frac_bits - 1);  // frac_half
+  FX_DCHECK(inputs.side_width == kHalfFrameIdx + 1)
+      << "Computed filter edge " << kHalfFrameIdx << " should equal specified side_width "
+      << inputs.side_width;
 
-  // We know that transition_idx will always be the last idx in the filter table, because our ctor
-  // sets side_width to (1 << (num_frac_bits - 1)) + 1, which == (frac_size >> 1) + 1
-  FX_CHECK(kTransitionIdx + 1 == width)
-      << "Transition idx " << kTransitionIdx << ", width " << width;
-
-  // Just a rectangular window, actually.
-  for (auto idx = 0; idx < kTransitionIdx; ++idx) {
+  // Just a rectangular window, with the exact midpoint performing averaging (for zero phase).
+  for (auto idx = 0; idx < kHalfFrameIdx; ++idx) {
     table[idx] = 1.0f;
   }
 
   // Here we average, so that we are zero-phase
-  table[kTransitionIdx] = 0.5f;
-
-  for (auto idx = kTransitionIdx + 1; idx < width; ++idx) {
-    table[idx] = 0.0f;
-  }
+  table[kHalfFrameIdx] = 0.5f;
 
   return out;
 }
@@ -140,15 +140,17 @@ CoefficientTable* CreateLinearFilterTable(LinearFilter::Inputs inputs) {
   TRACE_DURATION("audio", "CreateLinearFilterTable");
   auto out = new CoefficientTable(inputs.side_width, inputs.num_frac_bits);
   auto& table = *out;
-  auto width = inputs.side_width;
-  auto frac_size = 1 << inputs.num_frac_bits;
 
-  const int64_t kTransitionIdx = frac_size;
-  const float kTransitionFactor = 1.0f / static_cast<float>(frac_size);
+  const int64_t kZeroCrossIdx = 1 << inputs.num_frac_bits;  // frac_one
+  FX_DCHECK(inputs.side_width == kZeroCrossIdx)
+      << "Computed filter edge " << kZeroCrossIdx << " should equal specified side_width "
+      << inputs.side_width;
 
-  // Just a Bartlett (triangular) window, actually.
-  for (auto idx = 0; idx < kTransitionIdx; ++idx) {
-    auto factor = static_cast<float>(kTransitionIdx - idx) * kTransitionFactor;
+  const float kTransitionFactor = 1.0f / static_cast<float>(kZeroCrossIdx);
+
+  // Just a Bartlett (triangular) window.
+  for (auto idx = 0; idx < kZeroCrossIdx; ++idx) {
+    auto factor = static_cast<float>(kZeroCrossIdx - idx) * kTransitionFactor;
 
     if (factor >= std::numeric_limits<float>::epsilon() ||
         factor <= -std::numeric_limits<float>::epsilon()) {
@@ -156,9 +158,6 @@ CoefficientTable* CreateLinearFilterTable(LinearFilter::Inputs inputs) {
     } else {
       table[idx] = 0.0f;
     }
-  }
-  for (auto idx = kTransitionIdx; idx < width; ++idx) {
-    table[idx] = 0.0f;
   }
 
   return out;
@@ -170,10 +169,10 @@ CoefficientTable* CreateLinearFilterTable(LinearFilter::Inputs inputs) {
 CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
   TRACE_DURATION("audio", "CreateSincFilterTable");
   auto start_time = zx::clock::get_monotonic();
-  auto out = new CoefficientTable(inputs.side_width, inputs.num_frac_bits);
+  const auto width = inputs.side_width;
+  auto out = new CoefficientTable(width, inputs.num_frac_bits);
   auto& table = *out;
 
-  const auto width = inputs.side_width;
   const auto frac_one = 1 << inputs.num_frac_bits;
 
   // By capping this at 1.0, we set our low-pass filter to the lower of [source_rate, dest_rate].
@@ -218,7 +217,7 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
 
   auto end_time = zx::clock::get_monotonic();
   FX_LOGS(INFO) << "CreateSincFilterTable took " << (end_time - start_time).to_nsecs()
-                << " ns with Inputs { side_width=" << inputs.side_width
+                << " ns with Inputs { side_width=" << width
                 << ", num_frac_bits=" << inputs.num_frac_bits
                 << ", rate_conversion_ratio=" << inputs.rate_conversion_ratio << " }";
   return out;

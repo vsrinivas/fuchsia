@@ -167,8 +167,8 @@ TEST(SincSamplerTest, Construction_UnsupportedFormat) {
 TEST(SincSamplerTest, SamplingPosition_Basic) {
   auto mixer = SelectSincSampler(1, 1, 48000, 48000, fuchsia::media::AudioSampleFormat::FLOAT);
 
-  EXPECT_EQ(mixer->pos_filter_width().raw_value(), kSincFilterSideLength - 1);
-  EXPECT_EQ(mixer->neg_filter_width().raw_value(), kSincFilterSideLength - 1);
+  EXPECT_EQ(mixer->pos_filter_width().raw_value(), SincFilter::kFracSideLength - 1);
+  EXPECT_EQ(mixer->neg_filter_width().raw_value(), SincFilter::kFracSideLength - 1);
 
   bool do_not_accum = false;
   bool source_is_consumed;

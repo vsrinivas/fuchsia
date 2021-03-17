@@ -34,7 +34,7 @@ class ChannelStrip {
   ChannelStrip& operator=(ChannelStrip&& not_movable) = delete;
 
   // Used for debugging purposes only
-  static inline void Display(const ChannelStrip& channels);
+  static inline std::string ToString(const ChannelStrip& channels);
 
   // Zero out all channels, leaving each strip (vector) at the specified length
   void Clear() {
@@ -76,24 +76,22 @@ class ChannelStrip {
 
 // declared static, used for debugging purposes only
 // Log the contents of the channel strip, channel by channel.
-inline void ChannelStrip::Display(const ChannelStrip& channels) {
-  FX_LOGS(INFO) << "ChannelStrip: chans " << channels.num_channels_ << ", len 0x" << std::hex
-                << channels.len_;
+inline std::string ChannelStrip::ToString(const ChannelStrip& channels) {
+  std::string strip("ChannelStrip: chans ");
+  strip += std::to_string(channels.num_channels_) + ", len " + std::to_string(channels.len_) + "\n";
 
   for (auto chan = 0u; chan < channels.num_channels_; ++chan) {
-    char str[256];
-    int n = sprintf(str, "              channel %u", chan);
-    str[n] = 0;
+    strip += "\tChannel " + std::to_string(chan);
 
     for (auto idx = 0u; idx < channels.len_; ++idx) {
       if (idx % 16 == 0) {
-        FX_LOGS(INFO) << str;
-        n = sprintf(str, "[%4x]  ", idx);
+        strip += "\n[ " + std::to_string(idx) + "\t]";
       }
-      n += sprintf(str + n, "%6.03f ", channels.data_[chan][idx]);
+      strip += "\t" + std::to_string(channels.data_[chan][idx]);
     }
-    FX_LOGS(INFO) << str;
+    strip += "\n";
   }
+  return strip;
 }
 
 }  // namespace media::audio::mixer

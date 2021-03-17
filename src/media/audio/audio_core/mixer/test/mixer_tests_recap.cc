@@ -221,7 +221,7 @@ void MixerTestsRecap::PrintOutOfBandRejectionSummary() {
   printf("\n   (in dB, with prior results, more positive is better)");
 
   if (!FrequencySet::UseFullFrequencySet) {
-    printf("\n\n   Results only given for full-spectrum testing\n\n");
+    printf("\n\n   Results only generated during full-spectrum testing\n\n");
     return;
   }
 

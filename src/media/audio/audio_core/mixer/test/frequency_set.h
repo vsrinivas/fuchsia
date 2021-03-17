@@ -42,12 +42,11 @@ static constexpr int64_t kFreqTestBufSize = 65536;
 //
 // In our audio fidelity tests (noise floor, frequency response, SINAD, dynamic range, out-of-band
 // rejection, plus others in the future), we compare current measurements to previous results. For
-// any set of inputs, our results are always exactly the same -- but we should note that (as
-// currently implemented), configuration changes (such as adjustments to the below const) affect
-// frequency response and SINAD results in ways that differ by frequency. Doubling the resampling
-// packet size, as an example, may improve frequency response at 25 Hz but degrade it at 10 kHz.
-// With this in mind, the values we have saved as thresholds represent the worst-case results across
-// kResamplerTestNumPackets values of
+// any set of inputs, our results are always exactly the same -- but we note that (as implemented),
+// configuration changes (such as adjustments to the below const) affect frequency response and
+// SINAD results in ways that differ by frequency. Doubling the resampling packet size, for example,
+// may improve frequency response at 25 Hz but degrade it at 10 kHz. With this in mind, values saved
+// as thresholds represent the worst-case results across kResamplerTestNumPackets values of
 // [1,2,4,8,16,32,64,128,256,512,1024,2048,4096,8192,16384,32768].
 static constexpr uint32_t kResamplerTestNumPackets = 256;
 

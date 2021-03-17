@@ -286,31 +286,29 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
 
     // Now resample source to accum. (Why in pieces? See kResamplerTestNumPackets: frequency_set.h)
     source_offset = Fixed(0);
+    bool consumed_source;
     for (uint32_t packet = 0; packet < kResamplerTestNumPackets; ++packet) {
       dest_frames = num_dest_frames * (packet + 1) / kResamplerTestNumPackets;
-      mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
-                 source_frames, &source_offset, false);
+      consumed_source = mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset,
+                                   &source.samples()[0], source_frames, &source_offset, false);
+      if (consumed_source) {
+        source_offset -= Fixed(source_frames);
+      }
     }
 
-    auto expected_source_offset = Fixed(source_frames);
     if (dest_offset < dest_frames) {
+      auto data = accum.samples();
       FX_LOGS(TRACE) << "Performing wraparound mix: dest_frames " << dest_frames << ", dest_offset "
                      << dest_offset << ", source_frames " << source_frames << ", source_offset 0x"
                      << std::hex << source_offset.raw_value();
-      ASSERT_GE(source_offset, 0);
-      EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(source_frames))
-          << "source_off " << std::hex << source_offset.raw_value() << ", pos_width "
-          << mixer->pos_filter_width().raw_value() << ", source_frames " << source_frames;
 
       // Wrap around in the source buffer -- making the offset slightly negative. We can do
       // this, within the positive filter width of this sampler.
-      source_offset -= Fixed(source_frames);
       mixer->Mix(&accum.samples()[0], dest_frames, &dest_offset, &source.samples()[0],
                  source_frames, &source_offset, false);
-      expected_source_offset = Fixed(0);
     }
     EXPECT_EQ(dest_offset, dest_frames);
-    EXPECT_EQ(source_offset, expected_source_offset);
+    EXPECT_EQ(source_offset, Fixed(0));
 
     // After running each frequency, clear the cached filter state. This is not strictly necessary
     // today, since each frequency test starts precisely at buffer-start (thus for Point

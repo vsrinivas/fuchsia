@@ -17,36 +17,32 @@
 
 namespace media::audio::mixer {
 
-// Note that this value directly determines the maximum downsampling ratio: the ratio's numerator is
-// (kDataCacheLength/28). For example, if kDataCacheLength is 280, max downsampling ratio is 10:1.
-//
-// 'audio_fidelity_tests --profile' measured the performance of various lengths. Length 680 had
-// better performance than other measured lengths (280, 560, 640, 700, 720, 1000, 1344), presumably
-// because of cache/locality effects. This length allows a downsampling ratio greater than 24:1 --
-// even with 192kHz input hardware, we can produce 8kHz streams to capturers.
-static constexpr int64_t kDataCacheLength = 680;
-static constexpr int64_t kDataCacheFracLength = kDataCacheLength << Fixed::Format::FractionalBits;
-
 template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
 class SincSamplerImpl : public SincSampler {
  public:
   SincSamplerImpl(uint32_t source_frame_rate, uint32_t dest_frame_rate)
-      : SincSampler(SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate),
-                    SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate)),
+      : SincSampler(
+            // Sinc filters are symmetric (neg_filter_width == pos_filter_width)
+            SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate),
+            SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate)),
         source_rate_(source_frame_rate),
         dest_rate_(dest_frame_rate),
         position_(SourceChanCount, DestChanCount,
                   SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate).raw_value(),
                   SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate).raw_value()),
         working_data_(DestChanCount, kDataCacheLength),
+        // SincFilter holds one side of coefficients; we invert position to calc the negative side.
         filter_(source_rate_, dest_rate_,
                 SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate).raw_value()) {
-    num_prev_frames_needed_ = Ceiling(neg_filter_width().raw_value());
-    total_frames_needed_ = num_prev_frames_needed_ + Ceiling(pos_filter_width().raw_value());
-
-    FX_CHECK(kDataCacheLength > total_frames_needed_)
-        << "Data cache (len " << kDataCacheLength << ") must be at least " << total_frames_needed_
-        << " to support SRC ratio " << source_frame_rate << "/" << dest_frame_rate;
+    // SincFilter draws from range [ceil(frac_pos - neg_width), floor(frac_pos + pos_width)].
+    // Including the center, SincFilter can require floor(neg_width + one + pos_width) samples.
+    // Be careful: this is not (necessarily) the same as floor(neg_width) + one + floor(pos_width)
+    const int64_t kCacheFramesNeeded =
+        Floor(neg_filter_width().raw_value() + kFracFrame + pos_filter_width().raw_value());
+    // We set our data cache length to the maximum filter width that might ever be needed.
+    FX_CHECK(kDataCacheLength >= kCacheFramesNeeded)
+        << "Data cache (len " << kDataCacheLength << ") must be at least " << kCacheFramesNeeded
+        << " long to support SRC ratio " << source_frame_rate << "/" << dest_frame_rate;
   }
 
   bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
@@ -58,6 +54,7 @@ class SincSamplerImpl : public SincSampler {
     working_data_.Clear();
   }
 
+  // TODO(fxbug.dev/45074): This is for tests only and can be removed once filter creation is eager.
   virtual void EagerlyPrepare() override { filter_.EagerlyPrepare(); }
 
  private:
@@ -65,12 +62,19 @@ class SincSamplerImpl : public SincSampler {
   // through our public interfaces (to MixStage etc.) for source position/filter width/step size.
   static constexpr int64_t kFracFrame = kOneFrame.raw_value();
 
-  static int64_t Ceiling(int64_t frac_position) {
+  static constexpr int64_t Ceiling(int64_t frac_position) {
     return ((frac_position - 1) >> Fixed::Format::FractionalBits) + 1;
   }
-  static int64_t Floor(int64_t frac_position) {
+  static constexpr int64_t Floor(int64_t frac_position) {
     return frac_position >> Fixed::Format::FractionalBits;
   }
+
+  // Our ChannelStrip must fit even the widest filter, and Filter::ComputeSample requires
+  // floor(neg_width + 1 + pos_width) samples at minimum (incl 1 full sample for the center).
+  static constexpr int64_t kDataCacheLength =
+      Floor(SincFilter::kMaxFracSideLength + kFracFrame + SincFilter::kMaxFracSideLength);
+
+  static constexpr int64_t kDataCacheFracLength = kDataCacheLength << Fixed::Format::FractionalBits;
 
   template <ScalerType ScaleType, bool DoAccumulate>
   inline bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
@@ -84,8 +88,6 @@ class SincSamplerImpl : public SincSampler {
 
   uint32_t source_rate_;
   uint32_t dest_rate_;
-  int64_t num_prev_frames_needed_;
-  int64_t total_frames_needed_;
 
   PositionManager position_;
   ChannelStrip working_data_;
@@ -174,15 +176,15 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
       dest_ramp_start = position_.dest_offset();
     }
 
-    while (position_.FrameCanBeMixed()) {
-      // Can't left-shift the potentially-negative result of Ceiling (undefined behavior)
-      auto frac_source_offset_to_cache = Ceiling(frac_source_offset - frac_neg_width) * kFracFrame;
-      const auto frames_needed = std::min(source_frames - next_source_idx_to_copy,
-                                          kDataCacheLength - next_cache_idx_to_fill);
+    auto frac_source_offset_to_cache = Ceiling(frac_source_offset - frac_neg_width) * kFracFrame;
+    auto frames_needed = std::min(source_frames - next_source_idx_to_copy,
+                                  kDataCacheLength - next_cache_idx_to_fill);
 
-      // Bring in as much as a channel strip of source data (while channel/format-converting).
-      PopulateFramesToChannelStrip(source_void_ptr, next_source_idx_to_copy, frames_needed,
-                                   &working_data_, next_cache_idx_to_fill);
+    // Bring in as much as a channel strip of source data (while channel/format-converting).
+    PopulateFramesToChannelStrip(source_void_ptr, next_source_idx_to_copy, frames_needed,
+                                 &working_data_, next_cache_idx_to_fill);
+
+    while (position_.FrameCanBeMixed()) {
       next_source_idx_to_copy += frames_needed;
 
       int64_t frac_cache_offset = frac_source_offset - frac_source_offset_to_cache;
@@ -217,6 +219,13 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
 
       cache_center_idx -= num_frames_to_shift;
       next_cache_idx_to_fill = kDataCacheLength - num_frames_to_shift;
+
+      frac_source_offset_to_cache = Ceiling(frac_source_offset - frac_neg_width) * kFracFrame;
+      frames_needed = std::min(source_frames - next_source_idx_to_copy,
+                               kDataCacheLength - next_cache_idx_to_fill);
+
+      PopulateFramesToChannelStrip(source_void_ptr, next_source_idx_to_copy, frames_needed,
+                                   &working_data_, next_cache_idx_to_fill);
     }
   } else {
     auto num_source_frames_skipped = position_.AdvanceToEnd();
@@ -237,10 +246,6 @@ bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
                                   source_offset_ptr->raw_value(), pos_filter_width().raw_value(),
                                   info);
 
-  // For now, we continue to use this proliferation of template specializations, largely to keep the
-  // designs congruent between the Point and Sinc samplers. Previously when we removed most
-  // of these specializations from Point, we regained only about 75K of blob space, while
-  // mixer microbenchmarks running times ballooned to ~3x of their previous durations.
   if (info->gain.IsUnity()) {
     return accumulate
                ? Mix<ScalerType::EQ_UNITY, true>(dest_ptr, dest_frames, dest_offset_ptr,

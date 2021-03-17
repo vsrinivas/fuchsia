@@ -23,9 +23,9 @@ int main(int argc, char** argv) {
   syslog::SetTags({"audio_fidelity_tests"});
 
   // --subset  Measure only a small subset of frequencies.
-  // --recap Display summary fidelity results.
-  // --dump  Display full-spectrum results in importable format.
-  //         (This flag is used when updating AudioResult kPrev arrays.)
+  // --recap   Display summary fidelity results.
+  // --dump    Display full-spectrum results in importable format.
+  //           (This flag is used when updating AudioResult kPrev... arrays.)
   //
   bool test_full_frequency_set = !command_line.HasOption("subset");
   bool show_summary_results = command_line.HasOption("recap");
