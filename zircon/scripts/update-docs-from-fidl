@@ -676,7 +676,8 @@ def build_if_out_of_date(syscalls_dir, build_dir, json):
                 [
                     'fx',
                     '--dir=%s' % (build_dir), 'build', '-C',
-                    build_dir
+                    build_dir,
+                    os.path.relpath(json, build_dir),
                 ])
             if not is_up_to_date(syscall, json):
                 print('%s still out of date relative to %s!' % (json, syscall))
