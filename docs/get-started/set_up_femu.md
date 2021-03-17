@@ -5,9 +5,9 @@ and GPU support setup.
 
 ## Prerequisites
 
-To run FEMU, you must have
+To run FEMU, you must have:
 
- * [Fuchsia source installed and environment variables created](/docs/get-started/get_fuchsia_source.md)
+ * [Checked out the Fuchsia source and set up some environment variables](/docs/get-started/get_fuchsia_source.md)
  * [Configured and built Fuchsia](/docs/get-started/build_fuchsia.md)
 
 ### Building Fuchsia for FEMU
