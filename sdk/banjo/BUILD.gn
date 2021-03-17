@@ -133,14 +133,10 @@ _fidl_translated_deps -= [
   "fuchsia.hardware.gdc",  # Blocked by fuchsia.sysmem.
   "fuchsia.hardware.ge2d",  # Blocked by fuchsia.sysmem.
   "fuchsia.hardware.hidbus",  # Multiple enum variants with the same value.
-  "fuchsia.hardware.iommu",  # Variable name starting with `@`.
   "fuchsia.hardware.isp",  # Blocked by fuchsia.sysmem.
-  "fuchsia.hardware.pci",  # Variable name starting with `@`.
   "fuchsia.hardware.pciroot",  # Blocked by zircon.hw.pci.
-  "fuchsia.hardware.serial",  # Variable name starting with `@`.
   "fuchsia.hardware.serialimpl",  # Blocked by fuchsia.hardware.serial.
   "fuchsia.hardware.serialimpl.async",  # Blocked by fuchsia.hardware.serial.
-  "fuchsia.hardware.test",  # Variable name starting with `@`.
   "fuchsia.hardware.usb",  # Blocked by zircon.hw.usb.
   "fuchsia.hardware.usb.bus",  # Blocked by zircon.hw.usb.
   "fuchsia.hardware.usb.composite",  # Blocked by zircon.hw.usb.
@@ -174,8 +170,7 @@ _cpp_mock_translated_deps = [
   "fuchsia.hardware.gpio",
   "fuchsia.hardware.gpioimpl",
   "fuchsia.hardware.mipicsi",
-
-  # "fuchsia.hardware.pci",  # Not FIDL-compliant yet.
+  "fuchsia.hardware.pci",
   "fuchsia.hardware.power",
   "fuchsia.hardware.pwm",
   "fuchsia.hardware.registers",

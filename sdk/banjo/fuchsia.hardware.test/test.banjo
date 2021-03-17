@@ -20,7 +20,7 @@ protocol TestFunc {
 [BanjoLayout = "ddk-protocol"]
 protocol Test {
     /// Sets test output socket.
-    SetOutputSocket(zx.handle:SOCKET @handle) -> ();
+    SetOutputSocket(zx.handle:SOCKET handle) -> ();
 
     /// Gets test output socket.
     GetOutputSocket() -> (zx.handle:SOCKET h);

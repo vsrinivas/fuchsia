@@ -13,7 +13,6 @@ enum PciCfg : uint16 {
     COMMAND = 0x04;
     STATUS = 0x06;
     REVISION_ID = 0x08;
-    CLASS_CODE = 0x09;
     CLASS_CODE_INTR = 0x09;
     CLASS_CODE_SUB = 0x0a;
     CLASS_CODE_BASE = 0x0b;
@@ -122,7 +121,7 @@ protocol Pci {
     EnableBusMaster(bool enable) -> (zx.status s);
     ResetDevice() -> (zx.status s);
     AckInterrupt() -> (zx.status s);
-    MapInterrupt(uint32 which_irq) -> (zx.status s, zx.handle:INTERRUPT @handle);
+    MapInterrupt(uint32 which_irq) -> (zx.status s, zx.handle:INTERRUPT handle);
     QueryIrqMode(fuchsia.hardware.syscalls.pci.PciIrqMode mode) -> (zx.status s, uint32 max_irqs);
     SetIrqMode(fuchsia.hardware.syscalls.pci.PciIrqMode mode, uint32 requested_irq_count) -> (zx.status s);
     ConfigureIrqMode(uint32 requested_irq_count) -> (zx.status s, PciIrqMode mode);

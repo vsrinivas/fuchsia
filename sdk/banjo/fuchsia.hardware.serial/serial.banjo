@@ -54,5 +54,5 @@ protocol Serial {
     Config(uint32 baud_rate, uint32 flags) -> (zx.status s);
     /// Returns a socket that can be used for reading and writing data
     /// from the given serial port.
-    OpenSocket() -> (zx.status s, zx.handle:SOCKET @handle);
+    OpenSocket() -> (zx.status s, zx.handle:SOCKET handle);
 };
