@@ -6,16 +6,18 @@
 #### CATEGORY=Build
 ### list packages are built
 
-## usage: fx list-packages [--base|--cache|--universe]
+## usage: fx list-packages [--base|--cache|--universe] [--verbose] [pattern]
 ##
 ## list-packages lists the packages that the build is aware of. These are
 ## packages that can be rebuilt, and/or pushed to a device.
+## If a pattern is supplied, only packages matching the pattern are listed.
 ## Note: list-packages DOES NOT list all packages that could be built, only
 ## those which are included in the current build configuration.
 ##
 ##   --base      - list only packages in base
 ##   --cache     - list only packages in cache
 ##   --universe  - list all packages
+##   --verbose   - print package set for each listed package
 ##
 ## See https://fuchsia.dev/fuchsia-src/development/build/boards_and_products
 ## for more information about using these package sets.
@@ -23,19 +25,84 @@
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
+base_packages_list="${FUCHSIA_BUILD_DIR}/base_packages.list"
+cache_packages_list="${FUCHSIA_BUILD_DIR}/cache_packages.list"
+universe_packages_list="${FUCHSIA_BUILD_DIR}/universe_packages.list"
+
+package_sets=()
+verbose=false
+search_query="^.*$" # Default query matches "any" to list all packages.
+
 function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
-  case "$1" in
-  --base) cat "${FUCHSIA_BUILD_DIR}/base_packages.list" ;;
-  --cache) cat "${FUCHSIA_BUILD_DIR}/cache_packages.list" ;;
-  ""|--universe) cat "${FUCHSIA_BUILD_DIR}/universe_packages.list" ;;
-  *)
-    fx-error "Unknown argument: $1"
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+    --base)
+      package_sets+=( "${base_packages_list}" )
+      shift
+      ;;
+    --cache)
+      package_sets+=( "${cache_packages_list}" )
+      shift
+      ;;
+    --universe)
+      package_sets+=( "${universe_packages_list}" )
+      shift
+      ;;
+    -v|--verbose)
+      verbose=true
+      shift
+      ;;
+    -*)
+      fx-error "Unknown argument: $1"
+      return 1
+      ;;
+    *)
+      search_query="$1"
+      break
+      ;;
+    esac
+  done
+
+  # Default to universe if no options are provided.
+  if [[ ${#package_sets[@]} -eq 0 ]]; then
+    package_sets+=( "${universe_packages_list}" )
+  fi
+
+  if [[ ${#package_sets[@]} -ne 1 ]]; then
+    fx-error "Cannot supply multiple package set filters."
     return 1
-    ;;
-  esac
+  fi
+
+  # Search the provided package set.
+  results=($(grep "${search_query}" "${package_sets[0]}"))
+
+  # Pass through a non-zero return value when no results are found.
+  if [[ ${#results[@]} -eq 0 ]]; then
+    return 1
+  fi
+
+  # Verbose searches through all package sets and tags each result.
+  if "${verbose}"; then
+    all_packages=( "${base_packages_list}" "${cache_packages_list}" "${universe_packages_list}" )
+    for i in "${!results[@]}"; do
+      package="${results[$i]}"
+      tags=($(grep "^${package}$" "${all_packages[@]}"))
+
+      for j in "${!tags[@]}"; do
+        package_file=$(basename "${tags[$j]%:*}")
+        tags[$j]="${package_file%_packages.list}"
+      done
+
+      results[$i]="${package} [${tags[*]}]"
+    done
+  fi
+
+  # Print all matching patterns with discovered sets.
+  printf '%s\n' "${results[@]}"
+  return 0
 }
 
 main "$@"

@@ -30,7 +30,7 @@ then
 fi
 
 # make sure the build is configured with a Carnelian sample
-"$FX" list-packages | grep "spinning-square-rs"  >/dev/null 2>&1 || bail "Error: Could not find \
+"$FX" list-packages "spinning-square-rs"  >/dev/null 2>&1 || bail "Error: Could not find \
 the spinning square example in the package list. Please make sure you have '--with //src/lib/ui/\
 carnelian:examples' in your 'fx set'"
 

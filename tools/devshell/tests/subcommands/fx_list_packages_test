@@ -1,0 +1,80 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Test fx list-packages
+
+BT_FILE_DEPS=(
+  "scripts/fx"
+  "tools/devshell/list-packages"
+  "tools/devshell/lib/fx-cmd-locator.sh"
+  "tools/devshell/lib/fx-optional-features.sh"
+  "tools/devshell/lib/platform.sh"
+  "tools/devshell/lib/vars.sh"
+)
+
+declare fx
+
+BT_SET_UP() {
+  source "${BT_TEMP_DIR}/tools/devshell/lib/vars.sh"
+  source "${BT_TEMP_DIR}/tools/devshell/tests/lib/fuchsia-mock.sh"
+  fx="$(btf::setup_fx)"
+}
+
+# list-packages should return the entire contents of universe
+TEST_fx-list-packages-all() {
+  local test_package="universe-resolver"
+  local out="${BT_TEMP_DIR}/output.log"
+
+  echo "$test_package" > "${BT_TEMP_DIR}/out/default/universe_packages.list"
+
+  BT_EXPECT ${fx} list-packages >>${out} 2>&1
+  BT_EXPECT_FILE_CONTAINS "$out" "$test_package"
+}
+
+# list-packages should return only packages matching pattern
+TEST_fx-list-packages-pattern() {
+  local test_pattern="universe"
+  local test_package="universe-resolver"
+  local invalid_package="base-resolver"
+  local out="${BT_TEMP_DIR}/output.log"
+
+  {
+    echo "$test_package"
+    echo "$invalid_package"
+  } > "${BT_TEMP_DIR}/out/default/universe_packages.list"
+
+  BT_EXPECT ${fx} list-packages ${test_pattern} >>${out} 2>&1
+  BT_EXPECT_FILE_CONTAINS "$out" "$test_package"
+}
+
+# list-packages should return entire list with package tags
+TEST_fx-list-packages-verbose() {
+  local base_package="base-resolver"
+  local cache_package="universe-resolver"
+  local out="${BT_TEMP_DIR}/output.log"
+  local expected=$(cat <<-EOF
+$base_package [base universe]
+$cache_package [cache universe]
+EOF
+)
+
+  {
+    echo "$base_package"
+    echo "$cache_package"
+  } > "${BT_TEMP_DIR}/out/default/universe_packages.list"
+
+  {
+    echo "$cache_package"
+  } > "${BT_TEMP_DIR}/out/default/cache_packages.list"
+
+  {
+    echo "$base_package"
+  } > "${BT_TEMP_DIR}/out/default/base_packages.list"
+
+  BT_EXPECT ${fx} list-packages --verbose >>${out} 2>&1
+  BT_EXPECT_FILE_CONTAINS "$out" "$expected"
+}
+
+BT_RUN_TESTS "$@"
