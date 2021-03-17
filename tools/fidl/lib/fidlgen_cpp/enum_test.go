@@ -6,17 +6,21 @@ package fidlgen_cpp
 
 import (
 	"testing"
+
+	"github.com/google/go-cmp/cmp"
 )
 
-func assertEqual(t *testing.T, a interface{}, b interface{}) {
-	if a != b {
-		t.Fatalf("%s != %s", a, b)
+func assertEqual(t *testing.T, left interface{}, right interface{}) {
+	if !cmp.Equal(left, right) {
+		t.Fatalf(
+			"\nleft=%+v\nright=%+v\ndiff=%v",
+			left, right, cmp.Diff(left, right))
 	}
 }
 
-func assertNotEqual(t *testing.T, a interface{}, b interface{}) {
-	if a == b {
-		t.Fatalf("%s == %s", a, b)
+func assertNotEqual(t *testing.T, left interface{}, right interface{}) {
+	if cmp.Equal(left, right) {
+		t.Fatalf("\nleft=right=%+v", left)
 	}
 }
 
