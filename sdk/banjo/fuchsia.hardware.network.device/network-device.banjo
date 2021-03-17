@@ -137,7 +137,7 @@ struct BufferMetadata {
   /// Extra frame metadata information. The type of the [`fuchsia.hardware.network.device/FrameInfo`]
   /// union is defined by the value in `info_type`.
   FrameInfo info;
-  //// Type of data in `info`, as defined in [`fuchsia.hardware.network/InfoType`].
+  /// Type of data in `info`, as defined in [`fuchsia.hardware.network/InfoType`].
   uint32 info_type;
   /// Frame tx or rx flags, as defined in [`fuchsia.hardware.network/RxFlags`],
   /// [`fuchsia.hardware.network/txFlags`], and [`fuchsia.hardware.network/TxReturnFlags`].
