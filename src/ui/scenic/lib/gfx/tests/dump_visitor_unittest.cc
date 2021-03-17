@@ -80,12 +80,12 @@ TEST_F(DumpVisitorTest, ViewAndViewHolderDebugNames) {
 
   ViewPtr view = fxl::MakeRefCounted<View>(
       session(), next_id++, std::move(view_ref_pair.control_ref), std::move(view_ref_pair.view_ref),
-      kViewDebugName, session()->shared_error_reporter(), session()->view_tree_updater(),
+      kViewDebugName, session()->shared_error_reporter(), view_tree_updater_.GetWeakPtr(),
       session()->event_reporter()->GetWeakPtr());
 
   ViewHolderPtr view_holder = fxl::MakeRefCounted<ViewHolder>(
       session(), session()->id(), next_id++, /* is_annotation */ false, kViewHolderDebugName,
-      session()->shared_error_reporter(), session()->view_tree_updater());
+      session()->shared_error_reporter(), view_tree_updater_.GetWeakPtr());
 
   std::ostringstream ostream;
   std::unordered_set<GlobalId, GlobalId::Hash> visited;

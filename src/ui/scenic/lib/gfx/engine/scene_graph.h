@@ -71,15 +71,9 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
   // TODO(fxbug.dev/59407): Disentangle the annotation logic from ViewTree.
   void InvalidateAnnotationViewHolder(zx_koid_t koid);
 
-  // Tree topology: Enqueue transactional updates to the view tree, but do not apply them yet.
-  // Invariant: view_tree_ not modified
-  // Post: view_tree_updates_ grows by one
-  void StageViewTreeUpdates(ViewTreeUpdates updates);
-
   // Tree topolocy: Apply all enqueued updates to the view tree in a transactional step.
   // Post: view_tree_ updated
-  // Post: view_tree_updates_ cleared
-  void ProcessViewTreeUpdates();
+  void ProcessViewTreeUpdates(ViewTreeUpdates view_tree_updates);
 
   // Focus chain: Adjust focus in the view tree.
   // Return kAccept if request was honored; otherwise return an error enum.
@@ -146,7 +140,6 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry,
   std::vector<CompositorWeakPtr> compositors_;
 
   ViewTree view_tree_;
-  ViewTreeUpdates view_tree_updates_;
 
   fidl::Binding<fuchsia::ui::focus::FocusChainListenerRegistry> focus_chain_listener_registry_;
   uint64_t next_focus_chain_listener_id_ = 0;

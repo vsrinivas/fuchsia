@@ -61,7 +61,8 @@ void SessionHandlerTest::InitializeEngine() {
   frame_scheduler_->SetFrameRenderer(engine_);
 
   session_manager_ = std::make_unique<SessionManager>();
-  session_updater_ = std::make_shared<TestSessionUpdater>(engine_.get(), session_manager_.get());
+  session_updater_ = std::make_shared<TestSessionUpdater>(engine_.get(), session_manager_.get(),
+                                                          &view_tree_updater_);
   frame_scheduler_->AddSessionUpdater(session_updater_);
 }
 
@@ -80,7 +81,8 @@ scheduling::SessionUpdater::UpdateResults SessionHandlerTest::TestSessionUpdater
     const std::unordered_map<scheduling::SessionId, scheduling::PresentId>& sessions_to_update,
     uint64_t trace_id) {
   UpdateResults update_results;
-  CommandContext command_context = {.scene_graph = engine_->scene_graph()->GetWeakPtr()};
+  CommandContext command_context = {.scene_graph = engine_->scene_graph()->GetWeakPtr(),
+                                    .view_tree_updater = view_tree_updater_};
 
   for (auto [session_id, present_id] : sessions_to_update) {
     auto session = session_manager_->FindSession(session_id);

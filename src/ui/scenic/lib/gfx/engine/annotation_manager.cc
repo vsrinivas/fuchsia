@@ -28,13 +28,14 @@ AnnotationManager::AnnotationManager(SceneGraphWeakPtr scene_graph, ViewLinker* 
   FX_DCHECK(session_);
 }
 
-ViewHolderPtr AnnotationManager::NewAnnotationViewHolder(ViewHolderToken view_holder_token) {
+ViewHolderPtr AnnotationManager::NewAnnotationViewHolder(ViewHolderToken view_holder_token,
+                                                         ViewTreeUpdater& view_tree_updater) {
   std::ostringstream annotation_debug_name;
   annotation_debug_name << "Annotation ViewHolder: Token " << view_holder_token.value.get();
   ViewHolderPtr annotation_view_holder = fxl::MakeRefCounted<ViewHolder>(
       session_.get(), session_->id(), /* node_id */ 0U, /* suppress_events */ true,
       annotation_debug_name.str(), session_->shared_error_reporter(),
-      session_->view_tree_updater());
+      view_tree_updater.GetWeakPtr());
 
   // Set hit test behavior to kSuppress so it will suppress all hit testings.
   annotation_view_holder->SetHitTestBehavior(fuchsia::ui::gfx::HitTestBehavior::kSuppress);
@@ -78,7 +79,7 @@ void AnnotationManager::RequestCreate(AnnotationHandlerId handler_id, ViewRef ma
   handlers_state_[handler_id].requests.push_back(CreationRequest{
       .fulfilled = false,
       .main_view = std::move(main_view),
-      .annotation_view_holder = NewAnnotationViewHolder(std::move(view_holder_token)),
+      .annotation_view_holder = std::move(view_holder_token),
       .callback = std::move(callback),
   });
 }
@@ -104,16 +105,25 @@ void AnnotationManager::CleanupFulfilledRequests() {
   }
 }
 
-void AnnotationManager::FulfillCreateRequests() {
+void AnnotationManager::FulfillCreateRequests(ViewTreeUpdater& view_tree_updater) {
   std::vector<std::pair<AnnotationHandlerId, zx_status_t>> invalid_handlers_info;
   for (auto& kv : handlers_state_) {
     AnnotationHandlerId handler_id = kv.first;
     HandlerState& state = kv.second;
 
     for (auto& request : state.requests) {
-      zx_koid_t main_view_koid = utils::ExtractKoid(request.main_view);
-      zx_status_t status = scene_graph_->view_tree().AddAnnotationViewHolder(
-          main_view_koid, request.annotation_view_holder);
+      // Turn ViewHolderToken into a ViewHolder.
+      if (std::holds_alternative<fuchsia::ui::views::ViewHolderToken>(
+              request.annotation_view_holder)) {
+        request.annotation_view_holder = NewAnnotationViewHolder(
+            std::move(
+                std::get<fuchsia::ui::views::ViewHolderToken>(request.annotation_view_holder)),
+            view_tree_updater);
+      }
+
+      const zx_koid_t main_view_koid = utils::ExtractKoid(request.main_view);
+      const zx_status_t status = scene_graph_->view_tree().AddAnnotationViewHolder(
+          main_view_koid, std::get<ViewHolderPtr>(request.annotation_view_holder));
 
       if (status == ZX_OK) {
         request.fulfilled = true;
@@ -131,10 +141,6 @@ void AnnotationManager::FulfillCreateRequests() {
   }
   CleanupInvalidHandlerState(invalid_handlers_info);
   CleanupFulfilledRequests();
-}
-
-void AnnotationManager::StageViewTreeUpdates() {
-  session_->UpdateAndStageViewTreeUpdates(scene_graph_.get());
 }
 
 }  // namespace gfx

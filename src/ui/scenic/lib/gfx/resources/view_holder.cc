@@ -46,7 +46,7 @@ void ViewHolder::Connect(ViewLinker::ExportLink link) {
   link_ = std::move(link);
   view_holder_koid_ = link_->endpoint_id();
   if (view_tree_updater_) {
-    view_tree_updater_->TrackViewHolder(GetWeakPtr());
+    view_tree_updater_->TrackViewHolder(session_id(), GetWeakPtr());
   }
   link_->Initialize(fit::bind_member(this, &ViewHolder::LinkResolved),
                     fit::bind_member(this, &ViewHolder::LinkInvalidated));

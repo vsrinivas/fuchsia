@@ -258,7 +258,8 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(Session* session, CommandContext*
     case fuchsia::ui::gfx::ResourceArgs::Tag::kBuffer:
       return ApplyCreateBuffer(session, id, std::move(command.resource.buffer()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kScene:
-      return ApplyCreateScene(session, id, std::move(command.resource.scene()));
+      return ApplyCreateScene(session, id, std::move(command.resource.scene()),
+                              *command_context->view_tree_updater);
     case fuchsia::ui::gfx::ResourceArgs::Tag::kCamera:
       return ApplyCreateCamera(session, id, std::move(command.resource.camera()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kStereoCamera:
@@ -284,11 +285,14 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(Session* session, CommandContext*
     case fuchsia::ui::gfx::ResourceArgs::Tag::kMaterial:
       return ApplyCreateMaterial(session, id, std::move(command.resource.material()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kView:
-      return ApplyCreateView(session, id, std::move(command.resource.view()));
+      return ApplyCreateView(session, id, std::move(command.resource.view()),
+                             *command_context->view_tree_updater);
     case fuchsia::ui::gfx::ResourceArgs::Tag::kViewHolder:
-      return ApplyCreateViewHolder(session, id, std::move(command.resource.view_holder()));
+      return ApplyCreateViewHolder(session, id, std::move(command.resource.view_holder()),
+                                   *command_context->view_tree_updater);
     case fuchsia::ui::gfx::ResourceArgs::Tag::kView3:
-      return ApplyCreateView(session, id, std::move(command.resource.view3()));
+      return ApplyCreateView(session, id, std::move(command.resource.view3()),
+                             *command_context->view_tree_updater);
     case fuchsia::ui::gfx::ResourceArgs::Tag::kClipNode:
       return ApplyCreateClipNode(session, id, std::move(command.resource.clip_node()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kOpacityNode:
@@ -1094,8 +1098,9 @@ bool GfxCommandApplier::ApplyCreateBuffer(Session* session, ResourceId id,
 }
 
 bool GfxCommandApplier::ApplyCreateScene(Session* session, ResourceId id,
-                                         fuchsia::ui::gfx::SceneArgs args) {
-  auto scene = CreateScene(session, id, std::move(args));
+                                         fuchsia::ui::gfx::SceneArgs args,
+                                         ViewTreeUpdater& view_tree_updater) {
+  auto scene = CreateScene(session, id, std::move(args), view_tree_updater);
   return scene ? session->resources()->AddResource(id, std::move(scene)) : false;
 }
 
@@ -1258,12 +1263,13 @@ bool GfxCommandApplier::ApplyCreateMaterial(Session* session, ResourceId id,
 }
 
 bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
-                                        fuchsia::ui::gfx::ViewArgs args) {
+                                        fuchsia::ui::gfx::ViewArgs args,
+                                        ViewTreeUpdater& view_tree_updater) {
   // Sanity check.  We also rely on FIDL to enforce this for us, although it
   // does not at the moment.
   FX_DCHECK(args.token.value)
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateView(): no token provided.";
-  if (auto view = CreateView(session, id, std::move(args))) {
+  if (auto view = CreateView(session, id, std::move(args), view_tree_updater)) {
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
       FX_LOGS(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
                         "become a session-terminating error. For more info, see [fxbug.dev/24450].";
@@ -1278,12 +1284,13 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
 }
 
 bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
-                                        fuchsia::ui::gfx::ViewArgs3 args) {
+                                        fuchsia::ui::gfx::ViewArgs3 args,
+                                        ViewTreeUpdater& view_tree_updater) {
   // Sanity check.  We also rely on FIDL to enforce this for us, although it
   // does not at the moment.
   FX_DCHECK(args.token.value)
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateView(): no token provided.";
-  if (auto view = CreateView(session, id, std::move(args))) {
+  if (auto view = CreateView(session, id, std::move(args), view_tree_updater)) {
     if (!(session->SetRootView(view->As<View>()->GetWeakPtr()))) {
       FX_LOGS(ERROR) << "Error: cannot set more than one root view in a session. This will soon "
                         "become a session-terminating error. For more info, see [fxbug.dev/24450].";
@@ -1298,13 +1305,14 @@ bool GfxCommandApplier::ApplyCreateView(Session* session, ResourceId id,
 }
 
 bool GfxCommandApplier::ApplyCreateViewHolder(Session* session, ResourceId id,
-                                              fuchsia::ui::gfx::ViewHolderArgs args) {
+                                              fuchsia::ui::gfx::ViewHolderArgs args,
+                                              ViewTreeUpdater& view_tree_updater) {
   // Sanity check.  We also rely on FIDL to enforce this for us, although it
   // does not at the moment
   FX_DCHECK(args.token.value)
       << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateViewHolder(): no token provided.";
 
-  if (auto view_holder = CreateViewHolder(session, id, std::move(args))) {
+  if (auto view_holder = CreateViewHolder(session, id, std::move(args), view_tree_updater)) {
     session->resources()->AddResource(id, std::move(view_holder));
     return true;
   }
@@ -1408,8 +1416,9 @@ ResourcePtr GfxCommandApplier::CreateBuffer(Session* session, ResourceId id, Mem
 }
 
 ResourcePtr GfxCommandApplier::CreateScene(Session* session, ResourceId id,
-                                           fuchsia::ui::gfx::SceneArgs args) {
-  return fxl::MakeRefCounted<Scene>(session, session->id(), id, session->view_tree_updater(),
+                                           fuchsia::ui::gfx::SceneArgs args,
+                                           ViewTreeUpdater& view_tree_updater) {
+  return fxl::MakeRefCounted<Scene>(session, session->id(), id, view_tree_updater.GetWeakPtr(),
                                     session->event_reporter()->GetWeakPtr());
 }
 
@@ -1447,7 +1456,8 @@ ResourcePtr GfxCommandApplier::CreatePointLight(Session* session, ResourceId id)
 }
 
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
-                                          fuchsia::ui::gfx::ViewArgs args) {
+                                          fuchsia::ui::gfx::ViewArgs args,
+                                          ViewTreeUpdater& view_tree_updater) {
   // TODO(fxbug.dev/24602): Deprecate in favor of ViewArgs3.
   auto [control_ref, view_ref] = scenic::ViewRefPair::New();
 
@@ -1455,7 +1465,7 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
   std::string debug_name = args.debug_name ? *args.debug_name : std::string();
   auto view = fxl::MakeRefCounted<View>(session, id, std::move(control_ref), std::move(view_ref),
                                         std::move(debug_name), session->shared_error_reporter(),
-                                        session->view_tree_updater(),
+                                        view_tree_updater.GetWeakPtr(),
                                         session->event_reporter()->GetWeakPtr());
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ImportLink link =
@@ -1470,7 +1480,8 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
 }
 
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
-                                          fuchsia::ui::gfx::ViewArgs3 args) {
+                                          fuchsia::ui::gfx::ViewArgs3 args,
+                                          ViewTreeUpdater& view_tree_updater) {
   if (!validate_viewref(args.control_ref, args.view_ref)) {
     return nullptr;  // Error out: view ref not usable.
   }
@@ -1479,7 +1490,7 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
   std::string debug_name = args.debug_name ? *args.debug_name : std::string();
   auto view = fxl::MakeRefCounted<View>(
       session, id, std::move(args.control_ref), std::move(args.view_ref), std::move(debug_name),
-      session->shared_error_reporter(), session->view_tree_updater(),
+      session->shared_error_reporter(), view_tree_updater.GetWeakPtr(),
       session->event_reporter()->GetWeakPtr());
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ImportLink link =
@@ -1494,12 +1505,13 @@ ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,
 }
 
 ResourcePtr GfxCommandApplier::CreateViewHolder(Session* session, ResourceId id,
-                                                fuchsia::ui::gfx::ViewHolderArgs args) {
+                                                fuchsia::ui::gfx::ViewHolderArgs args,
+                                                ViewTreeUpdater& view_tree_updater) {
   // Create a ViewHolder and Link, then connect and return if the Link is valid.
   std::string debug_name = args.debug_name ? *args.debug_name : std::string();
   auto view_holder = fxl::MakeRefCounted<ViewHolder>(
       session, session->id(), id, /* suppress_events */ false, std::move(debug_name),
-      session->shared_error_reporter(), session->view_tree_updater());
+      session->shared_error_reporter(), view_tree_updater.GetWeakPtr());
   ViewLinker* view_linker = session->session_context().view_linker;
   ViewLinker::ExportLink link = view_linker->CreateExport(
       view_holder.get(), std::move(args.token.value), session->error_reporter());

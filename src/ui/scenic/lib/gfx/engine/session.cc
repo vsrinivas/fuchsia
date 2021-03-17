@@ -56,7 +56,6 @@ Session::Session(SessionId id, SessionContext session_context,
            session_context_.escher != nullptr ? session_context_.escher->sampler_cache()
                                               : nullptr}),
       resources_(error_reporter_),
-      view_tree_updater_(id),
       inspect_node_(std::move(inspect_node)),
       weak_factory_(this) {
   FX_DCHECK(error_reporter_);
@@ -95,18 +94,8 @@ void Session::DispatchCommand(fuchsia::ui::scenic::Command command,
 
 EventReporter* Session::event_reporter() const { return event_reporter_.get(); }
 
-void Session::UpdateAndStageViewTreeUpdates(SceneGraph* scene_graph) {
-  view_tree_updater_.UpdateViewHolderConnections();
-  view_tree_updater_.StageViewTreeUpdates(scene_graph);
-}
-
 bool Session::ApplyScheduledUpdates(CommandContext* command_context,
                                     scheduling::PresentId present_id) {
-  // RAII object to ensure UpdateViewHolderConnections and StageViewTreeUpdates, on all exit paths.
-  fbl::AutoCall cleanup([this, command_context] {
-    UpdateAndStageViewTreeUpdates(command_context->scene_graph.get());
-  });
-
   // Batch all updates up to |present_id|.
   std::vector<::fuchsia::ui::gfx::Command> commands;
   while (!scheduled_updates_.empty() && scheduled_updates_.front().present_id <= present_id) {

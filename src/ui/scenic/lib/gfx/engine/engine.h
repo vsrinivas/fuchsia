@@ -112,6 +112,8 @@ class Engine : public scheduling::FrameRenderer {
 
   EngineRenderer* renderer() { return engine_renderer_.get(); }
 
+  ViewTreeUpdater& view_tree_updater() { return view_tree_updater_; }
+
   // TODO(fxbug.dev/24357)
   // Instead of a set of Compositors, we should probably root at a set of
   // Displays. Or, we might not even need to store this set, and Displays (or
@@ -191,6 +193,7 @@ class Engine : public scheduling::FrameRenderer {
   std::shared_ptr<scheduling::DelegatingFrameScheduler> delegating_frame_scheduler_;
 
   SceneGraph scene_graph_;
+  ViewTreeUpdater view_tree_updater_;
 
   bool escher_cleanup_scheduled_ = false;
 

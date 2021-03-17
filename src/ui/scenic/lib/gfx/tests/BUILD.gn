@@ -178,6 +178,7 @@ executable("unittests") {
     "stereo_camera_unittest.cc",
     "view_clipping_unittest.cc",
     "view_ref_installed_impl_unittest.cc",
+    "view_tree_integrationtest.cc",
     "view_tree_unittest.cc",
     "view_unittest.cc",
   ]

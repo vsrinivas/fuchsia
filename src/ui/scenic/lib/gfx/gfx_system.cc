@@ -231,7 +231,8 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
           [renderer = engine_->renderer()](vk::Format framebuffer_format) {
             renderer->WarmPipelineCache({framebuffer_format});
           },
-      .scene_graph = engine_->scene_graph()};
+      .scene_graph = engine_->scene_graph(),
+      .view_tree_updater = &engine_->view_tree_updater()};
 
   // Update scene graph and stage ViewTree updates of Annotation Views first.
   //
@@ -243,12 +244,7 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
 
   // If annotation manager has annotation view holder creation requests, try
   // fulfilling them by adding the annotation ViewHolders to the SceneGraph.
-  engine_->annotation_manager()->FulfillCreateRequests();
-
-  // Session owned by AnnotationManager can also have ViewTree updates when
-  // AnnotationViewHolders are created or deleted. We should stage these updates
-  // into SceneGraph manually.
-  engine_->annotation_manager()->StageViewTreeUpdates();
+  engine_->annotation_manager()->FulfillCreateRequests(engine_->view_tree_updater());
 
   // Apply scheduled updates to each session, and process the changes to the local session scene
   // graph.
@@ -262,6 +258,8 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
     }
   }
 
+  ViewTreeUpdates updates = engine_->view_tree_updater().FinishAndExtractViewTreeUpdates();
+
   // Run through compositors, find the active Scene, stage it as the view tree root.
   {
     std::set<Scene*> scenes;
@@ -269,7 +267,6 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
       compositor->CollectScenes(&scenes);
     }
 
-    ViewTreeUpdates updates;
     if (scenes.empty()) {
       updates.push_back(ViewTreeMakeGlobalRoot{.koid = ZX_KOID_INVALID});
     } else {
@@ -281,14 +278,13 @@ scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
         updates.push_back(ViewTreeMakeGlobalRoot{.koid = scene->view_ref_koid()});
       }
     }
-    engine_->scene_graph()->StageViewTreeUpdates(std::move(updates));
   }
 
   // NOTE: Call this operation in a quiescent state: when session updates are guaranteed finished!
   //       This ordering ensures that all updates are accounted for consistently, and focus-related
   //       events are dispatched just once.
   // NOTE: Failure to call this operation will result in an inconsistent SceneGraph state.
-  engine_->scene_graph()->ProcessViewTreeUpdates();
+  engine_->scene_graph()->ProcessViewTreeUpdates(std::move(updates));
 
   return update_results;
 }

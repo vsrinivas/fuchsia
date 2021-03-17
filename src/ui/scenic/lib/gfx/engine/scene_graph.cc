@@ -64,18 +64,12 @@ void SceneGraph::InvalidateAnnotationViewHolder(zx_koid_t koid) {
   view_tree_.InvalidateAnnotationViewHolder(koid);
 }
 
-void SceneGraph::StageViewTreeUpdates(ViewTreeUpdates updates) {
-  for (auto& update : updates) {
-    view_tree_updates_.push_back(std::move(update));
-  }
-}
-
 // To avoid unnecessary complexity or cost of maintaining state, view_tree_ modifications are
 // destructive.  This operation must preserve any needed state before applying updates.
-void SceneGraph::ProcessViewTreeUpdates() {
+void SceneGraph::ProcessViewTreeUpdates(ViewTreeUpdates view_tree_updates) {
   std::vector<zx_koid_t> old_focus_chain = view_tree_.focus_chain();
   // Process all updates.
-  for (auto& update : view_tree_updates_) {
+  for (auto& update : view_tree_updates) {
     if (auto ptr = std::get_if<ViewTreeNewRefNode>(&update)) {
       view_tree_.NewRefNode(std::move(*ptr));
     } else if (const auto ptr = std::get_if<ViewTreeNewAttachNode>(&update)) {
@@ -93,7 +87,6 @@ void SceneGraph::ProcessViewTreeUpdates() {
                       << update.index();
     }
   }
-  view_tree_updates_.clear();
   view_tree_.PostProcessUpdates();
 
   MaybeDispatchFidlFocusChainAndFocusEvents(old_focus_chain);

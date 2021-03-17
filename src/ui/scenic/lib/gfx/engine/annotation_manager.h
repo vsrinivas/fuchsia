@@ -9,6 +9,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fit/function.h>
 
+#include <variant>
 #include <vector>
 
 #include "src/lib/fxl/memory/ref_counted.h"
@@ -37,8 +38,12 @@ class AnnotationManager {
   struct CreationRequest {
     bool fulfilled = false;
 
+    // ViewRef of the View this annotation is attached to.
     fuchsia::ui::views::ViewRef main_view;
-    ViewHolderPtr annotation_view_holder;
+    // ViewHolder to the AnnotationView. Attached as a child of main_view.
+    // Is a ViewHolderToken until FulfillCreateRequest(), at which point it's replaced with the
+    // corresponding ViewHolder.
+    std::variant<fuchsia::ui::views::ViewHolderToken, ViewHolderPtr> annotation_view_holder;
     OnAnnotationViewHolderCreatedCallback callback;
   };
 
@@ -61,15 +66,14 @@ class AnnotationManager {
                      fuchsia::ui::views::ViewHolderToken view_holder_token,
                      OnAnnotationViewHolderCreatedCallback callback);
 
-  void FulfillCreateRequests();
-
-  // Annotation manager session doesn't participate in |ApplySessionUpdates()|,
-  // so its ViewTree updates need to be staged manually using this method.
-  void StageViewTreeUpdates();
+  // Attempts to fulfill all pending requests from previous RequestCreate() calls.
+  // Called in GfxSystem::UpdateSessions() before sessions are updated.
+  void FulfillCreateRequests(ViewTreeUpdater& view_tree_updater);
 
  private:
   // Create annotation ViewHolder immediately.
-  ViewHolderPtr NewAnnotationViewHolder(fuchsia::ui::views::ViewHolderToken view_holder_token);
+  ViewHolderPtr NewAnnotationViewHolder(fuchsia::ui::views::ViewHolderToken view_holder_token,
+                                        ViewTreeUpdater& view_tree_updater);
 
   void CleanupInvalidHandlerState(
       const std::vector<std::pair<AnnotationHandlerId, zx_status_t>>& invalid_handlers_info);

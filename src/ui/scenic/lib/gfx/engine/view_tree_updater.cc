@@ -10,20 +10,19 @@
 
 namespace scenic_impl::gfx {
 
-ViewTreeUpdater::ViewTreeUpdater(SessionId session_id)
-    : session_id_(session_id), weak_factory_(this) {}
+ViewTreeUpdater::ViewTreeUpdater() : weak_factory_(this) {}
 
-void ViewTreeUpdater::AddUpdate(ViewTreeUpdate update) {
+void ViewTreeUpdater::AddUpdate(SessionId session_id, ViewTreeUpdate update) {
   return view_tree_updates_.push_back(std::move(update));
 }
 
-void ViewTreeUpdater::TrackViewHolder(fxl::WeakPtr<ViewHolder> view_holder) {
+void ViewTreeUpdater::TrackViewHolder(SessionId session_id, fxl::WeakPtr<ViewHolder> view_holder) {
   FX_DCHECK(view_holder) << "precondition";  // Called in ViewHolder constructor.
 
   const zx_koid_t koid = view_holder->view_holder_koid();
   view_tree_updates_.push_back(ViewTreeNewAttachNode{.koid = koid});
-  auto [iter, inserted] =
-      tracked_view_holders_.insert({koid, ViewHolderStatus{.view_holder = std::move(view_holder)}});
+  auto [iter, inserted] = tracked_view_holders_.insert(
+      {koid, ViewHolderStatus{.session_id = session_id, .view_holder = std::move(view_holder)}});
   FX_DCHECK(inserted);
 }
 
@@ -35,11 +34,7 @@ void ViewTreeUpdater::UntrackViewHolder(zx_koid_t koid) {
 }
 
 void ViewTreeUpdater::UpdateViewHolderConnections() {
-  for (auto& kv : tracked_view_holders_) {
-    const zx_koid_t koid = kv.first;
-    ViewHolderStatus& status = kv.second;
-    const std::optional<bool> prev_connected = status.connected_to_session_root;
-
+  for (auto& [koid, status] : tracked_view_holders_) {
     // Each ViewHolder may have an independent intra-Session "root" that connects it upwards.
     // E.g., it's legal to have multiple Scene roots connecting to independent compositors.
     zx_koid_t root = ZX_KOID_INVALID;
@@ -48,7 +43,7 @@ void ViewTreeUpdater::UpdateViewHolderConnections() {
     FX_DCHECK(status.view_holder) << "invariant";
     Node* curr = status.view_holder ? status.view_holder->parent() : nullptr;
     while (curr) {
-      if (curr->session_id() != session_id_) {
+      if (curr->session_id() != status.session_id) {
         break;  // Exited session boundary, quit upwards search.
       }
       if (curr->IsKindOf<ViewNode>() && curr->As<ViewNode>()->GetView()) {
@@ -76,6 +71,7 @@ void ViewTreeUpdater::UpdateViewHolderConnections() {
     // true     false   record disconnect, report disconnect (case 3)
     // false    true    record connect, report connect (case 1)
     // false    false   (nop)
+    const std::optional<bool> prev_connected = status.connected_to_session_root;
     if ((!prev_connected.has_value() && now_connected) ||
         (prev_connected.has_value() && !prev_connected.value() && now_connected)) {
       // Case 1
@@ -92,9 +88,11 @@ void ViewTreeUpdater::UpdateViewHolderConnections() {
   }
 }
 
-void ViewTreeUpdater::StageViewTreeUpdates(SceneGraph* scene_graph) {
-  scene_graph->StageViewTreeUpdates(std::move(view_tree_updates_));
+ViewTreeUpdates ViewTreeUpdater::FinishAndExtractViewTreeUpdates() {
+  UpdateViewHolderConnections();
+  auto updates = std::move(view_tree_updates_);
   view_tree_updates_.clear();
+  return updates;
 }
 
 }  // namespace scenic_impl::gfx

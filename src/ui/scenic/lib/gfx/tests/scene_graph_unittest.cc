@@ -114,8 +114,7 @@ TEST_F(SceneGraphTest, RequestFocusChange) {
     updates.push_back(ViewTreeConnectToParent{.child = child_koid, .parent = 1111u});
     updates.push_back(ViewTreeConnectToParent{.child = 1111u, .parent = parent_koid});
 
-    scene_graph.StageViewTreeUpdates(std::move(updates));
-    scene_graph.ProcessViewTreeUpdates();
+    scene_graph.ProcessViewTreeUpdates(std::move(updates));
   }
 
   ASSERT_EQ(scene_graph.view_tree().focus_chain().size(), 1u);
@@ -157,8 +156,7 @@ TEST_F(SceneGraphTest, RequestFocusChangeButMayNotReceiveFocus) {
     updates.push_back(ViewTreeConnectToParent{.child = child_koid, .parent = 1111u});
     updates.push_back(ViewTreeConnectToParent{.child = 1111u, .parent = parent_koid});
 
-    scene_graph.StageViewTreeUpdates(std::move(updates));
-    scene_graph.ProcessViewTreeUpdates();
+    scene_graph.ProcessViewTreeUpdates(std::move(updates));
   }
 
   ASSERT_EQ(scene_graph.view_tree().focus_chain().size(), 1u);
@@ -228,8 +226,7 @@ TEST_F(SceneGraphTest, ViewRefInstalledIntegrationTest) {
     updates.push_back(ViewTreeConnectToParent{.child = child_koid, .parent = 1111u});
     updates.push_back(ViewTreeConnectToParent{.child = 1111u, .parent = parent_koid});
 
-    scene_graph.StageViewTreeUpdates(std::move(updates));
-    scene_graph.ProcessViewTreeUpdates();
+    scene_graph.ProcessViewTreeUpdates(std::move(updates));
   }
 
   // ViewRefs are now installed and both Watch calls should return.

@@ -45,8 +45,7 @@ SessionContext SessionTest::CreateSessionContext() {
 }
 
 CommandContext SessionTest::CreateCommandContext() {
-  // By default, return the empty command context.
-  return CommandContext();
+  return CommandContext{.view_tree_updater = &view_tree_updater_};
 }
 
 std::unique_ptr<Session> SessionTest::CreateSession() {

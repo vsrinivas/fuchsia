@@ -120,6 +120,7 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
     FX_DCHECK(session->id() != 0u) << "GFX-side invariant for ViewTree";
     if (view_tree_updater_) {
       view_tree_updater_->AddUpdate(
+          session->id(),
           ViewTreeNewRefNode{.view_ref = std::move(clone),
                              .event_reporter = std::move(reporter),
                              .may_receive_focus = std::move(may_receive_focus),
@@ -136,7 +137,7 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
 
 View::~View() {
   if (view_tree_updater_) {
-    view_tree_updater_->AddUpdate(ViewTreeDeleteNode({.koid = view_ref_koid_}));
+    view_tree_updater_->AddUpdate(session_id(), ViewTreeDeleteNode({.koid = view_ref_koid_}));
   }
 
   // Explicitly detach the phantom node to ensure it is cleaned up.
@@ -181,8 +182,9 @@ void View::LinkResolved(ViewHolder* view_holder) {
   SendViewHolderConnectedEvent();
 
   if (view_tree_updater_) {
-    view_tree_updater_->AddUpdate(ViewTreeConnectToParent{
-        .child = view_ref_koid_, .parent = view_holder_->view_holder_koid()});
+    view_tree_updater_->AddUpdate(
+        session_id(), ViewTreeConnectToParent{.child = view_ref_koid_,
+                                              .parent = view_holder_->view_holder_koid()});
   }
 }
 
@@ -205,7 +207,8 @@ void View::LinkInvalidated(bool on_link_destruction) {
   SendViewHolderDisconnectedEvent();
 
   if (view_tree_updater_) {
-    view_tree_updater_->AddUpdate(ViewTreeDisconnectFromParent{.koid = view_ref_koid_});
+    view_tree_updater_->AddUpdate(session_id(),
+                                  ViewTreeDisconnectFromParent{.koid = view_ref_koid_});
   }
 }
 

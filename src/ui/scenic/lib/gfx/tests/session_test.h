@@ -9,6 +9,7 @@
 
 #include "lib/gtest/test_loop_fixture.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
+#include "src/ui/scenic/lib/gfx/engine/view_tree_updater.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
@@ -51,6 +52,8 @@ class SessionTest : public ErrorReportingTest {
   // Creates an empty CommandContext for Apply(). Subclasses should override to
   // customize command application.
   virtual CommandContext CreateCommandContext();
+
+  ViewTreeUpdater view_tree_updater_;
 
  private:
   SessionContext session_context_;

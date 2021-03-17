@@ -13,6 +13,7 @@
 #include "src/ui/scenic/lib/gfx/engine/resource_map.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
+#include "src/ui/scenic/lib/gfx/engine/view_tree_updater.h"
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 #include "src/ui/scenic/lib/gfx/resources/resource_context.h"
@@ -49,6 +50,7 @@ struct CommandContext {
   display::DisplayManager* display_manager = nullptr;
   WarmPipelineCacheCallback warm_pipeline_cache_callback;
   fxl::WeakPtr<SceneGraph> scene_graph;
+  ViewTreeUpdater* view_tree_updater = nullptr;
 };
 
 // Responsible for applying gfx commands to sessions.
@@ -164,7 +166,8 @@ class GfxCommandApplier {
   static bool ApplyCreateImagePipe2(Session* session, ResourceId id,
                                     fuchsia::ui::gfx::ImagePipe2Args args);
   static bool ApplyCreateBuffer(Session* session, ResourceId id, fuchsia::ui::gfx::BufferArgs args);
-  static bool ApplyCreateScene(Session* session, ResourceId id, fuchsia::ui::gfx::SceneArgs args);
+  static bool ApplyCreateScene(Session* session, ResourceId id, fuchsia::ui::gfx::SceneArgs args,
+                               ViewTreeUpdater& view_tree_updater);
   static bool ApplyCreateCamera(Session* session, ResourceId id, fuchsia::ui::gfx::CameraArgs args);
   static bool ApplyCreateStereoCamera(Session* session, ResourceId id,
                                       fuchsia::ui::gfx::StereoCameraArgs args);
@@ -185,10 +188,13 @@ class GfxCommandApplier {
   static bool ApplyCreateMesh(Session* session, ResourceId id, fuchsia::ui::gfx::MeshArgs args);
   static bool ApplyCreateMaterial(Session* session, ResourceId id,
                                   fuchsia::ui::gfx::MaterialArgs args);
-  static bool ApplyCreateView(Session* session, ResourceId id, fuchsia::ui::gfx::ViewArgs args);
+  static bool ApplyCreateView(Session* session, ResourceId id, fuchsia::ui::gfx::ViewArgs args,
+                              ViewTreeUpdater& view_tree_updater);
   static bool ApplyCreateViewHolder(Session* session, ResourceId id,
-                                    fuchsia::ui::gfx::ViewHolderArgs args);
-  static bool ApplyCreateView(Session* session, ResourceId id, fuchsia::ui::gfx::ViewArgs3 args);
+                                    fuchsia::ui::gfx::ViewHolderArgs args,
+                                    ViewTreeUpdater& view_tree_updater);
+  static bool ApplyCreateView(Session* session, ResourceId id, fuchsia::ui::gfx::ViewArgs3 args,
+                              ViewTreeUpdater& view_tree_updater);
   static bool ApplyCreateClipNode(Session* session, ResourceId id,
                                   fuchsia::ui::gfx::ClipNodeArgs args);
   static bool ApplyCreateEntityNode(Session* session, ResourceId id,
@@ -236,7 +242,8 @@ class GfxCommandApplier {
   static ResourcePtr CreateBuffer(Session* session, ResourceId id, MemoryPtr memory,
                                   uint32_t memory_offset, uint32_t num_bytes);
 
-  static ResourcePtr CreateScene(Session* session, ResourceId id, fuchsia::ui::gfx::SceneArgs args);
+  static ResourcePtr CreateScene(Session* session, ResourceId id, fuchsia::ui::gfx::SceneArgs args,
+                                 ViewTreeUpdater& view_tree_updater);
   static ResourcePtr CreateCamera(Session* session, ResourceId id,
                                   fuchsia::ui::gfx::CameraArgs args);
   static ResourcePtr CreateStereoCamera(Session* session, ResourceId id,
@@ -248,10 +255,13 @@ class GfxCommandApplier {
   static ResourcePtr CreateDirectionalLight(Session* session, ResourceId id);
   static ResourcePtr CreatePointLight(Session* session, ResourceId id);
 
-  static ResourcePtr CreateView(Session* session, ResourceId id, fuchsia::ui::gfx::ViewArgs args);
-  static ResourcePtr CreateView(Session* session, ResourceId id, fuchsia::ui::gfx::ViewArgs3 args);
+  static ResourcePtr CreateView(Session* session, ResourceId id, fuchsia::ui::gfx::ViewArgs args,
+                                ViewTreeUpdater& view_tree_updater);
+  static ResourcePtr CreateView(Session* session, ResourceId id, fuchsia::ui::gfx::ViewArgs3 args,
+                                ViewTreeUpdater& view_tree_updater);
   static ResourcePtr CreateViewHolder(Session* session, ResourceId id,
-                                      fuchsia::ui::gfx::ViewHolderArgs args);
+                                      fuchsia::ui::gfx::ViewHolderArgs args,
+                                      ViewTreeUpdater& view_tree_updater);
   static ResourcePtr CreateClipNode(Session* session, ResourceId id,
                                     fuchsia::ui::gfx::ClipNodeArgs args);
   static ResourcePtr CreateEntityNode(Session* session, ResourceId id,

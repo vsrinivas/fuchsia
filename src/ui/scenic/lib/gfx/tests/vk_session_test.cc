@@ -82,7 +82,10 @@ SessionContext VkSessionTest::CreateSessionContext() {
 }
 
 CommandContext VkSessionTest::CreateCommandContext() {
-  return {.sysmem = sysmem_.get(), .display_manager = display_manager_.get()};
+  auto context = SessionTest::CreateCommandContext();
+  context.sysmem = sysmem_.get();
+  context.display_manager = display_manager_.get();
+  return context;
 }
 
 }  // namespace test

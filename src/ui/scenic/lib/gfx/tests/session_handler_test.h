@@ -53,8 +53,11 @@ class SessionHandlerTest : public ErrorReportingTest {
 
   class TestSessionUpdater : public scheduling::SessionUpdater {
    public:
-    TestSessionUpdater(Engine* engine, SessionManager* session_manager)
-        : engine_(engine), session_manager_(session_manager) {}
+    TestSessionUpdater(Engine* engine, SessionManager* session_manager,
+                       ViewTreeUpdater* view_tree_updater)
+        : engine_(engine),
+          session_manager_(session_manager),
+          view_tree_updater_(view_tree_updater) {}
 
     // |scheduling::SessionUpdater|
     UpdateResults UpdateSessions(
@@ -72,6 +75,7 @@ class SessionHandlerTest : public ErrorReportingTest {
    private:
     Engine* engine_;
     SessionManager* session_manager_;
+    ViewTreeUpdater* view_tree_updater_;
   };
 
   sys::testing::ComponentContextProvider app_context_;
@@ -82,6 +86,8 @@ class SessionHandlerTest : public ErrorReportingTest {
   CommandDispatcherUniquePtr command_dispatcher_;
   std::unique_ptr<SessionManager> session_manager_;
   std::shared_ptr<TestSessionUpdater> session_updater_;
+
+  ViewTreeUpdater view_tree_updater_;
 };
 
 }  // namespace test

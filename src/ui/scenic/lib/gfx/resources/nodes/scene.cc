@@ -71,6 +71,7 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
     if (view_tree_updater_) {
       FX_DCHECK(session_id != 0u) << "GFX-side invariant for ViewTree";
       view_tree_updater_->AddUpdate(
+          session_id,
           ViewTreeNewRefNode{.view_ref = std::move(clone),
                              .event_reporter = std::move(event_reporter),
                              .may_receive_focus = std::move(may_receive_focus),
@@ -88,7 +89,7 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
 
 Scene::~Scene() {
   if (view_tree_updater_) {
-    view_tree_updater_->AddUpdate(ViewTreeDeleteNode({.koid = view_ref_koid_}));
+    view_tree_updater_->AddUpdate(session_id(), ViewTreeDeleteNode({.koid = view_ref_koid_}));
   }
 }
 

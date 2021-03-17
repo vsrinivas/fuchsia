@@ -26,12 +26,7 @@ void ViewTreeSessionTest::RegisterSession(Session* session) {
 }
 
 void ViewTreeSessionTest::StageAndUpdateViewTree(SceneGraph* scene_graph) {
-  for (const auto& session : sessions_) {
-    if (session) {
-      session->view_tree_updater()->StageViewTreeUpdates(scene_graph);
-    }
-  }
-  scene_graph->ProcessViewTreeUpdates();
+  scene_graph->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
 
   // Clear unused sessions.
   std::vector<fxl::WeakPtr<Session>> new_sessions;

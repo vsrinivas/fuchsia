@@ -61,18 +61,20 @@ escher::ray4 CreateZRay(glm::vec2 coords) {
 // Session wrapper that references a common Engine.
 class CustomSession {
  public:
-  CustomSession(SessionId id, SessionContext session_context)
+  CustomSession(SessionId id, SessionContext session_context, ViewTreeUpdater& view_tree_updater)
       : session_(std::make_unique<Session>(id, std::move(session_context), EventReporter::Default(),
-                                           ErrorReporter::Default())) {}
+                                           ErrorReporter::Default())),
+        view_tree_updater_(view_tree_updater) {}
 
   void Apply(::fuchsia::ui::gfx::Command command) {
-    CommandContext empty_command_context;
-    bool result = session_->ApplyCommand(&empty_command_context, std::move(command));
+    CommandContext command_context{.view_tree_updater = &view_tree_updater_};
+    bool result = session_->ApplyCommand(&command_context, std::move(command));
     ASSERT_TRUE(result) << "Failed to apply: " << command;  // Fail fast.
   }
 
  private:
   std::unique_ptr<Session> session_;
+  ViewTreeUpdater& view_tree_updater_;
 };
 
 // Accumulator that just accumulates all hits.
@@ -125,7 +127,7 @@ class HitTestTest : public gtest::TestLoopFixture {
   }
 
   CustomSession CreateSession(SessionId id) {
-    return CustomSession(id, engine_->session_context());
+    return CustomSession(id, engine_->session_context(), engine_->view_tree_updater());
   }
 
   // Creates a session ID 0 with a compositor, layer stack, layer, scene, camera, and renderer.
@@ -932,7 +934,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   }
 
   // Two sessions (s_1 and s_2) create an overlapping and hittable surface.
-  CustomSession s_1(2, engine()->session_context());
+  CustomSession s_1 = CreateSession(2);
   zx_koid_t view_ref_koid1 = ZX_KOID_INVALID;
   {
     auto pair = scenic::ViewRefPair::New();
@@ -957,7 +959,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
     s_1.Apply(scenic::NewSetShapeCmd(kShapeNodeId, kShapeId));
   }
 
-  CustomSession s_2(3, engine()->session_context());
+  CustomSession s_2 = CreateSession(3);
   zx_koid_t view_ref_koid2 = ZX_KOID_INVALID;
   {
     auto pair = scenic::ViewRefPair::New();

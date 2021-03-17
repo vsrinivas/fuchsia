@@ -81,7 +81,9 @@ class AnnotationManagerTest : public ViewTreeSessionTest {
     return session_context;
   }
 
-  CommandContext CreateCommandContext() { return {.scene_graph = scene_graph_->GetWeakPtr()}; }
+  CommandContext CreateCommandContext() {
+    return {.scene_graph = scene_graph_->GetWeakPtr(), .view_tree_updater = &view_tree_updater_};
+  }
 
   SceneGraph* scene_graph() const { return scene_graph_.get(); }
   AnnotationManager* annotation_manager() const { return annotation_manager_.get(); }
@@ -186,9 +188,8 @@ TEST_F(AnnotationManagerTest, SuccessfulLookup) {
 
   EXPECT_FALSE(created);
   EXPECT_FALSE(handler_removed);
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
   ASSERT_TRUE(created);
   EXPECT_FALSE(handler_removed);
 
@@ -269,9 +270,8 @@ TEST_F(AnnotationManagerTest, InvalidAndNonExistentViewRef) {
 
     EXPECT_FALSE(created);
     EXPECT_FALSE(handler_removed);
-    annotation_manager()->FulfillCreateRequests();
-    annotation_manager()->StageViewTreeUpdates();
-    scene_graph()->ProcessViewTreeUpdates();
+    annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+    scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
     ASSERT_FALSE(created);
     ASSERT_FALSE(handler_removed);
 
@@ -290,9 +290,8 @@ TEST_F(AnnotationManagerTest, InvalidAndNonExistentViewRef) {
 
     EXPECT_FALSE(created);
     EXPECT_FALSE(handler_removed);
-    annotation_manager()->FulfillCreateRequests();
-    annotation_manager()->StageViewTreeUpdates();
-    scene_graph()->ProcessViewTreeUpdates();
+    annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+    scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
     ASSERT_FALSE(created);
     ASSERT_TRUE(handler_removed);
     ASSERT_EQ(epitaph, ZX_ERR_INVALID_ARGS);
@@ -356,9 +355,8 @@ TEST_F(AnnotationManagerTest, NotFoundIfSessionDies) {
   // If the View doesn't exist in ViewTree yet, the Annotation View creation
   // request is defered until View is created, but the handler (and the
   // request) should be still alive.
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
   ASSERT_FALSE(created);
   EXPECT_EQ(handler_status, ZX_OK);
   EXPECT_FALSE(handler_removed);
@@ -388,9 +386,8 @@ TEST_F(AnnotationManagerTest, NotFoundIfSessionDies) {
   // The callback won't be triggered because there is no new Annotation
   // ViewHolder created; and the AnnotationRegistryHandler should be still
   // alive as this is not considered as a fatal error.
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
   EXPECT_FALSE(created);
   EXPECT_EQ(handler_status, ZX_OK);
   EXPECT_FALSE(handler_removed);
@@ -471,9 +468,8 @@ TEST_F(AnnotationManagerTest, HandlerAliveIfSessionDies) {
   // If the View doesn't exist in ViewTree yet, the Annotation View creation
   // request is defered until View is created, but the handler (and the
   // request) should be still alive.
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
   ASSERT_FALSE(annotation_view1_created);
   EXPECT_EQ(handler_status, ZX_OK);
   EXPECT_FALSE(handler_removed);
@@ -503,9 +499,8 @@ TEST_F(AnnotationManagerTest, HandlerAliveIfSessionDies) {
   // The callback won't be triggered because there is no new Annotation
   // ViewHolder created; and the AnnotationRegistryHandler should be still
   // alive as this is not considered as a fatal error.
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
   EXPECT_FALSE(annotation_view1_created);
   EXPECT_EQ(handler_status, ZX_OK);
   EXPECT_FALSE(handler_removed);
@@ -523,9 +518,8 @@ TEST_F(AnnotationManagerTest, HandlerAliveIfSessionDies) {
                                       std::move(view2_ref_for_creation), "view 2"));
   StageAndUpdateViewTree(scene_graph());
 
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
   EXPECT_TRUE(annotation_view2_created);
   EXPECT_EQ(handler_status, ZX_OK);
   EXPECT_FALSE(handler_removed);
@@ -583,9 +577,8 @@ TEST_F(AnnotationManagerTest, DelayCreateIfNotFound) {
   // If the View doesn't exist in ViewTree yet, the Annotation View creation
   // request is defered until View is created, but the handler (and the
   // request) should be still alive.
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
   ASSERT_FALSE(created);
   EXPECT_FALSE(handler_removed);
 
@@ -606,9 +599,8 @@ TEST_F(AnnotationManagerTest, DelayCreateIfNotFound) {
   // should succeed.
   EXPECT_FALSE(created);
   EXPECT_FALSE(handler_removed);
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
   ASSERT_TRUE(created);
   EXPECT_FALSE(handler_removed);
 
@@ -691,9 +683,8 @@ TEST_F(AnnotationManagerTest, LinkerTest_AnnotationViewCreatedFirst) {
                                       [&created]() { created = true; });
 
   EXPECT_FALSE(created);
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
   ASSERT_TRUE(created);
 
   // Lookup Annotation ViewHolder in View1.
@@ -778,9 +769,8 @@ TEST_F(AnnotationManagerTest, LinkerTest_AnnotationViewHolderCreatedFirst) {
   EXPECT_TRUE(annotation_view_ptr);
 
   EXPECT_FALSE(created);
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
   ASSERT_TRUE(created);
 
   // Lookup Annotation ViewHolder in View1.
@@ -844,9 +834,8 @@ TEST_F(AnnotationManagerTest, RemoveAnnotationView) {
   annotation_manager()->RegisterHandler(kAnnotationHandlerId, [](auto) {});
   annotation_manager()->RequestCreate(kAnnotationHandlerId, std::move(view1_ref),
                                       std::move(annotation_view_holder_token), []() {});
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
 
   // Create Annotation View.
   auto session_annotation = CreateAndRegisterSession();
@@ -926,9 +915,8 @@ TEST_F(AnnotationManagerTest, RemoveClientView) {
   annotation_manager()->RegisterHandler(kAnnotationHandlerId, [](auto) {});
   annotation_manager()->RequestCreate(kAnnotationHandlerId, std::move(view1_ref),
                                       std::move(annotation_view_holder_token), []() {});
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
 
   // Create Annotation View.
   auto session_annotation = CreateAndRegisterSession();
@@ -1021,9 +1009,8 @@ TEST_F(AnnotationManagerTest, RemoveClientViewHolder) {
   annotation_manager()->RegisterHandler(kAnnotationHandlerId, [](auto) {});
   annotation_manager()->RequestCreate(kAnnotationHandlerId, std::move(view1_ref),
                                       std::move(annotation_view_holder_token), []() {});
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
 
   // Create Annotation View.
   auto session_annotation = CreateAndRegisterSession();
@@ -1135,9 +1122,8 @@ TEST_F(AnnotationManagerTest, ViewPropertiesPropagation) {
   annotation_manager()->RegisterHandler(kAnnotationHandlerId, [](auto) {});
   annotation_manager()->RequestCreate(kAnnotationHandlerId, std::move(view1_ref),
                                       std::move(annotation_view_holder_token), []() {});
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
 
   // Create Annotation View.
   ClearEvents();
@@ -1267,9 +1253,8 @@ TEST_F(AnnotationManagerTest, GlobalTransformPropagation) {
   annotation_manager()->RegisterHandler(kAnnotationHandlerId, [](auto) {});
   annotation_manager()->RequestCreate(kAnnotationHandlerId, std::move(view1_ref),
                                       std::move(annotation_view_holder_token), []() {});
-  annotation_manager()->FulfillCreateRequests();
-  annotation_manager()->StageViewTreeUpdates();
-  scene_graph()->ProcessViewTreeUpdates();
+  annotation_manager()->FulfillCreateRequests(view_tree_updater_);
+  scene_graph()->ProcessViewTreeUpdates(view_tree_updater_.FinishAndExtractViewTreeUpdates());
 
   // Create Annotation View.
   auto session_annotation = CreateAndRegisterSession();

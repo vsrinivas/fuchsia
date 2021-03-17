@@ -88,9 +88,6 @@ class Session : public CommandDispatcher {
   ResourceMap* resources() { return &resources_; }
   const ResourceMap* resources() const { return &resources_; }
 
-  // Stage the latest ViewTree updates to a given SceneGraph.
-  void UpdateAndStageViewTreeUpdates(SceneGraph* scene_graph);
-
   // Applies all updates with a PresentId up to and including |present_id| to the scene graph.
   // This function should be called with monotonically increasing PresentIds.
   // Returns true if the update succeeds, false otherwise.
@@ -99,8 +96,6 @@ class Session : public CommandDispatcher {
   // Convenience.  Forwards an event to the EventReporter.
   void EnqueueEvent(::fuchsia::ui::gfx::Event event);
   void EnqueueEvent(::fuchsia::ui::input::InputEvent event);
-
-  fxl::WeakPtr<ViewTreeUpdater> view_tree_updater() { return view_tree_updater_.GetWeakPtr(); }
 
   void RegisterBufferCollection(
       uint32_t buffer_collection_id,
@@ -160,8 +155,6 @@ class Session : public CommandDispatcher {
   // transitioning to a one-root-view-per-session model. See fxbug.dev/24450 for more
   // details.
   fxl::WeakPtr<View> root_view_;
-
-  ViewTreeUpdater view_tree_updater_;
 
   scheduling::PresentId last_traced_present_id_ = 0;
 

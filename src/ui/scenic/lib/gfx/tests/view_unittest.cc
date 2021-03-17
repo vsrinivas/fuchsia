@@ -26,13 +26,14 @@ namespace {
 
 ViewHolderPtr NewAnnotationViewHolder(
     Session* session, ViewLinker* view_linker,
-    fuchsia::ui::views::ViewHolderToken annotation_view_holder_token) {
+    fuchsia::ui::views::ViewHolderToken annotation_view_holder_token,
+    ViewTreeUpdater& view_tree_updater) {
   std::ostringstream annotation_debug_name;
   annotation_debug_name << "Annotation ViewHolder [Test]";
   ViewHolderPtr annotation_view_holder = fxl::MakeRefCounted<ViewHolder>(
       session, session->id(), /* node_id */ 0U,
       /* is_annotation */ true, annotation_debug_name.str(), session->shared_error_reporter(),
-      session->view_tree_updater());
+      view_tree_updater.GetWeakPtr());
   // Set hit test behavior to kSuppress so it will suppress all hit testings.
   annotation_view_holder->SetHitTestBehavior(fuchsia::ui::gfx::HitTestBehavior::kSuppress);
   // Set up link with annotation View.
@@ -813,8 +814,9 @@ TEST_F(ViewTest, AnnotationViewReceivesViewPropertiesChangedEvent) {
       session_annotation->resources()->FindResource<View>(annotation_view_id)->GetWeakPtr();
 
   // Create Annotation ViewHolder.
-  EXPECT_TRUE(view->AddAnnotationViewHolder(NewAnnotationViewHolder(
-      session_annotation.get(), view_linker_.get(), std::move(annotation_view_holder_token))));
+  EXPECT_TRUE(view->AddAnnotationViewHolder(
+      NewAnnotationViewHolder(session_annotation.get(), view_linker_.get(),
+                              std::move(annotation_view_holder_token), view_tree_updater_)));
 
   // Set ViewProperties.
   uint32_t event_size = events().size();
@@ -876,8 +878,9 @@ TEST_F(ViewTest, AnnotationViewReceivesViewAttachedToSceneEvent) {
       session_annotation->resources()->FindResource<View>(annotation_view_id)->GetWeakPtr();
 
   // Create Annotation ViewHolder.
-  EXPECT_TRUE(view->AddAnnotationViewHolder(NewAnnotationViewHolder(
-      session_annotation.get(), view_linker_.get(), std::move(annotation_view_holder_token))));
+  EXPECT_TRUE(view->AddAnnotationViewHolder(
+      NewAnnotationViewHolder(session_annotation.get(), view_linker_.get(),
+                              std::move(annotation_view_holder_token), view_tree_updater_)));
 
   // Create a Scene and connect the ViewHolder to the Scene.
   const size_t event_size = events().size();
@@ -926,8 +929,9 @@ TEST_F(ViewTest, AnnotationViewReceivesViewDetachedFromSceneEvent) {
       session_annotation->resources()->FindResource<View>(annotation_view_id)->GetWeakPtr();
 
   // Create Annotation ViewHolder.
-  EXPECT_TRUE(view->AddAnnotationViewHolder(NewAnnotationViewHolder(
-      session_annotation.get(), view_linker_.get(), std::move(annotation_view_holder_token))));
+  EXPECT_TRUE(view->AddAnnotationViewHolder(
+      NewAnnotationViewHolder(session_annotation.get(), view_linker_.get(),
+                              std::move(annotation_view_holder_token), view_tree_updater_)));
 
   // Create a Scene and connect the ViewHolder to the Scene.
   const ResourceId scene_id = 4u;
