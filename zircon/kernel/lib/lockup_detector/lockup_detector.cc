@@ -92,22 +92,22 @@ void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
       return;
     }
 
+    // Print the symbolizer context, and then the PC as frame 0's address, and
+    // the LR as frame 1's address.
     PrintSymbolizerContext(output_target);
     fprintf(output_target, bt_fmt, n++, reinterpret_cast<void*>(state.pc));
+    fprintf(output_target, bt_fmt, n++, reinterpret_cast<void*>(state.r[30]));
 
     constexpr size_t PtrSize = sizeof(void*);
     uintptr_t ret_addr_ptr = state.r[18];
     if (ret_addr_ptr & (PtrSize - 1)) {
-      fprintf(output_target, "Skipping backtrace, x18 (0x%" PRIu64 ") is not %zu byte aligned.\n",
+      fprintf(output_target, "Halting backtrace, x18 (0x%" PRIu64 ") is not %zu byte aligned.\n",
               ret_addr_ptr, PtrSize);
       return;
     }
 
     constexpr uint32_t MAX_BACKTRACE = 32;
     for (; n < MAX_BACKTRACE; ++n) {
-      // Print out this level
-      fprintf(output_target, bt_fmt, n, reinterpret_cast<void**>(ret_addr_ptr)[0]);
-
       // Attempt to back up one level.  Never cross a page boundary when we do this.
       static_assert(fbl::is_pow2(static_cast<uint64_t>(PAGE_SIZE)),
                     "PAGE_SIZE is not a power of 2!  Wut??");
@@ -116,6 +116,9 @@ void DumpRegistersAndBacktrace(cpu_num_t cpu, FILE* output_target) {
       }
 
       ret_addr_ptr -= PtrSize;
+
+      // Print out this level
+      fprintf(output_target, bt_fmt, n, reinterpret_cast<void**>(ret_addr_ptr)[0]);
     }
   }
 }
