@@ -25,7 +25,6 @@ use {
     crate::handler::setting_handler_factory_impl::SettingHandlerFactoryImpl,
     crate::handler::setting_proxy::SettingProxy,
     crate::input::input_controller::InputController,
-    crate::inspect::inspect_broker::InspectBroker,
     crate::intl::intl_controller::IntlController,
     crate::light::light_controller::LightController,
     crate::monitor::base as monitor_base,
@@ -431,8 +430,11 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
                 .expect("unable to initialize storage for agent");
         }
 
-        let mapping_func_present_without_inspect =
+        let mapping_func_present_without_policy_inspect =
             !agent_types.contains(&AgentType::InspectPolicy) && self.agent_mapping_func.is_some();
+        let mapping_func_present_without_setting_inspect = !agent_types
+            .contains(&AgentType::InspectSettingData)
+            && self.agent_mapping_func.is_some();
 
         let mut agent_blueprints = self
             .agent_mapping_func
@@ -442,8 +444,18 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             .unwrap_or(self.agent_blueprints);
 
         // TODO(fxb/71872): Remove when the configuration file has InspectPolicy
-        if mapping_func_present_without_inspect {
+        // Currently, configuration files for products don't have
+        // SettingDataInspect. Without this, we will not have this agent for
+        // products.
+        if mapping_func_present_without_policy_inspect {
             agent_blueprints.push(crate::agent::inspect_policy::blueprint::create());
+        }
+        // TODO(fxb/71872): Remove when the configuration file has
+        // SettingDataInspect. Currently, configuration files for products
+        // don't have SettingDataInspect. Without this, we will not have this
+        // agent for products.
+        if mapping_func_present_without_setting_inspect {
+            agent_blueprints.push(crate::agent::inspect_setting_data::blueprint::create());
         }
 
         create_environment(
@@ -679,10 +691,6 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     } else {
         Some(monitor::environment::Builder::new().add_monitors(resource_monitor_generators).build())
     };
-
-    // Attach inspect broker, which watches messages between proxies and setting handlers to
-    // record settings values to inspect.
-    InspectBroker::create(messenger_factory.clone()).await;
 
     // TODO(fxbug.dev/58893): make max attempts a configurable option.
     // TODO(fxbug.dev/59174): make setting proxy response timeout and retry configurable.

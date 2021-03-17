@@ -38,6 +38,10 @@ pub mod earcons;
 /// policy proxies.
 pub mod inspect_policy;
 
+/// Agent for capturing setting values of messages between proxies and setting
+/// handlers.
+pub mod inspect_setting_data;
+
 #[derive(Error, Debug, Clone, Copy, PartialEq)]
 pub enum AgentError {
     #[error("Unhandled Lifespan")]

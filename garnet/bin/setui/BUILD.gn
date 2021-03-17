@@ -100,6 +100,7 @@ rustc_library("lib") {
     "src/agent/earcons/volume_change_handler.rs",
     "src/agent/inspect.rs",
     "src/agent/inspect_policy.rs",
+    "src/agent/inspect_setting_data.rs",
     "src/agent/media_buttons.rs",
     "src/agent/restore_agent.rs",
     "src/audio.rs",
