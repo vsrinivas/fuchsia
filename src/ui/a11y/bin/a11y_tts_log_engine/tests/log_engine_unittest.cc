@@ -9,8 +9,6 @@
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/service_directory.h>
-#include <lib/syslog/global.h>
-#include <lib/syslog/wire_format.h>
 
 #include <list>
 #include <memory>

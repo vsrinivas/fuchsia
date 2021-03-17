@@ -343,6 +343,10 @@ TEST(StructuredLogging, LOGS) {
 }
 
 TEST(StructuredLogging, Remaining) {
+  LogSettings new_settings;
+  files::ScopedTempDir temp_dir;
+  ASSERT_TRUE(temp_dir.NewTempFile(&new_settings.log_file));
+  SetLogSettings(new_settings);
   syslog_backend::LogBuffer buffer;
   syslog_backend::BeginRecord(&buffer, LOG_INFO, "test", 5, "test_msg", "");
   auto header = syslog_backend::MsgHeader::CreatePtr(&buffer);

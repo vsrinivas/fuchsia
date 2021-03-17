@@ -349,13 +349,15 @@ void BeginRecordInternal(LogBuffer* buffer, syslog::LogSeverity severity, const 
   // Ensure we have log state
   auto& log_state = LogState::Get();
   cpp17::optional<int8_t> raw_severity;
-  if ((severity % 0x10) || (severity > 0x60) || (severity < 0x10)) {
-    raw_severity = severity;
-    severity = syslog::LOG_DEBUG;
-  }
   if (log_state.fd() != -1) {
     BeginRecordLegacy(buffer, severity, file_name, line, msg, condition);
     return;
+  }
+  // Validate that the severity matches the FIDL definition in
+  // sdk/fidl/fuchsia.diagnostics/severity.fidl.
+  if ((severity % 0x10) || (severity > 0x60) || (severity < 0x10)) {
+    raw_severity = severity;
+    severity = syslog::LOG_DEBUG;
   }
   zx_time_t time = zx_clock_get_monotonic();
   auto* state = RecordState::CreatePtr(buffer);

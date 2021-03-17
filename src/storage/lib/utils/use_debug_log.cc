@@ -16,6 +16,9 @@
 
 #include <iostream>
 
+#include "lib/syslog/cpp/log_settings.h"
+#include "lib/syslog/cpp/logging_backend.h"
+
 namespace storage {
 namespace {
 
@@ -38,6 +41,9 @@ zx_status_t LogToDebugLog(fuchsia_boot::WriteOnlyLog::SyncClient log_client) {
   if (status != ZX_OK) {
     return status;
   }
+  syslog::LogSettings settings;
+  settings.log_fd = logger_config.console_fd;
+  syslog_backend::SetLogSettings(settings);
   return fx_log_reconfigure(&logger_config);
 }
 
