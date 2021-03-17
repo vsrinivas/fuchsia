@@ -68,10 +68,6 @@ impl Procedure for ExtendedErrorsProcedure {
         }
     }
 
-    fn ag_update(&mut self, update: at::Response, _state: &mut SlcState) -> ProcedureRequest {
-        ProcedureRequest::Error(ProcedureError::UnexpectedAg(update))
-    }
-
     fn is_terminated(&self) -> bool {
         self.state == State::Terminated
     }

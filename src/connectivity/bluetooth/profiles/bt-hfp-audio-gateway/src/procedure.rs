@@ -200,7 +200,9 @@ pub trait Procedure {
     ///
     /// Developers should ensure that the final request of a Procedure does not require
     /// a response.
-    fn hf_update(&mut self, update: at::Command, state: &mut SlcState) -> ProcedureRequest;
+    fn hf_update(&mut self, update: at::Command, _state: &mut SlcState) -> ProcedureRequest {
+        ProcedureRequest::Error(ProcedureError::UnexpectedHf(update))
+    }
 
     /// Receive an AG `update` to progress the procedure. Returns a request
     /// to the update.
@@ -215,7 +217,9 @@ pub trait Procedure {
     ///
     /// Developers should ensure that the final request of a Procedure does not require
     /// a response.
-    fn ag_update(&mut self, update: at::Response, state: &mut SlcState) -> ProcedureRequest;
+    fn ag_update(&mut self, update: at::Response, _state: &mut SlcState) -> ProcedureRequest {
+        ProcedureRequest::Error(ProcedureError::UnexpectedAg(update))
+    }
 
     /// Returns true if the Procedure is finished.
     fn is_terminated(&self) -> bool {
