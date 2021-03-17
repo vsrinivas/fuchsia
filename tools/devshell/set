@@ -105,6 +105,8 @@
 ##                         provided delimited by commas or the --with-host
 ##                         argument can be provided multiple times.
 ##   --cargo-toml-gen      Enable generation of Cargo.toml files
+##   --dev                 Always recompile fx-set from source. Ignored unless
+##                         the legacy_set feature is disabled.
 ##
 ## Example:
 ##
@@ -155,6 +157,19 @@ function main {
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
+  # Check if the --dev flag is set. If it is, then we'll always build fx-set
+  # from source.
+  local dev=false
+  for arg; do
+    shift
+    if [ "$arg" = --dev ]; then
+      dev=true
+      continue
+    fi
+    # Include every arg besides --dev in the args we pass to fx-set.
+    set -- "$@" "$arg"
+  done
+
   if ! is_feature_enabled "legacy_set"; then
     # Go commands must be run from first-level subdirectories because that's
     # where the go.mod files are.
@@ -163,23 +178,25 @@ function main {
     # Cache the compiled executable for later invocations.
     local exe_path="${FX_CACHE_DIR}/fx-set"
 
-    local add_log=false
-    if [ ! -f "$exe_path" ] && [ -t 1 ]; then
-      # If the executable has not yet been built, the system build cache is
-      # probably cold so it will take multiple seconds to build the tool. Add a
-      # temporary log so the user knows what's going on (but only do it if
-      # stdout is terminal, since otherwise we won't be able to clear the log).
-      add_log=true
-      fx-info "Compiling fx set..."
-    fi
+    # A `jiri update` hook deletes the fx-set executable (see
+    # //scripts/devshell/lib/delete_fx_set_executable.sh), so we only need to
+    # recompile fx-set if it's missing.
+    if $dev || [ ! -f "$exe_path" ]; then
+      # It may take upwards of 3 seconds to build the tool depending on the
+      # state of the system's Go build cache. Add a temporary log so the user
+      # knows what's going on (but only do it if stdout is terminal, since
+      # otherwise we won't be able to clear the log).
+      if [ -t 1 ]; then
+        fx-info "Compiling fx set..."
+      fi
 
-    # `go build` does an incremental build, only rebuilding what's necessary
-    # based on source content hashes.
-    fx-command-run go build -o "$exe_path" ./build/fx-set/cmd
-    if $add_log; then
-      # Delete the "compiling fx set" log so it doesn't show up in the final
-      # output.
-      echo -n -e "\r\033[1A\033[0K"
+      fx-command-run go build -o "$exe_path" ./build/fx-set/cmd
+
+      if [ -t 1 ]; then
+        # Delete the "compiling fx set" log so it doesn't show up in the final
+        # output.
+        echo -n -e "\r\033[1A\033[0K"
+      fi
     fi
 
     exec "$exe_path" "$@"
