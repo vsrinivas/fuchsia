@@ -21,6 +21,7 @@ import (
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/fifo"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/netdevice"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 	"go.fuchsia.dev/fuchsia/src/lib/component"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
@@ -41,17 +42,19 @@ type inspectInner interface {
 }
 
 const (
-	statsLabel                = "Stats"
-	networkEndpointStatsLabel = "Network Endpoint Stats"
-	socketInfo                = "Socket Info"
-	dhcpInfo                  = "DHCP Info"
-	neighborsLabel            = "Neighbors"
-	ethInfo                   = "Ethernet Info"
-	netdeviceInfo             = "Network Device Info"
-	rxReads                   = "RxReads"
-	rxWrites                  = "RxWrites"
-	txReads                   = "TxReads"
-	txWrites                  = "TxWrites"
+	statsLabel                  = "Stats"
+	networkEndpointStatsLabel   = "Network Endpoint Stats"
+	socketInfo                  = "Socket Info"
+	dhcpInfo                    = "DHCP Info"
+	dhcpStateRecentHistoryLabel = "DHCP State Recent History"
+	neighborsLabel              = "Neighbors"
+	ethInfo                     = "Ethernet Info"
+	netdeviceInfo               = "Network Device Info"
+	rxReads                     = "RxReads"
+	rxWrites                    = "RxWrites"
+	txReads                     = "TxReads"
+	txWrites                    = "TxWrites"
+	base10                      = 10
 )
 
 // An adapter that implements fuchsia.inspect.InspectWithCtx using the above.
@@ -195,20 +198,90 @@ func (impl *statCounterInspectImpl) GetChild(childName string) inspectInner {
 	return nil
 }
 
+var _ inspectInner = (*logEntryInspectImpl)(nil)
+
+type logEntryInspectImpl struct {
+	index string
+	entry util.LogEntry
+}
+
+func (impl *logEntryInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: impl.index,
+		Properties: []inspect.Property{
+			{Key: "@time", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(impl.entry.Timestamp), base10))},
+			{Key: "value", Value: inspect.PropertyValueWithStr(impl.entry.Content)},
+		},
+	}
+}
+
+func (impl *logEntryInspectImpl) ListChildren() []string {
+	return nil
+}
+
+func (impl *logEntryInspectImpl) GetChild(childName string) inspectInner {
+	return nil
+}
+
+var _ inspectInner = (*circularLogsInspectImpl)(nil)
+
+type circularLogsInspectImpl struct {
+	name  string
+	value []util.LogEntry
+}
+
+func (impl *circularLogsInspectImpl) ReadData() inspect.Object {
+	return inspect.Object{
+		Name: impl.name,
+	}
+}
+
+func (impl *circularLogsInspectImpl) ListChildren() []string {
+	children := make([]string, 0, len(impl.value))
+	for i := range impl.value {
+		children = append(children, strconv.FormatInt(int64(i), base10))
+	}
+	return children
+}
+
+func (impl *circularLogsInspectImpl) GetChild(childName string) inspectInner {
+	index, err := strconv.ParseUint(childName, 10, 32)
+	if err != nil {
+		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(%s): %s", childName, err)
+		return nil
+	}
+	if index >= uint64(len(impl.value)) {
+		_ = syslog.VLogTf(
+			syslog.DebugVerbosity,
+			inspect.InspectName,
+			"GetChild(%s): out of bound index: got = %d, want < %d",
+			childName,
+			index,
+			len(impl.value),
+		)
+		return nil
+	}
+	return &logEntryInspectImpl{
+		index: childName,
+		entry: impl.value[index],
+	}
+}
+
 var _ inspectInner = (*nicInfoMapInspectImpl)(nil)
 
 // Picking info to inspect from ifState in netstack.
 type ifStateInfo struct {
 	stack.NICInfo
-	nicid                tcpip.NICID
-	adminUp, linkOnline  bool
-	dnsServers           []tcpip.Address
-	dhcpEnabled          bool
-	dhcpInfo             dhcp.Info
-	dhcpStats            *dhcp.Stats
-	controller           link.Controller
-	neighbors            map[string]stack.NeighborEntry
-	networkEndpointStats map[string]stack.NetworkEndpointStats
+	nicid                  tcpip.NICID
+	adminUp, linkOnline    bool
+	dnsServers             []tcpip.Address
+	dhcpEnabled            bool
+	dhcpInfo               dhcp.Info
+	dhcpStateRecentHistory []util.LogEntry
+	dhcpStats              *dhcp.Stats
+	controller             link.Controller
+	neighbors              map[string]stack.NeighborEntry
+	networkEndpointStats   map[string]stack.NetworkEndpointStats
 }
 
 type nicInfoMapInspectImpl struct {
@@ -224,7 +297,7 @@ func (*nicInfoMapInspectImpl) ReadData() inspect.Object {
 func (impl *nicInfoMapInspectImpl) ListChildren() []string {
 	var children []string
 	for nicID := range impl.value {
-		children = append(children, strconv.FormatUint(uint64(nicID), 10))
+		children = append(children, strconv.FormatUint(uint64(nicID), base10))
 	}
 	sort.Strings(children)
 	return children
@@ -233,7 +306,7 @@ func (impl *nicInfoMapInspectImpl) ListChildren() []string {
 func (impl *nicInfoMapInspectImpl) GetChild(childName string) inspectInner {
 	id, err := strconv.ParseInt(childName, 10, 32)
 	if err != nil {
-		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild: %s", err)
+		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(%s): %s", childName, err)
 		return nil
 	}
 	if child, ok := impl.value[tcpip.NICID(id)]; ok {
@@ -257,7 +330,7 @@ func (impl *nicInfoInspectImpl) ReadData() inspect.Object {
 		Name: impl.name,
 		Properties: []inspect.Property{
 			{Key: "Name", Value: inspect.PropertyValueWithStr(impl.value.Name)},
-			{Key: "NICID", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.nicid), 10))},
+			{Key: "NICID", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.nicid), base10))},
 			{Key: "AdminUp", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.adminUp))},
 			{Key: "LinkOnline", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.linkOnline))},
 			{Key: "Up", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Flags.Up))},
@@ -295,7 +368,10 @@ func (impl *nicInfoInspectImpl) ReadData() inspect.Object {
 		object.Properties = append(object.Properties, inspect.Property{
 			Key: fmt.Sprintf("DNS server%d", i), Value: inspect.PropertyValueWithStr(addr.String())})
 	}
-	object.Properties = append(object.Properties, inspect.Property{Key: "DHCP enabled", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.dhcpEnabled))})
+	object.Properties = append(object.Properties, inspect.Property{
+		Key:   "DHCP enabled",
+		Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.dhcpEnabled)),
+	})
 	return object
 }
 
@@ -337,9 +413,10 @@ func (impl *nicInfoInspectImpl) GetChild(childName string) inspectInner {
 		}
 	case dhcpInfo:
 		return &dhcpInfoInspectImpl{
-			name:  childName,
-			info:  impl.value.dhcpInfo,
-			stats: impl.value.dhcpStats,
+			name:               childName,
+			info:               impl.value.dhcpInfo,
+			stateRecentHistory: impl.value.dhcpStateRecentHistory,
+			stats:              impl.value.dhcpStats,
 		}
 	case neighborsLabel:
 		return &neighborTableInspectImpl{
@@ -385,8 +462,8 @@ func (impl *networkEndpointStatsInspectImpl) ListChildren() []string {
 func (impl *networkEndpointStatsInspectImpl) GetChild(childName string) inspectInner {
 	entry, ok := impl.value[childName]
 	if !ok {
-		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName,
-			"GetChild: there are no stats for protocol %s",
+		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName,
+			"GetChild(%s): no stats found",
 			childName,
 		)
 		return nil
@@ -401,9 +478,10 @@ func (impl *networkEndpointStatsInspectImpl) GetChild(childName string) inspectI
 var _ inspectInner = (*dhcpInfoInspectImpl)(nil)
 
 type dhcpInfoInspectImpl struct {
-	name  string
-	info  dhcp.Info
-	stats *dhcp.Stats
+	name               string
+	info               dhcp.Info
+	stateRecentHistory []util.LogEntry
+	stats              *dhcp.Stats
 }
 
 func (impl *dhcpInfoInspectImpl) ReadData() inspect.Object {
@@ -439,10 +517,16 @@ func (impl *dhcpInfoInspectImpl) ReadData() inspect.Object {
 		{Key: "Config.SubnetMask", Value: inspect.PropertyValueWithStr(maskString(impl.info.Config.SubnetMask))},
 	}
 	for i, router := range impl.info.Config.Router {
-		properties = append(properties, inspect.Property{Key: fmt.Sprintf("Config.Router%d", i), Value: inspect.PropertyValueWithStr(addrString(router))})
+		properties = append(properties, inspect.Property{
+			Key:   fmt.Sprintf("Config.Router%d", i),
+			Value: inspect.PropertyValueWithStr(addrString(router)),
+		})
 	}
 	for i, dns := range impl.info.Config.DNS {
-		properties = append(properties, inspect.Property{Key: fmt.Sprintf("Config.DNS%d", i), Value: inspect.PropertyValueWithStr(addrString(dns))})
+		properties = append(properties, inspect.Property{
+			Key:   fmt.Sprintf("Config.DNS%d", i),
+			Value: inspect.PropertyValueWithStr(addrString(dns)),
+		})
 	}
 	properties = append(properties, []inspect.Property{
 		{Key: "Config.LeaseLength", Value: inspect.PropertyValueWithStr(impl.info.Config.LeaseLength.String())},
@@ -459,6 +543,7 @@ func (impl *dhcpInfoInspectImpl) ReadData() inspect.Object {
 func (*dhcpInfoInspectImpl) ListChildren() []string {
 	return []string{
 		statsLabel,
+		dhcpStateRecentHistoryLabel,
 	}
 }
 
@@ -468,6 +553,11 @@ func (impl *dhcpInfoInspectImpl) GetChild(childName string) inspectInner {
 		return &statCounterInspectImpl{
 			name:  childName,
 			value: reflect.ValueOf(impl.stats).Elem(),
+		}
+	case dhcpStateRecentHistoryLabel:
+		return &circularLogsInspectImpl{
+			name:  childName,
+			value: impl.stateRecentHistory,
 		}
 	default:
 		return nil
@@ -584,7 +674,7 @@ func (impl *fifoStatsInspectImpl) ReadData() inspect.Object {
 		batchSize := i + 1
 		if v := impl.value(batchSize).Value(); v != 0 {
 			metrics = append(metrics, inspect.Metric{
-				Key:   strconv.FormatInt(int64(batchSize), 10),
+				Key:   strconv.FormatInt(int64(batchSize), base10),
 				Value: inspect.MetricValueWithUintValue(v),
 			})
 		}
@@ -618,7 +708,7 @@ func (*socketInfoMapInspectImpl) ReadData() inspect.Object {
 func (impl *socketInfoMapInspectImpl) ListChildren() []string {
 	var children []string
 	impl.value.Range(func(key uint64, _ tcpip.Endpoint) bool {
-		children = append(children, strconv.FormatUint(uint64(key), 10))
+		children = append(children, strconv.FormatUint(uint64(key), base10))
 		return true
 	})
 	return children
@@ -627,7 +717,7 @@ func (impl *socketInfoMapInspectImpl) ListChildren() []string {
 func (impl *socketInfoMapInspectImpl) GetChild(childName string) inspectInner {
 	id, err := strconv.ParseUint(childName, 10, 64)
 	if err != nil {
-		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild: %s", err)
+		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(%s): %s", childName, err)
 		return nil
 	}
 	if ep, ok := impl.value.Load(uint64(id)); ok {
@@ -702,8 +792,8 @@ func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 		remoteAddress = zeroAddress
 	}
 
-	localAddr := net.JoinHostPort(localAddress.String(), strconv.FormatUint(uint64(common.ID.LocalPort), 10))
-	remoteAddr := net.JoinHostPort(remoteAddress.String(), strconv.FormatUint(uint64(common.ID.RemotePort), 10))
+	localAddr := net.JoinHostPort(localAddress.String(), strconv.FormatUint(uint64(common.ID.LocalPort), base10))
+	remoteAddr := net.JoinHostPort(remoteAddress.String(), strconv.FormatUint(uint64(common.ID.RemotePort), base10))
 	properties := []inspect.Property{
 		{Key: "NetworkProtocol", Value: inspect.PropertyValueWithStr(netString)},
 		{Key: "TransportProtocol", Value: inspect.PropertyValueWithStr(transString)},
@@ -711,8 +801,8 @@ func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 		{Key: "LocalAddress", Value: inspect.PropertyValueWithStr(localAddr)},
 		{Key: "RemoteAddress", Value: inspect.PropertyValueWithStr(remoteAddr)},
 		{Key: "BindAddress", Value: inspect.PropertyValueWithStr(common.BindAddr.String())},
-		{Key: "BindNICID", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(common.BindNICID), 10))},
-		{Key: "RegisterNICID", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(common.RegisterNICID), 10))},
+		{Key: "BindNICID", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(common.BindNICID), base10))},
+		{Key: "RegisterNICID", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(common.RegisterNICID), base10))},
 	}
 
 	return inspect.Object{
@@ -762,7 +852,7 @@ func (*routingTableInspectImpl) ReadData() inspect.Object {
 func (impl *routingTableInspectImpl) ListChildren() []string {
 	children := make([]string, len(impl.value))
 	for i := range impl.value {
-		children[i] = strconv.FormatUint(uint64(i), 10)
+		children[i] = strconv.FormatUint(uint64(i), base10)
 	}
 	return children
 }
@@ -770,14 +860,15 @@ func (impl *routingTableInspectImpl) ListChildren() []string {
 func (impl *routingTableInspectImpl) GetChild(childName string) inspectInner {
 	routeIndex, err := strconv.ParseUint(childName, 10, 64)
 	if err != nil {
-		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild: %s", err)
+		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(%s): %s", childName, err)
 		return nil
 	}
 	if routeIndex >= uint64(len(impl.value)) {
-		syslog.VLogTf(
+		_ = syslog.VLogTf(
 			syslog.DebugVerbosity,
 			inspect.InspectName,
-			"GetChild: index %d out of bounds; there are %d entries in the routing table",
+			"GetChild(%s): index %d out of bounds; there are %d entries in the routing table",
+			childName,
 			routeIndex,
 			len(impl.value),
 		)
@@ -802,8 +893,8 @@ func (impl *routeInfoInspectImpl) ReadData() inspect.Object {
 		Properties: []inspect.Property{
 			{Key: "Destination", Value: inspect.PropertyValueWithStr(impl.value.Route.Destination.String())},
 			{Key: "Gateway", Value: inspect.PropertyValueWithStr(impl.value.Route.Gateway.String())},
-			{Key: "NIC", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.Route.NIC), 10))},
-			{Key: "Metric", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.Metric), 10))},
+			{Key: "NIC", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.Route.NIC), base10))},
+			{Key: "Metric", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.Metric), base10))},
 			{Key: "MetricTracksInterface", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.MetricTracksInterface))},
 			{Key: "Dynamic", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Dynamic))},
 			{Key: "Enabled", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Enabled))},
@@ -843,8 +934,8 @@ func (impl *neighborTableInspectImpl) ListChildren() []string {
 func (impl *neighborTableInspectImpl) GetChild(childName string) inspectInner {
 	entry, ok := impl.value[childName]
 	if !ok {
-		syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName,
-			"GetChild: there is no entry for %q in the neighbor table",
+		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName,
+			"GetChild(%s): no entry found in the neighbor table",
 			childName,
 		)
 		return nil

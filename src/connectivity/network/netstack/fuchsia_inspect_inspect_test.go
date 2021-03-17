@@ -8,6 +8,7 @@ package netstack
 
 import (
 	"context"
+	"fmt"
 	"reflect"
 	"sort"
 	"strconv"
@@ -19,6 +20,7 @@ import (
 	ethernetext "go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/fidlext/fuchsia/hardware/ethernet"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/link/eth"
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/routes"
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 
 	"fidl/fuchsia/hardware/ethernet"
 	inspect "fidl/fuchsia/inspect/deprecated"
@@ -85,6 +87,78 @@ func TestStatCounterInspectImpl(t *testing.T) {
 		},
 	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func circularLogsChecker(logs *circularLogsInspectImpl, expectedChildren []string, expectedChildrenData []inspect.Object) []error {
+	var errors []error
+
+	if diff := cmp.Diff(inspect.Object{
+		Name: logs.name,
+	}, logs.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Metric{})); diff != "" {
+		errors = append(errors, fmt.Errorf("ReadData() mismatch (-want +got):\n%s", diff))
+	}
+
+	children := logs.ListChildren()
+	if diff := cmp.Diff(expectedChildren, children); diff != "" {
+		errors = append(errors, fmt.Errorf("ListChildren() mismatch (-want +got):\n%s", diff))
+		return errors
+	}
+
+	childName := "not a real child"
+	if child := logs.GetChild(childName); child != nil {
+		errors = append(errors, fmt.Errorf("got GetChild(%s) = %s, want = nil", childName, child))
+	}
+
+	for i, childName := range children {
+		if child := logs.GetChild(childName); child == nil {
+			errors = append(errors, fmt.Errorf("got GetChild(%s) = nil, want non-nil", childName))
+		} else if entry, ok := child.(*logEntryInspectImpl); !ok {
+			errors = append(errors, fmt.Errorf("got GetChild(%s) = %T, want %T", childName, child, &statCounterInspectImpl{}))
+		} else {
+			if diff := cmp.Diff(expectedChildrenData[i], entry.ReadData(), cmpopts.IgnoreUnexported(
+				inspect.Object{}, inspect.Metric{})); diff != "" {
+				errors = append(errors, fmt.Errorf("ReadData() mismatch (-want +got):\n%s", diff))
+			}
+			if diff := cmp.Diff(child.ListChildren(), []string(nil)); diff != "" {
+				errors = append(errors, fmt.Errorf("ListChildren() mismatch (-want +got):\n%s", diff))
+			}
+		}
+	}
+
+	return errors
+}
+
+func TestCircularLogsInspectImpl(t *testing.T) {
+	v := circularLogsInspectImpl{
+		name: "dosn't matter",
+		value: []util.LogEntry{
+			{Timestamp: 42, Content: "foo"},
+			{Timestamp: 1337, Content: "bar"},
+		},
+	}
+
+	expectedChildren := []string{"0", "1"}
+	expectedChildrenData := []inspect.Object{
+		{
+			Name: "0",
+			Properties: []inspect.Property{
+				{Key: "@time", Value: inspect.PropertyValueWithStr("42")},
+				{Key: "value", Value: inspect.PropertyValueWithStr("foo")},
+			},
+		},
+		{
+			Name: "1",
+			Properties: []inspect.Property{
+				{Key: "@time", Value: inspect.PropertyValueWithStr("1337")},
+				{Key: "value", Value: inspect.PropertyValueWithStr("bar")},
+			},
+		},
+	}
+
+	errors := circularLogsChecker(&v, expectedChildren, expectedChildrenData)
+	for _, err := range errors {
+		t.Error(err)
 	}
 }
 
@@ -308,19 +382,29 @@ func TestNicInfoInspectImpl(t *testing.T) {
 func TestDHCPInfoInspectImpl(t *testing.T) {
 	v := dhcpInfoInspectImpl{
 		name: "doesn't matter",
+		stateRecentHistory: []util.LogEntry{
+			{Timestamp: 1, Content: "1"},
+			{Timestamp: 2, Content: "2"},
+		},
 	}
 	children := v.ListChildren()
 	if diff := cmp.Diff([]string{
-		"Stats",
+		"Stats", "DHCP State Recent History",
 	}, children); diff != "" {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
-	for _, childName := range children {
-		if child := v.GetChild(childName); child == nil {
-			t.Errorf("got GetChild(%s) = nil, want non-nil", childName)
-		} else if _, ok := child.(*statCounterInspectImpl); !ok {
-			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &statCounterInspectImpl{})
-		}
+
+	var child inspectInner
+	var ok bool
+	child = v.GetChild("Stats")
+	_, ok = child.(*statCounterInspectImpl)
+	if !ok {
+		t.Errorf("got GetChild(Stats) = %T, want %T", child, &statCounterInspectImpl{})
+	}
+	child = v.GetChild("DHCP State Recent History")
+	recentHistory, ok := child.(*circularLogsInspectImpl)
+	if !ok {
+		t.Errorf("got GetChild(DHCP State Recent History) = %T, want %T", child, &statCounterInspectImpl{})
 	}
 
 	childName := "not a real child"
@@ -352,6 +436,31 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 		},
 	}, v.ReadData(), cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+	}
+
+	if recentHistory != nil {
+		expectedChildren := []string{"0", "1"}
+		expectedChildrenData := []inspect.Object{
+			{
+				Name: "0",
+				Properties: []inspect.Property{
+					{Key: "@time", Value: inspect.PropertyValueWithStr("1")},
+					{Key: "value", Value: inspect.PropertyValueWithStr("1")},
+				},
+			},
+			{
+				Name: "1",
+				Properties: []inspect.Property{
+					{Key: "@time", Value: inspect.PropertyValueWithStr("2")},
+					{Key: "value", Value: inspect.PropertyValueWithStr("2")},
+				},
+			},
+		}
+
+		errors := circularLogsChecker(recentHistory, expectedChildren, expectedChildrenData)
+		for _, err := range errors {
+			t.Error(err)
+		}
 	}
 }
 

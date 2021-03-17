@@ -13,8 +13,10 @@ import (
 	"math/rand"
 	"net"
 	"sync/atomic"
+	"syscall/zx"
 	"time"
 
+	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
 	syslog "go.fuchsia.dev/fuchsia/src/lib/syslog/go"
 
 	"gvisor.dev/gvisor/pkg/tcpip"
@@ -28,6 +30,13 @@ import (
 const (
 	tag                        = "DHCP"
 	defaultLeaseLength Seconds = 12 * 3600
+
+	// stateRecentHistoryLength is the length of recent DHCP state transitions.
+	// A value large enough must be used to allow the last 24h to be recorded even
+	// when the DHCP lease is renewed every hour. And if the DHCP state machine
+	// breaks and cycles through state very fast, this will be enough data to
+	// possibly find a pattern.
+	stateRecentHistoryLength = 128
 
 	// As per RFC 2131 section 3.1,
 	//
@@ -56,6 +65,12 @@ type Client struct {
 	// info holds the Client's state as type Info.
 	info atomic.Value
 
+	// TODO(https://fxbug.dev/71350): Once we can persist inspect snapshot across
+	// reboots, remove the recent state history.
+	stateRecentHistory util.CircularLogs
+
+	stats Stats
+
 	acquiredFunc AcquiredFunc
 
 	wq waiter.Queue
@@ -67,8 +82,6 @@ type Client struct {
 	// At the time of writing, TestDhcpConfiguration was creating this
 	// scenario and causing panics.
 	sem chan struct{}
-
-	stats Stats
 
 	// Stubbable in test.
 	rand           *rand.Rand
@@ -154,16 +167,17 @@ func NewClient(
 		panic(fmt.Sprintf("stack.GetNetworkEndpoint(%d, header.IPv4ProtocolNumber): %s", nicid, err))
 	}
 	c := &Client{
-		stack:           s,
-		networkEndpoint: ep,
-		acquiredFunc:    acquiredFunc,
-		sem:             make(chan struct{}, 1),
-		rand:            rand.New(rand.NewSource(time.Now().UnixNano())),
-		retransTimeout:  time.After,
-		acquire:         acquire,
-		now:             time.Now,
+		stack:              s,
+		networkEndpoint:    ep,
+		acquiredFunc:       acquiredFunc,
+		sem:                make(chan struct{}, 1),
+		rand:               rand.New(rand.NewSource(time.Now().UnixNano())),
+		retransTimeout:     time.After,
+		acquire:            acquire,
+		now:                time.Now,
+		stateRecentHistory: util.MakeCircularLogs(stateRecentHistoryLength, true /* ignoreDuplicates */),
 	}
-	c.info.Store(Info{
+	c.StoreInfo(&Info{
 		NICID:          nicid,
 		LinkAddr:       linkAddr,
 		Acquisition:    acquisition,
@@ -178,9 +192,20 @@ func (c *Client) Info() Info {
 	return c.info.Load().(Info)
 }
 
+// StoreInfo updates the synchronized copy of the DHCP Info and if the client's
+// state changed, it will log it in the state recent history.
+func (c *Client) StoreInfo(info *Info) {
+	c.stateRecentHistory.Push(util.LogEntry{zx.Sys_clock_get_monotonic(), info.State.String()})
+	c.info.Store(*info)
+}
+
 // Stats returns a reference to the Client`s stats.
 func (c *Client) Stats() *Stats {
 	return &c.stats
+}
+
+func (c *Client) StateRecentHistory() []util.LogEntry {
+	return c.stateRecentHistory.BuildLogs()
 }
 
 // Run runs the DHCP client.
@@ -398,7 +423,7 @@ func (c *Client) Run(ctx context.Context) {
 		}
 
 		// Synchronize info after attempt to acquire is complete.
-		c.info.Store(info)
+		c.StoreInfo(&info)
 
 		// RFC 2131 Section 4.4.5
 		// https://tools.ietf.org/html/rfc2131#section-4.4.5
@@ -455,7 +480,7 @@ func (c *Client) Run(ctx context.Context) {
 		info.State = next
 
 		// Synchronize info after any state updates.
-		c.info.Store(info)
+		c.StoreInfo(&info)
 	}
 }
 
@@ -471,7 +496,7 @@ func (c *Client) updateInfo(info *Info, acquired tcpip.AddressWithPrefix, config
 	info.RebindTime = now.Add(config.RebindTime.Duration())
 	info.Config = config
 	info.State = state
-	c.info.Store(*info)
+	c.StoreInfo(info)
 	if fn := c.acquiredFunc; fn != nil {
 		fn(prevAssigned, acquired, config)
 	}

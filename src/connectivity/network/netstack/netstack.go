@@ -1158,6 +1158,7 @@ func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tc
 		if ifs.mu.dhcp.enabled {
 			info.dhcpInfo = ifs.mu.dhcp.Info()
 			info.dhcpStats = ifs.mu.dhcp.Stats()
+			info.dhcpStateRecentHistory = ifs.mu.dhcp.StateRecentHistory()
 		}
 
 		for _, network := range []tcpip.NetworkProtocolNumber{header.IPv4ProtocolNumber, header.IPv6ProtocolNumber} {

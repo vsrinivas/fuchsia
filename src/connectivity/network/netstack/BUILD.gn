@@ -202,6 +202,8 @@ go_library("netstack_lib") {
     "socket_conv.go",
     "socket_encode.go",
     "testutil/packet_buffer.go",
+    "util/circular_logs.go",
+    "util/circular_logs_test.go",
     "util/parse.go",
     "util/parse_test.go",
   ]

@@ -1140,6 +1140,26 @@ func stubTimeNow(ctx context.Context, t0 time.Time, durations []time.Duration, d
 	}
 }
 
+func (c *Client) verifyRecentStateHistory(t *testing.T, expectedStateHistory []dhcpClientState) error {
+	t.Helper()
+
+	var got []string
+	for _, e := range c.StateRecentHistory() {
+		got = append(got, e.Content)
+	}
+
+	var want []string
+	for _, s := range expectedStateHistory {
+		want = append(want, s.String())
+	}
+
+	if diff := cmp.Diff(want, got); diff != "" {
+		return fmt.Errorf("c.StateRecentHistory() mismatch (-want +got):\n%s", diff)
+	}
+
+	return nil
+}
+
 func TestStateTransition(t *testing.T) {
 	type testType int
 	const (
@@ -1162,7 +1182,8 @@ func TestStateTransition(t *testing.T) {
 		typ            testType
 		acquireTimeout time.Duration
 		// The time durations to advance in test when the current time is requested.
-		durations []time.Duration
+		durations            []time.Duration
+		expectedStateHistory []dhcpClientState
 	}{
 		{
 			name:           "Renew",
@@ -1177,6 +1198,12 @@ func TestStateTransition(t *testing.T) {
 				0,
 				// Second acquisition from renew.
 				0,
+			},
+			expectedStateHistory: []dhcpClientState{
+				initSelecting,
+				bound,
+				renewing,
+				bound,
 			},
 		},
 		{
@@ -1196,6 +1223,13 @@ func TestStateTransition(t *testing.T) {
 				0,
 				// Second acquisition from rebind.
 				0,
+			},
+			expectedStateHistory: []dhcpClientState{
+				initSelecting,
+				bound,
+				renewing,
+				rebinding,
+				bound,
 			},
 		},
 		{
@@ -1221,6 +1255,13 @@ func TestStateTransition(t *testing.T) {
 				// Second acquisition from rebind.
 				0,
 			},
+			expectedStateHistory: []dhcpClientState{
+				initSelecting,
+				bound,
+				renewing,
+				rebinding,
+				bound,
+			},
 		},
 		{
 			name:           "LeaseExpire",
@@ -1241,6 +1282,14 @@ func TestStateTransition(t *testing.T) {
 				10 * time.Millisecond,
 				// Second acquisition after lease expiration.
 				0,
+			},
+			expectedStateHistory: []dhcpClientState{
+				initSelecting,
+				bound,
+				renewing,
+				rebinding,
+				initSelecting,
+				bound,
 			},
 		},
 		{
@@ -1267,6 +1316,14 @@ func TestStateTransition(t *testing.T) {
 				10 * time.Millisecond,
 				// Second acquisition after lease expiration.
 				0,
+			},
+			expectedStateHistory: []dhcpClientState{
+				initSelecting,
+				bound,
+				renewing,
+				rebinding,
+				initSelecting,
+				bound,
 			},
 		},
 	} {
@@ -1380,6 +1437,9 @@ func TestStateTransition(t *testing.T) {
 				if got := c.stats.RebindAcquire.Value(); got == 0 {
 					t.Error("client did not rebind before lease expiration, want at least once")
 				}
+			}
+			if err := c.verifyRecentStateHistory(t, tc.expectedStateHistory); err != nil {
+				t.Error(err)
 			}
 		})
 	}
