@@ -10,7 +10,10 @@ group("tests") {
 executable("magnifier_tests") {
   testonly = true
 
-  sources = [ "magnifier_unittest.cc" ]
+  sources = [
+    "magnifier_unittest.cc",
+    "magnifier_util_test.cc",
+  ]
 
   deps = [
     "//sdk/fidl/fuchsia.ui.input.accessibility",

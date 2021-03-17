@@ -28,7 +28,7 @@ namespace {
 
 }  // namespace
 
-::fuchsia::math::PointF GestureContext::StartingCentroid(bool local) {
+::fuchsia::math::PointF GestureContext::StartingCentroid(bool local) const {
   std::vector<::fuchsia::math::PointF> points;
   for (const auto& it : starting_pointer_locations) {
     points.push_back(local ? it.second.local_point : it.second.ndc_point);
@@ -37,7 +37,7 @@ namespace {
   return Centroid(points);
 }
 
-::fuchsia::math::PointF GestureContext::CurrentCentroid(bool local) {
+::fuchsia::math::PointF GestureContext::CurrentCentroid(bool local) const {
   std::vector<::fuchsia::math::PointF> points;
   for (const auto& it : current_pointer_locations) {
     points.push_back(local ? it.second.local_point : it.second.ndc_point);

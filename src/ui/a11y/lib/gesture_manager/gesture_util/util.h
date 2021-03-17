@@ -30,8 +30,8 @@ struct GestureContext {
   std::map<uint32_t /*pointer_id*/, PointerLocation> starting_pointer_locations;
   std::map<uint32_t /*pointer id*/, PointerLocation> current_pointer_locations;
 
-  ::fuchsia::math::PointF StartingCentroid(bool local);
-  ::fuchsia::math::PointF CurrentCentroid(bool local);
+  ::fuchsia::math::PointF StartingCentroid(bool local) const;
+  ::fuchsia::math::PointF CurrentCentroid(bool local) const;
 };
 
 // Max value by which pointer events can move(relative to the first point of contact), and still
