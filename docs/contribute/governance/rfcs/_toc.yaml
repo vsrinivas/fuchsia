@@ -65,3 +65,5 @@ toc:
   path: /docs/contribute/governance/rfcs/0074_expose_process_start_time.md
 - title: "RFC-0075 - Deprecate Zedboot-based paving for provisioning devices"
   path: /docs/contribute/governance/rfcs/0075_deprecate_zedboot_paving.md
+- title: "RFC-0076 - FIDL API summaries"
+  path: /docs/contribute/governance/rfcs/0076_fidl_api_summaries.md

@@ -339,3 +339,16 @@
   reviewers: ['rudymathu@google.com', 'nmulcahey@google.com', 'dpursell@google.com', 'wittrock@google.com', 'andresoportus@google.com', 'vaas@google.com', 'dkrahn@google.com', 'jfsulliv@google.com']
   submitted: '2021-02-25'
   reviewed: '2021-03-12'
+
+- name: 'RFC-0076'
+  title: 'FIDL API Summaries'
+  short_description: 'Presents a format for a human-readable FIDL API surface.'
+  authors: ['fmil@google.com']
+  file: '0076_fidl_api_summaries.md'
+  area: ['FIDL']
+  issue: [68955]
+  gerrit_change_id: ['480497']
+  status: 'Socialization'
+  reviewers: ['pascallouis@google.com', 'mkember@google.com', 'jeremymanson@google.com', 'gridman@google.com']
+  submitted: '2021-03-16'
+  reviewed: '2021-03-16'
