@@ -106,7 +106,7 @@ static const gpio_pin_t gpio_pins[] = {
 
 static const pbus_metadata_t gpio_metadata[] = {{
     .type = DEVICE_METADATA_GPIO_PINS,
-    .data_buffer = &gpio_pins,
+    .data_buffer = reinterpret_cast<const uint8_t*>(&gpio_pins),
     .data_size = sizeof(gpio_pins),
 }};
 
@@ -141,7 +141,7 @@ zx_status_t Vim::GpioInit() {
   static const pbus_metadata_t light_metadata[] = {
       {
           .type = DEVICE_METADATA_NAME,
-          .data_buffer = &light_names,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&light_names),
           .data_size = sizeof(light_names),
       },
   };

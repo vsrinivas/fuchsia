@@ -67,7 +67,7 @@ static const eth_dev_metadata_t eth_phy_device = {
 static const pbus_metadata_t eth_mac_device_metadata[] = {
     {
         .type = DEVICE_METADATA_ETH_PHY_DEVICE,
-        .data_buffer = &eth_phy_device,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&eth_phy_device),
         .data_size = sizeof(eth_dev_metadata_t),
     },
 };
@@ -83,7 +83,7 @@ static const eth_dev_metadata_t eth_mac_device = {
 static const pbus_metadata_t eth_board_metadata[] = {
     {
         .type = DEVICE_METADATA_ETH_MAC_DEVICE,
-        .data_buffer = &eth_mac_device,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&eth_mac_device),
         .data_size = sizeof(eth_dev_metadata_t),
     },
 };
