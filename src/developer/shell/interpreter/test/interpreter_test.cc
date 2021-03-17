@@ -241,18 +241,15 @@ InterpreterTestContext* InterpreterTest::GetContext(uint64_t context_id) {
 }
 
 void InterpreterTest::SetUp() {
-  zx_handle_t client_ch;
-  zx_handle_t server_ch;
-  zx_channel_create(0, &client_ch, &server_ch);
-  zx::channel client_channel(client_ch);
-  shell_ = std::make_unique<fuchsia_shell::Shell::SyncClient>(std::move(client_channel));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_shell::Shell>();
+  shell_ = std::make_unique<fuchsia_shell::Shell::SyncClient>(std::move(endpoints->client));
 
   // Reset context ids.
   last_context_id_ = 0;
   // Resets the global error stream for the test (to be able to run multiple tests).
   global_error_stream_.str() = "";
 
-  zx::channel server_channel(server_ch);
   // Creates a new connection to the server.
-  ASSERT_EQ(ZX_OK, shell_provider_->Connect("fuchsia.shell.Shell", std::move(server_channel)));
+  ASSERT_EQ(ZX_OK, shell_provider_->Connect("fuchsia.shell.Shell",
+                                            std::move(endpoints->server.channel())));
 }

@@ -18,33 +18,35 @@ namespace shell::console {
 class ScopedInterpreter {
  public:
   ScopedInterpreter() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread), server_(&loop_) {
-    zx_handle_t client_ch;
-    zx_handle_t server_ch;
-    zx_channel_create(0, &client_ch, &server_ch);
-    zx_status_t result = server_.IncomingConnection(server_ch);
+    auto endpoints = fidl::CreateEndpoints<fuchsia_shell::Shell>();
+    if (!endpoints.is_ok()) {
+      fprintf(stderr, "Unable to create channels: %s\n", endpoints.status_string());
+      exit(1);
+    }
+
+    zx_status_t result = server_.IncomingConnection(std::move(endpoints->server));
     if (result != ZX_OK) {
       fprintf(stderr, "Unable to start interpreter: %s\n", zx_status_get_string(result));
       exit(1);
     }
     loop_.StartThread("shell worker");
 
-    zx::channel client_channel(client_ch);
-    client_ = std::make_unique<fuchsia_shell::Shell::SyncClient>(std::move(client_channel));
+    client_ = fidl::BindSyncClient(std::move(endpoints->client));
   }
 
   ~ScopedInterpreter() {
-    client_->Shutdown();
+    client_.Shutdown();
     loop_.Shutdown();
     loop_.JoinThreads();
   }
 
   // Returns a pointer to the SyncClient that is valid during the lifetime of this object.
-  fuchsia_shell::Shell::SyncClient* client() { return client_.get(); }
+  fuchsia_shell::Shell::SyncClient* client() { return &client_; }
 
  private:
   async::Loop loop_;
   shell::interpreter::server::Server server_;
-  std::unique_ptr<fuchsia_shell::Shell::SyncClient> client_;
+  fuchsia_shell::Shell::SyncClient client_;
 };
 
 }  // namespace shell::console

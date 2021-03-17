@@ -16,9 +16,8 @@ namespace {
 using App = gtest::TestLoopFixture;
 
 fuchsia_shell::Shell::SyncClient Client() {
-  zx_handle_t client_ch = 0;
-  zx::channel client_channel(client_ch);
-  return fuchsia_shell::Shell::SyncClient(std::move(client_channel));
+  fidl::ClientEnd<fuchsia_shell::Shell> client_end;
+  return fuchsia_shell::Shell::SyncClient(std::move(client_end));
 }
 
 TEST_F(App, BogusArgs) {

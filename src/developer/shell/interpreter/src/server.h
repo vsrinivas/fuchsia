@@ -300,7 +300,7 @@ class Server {
   // Listens for connections on the given channel instead of setting up a service.
   // Returns whether we were able to bind to the given |channel|.  On error, |channel| is closed and
   // we do not bind.
-  zx_status_t IncomingConnection(zx_handle_t service_request);
+  zx_status_t IncomingConnection(fidl::ServerEnd<fuchsia_shell::Shell> service_request);
   void Run() { loop()->Run(); }
 
   async::Loop* loop() { return loop_; }

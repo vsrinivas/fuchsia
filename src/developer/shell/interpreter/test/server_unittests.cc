@@ -18,12 +18,11 @@ TEST(Server, ShutdownService) {
   auto server = std::make_unique<shell::interpreter::server::Server>(&loop);
   loop.StartThread();
 
-  zx::channel client_end, server_end;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &client_end, &server_end));
-  ASSERT_EQ(ZX_OK, server->IncomingConnection(server_end.release()));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_shell::Shell>();
+  ASSERT_EQ(ZX_OK, server->IncomingConnection(std::move(endpoints->server)));
 
   // Call |fuchsia.shell/Shell.Shutdown| on the connection.
-  fuchsia_shell::Shell::SyncClient client(std::move(client_end));
+  fuchsia_shell::Shell::SyncClient client(std::move(endpoints->client));
   auto result = client.Shutdown();
   ASSERT_EQ(ZX_OK, result.status())
       << "Shutdown failed: " << result.status_string() << ", " << result.error();
@@ -42,9 +41,8 @@ TEST(Server, ShutdownServer) {
   auto server = std::make_unique<shell::interpreter::server::Server>(&loop);
   loop.StartThread();
 
-  zx::channel client_end, server_end;
-  ASSERT_EQ(ZX_OK, zx::channel::create(0, &client_end, &server_end));
-  ASSERT_EQ(ZX_OK, server->IncomingConnection(server_end.release()));
+  auto endpoints = fidl::CreateEndpoints<fuchsia_shell::Shell>();
+  ASSERT_EQ(ZX_OK, server->IncomingConnection(std::move(endpoints->server)));
 
   // Shutdown the server first.
   async::PostTask(loop.dispatcher(), [server = std::move(server)] {});
@@ -52,6 +50,7 @@ TEST(Server, ShutdownServer) {
 
   // Verify that client connections are dropped.
   zx_signals_t observed = ZX_SIGNAL_NONE;
-  ASSERT_EQ(ZX_OK, client_end.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed));
+  ASSERT_EQ(ZX_OK, endpoints->client.channel().wait_one(ZX_CHANNEL_PEER_CLOSED,
+                                                        zx::time::infinite(), &observed));
   ASSERT_EQ(ZX_CHANNEL_PEER_CLOSED, observed);
 }

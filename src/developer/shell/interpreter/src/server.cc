@@ -369,7 +369,9 @@ std::shared_ptr<ObjectFieldSchema> ServerInterpreter::GetObjectFieldSchema(
 
 void connect(void* untyped_context, const char* service_name, zx_handle_t service_request) {
   auto server = static_cast<Server*>(untyped_context);
-  server->IncomingConnection(service_request);
+  zx::channel sr(service_request);
+  fidl::ServerEnd<fuchsia_shell::Shell> sr_end(std::move(sr));
+  server->IncomingConnection(std::move(sr_end));
 }
 
 // - Service ---------------------------------------------------------------------------------------
@@ -673,11 +675,11 @@ bool Server::Listen() {
   return true;
 }
 
-zx_status_t Server::IncomingConnection(zx_handle_t service_request) {
+zx_status_t Server::IncomingConnection(fidl::ServerEnd<fuchsia_shell::Shell> service_request) {
   auto service = std::make_unique<Service>(this);
   auto* service_ptr = service.get();
   auto result =
-      fidl::BindServer(loop()->dispatcher(), zx::channel(service_request), std::move(service));
+      fidl::BindServer(loop()->dispatcher(), std::move(service_request), std::move(service));
   if (result.is_error()) {
     return result.error();
   }
