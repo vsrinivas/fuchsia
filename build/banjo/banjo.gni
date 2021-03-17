@@ -37,6 +37,12 @@ import("//build/rust/toolchain.gni")
 #     This is part of the Banjo deprecation effort and should not be used in
 #     any other context.
 #     Defaults to true.
+#
+#   fidl_only (optional)
+#     Whether to only present this library as a FIDL library.
+#     This is to ensure to once we start using a library as a FIDL one, no new
+#     legacy reference gets introduced.
+#     Defaults to false.
 
 template("banjo") {
   if (defined(invoker.sdk_category)) {
@@ -46,7 +52,10 @@ template("banjo") {
     not_needed(invoker, [ "needs_composite" ])
   }
 
-  excluded_variables = [ "translate_to_fidl" ]
+  excluded_variables = [
+    "fidl_only",
+    "translate_to_fidl",
+  ]
 
   if (current_toolchain == banjo_toolchain) {
     import("//build/banjo/banjo_library.gni")
@@ -57,20 +66,22 @@ template("banjo") {
         deps = []
       }
     }
-  } else if (is_fuchsia) {
-    import("//build/c/banjo_c.gni")
-    import("//build/rust/banjo_rust_library.gni")
+  } else if (!defined(invoker.fidl_only) || !invoker.fidl_only) {
+    if (is_fuchsia) {
+      import("//build/c/banjo_c.gni")
+      import("//build/rust/banjo_rust_library.gni")
 
-    banjo_rust_library(target_name) {
-      forward_variables_from(invoker, "*", excluded_variables)
-    }
+      banjo_rust_library(target_name) {
+        forward_variables_from(invoker, "*", excluded_variables)
+      }
 
-    banjo_c_target(target_name) {
-      forward_variables_from(invoker, "*", excluded_variables)
+      banjo_c_target(target_name) {
+        forward_variables_from(invoker, "*", excluded_variables)
+      }
+    } else {
+      assert(false,
+             "Unable to process BANJO target in toolchain $current_toolchain.")
     }
-  } else {
-    assert(false,
-           "Unable to process BANJO target in toolchain $current_toolchain.")
   }
 
   if (!defined(invoker.translate_to_fidl) || invoker.translate_to_fidl) {
