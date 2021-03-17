@@ -7,6 +7,7 @@ use {
         access_point::{state_machine as ap_fsm, types as ap_types},
         client::types as client_types,
         mode_management::iface_manager_types::*,
+        regulatory_manager::REGION_CODE_LEN,
     },
     anyhow::Error,
     async_trait::async_trait,
@@ -78,6 +79,12 @@ pub(crate) trait IfaceManagerApi {
 
     /// Returns whether or not there is an iface that can support a WPA3 connection.
     async fn has_wpa3_capable_client(&mut self) -> Result<bool, Error>;
+
+    /// Sets the country code for WLAN PHYs.
+    async fn set_country(
+        &mut self,
+        country_code: Option<[u8; REGION_CODE_LEN]>,
+    ) -> Result<(), Error>;
 }
 
 #[derive(Clone)]
@@ -204,6 +211,16 @@ impl IfaceManagerApi for IfaceManager {
         self.sender.try_send(IfaceManagerRequest::HasWpa3Iface(req))?;
         Ok(receiver.await?)
     }
+
+    async fn set_country(
+        &mut self,
+        country_code: Option<[u8; REGION_CODE_LEN]>,
+    ) -> Result<(), Error> {
+        let (responder, receiver) = oneshot::channel();
+        let req = SetCountryRequest { country_code, responder };
+        self.sender.try_send(IfaceManagerRequest::SetCountry(req))?;
+        receiver.await?
+    }
 }
 
 #[cfg(test)]
@@ -312,7 +329,8 @@ mod tests {
                     responder,
                 })
                 | IfaceManagerRequest::StopAp(StopApRequest { responder, .. })
-                | IfaceManagerRequest::StopAllAps(StopAllApsRequest { responder, .. }) => {
+                | IfaceManagerRequest::StopAllAps(StopAllApsRequest { responder, .. })
+                | IfaceManagerRequest::SetCountry(SetCountryRequest { responder, .. }) => {
                     handle_negative_test_result_responder(responder, failure_mode);
                 }
                 IfaceManagerRequest::Connect(ConnectRequest { responder, .. }) => {
@@ -1271,5 +1289,72 @@ mod tests {
 
         // Verify that the request completes in error.
         assert_variant!(test_values.exec.run_until_stalled(&mut has_wpa3_fut), Poll::Ready(Err(_)));
+    }
+
+    #[test]
+    fn test_set_country_succeeds() {
+        let mut test_values = test_setup();
+
+        // Set country code
+        let set_country_fut = test_values.iface_manager.set_country(None);
+        pin_mut!(set_country_fut);
+        assert_variant!(test_values.exec.run_until_stalled(&mut set_country_fut), Poll::Pending);
+
+        // Verify the service sees the request
+        let next_message = test_values.receiver.next();
+        pin_mut!(next_message);
+
+        assert_variant!(
+            test_values.exec.run_until_stalled(&mut next_message),
+            Poll::Ready(Some(IfaceManagerRequest::SetCountry(SetCountryRequest{
+                country_code: None,
+                responder
+            }))) => {
+                responder.send(Ok(())).expect("failed to send stop AP response");
+            }
+        );
+
+        // Verify that the client gets the response
+        assert_variant!(
+            test_values.exec.run_until_stalled(&mut set_country_fut),
+            Poll::Ready(Ok(_))
+        );
+    }
+
+    #[test_case(NegativeTestFailureMode::RequestFailure; "request failure")]
+    #[test_case(NegativeTestFailureMode::OperationFailure; "operation failure")]
+    #[test_case(NegativeTestFailureMode::ServiceFailure; "service failure")]
+    fn set_country_negative_test(failure_mode: NegativeTestFailureMode) {
+        let mut test_values = test_setup();
+
+        // Set country code
+        let set_country_fut = test_values.iface_manager.set_country(None);
+        pin_mut!(set_country_fut);
+        assert_variant!(test_values.exec.run_until_stalled(&mut set_country_fut), Poll::Pending);
+
+        let service_fut =
+            iface_manager_api_negative_test(test_values.receiver, failure_mode.clone());
+        pin_mut!(service_fut);
+
+        match failure_mode {
+            NegativeTestFailureMode::RequestFailure => {}
+            _ => {
+                // Run the request and the servicing of the request
+                assert_variant!(
+                    test_values.exec.run_until_stalled(&mut set_country_fut),
+                    Poll::Pending
+                );
+                assert_variant!(
+                    test_values.exec.run_until_stalled(&mut service_fut),
+                    Poll::Ready(())
+                );
+            }
+        }
+
+        // Verify that the client gets the response
+        assert_variant!(
+            test_values.exec.run_until_stalled(&mut set_country_fut),
+            Poll::Ready(Err(_))
+        );
     }
 }

@@ -537,6 +537,13 @@ mod tests {
         async fn has_wpa3_capable_client(&mut self) -> Result<bool, Error> {
             Ok(self.wpa3_capable)
         }
+
+        async fn set_country(
+            &mut self,
+            _country_code: Option<[u8; types::REGION_CODE_LEN]>,
+        ) -> Result<(), Error> {
+            unimplemented!()
+        }
     }
 
     /// Creates a Client wrapper.

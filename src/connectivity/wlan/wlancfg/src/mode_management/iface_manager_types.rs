@@ -6,6 +6,7 @@ use {
     crate::{
         access_point::{state_machine as ap_fsm, types as ap_types},
         client::types as client_types,
+        regulatory_manager::REGION_CODE_LEN,
     },
     anyhow::Error,
     fidl_fuchsia_wlan_sme,
@@ -94,6 +95,12 @@ pub(crate) struct HasWpa3IfaceRequest {
 }
 
 #[derive(Debug)]
+pub(crate) struct SetCountryRequest {
+    pub country_code: Option<[u8; REGION_CODE_LEN]>,
+    pub responder: oneshot::Sender<Result<(), Error>>,
+}
+
+#[derive(Debug)]
 pub(crate) enum IfaceManagerRequest {
     Disconnect(DisconnectRequest),
     Connect(ConnectRequest),
@@ -109,4 +116,18 @@ pub(crate) enum IfaceManagerRequest {
     StopAp(StopApRequest),
     StopAllAps(StopAllApsRequest),
     HasWpa3Iface(HasWpa3IfaceRequest),
+    #[allow(unused)]
+    SetCountry(SetCountryRequest),
+}
+
+pub(crate) struct SetCountryOperationState {
+    pub client_connections_initially_enabled: bool,
+    pub initial_ap_configs: Vec<ap_fsm::ApConfig>,
+    pub set_country_result: Result<(), Error>,
+    pub responder: oneshot::Sender<Result<(), Error>>,
+}
+
+pub(crate) enum IfaceManagerOperation {
+    ConfigureStateMachine,
+    SetCountry(SetCountryOperationState),
 }

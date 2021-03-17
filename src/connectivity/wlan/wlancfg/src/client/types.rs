@@ -12,6 +12,9 @@ use {
     },
 };
 
+#[cfg(test)]
+pub(crate) use crate::regulatory_manager::REGION_CODE_LEN;
+
 pub type NetworkIdentifier = fidl_policy::NetworkIdentifier;
 pub type SecurityType = fidl_policy::SecurityType;
 pub type ConnectionState = fidl_policy::ConnectionState;

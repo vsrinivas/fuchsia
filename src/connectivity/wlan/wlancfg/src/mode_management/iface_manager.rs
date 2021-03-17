@@ -966,6 +966,83 @@ async fn handle_terminated_state_machine(
     }
 }
 
+fn initiate_set_country(
+    iface_manager: &mut IfaceManagerService,
+    req: SetCountryRequest,
+) -> BoxFuture<'static, IfaceManagerOperation> {
+    // Store the initial AP configs so that they can be started later.
+    let initial_ap_configs =
+        iface_manager.aps.iter().filter_map(|container| container.config.clone()).collect();
+
+    // Create futures to stop all of the APs and stop client connections
+    let stop_client_connections_fut = iface_manager
+        .stop_client_connections(client_types::DisconnectReason::RegulatoryRegionChange);
+    let stop_aps_fut = iface_manager.stop_all_aps();
+
+    // Once the clients and APs have been stopped, set the regulatory region.
+    let phy_manager = iface_manager.phy_manager.clone();
+    let regulatory_fut = async move {
+        let client_connections_initially_enabled =
+            phy_manager.lock().await.client_connections_enabled();
+
+        let set_country_result = if let Err(e) = stop_client_connections_fut.await {
+            Err(format_err!(
+                "failed to stop client connection in preparation for setting 
+            country code: {:?}",
+                e
+            ))
+        } else if let Err(e) = stop_aps_fut.await {
+            Err(format_err!("failed to stop APs in preparation for setting country code: {:?}", e))
+        } else {
+            let mut phy_manager = phy_manager.lock().await;
+            phy_manager
+                .set_country_code(req.country_code)
+                .await
+                .map_err(|e| format_err!("failed to set regulatory region: {:?}", e))
+        };
+
+        let result = SetCountryOperationState {
+            client_connections_initially_enabled,
+            initial_ap_configs,
+            set_country_result,
+            responder: req.responder,
+        };
+
+        // Return all information required to resume to the old state.
+        IfaceManagerOperation::SetCountry(result)
+    };
+    regulatory_fut.boxed()
+}
+
+async fn restore_state_after_setting_country_code(
+    iface_manager: &mut IfaceManagerService,
+    previous_state: SetCountryOperationState,
+) {
+    // Prior to setting the country code, it is essential that client connections and APs are all
+    // stopped.  If stopping clients or APs fails or if setting the country code fails, the whole
+    // process of setting the country code must be considered a failure.
+    //
+    // Bringing clients and APs back online following the regulatory region setting may fail and is
+    // possibly recoverable.  Log failures, but do not report errors in scenarios where recreating
+    // the client and AP interfaces fails.  This allows API clients to retry and attempt to create
+    // the interfaces themselves by making policy API requests.
+    if previous_state.client_connections_initially_enabled {
+        if let Err(e) = iface_manager.start_client_connections().await {
+            error!("failed to resume client connections after setting country: {:?}", e);
+        }
+    }
+
+    for config in previous_state.initial_ap_configs {
+        if let Err(e) = iface_manager.start_ap(config).await {
+            error!("failed to resume AP after setting regulatory region: {:?}", e);
+        }
+    }
+
+    if previous_state.responder.send(previous_state.set_country_result).is_err() {
+        error!("could not respond to SetCountryRequest");
+    }
+}
+
 pub(crate) async fn serve_iface_manager_requests(
     mut iface_manager: IfaceManagerService,
     iface_manager_client: Arc<Mutex<dyn IfaceManagerApi + Send>>,
@@ -1005,7 +1082,15 @@ pub(crate) async fn serve_iface_manager_requests(
                     &mut network_selection_futures
                 ).await;
             },
-            () = operation_futures.select_next_some() => {},
+            op = operation_futures.select_next_some() => match op {
+                IfaceManagerOperation::ConfigureStateMachine => {},
+                IfaceManagerOperation::SetCountry(previous_state) => {
+                    restore_state_after_setting_country_code(
+                        &mut iface_manager,
+                        previous_state
+                    ).await;
+                }
+            },
             network_selection_result = network_selection_futures.select_next_some() => {
                 handle_network_selection_results(
                     network_selection_result,
@@ -1022,6 +1107,7 @@ pub(crate) async fn serve_iface_manager_requests(
                             if responder.send(fut.await).is_err() {
                                 error!("could not respond to DisconnectRequest");
                             }
+                            IfaceManagerOperation::ConfigureStateMachine
                         };
                         operation_futures.push(disconnect_fut.boxed());
                     }
@@ -1069,6 +1155,7 @@ pub(crate) async fn serve_iface_manager_requests(
                             if responder.send(fut.await).is_err() {
                                 error!("could not respond to StopClientConnectionsRequest");
                             }
+                            IfaceManagerOperation::ConfigureStateMachine
                         };
                         operation_futures.push(stop_client_connections_fut.boxed());
                     }
@@ -1088,6 +1175,7 @@ pub(crate) async fn serve_iface_manager_requests(
                             if responder.send(stop_ap_fut.await).is_err() {
                                 error!("could not respond to StopApRequest");
                             }
+                            IfaceManagerOperation::ConfigureStateMachine
                         };
                         operation_futures.push(stop_ap_fut.boxed());
                     }
@@ -1097,6 +1185,7 @@ pub(crate) async fn serve_iface_manager_requests(
                             if responder.send(stop_all_aps_fut.await).is_err() {
                                 error!("could not respond to StopAllApsRequest");
                             }
+                            IfaceManagerOperation::ConfigureStateMachine
                         };
                         operation_futures.push(stop_all_aps_fut.boxed());
                     }
@@ -1105,6 +1194,11 @@ pub(crate) async fn serve_iface_manager_requests(
                             error!("could not respond to HasWpa3IfaceRequest");
                         }
 
+                    }
+                    IfaceManagerRequest::SetCountry(req) => {
+                        let regulatory_fut =
+                            initiate_set_country(&mut iface_manager, req);
+                        operation_futures.push(regulatory_fut);
                     }
                 };
             }
@@ -1256,10 +1350,14 @@ mod tests {
         Arc::new(Mutex::new(phy_manager::PhyManager::new(device_service, node)))
     }
 
+    #[derive(Debug)]
     struct FakePhyManager {
         create_iface_ok: bool,
         destroy_iface_ok: bool,
+        set_country_ok: bool,
         wpa3_iface: Option<u16>,
+        region_code: Option<[u8; REGION_CODE_LEN]>,
+        client_connections_enabled: bool,
     }
 
     #[async_trait]
@@ -1290,7 +1388,7 @@ mod tests {
         }
 
         fn client_connections_enabled(&self) -> bool {
-            unimplemented!();
+            self.client_connections_enabled
         }
 
         async fn destroy_all_client_ifaces(&mut self) -> Result<(), PhyManagerError> {
@@ -1347,9 +1445,14 @@ mod tests {
 
         async fn set_country_code(
             &mut self,
-            _country_code: Option<[u8; REGION_CODE_LEN]>,
+            country_code: Option<[u8; REGION_CODE_LEN]>,
         ) -> Result<(), PhyManagerError> {
-            unimplemented!();
+            if self.set_country_ok {
+                self.region_code = country_code;
+                Ok(())
+            } else {
+                Err(PhyManagerError::PhySetCountryFailure)
+            }
         }
 
         fn save_region_code(&mut self, _region_code: Option<[u8; REGION_CODE_LEN]>) {
@@ -1454,8 +1557,14 @@ mod tests {
             client_state_machine: None,
             driver_features: Vec::new(),
         };
-        let phy_manager =
-            FakePhyManager { create_iface_ok: true, destroy_iface_ok: true, wpa3_iface: None };
+        let phy_manager = FakePhyManager {
+            create_iface_ok: true,
+            destroy_iface_ok: true,
+            wpa3_iface: None,
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true,
+        };
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender.clone(),
@@ -1502,8 +1611,14 @@ mod tests {
             ap_state_machine: Box::new(fake_ap),
             enabled_time: None,
         };
-        let phy_manager =
-            FakePhyManager { create_iface_ok: true, destroy_iface_ok: true, wpa3_iface: None };
+        let phy_manager = FakePhyManager {
+            create_iface_ok: true,
+            destroy_iface_ok: true,
+            wpa3_iface: None,
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true,
+        };
         let mut iface_manager = IfaceManagerService::new(
             Arc::new(Mutex::new(phy_manager)),
             test_values.client_update_sender.clone(),
@@ -2013,6 +2128,9 @@ mod tests {
             create_iface_ok: true,
             destroy_iface_ok: false,
             wpa3_iface: Some(0),
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true,
         }));
 
         // Configure the mock CSM with the expected connect request
@@ -2413,6 +2531,9 @@ mod tests {
             create_iface_ok: true,
             destroy_iface_ok: false,
             wpa3_iface: None,
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true,
         }));
 
         // Create a PhyManager with a single, known client iface.
@@ -2627,6 +2748,9 @@ mod tests {
             create_iface_ok: false,
             destroy_iface_ok: true,
             wpa3_iface: None,
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true,
         }));
 
         {
@@ -3530,7 +3654,7 @@ mod tests {
     }
 
     fn run_service_test<T: std::fmt::Debug>(
-        mut exec: fuchsia_async::Executor,
+        exec: &mut fuchsia_async::Executor,
         network_selector: Arc<NetworkSelector>,
         iface_manager: IfaceManagerService,
         req: IfaceManagerRequest,
@@ -3558,9 +3682,17 @@ mod tests {
         // for the operation under test.
         let mut device_service_fut = device_service_stream.into_future();
         assert_variant!(exec.run_until_stalled(&mut serve_fut), Poll::Pending);
-        match poll_device_service_req(&mut exec, &mut device_service_fut) {
+        match poll_device_service_req(exec, &mut device_service_fut) {
             Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetClientSme {
                 iface_id: TEST_CLIENT_IFACE_ID,
+                sme: _,
+                responder,
+            }) => {
+                // Send back a positive acknowledgement.
+                assert!(responder.send(fuchsia_zircon::sys::ZX_OK).is_ok());
+            }
+            Poll::Ready(fidl_fuchsia_wlan_device_service::DeviceServiceRequest::GetApSme {
+                iface_id: TEST_AP_IFACE_ID,
                 sme: _,
                 responder,
             }) => {
@@ -3671,7 +3803,7 @@ mod tests {
         let req = IfaceManagerRequest::Disconnect(req);
 
         run_service_test(
-            exec,
+            &mut exec,
             test_values.network_selector,
             iface_manager,
             req,
@@ -3700,7 +3832,7 @@ mod tests {
         let req = IfaceManagerRequest::Connect(req);
 
         run_service_test(
-            exec,
+            &mut exec,
             test_values.network_selector,
             iface_manager,
             req,
@@ -3927,6 +4059,13 @@ mod tests {
         async fn has_wpa3_capable_client(&mut self) -> Result<bool, Error> {
             Ok(true)
         }
+
+        async fn set_country(
+            &mut self,
+            _country_code: Option<[u8; REGION_CODE_LEN]>,
+        ) -> Result<(), Error> {
+            unimplemented!()
+        }
     }
 
     #[test]
@@ -4151,7 +4290,7 @@ mod tests {
         let req = IfaceManagerRequest::Scan(req);
 
         run_service_test(
-            exec,
+            &mut exec,
             test_values.network_selector,
             iface_manager,
             req,
@@ -4161,9 +4300,42 @@ mod tests {
         );
     }
 
-    #[test_case(FakePhyManager { create_iface_ok: true, destroy_iface_ok: true, wpa3_iface: None }, TestType::Pass; "successfully started client connections")]
-    #[test_case(FakePhyManager { create_iface_ok: false, destroy_iface_ok: true, wpa3_iface: None }, TestType::Fail; "failed to start client connections")]
-    #[test_case(FakePhyManager { create_iface_ok: true, destroy_iface_ok: true, wpa3_iface: None }, TestType::ClientError; "client dropped receiver")]
+    #[test_case(
+        FakePhyManager {
+            create_iface_ok: true,
+            destroy_iface_ok: true,
+            wpa3_iface: None,
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true
+        },
+        TestType::Pass;
+        "successfully started client connections"
+    )]
+    #[test_case(
+        FakePhyManager {
+            create_iface_ok: false,
+            destroy_iface_ok: true,
+            wpa3_iface: None,
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true
+        },
+        TestType::Fail;
+        "failed to start client connections"
+    )]
+    #[test_case(
+        FakePhyManager {
+            create_iface_ok: true,
+            destroy_iface_ok: true,
+            wpa3_iface: None,
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true
+        },
+        TestType::ClientError;
+        "client dropped receiver"
+    )]
     fn service_start_client_connections_test(phy_manager: FakePhyManager, test_type: TestType) {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
@@ -4187,7 +4359,7 @@ mod tests {
         let req = IfaceManagerRequest::StartClientConnections(req);
 
         run_service_test(
-            exec,
+            &mut exec,
             test_values.network_selector,
             iface_manager,
             req,
@@ -4197,9 +4369,42 @@ mod tests {
         );
     }
 
-    #[test_case(FakePhyManager { create_iface_ok: true, destroy_iface_ok: true, wpa3_iface: None }, TestType::Pass; "successfully stopped client connections")]
-    #[test_case(FakePhyManager { create_iface_ok: true, destroy_iface_ok: false, wpa3_iface: None }, TestType::Fail; "failed to stop client connections")]
-    #[test_case(FakePhyManager { create_iface_ok: true, destroy_iface_ok: true, wpa3_iface: None }, TestType::ClientError; "client dropped receiver")]
+    #[test_case(
+        FakePhyManager {
+            create_iface_ok: true,
+            destroy_iface_ok: true,
+            wpa3_iface: None,
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true
+        },
+        TestType::Pass;
+        "successfully stopped client connections"
+    )]
+    #[test_case(
+        FakePhyManager {
+            create_iface_ok: true,
+            destroy_iface_ok: false,
+            wpa3_iface: None,
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true
+        },
+        TestType::Fail;
+        "failed to stop client connections"
+    )]
+    #[test_case(
+        FakePhyManager {
+            create_iface_ok: true,
+            destroy_iface_ok: true,
+            wpa3_iface: None,
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true
+        },
+        TestType::ClientError;
+        "client dropped receiver"
+    )]
     fn service_stop_client_connections_test(phy_manager: FakePhyManager, test_type: TestType) {
         let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
 
@@ -4226,7 +4431,7 @@ mod tests {
         let req = IfaceManagerRequest::StopClientConnections(req);
 
         run_service_test(
-            exec,
+            &mut exec,
             test_values.network_selector,
             iface_manager,
             req,
@@ -4255,7 +4460,7 @@ mod tests {
         let req = IfaceManagerRequest::StartAp(req);
 
         run_service_test(
-            exec,
+            &mut exec,
             test_values.network_selector,
             iface_manager,
             req,
@@ -4287,7 +4492,7 @@ mod tests {
         let req = IfaceManagerRequest::StopAp(req);
 
         run_service_test(
-            exec,
+            &mut exec,
             test_values.network_selector,
             iface_manager,
             req,
@@ -4313,7 +4518,7 @@ mod tests {
         let req = IfaceManagerRequest::StopAllAps(req);
 
         run_service_test(
-            exec,
+            &mut exec,
             test_values.network_selector,
             iface_manager,
             req,
@@ -4994,6 +5199,9 @@ mod tests {
             create_iface_ok: true,
             destroy_iface_ok: true,
             wpa3_iface: Some(0),
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true,
         }));
         let fut = iface_manager.has_wpa3_capable_client();
         pin_mut!(fut);
@@ -5014,9 +5222,121 @@ mod tests {
             create_iface_ok: true,
             destroy_iface_ok: true,
             wpa3_iface: None,
+            set_country_ok: true,
+            region_code: None,
+            client_connections_enabled: true,
         }));
         let fut = iface_manager.has_wpa3_capable_client();
         pin_mut!(fut);
         assert_variant!(exec.run_until_stalled(&mut fut), Poll::Ready(false));
+    }
+
+    /// Tests the operation of setting the country code.  The test cases of interest are:
+    /// 1. Client connections and APs are initially enabled and all operations succeed.
+    /// 2. Client connections are initially enabled and all operations succeed except restarting
+    ///    client connections.
+    ///    * In this scenario, the region has been properly applied and the device should be
+    ///      allowed to continue running.  Higher layers can optionally re-enable client
+    ///      connections to recover.
+    /// 3. APs are initially enabled and all operations succeed except restarting the AP.
+    ///    * As in the above scenario, the device can be allowed to continue running and the API
+    ///      client can attempt to restart the AP manually.
+    /// 4. Stop client connections fails.
+    /// 5. Stop all APs fails.
+    /// 6. Set country fails.
+    #[test_case(
+        true, true, true, true, true, TestType::Pass;
+        "client and AP enabled and all operations succeed"
+    )]
+    #[test_case(
+        true, false, true, true, false, TestType::Pass;
+        "client enabled and restarting client fails"
+    )]
+    #[test_case(
+        false, true, true, true, false, TestType::Pass;
+        "AP enabled and start AP fails after setting country"
+    )]
+    #[test_case(
+        true, false, false, true, true, TestType::Fail;
+        "stop client connections fails"
+    )]
+    #[test_case(
+        false, true, false, true, true, TestType::Fail;
+        "stop APs fails"
+    )]
+    #[test_case(
+        false, true, true, false, true, TestType::Fail;
+        "set country fails"
+    )]
+    fn set_country_service_test(
+        client_connections_enabled: bool,
+        ap_enabled: bool,
+        destroy_iface_ok: bool,
+        set_country_ok: bool,
+        create_iface_ok: bool,
+        test_type: TestType,
+    ) {
+        let mut exec = fuchsia_async::Executor::new().expect("failed to create an executor");
+        let test_values = test_setup(&mut exec);
+
+        // Seed a FakePhyManager with the test configuration information and provide the PhyManager
+        // to a new IfaceManagerService to test the behavior given the configuration.
+        let phy_manager = Arc::new(Mutex::new(FakePhyManager {
+            create_iface_ok,
+            destroy_iface_ok,
+            set_country_ok,
+            wpa3_iface: None,
+            region_code: None,
+            client_connections_enabled,
+        }));
+
+        let mut iface_manager = IfaceManagerService::new(
+            phy_manager.clone(),
+            test_values.client_update_sender.clone(),
+            test_values.ap_update_sender.clone(),
+            test_values.device_service_proxy.clone(),
+            test_values.saved_networks.clone(),
+            test_values.network_selector.clone(),
+            test_values.cobalt_api.clone(),
+        );
+
+        // If the test calls for it, create an AP interface to test that the IfaceManager preserves
+        // the configuration and restores it after setting the regulatory region.
+        if ap_enabled {
+            let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
+            let ap_container = ApIfaceContainer {
+                iface_id: TEST_AP_IFACE_ID,
+                config: Some(create_ap_config(TEST_SSID, TEST_PASSWORD)),
+                ap_state_machine: Box::new(fake_ap),
+                enabled_time: None,
+            };
+            iface_manager.aps.push(ap_container);
+        }
+
+        // Call set_country and drive the operation to completion.
+        let (set_country_sender, set_country_receiver) = oneshot::channel();
+        let req = SetCountryRequest { country_code: Some([0, 0]), responder: set_country_sender };
+        let req = IfaceManagerRequest::SetCountry(req);
+
+        run_service_test(
+            &mut exec,
+            test_values.network_selector,
+            iface_manager,
+            req,
+            set_country_receiver,
+            test_values.device_service_stream,
+            test_type,
+        );
+
+        if destroy_iface_ok && set_country_ok {
+            let phy_manager_fut = phy_manager.lock();
+            pin_mut!(phy_manager_fut);
+            assert_variant!(
+                exec.run_until_stalled(&mut phy_manager_fut),
+                Poll::Ready(phy_manager) => {
+                    assert_eq!(phy_manager.region_code, Some([0, 0]))
+                }
+            );
+        }
     }
 }
