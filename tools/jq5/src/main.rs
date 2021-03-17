@@ -10,7 +10,9 @@ use std::{
     process::{Command, Stdio},
 };
 use structopt::StructOpt;
+
 mod reader;
+mod traverser;
 
 fn read_files(files: Vec<PathBuf>) -> Result<Vec<String>, anyhow::Error> {
     let mut json_strings = Vec::with_capacity(files.len());
