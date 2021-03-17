@@ -961,6 +961,7 @@ version = "0.1.1"
 name = "fuchsia-third-party"
 version = "0.1.0"
 dependencies = [
+ "ansi_term",
  "anyhow",
  "arbitrary",
  "arc-swap",
