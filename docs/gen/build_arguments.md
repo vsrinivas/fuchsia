@@ -61,14 +61,14 @@ TODO(fxbug.dev/67565) - remove once external FD extensions fully supported
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/311a46af85ddf24a7662d44fc308a02c0baa3c90/src/intel/vulkan/BUILD.gn#26)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:26](https://fuchsia.googlesource.com/third_party/mesa/+/33e6e1ac56b2fc6a97fdef8b3d843cca5961a675/src/intel/vulkan/BUILD.gn#26)
 
 ### anv_use_max_ram
 Give maximum possible memory to Vulkan heap
 
 **Current value (from the default):** `false`
 
-From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/311a46af85ddf24a7662d44fc308a02c0baa3c90/src/intel/vulkan/BUILD.gn#28)
+From [//third_party/mesa/src/intel/vulkan/BUILD.gn:28](https://fuchsia.googlesource.com/third_party/mesa/+/33e6e1ac56b2fc6a97fdef8b3d843cca5961a675/src/intel/vulkan/BUILD.gn#28)
 
 ### asan_default_options
 Default [AddressSanitizer](https://clang.llvm.org/docs/AddressSanitizer.html)
@@ -737,6 +737,22 @@ Tells openweave to include files that require heap access.
 **Current value (from the default):** `true`
 
 From [//third_party/openweave-core/config.gni:32](https://fuchsia.googlesource.com/third_party/openweave-core/+/792b7bb0c12444eb4f525f114faa42fc181c2857/config.gni#32)
+
+### coverage_sdk_source_sets
+Set this to true to profile sdk_source_set() instances reachable from the
+top-level //sdk target. This will ensure that the build generates a profile
+list file, and add its path to 'profile_source_files_list_files' automatically.
+
+NOTE: This is ignored if the "profile" build variant is not enabled!
+Example usage:
+
+ fx set core.x64 --with //sdk --variant profile --args 'coverage_sdk_source_sets = true'
+ fx build
+
+
+**Current value (from the default):** `false`
+
+From //build/config/profile/sdk.gni:16
 
 ### crash_diagnostics_dir
 Clang crash reports directory path. Use empty path to disable altogether.
