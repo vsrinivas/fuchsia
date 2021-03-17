@@ -19,6 +19,7 @@ go_library("fidlgen_cpp") {
     "namespaced_enum.go",
     "reserved_names.go",
     "struct.go",
+    "table.go",
     "typed_channel_migration.go",
     "union.go",
   ]
