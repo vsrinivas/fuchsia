@@ -138,7 +138,6 @@ TEST(BacktraceRequest, IgnoreNormalException) {
 
   zx::channel exception_channel;
   const void* exit_address = nullptr;
-  bool should_be_true = true;
 
   std::thread thread([&] {
     exit_address = &&exit;  // clang and gcc extension to obtain address of a label.
@@ -154,8 +153,7 @@ TEST(BacktraceRequest, IgnoreNormalException) {
 #else
 #error "what machine?"
 #endif
-    // This should never be reached.
-    should_be_true = false;
+    ADD_FAILURE("This should never be reached");
   exit:
     ;
   });
@@ -191,7 +189,6 @@ TEST(BacktraceRequest, IgnoreNormalException) {
   exception.reset();
 
   thread.join();
-  ASSERT_TRUE(should_be_true);
 }
 
 }  // namespace
