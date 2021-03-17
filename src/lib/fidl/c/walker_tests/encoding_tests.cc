@@ -282,9 +282,9 @@ TEST(BufferSizes, encode_too_many_bytes_specified_should_close_handles) {
   ASSERT_EQ(zx::eventpair::create(0, &ep0, &ep1), ZX_OK);
 
   constexpr size_t kSizeTooBig = sizeof(nonnullable_handle_message_layout) * 2;
-  std::unique_ptr<uint8_t[]> buffer = std::make_unique<uint8_t[]>(kSizeTooBig);
+  uint8_t buffer[kSizeTooBig];
   nonnullable_handle_message_layout& message =
-      *reinterpret_cast<nonnullable_handle_message_layout*>(buffer.get());
+      *reinterpret_cast<nonnullable_handle_message_layout*>(buffer);
   message.inline_struct.handle = ep0.get();
 
   ASSERT_TRUE(IsPeerValid(zx::unowned_eventpair(ep1)));
@@ -1957,9 +1957,9 @@ TEST(TrackingPtr, encode_union_tracking_ptr_unowned) {
 
 // Heap allocated objects are not co-located with the stack object so this tests linearization.
 TEST(TrackingPtr, encode_union_tracking_ptr_heap_allocate) {
-  constexpr int32_t int_val = 0x12345678;
+  int32_t int_val = 0x12345678;
   LLCPPStyleUnionStruct str;
-  str.u.set_Primitive(std::make_unique<int32_t>(int_val));
+  str.u.set_Primitive(fidl::unowned_ptr(&int_val));
 
   constexpr uint32_t kBufSize = 512;
   uint8_t buffer[kBufSize];
@@ -2018,12 +2018,12 @@ TEST(TrackingPtr, encode_vector_view_tracking_ptr_unowned) {
 // Heap allocated objects are not co-located with the stack object so this tests linearization.
 TEST(TrackingPtr, encode_vector_view_tracking_ptr_heap_allocate) {
   constexpr uint32_t kSize = 16;
-  auto uptr = std::make_unique<uint32_t[]>(kSize);
+  uint32_t uptr[kSize];
   for (uint32_t i = 0; i < kSize; i++)
     uptr[i] = i;
 
   Uint32VectorStruct str;
-  str.vec.set_data(std::move(uptr));
+  str.vec.set_data(fidl::unowned_ptr(uptr));
   str.vec.set_count(kSize);
 
   constexpr uint32_t kBufSize = 512;

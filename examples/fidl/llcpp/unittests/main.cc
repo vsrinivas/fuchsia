@@ -40,9 +40,9 @@ TEST(FidlExamples, Structs) {
 
 // [START unions]
 TEST(FidlExamples, Unions) {
-  auto int_val = fuchsia_examples::wire::JsonValue::WithIntValue(std::make_unique<int32_t>(1));
-  auto str_val =
-      fuchsia_examples::wire::JsonValue::WithStringValue(std::make_unique<fidl::StringView>("1"));
+  fidl::FidlAllocator allocator;
+  auto int_val = fuchsia_examples::wire::JsonValue::WithIntValue(allocator, 1);
+  auto str_val = fuchsia_examples::wire::JsonValue::WithStringValue(allocator, "1");
   ASSERT_TRUE(int_val.is_int_value());
   ASSERT_TRUE(str_val.is_string_value());
 }
