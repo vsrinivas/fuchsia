@@ -16,7 +16,7 @@
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/mp.h>
 #include <kernel/thread.h>
-#include <pretty/sizes.h>
+#include <pretty/cpp/sizes.h>
 #include <vm/bootalloc.h>
 #include <vm/page_request.h>
 #include <vm/physmap.h>
@@ -26,6 +26,8 @@
 #include "vm_priv.h"
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
+
+using pretty::FormattedBytes;
 
 KCOUNTER(pmm_alloc_async, "vm.pmm.alloc.async")
 
@@ -724,21 +726,17 @@ void PmmNode::SetMemAvailStateLocked(uint8_t mem_avail_state) {
 void PmmNode::DumpMemAvailState() const {
   Guard<Mutex> guard{&lock_};
 
-  char str[32];
   printf("watermarks: [");
   for (unsigned i = 0; i < mem_avail_state_watermark_count_; i++) {
-    format_size(str, sizeof(str), mem_avail_state_watermarks_[i] * PAGE_SIZE);
-    printf("%s%s", str, i + 1 == mem_avail_state_watermark_count_ ? "]\n" : ", ");
+    printf("%s%s", FormattedBytes(mem_avail_state_watermarks_[i] * PAGE_SIZE).str(),
+           i + 1 == mem_avail_state_watermark_count_ ? "]\n" : ", ");
   }
-  format_size(str, sizeof(str), mem_avail_state_debounce_ * PAGE_SIZE);
-  printf("debounce: %s\n", str);
-
-  format_size(str, sizeof(str), mem_avail_state_lower_bound_ * PAGE_SIZE);
-  printf("current state: %u\ncurrent bounds: [%s, ", mem_avail_state_cur_index_, str);
-  format_size(str, sizeof(str), mem_avail_state_upper_bound_ * PAGE_SIZE);
-  printf("%s]\n", str);
-  format_size(str, sizeof(str), free_count_ * PAGE_SIZE);
-  printf("free memory: %s\n", str);
+  printf("debounce: %s\n", FormattedBytes(mem_avail_state_debounce_ * PAGE_SIZE).str());
+  printf("current state: %u\n", mem_avail_state_cur_index_);
+  printf("current bounds: [%s, %s]\n",
+         FormattedBytes(mem_avail_state_lower_bound_ * PAGE_SIZE).str(),
+         FormattedBytes(mem_avail_state_upper_bound_ * PAGE_SIZE).str());
+  printf("free memory: %s\n", FormattedBytes(free_count_ * PAGE_SIZE).str());
 }
 
 uint64_t PmmNode::DebugNumPagesTillMemState(uint8_t mem_state_idx) const {

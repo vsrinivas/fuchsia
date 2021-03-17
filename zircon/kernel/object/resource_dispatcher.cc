@@ -16,8 +16,10 @@
 #include <fbl/alloc_checker.h>
 #include <kernel/auto_lock.h>
 #include <kernel/range_check.h>
-#include <pretty/sizes.h>
+#include <pretty/cpp/sizes.h>
 #include <vm/vm.h>
+
+using pretty::FormattedBytes;
 
 #define LOCAL_TRACE 0
 
@@ -304,7 +306,6 @@ void ResourceDispatcher::Dump() {
   auto callback = [&](const ResourceDispatcher& r) -> zx_status_t {
     char name[ZX_MAX_NAME_LEN];
     char flag_str[kFlagLen];
-    char pretty_size[kPrettyLen];
 
     // exit early so we can print the list in a grouped format
     // without adding overhead to the list management.
@@ -342,7 +343,7 @@ void ResourceDispatcher::Dump() {
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, format_size(pretty_size, sizeof(pretty_size), r.get_size()));
+        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).str());
         printf("\n");
         break;
       case ZX_RSRC_KIND_MMIO:
@@ -352,7 +353,7 @@ void ResourceDispatcher::Dump() {
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, format_size(pretty_size, sizeof(pretty_size), r.get_size()));
+        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).str());
         printf("\n");
         break;
       case ZX_RSRC_KIND_SMC:
@@ -362,7 +363,7 @@ void ResourceDispatcher::Dump() {
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, format_size(pretty_size, sizeof(pretty_size), r.get_size()));
+        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).str());
         printf("\n");
         break;
       case ZX_RSRC_KIND_SYSTEM:
@@ -372,7 +373,7 @@ void ResourceDispatcher::Dump() {
         printf("\t%.*s", kNameLen, name);
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base());
         printf("\t%#.*" PRIxPTR, kNumLen, r.get_base() + r.get_size());
-        printf("\t%.*s", kPrettyLen, format_size(pretty_size, sizeof(pretty_size), r.get_size()));
+        printf("\t%.*s", kPrettyLen, FormattedBytes(r.get_size()).str());
         printf("\n");
         break;
     }

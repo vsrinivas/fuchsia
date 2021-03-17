@@ -15,7 +15,7 @@
 
 #include <ktl/array.h>
 #include <ktl/optional.h>
-#include <pretty/sizes.h>
+#include <pretty/cpp/sizes.h>
 
 #include "allocation.h"
 #include "boot-zbi.h"
@@ -71,10 +71,9 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
   BootZbi::InputZbi kernel_zbi(zbitl::AsBytes(buffer.data()));
 
   {
-    char buf1[MAX_FORMAT_SIZE_LEN], buf2[MAX_FORMAT_SIZE_LEN];
     printf("physboot: STORAGE_KERNEL decompressed %s -> %s\n",
-           format_size(buf1, sizeof(buf1), (*kernel_item).header->length),
-           format_size(buf2, sizeof(buf2), kernel_zbi.size_bytes()));
+           FormattedSize((*kernel_item).header->length).str(),
+           FormattedSize(kernel_zbi.size_bytes()).str());
   }
 
   BootZbi boot;
@@ -119,18 +118,17 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
       zbi.storage().size(),
   };
 
-  char buf[MAX_FORMAT_SIZE_LEN];
   printf("physboot: Kernel @ [0x%016" PRIxPTR ", 0x%016" PRIxPTR ")  %s\n",
          boot.KernelLoadAddress(), boot.KernelLoadAddress() + boot.KernelLoadSize(),
-         format_size(buf, sizeof(buf), boot.KernelLoadSize()));
+         FormattedSize(boot.KernelLoadSize()).str());
   printf("physboot:  Entry @  0x%016" PRIxPTR "\n", boot.KernelEntryAddress());
   printf("physboot:    BSS @ [0x%016" PRIxPTR ", 0x%016" PRIxPTR ")  %s\n",
          boot.KernelLoadAddress() + boot.KernelLoadSize(),
          boot.KernelLoadAddress() + boot.KernelMemorySize(),
-         format_size(buf, sizeof(buf), boot.KernelHeader()->reserve_memory_size));
+         FormattedSize(boot.KernelHeader()->reserve_memory_size).str());
   printf("physboot: ZBI    @ [0x%016" PRIxPTR ", 0x%016" PRIxPTR ")  %s\n", boot.DataLoadAddress(),
          boot.DataLoadAddress() + boot.DataLoadSize(),
-         format_size(buf, sizeof(buf), boot.DataLoadSize()));
+         FormattedSize(boot.DataLoadSize()).str());
 
   boot.Boot();
 }

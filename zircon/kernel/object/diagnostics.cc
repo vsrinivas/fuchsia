@@ -20,8 +20,10 @@
 #include <object/job_dispatcher.h>
 #include <object/process_dispatcher.h>
 #include <object/vm_object_dispatcher.h>
-#include <pretty/sizes.h>
+#include <pretty/cpp/sizes.h>
 #include <vm/fault.h>
+
+using pretty::FormattedBytes;
 
 // Machinery to walk over a job tree and run a callback on each process.
 template <typename ProcessCallbackType>
@@ -388,8 +390,8 @@ static void PrintVmoDumpHeader(bool handles) {
          handles ? "      handle rights " : "           -      - ");
 }
 
-static void DumpVmObject(const VmObject& vmo, char format_unit, zx_handle_t handle, uint32_t rights,
-                         zx_koid_t koid) {
+static void DumpVmObject(const VmObject& vmo, pretty::SizeUnit format_unit, zx_handle_t handle,
+                         uint32_t rights, zx_koid_t koid) {
   char handle_str[11];
   if (handle != ZX_HANDLE_INVALID) {
     snprintf(handle_str, sizeof(handle_str), "%u", static_cast<uint32_t>(handle));
@@ -406,14 +408,13 @@ static void DumpVmObject(const VmObject& vmo, char format_unit, zx_handle_t hand
     rights_str[1] = '\0';
   }
 
-  char size_str[MAX_FORMAT_SIZE_LEN];
-  format_size_fixed(size_str, sizeof(size_str), vmo.size(), format_unit);
+  FormattedBytes size_str(vmo.size(), format_unit);
 
-  char alloc_str[MAX_FORMAT_SIZE_LEN];
+  FormattedBytes alloc_size;
+  const char *alloc_str = "phys";
   if (vmo.is_paged()) {
-    format_size_fixed(alloc_str, sizeof(alloc_str), vmo.AttributedPages() * PAGE_SIZE, format_unit);
-  } else {
-    strlcpy(alloc_str, "phys", sizeof(alloc_str));
+    alloc_size.SetSize(vmo.AttributedPages() * PAGE_SIZE, format_unit);
+    alloc_str = alloc_size.str();
   }
 
   char child_str[21];
@@ -448,7 +449,7 @@ static void DumpVmObject(const VmObject& vmo, char format_unit, zx_handle_t hand
       "%7s "   // allocated bytes
       "%s\n",  // name
       handle_str, rights_str, koid, &vmo, child_str, vmo.num_children(), vmo.num_mappings(),
-      vmo.share_count(), size_str, alloc_str, name);
+      vmo.share_count(), size_str.str(), alloc_str, name);
 }
 
 // If |hidden_only| is set, will only dump VMOs that are not mapped
@@ -456,7 +457,7 @@ static void DumpVmObject(const VmObject& vmo, char format_unit, zx_handle_t hand
 // - VMOs that userspace has handles to but does not map
 // - VMOs that are mapped only into kernel space
 // - Kernel-only, unmapped VMOs that have no handles
-static void DumpAllVmObjects(bool hidden_only, char format_unit) {
+static void DumpAllVmObjects(bool hidden_only, pretty::SizeUnit format_unit) {
   if (hidden_only) {
     printf("\"Hidden\" VMOs, oldest to newest:\n");
   } else {
@@ -482,7 +483,7 @@ namespace {
 // Dumps VMOs under a VmAspace.
 class AspaceVmoDumper final : public VmEnumerator {
  public:
-  AspaceVmoDumper(char format_unit) : format_unit_(format_unit) {}
+  explicit AspaceVmoDumper(pretty::SizeUnit format_unit) : format_unit_(format_unit) {}
   bool OnVmMapping(const VmMapping* map, const VmAddressRegion* vmar, uint depth) final {
     auto vmo = map->vmo_locked();
     DumpVmObject(*vmo, format_unit_, ZX_HANDLE_INVALID,
@@ -492,12 +493,11 @@ class AspaceVmoDumper final : public VmEnumerator {
   }
 
  private:
-  const char format_unit_;
+  pretty::SizeUnit format_unit_;
 };
-}  // namespace
 
 // Dumps all VMOs associated with a process.
-static void DumpProcessVmObjects(zx_koid_t id, char format_unit) {
+void DumpProcessVmObjects(zx_koid_t id, pretty::SizeUnit format_unit) {
   auto pd = ProcessDispatcher::LookupProcessById(id);
   if (!pd) {
     printf("process not found!\n");
@@ -528,11 +528,9 @@ static void DumpProcessVmObjects(zx_koid_t id, char format_unit) {
         total_alloc += vmo->AttributedPages() * PAGE_SIZE;
         return ZX_OK;
       });
-  char size_str[MAX_FORMAT_SIZE_LEN];
-  char alloc_str[MAX_FORMAT_SIZE_LEN];
   printf("  total: %d VMOs, size %s, alloc %s\n", count,
-         format_size_fixed(size_str, sizeof(size_str), total_size, format_unit),
-         format_size_fixed(alloc_str, sizeof(alloc_str), total_alloc, format_unit));
+         FormattedBytes(total_size, format_unit).str(),
+         FormattedBytes(total_alloc, format_unit).str());
 
   // Call DumpVmObject() on all VMOs under the process's VmAspace.
   printf("Mapped VMOs:\n");
@@ -541,6 +539,8 @@ static void DumpProcessVmObjects(zx_koid_t id, char format_unit) {
   pd->aspace()->EnumerateChildren(&avd);
   PrintVmoDumpHeader(/* handles */ false);
 }
+
+}  // namespace
 
 void KillProcess(zx_koid_t id) {
   // search the process list and send a kill if found
@@ -1062,10 +1062,10 @@ static int cmd_diagnostics(int argc, const cmd_args* argv, uint32_t flags) {
   } else if (strcmp(argv[1].str, "vmos") == 0) {
     if (argc < 3)
       goto usage;
-    char format_unit = 0;
+    pretty::SizeUnit format_unit = pretty::SizeUnit::kAuto;
     if (argc >= 4) {
       if (!strncmp(argv[3].str, "-u", sizeof("-u") - 1)) {
-        format_unit = argv[3].str[sizeof("-u") - 1];
+        format_unit = static_cast<pretty::SizeUnit>(argv[3].str[sizeof("-u") - 1]);
       } else {
         printf("dunno '%s'\n", argv[3].str);
         goto usage;

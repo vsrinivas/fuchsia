@@ -16,7 +16,7 @@
 
 #include <kernel/range_check.h>
 #include <ktl/limits.h>
-#include <pretty/sizes.h>
+#include <pretty/cpp/sizes.h>
 #include <vm/bootalloc.h>
 #include <vm/bootreserve.h>
 #include <vm/physmap.h>
@@ -208,9 +208,8 @@ void PmmArena::CountStates(size_t state_count[VmPageStateIndex(vm_page_state::CO
 }
 
 void PmmArena::Dump(bool dump_pages, bool dump_free_ranges) const {
-  char pbuf[16];
-  printf("  arena %p: name '%s' base %#" PRIxPTR " size %s (0x%zx) flags 0x%x\n", this,
-         name(), base(), format_size(pbuf, sizeof(pbuf), size()), size(), flags());
+  printf("  arena %p: name '%s' base %#" PRIxPTR " size %s (0x%zx) flags 0x%x\n", this, name(),
+         base(), pretty::FormattedBytes(size()).str(), size(), flags());
   printf("\tpage_array %p search_hint %lu\n", page_array_, search_hint_);
 
   // dump all of the pages
