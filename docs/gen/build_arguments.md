@@ -859,7 +859,7 @@ List of labels for objects to include in the ZBI.
 
 **Current value (from the default):** `[]`
 
-From //build/dev.gni:27
+From //build/dev.gni:37
 
 ### dev_build_only_deps
 List of labels for targets that should be built but not included in any
@@ -868,6 +868,15 @@ build outputs that are part of the build API (e.g. zbi's, package servers).
 **Current value (from the default):** `[]`
 
 From //build/dev.gni:14
+
+### dev_fuchsia_zbi_bootfs_filelist_golden
+An optional golden file for fuchsia.zbi bootFS file list. If specified,
+this golden file would be compared against fuchsia.zbi bootFS file list
+during build time.
+
+**Current value (from the default):** `""`
+
+From //build/dev.gni:29
 
 ### dev_fuchsia_zbi_kernel_cmdline_golden
 An optional golden file for fuchsia.zbi kernel cmdline args. If specified,
@@ -883,7 +892,16 @@ List of binary labels to include in the recovery ZBI.
 
 **Current value (from the default):** `[]`
 
-From //build/dev.gni:33
+From //build/dev.gni:43
+
+### dev_recovery_zbi_bootfs_filelist_golden
+An optional golden file for recovery.zbi bootFS file list. If specified,
+this golden file would be compared against recovery.zbi bootFS file list
+during build time.
+
+**Current value (from the default):** `""`
+
+From //build/dev.gni:34
 
 ### dev_recovery_zbi_kernel_cmdline_golden
 An optional golden file for recovery.zbi kernel cmdline args. If specified,
@@ -916,14 +934,14 @@ Default value is 'all', it is preferable to set to 'none' for production
 
 **Current value (from the default):** `"all"`
 
-From //build/dev.gni:46
+From //build/dev.gni:56
 
 ### dev_zedboot_bootfs_labels
 List of binary labels to include in the zedboot ZBI.
 
 **Current value (from the default):** `[]`
 
-From //build/dev.gni:30
+From //build/dev.gni:40
 
 ### devmgr_config
 List of arguments to add to /boot/config/devmgr.
@@ -947,6 +965,13 @@ flag platform_enable_user_pci in //src/devices/bus/drivers/pci/pci.gni.
 **Current value (from the default):** `false`
 
 From //zircon/kernel/params.gni:64
+
+### dwarf_version
+Explicitly specify DWARF version used.
+
+**Current value (from the default):** `4`
+
+From //build/config/compiler.gni:67
 
 ### enable_api_diff
 Detect dart API changes
