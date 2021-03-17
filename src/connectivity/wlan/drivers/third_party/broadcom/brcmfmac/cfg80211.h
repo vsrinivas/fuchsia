@@ -54,8 +54,10 @@
 #define BRCMF_AP_START_TIMER_DUR_MS       ZX_MSEC(1000) /* AP start timer dur */
 #define BRCMF_CONNECT_TIMER_DUR_MS        ZX_MSEC(1500) /*connect timer dur*/
 #define BRCMF_CONNECT_LOG_DUR             ZX_SEC(30) /* 30 seconds */
-// Connect log will be printed out in the Signal report timer handler every 5 minutes
+// Connect log will be printed out in the Signal report timer handler every 5 minutes.
 #define BRCMF_CONNECT_LOG_COUNT           (BRCMF_CONNECT_LOG_DUR / BRCMF_SIGNAL_REPORT_TIMER_DUR_MS)
+// The time threshold to distinguish whether the device encounters an rx freeze.
+#define BRCMF_RX_FREEZE_THRESHOLD         ZX_MIN(2)
 
 #define WL_ESCAN_ACTION_START      1
 #define WL_ESCAN_ACTION_CONTINUE   2

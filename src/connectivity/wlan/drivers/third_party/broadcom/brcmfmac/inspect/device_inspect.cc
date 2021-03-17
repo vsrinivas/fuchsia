@@ -39,6 +39,12 @@ zx_status_t DeviceInspect::Create(async_dispatcher_t* dispatcher,
     return status;
   }
 
+  inspect->rx_freeze_ = inspect->root_.CreateUint("rx_freeze", 0);
+  if ((status = inspect->rx_freeze_24hrs_.Init(&inspect->root_, 24, "rx_freeze_24hrs", 0)) !=
+      ZX_OK) {
+    return status;
+  }
+
   DeviceConnMetrics& conn_metrics_ = inspect->conn_metrics_;
   conn_metrics_.root = inspect->root_.CreateChild("connection-metrics");
   conn_metrics_.success = conn_metrics_.root.CreateUint("success", 0);
@@ -69,6 +75,7 @@ zx_status_t DeviceInspect::Create(async_dispatcher_t* dispatcher,
       [inspect = inspect.get()]() {
         inspect->tx_qfull_24hrs_.SlideWindow();
         inspect->fw_recovered_24hrs_.SlideWindow();
+        inspect->rx_freeze_24hrs_.SlideWindow();
         inspect->conn_metrics_.success_24hrs.SlideWindow();
         inspect->conn_metrics_.no_network_fail_24hrs.SlideWindow();
         inspect->conn_metrics_.auth_fail_24hrs.SlideWindow();
@@ -106,6 +113,11 @@ void DeviceInspect::LogConnNoNetworkFail() {
 void DeviceInspect::LogConnOtherFail() {
   conn_metrics_.other_fail.Add(1);
   conn_metrics_.other_fail_24hrs.Add(1);
+}
+
+void DeviceInspect::LogRxFreeze() {
+  rx_freeze_.Add(1);
+  rx_freeze_24hrs_.Add(1);
 }
 
 }  // namespace wlan::brcmfmac
