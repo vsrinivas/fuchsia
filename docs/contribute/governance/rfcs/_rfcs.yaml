@@ -348,7 +348,7 @@
   area: ['FIDL']
   issue: [68955]
   gerrit_change_id: ['480497']
-  status: 'Socialization'
+  status: 'Accepted'
   reviewers: ['pascallouis@google.com', 'mkember@google.com', 'jeremymanson@google.com', 'gridman@google.com']
   submitted: '2021-03-16'
   reviewed: '2021-03-16'
