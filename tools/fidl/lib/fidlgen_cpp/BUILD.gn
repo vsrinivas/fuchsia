@@ -10,6 +10,7 @@ go_library("fidlgen_cpp") {
   sources = [
     "clang_formatter.go",
     "enum.go",
+    "handles.go",
     "ir.go",
     "names.go",
     "namespace.go",

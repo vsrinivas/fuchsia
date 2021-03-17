@@ -155,11 +155,6 @@ type Member interface {
 	NameAndType() (string, Type)
 }
 
-type HandleInformation struct {
-	ObjectType string
-	Rights     string
-}
-
 type ConstantValue struct {
 	Natural string
 	Wire    string
@@ -706,37 +701,6 @@ var primitiveTypes = map[fidl.PrimitiveSubtype]string{
 	fidl.Float64: "double",
 }
 
-var handleSubtypeConsts = map[fidl.HandleSubtype]string{
-	fidl.Bti:          "BTI",
-	fidl.Channel:      "CHANNEL",
-	fidl.Clock:        "CLOCK",
-	fidl.DebugLog:     "LOG",
-	fidl.Event:        "EVENT",
-	fidl.Eventpair:    "EVENTPAIR",
-	fidl.Exception:    "EXCEPTION",
-	fidl.Fifo:         "FIFO",
-	fidl.Guest:        "GUEST",
-	fidl.Handle:       "NONE",
-	fidl.Interrupt:    "INTERRUPT",
-	fidl.Iommu:        "IOMMU",
-	fidl.Job:          "JOB",
-	fidl.Pager:        "PAGER",
-	fidl.PciDevice:    "PCI_DEVICE",
-	fidl.Pmt:          "PMT",
-	fidl.Port:         "PORT",
-	fidl.Process:      "PROCESS",
-	fidl.Profile:      "PROFILE",
-	fidl.Resource:     "RESOURCE",
-	fidl.Socket:       "SOCKET",
-	fidl.Stream:       "STREAM",
-	fidl.SuspendToken: "SUSPEND_TOKEN",
-	fidl.Thread:       "THREAD",
-	fidl.Time:         "TIMER",
-	fidl.Vcpu:         "VCPU",
-	fidl.Vmar:         "VMAR",
-	fidl.Vmo:          "VMO",
-}
-
 // TypeNameForPrimitive returns the C++ name of a FIDL primitive type.
 func TypeNameForPrimitive(t fidl.PrimitiveSubtype) TypeName {
 	return PrimitiveTypeName(primitiveTypes[t])
@@ -940,32 +904,6 @@ func (c *compiler) compilePrimitiveSubtype(val fidl.PrimitiveSubtype) string {
 		return t
 	}
 	panic(fmt.Sprintf("unknown primitive type: %v", val))
-}
-
-func (c *compiler) fieldHandleInformation(val *fidl.Type) *HandleInformation {
-	if val.ElementType != nil {
-		return c.fieldHandleInformation(val.ElementType)
-	}
-	if val.Kind == fidl.RequestType || val.Kind != fidl.HandleType {
-		return nil
-	}
-	if val.Kind == fidl.IdentifierType {
-		declInfo, ok := c.decls[val.Identifier]
-		if !ok {
-			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
-		}
-		if declInfo.Type == fidl.ProtocolDeclType {
-			return nil
-		}
-	}
-	subtype, ok := handleSubtypeConsts[val.HandleSubtype]
-	if !ok {
-		panic(fmt.Sprintf("unknown handle type for const: %v", val))
-	}
-	return &HandleInformation{
-		ObjectType: fmt.Sprintf("ZX_OBJ_TYPE_%s", subtype),
-		Rights:     fmt.Sprintf("0x%x", val.HandleRights),
-	}
 }
 
 func (c *compiler) compileType(val fidl.Type) Type {
