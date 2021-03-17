@@ -52,9 +52,11 @@ zx_status_t C18::Msdc0Init() {
 
   static const pbus_metadata_t msdc0_metadata[] = {
       {.type = DEVICE_METADATA_PRIVATE,
-       .data_buffer = &msdc0_config,
+       .data_buffer = reinterpret_cast<const uint8_t*>(&msdc0_config),
        .data_size = sizeof(msdc0_config)},
-      {.type = DEVICE_METADATA_GUID_MAP, .data_buffer = guid_map, .data_size = sizeof(guid_map)}};
+      {.type = DEVICE_METADATA_GUID_MAP,
+       .data_buffer = reinterpret_cast<const uint8_t*>(guid_map),
+       .data_size = sizeof(guid_map)}};
 
   static const pbus_irq_t msdc0_irqs[] = {
       {.irq = MT8183_IRQ_MSDC0, .mode = ZX_INTERRUPT_MODE_LEVEL_HIGH}};

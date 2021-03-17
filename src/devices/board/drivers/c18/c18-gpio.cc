@@ -40,7 +40,7 @@ zx_status_t C18::GpioInit() {
 
   const pbus_metadata_t c18_gpio_metadata[] = {{
       .type = DEVICE_METADATA_GPIO_PINS,
-      .data_buffer = &c18_gpio_pins,
+      .data_buffer = reinterpret_cast<const uint8_t*>(&c18_gpio_pins),
       .data_size = sizeof(c18_gpio_pins),
   }};
 
