@@ -73,4 +73,8 @@ enum ReasonCode : uint16 {
     MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS = 64;
     MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS = 65;
     MESH_CHANNEL_SWITCH_UNSPECIFIED = 66;
+
+    /// Use reserved value 128 to indicate when MLME lost the link. This is usually
+    /// caused by loss of signal with the AP.
+    MLME_LINK_FAILED = 128;
 };
