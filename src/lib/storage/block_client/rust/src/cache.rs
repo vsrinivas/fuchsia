@@ -194,6 +194,12 @@ impl Cache {
     pub fn device(&self) -> &RemoteBlockDevice {
         &self.device
     }
+
+    #[doc(hidden)]
+    // Transitional; remove this after soft migration.
+    pub async fn flush_device(&self) -> Result<(), Error> {
+        self.device.flush().await
+    }
 }
 
 impl Drop for Cache {
