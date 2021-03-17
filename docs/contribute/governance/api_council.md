@@ -123,41 +123,7 @@ The council is comprised of Fuchsia contributors who have demonstrated:
 *   Strong communication and collaboration skills, as viewed by API designers
     (i.e., their collaborators).
 
-Members are appointed by each functional area of the project:
-
-| Area              | Appointee                |
-| ----------------- | ------------------------ |
-| Auth              | jsankey@google.com       |
-| Bluetooth         | jamuraa@google.com       |
-| Component Runtime | geb@google.com           |
-| DDK               | jocelyndang@google.com   |
-| Developer         | dschuyler@google.com     |
-| Diagnostics       | crjohns@google.com       |
-| Drivers           | ravoorir@google.com      |
-| Experiences       | chaselatta@google.com    |
-| FIDL              | ianloic@google.com       |
-| Firmware          | dpursell@google.com      |
-| Graphics          | jbauman@google.com       |
-| View System       | jaeheon@google.com       |
-| HCI (a11y, i18n)  | neelsa@google.com        |
-| Kernel            | cpu@google.com           |
-| Ledger            | qsr@google.com           |
-| Media             | dalesat@google.com       |
-| Metrics           | camrdale@google.com      |
-| Netstack          | brunodalbo@google.com    |
-| Security          | jsankey@google.com       |
-| Sessions          | lindkvist@google.com     |
-| Software Delivery | computerdruid@google.com |
-| Storage           | manalib@google.com       |
-| System            | cpu@google.com           |
-| Toolchain         | mcgrathr@google.com      |
-| Virtualization    | abdulla@google.com       |
-| Web               | wez@google.com           |
-| WLAN              | silberst@google.com      |
-
-As the project evolves, the list of functional areas (and therefore the makeup
-of the council) will evolve as well. The list of functional areas is maintained
-by Fuchsia leadership.
+Members are appointed by each [functional area](#area) of the project.
 
 The council is overseen by the [Fuchsia Eng Council][eng-council].
 
@@ -168,6 +134,49 @@ following responsibilities:
 * Schedules meetings.
 * Sets the agenda for each meeting.
 * Assesses if the council has reached [rough consensus][rough-consensus].
+
+## Functional areas {#area}
+
+| Area              | Primary                  | Secondary                |
+| ----------------- | ------------------------ | ------------------------ |
+| Auth              | jsankey@google.com       | _none._                  |
+| Bluetooth         | jamuraa@google.com       | silberst@google.com      |
+| Component Runtime | geb@google.com           | lindkvist@google.com     |
+| DDK               | jocelyndang@google.com   | ravoorir@google.com      |
+| Developer         | dschuyler@google.com     | crjohns@google.com       |
+| Diagnostics       | crjohns@google.com       | _none._                  |
+| Drivers           | ravoorir@google.com      | jocelyndang@google.com   |
+| Experiences       | chaselatta@google.com    | ianloic@google.com       |
+| FIDL              | ianloic@google.com       | _none._                  |
+| Firmware          | dpursell@google.com      | _none._                  |
+| Graphics          | jbauman@google.com       | _none._                  |
+| HCI (a11y, i18n)  | neelsa@google.com        | jaeheon@google.com       |
+| Kernel            | cpu@google.com           | abarth@google.com        |
+| Ledger            | qsr@google.com           | _none._                  |
+| Media             | dalesat@google.com       | _none._                  |
+| Metrics           | camrdale@google.com      | _none._                  |
+| Netstack          | brunodalbo@google.com    | _none._                  |
+| Security          | jsankey@google.com       | _none._                  |
+| Sessions          | lindkvist@google.com     | _none._                  |
+| Software Delivery | computerdruid@google.com | _none._                  |
+| Storage           | manalib@google.com       | _none._                  |
+| System            | cpu@google.com           | _none._                  |
+| Toolchain         | mcgrathr@google.com      | _none._                  |
+| View System       | jaeheon@google.com       | neelsa@google.com        |
+| Virtualization    | abdulla@google.com       | _none._                  |
+| Web               | wez@google.com           | ianloic@google.com       |
+| WLAN              | silberst@google.com      | _none._                  |
+
+As the project evolves, the list of functional areas (and therefore the makeup
+of the council) will evolve as well. The list of functional areas is maintained
+by Fuchsia leadership.
+
+When considering adding an area, the council considers:
+
+1. **Coverage.** Is this area already covered by one of the other areas, or is
+   there a gap?
+2. **Scope.** Is this area sufficiently large to warrant a dedicated appointee?
+3. **Consistent need.**. Has the need to have this as an area arisen before?
 
 ## Decision process
 
@@ -212,6 +221,10 @@ privacy considerations. An API reviewer can always request the API designer to
 write an API Design Document, even for small changes if the API reviewer does
 not feel comfortable approving the change purely through code review.
 
+For inclusion in the Fuchsia SDK, an API must clear two hurdles: there must be a
+ready and willing customer, and the API must have gone through [API
+calibration](#calibration).
+
 API designers are also encouraged to seek early feedback from council members.
 For example, API designers should consider sharing work-in-progress API Design
 Documents with council members to get input early in the design process. Council
@@ -235,7 +248,7 @@ document to the full council if the API reviewer does not feel sufficiently
 calibrated, if the API is particularly complex or important, or if the reviewer
 feels pressured by looming deadlines or other teams.
 
-### API calibration
+### API calibration {#calibration}
 
 Periodically, the API council will meet for *API calibration*. The purpose of
 API calibration is to promote consistency of API reviews across the project and
