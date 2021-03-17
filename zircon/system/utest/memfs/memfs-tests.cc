@@ -122,56 +122,6 @@ TEST(MemfsTests, TestMemfsAppend) {
   ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
 }
 
-TEST(MemfsTests, TestMemfsInstall) {
-  memfs_filesystem_t* fs;
-  memfs_filesystem_t* fs_2;
-  {
-    async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
-    ASSERT_EQ(loop.StartThread(), ZX_OK);
-
-    ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/mytmp", &fs), ZX_OK);
-    int fd = open("/mytmp", O_DIRECTORY | O_RDONLY);
-    ASSERT_GE(fd, 0);
-
-    // Access files within the filesystem.
-    DIR* d = fdopendir(fd);
-
-    // Create a file
-    const char* filename = "file-a";
-    fd = openat(dirfd(d), filename, O_CREAT | O_RDWR);
-    ASSERT_GE(fd, 0);
-    const char* data = "hello";
-    ssize_t datalen = strlen(data);
-    ASSERT_EQ(write(fd, data, datalen), datalen);
-    ASSERT_EQ(lseek(fd, 0, SEEK_SET), 0);
-    char buf[32];
-    ASSERT_EQ(read(fd, buf, sizeof(buf)), datalen);
-    ASSERT_EQ(memcmp(buf, data, datalen), 0);
-    close(fd);
-
-    // Readdir the file
-    struct dirent* de;
-    ASSERT_NOT_NULL((de = readdir(d)));
-    ASSERT_EQ(strcmp(de->d_name, "."), 0);
-    ASSERT_NOT_NULL((de = readdir(d)));
-    ASSERT_EQ(strcmp(de->d_name, filename), 0);
-    ASSERT_NULL(readdir(d));
-
-    ASSERT_EQ(closedir(d), 0);
-    ASSERT_EQ(memfs_install_at(loop.dispatcher(), "/mytmp", &fs_2), ZX_ERR_ALREADY_EXISTS);
-
-    // Wait for cleanup of failed memfs install.
-    sync_completion_t unmounted;
-    async::PostTask(loop.dispatcher(), [&unmounted]() { sync_completion_signal(&unmounted); });
-    ASSERT_EQ(sync_completion_wait(&unmounted, zx::duration::infinite().get()), ZX_OK);
-
-    loop.Shutdown();
-  }
-  memfs_uninstall_unsafe(fs, "/mytmp");
-
-  // No way to clean up the namespace entry. See fxbug.dev/31875 for more details.
-}
-
 TEST(MemfsTests, TestMemfsCloseDuringAccess) {
   for (int i = 0; i < 100; i++) {
     async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);

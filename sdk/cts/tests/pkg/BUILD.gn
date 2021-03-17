@@ -6,6 +6,7 @@ group("tests") {
   deps = [
     "fdio:tests",
     "fidl/cpp:tests",
+    "memfs:tests",
   ]
   testonly = true
 }
