@@ -355,7 +355,7 @@ void HostVisibleHeap::CreateResource(::zx::vmo vmo,
 
     // Create actual data buffer and map physical address |paddr| to
     // address of the buffer's host memory.
-    auto result = control()->CreateBuffer2(std::move(vmo_dup), std::move(create_params));
+    auto result = control()->CreateBuffer2(allocator, std::move(vmo_dup), std::move(create_params));
     if (result.is_error()) {
       zxlogf(ERROR, "[%s] CreateBuffer2 error: status %d", kTag, status);
       completer.Close(result.error());
