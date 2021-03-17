@@ -8,8 +8,6 @@
 #include <lib/async/default.h>
 #include <lib/fit/function.h>
 
-#include "src/ui/scenic/lib/utils/helpers.h"
-
 namespace flatland {
 
 FlatlandManager::FlatlandManager(async_dispatcher_t* dispatcher,
@@ -55,8 +53,9 @@ void FlatlandManager::CreateFlatland(
     auto& instance = result.first->second;
     instance->impl = std::make_shared<Flatland>(
         instance->loop.dispatcher(), std::move(request), id,
-        std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), CreateOrGetAllocator(),
-        flatland_presenter_, link_system_, uber_struct_system_->AllocateQueueForSession(id));
+        std::bind(&FlatlandManager::DestroyInstanceFunction, this, id), flatland_presenter_,
+        link_system_, uber_struct_system_->AllocateQueueForSession(id),
+        buffer_collection_importers_);
 
     const std::string name = "Flatland ID=" + std::to_string(id);
     zx_status_t status = instance->loop.StartThread(name.c_str());
@@ -201,17 +200,6 @@ void FlatlandManager::RemoveFlatlandInstance(scheduling::SessionId session_id) {
   flatland_instances_.erase(session_id);
   uber_struct_system_->RemoveSession(session_id);
   flatland_presenter_->RemoveSession(session_id);
-}
-
-std::shared_ptr<Allocator> FlatlandManager::CreateOrGetAllocator() {
-  if (allocator_)
-    return allocator_;
-
-  // TODO(fxbug.dev/70692): Define the scope of Allocator and add fidl bindings. Move this under
-  // scenic/app.cc.
-  allocator_ = std::make_shared<Allocator>(
-      buffer_collection_importers_, utils::CreateSysmemAllocatorSyncPtr("FlatlandAllocator"));
-  return allocator_;
 }
 
 void FlatlandManager::DestroyInstanceFunction(scheduling::SessionId session_id) {

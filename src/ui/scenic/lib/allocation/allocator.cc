@@ -19,16 +19,21 @@ using fuchsia::scenic::allocation::RegisterBufferCollectionError;
 namespace allocation {
 
 Allocator::Allocator(
+    sys::ComponentContext* app_context,
     const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator)
     : buffer_collection_importers_(buffer_collection_importers),
       sysmem_allocator_(std::move(sysmem_allocator)),
-      weak_factory_(this) {}
+      weak_factory_(this) {
+  FX_DCHECK(app_context);
+  app_context->outgoing()->AddPublicService(bindings_.GetHandler(this));
+  FX_DCHECK(async_get_default_dispatcher());
+}
 
 Allocator::~Allocator() {
-  // Allocator outlives Flatland instances, because Flatland holds a shared_ptr to an Allocator.
-  // Also, passes the shared_ptr to release_fences. It is safe to release all remaining buffer
-  // collections because there should be no Flatland usage.
+  // Allocator outlives |buffer_collection_importers_| instances, because Scenic app guarantees that
+  // in dtor sequence. It is safe to release all remaining buffer collections because there should
+  // be no more usage.
   while (!buffer_collections_.empty()) {
     ReleaseBufferCollection(*buffer_collections_.begin());
   }
@@ -68,8 +73,8 @@ void Allocator::RegisterBufferCollection(
     return;
   }
 
-  // Create a token for each of the buffer collection importers and stick all of the tokens into an
-  // std::vector.
+  // Create a token for each of the buffer collection importers and stick all of the tokens into
+  // a std::vector.
   fuchsia::sysmem::BufferCollectionTokenSyncPtr sync_token = buffer_collection_token.BindSync();
   std::vector<fuchsia::sysmem::BufferCollectionTokenSyncPtr> tokens;
   for (uint32_t i = 0; i < buffer_collection_importers_.size(); i++) {

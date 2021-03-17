@@ -5,6 +5,7 @@
 #include "src/ui/scenic/lib/flatland/flatland.h"
 
 #include <lib/async/time.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <limits>
@@ -267,21 +268,19 @@ class FlatlandTest : public gtest::TestLoopFixture {
   }
 
   std::shared_ptr<Allocator> CreateAllocator() {
-    std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers;
+    std::vector<std::shared_ptr<BufferCollectionImporter>> importers;
     importers.push_back(buffer_collection_importer_);
-    return std::make_shared<Allocator>(importers,
+    return std::make_shared<Allocator>(context_provider_.context(), importers,
                                        utils::CreateSysmemAllocatorSyncPtr("-allocator"));
   }
 
-  Flatland CreateFlatland(std::shared_ptr<Allocator> allocator = nullptr) {
-    if (!allocator)
-      allocator = CreateAllocator();
+  Flatland CreateFlatland() {
     auto session_id = scheduling::GetNextSessionId();
     flatlands_.push_back({});
-    return Flatland(
-        dispatcher(), flatlands_.back().NewRequest(), session_id,
-        /*destroy_instance_functon=*/[]() {}, allocator, flatland_presenter_, link_system_,
-        uber_struct_system_->AllocateQueueForSession(session_id));
+    return Flatland(dispatcher(), flatlands_.back().NewRequest(), session_id,
+                    /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
+                    uber_struct_system_->AllocateQueueForSession(session_id),
+                    {buffer_collection_importer_});
   }
 
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> CreateToken() {
@@ -449,6 +448,7 @@ class FlatlandTest : public gtest::TestLoopFixture {
   const std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
   const std::shared_ptr<LinkSystem> link_system_;
+  sys::testing::ComponentContextProvider context_provider_;
 
  private:
   std::vector<fuchsia::ui::scenic::internal::FlatlandPtr> flatlands_;
@@ -2335,7 +2335,7 @@ TEST_F(FlatlandTest, SetLinkOnTransformErrorCases) {
 
 TEST_F(FlatlandTest, ReleaseLinkErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Zero is not a valid link_id.
   flatland.ReleaseLink(0, [](ContentLinkToken token) { EXPECT_TRUE(false); });
@@ -2694,7 +2694,7 @@ TEST_F(FlatlandTest, RecreateReleasedLinkSameToken) {
 
 TEST_F(FlatlandTest, SetLinkSizeErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   const ContentId kIdNotCreated = 1;
 
@@ -2857,7 +2857,7 @@ TEST_F(FlatlandTest, EmptyLogicalSizePreservesOldSize) {
 
 TEST_F(FlatlandTest, CreateImageValidCase) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = 1;
@@ -2873,7 +2873,7 @@ TEST_F(FlatlandTest, CreateImageValidCase) {
 
 TEST_F(FlatlandTest, CreateImageErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Default image properties.
   const uint32_t kDefaultVmoIndex = 1;
@@ -2971,7 +2971,7 @@ TEST_F(FlatlandTest, CreateImageErrorCases) {
 
 TEST_F(FlatlandTest, CreateImageWithDuplicatedImportTokens) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
   REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
@@ -2991,9 +2991,43 @@ TEST_F(FlatlandTest, CreateImageWithDuplicatedImportTokens) {
   }
 }
 
+TEST_F(FlatlandTest, CreateImageInMultipleFlatlands) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  Flatland flatland1 = CreateFlatland();
+  Flatland flatland2 = CreateFlatland();
+
+  BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
+  REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
+
+  // We can import the same image in both flatland instances.
+  {
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
+    ImageProperties properties;
+    properties.set_width(150);
+    properties.set_height(175);
+    flatland1.CreateImage(1, ref_pair.DuplicateImportToken(), 0, std::move(properties));
+    PRESENT(flatland1, true);
+  }
+  {
+    EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferImage(_)).WillOnce(Return(true));
+    ImageProperties properties;
+    properties.set_width(150);
+    properties.set_height(175);
+    flatland2.CreateImage(1, ref_pair.DuplicateImportToken(), 0, std::move(properties));
+    PRESENT(flatland2, true);
+  }
+
+  // There are seperate ReleaseBufferImage calls to release them from importers.
+  EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferImage(_)).Times(2);
+  flatland1.ClearGraph();
+  PRESENT(flatland1, true);
+  flatland2.ClearGraph();
+  PRESENT(flatland2, true);
+}
+
 TEST_F(FlatlandTest, SetContentOnTransformErrorCases) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = 1;
@@ -3028,7 +3062,7 @@ TEST_F(FlatlandTest, SetContentOnTransformErrorCases) {
 
 TEST_F(FlatlandTest, ClearContentOnTransform) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = 1;
@@ -3076,7 +3110,7 @@ TEST_F(FlatlandTest, ClearContentOnTransform) {
 
 TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Setup two valid images.
   const ContentId kImageId1 = 1;
@@ -3161,7 +3195,7 @@ TEST_F(FlatlandTest, TopologyVisitsContentBeforeChildren) {
 // tokens.
 TEST_F(FlatlandTest, ReleaseBufferCollectionHappensAfterCreateImage) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Register a valid buffer collection.
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
@@ -3187,7 +3221,7 @@ TEST_F(FlatlandTest, ReleaseBufferCollectionCompletesAfterFlatlandDestruction) {
   ContentId global_image_id;
   {
     std::shared_ptr<Allocator> allocator = CreateAllocator();
-    Flatland flatland = CreateFlatland(allocator);
+    Flatland flatland = CreateFlatland();
 
     const ContentId kImageId = 3;
     BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
@@ -3234,7 +3268,7 @@ TEST_F(FlatlandTest, ReleaseBufferCollectionCompletesAfterFlatlandDestruction) {
 // fence is signaled.
 TEST_F(FlatlandTest, ReleaseImageWaitsForReleaseFence) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Setup a valid buffer collection and Image.
   const ContentId kImageId = 1;
@@ -3327,14 +3361,14 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
   // Create flatland and allocator instances that has two BufferCollectionImporters.
   std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> importers(
       {buffer_collection_importer_, local_buffer_collection_importer});
-  std::shared_ptr<Allocator> allocator =
-      std::make_shared<Allocator>(importers, utils::CreateSysmemAllocatorSyncPtr());
+  std::shared_ptr<Allocator> allocator = std::make_shared<Allocator>(
+      context_provider_.context(), importers, utils::CreateSysmemAllocatorSyncPtr());
   auto session_id = scheduling::GetNextSessionId();
   fuchsia::ui::scenic::internal::FlatlandPtr flatland_ptr;
   auto flatland = Flatland(
       dispatcher(), flatland_ptr.NewRequest(), session_id,
-      /*destroy_instance_functon=*/[]() {}, allocator, flatland_presenter_, link_system_,
-      uber_struct_system_->AllocateQueueForSession(session_id));
+      /*destroy_instance_functon=*/[]() {}, flatland_presenter_, link_system_,
+      uber_struct_system_->AllocateQueueForSession(session_id), importers);
   EXPECT_CALL(*local_mock_buffer_collection_importer, ImportBufferCollection(_, _, _))
       .WillOnce(Return(true));
 
@@ -3358,7 +3392,7 @@ TEST_F(FlatlandTest, ImageImportPassesAndFailsOnDifferentImportersTest) {
 // on |ImportBufferImage()| that this is caught when we try to present.
 TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
   REGISTER_BUFFER_COLLECTION(allocator, ref_pair.export_token, CreateToken(), true);
@@ -3392,7 +3426,7 @@ TEST_F(FlatlandTest, BufferImporterImportImageReturnsFalseTest) {
 // to release the image.
 TEST_F(FlatlandTest, BufferImporterImageReleaseTest) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = 1;
@@ -3432,7 +3466,7 @@ TEST_F(FlatlandTest, BufferImporterImageReleaseTest) {
 
 TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = 1;
@@ -3493,7 +3527,7 @@ TEST_F(FlatlandTest, ReleasedImageRemainsUntilCleared) {
 
 TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = 1;
@@ -3560,7 +3594,7 @@ TEST_F(FlatlandTest, ReleasedImageIdCanBeReused) {
 // the Transform is not part of the most recently presented global topology.
 TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = 1;
@@ -3611,7 +3645,7 @@ TEST_F(FlatlandTest, ReleasedImagePersistsOutsideGlobalTopology) {
 
 TEST_F(FlatlandTest, ClearGraphReleasesImagesAndBufferCollections) {
   std::shared_ptr<Allocator> allocator = CreateAllocator();
-  Flatland flatland = CreateFlatland(allocator);
+  Flatland flatland = CreateFlatland();
 
   // Setup a valid image.
   const ContentId kImageId = 1;

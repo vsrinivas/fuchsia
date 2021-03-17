@@ -4,6 +4,7 @@
 
 #include "src/ui/scenic/lib/allocation/allocator.h"
 
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
@@ -62,7 +63,7 @@ class AllocatorTest : public gtest::TestLoopFixture {
   std::shared_ptr<Allocator> CreateAllocator() {
     std::vector<std::shared_ptr<BufferCollectionImporter>> importers;
     importers.push_back(buffer_collection_importer_);
-    return std::make_shared<Allocator>(importers,
+    return std::make_shared<Allocator>(context_provider_.context(), importers,
                                        utils::CreateSysmemAllocatorSyncPtr("-allocator"));
   }
 
@@ -78,10 +79,65 @@ class AllocatorTest : public gtest::TestLoopFixture {
  protected:
   MockBufferCollectionImporter* mock_buffer_collection_importer_;
   std::shared_ptr<BufferCollectionImporter> buffer_collection_importer_;
+  sys::testing::ComponentContextProvider context_provider_;
 
  private:
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
+
+TEST_F(AllocatorTest, CreateAndDestroyAllocatorChannel) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  fuchsia::scenic::allocation::AllocatorPtr allocator_ptr;
+  context_provider_.ConnectToPublicService(allocator_ptr.NewRequest());
+  RunLoopUntilIdle();
+
+  allocator_ptr.Unbind();
+}
+
+TEST_F(AllocatorTest, CreateAndDestroyMultipleAllocatorChannels) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  fuchsia::scenic::allocation::AllocatorPtr allocator_ptr1;
+  context_provider_.ConnectToPublicService(allocator_ptr1.NewRequest());
+  fuchsia::scenic::allocation::AllocatorPtr allocator_ptr2;
+  context_provider_.ConnectToPublicService(allocator_ptr2.NewRequest());
+  RunLoopUntilIdle();
+
+  allocator_ptr1.Unbind();
+  allocator_ptr2.Unbind();
+}
+
+TEST_F(AllocatorTest, RegisterBufferCollectionThroughAllocatorChannel) {
+  std::shared_ptr<Allocator> allocator = CreateAllocator();
+  fuchsia::scenic::allocation::AllocatorPtr allocator_ptr;
+  context_provider_.ConnectToPublicService(allocator_ptr.NewRequest());
+  RunLoopUntilIdle();
+
+  bool processed_callback = false;
+  BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
+  const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());
+  EXPECT_CALL(*mock_buffer_collection_importer_, ImportBufferCollection(koid, _, _))
+      .WillOnce(Return(true));
+  allocator_ptr->RegisterBufferCollection(
+      std::move(ref_pair.export_token), CreateToken(),
+      [&processed_callback](Allocator_RegisterBufferCollection_Result result) {
+        EXPECT_FALSE(result.is_err());
+        processed_callback = true;
+      });
+  RunLoopUntilIdle();
+  EXPECT_TRUE(processed_callback);
+
+  // Closing channel should not trigger ReleaseBufferCollection, because the client still holds a
+  // BufferCollectionImportToken.
+  {
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid)).Times(0);
+    allocator_ptr.Unbind();
+  }
+  // Destruction of Allocator instance triggers ReleaseBufferCollection.
+  {
+    EXPECT_CALL(*mock_buffer_collection_importer_, ReleaseBufferCollection(koid)).Times(1);
+    allocator.reset();
+  }
+}
 
 // Tests that Allocator passes the Sysmem token to the importer. This is necessary since the client
 // may block on buffers being allocated before presenting.
@@ -147,7 +203,7 @@ TEST_F(AllocatorTest, RegisterBufferCollectionErrorCases) {
 // collection while others do not. We have to therefore make sure that if importer A properly
 // imports a buffer collection and then importer B fails, that Flatland automatically releases the
 // buffer collection from importer A.
-TEST_F(AllocatorTest, BufferCollectionImportPassesAndFailsOnDifferentimportersTest) {
+TEST_F(AllocatorTest, BufferCollectionImportPassesAndFailsOnDifferentImportersTest) {
   // Create a second buffer collection importer.
   auto local_mock_buffer_collection_importer = new MockBufferCollectionImporter();
   auto local_buffer_collection_importer =
@@ -156,8 +212,8 @@ TEST_F(AllocatorTest, BufferCollectionImportPassesAndFailsOnDifferentimportersTe
   // Create an allocator instance that has two BufferCollectionImporters.
   std::vector<std::shared_ptr<BufferCollectionImporter>> importers(
       {buffer_collection_importer_, local_buffer_collection_importer});
-  std::shared_ptr<Allocator> allocator =
-      std::make_shared<Allocator>(importers, utils::CreateSysmemAllocatorSyncPtr());
+  std::shared_ptr<Allocator> allocator = std::make_shared<Allocator>(
+      context_provider_.context(), importers, utils::CreateSysmemAllocatorSyncPtr());
 
   BufferCollectionImportExportTokens ref_pair = BufferCollectionImportExportTokens::New();
   const auto koid = fsl::GetKoid(ref_pair.export_token.value.get());

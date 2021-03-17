@@ -17,7 +17,6 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-using fuchsia::scenic::allocation::BufferCollectionImportToken;
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkStatus;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
@@ -35,16 +34,16 @@ Flatland::Flatland(async_dispatcher_t* dispatcher,
                    fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
                    scheduling::SessionId session_id,
                    std::function<void()> destroy_instance_function,
-                   const std::shared_ptr<Allocator>& allocator,
                    const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
                    const std::shared_ptr<LinkSystem>& link_system,
-                   const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue)
+                   const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
+                   const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+                       buffer_collection_importers)
     : dispatcher_(dispatcher),
       binding_(this, std::move(request), dispatcher_),
       session_id_(session_id),
       destroy_instance_function_(std::move(destroy_instance_function)),
       peer_closed_waiter_(binding_.channel().get(), ZX_CHANNEL_PEER_CLOSED),
-      allocator_(allocator),
       present2_helper_([this](fuchsia::scenic::scheduling::FramePresentedInfo info) {
         if (binding_.is_bound()) {
           binding_.events().OnFramePresented(std::move(info));
@@ -53,7 +52,7 @@ Flatland::Flatland(async_dispatcher_t* dispatcher,
       flatland_presenter_(flatland_presenter),
       link_system_(link_system),
       uber_struct_queue_(uber_struct_queue),
-      buffer_collection_importers_(allocator_->buffer_collection_importers()),
+      buffer_collection_importers_(buffer_collection_importers),
       transform_graph_(session_id_),
       local_root_(transform_graph_.CreateTransform()) {
   zx_status_t status = peer_closed_waiter_.Begin(
@@ -531,7 +530,8 @@ void Flatland::CreateLink(ContentId link_id, ContentLinkToken token, LinkPropert
       .link = std::move(link), .properties = std::move(properties), .size = std::move(size)};
 }
 
-void Flatland::CreateImage(ContentId image_id, BufferCollectionImportToken import_token,
+void Flatland::CreateImage(ContentId image_id,
+                           fuchsia::scenic::allocation::BufferCollectionImportToken import_token,
                            uint32_t vmo_index, ImageProperties properties) {
   if (image_id == 0) {
     FX_LOGS(ERROR) << "CreateImage called with image_id 0";

@@ -25,6 +25,7 @@
 #include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 #include "src/ui/scenic/lib/scheduling/frame_metrics_registry.cb.h"
 #include "src/ui/scenic/lib/scheduling/windowed_frame_predictor.h"
+#include "src/ui/scenic/lib/utils/helpers.h"
 
 namespace {
 
@@ -77,6 +78,14 @@ bool GetPointerAutoFocusBehavior() {
 
   FX_LOGS(INFO) << "Scenic pointer auto focus: " << pointer_auto_focus;
   return pointer_auto_focus;
+}
+
+bool IsIncludedIn(
+    const std::shared_ptr<allocation::BufferCollectionImporter>&& element,
+    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>& importers) {
+  return std::find_if(importers.begin(), importers.end(), [&element](auto importer) {
+           return importer.get() == element.get();
+         }) != importers.end();
 }
 
 }  // namespace
@@ -195,9 +204,10 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect::Node inspe
                                          async_get_default_dispatcher());
 
   // TODO(fxbug.dev/67206): this should be moved into FlatlandManager.
-  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland>)> handler =
-      fit::bind_member(flatland_manager_.get(), &flatland::FlatlandManager::CreateFlatland);
-  zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(handler));
+  fit::function<void(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland>)>
+      flatland_handler =
+          fit::bind_member(flatland_manager_.get(), &flatland::FlatlandManager::CreateFlatland);
+  zx_status_t status = app_context_->outgoing()->AddPublicService(std::move(flatland_handler));
   FX_DCHECK(status == ZX_OK);
 }
 
@@ -301,6 +311,17 @@ void App::InitializeServices(escher::EscherUniquePtr escher,
   scenic_->InitializeSnapshotService(std::move(snapshotter));
 
   scenic_->SetInitialized(engine_->scene_graph());
+
+  // TODO(fxbug.dev/71955): Add a Vulkan buffer collection importer that is used by Scenic::Session
+  // instances.
+  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>
+      allocator_buffer_collection_importers;
+  allocator_buffer_collection_importers.push_back(flatland_compositor_);
+  allocator_ = std::make_shared<allocation::Allocator>(
+      app_context_.get(), allocator_buffer_collection_importers,
+      utils::CreateSysmemAllocatorSyncPtr("Allocator"));
+
+  FX_DCHECK(IsIncludedIn(flatland_compositor_, allocator_buffer_collection_importers));
   flatland_manager_->Initialize(display, {flatland_compositor_});
 }
 

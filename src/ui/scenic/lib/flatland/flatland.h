@@ -5,6 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_FLATLAND_H_
 
+#include <fuchsia/scenic/allocation/cpp/fidl.h>
 #include <fuchsia/ui/gfx/cpp/fidl.h>
 #include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
@@ -24,7 +25,6 @@
 // clang-format on
 
 #include "src/ui/lib/escher/flib/fence_queue.h"
-#include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
@@ -36,8 +36,6 @@
 #include "src/ui/scenic/lib/scheduling/present2_helper.h"
 
 namespace flatland {
-
-using allocation::Allocator;
 
 // This is a WIP implementation of the 2D Layer API. It currently exists to run unit tests, and to
 // provide a platform for features to be iterated and implemented over time.
@@ -60,10 +58,11 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
                     fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> request,
                     scheduling::SessionId session_id,
                     std::function<void()> destroy_instance_function,
-                    const std::shared_ptr<Allocator>& allocator,
                     const std::shared_ptr<FlatlandPresenter>& flatland_presenter,
                     const std::shared_ptr<LinkSystem>& link_system,
-                    const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue);
+                    const std::shared_ptr<UberStructSystem::UberStructQueue>& uber_struct_queue,
+                    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+                        buffer_collection_importers);
   ~Flatland();
 
   // Because this object captures its "this" pointer in internal closures, it is unsafe to copy or
@@ -169,9 +168,6 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   // Waits for the invalidation of the bound channel, then triggers the destruction of this client.
   // Uses WaitOnce since calling the handler will result in the destruction of this object.
   async::WaitOnce peer_closed_waiter_;
-
-  // Common allocator instance. May be shared across multiple Flatland instances.
-  std::shared_ptr<Allocator> allocator_;
 
   // A Present2Helper to facilitate sendng the appropriate OnFramePresented() callback to FIDL
   // clients when frames are presented to the display.

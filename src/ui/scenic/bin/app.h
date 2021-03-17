@@ -13,6 +13,7 @@
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/ui/lib/display/get_hardware_display_controller.h"
 #include "src/ui/lib/escher/escher.h"
+#include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/annotation/annotation_registry.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/flatland/default_flatland_presenter.h"
@@ -68,6 +69,8 @@ class App {
   std::shared_ptr<Scenic> scenic_;
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
   std::unique_ptr<Watchdog> watchdog_;
+
+  std::shared_ptr<allocation::Allocator> allocator_;
 
   std::shared_ptr<flatland::UberStructSystem> uber_struct_system_;
   std::shared_ptr<flatland::LinkSystem> link_system_;
