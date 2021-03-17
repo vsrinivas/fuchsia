@@ -10,13 +10,13 @@ use {
     fidl::endpoints::ClientEnd,
     fidl_fuchsia_cobalt::CobaltEvent,
     fidl_fuchsia_io::{DirectoryMarker, DirectoryProxy},
+    fidl_fuchsia_io2::Operations,
     fidl_fuchsia_pkg::{PackageCacheMarker, PackageCacheProxy},
     fidl_fuchsia_pkg_ext::BlobId,
     fidl_fuchsia_space::{ManagerMarker as SpaceManagerMarker, ManagerProxy as SpaceManagerProxy},
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
-    fidl_test_pkg_reflector::ReflectorMarker,
     fuchsia_async as fasync,
-    fuchsia_component::{client::ScopedInstance, server::ServiceFs},
+    fuchsia_component::server::ServiceFs,
     fuchsia_inspect::reader::DiagnosticsHierarchy,
     fuchsia_pkg_testing::{get_inspect_hierarchy, SystemImageBuilder},
     fuchsia_zircon as zx,
@@ -26,6 +26,10 @@ use {
     parking_lot::Mutex,
     pkgfs_ramdisk::PkgfsRamdisk,
     std::sync::Arc,
+    topology_builder::{
+        builder::{Capability, CapabilityRoute, ComponentSource, RouteEndpoint, TopologyBuilder},
+        TopologyInstance,
+    },
 };
 
 mod base_pkg_index;
@@ -35,9 +39,7 @@ mod inspect;
 mod space;
 mod sync;
 
-const TEST_CASE_COLLECTION: &str = "pkg_cache_test_realm";
-const TEST_CASE_REALM: &str =
-    "fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/test-case-realm.cm";
+const TEST_CASE_COLLECTION: &str = "topology_builder_collection";
 
 trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
@@ -113,18 +115,21 @@ where
         fs.add_remote("pkgfs", pkgfs.root_dir_handle().unwrap().into_proxy().unwrap());
         fs.add_remote("blob", pkgfs.blobfs_root_proxy().unwrap());
 
+        // Cobalt mocks so we can assert that we emit the correct events
         let logger_factory = Arc::new(MockLoggerFactory::new());
         let logger_factory_clone = Arc::clone(&logger_factory);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(Arc::clone(&logger_factory_clone).run_logger_factory(stream))
                 .detach()
         });
 
+        // Paver service, so we can verify that we submit the expected requests and so that
+        // we can verify if the paver service returns errors, that we handle them correctly.
         let paver_service = Arc::new(
             self.paver_service_builder.unwrap_or_else(|| MockPaverServiceBuilder::new()).build(),
         );
         let paver_service_clone = Arc::clone(&paver_service);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(
                 Arc::clone(&paver_service_clone)
                     .run_paver_service(stream)
@@ -133,49 +138,114 @@ where
             .detach()
         });
 
-        // Set up verifier service.
+        // Set up verifier service so we can verify that we reject GC until after the verifier
+        // commits this boot/slot as successful, lest we break rollbacks.
         let verifier_service = Arc::new(MockVerifierService::new(|_| Ok(())));
         let verifier_service_clone = Arc::clone(&verifier_service);
-        fs.add_fidl_service(move |stream| {
+        fs.dir("svc").add_fidl_service(move |stream| {
             fasync::Task::spawn(
                 Arc::clone(&verifier_service_clone).run_blobfs_verifier_service(stream),
             )
             .detach()
         });
 
-        let (reflected_dir_client_end, reflected_dir_server_end) =
-            fidl::endpoints::create_endpoints::<DirectoryMarker>()
-                .expect("creating reflected channel");
+        let fs_holder = Mutex::new(Some(fs));
 
-        fs.serve_connection(reflected_dir_server_end.into_channel()).unwrap();
+        let mut builder = TopologyBuilder::new().await.unwrap();
+        builder
+            .add_component("pkg_cache", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache.cm")).await.unwrap()
+            .add_component("system_update_committer", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/system-update-committer.cm")).await.unwrap()
+            .add_component("service_reflector", ComponentSource::mock(move |mock_handles| {
+                let mut rfs = fs_holder.lock().take().expect("mock component should only be launched once");
+                async {
+                    rfs.serve_connection(mock_handles.outgoing_dir.into_channel()).unwrap();
+                    fasync::Task::spawn(rfs.collect()).detach();
+                    Ok(())
+                }.boxed()
+            })).await.unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.logger.LogSink"),
+                source: RouteEndpoint::AboveRoot,
+                targets: vec![
+                    RouteEndpoint::component("pkg_cache"),
+                    RouteEndpoint::component("service_reflector"),
+                    RouteEndpoint::component("system_update_committer"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.cobalt.LoggerFactory"),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_cache"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.tracing.provider.Registry"),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_cache"),
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.paver.Paver"),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![ RouteEndpoint::component("system_update_committer") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.verify.BlobfsVerifier"),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![ RouteEndpoint::component("system_update_committer") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("pkgfs", "/pkgfs", Operations::Connect | Operations::Enumerate | Operations::Traverse | Operations::ReadBytes | Operations::WriteBytes | Operations::ModifyDirectory | Operations::GetAttributes | Operations::UpdateAttributes),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![ RouteEndpoint::component("pkg_cache") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::directory("blob", "/blob", Operations::Connect | Operations::Enumerate | Operations::Traverse | Operations::ReadBytes | Operations::WriteBytes | Operations::ModifyDirectory | Operations::GetAttributes | Operations::UpdateAttributes),
+                source: RouteEndpoint::component("service_reflector"),
+                targets: vec![ RouteEndpoint::component("pkg_cache") ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.update.CommitStatusProvider"),
+                source: RouteEndpoint::component("system_update_committer"),
+                targets: vec![
+                    RouteEndpoint::component("pkg_cache"), // offer
+                    RouteEndpoint::AboveRoot, // expose
+                ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.pkg.PackageCache"),
+                source: RouteEndpoint::component("pkg_cache"),
+                targets: vec![ RouteEndpoint::AboveRoot ],
+            }).unwrap()
+            .add_route(CapabilityRoute {
+                capability: Capability::protocol("fuchsia.space.Manager"),
+                source: RouteEndpoint::component("pkg_cache"),
+                targets: vec![ RouteEndpoint::AboveRoot ],
+            }).unwrap();
 
-        fasync::Task::spawn(fs.collect()).detach();
-
-        let pkg_cache_realm =
-            ScopedInstance::new(TEST_CASE_COLLECTION.to_string(), TEST_CASE_REALM.to_string())
-                .await
-                .expect("scoped instance to create successfully");
-
-        let reflector = pkg_cache_realm
-            .connect_to_protocol_at_exposed_dir::<ReflectorMarker>()
-            .expect("connecting to reflector");
-
-        reflector.reflect(reflected_dir_client_end).await.expect("reflect to work");
+        let mut topology = builder.build();
+        topology.set_collection_name(TEST_CASE_COLLECTION);
+        let topology_instance = topology.create().await.unwrap();
 
         let proxies = Proxies {
-            commit_status_provider: pkg_cache_realm
+            commit_status_provider: topology_instance
+                .root
                 .connect_to_protocol_at_exposed_dir::<CommitStatusProviderMarker>()
                 .expect("connect to commit status provider"),
-            space_manager: pkg_cache_realm
+            space_manager: topology_instance
+                .root
                 .connect_to_protocol_at_exposed_dir::<SpaceManagerMarker>()
                 .expect("connect to space manager"),
-            package_cache: pkg_cache_realm
+            package_cache: topology_instance
+                .root
                 .connect_to_protocol_at_exposed_dir::<PackageCacheMarker>()
                 .expect("connect to package cache"),
         };
 
         TestEnv {
-            apps: Apps { pkg_cache: pkg_cache_realm },
+            apps: Apps { topology_instance },
             pkgfs,
             proxies,
             mocks: Mocks {
@@ -200,7 +270,7 @@ pub struct Mocks {
 }
 
 struct Apps {
-    pkg_cache: ScopedInstance,
+    topology_instance: TopologyInstance,
 }
 
 struct TestEnv<P = PkgfsRamdisk> {
@@ -314,8 +384,8 @@ impl TestEnv<PkgfsRamdisk> {
 impl<P: PkgFs> TestEnv<P> {
     async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
         let nested_environment_label = format!(
-            "pkg_cache_integration_test/pkg_cache_test_realm\\:{}",
-            self.apps.pkg_cache.child_name()
+            "pkg_cache_integration_test/topology_builder_collection\\:{}",
+            self.apps.topology_instance.root.child_name()
         );
 
         get_inspect_hierarchy(&nested_environment_label, "pkg_cache").await
