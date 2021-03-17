@@ -245,6 +245,28 @@ should:
 
 For example: ``Test: Added new unit tests. `fx test netstack-gotests` ``.
 
+## Code Review Guidelines
+
+### Code Review Flow
+
+The following code review guidelines are adopted within the Netstack team:
+
+1. When your CL is ready for review, first request review from any team member
+not part of the leads group.
+1. Put leads in CC on the CL so they can follow any ongoing discussion and build
+context.
+1. You may prefer teammates that are more familiar with that area of the code,
+but that's not mandatory. One of the goals is to spread out.
+1. Once the initial reviewer approves your CL, the CC'ed lead commits to
+assigning themselves as a reviewer and sending out comments and/or approving
+within **two working hours**.
+
+Be mindful that his scheme can increase latency for reviews, which is a side
+effect we'd like to minimize. Try to decrease your latency when asked for review
+and when addressing comments as well. Gerrit notification settings and smart
+e-mail filters can be a big help to drive those interrupts. Also, don't be
+afraid to ping for reviews.
+
 ## Tips & Tricks
 
 ### `fx set`
