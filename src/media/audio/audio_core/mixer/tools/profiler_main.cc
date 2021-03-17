@@ -58,11 +58,8 @@ struct Options {
 };
 
 constexpr char kBenchmarkDurationSwitch[] = "bench-time";
-constexpr zx::duration kBenchmarkDurationDefault = zx::msec(250);
 
 constexpr char kBenchmarkRunsSwitch[] = "bench-runs";
-constexpr size_t kBenchmarkRunsDefault = 500;
-constexpr size_t kBenchmarkMinRuns = 5;
 
 constexpr char kProfileMixerCreationSwitch[] = "enable-create";
 constexpr char kProfileMixingSwitch[] = "enable-mix";
@@ -84,11 +81,11 @@ constexpr char kSampleFormatInt16Option[] = "int16";
 constexpr char kSampleFormatInt24In32Option[] = "int24";
 constexpr char kSampleFormatFloat32Option[] = "float";
 
-constexpr char kMixGainssSwitch[] = "mix-gains";
-constexpr char kMixGainsMuteOption[] = "mute";
-constexpr char kMixGainsUnityOption[] = "unity";
-constexpr char kMixGainsScaledOption[] = "scaled";
-constexpr char kMixGainsRampedOption[] = "ramped";
+constexpr char kMixGainsSwitch[] = "mix-gains";
+constexpr char kMixGainMuteOption[] = "mute";
+constexpr char kMixGainUnityOption[] = "unity";
+constexpr char kMixGainScaledOption[] = "scaled";
+constexpr char kMixGainRampedOption[] = "ramped";
 
 constexpr char kMixAccumulateSwitch[] = "accumulate";
 
@@ -100,6 +97,10 @@ constexpr char kOutputProducerSourceRangeNormalOption[] = "normal";
 constexpr char kPerftestJsonFilepathSwitch[] = "perftest-json";
 
 constexpr char kUsageSwitch[] = "help";
+
+constexpr zx::duration kBenchmarkDurationDefault = zx::msec(250);
+constexpr size_t kBenchmarkRunsDefault = 1000;
+constexpr size_t kBenchmarkMinRuns = 5;
 
 constexpr uint32_t kPreferredInputChans = 1;
 constexpr uint32_t kPreferredOutputChans = 1;
@@ -381,7 +382,9 @@ const Options kDefaultOpts = {
     .enable_pprof = false,
     .sample_formats =
         {
-            ASF::UNSIGNED_8, ASF::SIGNED_16, ASF::SIGNED_24_IN_32,
+            ASF::UNSIGNED_8,
+            ASF::SIGNED_16,  // kAltPreferredSampleFormat
+            ASF::SIGNED_24_IN_32,
             ASF::FLOAT,  // kPreferredSampleFormat
         },
     .num_input_output_chans =
@@ -389,7 +392,7 @@ const Options kDefaultOpts = {
             {1, 1},  // kPreferredInputChans, kPreferredOutputChans
             {1, 2},
             {2, 1},
-            {2, 2},
+            {2, 2},  // kAltPreferredInputChans, kAltPreferredOutputChans
             {4, 4},
         },
     .samplers =
@@ -405,29 +408,31 @@ const Options kDefaultOpts = {
 
             // Typical render-path rate pairs
             {48000, 48000},  // kPreferredSourceRate, kPreferredDestRate
-            {44100, 48000},
+            {44100, 48000},  // kAltPreferredSourceRate, kAltPreferredDestRate
             {48000, 96000},
 
             // Extreme cases
-            {8000, 192000},
-            {192000, 8000},
+            {1000, 192000},
+            {192000, 1000},
+            {192000, 192000},
         },
     .gain_types =
         {
             GainType::Mute,
-            GainType::Unity,  // kPreferredGainType
-            GainType::Scaled,
+            GainType::Unity,   // kPreferredGainType
+            GainType::Scaled,  // kAltPreferredGainType
             GainType::Ramped,
         },
     .accumulates =
         {
             false,  // kPreferredAccumSetting
-            true,
+            true,   // kAltPreferredAccumSetting
         },
     .output_ranges =
         {
-            OutputRange::Silence, OutputRange::OutOfRange,
+            OutputRange::Silence,
             OutputRange::Normal,  // kPreferredOutputRange
+            OutputRange::OutOfRange,
         },
 };
 
@@ -472,8 +477,8 @@ void Usage(const char* prog_name) {
          kSampleFormatInt16Option, kSampleFormatInt24In32Option, kSampleFormatFloat32Option);
   printf("    Profile these sample formats. Multiple sample formats can be separated by commas.\n");
   printf("\n");
-  printf("  --%s=[%s|%s|%s|%s]*\n", kMixGainssSwitch, kMixGainsMuteOption, kMixGainsUnityOption,
-         kMixGainsScaledOption, kMixGainsRampedOption);
+  printf("  --%s=[%s|%s|%s|%s]*\n", kMixGainsSwitch, kMixGainMuteOption, kMixGainUnityOption,
+         kMixGainScaledOption, kMixGainRampedOption);
   printf("    Profile these mixer gain options. Multiple options can be separated by commas.\n");
   printf("\n");
   printf("  --%s=[false|true]*\n", kMixAccumulateSwitch);
@@ -608,12 +613,12 @@ Options ParseCommandLine(int argc, char** argv) {
                    {kSampleFormatFloat32Option, ASF::FLOAT},
                });
 
-  enum_flagset(kMixGainssSwitch, opt.gain_types,
+  enum_flagset(kMixGainsSwitch, opt.gain_types,
                std::map<std::string, GainType>{
-                   {kMixGainsMuteOption, GainType::Mute},
-                   {kMixGainsUnityOption, GainType::Unity},
-                   {kMixGainsScaledOption, GainType::Scaled},
-                   {kMixGainsRampedOption, GainType::Ramped},
+                   {kMixGainMuteOption, GainType::Mute},
+                   {kMixGainUnityOption, GainType::Unity},
+                   {kMixGainScaledOption, GainType::Scaled},
+                   {kMixGainRampedOption, GainType::Ramped},
                });
 
   enum_flagset(kMixAccumulateSwitch, opt.accumulates,
