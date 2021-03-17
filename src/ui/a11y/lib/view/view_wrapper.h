@@ -47,7 +47,9 @@ class ViewWrapper {
   void HighlightNode(uint32_t node_id);
 
   // Clears contents of annotation view.
-  void ClearHighlights();
+  void ClearAllHighlights();
+  void ClearFocusHighlights();
+  void ClearMagnificationHighlights();
 
  private:
   fuchsia::ui::views::ViewRef view_ref_;

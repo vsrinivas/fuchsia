@@ -130,9 +130,14 @@ void ViewWrapper::HighlightNode(uint32_t node_id) {
 
   auto bounding_box = annotated_node->location();
   annotation_view_->DrawHighlight(bounding_box, transform.scale_vector(),
-                                  transform.translation_vector());
+                                  transform.translation_vector(),
+                                  false /* is_magnification_highlight */);
 }
 
-void ViewWrapper::ClearHighlights() { annotation_view_->DetachViewContents(); }
+void ViewWrapper::ClearAllHighlights() { annotation_view_->ClearAllAnnotations(); }
+void ViewWrapper::ClearFocusHighlights() { annotation_view_->ClearFocusHighlights(); }
+void ViewWrapper::ClearMagnificationHighlights() {
+  annotation_view_->ClearMagnificationHighlights();
+}
 
 }  // namespace a11y

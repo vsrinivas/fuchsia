@@ -66,7 +66,7 @@ void ViewManager::RegisterViewForSemantics(
   fuchsia::accessibility::semantics::SemanticListenerPtr semantic_listener = handle.Bind();
   semantic_listener.set_error_handler([](zx_status_t status) {
     FX_LOGS(WARNING) << "Semantic Provider disconnected with status: "
-                   << zx_status_get_string(status);
+                     << zx_status_get_string(status);
   });
 
   auto service =
@@ -212,7 +212,7 @@ bool ViewManager::RemoveHighlight() {
   }
 
   FX_DCHECK(it->second);
-  it->second->ClearHighlights();
+  it->second->ClearFocusHighlights();
 
   return true;
 }

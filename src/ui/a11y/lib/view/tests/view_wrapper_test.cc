@@ -114,7 +114,7 @@ TEST_F(ViewWrapperTest, HighlightAndClear) {
 
   // Verify that annotation view received bounding_box (defined above) as parameter to
   // DrawHighlight().
-  const auto& highlight_bounding_box = annotation_view_->GetCurrentHighlight();
+  const auto& highlight_bounding_box = annotation_view_->GetCurrentFocusHighlight();
   EXPECT_TRUE(highlight_bounding_box.has_value());
   EXPECT_EQ(highlight_bounding_box->min.x, 0.0f);
   EXPECT_EQ(highlight_bounding_box->min.y, 0.0f);
@@ -124,10 +124,10 @@ TEST_F(ViewWrapperTest, HighlightAndClear) {
   EXPECT_EQ(highlight_bounding_box->max.z, 3.0f);
 
   // CLear highlights.
-  view_wrapper_->ClearHighlights();
+  view_wrapper_->ClearFocusHighlights();
 
   // Verify that DetachViewContents() was called.
-  const auto& updated_highlight_bounding_box = annotation_view_->GetCurrentHighlight();
+  const auto& updated_highlight_bounding_box = annotation_view_->GetCurrentFocusHighlight();
   EXPECT_FALSE(updated_highlight_bounding_box.has_value());
 }
 
@@ -169,7 +169,7 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
 
   // Verify that annotation view received bounding_box (defined above) as parameter to
   // DrawHighlight().
-  const auto& highlight_bounding_box = annotation_view_->GetCurrentHighlight();
+  const auto& highlight_bounding_box = annotation_view_->GetCurrentFocusHighlight();
   EXPECT_TRUE(highlight_bounding_box.has_value());
   EXPECT_EQ(highlight_bounding_box->min.x, 2.0f);
   EXPECT_EQ(highlight_bounding_box->min.y, 3.0f);
@@ -178,13 +178,13 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
   EXPECT_EQ(highlight_bounding_box->max.y, 5.0f);
   EXPECT_EQ(highlight_bounding_box->max.z, 6.0f);
 
-  const auto& highlight_translation = annotation_view_->GetTranslationVector();
+  const auto& highlight_translation = annotation_view_->GetFocusHighlightTranslationVector();
   EXPECT_TRUE(highlight_translation.has_value());
   EXPECT_EQ((*highlight_translation)[0], 260.0f);
   EXPECT_EQ((*highlight_translation)[1], 670.0f);
   EXPECT_EQ((*highlight_translation)[2], 1280.0f);
 
-  const auto& highlight_scale = annotation_view_->GetScaleVector();
+  const auto& highlight_scale = annotation_view_->GetFocusHighlightScaleVector();
   EXPECT_TRUE(highlight_scale.has_value());
   EXPECT_EQ((*highlight_scale)[0], 100.0f);
   EXPECT_EQ((*highlight_scale)[1], 150.0f);
@@ -205,7 +205,7 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
   {
     // Verify again that the information received was correct, with the difference now that the
     // offset must be applied to the translation vector. The rest stays the same.
-    const auto& highlight_bounding_box = annotation_view_->GetCurrentHighlight();
+    const auto& highlight_bounding_box = annotation_view_->GetCurrentFocusHighlight();
     EXPECT_TRUE(highlight_bounding_box.has_value());
     EXPECT_EQ(highlight_bounding_box->min.x, 2.0f);
     EXPECT_EQ(highlight_bounding_box->min.y, 3.0f);
@@ -214,13 +214,13 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
     EXPECT_EQ(highlight_bounding_box->max.y, 5.0f);
     EXPECT_EQ(highlight_bounding_box->max.z, 6.0f);
 
-    const auto& highlight_translation = annotation_view_->GetTranslationVector();
+    const auto& highlight_translation = annotation_view_->GetFocusHighlightTranslationVector();
     EXPECT_TRUE(highlight_translation.has_value());
     EXPECT_EQ((*highlight_translation)[0], 60.0f);
     EXPECT_EQ((*highlight_translation)[1], 70.0f);
     EXPECT_EQ((*highlight_translation)[2], 1280.0f);  // no change in z axis.
 
-    const auto& highlight_scale = annotation_view_->GetScaleVector();
+    const auto& highlight_scale = annotation_view_->GetFocusHighlightScaleVector();
     EXPECT_TRUE(highlight_scale.has_value());
     EXPECT_EQ((*highlight_scale)[0], 100.0f);
     EXPECT_EQ((*highlight_scale)[1], 150.0f);
@@ -228,10 +228,10 @@ TEST_F(ViewWrapperTest, HighlightWithTransform) {
   }
 
   // Clear highlights.
-  view_wrapper_->ClearHighlights();
+  view_wrapper_->ClearFocusHighlights();
 
   // Verify that DetachViewContents() was called.
-  const auto& updated_highlight_bounding_box = annotation_view_->GetCurrentHighlight();
+  const auto& updated_highlight_bounding_box = annotation_view_->GetCurrentFocusHighlight();
   EXPECT_FALSE(updated_highlight_bounding_box.has_value());
 }
 
@@ -301,7 +301,7 @@ TEST_F(ViewWrapperTest, HighlightWithTransformAndOffsetContainers) {
 
   // Verify that annotation view received bounding_box (defined above) as parameter to
   // DrawHighlight().
-  const auto& highlight_bounding_box = annotation_view_->GetCurrentHighlight();
+  const auto& highlight_bounding_box = annotation_view_->GetCurrentFocusHighlight();
   EXPECT_TRUE(highlight_bounding_box.has_value());
   EXPECT_EQ(highlight_bounding_box->min.x, 2.0f);
   EXPECT_EQ(highlight_bounding_box->min.y, 3.0f);
@@ -310,13 +310,13 @@ TEST_F(ViewWrapperTest, HighlightWithTransformAndOffsetContainers) {
   EXPECT_EQ(highlight_bounding_box->max.y, 5.0f);
   EXPECT_EQ(highlight_bounding_box->max.z, 6.0f);
 
-  const auto& highlight_translation = annotation_view_->GetTranslationVector();
+  const auto& highlight_translation = annotation_view_->GetFocusHighlightTranslationVector();
   EXPECT_TRUE(highlight_translation.has_value());
   EXPECT_EQ((*highlight_translation)[0], 260.0f);
   EXPECT_EQ((*highlight_translation)[1], 670.0f);
   EXPECT_EQ((*highlight_translation)[2], 1280.0f);
 
-  const auto& highlight_scale = annotation_view_->GetScaleVector();
+  const auto& highlight_scale = annotation_view_->GetFocusHighlightScaleVector();
   EXPECT_TRUE(highlight_scale.has_value());
   EXPECT_EQ((*highlight_scale)[0], 100.0f);
   EXPECT_EQ((*highlight_scale)[1], 150.0f);

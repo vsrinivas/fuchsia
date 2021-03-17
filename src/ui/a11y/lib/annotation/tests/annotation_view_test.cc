@@ -176,7 +176,7 @@ class MockSession : public fuchsia::ui::scenic::testing::Session_TestBase {
   }
 
   void ApplySetTranslationCommand(const fuchsia::ui::gfx::SetTranslationCmd& command) {
-    if (command.id == AnnotationView::kContentNodeId) {
+    if (command.id == AnnotationView::kFocusHighlightContentNodeId) {
       entity_nodes_[command.id].translation_vector[0] = command.value.value.x;
       entity_nodes_[command.id].translation_vector[1] = command.value.value.y;
       entity_nodes_[command.id].translation_vector[2] = command.value.value.z;
@@ -414,7 +414,9 @@ class AnnotationViewTest : public gtest::TestLoopFixture {
   }
 
   void ExpectHighlightEdge(uint32_t id, uint32_t parent_id, float width, float height,
-                           float center_x, float center_y, float elevation) {
+                           float center_x, float center_y, float elevation,
+                           uint32_t content_node_id = AnnotationView::kFocusHighlightContentNodeId,
+                           uint32_t material_id = AnnotationView::kFocusHighlightMaterialId) {
     // Check properties for rectangle shape.
     RectangleAttributes rectangle;
     rectangle.id = id;
@@ -427,8 +429,7 @@ class AnnotationViewTest : public gtest::TestLoopFixture {
     ExpectRectangle(rectangle);
 
     // Check that rectangle was set as shape of parent node.
-    ExpectRectangleNode(
-        {parent_id, AnnotationView::kContentNodeId, id, AnnotationView::kHighlightMaterialId});
+    ExpectRectangleNode({parent_id, content_node_id, id, material_id});
   }
 
  protected:
@@ -451,34 +452,39 @@ TEST_F(AnnotationViewTest, TestInit) {
   ExpectView({AnnotationView::kAnnotationViewId, {}});
 
   // Verify that top-level content node (used to attach/detach annotations from view) was created.
-  ExpectEntityNode(
-      {AnnotationView::kContentNodeId,
-       0u,
-       {}, /* scale vector */
-       {}, /* translation vector */
-       {AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightRightEdgeNodeId,
-        AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kHighlightBottomEdgeNodeId}});
+  ExpectEntityNode({AnnotationView::kFocusHighlightContentNodeId,
+                    0u,
+                    {}, /* scale vector */
+                    {}, /* translation vector */
+                    {AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                     AnnotationView::kFocusHighlightRightEdgeNodeId,
+                     AnnotationView::kFocusHighlightTopEdgeNodeId,
+                     AnnotationView::kFocusHighlightBottomEdgeNodeId}});
 
   // Verify that drawing material was created.
-  ExpectMaterial(AnnotationView::kHighlightMaterialId);
+  ExpectMaterial(AnnotationView::kFocusHighlightMaterialId);
 
   // Verify that four shape nodes that will hold respective edge rectangles are created and added as
   // children of top-level content node. Also verify material of each.
-  ExpectRectangleNode({AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kContentNodeId, 0,
-                       AnnotationView::kHighlightMaterialId});
-  ExpectRectangleNode({AnnotationView::kHighlightRightEdgeNodeId, AnnotationView::kContentNodeId, 0,
-                       AnnotationView::kHighlightMaterialId});
-  ExpectRectangleNode({AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kContentNodeId, 0,
-                       AnnotationView::kHighlightMaterialId});
-  ExpectRectangleNode({AnnotationView::kHighlightBottomEdgeNodeId, AnnotationView::kContentNodeId,
-                       0, AnnotationView::kHighlightMaterialId});
+  ExpectRectangleNode({AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                       AnnotationView::kFocusHighlightContentNodeId, 0,
+                       AnnotationView::kFocusHighlightMaterialId});
+  ExpectRectangleNode({AnnotationView::kFocusHighlightRightEdgeNodeId,
+                       AnnotationView::kFocusHighlightContentNodeId, 0,
+                       AnnotationView::kFocusHighlightMaterialId});
+  ExpectRectangleNode({AnnotationView::kFocusHighlightTopEdgeNodeId,
+                       AnnotationView::kFocusHighlightContentNodeId, 0,
+                       AnnotationView::kFocusHighlightMaterialId});
+  ExpectRectangleNode({AnnotationView::kFocusHighlightBottomEdgeNodeId,
+                       AnnotationView::kFocusHighlightContentNodeId, 0,
+                       AnnotationView::kFocusHighlightMaterialId});
 }
 
-TEST_F(AnnotationViewTest, TestDrawHighlight) {
+TEST_F(AnnotationViewTest, TestDrawFocusHighlight) {
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
 
-  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0});
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0}, false);
 
   RunLoopUntilIdle();
 
@@ -492,22 +498,22 @@ TEST_F(AnnotationViewTest, TestDrawHighlight) {
   constexpr float kHighlightElevation = 0.0f;
 
   ExpectHighlightEdge(
-      8u, AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
+      14u, AnnotationView::kFocusHighlightLeftEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
       bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.min.x,
       (bounding_box.min.y + bounding_box.max.y) / 2, kHighlightElevation);
 
   ExpectHighlightEdge(
-      9u, AnnotationView::kHighlightRightEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
+      15u, AnnotationView::kFocusHighlightRightEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
       bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.max.x,
       (bounding_box.min.y + bounding_box.max.y) / 2.f, kHighlightElevation);
 
-  ExpectHighlightEdge(10u, AnnotationView::kHighlightTopEdgeNodeId,
+  ExpectHighlightEdge(16u, AnnotationView::kFocusHighlightTopEdgeNodeId,
                       bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
                       AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.max.y,
                       kHighlightElevation);
 
-  ExpectHighlightEdge(11u, AnnotationView::kHighlightBottomEdgeNodeId,
+  ExpectHighlightEdge(17u, AnnotationView::kFocusHighlightBottomEdgeNodeId,
                       bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
                       AnnotationView::kHighlightEdgeThickness,
                       (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.min.y,
@@ -515,53 +521,267 @@ TEST_F(AnnotationViewTest, TestDrawHighlight) {
 
   // Verify that top-level content node (used to attach/detach annotations from view) was attached
   // to view.
-  ExpectEntityNode(
-      {AnnotationView::kContentNodeId,
-       AnnotationView::kAnnotationViewId,
-       {1, 1, 1}, /* scale vector */
-       {0, 0, 0}, /* translation vector */
-       {AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightRightEdgeNodeId,
-        AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kHighlightBottomEdgeNodeId}});
+  ExpectEntityNode({AnnotationView::kFocusHighlightContentNodeId,
+                    AnnotationView::kAnnotationViewId,
+                    {1, 1, 1}, /* scale vector */
+                    {0, 0, 0}, /* translation vector */
+                    {AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                     AnnotationView::kFocusHighlightRightEdgeNodeId,
+                     AnnotationView::kFocusHighlightTopEdgeNodeId,
+                     AnnotationView::kFocusHighlightBottomEdgeNodeId}});
 }
 
-TEST_F(AnnotationViewTest, TestDetachViewContents) {
+TEST_F(AnnotationViewTest, TestDrawFocusHighlightAndClearMagnificationHighlight) {
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
 
-  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0});
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0}, false);
+
+  RunLoopUntilIdle();
+
+  // This operation should not affect the focus highlight.
+  annotation_view_->ClearMagnificationHighlights();
+
+  RunLoopUntilIdle();
+
+  // Verify that all four expected edges are present.
+  // Resource IDs 1-7 are used for the resources created in InitializeView(), so the next available
+  // id is 8. Since resource ids are generated incrementally, we expect the four edge rectangles to
+  // have ids 8-11.
+
+  // Before we set up the parent View bounding box, the z value of default
+  // bounding box is 0.
+  constexpr float kHighlightElevation = 0.0f;
+
+  ExpectHighlightEdge(
+      14u, AnnotationView::kFocusHighlightLeftEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
+      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.min.x,
+      (bounding_box.min.y + bounding_box.max.y) / 2, kHighlightElevation);
+
+  ExpectHighlightEdge(
+      15u, AnnotationView::kFocusHighlightRightEdgeNodeId, AnnotationView::kHighlightEdgeThickness,
+      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness, bounding_box.max.x,
+      (bounding_box.min.y + bounding_box.max.y) / 2.f, kHighlightElevation);
+
+  ExpectHighlightEdge(16u, AnnotationView::kFocusHighlightTopEdgeNodeId,
+                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
+                      AnnotationView::kHighlightEdgeThickness,
+                      (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.max.y,
+                      kHighlightElevation);
+
+  ExpectHighlightEdge(17u, AnnotationView::kFocusHighlightBottomEdgeNodeId,
+                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
+                      AnnotationView::kHighlightEdgeThickness,
+                      (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.min.y,
+                      kHighlightElevation);
+
+  // Verify that top-level content node (used to attach/detach annotations from view) was attached
+  // to view.
+  ExpectEntityNode({AnnotationView::kFocusHighlightContentNodeId,
+                    AnnotationView::kAnnotationViewId,
+                    {1, 1, 1}, /* scale vector */
+                    {0, 0, 0}, /* translation vector */
+                    {AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                     AnnotationView::kFocusHighlightRightEdgeNodeId,
+                     AnnotationView::kFocusHighlightTopEdgeNodeId,
+                     AnnotationView::kFocusHighlightBottomEdgeNodeId}});
+}
+
+TEST_F(AnnotationViewTest, TestDrawMagnificationHighlight) {
+  fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
+                                                .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
+
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0}, true);
+
+  RunLoopUntilIdle();
+
+  // Verify that all four expected edges are present.
+  // Resource IDs 1-7 are used for the resources created in InitializeView(), so the next available
+  // id is 8. Since resource ids are generated incrementally, we expect the four edge rectangles to
+  // have ids 8-11.
+
+  // Before we set up the parent View bounding box, the z value of default
+  // bounding box is 0.
+  constexpr float kHighlightElevation = 0.0f;
+
+  ExpectHighlightEdge(14u, AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                      AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.min.x, (bounding_box.min.y + bounding_box.max.y) / 2,
+                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
+                      AnnotationView::kMagnificationHighlightMaterialId);
+
+  ExpectHighlightEdge(15u, AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                      AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.x, (bounding_box.min.y + bounding_box.max.y) / 2.f,
+                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
+                      AnnotationView::kMagnificationHighlightMaterialId);
+
+  ExpectHighlightEdge(16u, AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
+                      AnnotationView::kHighlightEdgeThickness,
+                      (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.max.y,
+                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
+                      AnnotationView::kMagnificationHighlightMaterialId);
+
+  ExpectHighlightEdge(17u, AnnotationView::kMagnificationHighlightBottomEdgeNodeId,
+                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
+                      AnnotationView::kHighlightEdgeThickness,
+                      (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.min.y,
+                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
+                      AnnotationView::kMagnificationHighlightMaterialId);
+
+  // Verify that top-level content node (used to attach/detach annotations from view) was attached
+  // to view.
+  ExpectEntityNode({AnnotationView::kMagnificationHighlightContentNodeId,
+                    AnnotationView::kAnnotationViewId,
+                    {1, 1, 1}, /* scale vector */
+                    {0, 0, 0}, /* translation vector */
+                    {AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
+}
+
+TEST_F(AnnotationViewTest, TestDrawMagnificationHighlightAndClearFocusHighlight) {
+  fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
+                                                .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
+
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0}, true);
+
+  RunLoopUntilIdle();
+
+  // Attempt to clear focus highlight. This operation should not affect the
+  // magnification highlight.
+  annotation_view_->ClearFocusHighlights();
+
+  RunLoopUntilIdle();
+
+  // Verify that all four expected edges are present.
+  // Resource IDs 1-7 are used for the resources created in InitializeView(), so the next available
+  // id is 8. Since resource ids are generated incrementally, we expect the four edge rectangles to
+  // have ids 8-11.
+
+  // Before we set up the parent View bounding box, the z value of default
+  // bounding box is 0.
+  constexpr float kHighlightElevation = 0.0f;
+
+  ExpectHighlightEdge(14u, AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                      AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.min.x, (bounding_box.min.y + bounding_box.max.y) / 2,
+                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
+                      AnnotationView::kMagnificationHighlightMaterialId);
+
+  ExpectHighlightEdge(15u, AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                      AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.y + AnnotationView::kHighlightEdgeThickness,
+                      bounding_box.max.x, (bounding_box.min.y + bounding_box.max.y) / 2.f,
+                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
+                      AnnotationView::kMagnificationHighlightMaterialId);
+
+  ExpectHighlightEdge(16u, AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
+                      AnnotationView::kHighlightEdgeThickness,
+                      (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.max.y,
+                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
+                      AnnotationView::kMagnificationHighlightMaterialId);
+
+  ExpectHighlightEdge(17u, AnnotationView::kMagnificationHighlightBottomEdgeNodeId,
+                      bounding_box.max.x + AnnotationView::kHighlightEdgeThickness,
+                      AnnotationView::kHighlightEdgeThickness,
+                      (bounding_box.min.x + bounding_box.max.x) / 2.f, bounding_box.min.y,
+                      kHighlightElevation, AnnotationView::kMagnificationHighlightContentNodeId,
+                      AnnotationView::kMagnificationHighlightMaterialId);
+
+  // Verify that top-level content node (used to attach/detach annotations from view) was attached
+  // to view.
+  ExpectEntityNode({AnnotationView::kMagnificationHighlightContentNodeId,
+                    AnnotationView::kAnnotationViewId,
+                    {1, 1, 1}, /* scale vector */
+                    {0, 0, 0}, /* translation vector */
+                    {AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
+}
+
+TEST_F(AnnotationViewTest, TestClearFocusHighlights) {
+  fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
+                                                .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
+
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0}, false);
 
   RunLoopUntilIdle();
 
   // Verify that top-level content node (used to attach/detach annotations from view) was attached
   // to view.
-  ExpectEntityNode(
-      {AnnotationView::kContentNodeId,
-       AnnotationView::kAnnotationViewId,
-       {1, 1, 1}, /* scale vector */
-       {0, 0, 0}, /* translation vector */
-       {AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightRightEdgeNodeId,
-        AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kHighlightBottomEdgeNodeId}});
+  ExpectEntityNode({AnnotationView::kFocusHighlightContentNodeId,
+                    AnnotationView::kAnnotationViewId,
+                    {1, 1, 1}, /* scale vector */
+                    {0, 0, 0}, /* translation vector */
+                    {AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                     AnnotationView::kFocusHighlightRightEdgeNodeId,
+                     AnnotationView::kFocusHighlightTopEdgeNodeId,
+                     AnnotationView::kFocusHighlightBottomEdgeNodeId}});
 
-  annotation_view_->DetachViewContents();
+  annotation_view_->ClearFocusHighlights();
 
   RunLoopUntilIdle();
 
   // Verify that top-level content node (used to attach/detach annotations from view) was detached
   // from view.
-  ExpectEntityNode(
-      {AnnotationView::kContentNodeId,
-       0u,
-       {1, 1, 1}, /* scale vector */
-       {0, 0, 0}, /* translation vector */
-       {AnnotationView::kHighlightLeftEdgeNodeId, AnnotationView::kHighlightRightEdgeNodeId,
-        AnnotationView::kHighlightTopEdgeNodeId, AnnotationView::kHighlightBottomEdgeNodeId}});
+  ExpectEntityNode({AnnotationView::kFocusHighlightContentNodeId,
+                    0u,
+                    {1, 1, 1}, /* scale vector */
+                    {0, 0, 0}, /* translation vector */
+                    {AnnotationView::kFocusHighlightLeftEdgeNodeId,
+                     AnnotationView::kFocusHighlightRightEdgeNodeId,
+                     AnnotationView::kFocusHighlightTopEdgeNodeId,
+                     AnnotationView::kFocusHighlightBottomEdgeNodeId}});
+}
+
+TEST_F(AnnotationViewTest, TestClearMagnificationHighlights) {
+  fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
+                                                .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
+
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0}, true);
+
+  RunLoopUntilIdle();
+
+  // Verify that top-level content node (used to attach/detach annotations from view) was attached
+  // to view.
+  ExpectEntityNode({AnnotationView::kMagnificationHighlightContentNodeId,
+                    AnnotationView::kAnnotationViewId,
+                    {1, 1, 1}, /* scale vector */
+                    {0, 0, 0}, /* translation vector */
+                    {AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
+
+  annotation_view_->ClearMagnificationHighlights();
+
+  RunLoopUntilIdle();
+
+  // Verify that top-level content node (used to attach/detach annotations from view) was detached
+  // from view.
+  ExpectEntityNode({AnnotationView::kMagnificationHighlightContentNodeId,
+                    0u,
+                    {1, 1, 1}, /* scale vector */
+                    {0, 0, 0}, /* translation vector */
+                    {AnnotationView::kMagnificationHighlightLeftEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightRightEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightTopEdgeNodeId,
+                     AnnotationView::kMagnificationHighlightBottomEdgeNodeId}});
 }
 
 TEST_F(AnnotationViewTest, TestViewPropertiesChangedEvent) {
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
 
-  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0});
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0}, false);
 
   RunLoopUntilIdle();
 
@@ -580,7 +800,7 @@ TEST_F(AnnotationViewTest, TestViewPropertiesChangedElevation) {
 
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
-  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0});
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0}, false);
   RunLoopUntilIdle();
 
   // Same as the value defined in annotation_view.cc.
@@ -588,10 +808,10 @@ TEST_F(AnnotationViewTest, TestViewPropertiesChangedElevation) {
   const float kExpectedElevation = kViewProperties.bounding_box.min.z * kEpsilon;
 
   const auto& rectangles = mock_session_->rectangles();
-  EXPECT_FLOAT_EQ(rectangles.at(8u).elevation, kExpectedElevation);
-  EXPECT_FLOAT_EQ(rectangles.at(9u).elevation, kExpectedElevation);
-  EXPECT_FLOAT_EQ(rectangles.at(10u).elevation, kExpectedElevation);
-  EXPECT_FLOAT_EQ(rectangles.at(11u).elevation, kExpectedElevation);
+  EXPECT_FLOAT_EQ(rectangles.at(14u).elevation, kExpectedElevation);
+  EXPECT_FLOAT_EQ(rectangles.at(15u).elevation, kExpectedElevation);
+  EXPECT_FLOAT_EQ(rectangles.at(16u).elevation, kExpectedElevation);
+  EXPECT_FLOAT_EQ(rectangles.at(17u).elevation, kExpectedElevation);
 
   EXPECT_TRUE(properties_changed_);
 }
@@ -599,7 +819,7 @@ TEST_F(AnnotationViewTest, TestViewPropertiesChangedElevation) {
 TEST_F(AnnotationViewTest, TestViewDetachAndReattachEvents) {
   fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0, .y = 0, .z = 0},
                                                 .max = {.x = 1.0, .y = 2.0, .z = 3.0}};
-  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0});
+  annotation_view_->DrawHighlight(bounding_box, {1, 1, 1}, {0, 0, 0}, false);
 
   // ViewAttachedToSceneEvent() should have no effect before any highlights are drawn.
   mock_session_->SendViewDetachedFromSceneEvent();

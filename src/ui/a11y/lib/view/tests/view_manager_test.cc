@@ -305,7 +305,7 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDrawAndClearHighlights) {
 
   auto highlighted_view = annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
   ASSERT_TRUE(highlighted_view);
-  auto highlight = highlighted_view->GetCurrentHighlight();
+  auto highlight = highlighted_view->GetCurrentFocusHighlight();
   EXPECT_TRUE(highlight.has_value());
   EXPECT_EQ(highlight->max.x, 1.0);
   EXPECT_EQ(highlight->max.y, 2.0);
@@ -316,7 +316,7 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDrawAndClearHighlights) {
   auto maybe_highlighted_view =
       annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
   ASSERT_TRUE(maybe_highlighted_view);
-  auto maybe_highlight = maybe_highlighted_view->GetCurrentHighlight();
+  auto maybe_highlight = maybe_highlighted_view->GetCurrentFocusHighlight();
   EXPECT_FALSE(maybe_highlight.has_value());
 }
 
@@ -341,7 +341,7 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDisableAnnotations) {
 
   auto highlighted_view = annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
   ASSERT_TRUE(highlighted_view);
-  auto highlight = highlighted_view->GetCurrentHighlight();
+  auto highlight = highlighted_view->GetCurrentFocusHighlight();
   EXPECT_TRUE(highlight.has_value());
   EXPECT_EQ(highlight->max.x, 1.0);
   EXPECT_EQ(highlight->max.y, 2.0);
@@ -354,7 +354,7 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDisableAnnotations) {
   auto maybe_highlighted_view =
       annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
   ASSERT_TRUE(maybe_highlighted_view);
-  auto maybe_highlight = maybe_highlighted_view->GetCurrentHighlight();
+  auto maybe_highlight = maybe_highlighted_view->GetCurrentFocusHighlight();
   EXPECT_FALSE(maybe_highlight.has_value());
 }
 
@@ -378,7 +378,7 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDrawHighlightWithAnnotationsDisable
   auto maybe_highlighted_view =
       annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
   ASSERT_TRUE(maybe_highlighted_view);
-  auto maybe_highlight = maybe_highlighted_view->GetCurrentHighlight();
+  auto maybe_highlight = maybe_highlighted_view->GetCurrentFocusHighlight();
   EXPECT_FALSE(maybe_highlight.has_value());
 }
 
