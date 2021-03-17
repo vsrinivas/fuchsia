@@ -9,6 +9,7 @@ fidl("controller") {
 
   sources = [
     "detect_controller.fidl",
+    "elephant_controller.fidl",
     "log_stats_controller.fidl",
     "sampler_controller.fidl",
   ]

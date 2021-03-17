@@ -20,6 +20,7 @@ group("tests") {
     "archivist:tests",
     "config:tests",
     "detect:tests",
+    "elephant:tests",
     "iquery:tests",
     "lib:tests",
     "log-stats:tests",

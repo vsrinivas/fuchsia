@@ -1,0 +1,30 @@
+// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.diagnostics.persist;
+
+const uint64 MAX_NAME_SIZE = 100;
+
+enum PersistResult {
+    // The persistence request was scheduled to
+    // a fetcher's queue.
+    QUEUED = 1;
+    // TODO(cphoenix): What is too big?
+    TOO_BIG = 2;
+    // The provided tag for persistence wasn't present
+    // in the service configuration.
+    BAD_NAME = 3;
+    // Elephant encountered an issue that prevented the scheduling of
+    // the persistence.
+    INTERNAL_ERROR = 4;
+};
+
+/// Stores limited amounts of Inspect-formatted data till the next boot and publishes it in
+/// the "elephant" component's inspect tree.
+[Discoverable]
+protocol DataPersistence {
+    /// Schedule the persistence the selected data associated with this tag in Elephant's config files.
+    /// Fetching the selected data may be delayed, if there is other work in a given service's queue.
+    Persist(string:MAX_NAME_SIZE tag) -> (PersistResult result);
+};

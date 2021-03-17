@@ -1,0 +1,34 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/launcher",
+        args: [ "elephant" ],
+    },
+    capabilities: [
+        {
+            protocol: [ "fuchsia.diagnostics.internal.ElephantController" ],
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.diagnostics.FeedbackArchiveAccessor",
+            from: "parent",
+        },
+        {
+            directory: "config-data",
+            rights: [ "r*" ],
+            path: "/config/data",
+        },
+        {
+            storage: "data",
+            path: "/data",
+        },
+    ],
+    expose: [
+        {
+            protocol: [ "fuchsia.diagnostics.internal.ElephantController" ],
+            from: "self",
+        },
+    ],
+}

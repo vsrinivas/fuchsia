@@ -1,0 +1,17 @@
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config.gni")
+
+# TODO(cphoenix) re-enable tests in this file similar to config/triage/BUILD.gn
+
+# The list of triage configuration files in the current directory that
+# are used to implement the `fx triage` command. Files that are not listed
+# in this variable will be ignored.
+elephant_files = [ "test.persist" ]
+
+config_data("elephant") {
+  for_pkg = "elephant"
+  sources = elephant_files
+}

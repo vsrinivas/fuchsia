@@ -23,6 +23,7 @@ enum ChildArgs {
     Detect(detect::CommandLine),
     LogStats(log_stats::CommandLine),
     Lapis(sampler::Args),
+    Elephant(elephant::CommandLine),
 }
 
 #[fasync::run_singlethreaded]
@@ -31,6 +32,7 @@ async fn main() -> Result<(), Error> {
         Some(log_stats::PROGRAM_NAME) => log_stats::PROGRAM_NAME,
         Some(detect::PROGRAM_NAME) => detect::PROGRAM_NAME,
         Some(sampler::PROGRAM_NAME) => sampler::PROGRAM_NAME,
+        Some(elephant::PROGRAM_NAME) => elephant::PROGRAM_NAME,
         // If the name is invalid, don't quit yet - give argh a chance to log
         // help text. Then the program will exit.
         _ => "launcher",
@@ -39,6 +41,7 @@ async fn main() -> Result<(), Error> {
     let args = v2_argh_wrapper::load_command_line::<LauncherArgs>()?;
     match args.program {
         ChildArgs::Detect(args) => detect::main(args).await,
+        ChildArgs::Elephant(_args) => elephant::main().await,
         ChildArgs::LogStats(_args) => log_stats::main().await,
         ChildArgs::Lapis(args) => sampler::main(args).await,
     }
