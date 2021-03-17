@@ -68,6 +68,8 @@ mod c {
     c_test!(order2);
     c_test!(order3);
     c_test!(order4);
+    c_test!(order5);
+    c_test!(order6);
     c_test!(passcallback);
     c_test!(point);
     c_test!(preservenames);

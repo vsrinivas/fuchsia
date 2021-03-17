@@ -1,0 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.order7;
+
+struct One {
+    uint64 one_field;
+};
+
+struct Two {
+    uint32 two_field;
+};

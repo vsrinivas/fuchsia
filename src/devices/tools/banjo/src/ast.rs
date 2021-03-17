@@ -84,6 +84,21 @@ impl Ident {
         self.name.as_str()
     }
 
+    // Returns a triplet of data used to sort declarations in a way that's identical to FIDL.
+    pub fn order_triplet(&self) -> (String, String, String) {
+        (
+            // Namespace.
+            self.namespace.as_ref().map(|ns| ns.clone()).unwrap_or("".to_string()),
+            // Unqualified name.
+            self.name.clone(),
+            // Fully-qualified name.
+            self.namespace
+                .as_ref()
+                .map(|ns| format!("{}/{}", ns, self.name))
+                .unwrap_or(self.name.clone()),
+        )
+    }
+
     pub fn is_base_type(&self) -> bool {
         // TODO add more of zx.banjo
         match self.namespace {
@@ -575,18 +590,18 @@ pub enum Decl {
 impl Decl {
     // Returns an object used to order declaration instances.
     //
-    // Currently a tuple of optional namespace + required name.
-    fn get_order(&self) -> Option<(Option<String>, String)> {
+    // Currently a tuple of namespace + short name + fully-qualified name.
+    fn get_order(&self) -> Option<(String, String, String)> {
         // Declarations are alphabetically ordered here. Note however that the list of 0-dependency
         // declarations is processed from the back in `validate_declaration_deps`, resulting in
         // descending alhpabetical order.
         match self {
-            Decl::Protocol { name, .. } => Some(name.fq()),
-            Decl::Struct { name, .. } => Some(name.fq()),
-            Decl::Union { name, .. } => Some(name.fq()),
-            Decl::Enum { name, .. } => Some(name.fq()),
-            Decl::Alias(to, _from) => Some(to.fq()),
-            Decl::Constant { name, .. } => Some(name.fq()),
+            Decl::Protocol { name, .. } => Some(name.order_triplet()),
+            Decl::Struct { name, .. } => Some(name.order_triplet()),
+            Decl::Union { name, .. } => Some(name.order_triplet()),
+            Decl::Enum { name, .. } => Some(name.order_triplet()),
+            Decl::Alias(to, _from) => Some(to.order_triplet()),
+            Decl::Constant { name, .. } => Some(name.order_triplet()),
             Decl::Resource { .. } => None,
         }
     }
@@ -594,7 +609,18 @@ impl Decl {
 
 impl Ord for Decl {
     fn cmp(&self, other: &Self) -> Ordering {
-        self.get_order().cmp(&other.get_order())
+        let self_order = self.get_order();
+        let other_order = other.get_order();
+        if self_order == None || other_order == None {
+            return self_order.cmp(&other_order);
+        }
+        let (self_ns, self_name, self_flat_name) = self_order.unwrap();
+        let (other_ns, other_name, other_flat_name) = other_order.unwrap();
+        if self_ns != other_ns {
+            return self_flat_name.cmp(&other_flat_name);
+        } else {
+            return self_name.cmp(&other_name);
+        }
     }
 }
 
@@ -1016,8 +1042,9 @@ impl BanjoAst {
                     return None;
                 }
 
-                let (_, ident) = id.fq();
-                for decl in self.namespaces[&self.primary_namespace].iter() {
+                let (maybe_ns, ident) = id.fq();
+                let ns = maybe_ns.as_ref().unwrap_or(&self.primary_namespace);
+                for decl in self.namespaces[ns].iter() {
                     match decl {
                         Decl::Union { name, .. }
                         | Decl::Constant { name, .. }
@@ -1028,9 +1055,9 @@ impl BanjoAst {
                                 return Some(decl);
                             }
                         }
-                        Decl::Alias(to, from) => {
+                        Decl::Alias(to, _from) => {
                             if to == id {
-                                return self.type_to_decl(&self.id_to_type(from), ignore_ref);
+                                return Some(decl);
                             }
                         }
                         Decl::Resource { .. } => {}

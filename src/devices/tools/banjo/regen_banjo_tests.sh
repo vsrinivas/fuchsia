@@ -18,11 +18,17 @@ RUST_FILES="$BANJO_DIR/test/rust"
 AST_FILES="$BANJO_DIR/test/ast"
 BANJO_BIN="$FUCHSIA_BUILD_DIR/host_x64/exe.unstripped/banjo_bin"
 
+FILE="$1"
+
 for f in $BANJO_FILES/*
 do
   filename=$(basename -- "$f")
   extension="${filename##*.*.}"
   filename="${filename%.*.*}"
+
+  if [ ! -z  "$FILE" ] && [ "$filename" != "$FILE" ]; then
+    continue
+  fi
 
   if [ "$filename" = "bad_type" ]; then
     continue
@@ -48,8 +54,12 @@ do
     || [ "$filename" = "handles" ] || [ "$filename" = "protocol-array" ] \
     || [ "$filename" = "protocol-vector" ] || [ "$filename" = "tables" ] \
     || [ "$filename" = "example-9" ] || [ "$filename" = "protocol-handle" ] \
-    || [ "$filename" = "types" ] || [ "$filename" = "order4" ]; then
+    || [ "$filename" = "types" ] || [ "$filename" = "order4" ] || [ "$filename" = "order5" ]; then
     dependencies="$dependencies --files $FUCHSIA_DIR/sdk/banjo/zx/zx.banjo"
+  fi
+
+  if [ "$filename" = "order6" ]; then
+    dependencies="$dependencies --files $BANJO_FILES/order7.test.banjo"
   fi
 
   if [ "$filename" = "view" ]; then
@@ -88,7 +98,8 @@ do
 
   if [ "$filename" = "constants" ] || [ "$filename" = "order" ] || [ "$filename" = "union" ] \
     || [ "$filename" = "order1" ] || [ "$filename" = "order2" ] || [ "$filename" = "order3" ] \
-    || [ "$filename" = "order4" ]; then
+    || [ "$filename" = "order4" ] || [ "$filename" = "order5" ] || [ "$filename" = "order6" ] \
+    || [ "$filename" = "order7" ]; then
     with_cpp=false
     with_rust=false
   fi

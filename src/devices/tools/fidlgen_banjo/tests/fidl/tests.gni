@@ -193,6 +193,20 @@ _simple_libraries = [
     backends = [ "c" ]
     deps = [ "//zircon/vdso/zx" ]
   },
+  {
+    name = "order5"
+    backends = [ "c" ]
+    deps = [ "//zircon/vdso/zx" ]
+  },
+  {
+    name = "order6"
+    backends = [ "c" ]
+    deps = [ ":order7" ]
+  },
+  {
+    name = "order7"
+    backends = []
+  },
 
   # Note: parameterattributes is an AST-only test, the tested feature is supported by FIDL.
   {

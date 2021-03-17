@@ -514,7 +514,7 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
                         match param._type {
                             Type::Str { .. } => {
                                 need_cpp_string_header = true;
-                                if method.maybe_attributes.has("Async") {
+                                if !method.maybe_attributes.has("Async") {
                                     need_c_string_header = true;
                                 }
                             }
