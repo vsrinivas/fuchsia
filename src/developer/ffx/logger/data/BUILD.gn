@@ -17,3 +17,7 @@ rustc_library("lib") {
 
   sources = [ "src/lib.rs" ]
 }
+
+group("data") {
+  public_deps = [ ":lib" ]
+}

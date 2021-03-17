@@ -30,4 +30,6 @@ enum DiagnosticsStreamError : uint32 {
 
 table DaemonDiagnosticsStreamParameters {
     1: StreamMode stream_mode;
+    // Sets the earliest time (in monotonic nanoseconds) of logs that will be returned.
+    2: uint64 min_target_timestamp_nanos;
 };

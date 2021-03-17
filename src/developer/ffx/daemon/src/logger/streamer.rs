@@ -24,6 +24,7 @@ use {
         FutureExt, TryStreamExt,
     },
     std::convert::TryInto,
+    std::fmt,
     std::io::ErrorKind,
     std::iter::Iterator,
     std::pin::Pin,
@@ -173,6 +174,12 @@ impl LogFile {
     }
 }
 
+impl fmt::Display for &LogFile {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "<Log file wrapping '{}'>", &self.path.to_string_lossy())
+    }
+}
+
 #[derive(Clone, Debug)]
 pub struct TargetLogDirectory {
     root: PathBuf,
@@ -259,6 +266,7 @@ struct CachedSessionStream {
     file_iter: Option<LogFileEntries>,
     chunks: Vec<LogFile>,
     index: usize,
+    start_target_timestamp: Option<Timestamp>,
     end_timestamp: Option<Timestamp>,
     finished: bool,
 }
@@ -266,19 +274,64 @@ struct CachedSessionStream {
 impl CachedSessionStream {
     async fn new(
         session_dir: TargetSessionDirectory,
+        start_target_timestamp: Option<Timestamp>,
         end_timestamp: Option<Timestamp>,
         stream_mode: StreamMode,
     ) -> Result<Self> {
         let mut entries = session_dir.sort_entries().await?;
+
         if stream_mode == StreamMode::SnapshotRecentThenSubscribe && entries.len() > 2 {
             entries.drain(0..entries.len() - 2);
+        }
+
+        if let Some(start_ts) = start_target_timestamp {
+            // We try to optimize the read by choosing the first log file that
+            // could possibly contain the provided start timestamp
+            let mut i = entries.len();
+            for file in entries.iter().rev() {
+                i -= 1;
+                let stream = match file.stream_entries().await {
+                    Ok(s) => s,
+                    Err(e) => {
+                        // If this fails, just bail out on the optimization and continue on.
+                        log::info!(
+                            "non-critical failure to stream entries from log file '{}': {}",
+                            file,
+                            e
+                        );
+                        break;
+                    }
+                };
+
+                let earliest_chunk_ts = stream
+                    .filter_map(|e| e.ok())
+                    .filter_map(|e| match e.data {
+                        LogData::TargetLog(data) => Some(data.metadata.timestamp),
+                        _ => None,
+                    })
+                    .next()
+                    .await;
+                if let Some(earliest_ts) = earliest_chunk_ts {
+                    if earliest_ts < start_ts {
+                        entries.drain(0..i);
+                        break;
+                    }
+                }
+            }
         }
 
         // Force every LogFile to cache its underlying FS file. This allows to continue
         // streaming data even if the files get garbage collected during iteration.
         futures::future::join_all(entries.iter_mut().map(|e| e.force_open())).await;
 
-        Ok(Self { chunks: entries, index: 0, file_iter: None, finished: false, end_timestamp })
+        Ok(Self {
+            chunks: entries,
+            index: 0,
+            file_iter: None,
+            finished: false,
+            start_target_timestamp,
+            end_timestamp,
+        })
     }
 
     pub async fn iter(&mut self) -> Result<Option<Result<LogEntry>>> {
@@ -300,6 +353,17 @@ impl CachedSessionStream {
                             self.finished = true;
                             return Ok(None);
                         }
+                    }
+
+                    match &entry.data {
+                        LogData::TargetLog(data) => {
+                            if let Some(min_ts) = self.start_target_timestamp {
+                                if data.metadata.timestamp < min_ts {
+                                    continue;
+                                }
+                            }
+                        }
+                        _ => {}
                     }
 
                     return Ok(Some(Ok(entry)));
@@ -336,6 +400,7 @@ pub struct SessionStream {
 impl SessionStream {
     async fn new(
         session_dir: TargetSessionDirectory,
+        start_target_timestamp: Option<Timestamp>,
         end_timestamp: Option<Timestamp>,
         stream_mode: StreamMode,
         read_stream: Arc<mpmc::Sender<LogEntry>>,
@@ -348,7 +413,13 @@ impl SessionStream {
             None
         };
         Ok(Self {
-            cache_stream: CachedSessionStream::new(session_dir, end_timestamp, stream_mode).await?,
+            cache_stream: CachedSessionStream::new(
+                session_dir,
+                start_target_timestamp,
+                end_timestamp,
+                stream_mode,
+            )
+            .await?,
             cache_read_finished: false,
             read_receiver: receiver,
             read_stream,
@@ -476,7 +547,11 @@ pub trait GenericDiagnosticsStreamer {
 
     async fn clean_sessions_for_target(&self) -> Result<()>;
 
-    async fn stream_entries(&self, stream_mode: StreamMode) -> Result<SessionStream>;
+    async fn stream_entries(
+        &self,
+        stream_mode: StreamMode,
+        min_target_timestamp: Option<Timestamp>,
+    ) -> Result<SessionStream>;
 }
 
 #[async_trait::async_trait]
@@ -633,7 +708,11 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
         result
     }
 
-    async fn stream_entries(&self, stream_mode: StreamMode) -> Result<SessionStream> {
+    async fn stream_entries(
+        &self,
+        stream_mode: StreamMode,
+        min_target_timestamp: Option<Timestamp>,
+    ) -> Result<SessionStream> {
         let ts = if stream_mode == StreamMode::SnapshotAll {
             Some(self.read_most_recent_entry_timestamp().await?.unwrap_or(Timestamp::from(0)))
         } else {
@@ -643,7 +722,14 @@ impl GenericDiagnosticsStreamer for DiagnosticsStreamer<'_> {
         let inner = self.inner.read().await;
         let output_dir = inner.output_dir.as_ref().context("stream not setup")?;
 
-        SessionStream::new(output_dir.clone(), ts, stream_mode, inner.read_stream.clone()).await
+        SessionStream::new(
+            output_dir.clone(),
+            min_target_timestamp,
+            ts,
+            stream_mode,
+            inner.read_stream.clone(),
+        )
+        .await
     }
 }
 
@@ -721,9 +807,9 @@ mod test {
     use {
         super::*,
         async_std::{fs::read_to_string, future::timeout},
-        diagnostics_data::{LogsData, LogsField, Severity},
-        diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
+        diagnostics_data::LogsData,
         ffx_log_data::LogData,
+        ffx_log_test_utils::LogsDataBuilder,
         fuchsia_async::TimeoutExt,
         std::collections::HashMap,
         std::time::Duration,
@@ -772,17 +858,7 @@ mod test {
     }
 
     fn make_target_log(ts: i64, msg: String) -> LogsData {
-        let hierarchy =
-            DiagnosticsHierarchy::new("root", vec![Property::String(LogsField::Msg, msg)], vec![]);
-        LogsData::for_logs(
-            String::from("test/moniker"),
-            Some(hierarchy),
-            Timestamp::from(ts),
-            String::from("fake-url"),
-            Severity::Error,
-            1,
-            vec![],
-        )
+        LogsDataBuilder::new().message(&msg).timestamp(Timestamp::from(ts)).build()
     }
 
     fn make_malformed_log(ts: i64) -> LogEntry {
@@ -907,7 +983,7 @@ mod test {
             log
         );
 
-        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll).await?, vec![log]).await;
+        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll, None).await?, vec![log]).await;
 
         Ok(())
     }
@@ -932,7 +1008,54 @@ mod test {
         assert_eq!(serde_json::from_str::<LogEntry>(values.get(0).unwrap()).unwrap(), log);
         assert_eq!(serde_json::from_str::<LogEntry>(values.get(1).unwrap()).unwrap(), log2);
 
-        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll).await?, vec![log, log2]).await;
+        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll, None).await?, vec![log, log2])
+            .await;
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_min_timestamp_across_chunks() -> Result<()> {
+        let (_temp, streamer) = setup_default_streamer(
+            SMALL_MAX_LOG_SIZE,
+            LARGE_MAX_SESSION_SIZE,
+            DEFAULT_MAX_SESSIONS,
+        )
+        .await?;
+        let log = make_valid_log(TIMESTAMP, "log".to_string());
+        let log2 = make_valid_log(TIMESTAMP + 1, "log2".to_string());
+        let log3 = make_valid_log(TIMESTAMP + 2, "log3".to_string());
+        streamer.append_logs(vec![log.clone(), log2.clone(), log3.clone()]).await?;
+
+        verify_logs(
+            streamer
+                .stream_entries(StreamMode::SnapshotAll, Some(Timestamp::from(TIMESTAMP + 1)))
+                .await?,
+            vec![log2, log3],
+        )
+        .await;
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_min_timestamp_single_chunks() -> Result<()> {
+        let (_temp, streamer) = setup_default_streamer(
+            LARGE_MAX_LOG_SIZE,
+            LARGE_MAX_SESSION_SIZE,
+            DEFAULT_MAX_SESSIONS,
+        )
+        .await?;
+        let log = make_valid_log(TIMESTAMP, "log".to_string());
+        let log2 = make_valid_log(TIMESTAMP + 1, "log2".to_string());
+        let log3 = make_valid_log(TIMESTAMP + 2, "log3".to_string());
+        streamer.append_logs(vec![log.clone(), log2.clone(), log3.clone()]).await?;
+
+        verify_logs(
+            streamer
+                .stream_entries(StreamMode::SnapshotAll, Some(Timestamp::from(TIMESTAMP + 1)))
+                .await?,
+            vec![log2, log3],
+        )
+        .await;
         Ok(())
     }
 
@@ -957,7 +1080,8 @@ mod test {
         assert_eq!(serde_json::from_str::<LogEntry>(values.get(0).unwrap()).unwrap(), log);
         assert_eq!(serde_json::from_str::<LogEntry>(values.get(1).unwrap()).unwrap(), log2);
 
-        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll).await?, vec![log, log2]).await;
+        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll, None).await?, vec![log, log2])
+            .await;
         Ok(())
     }
 
@@ -979,7 +1103,8 @@ mod test {
         assert_eq!(serde_json::from_str::<LogEntry>(values.get(0).unwrap()).unwrap(), log);
         assert_eq!(serde_json::from_str::<LogEntry>(values.get(1).unwrap()).unwrap(), log2);
 
-        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll).await?, vec![log, log2]).await;
+        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll, None).await?, vec![log, log2])
+            .await;
         Ok(())
     }
 
@@ -1004,8 +1129,11 @@ mod test {
         assert_eq!(serde_json::from_str::<LogEntry>(values.get(0).unwrap()).unwrap(), log2);
         assert_eq!(serde_json::from_str::<LogEntry>(values.get(1).unwrap()).unwrap(), log3);
 
-        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll).await?, vec![log2, log3])
-            .await;
+        verify_logs(
+            streamer.stream_entries(StreamMode::SnapshotAll, None).await?,
+            vec![log2, log3],
+        )
+        .await;
         Ok(())
     }
 
@@ -1048,7 +1176,8 @@ mod test {
         assert_eq!(serde_json::from_str::<LogEntry>(results.get(1).unwrap()).unwrap(), log2);
         assert!(results.get(2).unwrap().is_empty());
 
-        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll).await?, vec![log, log2]).await;
+        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll, None).await?, vec![log, log2])
+            .await;
 
         Ok(())
     }
@@ -1064,13 +1193,14 @@ mod test {
         let log = make_valid_log(TIMESTAMP, "log1".to_string());
         streamer.append_logs(vec![log.clone()]).await?;
 
-        let iterator = streamer.stream_entries(StreamMode::SnapshotAll).await?;
+        let iterator = streamer.stream_entries(StreamMode::SnapshotAll, None).await?;
 
         let log2 = make_valid_log(TIMESTAMP + 1, "log2".to_string());
         streamer.append_logs(vec![log2.clone()]).await?;
 
         verify_logs(iterator, vec![log.clone()]).await;
-        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll).await?, vec![log, log2]).await;
+        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll, None).await?, vec![log, log2])
+            .await;
 
         Ok(())
     }
@@ -1083,13 +1213,13 @@ mod test {
             DEFAULT_MAX_SESSIONS,
         )
         .await?;
-        let mut iterator = streamer.stream_entries(StreamMode::SnapshotAll).await?;
+        let mut iterator = streamer.stream_entries(StreamMode::SnapshotAll, None).await?;
 
         let log = make_valid_log(TIMESTAMP, "log1".to_string());
         streamer.append_logs(vec![log.clone()]).await?;
 
         assert!(iterator.iter().await?.is_none());
-        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll).await?, vec![log]).await;
+        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll, None).await?, vec![log]).await;
 
         Ok(())
     }
@@ -1109,7 +1239,8 @@ mod test {
         let log4 = make_valid_log(TIMESTAMP + 3, "log4".to_string());
         streamer.append_logs(vec![log1.clone(), log2.clone()]).await?;
 
-        let mut iterator = streamer.stream_entries(StreamMode::SnapshotAllThenSubscribe).await?;
+        let mut iterator =
+            streamer.stream_entries(StreamMode::SnapshotAllThenSubscribe, None).await?;
         verify_log(&mut iterator, log1.clone()).await.context(format!("{:?}", log1)).unwrap();
 
         streamer.append_logs(vec![log3.clone()]).await?;
@@ -1138,7 +1269,8 @@ mod test {
         let log4 = make_valid_log(TIMESTAMP + 3, "log4".to_string());
         streamer.append_logs(vec![log1.clone(), log2.clone()]).await?;
 
-        let mut iterator = streamer.stream_entries(StreamMode::SnapshotAllThenSubscribe).await?;
+        let mut iterator =
+            streamer.stream_entries(StreamMode::SnapshotAllThenSubscribe, None).await?;
         verify_log(&mut iterator, log1.clone()).await.context(format!("{:?}", log1)).unwrap();
         verify_log(&mut iterator, log2.clone()).await.context(format!("{:?}", log2)).unwrap();
         verify_times_out(&mut iterator).await;
@@ -1168,7 +1300,8 @@ mod test {
         streamer.append_logs(vec![log.clone(), log.clone(), log2.clone(), log3.clone()]).await?;
 
         // SnapshotRecent will include only the most recent two chunks
-        let mut iterator = streamer.stream_entries(StreamMode::SnapshotRecentThenSubscribe).await?;
+        let mut iterator =
+            streamer.stream_entries(StreamMode::SnapshotRecentThenSubscribe, None).await?;
         verify_log(&mut iterator, log2.clone()).await.context(format!("{:?}", log2)).unwrap();
         verify_log(&mut iterator, log3.clone()).await.context(format!("{:?}", log3)).unwrap();
         verify_times_out(&mut iterator).await;
@@ -1177,7 +1310,8 @@ mod test {
         verify_log(&mut iterator, log4.clone()).await.context(format!("{:?}", log4)).unwrap();
         verify_times_out(&mut iterator).await;
 
-        let mut iterator = streamer.stream_entries(StreamMode::SnapshotRecentThenSubscribe).await?;
+        let mut iterator =
+            streamer.stream_entries(StreamMode::SnapshotRecentThenSubscribe, None).await?;
         verify_log(&mut iterator, log3.clone()).await.context(format!("{:?}", log3)).unwrap();
         verify_log(&mut iterator, log4.clone()).await.context(format!("{:?}", log4)).unwrap();
         verify_times_out(&mut iterator).await;
@@ -1200,7 +1334,7 @@ mod test {
         let log4 = make_valid_log(TIMESTAMP + 3, "log4".to_string());
         streamer.append_logs(vec![log1.clone(), log2.clone()]).await?;
 
-        let mut iterator = streamer.stream_entries(StreamMode::Subscribe).await?;
+        let mut iterator = streamer.stream_entries(StreamMode::Subscribe, None).await?;
         streamer.append_logs(vec![log3.clone()]).await?;
         verify_log(&mut iterator, log3.clone()).await.context(format!("{:?}", log3)).unwrap();
 
@@ -1223,7 +1357,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_read_no_setup_call_errors() -> Result<()> {
         let streamer = DiagnosticsStreamer::default();
-        assert!(streamer.stream_entries(StreamMode::SnapshotAll).await.is_err());
+        assert!(streamer.stream_entries(StreamMode::SnapshotAll, None).await.is_err());
 
         Ok(())
     }
@@ -1231,7 +1365,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_wait_for_setup() -> Result<()> {
         let streamer = Arc::new(DiagnosticsStreamer::default());
-        assert!(streamer.stream_entries(StreamMode::SnapshotAll).await.is_err());
+        assert!(streamer.stream_entries(StreamMode::SnapshotAll, None).await.is_err());
 
         let streamer_clone = streamer.clone();
         let f = streamer_clone.wait_for_setup();
@@ -1365,7 +1499,8 @@ mod test {
             "{:?}",
             results
         );
-        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll).await?, vec![log3]).await;
+        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll, None).await?, vec![log3])
+            .await;
         Ok(())
     }
 }

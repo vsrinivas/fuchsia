@@ -224,9 +224,9 @@ mod test {
         crate::NodeId,
         async_std::sync::Mutex,
         async_trait::async_trait,
-        diagnostics_data::{LogsField, Severity},
-        diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
-        ffx_log_test_utils::{setup_fake_archive_iterator, FakeArchiveIteratorResponse},
+        ffx_log_test_utils::{
+            setup_fake_archive_iterator, FakeArchiveIteratorResponse, LogsDataBuilder,
+        },
         fidl::endpoints::RequestStream,
         fidl_fuchsia_developer_remotecontrol::{
             ArchiveIteratorError, IdentifyHostResponse, RemoteControlMarker, RemoteControlProxy,
@@ -323,6 +323,7 @@ mod test {
         async fn stream_entries(
             &self,
             _stream_mode: fidl_fuchsia_developer_bridge::StreamMode,
+            _start_ts: Option<Timestamp>,
         ) -> Result<SessionStream> {
             panic!("unexpected stream_entries call");
         }
@@ -444,20 +445,7 @@ mod test {
     }
 
     fn target_log(timestamp: i64, msg: &str) -> LogsData {
-        let hierarchy = DiagnosticsHierarchy::new(
-            "root",
-            vec![Property::String(LogsField::Msg, msg.to_string())],
-            vec![],
-        );
-        LogsData::for_logs(
-            String::from("test/moniker"),
-            Some(hierarchy),
-            timestamp,
-            String::from("fake-url"),
-            Severity::Error,
-            1,
-            vec![],
-        )
+        LogsDataBuilder::new().timestamp(Timestamp::from(timestamp)).message(msg).build()
     }
 
     async fn make_default_target(expected_logs: Vec<FakeArchiveIteratorResponse>) -> Target {

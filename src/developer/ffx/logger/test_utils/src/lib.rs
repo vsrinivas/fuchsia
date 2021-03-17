@@ -5,6 +5,8 @@
 use {
     anyhow::Result,
     async_std::sync::Arc,
+    diagnostics_data::{LogsData, LogsField, Severity, Timestamp},
+    diagnostics_hierarchy::{DiagnosticsHierarchy, Property},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_developer_remotecontrol::{
         ArchiveIteratorEntry, ArchiveIteratorError, ArchiveIteratorMarker, ArchiveIteratorRequest,
@@ -75,4 +77,66 @@ pub fn setup_fake_archive_iterator(
     })
     .detach();
     Ok(())
+}
+
+pub struct LogsDataBuilder {
+    message: String,
+    timestamp: Timestamp,
+    moniker: String,
+    component_url: String,
+    severity: Severity,
+}
+
+impl LogsDataBuilder {
+    pub fn new() -> Self {
+        Self {
+            message: String::default(),
+            timestamp: Timestamp::from(0i64),
+            moniker: String::default(),
+            component_url: String::default(),
+            severity: Severity::Info,
+        }
+    }
+
+    pub fn message(mut self, message: &str) -> Self {
+        self.message = String::from(message);
+        self
+    }
+
+    pub fn timestamp(mut self, timestamp: Timestamp) -> Self {
+        self.timestamp = timestamp;
+        self
+    }
+
+    pub fn moniker(mut self, moniker: &str) -> Self {
+        self.moniker = String::from(moniker);
+        self
+    }
+
+    pub fn component_url(mut self, component_url: &str) -> Self {
+        self.component_url = String::from(component_url);
+        self
+    }
+
+    pub fn severity(mut self, severity: Severity) -> Self {
+        self.severity = severity;
+        self
+    }
+
+    pub fn build(&self) -> LogsData {
+        let hierarchy = DiagnosticsHierarchy::new(
+            "root",
+            vec![Property::String(LogsField::Msg, self.message.clone())],
+            vec![],
+        );
+        LogsData::for_logs(
+            self.moniker.clone(),
+            Some(hierarchy),
+            self.timestamp.clone(),
+            self.component_url.clone(),
+            self.severity.clone(),
+            1,
+            vec![],
+        )
+    }
 }

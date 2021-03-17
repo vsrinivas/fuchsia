@@ -25,3 +25,9 @@ pub struct LogEntry {
     pub timestamp: Timestamp,
     pub version: u64,
 }
+
+impl From<LogsData> for LogData {
+    fn from(data: LogsData) -> Self {
+        Self::TargetLog(data)
+    }
+}

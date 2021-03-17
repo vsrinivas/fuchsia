@@ -18,6 +18,7 @@ use {
     ascendd::Ascendd,
     async_trait::async_trait,
     chrono::Utc,
+    diagnostics_data::Timestamp,
     ffx_core::{build_info, TryStreamUtilExt},
     ffx_daemon_core::events::{self, EventHandler},
     fidl::endpoints::ServiceMarker,
@@ -582,8 +583,12 @@ impl Daemon {
                         .context("sending missing parameter response");
                 }
 
-                let mut log_iterator =
-                    stream.stream_entries(parameters.stream_mode.unwrap()).await?;
+                let mut log_iterator = stream
+                    .stream_entries(
+                        parameters.stream_mode.unwrap(),
+                        parameters.min_target_timestamp_nanos.map(|t| Timestamp::from(t as i64)),
+                    )
+                    .await?;
                 let task = Task::spawn(async move {
                     let mut iter_stream = iterator.into_stream()?;
 
@@ -608,6 +613,7 @@ impl Daemon {
                                     }
                                     None => {
                                         responder.send(&mut Ok(vec![]))?;
+                                        break;
                                     }
                                 }
                             }

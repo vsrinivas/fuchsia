@@ -3,8 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    argh::FromArgs, diagnostics_data::Severity, ffx_core::ffx_command,
+    argh::FromArgs,
+    chrono::{DateTime, Local},
+    chrono_english::{parse_date_string, Dialect},
+    diagnostics_data::Severity,
+    ffx_core::ffx_command,
     fidl_fuchsia_diagnostics::ComponentSelector,
+    std::time::Duration,
 };
 
 #[ffx_command()]
@@ -58,6 +63,7 @@ pub struct LogCommand {
     /// toggle coloring logs according to severity
     #[argh(option)]
     pub color: Option<bool>,
+
     /// allowed monikers
     #[argh(
         option,
@@ -82,6 +88,12 @@ fn parse_component_selector(value: &str) -> Result<ComponentSelector, String> {
         .map_err(|e| format!("failed to parse the moniker filter: {}", e))
 }
 
+fn parse_time(value: &str) -> Result<DateTime<Local>, String> {
+    let d = parse_date_string(value, Local::now(), Dialect::Us)
+        .map_err(|e| format!("invalid date string: {}", e));
+    d
+}
+
 #[derive(FromArgs, Clone, PartialEq, Debug)]
 #[argh(subcommand)]
 pub enum LogSubCommand {
@@ -100,7 +112,31 @@ pub struct WatchCommand {
 #[derive(FromArgs, Clone, PartialEq, Debug)]
 /// Dumps all logs from a target.
 #[argh(subcommand, name = "dump")]
-pub struct DumpCommand {}
+pub struct DumpCommand {
+    /// show only logs after a certain time
+    #[argh(option, from_str_fn(parse_time))]
+    pub from: Option<DateTime<Local>>,
+
+    /// show only logs after a certain time (as a monotonic
+    /// timestamp in seconds from the target).
+    #[argh(option, from_str_fn(parse_duration))]
+    pub from_monotonic: Option<Duration>,
+
+    /// show only logs until a certain time
+    #[argh(option, from_str_fn(parse_time))]
+    pub to: Option<DateTime<Local>>,
+
+    /// show only logs until a certain time (as a monotonic
+    /// timestamp in seconds from the target).
+    #[argh(option, from_str_fn(parse_duration))]
+    pub to_monotonic: Option<Duration>,
+}
+
+fn parse_duration(value: &str) -> Result<Duration, String> {
+    Ok(Duration::from_secs(
+        value.parse().map_err(|e| format!("value '{}' is not a number: {}", value, e))?,
+    ))
+}
 
 #[cfg(test)]
 mod test {
