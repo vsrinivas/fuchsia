@@ -12,6 +12,7 @@ go_library("fidlgen") {
     "lazywriter.go",
     "names.go",
     "strings.go",
+    "templates.go",
     "types.go",
   ]
 }

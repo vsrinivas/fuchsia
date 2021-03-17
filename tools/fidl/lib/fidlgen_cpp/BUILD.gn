@@ -9,6 +9,7 @@ go_library("fidlgen_cpp") {
   deps = [ "//tools/fidl/lib/fidlgen" ]
   sources = [
     "clang_formatter.go",
+    "const.go",
     "enum.go",
     "handles.go",
     "ir.go",
