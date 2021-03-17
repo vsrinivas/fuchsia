@@ -37,6 +37,8 @@ pub type sae_connid_t = u32;
 
 pub type mach_port_t = ::c_uint;
 
+pub type iconv_t = *mut ::c_void;
+
 deprecated_mach! {
     pub type vm_prot_t = ::c_int;
     pub type vm_size_t = ::uintptr_t;
@@ -2323,6 +2325,7 @@ pub const SO_NOADDRERR: ::c_int = 0x1023;
 pub const SO_NWRITE: ::c_int = 0x1024;
 pub const SO_REUSESHAREUID: ::c_int = 0x1025;
 pub const SO_NOTIFYCONFLICT: ::c_int = 0x1026;
+pub const SO_LINGER_SEC: ::c_int = 0x1080;
 pub const SO_RANDOMPORT: ::c_int = 0x1082;
 pub const SO_NP_EXTENSIONS: ::c_int = 0x1083;
 
@@ -3207,6 +3210,10 @@ pub const TIME_OOP: ::c_int = 3;
 pub const TIME_WAIT: ::c_int = 4;
 pub const TIME_ERROR: ::c_int = 5;
 
+// <sys/mount.h>
+pub const MNT_WAIT: ::c_int = 1;
+pub const MNT_NOWAIT: ::c_int = 2;
+
 cfg_if! {
     if #[cfg(libc_const_size_of)] {
         fn __DARWIN_ALIGN32(p: usize) -> usize {
@@ -3744,6 +3751,34 @@ extern "C" {
 
     pub fn ntp_adjtime(buf: *mut timex) -> ::c_int;
     pub fn ntp_gettime(buf: *mut ntptimeval) -> ::c_int;
+
+    #[cfg_attr(
+        all(target_os = "macos", not(target_arch = "aarch64")),
+        link_name = "getmntinfo$INODE64"
+    )]
+    pub fn getmntinfo(mntbufp: *mut *mut statfs, flags: ::c_int) -> ::c_int;
+    #[cfg_attr(
+        all(target_os = "macos", not(target_arch = "aarch64")),
+        link_name = "getfsstat$INODE64"
+    )]
+    pub fn getfsstat(
+        mntbufp: *mut statfs,
+        bufsize: ::c_int,
+        flags: ::c_int,
+    ) -> ::c_int;
+
+    pub fn iconv_open(
+        tocode: *const ::c_char,
+        fromcode: *const ::c_char,
+    ) -> iconv_t;
+    pub fn iconv(
+        cd: iconv_t,
+        inbuf: *mut *mut ::c_char,
+        inbytesleft: *mut ::size_t,
+        outbuf: *mut *mut ::c_char,
+        outbytesleft: *mut ::size_t,
+    ) -> ::size_t;
+    pub fn iconv_close(cd: iconv_t) -> ::c_int;
 }
 
 cfg_if! {

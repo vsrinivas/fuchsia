@@ -1103,7 +1103,7 @@ dependencies = [
  "slab",
  "smallvec 0.6.13",
  "smol",
- "socket2 0.4.0-alpha.5",
+ "socket2 0.4.0",
  "splines",
  "static_assertions",
  "streaming-stats",
@@ -1637,9 +1637,9 @@ checksum = "e2abad23fbc42b3700f2f279844dc832adb2b2eb069b2df918f455c4e18cc646"
 
 [[package]]
 name = "libc"
-version = "0.2.84"
+version = "0.2.88"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1cca32fa0182e8c0989459524dc356b8f2b5c10f1b9eb521b7d182c03cf8c5ff"
+checksum = "03b07a082330a35e43f63177cc01689da34fbffa0105e1246cf0311472cac73a"
 
 [[package]]
 name = "libm"
@@ -3348,9 +3348,9 @@ dependencies = [
 
 [[package]]
 name = "socket2"
-version = "0.4.0-alpha.5"
+version = "0.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "aa837ba9d8224cbeb63b73e72c88b38d62201f50b8b766e16ddba3dfd79a3657"
+checksum = "9e3dfc207c526015c632472a77be09cf1b6e46866581aecae5cc38fb4235dea2"
 dependencies = [
  "libc",
  "winapi",
