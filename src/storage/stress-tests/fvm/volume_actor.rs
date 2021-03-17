@@ -8,17 +8,52 @@ use {
     async_trait::async_trait,
     fuchsia_zircon::Status,
     log::debug,
-    rand::{rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
+    rand::{prelude::IteratorRandom, rngs::SmallRng, seq::SliceRandom, Rng, SeedableRng},
     std::collections::HashMap,
     stress_test::actor::{Actor, ActorError},
 };
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 enum VolumeOperation {
-    Append,
-    Truncate,
-    NewRange,
-    Verify,
+    Append { index: usize, range: VSliceRange },
+    Truncate { index: usize, range: VSliceRange },
+    NewRange { range: VSliceRange },
+    Verify { index: usize },
+}
+
+impl VolumeOperation {
+    pub fn random(rng: &mut SmallRng, vslice_ranges: &VSliceRanges) -> Self {
+        let extensions = vslice_ranges.extensions();
+        assert!(extensions.len() > 0);
+        let (index, extension) = extensions.choose(rng).unwrap();
+
+        let append = {
+            let range = extension.shrink_from_end(rng);
+            VolumeOperation::Append { index: *index, range }
+        };
+
+        let new_range = {
+            let range = extension.subrange(rng);
+            VolumeOperation::NewRange { range }
+        };
+
+        let truncate = {
+            let index = vslice_ranges.random_index(rng);
+            let range = vslice_ranges.get(index);
+            let range = range.shrink_from_start(rng);
+
+            VolumeOperation::Truncate { index, range }
+        };
+
+        let verify = {
+            let index = vslice_ranges.random_index(rng);
+            VolumeOperation::Verify { index }
+        };
+
+        let operations = vec![append, truncate, new_range, verify];
+
+        operations.into_iter().choose(rng).unwrap()
+    }
 }
 
 // Performs operations on a single FVM volume
@@ -34,6 +69,11 @@ pub struct VolumeActor {
 
     // Random number generator used for all operations
     rng: SmallRng,
+
+    // Contains details about the last pending operation.
+    // If set, we will retry this operation. Note that this
+    // operation must be idempotent for it to be safe to retry.
+    pending_op: Option<VolumeOperation>,
 }
 
 fn generate_data(seed: u128, size: usize) -> Vec<u8> {
@@ -55,74 +95,95 @@ impl VolumeActor {
         let vslice_ranges = VSliceRanges::new(max_vslice_count, max_slices_in_extend);
         let slice_seeds = HashMap::new();
 
-        let mut actor = Self { volume, rng, vslice_ranges, slice_seeds };
+        let mut actor = Self { volume, rng, vslice_ranges, slice_seeds, pending_op: None };
         actor.initialize_slice_zero().await;
         actor
     }
 
-    async fn fill_range(&mut self, range: &VSliceRange) -> Result<(), Status> {
+    async fn fill_range(&mut self, range: &VSliceRange) -> Result<Vec<u128>, Status> {
         let slice_size = self.volume.slice_size() as usize;
+        let mut seeds = vec![];
+
         for slice_offset in range.start..range.end {
             // Fill the slice with data
             let seed = self.rng.gen();
             let data = generate_data(seed, slice_size);
             self.volume.write_slice_at(&data, slice_offset).await?;
-
-            // Update state
-            let prev = self.slice_seeds.insert(slice_offset, seed);
-            assert!(prev.is_none());
+            seeds.push(seed);
         }
-        Ok(())
+
+        Ok(seeds)
     }
 
-    async fn append(&mut self) -> Result<(), Status> {
-        let extensions = self.vslice_ranges.extensions();
-        assert!(extensions.len() > 0);
+    async fn is_range_allocated(&self, range: &VSliceRange) -> Result<bool, Status> {
+        // If the first slice is allocated, then assume that all the rest are.
+        // This is because exactly one volume actor is operating on this volume,
+        // the extend operation is atomic and when the operation is redone the same
+        // range would be used.
+        match self.volume.read_slice_at(range.start).await {
+            Ok(_) => Ok(true),
+            Err(Status::OUT_OF_RANGE) => Ok(false),
+            Err(s) => Err(s),
+        }
+    }
 
-        // Choose an extension
-        let (index, extension) = extensions.choose(&mut self.rng).unwrap();
-        let append_range = extension.shrink_from_end(&mut self.rng);
+    fn insert_seeds(&mut self, range: &VSliceRange, seeds: Vec<u128>) {
+        assert_eq!(range.len(), seeds.len() as u64);
+
+        let offsets = range.start..range.end;
+        for (offset, seed) in offsets.zip(seeds) {
+            let prev = self.slice_seeds.insert(offset, seed);
+            assert!(prev.is_none());
+        }
+    }
+
+    async fn append(&mut self, index: usize, append_range: VSliceRange) -> Result<(), Status> {
         debug!("Append Range = {:?}", append_range);
 
-        // Do the extend operation on the volume
-        self.volume.extend(append_range.start, append_range.len()).await?;
+        match self.volume.extend(append_range.start, append_range.len()).await {
+            Ok(()) => {}
+            Err(Status::INVALID_ARGS) => {
+                // This can happen if the range was already extended.
+                assert!(self.is_range_allocated(&append_range).await?);
+            }
+            Err(s) => return Err(s),
+        }
 
         // Fill the range with data
-        self.fill_range(&append_range).await?;
+        let seeds = self.fill_range(&append_range).await?;
 
         // Update state
-        let mut range = self.vslice_ranges.get_mut(*index);
+        self.insert_seeds(&append_range, seeds);
+
+        let mut range = self.vslice_ranges.get_mut(index);
         range.end = append_range.end;
 
         Ok(())
     }
 
-    async fn new_range(&mut self) -> Result<(), Status> {
-        let extensions = self.vslice_ranges.extensions();
-        assert!(extensions.len() > 0);
-
-        // Choose an extension
-        let (_, extension) = extensions.choose(&mut self.rng).unwrap();
-        let new_range = extension.subrange(&mut self.rng);
+    async fn new_range(&mut self, new_range: VSliceRange) -> Result<(), Status> {
         debug!("New Range = {:?}", new_range);
 
-        // Do the extend operation on the volume
-        self.volume.extend(new_range.start, new_range.len()).await?;
+        match self.volume.extend(new_range.start, new_range.len()).await {
+            Ok(()) => {}
+            Err(Status::INVALID_ARGS) => {
+                // This can happen if the range was already extended.
+                assert!(self.is_range_allocated(&new_range).await?);
+            }
+            Err(s) => return Err(s),
+        }
 
         // Fill the range with data
-        self.fill_range(&new_range).await?;
+        let seeds = self.fill_range(&new_range).await?;
 
         // Update state
+        self.insert_seeds(&new_range, seeds);
         self.vslice_ranges.insert(new_range);
 
         Ok(())
     }
 
-    async fn truncate(&mut self) -> Result<(), Status> {
-        let index = self.vslice_ranges.random_index(&mut self.rng);
-        let mut range = self.vslice_ranges.get_mut(index);
-        let subrange = range.shrink_from_start(&mut self.rng);
-
+    async fn truncate(&mut self, index: usize, subrange: VSliceRange) -> Result<(), Status> {
         debug!("Truncate Range = {:?}", subrange);
 
         // Shrinking from offset 0 is forbidden
@@ -131,7 +192,16 @@ impl VolumeActor {
         }
 
         // Do the shrink operation on the volume
-        self.volume.shrink(subrange.start, subrange.len()).await?;
+        match self.volume.shrink(subrange.start, subrange.len()).await {
+            Ok(()) => {}
+            Err(Status::INVALID_ARGS) => {
+                // This can happen if the range was already shrunk.
+                assert!(!self.is_range_allocated(&subrange).await?);
+            }
+            Err(s) => return Err(s),
+        }
+
+        let mut range = self.vslice_ranges.get_mut(index);
 
         // Update state
         if subrange == *range {
@@ -150,8 +220,7 @@ impl VolumeActor {
         Ok(())
     }
 
-    async fn verify(&mut self) -> Result<(), Status> {
-        let index = self.vslice_ranges.random_index(&mut self.rng);
+    async fn verify(&mut self, index: usize) -> Result<(), Status> {
         let range = self.vslice_ranges.get_mut(index);
 
         debug!("Verify Range = {:?}", range);
@@ -170,39 +239,39 @@ impl VolumeActor {
 
     async fn initialize_slice_zero(&mut self) {
         let fill_range = VSliceRange::new(0, 1);
-        self.fill_range(&fill_range).await.unwrap();
+        let seeds = self.fill_range(&fill_range).await.unwrap();
+        self.insert_seeds(&fill_range, seeds);
         self.vslice_ranges.insert(fill_range);
-    }
-
-    // Returns a list of operations that are valid to perform,
-    // given the current state of the filesystem.
-    fn valid_operations(&self) -> Vec<VolumeOperation> {
-        vec![
-            VolumeOperation::Verify,
-            VolumeOperation::Append,
-            VolumeOperation::Truncate,
-            VolumeOperation::NewRange,
-        ]
     }
 }
 
 #[async_trait]
 impl Actor for VolumeActor {
     async fn perform(&mut self) -> Result<(), ActorError> {
-        let operations = self.valid_operations();
-        let operation = operations.choose(&mut self.rng).unwrap();
+        let operation = if let Some(pending_op) = self.pending_op.take() {
+            // Complete a pending operation, if one exists
+            pending_op
+        } else {
+            // Get a new operation
+            VolumeOperation::random(&mut self.rng, &self.vslice_ranges)
+        };
 
-        let result = match operation {
-            VolumeOperation::Append => self.append().await,
-            VolumeOperation::NewRange => self.new_range().await,
-            VolumeOperation::Truncate => self.truncate().await,
-            VolumeOperation::Verify => self.verify().await,
+        let result = match operation.clone() {
+            VolumeOperation::Append { index, range } => self.append(index, range).await,
+            VolumeOperation::NewRange { range } => self.new_range(range).await,
+            VolumeOperation::Truncate { index, range } => self.truncate(index, range).await,
+            VolumeOperation::Verify { index } => self.verify(index).await,
         };
 
         match result {
             Ok(()) => Ok(()),
             Err(Status::NO_SPACE) => Ok(()),
-            Err(Status::PEER_CLOSED) | Err(Status::CANCELED) => Err(ActorError::ResetEnvironment),
+            Err(Status::PEER_CLOSED) | Err(Status::CANCELED) => {
+                // Record this operation as pending.
+                // We will attempt to redo it when the connection is restored.
+                self.pending_op = Some(operation);
+                Err(ActorError::ResetEnvironment)
+            }
             Err(s) => panic!("Error occurred during {:?}: {}", operation, s),
         }
     }

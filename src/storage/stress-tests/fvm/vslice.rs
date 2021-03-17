@@ -4,7 +4,7 @@
 
 use rand::{rngs::SmallRng, Rng};
 
-#[derive(Eq, PartialEq)]
+#[derive(Clone, Eq, PartialEq)]
 pub struct VSliceRange {
     // The slice index that this virtual range begins at
     pub start: u64,
@@ -99,7 +99,7 @@ impl VSliceRanges {
     // |-----------i--------------|                        |-----------i+1-----------|
     //
     // In the above scenario, (i, range X) is returned
-    pub fn extensions(&mut self) -> Vec<(usize, VSliceRange)> {
+    pub fn extensions(&self) -> Vec<(usize, VSliceRange)> {
         assert!(self.ranges.len() > 0);
 
         let mut iter = self.ranges.iter().enumerate().peekable();
@@ -149,6 +149,10 @@ impl VSliceRanges {
 
     pub fn get_mut(&mut self, index: usize) -> &mut VSliceRange {
         self.ranges.get_mut(index).unwrap()
+    }
+
+    pub fn get(&self, index: usize) -> &VSliceRange {
+        self.ranges.get(index).unwrap()
     }
 
     pub fn insert(&mut self, range: VSliceRange) {
