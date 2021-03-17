@@ -310,7 +310,7 @@ where
         Ok((TraversalPosition::End, sink.seal().into()))
     }
 
-    async fn register_watcher(
+    fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
         mask: u32,

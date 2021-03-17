@@ -136,7 +136,7 @@ impl<T: DirectlyMutable> MutableDirectory for T {
         Err(Status::NOT_SUPPORTED)
     }
 
-    async fn get_filesystem(&self) -> &dyn Filesystem {
+    fn get_filesystem(&self) -> &dyn Filesystem {
         (self as &dyn DirectlyMutable).get_filesystem()
     }
 

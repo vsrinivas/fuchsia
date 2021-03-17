@@ -64,7 +64,7 @@ pub trait Directory: Any + Send + Sync {
 
     /// Register a watcher for this directory.
     /// Implementations will probably want to use a `Watcher` to manage watchers.
-    async fn register_watcher(
+    fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
         mask: u32,
@@ -100,7 +100,7 @@ pub trait MutableDirectory: Directory {
     async fn unlink(&self, name: Path) -> Result<(), Status>;
 
     /// Gets the filesystem this directory belongs to.
-    async fn get_filesystem(&self) -> &dyn Filesystem;
+    fn get_filesystem(&self) -> &dyn Filesystem;
 
     /// Gets this directory as an Any.
     fn into_any(self: Arc<Self>) -> Arc<dyn Any + Send + Sync>;

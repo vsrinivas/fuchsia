@@ -304,7 +304,7 @@ impl MutableConnection {
             Ok(Some(entry)) => entry,
         };
 
-        match self.base.directory.clone().into_mutable_directory().get_filesystem().await.rename(
+        match self.base.directory.clone().into_mutable_directory().get_filesystem().rename(
             self.base.directory.clone().into_mutable_directory().into_any(),
             src,
             dst_parent.into_mutable_directory().into_any(),
@@ -409,7 +409,7 @@ mod tests {
             panic!("Not implemented");
         }
 
-        async fn register_watcher(
+        fn register_watcher(
             self: Arc<Self>,
             _scope: ExecutionScope,
             _mask: u32,
@@ -445,7 +445,7 @@ mod tests {
             self.fs.handle_event(MutableDirectoryAction::SetAttr { id: self.id, flags, attrs })
         }
 
-        async fn get_filesystem(&self) -> &dyn Filesystem {
+        fn get_filesystem(&self) -> &dyn Filesystem {
             &*self.fs
         }
 

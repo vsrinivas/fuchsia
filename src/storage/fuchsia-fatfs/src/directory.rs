@@ -545,7 +545,7 @@ impl MutableDirectory for FatDirectory {
         Ok(())
     }
 
-    async fn get_filesystem(&self) -> &dyn Filesystem {
+    fn get_filesystem(&self) -> &dyn Filesystem {
         &*self.filesystem
     }
 
@@ -682,7 +682,7 @@ impl Directory for FatDirectory {
         return Ok((TraversalPosition::End, cur_sink.seal()));
     }
 
-    async fn register_watcher(
+    fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
         mask: u32,

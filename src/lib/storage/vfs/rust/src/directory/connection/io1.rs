@@ -393,8 +393,7 @@ where
                     responder.send(ZX_ERR_INVALID_ARGS)?;
                 } else {
                     let channel = Channel::from_channel(watcher)?;
-                    self.handle_watch(mask, channel, |status| responder.send(status.into_raw()))
-                        .await?;
+                    self.handle_watch(mask, channel, |status| responder.send(status.into_raw()))?;
                 }
             }
             _ => {}
@@ -552,7 +551,7 @@ where
         }
     }
 
-    async fn handle_watch<R>(
+    fn handle_watch<R>(
         &mut self,
         mask: u32,
         channel: Channel,
@@ -565,7 +564,6 @@ where
         responder(
             directory
                 .register_watcher(self.scope.clone(), mask, channel)
-                .await
                 .err()
                 .unwrap_or(Status::OK),
         )

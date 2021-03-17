@@ -243,7 +243,7 @@ impl<T: LazyDirectory> Directory for Lazy<T> {
         self.inner.read_dirents(pos, sink).await
     }
 
-    async fn register_watcher(
+    fn register_watcher(
         self: Arc<Self>,
         scope: ExecutionScope,
         mask: u32,
