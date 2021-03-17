@@ -24,7 +24,9 @@ impl DeviceStorageCompatible for IntlInfo {
 
     fn default_value() -> Self {
         IntlInfo {
-            locales: Some(vec![LocaleId { id: "en-US".to_string() }]),
+            // `-x-fxdef` is a private use extension and a special marker denoting that the
+            // setting is a fallback default, and not actually set through any user action.
+            locales: Some(vec![LocaleId { id: "en-US-x-fxdef".to_string() }]),
             temperature_unit: Some(TemperatureUnit::Celsius),
             time_zone_id: Some("UTC".to_string()),
             hour_cycle: Some(HourCycle::H12),
