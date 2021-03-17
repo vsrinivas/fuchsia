@@ -4,38 +4,39 @@
 
 use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
-use crate::peer::service_level_connection::SlcState;
 use at_commands as at;
 
-/// The Hf may request that the Audio Gateway report extended error result codes as defined in
-/// HFP v1.8, Section 4.9.
+use crate::peer::service_level_connection::SlcState;
+
+/// The HF may disable or enable the Call Waiting Notifications via this
+/// procedure. See HFP v1.8, Section 4.21.
 ///
 /// This procedure is implemented from the perspective of the AG. Namely, outgoing `requests`
 /// typically request information about the current state of the AG, to be sent to the remote
 /// peer acting as the HF.
 #[derive(Debug, Default)]
-pub struct ExtendedErrorsProcedure {
+pub struct CallWaitingNotificationsProcedure {
     /// The current state of the procedure
     terminated: bool,
 }
 
-impl ExtendedErrorsProcedure {
-    /// Create a new ExtendedErrors procedure in the Start state.
+impl CallWaitingNotificationsProcedure {
+    /// Create a new CallWaitingNotifications procedure in the Start state.
     pub fn new() -> Self {
         Self::default()
     }
 }
 
-impl Procedure for ExtendedErrorsProcedure {
+impl Procedure for CallWaitingNotificationsProcedure {
     fn marker(&self) -> ProcedureMarker {
-        ProcedureMarker::ExtendedErrors
+        ProcedureMarker::CallWaitingNotifications
     }
 
     fn hf_update(&mut self, update: at::Command, state: &mut SlcState) -> ProcedureRequest {
         match (self.terminated, update) {
-            (false, at::Command::Cmee { enable }) => {
+            (false, at::Command::Ccwa { enable }) => {
                 self.terminated = true;
-                state.extended_errors = enable;
+                state.call_waiting_notifications = enable;
                 at::Response::Ok.into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
@@ -54,13 +55,13 @@ mod tests {
 
     #[test]
     fn correct_marker() {
-        let marker = ExtendedErrorsProcedure::new().marker();
-        assert_eq!(marker, ProcedureMarker::ExtendedErrors);
+        let marker = CallWaitingNotificationsProcedure::new().marker();
+        assert_eq!(marker, ProcedureMarker::CallWaitingNotifications);
     }
 
     #[test]
     fn procedure_handles_invalid_messages() {
-        let mut proc = ExtendedErrorsProcedure::new();
+        let mut proc = CallWaitingNotificationsProcedure::new();
         let req = proc.hf_update(at::Command::Cmer {}, &mut SlcState::default());
         assert_matches!(req, ProcedureRequest::Error(ProcedureError::UnexpectedHf(_)));
 
@@ -70,18 +71,13 @@ mod tests {
     }
 
     #[test]
-    fn procedure_with_ok_response() {
-        let mut proc = ExtendedErrorsProcedure::new();
-        let req = proc.hf_update(at::Command::Cmee { enable: true }, &mut SlcState::default());
-        assert_matches!(req, ProcedureRequest::SendMessages(_));
-        assert!(proc.is_terminated());
-    }
-
-    #[test]
-    fn procedure_with_errors_disabled_ok_response() {
-        let mut proc = ExtendedErrorsProcedure::new();
-        let req = proc.hf_update(at::Command::Cmee { enable: false }, &mut SlcState::default());
-        assert_matches!(req, ProcedureRequest::SendMessages(_));
+    fn procedure_with_response() {
+        let mut proc = CallWaitingNotificationsProcedure::new();
+        let req = proc.hf_update(at::Command::Ccwa { enable: true }, &mut SlcState::default());
+        assert_matches!(
+            req,
+            ProcedureRequest::SendMessages(msgs) if msgs == vec![at::Response::Ok]
+        );
         assert!(proc.is_terminated());
     }
 }

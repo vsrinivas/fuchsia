@@ -63,6 +63,8 @@ pub struct SlcState {
     pub ag_network_operator_name_format: Option<at::NetworkOperatorNameFormat>,
     /// Use AG Extended Error Codes.
     pub extended_errors: bool,
+    /// Enable call waiting notifications.
+    pub call_waiting_notifications: bool,
 }
 
 impl SlcState {

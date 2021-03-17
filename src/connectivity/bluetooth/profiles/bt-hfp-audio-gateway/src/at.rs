@@ -87,6 +87,7 @@ pub enum AtHfMessage {
     SetNetworkOperatorFormat(NetworkOperatorNameFormat),
     GetNetworkOperator,
     Cmee(bool),
+    Ccwa(bool),
     Unknown(String),
 }
 

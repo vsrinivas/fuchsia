@@ -107,3 +107,7 @@ enum NetworkOperatorNameFormat {
 # Standard Set Extended Error Reporting command
 # HFP 1.8 4.34.2
 command { AT+CMEE=enable: BoolAsInt }
+
+# Call Waiting Notification Activation
+# HFP 1.8 4.34.2
+command { AT+CCWA=enable: BoolAsInt }
