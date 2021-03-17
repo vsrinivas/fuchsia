@@ -1189,7 +1189,8 @@ static void brcmf_notify_disassoc(struct net_device* ndev, zx_status_t status) {
 
 // Send deauth_ind to SME (can be from client or softap)
 static void brcmf_notify_deauth_ind(net_device* ndev, const uint8_t mac_addr[ETH_ALEN],
-                                    wlan_ieee80211::ReasonCode reason, bool locally_initiated) {
+                                    wlan_ieee80211::ReasonCode reason_code,
+                                    bool locally_initiated) {
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping deauth ind callback");
@@ -1199,17 +1200,18 @@ static void brcmf_notify_deauth_ind(net_device* ndev, const uint8_t mac_addr[ETH
   wlanif_deauth_indication_t ind = {};
   BRCMF_IFDBG(WLANIF, ndev,
               "Link Down: Sending deauth ind to SME. address: " MAC_FMT_STR ",  reason: %d",
-              MAC_FMT_ARGS(mac_addr), static_cast<int>(reason));
+              MAC_FMT_ARGS(mac_addr), static_cast<int>(reason_code));
 
   memcpy(ind.peer_sta_address, mac_addr, ETH_ALEN);
-  ind.reason_code = static_cast<reason_code_t>(reason);
+  ind.reason_code = static_cast<reason_code_t>(reason_code);
   ind.locally_initiated = locally_initiated;
   wlanif_impl_ifc_deauth_ind(&ndev->if_proto, &ind);
 }
 
 // Send disassoc_ind to SME (can be from client or softap)
 static void brcmf_notify_disassoc_ind(net_device* ndev, const uint8_t mac_addr[ETH_ALEN],
-                                      wlan_ieee80211::ReasonCode reason, bool locally_initiated) {
+                                      wlan_ieee80211::ReasonCode reason_code,
+                                      bool locally_initiated) {
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
     BRCMF_IFDBG(WLANIF, ndev, "interface stopped -- skipping disassoc ind callback");
@@ -1220,15 +1222,15 @@ static void brcmf_notify_disassoc_ind(net_device* ndev, const uint8_t mac_addr[E
 
   BRCMF_IFDBG(WLANIF, ndev,
               "Link Down: Sending disassoc ind to SME. address: " MAC_FMT_STR ",  reason: %d",
-              MAC_FMT_ARGS(mac_addr), static_cast<int>(reason));
+              MAC_FMT_ARGS(mac_addr), static_cast<int>(reason_code));
   memcpy(ind.peer_sta_address, mac_addr, ETH_ALEN);
-  ind.reason_code = static_cast<reason_code_t>(reason);
+  ind.reason_code = static_cast<reason_code_t>(reason_code);
   ind.locally_initiated = locally_initiated;
   wlanif_impl_ifc_disassoc_ind(&ndev->if_proto, &ind);
 }
 
 static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif,
-                                  wlan_ieee80211::ReasonCode event_reason, uint16_t event_code) {
+                                  wlan_ieee80211::ReasonCode reason_code, uint16_t event_code) {
   struct net_device* ndev = vif->wdev.netdev;
   std::shared_lock<std::shared_mutex> guard(ndev->if_proto_lock);
   if (ndev->if_proto.ops == nullptr) {
@@ -1238,7 +1240,7 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif,
 
   struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
   BRCMF_DBG(CONN, "Link Down: address: " MAC_FMT_STR ", SME reason: %d",
-            MAC_FMT_ARGS(vif->profile.bssid), static_cast<int>(event_reason));
+            MAC_FMT_ARGS(vif->profile.bssid), static_cast<int>(reason_code));
 
   const bool sme_initiated_deauth =
       cfg->disconnect_mode == BRCMF_DISCONNECT_DEAUTH &&
@@ -1256,16 +1258,16 @@ static void cfg80211_disconnected(struct brcmf_cfg80211_vif* vif,
                                    event_code == BRCMF_E_LINK;
     // BRCMF_E_DEAUTH is unlikely if not SME-initiated
     if (event_code == BRCMF_E_DEAUTH || event_code == BRCMF_E_DEAUTH_IND) {
-      brcmf_notify_deauth_ind(ndev, vif->profile.bssid, event_reason, locally_initiated);
+      brcmf_notify_deauth_ind(ndev, vif->profile.bssid, reason_code, locally_initiated);
     } else {
       // This is a catch-all case - could be E_DISASSOC, E_DISASSOC_IND, E_LINK or IF delete
-      brcmf_notify_disassoc_ind(ndev, vif->profile.bssid, event_reason, locally_initiated);
+      brcmf_notify_disassoc_ind(ndev, vif->profile.bssid, reason_code, locally_initiated);
     }
   }
   cfg->disconnect_mode = BRCMF_DISCONNECT_NONE;
 }
 
-static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::ReasonCode event_reason,
+static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::ReasonCode reason_code,
                             uint16_t event_code) {
   struct brcmf_cfg80211_info* cfg = vif->ifp->drvr->config;
   zx_status_t err = ZX_OK;
@@ -1281,7 +1283,7 @@ static void brcmf_link_down(struct brcmf_cfg80211_vif* vif, wlan_ieee80211::Reas
                 brcmf_fil_get_errstr(fwerr));
     }
     if (vif->wdev.iftype == WLAN_INFO_MAC_ROLE_CLIENT) {
-      cfg80211_disconnected(vif, event_reason, event_code);
+      cfg80211_disconnected(vif, reason_code, event_code);
     }
   }
   brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &vif->sme_state);
@@ -5264,8 +5266,12 @@ static zx_status_t brcmf_indicate_client_disconnect(struct brcmf_if* ifp,
                          (connect_status == brcmf_connect_status_t::CONNECTED)
                              ? WLAN_ASSOC_RESULT_SUCCESS
                              : WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+
+  wlan_ieee80211::ReasonCode reason_code = (connect_status == brcmf_connect_status_t::LINK_FAILED)
+                                               ? wlan_ieee80211::ReasonCode::MLME_LINK_FAILED
+                                               : wlan::common::ConvertReasonCode(e->reason);
   brcmf_disconnect_done(cfg);
-  brcmf_link_down(ifp->vif, wlan::common::ConvertReasonCode(e->reason), e->event_code);
+  brcmf_link_down(ifp->vif, reason_code, e->event_code);
   brcmf_clear_profile_on_client_disconnect(ndev_to_prof(ndev));
   if (ndev != cfg_to_ndev(cfg)) {
     sync_completion_signal(&cfg->vif_disabled);
