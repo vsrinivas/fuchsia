@@ -5,6 +5,7 @@ use {
     anyhow::{anyhow, Context as _, Result},
     async_std::future::timeout,
     async_trait::async_trait,
+    ffx_core::TryStreamUtilExt,
     fuchsia_async::Task,
     futures::channel::mpsc,
     futures::future::Future,
@@ -67,24 +68,46 @@ struct Dispatcher<T: EventTrait + 'static> {
 }
 
 impl<T: EventTrait + 'static> Dispatcher<T> {
-    fn new(handler: impl EventHandler<T> + 'static) -> Self {
-        let (event_in, mut queue) = mpsc::unbounded::<T>();
-        let inner = Arc::new(DispatcherInner { handler: Box::new(handler), event_in });
+    async fn handler_helper(event: T, inner: Arc<DispatcherInner<T>>) -> Result<()> {
+        inner
+            .handler
+            .on_event(event)
+            .map(|r| {
+                // This block merits some explaining:
+                // So originally an event handler would say that it is done by
+                // returning Ok(true). This works around it so that a success
+                // result of `true` will cause the work stream for this handler
+                // to close.
+                //
+                // Otherwise when there is an error, just rewrap it in an Err.
+                // This is just a complicated way to remap Result<bool> to
+                // Result<()> to preserve the original intended behavior.
+                if let Ok(r) = r {
+                    if r {
+                        Err(anyhow!("dispatcher done"))
+                    } else {
+                        Ok(())
+                    }
+                } else {
+                    Err(r.unwrap_err())
+                }
+            })
+            .await
+    }
 
+    fn new(handler: impl EventHandler<T> + 'static) -> Self {
+        let (event_in, queue) = mpsc::unbounded::<T>();
+        let inner = Arc::new(DispatcherInner { handler: Box::new(handler), event_in });
         Self {
             inner: Arc::downgrade(&inner),
-
             _task: Task::spawn(async move {
-                // All events should be handled serially. try_for_each didn't appear to
-                // be implemented for UnboundedReceiver<T>.
-                while let Some(e) = queue.next().await {
-                    if inner.handler.on_event(e).await.unwrap_or_else(|e| {
-                        log::warn!("event handler failed, exiting task: {:#}", e);
-                        true // "it is true we're done."
-                    }) {
-                        break;
-                    }
-                }
+                queue
+                    .map(|e| Ok(e))
+                    .try_for_each_concurrent_while_connected(None, move |e| {
+                        Self::handler_helper(e, inner.clone())
+                    })
+                    .await
+                    .unwrap_or_else(|e| log::warn!("dispatcher failed in detached task: {:#?}", e));
             }),
         }
     }
