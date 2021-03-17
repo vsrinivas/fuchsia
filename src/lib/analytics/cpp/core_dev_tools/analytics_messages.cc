@@ -42,9 +42,6 @@ By using Fuchsia developer tools, you agree to the Google Terms of Service.
 Note: The Google Privacy Policy describes how data is handled in your use of
 this service.
 
-Read about data we send with crash reports:
-https://fuchsia.dev/reference/crash-reporting
-
 See Google's privacy policy:
 https://policies.google.com/privacy
 )";
@@ -68,9 +65,6 @@ what is collected, type
 If you opt out of analytics, an opt-out event will be sent, and then no further
 information will be sent by the Fuchsia developer tools to Google.
 
-Read about data we send with crash reports:
-https://fuchsia.dev/reference/crash-reporting
-
 See Google's privacy policy:
 https://policies.google.com/privacy
 )";
@@ -92,9 +86,6 @@ To display the current setting, a full list of tools sharing this setting, and
 what is collected, type
     $0 $2
 Thank you!
-
-Read about data we send with crash reports:
-https://fuchsia.dev/reference/crash-reporting
 
 See Google's privacy policy:
 https://policies.google.com/privacy
