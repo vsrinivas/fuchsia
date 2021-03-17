@@ -7,7 +7,7 @@ use {
     fidl_fuchsia_hardware_block_volume::{VolumeMarker, VolumeProxy},
     fuchsia_component::client::{connect_channel_to_service_at_path, connect_to_service_at_path},
     fuchsia_zircon::{Channel, Status},
-    remote_block_device::{BufferSlice, MutableBufferSlice, RemoteBlockDevice},
+    remote_block_device::{BlockClient, BufferSlice, MutableBufferSlice, RemoteBlockClient},
     std::path::PathBuf,
     storage_stress_test_utils::fvm::get_volume_path,
 };
@@ -39,7 +39,7 @@ fn anyhow_to_status(result: Result<(), anyhow::Error>) -> Result<(), Status> {
 /// Using this struct one can perform I/O, extend, shrink or destroy the volume.
 pub struct VolumeConnection {
     volume_proxy: VolumeProxy,
-    block_device: RemoteBlockDevice,
+    block_device: RemoteBlockClient,
     slice_size: u64,
 }
 
@@ -53,7 +53,7 @@ impl VolumeConnection {
         // Connect to the Block FIDL protocol
         let (client_end, server_end) = Channel::create().unwrap();
         connect_channel_to_service_at_path(server_end, volume_path).unwrap();
-        let block_device = RemoteBlockDevice::new(client_end).unwrap();
+        let block_device = RemoteBlockClient::new(client_end).unwrap();
 
         Self { volume_proxy, block_device, slice_size }
     }

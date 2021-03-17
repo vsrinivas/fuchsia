@@ -5,7 +5,10 @@
 //! These type declarations simply exist to reduce the amount of boilerplate in the other parts of
 //! this crate.
 
-use fatfs::{DefaultTimeProvider, LossyOemCpConverter, ReadWriteSeek};
+use {
+    fatfs::{DefaultTimeProvider, LossyOemCpConverter, ReadWriteSeek},
+    remote_block_device::BlockClient,
+};
 
 pub trait Disk: ReadWriteSeek + Send {
     /// Returns true if the underlying block device for this disk is still present.

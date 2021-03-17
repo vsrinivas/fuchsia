@@ -9,6 +9,7 @@
 
 use {
     anyhow::{ensure, Error},
+    async_trait::async_trait,
     fidl_fuchsia_hardware_block as block,
     fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
     fuchsia_zircon::{self as zx, HandleBased},
@@ -202,8 +203,46 @@ impl Drop for VmoId {
     }
 }
 
-/// Represents a connection to a remote block device.
-pub struct RemoteBlockDevice {
+/// Represents a client connection to a block device. This is a simplified version of the block.fidl
+/// interface.
+/// Most users will use the RemoteBlockClient instantiation of this trait.
+#[async_trait]
+pub trait BlockClient: Send + Sync {
+    /// Wraps AttachVmo from fuchsia.hardware.block::Block.
+    fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error>;
+
+    /// Detaches the given vmo-id from the device.
+    async fn detach_vmo(&self, vmo_id: VmoId) -> Result<(), Error>;
+
+    /// Reads from the device at |device_offset| into the given buffer slice.
+    async fn read_at(
+        &self,
+        buffer_slice: MutableBufferSlice<'_>,
+        device_offset: u64,
+    ) -> Result<(), Error>;
+
+    /// Writes the data in |buffer_slice| to the device.
+    async fn write_at(
+        &self,
+        buffer_slice: BufferSlice<'_>,
+        device_offset: u64,
+    ) -> Result<(), Error>;
+
+    /// Sends a flush request to the underlying block device.
+    async fn flush(&self) -> Result<(), Error>;
+
+    /// Returns the block size of the device.
+    fn block_size(&self) -> u32;
+
+    /// Returns the size, in blocks, of the device.
+    fn block_count(&self) -> u64;
+
+    /// Returns true if the remote fifo is still connected.
+    fn is_connected(&self) -> bool;
+}
+
+/// RemoteBlockClient is a BlockClient that communicates with a real block device over FIDL.
+pub struct RemoteBlockClient {
     device: Mutex<block::BlockSynchronousProxy>,
     block_size: u32,
     block_count: u64,
@@ -212,7 +251,10 @@ pub struct RemoteBlockDevice {
     temp_vmo_id: VmoId,
 }
 
-impl RemoteBlockDevice {
+// Transitional type alias. Remove after soft migration.
+pub type RemoteBlockDevice = RemoteBlockClient;
+
+impl RemoteBlockClient {
     /// Returns a connection to a remote block device via the given channel.
     pub fn new(channel: zx::Channel) -> Result<Self, Error> {
         let device = Self::from_channel(channel)?;
@@ -229,7 +271,7 @@ impl RemoteBlockDevice {
         let (sender, receiver) = oneshot::channel::<Result<Self, Error>>();
         std::thread::spawn(move || {
             let mut executor = fasync::Executor::new().expect("failed to create executor");
-            let maybe_device = RemoteBlockDevice::from_channel(channel);
+            let maybe_device = Self::from_channel(channel);
             let fifo_state = maybe_device.as_ref().ok().map(|device| device.fifo_state.clone());
             let _ = sender.send(maybe_device);
             if let Some(fifo_state) = fifo_state {
@@ -261,24 +303,6 @@ impl RemoteBlockDevice {
         Ok(device)
     }
 
-    /// Wraps AttachVmo from fuchsia.hardware.block::Block.
-    pub fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error> {
-        let mut device = self.device.lock().unwrap();
-        let (status, maybe_vmo_id) = device
-            .attach_vmo(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
-        Ok(VmoId(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id))
-    }
-
-    /// Detaches the given vmo-id from the device.
-    pub async fn detach_vmo(&self, vmo_id: VmoId) -> Result<(), Error> {
-        self.send(BlockFifoRequest {
-            op_code: BLOCKIO_CLOSE_VMO,
-            vmoid: vmo_id.into_id(),
-            ..Default::default()
-        })
-        .await
-    }
-
     fn to_blocks(&self, bytes: u64) -> Result<u64, Error> {
         ensure!(bytes % self.block_size as u64 == 0, "bad alignment");
         Ok(bytes / self.block_size as u64)
@@ -307,9 +331,29 @@ impl RemoteBlockDevice {
         }
         Ok(ResponseFuture::new(self.fifo_state.clone(), request_id).await?)
     }
+}
 
-    /// Reads from the device at |device_offset| into the given buffer slice.
-    pub async fn read_at(
+#[async_trait]
+impl BlockClient for RemoteBlockClient {
+    /// Wraps AttachVmo from fuchsia.hardware.block::Block.
+    fn attach_vmo(&self, vmo: &zx::Vmo) -> Result<VmoId, Error> {
+        let mut device = self.device.lock().unwrap();
+        let (status, maybe_vmo_id) = device
+            .attach_vmo(vmo.duplicate_handle(zx::Rights::SAME_RIGHTS)?, zx::Time::INFINITE)?;
+        Ok(VmoId(maybe_vmo_id.ok_or(zx::Status::from_raw(status))?.id))
+    }
+
+    /// Detaches the given vmo-id from the device.
+    async fn detach_vmo(&self, vmo_id: VmoId) -> Result<(), Error> {
+        self.send(BlockFifoRequest {
+            op_code: BLOCKIO_CLOSE_VMO,
+            vmoid: vmo_id.into_id(),
+            ..Default::default()
+        })
+        .await
+    }
+
+    async fn read_at(
         &self,
         buffer_slice: MutableBufferSlice<'_>,
         device_offset: u64,
@@ -353,8 +397,7 @@ impl RemoteBlockDevice {
         Ok(())
     }
 
-    /// Writes the data in |buffer_slice| to the device.
-    pub async fn write_at(
+    async fn write_at(
         &self,
         buffer_slice: BufferSlice<'_>,
         device_offset: u64,
@@ -398,8 +441,7 @@ impl RemoteBlockDevice {
         Ok(())
     }
 
-    // Flush all data
-    pub async fn flush(&self) -> Result<(), Error> {
+    async fn flush(&self) -> Result<(), Error> {
         self.send(BlockFifoRequest {
             op_code: BLOCKIO_FLUSH,
             vmoid: BLOCK_VMOID_INVALID,
@@ -408,21 +450,20 @@ impl RemoteBlockDevice {
         .await
     }
 
-    pub fn block_size(&self) -> u32 {
+    fn block_size(&self) -> u32 {
         self.block_size
     }
 
-    pub fn block_count(&self) -> u64 {
+    fn block_count(&self) -> u64 {
         self.block_count
     }
 
-    /// Returns true if the remote fifo is still connected.
-    pub fn is_connected(&self) -> bool {
+    fn is_connected(&self) -> bool {
         self.fifo_state.lock().unwrap().fifo.is_some()
     }
 }
 
-impl Drop for RemoteBlockDevice {
+impl Drop for RemoteBlockClient {
     fn drop(&mut self) {
         // It's OK to leak the VMO id because the server will dump all VMOs when the fifo is torn
         // down.
@@ -499,7 +540,8 @@ impl Future for FifoPoller {
 mod tests {
     use {
         super::{
-            BlockFifoRequest, BlockFifoResponse, BufferSlice, MutableBufferSlice, RemoteBlockDevice,
+            BlockClient, BlockFifoRequest, BlockFifoResponse, BufferSlice, MutableBufferSlice,
+            RemoteBlockClient,
         },
         fidl_fuchsia_hardware_block::{self as block, BlockRequest},
         fuchsia_async::{self as fasync, FifoReadable, FifoWritable},
@@ -515,7 +557,7 @@ mod tests {
     const RAMDISK_BLOCK_SIZE: u64 = 1024;
     const RAMDISK_BLOCK_COUNT: u64 = 1024;
 
-    pub fn make_ramdisk() -> (RamdiskClient, RemoteBlockDevice) {
+    pub fn make_ramdisk() -> (RamdiskClient, RemoteBlockClient) {
         isolated_driver_manager::launch_isolated_driver_manager()
             .expect("launch_isolated_driver_manager failed");
         ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
@@ -523,9 +565,9 @@ mod tests {
         let ramdisk = RamdiskClient::create(RAMDISK_BLOCK_SIZE, RAMDISK_BLOCK_COUNT)
             .expect("RamdiskClient::create failed");
         let remote_block_device =
-            RemoteBlockDevice::new(ramdisk.open().expect("ramdisk.open failed"))
-                .expect("RemoteBlockDevice::new failed");
-        assert_eq!(remote_block_device.block_size, 1024);
+            RemoteBlockClient::new(ramdisk.open().expect("ramdisk.open failed"))
+                .expect("RemoteBlockDeviceImpl::new failed");
+        assert_eq!(remote_block_device.block_size(), 1024);
         (ramdisk, remote_block_device)
     }
 
@@ -890,7 +932,7 @@ mod tests {
         // client and we are using a single threaded executor.
         std::thread::spawn(move || {
             let _remote_block_device =
-                RemoteBlockDevice::new_sync(client).expect("RemoteBlockDevice::new_sync failed");
+                RemoteBlockClient::new_sync(client).expect("RemoteBlockDevice::new_sync failed");
             // The drop here should cause CloseFifo to be sent.
         });
 
@@ -915,8 +957,8 @@ mod tests {
         // Have to spawn this on a different thread because RemoteBlockDevice uses a synchronous
         // client and we are using a single threaded executor.
         std::thread::spawn(move || {
-            let remote_block_device =
-                RemoteBlockDevice::new_sync(client).expect("RemoteBlockDevice::new_sync failed");
+            let remote_block_device = RemoteBlockClient::new_sync(client)
+                .expect("RemoteBlockDeviceImpl::new_sync failed");
             futures::executor::block_on(remote_block_device.flush())
                 .expect("RemoteBlockDevice::flush failed");
         });

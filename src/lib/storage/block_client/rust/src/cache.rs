@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    super::{BufferSlice, MutableBufferSlice, RemoteBlockDevice, VmoId},
+    super::{BlockClient, BufferSlice, MutableBufferSlice, RemoteBlockClient, VmoId},
     anyhow::{ensure, Error},
     fuchsia_syslog::fx_log_err,
     fuchsia_zircon as zx,
@@ -29,12 +29,8 @@ pub struct Stats {
     cache_hits: u64,
 }
 
-/// Wraps RemoteBlockDevice providing a simple LRU cache and trait implementations for
-/// std::io::{Read, Seek, Write}. This is unlikely to be performant; the implementation is single
-/// threaded. The cache works by dividing up a VMO into BLOCK_COUNT blocks of BLOCK_SIZE bytes, and
-/// maintaining mappings from device offsets to offsets in the VMO.
-pub struct Cache {
-    device: RemoteBlockDevice,
+pub struct AbstractCache<T: BlockClient> {
+    device: T,
     vmo: zx::Vmo,
     vmo_id: VmoId,
     map: LinkedHashMap<u64, CacheEntry>,
@@ -42,13 +38,22 @@ pub struct Cache {
     stats: Stats,
 }
 
-impl Cache {
+/// Wraps RemoteBlockDevice providing a simple LRU cache and trait implementations for
+/// std::io::{Read, Seek, Write}. This is unlikely to be performant; the implementation is single
+/// threaded. The cache works by dividing up a VMO into BLOCK_COUNT blocks of BLOCK_SIZE bytes, and
+/// maintaining mappings from device offsets to offsets in the VMO.
+pub type Cache = AbstractCache<RemoteBlockClient>;
+
+impl<T: BlockClient> AbstractCache<T> {
     /// Returns a new Cache wrapping the given RemoteBlockDevice.
-    pub fn new(device: RemoteBlockDevice) -> Result<Self, Error> {
-        ensure!(BLOCK_SIZE % device.block_size as u64 == 0, "underlying block size not supported");
+    pub fn new(device: T) -> Result<Self, Error> {
+        ensure!(
+            BLOCK_SIZE % device.block_size() as u64 == 0,
+            "underlying block size not supported"
+        );
         let vmo = zx::Vmo::create(VMO_SIZE)?;
         let vmo_id = device.attach_vmo(&vmo)?;
-        Ok(Cache {
+        Ok(Self {
             device,
             vmo,
             vmo_id,
@@ -59,7 +64,7 @@ impl Cache {
     }
 
     fn device_size(&self) -> u64 {
-        self.device.block_count * self.device.block_size as u64
+        self.device.block_count() * self.device.block_size() as u64
     }
 
     // Finds a block that can be used for the given offset, marking dirty if requested. Returns a
@@ -191,7 +196,7 @@ impl Cache {
 
     /// Returns a reference to the underlying device
     /// Can be used for additional control, like instructing the device to flush any written data
-    pub fn device(&self) -> &RemoteBlockDevice {
+    pub fn device(&self) -> &T {
         &self.device
     }
 
@@ -202,7 +207,7 @@ impl Cache {
     }
 }
 
-impl Drop for Cache {
+impl<T: BlockClient> Drop for AbstractCache<T> {
     fn drop(&mut self) {
         if let Err(e) = self.flush() {
             fx_log_err!("Flush failed: {}", e);
@@ -215,7 +220,7 @@ fn into_io_error(error: Error) -> std::io::Error {
     std::io::Error::new(std::io::ErrorKind::Other, error)
 }
 
-impl std::io::Read for Cache {
+impl<T: BlockClient> std::io::Read for AbstractCache<T> {
     fn read(&mut self, mut buf: &mut [u8]) -> std::io::Result<usize> {
         if self.offset > self.device_size() {
             return Ok(0);
@@ -230,7 +235,7 @@ impl std::io::Read for Cache {
     }
 }
 
-impl Write for Cache {
+impl<T: BlockClient> Write for AbstractCache<T> {
     fn write(&mut self, mut buf: &[u8]) -> std::io::Result<usize> {
         if self.offset > self.device_size() {
             return Ok(0);
@@ -267,7 +272,7 @@ impl Write for Cache {
     }
 }
 
-impl std::io::Seek for Cache {
+impl<T: BlockClient> std::io::Seek for AbstractCache<T> {
     fn seek(&mut self, pos: SeekFrom) -> std::io::Result<u64> {
         self.offset = match pos {
             SeekFrom::Start(offset) => Some(offset),
@@ -295,7 +300,7 @@ impl std::io::Seek for Cache {
 mod tests {
     use {
         super::{Cache, Stats},
-        crate::RemoteBlockDevice,
+        crate::RemoteBlockClient,
         ramdevice_client::RamdiskClient,
         std::io::{Read, Seek, SeekFrom, Write},
     };
@@ -304,7 +309,7 @@ mod tests {
     const RAMDISK_BLOCK_COUNT: u64 = 1023; // Deliberate for testing max offset.
     const RAMDISK_SIZE: u64 = RAMDISK_BLOCK_SIZE * RAMDISK_BLOCK_COUNT;
 
-    pub fn make_ramdisk() -> (RamdiskClient, RemoteBlockDevice) {
+    pub fn make_ramdisk() -> (RamdiskClient, RemoteBlockClient) {
         isolated_driver_manager::launch_isolated_driver_manager()
             .expect("launch_isolated_driver_manager failed");
         ramdevice_client::wait_for_device("/dev/misc/ramctl", std::time::Duration::from_secs(10))
@@ -312,7 +317,7 @@ mod tests {
         let ramdisk = RamdiskClient::create(RAMDISK_BLOCK_SIZE, RAMDISK_BLOCK_COUNT)
             .expect("RamdiskClient::create failed");
         let remote_block_device =
-            RemoteBlockDevice::new_sync(ramdisk.open().expect("ramdisk.open failed"))
+            RemoteBlockClient::new_sync(ramdisk.open().expect("ramdisk.open failed"))
                 .expect("RemoteBlockDevice::new_sync failed");
         (ramdisk, remote_block_device)
     }
@@ -406,7 +411,7 @@ mod tests {
 
         drop(cache);
         let mut cache = Cache::new(
-            RemoteBlockDevice::new_sync(ramdisk.open().expect("ramdisk.open failed"))
+            RemoteBlockClient::new_sync(ramdisk.open().expect("ramdisk.open failed"))
                 .expect("RemoteBlockDevice::new_sync failed"),
         )
         .expect("Cache::new failed");
@@ -516,7 +521,7 @@ mod tests {
         let ramdisk =
             RamdiskClient::create(super::BLOCK_SIZE * 2, 10).expect("RamdiskClient::create failed");
         let remote_block_device =
-            RemoteBlockDevice::new_sync(ramdisk.open().expect("ramdisk.open failed"))
+            RemoteBlockClient::new_sync(ramdisk.open().expect("ramdisk.open failed"))
                 .expect("RemoteBlockDevice::new_sync failed");
         Cache::new(remote_block_device).err().expect("Cache::new succeeded");
     }
