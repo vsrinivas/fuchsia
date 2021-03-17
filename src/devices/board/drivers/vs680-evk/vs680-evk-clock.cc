@@ -38,7 +38,7 @@ zx_status_t Vs680Evk::ClockInit() {
   const pbus_metadata_t clock_metadata[] = {
       {
           .type = DEVICE_METADATA_CLOCK_IDS,
-          .data_buffer = &clock_ids,
+          .data_buffer = reinterpet_cast<const uint8_t*>(&clock_ids),
           .data_size = sizeof(clock_ids),
       },
   };

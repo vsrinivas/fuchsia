@@ -522,12 +522,12 @@ zx_status_t Vs680Evk::GpioInit() {
   const pbus_metadata_t gpio_metadata[] = {
       {
           .type = DEVICE_METADATA_GPIO_PINS,
-          .data_buffer = &gpio_pins,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&gpio_pins),
           .data_size = sizeof(gpio_pins),
       },
       {
           .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = &pinmux_metadata,
+          .data_buffer = reinterpret_cast<const uint8_t*>(&pinmux_metadata),
           .data_size = sizeof(pinmux_metadata),
       },
   };

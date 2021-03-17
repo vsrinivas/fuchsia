@@ -48,10 +48,10 @@ zx_status_t Vs680Evk::EmmcInit() {
       },
   };
 
-  constexpr pbus_metadata_t emmc_metadata[] = {
+  const pbus_metadata_t emmc_metadata[] = {
       {
           .type = DEVICE_METADATA_GUID_MAP,
-          .data_buffer = guid_map,
+          .data_buffer = reinterpret_cast<const uint8_t*>(guid_map),
           .data_size = sizeof(guid_map),
       },
   };

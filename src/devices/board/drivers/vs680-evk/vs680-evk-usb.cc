@@ -81,12 +81,12 @@ static pbus_metadata_t usb_metadata[] = {
     },
     {
         .type = DEVICE_METADATA_PRIVATE,
-        .data_buffer = &dwc2_metadata,
+        .data_buffer = reinterpret_cast<const uint8_t*>(&dwc2_metadata),
         .data_size = sizeof(dwc2_metadata),
     },
     {
         .type = DEVICE_METADATA_MAC_ADDRESS,
-        .data_buffer = eth_mac_address,
+        .data_buffer = reinterpret_cast<const uint8_t*>(eth_mac_address),
         .data_size = sizeof(eth_mac_address),
     },
 };
@@ -177,7 +177,7 @@ zx_status_t Vs680Evk::UsbInit() {
   config->functions[1].interface_subclass = 0;
   config->functions[1].interface_protocol = 0;
   usb_metadata[0].data_size = config_size;
-  usb_metadata[0].data_buffer = config;
+  usb_metadata[0].data_buffer = reinterpret_cast<const uint8_t*>(config);
 
   status = pbus_.CompositeDeviceAdd(&dwc2_dev, reinterpret_cast<uint64_t>(dwc2_fragments),
                                     countof(dwc2_fragments), 1);
