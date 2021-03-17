@@ -56,6 +56,7 @@ class DeviceInspect {
   void LogConnNoNetworkFail();
   void LogConnAuthFail();
   void LogConnOtherFail();
+  void LogRxFreeze();
 
  private:
   // Only constructible through Create().
@@ -71,6 +72,8 @@ class DeviceInspect {
   WindowedUintProperty tx_qfull_24hrs_;
   inspect::UintProperty fw_recovered_;
   WindowedUintProperty fw_recovered_24hrs_;
+  inspect::UintProperty rx_freeze_;
+  WindowedUintProperty rx_freeze_24hrs_;
 };
 
 }  // namespace wlan::brcmfmac

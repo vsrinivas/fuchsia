@@ -284,6 +284,12 @@ struct net_device {
     int rx_errors;
     int tx_errors;
     int tx_confirmed;
+    int rx_last_log;      // The value of rx_packets which was last printed out by
+                          // brcmf_log_client_stats().
+    int tx_last_log;      // The value of tx_packets which was last printed out by
+                          // brcmf_log_client_stats().
+    int rx_freeze_count;  // The number of brcmf_log_client_stats called in which rx_packet number
+                          // freeze happens.
     // rssi histogram, index = -(rssi), For ex, -128 => 128....-1 => 1
     std::array<uint64_t, RSSI_HISTOGRAM_LEN> rssi_buckets;
     wlanif_mlme_stats_t mlme_stats;

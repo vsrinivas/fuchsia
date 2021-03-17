@@ -31,8 +31,8 @@
 namespace wlan {
 namespace brcmfmac {
 
-constexpr uint16_t kUintPropertyNum = 6;
-constexpr uint16_t kWindowPropertyNum = 6;
+constexpr uint16_t kUintPropertyNum = 7;
+constexpr uint16_t kWindowPropertyNum = 7;
 
 const std::vector<std::string> kRootMetrics = {"brcmfmac-phy"};
 const std::vector<std::string> kConnMetrics = {"brcmfmac-phy", "connection-metrics"};
@@ -56,6 +56,7 @@ class DeviceInspectTest : public gtest::TestLoopFixture {
   void LogConnNoNetworkFail() { device_inspect_->LogConnNoNetworkFail(); }
   void LogConnAuthFail() { device_inspect_->LogConnAuthFail(); }
   void LogConnOtherFail() { device_inspect_->LogConnOtherFail(); }
+  void LogRxFreeze() { device_inspect_->LogRxFreeze(); }
 
   uint64_t GetUintProperty(const std::vector<std::string>& path, std::string name) {
     auto hierarchy = FetchHierarchy(device_inspect_->inspector());
@@ -80,6 +81,7 @@ class DeviceInspectTest : public gtest::TestLoopFixture {
                        std::bind(&DeviceInspectTest::LogConnAuthFail, this)),
       PropertyTestUnit(kConnMetrics, "other_fail",
                        std::bind(&DeviceInspectTest::LogConnOtherFail, this)),
+      PropertyTestUnit(kRootMetrics, "rx_freeze", std::bind(&DeviceInspectTest::LogRxFreeze, this)),
   };
   const PropertyTestUnit window_properties_[kWindowPropertyNum] = {
       PropertyTestUnit(kRootMetrics, "tx_qfull_24hrs",
@@ -94,6 +96,8 @@ class DeviceInspectTest : public gtest::TestLoopFixture {
                        std::bind(&DeviceInspectTest::LogConnAuthFail, this)),
       PropertyTestUnit(kConnMetrics, "other_fail_24hrs",
                        std::bind(&DeviceInspectTest::LogConnOtherFail, this)),
+      PropertyTestUnit(kRootMetrics, "rx_freeze_24hrs",
+                       std::bind(&DeviceInspectTest::LogRxFreeze, this)),
   };
 };
 
