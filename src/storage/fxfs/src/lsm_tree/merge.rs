@@ -13,7 +13,7 @@ use {
     },
 };
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum ItemOp<K, V> {
     /// Keeps the item to be presented to the merger subsequently with a new merge pair.
     Keep,
@@ -26,7 +26,7 @@ pub enum ItemOp<K, V> {
     Replace(Item<K, V>),
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub enum MergeResult<K, V> {
     /// Emits the left item unchanged. Keeps the right item. This is the common case. Once an item
     /// has been emitted, it will never be seen again by the merge function.
@@ -101,6 +101,11 @@ pub struct MergeIterator<'iter, K, V> {
 impl<'iter, K, V> MergeIterator<'iter, K, V> {
     fn new(layer: u16, iter: BoxedLayerIterator<'iter, K, V>) -> Self {
         MergeIterator { iter: Some(iter), layer, item: MergeItem::None }
+    }
+
+    #[cfg(test)]
+    pub fn new_with_item(layer: u16, item: Item<K, V>) -> Self {
+        MergeIterator { iter: None, layer, item: MergeItem::Item(item) }
     }
 
     pub fn item(&self) -> ItemRef<'_, K, V> {
@@ -321,11 +326,7 @@ impl<
             }
             self.iterators_initialized = self.iterators.len();
         }
-        if self.heap.is_empty() {
-            self.item = CurrentItem::None;
-            return Ok(());
-        }
-        loop {
+        while !self.heap.is_empty() {
             let mut lowest = self.heap.pop().unwrap();
             let maybe_second_lowest = self.heap.pop();
             if let Some(mut second_lowest) = maybe_second_lowest {
@@ -354,6 +355,8 @@ impl<
                 return Ok(());
             }
         }
+        self.item = CurrentItem::None;
+        Ok(())
     }
 
     // Updates the merge iterator depending on |op|. If discarding, the iterator should have already
@@ -1143,5 +1146,22 @@ mod tests {
 
         let ItemRef { key, value } = merger.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_all_discarded() {
+        let skip_lists = [SkipListLayer::new(100), SkipListLayer::new(100)];
+        let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
+        skip_lists[0].insert(items[1].clone()).await;
+        skip_lists[1].insert(items[0].clone()).await;
+        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
+        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
+            emit: None,
+            left: Discard,
+            right: Discard,
+        });
+
+        merger.advance().await.unwrap();
+        assert!(merger.get().is_none());
     }
 }
