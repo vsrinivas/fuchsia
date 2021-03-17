@@ -25,7 +25,7 @@ constexpr char kParticipatingTools[] = R"(  • ffx
 // $3: status args
 constexpr char kMessageFirstRunOfFirstTool[] = R"(Welcome to Fuchsia! - https://fuchsia.dev
 
-Fuchsia core developer tools, including
+Fuchsia developer tools, including
 $0
 use Google Analytics to report feature usage statistics and basic crash reports.
 Google may examine the collected data in aggregate to help improve these tools,
@@ -36,9 +36,9 @@ Analytics are not sent on this very first run. To disable reporting, type
 To display the current setting and what is collected, type
     $1 $3
 If you opt out of analytics, an opt-out event will be sent, and then no further
-information will be sent by the core developer tools to Google.
+information will be sent by the Fuchsia developer tools to Google.
 
-By using Fuchsia core developer tools, you agree to the Google Terms of Service.
+By using Fuchsia developer tools, you agree to the Google Terms of Service.
 Note: The Google Privacy Policy describes how data is handled in your use of
 this service.
 
@@ -55,9 +55,9 @@ https://policies.google.com/privacy
 // $2: status args
 constexpr char kMessageFirstRunOfOtherToolEnabled[] = R"(Welcome to $0!
 
-As part of the Fuchsia core developer tools, this tool uses Google Analytics to
+As part of the Fuchsia developer tools, this tool uses Google Analytics to
 report feature usage statistics and basic crash reports. Google may examine the
-collected data in aggregate to help improve the core developer tools, other
+collected data in aggregate to help improve the developer tools, other
 Fuchsia tools, and the Fuchsia SDK.
 
 To disable reporting, type
@@ -66,7 +66,7 @@ To display the current setting, a full list of tools sharing this setting, and
 what is collected, type
     $0 $2
 If you opt out of analytics, an opt-out event will be sent, and then no further
-information will be sent by the core developer tools to Google.
+information will be sent by the Fuchsia developer tools to Google.
 
 Read about data we send with crash reports:
 https://fuchsia.dev/reference/crash-reporting
@@ -81,10 +81,10 @@ https://policies.google.com/privacy
 // $2: status args
 constexpr char kMessageFirstRunOfOtherToolDisabled[] = R"(Welcome to $0!
 
-Analytics is currently disabled for Fuchsia core developer tools, so no
+Analytics is currently disabled for Fuchsia developer tools, so no
 information will be sent to Google from these tools.
 
-If you would like to help improve the core developer tools, other Fuchsia tools,
+If you would like to help improve the Fuchsia developer tools, other Fuchsia tools,
 and the Fuchsia SDK via allowing us to report feature usage statistics and basic
 crash reports to Google, you can type
     $0 $1
@@ -108,7 +108,7 @@ https://policies.google.com/privacy
 // $4: enable args / disable args
 // $5: list of tool-specific analytics
 constexpr char kMessageShowAnalytics[] =
-    R"(The collection of analytics is currently $0 for Fuchsia core developer
+    R"(The collection of analytics is currently $0 for Fuchsia developer
 tools, including
 $2
 
@@ -131,12 +131,12 @@ When enabled, the UUID and the status are stored in $HOME/.fuchsia
 // In the following message
 // $0: enabled/disabled
 constexpr char kMessageShowAlready[] =
-    R"(Collection of analytics for Fuchsia core developer tools is already $0.)";
+    R"(Collection of analytics for Fuchsia developer tools is already $0.)";
 
 // In the following message
 // $0: enabled/disabled
 constexpr char kMessageShowChangedTo[] =
-    R"(Collection of analytics for Fuchsia core developer tools is $0 at user's
+    R"(Collection of analytics for Fuchsia developer tools is $0 at user's
 request.)";
 
 }  // namespace
