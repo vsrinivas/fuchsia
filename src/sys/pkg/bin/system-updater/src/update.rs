@@ -77,7 +77,9 @@ enum PrepareError {
     #[error("while resolving the update package")]
     ResolveUpdate(#[source] ResolveError),
 
-    #[error("downgrades from epoch {src} to {target} are not allowed")]
+    #[error(
+        "downgrades from epoch {src} to {target} are not allowed. For more context, see RFC-0071: https://fuchsia.dev/fuchsia-src/contribute/governance/rfcs/0071_ota_backstop."
+    )]
     UnsupportedDowngrade { src: u64, target: u64 },
 
     #[error("while verifying board name")]

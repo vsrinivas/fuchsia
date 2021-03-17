@@ -665,7 +665,7 @@ const UPDATE_PKG_URL: &str = "fuchsia-pkg://fuchsia.com/update";
 // when we bump the epoch, most of the integration tests will fail. To fix this, simply bump this
 // constant to match the SOURCE epoch. This will encourage developers to think critically about
 // bumping the epoch and follow the policy documented on fuchsia.dev.
-// TODO(fxbug.dev/68409) publish the policy for bumping epoch and link here.
+// See //src/sys/pkg/bin/system-updater/epoch/playbook.md for information on bumping the epoch.
 const SOURCE_EPOCH: u64 = 0;
 
 fn resolved_urls(interactions: SystemUpdaterInteractions) -> Vec<String> {
