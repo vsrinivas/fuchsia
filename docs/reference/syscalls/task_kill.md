@@ -27,7 +27,7 @@ signal. When the procedure completes, as observed by the signal, the task and
 all its children are considered to be in the dead state and most operations
 will no longer succeed.
 
-If *handle* is a job and the syscall is successful, the job cannot longer be
+If *handle* is a job and the syscall is successful, the job can no longer be
 used to create new processes.
 
 When a process or job is killed via this syscall, the `return_code` is
