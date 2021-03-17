@@ -249,7 +249,6 @@ TEST(CreateCommandFidl, DcsLongWriteT1) {
 }
 
 TEST(CreateCommandFidl, GenShortRead0T1) {
-  fuchsia_hardware_dsi::wire::MipiDsiCmd cmd;
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;
   auto res = MipiDsi::CreateCommandFidl(0, sizeof(rbuf), false, allocator);
@@ -261,7 +260,6 @@ TEST(CreateCommandFidl, GenShortRead0T1) {
 }
 
 TEST(CreateCommandFidl, GenShortRead1T1) {
-  fuchsia_hardware_dsi::wire::MipiDsiCmd cmd;
   uint8_t tbuf[1];
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;
@@ -274,7 +272,6 @@ TEST(CreateCommandFidl, GenShortRead1T1) {
 }
 
 TEST(CreateCommandFidl, DcsShortRead0T1) {
-  fuchsia_hardware_dsi::wire::MipiDsiCmd cmd;
   uint8_t tbuf[1];
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;
@@ -287,7 +284,6 @@ TEST(CreateCommandFidl, DcsShortRead0T1) {
 }
 
 TEST(CreateCommandFidl, GenShortRead2T1) {
-  fuchsia_hardware_dsi::wire::MipiDsiCmd cmd;
   uint8_t tbuf[2];
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;
@@ -300,7 +296,6 @@ TEST(CreateCommandFidl, GenShortRead2T1) {
 }
 
 TEST(CreateCommandFidl, InvalidDcsReadT1) {
-  fuchsia_hardware_dsi::wire::MipiDsiCmd cmd;
   uint8_t tbuf[2];
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;
@@ -309,7 +304,6 @@ TEST(CreateCommandFidl, InvalidDcsReadT1) {
 }
 
 TEST(CreateCommandFidl, InvalidReadT1) {
-  fuchsia_hardware_dsi::wire::MipiDsiCmd cmd;
   uint8_t tbuf[3];
   uint8_t rbuf[2];
   fidl::FidlAllocator<2048> allocator;
