@@ -98,7 +98,6 @@ template("prebuilt_package") {
                            ])
 
     archive = invoker.archive
-    pm = rebase_path("${root_build_dir}/host_${host_cpu}/pm")
 
     if (defined(visibility)) {
       visibility += [ ":$manifest_target_name" ]
@@ -108,10 +107,11 @@ template("prebuilt_package") {
 
     system_rsp = "$target_out_dir/$pkg_name.system.rsp"
     meta_merkle = "$meta_dir/meta.far.merkle"
+    pm = "$host_out_dir/pm"
 
     args = [
       "--pm-tool",
-      pm,
+      rebase_path(pm, root_build_dir),
       "--name",
       pkg_name,
       "--archive",
@@ -121,6 +121,7 @@ template("prebuilt_package") {
       "--system-rsp",
       rebase_path(system_rsp, root_build_dir),
     ]
+
     inputs = [
       archive,
       pm,
