@@ -9,10 +9,6 @@
 
 #include <zircon/compiler.h>
 
-__BEGIN_CDECLS
-
-void kernel_init(void);
-
-__END_CDECLS
+void kernel_init();
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_INIT_H_

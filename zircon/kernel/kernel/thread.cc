@@ -1337,7 +1337,7 @@ void thread_secondary_cpu_entry() {
 
   mp_set_curr_cpu_active(true);
 
-  get_local_percpu()->dpc_queue.InitForCurrentCpu();
+  percpu::GetCurrent().dpc_queue.InitForCurrentCpu();
 
   // Exit from our bootstrap thread, and enter the scheduler on this cpu
   Thread::Current::Exit(0);

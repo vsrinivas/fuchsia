@@ -363,7 +363,7 @@ static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id, zx_time_t 
 
   // Now that the cpu is no longer processing tasks, migrate
   // |percpu_to_unplug|'s TimerQueue and DpcQueue to this cpu.
-  percpu& current_percpu = *get_local_percpu();
+  percpu& current_percpu = percpu::GetCurrent();
   current_percpu.timer_queue.TransitionOffCpu(percpu_to_unplug.timer_queue);
   current_percpu.dpc_queue.TransitionOffCpu(percpu_to_unplug.dpc_queue);
 

@@ -396,7 +396,7 @@ bool set_migrate_ready_threads_test() {
 
   {
     AutoPreemptDisabler preempt_disabled_guard;
-    const auto context_switches_before = get_local_percpu()->stats.context_switches;
+    const auto context_switches_before = percpu::GetCurrent().stats.context_switches;
 
     // Resume the workers with preemption disabled. The workers should stack up
     // behind the current thread in the run queue. BE CAREFUL not to do anything
@@ -422,7 +422,7 @@ bool set_migrate_ready_threads_test() {
       worker->SetCpuAffinity(cpu_num_to_mask(kTargetCpu));
     }
 
-    const auto context_switches_after = get_local_percpu()->stats.context_switches;
+    const auto context_switches_after = percpu::GetCurrent().stats.context_switches;
     ASSERT_EQ(context_switches_before, context_switches_after,
               "The test thread context switched during the critical section.");
   }

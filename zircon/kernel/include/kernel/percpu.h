@@ -163,8 +163,4 @@ struct percpu {
   static percpu* boot_index_[1];
 } __CPU_ALIGN;
 
-// TODO(edcoyne): rename this to c++, or wait for travis's work to integrate
-// into arch percpus.
-static inline struct percpu* get_local_percpu(void) { return arch_get_curr_percpu(); }
-
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_PERCPU_H_

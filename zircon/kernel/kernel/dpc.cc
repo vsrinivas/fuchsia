@@ -34,7 +34,7 @@ zx_status_t Dpc::Queue(bool reschedule) {
       return ZX_ERR_ALREADY_EXISTS;
     }
 
-    dpc_queue = &get_local_percpu()->dpc_queue;
+    dpc_queue = &percpu::GetCurrent().dpc_queue;
 
     // Put this Dpc at the tail of the list. Signal the worker outside the lock.
     dpc_queue->Enqueue(this);
@@ -56,7 +56,7 @@ zx_status_t Dpc::QueueThreadLocked() {
       return ZX_ERR_ALREADY_EXISTS;
     }
 
-    DpcQueue& dpc_queue = get_local_percpu()->dpc_queue;
+    DpcQueue& dpc_queue = percpu::GetCurrent().dpc_queue;
 
     // Put this Dpc at the tail of the list and signal the worker.
     dpc_queue.Enqueue(this);
@@ -125,7 +125,7 @@ void DpcQueue::TransitionOffCpu(DpcQueue& source) {
   source.cpu_ = INVALID_CPU;
 }
 
-int DpcQueue::WorkerThread(void* unused) { return get_local_percpu()->dpc_queue.Work(); }
+int DpcQueue::WorkerThread(void* unused) { return percpu::GetCurrent().dpc_queue.Work(); }
 
 int DpcQueue::Work() {
   for (;;) {
@@ -196,7 +196,7 @@ void DpcQueue::InitForCurrentCpu() {
 
 static void dpc_init(unsigned int level) {
   // Initialize the DpcQueue for the main cpu.
-  get_local_percpu()->dpc_queue.InitForCurrentCpu();
+  percpu::GetCurrent().dpc_queue.InitForCurrentCpu();
 }
 
 LK_INIT_HOOK(dpc, dpc_init, LK_INIT_LEVEL_THREADING)

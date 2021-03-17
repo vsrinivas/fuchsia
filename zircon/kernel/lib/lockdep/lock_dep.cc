@@ -173,7 +173,7 @@ void SystemCircularLockDependencyDetected(LockClassState* connected_set_root) {
 // thread context or for the current CPU when in irq context.
 ThreadLockState* SystemGetThreadLockState() {
   if (arch_blocking_disallowed()) {
-    return &get_local_percpu()->lock_state;
+    return &percpu::GetCurrent().lock_state;
   }
   return &Thread::Current::Get()->lock_state();
 }

@@ -548,7 +548,7 @@ void DoHeartbeatAndCheckPeerCpus(Timer* timer, zx_time_t now_mono, void* arg) {
 void stop_heartbeats() {
   LockupDetectorState& state = gLockupDetectorPerCpuState[arch_curr_cpu_num()];
   state.heartbeat.active.store(false);
-  get_local_percpu()->lockup_detector_timer.Cancel();
+  percpu::GetCurrent().lockup_detector_timer.Cancel();
 }
 
 // Start the process of recording heartbeats and checking in on other CPUs on
@@ -568,7 +568,7 @@ void start_heartbeats() {
 
   // Use a deadline with some jitter to avoid having all CPUs heartbeat at the same time.
   const Deadline deadline = DeadlineWithJitterAfter(HeartbeatLockupChecker::period(), 10);
-  get_local_percpu()->lockup_detector_timer.Set(deadline, DoHeartbeatAndCheckPeerCpus, &state);
+  percpu::GetCurrent().lockup_detector_timer.Set(deadline, DoHeartbeatAndCheckPeerCpus, &state);
 }
 
 }  // namespace

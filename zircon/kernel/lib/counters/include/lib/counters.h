@@ -10,8 +10,8 @@
 #include <lib/special-sections/special-sections.h>
 
 #include <arch/ops.h>
-#include <kernel/percpu.h>
 #include <fbl/atomic_ref.h>
+#include <kernel/percpu.h>
 
 #include "counter-vmo-abi.h"
 
@@ -122,7 +122,7 @@ class Counter {
   }
 
  protected:
-  int64_t* Slot() const { return &get_local_percpu()->counters[Index()]; }
+  int64_t* Slot() const { return &percpu::GetCurrent().counters[Index()]; }
 
  private:
   // The order of the descriptors is the order of the slots in each per-CPU
@@ -155,6 +155,6 @@ class Counter {
 
 #define KCOUNTER(var, name) KCOUNTER_DECLARE(var, name, Sum)
 
-static inline void kcounter_add(const Counter& counter, int64_t delta) { counter.Add(delta); }
+inline void kcounter_add(const Counter& counter, int64_t delta) { counter.Add(delta); }
 
 #endif  // ZIRCON_KERNEL_LIB_COUNTERS_INCLUDE_LIB_COUNTERS_H_

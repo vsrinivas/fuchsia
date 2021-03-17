@@ -10,8 +10,6 @@
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
-__BEGIN_CDECLS
-
 // per cpu guest statistics
 struct guest_stats {
   ulong vm_entries;
@@ -61,19 +59,17 @@ struct cpu_stats {
   ulong generic_ipis;
 };
 
-__END_CDECLS
-
 // include after the cpu_stats definition above, since it is part of the percpu structure
 #include <kernel/percpu.h>
 
-#define GUEST_STATS_INC(name)                                                   \
-  do {                                                                          \
-    __atomic_fetch_add(&get_local_percpu()->gstats.name, 1u, __ATOMIC_RELAXED); \
+#define GUEST_STATS_INC(name)                                                    \
+  do {                                                                           \
+    __atomic_fetch_add(&percpu::GetCurrent().gstats.name, 1u, __ATOMIC_RELAXED); \
   } while (0)
 
-#define CPU_STATS_INC(name)                                                    \
-  do {                                                                         \
-    __atomic_fetch_add(&get_local_percpu()->stats.name, 1u, __ATOMIC_RELAXED); \
+#define CPU_STATS_INC(name)                                                     \
+  do {                                                                          \
+    __atomic_fetch_add(&percpu::GetCurrent().stats.name, 1u, __ATOMIC_RELAXED); \
   } while (0)
 
 #endif  // ZIRCON_KERNEL_INCLUDE_KERNEL_STATS_H_
