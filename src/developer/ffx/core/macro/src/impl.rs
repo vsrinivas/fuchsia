@@ -32,10 +32,10 @@ const UNRECOGNIZED_PARAMETER: &str = "If this is a proxy, make sure the paramete
 the mapping passed into the ffx_plugin attribute.";
 
 lazy_static! {
-    static ref KNOWN_PROXIES: Vec<(&'static str, &'static str, &'static str)> = vec![
-        ("RemoteControlProxy", "remote_proxy", "remote_factory"),
-        ("DaemonProxy", "daemon_proxy", "daemon_factory"),
-        ("FastbootProxy", "fastboot_proxy", "fastboot_factory"),
+    static ref KNOWN_PROXIES: Vec<(&'static str, &'static str)> = vec![
+        ("RemoteControlProxy", "remote_factory"),
+        ("DaemonProxy", "daemon_factory"),
+        ("FastbootProxy", "fastboot_factory"),
     ];
 }
 
@@ -106,7 +106,6 @@ fn generate_fake_test_proxy_method(
 }
 
 struct GeneratedCodeParts {
-    known_proxies: Vec<TokenStream>,
     args: Punctuated<TokenStream, Token!(,)>,
     futures: Punctuated<Ident, Token!(,)>,
     future_results: Punctuated<Ident, Token!(,)>,
@@ -119,7 +118,6 @@ fn parse_arguments(
     args: Punctuated<FnArg, Comma>,
     proxies: &ProxyMap,
 ) -> Result<GeneratedCodeParts, Error> {
-    let mut known_proxies = Vec::<TokenStream>::new();
     let mut inner_args: Punctuated<TokenStream, Token!(,)> = Punctuated::new();
     let mut futures: Punctuated<Ident, Token!(,)> = Punctuated::new();
     let mut future_results: Punctuated<Ident, Token!(,)> = Punctuated::new();
@@ -136,13 +134,20 @@ fn parse_arguments(
             }
             FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
                 Path(TypePath { path, .. }) => {
-                    if let Some(GeneratedKnownProxyParts { name, factory, testing }) =
-                        generate_known_proxy(&pat, path)?
+                    if let Some(GeneratedProxyParts {
+                        arg,
+                        fut,
+                        fut_res,
+                        implementation,
+                        testing,
+                    }) = generate_known_proxy(&pat, path)?
                     {
-                        known_proxies.push(factory);
-                        inner_args.push(quote! { #name });
+                        inner_args.push(arg);
+                        futures.push(fut);
+                        future_results.push(fut_res);
+                        proxies_to_generate.push(implementation);
                         test_fake_methods_to_generate.push(testing);
-                    } else if let Some(GeneratedMappedProxyParts {
+                    } else if let Some(GeneratedProxyParts {
                         arg,
                         fut,
                         fut_res,
@@ -192,7 +197,6 @@ fn parse_arguments(
 
     if let Some(cmd) = cmd {
         Ok(GeneratedCodeParts {
-            known_proxies,
             args: inner_args,
             futures,
             future_results,
@@ -211,12 +215,6 @@ fn parse_argh_command(pattern_type: &Box<Pat>) -> Option<Ident> {
     } else {
         None
     }
-}
-
-struct GeneratedKnownProxyParts {
-    name: Ident,
-    factory: TokenStream,
-    testing: TokenStream,
 }
 
 enum ProxyWrapper {
@@ -261,7 +259,7 @@ fn extract_proxy_type(proxy_type_path: &syn::Path) -> Result<ProxyWrapper, Error
 fn generate_known_proxy(
     pattern_type: &Box<Pat>,
     path: &syn::Path,
-) -> Result<Option<GeneratedKnownProxyParts>, Error> {
+) -> Result<Option<GeneratedProxyParts>, Error> {
     let proxy_wrapper_type = extract_proxy_type(path)?;
     let proxy_type_path = match proxy_wrapper_type {
         ProxyWrapper::Option(ref ptype)
@@ -274,25 +272,33 @@ fn generate_known_proxy(
     };
     for known_proxy in KNOWN_PROXIES.iter() {
         if proxy_type.ident == Ident::new(known_proxy.0, Span::call_site()) {
-            let testing = if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
-                generate_fake_test_proxy_method(pat_ident.ident.clone(), proxy_type_path)
-            } else {
-                quote! {}
-            };
-            let name = Ident::new(known_proxy.1, Span::call_site());
-            let factory_name = Ident::new(known_proxy.2, Span::call_site());
-            let factory = match proxy_wrapper_type {
-                ProxyWrapper::Option(_) => quote! { let #name = #factory_name().await.ok(); },
-                ProxyWrapper::Result(_) => quote! { let #name = #factory_name().await; },
-                ProxyWrapper::None(_) => quote! { let #name = #factory_name().await?; },
-            };
-            return Ok(Some(GeneratedKnownProxyParts { name, factory, testing }));
+            if let Pat::Ident(pat_ident) = pattern_type.as_ref() {
+                let factory_name = Ident::new(known_proxy.1, Span::call_site());
+                let output_fut = Ident::new(&format!("{}_fut", factory_name), Span::call_site());
+                let output_fut_res =
+                    Ident::new(&format!("{}_fut_res", factory_name), Span::call_site());
+                let implementation = quote! { let #output_fut = #factory_name(); };
+                let testing =
+                    generate_fake_test_proxy_method(pat_ident.ident.clone(), proxy_type_path);
+                let arg = match proxy_wrapper_type {
+                    ProxyWrapper::Option(_) => quote! { #output_fut_res.ok() },
+                    ProxyWrapper::Result(_) => quote! { #output_fut_res },
+                    ProxyWrapper::None(_) => quote! { #output_fut_res? },
+                };
+                return Ok(Some(GeneratedProxyParts {
+                    arg,
+                    fut: output_fut,
+                    fut_res: output_fut_res,
+                    implementation,
+                    testing,
+                }));
+            }
         }
     }
     Ok(None)
 }
 
-struct GeneratedMappedProxyParts {
+struct GeneratedProxyParts {
     arg: TokenStream,
     fut: Ident,
     fut_res: Ident,
@@ -304,7 +310,7 @@ fn generate_mapped_proxy(
     proxies: &ProxyMap,
     pattern_type: &Box<Pat>,
     path: &syn::Path,
-) -> Result<Option<GeneratedMappedProxyParts>, Error> {
+) -> Result<Option<GeneratedProxyParts>, Error> {
     let proxy_wrapper_type = extract_proxy_type(path)?;
     let proxy_type_path = match proxy_wrapper_type {
         ProxyWrapper::Option(ref ptype)
@@ -335,7 +341,7 @@ fn generate_mapped_proxy(
                 ProxyWrapper::Result(_) => quote! { #output_fut_res.map(|_| #output) },
                 ProxyWrapper::None(_) => quote! { #output_fut_res.map(|_| #output)? },
             };
-            return Ok(Some(GeneratedMappedProxyParts {
+            return Ok(Some(GeneratedProxyParts {
                 arg,
                 fut: output_fut,
                 fut_res: output_fut_res,
@@ -410,7 +416,6 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     };
 
     let GeneratedCodeParts {
-        known_proxies,
         args,
         futures,
         future_results,
@@ -426,20 +431,15 @@ pub fn ffx_plugin(input: ItemFn, proxies: ProxyMap) -> Result<TokenStream, Error
     outer_args.push(quote! {is_experiment: E});
     outer_args.push(quote! {#cmd});
 
-    let generation = quote! {
-        #(#known_proxies)*
-        #(#proxies_to_generate)*
-    };
-
     let implementation = if proxies_to_generate.len() > 0 {
         quote! {
-            #generation
+            #(#proxies_to_generate)*
             let (#future_results,) = futures::join!(#futures);
             #method(#args)#asyncness
         }
     } else {
         quote! {
-            #generation
+            #(#proxies_to_generate)*
             #method(#args)#asyncness
         }
     };
@@ -1113,18 +1113,15 @@ mod test {
             fn test_fn(test_param: DaemonProxy) {}
         );
         let param = input.sig.inputs[0].clone();
-        if let Some(GeneratedKnownProxyParts { name, factory, testing: _ }) = match param {
+        if let Some(GeneratedProxyParts { arg, fut, .. }) = match param {
             FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
                 Path(TypePath { path, .. }) => generate_known_proxy(&pat, path)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
         } {
-            assert_eq!(name, Ident::new("daemon_proxy", Span::call_site()));
-            assert_eq!(
-                factory.to_string(),
-                quote! { let daemon_proxy = daemon_factory().await?; }.to_string()
-            );
+            assert_eq!(arg.to_string(), quote! { daemon_factory_fut_res? }.to_string());
+            assert_eq!(fut.to_string(), quote! { daemon_factory_fut }.to_string());
             Ok(())
         } else {
             Err(Error::new(Span::call_site(), "known proxy not generated"))
@@ -1137,18 +1134,15 @@ mod test {
             fn test_fn(test_param: RemoteControlProxy) {}
         );
         let param = input.sig.inputs[0].clone();
-        if let Some(GeneratedKnownProxyParts { name, factory, testing: _ }) = match param {
+        if let Some(GeneratedProxyParts { arg, fut, .. }) = match param {
             FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
                 Path(TypePath { path, .. }) => generate_known_proxy(&pat, path)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
         } {
-            assert_eq!(name, Ident::new("remote_proxy", Span::call_site()));
-            assert_eq!(
-                factory.to_string(),
-                quote! { let remote_proxy = remote_factory().await?;}.to_string()
-            );
+            assert_eq!(arg.to_string(), quote! { remote_factory_fut_res? }.to_string());
+            assert_eq!(fut.to_string(), quote! { remote_factory_fut }.to_string());
             Ok(())
         } else {
             Err(Error::new(Span::call_site(), "known proxy not generated"))
@@ -1161,18 +1155,15 @@ mod test {
             fn test_fn(test_param: FastbootProxy) {}
         );
         let param = input.sig.inputs[0].clone();
-        if let Some(GeneratedKnownProxyParts { name, factory, testing: _ }) = match param {
+        if let Some(GeneratedProxyParts { arg, fut, .. }) = match param {
             FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
                 Path(TypePath { path, .. }) => generate_known_proxy(&pat, path)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
             },
             _ => return Err(Error::new(Span::call_site(), "unexpected param")),
         } {
-            assert_eq!(name, Ident::new("fastboot_proxy", Span::call_site()));
-            assert_eq!(
-                factory.to_string(),
-                quote! { let fastboot_proxy = fastboot_factory().await?;}.to_string()
-            );
+            assert_eq!(arg.to_string(), quote! { fastboot_factory_fut_res? }.to_string());
+            assert_eq!(fut.to_string(), quote! { fastboot_factory_fut }.to_string());
             Ok(())
         } else {
             Err(Error::new(Span::call_site(), "known proxy not generated"))
@@ -1204,7 +1195,7 @@ mod test {
             fn test_fn(test_param: TestProxy) {}
         );
         let param = input.sig.inputs[0].clone();
-        if let Some(GeneratedMappedProxyParts { arg, fut, .. }) = match param {
+        if let Some(GeneratedProxyParts { arg, fut, .. }) = match param {
             FnArg::Typed(PatType { ty, pat, .. }) => match ty.as_ref() {
                 Path(TypePath { path, .. }) => generate_mapped_proxy(&proxy_map, &pat, path)?,
                 _ => return Err(Error::new(Span::call_site(), "unexpected param")),
