@@ -96,7 +96,6 @@ success("FlexibleUnionUnknownValue") {
 success("FlexibleResourceUnionUnknownValue") {
     // llcpp is tested by hand since it cannot construct unknown unions (and
     // they do not store bytes & handles), see fxr/423117
-    // TODO(fxbug.dev/64141): re-enable for Go
     bindings_denylist = [llcpp],
     value = TestFlexibleResourceXUnionInStruct {
         xu: SampleResourceXUnion{
