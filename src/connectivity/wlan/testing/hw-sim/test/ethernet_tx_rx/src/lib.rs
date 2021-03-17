@@ -95,8 +95,7 @@ async fn ethernet_tx_rx() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let proxy = helper.proxy();
-    connect_open(&proxy, &mut helper, SSID, &BSS).await;
+    connect_open(&mut helper, SSID, &BSS).await;
 
     let mut client = create_eth_client(&CLIENT_MAC_ADDR)
         .await

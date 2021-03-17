@@ -152,21 +152,22 @@ pub async fn init_client_controller(
     let (controller_client_end, controller_server_end) = fidl::endpoints::create_proxy().unwrap();
     let (listener_client_end, listener_server_end) = fidl::endpoints::create_endpoints().unwrap();
     provider.get_controller(controller_server_end, listener_client_end).unwrap();
-    let mut listener_stream = listener_server_end.into_stream().unwrap();
+    let mut client_state_update_stream = listener_server_end.into_stream().unwrap();
 
     // ConnectionsEnabled with no network states is always the first update.
-    assert_next_client_listener_update(&mut listener_stream, vec![]).await;
+    assert_next_client_state_update(&mut client_state_update_stream, vec![]).await;
 
-    (controller_client_end, listener_stream)
+    (controller_client_end, client_state_update_stream)
 }
 
 // Wait until the policy layer returns an update for which `continue_fn` returns true.
-// This function will panic if the `update_listener` stream ends.
+// This function will panic if the `client_state_update_stream` stream ends.
 pub async fn wait_until_client_state<F: Fn(fidl_policy::ClientStateSummary) -> bool>(
-    update_listener: &mut fidl_policy::ClientStateUpdatesRequestStream,
+    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     continue_fn: F,
 ) {
-    while let Some(update_request) = update_listener.try_next().await.expect("getting state update")
+    while let Some(update_request) =
+        client_state_update_stream.try_next().await.expect("getting state update")
     {
         let (update, responder) =
             update_request.into_on_client_state_update().expect("converting to state update");
@@ -195,10 +196,10 @@ pub fn has_ssid_and_state(
 }
 
 /// Get the next client update. Will panic if no updates are available.
-pub async fn get_update_from_client_listener(
-    update_listener: &mut fidl_policy::ClientStateUpdatesRequestStream,
+async fn get_update_from_client_state_update_stream(
+    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
 ) -> fidl_policy::ClientStateSummary {
-    let update_request = update_listener
+    let update_request = client_state_update_stream
         .next()
         .await
         .expect("ClientStateUpdatesRequestStream failed")
@@ -210,8 +211,8 @@ pub async fn get_update_from_client_listener(
     update.into()
 }
 
-pub async fn save_network_and_connect(
-    wlan_controller: &fidl_policy::ClientControllerProxy,
+pub async fn save_network(
+    client_controller: &fidl_policy::ClientControllerProxy,
     ssid: &[u8],
     security_type: SecurityType,
     password: Option<&str>,
@@ -219,7 +220,7 @@ pub async fn save_network_and_connect(
     let network_config = create_network_config(ssid, security_type, password.clone());
 
     info!("Saving network. SSID: {:?}, Password: {:?}", ssid, password.map(|p| p.to_string()));
-    wlan_controller
+    client_controller
         .save_network(network_config)
         .await
         .expect("save_network future failed")
@@ -227,7 +228,7 @@ pub async fn save_network_and_connect(
 }
 
 pub async fn remove_network(
-    wlan_controller: &fidl_policy::ClientControllerProxy,
+    client_controller: &fidl_policy::ClientControllerProxy,
     ssid: &[u8],
     security_type: SecurityType,
     password: Option<&str>,
@@ -235,30 +236,30 @@ pub async fn remove_network(
     let network_config = create_network_config(ssid, security_type, password.clone());
 
     info!("Removing network. SSID: {:?}, Password: {:?}", ssid, password.map(|p| p.to_string()));
-    wlan_controller
+    client_controller
         .remove_network(network_config)
         .await
         .expect("remove_network future failed")
         .expect("client controller failed to remove network");
 }
 
-pub async fn assert_next_client_listener_update(
-    listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
+pub async fn assert_next_client_state_update(
+    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     networks: Vec<fidl_policy::NetworkState>,
 ) {
-    let update = get_update_from_client_listener(listener_stream).await;
+    let update = get_update_from_client_state_update_stream(client_state_update_stream).await;
     debug!("Next update from client listener: {:?}", update);
     assert_eq!(update.state, Some(fidl_policy::WlanClientState::ConnectionsEnabled));
     assert_eq!(update.networks, Some(networks));
 }
 
 pub async fn assert_connecting(
-    listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
+    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     network_identifier: fidl_policy::NetworkIdentifier,
 ) {
     // The next update in the queue should be "Connecting".
-    assert_next_client_listener_update(
-        listener_stream,
+    assert_next_client_state_update(
+        client_state_update_stream,
         vec![fidl_policy::NetworkState {
             id: Some(network_identifier),
             state: Some(fidl_policy::ConnectionState::Connecting),
@@ -270,12 +271,12 @@ pub async fn assert_connecting(
 }
 
 pub async fn assert_connected(
-    listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
+    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     network_identifier: fidl_policy::NetworkIdentifier,
 ) {
     // The next update in the queue should be "Connecting".
-    assert_next_client_listener_update(
-        listener_stream,
+    assert_next_client_state_update(
+        client_state_update_stream,
         vec![fidl_policy::NetworkState {
             id: Some(network_identifier),
             state: Some(fidl_policy::ConnectionState::Connected),
@@ -287,12 +288,12 @@ pub async fn assert_connected(
 }
 
 pub async fn assert_failed(
-    listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
+    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     network_identifier: fidl_policy::NetworkIdentifier,
     disconnect_status: fidl_policy::DisconnectStatus,
 ) {
-    assert_next_client_listener_update(
-        listener_stream,
+    assert_next_client_state_update(
+        client_state_update_stream,
         vec![fidl_policy::NetworkState {
             id: Some(network_identifier),
             state: Some(fidl_policy::ConnectionState::Failed),

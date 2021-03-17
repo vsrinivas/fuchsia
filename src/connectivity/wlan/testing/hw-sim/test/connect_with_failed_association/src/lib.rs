@@ -49,47 +49,22 @@ fn build_event_handler(
         .build()
 }
 
-async fn save_network_and_await_connection(
-    wlan_controller: &mut fidl_policy::ClientControllerProxy,
-    mut update_listener: &mut fidl_policy::ClientStateUpdatesRequestStream,
+async fn save_network_and_await_failed_connection(
+    client_controller: &mut fidl_policy::ClientControllerProxy,
+    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
 ) {
-    let network_config =
-        fidl_policy::NetworkConfig::from(NetworkConfigBuilder::open().ssid(&SSID.to_vec()));
-    wlan_controller
-        .save_network(network_config)
-        .await
-        .expect("requesting network save")
-        .expect("failed while saving network");
-
-    // The next update the queue should be "Connecting"
-    let expected_network_id = fidl_policy::NetworkIdentifier {
+    save_network(client_controller, SSID, fidl_policy::SecurityType::None, None).await;
+    let network_identifier = fidl_policy::NetworkIdentifier {
         ssid: SSID.to_vec(),
         type_: fidl_policy::SecurityType::None,
     };
-
-    let update = wlan_hw_sim::get_update_from_client_listener(&mut update_listener).await;
-
-    assert_eq!(
-        update.networks.unwrap(),
-        vec![fidl_policy::NetworkState {
-            id: Some(expected_network_id.clone()),
-            state: Some(fidl_policy::ConnectionState::Connecting),
-            status: None,
-            ..fidl_policy::NetworkState::EMPTY
-        }]
-    );
-
-    // The next update the queue should be "Failed"
-    let update = get_update_from_client_listener(&mut update_listener).await;
-    assert_eq!(
-        update.networks.unwrap(),
-        vec![fidl_policy::NetworkState {
-            id: Some(expected_network_id),
-            state: Some(fidl_policy::ConnectionState::Failed),
-            status: Some(fidl_policy::DisconnectStatus::ConnectionFailed),
-            ..fidl_policy::NetworkState::EMPTY
-        }]
-    );
+    assert_connecting(client_state_update_stream, network_identifier.clone()).await;
+    assert_failed(
+        client_state_update_stream,
+        network_identifier.clone(),
+        fidl_policy::DisconnectStatus::ConnectionFailed,
+    )
+    .await;
 }
 
 /// Test a client connect attempt fails if the association response contains a status code that is
@@ -101,9 +76,12 @@ async fn connect_with_failed_association() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let (mut wlan_controller, mut update_listener) = wlan_hw_sim::init_client_controller().await;
-    let save_network_fut =
-        save_network_and_await_connection(&mut wlan_controller, &mut update_listener);
+    let (mut client_controller, mut client_state_update_stream) =
+        wlan_hw_sim::init_client_controller().await;
+    let save_network_fut = save_network_and_await_failed_connection(
+        &mut client_controller,
+        &mut client_state_update_stream,
+    );
     pin_mut!(save_network_fut);
 
     let proxy = helper.proxy();

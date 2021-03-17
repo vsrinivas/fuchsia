@@ -4,7 +4,7 @@
 
 use {
     anyhow::format_err,
-    fidl_fuchsia_wlan_policy::{self as wlan_policy},
+    fidl_fuchsia_wlan_policy::{self as fidl_policy},
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_async::Task,
     fuchsia_zircon::prelude::*,
@@ -23,42 +23,18 @@ use {
 
 async fn test_actions(
     ssid: &'static [u8],
-    passphrase: Option<&str>,
+    password: Option<&str>,
     second_association_confirm_receiver: oneshot::Receiver<()>,
 ) {
     // Connect to the client policy service and get a client controller.
-    let (client_controller, mut update_listener) = init_client_controller().await;
-
-    // Store the config that was just passed in.
-    let network_config = match passphrase {
-        Some(passphrase) => NetworkConfigBuilder::protected(
-            wlan_policy::SecurityType::Wpa2,
-            &passphrase.as_bytes().to_vec(),
-        ),
-        None => NetworkConfigBuilder::open(),
-    }
-    .ssid(&ssid.to_vec());
-
-    let result = client_controller
-        .save_network(wlan_policy::NetworkConfig::from(network_config.clone()))
-        .await
-        .expect("saving network config");
-    assert!(result.is_ok());
-
-    // Issue a connect request.
-    let mut network_id = wlan_policy::NetworkConfig::from(network_config).id.unwrap();
-    client_controller.connect(&mut network_id).await.expect("connecting");
-
-    // Wait until the policy layer indicates that the client has successfully connected.
-    wait_until_client_state(&mut update_listener, |update| {
-        has_ssid_and_state(update, ssid, wlan_policy::ConnectionState::Connected)
-    })
-    .await;
+    let (_client_controller, mut client_state_update_stream) =
+        save_network_and_wait_until_connected(ssid, fidl_policy::SecurityType::Wpa2, password)
+            .await;
 
     let t = Task::spawn(async move {
         // Check updates from the policy. If we see disconnect, panic.
-        wait_until_client_state(&mut update_listener, |update| {
-            has_ssid_and_state(update, ssid, wlan_policy::ConnectionState::Disconnected)
+        wait_until_client_state(&mut client_state_update_stream, |update| {
+            has_ssid_and_state(update, ssid, fidl_policy::ConnectionState::Disconnected)
         })
         .await;
         panic!("Policy saw a disconnect!");

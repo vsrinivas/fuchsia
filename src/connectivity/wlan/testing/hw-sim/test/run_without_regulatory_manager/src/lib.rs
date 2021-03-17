@@ -4,7 +4,7 @@
 
 use {
     fidl::endpoints::{create_endpoints, create_proxy},
-    fidl_fuchsia_wlan_policy as wlan_policy,
+    fidl_fuchsia_wlan_policy as fidl_policy,
     fuchsia_component::client::connect_to_service,
     wlan_hw_sim::*,
 };
@@ -18,7 +18,7 @@ async fn run_without_regulatory_manager() {
     let () = loop_until_iface_is_found().await;
 
     // Connect to the client policy service and get a client controller.
-    let policy_provider = connect_to_service::<wlan_policy::ClientProviderMarker>()
+    let policy_provider = connect_to_service::<fidl_policy::ClientProviderMarker>()
         .expect("connecting to wlan policy");
     let (client_controller, server_end) = create_proxy().expect("creating client controller");
     let (update_client_end, _update_server_end) =

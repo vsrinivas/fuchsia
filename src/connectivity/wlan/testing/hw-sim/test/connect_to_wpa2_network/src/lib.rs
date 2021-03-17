@@ -17,7 +17,6 @@ async fn connect_to_wpa2_network() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let phy = helper.proxy();
-    let () = connect_wpa2(&phy, &mut helper, SSID, &BSS, "wpa2good").await;
+    let () = connect_wpa2(&mut helper, SSID, &BSS, "wpa2good").await;
     helper.stop().await;
 }

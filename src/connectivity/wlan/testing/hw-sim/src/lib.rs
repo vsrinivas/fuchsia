@@ -9,7 +9,7 @@ use {
     fidl_fuchsia_wlan_device::MacRole,
     fidl_fuchsia_wlan_ieee80211 as fidl_ieee80211, fidl_fuchsia_wlan_mlme as fidl_mlme,
     fidl_fuchsia_wlan_policy::{
-        self as wlan_policy, Credential, Empty, NetworkConfig, NetworkIdentifier, SecurityType,
+        self as fidl_policy, Credential, Empty, NetworkConfig, NetworkIdentifier, SecurityType,
     },
     fidl_fuchsia_wlan_tap::{
         SetChannelArgs, TxArgs, WlanRxInfo, WlantapPhyConfig, WlantapPhyEvent, WlantapPhyProxy,
@@ -664,6 +664,31 @@ pub fn handle_connect_events(
     }
 }
 
+pub async fn save_network_and_wait_until_connected(
+    ssid: &[u8],
+    security_type: fidl_policy::SecurityType,
+    password: Option<&str>,
+) -> (fidl_policy::ClientControllerProxy, fidl_policy::ClientStateUpdatesRequestStream) {
+    // Connect to the client policy service and get a client controller.
+    let (client_controller, mut client_state_update_stream) =
+        wlancfg_helper::init_client_controller().await;
+
+    save_network(&client_controller, ssid, security_type, password).await;
+    assert_connecting(
+        &mut client_state_update_stream,
+        fidl_policy::NetworkIdentifier { ssid: ssid.to_vec(), type_: security_type },
+    )
+    .await;
+
+    // Wait until the policy layer indicates that the client has successfully connected.
+    wait_until_client_state(&mut client_state_update_stream, |update| {
+        has_ssid_and_state(update, ssid, fidl_policy::ConnectionState::Connected)
+    })
+    .await;
+
+    (client_controller, client_state_update_stream)
+}
+
 pub async fn connect_to_ap<F, R>(
     connect_fut: F,
     helper: &mut test_utils::TestHelper,
@@ -671,14 +696,14 @@ pub async fn connect_to_ap<F, R>(
     ap_bssid: &mac::Bssid,
     protection: &Protection,
     authenticator: &mut Option<wlan_rsn::Authenticator>,
+    update_sink: &mut Option<wlan_rsn::rsna::UpdateSink>,
 ) -> R
 where
     F: Future<Output = R> + Unpin,
 {
-    // Provide an UpdateSink if there is an Authenticator
-    let mut update_sink = match authenticator {
-        Some(_) => Some(wlan_rsn::rsna::UpdateSink::default()),
-        None => None,
+    // Assert UpdateSink provided if there is an Authenticator.
+    if matches!(authenticator, Some(_)) && !matches!(update_sink, Some(_)) {
+        panic!("No UpdateSink provided with Authenticator");
     };
 
     let phy = helper.proxy();
@@ -694,7 +719,7 @@ where
                     ap_bssid,
                     protection,
                     authenticator,
-                    &mut update_sink,
+                    update_sink,
                 );
             },
             connect_fut,
@@ -702,128 +727,101 @@ where
         .await
 }
 
-async fn connect_to_network(
-    ssid: &[u8],
-    security_type: wlan_policy::SecurityType,
-    passphrase: Option<&str>,
-) {
-    // Connect to the client policy service and get a client controller.
-    let (client_controller, mut update_listener) = wlancfg_helper::init_client_controller().await;
-
-    // Store the config that was just passed in.
-    let network_config = match passphrase {
-        Some(passphrase) => {
-            NetworkConfigBuilder::protected(security_type, &passphrase.as_bytes().to_vec())
-        }
-        None => NetworkConfigBuilder::open(),
-    }
-    .ssid(&ssid.to_vec());
-
-    let result = client_controller
-        .save_network(wlan_policy::NetworkConfig::from(network_config.clone()))
-        .await
-        .expect("saving network config");
-    assert!(result.is_ok());
-
-    // Issue a connect request.
-    let mut network_id = wlan_policy::NetworkConfig::from(network_config).id.unwrap();
-    client_controller.connect(&mut network_id).await.expect("connecting");
-
-    // Wait until the policy layer indicates that the client has successfully connected.
-    wait_until_client_state(&mut update_listener, |update| {
-        has_ssid_and_state(update, ssid, wlan_policy::ConnectionState::Connected)
-    })
-    .await;
-}
-
-async fn connect(
-    phy: &WlantapPhyProxy,
+async fn connect_with_security_type(
     helper: &mut test_utils::TestHelper,
     ssid: &[u8],
     bssid: &mac::Bssid,
     passphrase: Option<&str>,
-    security_type: wlan_policy::SecurityType,
+    security_type: fidl_policy::SecurityType,
 ) {
-    let connect_fut = connect_to_network(
-        ssid,
-        match passphrase {
-            Some(_) => wlan_policy::SecurityType::Wpa2,
-            None => wlan_policy::SecurityType::None,
-        },
-        passphrase,
-    );
+    let connect_fut = save_network_and_wait_until_connected(ssid, security_type, passphrase);
     pin_mut!(connect_fut);
 
     // Validate the connect request.
     let (mut authenticator, mut update_sink, protection) = match security_type {
-        wlan_policy::SecurityType::Wpa3 => (
+        fidl_policy::SecurityType::Wpa3 => (
             passphrase.map(|p| create_wpa3_authenticator(bssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
             Protection::Wpa3Personal,
         ),
-        wlan_policy::SecurityType::Wpa2 => (
+        fidl_policy::SecurityType::Wpa2 => (
             passphrase.map(|p| create_wpa2_psk_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
             Protection::Wpa2Personal,
         ),
-        wlan_policy::SecurityType::Wpa => (
+        fidl_policy::SecurityType::Wpa => (
             passphrase.map(|p| create_deprecated_wpa1_psk_authenticator(bssid, ssid, p)),
             Some(wlan_rsn::rsna::UpdateSink::default()),
             Protection::Wpa1,
         ),
-        wlan_policy::SecurityType::Wep => {
+        fidl_policy::SecurityType::Wep => {
             panic!("hw-sim does not support connecting to a AP with WEP security type")
         }
-        wlan_policy::SecurityType::None => (None, None, Protection::Open),
+        fidl_policy::SecurityType::None => (None, None, Protection::Open),
     };
 
-    helper
-        .run_until_complete_or_timeout(
-            30.seconds(),
-            format!("connecting to {} ({:02X?})", String::from_utf8_lossy(ssid), bssid),
-            |event| {
-                handle_connect_events(
-                    &event,
-                    &phy,
-                    ssid,
-                    bssid,
-                    &protection,
-                    &mut authenticator,
-                    &mut update_sink,
-                );
-            },
-            connect_fut,
-        )
-        .await
+    connect_to_ap(
+        connect_fut,
+        helper,
+        ssid,
+        bssid,
+        &protection,
+        &mut authenticator,
+        &mut update_sink,
+    )
+    .await;
 }
 
 pub async fn connect_wpa3(
-    phy: &WlantapPhyProxy,
     helper: &mut test_utils::TestHelper,
     ssid: &[u8],
     bssid: &mac::Bssid,
     passphrase: &str,
 ) {
-    connect(phy, helper, ssid, bssid, Some(passphrase), wlan_policy::SecurityType::Wpa3).await;
+    connect_with_security_type(
+        helper,
+        ssid,
+        bssid,
+        Some(passphrase),
+        fidl_policy::SecurityType::Wpa3,
+    )
+    .await;
 }
 
 pub async fn connect_wpa2(
-    phy: &WlantapPhyProxy,
     helper: &mut test_utils::TestHelper,
     ssid: &[u8],
     bssid: &mac::Bssid,
     passphrase: &str,
 ) {
-    connect(phy, helper, ssid, bssid, Some(passphrase), wlan_policy::SecurityType::Wpa2).await;
+    connect_with_security_type(
+        helper,
+        ssid,
+        bssid,
+        Some(passphrase),
+        fidl_policy::SecurityType::Wpa2,
+    )
+    .await;
 }
 
-pub async fn connect_open(
-    phy: &WlantapPhyProxy,
+pub async fn connect_deprecated_wpa1(
     helper: &mut test_utils::TestHelper,
     ssid: &[u8],
     bssid: &mac::Bssid,
+    passphrase: &str,
 ) {
-    connect(phy, helper, ssid, bssid, None, wlan_policy::SecurityType::None).await;
+    connect_with_security_type(
+        helper,
+        ssid,
+        bssid,
+        Some(passphrase),
+        fidl_policy::SecurityType::Wpa,
+    )
+    .await;
+}
+
+pub async fn connect_open(helper: &mut test_utils::TestHelper, ssid: &[u8], bssid: &mac::Bssid) {
+    connect_with_security_type(helper, ssid, bssid, None, fidl_policy::SecurityType::None).await;
 }
 
 pub fn rx_wlan_data_frame(
@@ -860,7 +858,7 @@ pub fn rx_wlan_data_frame(
 
 pub async fn loop_until_iface_is_found() {
     // Connect to the client policy service and get a client controller.
-    let policy_provider = connect_to_service::<wlan_policy::ClientProviderMarker>()
+    let policy_provider = connect_to_service::<fidl_policy::ClientProviderMarker>()
         .expect("connecting to wlan policy");
     let (client_controller, server_end) = create_proxy().expect("creating client controller");
     let (update_client_end, _update_server_end) =

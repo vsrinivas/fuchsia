@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_policy as wlan_policy,
+    fidl_fuchsia_wlan_policy as fidl_policy,
     fidl_fuchsia_wlan_tap::{WlantapPhyEvent, WlantapPhyProxy},
     fuchsia_zircon::prelude::*,
     pin_utils::pin_mut,
@@ -19,37 +19,6 @@ use {
         rsna::{SecAssocStatus, SecAssocUpdate},
     },
 };
-
-async fn test_actions(ssid: &'static [u8], passphrase: Option<&str>) {
-    // Connect to the client policy service and get a client controller.
-    let (client_controller, mut update_listener) = init_client_controller().await;
-
-    // Store the config that was just passed in.
-    let network_config = match passphrase {
-        Some(passphrase) => NetworkConfigBuilder::protected(
-            wlan_policy::SecurityType::Wpa2,
-            &passphrase.as_bytes().to_vec(),
-        ),
-        None => NetworkConfigBuilder::open(),
-    }
-    .ssid(&ssid.to_vec());
-
-    let result = client_controller
-        .save_network(wlan_policy::NetworkConfig::from(network_config.clone()))
-        .await
-        .expect("saving network config");
-    assert!(result.is_ok());
-
-    // Issue a connect request.
-    let mut network_id = wlan_policy::NetworkConfig::from(network_config).id.unwrap();
-    client_controller.connect(&mut network_id).await.expect("connecting");
-
-    // Wait until the policy layer indicates that the client has successfully connected.
-    wait_until_client_state(&mut update_listener, |update| {
-        has_ssid_and_state(update, ssid, wlan_policy::ConnectionState::Connected)
-    })
-    .await;
-}
 
 fn handle_phy_event(
     event: &WlantapPhyEvent,
@@ -117,8 +86,9 @@ async fn handle_tx_event_hooks() {
 
     let phy = helper.proxy();
 
-    let test_actions_fut = test_actions(SSID, passphrase);
-    pin_mut!(test_actions_fut);
+    let connect_to_network_fut =
+        save_network_and_wait_until_connected(SSID, fidl_policy::SecurityType::Wpa2, passphrase);
+    pin_mut!(connect_to_network_fut);
 
     // Validate the connect request.
     let mut authenticator = passphrase.map(|p| create_wpa2_psk_authenticator(&BSSID, SSID, p));
@@ -143,7 +113,7 @@ async fn handle_tx_event_hooks() {
                     &mut all_the_updates_sink,
                 );
             },
-            test_actions_fut,
+            connect_to_network_fut,
         )
         .await;
 

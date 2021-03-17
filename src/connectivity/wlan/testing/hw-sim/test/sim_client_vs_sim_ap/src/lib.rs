@@ -34,13 +34,13 @@ fn packet_forwarder<'a>(
 // Connect stage
 
 async fn initiate_connect(
-    wlan_controller: &fidl_policy::ClientControllerProxy,
+    client_controller: &fidl_policy::ClientControllerProxy,
     mut update_stream: fidl_policy::ClientStateUpdatesRequestStream,
     config: &mut fidl_policy::NetworkIdentifier,
     sender: oneshot::Sender<()>,
 ) {
     // Issue the connect request.
-    let response = wlan_controller.connect(config).await.expect("connecting via wlancfg");
+    let response = client_controller.connect(config).await.expect("connecting via wlancfg");
     assert_eq!(response, fidl_common::RequestStatus::Acknowledged);
 
     // Monitor the update stream for the connected notification.
@@ -58,7 +58,7 @@ async fn verify_client_connects_to_ap(
     client_helper: &mut test_utils::TestHelper,
     ap_helper: &mut test_utils::TestHelper,
 ) {
-    let (wlan_controller, update_stream) = wlan_hw_sim::init_client_controller().await;
+    let (client_controller, update_stream) = wlan_hw_sim::init_client_controller().await;
 
     let (sender, connect_confirm_receiver) = oneshot::channel();
     let network_config = NetworkConfigBuilder::protected(
@@ -68,7 +68,7 @@ async fn verify_client_connects_to_ap(
     .ssid(&SSID.to_vec());
 
     // The credentials need to be stored before attempting to connect.
-    wlan_controller
+    client_controller
         .save_network(fidl_policy::NetworkConfig::from(network_config.clone()))
         .await
         .expect("sending save network request")
@@ -77,7 +77,7 @@ async fn verify_client_connects_to_ap(
     let network_config = fidl_policy::NetworkConfig::from(network_config);
     let mut network_id = network_config.id.unwrap();
 
-    let connect_fut = initiate_connect(&wlan_controller, update_stream, &mut network_id, sender);
+    let connect_fut = initiate_connect(&client_controller, update_stream, &mut network_id, sender);
     pin_mut!(connect_fut);
 
     let client_fut = client_helper.run_until_complete_or_timeout(

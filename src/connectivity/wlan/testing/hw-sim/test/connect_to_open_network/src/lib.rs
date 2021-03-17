@@ -16,7 +16,6 @@ async fn connect_to_open_network() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let proxy = helper.proxy();
-    let () = connect_open(&proxy, &mut helper, SSID, &BSS).await;
+    let () = connect_open(&mut helper, SSID, &BSS).await;
     helper.stop().await;
 }

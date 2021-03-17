@@ -14,24 +14,24 @@ const SSID: &[u8] = b"test-ssid";
 const AUTHENTICATOR_PASSWORD: &str = "goodpassword";
 
 async fn connect_future(
-    wlan_controller: &fidl_policy::ClientControllerProxy,
-    listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
+    client_controller: &fidl_policy::ClientControllerProxy,
+    client_state_update_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
     security_type: fidl_policy::SecurityType,
     password: Option<&str>,
 ) {
-    save_network_and_connect(wlan_controller, SSID, security_type, password).await;
+    save_network(client_controller, SSID, security_type, password).await;
     assert_connecting(
-        listener_stream,
+        client_state_update_stream,
         fidl_policy::NetworkIdentifier { ssid: SSID.to_vec(), type_: security_type },
     )
     .await;
     assert_failed(
-        listener_stream,
+        client_state_update_stream,
         fidl_policy::NetworkIdentifier { ssid: SSID.to_vec(), type_: security_type },
         fidl_policy::DisconnectStatus::ConnectionFailed,
     )
     .await;
-    remove_network(wlan_controller, SSID, security_type, password).await;
+    remove_network(client_controller, SSID, security_type, password).await;
 }
 
 /// Test a client fails to connect to a network if the wrong credential type is
@@ -43,7 +43,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let (wlan_controller, mut listener_stream) = init_client_controller().await;
+    let (client_controller, mut client_state_update_stream) = init_client_controller().await;
 
     // Test a client fails to connect to a network protected by WPA2-PSK if no
     // password is provided. The DisconnectStatus::CredentialsFailed status should be
@@ -52,8 +52,8 @@ async fn connecting_to_aps_with_wrong_credential_types() {
         let mut authenticator =
             Some(create_wpa2_psk_authenticator(BSSID, SSID, AUTHENTICATOR_PASSWORD));
         let main_future = connect_future(
-            &wlan_controller,
-            &mut listener_stream,
+            &client_controller,
+            &mut client_state_update_stream,
             fidl_policy::SecurityType::None,
             None,
         );
@@ -66,6 +66,7 @@ async fn connecting_to_aps_with_wrong_credential_types() {
             BSSID,
             &Protection::Wpa2Personal,
             &mut authenticator,
+            &mut Some(wlan_rsn::rsna::UpdateSink::default()),
         )
         .await;
         info!("As expected, the connection failed.");
@@ -78,15 +79,23 @@ async fn connecting_to_aps_with_wrong_credential_types() {
         let mut authenticator =
             Some(create_deprecated_wpa1_psk_authenticator(BSSID, SSID, AUTHENTICATOR_PASSWORD));
         let main_future = connect_future(
-            &wlan_controller,
-            &mut listener_stream,
+            &client_controller,
+            &mut client_state_update_stream,
             fidl_policy::SecurityType::None,
             None,
         );
         pin_mut!(main_future);
         info!("Attempting to connect to a WPA1 network with no password.");
-        connect_to_ap(main_future, &mut helper, SSID, BSSID, &Protection::Wpa1, &mut authenticator)
-            .await;
+        connect_to_ap(
+            main_future,
+            &mut helper,
+            SSID,
+            BSSID,
+            &Protection::Wpa1,
+            &mut authenticator,
+            &mut Some(wlan_rsn::rsna::UpdateSink::default()),
+        )
+        .await;
         info!("As expected, the connection failed.");
     }
 
@@ -95,14 +104,23 @@ async fn connecting_to_aps_with_wrong_credential_types() {
     // returned by policy.
     {
         let main_future = connect_future(
-            &wlan_controller,
-            &mut listener_stream,
+            &client_controller,
+            &mut client_state_update_stream,
             fidl_policy::SecurityType::None,
             None,
         );
         pin_mut!(main_future);
         info!("Attempting to connect to a WEP network with no password.");
-        connect_to_ap(main_future, &mut helper, SSID, BSSID, &Protection::Wep, &mut None).await;
+        connect_to_ap(
+            main_future,
+            &mut helper,
+            SSID,
+            BSSID,
+            &Protection::Wep,
+            &mut None,
+            &mut None,
+        )
+        .await;
         info!("As expected, the connection failed.");
     }
 
@@ -111,14 +129,23 @@ async fn connecting_to_aps_with_wrong_credential_types() {
     // returned by policy.
     {
         let main_future = connect_future(
-            &wlan_controller,
-            &mut listener_stream,
+            &client_controller,
+            &mut client_state_update_stream,
             fidl_policy::SecurityType::Wpa2,
             Some("password"),
         );
         pin_mut!(main_future);
         info!("Attempting to connect to an open network with a password.");
-        connect_to_ap(main_future, &mut helper, SSID, BSSID, &Protection::Open, &mut None).await;
+        connect_to_ap(
+            main_future,
+            &mut helper,
+            SSID,
+            BSSID,
+            &Protection::Open,
+            &mut None,
+            &mut None,
+        )
+        .await;
         info!("As expected, the connection failed.");
     }
 

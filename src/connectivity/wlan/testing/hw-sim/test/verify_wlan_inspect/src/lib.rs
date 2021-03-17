@@ -105,30 +105,6 @@ fn build_event_handler(
         .build()
 }
 
-async fn connect_future(
-    wlan_controller: &fidl_policy::ClientControllerProxy,
-    listener_stream: &mut fidl_policy::ClientStateUpdatesRequestStream,
-    security_type: fidl_policy::SecurityType,
-    password: Option<&str>,
-) {
-    save_network_and_connect(wlan_controller, SSID, security_type, password).await;
-    assert_connecting(
-        listener_stream,
-        fidl_policy::NetworkIdentifier { ssid: SSID.to_vec(), type_: security_type },
-    )
-    .await;
-    assert_next_client_listener_update(
-        listener_stream,
-        vec![fidl_policy::NetworkState {
-            id: Some(fidl_policy::NetworkIdentifier { ssid: SSID.to_vec(), type_: security_type }),
-            state: Some(fidl_policy::ConnectionState::Connected),
-            status: None,
-            ..fidl_policy::NetworkState::EMPTY
-        }],
-    )
-    .await;
-}
-
 fn select_properties(hierarchy: DiagnosticsHierarchy, selector: &str) -> Vec<PropertyEntry> {
     let parsed_selector = selectors::parse_selector(selector).expect("expect valid selector.");
     diagnostics_hierarchy::select_from_hierarchy(hierarchy, parsed_selector)
@@ -144,14 +120,16 @@ async fn verify_wlan_inspect() {
     let mut helper = test_utils::TestHelper::begin_test(default_wlantap_config_client()).await;
     let () = loop_until_iface_is_found().await;
 
-    let (wlan_controller, mut listener_stream) = wlan_hw_sim::init_client_controller().await;
+    let (client_controller, mut client_state_update_stream) =
+        wlan_hw_sim::init_client_controller().await;
     {
-        let connect_fut = connect_future(
-            &wlan_controller,
-            &mut listener_stream,
-            fidl_policy::SecurityType::None,
-            None,
-        );
+        let connect_fut = async {
+            save_network(&client_controller, SSID, fidl_policy::SecurityType::None, None).await;
+            wait_until_client_state(&mut client_state_update_stream, |update| {
+                has_ssid_and_state(update, SSID, fidl_policy::ConnectionState::Connected)
+            })
+            .await;
+        };
         pin_mut!(connect_fut);
 
         let proxy = helper.proxy();
@@ -208,19 +186,10 @@ async fn verify_wlan_inspect() {
     let properties = select_properties(hierarchy, DISCONNECT_CTX_SELECTOR);
     assert!(properties.is_empty(), "there should not be a disconnect_ctx yet");
 
-    remove_network(&wlan_controller, SSID, fidl_policy::SecurityType::None, None).await;
-    assert_next_client_listener_update(
-        &mut listener_stream,
-        vec![fidl_policy::NetworkState {
-            id: Some(fidl_policy::NetworkIdentifier {
-                ssid: SSID.to_vec(),
-                type_: fidl_policy::SecurityType::None,
-            }),
-            state: Some(fidl_policy::ConnectionState::Disconnected),
-            status: Some(fidl_policy::DisconnectStatus::ConnectionStopped),
-            ..fidl_policy::NetworkState::EMPTY
-        }],
-    )
+    remove_network(&client_controller, SSID, fidl_policy::SecurityType::None, None).await;
+    wait_until_client_state(&mut client_state_update_stream, |update| {
+        has_ssid_and_state(update, SSID, fidl_policy::ConnectionState::Disconnected)
+    })
     .await;
 
     let hierarchy = get_inspect_hierarchy().await.expect("expect Inspect data");
