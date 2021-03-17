@@ -6,7 +6,7 @@
 #define LIB_FIDL_LLCPP_VECTOR_VIEW_H_
 
 #include <lib/fidl/llcpp/fidl_allocator.h>
-#include <lib/fidl/llcpp/tracking_ptr.h>
+#include <lib/fidl/llcpp/unowned_ptr.h>
 #include <lib/fidl/walker.h>
 #include <zircon/fidl.h>
 
@@ -37,22 +37,12 @@ class VectorView {
   template <typename>
   friend class VectorView;
 
-  using marked_count = uint64_t;
-
-  // The MSB of count_ stores whether or not data_ is owned by VectorView.
-  static constexpr marked_count kOwnershipMask = internal::kVectorOwnershipMask;
-  // The maximum count to avoid colliding with the ownership bit.
-  static constexpr uint64_t kMaxCount = uint64_t(kOwnershipMask) - 1ULL;
-
  public:
   using elem_type = T;
 
   VectorView() {}
 
-  VectorView(tracking_ptr<T[]>&& data, uint64_t count) {
-    set_data_internal(std::move(data));
-    set_count(count);
-  }
+  VectorView(unowned_ptr_t<T[]>&& data, uint64_t count) : count_(count), data_(data.get()) {}
 
   // Allocates a vector using the allocator.
   VectorView(AnyAllocator& allocator, size_t count)
@@ -61,16 +51,16 @@ class VectorView {
       : count_(initial_count), data_(allocator.AllocateVector<T>(capacity)) {
     ZX_DEBUG_ASSERT(initial_count <= capacity);
   }
-  // Ideally these constructors wouldn't be needed, but automatic deduction into the tracking_ptr
+  // Ideally these constructors wouldn't be needed, but automatic deduction into the unowned_ptr
   // doesn't currently work. A deduction guide can fix this, but it is C++17-only.
-  VectorView(unowned_ptr_t<T> data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
+  VectorView(unowned_ptr_t<T> data, uint64_t count) : VectorView(unowned_ptr_t<T[]>(data), count) {}
   template <typename U = T, typename = std::enable_if_t<std::is_const<U>::value>>
   VectorView(unowned_ptr_t<std::remove_const_t<U>> data, uint64_t count)
-      : VectorView(tracking_ptr<T[]>(data), count) {}
-  VectorView(std::nullptr_t data, uint64_t count) : VectorView(tracking_ptr<T[]>(data), count) {}
-  // This constructor triggers a static assertion in tracking_ptr.
+      : VectorView(unowned_ptr_t<T[]>(data), count) {}
+  VectorView(std::nullptr_t data, uint64_t count) : VectorView(unowned_ptr_t<T[]>(data), count) {}
+  // This constructor triggers a static assertion in unowned_ptr.
   template <typename U, typename = std::enable_if_t<!std::is_array<U>::value>>
-  VectorView(U* data, uint64_t count) : VectorView(tracking_ptr<U[]>(data), count) {}
+  VectorView(U* data, uint64_t count) : VectorView(unowned_ptr_t<U[]>(data), count) {}
 
   template <typename U>
   VectorView(VectorView<U>&& other) {
@@ -79,41 +69,25 @@ class VectorView {
         "VectorView<T> can only be move-constructed from VectorView<T> or VectorView<const T>");
     count_ = other.count_;
     data_ = other.data_;
-    other.release();
-  }
-
-  ~VectorView() {
-    if (is_owned()) {
-      delete[] data_;
-    }
   }
 
   template <typename U>
   VectorView& operator=(VectorView<U>&& other) {
     static_assert(std::is_same<T, U>::value || std::is_same<T, std::add_const_t<U>>::value,
                   "VectorView<T> can only be assigned from VectorView<T> or VectorView<const T>");
-    if (data_ != nullptr && is_owned()) {
-      delete[] data_;
-    }
     count_ = other.count_;
     data_ = other.data_;
-    other.release();
     return *this;
   }
 
   VectorView(const VectorView&) = delete;
   VectorView& operator=(const VectorView&) = delete;
 
-  uint64_t count() const { return count_ & ~kOwnershipMask; }
-  void set_count(uint64_t count) {
-    if (count > kMaxCount) {
-      abort();
-    }
-    count_ = count | (count_ & kOwnershipMask);
-  }
+  uint64_t count() const { return count_; }
+  void set_count(uint64_t count) { count_ = count; }
 
   const T* data() const { return data_; }
-  void set_data(tracking_ptr<T[]> data) { set_data_internal(std::move(data)); }
+  void set_data(unowned_ptr_t<T[]> data) { data_ = data.get(); }
 
   T* mutable_data() const { return data_; }
 
@@ -136,43 +110,14 @@ class VectorView {
   fidl_vector_t* impl() { return this; }
 
   void Allocate(AnyAllocator& allocator, size_t count) {
-    if (is_owned()) {
-      delete[] data_;
-    }
     count_ = count;
     data_ = allocator.AllocateVector<T>(count);
   }
 
  private:
-  void set_data_internal(tracking_ptr<T[]>&& data) {
-    if (data_ != nullptr && is_owned()) {
-      delete[] data_;
-    }
-    if (data.is_owned()) {
-      count_ |= kOwnershipMask;
-    } else {
-      count_ &= ~kOwnershipMask;
-    }
-    data_ = data.get();
-    data.release();
-  }
-
-  bool is_owned() const noexcept { return count_ & kOwnershipMask; }
-
-  void release() {
-    if (is_owned()) {
-      // Match unique_ptr std::move behavior in owned and unowned case
-      // (unowned case doesn't reset source).
-      count_ = 0;
-      data_ = nullptr;
-    }
-  }
-
   friend ::LayoutChecker;
 
-  // The lower 63 bits of count_ are reserved to store the number of elements.
-  // The MSB stores ownership of the data_ pointer.
-  marked_count count_ = 0;
+  uint64_t count_ = 0;
   T* data_ = nullptr;
 };
 

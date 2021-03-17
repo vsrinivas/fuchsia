@@ -24,7 +24,7 @@ namespace fidl {
 class StringView final : private VectorView<const char> {
  public:
   StringView() : VectorView() {}
-  StringView(tracking_ptr<const char[]>&& data, uint64_t size)
+  StringView(unowned_ptr_t<const char[]>&& data, uint64_t size)
       : VectorView(std::move(data), size) {}
   explicit StringView(VectorView<char>&& vv) : VectorView(std::move(vv)) {}
   explicit StringView(VectorView<const char>&& vv) : VectorView(std::move(vv)) {}
@@ -42,7 +42,7 @@ class StringView final : private VectorView<const char> {
   //
   template <size_t N>
   constexpr StringView(const char (&literal)[N], uint64_t size = N - 1)
-      : VectorView(fidl::unowned_ptr_t<const char>(literal), size) {
+      : VectorView(fidl::unowned_ptr_t<const char>(static_cast<const char*>(literal)), size) {
     static_assert(N > 0, "String should not be empty");
   }
 
@@ -57,7 +57,7 @@ class StringView final : private VectorView<const char> {
   void set_size(uint64_t size) { set_count(size); }
 
   const char* data() const { return VectorView::data(); }
-  void set_data(tracking_ptr<const char[]> data) { VectorView::set_data(std::move(data)); }
+  void set_data(unowned_ptr_t<const char[]> data) { VectorView::set_data(data); }
 
   bool is_null() const { return data() == nullptr; }
   bool empty() const { return size() == 0; }

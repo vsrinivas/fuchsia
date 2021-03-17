@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/llcpp/array.h>
 #include <lib/fidl/llcpp/memory.h>
 
 #include <fbl/string.h>

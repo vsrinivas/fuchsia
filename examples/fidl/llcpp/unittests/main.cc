@@ -69,8 +69,9 @@ TEST(AllocationExamples, UnownedPtr) {
 
 // [START unowned-vec]
 TEST(AllocationExamples, UnownedVec) {
-  std::vector<uint32_t> vec;
+  std::vector<uint32_t> vec = { 1, 2, 3, 4 };
   fidl::VectorView<uint32_t> vv = fidl::unowned_vec(vec);
+  ASSERT_EQ(vv.count(), 4UL);
 }
 // [END unowned-vec]
 
@@ -78,12 +79,14 @@ TEST(AllocationExamples, UnownedVec) {
 TEST(AllocationExamples, UnownedStr) {
   const char arr[] = {'h', 'e', 'l', 'l', 'o'};
   fidl::StringView sv = fidl::unowned_str(arr, 5);
+  ASSERT_EQ(sv.size(), 5UL);
 }
 // [END unowned-str]
 
 TEST(AllocationExamples, StringViewLiteral) {
   // [START stringview-assign]
   fidl::StringView sv = "hello world";
+  ASSERT_EQ(sv.size(), 11UL);
   // [END stringview-assign]
 }
 
