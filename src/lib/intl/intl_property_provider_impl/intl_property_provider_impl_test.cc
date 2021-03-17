@@ -57,7 +57,7 @@ fuchsia::settings::IntlSettings NewSettings(std::vector<std::string> locale_ids,
 class FakeSettingsService : public fuchsia::settings::testing::Intl_TestBase {
  public:
   FakeSettingsService()
-      : intl_settings_(NewSettings({"en-US"}, HourCycle::H12, TemperatureUnit::FAHRENHEIT)),
+      : intl_settings_(NewSettings({"en-US-x-fxdef"}, HourCycle::H12, TemperatureUnit::FAHRENHEIT)),
         state_changed_(true) {}
 
   fidl::InterfaceRequestHandler<fuchsia::settings::Intl> GetHandler(
@@ -173,7 +173,8 @@ TEST_F(IntlPropertyProviderImplTest, GeneratesValidProfileFromDefaults) {
                                        "-hc-h12"
                                        "-ms-ussystem"
                                        "-nu-latn"
-                                       "-tz-usnyc"}});
+                                       "-tz-usnyc"
+                                       "-x-fxdef"}});
   expected.set_calendars({{CalendarId{.id = "und-u-ca-gregory"}}});
   expected.set_time_zones({TimeZoneId{.id = "America/New_York"}});
   expected.set_temperature_unit(TemperatureUnit::FAHRENHEIT);
@@ -196,7 +197,8 @@ TEST_F(IntlPropertyProviderImplTest, NotifiesOnTimeZoneChange) {
                                          "-hc-h12"
                                          "-ms-ussystem"
                                          "-nu-latn"
-                                         "-tz-usnyc"}});
+                                         "-tz-usnyc"
+                                         "-x-fxdef"}});
   expected_a.set_calendars({{CalendarId{.id = "und-u-ca-gregory"}}});
   expected_a.set_time_zones({TimeZoneId{.id = "America/New_York"}});
   expected_a.set_temperature_unit(TemperatureUnit::FAHRENHEIT);
@@ -224,7 +226,8 @@ TEST_F(IntlPropertyProviderImplTest, NotifiesOnTimeZoneChange) {
                                          "-hc-h12"
                                          "-ms-ussystem"
                                          "-nu-latn"
-                                         "-tz-cnsha"}});
+                                         "-tz-cnsha"
+                                         "-x-fxdef"}});
   expected_b.set_calendars({{CalendarId{.id = "und-u-ca-gregory"}}});
   expected_b.set_time_zones({TimeZoneId{.id = "Asia/Shanghai"}});
   expected_b.set_temperature_unit(TemperatureUnit::FAHRENHEIT);
@@ -351,6 +354,30 @@ TEST_F(IntlPropertyProviderImplTest, Multilocale) {
   expected.set_calendars({{CalendarId{.id = "und-u-ca-gregory"}}});
   expected.set_time_zones({TimeZoneId{.id = "Europe/Amsterdam"}});
   expected.set_temperature_unit(TemperatureUnit::CELSIUS);
+
+  EXPECT_EQ(expected, actual);
+}
+
+TEST_F(IntlPropertyProviderImplTest, UnsetDefault) {
+  setui_service_->SetTimeZone("America/Los_Angeles");
+  RunLoopUntilIdle();
+
+  auto client = GetClient();
+
+  Profile actual;
+  client->GetProfile([&](Profile profile) { actual = std::move(profile); });
+  RunLoopUntilIdle();
+
+  Profile expected{};
+  // This locale is reported if we never received any explicit settings from
+  // the setui service.  The client will need to figure out what to do in the
+  // case the locale is undefined.  Will probably need to do some sort of an
+  // ultimate fallback.
+  expected.set_locales(
+      {LocaleId{.id = "en-US-u-ca-gregory-fw-sun-hc-h12-ms-ussystem-nu-latn-tz-uslax-x-fxdef"}});
+  expected.set_calendars({{CalendarId{.id = "und-u-ca-gregory"}}});
+  expected.set_time_zones({TimeZoneId{.id = "America/Los_Angeles"}});
+  expected.set_temperature_unit(TemperatureUnit::FAHRENHEIT);
 
   EXPECT_EQ(expected, actual);
 }

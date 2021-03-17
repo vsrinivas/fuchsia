@@ -123,12 +123,14 @@ fit::result<LocaleId, zx_status_t> ExpandLocaleId(const icu::Locale& unexpanded_
   UErrorCode error_code = U_ZERO_ERROR;
 
   std::unordered_set<std::string> present_keys{};
-  unexpanded_locale
-      .getUnicodeKeywords<std::string, std::insert_iterator<std::unordered_set<std::string>>>(
-          std::inserter(present_keys, present_keys.end()), error_code);
+  unexpanded_locale.getKeywords<std::string, std::insert_iterator<std::unordered_set<std::string>>>(
+      std::inserter(present_keys, present_keys.end()), error_code);
 
   if (U_FAILURE(error_code)) {
-    FX_LOGS(WARNING) << "Couldn't read unexpanded locale";
+    icu::ErrorCode error;
+    error.set(error_code);
+    FX_LOGS(WARNING) << "Couldn't read unexpanded locale: " << unexpanded_locale.getName()
+                     << ", error: " << error.errorName();
   }
 
   icu::LocaleBuilder locale_builder{};
@@ -139,7 +141,10 @@ fit::result<LocaleId, zx_status_t> ExpandLocaleId(const icu::Locale& unexpanded_
     std::unique_ptr<icu::Calendar> calendar(
         icu::Calendar::createInstance(unexpanded_locale, error_code));
     if (U_FAILURE(error_code)) {
-      FX_LOGS(WARNING) << "Failed to load calendar data: " << u_errorName(error_code);
+      icu::ErrorCode error;
+      error.set(error_code);
+      FX_LOGS(WARNING) << "Failed to load calendar data: " << unexpanded_locale.getName()
+                       << ", error: " << error.errorName();
       return fit::error(ZX_ERR_INTERNAL);
     }
 
