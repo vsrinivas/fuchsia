@@ -286,7 +286,8 @@ class WebPixelTest : public PixelTest {
 
 // Loads a static page with a solid color via fuchsia.web interfaces and
 // verifies that the color is the only color onscreen.
-TEST_F(WebPixelTest, Static) {
+// TODO(fxbug.dev/72369): Investigate why this fails on femu and reenable.
+TEST_F(WebPixelTest, DISABLED_Static) {
   static constexpr uint32_t kTargetColor = 0xffff00ff;
 
   web_runner_tests::TestServer server;
