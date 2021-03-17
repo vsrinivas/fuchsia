@@ -88,6 +88,7 @@ pub enum AtHfMessage {
     GetNetworkOperator,
     Cmee(bool),
     Ccwa(bool),
+    Clip(bool),
     Unknown(String),
 }
 

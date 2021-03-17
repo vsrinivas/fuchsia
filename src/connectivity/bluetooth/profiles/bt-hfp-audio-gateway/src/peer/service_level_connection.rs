@@ -65,6 +65,8 @@ pub struct SlcState {
     pub extended_errors: bool,
     /// Enable call waiting notifications.
     pub call_waiting_notifications: bool,
+    /// Enable call line identification notifications during incoming calls.
+    pub call_line_ident_notifications: bool,
 }
 
 impl SlcState {

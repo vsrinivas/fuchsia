@@ -13,6 +13,9 @@ use crate::{
 /// Defines the implementation of the Call Waiting Notifications Procedure.
 pub mod call_waiting_notifications;
 
+/// Defines the implementation of the Call Line Identification Notifications Procedure.
+pub mod call_line_ident_notifications;
+
 /// Defines the implementation of the Report Extended Audio Gateway Error Code Results Procedure.
 pub mod extended_errors;
 
@@ -25,6 +28,7 @@ pub mod nrec;
 /// Defines the implementation of the Query Operator Selection Procedure.
 pub mod query_operator_selection;
 
+use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
 use call_waiting_notifications::CallWaitingNotificationsProcedure;
 use extended_errors::ExtendedErrorsProcedure;
 use nrec::NrecProcedure;
@@ -79,6 +83,8 @@ pub enum ProcedureMarker {
     ExtendedErrors,
     /// The Extended Audio Gateway Error Results Code as defined in HFP v1.8 Section 4.21.
     CallWaitingNotifications,
+    /// The Call Line Identification Notifications as defined in HFP v1.8 Section 4.23.
+    CallLineIdentNotifications,
 }
 
 impl ProcedureMarker {
@@ -90,6 +96,9 @@ impl ProcedureMarker {
             Self::QueryOperatorSelection => Box::new(QueryOperatorProcedure::new()),
             Self::ExtendedErrors => Box::new(ExtendedErrorsProcedure::new()),
             Self::CallWaitingNotifications => Box::new(CallWaitingNotificationsProcedure::new()),
+            Self::CallLineIdentNotifications => {
+                Box::new(CallLineIdentNotificationsProcedure::new())
+            }
         }
     }
 
@@ -111,6 +120,7 @@ impl ProcedureMarker {
             }
             at::Command::Cmee { .. } => Ok(Self::ExtendedErrors),
             at::Command::Ccwa { .. } => Ok(Self::CallWaitingNotifications),
+            at::Command::Clip { .. } => Ok(Self::CallLineIdentNotifications),
             _ => Err(ProcedureError::NotImplemented),
         }
     }
