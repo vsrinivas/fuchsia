@@ -15,6 +15,7 @@
 // information to locate the initial extents for the journal.  The super-block is written using the
 // same per-block checksum that is used for the journal file.
 
+mod reader;
 mod writer;
 
 use {

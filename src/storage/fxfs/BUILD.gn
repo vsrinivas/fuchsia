@@ -31,6 +31,7 @@ fxfs_sources = [
   "src/object_handle.rs",
   "src/object_store.rs",
   "src/object_store/journal.rs",
+  "src/object_store/journal/reader.rs",
   "src/object_store/journal/writer.rs",
   "src/object_store/merge.rs",
   "src/object_store/record.rs",
