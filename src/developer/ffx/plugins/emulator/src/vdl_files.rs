@@ -4,7 +4,6 @@
 
 use crate::portpicker::{pick_unused_port, Port};
 use crate::types::{get_sdk_data_dir, read_env_path, HostTools, ImageFiles, SSHKeys, VDLArgs};
-use crate::vdl_proto_parser::get_emu_pid;
 use ansi_term::Colour::*;
 use anyhow::Result;
 use ffx_core::ffx_bail;
@@ -14,7 +13,7 @@ use std::env;
 use std::fs::{copy, File};
 use std::io::Write;
 use std::path::PathBuf;
-use std::process::{Command, Output};
+use std::process::Command;
 use std::str;
 use tempfile::{Builder, TempDir};
 
@@ -315,9 +314,10 @@ impl VDLFiles {
             Some(location) => PathBuf::from(location),
             None => PathBuf::new(),
         };
-        if let Some(location) = &start_command.vdl_output {
-            self.output_proto = PathBuf::from(location);
-        }
+        let vdl_output = match &start_command.vdl_output {
+            Some(location) => PathBuf::from(location),
+            None => self.output_proto.clone(),
+        };
 
         let (port_map, ssh_port) = self.resolve_portmap(&start_command);
 
@@ -353,7 +353,7 @@ impl VDLFiles {
             .arg("--host_port_map")
             .arg(&port_map)
             .arg("--output_launched_device_proto")
-            .arg(&self.output_proto)
+            .arg(&vdl_output)
             .arg("--emu_log")
             .arg(&emu_log)
             .arg("--package_server_log")
@@ -411,36 +411,13 @@ impl VDLFiles {
                     Yellow.paint(format!(
                     "\nNOTE: For --noninteractive launcher artifacts need to be manually cleaned using the `kill` subcommand: \n\
                     In Fuchsia Repo: \"fx vdl kill --launched-proto {}\"\n\
-                    In SDK: \"./fvdl --sdk kill --launched-proto {}\"", self.output_proto.display(), self.output_proto.display()
+                    In SDK: \"./fvdl --sdk kill --launched-proto {}\"", vdl_output.display(), vdl_output.display()
                     ))
                 );
         } else {
-            // TODO(fxbug.dev/72190) Ensure we have a way for user to interact with emulator
-            // once SSH support goes away.
-            let pid = get_emu_pid(&self.output_proto).unwrap();
-            'keep_ssh: loop {
-                match Command::new("pgrep").arg("-P").arg(pid.to_string()).output() {
-                    Ok(out) => {
-                        // pgrep can no longer find the pid process we think the emulator has
-                        // terminated, stop trying to ssh.
-                        if out.stdout.is_empty() {
-                            break 'keep_ssh;
-                        }
-                        let ssh_out = self.ssh_and_wait(vdl_args.tuntap, ssh_port)?;
-                        // If SSH process terminated successfully, we think user intend to end
-                        // SSH session as well as shutting down emulator, stop trying to ssh.
-                        // If SSH process terminated with a non-zerio exit status, we think the
-                        // user has issued "dm reboot", which reboots fuchsia and disconnects ssh,
-                        // but emulator should still be running.
-                        if ssh_out.status.success() {
-                            break 'keep_ssh;
-                        }
-                    }
-                    Err(_) => break 'keep_ssh,
-                }
-            }
+            self.ssh_and_wait(vdl_args.tuntap, ssh_port)?;
             self.stop_vdl(&KillCommand {
-                launched_proto: Some(self.output_proto.display().to_string()),
+                launched_proto: Some(vdl_output.display().to_string()),
                 vdl_path: Some(vdl.display().to_string()),
             })?;
         }
@@ -448,13 +425,13 @@ impl VDLFiles {
     }
 
     /// SSH into the emulator and wait for exit signal.
-    fn ssh_and_wait(&self, tuntap: bool, ssh_port: Port) -> Result<Output, std::io::Error> {
+    fn ssh_and_wait(&self, tuntap: bool, ssh_port: Port) -> Result<()> {
         if tuntap {
             let device_addr = Command::new(&self.host_tools.device_finder)
                 .args(&["resolve", "-ipv4=false", "fuchsia-5254-0063-5e7a"])
                 .output()?;
             // Ref to SSH flags: http://man.openbsd.org/ssh_config
-            return Command::new("ssh")
+            Command::new("ssh")
                 .args(&[
                     "-o",
                     "StrictHostKeyChecking=no",
@@ -473,9 +450,9 @@ impl VDLFiles {
                     str::from_utf8(&device_addr.stdout).unwrap().trim_end_matches('\n'),
                 ])
                 .spawn()?
-                .wait_with_output();
+                .wait_with_output()?;
         } else {
-            return Command::new("ssh")
+            Command::new("ssh")
                 .args(&[
                     "-o",
                     "StrictHostKeyChecking=no",
@@ -490,8 +467,9 @@ impl VDLFiles {
                     &ssh_port.to_string(),
                 ])
                 .spawn()?
-                .wait_with_output();
+                .wait_with_output()?;
         }
+        Ok(())
     }
 
     pub fn stop_vdl(&self, kill_command: &KillCommand) -> Result<()> {
