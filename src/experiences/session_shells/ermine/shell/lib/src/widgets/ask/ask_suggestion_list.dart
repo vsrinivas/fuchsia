@@ -110,7 +110,9 @@ class AskSuggestionList extends StatelessWidget {
                     ),
                     Padding(padding: EdgeInsets.only(left: 12)),
                     Text(
-                      'PACKAGE',
+                      suggestion.url?.endsWith('cml') == true
+                          ? 'v2 PACKAGE'
+                          : 'v1 PACKAGE',
                       overflow: TextOverflow.fade,
                       maxLines: 1,
                       style: TextStyle(

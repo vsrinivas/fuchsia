@@ -2,94 +2,50 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-import 'package:fidl_fuchsia_sys_index/fidl_async.dart';
-import 'package:fidl_fuchsia_sys/fidl_async.dart';
 import 'package:flutter/foundation.dart';
-import 'package:fuchsia_logger/logger.dart';
-import 'package:fuchsia_services/services.dart';
 import 'package:meta/meta.dart';
 
 import 'suggestion.dart';
 
-const _kComponentIndexUrl =
-    'fuchsia-pkg://fuchsia.com/component_index#meta/component_index.cmx';
-
 /// Class to encapsulate the functionality of the Suggestions Engine.
 class SuggestionService {
-  final ComponentIndexProxy _componentIndex;
-  final LauncherProxy _launcher;
   final ValueChanged<Suggestion> _onSuggestion;
 
   /// Constructor.
   const SuggestionService({
-    @required ComponentIndex componentIndex,
-    @required Launcher launcher,
-    ValueChanged<Suggestion> onSuggestion,
-  })  : _componentIndex = componentIndex,
-        _launcher = launcher,
-        _onSuggestion = onSuggestion;
-
-  /// Construct with the a connection to the default /svc path.
-  factory SuggestionService.withSvcPath({
-    ValueChanged<Suggestion> onSuggestion,
-  }) {
-    final launcher = LauncherProxy();
-    Incoming.fromSvcPath().connectToService(launcher);
-
-    final Incoming incoming = Incoming();
-    final ComponentControllerProxy componentIndexController =
-        ComponentControllerProxy();
-    launcher.createComponent(
-      LaunchInfo(
-        url: _kComponentIndexUrl,
-        directoryRequest: incoming.request().passChannel(),
-      ),
-      componentIndexController.ctrl.request(),
-    );
-
-    final componentIndex = ComponentIndexProxy();
-    incoming
-      ..connectToService(componentIndex)
-      ..close();
-
-    return SuggestionService(
-      componentIndex: componentIndex,
-      launcher: launcher,
-      onSuggestion: onSuggestion,
-    );
-  }
-
-  /// Release FIDL services.
-  void dispose() {
-    _componentIndex.ctrl.close();
-    _launcher.ctrl.close();
-  }
+    @required ValueChanged<Suggestion> onSuggestion,
+  }) : _onSuggestion = onSuggestion;
 
   /// Returns an [Iterable<Suggestion>] for given [query].
   Future<Iterable<Suggestion>> getSuggestions(String query,
       [int maxSuggestions = 20]) async {
-    final newSuggestions = <Suggestion>[];
+    final now = DateTime.now().millisecondsSinceEpoch;
     // Allow only non empty queries.
     if (query.isEmpty) {
-      return newSuggestions;
+      return <Suggestion>[];
+    } else if (query.startsWith('fuchsia-pkg')) {
+      return <Suggestion>[
+        Suggestion(
+          id: '$query:$now',
+          url: query,
+          title: query,
+        )
+      ];
+    } else {
+      // Generate two suggestions, for v1 (.cmx) and v2 (.cml) components.
+      return <Suggestion>[
+        Suggestion(
+          id: '$query-1:$now',
+          url: 'fuchsia-pkg://fuchsia.com/$query#meta/$query.cmx',
+          title: query,
+        ),
+        Suggestion(
+          id: '$query-2:$now',
+          url: 'fuchsia-pkg://fuchsia.com/$query#meta/$query.cml',
+          title: query,
+        ),
+      ];
     }
-
-    try {
-      final results = await _componentIndex.fuzzySearch(query);
-      newSuggestions.addAll(results.map((url) {
-        final re = RegExp(r'fuchsia-pkg://fuchsia.com/(.+)#meta/.+');
-        final name = re.firstMatch(url)?.group(1);
-        return Suggestion(
-          id: '$url:${DateTime.now().millisecondsSinceEpoch}',
-          url: url,
-          title: name,
-        );
-      }));
-    } on Exception catch (e) {
-      log.info('Component Index error: $e');
-    }
-
-    return newSuggestions.take(maxSuggestions);
   }
 
   /// Invokes the [suggestion].

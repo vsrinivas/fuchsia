@@ -25,7 +25,6 @@
             "fuchsia.session.ElementManager",
             "fuchsia.settings.Intl",
             "fuchsia.sys.Environment",
-            "fuchsia.sys.Launcher",
             "fuchsia.ui.brightness.Control",
             "fuchsia.ui.focus.FocusChainListenerRegistry",
             "fuchsia.ui.input.ImeService",

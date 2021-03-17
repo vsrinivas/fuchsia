@@ -80,7 +80,6 @@ void main() {
 
     verify(keyboardShortcuts.dispose()).called(1);
     verify(pointerEventsStream.dispose()).called(1);
-    verify(suggestionService.dispose()).called(1);
     verify(statusModel.dispose()).called(1);
     verify(focusChainListenerBinding.close()).called(1);
   });

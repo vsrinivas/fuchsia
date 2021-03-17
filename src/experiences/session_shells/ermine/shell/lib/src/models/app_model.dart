@@ -126,7 +126,7 @@ class AppModel {
     _localeStream = localeSource.stream().asBroadcastStream();
 
     // Suggestion service.
-    _suggestionService ??= SuggestionService.withSvcPath(
+    _suggestionService ??= SuggestionService(
       onSuggestion: clustersModel.storySuggested,
     );
 
@@ -326,7 +326,6 @@ class AppModel {
     _splitter.close();
 
     _intl?.ctrl?.close();
-    _suggestionService.dispose();
     statusModel.dispose();
     _focusChainListenerBinding.close();
   }
