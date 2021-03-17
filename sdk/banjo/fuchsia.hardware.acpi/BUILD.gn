@@ -5,6 +5,7 @@
 import("//build/banjo/banjo.gni")
 
 banjo("fuchsia.hardware.acpi") {
+  fidl_only = true
   sources = [ "acpi.banjo" ]
   deps = [ "//sdk/banjo/zx" ]
 }

@@ -19,7 +19,7 @@ bind_rules("goldfish-sync-bind") {
 source_set("common_deps") {
   public_deps = [
     ":goldfish-sync-bind",
-    "//sdk/banjo/fuchsia.hardware.acpi",
+    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp",
     "//sdk/banjo/fuchsia.hardware.goldfish.sync",
     "//sdk/fidl/fuchsia.hardware.goldfish:fuchsia.hardware.goldfish_llcpp",
     "//src/devices/lib/driver",
@@ -67,7 +67,7 @@ test("goldfish-sync-device-test") {
   ]
   deps = [
     ":common_deps",
-    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_mock",
+    "//sdk/banjo/fuchsia.hardware.acpi:fuchsia.hardware.acpi_banjo_cpp_mock",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
     "//zircon/public/lib/mock-function",
