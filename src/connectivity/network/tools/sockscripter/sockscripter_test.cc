@@ -9,8 +9,6 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "addr.h"
-
 TEST(SendBufferGenTest, LoadHexBuffer) {
   SendBufferGenerator gen;
   EXPECT_TRUE(gen.SetSendBufHex("61 62 63 64"));
@@ -135,13 +133,17 @@ TEST(CommandLine, RepeatConfig) {
 
 TEST(CommandLine, SocketBuild) {
   TestApi test;
-  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, 0));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP));
   EXPECT_EQ(test.RunCommandLine("udp"), 0);
-  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, IPPROTO_ICMP));
+  EXPECT_EQ(test.RunCommandLine("icmp"), 0);
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP));
   EXPECT_EQ(test.RunCommandLine("tcp"), 0);
-  EXPECT_CALL(test, socket(AF_INET6, SOCK_DGRAM, 0));
+  EXPECT_CALL(test, socket(AF_INET6, SOCK_DGRAM, IPPROTO_UDP));
   EXPECT_EQ(test.RunCommandLine("udp6"), 0);
-  EXPECT_CALL(test, socket(AF_INET6, SOCK_STREAM, 0));
+  EXPECT_CALL(test, socket(AF_INET6, SOCK_DGRAM, IPPROTO_ICMPV6));
+  EXPECT_EQ(test.RunCommandLine("icmp6"), 0);
+  EXPECT_CALL(test, socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP));
   EXPECT_EQ(test.RunCommandLine("tcp6"), 0);
   EXPECT_CALL(test, socket(AF_INET, SOCK_RAW, 1));
   EXPECT_EQ(test.RunCommandLine("raw 1"), 0);
@@ -155,7 +157,7 @@ constexpr int kSockFd = 15;
 TEST(CommandLine, UdpBindSendToRecvFrom) {
   testing::StrictMock<TestApi> test;
   testing::InSequence s;
-  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)).WillOnce(testing::Return(kSockFd));
   EXPECT_CALL(test, bind(kSockFd, testing::_, testing::_))
       .WillOnce([](testing::Unused, const struct sockaddr* addr, socklen_t addrlen) {
         const struct sockaddr_in expected_addr = {
@@ -195,7 +197,7 @@ TEST(CommandLine, UdpBindSendToRecvFrom) {
 TEST(CommandLine, TcpBindConnectSendRecv) {
   testing::StrictMock<TestApi> test;
   testing::InSequence s;
-  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
   EXPECT_CALL(test, bind(kSockFd, testing::_, testing::_))
       .WillOnce([](testing::Unused, const struct sockaddr* addr, socklen_t addrlen) {
         const struct sockaddr_in expected_addr = {
@@ -242,35 +244,35 @@ TEST(CommandLine, TcpShutdown) {
   testing::InSequence s;
 
   // Missing argument.
-  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
   EXPECT_EQ(test.RunCommandLine("tcp shutdown"), -1);
 
   // Nonsense argument.
-  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
   EXPECT_EQ(test.RunCommandLine("tcp shutdown foobar"), -1);
 
-  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
   EXPECT_CALL(test, shutdown(kSockFd, SHUT_RD)).WillOnce(testing::Return(0));
   EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
   EXPECT_EQ(test.RunCommandLine("tcp shutdown rd"), 0);
 
-  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
   EXPECT_CALL(test, shutdown(kSockFd, SHUT_WR)).WillOnce(testing::Return(0));
   EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
   EXPECT_EQ(test.RunCommandLine("tcp shutdown wr"), 0);
 
-  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
   EXPECT_CALL(test, shutdown(kSockFd, SHUT_RDWR)).WillOnce(testing::Return(0));
   EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
   EXPECT_EQ(test.RunCommandLine("tcp shutdown rdwr"), 0);
 
-  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
   EXPECT_CALL(test, shutdown(kSockFd, SHUT_RDWR)).WillOnce(testing::Return(0));
   EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
   EXPECT_EQ(test.RunCommandLine("tcp shutdown wrrd"), 0);
 
   // Overlapping specifier. Probably should not allow this?
-  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
   EXPECT_CALL(test, shutdown(kSockFd, SHUT_RDWR)).WillOnce(testing::Return(0));
   EXPECT_CALL(test, getsockname(kSockFd, testing::_, testing::_)).WillOnce(testing::Return(0));
   EXPECT_EQ(test.RunCommandLine("tcp shutdown wrd"), 0);
@@ -279,7 +281,7 @@ TEST(CommandLine, TcpShutdown) {
 TEST(CommandLine, JoinDropMcast) {
   testing::StrictMock<TestApi> test;
   testing::InSequence s;
-  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)).WillOnce(testing::Return(kSockFd));
   struct ip_mreqn expected = {
       .imr_ifindex = 1,
   };
@@ -308,7 +310,7 @@ TEST(CommandLine, JoinDropMcast) {
 TEST(CommandLine, JoinDropMcast6) {
   testing::StrictMock<TestApi> test;
   testing::InSequence s;
-  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)).WillOnce(testing::Return(kSockFd));
   struct ipv6_mreq expected = {
       .ipv6mr_interface = 1,
   };
@@ -355,7 +357,7 @@ SockOptParam MakeSockOptParam(std::string name, std::string arg, int level, int 
   const auto* end = start + sizeof(optval);
   std::vector<uint8_t> buf(start, end);
   return SockOptParam(std::move(name), std::move(arg), level, optname, buf);
-};
+}
 
 SockOptParam MakeSockOptParam(std::string name, std::string arg, int level, int optname,
                               const char* optval) {
@@ -363,7 +365,7 @@ SockOptParam MakeSockOptParam(std::string name, std::string arg, int level, int 
   const auto* end = start + strlen(optval);
   std::vector<uint8_t> buf(start, end);
   return SockOptParam(std::move(name), std::move(arg), level, optname, buf);
-};
+}
 
 class SockOptTest : public testing::TestWithParam<SockOptParam> {};
 
@@ -372,7 +374,7 @@ TEST_P(SockOptTest, SetGetParam) {
   testing::InSequence s;
   std::stringstream cmd;
   auto& param = GetParam();
-  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
   EXPECT_CALL(test, setsockopt(kSockFd, param.level, param.optname, testing::_, testing::_))
       .WillOnce([&param](testing::Unused, testing::Unused, testing::Unused, const void* optval,
                          socklen_t optlen) {
@@ -397,7 +399,7 @@ TEST(SockOptTestMulticastIf, SetGetParam) {
   testing::StrictMock<TestApi> test;
   testing::InSequence s;
   std::stringstream cmd;
-  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, 0)).WillOnce(testing::Return(kSockFd));
+  EXPECT_CALL(test, socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)).WillOnce(testing::Return(kSockFd));
   struct ip_mreqn expected;
   EXPECT_CALL(test, setsockopt(kSockFd, IPPROTO_IP, IP_MULTICAST_IF, testing::_, testing::_))
       .WillOnce([&expected](testing::Unused, testing::Unused, testing::Unused, const void* optval,

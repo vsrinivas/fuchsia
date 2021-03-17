@@ -11,5 +11,6 @@ bool str2int(const std::string& in_str, int* out_int);
 bool getFlagInt(const std::string& in_str, int* out_int);
 const char* GetDomainName(int domain);
 const char* GetTypeName(int type);
+const char* GetProtoName(int type);
 
 #endif  // SRC_CONNECTIVITY_NETWORK_TOOLS_SOCKSCRIPTER_UTIL_H_

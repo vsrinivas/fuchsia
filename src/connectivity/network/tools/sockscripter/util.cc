@@ -8,6 +8,8 @@
 
 #include <climits>
 
+#include "netinet/in.h"
+
 // Helper function to convert a string containing a decimal number to an integer using strtol.
 bool str2int(const std::string& in_str, int* out_int) {
   if (in_str.empty()) {
@@ -49,11 +51,9 @@ bool getFlagInt(const std::string& in_str, int* out_int) {
 const char* GetDomainName(int domain) {
   switch (domain) {
     case AF_INET:
-      return "UDP";
-    case SOCK_STREAM:
-      return "TCP";
-    case SOCK_RAW:
-      return "RAW";
+      return "IPv4";
+    case AF_INET6:
+      return "IPv6";
     default:
       return "UNKNOWN";
   }
@@ -62,11 +62,26 @@ const char* GetDomainName(int domain) {
 const char* GetTypeName(int type) {
   switch (type) {
     case SOCK_DGRAM:
-      return "UDP";
+      return "DGRAM";
     case SOCK_STREAM:
-      return "TCP";
+      return "STREAM";
     case SOCK_RAW:
       return "RAW";
+    default:
+      return "UNKNOWN";
+  }
+}
+
+const char* GetProtoName(int proto) {
+  switch (proto) {
+    case IPPROTO_TCP:
+      return "TCP";
+    case IPPROTO_UDP:
+      return "UDP";
+    case IPPROTO_ICMP:
+      return "ICMP";
+    case IPPROTO_ICMPV6:
+      return "ICMPv6";
     default:
       return "UNKNOWN";
   }

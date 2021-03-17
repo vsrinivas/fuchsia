@@ -8,6 +8,8 @@
 #include <net/if.h>
 #include <unistd.h>
 
+#include <optional>
+
 #include "addr.h"
 #include "log.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
@@ -79,17 +81,14 @@ bool TestRepeatCfg::Parse(const std::string& cmd) {
 
 struct SocketType {
   const char* name;
-  const char* arg;
-  const char* help_str;
   int domain;
   int type;
+  std::optional<int> proto;
 } socket_types[] = {
-    {"udp", nullptr, "open new AF_INET SOCK_DGRAM socket", AF_INET, SOCK_DGRAM},
-    {"udp6", nullptr, "open new AF_INET6 SOCK_DGRAM socket", AF_INET6, SOCK_DGRAM},
-    {"tcp", nullptr, "open new AF_INET SOCK_STREAM socket", AF_INET, SOCK_STREAM},
-    {"tcp6", nullptr, "open new AF_INET6 SOCK_STREAM socket", AF_INET6, SOCK_STREAM},
-    {"raw", "<protocol>", "open new AF_INET SOCK_RAW socket", AF_INET, SOCK_RAW},
-    {"raw6", "<protocol>", "open new AF_INET6 SOCK_RAW socket", AF_INET6, SOCK_RAW},
+    {"udp", AF_INET, SOCK_DGRAM, IPPROTO_UDP},   {"udp6", AF_INET6, SOCK_DGRAM, IPPROTO_UDP},
+    {"icmp", AF_INET, SOCK_DGRAM, IPPROTO_ICMP}, {"icmp6", AF_INET6, SOCK_DGRAM, IPPROTO_ICMPV6},
+    {"tcp", AF_INET, SOCK_STREAM, IPPROTO_TCP},  {"tcp6", AF_INET6, SOCK_STREAM, IPPROTO_TCP},
+    {"raw", AF_INET, SOCK_RAW, std::nullopt},    {"raw6", AF_INET6, SOCK_RAW, std::nullopt},
 };
 
 using SockScripterHandler = bool (SockScripter::*)(char*);
@@ -185,16 +184,13 @@ void print_socket_types() {
   std::cout << std::endl;
 }
 
-int check_socket_type_has_proto(const char* stype) {
+bool check_socket_type_has_proto(const char* stype) {
   for (const auto& socket_type : socket_types) {
     if (strcmp(stype, socket_type.name) == 0) {
-      if (socket_type.arg) {
-        return 0;
-      }
-      break;
+      return socket_type.proto.has_value();
     }
   }
-  return 1;
+  return false;
 }
 
 int print_commands_list() {
@@ -220,9 +216,16 @@ int check_command_has_args(const char* command) {
 int usage(const char* name) {
   std::stringstream socket_types_str;
   for (const auto& socket_type : socket_types) {
-    socket_types_str << "    " << socket_type.name << " "
-                     << (socket_type.arg ? socket_type.arg : "") << " : " << socket_type.help_str
-                     << "\n";
+    socket_types_str << "    " << socket_type.name << " ";
+    if (!socket_type.proto.has_value()) {
+      socket_types_str << "<protocol>";
+    }
+    socket_types_str << " : open new " << GetDomainName(socket_type.domain) << " "
+                     << GetTypeName(socket_type.type);
+    if (socket_type.proto.has_value()) {
+      socket_types_str << " " << GetProtoName(socket_type.proto.value());
+    }
+    socket_types_str << " socket" << std::endl;
   }
 
   std::stringstream cmds_str;
@@ -273,7 +276,7 @@ int SockScripter::Execute(int argc, char* const argv[]) {
         print_socket_types();
         return 0;
       case 'p':
-        return check_socket_type_has_proto(optarg);
+        return check_socket_type_has_proto(optarg) ? 0 : 1;
       case 'c':
         return print_commands_list();
       case 'a':
@@ -293,8 +296,10 @@ int SockScripter::Execute(int argc, char* const argv[]) {
     for (const auto& socket_type : socket_types) {
       if (strcmp(argv[optind], socket_type.name) == 0) {
         found = true;
-        int proto = 0;
-        if (socket_type.arg) {
+        int proto;
+        if (socket_type.proto.has_value()) {
+          proto = socket_type.proto.value();
+        } else {
           optind++;
           if (optind >= argc) {
             fprintf(stderr, "Error-Need protocol# for RAW socket!\n\n");
@@ -367,16 +372,16 @@ int SockScripter::Execute(int argc, char* const argv[]) {
 }
 
 bool SockScripter::Open(int domain, int type, int proto) {
-  const char* domain_str = (domain == AF_INET) ? "IPv4-" : "IPv6-";
   sockfd_ = api_->socket(domain, type, proto);
   if (sockfd_ < 0) {
-    LOG(ERROR) << "Error-Opening " << domain_str << GetTypeName(type) << " socket "
-               << "(proto:" << proto << ") "
+    LOG(ERROR) << "Error-Opening " << GetDomainName(domain) << "-" << GetTypeName(type)
+               << " socket "
+               << "(proto:" << GetProtoName(proto) << ") "
                << "failed-[" << errno << "]" << strerror(errno);
     return false;
   }
-  LOG(INFO) << "Opened " << domain_str << GetTypeName(type) << " socket "
-            << "(proto:" << proto << ") fd:" << sockfd_;
+  LOG(INFO) << "Opened " << GetDomainName(domain) << "-" << GetTypeName(type) << " socket "
+            << "(proto:" << GetProtoName(proto) << ") fd:" << sockfd_;
   return true;
 }
 

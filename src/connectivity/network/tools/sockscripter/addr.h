@@ -18,17 +18,17 @@ class InAddr {
 
   sa_family_t GetFamily() const { return family_; }
 
-  bool IsSet() { return family_ != AF_UNSPEC; }
+  bool IsSet() const { return family_ != AF_UNSPEC; }
 
-  bool IsAddr4() { return family_ == AF_INET; }
+  bool IsAddr4() const { return family_ == AF_INET; }
 
-  bool IsAddr6() { return family_ == AF_INET6; }
+  bool IsAddr6() const { return family_ == AF_INET6; }
 
-  struct in_addr GetAddr4() {
+  struct in_addr GetAddr4() const {
     return addr_.addr4_;
   }
 
-  struct in6_addr GetAddr6() {
+  struct in6_addr GetAddr6() const {
     return addr_.addr6_;
   }
 
@@ -64,9 +64,9 @@ class LocalIfAddr {
 
   bool HasAddr6() { return in_addr_.IsAddr6(); }
 
-  bool HasId() { return id_ > 0; }
+  bool HasId() const { return id_ > 0; }
 
-  int GetId() { return id_; }
+  int GetId() const { return id_; }
 
   struct in_addr GetAddr4() {
     return in_addr_.GetAddr4();
