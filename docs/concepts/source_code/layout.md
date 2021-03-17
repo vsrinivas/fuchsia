@@ -39,6 +39,16 @@ products are quite small and build quickly (e.g., the [core](/products/core.gni)
 product), whereas others are more elaborate (e.g., the
 [workstation](/products/workstation.gni) product).
 
+The `sdk` directory contains libraries that make up the Fuchsia API Surface.
+Some of these libraries are client libraries whereas others are FIDL libraries.
+Not all of these libraries are distributed in the Fuchsia SDK. All non-test
+FIDL libraries should be placed in the `//sdk/fidl` directory, organized by
+FIDL library name, including libraries intended to be used only within the
+Fuchsia Platform Source Tree. These libraries can use the default
+`sdk_category` of `internal`, which will prevent them from being distributed
+to partners, or they can be marked `internal` explicitly with a comment
+alerting people to their intended usage.
+
 Most third-party dependencies are stored in separate repositories. These
 repositories are included in a local checkout only when needed to support one of
 the following source tree configurations:
@@ -85,10 +95,6 @@ pattern:
  * `lib/` (optional)
  * `drivers/` (optional)
  * `examples/` (optional)
- * `fidl/` (optional)
-    * In some cases, an area might have internal FIDL interfaces that are not
-      exposed to other areas or to end-developers. Rather than put those
-      interfaces in the SDK, an area can put those interfaces in this directory.
  * `tests/` (optional)
     * This directory contains integration tests that span multiple source code
       directories within the area
