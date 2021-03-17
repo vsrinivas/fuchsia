@@ -57,20 +57,15 @@ class CpuCacheInfo {
       return;
     }
 
-    // [amd/vol3]: E.4.15  Function 8000_001Dh—Cache Topology Information.
-    //
-    // CpuidAmdCacheTopologyA's leaf (0x8000'001d) is reserved if the
-    // topology extension feature is not implemented.
-    if (io.template Read<CpuidAmdFeatureFlagsC>().topology_extensions() &&
-        TryV2Topology<CpuidAmdCacheTopologyA, CpuidAmdCacheTopologyB,  //
-                      CpuidAmdCacheTopologyC, CpuidMaximumExtendedLeaf>(io)) {
+    if (TryV2Topology<CpuidAmdCacheTopologyA, CpuidAmdCacheTopologyB, CpuidAmdCacheTopologyC,
+                      CpuidMaximumExtendedLeaf>(io)) {
       return;
     }
 
     // The extended leaves explicitly enumerate information about L1d, L1i, L2,
     // and L3, which was the original means of figuring out cache topology on
     // AMD.
-    if (io.template Read<CpuidMaximumExtendedLeaf>().leaf() >= CpuidL3CacheInformation::kLeaf) {
+    if (CpuidSupports<CpuidL3CacheInformation>(io)) {
       const auto l1d = io.template Read<CpuidL1DataCacheInformation>();
       const auto l1i = io.template Read<CpuidL1InstructionCacheInformation>();
       const auto l2 = io.template Read<CpuidL2CacheInformation>();
@@ -148,7 +143,7 @@ class CpuCacheInfo {
             typename MaximumLeaf,                      //
             typename CpuidIoProvider>
   bool TryV2Topology(CpuidIoProvider&& io) {
-    if (io.template Read<MaximumLeaf>().leaf() < CacheTopologyA<0>::kLeaf) {
+    if (!CpuidSupports<CacheTopologyA<0>>(io)) {
       return false;
     }
 

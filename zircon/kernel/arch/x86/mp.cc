@@ -115,10 +115,9 @@ zx_status_t x86_allocate_ap_structures(uint32_t* apic_ids, uint8_t cpu_count) {
     }
     memset(ap_percpus, 0, len);
 
-    use_monitor =
-        arch::BootCpuid<arch::CpuidFeatureFlagsC>().monitor() &&
-        (arch::BootCpuid<arch::CpuidMaximumLeaf>().leaf() >= arch::CpuidMonitorMwaitB::kLeaf) &&
-        !x86_get_microarch_config()->idle_prefer_hlt;
+    use_monitor = arch::BootCpuid<arch::CpuidFeatureFlagsC>().monitor() &&
+                  arch::BootCpuidSupports<arch::CpuidMonitorMwaitB>() &&
+                  !x86_get_microarch_config()->idle_prefer_hlt;
     if (use_monitor) {
       uint16_t monitor_size =
           arch::BootCpuid<arch::CpuidMonitorMwaitB>().largest_monitor_line_size();

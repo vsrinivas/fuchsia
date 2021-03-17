@@ -126,13 +126,20 @@ class BootCpuidIo {
 // instruction.  See below for implementation details.
 extern "C" void InitializeBootCpuid();
 
-// Convenient accessor for BootcpuidIo data, e.g.
+// Convenient accessor for BootCpuidIo data, e.g.
 // ```
 // bool have_avx = arch::BootCpuid<arch::CpuidFeatureFlagsC>().avx();
 // ```
 template <typename CpuidValue>
 inline auto BootCpuid() {
   return CpuidValue::Get().ReadFrom(BootCpuidIo{}.Get<CpuidValue>());
+}
+
+// Whether the leaf assosiated with a CPUID value type is supported, according
+// to BootCpuidIo.
+template <typename CpuidValue>
+inline bool BootCpuidSupports() {
+  return CpuidSupports<CpuidValue>(BootCpuidIo{});
 }
 
 // Explicit specializations for types used from assembly make it possible

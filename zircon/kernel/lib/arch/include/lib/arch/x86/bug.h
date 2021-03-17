@@ -180,8 +180,7 @@ inline bool HasX86SsbBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
       ArchCapabilitiesMsr::Get().ReadFrom(&msr).ssb_no()) {
     return false;
   }
-  if (cpuid.template Read<CpuidMaximumExtendedLeaf>().leaf() >=
-          CpuidExtendedAmdFeatureFlagsB::kLeaf &&
+  if (CpuidSupports<CpuidExtendedAmdFeatureFlagsB>(cpuid) &&
       cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>().ssb_no()) {
     return false;
   }
@@ -223,8 +222,7 @@ inline bool MitigateX86SsbBug(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
     return true;
   }
 
-  if (cpuid.template Read<CpuidMaximumExtendedLeaf>().leaf() >=
-      CpuidExtendedAmdFeatureFlagsB::kLeaf) {
+  if (CpuidSupports<CpuidExtendedAmdFeatureFlagsB>(cpuid)) {
     const auto amd_features = cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>();
     if (amd_features.ssbd()) {
       ZX_DEBUG_ASSERT(SpeculationControlMsr::IsSupported(cpuid));

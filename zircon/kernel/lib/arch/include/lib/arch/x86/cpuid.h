@@ -1026,6 +1026,31 @@ struct CpuidNodeInfo : public CpuidIoValueBase<CpuidNodeInfo, 0x8000'001e, 0x0, 
   DEF_FIELD(7, 0, node_id);
 };
 
+// Whether the leaf associated with a given CPUID value type is supported.
+template <typename CpuidValueType, typename CpuidIoProvider>
+inline bool CpuidSupports(CpuidIoProvider&& cpuid) {
+  if constexpr (CpuidValueType::kLeaf >= 0x8000'0000) {
+    auto max = cpuid.template Read<CpuidMaximumExtendedLeaf>().leaf();
+
+    // [amd/vol3]: E.4.15  Function 8000_001Dh—Cache Topology Information.
+    // [amd/vol3]: E.4.16  Function 8000_001Eh—Processor Topology Information.
+    //
+    // If topology extensions are not advertised, these leaves are reserved.
+    if constexpr (CpuidValueType::kLeaf == 0x8000'001d || CpuidValueType::kLeaf == 0x8000'001e) {
+      return (CpuidValueType::kLeaf <= max) &&
+             cpuid.template Read<CpuidAmdFeatureFlagsC>().topology_extensions();
+    } else {
+      return CpuidValueType::kLeaf <= max;
+    }
+  } else if constexpr (CpuidValueType::kLeaf >= 0x4000'0000) {
+    auto max = cpuid.template Read<CpuidMaximumHypervisorLeaf>().leaf();
+    return CpuidValueType::kLeaf <= max;
+  } else {
+    auto max = cpuid.template Read<CpuidMaximumLeaf>().leaf();
+    return CpuidValueType::kLeaf <= max;
+  }
+}
+
 }  // namespace arch
 
 #endif  // ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_CPUID_H_

@@ -11,12 +11,6 @@
 
 #include <gtest/gtest.h>
 
-// This file is meant for tests that exercise basic CPUID lib/arch logic that
-// does not rely upon CpuidIo access (but rather the business logic around it),
-// Tests that deal in CpuidIo access should written in cpuid-corpus-tests.cc
-// and leverage the corpus of CPUID values for expectations around particular
-// processors.
-
 namespace {
 
 TEST(CpuidTests, Family) {
@@ -112,6 +106,59 @@ TEST(CpuidTests, GetMicroarchitectureFromVersion) {
         << "(" << vendor_sv << ", " << std::hex << test_case.extended_family << ", " << std::hex
         << test_case.base_family << ", " << std::hex << test_case.extended_model << ", " << std::hex
         << test_case.base_model << "); got " << std::quoted(actual_sv);
+  }
+}
+
+TEST(CpuidTests, CpuidSupports) {
+  using arch::testing::X86Microprocessor;
+
+  {
+    // Max basic leaf: 0xa;
+    // Max hypervisor leaf: 0x0;
+    // Max extended leaf: 0x8000'0008.
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelAtom330);
+
+    // Supported basic leaf (0xa).
+    EXPECT_TRUE(arch::CpuidSupports<arch::CpuidPerformanceMonitoringA>(cpuid));
+
+    // Unsupported basic leaf (0x14).
+    EXPECT_FALSE(arch::CpuidSupports<arch::CpuidProcessorTraceMainB>(cpuid));
+
+    // Unsupported hypervisor leaf (0x4000'0000)
+    EXPECT_FALSE(arch::CpuidSupports<arch::CpuidMaximumHypervisorLeaf>(cpuid));
+
+    // Supported extended leaf (0x8000'0008).
+    EXPECT_TRUE(arch::CpuidSupports<arch::CpuidExtendedAmdFeatureFlagsB>(cpuid));
+
+    // Unsupported extended leaf (0x8000'001e).
+    EXPECT_FALSE(arch::CpuidSupports<arch::CpuidExtendedApicId>(cpuid));
+  }
+
+  {
+    // Max basic leaf: 0x10;
+    // Max hypervisor leaf: 0x0;
+    // Max extended leaf: 0x8000'0020.
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950x);
+
+    // Supported 0x8000'001d, 0x8000'001e (has topology extensions).
+    using CpuidAmdCacheTopologyA_0 = arch::CpuidAmdCacheTopologyA<0>;
+    EXPECT_TRUE(arch::CpuidSupports<CpuidAmdCacheTopologyA_0>(cpuid));
+    EXPECT_TRUE(arch::CpuidSupports<arch::CpuidExtendedApicId>(cpuid));
+  }
+
+  {
+    // Max basic leaf: 0xd;
+    // Max hypervisor leaf: 0x4000'0010;
+    // Max extended leaf: 0x8000'001e.
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950xVmware);
+
+    // Supported hypervisor leaf (0x4000'0000).
+    EXPECT_TRUE(arch::CpuidSupports<arch::CpuidMaximumHypervisorLeaf>(cpuid));
+
+    // Unsupported 0x8000'001d, 0x8000'001e (no topology extensions).
+    using CpuidAmdCacheTopologyA_0 = arch::CpuidAmdCacheTopologyA<0>;
+    EXPECT_FALSE(arch::CpuidSupports<CpuidAmdCacheTopologyA_0>(cpuid));
+    EXPECT_FALSE(arch::CpuidSupports<arch::CpuidExtendedApicId>(cpuid));
   }
 }
 

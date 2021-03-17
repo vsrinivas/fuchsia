@@ -22,23 +22,16 @@ inline uint32_t GetApicId(CpuidIoProvider&& io) {
   // For extended topology enumeration, if the first level does not encode the
   // "SMT" level (a spec'ed expecation), then we assume the associated leaves
   // to be invalid.
-  const uint32_t max_leaf = io.template Read<CpuidMaximumLeaf>().leaf();
-  if (max_leaf >= CpuidV2TopologyEnumerationA<0>::kLeaf) {
-    if (io.template Read<CpuidV2TopologyEnumerationC<0>>().level_type() == LevelType::kSmt) {
-      return io.template Read<CpuidV2TopologyEnumerationD<0>>().x2apic_id();
-    }
+  if (CpuidSupports<CpuidV2TopologyEnumerationA<0>>(io) &&
+      io.template Read<CpuidV2TopologyEnumerationC<0>>().level_type() == LevelType::kSmt) {
+    return io.template Read<CpuidV2TopologyEnumerationD<0>>().x2apic_id();
   }
-  if (max_leaf >= CpuidV1TopologyEnumerationA<0>::kLeaf) {
-    if (io.template Read<CpuidV1TopologyEnumerationC<0>>().level_type() == LevelType::kSmt) {
-      return io.template Read<CpuidV1TopologyEnumerationD<0>>().x2apic_id();
-    }
+  if (CpuidSupports<CpuidV1TopologyEnumerationA<0>>(io) &&
+      io.template Read<CpuidV1TopologyEnumerationC<0>>().level_type() == LevelType::kSmt) {
+    return io.template Read<CpuidV1TopologyEnumerationD<0>>().x2apic_id();
   }
 
-  // [amd/vol3]: E.4.16  Function 8000_001Eh—Processor Topology Information.
-  //
-  // If the topology extensions are not advertised, the leaf is reserved.
-  if ((io.template Read<CpuidMaximumExtendedLeaf>().leaf() >= CpuidExtendedApicId::kLeaf) &&
-      io.template Read<CpuidAmdFeatureFlagsC>().topology_extensions()) {
+  if (CpuidSupports<CpuidExtendedApicId>(io)) {
     return io.template Read<CpuidExtendedApicId>().x2apic_id();
   }
 
@@ -117,13 +110,14 @@ class ApicIdDecoder {
 
     // [intel/vol3]: Example 8-21.  Support Routines for Identifying
     // Package, Core and Logical Processors from 8-bit Initial APIC ID.
-    const auto zeroth_cache_topology = io.template Read<CpuidIntelCacheTopologyA<0>>();
-    if (io.template Read<CpuidMaximumLeaf>().leaf() >= CpuidIntelCacheTopologyA<0>::kLeaf &&
-        zeroth_cache_topology.cache_type() != X86CacheType::kNull) {
-      // The field encodes one less than the real count.
-      max_cores = zeroth_cache_topology.max_cores() + 1;
-      finalize();
-      return;
+    if (CpuidSupports<CpuidIntelCacheTopologyA<0>>(io)) {
+      const auto zeroth_cache_topology = io.template Read<CpuidIntelCacheTopologyA<0>>();
+      if (zeroth_cache_topology.cache_type() != X86CacheType::kNull) {
+        // The field encodes one less than the real count.
+        max_cores = zeroth_cache_topology.max_cores() + 1;
+        finalize();
+        return;
+      }
     }
 
     // Unfortunately, the AMD spec does not give a general way of
@@ -132,8 +126,7 @@ class ApicIdDecoder {
     // requires the topology extension feature to be advertised), then we
     // can give best-effort guesses of these quanities based on the actual
     // counts of dies per package and logical processors per core.
-    if ((io.template Read<CpuidMaximumExtendedLeaf>().leaf() >= CpuidComputeUnitInfo::kLeaf) &&
-        io.template Read<CpuidAmdFeatureFlagsC>().topology_extensions()) {
+    if (CpuidSupports<CpuidComputeUnitInfo>(io)) {
       // We translate "compute unit" and "node" here as core and die,
       // respectively.
       max_dies = io.template Read<CpuidNodeInfo>().nodes_per_package() + 1;
@@ -174,7 +167,7 @@ class ApicIdDecoder {
             template <uint32_t> class TopologyEnumerationC,  //
             typename CpuidIoProvider>
   bool TryExtendedTopology(CpuidIoProvider&& io) {
-    if (io.template Read<CpuidMaximumLeaf>().leaf() < TopologyEnumerationA<0>::kLeaf) {
+    if (!CpuidSupports<TopologyEnumerationA<0>>(io)) {
       return false;
     }
 
@@ -247,7 +240,7 @@ class ApicIdDecoder {
 
     // The AMD max. For AMD hardware, the quantity above gives the actual count
     // of logical processors instead of the maximum number of addressible ones.
-    if (io.template Read<CpuidMaximumExtendedLeaf>().leaf() >= CpuidExtendedSizeInfo::kLeaf) {
+    if (CpuidSupports<CpuidExtendedSizeInfo>(io)) {
       // [amd/vol3]: E.5.2  Extended Method.
       const auto size_ids = io.template Read<CpuidExtendedSizeInfo>();
       const size_t amd_max =

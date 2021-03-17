@@ -40,8 +40,7 @@ struct SpeculationControlMsr : public hwreg::RegisterBase<SpeculationControlMsr,
     }
 
     // The AMD way:
-    if (cpuid.template Read<CpuidMaximumExtendedLeaf>().leaf() <
-        CpuidExtendedAmdFeatureFlagsB::kLeaf) {
+    if (!CpuidSupports<CpuidExtendedAmdFeatureFlagsB>(cpuid)) {
       return false;
     }
     const auto amd_features = cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>();
@@ -68,8 +67,7 @@ struct AmdVirtualSpeculationControlMsr
   template <typename CpuidIoProvider>
   static bool IsSupported(CpuidIoProvider&& cpuid) {
     // [amd/ssbd]: HYPERVISOR USAGE MODELS.
-    return (cpuid.template Read<CpuidMaximumExtendedLeaf>().leaf() >=
-            CpuidExtendedAmdFeatureFlagsB::kLeaf) &&
+    return CpuidSupports<CpuidExtendedAmdFeatureFlagsB>(cpuid) &&
            cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>().virt_ssbd();
   }
 
