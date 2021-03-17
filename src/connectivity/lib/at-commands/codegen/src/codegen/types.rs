@@ -79,8 +79,9 @@ pub fn codegen_responses<W: io::Write>(
         HIGHLEVEL_SUCCESS_TYPE,
         |sink, indent| {
             for definition in definitions {
-                if let Definition::Response { name, arguments, .. } = definition {
-                    codegen_response(sink, indent, name, arguments)?;
+                if let Definition::Response { name, type_name, arguments, .. } = definition {
+                    let type_name = type_name.clone().unwrap_or_else(|| to_initial_capital(name));
+                    codegen_response(sink, indent, &type_name, arguments)?;
                 }
             }
             Ok(())
@@ -93,14 +94,14 @@ pub fn codegen_responses<W: io::Write>(
 fn codegen_response<W: io::Write>(
     sink: &mut W,
     indent: u64,
-    name: &str,
+    type_name: &str,
     arguments: &Arguments,
 ) -> Result {
     codegen_block(
         sink,
         indent,
         None,
-        &to_initial_capital(name),
+        type_name,
         |sink, indent| codegen_arguments(sink, indent, arguments),
         Some(","),
     )

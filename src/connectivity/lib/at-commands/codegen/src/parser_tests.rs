@@ -31,11 +31,13 @@ fn parse_multiple() {
     let expected_result = vec![
         Definition::Command(Command::Execute {
             name: String::from("TESTONE"),
+            type_name: None,
             is_extension: true,
             arguments: None,
         }),
         Definition::Command(Command::Execute {
             name: String::from("TESTTWO"),
+            type_name: None,
             is_extension: true,
             arguments: None,
         }),
@@ -55,6 +57,21 @@ fn exec_no_args() {
         "command { ATTEST }",
         Definition::Command(Command::Execute {
             name: String::from("TEST"),
+            type_name: None,
+            is_extension: false,
+            arguments: None,
+        }),
+    )
+}
+
+// Command with custom type name
+#[test]
+fn exec_with_type_name() {
+    test_parse(
+        "command TestName { ATTESTN }",
+        Definition::Command(Command::Execute {
+            name: String::from("TESTN"),
+            type_name: Some(String::from("TestName")),
             is_extension: false,
             arguments: None,
         }),
@@ -68,6 +85,7 @@ fn exec_ext_no_args() {
         "command { AT+TEST }",
         Definition::Command(Command::Execute {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: None,
         }),
@@ -81,6 +99,7 @@ fn exec_one_arg_no_comma() {
         "command { AT+TEST=field: Integer }",
         Definition::Command(Command::Execute {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Some(ExecuteArguments {
                 nonstandard_delimiter: None,
@@ -100,6 +119,7 @@ fn exec_one_arg_no_with_comma() {
         "command { AT+TEST=field: Integer, }",
         Definition::Command(Command::Execute {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Some(ExecuteArguments {
                 nonstandard_delimiter: None,
@@ -119,6 +139,7 @@ fn exec_one_arg_nonstd_delim() {
         "command { AT+TEST>field: Integer }",
         Definition::Command(Command::Execute {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Some(ExecuteArguments {
                 nonstandard_delimiter: Some(String::from(">")),
@@ -138,6 +159,7 @@ fn exec_args_no_comma() {
         "command { AT+TEST=field1: Integer, field2: String }",
         Definition::Command(Command::Execute {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Some(ExecuteArguments {
                 nonstandard_delimiter: None,
@@ -163,6 +185,7 @@ fn exec_args_with_comma() {
         "command { AT+TEST=field1: Integer, field2: String, }",
         Definition::Command(Command::Execute {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Some(ExecuteArguments {
                 nonstandard_delimiter: None,
@@ -188,6 +211,7 @@ fn paren_args() {
         "command { AT+TEST=(field: Integer) }",
         Definition::Command(Command::Execute {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Some(ExecuteArguments {
                 nonstandard_delimiter: None,
@@ -207,6 +231,7 @@ fn multiple_paren_args() {
         "command { AT+TEST=(field1: Integer)(field2: Integer, field3: String) }",
         Definition::Command(Command::Execute {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Some(ExecuteArguments {
                 nonstandard_delimiter: None,
@@ -238,6 +263,7 @@ fn list_type() {
         "command { AT+TEST=field: List<Integer>}",
         Definition::Command(Command::Execute {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Some(ExecuteArguments {
                 nonstandard_delimiter: None,
@@ -257,6 +283,7 @@ fn map_type() {
         "command { AT+TEST=field: Map<Integer, String> }",
         Definition::Command(Command::Execute {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Some(ExecuteArguments {
                 nonstandard_delimiter: None,
@@ -274,7 +301,11 @@ fn map_type() {
 fn read() {
     test_parse(
         "command { ATTEST? }",
-        Definition::Command(Command::Read { name: String::from("TEST"), is_extension: false }),
+        Definition::Command(Command::Read {
+            name: String::from("TEST"),
+            type_name: None,
+            is_extension: false,
+        }),
     )
 }
 
@@ -283,7 +314,11 @@ fn read() {
 fn read_ext() {
     test_parse(
         "command { AT+TEST? }",
-        Definition::Command(Command::Read { name: String::from("TEST"), is_extension: true }),
+        Definition::Command(Command::Read {
+            name: String::from("TEST"),
+            type_name: None,
+            is_extension: true,
+        }),
     )
 }
 
@@ -292,7 +327,11 @@ fn read_ext() {
 fn test() {
     test_parse(
         "command { ATTEST=? }",
-        Definition::Command(Command::Test { name: String::from("TEST"), is_extension: false }),
+        Definition::Command(Command::Test {
+            name: String::from("TEST"),
+            type_name: None,
+            is_extension: false,
+        }),
     )
 }
 
@@ -301,7 +340,11 @@ fn test() {
 fn test_ext() {
     test_parse(
         "command { AT+TEST=? }",
-        Definition::Command(Command::Test { name: String::from("TEST"), is_extension: true }),
+        Definition::Command(Command::Test {
+            name: String::from("TEST"),
+            type_name: None,
+            is_extension: true,
+        }),
     )
 }
 
@@ -312,6 +355,21 @@ fn resp_no_args() {
         "response { TEST: }",
         Definition::Response {
             name: String::from("TEST"),
+            type_name: None,
+            is_extension: false,
+            arguments: Arguments::ArgumentList(Vec::new()),
+        },
+    )
+}
+
+// Response with custom type name
+#[test]
+fn resp_no_args_custom_typename() {
+    test_parse(
+        "response TestResponse { TESTN: }",
+        Definition::Response {
+            name: String::from("TESTN"),
+            type_name: Some(String::from("TestResponse")),
             is_extension: false,
             arguments: Arguments::ArgumentList(Vec::new()),
         },
@@ -325,6 +383,7 @@ fn resp_ext_no_args() {
         "response { +TEST: }",
         Definition::Response {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Arguments::ArgumentList(Vec::new()),
         },
@@ -338,6 +397,7 @@ fn resp_one_arg_no_comma() {
         "response { +TEST: field: Integer }",
         Definition::Response {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Arguments::ArgumentList(vec![Argument {
                 name: String::from("field"),
@@ -354,6 +414,7 @@ fn resp_one_arg_with_comma() {
         "response { +TEST: field: Integer, }",
         Definition::Response {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Arguments::ArgumentList(vec![Argument {
                 name: String::from("field"),
@@ -370,6 +431,7 @@ fn resp_args_no_comma() {
         "response { +TEST: field1: Integer, field2: Integer }",
         Definition::Response {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Arguments::ArgumentList(vec![
                 Argument {
@@ -392,6 +454,7 @@ fn resp_args_with_comma() {
         "response { +TEST: field1: Integer, field2: Integer,}",
         Definition::Response {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Arguments::ArgumentList(vec![
                 Argument {
@@ -414,6 +477,7 @@ fn resp_paren_args() {
         "response { +TEST: (field: Integer) }",
         Definition::Response {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![vec![Argument {
                 name: String::from("field"),
@@ -430,6 +494,7 @@ fn resp_paren_multiple_args() {
         "response { +TEST: (field1: Integer)(field2: Integer, field3: String) }",
         Definition::Response {
             name: String::from("TEST"),
+            type_name: None,
             is_extension: true,
             arguments: Arguments::ParenthesisDelimitedArgumentLists(vec![
                 vec![Argument {

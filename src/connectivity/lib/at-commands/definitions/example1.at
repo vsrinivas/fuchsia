@@ -7,6 +7,9 @@ command { ATTESTEX }
 # Extension execute command with no arguments
 command { AT+TESTEXEXT }
 
+# Execute command with no arguments and custom name
+command TestCommand { ATTESTNEX }
+
 # Extension execute command with one argument, no trailing comma
 command { AT+TESTEXEXTFI=field: Integer }
 
@@ -24,6 +27,7 @@ command { AT+TESTEXEXTFSIC=field1: String, field2: Integer,}
 
 # List type argument
 command { AT+TESTL=field: List<Integer>}
+
 
 # Map  type arguments
 command { AT+TESTM=field: Map<Integer, String> }
@@ -55,6 +59,9 @@ command { AT+TESTTEX=? }
 
 # Response with no arguments
 response { TEST: }
+
+# Response with no arguments and custom name
+response TestResponse { TESTN: }
 
 # Extension response command with no arguments
 response { +TESTEXT: }

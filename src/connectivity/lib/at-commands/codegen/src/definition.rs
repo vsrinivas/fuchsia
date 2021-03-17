@@ -7,15 +7,28 @@ use super::codegen::common::to_initial_capital;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Definition {
     Command(Command),
-    Response { name: String, is_extension: bool, arguments: Arguments },
+    Response { name: String, type_name: Option<String>, is_extension: bool, arguments: Arguments },
     Enum { name: String, variants: Vec<Variant> },
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Command {
-    Execute { name: String, is_extension: bool, arguments: Option<ExecuteArguments> },
-    Read { name: String, is_extension: bool },
-    Test { name: String, is_extension: bool },
+    Execute {
+        name: String,
+        type_name: Option<String>,
+        is_extension: bool,
+        arguments: Option<ExecuteArguments>,
+    },
+    Read {
+        name: String,
+        type_name: Option<String>,
+        is_extension: bool,
+    },
+    Test {
+        name: String,
+        type_name: Option<String>,
+        is_extension: bool,
+    },
 }
 
 impl Command {
@@ -23,12 +36,21 @@ impl Command {
         match self {
             Command::Execute {
                 name,
+                type_name,
                 arguments: Some(ExecuteArguments { nonstandard_delimiter: Some(_), .. }),
                 ..
-            } => format!("{}Special", to_initial_capital(name)),
-            Command::Execute { name, .. } => to_initial_capital(name.as_str()),
-            Command::Read { name, .. } => format!("{}Read", to_initial_capital(name.as_str())),
-            Command::Test { name, .. } => format!("{}Test", to_initial_capital(name.as_str())),
+            } => {
+                type_name.clone().unwrap_or_else(|| format!("{}Special", to_initial_capital(name)))
+            }
+            Command::Execute { name, type_name, .. } => {
+                type_name.clone().unwrap_or_else(|| to_initial_capital(name.as_str()))
+            }
+            Command::Read { name, type_name, .. } => type_name
+                .clone()
+                .unwrap_or_else(|| format!("{}Read", to_initial_capital(name.as_str()))),
+            Command::Test { name, type_name, .. } => type_name
+                .clone()
+                .unwrap_or_else(|| format!("{}Test", to_initial_capital(name.as_str()))),
         }
     }
 }

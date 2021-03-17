@@ -58,7 +58,7 @@ fn codegen_commands<W: io::Write>(sink: &mut W, indent: u64, definitions: &[Defi
 
 fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -> Result {
     match command {
-        Command::Execute { name, is_extension, arguments } => {
+        Command::Execute { name, is_extension, arguments, .. } => {
             codegen_match_branch(
                 sink,
                 indent,
@@ -71,7 +71,7 @@ fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -
                 arguments.as_ref(),
             )?;
         }
-        Command::Read { name, is_extension } => {
+        Command::Read { name, is_extension, .. } => {
             codegen_match_branch(
                 sink,
                 indent,
@@ -84,7 +84,7 @@ fn codegen_command<W: io::Write>(sink: &mut W, indent: u64, command: &Command) -
                 None::<&ExecuteArguments>,
             )?;
         }
-        Command::Test { name, is_extension } => {
+        Command::Test { name, is_extension, .. } => {
             codegen_match_branch(
                 sink,
                 indent,
@@ -122,8 +122,10 @@ fn codegen_responses<W: io::Write>(
             let indent = indent + TABSTOP;
 
             for definition in definitions {
-                if let Definition::Response { name, is_extension, arguments } = definition {
-                    let type_name = to_initial_capital(name);
+                if let Definition::Response { name, type_name, is_extension, arguments } =
+                    definition
+                {
+                    let type_name = type_name.clone().unwrap_or(to_initial_capital(name));
                     codegen_match_branch(
                         sink,
                         indent,

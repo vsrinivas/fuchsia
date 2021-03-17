@@ -11,7 +11,7 @@ use pest_derive::Parser;
 file = { SOI ~ definition* ~ EOI }
 definition = { command | response | enumeration }
 
-command = { "command" ~ "{" ~ ( read | test | execute ) ~ "}" }
+command = { "command" ~ optional_type_name ~ "{" ~ ( read | test | execute ) ~ "}" }
 
 read =    { "AT" ~ optional_extension ~ command_name ~ "?" }
 test =    { "AT" ~ optional_extension ~ command_name ~ "=?" }
@@ -20,7 +20,9 @@ execute = { "AT" ~ optional_extension ~ command_name ~ execute_arguments? }
 execute_arguments = { execute_argument_delimiter ~ arguments }
 execute_argument_delimiter = { "=" | ">" }
 
-response = { "response" ~ "{" ~ optional_extension ~ command_name ~ ":" ~ arguments ~ "}" }
+response = { "response" ~ optional_type_name ~ "{" ~ optional_extension ~ command_name ~ ":" ~ arguments ~ "}" }
+
+optional_type_name = { identifier? } 
 
 optional_extension = { "+"? }
 

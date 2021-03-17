@@ -120,21 +120,31 @@ fn parse_definition(definition: Pair<'_>) -> Result<Definition> {
 }
 
 fn parse_command(command: Pair<'_>) -> Result<Definition> {
-    let mut command_elments = command.into_inner();
+    let mut command_elements = command.into_inner();
+
+    let optional_type_name = next_match_option(&mut command_elements, Rule::optional_type_name)?;
+    let parsed_optional_type_name = match optional_type_name {
+        Some(n) => {
+            let id = parse_identifier(n)?;
+            (!id.is_empty()).then(|| id)
+        }
+        None => None,
+    };
+
     let command_variant =
-        next_match_one_of(&mut command_elments, vec![Rule::execute, Rule::read, Rule::test])?;
+        next_match_one_of(&mut command_elements, vec![Rule::execute, Rule::read, Rule::test])?;
 
     let parsed_command = match command_variant.as_rule() {
-        Rule::execute => parse_execute(command_variant),
-        Rule::read => parse_read(command_variant),
-        Rule::test => parse_test(command_variant),
+        Rule::execute => parse_execute(command_variant, parsed_optional_type_name),
+        Rule::read => parse_read(command_variant, parsed_optional_type_name),
+        Rule::test => parse_test(command_variant, parsed_optional_type_name),
         _ => unreachable!(),
     }?;
 
     Ok(Definition::Command(parsed_command))
 }
 
-fn parse_execute(execute: Pair<'_>) -> Result<Command> {
+fn parse_execute(execute: Pair<'_>, parsed_optional_type_name: Option<String>) -> Result<Command> {
     let mut execute_elements = execute.into_inner();
 
     let optional_extension = next_match(&mut execute_elements, Rule::optional_extension)?;
@@ -152,6 +162,7 @@ fn parse_execute(execute: Pair<'_>) -> Result<Command> {
 
     Ok(Command::Execute {
         name: parsed_name,
+        type_name: parsed_optional_type_name,
         is_extension: parsed_optional_extension,
         arguments: parsed_execute_arguments_option,
     })
@@ -185,7 +196,7 @@ fn parse_execute_argument_delimiter(
     }
 }
 
-fn parse_read(read: Pair<'_>) -> Result<Command> {
+fn parse_read(read: Pair<'_>, parsed_optional_type_name: Option<String>) -> Result<Command> {
     let mut read_elements = read.into_inner();
 
     let optional_extension = next_match(&mut read_elements, Rule::optional_extension)?;
@@ -194,10 +205,14 @@ fn parse_read(read: Pair<'_>) -> Result<Command> {
     let name = next_match(&mut read_elements, Rule::command_name)?;
     let parsed_name = parse_name(name)?;
 
-    Ok(Command::Read { name: parsed_name, is_extension: parsed_optional_extension })
+    Ok(Command::Read {
+        name: parsed_name,
+        type_name: parsed_optional_type_name,
+        is_extension: parsed_optional_extension,
+    })
 }
 
-fn parse_test(test: Pair<'_>) -> Result<Command> {
+fn parse_test(test: Pair<'_>, parsed_optional_type_name: Option<String>) -> Result<Command> {
     let mut test_elements = test.into_inner();
 
     let optional_extension = next_match(&mut test_elements, Rule::optional_extension)?;
@@ -206,11 +221,24 @@ fn parse_test(test: Pair<'_>) -> Result<Command> {
     let name = next_match(&mut test_elements, Rule::command_name)?;
     let parsed_name = parse_name(name)?;
 
-    Ok(Command::Test { name: parsed_name, is_extension: parsed_optional_extension })
+    Ok(Command::Test {
+        name: parsed_name,
+        type_name: parsed_optional_type_name,
+        is_extension: parsed_optional_extension,
+    })
 }
 
 fn parse_response(response: Pair<'_>) -> Result<Definition> {
     let mut response_elements = response.into_inner();
+
+    let optional_type_name = next_match_option(&mut response_elements, Rule::optional_type_name)?;
+    let parsed_optional_type_name = match optional_type_name {
+        Some(n) => {
+            let id = parse_identifier(n)?;
+            (!id.is_empty()).then(|| id)
+        }
+        None => None,
+    };
 
     let optional_extension = next_match(&mut response_elements, Rule::optional_extension)?;
     let parsed_optional_extension = parse_optional_extension(optional_extension)?;
@@ -223,6 +251,7 @@ fn parse_response(response: Pair<'_>) -> Result<Definition> {
 
     Ok(Definition::Response {
         name: parsed_name,
+        type_name: parsed_optional_type_name,
         is_extension: parsed_optional_extension,
         arguments: parsed_arguments,
     })
