@@ -69,14 +69,12 @@ fuchsia::feedback::CrashReport CreateCrashReport(const RebootLog& reboot_log) {
   }
 
   // Build the crash report attachments.
-  if (reboot_log.HasRebootLogStr()) {
-    fsl::SizedVmo vmo;
-    if (fsl::VmoFromString(reboot_log.RebootLogStr(), &vmo)) {
-      std::vector<fuchsia::feedback::Attachment> attachments(1);
-      attachments.back().key = "reboot_crash_log";
-      attachments.back().value = std::move(vmo).ToTransport();
-      report.set_attachments(std::move(attachments));
-    }
+  fsl::SizedVmo vmo;
+  if (fsl::VmoFromString(reboot_log.RebootLogStr(), &vmo)) {
+    std::vector<fuchsia::feedback::Attachment> attachments(1);
+    attachments.back().key = "reboot_crash_log";
+    attachments.back().value = std::move(vmo).ToTransport();
+    report.set_attachments(std::move(attachments));
   }
 
   return report;

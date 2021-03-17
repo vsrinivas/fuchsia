@@ -10,48 +10,45 @@
 
 namespace forensics {
 namespace last_reboot {
-namespace {
 
 std::string ToString(const RebootReason reason) {
   switch (reason) {
     case RebootReason::kNotParseable:
-      return "RebootReason::kNotParseable";
+      return "NOT PARSEABLE";
     case RebootReason::kGenericGraceful:
-      return "RebootReason::kGenericGraceful";
+      return "GENERIC GRACEFUL";
     case RebootReason::kCold:
-      return "RebootReason::kCold";
+      return "COLD";
     case RebootReason::kSpontaneous:
-      return "RebootReason::kSpontaneous";
+      return "SPONTANEOUS";
     case RebootReason::kKernelPanic:
-      return "RebootReason::kKernelPanic";
+      return "KERNEL PANIC";
     case RebootReason::kOOM:
-      return "RebootReason::kOOM";
+      return "OOM";
     case RebootReason::kHardwareWatchdogTimeout:
-      return "RebootReason::kHardwareWatchdogTimeout";
+      return "HARDWARE WATCHDOG TIMEOUT";
     case RebootReason::kSoftwareWatchdogTimeout:
-      return "RebootReason::kSoftwareWatchdogTimeout";
+      return "SOFTWARE WATCHDOG TIMEOUT";
     case RebootReason::kBrownout:
-      return "RebootReason::kBrownout";
+      return "BROWNOUT";
     case RebootReason::kUserRequest:
-      return "RebootReason::kUserRequest";
+      return "USER REQUEST";
     case RebootReason::kSystemUpdate:
-      return "RebootReason::kSystemUpdate";
+      return "SYSTEM UPDATE";
     case RebootReason::kRetrySystemUpdate:
-      return "RebootReason::kRetrySystemUpdate";
+      return "RETRY SYSTEM UPDATE";
     case RebootReason::kHighTemperature:
-      return "RebootReason::kHighTemperature";
+      return "HIGH TEMPERATURE";
     case RebootReason::kSessionFailure:
-      return "RebootReason::kSessionFailure";
+      return "SESSION FAILURE";
     case RebootReason::kSysmgrFailure:
-      return "RebootReason::kSysmgrFailure";
+      return "SYSMGR FAILURE";
     case RebootReason::kCriticalComponentFailure:
-      return "RebootReason::kCriticalComponentFailure";
+      return "CRITICAL COMPONENT FAILURE";
     case RebootReason::kFdr:
-      return "RebootReason::kFdr";
+      return "FACTORY DATA RESET";
   }
 }
-
-}  // namespace
 
 bool IsCrash(const RebootReason reason) {
   switch (reason) {
@@ -195,7 +192,7 @@ std::string ToCrashSignature(const RebootReason reason) {
     case RebootReason::kHighTemperature:
     case RebootReason::kCold:
     case RebootReason::kFdr:
-      FX_LOGS(FATAL) << "Not expecting a crash for reboot reason " << ToString(reason);
+      FX_LOGS(FATAL) << "Not expecting a crash for reboot reason: " << ToString(reason);
       return "FATAL ERROR";
   }
 }
@@ -223,7 +220,7 @@ std::string ToCrashProgramName(const RebootReason reason) {
     case RebootReason::kHighTemperature:
     case RebootReason::kCold:
     case RebootReason::kFdr:
-      FX_LOGS(FATAL) << "Not expecting a program name request for reboot reason "
+      FX_LOGS(FATAL) << "Not expecting a program name request for reboot reason: "
                      << ToString(reason);
       return "FATAL ERROR";
   }

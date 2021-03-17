@@ -40,7 +40,7 @@ class MainServiceTest : public UnitTestFixture {
             .dispatcher = dispatcher(),
             .services = services(),
             .root_node = &InspectRoot(),
-            .reboot_log = RebootLog(RebootReason::kNotParseable, std::nullopt, std::nullopt),
+            .reboot_log = RebootLog(RebootReason::kNotParseable, "", std::nullopt),
             .graceful_reboot_reason_write_path = Path(),
         }) {}
 

@@ -41,6 +41,8 @@ enum class RebootReason {
   kFdr,
 };
 
+std::string ToString(RebootReason reason);
+
 // Whether the reason justifies a crash report.
 bool IsCrash(RebootReason reason);
 
