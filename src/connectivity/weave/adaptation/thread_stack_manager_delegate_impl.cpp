@@ -4,6 +4,7 @@
 
 #include <fuchsia/net/routes/cpp/fidl.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/time.h>
 
 // clang-format off
 #include <Weave/DeviceLayer/internal/WeaveDeviceLayerInternal.h>
@@ -46,9 +47,9 @@ constexpr uint16_t kMinThreadChannel = 11;
 constexpr uint16_t kMaxThreadChannel = 26;
 
 // Default joinable period for Thread network setup.
-constexpr zx_duration_t kThreadJoinableDuration = zx_duration_from_sec(300);
+constexpr zx::duration kThreadJoinableDurationDefault{zx_duration_from_sec(300)};
 // A joinable duration of 0 stops any active joinable state.
-constexpr zx_duration_t kThreadJoinableStop = zx_duration_from_sec(0);
+constexpr zx::duration kThreadJoinableStop{zx_duration_from_sec(0)};
 
 // The required size of a buffer supplied to GetPrimary802154MACAddress.
 constexpr size_t k802154MacAddressBufSize =
@@ -507,13 +508,34 @@ WEAVE_ERROR ThreadStackManagerDelegateImpl::SetThreadJoinable(bool enable) {
   zx_status_t status;
 
   // Get the legacy Thread protocol
-  status = GetProtocols(std::move(Protocols().set_thread_legacy_joining(thread_legacy.NewRequest())));
+  status =
+      GetProtocols(std::move(Protocols().set_thread_legacy_joining(thread_legacy.NewRequest())));
   if (status != ZX_OK) {
     return status;
   }
 
+  // Check for configured duration.
+  uint32_t duration_sec;
+  zx::duration duration;
+  WEAVE_ERROR err = ConfigurationMgrImpl().GetThreadJoinableDuration(&duration_sec);
+  if (err == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
+    FX_LOGS(INFO) << "No joinable duration specified, using default duration.";
+    duration = kThreadJoinableDurationDefault;
+  } else if (err == WEAVE_NO_ERROR) {
+    duration = zx::duration{zx_duration_from_sec(duration_sec)};
+  } else {
+    FX_LOGS(ERROR) << "Error reading Thread joinable duration config value.";
+    return err;
+  }
+
   // Set joinable or disable joinable based on the intended value.
-  status = thread_legacy->MakeJoinable(enable ? kThreadJoinableDuration : kThreadJoinableStop,
+  if (enable) {
+    FX_LOGS(INFO) << "Requesting Thread radio joinable state for " << duration.to_secs()
+                  << " seconds.";
+  } else {
+    FX_LOGS(INFO) << "Requesting to disable Thread radio joinable state.";
+  }
+  status = thread_legacy->MakeJoinable(enable ? duration.get() : kThreadJoinableStop.get(),
                                        WEAVE_UNSECURED_PORT);
   if (status != ZX_OK) {
     return status;

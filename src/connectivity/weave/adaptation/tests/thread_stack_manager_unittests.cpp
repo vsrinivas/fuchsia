@@ -364,10 +364,23 @@ class FakeNetRoutes : public fuchsia::net::routes::testing::State_TestBase {
 class OverridableThreadConfigurationManagerDelegate : public ConfigurationManagerDelegateImpl {
  private:
   bool is_thread_enabled_ = true;
+  std::optional<uint32_t> join_duration_ = std::nullopt;
+
   bool IsThreadEnabled() override { return is_thread_enabled_; }
+  WEAVE_ERROR GetThreadJoinableDuration(uint32_t* duration) override {
+    if (!join_duration_){
+      return WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND;
+    }
+
+    *duration = *join_duration_;
+    return WEAVE_NO_ERROR;
+  }
 
  public:
   void SetThreadEnabled(bool value) { is_thread_enabled_ = value; }
+  void SetThreadJoinableDuration(std::optional<uint32_t> duration) {
+    join_duration_ = std::move(duration);
+  }
 };
 
 class ThreadStackManagerTest : public WeaveTestFixture {
@@ -757,6 +770,7 @@ TEST_F(ThreadStackManagerTest, GetPrimary802154MacAddress) {
 }
 
 TEST_F(ThreadStackManagerTest, SetThreadJoinable) {
+  constexpr uint32_t kTestDuration = 123;
   EXPECT_EQ(fake_lookup_.thread_legacy().calls().size(), 0u);
 
   EXPECT_EQ(ThreadStackMgrImpl().SetThreadJoinable(true), WEAVE_NO_ERROR);
@@ -767,12 +781,21 @@ TEST_F(ThreadStackManagerTest, SetThreadJoinable) {
     EXPECT_EQ(calls[0].second, WEAVE_UNSECURED_PORT);
   }
 
-  EXPECT_EQ(ThreadStackMgrImpl().SetThreadJoinable(false), WEAVE_NO_ERROR);
+  config_delegate_->SetThreadJoinableDuration(kTestDuration);
+  EXPECT_EQ(ThreadStackMgrImpl().SetThreadJoinable(true), WEAVE_NO_ERROR);
   {
     const auto& calls = fake_lookup_.thread_legacy().calls();
     ASSERT_EQ(calls.size(), 2u);
-    EXPECT_EQ(calls[1].first, 0);
+    EXPECT_EQ(calls[1].first, zx_duration_from_sec(kTestDuration));
     EXPECT_EQ(calls[1].second, WEAVE_UNSECURED_PORT);
+  }
+
+  EXPECT_EQ(ThreadStackMgrImpl().SetThreadJoinable(false), WEAVE_NO_ERROR);
+  {
+    const auto& calls = fake_lookup_.thread_legacy().calls();
+    ASSERT_EQ(calls.size(), 3u);
+    EXPECT_EQ(calls[2].first, 0);
+    EXPECT_EQ(calls[2].second, WEAVE_UNSECURED_PORT);
   }
 }
 
