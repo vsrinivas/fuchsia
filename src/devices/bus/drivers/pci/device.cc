@@ -7,6 +7,7 @@
 #include <assert.h>
 #include <err.h>
 #include <inttypes.h>
+#include <lib/inspect/cpp/inspector.h>
 #include <lib/zx/interrupt.h>
 #include <string.h>
 #include <zircon/compiler.h>
@@ -40,7 +41,7 @@ namespace {  // anon namespace.  Externals do not need to know about DeviceImpl
 class DeviceImpl : public Device {
  public:
   static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Config>&& cfg,
-                            UpstreamNode* upstream, BusDeviceInterface* bdi);
+                            UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node);
 
   // Implement ref counting, do not let derived classes override.
   PCI_IMPLEMENT_REFCOUNTED;
@@ -50,14 +51,15 @@ class DeviceImpl : public Device {
 
  protected:
   DeviceImpl(zx_device_t* parent, std::unique_ptr<Config>&& cfg, UpstreamNode* upstream,
-             BusDeviceInterface* bdi)
-      : Device(parent, std::move(cfg), upstream, bdi, false) {}
+             BusDeviceInterface* bdi, inspect::Node node)
+      : Device(parent, std::move(cfg), upstream, bdi, std::move(node), false) {}
 };
 
 zx_status_t DeviceImpl::Create(zx_device_t* parent, std::unique_ptr<Config>&& cfg,
-                               UpstreamNode* upstream, BusDeviceInterface* bdi) {
+                               UpstreamNode* upstream, BusDeviceInterface* bdi,
+                               inspect::Node node) {
   fbl::AllocChecker ac;
-  auto raw_dev = new (&ac) DeviceImpl(parent, std::move(cfg), upstream, bdi);
+  auto raw_dev = new (&ac) DeviceImpl(parent, std::move(cfg), upstream, bdi, std::move(node));
   if (!ac.check()) {
     zxlogf(ERROR, "Out of memory attemping to create PCIe device %s.", cfg->addr());
     return ZX_ERR_NO_MEMORY;
@@ -75,6 +77,43 @@ zx_status_t DeviceImpl::Create(zx_device_t* parent, std::unique_ptr<Config>&& cf
 }
 
 }  // namespace
+
+Device::Device(zx_device_t* parent, std::unique_ptr<Config>&& config, UpstreamNode* upstream,
+               BusDeviceInterface* bdi, inspect::Node node, bool is_bridge)
+    : PciDeviceType(parent),
+      cfg_(std::move(config)),
+      upstream_(upstream),
+      bdi_(bdi),
+      bar_count_(is_bridge ? PCI_BAR_REGS_PER_BRIDGE : PCI_BAR_REGS_PER_DEVICE),
+      is_bridge_(is_bridge) {
+  metrics_.node = std::move(node);
+  metrics_.legacy.node = metrics_.node.CreateChild(kInspectLegacyInterrupt);
+  metrics_.msi.node = metrics_.node.CreateChild(kInspectMsi);
+
+  metrics_.irq_mode =
+      metrics_.node.CreateString(kInspectIrqMode, kInspectIrqModes[PCI_IRQ_MODE_DISABLED]);
+  uint8_t pin = cfg_->Read(Config::kInterruptPin);
+  switch (pin) {
+    case 1:
+    case 2:
+    case 3:
+    case 4: {
+      // register values 1-4 map to pins A-D
+      char s[2] = {static_cast<char>('A' + (pin - 1)), '\0'};
+      metrics_.legacy.pin = metrics_.legacy.node.CreateString(kInspectLegacyInterruptPin, s);
+      break;
+    }
+  }
+  uint8_t line = cfg_->Read(Config::kInterruptLine);
+  if (line != 0 && line != 0xFF) {
+    metrics_.legacy.line = metrics_.legacy.node.CreateUint(kInspectLegacyInterruptLine,
+                                                           cfg_->Read(Config::kInterruptLine));
+  }
+  metrics_.legacy.ack_count = metrics_.legacy.node.CreateUint(kInspectLegacyAckCount, 0);
+  metrics_.legacy.signal_count = metrics_.legacy.node.CreateUint(kInspectLegacySignalCount, 0);
+  metrics_.msi.base_vector = metrics_.msi.node.CreateUint(kInspectMsiBaseVector, 0);
+  metrics_.msi.allocated = metrics_.msi.node.CreateUint(kInspectMsiAllocated, 0);
+}
 
 Device::~Device() {
   // We should already be unlinked from the bus's device tree.
@@ -116,8 +155,8 @@ zx_status_t Device::CreateProxy() {
 }
 
 zx_status_t Device::Create(zx_device_t* parent, std::unique_ptr<Config>&& config,
-                           UpstreamNode* upstream, BusDeviceInterface* bdi) {
-  return DeviceImpl::Create(parent, std::move(config), upstream, bdi);
+                           UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node) {
+  return DeviceImpl::Create(parent, std::move(config), upstream, bdi, std::move(node));
 }
 
 zx_status_t Device::Init() {

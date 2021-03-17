@@ -10,6 +10,8 @@
 #include <zircon/status.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/string_buffer.h>
+#include <fbl/string_printf.h>
 
 #include "src/devices/bus/drivers/pci/capabilities/msi.h"
 #include "src/devices/bus/drivers/pci/common.h"
@@ -103,6 +105,7 @@ zx_status_t Device::DisableInterrupts() {
   if (st == ZX_OK) {
     zxlogf(DEBUG, "[%s] disabled IRQ mode %u", cfg_->addr(), irqs_.mode);
     irqs_.mode = PCI_IRQ_MODE_DISABLED;
+    metrics_.irq_mode.Set(kInspectIrqModes[irqs_.mode]);
   }
   return st;
 }
@@ -161,7 +164,18 @@ zx::status<zx::interrupt> Device::MapInterrupt(uint32_t which_irq) {
 }
 
 zx_status_t Device::SignalLegacyIrq(zx_time_t timestamp) const {
+  metrics_.legacy.signal_count.Add(1);
   return irqs_.legacy.trigger(/*options=*/0, zx::time(timestamp));
+}
+
+zx_status_t Device::AckLegacyIrq() {
+  if (irqs_.mode != PCI_IRQ_MODE_LEGACY) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  ModifyCmdLocked(/*clr_bits=*/PCI_CFG_COMMAND_INT_DISABLE, /*set_bits=*/0);
+  metrics_.legacy.ack_count.Add(1);
+  return ZX_OK;
 }
 
 zx::status<std::pair<zx::msi, zx_info_msi_t>> Device::AllocateMsi(uint32_t irq_cnt) {
@@ -179,6 +193,8 @@ zx::status<std::pair<zx::msi, zx_info_msi_t>> Device::AllocateMsi(uint32_t irq_c
   ZX_DEBUG_ASSERT(msi_info.num_irq == irq_cnt);
   ZX_DEBUG_ASSERT(msi_info.interrupt_count == 0);
 
+  metrics_.msi.allocated.Set(msi_info.num_irq);
+  metrics_.msi.base_vector.Set(msi_info.base_irq_id);
   return zx::ok(std::make_pair(std::move(msi), msi_info));
 }
 
@@ -197,6 +213,7 @@ zx_status_t Device::EnableLegacy() {
 
   ModifyCmdLocked(/*clr_bits=*/PCIE_CFG_COMMAND_INT_DISABLE, /*set_bits=*/0);
   irqs_.mode = PCI_IRQ_MODE_LEGACY;
+  metrics_.irq_mode.Set(kInspectIrqModes[irqs_.mode]);
   return ZX_OK;
 }
 
@@ -232,6 +249,7 @@ zx_status_t Device::EnableMsi(uint32_t irq_cnt) {
 
     irqs_.msi_allocation = std::move(alloc);
     irqs_.mode = PCI_IRQ_MODE_MSI;
+    metrics_.irq_mode.Set(kInspectIrqModes[irqs_.mode]);
   }
   return result.status_value();
 }
@@ -262,6 +280,7 @@ zx_status_t Device::EnableMsix(uint32_t irq_cnt) {
 
     irqs_.msi_allocation = std::move(alloc);
     irqs_.mode = PCI_IRQ_MODE_MSI_X;
+    metrics_.irq_mode.Set(kInspectIrqModes[irqs_.mode]);
   }
   return result.status_value();
 }
@@ -304,6 +323,12 @@ zx_status_t Device::VerifyAllMsisFreed() {
   return ZX_OK;
 }
 
+void Device::DisableMsiCommon() {
+  irqs_.msi_allocation.reset();
+  metrics_.msi.allocated.Set(0);
+  metrics_.msi.base_vector.Set(0);
+}
+
 zx_status_t Device::DisableMsi() {
   ZX_DEBUG_ASSERT(caps_.msi);
   if (zx_status_t st = VerifyAllMsisFreed(); st != ZX_OK) {
@@ -314,7 +339,7 @@ zx_status_t Device::DisableMsi() {
   ctrl.set_enable(0);
   cfg_->Write(caps_.msi->ctrl(), ctrl.value);
 
-  irqs_.msi_allocation.reset();
+  DisableMsiCommon();
   return ZX_OK;
 }
 

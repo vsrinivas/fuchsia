@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/mmio-buffer.h>
+#include <lib/inspect/cpp/inspector.h>
 #include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/msi.h>
@@ -22,6 +23,7 @@
 
 #include <ddktl/device.h>
 #include <ddktl/fidl.h>
+#include <ddktl/protocol/empty-protocol.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/vector.h>
@@ -59,7 +61,10 @@ using DeviceTree =
 
 class Bus;
 using PciBusType = ddk::Device<Bus, ddk::Messageable>;
-class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceInterface {
+class Bus : public PciBusType,
+            public ddk::EmptyProtocol<ZX_PROTOCOL_PCI>,
+            public PciFidl::Bus::Interface,
+            public BusDeviceInterface {
  public:
   static zx_status_t Create(zx_device_t* parent);
   Bus(zx_device_t* parent, const pciroot_protocol_t* pciroot, const pci_platform_info_t info,
@@ -90,6 +95,8 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
   void GetDevices(GetDevicesCompleter::Sync& completer) final;
   void GetHostBridgeInfo(GetHostBridgeInfoCompleter::Sync& completer) final;
+
+  zx::vmo GetInspectVmo() { return inspector_.DuplicateVmo(); }
 
  protected:
   // These are used by the derived TestBus class.
@@ -137,6 +144,9 @@ class Bus : public PciBusType, public PciFidl::Bus::Interface, public BusDeviceI
   // A map of lists of devices corresponding to a give vector, keyed by vector.
   LegacyIrqs legacy_irqs_;
   SharedIrqMap shared_irqs_ __TA_GUARDED(devices_lock_);
+
+  // Diagnostics.
+  inspect::Inspector inspector_;
 };
 
 zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent);

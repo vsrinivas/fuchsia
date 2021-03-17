@@ -62,7 +62,8 @@ zx_status_t pci_bus_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
 
-  if ((status = bus->DdkAdd("bus")) != ZX_OK) {
+  if ((status = bus->DdkAdd(ddk::DeviceAddArgs("bus").set_inspect_vmo(bus->GetInspectVmo()))) !=
+      ZX_OK) {
     zxlogf(ERROR, "failed to add bus driver: %s", zx_status_get_string(status));
     return status;
   }
@@ -192,12 +193,14 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
       zxlogf(TRACE, "\tfound %s at %02x:%02x.%1x", (is_bridge) ? "bridge" : "device", bus_id,
              dev_id, func_id);
 
+      inspect::Node node = inspector_.GetRoot().CreateChild(config->addr());
       // If we found a bridge, add it to our bridge list and initialize /
       // enumerate it after we finish scanning this bus
       if (is_bridge) {
         fbl::RefPtr<Bridge> bridge;
         uint8_t mbus_id = config->Read(Config::kSecondaryBusId);
-        status = Bridge::Create(zxdev(), std::move(config), upstream, this, mbus_id, &bridge);
+        status = Bridge::Create(zxdev(), std::move(config), upstream, this, std::move(node),
+                                mbus_id, &bridge);
         if (status != ZX_OK) {
           zxlogf(ERROR, "failed to create Bridge at %s: %s", config->addr(),
                  zx_status_get_string(status));
@@ -228,7 +231,7 @@ void Bus::ScanBus(BusScanEntry entry, std::list<BusScanEntry>* scan_list) {
       }
 
       // We're at a leaf node in the topology so create a normal device
-      status = pci::Device::Create(zxdev(), std::move(config), upstream, this);
+      status = pci::Device::Create(zxdev(), std::move(config), upstream, this, std::move(node));
       if (status != ZX_OK) {
         zxlogf(ERROR, "failed to create device at %s: %s", config->addr(),
                zx_status_get_string(status));

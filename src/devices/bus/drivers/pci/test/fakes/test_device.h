@@ -66,7 +66,7 @@ std::array<uint8_t, PCI_EXT_CONFIG_SIZE> kFakeQuadroDeviceConfig = {
     0x60, // Capabilities PTR
     0x00, 0x00, 0x00, // Reserved
     0x00, 0x00, 0x00, 0x00, // Reserved
-    0xff, // Interrupt Line
+    0x10, // Interrupt Line
     0x01, // Interrupt Pin
     0x00, // Min_Gnt
     0x00, // Max_Lat

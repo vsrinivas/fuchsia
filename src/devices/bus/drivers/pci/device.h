@@ -6,13 +6,13 @@
 
 #include <assert.h>
 #include <fuchsia/hardware/pci/cpp/banjo.h>
+#include <lib/inspect/cpp/inspector.h>
 #include <lib/pci/hw.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/status.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
-#include <zircon/hw/pci.h>
 
 #include <limits>
 
@@ -26,6 +26,7 @@
 #include <fbl/ref_ptr.h>
 #include <region-alloc/region-alloc.h>
 
+#include "fuchsia/hardware/pci/c/banjo.h"
 #include "src/devices/bus/drivers/pci/allocation.h"
 #include "src/devices/bus/drivers/pci/bar_info.h"
 #include "src/devices/bus/drivers/pci/bus_device_interface.h"
@@ -63,22 +64,38 @@ class Device : public PciDeviceType,
 
 {
  public:
-  // These traits are used for the WAVL tree implementation. They allow device objects
-  // to be sorted and found in trees by composite bdf address in the Bus.
-  struct KeyTraitsSortByBdf {
-    static const pci_bdf_t& GetKey(pci::Device& dev) { return dev.cfg_->bdf(); }
+  // All the strings used for inspect PropertyValue and Node names.
+  static constexpr char kInspectIrqMode[] = "Irq Mode";
+  static constexpr char kInspectLegacyInterrupt[] = "Legacy Interrupt";
+  static constexpr char kInspectMsi[] = "Message Signaled Interrupts";
+  static const constexpr char* kInspectIrqModes[] = {"Disabled", "Legacy Interrupt",
+                                                     "Message Signaled Interrupts (MSI)", "MSI-X"};
+  static constexpr char kInspectLegacyInterruptLine[] = "InterruptLine";
+  static constexpr char kInspectLegacyInterruptPin[] = "InterruptPin";
+  static constexpr char kInspectLegacySignalCount[] = "Signal Count";
+  static constexpr char kInspectLegacyAckCount[] = "Ack Count";
+  static constexpr char kInspectMsiBaseVector[] = "Base Vector";
+  static constexpr char kInspectMsiAllocated[] = "Allocated";
 
-    static bool LessThan(const pci_bdf_t& bdf1, const pci_bdf_t& bdf2) {
-      return (bdf1.bus_id < bdf2.bus_id) ||
-             ((bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id < bdf2.device_id)) ||
-             ((bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id == bdf2.device_id) &&
-              (bdf1.function_id < bdf2.function_id));
-    }
+  struct LegacyInterruptInspect {
+    inspect::Node node;
+    inspect::UintProperty line;
+    inspect::StringProperty pin;
+    inspect::UintProperty signal_count;
+    inspect::UintProperty ack_count;
+  };
 
-    static bool EqualTo(const pci_bdf_t& bdf1, const pci_bdf_t& bdf2) {
-      return (bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id == bdf2.device_id) &&
-             (bdf1.function_id == bdf2.function_id);
-    }
+  struct MsiInspect {
+    inspect::Node node;
+    inspect::UintProperty base_vector;
+    inspect::UintProperty allocated;
+  };
+
+  struct Inspect {
+    inspect::Node node;
+    inspect::StringProperty irq_mode;  // Corresponds to |kInspectIrqModes|
+    LegacyInterruptInspect legacy;
+    MsiInspect msi;
   };
 
   // This structure contains all bookkeeping and state for a device's
@@ -96,6 +113,24 @@ class Device : public PciDeviceType,
     MsiCapability* msi;
     MsixCapability* msix;
     PciExpressCapability* pcie;
+  };
+
+  // These traits are used for the WAVL tree implementation. They allow device objects
+  // to be sorted and found in trees by composite bdf address in the Bus.
+  struct KeyTraitsSortByBdf {
+    static const pci_bdf_t& GetKey(pci::Device& dev) { return dev.cfg_->bdf(); }
+
+    static bool LessThan(const pci_bdf_t& bdf1, const pci_bdf_t& bdf2) {
+      return (bdf1.bus_id < bdf2.bus_id) ||
+             ((bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id < bdf2.device_id)) ||
+             ((bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id == bdf2.device_id) &&
+              (bdf1.function_id < bdf2.function_id));
+    }
+
+    static bool EqualTo(const pci_bdf_t& bdf1, const pci_bdf_t& bdf2) {
+      return (bdf1.bus_id == bdf2.bus_id) && (bdf1.device_id == bdf2.device_id) &&
+             (bdf1.function_id == bdf2.function_id);
+    }
   };
 
   // DDKTL PciProtocol methods that will be called by Rxrpc.
@@ -120,7 +155,7 @@ class Device : public PciDeviceType,
 
   // Create, but do not initialize, a device.
   static zx_status_t Create(zx_device_t* parent, std::unique_ptr<Config>&& config,
-                            UpstreamNode* upstream, BusDeviceInterface* bdi);
+                            UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node);
   zx_status_t CreateProxy();
   virtual ~Device();
 
@@ -207,6 +242,7 @@ class Device : public PciDeviceType,
     fbl::AutoLock dev_lock(&dev_lock_);
     return irqs_.legacy_vector;
   }
+  const zx::msi& msi_allocation() const __TA_REQUIRES(dev_lock_) { return irqs_.msi_allocation; }
 
   // A packed version of the BDF addr used for BTI identifiers by the IOMMU implementation.
   uint32_t packed_addr() const {
@@ -225,25 +261,20 @@ class Device : public PciDeviceType,
   zx_status_t EnableMsi(uint32_t irq_cnt) __TA_REQUIRES(dev_lock_);
   zx_status_t EnableMsix(uint32_t irq_cnt) __TA_REQUIRES(dev_lock_);
   zx_status_t DisableLegacy() __TA_REQUIRES(dev_lock_);
+  void DisableMsiCommon() __TA_REQUIRES(dev_lock_);
   zx_status_t DisableMsi() __TA_REQUIRES(dev_lock_);
   zx_status_t DisableMsix() __TA_REQUIRES(dev_lock_);
   // Signals the device's zx::interrupt, effectively triggering an interrupt for the device
   // driver.
   zx_status_t SignalLegacyIrq(zx_time_t timestamp) const __TA_REQUIRES(dev_lock_);
+  zx_status_t AckLegacyIrq() __TA_REQUIRES(dev_lock_);
 
   // Devices need to exist in both the top level bus driver class, as well
   // as in a list for roots/bridges to track their downstream children. These
   // traits facilitate that for us.
  protected:
   Device(zx_device_t* parent, std::unique_ptr<Config>&& config, UpstreamNode* upstream,
-         BusDeviceInterface* bdi, bool is_bridge)
-      : PciDeviceType(parent),
-        cfg_(std::move(config)),
-        upstream_(upstream),
-        bdi_(bdi),
-        bar_count_(is_bridge ? PCI_BAR_REGS_PER_BRIDGE : PCI_BAR_REGS_PER_DEVICE),
-        is_bridge_(is_bridge) {}
-
+         BusDeviceInterface* bdi, inspect::Node node, bool is_bridge);
   zx_status_t Init() __TA_EXCLUDES(dev_lock_);
   zx_status_t InitLocked() __TA_REQUIRES(dev_lock_);
   zx_status_t InitInterrupts() __TA_REQUIRES(dev_lock_);
@@ -287,7 +318,6 @@ class Device : public PciDeviceType,
                                                                   std::optional<zx_paddr_t> base)
       __TA_REQUIRES(dev_lock_);
   zx_status_t WriteBarInformation(const Bar& bar) __TA_REQUIRES(dev_lock_);
-
   // Allocates address space for a BAR if it does not already exist.
   zx_status_t AllocateBar(uint8_t bar_id) __TA_REQUIRES(dev_lock_);
   // Called a device to configure (probe/allocate) its BARs
@@ -335,6 +365,9 @@ class Device : public PciDeviceType,
   // Used for Rxrpc / RpcReply for protocol buffers.
   PciRpcMsg request_;
   PciRpcMsg response_;
+
+  // Diagnostics
+  mutable Inspect metrics_;
 };
 
 }  // namespace pci

@@ -374,12 +374,8 @@ zx_status_t Device::RpcMapInterrupt(const zx::unowned_channel& ch) {
 zx_status_t Device::RpcAckInterrupt(const zx::unowned_channel& ch) {
   fbl::AutoLock dev_lock(&dev_lock_);
 
-  if (irqs_.mode != PCI_IRQ_MODE_LEGACY) {
-    return RpcReply(ch, ZX_ERR_BAD_STATE, nullptr, 0);
-  }
-
-  ModifyCmdLocked(/*clr_bits=*/PCI_CFG_COMMAND_INT_DISABLE, /*set_bits=*/0);
-  return RpcReply(ch, ZX_OK, nullptr, 0);
+  zx_status_t status = AckLegacyIrq();
+  return RpcReply(ch, status, nullptr, 0);
 }
 
 zx_status_t Device::RpcResetDevice(const zx::unowned_channel& ch) { RPC_UNIMPLEMENTED; }

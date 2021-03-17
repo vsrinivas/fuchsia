@@ -49,6 +49,7 @@ source_set("user_pci") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
+    "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/region-alloc",
 
     # TODO(fxbug.dev/33846): This shouldn't be here if the mmio code is actually

@@ -26,15 +26,16 @@ namespace pci {
 
 // Bridges rely on most of the protected Device members when they can
 Bridge::Bridge(zx_device_t* parent, std::unique_ptr<Config>&& config, UpstreamNode* upstream,
-               BusDeviceInterface* bdi, uint8_t mbus_id)
-    : pci::Device(parent, std::move(config), upstream, bdi, true),
+               BusDeviceInterface* bdi, inspect::Node node, uint8_t mbus_id)
+    : pci::Device(parent, std::move(config), upstream, bdi, std::move(node), true),
       UpstreamNode(UpstreamNode::Type::BRIDGE, mbus_id) {}
 
 zx_status_t Bridge::Create(zx_device_t* parent, std::unique_ptr<Config>&& config,
-                           UpstreamNode* upstream, BusDeviceInterface* bdi, uint8_t managed_bus_id,
-                           fbl::RefPtr<pci::Bridge>* out_bridge) {
+                           UpstreamNode* upstream, BusDeviceInterface* bdi, inspect::Node node,
+                           uint8_t managed_bus_id, fbl::RefPtr<pci::Bridge>* out_bridge) {
   fbl::AllocChecker ac;
-  auto raw_bridge = new (&ac) Bridge(parent, std::move(config), upstream, bdi, managed_bus_id);
+  auto raw_bridge =
+      new (&ac) Bridge(parent, std::move(config), upstream, bdi, std::move(node), managed_bus_id);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
