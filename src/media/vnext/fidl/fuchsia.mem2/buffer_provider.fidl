@@ -1,0 +1,82 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mem2;
+
+using zx;
+
+const uint32 MAX_BUFFERS = 64;
+
+/// Provides buffers (VMOs) to groups of participants.
+[Discoverable]
+protocol BufferProvider {
+    /// Creates a new logical buffer collection identified by `provider_token`. Calling `GetBuffers`
+    /// with a peer of `provider_token` gets buffers from the same logical collection. This method
+    /// will never return `BufferProviderError.TIMED_OUT_WAITING_FOR_CREATION`.
+    CreateBufferCollection(zx.handle:EVENTPAIR provider_token)
+        -> (CollectionInfo collection_info) error BufferProviderError;
+
+    /// Gets buffers for the logical buffer collection identified by |participant_token|, which must be
+    /// a peer of the provider token used in a `CreateBufferCollection` call. This operation
+    /// completes when all copies of the participant token have been destroyed or passed in a
+    /// `GetBuffers` call.
+    GetBuffers(zx.handle:EVENTPAIR participant_token, Constraints constraints)
+        -> (vector<zx.handle:VMO>:MAX_BUFFERS buffers) error BufferProviderError;
+};
+
+table CollectionInfo {
+    /// The size of the buffers in the collection.
+    1: uint32 buffer_size;
+
+    /// The size of the collection.
+    2: uint32 buffer_count;
+};
+
+/// Describes constraints applied to a buffer collection by a particpant via
+/// `BufferProvider.GetBuffers`.
+// TODO: Define this for real.
+// TODO: More specific name? BufferConstraints?
+table Constraints {
+    /// Minimum buffer size. The participant requires that each buffer in the collection be at
+    /// least this size (in bytes). The size of the buffers in the buffer collection will be at
+    /// least the maximum of these values across all participants. If this value is not provided,
+    /// a default value of 0 is presumed.
+    1: uint32 min_buffer_size;
+
+    /// Buffer count. The participant may, at any given time, maintain possession of this many
+    /// buffers. The number of buffers in the buffer collection will be at least the sum of these
+    /// values across all participants. If this value is not provided, a default value of 0 is
+    /// presumed.
+    2: uint32 buffer_count;
+
+    /// Minimum aggregate buffer size. The participant requires that the sum (in bytes) of the sizes
+    /// of all the buffers in the collection be at least this large. The sum of the sizes of all the
+    /// buffers in the buffer collection will be at least the sum of these values across all
+    /// participants. If this value is not provided, a default value of 0 is presumed.
+    3: uint64 aggregate_buffer_size;
+};
+
+/// Errors that may be returned by `BufferProvider.CreateBufferCollection` or
+/// `BufferProvider.GetBuffers`.
+enum BufferProviderError {
+    /// Participants have submitted constraints that cannot be collectively satisfied.
+    OVERCONSTRAINED = 1;
+
+    /// Participants have submitted constraints that don't collectively provide enough information
+    /// to create a buffer collection.
+    UNDERCONSTRAINED = 2;
+
+    /// Insufficient free memory of the required type was available.
+    INSUFFICIENT_MEMORY = 3;
+
+    /// All provider tokens were destroyed without `GetBuffers` being called.
+    NO_PARTICIPANTS = 4;
+
+    /// Timed out waiting for a `CreateBufferCollection` call with a matching provider token.
+    TIMED_OUT_WAITING_FOR_CREATION = 5;
+
+    /// Timed out waiting for one or more participants in the logical connection to call
+    /// `GetBuffers` with a matching participant token.
+    TIMED_OUT_WAITING_FOR_PARTICPANT = 6;
+};

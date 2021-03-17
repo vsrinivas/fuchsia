@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.media2") {
   sources = [
+    "connection_error.fidl",
     "stream_sink.fidl",
     "timelines.fidl",
   ]

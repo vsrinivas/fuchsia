@@ -13,17 +13,17 @@ const int64 MAX_PAYLOAD_RANGES = 16;
 
 /// Represents an audio decoder.
 protocol Decoder {
-    /// Adds an input stream in the form of a `StreamSink` through
-    /// which the decoder consumes packets. `format` may be
-    /// supplied to provide additional format details not
-    /// established when the decoder was created. Likewise,
-    /// `compression` may be supplied to provide additional
-    /// compression details.
+    /// Connects an input stream in the form of a `StreamSink` through which the decoder consumes
+    /// packets. `format` may be supplied to provide additional format details not established when
+    /// the decoder was created. Likewise, `compression` may be supplied to provide additional
+    /// compression details. This method responds when the connection is ready or the connect
+    /// attempt fails.
     ConnectInputStream(
         zx.handle:EVENTPAIR buffer_collection_token,
         fuchsia.mediastreams.AudioFormat? format,
         fuchsia.mediastreams.Compression? compression,
-        request<fuchsia.media2.StreamSink> stream_sink_request);
+        request<fuchsia.media2.StreamSink> stream_sink_request)
+        -> () error fuchsia.media2.ConnectionError;
 
     /// Indicates that the current input stream has been disconnected unexpectedly.
     -> OnInputStreamDisconnected(zx.status status);
@@ -35,11 +35,12 @@ protocol Decoder {
     -> OnNewOutputStreamAvailable(
            fuchsia.mediastreams.AudioFormat format);
 
-    /// Establishes a new output stream in response to a
-    /// `OnNewOutputStreamAvailable` event.
+    /// Creates a new output stream in response to a `OnNewOutputStreamAvailable` event. This
+    /// method responds when the connection is ready or the connect attempt fails.
     ConnectOutputStream(
         zx.handle:EVENTPAIR buffer_collection_token,
-        fuchsia.media2.StreamSink stream_sink);
+        fuchsia.media2.StreamSink stream_sink)
+        -> () error fuchsia.media2.ConnectionError;
 
     /// Disconnects the output stream.
     DisconnectOutputStream();

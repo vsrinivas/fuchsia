@@ -6,6 +6,7 @@ import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.audio") {
   sources = [
+    "capturer.fidl",
     "decoder.fidl",
     "renderer.fidl",
   ]

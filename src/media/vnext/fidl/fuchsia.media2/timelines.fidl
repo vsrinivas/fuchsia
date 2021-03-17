@@ -69,3 +69,6 @@ struct StreamTimeline {
     /// `stream_interval`.
     zx.duration presentation_interval = 1000000000;
 };
+
+/// Placeholder value for unspecified times.
+const zx.time TIME_UNSPECIFIED = 0x7fffffffffffffff;

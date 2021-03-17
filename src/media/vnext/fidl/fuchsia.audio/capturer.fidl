@@ -1,0 +1,83 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.audio;
+
+using fuchsia.media2;
+using fuchsia.mediastreams;
+using zx;
+
+/// Represents an audio capturer.
+protocol Capturer {
+    /// Connects a stream sink for the capturer with the indicate properties. Multiple stream sinks
+    /// may be used sequentially for a given capturer. This method responds when the connection is
+    /// ready or the connect attempt fails.
+    ConnectOutputStream(
+        zx.handle:EVENTPAIR buffer_collection_token,
+        fuchsia.mediastreams.AudioFormat format,
+        fuchsia.media2.StreamTimeline stream_timeline,
+        fuchsia.media2.StreamSink stream_sink)
+        -> () error fuchsia.media2.ConnectionError;
+
+    /// Disconnects the output stream.
+    DisconnectOutputStream();
+
+    /// Indicates that the current output stream has been disconnected unexpectedly.
+    -> OnOutputStreamDisconnected(zx.status status);
+
+    /// Indicates that the stream sink previously created is invalid,
+    /// and the client should create another one if it wishes to
+    /// continue sending packets.
+    -> OnOutputStreamSinkInvalid();
+
+    /// Starts the capturer's presentation timeline.
+    ///
+    /// + request `reference_time` the reference time at which the presentation timeline should
+    ///   start. A value of `fuchsia.media2.TIME_UNSPECIFIED` indicates it should start as soon as
+    ///   possible.
+    /// + request `presentation_time` the value of the capturer's presentation clock when
+    ///   presentation timeline starts. A value of `fuchsia.media2.TIME_UNSPECIFIED` indicates the\
+    ///   presentation timeline should start at its current value.
+    /// * response `reference_time` the reference time at which the presentation timeline actually
+    ///   started.
+    /// * response `presentation_time` the value of the capturer's presentation clock when the
+    ///   presentation timeline actually started.
+    ///
+    /// If the capturer is currently running, this method does nothing except return the same values
+    /// returned by the previous `Start` call. If a start or stop transition is currently scheduled
+    /// when this method is called, that scheduled transition is first cancelled.
+    // TODO: flags? LOW_LATENCY, SUPPLY_DRIVEN
+    Start(zx.time reference_time, zx.time presentation_time)
+        -> (zx.time reference_time, zx.time presentation_time);
+
+    /// Stops the capturer's presentation timeline.
+    ///
+    /// + request `presentation_time` the value of the capturer's presentation clock when
+    ///   presentation timeline should stop. A value of `fuchsia.media2.TIME_UNSPECIFIED` indicates
+    ///   the presentation timeline should stop as soon as possible.
+    /// * response `reference_time` the reference time at which the presentation timeline actually
+    ///   stopped.
+    /// * response `presentation_time` the value of the capturer's presentation clock when the
+    ///   presentation timeline actually stopped. This is the current presentation time until
+    ///   a subsequent call to `Start`.
+    ///
+    /// If the capturer is currently stopped, this method does nothing except return the same values
+    /// returned by the previous `Stop` call or 0,0 if this capturer has never been started. If a
+    /// start or stop transition is currently scheduled when this method is called, that scheduled
+    /// transition is first cancelled.
+    Stop(zx.time presentation_time)
+        -> (zx.time reference_time, zx.time presentation_time);
+
+    /// Sets the reference clock to use for this capturer. All
+    /// ‘reference time’ values for this capturer are interpreted
+    /// with respect to this clock. If this method is never called,
+    /// the reference clock is the system’s monotonic clock.
+    SetReferenceClock(zx.handle:CLOCK reference_clock);
+
+    // Binds the volume control for the capturer.
+    //BindVolumeControl(request<VolumeControl> request);
+
+    // Binds the gain control for the capturer.
+    //BindGainControl(request<GainControl> request);
+};

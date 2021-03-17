@@ -8,18 +8,17 @@ using fuchsia.media2;
 using fuchsia.mediastreams;
 using zx;
 
-const zx.time TIME_UNSPECIFIED = 0x7fffffffffffffff;
-
 /// Represents an audio renderer.
 protocol Renderer {
-    /// Connects a stream sink for the renderer with the indicated
-    /// properties. Multiple stream sinks may be used sequentially for
-    /// a given renderer.
+    /// Connects a stream sink for the renderer with the indicated properties. Multiple stream
+    /// sinks may be used sequentially for a given renderer. This method responds when the
+    /// connection is ready or the connect attempt fails.
     ConnectInputStream(
         zx.handle:EVENTPAIR buffer_collection_token,
         fuchsia.mediastreams.AudioFormat format,
         fuchsia.media2.StreamTimeline stream_timeline,
-        request<fuchsia.media2.StreamSink> request);
+        request<fuchsia.media2.StreamSink> request)
+        -> () error fuchsia.media2.ConnectionError;
 
     /// Indicates that the current input stream has been disconnected unexpectedly.
     -> OnInputStreamDisconnected(zx.status status);
@@ -36,10 +35,11 @@ protocol Renderer {
     /// Starts the renderer's presentation timeline.
     ///
     /// + request `reference_time` the reference time at which the presentation timeline should
-    ///   start. A value of `TIME_UNSPECIFIED` indicates it should start as soon as possible.
+    ///   start. A value of `fuchsia.media2.TIME_UNSPECIFIED` indicates it should start as soon as
+    ///   possible.
     /// + request `presentation_time` the value of the renderer's presentation clock when
-    ///   presentation timeline starts. A value of `TIME_UNSPECIFIED` indicates the presentation
-    ///   timeline should start at its current value.
+    ///   presentation timeline starts. A value of `fuchsia.media2.TIME_UNSPECIFIED` indicates the
+    ///   presentation timeline should start at its current value.
     /// * response `reference_time` the reference time at which the presentation timeline actually
     ///   started.
     /// * response `presentation_time` the value of the renderer's presentation clock when the
@@ -55,15 +55,15 @@ protocol Renderer {
     /// Stops the renderer's presentation timeline.
     ///
     /// + request `presentation_time` the value of the renderer's presentation clock when
-    ///   presentation timeline should stop. A value of `TIME_UNSPECIFIED` indicates the
-    ///   presentation timeline should stop as soon as possible.
+    ///   presentation timeline should stop. A value of `fuchsia.media2.TIME_UNSPECIFIED` indicates
+    ///   the presentation timeline should stop as soon as possible.
     /// * response `reference_time` the reference time at which the presentation timeline actually
     ///   stopped.
     /// * response `presentation_time` the value of the renderer's presentation clock when the
     ///   presentation timeline actually stopped. This is the current presentation time until
     ///   a subsequent call to `Play`.
     ///
-    /// If the renderer is currently pause, this method does nothing except return the same values
+    /// If the renderer is currently paused, this method does nothing except return the same values
     /// returned by the previous `Pause` call or 0,0 if this renderer has never played. If a play
     /// or pause transition is currently scheduled when this method is called, that scheduled
     /// transition is first cancelled.
