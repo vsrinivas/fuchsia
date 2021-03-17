@@ -98,12 +98,12 @@ template("prebuilt_package") {
                            ])
 
     archive = invoker.archive
+    pm = rebase_path("${root_build_dir}/host_${host_cpu}/pm")
 
     if (defined(visibility)) {
       visibility += [ ":$manifest_target_name" ]
     }
 
-    hermetic_deps = false
     script = "//build/packages/prebuilt_package.py"
 
     system_rsp = "$target_out_dir/$pkg_name.system.rsp"
@@ -111,7 +111,7 @@ template("prebuilt_package") {
 
     args = [
       "--pm-tool",
-      rebase_path("$root_out_dir/host_$host_cpu/pm"),
+      pm,
       "--name",
       pkg_name,
       "--archive",
@@ -121,7 +121,11 @@ template("prebuilt_package") {
       "--system-rsp",
       rebase_path(system_rsp, root_build_dir),
     ]
-    inputs = [ archive ]
+    inputs = [
+      archive,
+      pm,
+    ]
+
     outputs = [
       blobs_manifest,
       system_rsp,
