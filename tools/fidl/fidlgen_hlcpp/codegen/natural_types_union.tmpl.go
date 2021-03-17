@@ -219,8 +219,8 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 #ifdef __Fuchsia__
 {{- PushNamespace }}
 {{- end }}
-extern "C" const fidl_type_t {{ .TableType }};
-const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
+extern "C" const fidl_type_t {{ .CodingTableType }};
+const fidl_type_t* {{ .Name }}::FidlType = &{{ .CodingTableType }};
 
 {{ .Name }}::{{ .Name }}() {}
 

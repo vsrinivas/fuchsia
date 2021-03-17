@@ -88,8 +88,8 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 #ifdef __Fuchsia__
 {{- PushNamespace }}
 {{- end }}
-extern "C" const fidl_type_t {{ .TableType }};
-const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
+extern "C" const fidl_type_t {{ .CodingTableType }};
+const fidl_type_t* {{ .Name }}::FidlType = &{{ .CodingTableType }};
 
 void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset,
                          cpp17::optional<::fidl::HandleInformation> maybe_handle_info) {

@@ -18,12 +18,12 @@ struct {{ .Name }};
 #ifdef __Fuchsia__
 {{- PushNamespace }}
 {{- end }}
-extern "C" const fidl_type_t {{ .TableType }};
+extern "C" const fidl_type_t {{ .CodingTableType }};
 {{ range .DocComments }}
 //{{ . }}
 {{- end }}
 struct {{ .Name }} {
-  static constexpr const fidl_type_t* Type = &{{ .TableType }};
+  static constexpr const fidl_type_t* Type = &{{ .CodingTableType }};
   static constexpr uint32_t MaxNumHandles = {{ .MaxHandles }};
   static constexpr uint32_t PrimarySize = {{ .InlineSize }};
   [[maybe_unused]]

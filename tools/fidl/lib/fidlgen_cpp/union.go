@@ -15,13 +15,13 @@ type Union struct {
 	fidl.Strictness
 	fidl.Resourceness
 	DeclName
-	TableType    string
-	Members      []UnionMember
-	InlineSize   int
-	MaxHandles   int
-	MaxOutOfLine int
-	Result       *Result
-	HasPointer   bool
+	CodingTableType string
+	Members         []UnionMember
+	InlineSize      int
+	MaxHandles      int
+	MaxOutOfLine    int
+	Result          *Result
+	HasPointer      bool
 
 	// Kind should be default initialized.
 	Kind unionKind
@@ -62,17 +62,17 @@ func (c *compiler) compileUnionMember(val fidl.UnionMember) UnionMember {
 
 func (c *compiler) compileUnion(val fidl.Union) Union {
 	name := c.compileDeclName(val.Name)
-	tableType := c.compileTableType(val.Name)
+	codingTableType := c.compileCodingTableType(val.Name)
 	r := Union{
-		Attributes:   val.Attributes,
-		Strictness:   val.Strictness,
-		Resourceness: val.Resourceness,
-		DeclName:     name,
-		TableType:    tableType,
-		InlineSize:   val.TypeShapeV1.InlineSize,
-		MaxHandles:   val.TypeShapeV1.MaxHandles,
-		MaxOutOfLine: val.TypeShapeV1.MaxOutOfLine,
-		HasPointer:   val.TypeShapeV1.Depth > 0,
+		Attributes:      val.Attributes,
+		Strictness:      val.Strictness,
+		Resourceness:    val.Resourceness,
+		DeclName:        name,
+		CodingTableType: codingTableType,
+		InlineSize:      val.TypeShapeV1.InlineSize,
+		MaxHandles:      val.TypeShapeV1.MaxHandles,
+		MaxOutOfLine:    val.TypeShapeV1.MaxOutOfLine,
+		HasPointer:      val.TypeShapeV1.Depth > 0,
 	}
 
 	for _, v := range val.Members {

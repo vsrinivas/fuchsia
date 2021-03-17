@@ -616,10 +616,10 @@ func (c *compiler) compileDeclName(eci fidl.EncodedCompoundIdentifier) DeclName 
 	panic("Unknown decl type: " + string(declType))
 }
 
-func (c *compiler) compileTableType(eci fidl.EncodedCompoundIdentifier) string {
+func (c *compiler) compileCodingTableType(eci fidl.EncodedCompoundIdentifier) string {
 	val := fidl.ParseCompoundIdentifier(eci)
 	if c.isInExternalLibrary(val) {
-		panic(fmt.Sprintf("can't create table type for external identifier: %v", val))
+		panic(fmt.Sprintf("can't create coding table type for external identifier: %v", val))
 	}
 
 	return fmt.Sprintf("%s_%sTable", c.symbolPrefix, val.Name)
@@ -801,20 +801,19 @@ func (m Method) buildLLContextProps(context LLContext) LLContextProps {
 
 func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 	protocolName := c.compileDeclName(val.Name)
-	tableName := codingTableName(val.Name)
-	tableBase := DeclName{
-		Wire:    NewDeclVariant(tableName, protocolName.Wire.Namespace()),
-		Natural: NewDeclVariant(tableName, protocolName.Natural.Namespace().Append("_internal")),
+	codingTableName := codingTableName(val.Name)
+	codingTableBase := DeclName{
+		Wire:    NewDeclVariant(codingTableName, protocolName.Wire.Namespace()),
+		Natural: NewDeclVariant(codingTableName, protocolName.Natural.Namespace().Append("_internal")),
 	}
 	methods := []Method{}
 	maxResponseSize := 0
 	for _, v := range val.Methods {
 		name := changeIfReserved(v.Name)
-		requestTable := tableBase.AppendName(string(v.Name) + "RequestTable")
-		responseTable := tableBase.AppendName(string(v.Name) + "ResponseTable")
+		requestCodingTable := codingTableBase.AppendName(string(v.Name) + "RequestTable")
+		responseCodingTable := codingTableBase.AppendName(string(v.Name) + "ResponseTable")
 		if !v.HasRequest {
-			responseTable = tableBase.AppendName(string(v.Name) + "EventTable")
-
+			responseCodingTable = codingTableBase.AppendName(string(v.Name) + "EventTable")
 		}
 
 		var result *Result
@@ -833,10 +832,10 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 			Ordinal:             v.Ordinal,
 			HasRequest:          v.HasRequest,
 			Request:             c.compileParameterArray(v.Request),
-			RequestCodingTable:  requestTable,
+			RequestCodingTable:  requestCodingTable,
 			HasResponse:         v.HasResponse,
 			Response:            c.compileParameterArray(v.Response),
-			ResponseCodingTable: responseTable,
+			ResponseCodingTable: responseCodingTable,
 			Transitional:        v.IsTransitional(),
 			Result:              result,
 		}.build()

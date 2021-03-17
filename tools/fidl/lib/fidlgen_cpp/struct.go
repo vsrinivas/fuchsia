@@ -16,16 +16,16 @@ type Struct struct {
 	fidl.Attributes
 	fidl.Resourceness
 	DeclName
-	TableType      string
-	Members        []StructMember
-	InlineSize     int
-	MaxHandles     int
-	MaxOutOfLine   int
-	ByteBufferType string
-	HasPadding     bool
-	IsResultValue  bool
-	HasPointer     bool
-	Result         *Result
+	CodingTableType string
+	Members         []StructMember
+	InlineSize      int
+	MaxHandles      int
+	MaxOutOfLine    int
+	ByteBufferType  string
+	HasPadding      bool
+	IsResultValue   bool
+	HasPointer      bool
+	Result          *Result
 	// Full decls needed to check if a type is memcpy compatible.
 	// Only set if it may be possible for a type to be memcpy compatible,
 	// e.g. has no padding.
@@ -78,19 +78,19 @@ func (c *compiler) compileStructMember(val fidl.StructMember) StructMember {
 
 func (c *compiler) compileStruct(val fidl.Struct) Struct {
 	name := c.compileDeclName(val.Name)
-	tableType := c.compileTableType(val.Name)
+	codingTableType := c.compileCodingTableType(val.Name)
 	r := Struct{
-		Attributes:     val.Attributes,
-		Resourceness:   val.Resourceness,
-		DeclName:       name,
-		TableType:      tableType,
-		Members:        []StructMember{},
-		InlineSize:     val.TypeShapeV1.InlineSize,
-		MaxHandles:     val.TypeShapeV1.MaxHandles,
-		MaxOutOfLine:   val.TypeShapeV1.MaxOutOfLine,
-		ByteBufferType: byteBufferType(val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded),
-		HasPadding:     val.TypeShapeV1.HasPadding,
-		HasPointer:     val.TypeShapeV1.Depth > 0,
+		Attributes:      val.Attributes,
+		Resourceness:    val.Resourceness,
+		DeclName:        name,
+		CodingTableType: codingTableType,
+		Members:         []StructMember{},
+		InlineSize:      val.TypeShapeV1.InlineSize,
+		MaxHandles:      val.TypeShapeV1.MaxHandles,
+		MaxOutOfLine:    val.TypeShapeV1.MaxOutOfLine,
+		ByteBufferType:  byteBufferType(val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded),
+		HasPadding:      val.TypeShapeV1.HasPadding,
+		HasPointer:      val.TypeShapeV1.Depth > 0,
 	}
 
 	for _, v := range val.Members {

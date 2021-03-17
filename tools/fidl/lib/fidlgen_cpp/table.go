@@ -16,14 +16,14 @@ type Table struct {
 	fidl.Attributes
 	fidl.Resourceness
 	DeclName
-	TableType      string
-	Members        []TableMember
-	InlineSize     int
-	BiggestOrdinal int
-	MaxHandles     int
-	MaxOutOfLine   int
-	ByteBufferType string
-	HasPointer     bool
+	CodingTableType string
+	Members         []TableMember
+	InlineSize      int
+	BiggestOrdinal  int
+	MaxHandles      int
+	MaxOutOfLine    int
+	ByteBufferType  string
+	HasPointer      bool
 
 	// FrameItems stores the members in ordinal order; "null" for reserved.
 	FrameItems []TableFrameItem
@@ -79,19 +79,19 @@ func (c *compiler) compileTableMember(val fidl.TableMember, index int) TableMemb
 
 func (c *compiler) compileTable(val fidl.Table) Table {
 	name := c.compileDeclName(val.Name)
-	tableType := c.compileTableType(val.Name)
+	codingTableType := c.compileCodingTableType(val.Name)
 	r := Table{
-		Attributes:     val.Attributes,
-		Resourceness:   val.Resourceness,
-		DeclName:       name,
-		TableType:      tableType,
-		Members:        nil,
-		InlineSize:     val.TypeShapeV1.InlineSize,
-		BiggestOrdinal: 0,
-		MaxHandles:     val.TypeShapeV1.MaxHandles,
-		MaxOutOfLine:   val.TypeShapeV1.MaxOutOfLine,
-		ByteBufferType: byteBufferType(val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded),
-		HasPointer:     val.TypeShapeV1.Depth > 0,
+		Attributes:      val.Attributes,
+		Resourceness:    val.Resourceness,
+		DeclName:        name,
+		CodingTableType: codingTableType,
+		Members:         nil,
+		InlineSize:      val.TypeShapeV1.InlineSize,
+		BiggestOrdinal:  0,
+		MaxHandles:      val.TypeShapeV1.MaxHandles,
+		MaxOutOfLine:    val.TypeShapeV1.MaxOutOfLine,
+		ByteBufferType:  byteBufferType(val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded),
+		HasPointer:      val.TypeShapeV1.Depth > 0,
 	}
 
 	for i, v := range val.SortedMembersNoReserved() {
