@@ -5,6 +5,7 @@
 group("lib") {
   deps = [
     "ermine_localhost:ermine_localhost",
+    "ermine_ui:ermine_ui",
     "quickui:quickui",
   ]
 }
@@ -16,6 +17,7 @@ group("dart_unittests") {
   if (host_os != "mac") {
     _flutter_tester_tests += [
       "ermine_localhost:ermine_localhost_unittests($host_toolchain)",
+      "ermine_ui:ermine_ui_unittests($host_toolchain)",
       "quickui:quickui_unittests($host_toolchain)",
     ]
   }

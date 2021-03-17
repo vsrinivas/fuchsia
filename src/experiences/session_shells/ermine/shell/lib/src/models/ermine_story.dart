@@ -46,7 +46,8 @@ class ErmineStory {
     this.onChange,
     String title,
   })  : nameNotifier = ValueNotifier(title),
-        childViewConnectionNotifier = ValueNotifier(null);
+        childViewConnectionNotifier = ValueNotifier(null),
+        childViewAvailableNotifier = ValueNotifier(false);
 
   factory ErmineStory.fromSuggestion({
     Suggestion suggestion,
@@ -95,6 +96,7 @@ class ErmineStory {
   set focused(bool value) => focusedNotifier.value = value;
 
   final ValueNotifier<ChildViewConnection> childViewConnectionNotifier;
+  final ValueNotifier<bool> childViewAvailableNotifier;
   ChildViewConnection get childViewConnection =>
       childViewConnectionNotifier.value;
 
@@ -106,6 +108,8 @@ class ErmineStory {
   void delete() {
     childViewConnectionNotifier.value?.dispose();
     childViewConnectionNotifier.value = null;
+    childViewAvailableNotifier.value = null;
+    viewController?.viewConnectionAvailable?.removeListener(onViewAvailable);
     viewController?.close();
     onDelete?.call(this);
     _elementController?.ctrl?.close();
@@ -167,7 +171,13 @@ class ErmineStory {
     childViewConnectionNotifier.value = connection;
     this.viewRef = viewRef;
     viewController = vc;
+    viewController.viewConnectionAvailable.addListener(onViewAvailable);
     viewController?.didPresent();
+  }
+
+  void onViewAvailable() {
+    childViewAvailableNotifier.value =
+        viewController.viewConnectionAvailable.value;
   }
 
   /// Requests focus to be transfered to this view given it's [viewRef].

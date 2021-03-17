@@ -107,6 +107,7 @@ flutter_app("ermine") {
     "//sdk/fidl/fuchsia.ui.remotewidgets",
     "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.ui.views",
+    "//src/experiences/lib/ermine_ui:ermine_ui",
     "//src/experiences/lib/quickui",
     "//src/experiences/session_shells/ermine/internationalization",
     "//src/experiences/session_shells/ermine/keyboard_shortcuts",

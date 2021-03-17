@@ -1,0 +1,28 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_library.gni")
+import("//build/flutter/test.gni")
+
+dart_library("ermine_ui") {
+  package_name = "ermine_ui"
+  sources = [
+    "ermine_ui.dart",
+    "ui_components/loading_indicator/layout.dart",
+    "ui_components/loading_indicator/loading_indicator.dart",
+    "visual_languages/colors.dart",
+  ]
+  deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
+}
+
+# fx test ermine_ui_unittests
+flutter_test("ermine_ui_unittests") {
+  sources = [ "loading_indicator_test.dart" ]
+
+  deps = [
+    ":ermine_ui",
+    "//third_party/dart-pkg/git/flutter/packages/flutter",
+    "//third_party/dart-pkg/git/flutter/packages/flutter_test",
+  ]
+}

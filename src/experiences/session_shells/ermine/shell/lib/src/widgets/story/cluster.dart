@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:tiler/tiler.dart' show Tiler, TileModel;
 import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
+import 'package:ermine_ui/ermine_ui.dart' as ermine_ui;
 
 import '../../models/cluster_model.dart';
 import '../../models/ermine_story.dart';
@@ -12,6 +15,8 @@ import 'post_render.dart';
 import 'tile_chrome.dart';
 import 'tile_sizer.dart';
 import 'tile_tab.dart';
+
+const _kDelay = 250;
 
 /// Defines a widget to cluster [Story] widgets built by the [Tiler] widget.
 class Cluster extends StatelessWidget {
@@ -49,6 +54,8 @@ class Cluster extends StatelessWidget {
   Widget _chromeBuilder(BuildContext context, TileModel<ErmineStory> tile,
       {bool custom = false}) {
     final story = tile.content;
+    final isDelayOver = ValueNotifier(false);
+
     return AnimatedBuilder(
       animation: Listenable.merge([
         story.childViewConnectionNotifier,
@@ -66,9 +73,41 @@ class Cluster extends StatelessWidget {
                   name: story.name,
                   showTitle: !custom,
                   focused: story.focused,
-                  //TODO(47796) show a placeholder until the view loads
                   child: PostRender(
-                    child: ChildView(connection: story.childViewConnection),
+                    child: Stack(
+                      alignment: Alignment.center,
+                      children: [
+                        ChildView(connection: story.childViewConnection),
+                        AnimatedBuilder(
+                            animation: Listenable.merge([
+                              story.childViewAvailableNotifier,
+                              isDelayOver
+                            ]),
+                            // Displays a loading indicator if the child view
+                            // is not available within [_kDelay] after launching
+                            // the element.
+                            builder: (context, child) {
+                              final isAvailable =
+                                  story.childViewAvailableNotifier.value;
+                              final showPlaceHolder = isDelayOver.value;
+                              if (!isAvailable && showPlaceHolder) {
+                                return Container(
+                                  alignment: Alignment.center,
+                                  child: ermine_ui.LoadingIndicator(
+                                    description: 'Launching ${story.name}...',
+                                  ),
+                                );
+                              } else if (!isAvailable && !showPlaceHolder) {
+                                Timer(Duration(milliseconds: _kDelay), () {
+                                  isDelayOver.value = true;
+                                });
+                              } else if (isAvailable) {
+                                isDelayOver.value = false;
+                              }
+                              return Offstage();
+                            }),
+                      ],
+                    ),
                     onRender: story.requestFocus,
                   ),
                   onTap: story.focus,
