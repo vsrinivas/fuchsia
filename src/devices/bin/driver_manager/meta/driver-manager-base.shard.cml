@@ -1,0 +1,139 @@
+{
+    collections: [
+        {
+            name: "drivers",
+            environment: "#driver-env",
+            durability: "transient",
+        },
+        {
+            name: "driver_hosts",
+            environment: "#driver_host-env",
+            durability: "transient",
+        },
+    ],
+    capabilities: [
+        // Device tree
+        {
+            directory: "dev",
+            rights: [ "rw*" ],
+            path: "/dev",
+        },
+        {
+            protocol: [
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.device.manager.BindDebugger",
+                "fuchsia.device.manager.DebugDumper",
+                "fuchsia.device.manager.DriverHostDevelopment",
+                "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.driver.registrar.DriverRegistrar",
+            ],
+        },
+
+        // Component runner for drivers
+        {
+            runner: "driver",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+    ],
+    use: [
+        {
+            directory: "boot",
+            rights: [ "rx*" ],
+            path: "/boot",
+        },
+        {
+            directory: "system",
+            rights: [ "rx*" ],
+            path: "/system",
+        },
+        {
+            directory: "system-delayed",
+            rights: [ "rx*" ],
+            path: "/system-delayed",
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.Items",
+                "fuchsia.boot.RootResource",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.fshost.Admin",
+                "fuchsia.fshost.Loader",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.power.manager.DriverManagerRegistration",
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.tracing.provider.Registry",
+            ],
+        },
+        {
+            // The Realm protocol is required to start components.
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#driver_hosts" ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Items",
+                "fuchsia.boot.RootResource",
+                "fuchsia.logger.LogSink",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#drivers" ],
+        },
+    ],
+    expose: [
+        {
+            directory: "dev",
+            from: "self",
+        },
+        {
+            protocol: [
+                "fuchsia.device.manager.Administrator",
+                "fuchsia.device.manager.BindDebugger",
+                "fuchsia.device.manager.DebugDumper",
+                "fuchsia.device.manager.DriverHostDevelopment",
+                "fuchsia.device.manager.SystemStateTransition",
+                "fuchsia.driver.registrar.DriverRegistrar",
+            ],
+            from: "self",
+        },
+    ],
+    environments: [
+        {
+            name: "driver-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "driver",
+                    from: "self",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "base_resolver",
+                    scheme: "fuchsia-pkg",
+                    from: "parent",
+                },
+            ],
+            __stop_timeout_ms: 1000,
+        },
+        {
+            name: "driver_host-env",
+            extends: "realm",
+            __stop_timeout_ms: 2000,
+        },
+    ],
+}
