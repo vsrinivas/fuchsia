@@ -8,7 +8,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"path"
+	"path/filepath"
 
 	"github.com/golang/glog"
 )
@@ -32,7 +32,7 @@ func checkBuildConfiguration() {
 }
 
 func traceManagerIsInBaseBuildTargets() bool {
-	file, err := os.Open(getBaseTargetListFile())
+	file, err := os.Open(filepath.Join(buildRoot, baseTargetListFile))
 	if err != nil {
 		glog.V(1).Infof("%s not found\n", baseTargetListFile)
 		return false
@@ -48,8 +48,4 @@ func traceManagerIsInBaseBuildTargets() bool {
 	}
 
 	return false
-}
-
-func getBaseTargetListFile() string {
-	return path.Join(buildRoot, baseTargetListFile)
 }

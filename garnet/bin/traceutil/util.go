@@ -8,17 +8,15 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
-	"path"
+	"path/filepath"
 )
 
 var fuchsiaRoot = getFuchsiaRoot()
 var buildRoot = getBuildRoot(fuchsiaRoot)
 
 func runCommand(command string, args []string) error {
-	cmd := exec.Command(command)
-	cmd.Args = append(cmd.Args, args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
+	cmd := exec.Command(command, args...)
+	if output, err := cmd.CombinedOutput(); err != nil {
 		return fmt.Errorf("%s failed.  Output:\n%s", command, output)
 	}
 	return nil
@@ -31,9 +29,9 @@ func getCommandOutput(command string, args ...string) (string, error) {
 }
 
 func fullExt(filename string) string {
-	ext := path.Ext(filename)
+	ext := filepath.Ext(filename)
 	if ext == ".gz" {
-		ext = path.Ext(filename[0:len(filename)-len(ext)]) + ext
+		ext = filepath.Ext(filename[0:len(filename)-len(ext)]) + ext
 	}
 	return ext
 }
@@ -49,14 +47,11 @@ func getFuchsiaRoot() string {
 		panic(err.Error())
 	}
 
-	dir, _ := path.Split(execPath)
-	for dir != "" && dir != "/" {
-		dir = path.Clean(dir)
-		manifestPath := path.Join(dir, ".jiri_manifest")
-		if _, err = os.Stat(manifestPath); !os.IsNotExist(err) {
+	for dir := filepath.Dir(execPath); dir != "" && dir != "/"; dir = filepath.Dir(dir) {
+		dir = filepath.Clean(dir)
+		if _, err = os.Stat(filepath.Join(dir, ".jiri_manifest")); !os.IsNotExist(err) {
 			return dir
 		}
-		dir, _ = path.Split(dir)
 	}
 
 	panic("Can not determine Fuchsia source root based on executable path.")
@@ -67,21 +62,17 @@ func getTraceutilBuildDir() string {
 	if err != nil {
 		panic(err.Error())
 	}
-	dir, _ := path.Split(execPath)
-	return dir
+	return filepath.Dir(execPath)
 }
 
 func getBuildRoot(fxRoot string) string {
 	execPath := getTraceutilBuildDir()
 
-	outPath := path.Join(fxRoot, "out")
-	dir, file := path.Split(execPath)
-	for dir != "" && dir != "/" {
-		dir = path.Clean(dir)
-		if dir == outPath {
-			return path.Join(dir, file)
+	outPath := filepath.Join(fxRoot, "out")
+	for dir, file := filepath.Split(execPath); dir != "" && dir != "/"; dir, file = filepath.Split(dir) {
+		if dir = filepath.Clean(dir); dir == outPath {
+			return filepath.Join(dir, file)
 		}
-		dir, file = path.Split(dir)
 	}
 
 	panic("Can not determine output directory based on executable path.")
@@ -92,10 +83,9 @@ func getZirconBuildRoot() string {
 }
 
 func getJsonGenerator() string {
-	return path.Join(path.Dir(os.Args[0]), "trace2json")
+	return filepath.Join(getTraceutilBuildDir(), "trace2json")
 }
 
 func getExternalReportGenerator(reportType string) string {
-	return path.Join(getTraceutilBuildDir(),
-		"traceutil-generate-"+reportType)
+	return filepath.Join(getTraceutilBuildDir(), "traceutil-generate-"+reportType)
 }

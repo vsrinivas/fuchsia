@@ -7,7 +7,6 @@ package zedmon
 import (
 	"flag"
 	"os"
-	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -60,7 +59,7 @@ func setupTest(t *testing.T, stderrData, stdinData []string) (string, func()) {
 	if *fakeZedmonRelpath == "" {
 		t.Fatalf("-fake_zedmon_relpath flag must be set")
 	}
-	fakeZedmonPath := path.Join(myDir, *fakeZedmonRelpath)
+	fakeZedmonPath := filepath.Join(myDir, *fakeZedmonRelpath)
 	if _, err := os.Stat(fakeZedmonPath); os.IsNotExist(err) {
 		t.Fatalf("fake_zedmon executable not found at %s", fakeZedmonPath)
 	}

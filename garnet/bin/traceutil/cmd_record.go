@@ -11,7 +11,7 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
-	"path"
+	"path/filepath"
 	"time"
 
 	"github.com/google/subcommands"
@@ -311,8 +311,7 @@ func (cmd *cmdRecord) downloadFile(conn *TargetConnection, name string, remotePa
 
 	elapsed := time.Since(now)
 	fileInfo, err2 := os.Stat(localPath)
-	fmt.Printf("Downloaded %s in %0.3f seconds",
-		path.Base(localPath), elapsed.Seconds())
+	fmt.Printf("Downloaded %s in %0.3f seconds", filepath.Base(localPath), elapsed.Seconds())
 	if err2 == nil {
 		fmt.Printf(" (%0.3f KB/sec)",
 			float64((fileInfo.Size()+1023)/1024)/elapsed.Seconds())
