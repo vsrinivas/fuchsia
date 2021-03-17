@@ -15,7 +15,7 @@ fx-config-read
 fx-command-run merge-package-config \
   --first "$FUCHSIA_DIR/third_party/dart-pkg/pub/package_config.json" \
   --second "${FUCHSIA_DIR}/scripts/codesize/.dart_tool/package_config.json" \
-  --out "codesize.package_config.json" --build-dir "${FUCHSIA_BUILD_DIR}"
+  --out "${FUCHSIA_BUILD_DIR}/codesize.package_config.json"
 
 exec "${PREBUILT_DART_DIR}/bin/dart" \
 --enable-experiment=non-nullable --no-sound-null-safety \
