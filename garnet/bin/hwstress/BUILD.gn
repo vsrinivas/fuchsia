@@ -153,8 +153,8 @@ executable("hwstress_v2_test") {
     "//sdk/lib/fdio",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/isolated_devmgr/v2_component",  # requires CFv2.
     "//src/lib/testing/predicates",
+    "//src/storage/testing:storage_driver_test_support",  # requires CFv2.
     "//third_party/googletest:gmock",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
@@ -171,6 +171,9 @@ test_package("hwstress_test_pkg") {
 
   tests = [
     {
+      log_settings = {
+        max_severity = "ERROR"
+      }
       name = "hwstress_test"
     },
   ]
@@ -189,7 +192,7 @@ group("tests") {
   testonly = true
   public_deps = [
     ":hwstress_test_pkg",
-    "//src/lib/isolated_devmgr/v2_component",
+    "//src/storage/testing:storage-isolated-devmgr",
   ]
 }
 

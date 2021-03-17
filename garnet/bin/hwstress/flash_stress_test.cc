@@ -18,9 +18,9 @@
 #include <fs-management/fvm.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/isolated_devmgr/v2_component/fvm.h"
-#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/lib/testing/predicates/status.h"
+#include "src/storage/testing/fvm.h"
+#include "src/storage/testing/ram_disk.h"
 #include "status.h"
 #include "testing_util.h"
 
@@ -56,8 +56,7 @@ class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
     // Map the VMO into memory.
     zx_status_t status = zx::vmar::root_self()->map(
         /*options=*/(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_MAP_RANGE),
-        /*vmar_offset=*/0, vmo_, /*vmo_offset=*/0, vmo_size,
-        &vmo_addr_);
+        /*vmar_offset=*/0, vmo_, /*vmo_offset=*/0, vmo_size, &vmo_addr_);
     ZX_ASSERT(status == ZX_OK);
     callback(ZX_OK, std::make_unique<fuchsia::hardware::block::VmoId>(kVmoId));
   }
@@ -163,13 +162,13 @@ class FakeBlock : public fuchsia::hardware::block::testing::Block_TestBase {
 
 TEST(Flash, FlashStress) {
   // Create a RAM disk.
-  zx::status<isolated_devmgr::RamDisk> ramdisk = isolated_devmgr::RamDisk::Create(
+  zx::status<storage::RamDisk> ramdisk = storage::RamDisk::Create(
       /*block_size=*/kBlockSize, /*block_count=*/kDefaultRamDiskSize / kBlockSize);
   ASSERT_TRUE(ramdisk.is_ok());
 
   // Instantiate it as a FVM device.
   zx::status<std::string> fvm_path =
-      isolated_devmgr::CreateFvmInstance(ramdisk->path(), kDefaultFvmSliceSize);
+      storage::CreateFvmInstance(ramdisk->path(), kDefaultFvmSliceSize);
   ASSERT_TRUE(fvm_path.is_ok());
 
   CommandLineArgs args;
@@ -262,13 +261,13 @@ TEST(Flash, SingleBlock) {
 
 TEST(Flash, DeletePartition) {
   // Create a RAM disk.
-  zx::status<isolated_devmgr::RamDisk> ramdisk = isolated_devmgr::RamDisk::Create(
+  zx::status<storage::RamDisk> ramdisk = storage::RamDisk::Create(
       /*block_size=*/kBlockSize, /*block_count=*/kDefaultRamDiskSize / kBlockSize);
   ASSERT_TRUE(ramdisk.is_ok());
 
   // Instantiate it as a FVM device.
   zx::status<std::string> fvm_path =
-      isolated_devmgr::CreateFvmInstance(ramdisk->path(), kDefaultFvmSliceSize);
+      storage::CreateFvmInstance(ramdisk->path(), kDefaultFvmSliceSize);
   ASSERT_TRUE(fvm_path.is_ok());
 
   // Access FVM.

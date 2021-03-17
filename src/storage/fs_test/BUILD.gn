@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+import("//src/storage/testing/isolated_devmgr.gni")
 import("//src/sys/build/fuchsia_component.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 
@@ -12,7 +12,7 @@ group("tests") {
   deps = [
     ":fs-tests",
     ":large-fs-tests",
-    "//src/lib/isolated_devmgr/v2_component",
+    "//src/storage/testing:storage-isolated-devmgr",
   ]
 }
 
@@ -30,6 +30,7 @@ static_library("fs_test") {
     "//src/storage/fuchsia-fatfs:fatfs",
     "//src/storage/fvm",
     "//src/storage/memfs",
+    "//src/storage/testing:storage_driver_test_support",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fdio-caller",
@@ -37,9 +38,9 @@ static_library("fs_test") {
   public_deps = [
     # fs_test.h:
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
-    "//src/lib/isolated_devmgr/v2_component:client",
     "//src/storage/blobfs",
     "//src/storage/minfs",
+    "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zx",
@@ -68,7 +69,7 @@ test("access_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_v2_component("access-tests") {
+storage_isolated_devmgr_unittest_v2_component("access-tests") {
   executable_path = "test/access_tests"
   deps = [ ":access_tests" ]
 }
@@ -82,7 +83,7 @@ test("append_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("append-tests") {
+storage_isolated_devmgr_unittest_v2_component("append-tests") {
   executable_path = "test/append_tests"
   deps = [ ":append_tests" ]
 }
@@ -96,7 +97,7 @@ test("attr_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("attr-tests") {
+storage_isolated_devmgr_unittest_v2_component("attr-tests") {
   executable_path = "test/attr_tests"
   deps = [ ":attr_tests" ]
 }
@@ -109,7 +110,7 @@ test("basic_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("basic-tests") {
+storage_isolated_devmgr_unittest_v2_component("basic-tests") {
   executable_path = "test/basic_tests"
   deps = [ ":basic_tests" ]
 }
@@ -122,7 +123,7 @@ test("case_sensitivity_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("case-sensitivity-tests") {
+storage_isolated_devmgr_unittest_v2_component("case-sensitivity-tests") {
   executable_path = "test/case_sensitivity_tests"
   deps = [ ":case_sensitivity_tests" ]
 }
@@ -136,7 +137,7 @@ test("clone_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("clone-tests") {
+storage_isolated_devmgr_unittest_v2_component("clone-tests") {
   executable_path = "test/clone_tests"
   deps = [ ":clone_tests" ]
 }
@@ -156,7 +157,7 @@ test("corrupt_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_v2_component("corrupt-tests") {
+storage_isolated_devmgr_unittest_v2_component("corrupt-tests") {
   executable_path = "test/corrupt_tests"
   deps = [ ":corrupt_tests" ]
 }
@@ -170,7 +171,7 @@ test("directory_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("directory-tests") {
+storage_isolated_devmgr_unittest_v2_component("directory-tests") {
   executable_path = "test/directory_tests"
   deps = [ ":directory_tests" ]
 }
@@ -191,7 +192,7 @@ test("dot_dot_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_v2_component("dot-dot-tests") {
+storage_isolated_devmgr_unittest_v2_component("dot-dot-tests") {
   executable_path = "test/dot_dot_tests"
   deps = [ ":dot_dot_tests" ]
 }
@@ -205,7 +206,7 @@ test("fcntl_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("fcntl-tests") {
+storage_isolated_devmgr_unittest_v2_component("fcntl-tests") {
   executable_path = "test/fcntl_tests"
   deps = [ ":fcntl_tests" ]
 }
@@ -219,7 +220,7 @@ test("filename_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("filename-tests") {
+storage_isolated_devmgr_unittest_v2_component("filename-tests") {
   executable_path = "test/filename_tests"
   deps = [ ":filename_tests" ]
 }
@@ -233,7 +234,7 @@ test("link_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("link-tests") {
+storage_isolated_devmgr_unittest_v2_component("link-tests") {
   executable_path = "test/link_tests"
   deps = [ ":link_tests" ]
 }
@@ -247,7 +248,7 @@ test("lseek_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("lseek-tests") {
+storage_isolated_devmgr_unittest_v2_component("lseek-tests") {
   executable_path = "test/lseek_tests"
   deps = [ ":lseek_tests" ]
 }
@@ -272,7 +273,7 @@ test("minfs_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_v2_component("minfs-tests") {
+storage_isolated_devmgr_unittest_v2_component("minfs-tests") {
   executable_path = "test/minfs_tests"
   deps = [ ":minfs_tests" ]
 }
@@ -287,7 +288,7 @@ test("mmap_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("mmap-tests") {
+storage_isolated_devmgr_unittest_v2_component("mmap-tests") {
   executable_path = "test/mmap_tests"
   deps = [ ":mmap_tests" ]
 }
@@ -300,7 +301,7 @@ test("open_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("open-tests") {
+storage_isolated_devmgr_unittest_v2_component("open-tests") {
   executable_path = "test/open_tests"
   deps = [ ":open_tests" ]
 }
@@ -313,7 +314,7 @@ test("overflow_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("overflow-tests") {
+storage_isolated_devmgr_unittest_v2_component("overflow-tests") {
   executable_path = "test/overflow_tests"
   deps = [ ":overflow_tests" ]
 }
@@ -326,7 +327,7 @@ test("persist_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("persist-tests") {
+storage_isolated_devmgr_unittest_v2_component("persist-tests") {
   executable_path = "test/persist_tests"
   deps = [ ":persist_tests" ]
 }
@@ -340,7 +341,7 @@ test("random_op_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("random-op-tests") {
+storage_isolated_devmgr_unittest_v2_component("random-op-tests") {
   executable_path = "test/random_op_tests"
   deps = [ ":random_op_tests" ]
 }
@@ -354,7 +355,7 @@ test("realpath_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("realpath-tests") {
+storage_isolated_devmgr_unittest_v2_component("realpath-tests") {
   executable_path = "test/realpath_tests"
   deps = [ ":realpath_tests" ]
 }
@@ -375,7 +376,7 @@ test("rename_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_v2_component("rename-tests") {
+storage_isolated_devmgr_unittest_v2_component("rename-tests") {
   executable_path = "test/rename_tests"
   deps = [ ":rename_tests" ]
 }
@@ -398,7 +399,7 @@ test("resize_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_v2_component("resize-tests") {
+storage_isolated_devmgr_unittest_v2_component("resize-tests") {
   executable_path = "test/resize_tests"
   deps = [ ":resize_tests" ]
 }
@@ -412,7 +413,7 @@ test("rw_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("rw-tests") {
+storage_isolated_devmgr_unittest_v2_component("rw-tests") {
   executable_path = "test/rw_tests"
   deps = [ ":rw_tests" ]
 }
@@ -426,7 +427,7 @@ test("rw_workers_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("rw-workers-tests") {
+storage_isolated_devmgr_unittest_v2_component("rw-workers-tests") {
   executable_path = "test/rw_workers_tests"
   deps = [ ":rw_workers_tests" ]
 }
@@ -440,7 +441,7 @@ test("sparse_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("sparse-tests") {
+storage_isolated_devmgr_unittest_v2_component("sparse-tests") {
   executable_path = "test/sparse_tests"
   deps = [ ":sparse_tests" ]
 }
@@ -454,7 +455,7 @@ test("sync_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("sync-tests") {
+storage_isolated_devmgr_unittest_v2_component("sync-tests") {
   executable_path = "test/sync_tests"
   deps = [ ":sync_tests" ]
 }
@@ -468,7 +469,7 @@ test("threading_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("threading-tests") {
+storage_isolated_devmgr_unittest_v2_component("threading-tests") {
   executable_path = "test/threading_tests"
   deps = [ ":threading_tests" ]
 }
@@ -485,7 +486,7 @@ test("truncate_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("truncate-tests") {
+storage_isolated_devmgr_unittest_v2_component("truncate-tests") {
   executable_path = "test/truncate_tests"
   deps = [ ":truncate_tests" ]
 }
@@ -499,7 +500,7 @@ test("unicode_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("unicode-tests") {
+storage_isolated_devmgr_unittest_v2_component("unicode-tests") {
   executable_path = "test/unicode_tests"
   deps = [ ":unicode_tests" ]
 }
@@ -513,7 +514,7 @@ test("unlink_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("unlink-tests") {
+storage_isolated_devmgr_unittest_v2_component("unlink-tests") {
   executable_path = "test/unlink_tests"
   deps = [ ":unlink_tests" ]
 }
@@ -534,7 +535,7 @@ test("watcher_tests") {
   configs += [ "//build/cpp:fidl-llcpp-deprecated-raw-channels" ]
 }
 
-isolated_devmgr_unittest_v2_component("watcher-tests") {
+storage_isolated_devmgr_unittest_v2_component("watcher-tests") {
   executable_path = "test/watcher_tests"
   deps = [ ":watcher_tests" ]
 }
@@ -589,7 +590,7 @@ test("directory_large_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("directory-large-tests") {
+storage_isolated_devmgr_unittest_v2_component("directory-large-tests") {
   executable_path = "test/directory_large_tests"
   deps = [ ":directory_large_tests" ]
 }
@@ -603,7 +604,7 @@ test("max_file_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("max-file-tests") {
+storage_isolated_devmgr_unittest_v2_component("max-file-tests") {
   executable_path = "test/max_file_tests"
   deps = [ ":max_file_tests" ]
 }
@@ -617,7 +618,7 @@ test("sparse_large_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("sparse-large-tests") {
+storage_isolated_devmgr_unittest_v2_component("sparse-large-tests") {
   executable_path = "test/sparse_large_tests"
   deps = [ ":sparse_large_tests" ]
 }
@@ -634,7 +635,7 @@ test("truncate_large_tests") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("truncate-large-tests") {
+storage_isolated_devmgr_unittest_v2_component("truncate-large-tests") {
   executable_path = "test/truncate_large_tests"
   deps = [ ":truncate_large_tests" ]
 }

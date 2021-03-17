@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
+#include "src/storage/testing/ram_disk.h"
 
 #include <lib/syslog/cpp/macros.h>
 #include <lib/zx/job.h>
@@ -11,12 +11,12 @@
 
 #include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
 
-namespace isolated_devmgr {
+namespace storage {
 
 constexpr zx::duration kDefaultWaitTime = zx::sec(10);
 
 static zx::status<> WaitForRamctl(zx::duration time = kDefaultWaitTime) {
-  auto status = OneTimeSetUp();
+  auto status = isolated_devmgr::OneTimeSetUp();
   if (status.is_error()) {
     return status.take_error();
   }
@@ -63,4 +63,4 @@ zx::status<RamDisk> RamDisk::CreateWithVmo(zx::vmo vmo, uint64_t block_size) {
   return zx::ok(RamDisk(client));
 }
 
-}  // namespace isolated_devmgr
+}  // namespace storage

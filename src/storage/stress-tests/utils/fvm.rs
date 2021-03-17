@@ -16,7 +16,6 @@ use {
     fidl_fuchsia_io::OPEN_RIGHT_READABLE,
     fuchsia_component::client::connect_to_service_at_path,
     fuchsia_zircon::{sys::zx_status_t, AsHandleRef, Rights, Status, Vmo},
-    isolated_driver_manager::{bind_fvm, rebind_fvm},
     ramdevice_client::{RamdiskClient, VmoRamdiskClientBuilder},
     rand::{rngs::SmallRng, FromEntropy, Rng},
     std::{
@@ -25,6 +24,7 @@ use {
         path::PathBuf,
         time::Duration,
     },
+    storage_isolated_driver_manager::{bind_fvm, rebind_fvm},
     test_utils_lib::opaque_test::OpaqueTest,
 };
 
@@ -36,10 +36,11 @@ extern "C" {
 }
 
 async fn start_test() -> OpaqueTest {
-    let test: OpaqueTest =
-        OpaqueTest::default("fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated-devmgr.cm")
-            .await
-            .unwrap();
+    let test: OpaqueTest = OpaqueTest::default(
+        "fuchsia-pkg://fuchsia.com/storage-isolated-devmgr#meta/isolated-devmgr.cm",
+    )
+    .await
+    .unwrap();
 
     // Wait for the root component to start
     let event_source = test.connect_to_event_source().await.unwrap();

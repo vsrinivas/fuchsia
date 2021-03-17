@@ -6,7 +6,7 @@ import("//build/dist/component_manifest_resources.gni")
 import("//build/dist/resource.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/zbi/kernel_cmdline.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+import("//src/storage/testing/isolated_devmgr.gni")
 import("//src/sys/build/components.gni")
 import("//tools/cmc/build/cml.gni")
 
@@ -32,7 +32,7 @@ group("tests") {
   testonly = true
   deps = [
     ":live-usb-unittests",
-    "//src/lib/isolated_devmgr/v2_component",
+    "//src/storage/testing:storage-isolated-devmgr",
   ]
 }
 
@@ -102,7 +102,7 @@ rustc_binary("bin") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("live-usb-test") {
+storage_isolated_devmgr_unittest_v2_component("live-usb-test") {
   deps = [ ":bin_test" ]
   executable_path = "bin/live_usb_bin_test"
   runner = "rust_test_runner"

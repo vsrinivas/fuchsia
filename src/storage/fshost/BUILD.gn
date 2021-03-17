@@ -4,7 +4,7 @@
 
 import("//build/dist/component_manifest_resources.gni")
 import("//build/test.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+import("//src/storage/testing/isolated_devmgr.gni")
 import("//src/sys/build/components.gni")
 
 declare_args() {
@@ -36,7 +36,7 @@ group("tests") {
   testonly = true
   deps = [
     ":fshost-tests",
-    "//src/lib/isolated_devmgr/v2_component",
+    "//src/storage/testing:storage-isolated-devmgr",
   ]
 }
 
@@ -358,10 +358,10 @@ test("fshost_integration_test") {
     "//sdk/fidl/fuchsia.sys2",
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/isolated_devmgr/v2_component:client",
     "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
     "//src/storage/blobfs",
     "//src/storage/minfs",
+    "//src/storage/testing:storage_driver_test_support",
     "//src/sys/pkg/fidl/fuchsia.update.verify:fuchsia.update.verify_llcpp",
     "//third_party/googletest:gmock",
     "//zircon/system/ulib/cobalt-client:in-memory-logger",
@@ -386,7 +386,7 @@ fuchsia_component("test-fshost") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("fshost-integration-test") {
+storage_isolated_devmgr_unittest_v2_component("fshost-integration-test") {
   manifest = "meta/fshost_integration_test.cml"
   deps = [
     ":fshost_integration_test",

@@ -4,7 +4,7 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+import("//src/storage/testing/isolated_devmgr.gni")
 import("//src/sys/build/components.gni")
 
 group("test") {
@@ -14,7 +14,7 @@ group("test") {
     ":blobfs-integration-package",
     ":blobfs-unittest",
     ":blobfs_host($host_toolchain)",
-    "//src/lib/isolated_devmgr/v2_component",
+    "//src/storage/testing:storage-isolated-devmgr",
   ]
 }
 
@@ -214,7 +214,7 @@ test("blobfs_integration") {
   public_deps = [ "//zircon/system/ulib/fidl-utils" ]
 }
 
-isolated_devmgr_unittest_v2_component("blobfs-integration-component") {
+storage_isolated_devmgr_unittest_v2_component("blobfs-integration-component") {
   executable_path = "test/blobfs_integration_test"
   component_name = "blobfs-integration"
 
@@ -297,7 +297,7 @@ template("blobfs_large_integration_test") {
     }
   }
 
-  isolated_devmgr_unittest_v2_component(component_name) {
+  storage_isolated_devmgr_unittest_v2_component(component_name) {
     executable_path = "test/$test_name"
     component_name = test_name
     deps = [ ":$test_name" ]

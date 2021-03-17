@@ -11,7 +11,7 @@
     children: [
         {
             name: "isolated-devmgr",
-            url: "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated-devmgr.cm",
+            url: "fuchsia-pkg://fuchsia.com/storage-isolated-devmgr#meta/isolated-devmgr.cm",
             startup: "eager",
         },
     ],

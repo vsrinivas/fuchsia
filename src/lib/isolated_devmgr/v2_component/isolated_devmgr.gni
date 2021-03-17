@@ -4,10 +4,83 @@
 
 import("//src/sys/build/fuchsia_component.gni")
 
+template("isolated_devmgr_v2_component") {
+  package_name = invoker.package_name
+  manifest_path = "${target_gen_dir}/meta/isolated-devmgr.cml"
+  generated_file(manifest_path) {
+    contents = {
+      include = [ "sdk/lib/diagnostics/syslog/client.shard.cml" ]
+      program = {
+        runner = "elf"
+        binary = "bin/support"
+      }
+      children = [
+        {
+          name = "driver-manager-test"
+          url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/driver-manager-test.cm"
+        },
+      ]
+      capabilities = [
+        {
+          protocol = [
+            "fuchsia.boot.Arguments",
+            "fuchsia.kernel.RootJob",
+          ]
+        },
+      ]
+      offer = [
+        {
+          protocol = [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+          ]
+          from = "parent"
+          to = [ "#driver-manager-test" ]
+        },
+        {
+          protocol = [
+            "fuchsia.boot.Arguments",
+            "fuchsia.kernel.RootJob",
+          ]
+          from = "self"
+          to = [ "#driver-manager-test" ]
+        },
+      ]
+      expose = [
+        {
+          directory = "dev"
+          from = "#driver-manager-test"
+        },
+      ]
+    }
+    outputs = [ "$manifest_path" ]
+    output_conversion = "json"
+    testonly = true
+    visibility = [ ":*" ]
+  }
+
+  fuchsia_component(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    testonly = true
+    component_name = "isolated-devmgr"
+    manifest = manifest_path
+    deps = []
+    if (defined(invoker.deps)) {
+      devmgr_args = invoker.deps
+    }
+    deps += [
+      ":$manifest_path",
+      "//src/lib/isolated_devmgr/v2_component:support",
+    ]
+  }
+}
+
 template("isolated_devmgr_unittest_v2_component") {
   if (!defined(invoker.manifest)) {
     generated_target = "${target_name}_generated_manifest"
     manifest = "$target_out_dir/${generated_target}.cml"
+    package_name = invoker.package_name
     generated_file(generated_target) {
       contents = {
         include = [
@@ -25,7 +98,7 @@ template("isolated_devmgr_unittest_v2_component") {
         children = [
           {
             name = "isolated-devmgr"
-            url = "fuchsia-pkg://fuchsia.com/isolated-devmgr#meta/isolated-devmgr.cm"
+            url = "fuchsia-pkg://fuchsia.com/${package_name}#meta/isolated-devmgr.cm"
             startup = "eager"
           },
         ]

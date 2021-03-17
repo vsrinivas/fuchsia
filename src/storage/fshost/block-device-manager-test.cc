@@ -13,12 +13,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/isolated_devmgr/v2_component/fvm.h"
-#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/storage/fshost/filesystem-mounter.h"
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/fshost_integration_test.h"
 #include "src/storage/fshost/mock-block-device.h"
+#include "src/storage/testing/fvm.h"
+#include "src/storage/testing/ram_disk.h"
 
 namespace devmgr {
 namespace {
@@ -126,21 +126,20 @@ TEST_F(BlockDeviceManagerIntegration, MaxSize) {
 
   // Now create the ram-disk with a single FVM partition.
   {
-    auto ramdisk_or = isolated_devmgr::RamDisk::CreateWithVmo(std::move(child_vmo), kBlockSize);
+    auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(child_vmo), kBlockSize);
     ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
-    isolated_devmgr::FvmOptions options{
+    storage::FvmOptions options{
         .name = "minfs",
         .type = std::array<uint8_t, BLOCK_GUID_LEN>{GUID_DATA_VALUE},
     };
-    auto fvm_partition_or =
-        isolated_devmgr::CreateFvmPartition(ramdisk_or->path(), kSliceSize, options);
+    auto fvm_partition_or = storage::CreateFvmPartition(ramdisk_or->path(), kSliceSize, options);
     ASSERT_EQ(fvm_partition_or.status_value(), ZX_OK);
   }
 
   ResumeWatcher();
 
   // Now reattach the ram-disk and fshost should format it.
-  auto ramdisk_or = isolated_devmgr::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
+  auto ramdisk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), kBlockSize);
   ASSERT_EQ(ramdisk_or.status_value(), ZX_OK);
   fbl::unique_fd fd = WaitForMount("minfs", VFS_TYPE_MINFS);
   ASSERT_TRUE(fd);

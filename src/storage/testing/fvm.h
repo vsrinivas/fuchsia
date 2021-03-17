@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_LIB_ISOLATED_DEVMGR_V2_COMPONENT_FVM_H_
-#define SRC_LIB_ISOLATED_DEVMGR_V2_COMPONENT_FVM_H_
+#ifndef SRC_STORAGE_TESTING_FVM_H_
+#define SRC_STORAGE_TESTING_FVM_H_
 
 #include <lib/zx/status.h>
 #include <zircon/device/block.h>
@@ -12,7 +12,7 @@
 #include <optional>
 #include <string>
 
-namespace isolated_devmgr {
+namespace storage {
 
 struct FvmOptions {
   std::string_view name = "fs-test-partition";
@@ -35,6 +35,6 @@ zx::status<std::string> CreateFvmPartition(const std::string& device_path, int s
 // Binds the FVM driver to the given device.
 zx::status<> BindFvm(int fd);
 
-}  // namespace isolated_devmgr
+}  // namespace storage
 
-#endif  // SRC_LIB_ISOLATED_DEVMGR_V2_COMPONENT_FVM_H_
+#endif  // SRC_STORAGE_TESTING_FVM_H_

@@ -27,10 +27,10 @@
 #include <gtest/gtest.h>
 #include <ramdevice-client/ramdisk.h>
 
-#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/storage/minfs/format.h"
 #include "src/storage/minfs/fsck.h"
 #include "src/storage/minfs/minfs.h"
+#include "src/storage/testing/ram_disk.h"
 
 namespace minfs {
 namespace {
@@ -41,8 +41,7 @@ template <bool repairable>
 class MountTestTemplate : public testing::Test {
  public:
   void SetUp() final {
-    ramdisk_ =
-        isolated_devmgr::RamDisk::Create(/*block_size=*/512, /*block_count=*/1 << 16).value();
+    ramdisk_ = storage::RamDisk::Create(/*block_size=*/512, /*block_count=*/1 << 16).value();
 
     ramdisk_path_ = ramdisk_->path();
     ASSERT_EQ(
@@ -131,7 +130,7 @@ class MountTestTemplate : public testing::Test {
 
  private:
   bool unmounted_ = false;
-  std::optional<isolated_devmgr::RamDisk> ramdisk_;
+  std::optional<storage::RamDisk> ramdisk_;
   std::string ramdisk_path_;
   std::unique_ptr<minfs::Bcache> bcache_ = nullptr;
   zx::channel root_client_end_;

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fvm.h"
+#include "src/storage/testing/fvm.h"
 
 #include <fuchsia/device/llcpp/fidl.h>
 #include <lib/fdio/cpp/caller.h>
@@ -13,7 +13,7 @@
 #include <fs-management/fvm.h>
 #include <ramdevice-client/ramdisk.h>
 
-namespace isolated_devmgr {
+namespace storage {
 
 constexpr uint8_t kTestPartGUID[] = {0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
                                      0xFF, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07};
@@ -103,4 +103,4 @@ zx::status<std::string> CreateFvmPartition(const std::string& device_path, int s
   return zx::ok(partition_path);
 }
 
-}  // namespace isolated_devmgr
+}  // namespace storage

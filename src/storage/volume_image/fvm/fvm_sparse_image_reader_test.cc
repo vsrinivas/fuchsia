@@ -16,10 +16,10 @@
 #include <fs-management/fvm.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/isolated_devmgr/v2_component/fvm.h"
-#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
+#include "src/storage/testing/fvm.h"
+#include "src/storage/testing/ram_disk.h"
 #include "src/storage/volume_image/ftl/ftl_image.h"
 #include "src/storage/volume_image/ftl/options.h"
 #include "src/storage/volume_image/utils/fd_reader.h"
@@ -35,7 +35,7 @@ zx::status<std::string> AttachFvm(const std::string& device_path) {
   if (!fd) {
     return zx::error(ZX_ERR_BAD_STATE);
   }
-  if (auto status = isolated_devmgr::BindFvm(fd.get()); status.is_error())
+  if (auto status = storage::BindFvm(fd.get()); status.is_error())
     return status.take_error();
   std::string fvm_disk_path = device_path + "/fvm";
   if (auto status = zx::make_status(wait_for_device(fvm_disk_path.c_str(), zx::sec(3).get()));
@@ -56,8 +56,7 @@ TEST(FvmSparseImageReaderTest, PartitionsInImagePassFsck) {
   // Create a ram-disk.
   constexpr int kDeviceBlockSize = 8192;
   const uint64_t disk_size = sparse_image_or.value().volume().size;
-  auto ram_disk_or =
-      isolated_devmgr::RamDisk::Create(kDeviceBlockSize, disk_size / kDeviceBlockSize);
+  auto ram_disk_or = storage::RamDisk::Create(kDeviceBlockSize, disk_size / kDeviceBlockSize);
   ASSERT_TRUE(ram_disk_or.is_ok()) << ram_disk_or.status_string();
 
   // Open the ram disk

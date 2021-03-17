@@ -21,8 +21,8 @@
 #include "encrypted-volume-interface.h"
 #include "mock-block-device.h"
 #include "src/lib/files/glob.h"
-#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/storage/fshost/fshost_integration_test.h"
+#include "src/storage/testing/ram_disk.h"
 
 namespace devmgr {
 namespace {
@@ -699,7 +699,7 @@ TEST(AddDeviceTestCase, MultipleGptDevicesWithGptAllOptionMatch) {
 
 class BlockWatcherTest : public FshostIntegrationTest {
  protected:
-  isolated_devmgr::RamDisk CreateGptRamdisk() {
+  storage::RamDisk CreateGptRamdisk() {
     zx::vmo ramdisk_vmo;
     EXPECT_EQ(zx::vmo::create(kTestDiskSectors * kBlockSize, 0, &ramdisk_vmo), ZX_OK);
     // Write the GPT into the VMO.
@@ -707,7 +707,7 @@ class BlockWatcherTest : public FshostIntegrationTest {
     EXPECT_EQ(ramdisk_vmo.write(kTestGptBlock1, kBlockSize, sizeof(kTestGptBlock1)), ZX_OK);
     EXPECT_EQ(ramdisk_vmo.write(kTestGptBlock2, 2 * kBlockSize, sizeof(kTestGptBlock2)), ZX_OK);
 
-    return isolated_devmgr::RamDisk::CreateWithVmo(std::move(ramdisk_vmo), kBlockSize).value();
+    return storage::RamDisk::CreateWithVmo(std::move(ramdisk_vmo), kBlockSize).value();
   }
 
   fbl::unique_fd WaitForBlockDevice(int number) {
@@ -726,7 +726,7 @@ class BlockWatcherTest : public FshostIntegrationTest {
   //
   // We make sure that this entry's toplogical path corresponds to it being the first partition
   // of the block device we added.
-  void CheckEventsDropped(int& next_device_number, isolated_devmgr::RamDisk& ramdisk) {
+  void CheckEventsDropped(int& next_device_number, storage::RamDisk& ramdisk) {
     ASSERT_NO_FATAL_FAILURE(ramdisk = CreateGptRamdisk());
 
     // Wait for the basic block driver to be bound
@@ -760,7 +760,7 @@ TEST_F(BlockWatcherTest, TestBlockWatcherDisable) {
   ASSERT_NO_FATAL_FAILURE(PauseWatcher());
 
   // Add a block device.
-  isolated_devmgr::RamDisk client;
+  storage::RamDisk client;
   ASSERT_NO_FATAL_FAILURE(client = CreateGptRamdisk());
 
   // Figure out what the next device number will be.
@@ -776,13 +776,13 @@ TEST_F(BlockWatcherTest, TestBlockWatcherDisable) {
 
   ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
 
-  isolated_devmgr::RamDisk client2;
+  storage::RamDisk client2;
   ASSERT_NO_FATAL_FAILURE(CheckEventsDropped(next_device_number, client2));
 }
 
 TEST_F(BlockWatcherTest, TestBlockWatcherAdd) {
   // Add a block device.
-  isolated_devmgr::RamDisk client;
+  storage::RamDisk client;
   ASSERT_NO_FATAL_FAILURE(client = CreateGptRamdisk());
 
   // Wait for fshost to bind the gpt driver.
@@ -801,7 +801,7 @@ TEST_F(BlockWatcherTest, TestMultiplePause) {
   int next_device_number = 0;
 
   // Add a block device.
-  isolated_devmgr::RamDisk client;
+  storage::RamDisk client;
   ASSERT_NO_FATAL_FAILURE(client = CreateGptRamdisk());
 
   // Figure out what the next device number will be.
@@ -817,7 +817,7 @@ TEST_F(BlockWatcherTest, TestMultiplePause) {
   // Resume once.
   ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
 
-  isolated_devmgr::RamDisk client2;
+  storage::RamDisk client2;
   ASSERT_NO_FATAL_FAILURE(client2 = CreateGptRamdisk());
   ASSERT_NO_FATAL_FAILURE(WaitForBlockDevice(next_device_number));
   next_device_number++;
@@ -827,12 +827,12 @@ TEST_F(BlockWatcherTest, TestMultiplePause) {
   ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
 
   // Make sure neither device was seen by the watcher.
-  isolated_devmgr::RamDisk client3;
+  storage::RamDisk client3;
   ASSERT_NO_FATAL_FAILURE(CheckEventsDropped(next_device_number, client3));
 
   // Pause again.
   ASSERT_NO_FATAL_FAILURE(PauseWatcher());
-  isolated_devmgr::RamDisk client4;
+  storage::RamDisk client4;
   client4 = CreateGptRamdisk();
   ASSERT_NO_FATAL_FAILURE(WaitForBlockDevice(next_device_number));
   next_device_number++;
@@ -840,7 +840,7 @@ TEST_F(BlockWatcherTest, TestMultiplePause) {
   ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
 
   // Make sure the last device wasn't added.
-  isolated_devmgr::RamDisk client5;
+  storage::RamDisk client5;
   ASSERT_NO_FATAL_FAILURE(CheckEventsDropped(next_device_number, client5));
 }
 
@@ -849,7 +849,7 @@ TEST_F(BlockWatcherTest, TestResumeThenImmediatelyPause) {
   int next_device_number = 0;
 
   // Add a block device, which should be ignored.
-  isolated_devmgr::RamDisk client;
+  storage::RamDisk client;
   ASSERT_NO_FATAL_FAILURE(client = CreateGptRamdisk());
 
   // Figure out what the next device number will be.
@@ -868,7 +868,7 @@ TEST_F(BlockWatcherTest, TestResumeThenImmediatelyPause) {
   ASSERT_NO_FATAL_FAILURE(PauseWatcher());
 
   // Add another block device, which should also be ignored.
-  isolated_devmgr::RamDisk client2;
+  storage::RamDisk client2;
   ASSERT_NO_FATAL_FAILURE(client2 = CreateGptRamdisk());
   ASSERT_NO_FATAL_FAILURE(WaitForBlockDevice(next_device_number));
   next_device_number++;
@@ -877,7 +877,7 @@ TEST_F(BlockWatcherTest, TestResumeThenImmediatelyPause) {
   ASSERT_NO_FATAL_FAILURE(ResumeWatcher());
 
   // Make sure the block watcher correctly resumed.
-  isolated_devmgr::RamDisk client3;
+  storage::RamDisk client3;
   ASSERT_NO_FATAL_FAILURE(CheckEventsDropped(next_device_number, client3));
 }
 

@@ -26,8 +26,8 @@
 #include <fs-management/mount.h>
 #include <ramdevice-client/ramnand.h>
 
-#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/storage/blobfs/blob_layout.h"
+#include "src/storage/testing/ram_disk.h"
 
 namespace fs_test {
 
@@ -84,7 +84,7 @@ class FilesystemInstance {
   // Returns path of the device on which the filesystem is created. For filesystem that are not
   // block device based, like memfs, the function returns an error.
   virtual zx::status<std::string> DevicePath() const = 0;
-  virtual isolated_devmgr::RamDisk* GetRamDisk() { return nullptr; }
+  virtual storage::RamDisk* GetRamDisk() { return nullptr; }
   virtual ramdevice_client::RamNand* GetRamNand() { return nullptr; }
   virtual zx::unowned_channel GetOutgoingDirectory() const { return {}; }
 };
@@ -219,7 +219,7 @@ class TestFilesystem {
   }
 
   // Returns the ramdisk, or nullptr if one isn't being used.
-  isolated_devmgr::RamDisk* GetRamDisk() const { return filesystem_->GetRamDisk(); }
+  storage::RamDisk* GetRamDisk() const { return filesystem_->GetRamDisk(); }
 
   // Returns the ram-nand device, or nullptr if one isn't being used.
   ramdevice_client::RamNand* GetRamNand() const { return filesystem_->GetRamNand(); }

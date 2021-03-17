@@ -12,7 +12,7 @@
 #include <fs-management/mount.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
+#include "src/storage/testing/ram_disk.h"
 
 namespace factoryfs {
 namespace {
@@ -21,7 +21,7 @@ TEST(FactoryFs, ExportedFilesystemIsMountable) {
   constexpr int kDeviceBlockSize = 4096;
   constexpr int kBlockCount = 1024;
 
-  auto ram_disk_or = isolated_devmgr::RamDisk::Create(kDeviceBlockSize, kBlockCount);
+  auto ram_disk_or = storage::RamDisk::Create(kDeviceBlockSize, kBlockCount);
   ASSERT_TRUE(ram_disk_or.is_ok()) << ram_disk_or.status_string();
 
   char factoryfs_c_str[] = "/tmp/factoryfs.XXXXXX";

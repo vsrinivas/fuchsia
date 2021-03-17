@@ -31,11 +31,11 @@
 #include <fs-management/mount.h>
 
 #include "src/lib/isolated_devmgr/v2_component/bind_devfs_to_namespace.h"
-#include "src/lib/isolated_devmgr/v2_component/fvm.h"
 #include "src/lib/storage/vfs/cpp/vfs.h"
 #include "src/storage/blobfs/blob_layout.h"
 #include "src/storage/fs_test/blobfs_test.h"
 #include "src/storage/fs_test/minfs_test.h"
+#include "src/storage/testing/fvm.h"
 
 namespace fs_test {
 namespace {
@@ -49,7 +49,7 @@ std::string StripTrailingSlash(const std::string& in) {
 }
 
 // Creates a ram-disk with an optional FVM partition. Returns the ram-disk and the device path.
-zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDisk(
+zx::status<std::pair<storage::RamDisk, std::string>> CreateRamDisk(
     const TestFilesystemOptions& options) {
   if (options.use_ram_nand) {
     return zx::error(ZX_ERR_NOT_SUPPORTED);
@@ -71,8 +71,7 @@ zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDisk(
   }
 
   // Create a ram-disk.
-  auto ram_disk_or =
-      isolated_devmgr::RamDisk::CreateWithVmo(std::move(vmo), options.device_block_size);
+  auto ram_disk_or = storage::RamDisk::CreateWithVmo(std::move(vmo), options.device_block_size);
   if (ram_disk_or.is_error()) {
     return ram_disk_or.take_error();
   }
@@ -81,7 +80,7 @@ zx::status<std::pair<isolated_devmgr::RamDisk, std::string>> CreateRamDisk(
   std::string device_path;
   if (options.use_fvm) {
     auto fvm_partition_or =
-        isolated_devmgr::CreateFvmPartition(ram_disk_or.value().path(), options.fvm_slice_size);
+        storage::CreateFvmPartition(ram_disk_or.value().path(), options.fvm_slice_size);
     if (fvm_partition_or.is_error()) {
       return fvm_partition_or.take_error();
     }
@@ -166,7 +165,7 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> CreateRamNand(
   return zx::ok(std::make_pair(*std::move(ram_nand), std::move(ftl_path)));
 }
 
-using RamDevice = std::variant<isolated_devmgr::RamDisk, ramdevice_client::RamNand>;
+using RamDevice = std::variant<storage::RamDisk, ramdevice_client::RamNand>;
 
 // Returns device and device path.
 zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
@@ -178,8 +177,7 @@ zx::status<std::pair<RamDevice, std::string>> CreateRamDevice(
     }
     auto [ram_nand, nand_device_path] = std::move(ram_nand_or).value();
 
-    auto fvm_partition_or =
-        isolated_devmgr::CreateFvmPartition(nand_device_path, options.fvm_slice_size);
+    auto fvm_partition_or = storage::CreateFvmPartition(nand_device_path, options.fvm_slice_size);
     if (fvm_partition_or.is_error()) {
       std::cout << "Failed to create FVM partition: " << fvm_partition_or.status_string()
                 << std::endl;
@@ -215,7 +213,7 @@ zx::status<std::pair<ramdevice_client::RamNand, std::string>> OpenRamNand(
   fbl::unique_fd ftl_device(open(ftl_device_path.c_str(), O_RDWR));
   if (!ftl_device)
     return zx::error(ZX_ERR_BAD_STATE);
-  auto status = isolated_devmgr::BindFvm(ftl_device.get());
+  auto status = storage::BindFvm(ftl_device.get());
   if (status.is_error()) {
     std::cout << "Unable to bind FVM: " << status.status_string() << std::endl;
     return status.take_error();
@@ -449,9 +447,7 @@ class MinfsInstance : public FilesystemInstance {
 
   zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
 
-  isolated_devmgr::RamDisk* GetRamDisk() override {
-    return std::get_if<isolated_devmgr::RamDisk>(&device_);
-  }
+  storage::RamDisk* GetRamDisk() override { return std::get_if<storage::RamDisk>(&device_); }
 
   ramdevice_client::RamNand* GetRamNand() override {
     return std::get_if<ramdevice_client::RamNand>(&device_);
@@ -530,7 +526,7 @@ zx::status<std::unique_ptr<FilesystemInstance>> MemfsFilesystem::Make(
 
 class FatfsInstance : public FilesystemInstance {
  public:
-  FatfsInstance(isolated_devmgr::RamDisk ram_disk, std::string device_path)
+  FatfsInstance(storage::RamDisk ram_disk, std::string device_path)
       : ram_disk_(std::move(ram_disk)), device_path_(std::move(device_path)) {}
 
   zx::status<> Format(const TestFilesystemOptions&) override {
@@ -585,7 +581,7 @@ class FatfsInstance : public FilesystemInstance {
   zx::unowned_channel GetOutgoingDirectory() const override { return outgoing_directory_.borrow(); }
 
  private:
-  isolated_devmgr::RamDisk ram_disk_;
+  storage::RamDisk ram_disk_;
   std::string device_path_;
   zx::channel outgoing_directory_;
 };
@@ -642,9 +638,7 @@ class BlobfsInstance : public FilesystemInstance {
   }
 
   zx::status<std::string> DevicePath() const override { return zx::ok(std::string(device_path_)); }
-  isolated_devmgr::RamDisk* GetRamDisk() override {
-    return std::get_if<isolated_devmgr::RamDisk>(&device_);
-  }
+  storage::RamDisk* GetRamDisk() override { return std::get_if<storage::RamDisk>(&device_); }
   ramdevice_client::RamNand* GetRamNand() override {
     return std::get_if<ramdevice_client::RamNand>(&device_);
   }

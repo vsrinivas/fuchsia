@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+import("//src/storage/testing/isolated_devmgr.gni")
 import("//src/sys/build/fuchsia_component.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 
@@ -30,7 +30,7 @@ rustc_library("remote-block-device") {
   ]
 }
 
-isolated_devmgr_unittest_v2_component("block-client-tests-component") {
+storage_isolated_devmgr_unittest_v2_component("block-client-tests-component") {
   component_name = "block-client-tests"
   executable_path = "bin/remote_block_device_lib_test"
   runner = "rust_test_runner"
@@ -50,6 +50,6 @@ group("tests") {
   testonly = true
   deps = [
     ":block-client-tests",
-    "//src/lib/isolated_devmgr/v2_component",
+    "//src/storage/testing:storage-isolated-devmgr",
   ]
 }

@@ -19,7 +19,6 @@
 #include <cobalt-client/cpp/metric_options.h>
 #include <gtest/gtest.h>
 
-#include "src/lib/isolated_devmgr/v2_component/ram_disk.h"
 #include "src/lib/storage/vfs/cpp/metrics/events.h"
 #include "src/storage/fshost/block-device-manager.h"
 #include "src/storage/fshost/block-watcher.h"
@@ -28,6 +27,7 @@
 #include "src/storage/fshost/fs-manager.h"
 #include "src/storage/fshost/metrics.h"
 #include "src/storage/minfs/format.h"
+#include "src/storage/testing/ram_disk.h"
 
 namespace devmgr {
 namespace {
@@ -101,10 +101,10 @@ class BlockDeviceTest : public testing::Test {
   }
 
   void CreateRamdisk(bool use_guid = false) {
-    isolated_devmgr::RamDisk::Options options;
+    storage::RamDisk::Options options;
     if (use_guid)
       options.type_guid = std::array<uint8_t, GPT_GUID_LEN>(GUID_DATA_VALUE);
-    ramdisk_ = isolated_devmgr::RamDisk::Create(kBlockSize, kBlockCount, options).value();
+    ramdisk_ = storage::RamDisk::Create(kBlockSize, kBlockCount, options).value();
     ASSERT_EQ(wait_for_device(ramdisk_->path().c_str(), zx::sec(10).get()), ZX_OK);
   }
 
@@ -121,7 +121,7 @@ class BlockDeviceTest : public testing::Test {
  private:
   // This counts number of minfs corruptions events seen.
   std::atomic<uint32_t> minfs_corruption_count_ = 0;
-  std::optional<isolated_devmgr::RamDisk> ramdisk_;
+  std::optional<storage::RamDisk> ramdisk_;
   BlockWatcher watcher_;
 };
 

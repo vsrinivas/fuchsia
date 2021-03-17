@@ -5,7 +5,7 @@
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/testing/bootfs_test.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+import("//src/storage/testing/isolated_devmgr.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
 
@@ -101,9 +101,9 @@ test("minfs_dirty_cache_integration") {
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
     "//sdk/fidl/fuchsia.minfs:fuchsia.minfs_llcpp",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/isolated_devmgr/v2_component:client",
     "//src/storage/fs_test",
     "//src/storage/minfs",
+    "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/zircon-internal",
@@ -150,7 +150,6 @@ test("minfs_micro_benchmark") {
     "//sdk/lib/fdio",
     "//src/lib/digest",
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/isolated_devmgr/v2_component:client",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/fs_test",
     "//src/storage/fvm",
@@ -158,6 +157,7 @@ test("minfs_micro_benchmark") {
     "//src/storage/memfs",
     "//src/storage/memfs:memfs-cpp",
     "//src/storage/minfs",
+    "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
@@ -200,17 +200,18 @@ fuzzers_package("minfs-fuzzers") {
   cpp_fuzzers = [ ":minfs-fuzzer" ]
 }
 
-isolated_devmgr_unittest_v2_component("minfs-integration-test") {
+storage_isolated_devmgr_unittest_v2_component("minfs-integration-test") {
   executable_path = "test/minfs-integration"
   deps = [ ":minfs-integration" ]
 }
 
-isolated_devmgr_unittest_v2_component("minfs-dirty-cache-integration-test") {
+storage_isolated_devmgr_unittest_v2_component(
+    "minfs-dirty-cache-integration-test") {
   executable_path = "test/minfs_dirty_cache_integration"
   deps = [ ":minfs_dirty_cache_integration" ]
 }
 
-isolated_devmgr_unittest_v2_component("minfs-power-test") {
+storage_isolated_devmgr_unittest_v2_component("minfs-power-test") {
   executable_path = "test/minfs-power"
   deps = [ ":minfs-power" ]
 }
@@ -220,7 +221,7 @@ fuchsia_unittest_component("minfs-unit-test") {
   manifest = "meta/minfs_unit_test.cml"
 }
 
-isolated_devmgr_unittest_v2_component("minfs-micro-benchmark-test") {
+storage_isolated_devmgr_unittest_v2_component("minfs-micro-benchmark-test") {
   executable_path = "test/minfs_micro_benchmark"
   deps = [ ":minfs_micro_benchmark" ]
 }

@@ -83,7 +83,7 @@ test("integration_test") {
   sources = [ "integration_test.cc" ]
   deps = [
     "//src/lib/fxl/test:gtest_main",
-    "//src/lib/isolated_devmgr/v2_component:client",
+    "//src/storage/testing:storage_driver_test_support",
     "//third_party/googletest:gtest",
     "//zircon/system/ulib/fs-management",
   ]

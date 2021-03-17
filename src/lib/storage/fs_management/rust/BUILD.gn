@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//src/lib/isolated_devmgr/v2_component/isolated_devmgr.gni")
+import("//src/storage/testing/isolated_devmgr.gni")
 import("//src/sys/build/fuchsia_component.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 
@@ -26,7 +26,8 @@ rustc_library("fs_management") {
   sources = [ "src/lib.rs" ]
 }
 
-isolated_devmgr_unittest_v2_component("fs-management-rust-tests-component") {
+storage_isolated_devmgr_unittest_v2_component(
+    "fs-management-rust-tests-component") {
   component_name = "fs-management-rust-tests"
   executable_path = "bin/fs_management_lib_test"
   runner = "rust_test_runner"
@@ -51,6 +52,6 @@ group("tests") {
   testonly = true
   deps = [
     ":fs-management-rust-tests",
-    "//src/lib/isolated_devmgr/v2_component",
+    "//src/storage/testing:storage-isolated-devmgr",
   ]
 }

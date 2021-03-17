@@ -204,6 +204,6 @@ group("tests") {
     "test:minfs-fuzzers",
     "test:minfs-tests",
     "test/host:minfs_host($host_toolchain)",
-    "//src/lib/isolated_devmgr/v2_component",
+    "//src/storage/testing:storage-isolated-devmgr",
   ]
 }
