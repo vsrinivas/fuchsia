@@ -10,22 +10,22 @@
 namespace flatland {
 
 bool NullRenderer::RegisterRenderTargetCollection(
-    sysmem_util::GlobalBufferCollectionId collection_id,
+    allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   return ImportBufferCollection(collection_id, sysmem_allocator, std::move(token));
 }
 
 void NullRenderer::DeregisterRenderTargetCollection(
-    sysmem_util::GlobalBufferCollectionId collection_id) {
+    allocation::GlobalBufferCollectionId collection_id) {
   ReleaseBufferCollection(collection_id);
 }
 
 bool NullRenderer::ImportBufferCollection(
-    sysmem_util::GlobalBufferCollectionId collection_id,
+    allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
-  FX_DCHECK(collection_id != sysmem_util::kInvalidId);
+  FX_DCHECK(collection_id != allocation::kInvalidId);
 
   // Check for a null token here before we try to duplicate it to get the
   // vulkan token.
@@ -54,7 +54,7 @@ bool NullRenderer::ImportBufferCollection(
   return true;
 }
 
-void NullRenderer::ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) {
+void NullRenderer::ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id) {
   // Multiple threads may be attempting to read/write from the various maps,
   // lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
@@ -71,7 +71,7 @@ void NullRenderer::ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId
   collection_map_.erase(collection_id);
 }
 
-bool NullRenderer::ImportBufferImage(const ImageMetadata& metadata) {
+bool NullRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
   std::unique_lock<std::mutex> lock(lock_);
   const auto& collection_itr = collection_map_.find(metadata.collection_id);
   if (collection_itr == collection_map_.end()) {
@@ -116,17 +116,17 @@ bool NullRenderer::ImportBufferImage(const ImageMetadata& metadata) {
   return true;
 }
 
-void NullRenderer::ReleaseBufferImage(sysmem_util::GlobalImageId image_id) {}
+void NullRenderer::ReleaseBufferImage(allocation::GlobalImageId image_id) {}
 
 // Check that the buffer collections for each of the images passed in have been validated.
 // DCHECK if they have not.
-void NullRenderer::Render(const ImageMetadata& render_target,
+void NullRenderer::Render(const allocation::ImageMetadata& render_target,
                           const std::vector<Rectangle2D>& rectangles,
-                          const std::vector<ImageMetadata>& images,
+                          const std::vector<allocation::ImageMetadata>& images,
                           const std::vector<zx::event>& release_fences) {
   for (const auto& image : images) {
     auto image_id = image.identifier;
-    FX_DCHECK(image_id != sysmem_util::kInvalidId);
+    FX_DCHECK(image_id != allocation::kInvalidId);
 
     // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
     std::unique_lock<std::mutex> lock(lock_);

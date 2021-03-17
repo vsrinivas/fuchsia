@@ -15,6 +15,10 @@
 
 namespace flatland {
 
+using allocation::GlobalBufferCollectionId;
+using allocation::GlobalImageId;
+using allocation::ImageMetadata;
+
 // Implementation of the Flatland Renderer interface that relies on Escher and
 // by extension the Vulkan API.
 class VkRenderer final : public Renderer {
@@ -24,28 +28,25 @@ class VkRenderer final : public Renderer {
 
   // |BufferCollectionImporter|
   bool ImportBufferCollection(
-      sysmem_util::GlobalBufferCollectionId collection_id,
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
+  void ReleaseBufferCollection(GlobalBufferCollectionId collection_id) override;
 
   // |BufferCollectionImporter|
   bool ImportBufferImage(const ImageMetadata& metadata) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferImage(sysmem_util::GlobalImageId image_id) override;
+  void ReleaseBufferImage(GlobalImageId image_id) override;
 
   // |Renderer|.
   bool RegisterRenderTargetCollection(
-      sysmem_util::GlobalBufferCollectionId collection_id,
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |Renderer|.
-  void DeregisterRenderTargetCollection(
-      sysmem_util::GlobalBufferCollectionId collection_id) override;
+  void DeregisterRenderTargetCollection(GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
   void Render(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
@@ -61,7 +62,7 @@ class VkRenderer final : public Renderer {
 
  private:
   // Generic helper function used by both |ImportBufferCollection| and |RegisterTextureCollection|.
-  bool RegisterCollection(sysmem_util::GlobalBufferCollectionId collection_id,
+  bool RegisterCollection(GlobalBufferCollectionId collection_id,
                           fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                           fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
                           vk::ImageUsageFlags usage);
@@ -82,17 +83,15 @@ class VkRenderer final : public Renderer {
 
   // This mutex is used to protect access to |collection_map_| and |sysmem_map_|.
   mutable std::mutex lock_;
-  std::unordered_map<sysmem_util::GlobalBufferCollectionId, vk::BufferCollectionFUCHSIA>
-      vk_collections_;
-  std::unordered_map<sysmem_util::GlobalBufferCollectionId,
-                     fuchsia::sysmem::BufferCollectionSyncPtr>
+  std::unordered_map<GlobalBufferCollectionId, vk::BufferCollectionFUCHSIA> vk_collections_;
+  std::unordered_map<GlobalBufferCollectionId, fuchsia::sysmem::BufferCollectionSyncPtr>
       collections_;
 
-  std::unordered_map<sysmem_util::GlobalImageId, escher::TexturePtr> texture_map_;
-  std::unordered_map<sysmem_util::GlobalImageId, escher::ImagePtr> render_target_map_;
-  std::unordered_map<sysmem_util::GlobalImageId, escher::TexturePtr> depth_target_map_;
-  std::set<sysmem_util::GlobalImageId> pending_textures_;
-  std::set<sysmem_util::GlobalImageId> pending_render_targets_;
+  std::unordered_map<GlobalImageId, escher::TexturePtr> texture_map_;
+  std::unordered_map<GlobalImageId, escher::ImagePtr> render_target_map_;
+  std::unordered_map<GlobalImageId, escher::TexturePtr> depth_target_map_;
+  std::set<GlobalImageId> pending_textures_;
+  std::set<GlobalImageId> pending_render_targets_;
 
   uint32_t frame_number_ = 0;
 };

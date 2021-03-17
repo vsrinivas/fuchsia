@@ -21,7 +21,7 @@
 using ::testing::_;
 using ::testing::Return;
 
-using flatland::ImageMetadata;
+using allocation::ImageMetadata;
 using flatland::LinkSystem;
 using flatland::Renderer;
 using flatland::TransformGraph;
@@ -101,7 +101,7 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
   // assumptions here, such as making the pixel format for the capture image BGR24, as that
   // is the only capture format that AMLOGIC supports.
   fit::result<fuchsia::sysmem::BufferCollectionSyncPtr, zx_status_t> SetupCapture(
-      sysmem_util::GlobalBufferCollectionId collection_id,
+      allocation::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::BufferCollectionInfo_2* collection_info, uint64_t* image_id) {
     auto display = display_manager_->default_display();
     auto display_controller = display_manager_->default_display_controller();
@@ -188,7 +188,7 @@ class DisplayCompositorPixelTest : public DisplayCompositorTestBase {
   // Sets up the buffer collection information for collections that will be imported
   // into the engine.
   fuchsia::sysmem::BufferCollectionSyncPtr SetupTextures(
-      DisplayCompositor* display_compositor, sysmem_util::GlobalBufferCollectionId collection_id,
+      DisplayCompositor* display_compositor, allocation::GlobalBufferCollectionId collection_id,
       uint32_t width, uint32_t height, uint32_t num_vmos,
       fuchsia::sysmem::BufferCollectionInfo_2* collection_info) {
     // Setup the buffer collection that will be used for the flatland rectangle's texture.
@@ -337,8 +337,8 @@ TEST_F(DisplayCompositorPixelTest, FullscreenRectangleTest) {
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
 
-  const uint64_t kTextureCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
-  const uint64_t kCaptureCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
+  const uint64_t kTextureCollectionId = allocation::GenerateUniqueBufferCollectionId();
+  const uint64_t kCaptureCollectionId = allocation::GenerateUniqueBufferCollectionId();
 
   // Set up buffer collection and image for display_controller capture.
   uint64_t capture_image_id;
@@ -374,7 +374,7 @@ TEST_F(DisplayCompositorPixelTest, FullscreenRectangleTest) {
 
   // Import the texture to the engine.
   auto image_metadata = ImageMetadata{.collection_id = kTextureCollectionId,
-                                      .identifier = sysmem_util::GenerateUniqueImageId(),
+                                      .identifier = allocation::GenerateUniqueImageId(),
                                       .vmo_index = 0,
                                       .width = kTextureWidth,
                                       .height = kTextureHeight,
@@ -424,8 +424,8 @@ VK_TEST_F(DisplayCompositorPixelTest, SoftwareRenderingTest) {
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
 
-  const uint64_t kTextureCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
-  const uint64_t kCaptureCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
+  const uint64_t kTextureCollectionId = allocation::GenerateUniqueBufferCollectionId();
+  const uint64_t kCaptureCollectionId = allocation::GenerateUniqueBufferCollectionId();
 
   // Set up buffer collection and image for display_controller capture.
   uint64_t capture_image_id;
@@ -449,7 +449,7 @@ VK_TEST_F(DisplayCompositorPixelTest, SoftwareRenderingTest) {
   ImageMetadata image_metadatas[2];
   for (uint32_t i = 0; i < 2; i++) {
     image_metadatas[i] = {.collection_id = kTextureCollectionId,
-                          .identifier = sysmem_util::GenerateUniqueImageId(),
+                          .identifier = allocation::GenerateUniqueImageId(),
                           .vmo_index = i,
                           .width = kTextureWidth,
                           .height = kTextureHeight,
@@ -552,8 +552,8 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
   auto display = display_manager_->default_display();
   auto display_controller = display_manager_->default_display_controller();
 
-  const uint64_t kTextureCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
-  const uint64_t kCaptureCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
+  const uint64_t kTextureCollectionId = allocation::GenerateUniqueBufferCollectionId();
+  const uint64_t kCaptureCollectionId = allocation::GenerateUniqueBufferCollectionId();
 
   // Set up buffer collection and image for display_controller capture.
   uint64_t capture_image_id;
@@ -577,7 +577,7 @@ VK_TEST_F(DisplayCompositorPixelTest, OverlappingTransparencyTest) {
   ImageMetadata image_metadatas[2];
   for (uint32_t i = 0; i < 2; i++) {
     image_metadatas[i] = {.collection_id = kTextureCollectionId,
-                          .identifier = sysmem_util::GenerateUniqueImageId(),
+                          .identifier = allocation::GenerateUniqueImageId(),
                           .vmo_index = i,
                           .width = kTextureWidth,
                           .height = kTextureHeight,

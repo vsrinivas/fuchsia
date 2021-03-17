@@ -59,7 +59,7 @@ DisplayCompositor::~DisplayCompositor() {
 }
 
 bool DisplayCompositor::ImportBufferCollection(
-    sysmem_util::GlobalBufferCollectionId collection_id,
+    allocation::GlobalBufferCollectionId collection_id,
     fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   FX_DCHECK(display_controller_);
@@ -88,14 +88,14 @@ bool DisplayCompositor::ImportBufferCollection(
 }
 
 void DisplayCompositor::ReleaseBufferCollection(
-    sysmem_util::GlobalBufferCollectionId collection_id) {
+    allocation::GlobalBufferCollectionId collection_id) {
   std::unique_lock<std::mutex> lock(lock_);
   FX_DCHECK(display_controller_);
   (*display_controller_.get())->ReleaseBufferCollection(collection_id);
   renderer_->ReleaseBufferCollection(collection_id);
 }
 
-bool DisplayCompositor::ImportBufferImage(const ImageMetadata& metadata) {
+bool DisplayCompositor::ImportBufferImage(const allocation::ImageMetadata& metadata) {
   FX_DCHECK(display_controller_);
 
   if (metadata.identifier == 0) {
@@ -103,7 +103,7 @@ bool DisplayCompositor::ImportBufferImage(const ImageMetadata& metadata) {
     return false;
   }
 
-  if (metadata.collection_id == sysmem_util::kInvalidId) {
+  if (metadata.collection_id == allocation::kInvalidId) {
     FX_LOGS(ERROR) << "ImageMetadata collection ID is invalid.";
     return false;
   }
@@ -145,7 +145,7 @@ bool DisplayCompositor::ImportBufferImage(const ImageMetadata& metadata) {
   }
 }
 
-void DisplayCompositor::ReleaseBufferImage(sysmem_util::GlobalImageId image_id) {
+void DisplayCompositor::ReleaseBufferImage(allocation::GlobalImageId image_id) {
   auto display_image_id = InternalImageId(image_id);
 
   // Locks the rest of the function.
@@ -204,7 +204,8 @@ bool DisplayCompositor::SetRenderDataOnDisplay(const RenderData& data) {
 }
 
 void DisplayCompositor::ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle,
-                                        ImageMetadata image, scenic_impl::DisplayEventId wait_id,
+                                        allocation::ImageMetadata image,
+                                        scenic_impl::DisplayEventId wait_id,
                                         scenic_impl::DisplayEventId signal_id) {
   auto display_image_id = InternalImageId(image.identifier);
   auto [src, dst] = DisplaySrcDstFrames::New(rectangle, image);
@@ -343,7 +344,7 @@ DisplayCompositor::FrameEventData DisplayCompositor::NewFrameEventData() {
   return result;
 }
 
-sysmem_util::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
+allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
     uint64_t display_id, DisplayInfo info, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     uint32_t num_vmos, fuchsia::sysmem::BufferCollectionInfo_2* collection_info) {
   FX_DCHECK(sysmem_allocator);
@@ -397,7 +398,7 @@ sysmem_util::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
   FX_DCHECK(status == ZX_OK);
 
   // Register the buffer collection with the renderer
-  auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
   auto result = renderer_->RegisterRenderTargetCollection(collection_id, sysmem_allocator,
                                                           std::move(renderer_token));
   FX_DCHECK(result);
@@ -429,13 +430,13 @@ sysmem_util::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
 
   // Import the images as well.
   for (uint32_t i = 0; i < num_vmos; i++) {
-    ImageMetadata target = {.collection_id = collection_id,
-                            .identifier = sysmem_util::GenerateUniqueImageId(),
-                            .vmo_index = i,
-                            .width = kWidth,
-                            .height = kHeight,
-                            .has_transparency = false,
-                            .is_render_target = true};
+    allocation::ImageMetadata target = {.collection_id = collection_id,
+                                        .identifier = allocation::GenerateUniqueImageId(),
+                                        .vmo_index = i,
+                                        .width = kWidth,
+                                        .height = kHeight,
+                                        .has_transparency = false,
+                                        .is_render_target = true};
 
     display_engine_data.frame_event_datas.push_back(NewFrameEventData());
     display_engine_data.targets.push_back(target);
@@ -448,7 +449,7 @@ sysmem_util::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
   return collection_id;
 }
 
-uint64_t DisplayCompositor::InternalImageId(sysmem_util::GlobalImageId image_id) const {
+uint64_t DisplayCompositor::InternalImageId(allocation::GlobalImageId image_id) const {
   // Lock the whole function.
   std::unique_lock<std::mutex> lock(lock_);
   auto itr = image_id_map_.find(image_id);

@@ -12,11 +12,10 @@
 
 // clang-format off
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
+#include <glm/mat3x3.hpp>
 // clang-format on
 
-#include <glm/mat3x3.hpp>
-
-#include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
 #include "src/ui/scenic/lib/flatland/transform_handle.h"
 
@@ -45,7 +44,7 @@ struct UberStruct {
   std::unordered_map<TransformHandle, glm::mat3> local_matrices;
 
   // The images associated with each TransformHandle.
-  std::unordered_map<TransformHandle, ImageMetadata> images;
+  std::unordered_map<TransformHandle, allocation::ImageMetadata> images;
 };
 
 }  // namespace flatland

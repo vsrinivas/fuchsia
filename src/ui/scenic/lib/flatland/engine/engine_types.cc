@@ -6,7 +6,8 @@
 
 namespace flatland {
 
-DisplaySrcDstFrames DisplaySrcDstFrames::New(escher::Rectangle2D rectangle, ImageMetadata image) {
+DisplaySrcDstFrames DisplaySrcDstFrames::New(escher::Rectangle2D rectangle,
+                                             allocation::ImageMetadata image) {
   fuchsia::hardware::display::Frame src_frame = {
       .x_pos = static_cast<uint32_t>(rectangle.clockwise_uvs[0].x * image.width),
       .y_pos = static_cast<uint32_t>(rectangle.clockwise_uvs[0].y * image.height),

@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_FLATLAND_BUFFERS_BUFFER_COLLECTION_IMPORTER_H_
-#define SRC_UI_SCENIC_LIB_FLATLAND_BUFFERS_BUFFER_COLLECTION_IMPORTER_H_
+#ifndef SRC_UI_SCENIC_LIB_ALLOCATION_BUFFER_COLLECTION_IMPORTER_H_
+#define SRC_UI_SCENIC_LIB_ALLOCATION_BUFFER_COLLECTION_IMPORTER_H_
 
 #include <fuchsia/sysmem/cpp/fidl.h>
 
-#include "src/ui/scenic/lib/sysmem/id.h"
+#include "src/ui/scenic/lib/allocation/id.h"
 
-namespace flatland {
+namespace allocation {
 
 // Struct representing the data needed to extract an image from a buffer collection.
 // All pixel information is stored within the Vmo of the collection so this struct
@@ -18,10 +18,10 @@ namespace flatland {
 // as the image format type.
 struct ImageMetadata {
   // The unique id of the buffer collection this image is backed by.
-  sysmem_util::GlobalBufferCollectionId collection_id = sysmem_util::kInvalidId;
+  GlobalBufferCollectionId collection_id = kInvalidId;
 
   // The unique ID for this particular image.
-  sysmem_util::GlobalImageId identifier = sysmem_util::kInvalidImageId;
+  GlobalImageId identifier = kInvalidImageId;
 
   // A single buffer collection may have several vmos. This tells the importer
   // which vmo in the collection specified by |collection_id| to use as the memory
@@ -59,13 +59,12 @@ class BufferCollectionImporter {
   // importation via |true| and a failed importation via |false|. The collection_id can be
   // reused if the importation fails.
   virtual bool ImportBufferCollection(
-      sysmem_util::GlobalBufferCollectionId collection_id,
-      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) = 0;
 
   // Releases the buffer collection from the service. It may be called while there are associated
   // Images alive.
-  virtual void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) = 0;
+  virtual void ReleaseBufferCollection(GlobalBufferCollectionId collection_id) = 0;
 
   // Has the service create an image for itself from the provided buffer collection. Returns
   // true upon a successful import and false otherwise.
@@ -74,11 +73,11 @@ class BufferCollectionImporter {
   virtual bool ImportBufferImage(const ImageMetadata& metadata) = 0;
 
   // Releases the provided image from the service.
-  virtual void ReleaseBufferImage(sysmem_util::GlobalImageId image_id) = 0;
+  virtual void ReleaseBufferImage(GlobalImageId image_id) = 0;
 
   virtual ~BufferCollectionImporter() = default;
 };
 
-}  // namespace flatland
+}  // namespace allocation
 
-#endif  // SRC_UI_SCENIC_LIB_FLATLAND_BUFFERS_BUFFER_COLLECTION_IMPORTER_H_
+#endif  // SRC_UI_SCENIC_LIB_ALLOCATION_BUFFER_COLLECTION_IMPORTER_H_

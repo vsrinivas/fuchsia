@@ -9,7 +9,7 @@
 
 #include <optional>
 
-#include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 
 // clang-format off
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
@@ -31,7 +31,7 @@ using Rectangle2D = escher::Rectangle2D;
 // This is the main renderer interface used by the Flatland System. Since Flatland is
 // agnostic to the implementation of the renderer, it is declared here as a virtual
 // interface, whose concrete implementation is to be injected into Flatland.
-class Renderer : public BufferCollectionImporter {
+class Renderer : public allocation::BufferCollectionImporter {
  public:
   // This function is for registering collections that contain render targets. In order for an image
   // to be used as a render target in the Render() function below, the buffer collection it
@@ -40,14 +40,14 @@ class Renderer : public BufferCollectionImporter {
   // This function is likewise threadsafe, although it is only meant to be called from the render
   // loop, and not by any flatland instance directly.
   virtual bool RegisterRenderTargetCollection(
-      sysmem_util::GlobalBufferCollectionId collection_id,
+      allocation::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) = 0;
 
   // Removes a buffer collection used for render targets from the renderer. Once done, the
   // collection_id can be reused for another buffer collection.
   virtual void DeregisterRenderTargetCollection(
-      sysmem_util::GlobalBufferCollectionId collection_id) = 0;
+      allocation::GlobalBufferCollectionId collection_id) = 0;
 
   // This function is responsible for rendering a single batch of Flatland rectangles into a
   // render target. This function is designed to be called on the render thread, not on any
@@ -64,9 +64,9 @@ class Renderer : public BufferCollectionImporter {
   // The vector of release fences will be signaled once rendering has completed. Clients can use
   // these fences to coordinate with other work that needs to wait until rendering is completed
   // to be executed.
-  virtual void Render(const ImageMetadata& render_target,
+  virtual void Render(const allocation::ImageMetadata& render_target,
                       const std::vector<Rectangle2D>& rectangles,
-                      const std::vector<ImageMetadata>& images,
+                      const std::vector<allocation::ImageMetadata>& images,
                       const std::vector<zx::event>& release_fences = {}) = 0;
 
   // Returns the pixel format that the renderer prefers to use for render targets.

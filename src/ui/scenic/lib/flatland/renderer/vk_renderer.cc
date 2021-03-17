@@ -69,14 +69,13 @@ VkRenderer::~VkRenderer() {
 }
 
 bool VkRenderer::ImportBufferCollection(
-    sysmem_util::GlobalBufferCollectionId collection_id,
-    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   return RegisterCollection(collection_id, sysmem_allocator, std::move(token),
                             escher::RectangleCompositor::kTextureUsageFlags);
 }
 
-void VkRenderer::ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) {
+void VkRenderer::ReleaseBufferCollection(GlobalBufferCollectionId collection_id) {
   // Multiple threads may be attempting to read/write from the various maps,
   // lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
@@ -98,15 +97,14 @@ void VkRenderer::ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId c
 }
 
 bool VkRenderer::RegisterCollection(
-    sysmem_util::GlobalBufferCollectionId collection_id,
-    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
     vk::ImageUsageFlags usage) {
   TRACE_DURATION("flatland", "VkRenderer::RegisterCollection");
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
   FX_DCHECK(vk_device);
-  FX_DCHECK(collection_id != sysmem_util::kInvalidId);
+  FX_DCHECK(collection_id != allocation::kInvalidId);
 
   // Check for a null token here before we try to duplicate it to get the
   // vulkan token.
@@ -233,7 +231,7 @@ bool VkRenderer::ImportBufferImage(const ImageMetadata& metadata) {
   return true;
 }
 
-void VkRenderer::ReleaseBufferImage(sysmem_util::GlobalImageId image_id) {
+void VkRenderer::ReleaseBufferImage(GlobalImageId image_id) {
   std::unique_lock<std::mutex> lock(lock_);
   if (texture_map_.find(image_id) != texture_map_.end()) {
     texture_map_.erase(image_id);
@@ -338,15 +336,13 @@ escher::ImagePtr VkRenderer::ExtractImage(const ImageMetadata& metadata,
 }
 
 bool VkRenderer::RegisterRenderTargetCollection(
-    sysmem_util::GlobalBufferCollectionId collection_id,
-    fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+    GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
     fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) {
   return RegisterCollection(collection_id, sysmem_allocator, std::move(token),
                             escher::RectangleCompositor::kRenderTargetUsageFlags);
 }
 
-void VkRenderer::DeregisterRenderTargetCollection(
-    sysmem_util::GlobalBufferCollectionId collection_id) {
+void VkRenderer::DeregisterRenderTargetCollection(GlobalBufferCollectionId collection_id) {
   ReleaseBufferCollection(collection_id);
 }
 

@@ -21,6 +21,8 @@
 
 namespace flatland {
 
+using allocation::ImageMetadata;
+
 // TODO(fxbug.dev/52632): Move common functions to testing::WithParamInterface instead of function
 // calls.
 using NullRendererTest = RendererTest;
@@ -44,7 +46,7 @@ void RegisterCollectionTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync*
   auto tokens = SysmemTokens::Create(sysmem_allocator);
 
   // First id should be valid.
-  auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto bcid = allocation::GenerateUniqueBufferCollectionId();
   auto result = renderer->RegisterRenderTargetCollection(bcid, sysmem_allocator,
                                                          std::move(tokens.local_token));
   EXPECT_TRUE(result);
@@ -67,13 +69,13 @@ void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
   EXPECT_EQ(status, ZX_OK);
 
   // First id should be valid.
-  auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto bcid = allocation::GenerateUniqueBufferCollectionId();
   auto result = renderer->RegisterRenderTargetCollection(bcid, sysmem_allocator,
                                                          std::move(tokens.local_token));
   EXPECT_TRUE(result);
 
   // Second id should be valid.
-  auto bcid2 = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto bcid2 = allocation::GenerateUniqueBufferCollectionId();
   result = renderer->RegisterRenderTargetCollection(bcid2, sysmem_allocator,
                                                     std::move(tokens.dup_token));
   EXPECT_TRUE(result);
@@ -89,12 +91,12 @@ void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
 
   // Now check that both server ids are allocated.
   bool res_1 = renderer->ImportBufferImage({.collection_id = bcid,
-                                            .identifier = sysmem_util::GenerateUniqueImageId(),
+                                            .identifier = allocation::GenerateUniqueImageId(),
                                             .vmo_index = 0,
                                             .width = 1,
                                             .height = 1});
   bool res_2 = renderer->ImportBufferImage({.collection_id = bcid2,
-                                            .identifier = sysmem_util::GenerateUniqueImageId(),
+                                            .identifier = allocation::GenerateUniqueImageId(),
                                             .vmo_index = 0,
                                             .width = 1,
                                             .height = 1});
@@ -102,12 +104,12 @@ void SameTokenTwiceTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sys
   EXPECT_TRUE(res_2);
 }
 
-// Make sure a bad token returns Renderer::sysmem_util::kInvalidId. A "bad token" here can
+// Make sure a bad token returns Renderer::allocation::kInvalidId. A "bad token" here can
 // either be a null token, or a token that's a valid channel but just not a
 // valid buffer collection token.
 void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
   // Null token should fail.
-  auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto bcid = allocation::GenerateUniqueBufferCollectionId();
   auto result = renderer->RegisterRenderTargetCollection(bcid, sysmem_allocator, nullptr);
   EXPECT_FALSE(result);
 
@@ -118,7 +120,7 @@ void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_al
   flatland::BufferCollectionHandle handle{std::move(remote_endpoint)};
   ASSERT_TRUE(handle.is_valid());
 
-  bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  bcid = allocation::GenerateUniqueBufferCollectionId();
   result = renderer->RegisterRenderTargetCollection(bcid, sysmem_allocator, std::move(handle));
   EXPECT_FALSE(result);
 }
@@ -129,13 +131,13 @@ void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_al
 void ImportImageTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
   auto tokens = SysmemTokens::Create(sysmem_allocator);
 
-  auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto bcid = allocation::GenerateUniqueBufferCollectionId();
   auto result =
       renderer->RegisterRenderTargetCollection(bcid, sysmem_allocator, std::move(tokens.dup_token));
   EXPECT_TRUE(result);
 
   // The buffer collection should not be valid here.
-  auto image_id = sysmem_util::GenerateUniqueImageId();
+  auto image_id = allocation::GenerateUniqueImageId();
   EXPECT_FALSE(renderer->ImportBufferImage(
       {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1}));
 
@@ -159,13 +161,13 @@ void ImportImageTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem
 void DeregistrationTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
   auto tokens = SysmemTokens::Create(sysmem_allocator);
 
-  auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto bcid = allocation::GenerateUniqueBufferCollectionId();
   auto result =
       renderer->RegisterRenderTargetCollection(bcid, sysmem_allocator, std::move(tokens.dup_token));
   EXPECT_TRUE(result);
 
   // The buffer collection should not be valid here.
-  auto image_id = sysmem_util::GenerateUniqueImageId();
+  auto image_id = allocation::GenerateUniqueImageId();
   EXPECT_FALSE(renderer->ImportBufferImage(
       {.collection_id = bcid, .identifier = image_id, .vmo_index = 0, .width = 1, .height = 1}));
 
@@ -199,8 +201,8 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
   auto texture_tokens = SysmemTokens::Create(sysmem_allocator);
   auto target_tokens = SysmemTokens::Create(sysmem_allocator);
 
-  auto texture_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
-  auto target_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto texture_collection_id = allocation::GenerateUniqueBufferCollectionId();
+  auto target_collection_id = allocation::GenerateUniqueBufferCollectionId();
   auto result = renderer->RegisterRenderTargetCollection(texture_collection_id, sysmem_allocator,
                                                          std::move(texture_tokens.dup_token));
   EXPECT_TRUE(result);
@@ -226,7 +228,7 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
 
   // Import render target.
   ImageMetadata render_target = {.collection_id = target_collection_id,
-                                 .identifier = sysmem_util::GenerateUniqueImageId(),
+                                 .identifier = allocation::GenerateUniqueImageId(),
                                  .vmo_index = 0,
                                  .width = kWidth,
                                  .height = kHeight,
@@ -236,7 +238,7 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
 
   // Import image.
   ImageMetadata image = {.collection_id = texture_collection_id,
-                         .identifier = sysmem_util::GenerateUniqueImageId(),
+                         .identifier = allocation::GenerateUniqueImageId(),
                          .vmo_index = 0,
                          .width = kWidth,
                          .height = kHeight,
@@ -263,7 +265,7 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
 void MultithreadingTest(Renderer* renderer) {
   const uint32_t kNumThreads = 50;
 
-  std::set<sysmem_util::GlobalBufferCollectionId> bcid_set;
+  std::set<allocation::GlobalBufferCollectionId> bcid_set;
   std::mutex lock;
 
   auto register_and_import_function = [&renderer, &bcid_set, &lock]() {
@@ -274,8 +276,8 @@ void MultithreadingTest(Renderer* renderer) {
     fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator = utils::CreateSysmemAllocatorSyncPtr();
 
     auto tokens = SysmemTokens::Create(sysmem_allocator.get());
-    auto bcid = sysmem_util::GenerateUniqueBufferCollectionId();
-    auto image_id = sysmem_util::GenerateUniqueImageId();
+    auto bcid = allocation::GenerateUniqueBufferCollectionId();
+    auto image_id = allocation::GenerateUniqueImageId();
     bool result = renderer->RegisterRenderTargetCollection(bcid, sysmem_allocator.get(),
                                                            std::move(tokens.local_token));
     EXPECT_TRUE(result);
@@ -320,7 +322,7 @@ void MultithreadingTest(Renderer* renderer) {
   for (const auto& bcid : bcid_set) {
     // The buffer collection *should* be valid here.
     auto result = renderer->ImportBufferImage({.collection_id = bcid,
-                                               .identifier = sysmem_util::GenerateUniqueImageId(),
+                                               .identifier = allocation::GenerateUniqueImageId(),
                                                .vmo_index = 0,
                                                .width = 1,
                                                .height = 1});
@@ -339,7 +341,7 @@ void AsyncEventSignalTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* s
   // Register the render target with the renderer.
   fuchsia::sysmem::BufferCollectionInfo_2 target_info = {};
 
-  auto target_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto target_id = allocation::GenerateUniqueBufferCollectionId();
 
   auto result = renderer->RegisterRenderTargetCollection(target_id, sysmem_allocator,
                                                          std::move(target_tokens.dup_token));
@@ -358,7 +360,7 @@ void AsyncEventSignalTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* s
   // Now that the renderer and client have set their contraints, we can import the render target.
   // Create the render_target image metadata.
   ImageMetadata render_target = {.collection_id = target_id,
-                                 .identifier = sysmem_util::GenerateUniqueImageId(),
+                                 .identifier = allocation::GenerateUniqueImageId(),
                                  .vmo_index = 0,
                                  .width = kWidth,
                                  .height = kHeight,
@@ -530,7 +532,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
   // Register the collection with the renderer.
-  auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
 
   auto result = renderer.ImportBufferCollection(collection_id, sysmem_allocator_.get(),
                                                 std::move(tokens.dup_token));
@@ -545,7 +547,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
       /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
       std::make_optional(memory_constraints));
 
-  auto target_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto target_id = allocation::GenerateUniqueBufferCollectionId();
 
   result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
                                                    std::move(target_tokens.dup_token));
@@ -586,7 +588,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   // Create the render_target image metadata.
   ImageMetadata render_target = {
       .collection_id = target_id,
-      .identifier = sysmem_util::GenerateUniqueImageId(),
+      .identifier = allocation::GenerateUniqueImageId(),
       .vmo_index = 0,
       .width = kTargetWidth,
       .height = kTargetHeight,
@@ -595,7 +597,7 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
 
   // Create the image meta data for the renderable.
   ImageMetadata renderable_texture = {.collection_id = collection_id,
-                                      .identifier = sysmem_util::GenerateUniqueImageId(),
+                                      .identifier = allocation::GenerateUniqueImageId(),
                                       .vmo_index = 0,
                                       .width = 2,
                                       .height = 1};
@@ -693,7 +695,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   auto target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
   // Register and the collection with the renderer.
-  auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
 
   auto result = renderer.ImportBufferCollection(collection_id, sysmem_allocator_.get(),
                                                 std::move(tokens.dup_token));
@@ -708,7 +710,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
       /*height*/ 40, buffer_usage, fuchsia::sysmem::PixelFormatType::BGRA32,
       std::make_optional(memory_constraints));
 
-  auto target_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto target_id = allocation::GenerateUniqueBufferCollectionId();
   result = renderer.RegisterRenderTargetCollection(target_id, sysmem_allocator_.get(),
                                                    std::move(target_tokens.dup_token));
   EXPECT_TRUE(result);
@@ -746,7 +748,7 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   // Create the render_target image metadata.
   ImageMetadata render_target = {
       .collection_id = target_id,
-      .identifier = sysmem_util::GenerateUniqueImageId(),
+      .identifier = allocation::GenerateUniqueImageId(),
       .vmo_index = 0,
       .width = kTargetWidth,
       .height = kTargetHeight,
@@ -755,14 +757,14 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
 
   // Create the image meta data for the renderable.
   ImageMetadata renderable_texture = {.collection_id = collection_id,
-                                      .identifier = sysmem_util::GenerateUniqueImageId(),
+                                      .identifier = allocation::GenerateUniqueImageId(),
                                       .vmo_index = 0,
                                       .width = 1,
                                       .height = 1};
 
   // Create the texture that will go on the transparent renderable.
   ImageMetadata transparent_texture = {.collection_id = collection_id,
-                                       .identifier = sysmem_util::GenerateUniqueImageId(),
+                                       .identifier = allocation::GenerateUniqueImageId(),
                                        .vmo_index = 1,
                                        .width = 1,
                                        .height = 1,
@@ -881,7 +883,7 @@ VK_TEST_P(ParameterizedRendererYuvTest, YuvTest) {
   auto image_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
   // Register the Image token with the renderer.
-  auto image_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto image_collection_id = allocation::GenerateUniqueBufferCollectionId();
   auto result = renderer.ImportBufferCollection(image_collection_id, sysmem_allocator_.get(),
                                                 std::move(image_tokens.dup_token));
   EXPECT_TRUE(result);
@@ -912,7 +914,7 @@ VK_TEST_P(ParameterizedRendererYuvTest, YuvTest) {
 
   // Create the image meta data for the Image and import.
   ImageMetadata image_metadata = {.collection_id = image_collection_id,
-                                  .identifier = sysmem_util::GenerateUniqueImageId(),
+                                  .identifier = allocation::GenerateUniqueImageId(),
                                   .vmo_index = 0,
                                   .width = kTargetWidth,
                                   .height = kTargetHeight};
@@ -923,7 +925,7 @@ VK_TEST_P(ParameterizedRendererYuvTest, YuvTest) {
   auto render_target_tokens = flatland::SysmemTokens::Create(sysmem_allocator_.get());
 
   // Register the render target tokens with the renderer.
-  auto render_target_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto render_target_collection_id = allocation::GenerateUniqueBufferCollectionId();
   result =
       renderer.RegisterRenderTargetCollection(render_target_collection_id, sysmem_allocator_.get(),
                                               std::move(render_target_tokens.dup_token));
@@ -951,7 +953,7 @@ VK_TEST_P(ParameterizedRendererYuvTest, YuvTest) {
   // Create the render_target image metadata and import.
   ImageMetadata render_target_metadata = {
       .collection_id = render_target_collection_id,
-      .identifier = sysmem_util::GenerateUniqueImageId(),
+      .identifier = allocation::GenerateUniqueImageId(),
       .vmo_index = 0,
       .width = kTargetWidth,
       .height = kTargetHeight,

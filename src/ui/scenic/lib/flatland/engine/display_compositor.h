@@ -5,8 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_DISPLAY_COMPOSITOR_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_ENGINE_DISPLAY_COMPOSITOR_H_
 
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/display/util.h"
-#include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/engine/engine_types.h"
 
 namespace flatland {
@@ -19,7 +19,7 @@ namespace flatland {
 // BufferCollectionImporter interface is how Flatland instances communicate with the
 // DisplayCompositor, providing it with the necessary data to render without exposing to Flatland
 // the DisplayController or other dependencies.
-class DisplayCompositor final : public BufferCollectionImporter {
+class DisplayCompositor final : public allocation::BufferCollectionImporter {
  public:
   // TODO(fxbug.dev/66807): The DisplayCompositor has multiple parts of its code where usage of the
   // display controller is protected by locks, because of the multithreaded environment of flatland.
@@ -37,18 +37,18 @@ class DisplayCompositor final : public BufferCollectionImporter {
 
   // |BufferCollectionImporter|
   bool ImportBufferCollection(
-      sysmem_util::GlobalBufferCollectionId collection_id,
+      allocation::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
+  void ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id) override;
 
   // |BufferCollectionImporter|
-  bool ImportBufferImage(const ImageMetadata& metadata) override;
+  bool ImportBufferImage(const allocation::ImageMetadata& metadata) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferImage(sysmem_util::GlobalImageId image_id) override;
+  void ReleaseBufferImage(allocation::GlobalImageId image_id) override;
 
   // TODO(fxbug.dev/59646): Add in parameters for scheduling, etc. Right now we're just making sure
   // the data is processed correctly.
@@ -61,7 +61,7 @@ class DisplayCompositor final : public BufferCollectionImporter {
   // caller via an output parameter.
   // TODO(fxbug.dev/59646): We need to figure out exactly how we want the display to anchor
   // to the Flatland hierarchy.
-  sysmem_util::GlobalBufferCollectionId AddDisplay(
+  allocation::GlobalBufferCollectionId AddDisplay(
       uint64_t display_id, DisplayInfo info, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       uint32_t num_vmos, fuchsia::sysmem::BufferCollectionInfo_2* collection_info = nullptr);
 
@@ -93,7 +93,7 @@ class DisplayCompositor final : public BufferCollectionImporter {
     uint32_t curr_vmo = 0;
 
     // The information used to create images for each render target from the vmo data.
-    std::vector<ImageMetadata> targets;
+    std::vector<allocation::ImageMetadata> targets;
 
     // Used to synchronize buffer rendering with setting the buffer on the display.
     std::vector<FrameEventData> frame_event_datas;
@@ -115,8 +115,9 @@ class DisplayCompositor final : public BufferCollectionImporter {
   void SetDisplayLayers(uint64_t display_id, const std::vector<uint64_t>& layers);
 
   // Takes an image and directly composites it to a hardware layer on the display.
-  void ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle, ImageMetadata image,
-                       scenic_impl::DisplayEventId wait_id, scenic_impl::DisplayEventId signal_id);
+  void ApplyLayerImage(uint32_t layer_id, escher::Rectangle2D rectangle,
+                       allocation::ImageMetadata image, scenic_impl::DisplayEventId wait_id,
+                       scenic_impl::DisplayEventId signal_id);
 
   // Checks if the display controller is capable of applying the configuration settings that
   // have been set up until that point
@@ -130,7 +131,7 @@ class DisplayCompositor final : public BufferCollectionImporter {
   void ApplyConfig();
 
   // Returns the image id used by the display controller.
-  uint64_t InternalImageId(sysmem_util::GlobalImageId image_id) const;
+  uint64_t InternalImageId(allocation::GlobalImageId image_id) const;
 
   // This mutex protects access to |display_controller_| and |image_id_map_|.
   //
@@ -144,7 +145,7 @@ class DisplayCompositor final : public BufferCollectionImporter {
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller_;
 
   // Maps the flatland global image id to the image id used by the display controller.
-  std::unordered_map<sysmem_util::GlobalImageId, uint64_t> image_id_map_;
+  std::unordered_map<allocation::GlobalImageId, uint64_t> image_id_map_;
 
   // Software renderer used when render data cannot be directly composited to the display.
   const std::shared_ptr<Renderer> renderer_;

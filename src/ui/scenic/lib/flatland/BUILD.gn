@@ -10,8 +10,6 @@ config("glm_config") {
 
 source_set("flatland") {
   sources = [
-    "allocator.cc",
-    "allocator.h",
     "default_flatland_presenter.cc",
     "default_flatland_presenter.h",
     "flatland.cc",

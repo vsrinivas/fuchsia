@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/flatland/allocator.h"
+#include "src/ui/scenic/lib/allocation/allocator.h"
 
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
@@ -13,11 +13,10 @@
 
 #include "src/lib/fsl/handles/object_info.h"
 
-using fuchsia::ui::scenic::internal::BufferCollectionExportToken;
-using fuchsia::ui::scenic::internal::RegisterBufferCollectionError;
-using sysmem_util::GlobalBufferCollectionId;
+using fuchsia::scenic::allocation::BufferCollectionExportToken;
+using fuchsia::scenic::allocation::RegisterBufferCollectionError;
 
-namespace flatland {
+namespace allocation {
 
 Allocator::Allocator(
     const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
@@ -169,4 +168,4 @@ void Allocator::ReleaseBufferCollection(GlobalBufferCollectionId collection_id) 
   }
 }
 
-}  // namespace flatland
+}  // namespace allocation

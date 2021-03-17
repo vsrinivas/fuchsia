@@ -24,8 +24,8 @@
 // clang-format on
 
 #include "src/ui/lib/escher/flib/fence_queue.h"
-#include "src/ui/scenic/lib/flatland/allocator.h"
-#include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
+#include "src/ui/scenic/lib/allocation/allocator.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
 #include "src/ui/scenic/lib/flatland/transform_graph.h"
@@ -36,6 +36,8 @@
 #include "src/ui/scenic/lib/scheduling/present2_helper.h"
 
 namespace flatland {
+
+using allocation::Allocator;
 
 // This is a WIP implementation of the 2D Layer API. It currently exists to run unit tests, and to
 // provide a platform for features to be iterated and implemented over time.
@@ -105,7 +107,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
       fidl::InterfaceRequest<fuchsia::ui::scenic::internal::ContentLink> content_link) override;
   // |fuchsia::ui::scenic::internal::Flatland|
   void CreateImage(ContentId image_id,
-                   fuchsia::ui::scenic::internal::BufferCollectionImportToken import_token,
+                   fuchsia::scenic::allocation::BufferCollectionImportToken import_token,
                    uint32_t vmo_index,
                    fuchsia::ui::scenic::internal::ImageProperties properties) override;
   // |fuchsia::ui::scenic::internal::Flatland|
@@ -188,7 +190,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
 
   // Used to import Flatland images to external services that Flatland does not have knowledge of.
   // Each importer is used for a different service.
-  std::vector<std::shared_ptr<BufferCollectionImporter>> buffer_collection_importers_;
+  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers_;
 
   // A Sysmem allocator to faciliate buffer allocation with the Renderer.
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
@@ -280,7 +282,7 @@ class Flatland : public fuchsia::ui::scenic::internal::Flatland {
   std::unordered_map<TransformHandle, MatrixData> matrices_;
 
   // A mapping from Flatland-generated TransformHandle to the ImageMetadata it represents.
-  std::unordered_map<TransformHandle, ImageMetadata> image_metadatas_;
+  std::unordered_map<TransformHandle, allocation::ImageMetadata> image_metadatas_;
 };
 
 }  // namespace flatland

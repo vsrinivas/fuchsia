@@ -31,7 +31,8 @@ FlatlandManager::~FlatlandManager() {
 
 void FlatlandManager::Initialize(
     std::shared_ptr<scenic_impl::display::Display> display,
-    const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers) {
+    const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+        buffer_collection_importers) {
   FX_DCHECK(display);
   FX_DCHECK(!primary_display_);
   primary_display_ = std::move(display);

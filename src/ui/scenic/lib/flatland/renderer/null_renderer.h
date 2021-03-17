@@ -21,32 +21,33 @@ class NullRenderer final : public Renderer {
 
   // |BufferCollectionImporter|
   bool ImportBufferCollection(
-      sysmem_util::GlobalBufferCollectionId collection_id,
+      allocation::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id) override;
+  void ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id) override;
 
   // |BufferCollectionImporter|
-  bool ImportBufferImage(const ImageMetadata& metadata) override;
+  bool ImportBufferImage(const allocation::ImageMetadata& metadata) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferImage(sysmem_util::GlobalImageId image_id) override;
+  void ReleaseBufferImage(allocation::GlobalImageId image_id) override;
 
   // |Renderer|.
   bool RegisterRenderTargetCollection(
-      sysmem_util::GlobalBufferCollectionId collection_id,
+      allocation::GlobalBufferCollectionId collection_id,
       fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |Renderer|.
   void DeregisterRenderTargetCollection(
-      sysmem_util::GlobalBufferCollectionId collection_id) override;
+      allocation::GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
-  void Render(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
-              const std::vector<ImageMetadata>& images,
+  void Render(const allocation::ImageMetadata& render_target,
+              const std::vector<Rectangle2D>& rectangles,
+              const std::vector<allocation::ImageMetadata>& images,
               const std::vector<zx::event>& release_fences = {}) override;
 
   // |Renderer|.
@@ -56,9 +57,8 @@ class NullRenderer final : public Renderer {
  private:
   // This mutex is used to protect access to |collection_map_| and |image_map|.
   std::mutex lock_;
-  std::unordered_map<sysmem_util::GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
-  std::unordered_map<sysmem_util::GlobalImageId, fuchsia::sysmem::ImageFormatConstraints>
-      image_map_;
+  std::unordered_map<allocation::GlobalBufferCollectionId, BufferCollectionInfo> collection_map_;
+  std::unordered_map<allocation::GlobalImageId, fuchsia::sysmem::ImageFormatConstraints> image_map_;
 };
 
 }  // namespace flatland

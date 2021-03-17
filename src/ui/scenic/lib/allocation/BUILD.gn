@@ -1,0 +1,29 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("allocation") {
+  sources = [
+    "allocator.cc",
+    "allocator.h",
+    "buffer_collection_import_export_tokens.cc",
+    "buffer_collection_import_export_tokens.h",
+    "buffer_collection_importer.h",
+    "id.cc",
+    "id.h",
+    "mock_buffer_collection_importer.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.scenic.allocation",
+    "//src/lib/fxl",
+  ]
+
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fsl",
+    "//src/ui/scenic/lib/utils",
+    "//zircon/system/ulib/trace",
+  ]
+}

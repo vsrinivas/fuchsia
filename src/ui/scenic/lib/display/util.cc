@@ -10,7 +10,7 @@
 
 namespace scenic_impl {
 
-bool ImportBufferCollection(sysmem_util::GlobalBufferCollectionId buffer_collection_id,
+bool ImportBufferCollection(allocation::GlobalBufferCollectionId buffer_collection_id,
                             const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
                             fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
                             const fuchsia::hardware::display::ImageConfig& image_config) {
@@ -82,7 +82,7 @@ bool IsCaptureSupported(const fuchsia::hardware::display::ControllerSyncPtr& dis
 uint64_t ImportImageForCapture(
     const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
     const fuchsia::hardware::display::ImageConfig& image_config,
-    sysmem_util::GlobalBufferCollectionId buffer_collection_id, uint64_t vmo_idx) {
+    allocation::GlobalBufferCollectionId buffer_collection_id, uint64_t vmo_idx) {
   if (buffer_collection_id == 0) {
     FX_LOGS(ERROR) << "Buffer collection id is 0.";
     return 0;

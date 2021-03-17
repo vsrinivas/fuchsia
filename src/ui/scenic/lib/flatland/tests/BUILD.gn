@@ -12,7 +12,6 @@ executable("unittests") {
   output_name = "flatland_unittests"
   testonly = true
   sources = [
-    "allocator_unittest.cc",
     "default_flatland_presenter_unittest.cc",
     "flatland_manager_unittest.cc",
     "flatland_unittest.cc",

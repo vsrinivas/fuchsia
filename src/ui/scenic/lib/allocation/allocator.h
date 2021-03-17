@@ -2,32 +2,32 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_FLATLAND_ALLOCATOR_H_
-#define SRC_UI_SCENIC_LIB_FLATLAND_ALLOCATOR_H_
+#ifndef SRC_UI_SCENIC_LIB_ALLOCATION_ALLOCATOR_H_
+#define SRC_UI_SCENIC_LIB_ALLOCATION_ALLOCATOR_H_
 
+#include <fuchsia/scenic/allocation/cpp/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <fuchsia/ui/scenic/internal/cpp/fidl.h>
 
 #include <unordered_set>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
-#include "src/ui/scenic/lib/sysmem/id.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
+#include "src/ui/scenic/lib/allocation/id.h"
 
-namespace flatland {
+namespace allocation {
 
 // This class implements Allocator service which allows allocation of BufferCollections which can be
 // used in multiple Flatland/Gfx sessions simultaneously.
-class Allocator : public fuchsia::ui::scenic::internal::Allocator {
+class Allocator : public fuchsia::scenic::allocation::Allocator {
  public:
   Allocator(
       const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers,
       fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator);
   ~Allocator() override;
 
-  // |fuchsia::ui::scenic::internal::Allocator|
+  // |fuchsia::scenic::allocation::Allocator|
   void RegisterBufferCollection(
-      fuchsia::ui::scenic::internal::BufferCollectionExportToken export_token,
+      fuchsia::scenic::allocation::BufferCollectionExportToken export_token,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> buffer_collection_token,
       RegisterBufferCollectionCallback callback) override;
 
@@ -37,7 +37,7 @@ class Allocator : public fuchsia::ui::scenic::internal::Allocator {
   }
 
  private:
-  void ReleaseBufferCollection(sysmem_util::GlobalBufferCollectionId collection_id);
+  void ReleaseBufferCollection(GlobalBufferCollectionId collection_id);
 
   // Used to import Flatland buffer collections and images to external services that Flatland does
   // not have knowledge of. Each importer is used for a different service.
@@ -47,12 +47,12 @@ class Allocator : public fuchsia::ui::scenic::internal::Allocator {
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 
   // Keep track of buffer collection Ids for garbage collection.
-  std::unordered_set<sysmem_util::GlobalBufferCollectionId> buffer_collections_;
+  std::unordered_set<GlobalBufferCollectionId> buffer_collections_;
 
   // Should be last.
   fxl::WeakPtrFactory<Allocator> weak_factory_;
 };
 
-}  // namespace flatland
+}  // namespace allocation
 
-#endif  // SRC_UI_SCENIC_LIB_FLATLAND_ALLOCATOR_H_
+#endif  // SRC_UI_SCENIC_LIB_ALLOCATION_ALLOCATOR_H_

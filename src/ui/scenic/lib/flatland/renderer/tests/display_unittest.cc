@@ -113,18 +113,18 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
   FX_DCHECK(status == ZX_OK);
 
   // Register the collection with the renderer, which sets the vk constraints.
-  auto collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
-  auto image_id = sysmem_util::GenerateUniqueImageId();
+  auto collection_id = allocation::GenerateUniqueBufferCollectionId();
+  auto image_id = allocation::GenerateUniqueImageId();
   auto result = renderer.ImportBufferCollection(collection_id, sysmem_allocator_.get(),
                                                 std::move(tokens.dup_token));
   EXPECT_TRUE(result);
 
-  flatland::ImageMetadata metadata = {.collection_id = collection_id,
-                                      .identifier = image_id,
-                                      .vmo_index = 0,
-                                      .width = kWidth,
-                                      .height = kHeight,
-                                      .is_render_target = false};
+  allocation::ImageMetadata metadata = {.collection_id = collection_id,
+                                        .identifier = image_id,
+                                        .vmo_index = 0,
+                                        .width = kWidth,
+                                        .height = kHeight,
+                                        .is_render_target = false};
 
   // Importing an image should fail at this point because we've only set the renderer constraints.
   auto import_result = renderer.ImportBufferImage(metadata);
@@ -212,7 +212,7 @@ VK_TEST_F(DisplayTest, SetDisplayImageTest) {
       .height = kHeight,
       .pixel_format = ZX_PIXEL_FORMAT_RGB_x888,
   };
-  auto display_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto display_collection_id = allocation::GenerateUniqueBufferCollectionId();
   ASSERT_NE(display_collection_id, 0U);
 
   bool res = scenic_impl::ImportBufferCollection(display_collection_id, *display_controller.get(),

@@ -32,8 +32,8 @@ source_set("display") {
     # TODO(fxbug.dev/24590): For displayOwned/NotOwnedSignal.
     # TODO(fxbug.dev/23686): Remove this when we externalize Displays.
     "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/ui/scenic/lib/allocation",
     "//src/ui/scenic/lib/scheduling:vsync_timing",
-    "//src/ui/scenic/lib/sysmem",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace",
   ]

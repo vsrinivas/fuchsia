@@ -7,7 +7,7 @@
 using ::testing::_;
 using ::testing::Return;
 
-using flatland::ImageMetadata;
+using allocation::ImageMetadata;
 using flatland::LinkSystem;
 using flatland::Renderer;
 using flatland::TransformGraph;

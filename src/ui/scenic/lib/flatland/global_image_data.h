@@ -5,7 +5,7 @@
 #ifndef SRC_UI_SCENIC_LIB_FLATLAND_GLOBAL_IMAGE_DATA_H_
 #define SRC_UI_SCENIC_LIB_FLATLAND_GLOBAL_IMAGE_DATA_H_
 
-#include "src/ui/scenic/lib/flatland/buffers/buffer_collection_importer.h"
+#include "src/ui/scenic/lib/allocation/buffer_collection_importer.h"
 #include "src/ui/scenic/lib/flatland/global_topology_data.h"
 #include "src/ui/scenic/lib/flatland/uber_struct.h"
 
@@ -13,7 +13,7 @@ namespace flatland {
 
 // The list of Images for a particular global topology. Entries in the list are sorted in the order
 // they should be rendered.
-using GlobalImageVector = std::vector<ImageMetadata>;
+using GlobalImageVector = std::vector<allocation::ImageMetadata>;
 
 // Struct combining a vector of sorted images and a vector of indices corresponding to the
 // transforms each image is paired with. Both vectors should be the same length.

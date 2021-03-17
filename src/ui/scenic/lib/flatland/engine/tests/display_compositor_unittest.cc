@@ -13,7 +13,7 @@
 using ::testing::_;
 using ::testing::Return;
 
-using flatland::ImageMetadata;
+using allocation::ImageMetadata;
 using flatland::LinkSystem;
 using flatland::MockDisplayController;
 using flatland::Renderer;
@@ -99,7 +99,7 @@ TEST_F(DisplayCompositorTest, ImportAndReleaseBufferCollectionTest) {
     }
   });
 
-  const sysmem_util::GlobalBufferCollectionId kGlobalBufferCollectionId = 15;
+  const allocation::GlobalBufferCollectionId kGlobalBufferCollectionId = 15;
 
   EXPECT_CALL(*mock_display_controller_.get(),
               ImportBufferCollection(kGlobalBufferCollectionId, _, _))
@@ -149,7 +149,7 @@ TEST_F(DisplayCompositorTest, ImageIsValidAfterReleaseBufferCollection) {
     }
   });
 
-  const auto kGlobalBufferCollectionId = sysmem_util::GenerateUniqueBufferCollectionId();
+  const auto kGlobalBufferCollectionId = allocation::GenerateUniqueBufferCollectionId();
 
   // Import buffer collection.
   EXPECT_CALL(*mock, ImportBufferCollection(kGlobalBufferCollectionId, _, _))
@@ -170,7 +170,7 @@ TEST_F(DisplayCompositorTest, ImageIsValidAfterReleaseBufferCollection) {
   // Import image.
   ImageMetadata image_metadata = ImageMetadata{
       .collection_id = kGlobalBufferCollectionId,
-      .identifier = sysmem_util::GenerateUniqueImageId(),
+      .identifier = allocation::GenerateUniqueImageId(),
       .vmo_index = 0,
       .width = 128,
       .height = 256,
@@ -204,8 +204,8 @@ TEST_F(DisplayCompositorTest, ImageIsValidAfterReleaseBufferCollection) {
 }
 
 TEST_F(DisplayCompositorTest, ImportImageErrorCases) {
-  const sysmem_util::GlobalBufferCollectionId kGlobalBufferCollectionId = 30;
-  const sysmem_util::GlobalImageId kImageId = 50;
+  const allocation::GlobalBufferCollectionId kGlobalBufferCollectionId = 30;
+  const allocation::GlobalImageId kImageId = 50;
   const uint32_t kVmoCount = 2;
   const uint32_t kVmoIdx = 1;
   const uint32_t kMaxWidth = 100;
@@ -297,7 +297,7 @@ TEST_F(DisplayCompositorTest, ImportImageErrorCases) {
               ImportImage(_, kGlobalBufferCollectionId, kVmoIdx, _))
       .Times(0);
   auto copy_metadata = metadata;
-  copy_metadata.collection_id = sysmem_util::kInvalidId;
+  copy_metadata.collection_id = allocation::kInvalidId;
   result = display_compositor_->ImportBufferImage(copy_metadata);
   EXPECT_FALSE(result);
 
@@ -376,7 +376,7 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
   // Add an image.
   ImageMetadata parent_image_metadata = ImageMetadata{
       .collection_id = kGlobalBufferCollectionId,
-      .identifier = sysmem_util::GenerateUniqueImageId(),
+      .identifier = allocation::GenerateUniqueImageId(),
       .vmo_index = 0,
       .width = 128,
       .height = 256,
@@ -396,7 +396,7 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
   // Add an image.
   ImageMetadata child_image_metadata = ImageMetadata{
       .collection_id = kGlobalBufferCollectionId,
-      .identifier = sysmem_util::GenerateUniqueImageId(),
+      .identifier = allocation::GenerateUniqueImageId(),
       .vmo_index = 1,
       .width = 512,
       .height = 1024,
@@ -531,10 +531,9 @@ TEST_F(DisplayCompositorTest, HardwareFrameCorrectnessTest) {
 
   DisplayInfo display_info{parent_root_handle, resolution, {kPixelFormat}};
   display_compositor_->AddDisplay(display_id, display_info, sysmem_allocator_.get(),
-                      /*num_vmos*/ 0);
+                                  /*num_vmos*/ 0);
 
-  display_compositor_->RenderFrame(
-      GenerateDisplayListForTest({{display_id, display_info}}));
+  display_compositor_->RenderFrame(GenerateDisplayListForTest({{display_id, display_info}}));
 
   for (uint32_t i = 0; i < 2; i++) {
     EXPECT_CALL(*mock, DestroyLayer(layers[i]));

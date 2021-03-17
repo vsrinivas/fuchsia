@@ -33,7 +33,7 @@ struct DisplayInfo {
 // index represents a single renderable object.
 struct RenderData {
   std::vector<Rectangle2D> rectangles;
-  std::vector<ImageMetadata> images;
+  std::vector<allocation::ImageMetadata> images;
   glm::uvec2 pixel_scale;
   // TODO(fxbug.dev/70464): should we remove this, and pass to RenderFrame() as a std::map of
   // RenderData keyed by display_id?  That would have the benefit of guaranteeing by construction
@@ -56,7 +56,7 @@ struct DisplaySrcDstFrames {
   // Rectangle2D struct and ImageMetadata struct, so we just need to convert that over to
   // the proper display controller readable format. The input rectangle contains both the
   // source and destination information.
-  static DisplaySrcDstFrames New(escher::Rectangle2D rectangle, ImageMetadata image);
+  static DisplaySrcDstFrames New(escher::Rectangle2D rectangle, allocation::ImageMetadata image);
 };
 
 }  // namespace flatland

@@ -16,8 +16,8 @@
 #include <thread>
 #include <unordered_map>
 
+#include "src/ui/scenic/lib/allocation/allocator.h"
 #include "src/ui/scenic/lib/display/display.h"
-#include "src/ui/scenic/lib/flatland/allocator.h"
 #include "src/ui/scenic/lib/flatland/flatland.h"
 #include "src/ui/scenic/lib/flatland/flatland_presenter.h"
 #include "src/ui/scenic/lib/flatland/link_system.h"
@@ -36,11 +36,11 @@ class FlatlandManager : public scheduling::SessionUpdater {
                   const std::shared_ptr<LinkSystem>& link_system);
   ~FlatlandManager() override;
 
-  // This must be called exactly once.  An incoming requests to connect to Flatland services (e.g.
+  // This must be called exactly once. An incoming requests to connect to Flatland services (e.g.
   // CreateFlatland()) will be deferred until this is called.
-  void Initialize(
-      std::shared_ptr<scenic_impl::display::Display> display,
-      const std::vector<std::shared_ptr<BufferCollectionImporter>>& buffer_collection_importers);
+  void Initialize(std::shared_ptr<scenic_impl::display::Display> display,
+                  const std::vector<std::shared_ptr<allocation::BufferCollectionImporter>>&
+                      buffer_collection_importers);
 
   void CreateFlatland(fidl::InterfaceRequest<fuchsia::ui::scenic::internal::Flatland> flatland);
 
@@ -72,7 +72,7 @@ class FlatlandManager : public scheduling::SessionUpdater {
   std::shared_ptr<FlatlandPresenter> flatland_presenter_;
   std::shared_ptr<UberStructSystem> uber_struct_system_;
   std::shared_ptr<LinkSystem> link_system_;
-  std::vector<std::shared_ptr<BufferCollectionImporter>> buffer_collection_importers_;
+  std::vector<std::shared_ptr<allocation::BufferCollectionImporter>> buffer_collection_importers_;
   std::unordered_map<scheduling::SessionId, /*num_present_tokens*/ uint64_t>
       flatland_instances_updated_;
 

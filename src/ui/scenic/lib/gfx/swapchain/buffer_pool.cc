@@ -20,8 +20,8 @@
 #include "src/ui/lib/escher/vk/chained_semaphore_generator.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 #include "src/ui/lib/escher/vk/image_layout_updater.h"
+#include "src/ui/scenic/lib/allocation/id.h"
 #include "src/ui/scenic/lib/display/util.h"
-#include "src/ui/scenic/lib/sysmem/id.h"
 
 #define VK_CHECK_RESULT(XXX) FX_CHECK(XXX.result == vk::Result::eSuccess)
 
@@ -182,7 +182,7 @@ bool BufferPool::CreateBuffers(size_t count, BufferPool::Environment* environmen
 
   // Set display buffer constraints.
   tokens[1]->SetDebugClientInfo("scenic", 0u);
-  auto display_collection_id = sysmem_util::GenerateUniqueBufferCollectionId();
+  auto display_collection_id = allocation::GenerateUniqueBufferCollectionId();
   auto result = scenic_impl::ImportBufferCollection(display_collection_id,
                                                     *environment->display_controller.get(),
                                                     std::move(tokens[1]), image_config_);

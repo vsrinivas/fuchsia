@@ -10,14 +10,14 @@
 
 #include <cstdint>
 
-#include "src/ui/scenic/lib/sysmem/id.h"
+#include "src/ui/scenic/lib/allocation/id.h"
 
 namespace scenic_impl {
 using DisplayEventId = uint64_t;
 
 // Imports a sysmem buffer collection token to a display controller, and sets the constraints.
 // A successful import will return true, otherwise it will return false.
-bool ImportBufferCollection(sysmem_util::GlobalBufferCollectionId identifier,
+bool ImportBufferCollection(allocation::GlobalBufferCollectionId identifier,
                             const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
                             fuchsia::sysmem::BufferCollectionTokenSyncPtr token,
                             const fuchsia::hardware::display::ImageConfig& image_config);
@@ -38,7 +38,7 @@ bool IsCaptureSupported(const fuchsia::hardware::display::ControllerSyncPtr& dis
 uint64_t ImportImageForCapture(
     const fuchsia::hardware::display::ControllerSyncPtr& display_controller,
     const fuchsia::hardware::display::ImageConfig& image_config,
-    sysmem_util::GlobalBufferCollectionId buffer_collection_id, uint64_t vmo_idx);
+    allocation::GlobalBufferCollectionId buffer_collection_id, uint64_t vmo_idx);
 
 }  // namespace scenic_impl
 

@@ -17,7 +17,7 @@
 #include <glm/gtc/matrix_access.hpp>
 #include <glm/gtc/type_ptr.hpp>
 
-using fuchsia::ui::scenic::internal::BufferCollectionImportToken;
+using fuchsia::scenic::allocation::BufferCollectionImportToken;
 using fuchsia::ui::scenic::internal::ContentLink;
 using fuchsia::ui::scenic::internal::ContentLinkStatus;
 using fuchsia::ui::scenic::internal::ContentLinkToken;
@@ -104,7 +104,7 @@ void Flatland::Present(fuchsia::ui::scenic::internal::PresentArgs args, PresentC
 
     // Cleanup released resources. Here we also collect the list of unused images so they can be
     // released by the buffer collection importers.
-    std::vector<ImageMetadata> images_to_release;
+    std::vector<allocation::ImageMetadata> images_to_release;
     for (const auto& dead_handle : data.dead_transforms) {
       matrices_.erase(dead_handle);
 
@@ -566,8 +566,8 @@ void Flatland::CreateImage(ContentId image_id, BufferCollectionImportToken impor
     return;
   }
 
-  ImageMetadata metadata;
-  metadata.identifier = sysmem_util::GenerateUniqueImageId();
+  allocation::ImageMetadata metadata;
+  metadata.identifier = allocation::GenerateUniqueImageId();
   metadata.collection_id = global_collection_id;
   metadata.vmo_index = vmo_index;
   metadata.width = properties.width();
