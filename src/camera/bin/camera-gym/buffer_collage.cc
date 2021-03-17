@@ -339,12 +339,12 @@ void BufferCollage::ShowBuffer(uint32_t collection_id, uint32_t buffer_index,
 
   if (subregion) {
     view.highlight_node->SetScale(subregion->width * view.view_region.width,
-                                  subregion->height * view.view_region.height, 0);
+                                  subregion->height * view.view_region.height, 1);
     view.highlight_node->SetTranslation(view.view_region.x + subregion->x * view.view_region.width,
                                         view.view_region.y + subregion->y * view.view_region.height,
                                         kHighlightDepth);
   } else {
-    view.highlight_node->SetScale(1, 1, 0);
+    view.highlight_node->SetScale(1, 1, 1);
     view.highlight_node->SetTranslation(0, 0, kOffscreenDepth);
   }
 
@@ -633,7 +633,7 @@ void BufferCollage::UpdateLayout() {
       view.view_region.x = view_width * x - element_width * 0.5f;
       view.view_region.y = view_height * y - element_height * 0.5f;
       float scale = (element_width - kPadding * 2) / view.description_node->width;
-      view.description_node->node.SetScale(scale, scale, scale);
+      view.description_node->node.SetScale(scale, scale, 1);
       view.description_node->node.SetTranslation(view_width * x,
                                                  view_height * y + element_height * 0.5f -
                                                      scale * view.description_node->height * 0.5f -
