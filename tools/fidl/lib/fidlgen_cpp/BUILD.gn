@@ -27,6 +27,7 @@ go_library("cpp_test") {
   sources = [
     "enum_test.go",
     "ir_test.go",
+    "names_test.go",
     "reserved_names_test.go",
   ]
 }

@@ -41,16 +41,17 @@ func (ns Namespace) Namespace() Namespace {
 	return ns
 }
 
+// String returns the fully qualified namespace including leading ::.
 func (ns Namespace) String() string {
 	return "::" + strings.Join(ns, "::")
 }
 
 // Append returns a new namespace with an additional component.
 func (ns Namespace) Append(part string) Namespace {
-	new := make([]string, len(ns)+1)
-	copy(new, ns)
-	new[len(ns)] = part
-	return Namespace(new)
+	newNs := make([]string, len(ns)+1)
+	copy(newNs, ns)
+	newNs[len(ns)] = part
+	return Namespace(newNs)
 }
 
 // DropLastComponent returns a new namespace with the final component removed.
@@ -63,29 +64,73 @@ func (ns Namespace) DropLastComponent() Namespace {
 	return Namespace(new)
 }
 
+// name represents a declaration name within a namespace.
+// In the case of a nested class all of the containing classes are part of the name.
+type name []string
+
+// String returns the name of the declaration within its namespace, including any nesting parent classes.
+func (n name) String() string {
+	return strings.Join(n, "::")
+}
+
+// Unqualified return the unqualified declaration name.
+func (n name) Unqualified() string {
+	return n[len(n)-1]
+}
+
+// Prepend returns a new name with a prefix prepended.
+func (n name) Prepend(prefix string) name {
+	var newName name = make([]string, len(n))
+	copy(newName, n)
+	newName[len(n)-1] = prefix + n[len(n)-1]
+	return newName
+}
+
+// Append returns a new name with a suffix appended.
+func (n name) Append(suffix string) name {
+	var newName name = make([]string, len(n))
+	copy(newName, n)
+	newName[len(n)-1] = n[len(n)-1] + suffix
+	return newName
+}
+
+// Nest returns a new name for a class nested inside the existing name.
+func (n name) Nest(nested string) name {
+	return name(append(n, nested))
+}
+
 // DeclVariant represents the name of a C++ declaration within a namespace.
 type DeclVariant struct {
-	name      string
+	name      name
 	namespace Namespace
 }
 
 // NewDeclVariant creates a new DeclVariant with a name and a namespace.
-func NewDeclVariant(name string, namespace Namespace) DeclVariant {
-	return DeclVariant{name: name, namespace: namespace}
+func NewDeclVariant(n string, namespace Namespace) DeclVariant {
+	return DeclVariant{name: name([]string{n}), namespace: namespace}
 }
 
+// String returns the fully qualified name including leading ::, namespace and nested classes.
 func (d DeclVariant) String() string {
-	return d.namespace.String() + "::" + d.name
+	return d.namespace.String() + "::" + d.name.String()
 }
 
+// Name returns the name within the namespace, including nested classes.
 func (d DeclVariant) Name() string {
-	return d.name
+	return d.name.String()
 }
 
+// Unqualified return the unqualified declaration name.
+func (d DeclVariant) Unqualified() string {
+	return d.name.Unqualified()
+}
+
+// Namespace returns the DeclVariant's namespace.
 func (d DeclVariant) Namespace() Namespace {
 	return d.namespace
 }
 
+// Type returns a TypeVariant for this DeclVariant.
 func (d DeclVariant) Type() TypeVariant {
 	return TypeVariant(d.String())
 }
@@ -93,7 +138,7 @@ func (d DeclVariant) Type() TypeVariant {
 // AppendName returns a new DeclVariant with an suffix appended to the name portion.
 func (d DeclVariant) AppendName(suffix string) DeclVariant {
 	return DeclVariant{
-		name:      d.name + suffix,
+		name:      d.name.Append(suffix),
 		namespace: d.namespace,
 	}
 }
@@ -101,7 +146,7 @@ func (d DeclVariant) AppendName(suffix string) DeclVariant {
 // PrependName returns a new DeclVariant with an prefix prepended to the name portion.
 func (d DeclVariant) PrependName(prefix string) DeclVariant {
 	return DeclVariant{
-		name:      prefix + d.name,
+		name:      d.name.Prepend(prefix),
 		namespace: d.namespace,
 	}
 }
@@ -111,6 +156,14 @@ func (d DeclVariant) AppendNamespace(part string) DeclVariant {
 	return DeclVariant{
 		name:      d.name,
 		namespace: d.namespace.Append(part),
+	}
+}
+
+// Nest returns a new DeclVariant for a class nested inside the existing declaration.
+func (d DeclVariant) Nest(nested string) DeclVariant {
+	return DeclVariant{
+		name:      d.name.Nest(nested),
+		namespace: d.namespace,
 	}
 }
 
