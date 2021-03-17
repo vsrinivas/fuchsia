@@ -97,6 +97,7 @@ group("stress-tests") {
   public_deps = [
     "//src/storage/stress-tests",
     "//src/sys/component_manager/stress_tests_alt",
+    "//src/ui/tests/scenic-stress-tests:tests",
     "//src/zircon/tests/stress-tests:tests",
   ]
 }
