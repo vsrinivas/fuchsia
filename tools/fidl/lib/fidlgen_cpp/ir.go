@@ -7,7 +7,6 @@ package fidlgen_cpp
 import (
 	"fmt"
 	"sort"
-	"strings"
 
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
@@ -149,15 +148,14 @@ type Member interface {
 }
 
 type Root struct {
-	PrimaryHeader          string
-	IncludeStem            string
-	Headers                []string
-	FuzzerHeaders          []string
-	HandleTypes            []string
-	Library                fidl.LibraryIdentifier
-	LibraryReversed        fidl.LibraryIdentifier
-	LibraryCommonNamespace Namespace
-	Decls                  []Decl
+	PrimaryHeader   string
+	IncludeStem     string
+	Headers         []string
+	FuzzerHeaders   []string
+	HandleTypes     []string
+	Library         fidl.LibraryIdentifier
+	LibraryReversed fidl.LibraryIdentifier
+	Decls           []Decl
 }
 
 // Holds information about error results on methods
@@ -215,27 +213,6 @@ func libraryParts(library fidl.LibraryIdentifier, identifierTransform identifier
 	return parts
 }
 
-func wireLibraryNamespace(library fidl.LibraryIdentifier) Namespace {
-	return commonLibraryNamespace(library).Append("wire")
-}
-
-func hlLibraryNamespace(library fidl.LibraryIdentifier) Namespace {
-	parts := libraryParts(library, changePartIfReserved)
-	return Namespace(parts)
-}
-func naturalLibraryNamespace(library fidl.LibraryIdentifier) Namespace {
-	return hlLibraryNamespace(library)
-}
-
-func formatLibrary(library fidl.LibraryIdentifier, sep string, identifierTransform identifierTransform) string {
-	name := strings.Join(libraryParts(library, identifierTransform), sep)
-	return changeIfReserved(fidl.Identifier(name))
-}
-
-func commonLibraryNamespace(library fidl.LibraryIdentifier) Namespace {
-	return Namespace([]string{formatLibrary(library, "_", keepPartIfReserved)})
-}
-
 func formatLibraryPrefix(library fidl.LibraryIdentifier) string {
 	return formatLibrary(library, "_", keepPartIfReserved)
 }
@@ -252,15 +229,12 @@ func codingTableName(ident fidl.EncodedCompoundIdentifier) string {
 }
 
 type compiler struct {
-	symbolPrefix     string
-	decls            fidl.DeclInfoMap
-	library          fidl.LibraryIdentifier
-	handleTypes      map[fidl.HandleSubtype]struct{}
-	naturalNamespace libraryNamespaceFunc
-	wireNamespace    libraryNamespaceFunc
-	commonNamespace  libraryNamespaceFunc
-	resultForStruct  map[fidl.EncodedCompoundIdentifier]*Result
-	resultForUnion   map[fidl.EncodedCompoundIdentifier]*Result
+	symbolPrefix    string
+	decls           fidl.DeclInfoMap
+	library         fidl.LibraryIdentifier
+	handleTypes     map[fidl.HandleSubtype]struct{}
+	resultForStruct map[fidl.EncodedCompoundIdentifier]*Result
+	resultForUnion  map[fidl.EncodedCompoundIdentifier]*Result
 }
 
 func (c *compiler) isInExternalLibrary(ci fidl.CompoundIdentifier) bool {
@@ -289,11 +263,14 @@ func (c *compiler) compileDeclName(eci fidl.EncodedCompoundIdentifier) DeclName 
 	switch declType {
 	case fidl.ConstDeclType, fidl.BitsDeclType, fidl.EnumDeclType, fidl.StructDeclType, fidl.TableDeclType, fidl.UnionDeclType:
 		return DeclName{
-			Natural: NewDeclVariant(name, c.naturalNamespace(ci.Library)),
-			Wire:    NewDeclVariant(name, c.wireNamespace(ci.Library)),
+			Natural: NewDeclVariant(name, naturalNamespace(ci.Library)),
+			Wire:    NewDeclVariant(name, wireNamespace(ci.Library)),
 		}
 	case fidl.ProtocolDeclType, fidl.ServiceDeclType:
-		return CommonDeclName(NewDeclVariant(name, c.commonNamespace(ci.Library)))
+		return DeclName{
+			Natural: NewDeclVariant(name, naturalNamespace(ci.Library)),
+			Wire:    NewDeclVariant(name, unifiedNamespace(ci.Library)),
+		}
 	}
 	panic("Unknown decl type: " + string(declType))
 }
@@ -425,7 +402,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 	return r
 }
 
-func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc) Root {
+func compile(r fidl.Root) Root {
 	root := Root{}
 	library := make(fidl.LibraryIdentifier, 0)
 	rawLibrary := make(fidl.LibraryIdentifier, 0)
@@ -435,19 +412,15 @@ func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc) Root {
 		rawLibrary = append(rawLibrary, identifier)
 	}
 	c := compiler{
-		symbolPrefix:     formatLibraryPrefix(rawLibrary),
-		decls:            r.DeclsWithDependencies(),
-		library:          fidl.ParseLibraryName(r.Name),
-		handleTypes:      make(map[fidl.HandleSubtype]struct{}),
-		naturalNamespace: naturalLibraryNamespace,
-		wireNamespace:    wireLibraryNamespace,
-		commonNamespace:  commonNsFormatter,
-		resultForStruct:  make(map[fidl.EncodedCompoundIdentifier]*Result),
-		resultForUnion:   make(map[fidl.EncodedCompoundIdentifier]*Result),
+		symbolPrefix:    formatLibraryPrefix(rawLibrary),
+		decls:           r.DeclsWithDependencies(),
+		library:         fidl.ParseLibraryName(r.Name),
+		handleTypes:     make(map[fidl.HandleSubtype]struct{}),
+		resultForStruct: make(map[fidl.EncodedCompoundIdentifier]*Result),
+		resultForUnion:  make(map[fidl.EncodedCompoundIdentifier]*Result),
 	}
 
 	root.Library = library
-	root.LibraryCommonNamespace = c.commonNamespace(fidl.ParseLibraryName(r.Name))
 	libraryReversed := make(fidl.LibraryIdentifier, len(library))
 	for i, j := 0, len(library)-1; i < len(library); i, j = i+1, j-1 {
 		libraryReversed[i] = library[j]
@@ -539,13 +512,13 @@ func compile(r fidl.Root, commonNsFormatter libraryNamespaceFunc) Root {
 }
 
 func CompileHL(r fidl.Root) Root {
-	return compile(r.ForBindings("hlcpp"), hlLibraryNamespace)
+	return compile(r.ForBindings("hlcpp"))
 }
 
 func CompileLL(r fidl.Root) Root {
-	return compile(r.ForBindings("llcpp"), commonLibraryNamespace)
+	return compile(r.ForBindings("llcpp"))
 }
 
 func CompileLibFuzzer(r fidl.Root) Root {
-	return compile(r.ForBindings("libfuzzer"), hlLibraryNamespace)
+	return compile(r.ForBindings("libfuzzer"))
 }

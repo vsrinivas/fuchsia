@@ -7,6 +7,8 @@ package fidlgen_cpp
 import (
 	"fmt"
 	"strings"
+
+	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // Namespaced is implemented by types that have a C++ namespace.
@@ -83,4 +85,26 @@ func EndOfFile() string {
 		panic("The namespace stack isn't empty, there's a PopNamespace missing somewhere")
 	}
 	return EnsureNamespace("::")
+}
+
+//
+// Predefined namespaces
+//
+
+func wireNamespace(library fidl.LibraryIdentifier) Namespace {
+	return unifiedNamespace(library).Append("wire")
+}
+
+func naturalNamespace(library fidl.LibraryIdentifier) Namespace {
+	parts := libraryParts(library, changePartIfReserved)
+	return Namespace(parts)
+}
+
+func formatLibrary(library fidl.LibraryIdentifier, sep string, identifierTransform identifierTransform) string {
+	name := strings.Join(libraryParts(library, identifierTransform), sep)
+	return changeIfReserved(fidl.Identifier(name))
+}
+
+func unifiedNamespace(library fidl.LibraryIdentifier) Namespace {
+	return Namespace([]string{formatLibrary(library, "_", keepPartIfReserved)})
 }
