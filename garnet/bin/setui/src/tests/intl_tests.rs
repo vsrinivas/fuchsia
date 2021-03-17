@@ -25,6 +25,7 @@ use crate::intl::types::IntlInfo;
 
 const ENV_NAME: &str = "settings_service_intl_test_environment";
 const CONTEXT_ID: u64 = 0;
+const INITIAL_LOCALE: &str = "en-US-x-fxdef";
 
 async fn create_test_intl_env(storage_factory: Arc<Mutex<InMemoryStorageFactory>>) -> IntlProxy {
     let service_gen = Box::new(
@@ -105,7 +106,7 @@ async fn test_intl_e2e() {
     );
     assert_eq!(
         settings.locales,
-        Some(vec![fidl_fuchsia_intl::LocaleId { id: "en-US".to_string() }])
+        Some(vec![fidl_fuchsia_intl::LocaleId { id: INITIAL_LOCALE.to_string() }])
     );
     assert_eq!(settings.temperature_unit, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius));
     assert_eq!(settings.hour_cycle, Some(fidl_fuchsia_settings::HourCycle::H12));
@@ -146,7 +147,7 @@ async fn test_intl_e2e_set_twice() {
     );
     assert_eq!(
         settings.locales,
-        Some(vec![fidl_fuchsia_intl::LocaleId { id: "en-US".to_string() }])
+        Some(vec![fidl_fuchsia_intl::LocaleId { id: INITIAL_LOCALE.to_string() }])
     );
     assert_eq!(settings.temperature_unit, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius));
     assert_eq!(settings.hour_cycle, Some(fidl_fuchsia_settings::HourCycle::H12));
@@ -188,7 +189,7 @@ async fn test_intl_e2e_idempotent_set() {
     );
     assert_eq!(
         settings.locales,
-        Some(vec![fidl_fuchsia_intl::LocaleId { id: "en-US".to_string() }])
+        Some(vec![fidl_fuchsia_intl::LocaleId { id: INITIAL_LOCALE.to_string() }])
     );
     assert_eq!(settings.temperature_unit, Some(fidl_fuchsia_intl::TemperatureUnit::Celsius));
     assert_eq!(settings.hour_cycle, Some(fidl_fuchsia_settings::HourCycle::H12));

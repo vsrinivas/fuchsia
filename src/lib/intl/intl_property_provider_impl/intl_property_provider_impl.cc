@@ -43,7 +43,8 @@ namespace {
 // Returns the default settings for the merged data.
 fuchsia::intl::merge::Data DataDefaults() {
   fuchsia::intl::merge::Data ret;
-  ret.set_language_tags({LocaleId{.id = "en-US"}});
+  // If we never got any locales, we set the extension `-x-fxdef`.
+  ret.set_language_tags({LocaleId{.id = "en-US-x-fxdef"}});
   ret.set_time_zone_ids({TimeZoneId{.id = "America/Los_Angeles"}});
   ret.set_calendar_ids({CalendarId{.id = "und-u-ca-gregory"}});
   ret.set_temperature_unit(TemperatureUnit::FAHRENHEIT);

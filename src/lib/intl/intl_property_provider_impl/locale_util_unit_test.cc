@@ -62,6 +62,26 @@ TEST_F(LocaleUtilUnitTest, ExpandLocaleId_PreservesExistingOverrides) {
   ASSERT_EQ(expected, actual);
 }
 
+TEST_F(LocaleUtilUnitTest, ExpandLocaleId_AsUndefined) {
+  UErrorCode error_code = U_ZERO_ERROR;
+  icu::Locale locale = icu::Locale::forLanguageTag("und-u-ca-gregory", error_code);
+  EXPECT_EQ(0, error_code);
+
+  auto result = intl::ExpandLocaleId(locale);
+  EXPECT_TRUE(result.is_ok());
+  EXPECT_EQ("und-u-ca-gregory-fw-sun-hc-h12-ms-ussystem-nu-latn", result.value().id);
+}
+
+TEST_F(LocaleUtilUnitTest, ExpandLocaleId_WithExtension) {
+  UErrorCode error_code = U_ZERO_ERROR;
+  icu::Locale locale = icu::Locale::forLanguageTag("und-u-ca-gregory-x-ext", error_code);
+  EXPECT_EQ(0, error_code);
+
+  auto result = intl::ExpandLocaleId(locale);
+  EXPECT_TRUE(result.is_ok());
+  EXPECT_EQ("und-u-ca-gregory-fw-sun-hc-h12-ms-ussystem-nu-latn-x-ext", result.value().id);
+}
+
 TEST_F(LocaleUtilUnitTest, ExtractBcp47CalendarId_Valid) {
   auto result = intl::ExtractBcp47CalendarId(CalendarId{.id = "und-u-ca-gregory"});
   ASSERT_TRUE(result.is_ok());
