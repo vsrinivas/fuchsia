@@ -44,6 +44,9 @@ void main() {
     expect(process.exitCode, equals(0),
         reason: 'flash.sh exited with nonzero exit code');
 
+    // Wait 45 seconds for the device to enter fuchsia after flashing.
+    sleep(Duration(seconds: 45));
+
     // Verify that the device came back by checking the nodename.
     expect(await deviceController.getDeviceName(), equals(nodename),
         reason: 'could not get nodename via sl4f');
