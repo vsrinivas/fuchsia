@@ -23,6 +23,7 @@
 #include <arch/quirks.h>
 #include <dev/interrupt.h>
 #include <dev/timer/arm_generic.h>
+#include <fbl/auto_call.h>
 #include <ktl/atomic.h>
 #include <ktl/limits.h>
 #include <lk/init.h>
@@ -80,7 +81,6 @@ enum timer_irq_assignment {
 timer_irq_assignment timer_assignment;
 
 // event stream state
-bool event_stream_enable;
 uint32_t event_stream_shift;
 uint32_t event_stream_freq;
 
@@ -330,12 +330,12 @@ static void event_stream_init(uint32_t cntfrq) {
   event_stream_shift = shift;
   event_stream_freq = (cntfrq >> (event_stream_shift + 1));
 
-  dprintf(INFO, "arm generic timer enabling event stream on all cpus: shift %u, %u Hz\n",
+  dprintf(INFO, "arm generic timer will enable event stream on all cpus: shift %u, %u Hz\n",
           event_stream_shift, event_stream_freq);
 }
 
 static void event_stream_enable_percpu() {
-  if (!event_stream_enable) {
+  if (!gBootOptions->arm64_event_stream_enabled) {
     return;
   }
 
@@ -351,6 +351,8 @@ static void event_stream_enable_percpu() {
   // Enable the stream
   cntkctl |= (1 << 2);  // EVNTEN
   __arm_wsr64(TIMER_REG_CNTKCTL, cntkctl);
+
+  dprintf(INFO, "arm generic timer cpu-%u: event stream enabled\n", arch_curr_cpu_num());
 }
 
 static void arm_generic_timer_init(uint32_t freq_override) {
@@ -600,59 +602,84 @@ bool test_cntpct_to_time(uint32_t cntfrq) {
   END_TEST;
 }
 
+// Verify that the event stream will break CPUs out of WFE.
+//
+// Start one thread for each CPU that's online and active.  Each thread will then disable
+// interrupts and issue a series of WFEs.  If the event stream is working as expected, each thread
+// will eventually complete its series of WFEs and terminate.  If the event stream is not working
+// as expected, one or more threads will hang.
 bool test_event_stream() {
   BEGIN_TEST;
 
-  const int kEventStreamIters = 1000;
-  const bool trace = false;
-
-  if (!event_stream_enable) {
+  if (!gBootOptions->arm64_event_stream_enabled) {
     printf("event stream disabled, skipping test\n");
     END_TEST;
   }
 
-  // compute the period of the event stream
-  affine::Ratio event_ticks_to_nsec = {ZX_SEC(1), event_stream_freq};
-  zx_time_t event_stream_period = event_ticks_to_nsec.Scale(1);
+  struct Args {
+    ktl::atomic<uint32_t> waiting{0};
+  };
 
-  if (trace) {
-    printf("event stream period %ld ns\n", event_stream_period);
-  }
-
-  // Repeatedly time how the cpu stays in a single WFE instruction. Verify that it
-  // does not substantially exceed the event stream timer period. If the event timer isn't firing
-  // it's possible the current cpu will lock up forever and a cross cpu check will have to generate
-  // an oops to catch it. Since this really shouldn't be happening it's probably not worth writing a
-  // more robust scheme to force a cpu wakeup after some time.
-  //
-  // Fairly sloppy test but err on the side of false negative.
-  for (int i = 0; i < kEventStreamIters; i++) {
-    zx_time_t t;
+  auto func = [](void* args_) -> int {
+    auto* args = reinterpret_cast<Args*>(args_);
     {
       InterruptDisableGuard guard;
 
-      t = current_time();
+      // Signal that we are ready.
+      args->waiting.fetch_sub(1);
+      // Wait until everyone else is ready.
+      while (args->waiting.load() > 0) {
+      }
 
-      // The test sequence is
-      // sevl   wfe   wfe
-      //
-      // The first two instructions clear any pending event flag that may be set in the cpu by
-      // locally setting the flag and then consuming it with a wfe. This instruction sequence should
-      // be extremely fast so shouldn't affect the timing much.
-      __asm__ volatile("sevl;wfe;wfe");
+      // If the event stream is working, it (or something else) will break us out on each iteration.
+      for (int i = 0; i < 1000; ++i) {
+        // The SEVL sets the event flag for this CPU.  The first WFE consumes the now set event
+        // flag.  By setting then consuming, we can be sure the second WFE will actually wait for an
+        // event.
+        __asm__ volatile("sevl;wfe;wfe");
+      }
 
-      t = current_time() - t;
     }
+    printf("cpu-%u done\n", arch_curr_cpu_num());
+    return 0;
+  };
 
-    if (trace) {
-      printf("time %ld\n", t);
+  Args args;
+  Thread* threads[SMP_MAX_CPUS]{};
+
+  // How many online+active CPUs do we have?
+  uint32_t num_cpus = ktl::popcount(mp_get_online_mask() & mp_get_active_mask());
+  args.waiting.store(num_cpus);
+
+  // Create a thread bound to each online+active CPU, but don't start them just yet.
+  cpu_num_t last = 0;
+  for (cpu_num_t i = 0; i < percpu::processor_count(); ++i) {
+    if (mp_is_cpu_online(i) && mp_is_cpu_active(i)) {
+      threads[i] = Thread::Create("test_event_stream", func, &args, DEFAULT_PRIORITY);
+      threads[i]->SetCpuAffinity(cpu_num_to_mask(i));
+      last = i;
     }
+  }
 
-    // verify that no delay is substantially more than the computed period
-    if (t > event_stream_period * 2) {
-      printf("WFE took substantially longer than event stream period: %ld ns, period %ld\n", t,
-             event_stream_period);
-      ASSERT_TRUE(false);
+  // Because these threads have hard affinity and will disable interrupts we need to take care in
+  // how we start them.  If we start one that's bound to our current CPU, we may get preempted
+  // deadlock.  To avoid this, bind the current thread to the *last* online+active CPU.
+  const cpu_mask_t orig_mask = Thread::Current::Get()->GetCpuAffinity();
+  Thread::Current::Get()->SetCpuAffinity(cpu_num_to_mask(last));
+  auto restore_mask =
+      fbl::MakeAutoCall([&orig_mask]() { Thread::Current::Get()->SetCpuAffinity(orig_mask); });
+
+  // Now that we're running on the last online+active CPU we can simply start them in order.
+  for (cpu_num_t i = 0; i < percpu::processor_count(); ++i) {
+    if (threads[i] != nullptr) {
+      threads[i]->Resume();
+    }
+  }
+
+  // Finally, wait for them to complete.
+  for (size_t i = 0; i < percpu::processor_count(); ++i) {
+    if (threads[i] != nullptr) {
+      threads[i]->Join(nullptr, ZX_TIME_INFINITE);
     }
   }
 
