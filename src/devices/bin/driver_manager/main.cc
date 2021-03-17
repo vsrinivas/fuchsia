@@ -150,8 +150,8 @@ struct DriverManagerArgs {
   std::string sys_device_driver;
   // Use the default loader rather than the one provided by fshost.
   bool use_default_loader = false;
-  // Use the driver runner, which allows driver components to be loaded.
-  bool use_driver_runner = false;
+  // If this exists, use the driver runner and launch this driver URL as the root driver.
+  std::string driver_runner_root_driver_url;
 };
 
 DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
@@ -163,7 +163,7 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
     kPathPrefix,
     kSysDeviceDriver,
     kUseDefaultLoader,
-    kUseDriverRunner,
+    kDriverRunnerRootDriverUrl,
   };
   option options[] = {
       {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
@@ -173,7 +173,7 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
       {"path-prefix", required_argument, nullptr, kPathPrefix},
       {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
       {"use-default-loader", no_argument, nullptr, kUseDefaultLoader},
-      {"use-driver-runner", no_argument, nullptr, kUseDriverRunner},
+      {"driver-runner-root-driver-url", required_argument, nullptr, kDriverRunnerRootDriverUrl},
       {0, 0, 0, 0},
   };
 
@@ -208,7 +208,7 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
         args.no_exit_after_suspend = true;
         break;
       case kPathPrefix:
-        args.path_prefix = std::string(optarg);
+        args.path_prefix = optarg;
         break;
       case kSysDeviceDriver:
         check_not_duplicated(args.sys_device_driver);
@@ -217,8 +217,8 @@ DriverManagerArgs ParseDriverManagerArgs(int argc, char** argv) {
       case kUseDefaultLoader:
         args.use_default_loader = true;
         break;
-      case kUseDriverRunner:
-        args.use_driver_runner = true;
+      case kDriverRunnerRootDriverUrl:
+        args.driver_runner_root_driver_url = optarg;
         break;
       default:
         print_usage_and_exit();
@@ -291,7 +291,10 @@ int main(int argc, char** argv) {
 
   std::optional<DriverRunner> driver_runner;
   std::optional<FakeDriverIndex> driver_index;
-  if (driver_manager_args.use_driver_runner) {
+  if (driver_manager_args.driver_runner_root_driver_url.size() != 0) {
+    LOGF(INFO, "Starting DriverRunner with root driver URL: %s",
+         driver_manager_args.driver_runner_root_driver_url.data());
+
     const auto realm_path = fbl::StringPrintf("/svc/%s", fuchsia_sys2::Realm::Name);
     auto endpoints = fidl::CreateEndpoints<fuchsia_sys2::Realm>();
     if (endpoints.is_error()) {
@@ -328,7 +331,7 @@ int main(int argc, char** argv) {
     if (publish.is_error()) {
       return publish.error_value();
     }
-    auto start = driver_runner->StartRootDriver("fuchsia-boot:///#meta/platform_bus2.cm");
+    auto start = driver_runner->StartRootDriver(driver_manager_args.driver_runner_root_driver_url);
     if (start.is_error()) {
       return start.error_value();
     }
