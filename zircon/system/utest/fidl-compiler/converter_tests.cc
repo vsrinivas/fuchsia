@@ -33,6 +33,11 @@ resource_definition handle : uint32 {
         obj_type subtype;
     };
 };
+
+bits rights : uint32 {
+    DUPLICATE = 0x00000001;
+    TRANSFER = 0x00000002;
+};
 )FIDL";
   TestLibrary zx_lib("zx.fidl", zx, &shared, flags);
   zx_lib.Compile();
@@ -165,7 +170,7 @@ library example;
 
 using zx;
 
-alias foo = zx.handle:<VMO,1>?;
+alias foo = zx.handle:<VMO,zx.rights.DUPLICATE | zx.rights.TRANSFER>?;
 )FIDL";
 
   std::string new_version = R"FIDL(
@@ -173,7 +178,7 @@ library example;
 
 using zx;
 
-alias foo = zx.handle:<optional,VMO,1>;
+alias foo = zx.handle:<optional,VMO,zx.rights.DUPLICATE | zx.rights.TRANSFER>;
 )FIDL";
 
   fidl::ExperimentalFlags flags;
@@ -785,7 +790,7 @@ library example;
 using zx;
 
 resource struct S {
-  zx.handle:<CHANNEL,7> h;
+  zx.handle:<CHANNEL,zx.rights.DUPLICATE | zx.rights.TRANSFER> h;
 };
 )FIDL";
 
@@ -795,7 +800,7 @@ library example;
 using zx;
 
 type S = resource struct {
-  h zx.handle:<CHANNEL,7>;
+  h zx.handle:<CHANNEL,zx.rights.DUPLICATE | zx.rights.TRANSFER>;
 };
 )FIDL";
 
@@ -818,7 +823,7 @@ library example;
 using zx;
 
 resource struct S {
-  array<zx.handle:<PORT,7>?>:5 a;
+  array<zx.handle:<PORT,zx.rights.DUPLICATE | zx.rights.TRANSFER>?>:5 a;
 };
 )FIDL";
 
@@ -828,7 +833,7 @@ library example;
 using zx;
 
 type S = resource struct {
-  a array<zx.handle:<optional,PORT,7>,5>;
+  a array<zx.handle:<optional,PORT,zx.rights.DUPLICATE | zx.rights.TRANSFER>,5>;
 };
 )FIDL";
 
@@ -933,7 +938,7 @@ VMO
 // 20
 ,
 // 21
-7
+zx.rights.DUPLICATE
 // 22
 >
 // 23
@@ -999,7 +1004,7 @@ a int32
 // 26
 // 27
 // 28
-b vector<zx.handle:<optional,VMO,7>>:<optional,16>
+b vector<zx.handle:<optional,VMO,zx.rights.DUPLICATE>>:<optional,16>
 // 29
 ;
 // 30
@@ -1160,7 +1165,7 @@ library example;
 using zx;
 
 resource table T {
-  1: zx.handle:<CHANNEL,7> h;
+  1: zx.handle:<CHANNEL,zx.rights.DUPLICATE | zx.rights.TRANSFER> h;
 };
 )FIDL";
 
@@ -1170,7 +1175,7 @@ library example;
 using zx;
 
 type T = resource table {
-  1: h zx.handle:<CHANNEL,7>;
+  1: h zx.handle:<CHANNEL,zx.rights.DUPLICATE | zx.rights.TRANSFER>;
 };
 )FIDL";
 
@@ -1452,7 +1457,7 @@ library example;
 using zx;
 
 resource union U {
-  1: zx.handle:<CHANNEL,7> h;
+  1: zx.handle:<CHANNEL,zx.rights.DUPLICATE | zx.rights.TRANSFER> h;
 };
 )FIDL";
 
@@ -1462,7 +1467,7 @@ library example;
 using zx;
 
 type U = resource union {
-  1: h zx.handle:<CHANNEL,7>;
+  1: h zx.handle:<CHANNEL,zx.rights.DUPLICATE | zx.rights.TRANSFER>;
 };
 )FIDL";
 
