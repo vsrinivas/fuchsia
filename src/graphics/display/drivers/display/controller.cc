@@ -453,17 +453,17 @@ void Controller::DisplayCaptureInterfaceOnCaptureComplete() {
   fbl::AutoLock lock(mtx());
   task->set_handler([this](async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
     if (status == ZX_OK) {
+      // Free an image that was previously used by the hardware.
+      if (pending_capture_image_release_ != 0) {
+        ReleaseCaptureImage(pending_capture_image_release_);
+        pending_capture_image_release_ = 0;
+      }
       fbl::AutoLock lock(mtx());
       if (vc_client_ && vc_ready_) {
         vc_client_->OnCaptureComplete();
       }
       if (primary_client_ && primary_ready_) {
         primary_client_->OnCaptureComplete();
-      }
-      // Free an image that was previously used by the hardware.
-      if (pending_capture_image_release_ != 0) {
-        ReleaseCaptureImage(pending_capture_image_release_);
-        pending_capture_image_release_ = 0;
       }
     } else {
       zxlogf(ERROR, "Failed to dispatch capture complete task %d", status);

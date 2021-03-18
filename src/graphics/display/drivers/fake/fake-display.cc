@@ -32,6 +32,8 @@
 #include "src/graphics/display/drivers/display/preferred-scanout-image-type.h"
 #include "zircon/types.h"
 
+constexpr unsigned int RAM = fuchsia_sysmem_CoherencyDomain_RAM;
+
 namespace fake_display {
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
 #define DISP_INFO(fmt, ...) zxlogf(INFO, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -147,6 +149,8 @@ zx_status_t FakeDisplay::DisplayControllerImplImportImage(image_t* image,
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  import_info->pixel_format = collection_info.settings.image_format_constraints.pixel_format.type;
+  import_info->ram_domain = collection_info.settings.buffer_settings.coherency_domain == RAM;
   import_info->vmo = std::move(vmos[index]);
   image->handle = reinterpret_cast<uint64_t>(import_info.get());
   imported_images_.push_back(std::move(import_info));
@@ -337,6 +341,8 @@ zx_status_t FakeDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_hand
     return ZX_ERR_OUT_OF_RANGE;
   }
 
+  import_capture->pixel_format = collection_info.settings.image_format_constraints.pixel_format.type;
+  import_capture->ram_domain = collection_info.settings.buffer_settings.coherency_domain == RAM;
   import_capture->vmo = std::move(vmos[index]);
   *out_capture_handle = reinterpret_cast<uint64_t>(import_capture.get());
   imported_captures_.push_back(std::move(import_capture));
@@ -442,6 +448,10 @@ int FakeDisplay::CaptureThread() {
             auto src = reinterpret_cast<ImageInfo*>(current_image_);
             auto dst = reinterpret_cast<ImageInfo*>(capture_active_id_);
 
+            if (src->pixel_format != dst->pixel_format) {
+              DISP_ERROR("Trying to capture format=%d as format=%d\n", src->pixel_format, dst->pixel_format);
+              continue;
+            }
             size_t src_vmo_size;
             auto status = src->vmo.get_size(&src_vmo_size);
             if (status != ZX_OK) {
@@ -472,7 +482,13 @@ int FakeDisplay::CaptureThread() {
               DISP_ERROR("Could not map destination %d\n", status);
               return status;
             }
+            if (src->ram_domain) {
+              zx_cache_flush(mapped_src.start(), src_vmo_size, ZX_CACHE_FLUSH_DATA|ZX_CACHE_FLUSH_INVALIDATE);
+            }
             memcpy(mapped_dst.start(), mapped_src.start(), dst_vmo_size);
+            if (dst->ram_domain) {
+              zx_cache_flush(mapped_dst.start(), dst_vmo_size, ZX_CACHE_FLUSH_DATA|ZX_CACHE_FLUSH_INVALIDATE);
+            }
           }
         }
         capture_intf_.OnCaptureComplete();

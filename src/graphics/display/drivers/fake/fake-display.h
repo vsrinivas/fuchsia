@@ -33,6 +33,8 @@
 namespace fake_display {
 
 struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> {
+  char pixel_format;
+  bool ram_domain;
   zx::vmo vmo;
 };
 
@@ -50,6 +52,7 @@ class FakeDisplay : public DeviceType,
   explicit FakeDisplay(zx_device_t* parent)
       : DeviceType(parent),
         dcimpl_proto_({&display_controller_impl_protocol_ops_, this}),
+        capture_proto_({&display_capture_impl_protocol_ops_, this}),
         clamp_rgbimpl_proto_({&display_clamp_rgb_impl_protocol_ops_, this}) {}
 
   // This function is called from the c-bind function upon driver matching. If start_vsync is
@@ -91,6 +94,7 @@ class FakeDisplay : public DeviceType,
   zx_status_t DisplayCaptureImplReleaseCapture(uint64_t capture_handle)
       __TA_EXCLUDES(capture_lock_);
   bool DisplayCaptureImplIsCaptureCompleted() __TA_EXCLUDES(capture_lock_);
+
   zx_status_t DisplayClampRgbImplSetMinimumRgb(uint8_t minimum_rgb);
 
   // Required functions for DeviceType
@@ -103,6 +107,7 @@ class FakeDisplay : public DeviceType,
   }
 
   const display_controller_impl_protocol_t* dcimpl_proto() const { return &dcimpl_proto_; }
+  const display_capture_impl_protocol_t* capture_proto() const { return &capture_proto_; }
   const display_clamp_rgb_impl_protocol_t* clamp_rgbimpl_proto() const {
     return &clamp_rgbimpl_proto_;
   }
@@ -125,6 +130,7 @@ class FakeDisplay : public DeviceType,
   void PopulateAddedDisplayArgs(added_display_args_t* args);
 
   display_controller_impl_protocol_t dcimpl_proto_ = {};
+  display_capture_impl_protocol_t capture_proto_ = {};
   display_clamp_rgb_impl_protocol_t clamp_rgbimpl_proto_ = {};
   ddk::PDev pdev_;
   ddk::SysmemProtocolClient sysmem_;

@@ -96,6 +96,7 @@ FakeDisplayDeviceTree::FakeDisplayDeviceTree(std::unique_ptr<SysmemDeviceWrapper
 
   // Protocols for display controller.
   ddk_.SetProtocol(ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL, display_->dcimpl_proto());
+  ddk_.SetProtocol(ZX_PROTOCOL_DISPLAY_CAPTURE_IMPL, display_->capture_proto());
   ddk_.SetProtocol(ZX_PROTOCOL_DISPLAY_CLAMP_RGB_IMPL, display_->clamp_rgbimpl_proto());
 
   std::unique_ptr<display::Controller> c(new Controller(fake_ddk::kFakeParent));
