@@ -116,7 +116,7 @@ dart_test("acts_bt_astro_test") {
         device_type = "Astro"
       }
 
-      tags = "acts-connectivity-astro"
+      tags = [ "acts-connectivity-astro" ]
     },
   ]
 
