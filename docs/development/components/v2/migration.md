@@ -933,9 +933,9 @@ please reach out to [component-framework-dev][cf-dev-list].
 
 ## Converting CMX features {:#cmx-features}
 
-This section provides guidance on migrating CMX [`features`][cmx-services].
-If there's a feature in your CMX file that's not in this list, please reach out
-to [component-framework-dev][cf-dev-list].
+This section provides guidance on migrating additional CMX [`sandbox`][cmx-services]
+features. If there's a feature in your CMX file that's not in this list,
+please reach out to [component-framework-dev][cf-dev-list].
 
 ### Storage features {#storage-features}
 
@@ -1272,6 +1272,81 @@ the following to route directory access to your test driver from the test root:
 }
 ```
 
+### Device directories {#devices}
+
+If your component uses any of the following features, follow the instructions in
+this section to migrate device access:
+
+| Feature | Description | Path |
+| ------- | ----------- | ---- |
+| `dev`   |  Device driver entries in `devfs` | `/dev/class/*` |
+
+[Device filesystem][device-model] access is supported in Components v2 using
+[directory capabilities][directory-capabilities].
+
+Consider the following example using Components v1 to access `/dev/class/input-report`:
+
+```json5
+// my_component.cmx
+{
+    "program": { ... },
+    "sandbox": {
+        "dev": [
+            "{{ '<var label="device subpath">class/input-report</var>' }}"
+        ]
+    }
+}
+```
+
+#### Declare the required device capabilities
+
+When [migrating your component manifest](#create-component-manifest), add
+the device path as a directory capability to your CML file:
+
+```json5
+// my_component.cml
+{
+    use: [
+        ...
+        {
+            directory: "{{ '<var label="device">dev-input-report</var>' }}",
+            rights: [ "r*" ],
+            path: "/dev/{{ '<var label="device subpath">class/input-report</var>' }}",
+        },
+    ],
+}
+```
+
+#### Route device subdirectory from the parent realm
+
+When [adding your component](#add-component-to-topology),
+you'll need to offer the appropriate device  path to your component from its
+parent realm.
+
+```json5
+// core.cml
+{
+    children: [
+        ...
+        {
+            name: "my_component",
+            url: "fuchsia-pkg://fuchsia.com/my-package#meta/my_component.cm",
+        },
+    ],
+    offer: [
+        ...
+        {
+            directory: "dev",
+            from: "parent",
+            as: "{{ '<var label="device">dev-input-report</var>' }}",
+            to: [ "#my_component" ],
+            subdir: "{{ '<var label="device subpath">class/input-report</var>' }}",
+        },
+    ]
+}
+```
+
+
 [archivist]: /docs/reference/diagnostics/inspect/tree.md#archivist
 [build-migration]: /docs/development/components/build.md#legacy-package-migration
 [cf-dev-list]: https://groups.google.com/a/fuchsia.dev/g/component-framework-dev
@@ -1286,6 +1361,7 @@ the following to route directory access to your test driver from the test root:
 [debug-log]: /docs/development/diagnostics/logs/recording.md#debuglog_handles
 [debug-log-cpp]: /src/sys/lib/stdout-to-debuglog/cpp
 [debug-log-rust]: /src/sys/lib/stdout-to-debuglog/rust
+[device-model]: /docs/concepts/drivers/device_driver_model/device-model.md
 [directory-capabilities]: /docs/concepts/components/v2/capabilities/directory.md
 [emulatortest]: /tools/emulator/emulatortest
 [example-component-id-index]: /src/sys/appmgr/config/core_component_id_index.json5
