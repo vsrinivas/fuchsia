@@ -1,0 +1,63 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/chromium/build_args.gni")
+import("//src/chromium/generate_pkg_and_config.gni")
+
+# Helper template that generates prebuilt Cast packages.
+#
+# Parameters:
+#   archive_path_suffix: For a given package target, the archive_path_suffix
+#                        is appended to the innermost folder of the base paths
+#                        passed into the generate_pkg_and_config template.
+
+template("generate_cast_targets") {
+  assert(defined(invoker.archive_path_suffix))
+
+  group(target_name) {
+    public_deps = [ ":cast_runner" ]
+  }
+
+  group("cast_runner") {
+    deps = [
+      ":cast_runner_config",
+      ":cast_runner_pkg",
+    ]
+  }
+
+  prebuilt_archive_base_path =
+      "//prebuilt/third_party/cast_runner${invoker.archive_path_suffix}"
+  debug_archive_base_path = "//prebuilt/build_ids/${target_cpu}/chromium${invoker.archive_path_suffix}"
+
+  # TODO(fxbug.dev/70573): Remove when use_cast_runner_canary is deprecated.
+  if (use_cast_runner_canary) {
+    package_flavor_selections += [
+      {
+        name = "cast_runner_pkg"
+        flavor = "canary"
+      },
+    ]
+  }
+
+  if (chromium_build_dir != "") {
+    package_flavor_selections += [
+      {
+        name = "cast_runner_pkg"
+        flavor = "custom"
+      },
+    ]
+  }
+
+  generate_pkg_and_config("cast_runner") {
+    prebuilt_archive_base_path = prebuilt_archive_base_path
+    debug_archive_base_path = debug_archive_base_path
+    custom_package_path = "/gen/fuchsia/engine/cast_runner/cast_runner.far"
+    selections = package_flavor_selections
+
+    # Config data arguments.
+    for_pkg = "appmgr"
+    sources = [ "config/cast_scheme_map.config" ]
+    outputs = [ "scheme_map/cast.config" ]
+  }
+}

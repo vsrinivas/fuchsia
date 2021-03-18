@@ -1,0 +1,208 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/packages/prebuilt_test_manifest.gni")
+import("//src/chromium/build_args.gni")
+import("//src/chromium/generate_pkg_and_config.gni")
+import("//src/lib/icu/tzdata/icu_tzdata_config_data.gni")
+
+# Helper template that generates prebuilt Chromium packages.
+#
+# Parameters:
+#   archive_path_suffix: For a given package target, the archive_path_suffix
+#                        is appended to the innermost folder of the base paths
+#                        passed into the generate_pkg_and_config template.
+
+template("generate_chromium_targets") {
+  assert(defined(invoker.archive_path_suffix))
+
+  prebuilt_archive_base_path = "//prebuilt/third_party"
+  debug_archive_base_path = "//prebuilt/build_ids/${target_cpu}"
+  build_output_gen_base_path = "/gen/fuchsia"
+
+  # This target is provided for use by the //src:src target. Dependencies on
+  # Chromium-supplied packages should refer explicitly to the desired package.
+  group(target_name) {
+    public_deps = [
+      ":web_engine",
+      ":web_runner",
+    ]
+  }
+
+  group("web_engine") {
+    deps = [
+      ":tzdata_for_web_engine",
+      ":web_engine_config",
+      ":web_engine_pkg",
+    ]
+  }
+
+  # TODO(fxbug.dev/70573): Remove when use_chromium_canary is deprecated.
+  if (use_chromium_canary) {
+    package_flavor_selections += [
+      {
+        name = "web_engine_pkg"
+        flavor = "canary"
+      },
+      {
+        name = "web_engine_shell_pkg"
+        flavor = "canary"
+      },
+      {
+        name = "web_runner_pkg"
+        flavor = "canary"
+      },
+    ]
+  }
+
+  if (chromium_build_dir != "") {
+    package_flavor_selections += [
+      {
+        name = "web_engine_pkg"
+        flavor = "custom"
+      },
+      {
+        name = "web_engine_shell_pkg"
+        flavor = "custom"
+      },
+      {
+        name = "web_runner_pkg"
+        flavor = "custom"
+      },
+    ]
+  }
+
+  generate_pkg_and_config("web_engine") {
+    # TODO(crbug.com/1148608): Move these two to `/web_engine`.
+    prebuilt_archive_base_path =
+        "${prebuilt_archive_base_path}/chromium${invoker.archive_path_suffix}"
+    debug_archive_base_path =
+        "${debug_archive_base_path}/chromium${invoker.archive_path_suffix}"
+    custom_package_path =
+        "${build_output_gen_base_path}/engine/web_engine/web_engine.far"
+    selections = package_flavor_selections
+
+    # Config data arguments.
+    for_pkg = "sysmgr"
+    sources = [ rebase_path("config/web_context_provider.config") ]
+  }
+
+  icu_tzdata_config_data("tzdata_for_web_engine") {
+    for_pkg = "web_engine"
+  }
+
+  group("web_engine_shell") {
+    deps = [ ":web_engine_shell_pkg" ]
+    testonly = true
+  }
+  generate_flavors("web_engine_shell") {
+    # TODO(crbug.com/1148608): Make the other two targets follow this pattern and
+    # potentially make these the default values in generate_flavors.gni.
+    prebuilt_archive_base_path = "${prebuilt_archive_base_path}/${target_name}${invoker.archive_path_suffix}"
+    debug_archive_base_path = "${debug_archive_base_path}/${target_name}${invoker.archive_path_suffix}"
+    custom_package_path =
+        "${build_output_gen_base_path}/engine/${target_name}/${target_name}.far"
+    selections = package_flavor_selections
+
+    testonly = true
+  }
+
+  group("web_runner") {
+    deps = [
+      ":web_runner_config",
+      ":web_runner_pkg",
+    ]
+  }
+
+  generate_pkg_and_config("web_runner") {
+    # TODO(crbug.com/1148608): Move these two to `/web_runner`.
+    prebuilt_archive_base_path =
+        "${prebuilt_archive_base_path}/chromium${invoker.archive_path_suffix}"
+    debug_archive_base_path =
+        "${debug_archive_base_path}/chromium${invoker.archive_path_suffix}"
+    custom_package_path =
+        "${build_output_gen_base_path}/runners/web_runner/web_runner.far"
+    selections = package_flavor_selections
+
+    # Config data arguments.
+    for_pkg = "appmgr"
+    sources = [ rebase_path("config/http_scheme_map.config") ]
+    outputs = [ "scheme_map/http.config" ]
+  }
+
+  # TODO(fxbug.dev/71642): Migrate the uses of this variable below to
+  # generate_flavors.gni. A simple function with a Boolean could be sufficient.
+  if (use_chromium_canary) {
+    canary_suffix = "_latest"
+  }
+
+  if (is_host) {
+    copy("chromedriver") {
+      outputs = [ "${host_tools_dir}/chromedriver" ]
+      if (use_chromium_canary) {
+        sources = [ "${prebuilt_archive_base_path}/chromedriver${invoker.archive_path_suffix}${canary_suffix}/linux-x64/chromedriver" ]
+      } else {
+        sources = [ "${prebuilt_archive_base_path}/chromedriver${invoker.archive_path_suffix}/linux-x64/chromedriver" ]
+      }
+    }
+  } else {
+    # Prebuilt FAR tests
+    test_env = [ nuc_env ]
+
+    group("chromium_tests_group") {
+      testonly = true
+      deps = [
+        ":chromium_tests",
+
+        # The targets below have exactly the same contents, so will not be taking
+        # extra storage in configurations that use them both.
+        ":tzdata_for_base_unittests",
+        ":tzdata_for_chromium_tests_base_unittests",
+        ":tzdata_for_media_unittests",
+      ]
+    }
+
+    # The specific tests binaries are specified by the "tests" target in
+    # https://source.chromium.org/chromium/chromium/src/+/master:fuchsia/cipd/BUILD.gn.
+    prebuilt_test_manifest("chromium_tests") {
+      if (use_chromium_canary) {
+        archive_dir = "${prebuilt_archive_base_path}/chromium_tests${invoker.archive_path_suffix}${canary_suffix}/arch/x64"
+      } else {
+        archive_dir = "${prebuilt_archive_base_path}/chromium_tests${invoker.archive_path_suffix}/arch/x64"
+      }
+      environments = test_env
+      log_settings = {
+        max_severity = "ERROR"
+      }
+    }
+
+    icu_tzdata_config_data("tzdata_for_chromium_tests_base_unittests") {
+      for_pkg = "chromium_tests_base_unittests"
+      testonly = true
+    }
+
+    icu_tzdata_config_data("tzdata_for_base_unittests") {
+      for_pkg = "base_unittests"
+      testonly = true
+    }
+
+    icu_tzdata_config_data("tzdata_for_media_unittests") {
+      for_pkg = "media_unittests"
+      testonly = true
+    }
+
+    group("tests") {
+      testonly = true
+
+      deps = [
+        ":chromium_tests_group",
+        ":web_engine",
+        ":web_runner",
+        "web_runner_tests:tests",
+        "//src/fonts:downstream_test_deps",
+      ]
+    }
+  }
+}
