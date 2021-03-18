@@ -370,7 +370,7 @@ void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* netbuf, bool handle_event) {
 void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* netbuf) {
   struct brcmf_if* ifp;
 
-  BRCMF_DBG(EVENT, "Enter: rxp=%p", netbuf);
+  // BRCMF_DBG(EVENT, "Enter: rxp=%p", netbuf);
 
   if (brcmf_rx_hdrpull(drvr, netbuf, &ifp)) {
     return;

@@ -272,15 +272,15 @@ static void brcmf_fweh_handle_event(brcmf_pub* drvr, struct brcmf_fweh_queue_ite
   emsg.ifidx = emsg_be->ifidx;
   emsg.bsscfgidx = emsg_be->bsscfgidx;
 
-  BRCMF_DBG(
-      EVENT,
-      "event %s (%u) version %u ifidx %u bsscfg %u status %d reason %d flags 0x%x addr" MAC_FMT_STR
-      "",
-      brcmf_fweh_event_name(event_info->code), emsg.event_code, emsg.version, emsg.ifidx,
-      emsg.bsscfgidx, emsg.status, emsg.reason, emsg.flags, MAC_FMT_ARGS(emsg.addr));
+  if (emsg.event_code != 69)
+    BRCMF_DBG(EVENT,
+              "event %s (%u) version %u ifidx %u bsscfg %u status %d reason %d flags 0x%x "
+              "addr" MAC_FMT_STR "",
+              brcmf_fweh_event_name(event_info->code), emsg.event_code, emsg.version, emsg.ifidx,
+              emsg.bsscfgidx, emsg.status, emsg.reason, emsg.flags, MAC_FMT_ARGS(emsg.addr));
 
-  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(EVENT), event->data, std::min<uint32_t>(emsg.datalen, 64),
-                     "event payload, len=%d", emsg.datalen);
+  // BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(EVENT), event->data, std::min<uint32_t>(emsg.datalen, 64),
+  //                    "event payload, len=%d", emsg.datalen);
 
   /* special handling of interface event */
   if (event_info->code == BRCMF_E_IF) {

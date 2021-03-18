@@ -37,11 +37,11 @@
 
 #define BRCMF_DBG_UNFILTERED BRCMF_INFO
 
-#define BRCMF_DBG(filter, fmt, ...)                                \
-  do {                                                             \
-    if (BRCMF_IS_ON(filter)) {                                     \
-      BRCMF_DBG_UNFILTERED(fmt, ##__VA_ARGS__);                    \
-    }                                                              \
+#define BRCMF_DBG(filter, fmt, ...)             \
+  do {                                          \
+    if (BRCMF_IS_ON(filter)) {                  \
+      BRCMF_DBG_UNFILTERED(fmt, ##__VA_ARGS__); \
+    }                                           \
   } while (0)
 
 #define BRCMF_DBG_EVENT(ifp, event_msg, REASON_FMT, reason_formatter) \
@@ -209,7 +209,8 @@ class Debug {
   // aid in recognizing important events.
   // http://fxbug.dev/29792 - Remove WLANIF once things have stabilized.
   static constexpr uint32_t kBrcmfMsgFilter =
-      static_cast<uint32_t>(Filter::kWLANIF) | static_cast<uint32_t>(Filter::kWLANPHY);
+      static_cast<uint32_t>(Filter::kWLANIF) | static_cast<uint32_t>(Filter::kWLANPHY) |
+      static_cast<uint32_t>(Filter::kFWCON) | static_cast<uint32_t>(Filter::kEVENT);
 
   // Check if a given debugging filter class is turned on.
   static constexpr bool IsFilterOn(Filter filter) {

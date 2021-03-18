@@ -2563,7 +2563,7 @@ static zx_status_t brcmf_cfg80211_escan_handler(struct brcmf_if* ifp,
   bool aborted;
   auto escan_result_le = static_cast<struct brcmf_escan_result_le*>(data);
 
-  BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
+  // BRCMF_DBG_EVENT(ifp, e, "%d", [](uint32_t reason) { return reason; });
 
   if (!escan_result_le) {
     BRCMF_ERR("Invalid escan result (nullptr)");
