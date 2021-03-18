@@ -9,20 +9,42 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 
+#include <memory>
+
+#include "data_processor.h"
 #include "event_stream.h"
+#include "fbl/unique_fd.h"
+#include "src/lib/files/directory.h"
 
 using TakeStaticEventStream_Result = fuchsia::sys2::EventSource_TakeStaticEventStream_Result;
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
+
   auto event_source = context->svc()->Connect<fuchsia::sys2::EventSource>();
   std::unique_ptr<EventStreamImpl> event_stream_impl;
   auto dispatcher = loop.dispatcher();
 
+  FX_CHECK(files::CreateDirectory("/data/debug_data"));
+
+  int fd;
+  if ((fd = open("/data/debug_data", O_DIRECTORY | O_RDWR)) == -1) {
+    FX_LOGS(ERROR) << "error opening /data/debug_data: " << strerror(errno);
+    return -1;
+  }
+
+  fbl::unique_fd debug_data_fd(fd);
+
+  async::Loop data_processor_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  data_processor_loop.StartThread();
+
+  auto data_processor_dispatcher = data_processor_loop.dispatcher();
+
   event_source->TakeStaticEventStream(
-      "EventStream", [dispatcher, &event_stream_impl,
-                      svc = context->svc()](TakeStaticEventStream_Result event_stream_result) {
+      "EventStream", [dispatcher, data_processor_dispatcher, &event_stream_impl,
+                      debug_data_fd = std::move(debug_data_fd), svc = context->svc()](
+                         TakeStaticEventStream_Result event_stream_result) mutable {
         if (event_stream_result.is_err()) {
           FX_LOGS(ERROR) << "Can't connect to event stream: "
                          << std::to_string(static_cast<int>(event_stream_result.err()));
@@ -30,9 +52,13 @@ int main(int argc, const char** argv) {
         }
         auto test_info = svc->Connect<fuchsia::test::internal::Info>();
         auto event_stream = std::move(event_stream_result.response().server_end);
-        event_stream_impl = std::make_unique<EventStreamImpl>(std::move(event_stream),
-                                                              std::move(test_info), dispatcher);
+        std::unique_ptr<AbstractDataProcessor> data_processor =
+            std::make_unique<DataProcessor>(std::move(debug_data_fd), data_processor_dispatcher);
+
+        event_stream_impl = std::make_unique<EventStreamImpl>(
+            std::move(event_stream), std::move(test_info), std::move(data_processor), dispatcher);
       });
 
   loop.Run();
+  data_processor_loop.Quit();
 }

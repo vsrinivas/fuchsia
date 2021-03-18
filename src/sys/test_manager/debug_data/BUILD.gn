@@ -8,12 +8,15 @@ source_set("lib") {
   testonly = true
 
   sources = [
+    "abstract_data_processor.h",
+    "cache.h",
+    "common.h",
+    "data_processor.cc",
+    "data_processor.h",
     "debug_data.cc",
     "debug_data.h",
     "event_stream.cc",
     "event_stream.h",
-    "moniker_url_cache.cc",
-    "moniker_url_cache.h",
   ]
 
   public_deps = [
@@ -22,7 +25,11 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.test.internal",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
+    "//src/lib/json_parser",
     "//zircon/system/ulib/async:async-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-cpp",
+    "//zircon/system/ulib/async-loop:async-loop-default",
+    "//zircon/system/ulib/debugdata",
   ]
 }
 
@@ -51,7 +58,12 @@ executable("test_bin") {
   testonly = true
   output_name = "debug_data_unittests"
 
-  sources = [ "moniker_url_cache_unittests.cc" ]
+  sources = [
+    "cache_unittests.cc",
+    "data_processor_unittests.cc",
+    "debug_data_unittests.cc",
+    "event_stream_unittests.cc",
+  ]
 
   deps = [
     ":lib",
@@ -62,9 +74,11 @@ executable("test_bin") {
   ]
 }
 
-fuchsia_unittest_component("debug_data_unittests_component") {
+fuchsia_component("debug_data_unittests_component") {
+  testonly = true
   component_name = "debug_data_unittests"
   deps = [ ":test_bin" ]
+  manifest = "meta/debug_data_unittests.cmx"
 }
 
 fuchsia_test_package("debug_data_unittests") {

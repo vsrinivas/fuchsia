@@ -19,7 +19,7 @@ async fn can_connect_to_debug_data_service() {
     assert_matches!(
         error,
         fidl::Error::ClientChannelClosed {
-            status: zx_status::Status::NOT_FOUND,
+            status: zx_status::Status::NOT_SUPPORTED,
             service_name: DebugDataMarker::NAME
         }
     );
