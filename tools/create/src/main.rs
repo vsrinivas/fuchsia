@@ -61,6 +61,9 @@ fn main() -> Result<(), anyhow::Error> {
         bail!("project directory already exists: {}", dest_project_path.display());
     }
 
+    // Create the directories leading to this project.
+    fs::create_dir_all(&args.project_path.project_parent)?;
+
     // Write the rendered files..
     project.write(&dest_project_path)?;
 
@@ -147,14 +150,18 @@ impl FromStr for ProjectPath {
         let path = if s.starts_with("//") {
             util::get_fuchsia_root()?.join(Path::new(&s[2..]))
         } else {
-            Path::new(s).to_path_buf()
+            PathBuf::from(s)
         };
         let project_parent = {
             let mut parent = path.parent().expect("parent should never be None");
             if parent == Path::new("") {
                 parent = Path::new(".");
             }
-            parent.canonicalize().context("path to project is invalid")?
+            if parent.is_absolute() {
+                parent.to_path_buf()
+            } else {
+                std::env::current_dir()?.join(parent)
+            }
         };
         let project_name =
             util::filename_to_string(path.file_name().with_context(|| "missing project name")?)?;
