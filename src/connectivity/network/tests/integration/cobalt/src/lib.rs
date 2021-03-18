@@ -7,6 +7,7 @@
 use anyhow::Context as _;
 
 #[fuchsia_async::run_singlethreaded(test)]
+#[ignore = "TODO(https://fxbug.dev/56382): this test is flaky"]
 async fn cobalt_metrics() -> Result<(), anyhow::Error> {
     // NB: netstack aggregates observations and logs them to cobalt once per
     // minute. We wait for calls to LogCobaltEvents to be made, so this test
