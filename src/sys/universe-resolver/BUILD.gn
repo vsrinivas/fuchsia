@@ -55,6 +55,9 @@ fuchsia_component("component") {
 
 fuchsia_package("universe-resolver") {
   deps = [ ":component" ]
+
+  # TODO(fxbug.dev/71657): Not safe for production use until this bug is resolved.
+  deps += [ "//build/validate:non_production_tag" ]
 }
 
 fuchsia_component("example") {
