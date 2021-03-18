@@ -469,6 +469,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
             service_context,
             Arc::new(Mutex::new(handler_factory)),
             Arc::new(Mutex::new(policy_handler_factory)),
+            self.storage_factory,
         )
         .await
         .map_err(|err| format_err!("could not create environment: {:?}", err))?;
@@ -681,6 +682,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     service_context_handle: ServiceContextHandle,
     handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
+    storage_factory: Arc<T>,
 ) -> Result<(), Error> {
     for blueprint in event_subscriber_blueprints {
         blueprint.create(messenger_factory.clone()).await;
@@ -837,6 +839,11 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
             stream,
         );
     });
+
+    // The service does not work without storage, so ensure it is always included first.
+    agent_authority
+        .register(Arc::new(crate::agent::storage_agent::Blueprint::new(storage_factory)))
+        .await;
 
     for blueprint in agent_blueprints {
         agent_authority.register(blueprint).await;

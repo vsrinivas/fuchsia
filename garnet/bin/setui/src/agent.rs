@@ -28,6 +28,9 @@ pub mod authority;
 /// Agent for rehydrating actions for restore.
 pub mod restore_agent;
 
+// Agent for managing access to storage.
+pub mod storage_agent;
+
 /// Agent for capturing requests.
 pub mod inspect;
 
