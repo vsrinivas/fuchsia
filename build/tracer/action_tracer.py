@@ -683,7 +683,7 @@ def main_arg_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--check-output-freshness",
         action="store_true",
-        default=True,
+        default=False,
         help="Check timestamp freshness of declared outputs")
     parser.add_argument(
         "--no-check-output-freshness",

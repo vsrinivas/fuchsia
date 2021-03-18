@@ -1134,9 +1134,9 @@ class MainArgParserTests(unittest.TestCase):
         args = parser.parse_args(self.required_args.split())
         self.assertEqual(args.trace_output, "t.out")
         self.assertEqual(args.label, "//pkg:tgt")
-        # Make sure all checks are enabled by default
+        # Make sure some checks are enabled by default
         self.assertTrue(args.check_access_permissions)
-        self.assertTrue(args.check_output_freshness)
+        self.assertFalse(args.check_output_freshness)
 
     def test_check_access_permissions(self):
         parser = action_tracer.main_arg_parser()

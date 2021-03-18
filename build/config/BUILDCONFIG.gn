@@ -654,7 +654,7 @@ foreach(_target_type,
 
       # If the action didn't write or touch all of its declared outputs, it
       # should be marked with `all_outputs_fresh = false`.
-      all_outputs_fresh = true
+      all_outputs_fresh = false
       if (defined(invoker.all_outputs_fresh)) {
         all_outputs_fresh = invoker.all_outputs_fresh
       }
@@ -709,12 +709,11 @@ foreach(_target_type,
           args += [ "--no-check-access-permissions" ]
         }
 
-        # TODO(fxb/72031): retire output freshness checks
-        if (!all_outputs_fresh || should_check_repeatability) {
+        if (all_outputs_fresh && !should_check_repeatability) {
           # Checking for repeatability will fail a command if outputs
           # do not match on a second invocation, which will make the action tracer
           # complain about an output being incorrectly fresh on a failed command.
-          args += [ "--no-check-output-freshness" ]
+          args += [ "--check-output-freshness" ]
         }
 
         # As far as tracing and dependencies are concerned, sources are just inputs.
