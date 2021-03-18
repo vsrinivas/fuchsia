@@ -374,8 +374,9 @@ mod tests {
             },
             types::{Item, ItemRef, Layer, MutableLayer, OrdLowerBound},
         },
-        fuchsia_async as fasync, fuchsia_zircon as zx,
+        fuchsia_async as fasync,
         std::ops::Bound,
+        std::time::{Duration, Instant},
     };
 
     #[derive(
@@ -546,20 +547,19 @@ mod tests {
         // back and measure something that should, in theory, take about half that time.
         let mut n = 100;
         let mut loops = 0;
-        let ticks_per_sec = zx::ticks_per_second();
-        let target_ticks = ticks_per_sec / 2; // 500ms
+        const TARGET_TIME: Duration = Duration::from_millis(500);
         let time = loop {
             let skip_list = SkipListLayer::new(n as usize);
             for i in 0..n {
                 skip_list.insert(Item::new(TestKey(i), i)).await;
             }
             let mut iter = skip_list.get_iterator();
-            let start = zx::ticks_get();
+            let start = Instant::now();
             for i in 0..n {
                 iter.seek(Bound::Included(&TestKey(i))).await.unwrap();
             }
-            let elapsed = zx::ticks_get() - start;
-            if elapsed > target_ticks {
+            let elapsed = Instant::now() - start;
+            if elapsed > TARGET_TIME {
                 break elapsed;
             }
             n *= 2;
@@ -573,18 +573,18 @@ mod tests {
             skip_list.insert(Item::new(TestKey(i), i)).await;
         }
         let mut iter = skip_list.get_iterator();
-        let start = zx::ticks_get();
+        let start = Instant::now();
         for i in 0..seek_count {
             iter.seek(Bound::Included(&TestKey(i))).await.unwrap();
         }
-        let elapsed = zx::ticks_get() - start;
+        let elapsed = Instant::now() - start;
 
         eprintln!(
             "{} items: {}ms, {} items: {}ms",
             seek_count,
-            time * 1000 / ticks_per_sec,
+            time.as_millis(),
             n,
-            elapsed * 1000 / ticks_per_sec
+            elapsed.as_millis()
         );
 
         // Experimental results show that typically we do a bit better than log(n), but here we just

@@ -72,5 +72,8 @@ fuchsia_test_package("fxfs-tests") {
 
 group("tests") {
   testonly = true
-  deps = [ ":fxfs-tests" ]
+  deps = [
+    ":fxfs-tests",
+    ":lib_test($host_toolchain)",
+  ]
 }
