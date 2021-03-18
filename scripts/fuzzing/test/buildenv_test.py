@@ -100,6 +100,7 @@ class BuildEnvTest(TestCaseWithFactory):
             'fake-package1/fake-target1',
             'fake-package1/fake-target2',
             'fake-package1/fake-target3',
+            'fake-package1/fake-target6',
             'fake-package2/an-extremely-verbose-target-name',
             'fake-package2/fake-target1',
             'fake-package2/fake-target11',
@@ -137,9 +138,9 @@ class BuildEnvTest(TestCaseWithFactory):
             fuzzers, sorted(expected_fuzzers + expected_fuzzer_tests))
 
     def test_fuzzers(self):
-        self.assertEqual(len(self.buildenv.fuzzers('/')), 6)
-        self.assertEqual(len(self.buildenv.fuzzers('fake')), 6)
-        self.assertEqual(len(self.buildenv.fuzzers('package1')), 3)
+        self.assertEqual(len(self.buildenv.fuzzers('/')), 7)
+        self.assertEqual(len(self.buildenv.fuzzers('fake')), 7)
+        self.assertEqual(len(self.buildenv.fuzzers('package1')), 4)
         self.assertEqual(len(self.buildenv.fuzzers('target1')), 3)
         self.assertEqual(len(self.buildenv.fuzzers('package2/target1')), 2)
         self.assertEqual(

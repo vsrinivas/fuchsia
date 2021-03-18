@@ -47,10 +47,11 @@ class CommandTest(TestCaseWithFuzzer):
             'See https://fuchsia.dev/fuchsia-src/development/testing/fuzzing/build-a-fuzzer',
             'for additional details.',
             '',
-            'Found 3 matching fuzzers for "fake-package1":',
+            'Found 4 matching fuzzers for "fake-package1":',
             '  fake-package1/fake-target1',
             '  fake-package1/fake-target2',
             '  fake-package1/fake-target3',
+            '  fake-package1/fake-target6',
         )
 
         # Exact match of a fuzzer

@@ -3,6 +3,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import datetime
 import os
 import unittest
 
@@ -90,10 +91,12 @@ class CorpusTest(TestCaseWithFuzzer):
         self.assertTrue(self.host.isfile(build_gn))
 
         pkgdir = self.buildenv.srcpath(fuzzer.corpus.srcdir)[2:]
+        year = datetime.datetime.now().year
         with self.host.open(build_gn) as f:
             self.assertEqual(
                 f.read().split('\n'), [
-                    '# Copyright 2020 The Fuchsia Authors. All rights reserved.',
+                    '# Copyright {} The Fuchsia Authors. All rights reserved.'.
+                    format(year),
                     '# Use of this source code is governed by a BSD-style license that can be',
                     '# found in the LICENSE file.',
                     '',
@@ -102,7 +105,7 @@ class CorpusTest(TestCaseWithFuzzer):
                     'import("//build/dist/resource.gni")',
                     '',
                     '# Generated using `fx fuzz update fake-package1/fake-target2`.',
-                    'resource("corpus") {',
+                    'resource("target2-corpus") {',
                     '  sources = []',
                     '  outputs = [ "data/{}/{{{{source_file_part}}}}" ]'.format(
                         pkgdir),
@@ -121,10 +124,12 @@ class CorpusTest(TestCaseWithFuzzer):
         build_gn = self.buildenv.abspath(srcdir, 'BUILD.gn')
         pkgdir = self.buildenv.srcpath(fuzzer.corpus.srcdir)[2:]
         self.assertTrue(self.host.isfile(build_gn))
+        year = datetime.datetime.now().year
         with self.host.open(build_gn) as f:
             self.assertEqual(
                 f.read().split('\n'), [
-                    '# Copyright 2020 The Fuchsia Authors. All rights reserved.',
+                    '# Copyright {} The Fuchsia Authors. All rights reserved.'.
+                    format(year),
                     '# Use of this source code is governed by a BSD-style license that can be',
                     '# found in the LICENSE file.',
                     '',
@@ -133,7 +138,7 @@ class CorpusTest(TestCaseWithFuzzer):
                     'import("//build/dist/resource.gni")',
                     '',
                     '# Generated using `fx fuzz update fake-package1/fake-target2`.',
-                    'resource("corpus") {',
+                    'resource("target2-corpus") {',
                     '  sources = [ "foo" ]',
                     '  outputs = [ "data/{}/{{{{source_file_part}}}}" ]'.format(
                         pkgdir),
@@ -153,10 +158,12 @@ class CorpusTest(TestCaseWithFuzzer):
         build_gn = self.buildenv.abspath(srcdir, 'BUILD.gn')
         pkgdir = self.buildenv.srcpath(fuzzer.corpus.srcdir)[2:]
         self.assertTrue(self.host.isfile(build_gn))
+        year = datetime.datetime.now().year
         with self.host.open(build_gn) as f:
             self.assertEqual(
                 f.read().split('\n'), [
-                    '# Copyright 2020 The Fuchsia Authors. All rights reserved.',
+                    '# Copyright {} The Fuchsia Authors. All rights reserved.'.
+                    format(year),
                     '# Use of this source code is governed by a BSD-style license that can be',
                     '# found in the LICENSE file.',
                     '',
@@ -165,7 +172,7 @@ class CorpusTest(TestCaseWithFuzzer):
                     'import("//build/dist/resource.gni")',
                     '',
                     '# Generated using `fx fuzz update fake-package1/fake-target2`.',
-                    'resource("corpus") {',
+                    'resource("target2-corpus") {',
                     '  sources = [',
                     '    "bar",',
                     '    "foo",',
@@ -192,7 +199,7 @@ class CorpusTest(TestCaseWithFuzzer):
             'import("//build/dist/resource.gni")',
             '',
             '# Not a matching comment',
-            'resource("corpus") {',
+            'resource("target2-corpus") {',
             '  sources = []',
             '  outputs = [ "data/corpus/{{source_file_part}}" ]',
             '}',
@@ -222,7 +229,7 @@ class CorpusTest(TestCaseWithFuzzer):
                     'import("//build/dist/resource.gni")',
                     '',
                     '# Generated using `fx fuzz update fake-package1/fake-target2`.',
-                    'resource("corpus") {',
+                    'resource("target2-corpus") {',
                     '  sources = [',
                     '    "bar",',
                     '    "baz",',
@@ -251,10 +258,12 @@ class CorpusTest(TestCaseWithFuzzer):
                 '{}/foo'.format(relpath),
             ])
         self.assertTrue(self.host.isfile(build_gn))
+        year = datetime.datetime.now().year
         with self.host.open(build_gn) as f:
             self.assertEqual(
                 f.read().split('\n'), [
-                    '# Copyright 2020 The Fuchsia Authors. All rights reserved.',
+                    '# Copyright {} The Fuchsia Authors. All rights reserved.'.
+                    format(year),
                     '# Use of this source code is governed by a BSD-style license that can be',
                     '# found in the LICENSE file.',
                     '',
@@ -264,7 +273,7 @@ class CorpusTest(TestCaseWithFuzzer):
                     '',
                     '# Generated using `fx fuzz update {} -o {}`.'.format(
                         str(fuzzer), self.buildenv.srcpath(build_gn)),
-                    'resource("corpus") {',
+                    'resource("target2-corpus") {',
                     '  sources = [',
                     '    "{}/bar",'.format(relpath),
                     '    "{}/foo",'.format(relpath),
@@ -349,6 +358,15 @@ class CorpusTest(TestCaseWithFuzzer):
         self.assertError(
             lambda: fuzzer.corpus.generate_buildfile(),
             'No such directory: {}'.format(self.buildenv.abspath(srcdir)))
+
+    def test_generate_buildfile_non_directory_corpus_target(self):
+        # Fuzzer with non-directory corpus (i.e. corpus GN target does not map
+        # cleanly to a directory in the source tree)
+        fuzzer = self.create_fuzzer('fake-package1/fake-target6')
+        self.assertError(
+            lambda: fuzzer.corpus.generate_buildfile(),
+            'Automatic buildfile generation not available for corpus labels that '
+            + 'don\'t correspond to a directory.')
 
     def test_generate_buildfile_needs_manual_update(self):
         # No corresponding fuzzer BUILD.gn

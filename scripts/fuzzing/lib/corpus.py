@@ -27,14 +27,29 @@ class Corpus(object):
         self._nspaths = None
         if not label:
             self._srcdir = None
+            self._pkgdir = None
             self._target = None
-        elif ':' in label:
-            parts = label.split(':')
-            self._srcdir = parts[0]
-            self._target = parts[1]
         else:
-            self._srcdir = label
-            self._target = os.path.basename(label)
+            # Parse GN label
+            if ':' in label:
+                target_dir, target = label.rsplit(':', 1)
+            else:
+                target_dir = label
+                target = os.path.basename(label)
+
+            if os.path.basename(target_dir) == target:
+                # We assume that a label of this form corresponds to a corpus
+                # directory, i.e. one containing only corpus elements and a BUILD.gn
+                # for the resource() target.
+                self._srcdir = target_dir
+                self._pkgdir = target_dir
+            else:
+                # A label in this form doesn't correspond cleanly with a corpus
+                # directory, so we can't auto-determine a srcdir
+                self._srcdir = None
+                self._pkgdir = target_dir + "/" + target
+
+            self._target = target
 
     @property
     def fuzzer(self):
@@ -74,8 +89,8 @@ class Corpus(object):
     def find_on_device(self):
         data = self.ns.data('corpus')
         self.ns.mkdir(data)
-        if self.srcdir:
-            resource = self.ns.resource(self.srcdir)
+        if self._pkgdir:
+            resource = self.ns.resource(self._pkgdir)
             self._nspaths = [data, resource]
         else:
             self._nspaths = [data]
@@ -128,11 +143,12 @@ class Corpus(object):
     def generate_buildfile(self, build_gn=None):
         """Generates a BUILD.gn file for the seed corpus.
 
-        Seed corpora are included in the source tree. In order to correctly update packages
-        including corpora, GN needs a listing of all the files being packaged. This function can
-        generate the necessary GN target on a per-fuzzer basis. More than one fuzzer may use the
-        same corpus, but each must have a separate target resulting in a different path, in order
-        for the GN templates to generate the component manifests correctly.
+        Seed corpora are included in the source tree. In order to correctly
+        update packages including corpora, GN needs a listing of all the files
+        being packaged. This function can generate the necessary GN target on a
+        per-fuzzer basis. More than one fuzzer may use the same corpus. A fuzzer
+        package may also include several corpora, with each separate GN target
+        resulting in a different path in the package.
 
         Parameters:
             build_gn    Specifies where on the host filesystem the BUILD.gn file should be
@@ -142,14 +158,21 @@ class Corpus(object):
         Returns:
             The list of elements found in the corpus.
         """
+
         if self._srcdir:
             srcdir = self.buildenv.abspath(self._srcdir)
+            pkgdir = self._pkgdir
             target = self._target
+        elif self._pkgdir:
+            self.host.error(
+                'Automatic buildfile generation not available for ' +
+                'corpus labels that don\'t correspond to a directory.')
         else:
             self.host.echo('No corpus set for {}.'.format(str(self.fuzzer)))
             self.host.echo('Please enter a path to a corpus: ', end='')
             srcdir = raw_input()
             srcdir = self.buildenv.abspath(srcdir)
+            pkgdir = srcdir
             target = os.path.basename(srcdir)
         if not self.host.isdir(srcdir):
             self.host.error('No such directory: {}'.format(srcdir))
@@ -208,7 +231,7 @@ class Corpus(object):
                     lines_out.append('')
 
         else:
-            year = 2020
+            year = datetime.datetime.now().year
             lines_out = [
                 '# Copyright {} The Fuchsia Authors. All rights reserved.'.
                 format(year),
@@ -232,17 +255,20 @@ class Corpus(object):
             lines_out.append('  ]')
         lines_out += [
             '  outputs = [ "data/{}/{{{{source_file_part}}}}" ]'.format(
-                srcdir[2:]),
+                pkgdir[2:]),
             '}',
             '',
         ]
         with self.host.open(build_gn, 'w') as gn:
             gn.write('\n'.join(lines_out))
 
-        if not self._srcdir and not self.fuzzer.add_corpus_to_buildfile(srcdir):
-            self.host.error(
-                'Failed to automatically add \'corpus = "{}"\'.'.format(srcdir),
-                'Please add the corpus parameter to {} manually.'.format(
-                    str(self.fuzzer)))
+        if not self._srcdir and not self._pkgdir:
+            # No GN metadata for the corpus was detected, so we should try to add it
+            if not self.fuzzer.add_corpus_to_buildfile(srcdir):
+                self.host.error(
+                    'Failed to automatically add \'corpus = "{}"\'.'.format(
+                        srcdir),
+                    'Please add the corpus parameter to {} manually.'.format(
+                        str(self.fuzzer)))
 
         return elems
