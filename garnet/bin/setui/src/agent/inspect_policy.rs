@@ -69,8 +69,7 @@ impl InspectPolicyAgent {
         // We must take care not to observe all requests as the agent itself can
         // issue messages and block on their response. If another message is
         // passed to the agent during this wait, we will deadlock.
-        // TODO(fxb/71826): log and exit instead of panicking
-        let (messenger_client, broker_receptor) = context
+        let (messenger_client, broker_receptor) = match context
             .messenger_factory
             .create(MessengerType::Broker(Some(filter::Builder::single(
                 filter::Condition::Custom(Arc::new(|message| {
@@ -79,7 +78,16 @@ impl InspectPolicyAgent {
                 })),
             ))))
             .await
-            .expect("broker listening to only policy requests could not be created");
+        {
+            Ok(messenger) => messenger,
+            Err(err) => {
+                fx_log_err!(
+                    "broker listening to only policy requests could not be created: {:?}",
+                    err
+                );
+                return;
+            }
+        };
 
         let mut agent = Self { messenger_client, inspect_node, policy_values: HashMap::new() };
 
