@@ -16,10 +16,10 @@ namespace media::audio::mixer {
 // extracts a significant amount of duplicate code across the resamplers.
 class PositionManager {
  public:
-  PositionManager() : PositionManager(1, 1, 0, kOneFrame.raw_value() - 1) {}
+  PositionManager() : PositionManager(1, 1, 1, kOneFrame.raw_value()) {}
 
-  PositionManager(uint32_t num_source_chans, uint32_t num_dest_chans, int64_t positive_width,
-                  int64_t negative_width);
+  PositionManager(uint32_t num_source_chans, uint32_t num_dest_chans, int64_t positive_length,
+                  int64_t negative_length);
   PositionManager(const PositionManager& not_ctor_copyable) = delete;
   PositionManager& operator=(const PositionManager& not_copyable) = delete;
   PositionManager(PositionManager&& not_ctor_movable) = delete;
@@ -38,7 +38,7 @@ class PositionManager {
                      uint64_t* source_pos_mod);
 
   static void CheckPositions(int64_t dest_frames, int64_t* dest_offset_ptr, int64_t source_frames,
-                             int64_t source_offset, int64_t pos_filter_width,
+                             int64_t source_offset, int64_t pos_filter_length,
                              Mixer::Bookkeeping* info);
   // Convenience method to retrieve the pointer to the first available source frame in this buffer.
   template <typename SourceSampleType>
@@ -89,14 +89,14 @@ class PositionManager {
  private:
   static void CheckDestPositions(int64_t dest_frames, int64_t* dest_offset_ptr);
   static void CheckSourcePositions(int64_t source_frames, int64_t frac_source_offset,
-                                   int64_t frac_pos_filter_width);
+                                   int64_t frac_pos_filter_length);
   static void CheckRateValues(int64_t frac_step_size, uint64_t rate_modulo, uint64_t denominator,
                               uint64_t* source_position_modulo_ptr);
 
   uint32_t num_source_chans_;
   uint32_t num_dest_chans_;
-  int64_t frac_positive_width_;
-  int64_t frac_negative_width_;
+  int64_t frac_positive_length_;
+  int64_t frac_negative_length_;
 
   void* source_void_ptr_ = nullptr;
   int64_t source_frames_ = 0;

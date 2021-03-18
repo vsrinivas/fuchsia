@@ -8,19 +8,19 @@
 namespace media::audio::mixer {
 
 PositionManager::PositionManager(uint32_t num_source_chans, uint32_t num_dest_chans,
-                                 int64_t frac_positive_width, int64_t frac_negative_width)
+                                 int64_t frac_positive_length, int64_t frac_negative_length)
     : num_source_chans_(num_source_chans),
       num_dest_chans_(num_dest_chans),
-      frac_positive_width_(frac_positive_width),
-      frac_negative_width_(frac_negative_width) {
-  FX_DCHECK(frac_positive_width_ >= 0);
-  FX_DCHECK(frac_negative_width_ >= 0);
+      frac_positive_length_(frac_positive_length),
+      frac_negative_length_(frac_negative_length) {
+  FX_CHECK(frac_positive_length_ > 0);
+  FX_CHECK(frac_negative_length_ > 0);
 }
 
 void PositionManager::Display(const PositionManager& pos_mgr) {
   FX_LOGS(INFO) << "Channels: source " << pos_mgr.num_source_chans_ << ", dest "
                 << pos_mgr.num_dest_chans_ << ".          Width: pos 0x" << std::hex
-                << pos_mgr.frac_positive_width_ << ", neg 0x" << pos_mgr.frac_negative_width_;
+                << pos_mgr.frac_positive_length_ << ", neg 0x" << pos_mgr.frac_negative_length_;
 
   FX_LOGS(INFO) << "Source:   len " << pos_mgr.source_frames_ << ", to 0x" << std::hex
                 << pos_mgr.frac_source_end_ << " (" << std::dec
@@ -54,10 +54,10 @@ void PositionManager::DisplayUpdate(const PositionManager& pos_mgr) {
 // static
 void PositionManager::CheckPositions(int64_t dest_frames, int64_t* dest_offset_ptr,
                                      int64_t source_frames, int64_t frac_source_offset,
-                                     int64_t frac_pos_filter_width, Mixer::Bookkeeping* info) {
+                                     int64_t frac_pos_filter_length, Mixer::Bookkeeping* info) {
   CheckDestPositions(dest_frames, dest_offset_ptr);
 
-  CheckSourcePositions(source_frames, frac_source_offset, frac_pos_filter_width);
+  CheckSourcePositions(source_frames, frac_source_offset, frac_pos_filter_length);
 
   CheckRateValues(info->step_size.raw_value(), info->rate_modulo(), info->denominator(),
                   &info->source_pos_modulo);
@@ -89,20 +89,20 @@ void PositionManager::SetSourceValues(const void* source_void_ptr, int64_t sourc
   frac_source_offset_ = source_offset_ptr_->raw_value();
 
   // frac_source_end_ is the first subframe at which this Mix call can no longer produce output
-  frac_source_end_ = (source_frames << Fixed::Format::FractionalBits) - frac_positive_width_;
+  frac_source_end_ = (source_frames << Fixed::Format::FractionalBits) - frac_positive_length_ + 1;
 }
 
 // static
 void PositionManager::CheckSourcePositions(int64_t source_frames, int64_t frac_source_offset,
-                                           int64_t frac_pos_filter_width) {
+                                           int64_t frac_pos_filter_length) {
   FX_CHECK(source_frames > 0) << "Source buffer must have at least one frame";
-  FX_CHECK(frac_pos_filter_width >= 0) << "Mixer lookahead frac_pos_filter_width (0x" << std::hex
-                                       << frac_pos_filter_width << ") cannot be negative";
+  FX_CHECK(frac_pos_filter_length > 0) << "Mixer lookahead frac_pos_filter_length (0x" << std::hex
+                                       << frac_pos_filter_length << ") cannot be negative";
 
-  // "Source offset" can be negative but only within bounds of frac_pos_filter_width.
-  FX_CHECK(frac_source_offset + frac_pos_filter_width >= 0)
-      << "frac_source_offset (0x" << std::hex << frac_source_offset << ") must be -pos_width (0x"
-      << -frac_pos_filter_width << ") or greater";
+  // "Source offset" can be negative but only within bounds of frac_pos_filter_length.
+  FX_CHECK(frac_source_offset + frac_pos_filter_length > 0)
+      << "frac_source_offset (0x" << std::hex << frac_source_offset
+      << ") must be greater than -pos_length (0x" << -frac_pos_filter_length << ")";
 
   // Source_offset cannot exceed source_frames.
   FX_CHECK(((frac_source_offset - 1) >> Fixed::Format::FractionalBits) < source_frames)
@@ -152,7 +152,7 @@ int64_t PositionManager::AdvanceToEnd() {
   const auto avail = std::min(est_dest_frames_produced, dest_frames_space_avail);
 
   const auto prev_source_frame_consumed =
-      (frac_source_offset_ + frac_positive_width_) >> Fixed::Format::FractionalBits;
+      (frac_source_offset_ + frac_positive_length_ - 1) >> Fixed::Format::FractionalBits;
 
   // Advance source and dest by 'avail' steps.
   frac_source_offset_ += (avail * frac_step_size_);
@@ -185,7 +185,7 @@ int64_t PositionManager::AdvanceToEnd() {
   }
 
   const auto new_source_frame_consumed =
-      (frac_source_offset_ + frac_positive_width_) >> Fixed::Format::FractionalBits;
+      (frac_source_offset_ + frac_positive_length_ - 1) >> Fixed::Format::FractionalBits;
   return new_source_frame_consumed - prev_source_frame_consumed;
 }
 

@@ -22,18 +22,19 @@ class SincSamplerImpl : public SincSampler {
  public:
   SincSamplerImpl(uint32_t source_frame_rate, uint32_t dest_frame_rate)
       : SincSampler(
-            // Sinc filters are symmetric (neg_filter_width == pos_filter_width)
-            SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate),
-            SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate)),
+            // TODO(fxbug.dev/72561): Convert Mixer and the rest of audio_core to a filter_width
+            // definition that includes [0] in its count (as SincFilter::Length does).
+            SincFilter::Length(source_frame_rate, dest_frame_rate) - Fixed::FromRaw(1),
+            // Sinc filters are symmetric (pos == neg, for coefficient values)
+            SincFilter::Length(source_frame_rate, dest_frame_rate) - Fixed::FromRaw(1)),
         source_rate_(source_frame_rate),
         dest_rate_(dest_frame_rate),
-        position_(SourceChanCount, DestChanCount,
-                  SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate).raw_value(),
-                  SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate).raw_value()),
+        position_(SourceChanCount, DestChanCount, pos_filter_width().raw_value(),
+                  neg_filter_width().raw_value()),
         working_data_(DestChanCount, kDataCacheLength),
         // SincFilter holds one side of coefficients; we invert position to calc the negative side.
         filter_(source_rate_, dest_rate_,
-                SincFilter::GetFilterWidth(source_frame_rate, dest_frame_rate).raw_value()) {
+                SincFilter::Length(source_frame_rate, dest_frame_rate).raw_value()) {
     // SincFilter draws from range [ceil(frac_pos - neg_width), floor(frac_pos + pos_width)].
     // Including the center, SincFilter can require floor(neg_width + one + pos_width) samples.
     // Be careful: this is not (necessarily) the same as floor(neg_width) + one + floor(pos_width)
@@ -159,9 +160,11 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
         working_data_.ShiftBy(Ceiling(frac_source_offset));
       }
 
-      // Calculate/store the last few source frames to the start of the channel_strip for next time
-      PopulateFramesToChannelStrip(source_void_ptr, next_source_idx_to_copy, frames_needed,
-                                   &working_data_, next_cache_idx_to_fill);
+      if constexpr (ScaleType != ScalerType::MUTED) {
+        // Calculate and store the last few source frames to start of channel_strip, for next time
+        PopulateFramesToChannelStrip(source_void_ptr, next_source_idx_to_copy, frames_needed,
+                                     &working_data_, next_cache_idx_to_fill);
+      }  // otherwise leave the shifted-in zeroes (silence), because we're muted.
       return true;
     }
     return false;

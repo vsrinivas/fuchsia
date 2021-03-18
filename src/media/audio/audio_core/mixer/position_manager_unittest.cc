@@ -17,7 +17,7 @@ constexpr int64_t kFracHalfFrame = kFracFrame / 2;
 // Produce the frame pointer (in source format) for the first frame in the source buffer.
 TEST(PositionManagerTest, FirstSourceFrame) {
   auto source_chans = 2u;
-  mixer::PositionManager pos_mgr(source_chans, 2u, 0, 0);
+  mixer::PositionManager pos_mgr(source_chans, 2u, 1, 1);
 
   int64_t source_frames = 5;
 
@@ -42,7 +42,7 @@ TEST(PositionManagerTest, FirstSourceFrame) {
 // Produce the frame pointer (in source format) for the last frame in the source buffer.
 TEST(PositionManagerTest, LastSourceFrame) {
   constexpr auto source_chans = 3u;
-  mixer::PositionManager pos_mgr(source_chans, 2u, 0, 0);
+  mixer::PositionManager pos_mgr(source_chans, 2u, 1, 1);
 
   constexpr int64_t source_frames = 5;
 
@@ -70,7 +70,7 @@ TEST(PositionManagerTest, LastSourceFrame) {
 TEST(PositionManagerTest, CurrentSourceFrame) {
   constexpr auto source_chans = 2u;
   constexpr auto dest_chans = 1u;
-  mixer::PositionManager pos_mgr(source_chans, dest_chans, 0, kFracFrame - 1);
+  mixer::PositionManager pos_mgr(source_chans, dest_chans, 1, kFracFrame);
 
   constexpr int64_t source_frames = 2;
 
@@ -112,7 +112,7 @@ TEST(PositionManagerTest, CurrentSourceFrame) {
 TEST(PositionManagerTest, CurrentDestFrame) {
   constexpr auto source_chans = 1u;
   constexpr auto dest_chans = 4u;
-  mixer::PositionManager pos_mgr(source_chans, dest_chans, 0, kFracFrame - 1);
+  mixer::PositionManager pos_mgr(source_chans, dest_chans, 1, kFracFrame);
 
   constexpr auto dest_frames = 2;
   float dest[dest_frames * dest_chans];
@@ -133,7 +133,7 @@ TEST(PositionManagerTest, CurrentDestFrame) {
 // Write back the latest values of source offset, dest offset, and source modulo.
 // This should overwrite existing values at those locations, and include effects of advances.
 TEST(PositionManagerTest, UpdateOffsets) {
-  mixer::PositionManager pos_mgr(1, 1, 0, kFracFrame - 1);
+  mixer::PositionManager pos_mgr(1, 1, 1, kFracFrame);
 
   float input;
   void* source_void_ptr = static_cast<void*>(&input);
@@ -182,7 +182,7 @@ TEST(PositionManagerTest, FrameCanBeMixed) {
   constexpr auto source_chans = 1u;
   constexpr auto dest_chans = 1u;
   auto half = Fixed(ffl::FromRatio(1, 2)).raw_value();
-  mixer::PositionManager pos_mgr(source_chans, dest_chans, half, half);
+  mixer::PositionManager pos_mgr(source_chans, dest_chans, half + 1, half + 1);
 
   int16_t source[2 * source_chans];
   const auto source_void = static_cast<void*>(source);
@@ -202,7 +202,7 @@ TEST(PositionManagerTest, FrameCanBeMixed) {
 }
 
 TEST(PositionManagerTest, AdvanceFrame_Basic) {
-  mixer::PositionManager pos_mgr(1, 1, 0, kFracFrame - 1);
+  mixer::PositionManager pos_mgr(1, 1, 1, kFracFrame);
 
   uint8_t source[3];
   auto source_offset = Fixed(1);
@@ -224,7 +224,7 @@ TEST(PositionManagerTest, AdvanceFrame_Basic) {
 
 // When source_offset reaches source_frames, we can no longer mix a frame, and source is consumed.
 TEST(PositionManagerTest, AdvanceFrame_SourceReachesEnd) {
-  mixer::PositionManager pos_mgr(1, 1, 0, kFracFrame - 1);
+  mixer::PositionManager pos_mgr(1, 1, 1, kFracFrame);
 
   int32_t source[2];
   auto source_offset = Fixed(1);
@@ -247,7 +247,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceReachesEnd) {
 // source_modulo starts just one shy of incrementing source_offset, and rate_modulo increments it
 // This is the boundary case, exactly where source_modulo affects source_offset
 TEST(PositionManagerTest, AdvanceFrame_SourceModuloReachesEnd) {
-  mixer::PositionManager pos_mgr(1, 1, 0, kFracFrame - 1);
+  mixer::PositionManager pos_mgr(1, 1, 1, kFracFrame);
 
   int16_t source[3];
   Fixed source_offset = Fixed(2) - Fixed::FromRaw(1);
@@ -282,7 +282,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloReachesEnd) {
 // source_modulo starts two shy of incrementing source_offset, and rate_modulo increments it by one.
 // This is the boundary case, one less than where source_modulo affects source_offset
 TEST(PositionManagerTest, AdvanceFrame_SourceModuloAlmostReachesEnd) {
-  mixer::PositionManager pos_mgr(1, 1, 0, kFracFrame - 1);
+  mixer::PositionManager pos_mgr(1, 1, 1, kFracFrame);
 
   float source[3];
   Fixed source_offset = Fixed(2) - Fixed::FromRaw(1);
@@ -316,7 +316,7 @@ TEST(PositionManagerTest, AdvanceFrame_SourceModuloAlmostReachesEnd) {
 
 // When dest_offset reaches dest_frames, we can no longer mix a frame, but source is not consumed.
 TEST(PositionManagerTest, AdvanceFrame_DestReachesEnd) {
-  mixer::PositionManager pos_mgr(1, 1, 0, kFracFrame - 1);
+  mixer::PositionManager pos_mgr(1, 1, 1, kFracFrame);
 
   int16_t source[3];
   auto source_offset = Fixed(1);
@@ -344,7 +344,7 @@ TEST(PositionManagerTest, AdvanceFrame_DestReachesEnd) {
 
 // Unity step_size (no rate_modulo) is the default if SetRateValues is never called.
 TEST(PositionManagerTest, AdvanceFrame_NoRateValues) {
-  mixer::PositionManager pos_mgr(1, 1, 0, kFracFrame - 1);
+  mixer::PositionManager pos_mgr(1, 1, 1, kFracFrame);
 
   int16_t source[3];
   Fixed source_offset = Fixed(2) - Fixed::FromRaw(1);
@@ -373,7 +373,7 @@ TEST(PositionManagerTest, AdvanceFrame_NoRateValues) {
 
 // AdvanceToEnd is limited by dest.
 TEST(PositionManagerTest, AdvanceToEnd_Dest) {
-  mixer::PositionManager pos_mgr(1, 1, 0, kFracFrame - 1);
+  mixer::PositionManager pos_mgr(1, 1, 1, kFracFrame);
 
   int16_t source[12];
   Fixed source_offset = Fixed(1) - Fixed::FromRaw(1);
@@ -402,7 +402,7 @@ TEST(PositionManagerTest, AdvanceToEnd_Dest) {
 
 // AdvanceToEnd is limited by source, with no rate_modulo factor
 TEST(PositionManagerTest, AdvanceToEnd_SourceBasic) {
-  mixer::PositionManager pos_mgr(1, 1, kFracHalfFrame, kFracHalfFrame);
+  mixer::PositionManager pos_mgr(1, 1, kFracHalfFrame + 1, kFracHalfFrame + 1);
 
   int16_t source[6];
   auto source_offset = Fixed(1);
@@ -431,7 +431,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceBasic) {
 
 // AdvanceToEnd is limited by source; rate_modulo contributes EXACTLY what consumes source.
 TEST(PositionManagerTest, AdvanceToEnd_SourceExactModulo) {
-  mixer::PositionManager pos_mgr(1, 1, 0, kFracHalfFrame);
+  mixer::PositionManager pos_mgr(1, 1, 1, kFracHalfFrame + 1);
 
   int16_t source[11];
   Fixed source_offset = Fixed(1) - Fixed::FromRaw(1);
@@ -461,7 +461,7 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExactModulo) {
 
 // AdvanceToEnd is limited by source; source_position modulo flows beyond source but by < 1 frame.
 TEST(PositionManagerTest, AdvanceToEnd_SourceExtraModulo) {
-  mixer::PositionManager pos_mgr(1, 1, 0, kFracHalfFrame);
+  mixer::PositionManager pos_mgr(1, 1, 1, kFracHalfFrame + 1);
 
   int16_t source[11];
   Fixed source_offset = Fixed(1) - Fixed::FromRaw(1);
@@ -489,10 +489,10 @@ TEST(PositionManagerTest, AdvanceToEnd_SourceExtraModulo) {
   EXPECT_TRUE(pos_mgr.SourceIsConsumed());
 }
 
-// AdvanceToEnd is limited by source; step_size and filter widths are high-magnitude.
+// AdvanceToEnd is limited by source; step_size and filter lengths are high-magnitude.
 TEST(PositionManagerTest, AdvanceToEndExtremeRatesAndWidths) {
-  mixer::PositionManager pos_mgr(1, 1, (336 << Fixed::Format::FractionalBits),
-                                 (336 << Fixed::Format::FractionalBits));
+  mixer::PositionManager pos_mgr(1, 1, (336 << Fixed::Format::FractionalBits) + 1,
+                                 (336 << Fixed::Format::FractionalBits) + 1);
 
   float dest[10];
   int64_t dest_offset = 0;

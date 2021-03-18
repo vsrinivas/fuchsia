@@ -333,13 +333,14 @@ class Mixer {
   //
   // Filter widths
   //
-  // The positive and negative widths of the filter for this mixer, expressed in
-  // fixed-point fractional source subframe units. These widths convey which
-  // source frames will be referenced by the filter, when producing output for a
-  // specific instant in time. Positive filter width refers to how far forward
-  // (positively) the filter looks, from the PTS in question; negative filter
-  // width refers to how far backward (negatively) the filter looks, from that
-  // same PTS. Specifically...
+  // The positive and negative widths of the filter for this mixer, expressed in fixed-point
+  // fractional source subframe units. These widths convey which source frames will be referenced by
+  // the filter, when producing output for a specific instant in time. Positive filter width refers
+  // to how far forward (positively) the filter looks, from the PTS in question; negative filter
+  // width refers to how far backward (negatively) the filter looks, from that same PTS.
+  //
+  // Note that filter widths do NOT include the center PTS in question, so in that regard they are
+  // not equivalent to the filter's length.
   //
   // Let:
   // P = pos_filter_width()
