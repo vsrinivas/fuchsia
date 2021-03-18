@@ -29,6 +29,8 @@ pub use cache::Cache;
 
 pub mod cache;
 
+pub mod testing;
+
 const BLOCK_VMOID_INVALID: u16 = 0;
 const TEMP_VMO_SIZE: usize = 65536;
 

@@ -28,6 +28,7 @@ rustc_library("remote-block-device") {
   sources = [
     "src/cache.rs",
     "src/lib.rs",
+    "src/testing.rs",
   ]
 }
 
