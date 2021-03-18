@@ -13,7 +13,7 @@ use crate::display::display_configuration::{
 use crate::display::types::{DisplayInfo, LowLightMode, Theme, ThemeBuilder, ThemeMode, ThemeType};
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
     controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
@@ -125,7 +125,7 @@ impl BrightnessManager for () {
         info: DisplayInfo,
         client: &ClientProxy,
     ) -> SettingHandlerResult {
-        write(&client, info, false).await.into_handler_result()
+        client.write_setting(info.into(), false).await.into_handler_result()
     }
 }
 
@@ -154,7 +154,7 @@ impl BrightnessManager for ExternalBrightnessControl {
         info: DisplayInfo,
         client: &ClientProxy,
     ) -> SettingHandlerResult {
-        write(&client, info, false).await?;
+        client.write_setting(info.into(), false).await?;
 
         if info.auto_brightness {
             self.brightness_service.call(BrightnessControlProxy::set_auto_brightness)
@@ -207,15 +207,13 @@ where
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::Restore => {
+                let display_info = self.client.read_setting::<DisplayInfo>().await;
+
                 // Load and set value.
-                Some(
-                    self.brightness_manager
-                        .update_brightness(self.client.read().await, &self.client)
-                        .await,
-                )
+                Some(self.brightness_manager.update_brightness(display_info, &self.client).await)
             }
             Request::SetDisplayInfo(mut set_display_info) => {
-                let display_info = self.client.read().await;
+                let display_info = self.client.read_setting::<DisplayInfo>().await;
                 if let Some(manual_brightness_value) = set_display_info.manual_brightness_value {
                     if let (auto_brightness @ Some(true), screen_enabled)
                     | (auto_brightness, screen_enabled @ Some(false)) =
@@ -270,7 +268,9 @@ where
                         .await,
                 )
             }
-            Request::Get => Some(Ok(Some(SettingInfo::Brightness(self.client.read().await)))),
+            Request::Get => {
+                Some(self.client.read_setting_info::<DisplayInfo>().await.into_handler_result())
+            }
             _ => None,
         }
     }
