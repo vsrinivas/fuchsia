@@ -70,6 +70,17 @@ participants must work together to choose an image size before they can
 determine the precise image format. This allows a pipeline to switch image
 sizes on the fly without needing to reallocate buffers.
 
+If a new participant needs to be added to an existing collection which has
+already undergone constraint negotiation and allocation, a new token can be
+[attached][AttachToken] to the buffer collection. The new participant's
+constraints must be satisfied using the already-allocated buffer collection,
+or the logical allocation (from the point of view of the new participant) fails.
+To increase the chances that the new participant can be added successfully, one
+of the participants present during initial allocation can mark a token
+[dispensable][SetDispensable]. This allows the token to be used to specify
+stand-in constraints so that the buffer collection will be able to later
+accommodate a new participant with the same constraints.
+
 ## Buffer destruction
 
 All references to a buffer must be removed before sysmem will destroy it and
@@ -178,3 +189,5 @@ collection.
 [fidl]: /docs/development/languages/fidl/README.md
 [map]: /docs/reference/syscalls/vmar_map.md
 [constraints]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#BufferCollectionConstraints
+[AttachToken]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#fuchsia.sysmem/BufferCollection.AttachToken
+[SetDispensable]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem#fuchsia.sysmem/BufferCollectionToken.SetDispensable
