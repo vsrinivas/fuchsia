@@ -130,7 +130,7 @@ template("config_package") {
   }
 
   validate_sysmgr_config_target = "${target_name}_validate_sysmgr_config"
-  merged_sysmgr_config = "$target_gen_dir/{$target_name}_merged_sysmgr_config"
+  merged_sysmgr_config = "$target_gen_dir/${target_name}_merged_sysmgr_config"
   action(validate_sysmgr_config_target) {
     forward_variables_from(invoker, [ "testonly" ])
     visibility = [ ":*" ]
