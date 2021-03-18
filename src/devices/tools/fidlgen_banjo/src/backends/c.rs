@@ -79,7 +79,7 @@ fn constant_to_c_str(ty: &Type, constant: &Constant, ir: &FidlIr) -> Result<Stri
     let value = match constant {
         Constant::Identifier { value, .. } => value,
         Constant::Literal { expression, .. } => expression,
-        Constant::BinaryOperator { expression, .. } => expression,
+        Constant::BinaryOperator { value, .. } => value,
     };
     match ty {
         Type::Primitive { subtype } => match subtype {
@@ -101,6 +101,10 @@ fn constant_to_c_str(ty: &Type, constant: &Constant, ir: &FidlIr) -> Result<Stri
             Declaration::Enum => {
                 let decl = ir.get_enum(identifier)?;
                 return integer_constant_to_c_str(&decl._type, constant, ir);
+            }
+            Declaration::Bits => {
+                let decl = ir.get_bits(identifier)?;
+                return constant_to_c_str(&decl._type, constant, ir);
             }
             t => Err(anyhow!("Can't handle this constant identifier: {:?}", t)),
         },

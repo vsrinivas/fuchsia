@@ -616,6 +616,10 @@ impl FidlIr {
         fetch_declaration!(self, type_alias_declarations, identifier)
     }
 
+    pub fn get_bits(&self, identifier: &CompoundIdentifier) -> Result<&Bits, Error> {
+        fetch_declaration!(self, bits_declarations, identifier)
+    }
+
     pub fn is_protocol(&self, identifier: &CompoundIdentifier) -> bool {
         self.declarations.0.get(identifier) == Some(&Declaration::Interface)
     }

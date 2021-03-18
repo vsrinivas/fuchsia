@@ -179,6 +179,11 @@ template("fidl") {
           ":${target_name}_server",
         ]
       }
+
+      import("//build/banjo/fidl_banjo.gni")
+      fidl_banjo(target_name) {
+        forward_variables_from(invoker, "*")
+      }
     }
   }
 }
