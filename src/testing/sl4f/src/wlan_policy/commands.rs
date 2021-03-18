@@ -231,6 +231,17 @@ impl Facade for WlanApPolicyFacade {
                 self.stop_all_access_points().await?;
                 return Ok(Value::Bool(true));
             }
+            "get_update" => {
+                fx_log_info!(tag: "WlanApPolicyFacade", "getting AP update");
+                let result = self.get_update().await?;
+                to_value(result).map_err(|e| format_err!("error handling listener update: {}", e))
+            }
+            "set_new_update_listener" => {
+                fx_log_info!(tag: "WlanApPolicyFacade", "initializing new update listener");
+                let result = self.set_new_listener()?;
+                to_value(result)
+                    .map_err(|e| format_err!("error initializing new update listener: {}", e))
+            }
             _ => {
                 return Err(format_err!("Unsupported command"));
             }

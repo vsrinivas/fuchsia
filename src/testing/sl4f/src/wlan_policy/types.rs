@@ -198,3 +198,86 @@ impl From<fidl_policy::NetworkConfig> for NetworkConfig {
         }
     }
 }
+
+#[derive(Serialize)]
+pub enum OperatingState {
+    Failed,
+    Starting,
+    Active,
+}
+
+impl From<fidl_policy::OperatingState> for OperatingState {
+    fn from(state: fidl_policy::OperatingState) -> Self {
+        match state {
+            fidl_policy::OperatingState::Failed => OperatingState::Failed,
+            fidl_policy::OperatingState::Starting => OperatingState::Starting,
+            fidl_policy::OperatingState::Active => OperatingState::Active,
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub enum ConnectivityMode {
+    LocalOnly,
+    Unrestricted,
+}
+
+impl From<fidl_policy::ConnectivityMode> for ConnectivityMode {
+    fn from(mode: fidl_policy::ConnectivityMode) -> Self {
+        match mode {
+            fidl_policy::ConnectivityMode::LocalOnly => ConnectivityMode::LocalOnly,
+            fidl_policy::ConnectivityMode::Unrestricted => ConnectivityMode::Unrestricted,
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub enum OperatingBand {
+    Any,
+    Only24Ghz,
+    Only5Ghz,
+}
+
+impl From<fidl_policy::OperatingBand> for OperatingBand {
+    fn from(band: fidl_policy::OperatingBand) -> Self {
+        match band {
+            fidl_policy::OperatingBand::Any => OperatingBand::Any,
+            fidl_policy::OperatingBand::Only24Ghz => OperatingBand::Only24Ghz,
+            fidl_policy::OperatingBand::Only5Ghz => OperatingBand::Only5Ghz,
+        }
+    }
+}
+
+#[derive(Serialize)]
+pub struct ConnectedClientInformation {
+    count: Option<u8>,
+}
+
+impl From<fidl_policy::ConnectedClientInformation> for ConnectedClientInformation {
+    fn from(clients: fidl_policy::ConnectedClientInformation) -> Self {
+        ConnectedClientInformation { count: clients.count }
+    }
+}
+
+#[derive(Serialize)]
+pub struct AccessPointState {
+    state: Option<OperatingState>,
+    mode: Option<ConnectivityMode>,
+    band: Option<OperatingBand>,
+    frequency: Option<u32>,
+    clients: Option<ConnectedClientInformation>,
+    id: Option<NetworkIdentifier>,
+}
+
+impl From<fidl_policy::AccessPointState> for AccessPointState {
+    fn from(update: fidl_policy::AccessPointState) -> Self {
+        AccessPointState {
+            state: update.state.map(|state| OperatingState::from(state)),
+            mode: update.mode.map(|mode| ConnectivityMode::from(mode)),
+            band: update.band.map(|band| OperatingBand::from(band)),
+            frequency: update.frequency,
+            clients: update.clients.map(|clients| ConnectedClientInformation::from(clients)),
+            id: update.id.map(|id| NetworkIdentifier::from(id)),
+        }
+    }
+}
