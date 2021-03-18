@@ -60,5 +60,41 @@ TEST(MemfsTest, SubdirectoryUpdateTime) {
   ASSERT_LE(subdirectory_attr.modification_time, index_attr.modification_time);
 }
 
+TEST(MemfsTest, SubPageContentSize) {
+  std::unique_ptr<Vfs> vfs;
+  fbl::RefPtr<VnodeDir> root;
+  ASSERT_OK(Vfs::Create("<tmp>", &vfs, &root));
+
+  zx::vmo vmo;
+  ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &vmo));
+
+  // Set the content size to a non page aligned value.
+  uint64_t content_size = zx_system_get_page_size() / 2;
+  EXPECT_OK(vmo.set_property(ZX_PROP_VMO_CONTENT_SIZE, &content_size, sizeof(content_size)));
+
+  // Duplicate the handle to create the VMO file so we can use the original handle for testing.
+  zx::vmo vmo_dup;
+  ASSERT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &vmo_dup));
+  // Create a VMO file sized to its content.
+  EXPECT_OK(root->CreateFromVmo("vmo", vmo_dup.release(), 0, content_size));
+
+  // Lookup the VMO and request its representation.
+  fbl::RefPtr<fs::Vnode> vmo_vnode;
+  ASSERT_OK(root->Lookup("vmo", &vmo_vnode));
+  fs::VnodeRepresentation vnode_info;
+  ASSERT_OK(vmo_vnode->GetNodeInfo(fs::Rights::ReadOnly(), &vnode_info));
+  EXPECT_TRUE(vnode_info.is_memory());
+
+  // We expect no cloning to have happened, this means we should have a handle to our original VMO.
+  // We can verify this by comparing koids.
+  zx_info_handle_basic_t original_vmo_info;
+  EXPECT_OK(vmo.get_info(ZX_INFO_HANDLE_BASIC, &original_vmo_info, sizeof(original_vmo_info),
+                         nullptr, nullptr));
+  zx_info_handle_basic_t vnode_vmo_info;
+  EXPECT_OK(vnode_info.memory().vmo.get_info(ZX_INFO_HANDLE_BASIC, &vnode_vmo_info,
+                                             sizeof(vnode_vmo_info), nullptr, nullptr));
+  EXPECT_EQ(original_vmo_info.koid, vnode_vmo_info.koid);
+}
+
 }  // namespace
 }  // namespace memfs

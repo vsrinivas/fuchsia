@@ -28,6 +28,9 @@ bool WindowMatchesVMO(zx_handle_t vmo, zx_off_t offset, zx_off_t length) {
   if (offset != 0)
     return false;
   uint64_t size;
+  if (zx_object_get_property(vmo, ZX_PROP_VMO_CONTENT_SIZE, &size, sizeof(size)) == ZX_OK) {
+    return size == length;
+  }
   if (zx_vmo_get_size(vmo, &size) < 0)
     return false;
   return size == length;
