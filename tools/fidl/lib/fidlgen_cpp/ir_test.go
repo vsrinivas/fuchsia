@@ -10,25 +10,25 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
-var mockProtocol = protocolInner{
+var mockProtocol = newProtocol(protocolInner{
 	Methods: []Method{
-		methodInner{
+		newMethod(methodInner{
 			Name:        "OneWay",
 			HasRequest:  true,
 			HasResponse: false,
-		}.build(),
-		methodInner{
+		}),
+		newMethod(methodInner{
 			Name:        "TwoWay",
 			HasRequest:  true,
 			HasResponse: true,
-		}.build(),
-		methodInner{
+		}),
+		newMethod(methodInner{
 			Name:        "Event",
 			HasRequest:  false,
 			HasResponse: true,
-		}.build(),
+		}),
 	},
-}.build()
+})
 
 func toNames(methods []Method) []string {
 	var s []string

@@ -88,14 +88,14 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
     uint8_t method_selector_ = data_[1];
     uint8_t method_selection_ = method_selector_ % {{ len $protocol.Methods }};
 
-  {{- range $methodIdx, $method := .Methods }}{{- if len $method.Request }}
+  {{- range $methodIdx, $method := .Methods }}{{- if len $method.RequestArgs }}
     if (method_selection_ == {{ $methodIdx }}) {
 #if !(ALL_METHODS || defined(METHOD_{{ $method.Name }}))
       // Selected method from protocol that is not part of this fuzzer.
       xprintf("Early exit: Chose disabled method: {{ $method.Name }}\n");
       return 0;
 #else
-      const size_t min_size_ = {{ range $paramIdx, $param := $method.Request }}
+      const size_t min_size_ = {{ range $paramIdx, $param := $method.RequestArgs }}
         {{- if $paramIdx }} + {{ end }}MinSize<{{ $param.Type.Natural }}>()
       {{- end }};
 
@@ -106,25 +106,25 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
       }
 
       const size_t slack_size_ = size_ - min_size_;
-      const size_t slack_size_per_param = slack_size_ / {{ len $method.Request }};
+      const size_t slack_size_per_param = slack_size_ / {{ len $method.RequestArgs }};
 
       xprintf("Allocating parameters with %zu bytes (%zu bytes each)\n", slack_size_, slack_size_per_param);
 
       size_t param_size_;
-  {{- range $method.Request }}
+  {{- range $method.RequestArgs }}
       param_size_ = MinSize<{{ .Type.Natural }}>() + slack_size_per_param;
       xprintf("Allocating %zu bytes for {{ .Type.Natural }} {{ .Name }}\n", param_size_);
       {{ .Type.Natural }} {{ .Name }} = Allocate<{{ .Type.Natural }}>{}(&src_, &param_size_);
   {{- end }}
 
       xprintf("Invoking method {{ $protocol.FuzzingName }}.{{ $method.Name }}\n");
-      protocol_->{{ $method.Name }}({{ range $paramIdx, $param := $method.Request }}
+      protocol_->{{ $method.Name }}({{ range $paramIdx, $param := $method.RequestArgs }}
           {{- if $paramIdx }}, {{ end -}}
           std::move({{ $param.Name }})
         {{- end }}
-        {{- if len $method.Response}}
-          {{- if len $method.Request }}, {{ end -}}
-          [signaller = fuzzer_.NewCallbackSignaller()]({{ range $paramIdx, $param := $method.Response }}
+        {{- if len $method.ResponseArgs}}
+          {{- if len $method.RequestArgs }}, {{ end -}}
+          [signaller = fuzzer_.NewCallbackSignaller()]({{ range $paramIdx, $param := $method.ResponseArgs }}
             {{- if $paramIdx }}, {{ end -}}
             {{ $param.Type.Natural }} {{ $param.Name }}
           {{- end }}) {

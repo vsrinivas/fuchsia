@@ -9,10 +9,10 @@ const fragmentSyncRequestManagedTmpl = `
 #ifdef __Fuchsia__
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}::{{ .Name }}(
     ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
-    {{- .Request | CommaMessagePrototype }})
+    {{- .RequestArgs | CommaMessagePrototype }})
    {
   ::fidl::OwnedEncodedMessage<{{ .Name }}Request> _request(zx_txid_t(0)
-    {{- .Request | CommaParamNames -}});
+    {{- .RequestArgs | CommaParamNames -}});
   {{- if .HasResponse }}
   _request.GetOutgoingMessage().Call<{{ .Name }}Response>(
       _client,
@@ -28,11 +28,11 @@ const fragmentSyncRequestManagedTmpl = `
 
 {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}::{{ .Name }}(
     ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
-    {{- .Request | CommaMessagePrototype -}}
+    {{- .RequestArgs | CommaMessagePrototype -}}
     , zx_time_t _deadline)
    {
   ::fidl::OwnedEncodedMessage<{{ .Name }}Request> _request(zx_txid_t(0)
-    {{- .Request | CommaParamNames -}});
+    {{- .RequestArgs | CommaParamNames -}});
   _request.GetOutgoingMessage().Call<{{ .Name }}Response>(
       _client,
       bytes_.data(),

@@ -6,11 +6,11 @@ package codegen
 
 const fragmentEventSenderTmpl = `
 {{- define "SendEventManagedMethodSignature" -}}
-{{ .Name }}({{ .Response | Params }}) const
+{{ .Name }}({{ .ResponseArgs | Params }}) const
 {{- end }}
 
 {{- define "SendEventCallerAllocateMethodSignature" -}}
-{{ .Name }}(::fidl::BufferSpan _buffer, {{ .Response | Params }}) const
+{{ .Name }}(::fidl::BufferSpan _buffer, {{ .ResponseArgs | Params }}) const
 {{- end }}
 
 {{- define "EventSenderDeclaration" }}
@@ -43,7 +43,7 @@ class {{ .Name }}::EventSender {
     {{- end }}
   zx_status_t {{ template "SendEventManagedMethodSignature" . }};
 
-    {{- if .Response }}
+    {{- if .ResponseArgs }}
 {{ "" }}
     {{- range .DocComments }}
   //{{ . }}
@@ -66,12 +66,12 @@ class {{ .Name }}::WeakEventSender {
     {{- end }}
   zx_status_t {{ template "SendEventManagedMethodSignature" . }} {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().{{ .Name }}({{ .Response | ParamMoveNames }});
+      return _binding->event_sender().{{ .Name }}({{ .ResponseArgs | ParamMoveNames }});
     }
     return ZX_ERR_CANCELED;
   }
 
-    {{- if .Response }}
+    {{- if .ResponseArgs }}
 {{ "" }}
     {{- range .DocComments }}
   //{{ . }}
@@ -79,7 +79,7 @@ class {{ .Name }}::WeakEventSender {
   // Caller provides the backing storage for FIDL message via response buffers.
   zx_status_t {{ template "SendEventCallerAllocateMethodSignature" . }} {
     if (auto _binding = binding_.lock()) {
-      return _binding->event_sender().{{ .Name }}(std::move(_buffer), {{ .Response | ParamMoveNames }});
+      return _binding->event_sender().{{ .Name }}(std::move(_buffer), {{ .ResponseArgs | ParamMoveNames }});
     }
     return ZX_ERR_CANCELED;
   }
@@ -104,19 +104,19 @@ class {{ .Name }}::WeakEventSender {
 zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
 {{- template "SendEventManagedMethodSignature" . }} {
   ::fidl::OwnedEncodedMessage<{{ .Name }}Response> _response{
-      {{- .Response | ParamNames -}}
+      {{- .ResponseArgs | ParamNames -}}
   };
   _response.Write(server_end_);
   return _response.status();
 }
     {{- /* Caller-allocated */}}
-    {{- if .Response }}
+    {{- if .ResponseArgs }}
 {{ "" }}
 zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
 {{- template "SendEventCallerAllocateMethodSignature" . }} {
   ::fidl::UnownedEncodedMessage<{{ .Name }}Response> _response(
       _buffer.data, _buffer.capacity
-      {{- .Response | CommaParamNames -}}
+      {{- .ResponseArgs | CommaParamNames -}}
   );
   _response.Write(server_end_);
   return _response.status();

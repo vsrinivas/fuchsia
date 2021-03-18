@@ -23,7 +23,7 @@ func (t *Type) WireNoTypedChannels() TypeVariant {
 // TODO(fxbug.dev/65212): We should always only generate the version with typed
 // channels.
 func (m *Method) ShouldEmitTypedChannelCascadingInheritance() bool {
-	for _, p := range m.Request {
+	for _, p := range m.RequestArgs {
 		if p.Type.Kind == TypeKinds.Protocol || p.Type.Kind == TypeKinds.Request {
 			return true
 		}

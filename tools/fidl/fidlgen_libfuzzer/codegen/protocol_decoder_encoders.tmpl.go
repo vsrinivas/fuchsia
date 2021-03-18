@@ -14,10 +14,10 @@ const tmplProtocolDecoderEncoders = `
 {{- if .HasRequest }}
 [](uint8_t* bytes, uint32_t num_bytes, zx_handle_info_t* handles, uint32_t num_handles) ->
   :std::pair<zx_status_t, zx_status_t> {
-  {{ .RequestCodingTable.Wire }}::DecodedMessage decoded(bytes, num_bytes);
+  {{ .Request.CodingTable.Wire }}::DecodedMessage decoded(bytes, num_bytes);
   if (decoded.status()) {
-    {{ .RequestCodingTable.Wire }}* value = decoded.PrimaryObject();
-    {{ .RequestCodingTable.Wire }}::OwnedByteEncodedMessage encoded(value);
+    {{ .Request.CodingTable.Wire }}* value = decoded.PrimaryObject();
+    {{ .Request.CodingTable.Wire }}::OwnedByteEncodedMessage encoded(value);
     if (!encoded.status()) {
       return ::std::make_pair<zx_status_t, zx_status_t>(decoded.status(), encoded.status());
     }
@@ -33,10 +33,10 @@ const tmplProtocolDecoderEncoders = `
 {{- if .HasResponse }}
 [](uint8_t* bytes, uint32_t num_bytes, zx_handle_info_t* handles, uint32_t num_handles) ->
   :std::pair<zx_status_t, zx_status_t> {
-  {{ .ResponseCodingTable.Wire }}::DecodedMessage decoded(bytes, num_bytes);
+  {{ .Response.CodingTable.Wire }}::DecodedMessage decoded(bytes, num_bytes);
   if (decoded.status()) {
-    {{ .ResponseCodingTable.Wire }}* value = decoded.PrimaryObject();
-    {{ .RequestCodingTable.Wire }}::{{ .Name }}::OwnedByteEncodedMessage encoded(value);
+    {{ .Response.CodingTable.Wire }}* value = decoded.PrimaryObject();
+    {{ .Request.CodingTable.Wire }}::{{ .Name }}::OwnedByteEncodedMessage encoded(value);
     if (!encoded.status()) {
       return ::std::make_pair<zx_status_t, zx_status_t>(decoded.status(), encoded.status());
     }

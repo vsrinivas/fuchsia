@@ -23,12 +23,12 @@ namespace methods {
 
 void {{ .LLProps.ProtocolName.Name }}Dispatch{{ .Name }}(void* interface, void* bytes,
     ::fidl::Transaction* txn) {
-  {{- if .Request }}
+  {{- if .RequestArgs }}
   auto message = reinterpret_cast<{{ .LLProps.ProtocolName }}::{{ .Name }}Request*>(bytes);
   {{- end }}
   {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}Completer::Sync completer(txn);
   reinterpret_cast<{{ .LLProps.ProtocolName }}::Interface*>(interface)
-      ->{{ .Name }}({{ template "SyncServerDispatchMoveParams" .Request }}{{ if .Request }},{{ end }}
+      ->{{ .Name }}({{ template "SyncServerDispatchMoveParams" .RequestArgs }}{{ if .RequestArgs }},{{ end }}
                     completer);
 }
   {{- end }}

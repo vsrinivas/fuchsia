@@ -14,14 +14,14 @@ const fragmentSyncRequestCallerAllocateTmpl = `
 {{- end }}
 
 {{- define "SyncRequestCallerAllocateMethodArguments" -}}
-{{ template "CallerBufferParams" .Request }}{{ if .HasResponse }}{{ if .Request }}, {{ end }}
+{{ template "CallerBufferParams" .RequestArgs }}{{ if .HasResponse }}{{ if .RequestArgs }}, {{ end }}
 ::fidl::BufferSpan _response_buffer{{ end }}
 {{- end }}
 
 {{- define "StaticCallSyncRequestCallerAllocateMethodArguments" -}}
 ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client_end
-{{- if .Request }}, {{ end }}
-{{- template "CallerBufferParams" .Request }}
+{{- if .RequestArgs }}, {{ end }}
+{{- template "CallerBufferParams" .RequestArgs }}
 {{- if .HasResponse }}, ::fidl::BufferSpan _response_buffer{{ end }}
 {{- end }}
 
@@ -29,23 +29,23 @@ const fragmentSyncRequestCallerAllocateTmpl = `
 #ifdef __Fuchsia__
 {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}::{{ .Name }}(
   ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
-  {{- if .Request -}}
+  {{- if .RequestArgs -}}
   , uint8_t* _request_bytes, uint32_t _request_byte_capacity
   {{- end -}}
-  {{- .Request | CommaMessagePrototype }}
+  {{- .RequestArgs | CommaMessagePrototype }}
   {{- if .HasResponse }}
   , uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
   {{- else }}
   ) {
   {{- end }}
-  {{- if .Request -}}
+  {{- if .RequestArgs -}}
   ::fidl::UnownedEncodedMessage<{{ .Name }}Request> _request(
     _request_bytes, _request_byte_capacity, 0
   {{- else -}}
   ::fidl::OwnedEncodedMessage<{{ .Name }}Request> _request(zx_txid_t(0)
   {{- end -}}
-    {{- .Request | CommaParamNames -}});
+    {{- .RequestArgs | CommaParamNames -}});
   {{- if .HasResponse }}
   _request.GetOutgoingMessage().Call<{{ .Name }}Response>(_client, _response_bytes,
                                                           _response_byte_capacity);

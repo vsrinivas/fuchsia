@@ -17,11 +17,11 @@ const fragmentClientAsyncMethodsTmpl = `
 {{- end }}
 
 {{- define "ClientAsyncRequestManagedMethodArguments" -}}
-{{ .Request | Params }}{{ if .Request }}, {{ end }} {{- template "ClientAsyncRequestManagedCallbackSignature" . }} _cb
+{{ .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end }} {{- template "ClientAsyncRequestManagedCallbackSignature" . }} _cb
 {{- end }}
 
 {{- define "ClientAsyncRequestCallerAllocateMethodArguments" -}}
-{{ template "CallerBufferParams" .Request }}{{ if .Request }}, {{ end }}{{ .Name }}ResponseContext* _context
+{{ template "CallerBufferParams" .RequestArgs }}{{ if .RequestArgs }}, {{ end }}{{ .Name }}ResponseContext* _context
 {{- end }}
 
 {{- define "ClientAsyncRequestManagedMethodDefinition" }}
@@ -42,7 +42,7 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
 
     void OnReply({{ .Name }}Response* response) override {
       cb_(response);
-      {{ if and .HasResponse .ResponseIsResource }}
+      {{ if and .HasResponse .Response.IsResource }}
       response->_CloseHandles();
       {{ end }}
       delete this;
@@ -59,19 +59,19 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{ .Name }}Request::OwnedEncodedMessage _request(_context->Txid()
-  {{- .Request | CommaParamNames -}}
+  {{- .RequestArgs | CommaParamNames -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
 ::fidl::Result {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }}) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  {{ if .Request }}
+  {{ if .RequestArgs }}
   {{ .Name }}Request::UnownedEncodedMessage _request(_request_buffer.data, _request_buffer.capacity, _context->Txid()
   {{- else }}
   {{ .Name }}Request::OwnedEncodedMessage _request(_context->Txid()
   {{- end }}
-  {{- .Request | CommaParamNames -}}
+  {{- .RequestArgs | CommaParamNames -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 }

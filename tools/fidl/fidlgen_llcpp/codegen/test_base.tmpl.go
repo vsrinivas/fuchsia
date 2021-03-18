@@ -28,7 +28,7 @@ class {{ .TestBase.Name }} : public {{ . }}::Interface {
   {{- range .Methods }}
     {{- if .HasRequest }}
     virtual void {{ .Name }}(
-        {{- .Request | Params }}{{ if .Request }}, {{ end -}}
+        {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
         Interface::{{ .Name }}Completer::Sync& completer) override { NotImplemented_("{{ .Name }}", completer); }
     {{- end }}
   {{- end }}

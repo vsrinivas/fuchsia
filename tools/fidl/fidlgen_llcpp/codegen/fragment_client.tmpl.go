@@ -80,10 +80,10 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
     {{- end }}
   // Synchronous variant of |{{ $outer.Name }}.{{ .Name }}()|.
   // {{- template "ClientAllocationComment" . }}
-  ResultOf::{{ .Name }} {{ .Name }}_Sync({{ .Request | Params }});
+  ResultOf::{{ .Name }} {{ .Name }}_Sync({{ .RequestArgs | Params }});
 
     {{- /* Sync caller-allocate flavor */}}
-    {{- if or .Request .Response }}
+    {{- if or .RequestArgs .ResponseArgs }}
 {{ "" }}
       {{- range .DocComments }}
   //{{ . }}
@@ -110,10 +110,10 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
   //
     {{- end }}
   // {{- template "ClientAllocationComment" . }}
-  ::fidl::Result {{ .Name }}({{ .Request | Params }});
+  ::fidl::Result {{ .Name }}({{ .RequestArgs | Params }});
 
     {{- /* Caller-allocate flavor */}}
-    {{- if .Request }}
+    {{- if .RequestArgs }}
 {{ "" }}
       {{- range .DocComments }}
   //{{ . }}

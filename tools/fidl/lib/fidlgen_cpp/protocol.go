@@ -37,7 +37,7 @@ type protocolInner struct {
 	TestBase            DeclName
 }
 
-// Protocol should be created using protocolInner.build().
+// Protocol should be created using newProtocol.
 type Protocol struct {
 	protocolInner
 
@@ -74,7 +74,7 @@ func (p *Protocol) WireType() string {
 	return string(p.Wire.Type())
 }
 
-func (inner protocolInner) build() *Protocol {
+func newProtocol(inner protocolInner) *Protocol {
 	type kinds []methodKind
 
 	filterBy := func(kinds kinds) []Method {
@@ -99,119 +99,113 @@ func (inner protocolInner) build() *Protocol {
 	}
 }
 
+type argsWrapper []Parameter
+
+// TODO(fxb/7704): We should be able to remove as we align with args with struct
+// representation.
+func (args argsWrapper) isResource() bool {
+	for _, arg := range args {
+		if arg.Type.IsResource {
+			return true
+		}
+	}
+	return false
+}
+
+// messageInner contains information about a Message that should be filled out
+// by the compiler.
+type messageInner struct {
+	TypeShape   fidl.TypeShape
+	CodingTable DeclName
+}
+
+// message contains lower level wire-format information about a request/response
+// message.
+// message should be created using newMessage.
+type message struct {
+	messageInner
+
+	Size           int
+	MaxHandles     int
+	MaxOutOfLine   int
+	ByteBufferType string
+	Padding        bool
+	Flexible       bool
+	HasPointer     bool
+	IsResource     bool
+}
+
+func newMessage(inner messageInner, args []Parameter, boundedness boundedness) message {
+	return message{
+		messageInner: inner,
+		Size:         inner.TypeShape.InlineSize,
+		MaxHandles:   inner.TypeShape.MaxHandles,
+		MaxOutOfLine: inner.TypeShape.MaxOutOfLine,
+		ByteBufferType: byteBufferType(
+			inner.TypeShape.InlineSize, inner.TypeShape.MaxOutOfLine, boundedness),
+		Padding:    inner.TypeShape.HasPadding,
+		Flexible:   inner.TypeShape.HasFlexibleEnvelope,
+		HasPointer: inner.TypeShape.Depth > 0,
+		IsResource: argsWrapper(args).isResource(),
+	}
+}
+
 // methodInner contains information about a Method that should be filled out by
 // the compiler.
 type methodInner struct {
-	// Private fields used to construct Method.
-	protocolName      DeclName
-	requestTypeShape  fidl.TypeShape
-	responseTypeShape fidl.TypeShape
-	// Public fields.
+	protocolName DeclName
+	request      messageInner
+	response     messageInner
+
 	fidl.Attributes
-	Name                string
-	Ordinal             uint64
-	HasRequest          bool
-	Request             []Parameter
-	RequestCodingTable  DeclName
-	HasResponse         bool
-	Response            []Parameter
-	ResponseCodingTable DeclName
-	Transitional        bool
-	Result              *Result
+	Name         string
+	Ordinal      uint64
+	HasRequest   bool
+	RequestArgs  []Parameter
+	HasResponse  bool
+	ResponseArgs []Parameter
+	Transitional bool
+	Result       *Result
 }
 
-// Method should be created using methodInner.build().
-// TODO: Consider factoring out common fields between Request and Response.
+// Method should be created using newMethod.
 type Method struct {
 	methodInner
 	NameInLowerSnakeCase string
-	// The name of a constant that defines the ordinal value.
-	OrdinalName             string
-	RequestSize             int
-	RequestMaxHandles       int
-	RequestMaxOutOfLine     int
-	RequestByteBufferType   string
-	RequestPadding          bool
-	RequestFlexible         bool
-	RequestHasPointer       bool
-	RequestIsResource       bool
-	ResponseSize            int
-	ResponseMaxHandles      int
-	ResponseMaxOutOfLine    int
-	ResponseByteBufferType  string
-	ResponseReceivedMaxSize int
-	ResponsePadding         bool
-	ResponseFlexible        bool
-	ResponseHasPointer      bool
-	ResponseIsResource      bool
-	CallbackType            string
-	ResponseHandlerType     string
-	ResponderType           string
-	LLProps                 LLProps
+	OrdinalName          string
+	Request              message
+	Response             message
+	CallbackType         string
+	ResponseHandlerType  string
+	ResponderType        string
+	LLProps              LLProps
 }
 
-func (inner methodInner) build() Method {
-	requestIsResource := false
-	for _, p := range inner.Request {
-		if p.Type.IsResource {
-			requestIsResource = true
-			break
-		}
-	}
-	responseIsResource := false
-	for _, p := range inner.Response {
-		if p.Type.IsResource {
-			responseIsResource = true
-			break
-		}
-	}
-
+func newMethod(inner methodInner) Method {
 	callbackType := ""
 	if inner.HasResponse {
 		callbackType = changeIfReserved(fidl.Identifier(inner.Name + "Callback"))
 	}
 
-	var computedResponseReceivedMaxSize int
-	if inner.responseTypeShape.HasFlexibleEnvelope {
-		computedResponseReceivedMaxSize = (1 << 32) - 1
-	} else {
-		computedResponseReceivedMaxSize = inner.responseTypeShape.InlineSize + inner.responseTypeShape.MaxOutOfLine
-	}
-
 	var responseBoundedness boundedness = boundednessBounded
-	if inner.responseTypeShape.HasFlexibleEnvelope {
+	if inner.response.TypeShape.HasFlexibleEnvelope {
 		responseBoundedness = boundednessUnbounded
 	}
 
 	m := Method{
-		methodInner:             inner,
-		NameInLowerSnakeCase:    fidl.ToSnakeCase(inner.Name),
-		OrdinalName:             fmt.Sprintf("k%s_%s_Ordinal", inner.protocolName.Natural.Name(), inner.Name),
-		RequestSize:             inner.requestTypeShape.InlineSize,
-		RequestMaxHandles:       inner.requestTypeShape.MaxHandles,
-		RequestMaxOutOfLine:     inner.requestTypeShape.MaxOutOfLine,
-		RequestByteBufferType:   byteBufferType(inner.requestTypeShape.InlineSize, inner.requestTypeShape.MaxOutOfLine, boundednessBounded),
-		RequestPadding:          inner.requestTypeShape.HasPadding,
-		RequestFlexible:         inner.requestTypeShape.HasFlexibleEnvelope,
-		RequestHasPointer:       inner.requestTypeShape.Depth > 0,
-		RequestIsResource:       requestIsResource,
-		ResponseSize:            inner.responseTypeShape.InlineSize,
-		ResponseMaxHandles:      inner.responseTypeShape.MaxHandles,
-		ResponseMaxOutOfLine:    inner.responseTypeShape.MaxOutOfLine,
-		ResponseByteBufferType:  byteBufferType(inner.responseTypeShape.InlineSize, inner.responseTypeShape.MaxOutOfLine, responseBoundedness),
-		ResponseReceivedMaxSize: computedResponseReceivedMaxSize,
-		ResponsePadding:         inner.responseTypeShape.HasPadding,
-		ResponseFlexible:        inner.responseTypeShape.HasFlexibleEnvelope,
-		ResponseHasPointer:      inner.responseTypeShape.Depth > 0,
-		ResponseIsResource:      responseIsResource,
-		CallbackType:            callbackType,
-		ResponseHandlerType:     fmt.Sprintf("%s_%s_ResponseHandler", inner.protocolName.Natural.Name(), inner.Name),
-		ResponderType:           fmt.Sprintf("%s_%s_Responder", inner.protocolName.Natural.Name(), inner.Name),
+		methodInner:          inner,
+		NameInLowerSnakeCase: fidl.ToSnakeCase(inner.Name),
+		OrdinalName:          fmt.Sprintf("k%s_%s_Ordinal", inner.protocolName.Natural.Name(), inner.Name),
+		Request:              newMessage(inner.request, inner.RequestArgs, boundednessBounded),
+		Response:             newMessage(inner.response, inner.ResponseArgs, responseBoundedness),
+		CallbackType:         callbackType,
+		ResponseHandlerType:  fmt.Sprintf("%s_%s_ResponseHandler", inner.protocolName.Natural.Name(), inner.Name),
+		ResponderType:        fmt.Sprintf("%s_%s_Responder", inner.protocolName.Natural.Name(), inner.Name),
 	}
 	m.LLProps = LLProps{
 		ProtocolName:      inner.protocolName.Wire,
-		LinearizeRequest:  len(inner.Request) > 0 && inner.requestTypeShape.Depth > 0,
-		LinearizeResponse: len(inner.Response) > 0 && inner.responseTypeShape.Depth > 0,
+		LinearizeRequest:  len(inner.RequestArgs) > 0 && inner.request.TypeShape.Depth > 0,
+		LinearizeResponse: len(inner.ResponseArgs) > 0 && inner.response.TypeShape.Depth > 0,
 		ClientContext:     m.buildLLContextProps(clientContext),
 		ServerContext:     m.buildLLContextProps(serverContext),
 	}
@@ -256,7 +250,7 @@ type LLContextProps struct {
 	StackUseResponse int
 }
 
-// LLProps contain properties of a method specific to llcpp
+// LLProps contain properties of a method specific to llcpp.
 type LLProps struct {
 	ProtocolName      DeclVariant
 	LinearizeRequest  bool
@@ -289,20 +283,24 @@ func (m Method) buildLLContextProps(context LLContext) LLContextProps {
 	stackAllocRequest := false
 	stackAllocResponse := false
 	if context == clientContext {
-		stackAllocRequest = len(m.Request) == 0 || (m.RequestSize+m.RequestMaxOutOfLine) < llcppMaxStackAllocSize
-		stackAllocResponse = len(m.Response) == 0 || (!m.ResponseFlexible && (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize)
+		stackAllocRequest = len(m.RequestArgs) == 0 ||
+			(m.Request.Size+m.Request.MaxOutOfLine) < llcppMaxStackAllocSize
+		stackAllocResponse = len(m.ResponseArgs) == 0 ||
+			(!m.Response.Flexible && (m.Response.Size+m.Response.MaxOutOfLine) < llcppMaxStackAllocSize)
 	} else {
-		stackAllocRequest = len(m.Request) == 0 || (!m.RequestFlexible && (m.RequestSize+m.RequestMaxOutOfLine) < llcppMaxStackAllocSize)
-		stackAllocResponse = len(m.Response) == 0 || (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize
+		stackAllocRequest = len(m.RequestArgs) == 0 ||
+			(!m.Request.Flexible && (m.Request.Size+m.Request.MaxOutOfLine) < llcppMaxStackAllocSize)
+		stackAllocResponse = len(m.ResponseArgs) == 0 ||
+			(m.Response.Size+m.Response.MaxOutOfLine) < llcppMaxStackAllocSize
 	}
 
 	stackUseRequest := 0
 	stackUseResponse := 0
 	if stackAllocRequest {
-		stackUseRequest = m.RequestSize + m.RequestMaxOutOfLine
+		stackUseRequest = m.Request.Size + m.Request.MaxOutOfLine
 	}
 	if stackAllocResponse {
-		stackUseResponse = m.ResponseSize + m.ResponseMaxOutOfLine
+		stackUseResponse = m.Response.Size + m.Response.MaxOutOfLine
 	}
 	return LLContextProps{
 		StackAllocRequest:  stackAllocRequest,
@@ -336,31 +334,35 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 			result = c.resultForUnion[v.Response[0].Type.Identifier]
 		}
 
-		method := methodInner{
-			protocolName:        protocolName,
-			requestTypeShape:    v.RequestTypeShapeV1,
-			responseTypeShape:   v.ResponseTypeShapeV1,
-			Attributes:          v.Attributes,
-			Name:                name,
-			Ordinal:             v.Ordinal,
-			HasRequest:          v.HasRequest,
-			Request:             c.compileParameterArray(v.Request),
-			RequestCodingTable:  requestCodingTable,
-			HasResponse:         v.HasResponse,
-			Response:            c.compileParameterArray(v.Response),
-			ResponseCodingTable: responseCodingTable,
-			Transitional:        v.IsTransitional(),
-			Result:              result,
-		}.build()
+		method := newMethod(methodInner{
+			protocolName: protocolName,
+			request: messageInner{
+				TypeShape:   v.RequestTypeShapeV1,
+				CodingTable: requestCodingTable,
+			},
+			response: messageInner{
+				TypeShape:   v.ResponseTypeShapeV1,
+				CodingTable: responseCodingTable,
+			},
+			Attributes:   v.Attributes,
+			Name:         name,
+			Ordinal:      v.Ordinal,
+			HasRequest:   v.HasRequest,
+			RequestArgs:  c.compileParameterArray(v.Request),
+			HasResponse:  v.HasResponse,
+			ResponseArgs: c.compileParameterArray(v.Response),
+			Transitional: v.IsTransitional(),
+			Result:       result,
+		})
 		methods = append(methods, method)
-		if size := method.ResponseSize + method.ResponseMaxOutOfLine; size > maxResponseSize {
+		if size := method.Response.Size + method.Response.MaxOutOfLine; size > maxResponseSize {
 			maxResponseSize = size
 		}
 	}
 
 	fuzzingName := strings.ReplaceAll(strings.ReplaceAll(string(val.Name), ".", "_"), "/", "_")
 
-	r := protocolInner{
+	r := newProtocol(protocolInner{
 		Attributes:          val.Attributes,
 		DeclName:            protocolName,
 		ClassName:           protocolName.AppendName("_clazz").Natural.Name(),
@@ -378,7 +380,7 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 		Methods:             methods,
 		FuzzingName:         fuzzingName,
 		TestBase:            protocolName.AppendName("_TestBase").AppendNamespace("testing"),
-	}.build()
+	})
 	return r
 }
 

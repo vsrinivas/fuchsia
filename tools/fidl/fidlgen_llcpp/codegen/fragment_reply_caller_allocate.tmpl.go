@@ -6,8 +6,8 @@ package codegen
 
 const fragmentReplyCallerAllocateTmpl = `
 {{- define "ReplyCallerAllocateMethodSignature" -}}
-Reply(::fidl::BufferSpan _buffer {{- if .Response }}, {{ end }}
-      {{ .Response | Params }})
+Reply(::fidl::BufferSpan _buffer {{- if .ResponseArgs }}, {{ end }}
+      {{ .ResponseArgs | Params }})
 {{- end }}
 
 {{- define "ReplyCallerAllocateMethodDefinition" }}
@@ -15,7 +15,7 @@ Reply(::fidl::BufferSpan _buffer {{- if .Response }}, {{ end }}
 ::fidl::Result {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
 {{- template "ReplyCallerAllocateMethodSignature" . }} {
   {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
-  {{- .Response | CommaParamNames -}}
+  {{- .ResponseArgs | CommaParamNames -}}
   );
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
