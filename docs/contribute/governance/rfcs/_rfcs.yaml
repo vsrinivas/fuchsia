@@ -352,3 +352,16 @@
   reviewers: ['pascallouis@google.com', 'mkember@google.com', 'jeremymanson@google.com', 'gridman@google.com']
   submitted: '2021-03-16'
   reviewed: '2021-03-16'
+
+- name: 'RFC-0077'
+  title: 'zx_clock_update accuracy improvement'
+  short_description: 'Changes to zx_clock_update that let clock maintainers opt in to supplying more information and achieving higher accuracy.'
+  authors: ['jsankey@google.com']
+  file: '0077_zx_clock_update_accuracy.md'
+  area: ['Zircon']
+  issue: ['65726']
+  gerrit_change_id: ['495844']
+  status: ''
+  reviewers: ['cpu@google.com', 'johngro@google.com', 'satsukiu@google.com']
+  submitted: '2021-03-04'
+  reviewed: '2021-03-18'
