@@ -76,9 +76,15 @@ async fn get_daemon_proxy() -> Result<DaemonProxy> {
     #[cfg(test)]
     let hash: String = "testcurrenthash".to_owned();
     #[cfg(not(test))]
-    let hash: String = ffx_config::get((CURRENT_EXE_HASH, ffx_config::ConfigLevel::Runtime))
-        .await
-        .map_err(|_| ffx_error!("BUG: ffx version information missing - build/release bug!"))?;
+    let hash: String =
+        match ffx_config::get((CURRENT_EXE_HASH, ffx_config::ConfigLevel::Runtime)).await {
+            Ok(str) => str,
+            Err(err) => {
+                log::error!("BUG: ffx version information is missing! {:?}", err);
+                link_task.detach();
+                return Ok(proxy);
+            }
+        };
 
     let daemon_hash = proxy.get_hash().await?;
     if hash == daemon_hash {
