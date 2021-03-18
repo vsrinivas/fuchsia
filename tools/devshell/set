@@ -171,10 +171,6 @@ function main {
   done
 
   if ! is_feature_enabled "legacy_set"; then
-    # Go commands must be run from first-level subdirectories because that's
-    # where the go.mod files are.
-    cd "${FUCHSIA_DIR}/tools"
-
     # Cache the compiled executable for later invocations.
     local exe_path="${FX_CACHE_DIR}/fx-set"
 
@@ -190,7 +186,18 @@ function main {
         fx-info "Compiling fx set..."
       fi
 
-      fx-command-run go build -o "$exe_path" ./build/fx-set/cmd
+      # Build in a temporary directory where we can arrange the module.
+      #
+      # Avoid "TMPDIR" since Go looks at that environment variable.
+      BUILD_DIR=$(mktemp -d)
+      trap 'rm -rf $BUILD_DIR' EXIT
+      pushd "$BUILD_DIR" > /dev/null
+      for target in go.{mod,sum} vendor; do
+        ln -s "$FUCHSIA_DIR"/third_party/golibs/$target .
+      done
+      ln -s "$FUCHSIA_DIR"/tools .
+      fx-command-run go build -o "$exe_path" ./tools/build/fx-set/cmd
+      popd > /dev/null
 
       if [ -t 1 ]; then
         # Delete the "compiling fx set" log so it doesn't show up in the final

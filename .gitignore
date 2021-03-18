@@ -46,6 +46,10 @@ Cargo.lock
 !/third_party/rust_crates/**/Cargo.lock
 Cargo.toml
 !/third_party/rust_crates/**/Cargo.toml
+go.mod
+!/third_party/golibs/**/go/.mod
+go.sum
+!/third_party/golibs/**/go/.sum
 CMakeLists.txt
 compile_commands.json
 cmake-build-debug/
@@ -83,6 +87,7 @@ tables_generator_tests_*.txt
 /third_party/*
 !/third_party/llvm-libc/
 /third_party/llvm-libc/src
+!/third_party/golibs
 !/third_party/rust_crates
 !/third_party/modp_b64
 !/third_party/scudo/
@@ -92,11 +97,9 @@ tables_generator_tests_*.txt
 /third_party/zstd/src
 /tmp/
 /topaz/
+/vendor/
 /src/experiences
 /build/secondary/third_party/protobuf
-
-# Ignore all vendored subdirectories.
-/vendor/**/
 
 # rust-analyzer
 /rust-project.json

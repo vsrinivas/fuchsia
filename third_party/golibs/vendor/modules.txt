@@ -1,0 +1,394 @@
+# cloud.google.com/go v0.79.0 => fuchsia.googlesource.com/third_party/github.com/googleapis/google-cloud-go.git v0.0.0-20200623164852-ad4f9324cdd7
+cloud.google.com/go
+cloud.google.com/go/compute/metadata
+cloud.google.com/go/iam
+cloud.google.com/go/internal
+cloud.google.com/go/internal/optional
+cloud.google.com/go/internal/trace
+cloud.google.com/go/internal/version
+# cloud.google.com/go/storage v1.14.0
+## explicit
+cloud.google.com/go/storage
+# github.com/creack/pty v1.1.11 => fuchsia.googlesource.com/third_party/github.com/creack/pty.git v0.0.0-20191209115840-8ab47f72e854
+## explicit
+github.com/creack/pty
+# github.com/dustin/go-humanize v1.0.0 => fuchsia.googlesource.com/third_party/go-humanize.git v0.0.0-20180713052910-9f541cc9db5d
+## explicit
+github.com/dustin/go-humanize
+github.com/dustin/go-humanize/english
+# github.com/flynn/go-tuf v0.0.0-20201230183259-aee6270feb55 => fuchsia.googlesource.com/third_party/go-tuf.git v0.0.0-20200826175457-a90d70916791
+## explicit
+github.com/flynn/go-tuf
+github.com/flynn/go-tuf/data
+github.com/flynn/go-tuf/encrypted
+github.com/flynn/go-tuf/sign
+github.com/flynn/go-tuf/util
+github.com/flynn/go-tuf/verify
+# github.com/fsnotify/fsnotify v1.4.9 => fuchsia.googlesource.com/third_party/github.com/fsnotify/fsnotify.git v0.0.0-20200311173518-45d7d09e39ef
+## explicit
+github.com/fsnotify/fsnotify
+# github.com/golang/glog v0.0.0-20160126235308-23def4e6c14b
+## explicit
+github.com/golang/glog
+# github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e
+github.com/golang/groupcache/lru
+# github.com/golang/protobuf v1.5.1 => fuchsia.googlesource.com/third_party/github.com/golang/protobuf.git v0.0.0-20200514204437-d04d7b157bb5
+## explicit
+github.com/golang/protobuf/descriptor
+github.com/golang/protobuf/internal/gengogrpc
+github.com/golang/protobuf/jsonpb
+github.com/golang/protobuf/proto
+github.com/golang/protobuf/protoc-gen-go
+github.com/golang/protobuf/protoc-gen-go/descriptor
+github.com/golang/protobuf/ptypes
+github.com/golang/protobuf/ptypes/any
+github.com/golang/protobuf/ptypes/duration
+github.com/golang/protobuf/ptypes/empty
+github.com/golang/protobuf/ptypes/timestamp
+# github.com/google/btree v1.0.1
+## explicit
+github.com/google/btree
+# github.com/google/go-cmp v0.5.5 => fuchsia.googlesource.com/third_party/github.com/google/go-cmp.git v0.0.0-20200818193711-d2fcc899bdc2
+## explicit
+github.com/google/go-cmp/cmp
+github.com/google/go-cmp/cmp/cmpopts
+github.com/google/go-cmp/cmp/internal/diff
+github.com/google/go-cmp/cmp/internal/flags
+github.com/google/go-cmp/cmp/internal/function
+github.com/google/go-cmp/cmp/internal/value
+# github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 => fuchsia.googlesource.com/third_party/github.com/google/shlex.git v0.0.0-20191202100458-e7afc7fbc510
+## explicit
+github.com/google/shlex
+# github.com/google/subcommands v1.2.0 => fuchsia.googlesource.com/third_party/github.com/google/subcommands.git v0.0.0-20190904161856-24aea2b9b9c1
+## explicit
+github.com/google/subcommands
+# github.com/googleapis/gax-go/v2 v2.0.5
+github.com/googleapis/gax-go/v2
+# github.com/jstemmer/go-junit-report v0.9.1
+github.com/jstemmer/go-junit-report
+github.com/jstemmer/go-junit-report/formatter
+github.com/jstemmer/go-junit-report/parser
+# github.com/kr/fs v0.1.0 => fuchsia.googlesource.com/third_party/github.com/kr/fs.git v0.0.0-20131111012553-2788f0dbd169
+## explicit
+github.com/kr/fs
+# github.com/kr/pretty v0.2.1 => fuchsia.googlesource.com/third_party/github.com/kr/pretty.git v0.0.0-20180506083345-73f6ac0b30a9
+## explicit
+github.com/kr/pretty
+# github.com/kr/text v0.2.0
+## explicit
+github.com/kr/text
+# github.com/pkg/errors v0.9.1 => fuchsia.googlesource.com/third_party/github.com/pkg/errors.git v0.0.0-20170505043639-c605e284fe17
+github.com/pkg/errors
+# github.com/pkg/sftp v1.13.0 => fuchsia.googlesource.com/third_party/github.com/pkg/sftp.git v0.0.0-20200111004458-561618205222
+## explicit
+github.com/pkg/sftp
+# github.com/spf13/pflag v1.0.5 => fuchsia.googlesource.com/third_party/github.com/spf13/pflag.git v0.0.0-20201009195203-85dd5c8bc61c
+## explicit
+github.com/spf13/pflag
+# github.com/stretchr/testify v1.7.0
+## explicit
+# github.com/tent/canonical-json-go v0.0.0-20130607151641-96e4ba3a7613
+## explicit
+github.com/tent/canonical-json-go
+# go.opencensus.io v0.23.0
+go.opencensus.io
+go.opencensus.io/internal
+go.opencensus.io/internal/tagencoding
+go.opencensus.io/metric/metricdata
+go.opencensus.io/metric/metricproducer
+go.opencensus.io/plugin/ochttp
+go.opencensus.io/plugin/ochttp/propagation/b3
+go.opencensus.io/resource
+go.opencensus.io/stats
+go.opencensus.io/stats/internal
+go.opencensus.io/stats/view
+go.opencensus.io/tag
+go.opencensus.io/trace
+go.opencensus.io/trace/internal
+go.opencensus.io/trace/propagation
+go.opencensus.io/trace/tracestate
+# go.uber.org/atomic v1.7.0 => fuchsia.googlesource.com/third_party/go.uber.org/atomic.git v0.0.0-20200515224902-7ccfa79b883f
+## explicit
+go.uber.org/atomic
+# go.uber.org/multierr v1.6.0 => fuchsia.googlesource.com/third_party/go.uber.org/multierr.git v0.0.0-20200423170120-4a27324ebb71
+## explicit
+go.uber.org/multierr
+# golang.org/x/crypto v0.0.0-20210317152858-513c2a44f670 => fuchsia.googlesource.com/third_party/golang.org/x/crypto.git v0.0.0-20200602180216-279210d13fed
+## explicit
+golang.org/x/crypto/blowfish
+golang.org/x/crypto/cast5
+golang.org/x/crypto/chacha20
+golang.org/x/crypto/curve25519
+golang.org/x/crypto/ed25519
+golang.org/x/crypto/ed25519/internal/edwards25519
+golang.org/x/crypto/internal/subtle
+golang.org/x/crypto/nacl/secretbox
+golang.org/x/crypto/openpgp
+golang.org/x/crypto/openpgp/armor
+golang.org/x/crypto/openpgp/elgamal
+golang.org/x/crypto/openpgp/errors
+golang.org/x/crypto/openpgp/packet
+golang.org/x/crypto/openpgp/s2k
+golang.org/x/crypto/pbkdf2
+golang.org/x/crypto/poly1305
+golang.org/x/crypto/salsa20/salsa
+golang.org/x/crypto/scrypt
+golang.org/x/crypto/ssh
+golang.org/x/crypto/ssh/internal/bcrypt_pbkdf
+# golang.org/x/lint v0.0.0-20201208152925-83fdc39ff7b5
+golang.org/x/lint
+golang.org/x/lint/golint
+# golang.org/x/mod v0.4.2
+## explicit
+golang.org/x/mod/module
+golang.org/x/mod/semver
+# golang.org/x/net v0.0.0-20210316092652-d523dce5a7f4 => fuchsia.googlesource.com/third_party/golang.org/x/net.git v0.0.0-20190827160401-ba9fcec4b297
+## explicit
+golang.org/x/net/bpf
+golang.org/x/net/context
+golang.org/x/net/context/ctxhttp
+golang.org/x/net/http/httpguts
+golang.org/x/net/http2
+golang.org/x/net/http2/hpack
+golang.org/x/net/idna
+golang.org/x/net/internal/iana
+golang.org/x/net/internal/socket
+golang.org/x/net/internal/timeseries
+golang.org/x/net/ipv4
+golang.org/x/net/ipv6
+golang.org/x/net/trace
+# golang.org/x/oauth2 v0.0.0-20210313182246-cd4f82c27b84
+golang.org/x/oauth2
+golang.org/x/oauth2/google
+golang.org/x/oauth2/google/internal/externalaccount
+golang.org/x/oauth2/internal
+golang.org/x/oauth2/jws
+golang.org/x/oauth2/jwt
+# golang.org/x/sync v0.0.0-20210220032951-036812b2e83c => fuchsia.googlesource.com/third_party/golang.org/x/sync.git v0.0.0-20190911185100-cd5d95a43a6e
+## explicit
+golang.org/x/sync/errgroup
+# golang.org/x/sys v0.0.0-20210317225723-c4fcb01b228e => fuchsia.googlesource.com/third_party/golang.org/x/sys.git v0.0.0-20210303074136-134d130e1a04
+## explicit
+golang.org/x/sys/cpu
+golang.org/x/sys/execabs
+golang.org/x/sys/internal/unsafeheader
+golang.org/x/sys/unix
+golang.org/x/sys/windows
+# golang.org/x/text v0.3.5
+golang.org/x/text/secure/bidirule
+golang.org/x/text/transform
+golang.org/x/text/unicode/bidi
+golang.org/x/text/unicode/norm
+# golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba => fuchsia.googlesource.com/third_party/golang.org/x/time.git v0.0.0-20190921001708-c4c64cad1fd0
+## explicit
+golang.org/x/time/rate
+# golang.org/x/tools v0.1.0
+golang.org/x/tools/cmd/goimports
+golang.org/x/tools/go/ast/astutil
+golang.org/x/tools/go/gcexportdata
+golang.org/x/tools/go/internal/gcimporter
+golang.org/x/tools/internal/event
+golang.org/x/tools/internal/event/core
+golang.org/x/tools/internal/event/keys
+golang.org/x/tools/internal/event/label
+golang.org/x/tools/internal/fastwalk
+golang.org/x/tools/internal/gocommand
+golang.org/x/tools/internal/gopathwalk
+golang.org/x/tools/internal/imports
+# golang.org/x/xerrors v0.0.0-20200804184101-5ec99f83aff1 => fuchsia.googlesource.com/third_party/golang.org/x/xerrors.git v0.0.0-20200804184101-5ec99f83aff1
+golang.org/x/xerrors
+golang.org/x/xerrors/internal
+# gonum.org/v1/gonum v0.9.0
+## explicit
+gonum.org/v1/gonum/floats
+gonum.org/v1/gonum/floats/scalar
+gonum.org/v1/gonum/integrate/quad
+gonum.org/v1/gonum/internal/asm/f64
+gonum.org/v1/gonum/mathext
+gonum.org/v1/gonum/mathext/internal/amos
+gonum.org/v1/gonum/mathext/internal/cephes
+gonum.org/v1/gonum/mathext/internal/gonum
+# google.golang.org/api v0.42.0
+## explicit
+google.golang.org/api/googleapi
+google.golang.org/api/googleapi/transport
+google.golang.org/api/internal
+google.golang.org/api/internal/gensupport
+google.golang.org/api/internal/impersonate
+google.golang.org/api/internal/third_party/uritemplates
+google.golang.org/api/iterator
+google.golang.org/api/option
+google.golang.org/api/option/internaloption
+google.golang.org/api/storage/v1
+google.golang.org/api/transport/cert
+google.golang.org/api/transport/http
+google.golang.org/api/transport/http/internal/propagation
+google.golang.org/api/transport/internal/dca
+# google.golang.org/appengine v1.6.7
+google.golang.org/appengine
+google.golang.org/appengine/internal
+google.golang.org/appengine/internal/app_identity
+google.golang.org/appengine/internal/base
+google.golang.org/appengine/internal/datastore
+google.golang.org/appengine/internal/log
+google.golang.org/appengine/internal/modules
+google.golang.org/appengine/internal/remote_api
+google.golang.org/appengine/internal/urlfetch
+google.golang.org/appengine/urlfetch
+# google.golang.org/genproto v0.0.0-20210317182105-75c7a8546eb9
+## explicit
+google.golang.org/genproto/googleapis/api/annotations
+google.golang.org/genproto/googleapis/iam/v1
+google.golang.org/genproto/googleapis/rpc/code
+google.golang.org/genproto/googleapis/rpc/status
+google.golang.org/genproto/googleapis/type/expr
+# google.golang.org/grpc v1.36.0 => fuchsia.googlesource.com/third_party/github.com/grpc/grpc-go.git v0.0.0-20200423161235-754ee590a4f3
+## explicit
+google.golang.org/grpc
+google.golang.org/grpc/attributes
+google.golang.org/grpc/backoff
+google.golang.org/grpc/balancer
+google.golang.org/grpc/balancer/base
+google.golang.org/grpc/balancer/roundrobin
+google.golang.org/grpc/binarylog/grpc_binarylog_v1
+google.golang.org/grpc/codes
+google.golang.org/grpc/connectivity
+google.golang.org/grpc/credentials
+google.golang.org/grpc/credentials/internal
+google.golang.org/grpc/encoding
+google.golang.org/grpc/encoding/proto
+google.golang.org/grpc/grpclog
+google.golang.org/grpc/internal
+google.golang.org/grpc/internal/backoff
+google.golang.org/grpc/internal/balancerload
+google.golang.org/grpc/internal/binarylog
+google.golang.org/grpc/internal/buffer
+google.golang.org/grpc/internal/channelz
+google.golang.org/grpc/internal/envconfig
+google.golang.org/grpc/internal/grpclog
+google.golang.org/grpc/internal/grpcrand
+google.golang.org/grpc/internal/grpcsync
+google.golang.org/grpc/internal/grpcutil
+google.golang.org/grpc/internal/resolver/dns
+google.golang.org/grpc/internal/resolver/passthrough
+google.golang.org/grpc/internal/status
+google.golang.org/grpc/internal/syscall
+google.golang.org/grpc/internal/transport
+google.golang.org/grpc/keepalive
+google.golang.org/grpc/metadata
+google.golang.org/grpc/naming
+google.golang.org/grpc/peer
+google.golang.org/grpc/resolver
+google.golang.org/grpc/serviceconfig
+google.golang.org/grpc/stats
+google.golang.org/grpc/status
+google.golang.org/grpc/tap
+# google.golang.org/protobuf v1.26.0 => fuchsia.googlesource.com/third_party/github.com/protocolbuffers/protobuf-go.git v0.0.0-20200622203215-3f7a61f89bb6
+## explicit
+google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo
+google.golang.org/protobuf/compiler/protogen
+google.golang.org/protobuf/encoding/protojson
+google.golang.org/protobuf/encoding/prototext
+google.golang.org/protobuf/encoding/protowire
+google.golang.org/protobuf/internal/descfmt
+google.golang.org/protobuf/internal/descopts
+google.golang.org/protobuf/internal/detrand
+google.golang.org/protobuf/internal/encoding/defval
+google.golang.org/protobuf/internal/encoding/json
+google.golang.org/protobuf/internal/encoding/messageset
+google.golang.org/protobuf/internal/encoding/tag
+google.golang.org/protobuf/internal/encoding/text
+google.golang.org/protobuf/internal/errors
+google.golang.org/protobuf/internal/fieldsort
+google.golang.org/protobuf/internal/filedesc
+google.golang.org/protobuf/internal/filetype
+google.golang.org/protobuf/internal/flags
+google.golang.org/protobuf/internal/genid
+google.golang.org/protobuf/internal/impl
+google.golang.org/protobuf/internal/mapsort
+google.golang.org/protobuf/internal/msgfmt
+google.golang.org/protobuf/internal/pragma
+google.golang.org/protobuf/internal/set
+google.golang.org/protobuf/internal/strs
+google.golang.org/protobuf/internal/version
+google.golang.org/protobuf/proto
+google.golang.org/protobuf/reflect/protodesc
+google.golang.org/protobuf/reflect/protoreflect
+google.golang.org/protobuf/reflect/protoregistry
+google.golang.org/protobuf/runtime/protoiface
+google.golang.org/protobuf/runtime/protoimpl
+google.golang.org/protobuf/testing/protocmp
+google.golang.org/protobuf/types/descriptorpb
+google.golang.org/protobuf/types/known/anypb
+google.golang.org/protobuf/types/known/durationpb
+google.golang.org/protobuf/types/known/emptypb
+google.golang.org/protobuf/types/known/timestamppb
+google.golang.org/protobuf/types/pluginpb
+# gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c
+## explicit
+# gopkg.in/yaml.v2 v2.4.0 => fuchsia.googlesource.com/third_party/github.com/go-yaml/yaml.git v0.0.0-20200121171940-53403b58ad1b
+## explicit
+gopkg.in/yaml.v2
+# gvisor.dev/gvisor v0.0.0-20210317193509-8a3f44a54fe8
+## explicit
+gvisor.dev/gvisor/pkg/gohacks
+gvisor.dev/gvisor/pkg/goid
+gvisor.dev/gvisor/pkg/linewriter
+gvisor.dev/gvisor/pkg/log
+gvisor.dev/gvisor/pkg/rand
+gvisor.dev/gvisor/pkg/sleep
+gvisor.dev/gvisor/pkg/state
+gvisor.dev/gvisor/pkg/state/wire
+gvisor.dev/gvisor/pkg/sync
+gvisor.dev/gvisor/pkg/tcpip
+gvisor.dev/gvisor/pkg/tcpip/buffer
+gvisor.dev/gvisor/pkg/tcpip/faketime
+gvisor.dev/gvisor/pkg/tcpip/hash/jenkins
+gvisor.dev/gvisor/pkg/tcpip/header
+gvisor.dev/gvisor/pkg/tcpip/header/parse
+gvisor.dev/gvisor/pkg/tcpip/link/ethernet
+gvisor.dev/gvisor/pkg/tcpip/link/loopback
+gvisor.dev/gvisor/pkg/tcpip/link/nested
+gvisor.dev/gvisor/pkg/tcpip/link/pipe
+gvisor.dev/gvisor/pkg/tcpip/link/sniffer
+gvisor.dev/gvisor/pkg/tcpip/network/arp
+gvisor.dev/gvisor/pkg/tcpip/network/hash
+gvisor.dev/gvisor/pkg/tcpip/network/internal/fragmentation
+gvisor.dev/gvisor/pkg/tcpip/network/internal/ip
+gvisor.dev/gvisor/pkg/tcpip/network/ipv4
+gvisor.dev/gvisor/pkg/tcpip/network/ipv6
+gvisor.dev/gvisor/pkg/tcpip/ports
+gvisor.dev/gvisor/pkg/tcpip/seqnum
+gvisor.dev/gvisor/pkg/tcpip/stack
+gvisor.dev/gvisor/pkg/tcpip/transport/icmp
+gvisor.dev/gvisor/pkg/tcpip/transport/packet
+gvisor.dev/gvisor/pkg/tcpip/transport/raw
+gvisor.dev/gvisor/pkg/tcpip/transport/tcp
+gvisor.dev/gvisor/pkg/tcpip/transport/tcpconntrack
+gvisor.dev/gvisor/pkg/tcpip/transport/udp
+gvisor.dev/gvisor/pkg/waiter
+# cloud.google.com/go => fuchsia.googlesource.com/third_party/github.com/googleapis/google-cloud-go.git v0.0.0-20200623164852-ad4f9324cdd7
+# github.com/creack/pty => fuchsia.googlesource.com/third_party/github.com/creack/pty.git v0.0.0-20191209115840-8ab47f72e854
+# github.com/dustin/go-humanize => fuchsia.googlesource.com/third_party/go-humanize.git v0.0.0-20180713052910-9f541cc9db5d
+# github.com/flynn/go-tuf => fuchsia.googlesource.com/third_party/go-tuf.git v0.0.0-20200826175457-a90d70916791
+# github.com/fsnotify/fsnotify => fuchsia.googlesource.com/third_party/github.com/fsnotify/fsnotify.git v0.0.0-20200311173518-45d7d09e39ef
+# github.com/golang/protobuf => fuchsia.googlesource.com/third_party/github.com/golang/protobuf.git v0.0.0-20200514204437-d04d7b157bb5
+# github.com/google/go-cmp => fuchsia.googlesource.com/third_party/github.com/google/go-cmp.git v0.0.0-20200818193711-d2fcc899bdc2
+# github.com/google/shlex => fuchsia.googlesource.com/third_party/github.com/google/shlex.git v0.0.0-20191202100458-e7afc7fbc510
+# github.com/google/subcommands => fuchsia.googlesource.com/third_party/github.com/google/subcommands.git v0.0.0-20190904161856-24aea2b9b9c1
+# github.com/kr/fs => fuchsia.googlesource.com/third_party/github.com/kr/fs.git v0.0.0-20131111012553-2788f0dbd169
+# github.com/kr/pretty => fuchsia.googlesource.com/third_party/github.com/kr/pretty.git v0.0.0-20180506083345-73f6ac0b30a9
+# github.com/pkg/errors => fuchsia.googlesource.com/third_party/github.com/pkg/errors.git v0.0.0-20170505043639-c605e284fe17
+# github.com/pkg/sftp => fuchsia.googlesource.com/third_party/github.com/pkg/sftp.git v0.0.0-20200111004458-561618205222
+# github.com/spf13/pflag => fuchsia.googlesource.com/third_party/github.com/spf13/pflag.git v0.0.0-20201009195203-85dd5c8bc61c
+# go.uber.org/atomic => fuchsia.googlesource.com/third_party/go.uber.org/atomic.git v0.0.0-20200515224902-7ccfa79b883f
+# go.uber.org/multierr => fuchsia.googlesource.com/third_party/go.uber.org/multierr.git v0.0.0-20200423170120-4a27324ebb71
+# golang.org/x/crypto => fuchsia.googlesource.com/third_party/golang.org/x/crypto.git v0.0.0-20200602180216-279210d13fed
+# golang.org/x/net => fuchsia.googlesource.com/third_party/golang.org/x/net.git v0.0.0-20190827160401-ba9fcec4b297
+# golang.org/x/sync => fuchsia.googlesource.com/third_party/golang.org/x/sync.git v0.0.0-20190911185100-cd5d95a43a6e
+# golang.org/x/sys => fuchsia.googlesource.com/third_party/golang.org/x/sys.git v0.0.0-20210303074136-134d130e1a04
+# golang.org/x/time => fuchsia.googlesource.com/third_party/golang.org/x/time.git v0.0.0-20190921001708-c4c64cad1fd0
+# golang.org/x/xerrors => fuchsia.googlesource.com/third_party/golang.org/x/xerrors.git v0.0.0-20200804184101-5ec99f83aff1
+# google.golang.org/grpc => fuchsia.googlesource.com/third_party/github.com/grpc/grpc-go.git v0.0.0-20200423161235-754ee590a4f3
+# google.golang.org/protobuf => fuchsia.googlesource.com/third_party/github.com/protocolbuffers/protobuf-go.git v0.0.0-20200622203215-3f7a61f89bb6
+# gopkg.in/yaml.v2 => fuchsia.googlesource.com/third_party/github.com/go-yaml/yaml.git v0.0.0-20200121171940-53403b58ad1b

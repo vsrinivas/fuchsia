@@ -3,9 +3,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-set -o errexit    # exit when a command fails
-set -o nounset    # error when an undefined variable is referenced
-set -o pipefail   # error if the input command to a pipe fails
+set -o errexit  # exit when a command fails
+set -o nounset  # error when an undefined variable is referenced
+set -o pipefail # error if the input command to a pipe fails
 
 readonly SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
 readonly FUCHSIA_ROOT="$(dirname "$(dirname "$SCRIPT_DIR")")"
@@ -19,7 +19,7 @@ print_usage_and_exit() {
 
   echo ""
   echo "Used to bootstrap the \"fint\" tool, which provides the platform's"
-  echo "\"integration interface\"."
+  echo '"integration interface".'
   echo "See //tools/integration/README.md for more details."
   echo ""
   echo "usage: $(basename "$0") (-o <path>)"
@@ -31,7 +31,6 @@ print_usage_and_exit() {
 
   exit "$exit_code"
 }
-
 
 ###############################################################################
 # Returns the host platform, of the form <OS>-<architecture>.
@@ -45,12 +44,12 @@ print_usage_and_exit() {
 host_platform() {
   readonly uname="$(uname -s -m)"
   case "${uname}" in
-    "Linux x86_64") echo linux-x64 ;;
-    "Darwin x86_64") echo mac-x64 ;;
-    *)
-      echo "unsupported infrastructure platform: ${uname}" 1>&2
-      exit 1
-      ;;
+  "Linux x86_64") echo linux-x64 ;;
+  "Darwin x86_64") echo mac-x64 ;;
+  *)
+    echo "unsupported infrastructure platform: ${uname}" 1>&2
+    exit 1
+    ;;
   esac
 }
 
@@ -58,7 +57,7 @@ host_platform() {
 # here in pure bash. It converts relative paths to absolute, and leaves
 # absolute paths as-is.
 realpath() {
-    [[ $1 = /* ]] && echo "$1" || echo "$PWD/${1#./}"
+  [[ $1 == /* ]] && echo "$1" || echo "$PWD/${1#./}"
 }
 
 main() {
@@ -66,17 +65,25 @@ main() {
   output="$(pwd)/fint"
   while getopts 'ho:' opt; do
     case "$opt" in
-      h) print_usage_and_exit 0 ;;
-      o) output=$(realpath "${OPTARG}") ;;
-      ?) print_usage_and_exit 1  ;;
+    h) print_usage_and_exit 0 ;;
+    o) output=$(realpath "${OPTARG}") ;;
+    ?) print_usage_and_exit 1 ;;
     esac
   done
 
-  # Ensure the go command runs from inside the module (which is rooted at the
-  # repository root).
-  readonly go_bin=prebuilt/third_party/go/$(host_platform)/bin/go
-  cd "${FUCHSIA_ROOT}" && ${go_bin} build \
-	  -mod=readonly -o "${output}" ./tools/integration/cmd/fint
+  # Build in a temporary directory where we can arrange the module.
+  #
+  # Avoid "TMPDIR" since Go looks at that environment variable.
+  BUILD_DIR=$(mktemp -d)
+  trap 'rm -rf $BUILD_DIR' EXIT
+  cd "$BUILD_DIR"
+  for target in go.{mod,sum} vendor; do
+    ln -s "$FUCHSIA_ROOT"/third_party/golibs/$target .
+  done
+  ln -s "$FUCHSIA_ROOT"/tools .
+  readonly go_bin=$FUCHSIA_ROOT/prebuilt/third_party/go/$(host_platform)/bin/go
+  GOPROXY=off $go_bin build \
+    -o "${output}" ./tools/integration/cmd/fint
 }
 
 main "$@"

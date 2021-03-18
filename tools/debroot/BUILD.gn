@@ -8,9 +8,9 @@ import("//build/go/go_library.gni")
 go_library("main") {
   source_dir = "cmd"
   deps = [
-    "//third_party/golibs:github.com/go-yaml/yaml",
     "//third_party/golibs:github.com/google/subcommands",
     "//third_party/golibs:golang.org/x/crypto",
+    "//third_party/golibs:gopkg.in/yaml.v2",
   ]
   sources = [
     "debian-archive-keyring.gpg",

@@ -1,0 +1,5 @@
+# TODO(https://fxbug.dev/35565): Remove once these repositories have been removed.
+/github.com/
+/go.uber.org/
+/golang.org/
+/gvisor.dev/
