@@ -18,6 +18,8 @@
 #include <zircon/status.h>
 #include <zircon/time.h>
 
+#include <vector>
+
 #include "src/lib/ui/base_view/embedded_view_utils.h"
 #include "src/ui/testing/views/color.h"
 #include "src/ui/testing/views/embedder_view.h"
@@ -27,54 +29,7 @@ namespace flutter_embedder_test {
 /// Defines a list of services that are injected into the test environment. Unlike the
 /// injected-services in CMX which are injected per test package, these are injected per test and
 /// result in a more hermetic test environment.
-constexpr std::size_t NUM_SERVICES = 14;
-constexpr std::array<std::pair<const char*, const char*>, NUM_SERVICES> kInjectedServices = {{
-    // clang-format off
-    {
-      "fuchsia.accessibility.semantics.SemanticsManager",
-      "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx"
-    },{
-      "fuchsia.deprecatedtimezone.Timezone",
-      "fuchsia-pkg://fuchsia.com/timezone#meta/timezone.cmx"
-    },{
-      "fuchsia.fonts.Provider",
-      "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx"
-    },{
-      "fuchsia.hardware.display.Provider",
-      "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"
-    },{
-      "fuchsia.intl.PropertyProvider",
-      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx"
-    },{
-      "fuchsia.netstack.Netstack",
-      "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
-    },{
-      "fuchsia.posix.socket.Provider",
-      "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
-    },{
-      "fuchsia.tracing.provider.Registry",
-      "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
-    },{
-      "fuchsia.ui.input.ImeService",
-      "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
-    },{
-      "fuchsia.ui.input.ImeVisibilityService",
-      "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
-    },{
-      "fuchsia.ui.scenic.Scenic",
-      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
-    },{
-      "fuchsia.ui.pointerinjector.Registry",
-      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
-    },{
-      "fuchsia.ui.policy.Presenter",
-      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"
-    },{
-      "fuchsia.ui.input.InputDeviceRegistry",
-      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"
-    },
-    // clang-format on
-}};
+const std::vector<std::pair<const char*, const char*>> GetInjectedServices();
 
 // Timeout when waiting on Scenic API calls like |GetDisplayInfo|.
 constexpr zx::duration kCallTimeout = zx::sec(5);
@@ -86,8 +41,8 @@ constexpr zx::duration kTestTimeout = zx::min(1);
 class FlutterEmbedderTestsBase : public sys::testing::TestWithEnvironment {
  public:
   explicit FlutterEmbedderTestsBase(
-      const std::array<std::pair<const char*, const char*>, NUM_SERVICES> injected_services)
-      : injected_services_(injected_services) {}
+      const std::vector<std::pair<const char*, const char*>> injected_services)
+      : injected_services_(std::move(injected_services)) {}
 
   // |testing::Test|
   void SetUp() override {
@@ -135,14 +90,14 @@ class FlutterEmbedderTestsBase : public sys::testing::TestWithEnvironment {
   }
 
  private:
-  const std::array<std::pair<const char*, const char*>, NUM_SERVICES> injected_services_;
+  const std::vector<std::pair<const char*, const char*>> injected_services_;
   std::unique_ptr<sys::ComponentContext> const component_context_;
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
 };
 
 class FlutterEmbedderTests : public FlutterEmbedderTestsBase {
  public:
-  FlutterEmbedderTests() : FlutterEmbedderTestsBase(kInjectedServices) {}
+  FlutterEmbedderTests() : FlutterEmbedderTestsBase(GetInjectedServices()) {}
 
   // |testing::Test|
   void SetUp() override {

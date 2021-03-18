@@ -14,6 +14,60 @@ constexpr scenic::Color kOverlayBackgroundColor = {0x00, 0xFF, 0x00, 0xFF};  // 
 constexpr scenic::Color kChildBackgroundColor = {0xFF, 0x00, 0xFF, 0xFF};    // Pink
 constexpr scenic::Color kChildTappedColor = {0xFF, 0xFF, 0x00, 0xFF};        // Yellow
 
+/// Defines a list of services that are injected into the test environment. Unlike the
+/// injected-services in CMX which are injected per test package, these are injected per test and
+/// result in a more hermetic test environment.
+const std::vector<std::pair<const char*, const char*>> GetInjectedServices() {
+  static const std::vector<std::pair<const char*, const char*>> injected_services = {{
+      // clang-format off
+    {
+      "fuchsia.accessibility.semantics.SemanticsManager",
+      "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx"
+    },{
+      "fuchsia.deprecatedtimezone.Timezone",
+      "fuchsia-pkg://fuchsia.com/timezone#meta/timezone.cmx"
+    },{
+      "fuchsia.fonts.Provider",
+      "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx"
+    },{
+      "fuchsia.hardware.display.Provider",
+      "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"
+    },{
+      "fuchsia.intl.PropertyProvider",
+      "fuchsia-pkg://fuchsia.com/intl_property_manager#meta/intl_property_manager.cmx"
+    },{
+      "fuchsia.netstack.Netstack",
+      "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+    },{
+      "fuchsia.posix.socket.Provider",
+      "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx"
+    },{
+      "fuchsia.tracing.provider.Registry",
+      "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx"
+    },{
+      "fuchsia.ui.input.ImeService",
+      "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
+    },{
+      "fuchsia.ui.input.ImeVisibilityService",
+      "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
+    },{
+      "fuchsia.ui.scenic.Scenic",
+      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
+    },{
+      "fuchsia.ui.pointerinjector.Registry",
+      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
+    },{
+      "fuchsia.ui.policy.Presenter",
+      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"
+    },{
+      "fuchsia.ui.input.InputDeviceRegistry",
+      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"
+    },
+      // clang-format on
+  }};
+  return injected_services;
+}
+
 TEST_F(FlutterEmbedderTests, BasicLegacyEmbedding) {
   RunAppWithArgs(kParentViewUrl, {"--no-usePlatformView"});
 
