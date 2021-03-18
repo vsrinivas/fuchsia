@@ -59,6 +59,7 @@ source_set("fvm-test") {
     "//src/lib/json_parser",
     "//src/storage/fvm",
     "//src/storage/volume_image/serialization:schema",
+    "//src/storage/volume_image/utils:block-utils",
     "//src/storage/volume_image/utils:guid",
     "//src/storage/volume_image/utils:lz4-compression",
     "//third_party/googletest:gmock",

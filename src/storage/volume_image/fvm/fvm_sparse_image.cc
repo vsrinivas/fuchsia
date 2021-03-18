@@ -5,10 +5,14 @@
 #include "src/storage/volume_image/fvm/fvm_sparse_image.h"
 
 #include <lib/fit/result.h>
+#include <string.h>
 
 #include <bitset>
 #include <cstdint>
+#include <future>
 #include <iostream>
+#include <memory>
+#include <optional>
 #include <string>
 
 #include <fbl/algorithm.h>
@@ -17,10 +21,12 @@
 #include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/fvm/metadata.h"
 #include "src/storage/volume_image/address_descriptor.h"
+#include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/block_utils.h"
 #include "src/storage/volume_image/utils/compressor.h"
 #include "src/storage/volume_image/utils/lz4_decompressor.h"
+#include "src/storage/volume_image/volume_descriptor.h"
 
 namespace storage::volume_image {
 namespace {
@@ -155,6 +161,29 @@ bool AddRange(std::map<uint64_t, uint64_t>& existing_ranges, uint64_t start, uin
   return true;
 }
 
+// Reader implementation that shares ownership of a reader with other instances.
+class SharedReader final : public Reader {
+ public:
+  SharedReader(uint64_t offset, uint64_t length, std::shared_ptr<Reader> image_reader)
+      : offset_(offset), length_(length), image_reader_(std::move(image_reader)) {}
+
+  uint64_t length() const final { return length_; }
+
+  fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
+    if (offset + buffer.size() > length_) {
+      return fit::error("SharedReader::Read out of bounds. Offset: " + std::to_string(offset) +
+                        " Length: " + std::to_string(buffer.size()) +
+                        " Max Length: " + std::to_string(length_) + ".");
+    }
+    return image_reader_->Read(offset_ + offset, buffer);
+  }
+
+ private:
+  uint64_t offset_ = 0;
+  uint64_t length_ = 0;
+  std::shared_ptr<Reader> image_reader_;
+};
+
 }  // namespace
 
 namespace fvm_sparse_internal {
@@ -187,6 +216,13 @@ uint32_t GetPartitionFlags(const Partition& partition) {
       break;
     default:
       break;
+  }
+
+  flags |= fvm::kSparseFlagZeroFillNotRequired;
+  for (const auto& mapping : partition.address().mappings) {
+    if (mapping.options.find(EnumAsString(AddressMapOption::kFill)) != mapping.options.end()) {
+      flags &= ~fvm::kSparseFlagZeroFillNotRequired;
+    }
   }
 
   return flags;
@@ -595,6 +631,94 @@ fit::result<bool, std::string> FvmSparseDecompressImage(uint64_t offset, const R
   }
 
   return fit::ok(true);
+}
+
+fit::result<FvmDescriptor, std::string> FvmSparseReadImage(uint64_t offset,
+                                                           std::unique_ptr<Reader> reader) {
+  if (!reader) {
+    return fit::error("Invalid |reader| for reading sparse image.");
+  }
+
+  std::shared_ptr<Reader> image_reader(reader.release());
+
+  auto header_or = fvm_sparse_internal::GetHeader(offset, *image_reader);
+  if (header_or.is_error()) {
+    return header_or.take_error_result();
+  }
+  auto header = header_or.take_value();
+
+  if (fvm_sparse_internal::GetCompressionOptions(header).schema != CompressionSchema::kNone) {
+    return fit::error(
+        "FvmSparseReadImage only supports uncompressed images. Use FvmSparseDecompressImage "
+        "first.");
+  }
+
+  // Get the partition entries.
+  auto partition_entries_or =
+      fvm_sparse_internal::GetPartitions(sizeof(fvm::SparseImage), *image_reader, header);
+  if (partition_entries_or.is_error()) {
+    return partition_entries_or.take_error_result();
+  }
+
+  // Get the matching options.
+  FvmOptions options;
+
+  options.slice_size = header.slice_size;
+
+  if (header.maximum_disk_size != 0) {
+    options.max_volume_size = header.maximum_disk_size;
+  }
+
+  FvmDescriptor::Builder builder;
+  builder.SetOptions(options);
+
+  // Generate the address map for each partition entry.
+  uint64_t imaged_extent_offset = header.header_length;
+  for (auto& partition_entry : partition_entries_or.value()) {
+    VolumeDescriptor volume_descriptor;
+    AddressDescriptor address_descriptor;
+
+    volume_descriptor.encryption = (partition_entry.descriptor.flags & fvm::kSparseFlagZxcrypt) != 0
+                                       ? EncryptionType::kZxcrypt
+                                       : EncryptionType::kNone;
+    std::string_view name(reinterpret_cast<const char*>(partition_entry.descriptor.name),
+                          sizeof(fvm::PartitionDescriptor::name));
+    name = name.substr(0, name.find('\0'));
+    volume_descriptor.name = name;
+
+    memcpy(volume_descriptor.instance.data(), fvm::kPlaceHolderInstanceGuid.data(),
+           sizeof(VolumeDescriptor::type));
+    memcpy(volume_descriptor.type.data(), partition_entry.descriptor.type,
+           sizeof(VolumeDescriptor::type));
+
+    if ((partition_entry.descriptor.flags & fvm::kSparseFlagCorrupted) != 0) {
+      volume_descriptor.options.insert(Option::kEmpty);
+    }
+
+    uint64_t accumulated_extent_offset = 0;
+    for (const auto& extent : partition_entry.extents) {
+      AddressMap mapping;
+      mapping.count = extent.extent_length;
+      mapping.source = accumulated_extent_offset;
+      mapping.target = extent.slice_start * options.slice_size;
+      mapping.size = extent.slice_count * options.slice_size;
+
+      if ((partition_entry.descriptor.flags & fvm::kSparseFlagZeroFillNotRequired) == 0) {
+        mapping.options[EnumAsString(AddressMapOption::kFill)] = 0;
+      }
+      address_descriptor.mappings.push_back(mapping);
+      accumulated_extent_offset += extent.extent_length;
+    }
+    std::unique_ptr<SharedReader> partition_reader = std::make_unique<SharedReader>(
+        imaged_extent_offset, accumulated_extent_offset, image_reader);
+
+    imaged_extent_offset += accumulated_extent_offset;
+
+    builder.AddPartition(
+        Partition(volume_descriptor, address_descriptor, std::move(partition_reader)));
+  }
+
+  return builder.Build();
 }
 
 }  // namespace storage::volume_image

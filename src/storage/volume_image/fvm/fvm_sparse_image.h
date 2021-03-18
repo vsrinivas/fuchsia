@@ -101,6 +101,14 @@ fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& desc
 fit::result<bool, std::string> FvmSparseDecompressImage(uint64_t offset, const Reader& reader,
                                                         Writer& writer);
 
+// Returns a |FvmDescriptor| representing the contained data in sparse image contained in |reader|
+// starting at |offset|. |reader| must contain an uncompressed fvm sparse image, or an error is
+// returned.
+//
+// On error, returns a description of the error condition.
+fit::result<FvmDescriptor, std::string> FvmSparseReadImage(uint64_t offset,
+                                                           std::unique_ptr<Reader> reader);
+
 }  // namespace storage::volume_image
 
 #endif  // SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_H_

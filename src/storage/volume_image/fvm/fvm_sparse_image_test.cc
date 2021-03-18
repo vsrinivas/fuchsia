@@ -26,6 +26,7 @@
 #include "src/storage/volume_image/fvm/fvm_descriptor.h"
 #include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/options.h"
+#include "src/storage/volume_image/utils/block_utils.h"
 #include "src/storage/volume_image/utils/lz4_compressor.h"
 #include "src/storage/volume_image/utils/reader.h"
 #include "src/storage/volume_image/utils/writer.h"
@@ -68,6 +69,18 @@ TEST(GetPartitionFlagsTest, MapsEncryptionCorrectly) {
   EXPECT_EQ(flag & fvm::kSparseFlagZxcrypt, fvm::kSparseFlagZxcrypt);
 }
 
+TEST(GetPartitionFlagsTest, NoZeroFillIsSetWhenNoFillOptionsIsProvided) {
+  VolumeDescriptor descriptor;
+  AddressDescriptor address;
+  address.mappings.push_back({});
+  address.mappings.front().options[EnumAsString(AddressMapOption::kFill)] = 0;
+
+  Partition partition(descriptor, address, nullptr);
+
+  auto flag = fvm_sparse_internal::GetPartitionFlags(partition);
+  EXPECT_EQ(flag & fvm::kSparseFlagZeroFillNotRequired, 0u);
+}
+
 TEST(GetPartitionFlagsTest, FlagMapsNoEncryptionCorrectly) {
   VolumeDescriptor descriptor = {};
   descriptor.encryption = EncryptionType::kNone;
@@ -75,17 +88,19 @@ TEST(GetPartitionFlagsTest, FlagMapsNoEncryptionCorrectly) {
   Partition partition(descriptor, address, nullptr);
 
   auto flag = fvm_sparse_internal::GetPartitionFlags(partition);
-  EXPECT_EQ(flag, 0u);
+  EXPECT_EQ(flag & fvm::kSparseFlagZxcrypt, 0u);
 }
 
 TEST(GetPartitionFlagsTest, MapsUnknownEncryptionCorrectly) {
   VolumeDescriptor descriptor = {};
-  descriptor.encryption = static_cast<EncryptionType>(-1);
   AddressDescriptor address = {};
   Partition partition(descriptor, address, nullptr);
 
+  auto expected_flag = fvm_sparse_internal::GetPartitionFlags(partition);
+  descriptor.encryption = static_cast<EncryptionType>(-1);
+
   auto flag = fvm_sparse_internal::GetPartitionFlags(partition);
-  EXPECT_EQ(flag, 0u);
+  EXPECT_EQ(flag, expected_flag);
 }
 
 constexpr std::string_view kSerializedVolumeImage1 = R"(
@@ -170,7 +185,7 @@ struct SerializedSparseImage {
   uint8_t extent_data[211];
 } __attribute__((packed));
 
-FvmDescriptor MakeDescriptor() {
+FvmDescriptor MakeFvmDescriptor() {
   FvmOptions options;
   options.compression.schema = CompressionSchema::kLz4;
   options.max_volume_size = 20 * (1 << 20);
@@ -191,7 +206,7 @@ FvmDescriptor MakeDescriptor() {
 }
 
 TEST(FvmSparseGenerateHeaderTest, MatchesFvmDescriptor) {
-  FvmDescriptor descriptor = MakeDescriptor();
+  FvmDescriptor descriptor = MakeFvmDescriptor();
   auto header = fvm_sparse_internal::GenerateHeader(descriptor);
 
   EXPECT_EQ(header.partition_count, descriptor.partitions().size());
@@ -212,7 +227,7 @@ TEST(FvmSparseGenerateHeaderTest, MatchesFvmDescriptor) {
 }
 
 TEST(FvmSparGeneratePartitionEntryTest, MatchesPartition) {
-  FvmDescriptor descriptor = MakeDescriptor();
+  FvmDescriptor descriptor = MakeFvmDescriptor();
   const auto& partition = *descriptor.partitions().begin();
 
   auto partition_entry_result =
@@ -236,7 +251,7 @@ TEST(FvmSparseCalculateUncompressedImageSizeTest, EmptyDescriptorIsHeaderSize) {
 }
 
 TEST(FvmSparseCalculateUncompressedImageSizeTest, ParitionsAndExtentsMatchesSerializedContent) {
-  FvmDescriptor descriptor = MakeDescriptor();
+  FvmDescriptor descriptor = MakeFvmDescriptor();
   uint64_t header_length = fvm_sparse_internal::GenerateHeader(descriptor).header_length;
   uint64_t data_length = 0;
   for (const auto& partition : descriptor.partitions()) {
@@ -322,7 +337,7 @@ class SerializedImageContainer {
   BufferWriter writer_;
 };
 
-FvmDescriptor MakeDescriptorWithOptions(const FvmOptions& options) {
+FvmDescriptor MakeFvmDescriptorWithOptions(const FvmOptions& options) {
   auto partition_1_result =
       Partition::Create(kSerializedVolumeImage1, std::make_unique<FakeReader>(GetContents<1>));
 
@@ -431,7 +446,7 @@ auto ExtentDescriptorsMatchesEntry(const fvm_sparse_internal::PartitionEntry& ex
 
 TEST(FvmSparseWriteImageTest, DataUncompressedCompliesWithFormat) {
   SerializedImageContainer container;
-  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
   auto header = fvm_sparse_internal::GenerateHeader(descriptor);
 
   std::vector<fvm_sparse_internal::PartitionEntry> expected_partition_entries =
@@ -484,7 +499,7 @@ TEST(FvmSparseWriteImageTest, DataUncompressedCompliesWithFormat) {
 
 TEST(FvmSparseWriteImageTest, DataCompressedCompliesWithFormat) {
   SerializedImageContainer container;
-  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
   auto header = fvm_sparse_internal::GenerateHeader(descriptor);
 
   std::vector<fvm_sparse_internal::PartitionEntry> expected_partition_entries =
@@ -996,7 +1011,7 @@ class FvmSparseReaderImpl final : public fvm::ReaderInterface {
 
 TEST(FvmSparseWriteImageTest, WrittenImageIsCompatibleWithLegacyImplementation) {
   SerializedImageContainer container;
-  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
 
   std::vector<fvm_sparse_internal::PartitionEntry> expected_partition_entries =
       GetExpectedPartitionEntries(descriptor, descriptor.options().slice_size);
@@ -1061,7 +1076,7 @@ TEST(FvmSparseWriteImageTest, WrittenImageIsCompatibleWithLegacyImplementation) 
 
 TEST(FvmSparseWriteImageTest, WrittenCompressedImageIsCompatibleWithLegacyImplementation) {
   SerializedImageContainer container;
-  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
 
   std::vector<fvm_sparse_internal::PartitionEntry> expected_partition_entries =
       GetExpectedPartitionEntries(descriptor, descriptor.options().slice_size);
@@ -1543,7 +1558,7 @@ TEST(FvmSparseImageDecompressTest, BadSparseImageHeaderIsError) {
   SerializedImageContainer container;
   std::vector<uint8_t> buffer;
   BufferWriter writer(buffer);
-  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
 
   auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
   ASSERT_TRUE(write_result.is_ok()) << write_result.error();
@@ -1561,7 +1576,7 @@ TEST(FvmSparseImageDecompressTest, BadPartitionDescriptorIsError) {
   SerializedImageContainer container;
   std::vector<uint8_t> buffer;
   BufferWriter writer(buffer);
-  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
 
   auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
   ASSERT_TRUE(write_result.is_ok()) << write_result.error();
@@ -1579,7 +1594,7 @@ TEST(FvmSparseImageDecompressTest, BadExtentDescriptorIsError) {
   SerializedImageContainer container;
   std::vector<uint8_t> buffer;
   BufferWriter writer(buffer);
-  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
 
   auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
   ASSERT_TRUE(write_result.is_ok()) << write_result.error();
@@ -1597,7 +1612,7 @@ TEST(FvmSparseImageDecompressTest, CompressedImageWithBadCompresseDataIsError) {
   SerializedImageContainer container;
   std::vector<uint8_t> buffer;
   BufferWriter writer(buffer);
-  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
 
   auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
   ASSERT_TRUE(write_result.is_ok()) << write_result.error();
@@ -1615,7 +1630,7 @@ TEST(FvmSparseImageDecompressTest, UncompressedImageReturnsFalse) {
   SerializedImageContainer container;
   std::vector<uint8_t> buffer;
   BufferWriter writer(buffer);
-  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
 
   auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
   ASSERT_TRUE(write_result.is_ok()) << write_result.error();
@@ -1632,9 +1647,9 @@ TEST(FvmSparseImageDecompressTest, CompressedImageReturnsTrueAndIsCorrect) {
   SerializedImageContainer decompressed_container;
   SerializedImageContainer expected_container;
 
-  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
   auto decompressed_descriptor =
-      MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+      MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
 
   Lz4Compressor compressor = Lz4Compressor::Create(descriptor.options().compression).take_value();
 
@@ -1670,6 +1685,108 @@ TEST(FvmSparseImageDecompressTest, CompressedImageReturnsTrueAndIsCorrect) {
 
   EXPECT_THAT(decompressed_container.serialized_image().extent_data,
               testing::ElementsAreArray(expected_container.serialized_image().extent_data));
+}
+
+TEST(FvmSparseReadImageTest, NullReaderIsError) {
+  ASSERT_TRUE(FvmSparseReadImage(0, nullptr).is_error());
+}
+
+TEST(FvmSparseReadImageTest, CompressedImageIsError) {
+  SerializedImageContainer compressed_container;
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
+
+  Lz4Compressor compressor = Lz4Compressor::Create(descriptor.options().compression).take_value();
+
+  // Write the compressed data that we will decompress later.
+  auto write_result = FvmSparseWriteImage(descriptor, &compressed_container.writer(), &compressor);
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  EXPECT_TRUE(FvmSparseReadImage(
+                  0, std::make_unique<BufferReader>(0, &compressed_container.serialized_image(),
+                                                    sizeof(SerializedSparseImage)))
+                  .is_error());
+}
+
+TEST(FvmSparseReadImageTest, ReturnsFvmDescriptorAndIsCorrect) {
+  SerializedImageContainer compressed_container;
+  auto descriptor = MakeFvmDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+
+  // Write the compressed data that we will decompress later.
+  auto write_result = FvmSparseWriteImage(descriptor, &compressed_container.writer());
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  auto read_descriptor_or = FvmSparseReadImage(
+      0, std::make_unique<BufferReader>(0, &compressed_container.serialized_image(),
+                                        sizeof(SerializedSparseImage)));
+  EXPECT_TRUE(read_descriptor_or.is_ok());
+  auto read_descriptor = read_descriptor_or.take_value();
+
+  EXPECT_EQ(read_descriptor.options().slice_size, descriptor.options().slice_size);
+  EXPECT_EQ(read_descriptor.options().max_volume_size, descriptor.options().max_volume_size);
+  EXPECT_EQ(read_descriptor.options().target_volume_size, std::nullopt);
+  EXPECT_EQ(read_descriptor.options().compression.schema, CompressionSchema::kNone);
+
+  ASSERT_EQ(read_descriptor.partitions().size(), descriptor.partitions().size());
+  auto read_partition_it = read_descriptor.partitions().begin();
+  auto expected_partition_it = descriptor.partitions().begin();
+  for (size_t i = 0; i < read_descriptor.partitions().size(); ++i) {
+    const auto& actual_partition = *(read_partition_it);
+    const auto& expected_partition = *(expected_partition_it);
+
+    EXPECT_EQ(actual_partition.volume().name, expected_partition.volume().name);
+    EXPECT_EQ(actual_partition.volume().encryption, expected_partition.volume().encryption);
+    EXPECT_THAT(actual_partition.volume().type,
+                testing::ElementsAreArray(expected_partition.volume().type));
+    EXPECT_THAT(actual_partition.volume().instance,
+                testing::ElementsAreArray(fvm::kPlaceHolderInstanceGuid));
+
+    // Verify that the target mappings are the same, and the contents of each mapping are the same.
+    ASSERT_EQ(actual_partition.address().mappings.size(),
+              expected_partition.address().mappings.size());
+
+    // Check data content.
+    std::vector<uint8_t> actual_data;
+    std::vector<uint8_t> expected_data;
+
+    for (size_t j = 0; j < actual_partition.address().mappings.size(); ++j) {
+      const auto& actual_mapping = actual_partition.address().mappings[j];
+      const auto& expected_mapping = expected_partition.address().mappings[j];
+
+      EXPECT_EQ(actual_mapping.target, expected_mapping.target);
+      EXPECT_EQ(actual_mapping.count, expected_mapping.count);
+
+      // Calculate the number of bytes that the extent should have, based on the minimum number of
+      // slices that it is requested.
+      std::optional<uint64_t> expected_size =
+          8192 * fvm::BlocksToSlices(8192, expected_partition.volume().block_size,
+                                     storage::volume_image::GetBlockCount(
+                                         expected_mapping.target, expected_mapping.count,
+                                         expected_partition.volume().block_size));
+
+      EXPECT_EQ(actual_mapping.size, expected_size);
+
+      ASSERT_EQ(actual_mapping.options.size(), expected_mapping.options.size());
+      for (auto& [k, v] : actual_mapping.options) {
+        ASSERT_NE(expected_mapping.options.find(k), expected_mapping.options.end());
+        EXPECT_EQ(v, expected_mapping.options.at(k));
+      }
+
+      actual_data.resize(actual_mapping.count, 0);
+      expected_data.resize(expected_mapping.count, 0);
+
+      auto actual_read_result = actual_partition.reader()->Read(actual_mapping.source, actual_data);
+      ASSERT_TRUE(actual_read_result.is_ok()) << actual_read_result.error();
+
+      auto expected_read_result =
+          expected_partition.reader()->Read(expected_mapping.source, expected_data);
+      ASSERT_TRUE(expected_read_result.is_ok()) << expected_read_result.error();
+
+      EXPECT_THAT(actual_data, testing::ElementsAreArray(expected_data));
+    }
+
+    read_partition_it++;
+    expected_partition_it++;
+  }
 }
 
 }  // namespace
