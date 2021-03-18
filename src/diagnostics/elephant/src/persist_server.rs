@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{config::Config, file_handler, inspect_fetcher::InspectFetcher},
+    crate::{config::TaggedPersist, constants, file_handler, inspect_fetcher::InspectFetcher},
     anyhow::Error,
     fidl_fuchsia_diagnostics_persist::{
         DataPersistenceRequest, DataPersistenceRequestStream, PersistResult,
@@ -21,22 +21,27 @@ use {
 };
 
 pub struct PersistServer {
+    // Service name that this persist server is hosting.
+    service_name: String,
+    // Mapping from a string tag to an archive reader
+    // configured to fetch a specific set of selectors.
     fetchers: HashMap<String, Fetcher>,
 }
 
 impl PersistServer {
-    pub fn create(config: Config) -> Result<PersistServer, Error> {
+    pub fn create(
+        service_name: String,
+        tags: HashMap<String, TaggedPersist>,
+    ) -> Result<PersistServer, Error> {
         let mut persisters = HashMap::new();
-        for (service_name, tags) in config.into_iter() {
-            for (tag, entry) in tags.into_iter() {
-                let inspect_fetcher = InspectFetcher::create(entry.selectors)?;
-                let backoff = zx::Duration::from_seconds(entry.repeat_seconds);
-                let fetcher =
-                    Fetcher::create(inspect_fetcher, backoff, service_name.clone(), tag.clone());
-                persisters.insert(tag, fetcher);
-            }
+        for (tag, entry) in tags.into_iter() {
+            let inspect_fetcher = InspectFetcher::create(entry.selectors)?;
+            let backoff = zx::Duration::from_seconds(entry.repeat_seconds);
+            let fetcher =
+                Fetcher::create(inspect_fetcher, backoff, service_name.clone(), tag.clone());
+            persisters.insert(tag, fetcher);
         }
-        Ok(PersistServer { fetchers: persisters })
+        Ok(PersistServer { service_name, fetchers: persisters })
     }
 
     // Serve the Persist FIDL protocol.
@@ -47,26 +52,32 @@ impl PersistServer {
             .map(|(k, v)| (k.clone(), v.clone()))
             .collect::<HashMap<String, Fetcher>>();
 
-        fs.dir("svc").add_fidl_service(move |mut stream: DataPersistenceRequestStream| {
-            let mut fetchers = fetchers.clone();
-            fasync::Task::spawn(async move {
-                while let Ok(Some(DataPersistenceRequest::Persist { tag, responder, .. })) =
-                    stream.try_next().await
-                {
-                    match fetchers.get_mut(&tag) {
-                        None => {
-                            error!("Tag '{}' was requested but is not configured", tag);
-                            let _ = responder.send(PersistResult::BadName);
-                        }
-                        Some(fetcher) => {
-                            fetcher.queue_fetch();
-                            let _ = responder.send(PersistResult::Queued);
-                        }
-                    };
-                }
-            })
-            .detach();
-        });
+        let unique_service_name =
+            format!("{}_{}", constants::PERSIST_SERVICE_NAME_PREFIX, self.service_name);
+
+        fs.dir("svc").add_fidl_service_at(
+            unique_service_name,
+            move |mut stream: DataPersistenceRequestStream| {
+                let mut fetchers = fetchers.clone();
+                fasync::Task::spawn(async move {
+                    while let Ok(Some(DataPersistenceRequest::Persist { tag, responder, .. })) =
+                        stream.try_next().await
+                    {
+                        match fetchers.get_mut(&tag) {
+                            None => {
+                                error!("Tag '{}' was requested but is not configured", tag);
+                                let _ = responder.send(PersistResult::BadName);
+                            }
+                            Some(fetcher) => {
+                                fetcher.queue_fetch();
+                                let _ = responder.send(PersistResult::Queued);
+                            }
+                        };
+                    }
+                })
+                .detach();
+            },
+        );
 
         Ok(())
     }

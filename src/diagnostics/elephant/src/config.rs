@@ -23,7 +23,7 @@ pub struct TaggedPersist {
     /// Tags must conform to /[a-z][a-z-]*/.
     pub tag: String,
     /// Each tag will only be requestable via a named service. Multiple tags can use the
-    /// same service name, which will be published and routed as PersistService_{service_name}.
+    /// same service name, which will be published and routed as DataPersistence_{service_name}.
     /// Service names must conform to /[a-z][a-z-]*/.
     pub service_name: String,
     /// These selectors will be fetched and stored for publication on the next boot.

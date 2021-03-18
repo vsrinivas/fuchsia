@@ -5,25 +5,23 @@
 //! `elephant` persists Inspect VMOs and serves them at the next boot.
 
 mod config;
+mod constants;
 mod file_handler;
 mod inspect_fetcher;
 mod inspect_server;
 mod persist_server;
 
 use {
-    anyhow::{bail, Error},
+    crate::config::Config,
+    anyhow::{bail, format_err, Error},
     argh::FromArgs,
-    fuchsia_async as fasync, //fuchsia_zircon as zx,
-    fuchsia_component::server::ServiceFs,
+    fuchsia_async as fasync,
+    fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_inspect::component,
-    //glob::glob,
-    //injectable_time::MonotonicTime,
     fuchsia_zircon::DurationNum,
     futures::StreamExt,
     log::*,
     persist_server::PersistServer,
-    //serde_derive::Deserialize,
-    //std::collections::HashMap,
 };
 
 /// The name of the subcommand and the logs-tag.
@@ -65,8 +63,42 @@ pub async fn main() -> Result<(), Error> {
         .root()
         .record_child(PERSIST_NODE_NAME, |node| inspect_server::serve_persisted_data(node));
 
-    // Start listening for persist requests
-    let persist_object = PersistServer::create(config)?;
-    let _persist_server = persist_object.launch_server(&mut fs);
+    // Add a persistence fidl service for each service defined in the config files.
+    spawn_persist_services(config, &mut fs)?;
+
     Ok(fs.collect::<()>().await)
+}
+
+// Takes a config and adds all the persist services defined in those configs to the servicefs of
+// the component.
+fn spawn_persist_services(
+    config: Config,
+    fs: &mut ServiceFs<ServiceObj<'static, ()>>,
+) -> Result<(), Error> {
+    let mut started_persist_services = 0;
+    // We want fault tolerance if only a subset of the service configs fail to initialize.
+    for (service_name, tags) in config.into_iter() {
+        match PersistServer::create(service_name.clone(), tags) {
+            Ok(persist_service) => {
+                if let Err(e) = persist_service.launch_server(fs) {
+                    warn!(
+                        "Encountered error launching persist service for service name: {}, Error: {:?}",
+                        service_name, e
+                    );
+                } else {
+                    started_persist_services += 1;
+                }
+            }
+            Err(e) => warn!(
+                "Encountered error instantiating persist service for service name: {}, Error: {:?}",
+                service_name, e
+            ),
+        }
+    }
+
+    if started_persist_services == 0 {
+        Err(format_err!("Failed to start any persist services"))
+    } else {
+        Ok(())
+    }
 }

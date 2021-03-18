@@ -46,6 +46,7 @@ rustc_library("lib") {
 
   sources = [
     "src/config.rs",
+    "src/constants.rs",
     "src/file_handler.rs",
     "src/inspect_fetcher.rs",
     "src/inspect_server.rs",
