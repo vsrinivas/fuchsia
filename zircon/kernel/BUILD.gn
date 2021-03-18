@@ -118,7 +118,15 @@ if (current_toolchain == default_toolchain) {
       # variable, and not zx_assert_level (though it defaults to the same value, but
       # some product configurations may decide to change it).
       remove_common_configs += [ "//build/config/zircon:default_assert_level" ]
-      configs += [ "//build/config/zircon:assert_level_$kernel_debug_level" ]
+
+      # Map kernel_debug_level above 2 to an assert_level of 2, as that is the
+      # highest valid assertion level.
+      if (kernel_debug_level > 2) {
+        kernel_assert_level = 2
+      } else {
+        kernel_assert_level = kernel_debug_level
+      }
+      configs += [ "//build/config/zircon:assert_level_$kernel_assert_level" ]
 
       # As a special case, never build the kernel with -O0, since it will
       # crash immediately on boot. Use -Og instead, which allows debugging the
