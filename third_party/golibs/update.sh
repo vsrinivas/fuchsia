@@ -33,8 +33,6 @@ for dir in $FUCHSIA_DIR $FUCHSIA_DIR/third_party/cobalt; do
     grep -vF go.fuchsia.dev/fuchsia/ |
     # Apparently we generate these normally checked-in files?
     grep -vF 'go.chromium.org/luci' |
-    # TODO(https://fxbug.dev/35565): Remove once cobalt imports the canonical path.
-    grep -vF 'github.com/go-yaml/yaml' |
     grep -F . |
     sort | uniq |
     xargs "$GO" list -mod=readonly -e -f \

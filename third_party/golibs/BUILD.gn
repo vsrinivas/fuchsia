@@ -91,9 +91,6 @@ golib("github.com/fsnotify/fsnotify") {
 golib("gopkg.in/yaml.v2") {
 }
 
-# TODO(https://fxbug.dev/35565): Remove once cobalt imports the canonical path.
-golib_old("github.com/go-yaml/yaml") {
-}
 golib("github.com/golang/glog") {
 }
 
