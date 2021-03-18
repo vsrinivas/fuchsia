@@ -23,7 +23,6 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-025](ftp/ftp-025.md) | 2019-01-09 | 2019-01-24 | Bit Flags &mdash; Just a Little Bit
 [FTP-030](ftp/ftp-030.md) | 2019-01-30 | 2019-01-30 | FIDL is little endian
 [FTP-027](ftp/ftp-027.md) | 2019-01-19 | 2019-02-04 | You only pay for what you use
-[FTP-032](ftp/ftp-032.md) | 2019-02-06 | 2019-02-21 | Efficient Envelopes: Turning Envelopes into Postcards
 [FTP-029](ftp/ftp-029.md) | 2019-02-14 | 2019-02-28 | Increasing Method Ordinals
 [FTP-033](ftp/ftp-033.md) | 2019-02-07 | 2019-03-07 | Handling of Unknown Fields &amp; Strictness
 [FTP-004](ftp/ftp-004.md) | 2018-07-19 | 2019-03-14 | Safer Structs for C++
@@ -53,6 +52,7 @@ FTP                   | Submitted  | Reviewed   | Title
 [FTP-042](ftp/ftp-042.md) | 2019-04-01 | 2019-04-01 | Non Nullable Types &mdash; Poisson d'Avril
 [FTP-045](ftp/ftp-045.md) | 2018-12-26 | 2019-05-29 | Zero-Size Empty Structs: &infin;% more efficient
 [FTP-017](ftp/ftp-017.md) | 2018-09-27 | 2020-06-17 | Box&lt;Knox&gt;
+[FTP-032](ftp/ftp-032.md) | 2019-02-06 | 2021-03-17 | Efficient Envelopes: Turning Envelopes into Postcards
 
 ## Process
 
