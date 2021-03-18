@@ -2,7 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {glob::glob, log::warn, std::fs};
+use {
+    anyhow::{format_err, Error},
+    glob::glob,
+    log::warn,
+    std::fs,
+};
 
 const CURRENT_PATH: &str = "/cache/current";
 const PREVIOUS_PATH: &str = "/cache/previous";
@@ -25,43 +30,90 @@ pub fn write(service_name: &str, tag: &str, data: &str) {
 
 // All the names in the previous-boot directory.
 // TODO(fxbug.dev/71350): If this gets big, use Lazy Inspect.
-pub fn remembered_data() -> Vec<(String, Vec<(String, String)>)> {
+pub fn remembered_data() -> Result<Vec<(String, Vec<(String, String)>)>, Error> {
+    // Counter for number of tags successfully retrieved. If no persisted tags were
+    // retrieved, this method returns an error.
+    let mut tags_retrieved = 0;
+
     let mut service_entries = Vec::new();
-    for service_path in glob(&format!("{}/*", PREVIOUS_PATH)).unwrap() {
-        if let Ok(service_path) = service_path {
-            let service_name = service_path.file_name().unwrap().to_string_lossy().to_string();
-            let mut tag_entries = Vec::new();
-            for tag_path in glob(&format!("{}/{}/*", PREVIOUS_PATH, service_name)).unwrap() {
-                if let Ok(tag_path) = tag_path {
-                    let tag_name = tag_path.file_name().unwrap().to_string_lossy().to_string();
-                    match fs::read(tag_path.clone()) {
-                        Ok(text) => {
-                            // TODO(lukenicholson): We want to encode failures at retrieving persisted
-                            // metrics in the elephant inspect hierarchy so clients know why their data is
-                            // missing.
-                            match std::str::from_utf8(&text) {
-                                Ok(contents) => {
-                                    tag_entries.push((tag_name, contents.to_owned()));
-                                }
-                                Err(e) => {
-                                    warn!(
-                                        "Failed to parse persisted bytes at path: {:?} into text: {:?}",
-                                        tag_path, e
-                                    );
+    // Create an iterator over all subdirectories of /cache/previous
+    // which contains persisted data from the last boot.
+    for service_path in glob(&format!("{}/*", PREVIOUS_PATH))
+        .map_err(|e| format_err!("Failed to read previous-path glob pattern: {:?}", e))?
+    {
+        match service_path {
+            Err(e) => {
+                // If our glob pattern was valid, but we encountered glob errors while iterating, just warn
+                // since there may still be some persisted metrics.
+                warn!(
+                    "Encountered GlobError; contents could not be read to determine if glob pattern was matched: {:?}",
+                    e
+                )
+            }
+            Ok(path) => {
+                if let Some(name) = path.file_name() {
+                    let service_name = name.to_string_lossy().to_string();
+                    let mut tag_entries = Vec::new();
+                    for tag_path in
+                        glob(&format!("{}/{}/*", PREVIOUS_PATH, service_name)).map_err(|e| {
+                            format_err!(
+                                "Failed to read previous service persistence pattern: {:?}",
+                                e
+                            )
+                        })?
+                    {
+                        match tag_path {
+                            Ok(path) => {
+                                if let Some(tag_name) = path.file_name() {
+                                    let tag_name = tag_name.to_string_lossy().to_string();
+                                    match fs::read(path.clone()) {
+                                        Ok(text) => {
+                                            // TODO(cphoenix): We want to encode failures at retrieving persisted
+                                            // metrics in the elephant inspect hierarchy so clients know why their data is
+                                            // missing.
+                                            match std::str::from_utf8(&text) {
+                                                Ok(contents) => {
+                                                    tags_retrieved += 1;
+
+                                                    tag_entries
+                                                        .push((tag_name, contents.to_owned()));
+                                                }
+                                                Err(e) => {
+                                                    warn!(
+                                                        "Failed to parse persisted bytes at path: {:?} into text: {:?}",
+                                                        path, e
+                                                    );
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            warn!(
+                                            "Failed to retrieve text persisted at path: {:?}: {:?}",
+                                            path, e
+                                        );
+                                        }
+                                    }
                                 }
                             }
-                        }
-                        Err(e) => {
-                            warn!(
-                                "Failed to retrieve text persisted at path: {:?}: {:?}",
-                                tag_path, e
-                            );
+                            Err(e) => {
+                                // If our glob pattern was valid, but we encountered glob errors while iterating, just warn
+                                // since there may still be some persisted metrics.
+                                warn!(
+                                        "Encountered GlobError; contents could not be read to determine if glob pattern was matched: {:?}",
+                                        e
+                                    )
+                            }
                         }
                     }
+                    service_entries.push((service_name, tag_entries));
                 }
             }
-            service_entries.push((service_name, tag_entries));
-        }
+        };
     }
-    service_entries
+
+    if tags_retrieved == 0 {
+        Err(format_err!("No persisted data was successfully retrieved."))
+    } else {
+        Ok(service_entries)
+    }
 }

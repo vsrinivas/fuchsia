@@ -59,9 +59,14 @@ pub async fn main() -> Result<(), Error> {
     // Start serving previous boot data
     let inspector = component::inspector();
     on_error!(inspector.serve(&mut fs), "Error initializing Inspect: {}")?;
-    inspector
-        .root()
-        .record_child(PERSIST_NODE_NAME, |node| inspect_server::serve_persisted_data(node));
+    inspector.root().record_child(PERSIST_NODE_NAME, |node| {
+        inspect_server::serve_persisted_data(node).unwrap_or_else(|e| {
+            error!(
+                "Serving persisted data experienced critical failure. No data available: {:?}",
+                e
+            )
+        })
+    });
 
     // Add a persistence fidl service for each service defined in the config files.
     spawn_persist_services(config, &mut fs)?;

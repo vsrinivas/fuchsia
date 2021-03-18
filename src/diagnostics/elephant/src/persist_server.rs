@@ -69,8 +69,15 @@ impl PersistServer {
                                 let _ = responder.send(PersistResult::BadName);
                             }
                             Some(fetcher) => {
-                                fetcher.queue_fetch();
-                                let _ = responder.send(PersistResult::Queued);
+                                match fetcher.queue_fetch() {
+                                    Ok(_) => {
+                                        responder.send(PersistResult::Queued).unwrap_or_else(|err| warn!("Failed to notify client that work was queued: {}", err));
+                                    }
+                                    Err(e) => {
+                                        fetchers.remove(&tag);
+                                        warn!("Fetcher removed because queuing tasks is now failing: {:?}", e);
+                                    }
+                                }
                             }
                         };
                     }
@@ -125,12 +132,13 @@ impl Fetcher {
         fetcher
     }
 
-    fn queue_fetch(&mut self) {
+    fn queue_fetch(&mut self) -> Result<(), Error> {
         let mut state = self.state.lock();
         match *state {
             // If we're already scheduled to fetch, we don't have to do anything.
             FetchState::Pending => {
-                info!("Fetch requested for {} but is already queued till backoff.", self.tag)
+                info!("Fetch requested for {} but is already queued till backoff.", self.tag);
+                Ok(())
             }
             FetchState::LastFetched(last_fetched) => {
                 let now = fuchsia_zircon::Time::get_monotonic();
@@ -138,8 +146,9 @@ impl Fetcher {
                 // time_until_fetch_allowed will be negative if already allowed.
                 let time_until_fetch_allowed = earliest_fetch_allowed_time - now;
                 if time_until_fetch_allowed.into_nanos() <= 0 {
-                    self.invoke_fetch.send(()).unwrap();
+                    self.invoke_fetch.send(())?;
                     *state = FetchState::LastFetched(now);
+                    Ok(())
                 } else {
                     *state = FetchState::Pending;
                     // Clone a bunch of self's attributes so we dont pull it into the async task.
@@ -157,10 +166,13 @@ impl Fetcher {
                                 *state_for_async_task.lock() =
                                     FetchState::LastFetched(earliest_fetch_allowed_time);
                             } else {
+                                // TODO(cphoenix): We need to remove this dead fetcher from the persist service, but the existing
+                                // fire-forget architecture causes us to lose communication at this point.
                                 warn!("Encountered an error trying to send invoker a wakeup message for service: {}", service_name_for_async_task);
                             }
                         }
                     }).detach();
+                    Ok(())
                 }
             }
         }

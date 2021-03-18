@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::file_handler, log::*, serde_json::Value as JsonValue};
+use {crate::file_handler, anyhow::Error, log::*, serde_json::Value as JsonValue};
 
 // Make sure extremely deep-tree data doesn't overflow a stack.
 const MAX_TREE_DEPTH: u32 = 128;
@@ -34,8 +34,8 @@ fn store_data(inspect_node: &fuchsia_inspect::Node, name: &str, data: &JsonValue
     }
 }
 
-pub fn serve_persisted_data(persist_root: &fuchsia_inspect::Node) {
-    let remembered_data = file_handler::remembered_data();
+pub fn serve_persisted_data(persist_root: &fuchsia_inspect::Node) -> Result<(), Error> {
+    let remembered_data = file_handler::remembered_data()?;
     for (service_name, service_data) in remembered_data.iter() {
         persist_root.record_child(service_name, |service_node| {
             for (tag_name, tag_data) in service_data.iter() {
@@ -46,6 +46,7 @@ pub fn serve_persisted_data(persist_root: &fuchsia_inspect::Node) {
             }
         });
     }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -67,8 +68,8 @@ mod test {
         );
 
         let data_json = "{ negint: -5, int: 42, unsigned: 0, float: 45.6, \
-            bool: true, obj: { child: 'child', grandchild: { hello: 'world', \
-            great_grand: { should_be_clipped: true } } } }";
+                         bool: true, obj: { child: 'child', grandchild: { hello: 'world', \
+                         great_grand: { should_be_clipped: true } } } }";
         let mut data_parsed = serde_json5::from_str::<serde_json::Value>(data_json)?;
         // serde_json5::from_str() won't parse a number this big, so I have to insert it afterward.
         *data_parsed.get_mut("unsigned").unwrap() = serde_json::json!(9223372036854775808u64);
