@@ -46,6 +46,8 @@ func DecodeJSONIr(r io.Reader) (Root, error) {
 		return Root{}, fmt.Errorf("Error parsing JSON IR: %w", err)
 	}
 
+	root.initializeDeclarationsMap()
+
 	return root, nil
 }
 
@@ -599,11 +601,35 @@ type FieldShape struct {
 	Padding int `json:"padding"`
 }
 
+type Declaration interface {
+	GetName() EncodedCompoundIdentifier
+}
+
+type Decl struct {
+	Attributes
+	Name EncodedCompoundIdentifier `json:"name"`
+}
+
+func (d *Decl) GetName() EncodedCompoundIdentifier {
+	return d.Name
+}
+
+// Assert that declarations conform to the Declaration interface
+var _ = []Declaration{
+	(*Union)(nil),
+	(*Table)(nil),
+	(*Struct)(nil),
+	(*Protocol)(nil),
+	(*Service)(nil),
+	(*Enum)(nil),
+	(*Bits)(nil),
+	(*Const)(nil),
+}
+
 // Union represents the declaration of a FIDL union.
 type Union struct {
-	Attributes
-	Name         EncodedCompoundIdentifier `json:"name"`
-	Members      []UnionMember             `json:"members"`
+	Decl
+	Members      []UnionMember `json:"members"`
 	Strictness   `json:"strict"`
 	Resourceness `json:"resource"`
 	TypeShapeV1  TypeShape `json:"type_shape_v1"`
@@ -623,9 +649,8 @@ type UnionMember struct {
 
 // Table represents a declaration of a FIDL table.
 type Table struct {
-	Attributes
-	Name         EncodedCompoundIdentifier `json:"name"`
-	Members      []TableMember             `json:"members"`
+	Decl
+	Members      []TableMember `json:"members"`
 	Resourceness `json:"resource"`
 	TypeShapeV1  TypeShape `json:"type_shape_v1"`
 }
@@ -671,10 +696,9 @@ func (t *Table) SortedMembersNoReserved() []TableMember {
 
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
-	Attributes
-	Name         EncodedCompoundIdentifier `json:"name"`
-	Anonymous    bool                      `json:"anonymous"`
-	Members      []StructMember            `json:"members"`
+	Decl
+	Anonymous    bool           `json:"anonymous"`
+	Members      []StructMember `json:"members"`
 	Resourceness `json:"resource"`
 	TypeShapeV1  TypeShape `json:"type_shape_v1"`
 }
@@ -714,9 +738,8 @@ func EmptyStructMember(name string) StructMember {
 
 // Protocol represents the declaration of a FIDL protocol.
 type Protocol struct {
-	Attributes
-	Name    EncodedCompoundIdentifier `json:"name"`
-	Methods []Method                  `json:"methods"`
+	Decl
+	Methods []Method `json:"methods"`
 }
 
 func (d *Protocol) GetServiceName() string {
@@ -735,9 +758,8 @@ func (d *Protocol) GetServiceName() string {
 
 // Service represents the declaration of a FIDL service.
 type Service struct {
-	Attributes
-	Name    EncodedCompoundIdentifier `json:"name"`
-	Members []ServiceMember           `json:"members"`
+	Decl
+	Members []ServiceMember `json:"members"`
 }
 
 func (s *Service) GetServiceName() string {
@@ -793,10 +815,9 @@ type Parameter struct {
 
 // Enum represents a FIDL declaration of an enum.
 type Enum struct {
-	Attributes
-	Type            PrimitiveSubtype          `json:"type"`
-	Name            EncodedCompoundIdentifier `json:"name"`
-	Members         []EnumMember              `json:"members"`
+	Decl
+	Type            PrimitiveSubtype `json:"type"`
+	Members         []EnumMember     `json:"members"`
 	Strictness      `json:"strict"`
 	RawUnknownValue int64OrUint64 `json:"maybe_unknown_value"`
 }
@@ -858,11 +879,10 @@ func (member *EnumMember) IsUnknown() bool {
 
 // Bits represents a FIDL declaration of an bits.
 type Bits struct {
-	Attributes
-	Type       Type                      `json:"type"`
-	Name       EncodedCompoundIdentifier `json:"name"`
-	Mask       string                    `json:"mask"`
-	Members    []BitsMember              `json:"members"`
+	Decl
+	Type       Type         `json:"type"`
+	Mask       string       `json:"mask"`
+	Members    []BitsMember `json:"members"`
 	Strictness `json:"strict"`
 }
 
@@ -875,10 +895,9 @@ type BitsMember struct {
 
 // Const represents a FIDL declaration of a named constant.
 type Const struct {
-	Attributes
-	Type  Type                      `json:"type"`
-	Name  EncodedCompoundIdentifier `json:"name"`
-	Value Constant                  `json:"value"`
+	Decl
+	Type  Type     `json:"type"`
+	Value Constant `json:"value"`
 }
 
 // Strictness represents whether a FIDL object is strict or flexible. See
@@ -963,18 +982,47 @@ type Library struct {
 // Root is the top-level object for a FIDL library.
 // It contains lists of all declarations and dependencies within the library.
 type Root struct {
-	Name      EncodedLibraryIdentifier    `json:"name,omitempty"`
-	Consts    []Const                     `json:"const_declarations,omitempty"`
-	Bits      []Bits                      `json:"bits_declarations,omitempty"`
-	Enums     []Enum                      `json:"enum_declarations,omitempty"`
-	Protocols []Protocol                  `json:"interface_declarations,omitempty"`
-	Services  []Service                   `json:"service_declarations,omitempty"`
-	Structs   []Struct                    `json:"struct_declarations,omitempty"`
-	Tables    []Table                     `json:"table_declarations,omitempty"`
-	Unions    []Union                     `json:"union_declarations,omitempty"`
-	DeclOrder []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
-	Decls     DeclMap                     `json:"declarations,omitempty"`
-	Libraries []Library                   `json:"library_dependencies,omitempty"`
+	Name         EncodedLibraryIdentifier    `json:"name,omitempty"`
+	Consts       []Const                     `json:"const_declarations,omitempty"`
+	Bits         []Bits                      `json:"bits_declarations,omitempty"`
+	Enums        []Enum                      `json:"enum_declarations,omitempty"`
+	Protocols    []Protocol                  `json:"interface_declarations,omitempty"`
+	Services     []Service                   `json:"service_declarations,omitempty"`
+	Structs      []Struct                    `json:"struct_declarations,omitempty"`
+	Tables       []Table                     `json:"table_declarations,omitempty"`
+	Unions       []Union                     `json:"union_declarations,omitempty"`
+	DeclOrder    []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
+	Decls        DeclMap                     `json:"declarations,omitempty"`
+	Libraries    []Library                   `json:"library_dependencies,omitempty"`
+	declarations map[EncodedCompoundIdentifier]Declaration
+}
+
+func (r *Root) initializeDeclarationsMap() {
+	r.declarations = make(map[EncodedCompoundIdentifier]Declaration)
+	for i, d := range r.Consts {
+		r.declarations[d.Name] = &r.Consts[i]
+	}
+	for i, d := range r.Bits {
+		r.declarations[d.Name] = &r.Bits[i]
+	}
+	for i, d := range r.Enums {
+		r.declarations[d.Name] = &r.Enums[i]
+	}
+	for i, d := range r.Protocols {
+		r.declarations[d.Name] = &r.Protocols[i]
+	}
+	for i, d := range r.Services {
+		r.declarations[d.Name] = &r.Services[i]
+	}
+	for i, d := range r.Structs {
+		r.declarations[d.Name] = &r.Structs[i]
+	}
+	for i, d := range r.Tables {
+		r.declarations[d.Name] = &r.Tables[i]
+	}
+	for i, d := range r.Unions {
+		r.declarations[d.Name] = &r.Unions[i]
+	}
 }
 
 // DeclsWithDependencies returns a single DeclInfoMap containing the FIDL
@@ -1132,7 +1180,13 @@ func (r *Root) ForBindings(language string) Root {
 		}
 	}
 
+	r.initializeDeclarationsMap()
+
 	return res
+}
+
+func (r *Root) LookupDecl(i EncodedCompoundIdentifier) Declaration {
+	return r.declarations[i]
 }
 
 type int64OrUint64 struct {
