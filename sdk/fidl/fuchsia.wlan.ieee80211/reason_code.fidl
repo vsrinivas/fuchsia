@@ -7,7 +7,8 @@ library fuchsia.wlan.ieee80211;
 /// 802.11 reason codes.  These values are common throughout the standard.
 /// IEEE Std 802.11-2016, 9.4.1.7, Table 9-45
 enum ReasonCode : uint16 {
-    /// 0 reserved.
+    RESERVED_0 = 0;
+
     UNSPECIFIED_REASON = 1;
     INVALID_AUTHENTICATION = 2;
     LEAVING_NETWORK_DEAUTH = 3;
@@ -74,7 +75,11 @@ enum ReasonCode : uint16 {
     MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS = 65;
     MESH_CHANNEL_SWITCH_UNSPECIFIED = 66;
 
+    RESERVED_67_TO_127 = 67;
+
     /// Use reserved value 128 to indicate when MLME lost the link. This is usually
     /// caused by loss of signal with the AP.
     MLME_LINK_FAILED = 128;
+
+    RESERVED_129_TO_65535 = 129;
 };

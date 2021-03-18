@@ -52,6 +52,7 @@ group("tests") {
     "drivers/wlanif/test:tests",
     "drivers/wlanphy:tests",
     "lib/bitfield/wlan-bitfield-tests",
+    "lib/common/cpp:ieee80211_codes_tests",
     "lib/common/cpp:mcs_rate_lookup_tests",
     "lib/common/rust:wlan-common-tests",
     "lib/eapol:eapol-tests",
