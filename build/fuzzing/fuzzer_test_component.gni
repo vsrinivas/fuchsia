@@ -42,6 +42,13 @@ template("fuzzer_test_component") {
   fuzzer_test = "${invoker.fuzzer}_test"
 
   meta_target_name = "${target_name}_metadata"
+
+  fuchsia_unittest_component(target_name) {
+    forward_variables_from(invoker, [ "visibility" ])
+    component_name = fuzzer_test
+    deps = invoker.deps + [ ":$meta_target_name" ]
+  }
+
   group(meta_target_name) {
     testonly = true
     deps = invoker.deps + [ "//build/fuzzing:base_includes" ]
@@ -78,15 +85,10 @@ template("fuzzer_test_component") {
         {
           label = invoker.label
           fuzzer_test = fuzzer_test
-          test_manifest = get_path_info(":${invoker.target_name}", "file")
+          test_manifest = get_target_outputs(":${invoker.target_name}")
+          test_manifest = get_path_info(test_manifest[0], "file")
         },
       ]
     }
-  }
-
-  fuchsia_unittest_component(target_name) {
-    forward_variables_from(invoker, [ "visibility" ])
-    component_name = fuzzer_test
-    deps = invoker.deps + [ ":$meta_target_name" ]
   }
 }
