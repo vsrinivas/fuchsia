@@ -48,11 +48,12 @@ use {
     cstr::cstr,
     fdio::{spawn_etc, Namespace, SpawnAction, SpawnOptions},
     fidl_fuchsia_io::{
-        DirectoryAdminSynchronousProxy, NodeSynchronousProxy, CLONE_FLAG_SAME_RIGHTS,
-        OPEN_RIGHT_ADMIN,
+        DirectoryAdminSynchronousProxy, FilesystemInfo, NodeSynchronousProxy,
+        CLONE_FLAG_SAME_RIGHTS, OPEN_RIGHT_ADMIN,
     },
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef, Task},
+    fuchsia_zircon_status as zx_status,
     std::ffi::CStr,
 };
 
@@ -114,6 +115,25 @@ impl FSInstance {
         namespace
             .unbind(&self.mount_point)
             .context("failed to unbind filesystem from default namespace")
+    }
+
+    /// Get `FileSystemInfo` struct from which one can find out things like
+    /// free space, used space, block size, etc.
+    fn query_filesystem(&self) -> Result<Box<FilesystemInfo>, Error> {
+        let (client_chan, server_chan) = zx::Channel::create()?;
+
+        let namespace = Namespace::installed().context("failed to get installed namespace")?;
+        namespace
+            .connect(&self.mount_point, OPEN_RIGHT_ADMIN, server_chan)
+            .context("failed to connect to filesystem")?;
+
+        let mut proxy = DirectoryAdminSynchronousProxy::new(client_chan);
+
+        let (status, result) = proxy
+            .query_filesystem(zx::Time::INFINITE)
+            .context("failed to query filesystem info")?;
+        zx_status::Status::ok(status).context("failed to query filesystem info")?;
+        result.ok_or(format_err!("querying filesystem info got empty result"))
     }
 
     /// Terminate the filesystem process and force unmount the mount point
@@ -278,6 +298,16 @@ impl<FSC: FSConfig> Filesystem<FSC> {
             instance.unmount()
         } else {
             Err(format_err!("cannot unmount. filesystem is not mounted"))
+        }
+    }
+
+    /// Get `FileSystemInfo` struct from which one can find out things like
+    /// free space, used space, block size, etc.
+    pub fn query_filesystem(&self) -> Result<Box<FilesystemInfo>, Error> {
+        if let Some(instance) = &self.instance {
+            instance.query_filesystem()
+        } else {
+            Err(format_err!("cannot query filesystem. filesystem is not mounted"))
         }
     }
 
@@ -582,7 +612,7 @@ mod tests {
     }
 
     #[test]
-    fn blobfs_format_mount_write_remount_read_unmount() {
+    fn blobfs_format_mount_write_query_remount_read_unmount() {
         let block_size = 512;
         let mount_point = "/test-fs-root";
         let ramdisk = ramdisk(block_size);
@@ -590,6 +620,10 @@ mod tests {
 
         blobfs.format().expect("failed to format blobfs");
         blobfs.mount(mount_point).expect("failed to mount blobfs the first time");
+
+        // snapshot of FilesystemInfo
+        let fs_info1 =
+            blobfs.query_filesystem().expect("failed to query filesystem info after first mount");
 
         // pre-generated merkle test fixture data
         let merkle = "be901a14ec42ee0a8ee220eb119294cdd40d26d573139ee3d51e4430e7d08c28";
@@ -602,7 +636,20 @@ mod tests {
             test_file.write(&content).expect("failed to write to test file");
         }
 
+        // check against the snapshot FilesystemInfo
+        let fs_info2 =
+            blobfs.query_filesystem().expect("failed to query filesystem info after write");
+        assert_eq!(
+            fs_info2.used_bytes - fs_info1.used_bytes,
+            fs_info2.block_size as u64 // assuming content < 8K
+        );
+
         blobfs.unmount().expect("failed to unmount blobfs the first time");
+
+        blobfs
+            .query_filesystem()
+            .expect_err("filesystem query on an unmounted filesystem didn't fail");
+
         blobfs.mount(mount_point).expect("failed to mount blobfs the second time");
 
         {
@@ -611,6 +658,14 @@ mod tests {
             test_file.read_to_end(&mut read_content).expect("failed to read from test file");
             assert_eq!(content, read_content);
         }
+
+        // once more check against the snapshot FilesystemInfo
+        let fs_info3 =
+            blobfs.query_filesystem().expect("failed to query filesystem info after read");
+        assert_eq!(
+            fs_info3.used_bytes - fs_info1.used_bytes,
+            fs_info3.block_size as u64 // assuming content < 8K
+        );
 
         blobfs.unmount().expect("failed to unmount blobfs the second time");
 
@@ -687,7 +742,7 @@ mod tests {
     }
 
     #[test]
-    fn minfs_format_mount_write_remount_read_unmount() {
+    fn minfs_format_mount_write_query_remount_read_unmount() {
         let block_size = 8192;
         let mount_point = "/test-fs-root";
         let ramdisk = ramdisk(block_size);
@@ -695,6 +750,10 @@ mod tests {
 
         minfs.format().expect("failed to format minfs");
         minfs.mount(mount_point).expect("failed to mount minfs the first time");
+
+        // snapshot of FilesystemInfo
+        let fs_info1 =
+            minfs.query_filesystem().expect("failed to query filesystem info after first mount");
 
         let filename = "test_file";
         let content = String::from("test content").into_bytes();
@@ -705,7 +764,20 @@ mod tests {
             test_file.write(&content).expect("failed to write to test file");
         }
 
+        // check against the snapshot FilesystemInfo
+        let fs_info2 =
+            minfs.query_filesystem().expect("failed to query filesystem info after write");
+        assert_eq!(
+            fs_info2.used_bytes - fs_info1.used_bytes,
+            fs_info2.block_size as u64 // assuming content < 8K
+        );
+
         minfs.unmount().expect("failed to unmount minfs the first time");
+
+        minfs
+            .query_filesystem()
+            .expect_err("filesystem query on an unmounted filesystem didn't fail");
+
         minfs.mount(mount_point).expect("failed to mount minfs the second time");
 
         {
@@ -714,6 +786,14 @@ mod tests {
             test_file.read_to_end(&mut read_content).expect("failed to read from test file");
             assert_eq!(content, read_content);
         }
+
+        // once more check against the snapshot FilesystemInfo
+        let fs_info3 =
+            minfs.query_filesystem().expect("failed to query filesystem info after read");
+        assert_eq!(
+            fs_info3.used_bytes - fs_info1.used_bytes,
+            fs_info3.block_size as u64 // assuming content < 8K
+        );
 
         minfs.unmount().expect("failed to unmount minfs the second time");
 
