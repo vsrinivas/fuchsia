@@ -5,6 +5,7 @@
 use {
     crate::daemon::Daemon,
     anyhow::{Context, Result},
+    ffx_core::{ffx_error, FfxError},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fuchsia_developer_bridge::{DaemonMarker, DaemonProxy, DaemonRequestStream},
     fidl_fuchsia_overnet::{ServiceProviderRequest, ServiceProviderRequestStream},
@@ -14,7 +15,9 @@ use {
     hoist::OvernetInstance,
     libc,
     std::os::unix::process::CommandExt,
+    std::pin::Pin,
     std::process::Command,
+    std::time::Duration,
 };
 
 mod constants;
@@ -40,9 +43,33 @@ async fn create_daemon_proxy(id: &mut NodeId) -> Result<DaemonProxy> {
     Ok(DaemonProxy::new(proxy))
 }
 
-pub async fn find_next_daemon<'a>(
+pub async fn get_daemon_proxy_single_link(
     exclusions: Option<Vec<NodeId>>,
-) -> Result<(NodeId, DaemonProxy)> {
+) -> Result<(NodeId, DaemonProxy, Pin<Box<impl Future<Output = Result<()>>>>), FfxError> {
+    // Start a race betwen:
+    // - The unix socket link being lost
+    // - A timeout
+    // - Getting a FIDL proxy over the link
+
+    let link = hoist::hoist().run_single_ascendd_link().fuse();
+    let mut link = Box::pin(link);
+    let find = find_next_daemon(exclusions).fuse();
+    let mut find = Box::pin(find);
+    let mut timeout = fuchsia_async::Timer::new(Duration::from_secs(1)).fuse();
+
+    let res = futures::select! {
+        r = link => {
+            Err(ffx_error!("Daemon link lost while attempting to connect: {:?}\nRun `ffx doctor` for further diagnostics.", r))
+        }
+        _ = timeout => {
+            Err(ffx_error!("Timed out waiting for Daemon connection.\nRun `ffx doctor` for futher diagnostics."))
+        }
+        proxy = find => proxy.map_err(|e| ffx_error!("Error connecting to Daemon: {}.\nRun `ffx doctor` for fruther diagnostics.", e)),
+    };
+    res.map(|(nodeid, proxy)| (nodeid, proxy, link))
+}
+
+async fn find_next_daemon<'a>(exclusions: Option<Vec<NodeId>>) -> Result<(NodeId, DaemonProxy)> {
     let svc = hoist::hoist().connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
@@ -75,7 +102,16 @@ pub async fn find_next_daemon<'a>(
 
 // Note that this function assumes the daemon has been started separately.
 pub async fn find_and_connect() -> Result<DaemonProxy> {
-    find_next_daemon(None).await.map(|(_, proxy)| proxy)
+    // This function is due for deprecation/removal. It should only be used
+    // currently by the doctor daemon_manager, which should instead learn to
+    // understand the link state in future revisions.
+    get_daemon_proxy_single_link(None)
+        .await
+        .map(|(_nodeid, proxy, link_fut)| {
+            fuchsia_async::Task::local(link_fut.map(|_| ())).detach();
+            proxy
+        })
+        .context("connecting to the ffx daemon")
 }
 
 pub async fn spawn_daemon() -> Result<()> {
