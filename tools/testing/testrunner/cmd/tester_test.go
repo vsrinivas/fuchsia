@@ -695,7 +695,7 @@ func TestCommandForTest(t *testing.T) {
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
 				}},
-			expected: []string{"run-test-suite", "fuchsia-pkg://example.com/test.cm"},
+			expected: []string{"run-test-suite", "--filter-ansi", "fuchsia-pkg://example.com/test.cm"},
 		},
 		{
 			name:        "components v2 no parallel",
@@ -705,7 +705,7 @@ func TestCommandForTest(t *testing.T) {
 					Path:       "/path/to/test",
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
 				}},
-			expected: []string{"run-test-suite", "fuchsia-pkg://example.com/test.cm"},
+			expected: []string{"run-test-suite", "--filter-ansi", "fuchsia-pkg://example.com/test.cm"},
 		},
 		{
 			name:        "components v2 parallel",
@@ -716,7 +716,7 @@ func TestCommandForTest(t *testing.T) {
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
 					Parallel:   2,
 				}},
-			expected: []string{"run-test-suite", "--parallel", "2", "fuchsia-pkg://example.com/test.cm"},
+			expected: []string{"run-test-suite", "--filter-ansi", "--parallel", "2", "fuchsia-pkg://example.com/test.cm"},
 		},
 		{
 			name:        "components v2 timeout",
@@ -727,7 +727,7 @@ func TestCommandForTest(t *testing.T) {
 					PackageURL: "fuchsia-pkg://example.com/test.cm",
 				}},
 			timeout:  time.Second,
-			expected: []string{"run-test-suite", "--timeout", "1", "fuchsia-pkg://example.com/test.cm"},
+			expected: []string{"run-test-suite", "--filter-ansi", "--timeout", "1", "fuchsia-pkg://example.com/test.cm"},
 		},
 	}
 

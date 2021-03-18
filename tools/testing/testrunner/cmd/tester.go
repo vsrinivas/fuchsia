@@ -546,7 +546,7 @@ func commandForTest(test *testsharder.Test, useRuntests bool, remoteOutputDir st
 		}
 	} else if test.PackageURL != "" {
 		if strings.HasSuffix(test.PackageURL, componentV2Suffix) {
-			command = []string{runTestSuiteName}
+			command = []string{runTestSuiteName, "--filter-ansi"}
 			if test.LogSettings.MaxSeverity != "" {
 				command = append(command, "--max-severity-logs", fmt.Sprintf("%s", test.LogSettings.MaxSeverity))
 			}
