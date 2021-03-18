@@ -5,11 +5,11 @@
 import("//build/board.gni")
 import("//build/config/build_api_module.gni")
 import("//build/config/compiler.gni")
-import("//build/dev.gni")
 import("//build/fidl/args.gni")
 import("//build/images/args.gni")
 import("//build/info/info.gni")
 import("//build/rust/config.gni")
+import("//build/security.gni")
 import("//build/testing/platforms.gni")
 import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
@@ -51,11 +51,6 @@ declare_args() {
   # artifact set, which represents an additional set of host-only software that
   # is produced by the build.
   host_labels = []
-
-  # Whether to allow testonly=true targets in base/cache pacakges. Default to
-  # true to allow testonly=true targets. It is preferrable to set to false for
-  # production builds to avoid accidental inclusion of testing targets.
-  base_cache_packages_allow_testonly = true
 }
 
 if (host_os == "mac") {

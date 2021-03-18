@@ -13,26 +13,6 @@ declare_args() {
   # build outputs that are part of the build API (e.g. zbi's, package servers).
   dev_build_only_deps = []
 
-  # An optional golden file for fuchsia.zbi kernel cmdline args. If specified,
-  # this golden file would be compared against fuchsia.zbi kernel cmdline during
-  # build time.
-  dev_fuchsia_zbi_kernel_cmdline_golden = ""
-
-  # An optional golden file for recovery.zbi kernel cmdline args. If specified,
-  # this golden file would be compared against recovery.zbi kernel cmdline
-  # during build time.
-  dev_recovery_zbi_kernel_cmdline_golden = ""
-
-  # An optional golden file for fuchsia.zbi bootFS file list. If specified,
-  # this golden file would be compared against fuchsia.zbi bootFS file list
-  # during build time.
-  dev_fuchsia_zbi_bootfs_filelist_golden = ""
-
-  # An optional golden file for recovery.zbi bootFS file list. If specified,
-  # this golden file would be compared against recovery.zbi bootFS file list
-  # during build time.
-  dev_recovery_zbi_bootfs_filelist_golden = ""
-
   # List of labels for objects to include in the ZBI.
   dev_bootfs_labels = []
 
@@ -41,33 +21,4 @@ declare_args() {
 
   # List of binary labels to include in the recovery ZBI.
   dev_recovery_bootfs_labels = []
-
-  # Whether to allow testonly=true targets in fuchsia ZBI or base/cache packages.
-  #
-  # Possible values are
-  #   "all": Allow testonly=true target in fuchsia ZBI and base/cache packages.
-  #   "all_but_base_cache_packages": Do not allow testonly=true target in
-  #      base/cache packages, but allow in other fuchsia ZBI dependencies.
-  #   "none": Do not allow testonly=true target in all ZBI dependencies
-  #      including base/cache packages.
-  #
-  # Default value is 'all', it is preferable to set to 'none' for production
-  #   image to avoid accidental inclusion of testing targets.
-  dev_testonly_in_containers = "all"
-}
-
-# Whether to allow testonly=true in base_packages/cache_packages.
-base_cache_packages_testonly = false
-if (dev_testonly_in_containers == "all") {
-  # If we allow testonly=true for all containers, then we allow it for
-  # base/cache packges.
-  base_cache_packages_testonly = true
-}
-
-# Whether to allow testonly=true in zbi("fuchsia") and all its dependencies
-# except base_packages/cache_packages.
-fuchsia_zbi_testonly = false
-if (dev_testonly_in_containers == "all" ||
-    dev_testonly_in_containers == "all_but_base_cache_packages") {
-  fuchsia_zbi_testonly = true
 }
