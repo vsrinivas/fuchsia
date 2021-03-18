@@ -1,0 +1,49 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/python/python_host_test.gni")
+
+tests = [
+  "args",
+  "buildenv",
+  "command",
+  "corpus",
+  "device",
+  "dictionary",
+  "factory",
+  "fuzzer",
+  "host",
+  "namespace",
+]
+
+foreach(t, tests) {
+  python_host_test(t + "_test") {
+    main_source = "run_single_test.py"
+    sources = [
+      "../lib",
+      "__init__.py",
+      "data",
+      "factory_fake.py",
+      "host_fake.py",
+      "process_fake.py",
+      "test_case.py",
+      "test_e2e.py",
+      "test_env.py",
+    ]
+    _target_dir = get_label_info(target_name, "dir")
+    extra_args = [
+      "-t",
+      rebase_path("${root_out_dir}/test_data/${_target_dir}", root_build_dir),
+      "-v",
+    ]
+  }
+}
+
+group("tests") {
+  testonly = true
+  public_deps = []
+  foreach(t, tests) {
+    public_deps += [ ":" + t + "_test($host_toolchain)" ]
+  }
+}

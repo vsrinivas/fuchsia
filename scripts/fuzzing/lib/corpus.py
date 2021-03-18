@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -170,7 +170,7 @@ class Corpus(object):
         else:
             self.host.echo('No corpus set for {}.'.format(str(self.fuzzer)))
             self.host.echo('Please enter a path to a corpus: ', end='')
-            srcdir = raw_input()
+            srcdir = input()
             srcdir = self.buildenv.abspath(srcdir)
             pkgdir = srcdir
             target = os.path.basename(srcdir)

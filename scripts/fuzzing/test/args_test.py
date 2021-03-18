@@ -1,13 +1,13 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import unittest
 
-import test_env
-import lib.command as command
-from test_case import TestCaseWithFactory
+from . import test_env
+from ..lib import command
+from .test_case import TestCaseWithFactory
 
 
 class ArgsTest(TestCaseWithFactory):
@@ -16,7 +16,7 @@ class ArgsTest(TestCaseWithFactory):
 
     def assertParse(self, args, **kwargs):
         args = vars(self.parse_args(*args))
-        for key, val in kwargs.iteritems():
+        for key, val in kwargs.items():
             self.assertEqual(args[key], val)
 
     def assertParseFails(self, args, msg):
@@ -123,7 +123,8 @@ class ArgsTest(TestCaseWithFactory):
                 '',
             ])
 
-        self.assertParseFails(['start'], 'Too few arguments.')
+        self.assertParseFails(
+            ['start'], 'The following arguments are required: name')
 
         self.assertParse(
             [
@@ -142,7 +143,8 @@ class ArgsTest(TestCaseWithFactory):
         self.assertParse(['start', '-m', 'name'], monitor=True)
 
         self.assertParseFails(
-            ['start', '--output', 'name'], 'Too few arguments.')
+            ['start', '--output', 'name'],
+            'The following arguments are required: name')
         self.assertParseFails(
             [
                 'start',
@@ -262,7 +264,8 @@ class ArgsTest(TestCaseWithFactory):
                 '  -v,--verbose        Display additional output.',
                 '',
             ])
-        self.assertParseFails(['stop'], 'Too few arguments.')
+        self.assertParseFails(
+            ['stop'], 'The following arguments are required: name')
 
         self.assertParse(
             [
@@ -300,8 +303,12 @@ class ArgsTest(TestCaseWithFactory):
                 '',
             ])
 
-        self.assertParseFails(['repro'], 'Too few arguments.')
-        self.assertParseFails(['repro', 'name'], 'Too few arguments.')
+        self.assertParseFails(
+            ['repro'],
+            'The following arguments are required: name, libfuzzer_inputs')
+        self.assertParseFails(
+            ['repro', 'name'],
+            'The following arguments are required: libfuzzer_inputs')
 
         self.assertParse(
             [
@@ -324,7 +331,7 @@ class ArgsTest(TestCaseWithFactory):
                 '--output',
                 'name',
                 'unit',
-            ], 'Too few arguments.')
+            ], 'The following arguments are required: libfuzzer_inputs')
         self.assertParseFails(
             [
                 'repro',
@@ -425,7 +432,8 @@ class ArgsTest(TestCaseWithFactory):
                 '',
             ])
 
-        self.assertParseFails(['analyze'], 'Too few arguments.')
+        self.assertParseFails(
+            ['analyze'], 'The following arguments are required: name')
 
         self.assertParse(
             [
@@ -434,7 +442,8 @@ class ArgsTest(TestCaseWithFactory):
             ], command=command.analyze_fuzzer, name='name')
 
         self.assertParseFails(
-            ['analyze', '--corpus', 'name'], 'Too few arguments.')
+            ['analyze', '--corpus', 'name'],
+            'The following arguments are required: name')
         self.assertParse(
             [
                 'analyze',
@@ -457,7 +466,8 @@ class ArgsTest(TestCaseWithFactory):
             corpora=['corpus1', 'corpus2'])
 
         self.assertParseFails(
-            ['analyze', '--dict', 'name'], 'Too few arguments.')
+            ['analyze', '--dict', 'name'],
+            'The following arguments are required: name')
         self.assertParseFails(
             [
                 'analyze',
@@ -484,7 +494,8 @@ class ArgsTest(TestCaseWithFactory):
         self.assertParse(['analyze', '-l', 'name'], local=True)
 
         self.assertParseFails(
-            ['analyze', '--output', 'name'], 'Too few arguments.')
+            ['analyze', '--output', 'name'],
+            'The following arguments are required: name')
         self.assertParseFails(
             [
                 'analyze',
@@ -623,7 +634,8 @@ class ArgsTest(TestCaseWithFactory):
                 '',
             ])
 
-        self.assertParseFails(['coverage'], 'Too few arguments.')
+        self.assertParseFails(
+            ['coverage'], 'The following arguments are required: name')
 
         self.assertParse(
             [

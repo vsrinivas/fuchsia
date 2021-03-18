@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,11 +7,11 @@ import errno
 import fnmatch
 import os
 import subprocess
-from StringIO import StringIO
+from io import StringIO
 
-import test_env
-from lib.host import Host
-from process_fake import FakeProcess
+from . import test_env
+from ..lib.host import Host
+from .process_fake import FakeProcess
 
 
 class FakeHost(Host):
@@ -82,7 +82,7 @@ class FakeHost(Host):
         """A file-like object that can be used in "with" statements."""
 
         def __init__(self):
-            self._contents = None
+            self._contents = ''
 
         def open(self, mode):
             """Recreates the StringIO base object to simulate opening."""
@@ -98,8 +98,7 @@ class FakeHost(Host):
 
         def __exit__(self, exc_type, exc_value, exc_traceback):
             if not exc_type:
-                self.seek(0, 0)
-                self._contents = self.read()
+                self._contents = self.getvalue()
 
     def open(self, pathname, mode='r', on_error=None, missing_ok=False):
         """Opens a fake file for reading and/or writing."""

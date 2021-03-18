@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,8 +7,8 @@ import os
 import sys
 import unittest
 
-from host import Host
-from fuzzer import Fuzzer
+from .host import Host
+from .fuzzer import Fuzzer
 
 # This file contains the top-level implementations for each of the subcommands
 # for "fx fuzz".
@@ -65,7 +65,7 @@ def start_fuzzer(args, factory):
                 'Stop manually with "fx fuzz stop {}".'.format(fuzzer))
         fuzzer.start()
         if not args.foreground:
-            cmd = ['python', sys.argv[0], 'start', '--monitor']
+            cmd = ['python3.8', sys.argv[0], 'start', '--monitor']
             if fuzzer.output:
                 cmd += ['--output', fuzzer.output]
             cmd.append(str(fuzzer))
@@ -161,9 +161,13 @@ def update_corpus(args, factory):
 
 
 def _run_tests(pattern, factory):
+    # __file__ is scripts/fuzzing/lib/command.py
     lib_dir = os.path.dirname(os.path.abspath(__file__))
+    # ../test
     test_dir = os.path.join(os.path.dirname(lib_dir), 'test')
-    tests = unittest.defaultTestLoader.discover(test_dir, pattern=pattern)
+    # scripts/fuzzing/lib/../../ => scripts/
+    top_level_dir = os.path.dirname(os.path.dirname(lib_dir))
+    tests = unittest.defaultTestLoader.discover(test_dir, pattern=pattern, top_level_dir=top_level_dir)
     if factory.host.tracing:
         os.environ[Host.TRACE_ENVVAR] = '1'
         verbosity = 2

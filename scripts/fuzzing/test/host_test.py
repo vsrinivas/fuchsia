@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -10,12 +10,12 @@ import subprocess
 import sys
 import tempfile
 import unittest
-from StringIO import StringIO
+from io import StringIO
 
-import test_env
-from lib.host import Host
-from host_fake import FakeHost
-from test_case import TestCaseWithIO
+from . import test_env
+from ..lib.host import Host
+from .host_fake import FakeHost
+from .test_case import TestCaseWithIO
 """ Test the real and fake implementations of the Host.
 
 The structure of these tests is organized into 5 classes:

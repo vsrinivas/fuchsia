@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,9 +7,9 @@ import os
 import sys
 import unittest
 
-import test_env
-import lib.command as command
-from test_case import TestCaseWithFuzzer
+from . import test_env
+from ..lib import command
+from .test_case import TestCaseWithFuzzer
 
 
 class CommandTest(TestCaseWithFuzzer):
@@ -98,7 +98,7 @@ class CommandTest(TestCaseWithFuzzer):
             'Stop manually with "fx fuzz stop {}".'.format(self.fuzzer),
         )
         cmd = [
-            'python',
+            'python3.8',
             sys.argv[0],
             'start',
             '--monitor',

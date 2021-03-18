@@ -18,6 +18,10 @@ import("//build/testing/host_test_data.gni")
 #     - Optional: Other files that are used in the test.
 #     - Type: list(path)
 #
+#   * extra_args
+#     - Optional: Additional arguments to pass to the test.
+#     - Type: list(string)
+#
 #   * deps
 #   * visibility
 #     - Optional: Usual GN meanings.
@@ -30,6 +34,7 @@ template("python_host_test") {
   _host_test_data_target = "${target_name}_test_data"
   host_test_data(_host_test_data_target) {
     testonly = true
+
     forward_variables_from(invoker,
                            [
                              "deps",
@@ -45,9 +50,13 @@ template("python_host_test") {
   host_test(target_name) {
     binary_path = python_exe_path
     args = [ rebase_path("${_out_dir}/${invoker.main_source}", root_build_dir) ]
+    if (defined(invoker.extra_args)) {
+      args += invoker.extra_args
+    }
     deps = [
       ":${_host_test_data_target}",
       "//build/python:interpreter",
     ]
+    forward_variables_from(invoker, [ "visibility" ])
   }
 }

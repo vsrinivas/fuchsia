@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,8 +7,8 @@ import re
 import subprocess
 import time
 
-from buildenv import BuildEnv
-from host import Host
+from .buildenv import BuildEnv
+from .host import Host
 
 
 class Device(object):
@@ -134,7 +134,7 @@ class Device(object):
             ssh_options += ['-{}'.format('v' * self._ssh_verbosity)]
 
         # Options
-        for key, val in sorted(self._ssh_options.iteritems()):
+        for key, val in sorted(self._ssh_options.items()):
             ssh_options += ['-{}'.format(key), val]
 
         # Configuration options

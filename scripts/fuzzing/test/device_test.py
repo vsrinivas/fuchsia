@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,9 +7,9 @@ import os
 import unittest
 import subprocess
 
-import test_env
-from lib.device import Device
-from test_case import TestCaseWithFactory
+from . import test_env
+from ..lib.device import Device
+from .test_case import TestCaseWithFactory
 
 
 class DeviceTest(TestCaseWithFactory):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -10,8 +10,8 @@ import re
 import subprocess
 from collections import defaultdict
 
-from fuzzer import Fuzzer
-from process import Process
+from .fuzzer import Fuzzer
+from .process import Process
 
 
 class BuildEnv(object):
@@ -190,7 +190,7 @@ class BuildEnv(object):
                         'manifest': '{}.cmx'.format(fuzzer),
                         'label': '//generated/{}:{}'.format(package, fuzzer),
                     })
-        fuzz_specs += by_label.values()
+        fuzz_specs += list(by_label.values())
         self._fuzzers = [
             Fuzzer(self._factory, fuzz_spec) for fuzz_spec in fuzz_specs
         ]

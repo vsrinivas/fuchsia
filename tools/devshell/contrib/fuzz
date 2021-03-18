@@ -11,4 +11,4 @@
 ## For specific subcommand info, run "fx fuzz help".
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
-python ${FUCHSIA_DIR}/scripts/fuzzing/main.py "$@"
+"${PREBUILT_PYTHON3_DIR}/bin/python3.8" ${FUCHSIA_DIR}/scripts/fuzzing/main.py "$@"

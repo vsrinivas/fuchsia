@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -6,12 +6,12 @@
 import os
 import sys
 import unittest
+from io import StringIO
 
-import test_env
-import lib.args
-from factory_fake import FakeFactory
-from process_fake import FakeProcess
-from StringIO import StringIO
+from . import test_env
+from ..lib import args
+from .factory_fake import FakeFactory
+from .process_fake import FakeProcess
 
 
 class TestCaseWithIO(unittest.TestCase):
@@ -30,6 +30,7 @@ class TestCaseWithIO(unittest.TestCase):
 
     def set_input(self, *lines):
         sys.stdin.truncate(0)
+        sys.stdin.seek(0)
         for line in lines:
             sys.stdin.write(line)
             sys.stdin.write('\n')
@@ -39,9 +40,9 @@ class TestCaseWithIO(unittest.TestCase):
     # Unit test assertions
 
     def _dump_io(self, io):
-        io.seek(0)
-        data = io.read()
+        data = io.getvalue()
         io.truncate(0)
+        io.seek(0)
         return data
 
     def _assert_io_equals(self, io, lines, n=-1):
@@ -243,6 +244,10 @@ class TestCaseWithFuzzer(TestCaseWithFactory):
     def setUp(self):
         super(TestCaseWithFuzzer, self).setUp()
         self.create_fuzzer('check', 'fake-package1/fake-target1')
+
+    def tearDown(self):
+        super(TestCaseWithFuzzer, self).tearDown()
+        self._fuzzer = None
 
     # Unit test context.
 

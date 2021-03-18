@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -9,10 +9,10 @@ import os
 import re
 import subprocess
 
-from corpus import Corpus
-from dictionary import Dictionary
-from host import Host
-from namespace import Namespace
+from .corpus import Corpus
+from .dictionary import Dictionary
+from .host import Host
+from .namespace import Namespace
 
 
 class Fuzzer(object):
@@ -338,7 +338,7 @@ class Fuzzer(object):
                 self._options[option] = '0'
         self._options.update(self._libfuzzer_opts)
         fuzz_cmd = ['run', self.executable_url]
-        for key, value in sorted(self._options.iteritems()):
+        for key, value in sorted(self._options.items()):
             fuzz_cmd.append('-{}={}'.format(key, value))
         fuzz_cmd += self._libfuzzer_inputs
         if self._subprocess_args:
@@ -642,7 +642,9 @@ class Fuzzer(object):
                 if self.host.isdir(input_dir):
                     self.corpus.add_from_host(input_dir)
                 else:
-                    self.host.error('{} is not a directory, and cannot be used as corpus input.')
+                    self.host.error(
+                        '{} is not a directory, and cannot be used as corpus input.'
+                    )
 
         # Ensure the output directory is created.
         self.host.mkdir(self.output)

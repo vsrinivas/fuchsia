@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -8,8 +8,8 @@ import os
 import re
 import unittest
 
-import test_env
-from test_case import TestCaseWithFuzzer
+from . import test_env
+from .test_case import TestCaseWithFuzzer
 
 
 class FuzzerTest(TestCaseWithFuzzer):
@@ -627,7 +627,10 @@ class FuzzerTest(TestCaseWithFuzzer):
 
             # Note: this takes advantage of the fact that the FakeCLI always returns
             # the same name for temp_dir().
-            cmd = ['gsutil', '-m', 'cp', fuzzer.clusterfuzz_gcs_url + '/*', temp_dir.pathname]
+            cmd = [
+                'gsutil', '-m', 'cp', fuzzer.clusterfuzz_gcs_url + '/*',
+                temp_dir.pathname
+            ]
             self.assertRan(*cmd)
 
             # Assert that the corpus data file was copied to the device.
@@ -653,7 +656,8 @@ class FuzzerTest(TestCaseWithFuzzer):
             host_corpus_file = os.path.join(input_dir, 'corpus1')
             self.host.touch(host_corpus_file)
 
-            self.fuzzer.generate_coverage_report(local=True, input_dirs=[input_dir])
+            self.fuzzer.generate_coverage_report(
+                local=True, input_dirs=[input_dir])
 
             # Assert that the corpus data file was copied to the device.
             device_file_path = '/data/r/sys/r/{}/fuchsia.com:{}:0#meta:{}_test.cmx/{}'.format(
@@ -697,6 +701,7 @@ class FuzzerTest(TestCaseWithFuzzer):
             ],
             returncode=0,
             reset=True)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -1,15 +1,15 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
 import errno
 
-from args import ArgParser
-from host import Host
-from buildenv import BuildEnv
-from device import Device
-from fuzzer import Fuzzer
+from .args import ArgParser
+from .host import Host
+from .buildenv import BuildEnv
+from .device import Device
+from .fuzzer import Fuzzer
 
 
 class Factory(object):

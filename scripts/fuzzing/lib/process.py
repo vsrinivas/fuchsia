@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -51,7 +51,8 @@ class Process(object):
             self.args,
             stdin=self._stdin,
             stdout=self._stdout,
-            stderr=self._stderr)
+            stderr=self._stderr,
+            text=True)
         return p
 
     def call(self):

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -11,7 +11,7 @@ import sys
 import tempfile
 import time
 
-from process import Process
+from .process import Process
 
 
 class Host(object):
@@ -107,12 +107,12 @@ class Host(object):
         while not choice:
             self.echo("Choose 1-{}: ".format(len(choices)), end='')
             try:
-                raw_choice = int(raw_input())
+                raw_choice = int(input())
                 if raw_choice == 0:
                     self.echo("User canceled.")
                     sys.exit(0)
                 choice = choices[raw_choice - 1]
-            except ValueError, IndexError:
+            except (ValueError, IndexError):
                 self.echo("Invalid selection.")
         return choice
 

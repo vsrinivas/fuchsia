@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,8 +7,8 @@ import argparse
 import re
 import sys
 
-import command
-from host import Host
+from . import command
+from .host import Host
 
 # This file contains the arguments parsing for "fx fuzz".
 
@@ -451,7 +451,7 @@ class ArgParser(argparse.ArgumentParser):
         if self._parsers:
             lines += ['']
             lines += ['Subcommands:']
-            for prog, subcommand in sorted(self._parsers.iteritems()):
+            for prog, subcommand in sorted(self._parsers.items()):
                 lines += self._format_help(prog, [subcommand.help])
 
         if self._arguments_help:

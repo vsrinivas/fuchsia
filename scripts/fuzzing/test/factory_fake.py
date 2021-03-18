@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,11 +7,11 @@ import json
 import os
 import sys
 
-import test_env
-from lib.factory import Factory
-from host_fake import FakeHost
-from lib.buildenv import BuildEnv
-from lib.device import Device
+from . import test_env
+from ..lib.factory import Factory
+from .host_fake import FakeHost
+from ..lib.buildenv import BuildEnv
+from ..lib.device import Device
 
 
 class FakeFactory(Factory):

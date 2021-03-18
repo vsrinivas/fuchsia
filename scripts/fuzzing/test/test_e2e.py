@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -11,11 +11,11 @@ import sys
 import tempfile
 import unittest
 
-import test_env
-import lib.command as command
-from lib.host import Host
-from lib.factory import Factory
-from test_case import TestCaseWithIO
+from . import test_env
+from ..lib import command
+from ..lib.host import Host
+from ..lib.factory import Factory
+from .test_case import TestCaseWithIO
 
 
 # Override test loading so we can run a different set of tests depending on
@@ -75,7 +75,7 @@ class IntegrationTestFull(IntegrationTest):
         artifacts = glob.glob(os.path.join(self.temp_dir, 'crash-*'))
         self.assertEqual(len(artifacts), 1)
         with self.host.open(artifacts[0], 'rb') as f:
-            self.assertEqual(f.read(3), 'HI!')
+            self.assertEqual(f.read(3), b'HI!')
 
     def test_start_stop(self):
         # This test covers interactions with on-device processes
@@ -107,7 +107,7 @@ class IntegrationTestFull(IntegrationTest):
         # This will cause overflow_fuzzer to allocate 2 bytes and attempt to
         # write 4 bytes into it
         with self.host.open(testfile, 'wb') as f:
-            f.write(struct.pack("<Q", 2) + "AAAA")
+            f.write(struct.pack('<Q', 2) + b'AAAA')
 
         cmd = self.parser.parse_args(
             ['repro', 'example-fuzzers/overflow_fuzzer', testfile])

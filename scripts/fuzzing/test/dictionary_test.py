@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3.8
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -6,8 +6,8 @@
 import os
 import unittest
 
-import test_env
-from test_case import TestCaseWithFuzzer
+from . import test_env
+from .test_case import TestCaseWithFuzzer
 
 
 class DictionaryTest(TestCaseWithFuzzer):
