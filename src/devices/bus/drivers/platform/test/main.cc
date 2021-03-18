@@ -192,7 +192,7 @@ TEST(PbusTest, BoardInfo) {
   auto irq_ctrl_info = client.GetInterruptControllerInfo();
   EXPECT_OK(irq_ctrl_info.status());
   EXPECT_TRUE(irq_ctrl_info.ok());
-  EXPECT_NE(irq_ctrl_info->info, nullptr);
+  EXPECT_NE(nullptr, irq_ctrl_info->info);
 
   // Get board revision information.
   auto board_revision = client.GetBoardRevision();
