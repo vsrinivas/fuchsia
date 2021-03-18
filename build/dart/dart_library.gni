@@ -19,8 +19,7 @@ declare_args() {
   disable_dart_strict_deps = false
 
   # Detect dart API changes
-  # TODO(fxbug.dev/36723, fxbug.dev/6623) Remove this flag once issues are resolved
-  enable_api_diff = false
+  enable_api_diff = true
 }
 
 # Defines a Dart library
@@ -587,11 +586,9 @@ if (current_toolchain == dart_toolchain) {
         runner_out_dir = get_label_info(runner_label, "root_out_dir")
         script = "$runner_out_dir/dart-tools/detect_api_changes"
         output_file = detect_target_file
+        hermetic_deps = false
 
-        inputs = [
-                   _packages_path,
-                   source_file,
-                 ] + rebased_sources
+        inputs = [ source_file ] + rebased_sources
 
         outputs = [ output_file ]
 
