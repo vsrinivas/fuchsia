@@ -6,11 +6,10 @@ use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy, WriteResult,
-};
+use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
 use crate::handler::setting_handler::{
-    controller, ControllerError, ControllerStateResult, SettingHandlerResult, State,
+    controller, ControllerError, ControllerStateResult, IntoHandlerResult, SettingHandlerResult,
+    State,
 };
 use crate::input::common::connect_to_camera;
 use crate::input::input_device_configuration::InputConfiguration;

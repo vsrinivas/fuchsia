@@ -335,6 +335,18 @@ impl<C: controller::Create + controller::Handle + Send + Sync + 'static> Handler
     }
 }
 
+/// `IntoHandlerResult` helps with converting a value into the result of a setting request.
+pub trait IntoHandlerResult {
+    /// Converts `Self` into a `SettingHandlerResult` for use in a `Controller`.
+    fn into_handler_result(self) -> SettingHandlerResult;
+}
+
+impl IntoHandlerResult for SettingInfo {
+    fn into_handler_result(self) -> SettingHandlerResult {
+        Ok(Some(self))
+    }
+}
+
 pub mod persist {
     use super::ClientProxy as BaseProxy;
     use super::*;
@@ -512,18 +524,18 @@ pub mod persist {
 
     /// A trait for interpreting a `Result` into whether a notification occurred
     /// and converting the `Result` into a `SettingHandlerResult`.
-    pub trait WriteResult {
+    pub trait WriteResult: IntoHandlerResult {
         /// Indicates whether a notification occurred as a result of the write.
         fn notified(&self) -> bool;
-        /// Converts the result into a `SettingHandlerResult`.
-        fn into_handler_result(self) -> SettingHandlerResult;
     }
 
     impl WriteResult for Result<UpdateState, ControllerError> {
         fn notified(&self) -> bool {
             self.as_ref().map_or(false, |update_state| UpdateState::Updated == *update_state)
         }
+    }
 
+    impl IntoHandlerResult for Result<UpdateState, ControllerError> {
         fn into_handler_result(self) -> SettingHandlerResult {
             self.map(|_| None)
         }

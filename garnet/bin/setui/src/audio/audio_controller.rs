@@ -12,7 +12,8 @@ use crate::handler::setting_handler::persist::{
     controller as data_controller, write, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{
-    controller, ControllerError, ControllerStateResult, Event, SettingHandlerResult, State,
+    controller, ControllerError, ControllerStateResult, Event, IntoHandlerResult,
+    SettingHandlerResult, State,
 };
 use crate::input::ButtonType;
 use async_trait::async_trait;

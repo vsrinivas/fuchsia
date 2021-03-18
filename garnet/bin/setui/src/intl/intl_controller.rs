@@ -6,10 +6,10 @@ use crate::base::{Merge, SettingInfo, SettingType};
 use crate::call_async;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy, WriteResult,
+use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::{
+    controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult};
 use crate::intl::types::{HourCycle, IntlInfo, LocaleId, TemperatureUnit};
 use async_trait::async_trait;
 use std::collections::HashSet;

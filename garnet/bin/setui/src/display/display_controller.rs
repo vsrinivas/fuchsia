@@ -13,10 +13,10 @@ use crate::display::display_configuration::{
 use crate::display::types::{DisplayInfo, LowLightMode, Theme, ThemeBuilder, ThemeMode, ThemeType};
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy, WriteResult,
+use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::{
+    controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult};
 use crate::service_context::ExternalServiceProxy;
 use async_trait::async_trait;
 use fidl_fuchsia_ui_brightness::{

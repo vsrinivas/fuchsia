@@ -6,10 +6,10 @@ use crate::base::SettingInfo;
 use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy, WriteResult,
+use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::{
+    controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
-use crate::handler::setting_handler::{controller, ControllerError, SettingHandlerResult};
 use async_trait::async_trait;
 
 impl DeviceStorageCompatible for DoNotDisturbInfo {
