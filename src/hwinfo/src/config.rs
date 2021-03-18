@@ -255,10 +255,10 @@ impl ProductInfo {
             }
         }
         if let Err(err) = product_info.load_from_hw_file(HW_TXT, proxy_handle).await {
-            fx_log_err!("Failed to load hw.txt.txt due to {}", err);
+            fx_log_err!("Failed to load hw.txt due to {}", err);
         }
         if let Err(err) = product_info.load_from_locale_list(LOCALE_LIST_FILE, proxy_handle).await {
-            fx_log_err!("Failed to load local_list.txt due to {}", err);
+            fx_log_err!("Failed to load locale_list.txt due to {}", err);
         }
         product_info
     }

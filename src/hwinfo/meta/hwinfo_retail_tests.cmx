@@ -14,7 +14,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/hwinfo_retail_test"
+        "binary": "bin/hwinfo_retail_test"
     },
     "sandbox": {
         "features": [

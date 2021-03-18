@@ -16,7 +16,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/hwinfo_negative_test"
+        "binary": "bin/hwinfo_negative_test"
     },
     "sandbox": {
         "services": [

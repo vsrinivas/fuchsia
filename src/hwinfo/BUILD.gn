@@ -3,10 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//src/hwinfo/hwinfo_config.gni")
 
@@ -53,34 +51,57 @@ hwinfo_config("default_product_config") {
   config = rebase_path("default_product_config.json")
 }
 
-template("hwinfo_package") {
-  package(target_name) {
+fuchsia_component("hwinfo_component") {
+  component_name = "hwinfo"
+  manifest = "meta/hwinfo.cmx"
+  deps = [ ":hwinfo_bin" ]
+}
+
+fuchsia_package("hwinfo") {
+  deps = [ ":hwinfo_component" ]
+}
+
+fuchsia_package("fake_hwinfo") {
+  deps = [ ":hwinfo_component" ]
+}
+
+template("hwinfo_integration_test") {
+  assert(defined(invoker.manifest), "A manifest must be specified.")
+  assert(defined(invoker.deps), "Test dependencies must be specified.")
+  test_name = target_name
+
+  fuchsia_component("${test_name}_hwinfo") {
+    testonly = true
+    component_name = "hwinfo"
+    manifest = "meta/hwinfo.cmx"
     deps = [ ":hwinfo_bin" ]
-
-    binaries = [
-      {
-        name = "hwinfo"
-      },
-    ]
-
-    meta = [
-      {
-        path = rebase_path("meta/hwinfo.cmx")
-        dest = "hwinfo.cmx"
-      },
-    ]
   }
 
-  # Suppress unused variable warnings as the invoker is expected to be empty.
-  not_needed(invoker, "*")
-}
+  fuchsia_test_component("${test_name}_component") {
+    component_name = test_name
+    manifest = invoker.manifest
+    deps = invoker.deps
+  }
 
-# The real package.
-hwinfo_package("hwinfo") {
-}
+  fuchsia_test_package("${test_name}_package") {
+    package_name = test_name
+    test_components = [ ":${test_name}_component" ]
+    deps = [ ":${test_name}_hwinfo" ]
+    if (defined(invoker.package_deps)) {
+      deps += invoker.package_deps
+    }
+    if (defined(invoker.test_specs)) {
+      test_specs = invoker.test_specs
+    }
+  }
 
-# The fake package used for integration testing where we want control over config data.
-hwinfo_package("fake_hwinfo") {
+  group(target_name) {
+    testonly = true
+    deps = [
+      ":${test_name}_package",
+      "//src/factory/fake_factory_store_providers",
+    ]
+  }
 }
 
 rustc_test("hwinfo_positive_test") {
@@ -137,81 +158,35 @@ rustc_test("hwinfo_retail_test") {
   sources = [ "tests/hwinfo_retail_test.rs" ]
 }
 
-test_package("hwinfo_positive_tests") {
-  deps = [
-    ":hwinfo_bin",
-    ":hwinfo_positive_test",
-  ]
-
-  binaries = [
-    {
-      name = "hwinfo"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/hwinfo.cmx")
-      dest = "hwinfo.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "hwinfo_positive_test"
-    },
+hwinfo_integration_test("hwinfo_positive_tests") {
+  manifest = "meta/hwinfo_positive_tests.cmx"
+  deps = [ ":hwinfo_positive_test" ]
+  package_deps = [
+    ":hwinfo_tests_config",
+    ":hwinfo_tests_factory_config",
   ]
 }
 
-test_package("hwinfo_negative_tests") {
-  deps = [
-    ":hwinfo_bin",
-    ":hwinfo_negative_test",
+hwinfo_integration_test("hwinfo_negative_tests") {
+  manifest = "meta/hwinfo_negative_tests.cmx"
+  deps = [ ":hwinfo_negative_test" ]
+  package_deps = [
+    ":hwinfo_tests_factory_config",
+    "//src/factory/fake_factory_store_providers",
   ]
-
-  binaries = [
-    {
-      name = "hwinfo"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/hwinfo.cmx")
-      dest = "hwinfo.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "hwinfo_negative_test"
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
-test_package("hwinfo-retail-tests") {
-  deps = [
-    ":hwinfo_bin",
-    ":hwinfo_retail_test",
-  ]
-
-  binaries = [
-    {
-      name = "hwinfo"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/hwinfo.cmx")
-      dest = "hwinfo.cmx"
-    },
-  ]
-
-  tests = [
-    {
-      name = "hwinfo_retail_test"
-    },
+hwinfo_integration_test("hwinfo_retail_tests") {
+  manifest = "meta/hwinfo_retail_tests.cmx"
+  deps = [ ":hwinfo_retail_test" ]
+  package_deps = [
+    ":hwinfo_retail_tests_config",
+    ":hwinfo_retail_tests_factory_config",
   ]
 }
 
@@ -238,7 +213,7 @@ config_data("hwinfo_retail_tests_factory_config") {
 }
 
 config_data("hwinfo_retail_tests_config") {
-  for_pkg = "hwinfo-retail-tests"
+  for_pkg = "hwinfo_retail_tests"
 
   sources = [
     "testdata/board_config.json",
@@ -250,13 +225,8 @@ group("tests") {
   testonly = true
   deps = [
     ":fake_hwinfo",
-    ":hwinfo-retail-tests",
     ":hwinfo_negative_tests",
     ":hwinfo_positive_tests",
-    ":hwinfo_retail_tests_config",
-    ":hwinfo_retail_tests_factory_config",
-    ":hwinfo_tests_config",
-    ":hwinfo_tests_factory_config",
-    "//src/factory/fake_factory_store_providers",
+    ":hwinfo_retail_tests",
   ]
 }
