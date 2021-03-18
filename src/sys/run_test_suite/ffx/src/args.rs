@@ -37,6 +37,10 @@ pub struct TestCommand {
     #[argh(switch)]
     pub run_disabled: bool,
 
+    /// filter ANSI escape sequences from output
+    #[argh(switch)]
+    pub filter_ansi: bool,
+
     /// run tests in parallel
     #[argh(option)]
     pub parallel: Option<u16>,

@@ -32,14 +32,18 @@ rustc_library("lib") {
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:thiserror",
+    "//third_party/rust_crates:vte",
   ]
   if (!is_host) {
     deps += [ "//src/lib/zircon/rust:fuchsia-zircon" ]
   }
 
+  test_deps = [ "//third_party/rust_crates:ansi_term" ]
+
   sources = [
     "src/diagnostics.rs",
     "src/lib.rs",
+    "src/writer.rs",
   ]
 }
 
@@ -68,8 +72,19 @@ fuchsia_shell_package("run_test_suite_pkg") {
   deps = [ ":bin" ]
 }
 
-fuchsia_unittest_package("run-test-suite-unit-tests") {
+fuchsia_unittest_component("run-test-suite-lib-test") {
+  deps = [ ":lib_test" ]
+}
+
+fuchsia_unittest_component("run-test-suite-bin-test") {
   deps = [ ":bin_test" ]
+}
+
+fuchsia_test_package("run-test-suite-unit-tests") {
+  test_components = [
+    ":run-test-suite-lib-test",
+    ":run-test-suite-bin-test",
+  ]
 }
 
 # fxbug.dev/44251: Packages cannot include other packages, so making a group here for dependency.

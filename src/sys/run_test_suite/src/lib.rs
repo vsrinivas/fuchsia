@@ -16,13 +16,15 @@ use {
     futures::{channel::mpsc, join, prelude::*, stream::LocalBoxStream},
     std::collections::HashSet,
     std::fmt,
-    std::io::{self, Write},
+    std::io::{self},
     test_executor::{LogStream, TestEvent, TestRunOptions},
 };
 
-pub use test_executor::DisabledTestHandling;
-
 pub mod diagnostics;
+pub mod writer;
+
+pub use test_executor::DisabledTestHandling;
+pub use writer::WriteLine;
 
 #[derive(PartialEq, Debug)]
 pub enum Outcome {
@@ -96,7 +98,7 @@ impl TestParams {
     }
 }
 
-async fn run_test_for_invocations<W: Write>(
+async fn run_test_for_invocations<W: WriteLine>(
     suite_instance: &test_executor::SuiteInstance,
     invocations: Vec<Invocation>,
     run_options: TestRunOptions,
@@ -147,7 +149,8 @@ async fn run_test_for_invocations<W: Write>(
                             if test_cases_executed.contains(&test_case_name) {
                                 return Err(anyhow::anyhow!("test case: '{}' started twice", test_case_name));
                             }
-                            writeln!(writer, "[RUNNING]\t{}", test_case_name).expect("Cannot write logs");
+                            writer.write_line(&format!("[RUNNING]\t{}", test_case_name))
+                                .expect("Cannot write logs");
                             test_cases_in_progress.insert(test_case_name.clone());
                             test_cases_executed.insert(test_case_name);
                         }
@@ -178,12 +181,12 @@ async fn run_test_for_invocations<W: Write>(
                                     "ERROR"
                                 }
                             };
-                            writeln!(writer, "[{}]\t{}", result_str, test_case_name)
+                            writer.write_line(&format!("[{}]\t{}", result_str, test_case_name))
                                 .expect("Cannot write logs");
                         }
                         TestEvent::ExcessiveDuration { test_case_name, duration } => {
-                            writeln!(writer, "[duration - {}]:\tStill running after {:?} seconds",
-                                test_case_name, duration.as_secs())
+                            writer.write_line(&format!("[duration - {}]:\tStill running after {:?} seconds",
+                                test_case_name, duration.as_secs()))
                                 .expect("Cannot write logs");
                         }
                         TestEvent::StdoutMessage { test_case_name, mut msg } => {
@@ -199,7 +202,7 @@ async fn run_test_for_invocations<W: Write>(
                                 msg.truncate(msg.len()-1)
                             }
                             // TODO(anmittal): buffer by newline or something else.
-                            writeln!(writer, "[output - {}]:\n{}", test_case_name, msg).expect("Cannot write logs");
+                            writer.write_line(&format!("[output - {}]:\n{}", test_case_name, msg)).expect("Cannot write logs");
 
                         }
                         TestEvent::Finish => {
@@ -223,9 +226,9 @@ async fn run_test_for_invocations<W: Write>(
             }
             _ => {}
         }
-        writeln!(writer, "\nThe following test(s) never completed:").expect("Cannot write logs");
+        writer.write_line("\nThe following test(s) never completed:").expect("Cannot write logs");
         for t in test_cases_in_progress {
-            writeln!(writer, "{}", t).expect("Cannot write logs");
+            writer.write_line(&format!("{}", t)).expect("Cannot write logs");
         }
     }
 
@@ -252,7 +255,7 @@ pub struct TestStreams<'a> {
 }
 
 /// Runs the test `count` number of times, and writes logs to writer.
-pub async fn run_test<'a, W: Write + Send>(
+pub async fn run_test<'a, W: WriteLine + Send>(
     test_params: TestParams,
     count: u16,
     writer: &'a mut W,
@@ -263,7 +266,7 @@ pub async fn run_test<'a, W: Write + Send>(
         arguments: test_params.test_args.clone(),
     };
 
-    struct FoldArgs<'a, W: Write> {
+    struct FoldArgs<'a, W: WriteLine> {
         current_count: u16,
         count: u16,
         suite_instance: test_executor::SuiteInstance,
@@ -291,7 +294,7 @@ pub async fn run_test<'a, W: Write + Send>(
         writer,
     };
 
-    let results = stream::try_unfold(args, |mut args| async move {
+    let results = stream::try_unfold(args, move |mut args| async move {
         if args.current_count >= args.count {
             args.suite_instance.kill()?;
             return Ok(None);
@@ -386,11 +389,15 @@ pub async fn run_tests_and_get_outcome(
     test_params: TestParams,
     log_opts: diagnostics::LogCollectionOptions,
     count: std::num::NonZeroU16,
+    filter_ansi: bool,
 ) -> Outcome {
     let test_url = test_params.test_url.clone();
     println!("\nRunning test '{}'", &test_url);
 
-    let mut stdout_for_results = io::stdout();
+    let mut stdout_for_results: Box<dyn WriteLine + Send> = match filter_ansi {
+        true => Box::new(writer::AnsiFilterWriter::new(io::stdout())),
+        false => Box::new(io::stdout()),
+    };
     let streams = match run_test(test_params, count.get(), &mut stdout_for_results).await {
         Ok(s) => s,
         Err(e) => {
@@ -400,7 +407,10 @@ pub async fn run_tests_and_get_outcome(
     };
 
     let (log_stream, result_stream) = (streams.logs, streams.results);
-    let mut stdout_for_logs = io::stdout();
+    let mut stdout_for_logs: Box<dyn WriteLine + Send> = match filter_ansi {
+        true => Box::new(writer::AnsiFilterWriter::new(io::stdout())),
+        false => Box::new(io::stdout()),
+    };
     let log_collection_fut = diagnostics::collect_logs(log_stream, &mut stdout_for_logs, log_opts);
     let results_collection_fut = collect_results(&test_url, count, result_stream);
 

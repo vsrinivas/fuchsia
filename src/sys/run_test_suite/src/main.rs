@@ -23,6 +23,10 @@ struct Args {
     #[argh(switch)]
     also_run_disabled_tests: bool,
 
+    /// whether to filter ANSI escape sequences from stdout.
+    #[argh(switch)]
+    filter_ansi: bool,
+
     /// run test cases in parallel, up to the number provided.
     #[argh(option)]
     parallel: Option<u16>,
@@ -60,6 +64,7 @@ async fn main() {
         min_severity_logs,
         max_severity_logs,
         test_args,
+        filter_ansi,
     } = args;
     let count = count.unwrap_or(1);
     if count == 0 {
@@ -75,6 +80,10 @@ async fn main() {
         max_severity: max_severity_logs,
     };
 
+    if filter_ansi {
+        println!("Note: Filtering out ANSI escape sequences.");
+    }
+
     match run_test_suite_lib::run_tests_and_get_outcome(
         run_test_suite_lib::TestParams {
             test_url,
@@ -87,6 +96,7 @@ async fn main() {
         },
         log_opts,
         std::num::NonZeroU16::new(count).unwrap(),
+        filter_ansi,
     )
     .await
     {

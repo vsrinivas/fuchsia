@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 use {
+    crate::writer,
     anyhow::Error,
     diagnostics_data::{LogsData, Severity},
     futures::{Stream, TryStreamExt},
-    std::io::Write,
 };
 
 // TODO(fxbug.dev/54198, fxbug.dev/70581): deprecate this when implementing metadata selectors for
@@ -52,7 +52,7 @@ pub async fn collect_logs<S, W>(
     options: LogCollectionOptions,
 ) -> Result<LogCollectionOutcome, Error>
 where
-    W: Write,
+    W: writer::WriteLine,
     S: Stream<Item = Result<LogsData, Error>> + Unpin,
 {
     let mut restricted_logs = vec![];
@@ -63,7 +63,7 @@ where
             format!("[{}][{}] {}: {}", log.metadata.timestamp, moniker, log.metadata.severity, msg);
 
         if options.should_display(&log) {
-            writeln!(writer, "{}", log_repr).expect("Failed to write log");
+            writer.write_line(&format!("{}", log_repr)).expect("Failed to write log");
         }
 
         if options.is_restricted_log(&log) {

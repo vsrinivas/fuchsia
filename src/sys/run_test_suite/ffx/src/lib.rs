@@ -41,6 +41,7 @@ pub async fn test(
                 max_severity: cmd.max_severity_logs,
             },
             count,
+            cmd.filter_ansi,
         )
         .await
         {
