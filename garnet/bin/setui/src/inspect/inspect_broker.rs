@@ -23,6 +23,7 @@ use crate::service::message::Messenger;
 use crate::service::TryFromWithClient;
 
 const INSPECT_NODE_NAME: &str = "setting_values";
+const SETTING_TYPE_INSPECT_NODE_NAME: &str = "setting_types";
 
 /// An agent that listens in on messages between the proxy and setting handlers to record the
 /// values of all settings to inspect.
@@ -31,6 +32,17 @@ pub struct InspectSettingAgent {
     inspect_node: inspect::Node,
     setting_values: HashMap<&'static str, InspectSettingInfo>,
     setting_types: HashSet<SettingType>,
+    _setting_types_inspect_node: SettingTypesInspectInfo,
+}
+
+/// Information about the setting types available in the settings service.
+///
+/// Inspect nodes are not used, but need to be held as they're deleted from inspect once they go
+/// out of scope.
+#[derive(Debug)]
+struct SettingTypesInspectInfo {
+    _node: inspect::Node,
+    _value: inspect::StringProperty,
 }
 
 /// Information about a setting to be written to inspect.
@@ -57,6 +69,7 @@ impl InspectSettingAgent {
         Self::create_with_node(
             context,
             component::inspector().root().create_child(INSPECT_NODE_NAME),
+            None,
         )
         .await;
     }
@@ -65,7 +78,13 @@ impl InspectSettingAgent {
     /// handlers. Agent starts immediately without calling invocation, but
     /// acknowledges the invocation payload to let the Authority know the agent
     /// starts properly.
-    pub async fn create_with_node(context: Context, inspect_node: inspect::Node) {
+    pub async fn create_with_node(
+        context: Context,
+        inspect_node: inspect::Node,
+        custom_inspector: Option<&inspect::Inspector>,
+    ) {
+        let inspector = custom_inspector.unwrap_or_else(|| component::inspector());
+
         // TODO(fxb/71826): log and exit instead of panicking
         let (messenger_client, receptor) = context
             .messenger_factory
@@ -81,11 +100,26 @@ impl InspectSettingAgent {
             .await
             .expect("could not create inspect");
 
+        // Add inspect node for the setting types.
+        let setting_type_node = inspector.root().create_child(SETTING_TYPE_INSPECT_NODE_NAME);
+        let mut setting_types_list: Vec<String> = context
+            .available_components
+            .clone()
+            .iter()
+            .map(|component| format!("{:?}", component))
+            .collect();
+        setting_types_list.sort();
+        let setting_types_value =
+            setting_type_node.create_string("value", format!("{:?}", setting_types_list));
+        let setting_types_inspect_node =
+            SettingTypesInspectInfo { _node: setting_type_node, _value: setting_types_value };
+
         let mut agent = Self {
             messenger_client,
             inspect_node,
             setting_values: HashMap::new(),
             setting_types: context.available_components.clone(),
+            _setting_types_inspect_node: setting_types_inspect_node,
         };
 
         fasync::Task::spawn(async move {
@@ -190,7 +224,7 @@ mod tests {
     use fuchsia_zircon::Time;
 
     use crate::agent::Invocation;
-    use crate::base::{SettingInfo, UnknownInfo};
+    use crate::base::{SettingInfo, SettingType, UnknownInfo};
     use crate::message::base::Status;
     use crate::service::message::create_hub;
     use crate::service_context::ServiceContext;
@@ -227,10 +261,13 @@ mod tests {
             .await
             .expect("should create proxy");
 
-        InspectSettingAgent::create_with_node(context, inspect_node).await;
+        InspectSettingAgent::create_with_node(context, inspect_node, Some(&inspector)).await;
 
         // Inspect agent should not report any setting values.
         assert_inspect_tree!(inspector, root: {
+            setting_types: {
+                "value": "[\"Unknown\"]",
+            },
             setting_values: {
             }
         });
@@ -269,6 +306,9 @@ mod tests {
 
         // Inspect agent writes value to inspect.
         assert_inspect_tree!(inspector, root: {
+            setting_types: {
+                "value": "[\"Unknown\"]",
+            },
             setting_values: {
                 "Unknown": {
                     value: "UnknownInfo(true)",
@@ -296,10 +336,13 @@ mod tests {
             .expect("should create proxy messenger")
             .1;
 
-        InspectSettingAgent::create_with_node(context, inspect_node).await;
+        InspectSettingAgent::create_with_node(context, inspect_node, Some(&inspector)).await;
 
         // Inspect agent should not report any setting values.
         assert_inspect_tree!(inspector, root: {
+            setting_types: {
+                "value": "[\"Unknown\"]",
+            },
             setting_values: {
             }
         });
@@ -323,6 +366,9 @@ mod tests {
 
         // Inspect agent writes value to inspect.
         assert_inspect_tree!(inspector, root: {
+            setting_types: {
+                "value": "[\"Unknown\"]",
+            },
             setting_values: {
                 "Unknown": {
                     value: "UnknownInfo(false)",
