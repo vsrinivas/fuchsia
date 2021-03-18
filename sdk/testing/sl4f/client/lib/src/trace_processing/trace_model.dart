@@ -118,7 +118,7 @@ enum FlowEventPhase { start, step, end }
 ///   * A step flow event with no preceding (category, name, id) tuple.
 ///   * An end flow event with no preceding (category, name, id) tuple.
 class FlowEvent extends Event {
-  int id;
+  String id;
 
   /// The phase of the [FlowEvent].
   FlowEventPhase phase;

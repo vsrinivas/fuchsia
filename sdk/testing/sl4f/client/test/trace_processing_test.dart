@@ -56,7 +56,7 @@ Model _getTestModel() {
     ..tid = 7021
     ..start =
         TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697503139.9531089))
-    ..id = 0
+    ..id = '0'
     ..phase = FlowEventPhase.start;
 
   final flowStep = FlowEvent()
@@ -66,7 +66,7 @@ Model _getTestModel() {
     ..tid = 7022
     ..start =
         TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697779328.2160872))
-    ..id = 0
+    ..id = '0'
     ..phase = FlowEventPhase.step;
 
   final flowEnd = FlowEvent()
@@ -76,7 +76,7 @@ Model _getTestModel() {
     ..tid = 7022
     ..start =
         TimePoint.fromEpochDelta(TimeDelta.fromMicroseconds(697868050.2160872))
-    ..id = 0
+    ..id = '0'
     ..phase = FlowEventPhase.end;
 
   final counterEvent = CounterEvent()
@@ -739,5 +739,20 @@ void main(List<String> args) {
     final model = await _modelFromPath('runtime_deps/flutter_app.json');
     final results = totalTraceWallTimeMetricsProcessor(model, {});
     expect(results[0].values[0], _closeTo(16247.062083));
+  });
+
+  test('Flow ids', () async {
+    final model = await _modelFromPath('runtime_deps/flow_ids.json');
+
+    final events = getAllEvents(model);
+    final flowEvents = filterEventsTyped<FlowEvent>(events).toList()
+      ..sort((a, b) => a.start.compareTo(b.start));
+
+    expect(flowEvents.length, 3);
+    expect(flowEvents[0].nextFlow, isNotNull);
+    expect(flowEvents[1].nextFlow, isNotNull);
+    expect(flowEvents[2].nextFlow, isNull);
+
+    expect(getAllEvents(model).length, 4);
   });
 }

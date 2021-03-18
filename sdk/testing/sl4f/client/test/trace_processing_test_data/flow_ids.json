@@ -1,0 +1,41 @@
+{
+    "displayTimeUnit": "ns",
+    "traceEvents": [
+        {
+            "ph": "X",
+            "cat": "test",
+            "name": "duration",
+            "dur": 1000,
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 0
+        },
+        {
+            "ph": "s",
+            "cat": "test",
+            "name": "flow start",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 1,
+            "id": "0"
+        },
+        {
+            "ph": "t",
+            "cat": "test",
+            "name": "flow start",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 2,
+            "id": 0
+        },
+        {
+            "ph": "f",
+            "cat": "test",
+            "name": "flow start",
+            "pid": 1000,
+            "tid": 1234,
+            "ts": 3,
+            "id": "0"
+        }
+    ]
+}

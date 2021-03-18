@@ -84,6 +84,26 @@ void _checkTraceEvent(Map<String, dynamic> jsonTraceEvent) {
   }
 }
 
+String _asStringId(dynamic object) {
+  if (object is String) {
+    return object;
+  } else if (object is int) {
+    return object.toString();
+  } else if (object is double) {
+    if (object.isNaN) {
+      throw FormatException('Got NaN double for id field value');
+    } else if (object.remainder(1.0) != 0.0) {
+      throw FormatException(
+          'Got float with non-zero decimal place ($object) for id field value');
+    } else {
+      return object.toInt().toString();
+    }
+  } else {
+    throw FormatException(
+        'Got unexpected type ${object.runtimeType} for id field value: $object');
+  }
+}
+
 /// A helper class to group events by their "track" ((pid, tid) pairs).
 class _TrackKey {
   int pid;
@@ -114,7 +134,7 @@ class _TrackKey {
 class _FlowKey {
   String category;
   String name;
-  int id;
+  String id;
   // Only used for 'local' flow ids.
   int pid;
 
@@ -126,27 +146,15 @@ class _FlowKey {
     pid = 0;
 
     if (traceEvent.containsKey('id')) {
-      if (traceEvent['id'] is int) {
-        id = traceEvent['id'];
-      } else if (traceEvent['id'] is String) {
-        id = int.tryParse(traceEvent['id']);
-      }
+      id = _asStringId(traceEvent['id']);
     } else if (traceEvent.containsKey('id2')) {
       final Map<String, dynamic> id2 = traceEvent['id2'];
       if (id2.containsKey('local')) {
         // 'local' id2 means scoped to the process.
         pid = traceEvent['pid'];
-        if (id2['local'] is int) {
-          id = id2['local'];
-        } else if (id2['local'] is String) {
-          id = int.tryParse(id2['local']);
-        }
+        id = _asStringId(id2['local']);
       } else if (id2.containsKey('global')) {
-        if (id2['global'] is int) {
-          id = id2['global'];
-        } else if (id2['global'] is String) {
-          id = int.tryParse(id2['global']);
-        }
+        id = _asStringId(id2['global']);
       }
     }
 

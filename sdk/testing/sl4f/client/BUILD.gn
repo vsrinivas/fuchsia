@@ -118,6 +118,7 @@ if (is_host) {
       "test/trace_processing_test_data/chrome_metadata.json",
       "test/trace_processing_test_data/cpu_metric.json",
       "test/trace_processing_test_data/flow_event_binding.json",
+      "test/trace_processing_test_data/flow_ids.json",
       "test/trace_processing_test_data/flutter_app.json",
       "test/trace_processing_test_data/flutter_app_long_name.json",
       "test/trace_processing_test_data/flutter_app_no_scenic.json",

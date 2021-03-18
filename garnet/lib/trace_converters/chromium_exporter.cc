@@ -304,13 +304,13 @@ void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
       writer_.Key("ph");
       writer_.String("s");
       writer_.Key("id");
-      writer_.Uint64(event.data.GetFlowBegin().id);
+      writer_.String(std::to_string(event.data.GetFlowBegin().id));
       break;
     case trace::EventType::kFlowStep:
       writer_.Key("ph");
       writer_.String("t");
       writer_.Key("id");
-      writer_.Uint64(event.data.GetFlowStep().id);
+      writer_.String(std::to_string(event.data.GetFlowStep().id));
       break;
     case trace::EventType::kFlowEnd:
       writer_.Key("ph");
@@ -318,7 +318,7 @@ void ChromiumExporter::ExportEvent(const trace::Record::Event& event) {
       writer_.Key("bp");
       writer_.String("e");
       writer_.Key("id");
-      writer_.Uint64(event.data.GetFlowEnd().id);
+      writer_.String(std::to_string(event.data.GetFlowEnd().id));
       break;
     default:
       break;
