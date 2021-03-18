@@ -9,7 +9,7 @@ use crate::base::SettingType;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
 use crate::handler::setting_handler::persist::{
-    controller as data_controller, write, ClientProxy, WriteResult,
+    controller as data_controller, ClientProxy, WriteResult,
 };
 use crate::handler::setting_handler::{
     controller, ControllerError, ControllerStateResult, Event, IntoHandlerResult,
@@ -66,14 +66,14 @@ impl VolumeController {
     /// the local state. Also pushes the changes to the audio core if
     /// [push_to_audio_core] is true.
     async fn restore_volume_state(&mut self, push_to_audio_core: bool) -> ControllerStateResult {
-        let audio_info = self.client.read::<AudioInfo>().await;
+        let audio_info = self.client.read_setting::<AudioInfo>().await;
         let stored_streams = audio_info.streams.iter().cloned().collect();
         self.update_volume_streams(&stored_streams, push_to_audio_core).await?;
         Ok(())
     }
 
     async fn get_info(&mut self) -> Result<AudioInfo, ControllerError> {
-        let mut audio_info = self.client.read::<AudioInfo>().await;
+        let mut audio_info = self.client.read_setting::<AudioInfo>().await;
 
         // Only override the mic mute state if present.
         if let Some(mic_mute_state) = self.mic_mute_state {
@@ -110,10 +110,10 @@ impl VolumeController {
     async fn set_mic_mute_state(&mut self, mic_mute_state: bool) -> SettingHandlerResult {
         self.mic_mute_state = Some(mic_mute_state);
 
-        let mut audio_info = self.client.read::<AudioInfo>().await;
+        let mut audio_info = self.client.read_setting::<AudioInfo>().await;
         audio_info.input.mic_mute = mic_mute_state;
 
-        write(&self.client, audio_info, false).await.into_handler_result()
+        self.client.write_setting(audio_info.into(), false).await.into_handler_result()
     }
 
     /// Updates the state with the given streams' volume levels.
@@ -140,11 +140,11 @@ impl VolumeController {
             self.check_and_bind_volume_controls(new_streams).await?;
         }
 
-        let mut stored_value = self.client.read::<AudioInfo>().await;
+        let mut stored_value = self.client.read_setting::<AudioInfo>().await;
         stored_value.streams = get_streams_array_from_map(&self.stream_volume_controls);
         stored_value.modified_counters = Some(self.modified_counters.clone());
 
-        Ok(write(&self.client, stored_value, false).await.notified())
+        Ok(self.client.write_setting(stored_value.into(), false).await.notified())
     }
 
     /// Populates the local state with the given [streams] and binds it to the audio core service.
