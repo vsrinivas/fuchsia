@@ -24,7 +24,7 @@ use {
     },
     anyhow::{format_err, Context as _, Error},
     fidl_fuchsia_location_namedplace::RegulatoryRegionWatcherMarker,
-    fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy},
+    fidl_fuchsia_wlan_device_service::DeviceServiceMarker,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_async as fasync,
     fuchsia_async::DurationExt,
     fuchsia_cobalt::{CobaltConnector, ConnectionType},
@@ -180,15 +180,12 @@ async fn serve_metrics(
 // Some builds will not include the RegulatoryRegionWatcher.  In such cases, wlancfg can continue
 // to run, though it will not be able to set its regulatory region and will fallback to world wide.
 fn run_regulatory_manager(
-    wlan_svc: DeviceServiceProxy,
-    phy_manager: Arc<Mutex<PhyManager>>,
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     regulatory_sender: oneshot::Sender<()>,
 ) -> BoxFuture<'static, Result<(), Error>> {
     match fuchsia_component::client::connect_to_service::<RegulatoryRegionWatcherMarker>() {
         Ok(regulatory_svc) => {
-            let regulatory_manager =
-                RegulatoryManager::new(regulatory_svc, wlan_svc, phy_manager, iface_manager);
+            let regulatory_manager = RegulatoryManager::new(regulatory_svc, iface_manager);
             let regulatory_fut = async move {
                 regulatory_manager.run(regulatory_sender).await.unwrap_or_else(|e| {
                     error!("regulatory manager failed: {:?}", e);
@@ -273,12 +270,7 @@ fn main() -> Result<(), Error> {
         .and_then(|_| future::ready(Err(format_err!("Device watcher future exited unexpectedly"))));
 
     let metrics_fut = serve_metrics(saved_networks.clone(), cobalt_fut);
-    let regulatory_fut = run_regulatory_manager(
-        wlan_svc.clone(),
-        phy_manager.clone(),
-        iface_manager.clone(),
-        regulatory_sender,
-    );
+    let regulatory_fut = run_regulatory_manager(iface_manager.clone(), regulatory_sender);
 
     executor
         .run_singlethreaded(try_join5(
