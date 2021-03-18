@@ -32,7 +32,7 @@ type Struct struct {
 	// See the struct template for usage.
 	FullDeclMemcpyCompatibleDeps []string
 
-	// Kind should be default initialized.
+	// Kind is a type tag; omit when initializing the struct.
 	Kind structKind
 }
 

@@ -19,7 +19,7 @@ type Service struct {
 	ServiceName string
 	Members     []ServiceMember
 
-	// Kind should be default initialized.
+	// Kind is a type tag; omit when initializing the struct.
 	Kind serviceKind
 }
 

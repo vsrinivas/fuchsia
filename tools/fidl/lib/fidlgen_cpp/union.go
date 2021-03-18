@@ -23,7 +23,7 @@ type Union struct {
 	Result          *Result
 	HasPointer      bool
 
-	// Kind should be default initialized.
+	// Kind is a type tag; omit when initializing the struct.
 	Kind unionKind
 }
 

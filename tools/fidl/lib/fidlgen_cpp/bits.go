@@ -17,7 +17,7 @@ type Bits struct {
 	MaskName DeclName
 	Members  []BitsMember
 
-	// Kind should be default initialized.
+	// Kind is a type tag; omit when initializing the struct.
 	Kind bitsKind
 }
 

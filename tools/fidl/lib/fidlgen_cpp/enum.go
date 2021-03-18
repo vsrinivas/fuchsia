@@ -16,7 +16,7 @@ type Enum struct {
 	Type    TypeName
 	Members []EnumMember
 
-	// Kind should be default initialized.
+	// Kind is a type tag; omit when initializing the struct.
 	Kind enumKind
 }
 

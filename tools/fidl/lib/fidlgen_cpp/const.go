@@ -76,7 +76,7 @@ type Const struct {
 	Type      Type
 	Value     ConstantValue
 
-	// Kind should be default initialized.
+	// Kind is a type tag; omit when initializing the struct.
 	Kind constKind
 }
 

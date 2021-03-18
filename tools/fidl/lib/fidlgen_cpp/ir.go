@@ -11,15 +11,19 @@ import (
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-// These are used in header/impl templates to select the correct type-specific template
-type bitsKind struct{}
-type constKind struct{}
-type enumKind struct{}
-type protocolKind struct{}
-type serviceKind struct{}
-type structKind struct{}
-type tableKind struct{}
-type unionKind struct{}
+// These are used in header/impl templates to select the correct type-specific template.
+// Each individual type is embedded into the corresponding C++ IR struct. Omit those
+// fields when initializing IRs.
+type (
+	bitsKind     struct{}
+	constKind    struct{}
+	enumKind     struct{}
+	protocolKind struct{}
+	serviceKind  struct{}
+	structKind   struct{}
+	tableKind    struct{}
+	unionKind    struct{}
+)
 
 var Kinds = struct {
 	Const    constKind

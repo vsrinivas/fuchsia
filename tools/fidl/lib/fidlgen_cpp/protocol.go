@@ -58,7 +58,7 @@ type Protocol struct {
 	// in the protocol.
 	Events []Method
 
-	// Kind should always be default initialized.
+	// Kind is a type tag; omit when initializing the struct.
 	Kind protocolKind
 }
 
