@@ -263,6 +263,14 @@ zx_status_t AudioDeviceStream::SetFormat(uint32_t frames_per_second, uint16_t ch
   audio_fidl::StreamConfig::Call::CreateRingBuffer(stream_ch_, std::move(format),
                                                    std::move(remote));
   rb_ch_ = std::move(local);
+
+  // Stash the FIFO depth, in case users need to know it.
+  auto result = audio_fidl::RingBuffer::Call::GetProperties(rb_ch_);
+  if (result.status() != ZX_OK) {
+    return ZX_ERR_BAD_STATE;
+  }
+  fifo_depth_ = result->properties.fifo_depth();
+  external_delay_nsec_ = result->properties.external_delay();
   return ZX_OK;
 }
 
@@ -274,16 +282,6 @@ zx_status_t AudioDeviceStream::GetBuffer(uint32_t frames, uint32_t irqs_per_ring
 
   if (!rb_ch_.is_valid() || rb_vmo_.is_valid() || !frame_sz_) {
     return ZX_ERR_BAD_STATE;
-  }
-
-  // Stash the FIFO depth, in case users need to know it.
-  {
-    auto result = audio_fidl::RingBuffer::Call::GetProperties(rb_ch_);
-    if (result.status() != ZX_OK) {
-      return ZX_ERR_BAD_STATE;
-    }
-    fifo_depth_ = result->properties.fifo_depth();
-    external_delay_nsec_ = result->properties.external_delay();
   }
 
   // Get a VMO representing the ring buffer we will share with the audio driver.
