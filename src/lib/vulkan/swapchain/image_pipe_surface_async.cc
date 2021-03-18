@@ -169,8 +169,13 @@ bool ImagePipeSurfaceAsync::CreateImage(VkDevice device, VkLayerDispatchTable* p
     }
     uint32_t memory_type_index =
         __builtin_ctz(memory_requirements.memoryTypeBits & properties.memoryTypeBits);
+    VkMemoryDedicatedAllocateInfoKHR dedicated_info = {
+        .sType = VK_STRUCTURE_TYPE_MEMORY_DEDICATED_ALLOCATE_INFO_KHR,
+        .image = image,
+    };
     VkImportMemoryBufferCollectionFUCHSIA import_info = {
         .sType = VK_STRUCTURE_TYPE_IMPORT_MEMORY_BUFFER_COLLECTION_FUCHSIA,
+        .pNext = &dedicated_info,
         .collection = collection,
         .index = i,
     };

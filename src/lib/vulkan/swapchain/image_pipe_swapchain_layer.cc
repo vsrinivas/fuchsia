@@ -638,6 +638,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
 #if defined(VK_USE_PLATFORM_FUCHSIA)
   bool external_memory_extension_available = false;
   bool fuchsia_buffer_collection_extension_available = false;
+  bool dedicated_allocation_extension_available = false;
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
   bool external_fence_extension_available = false;
 #endif
@@ -663,6 +664,10 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
                     device_extensions[i].extensionName)) {
           fuchsia_buffer_collection_extension_available = true;
         }
+        if (!strcmp(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME,
+                    device_extensions[i].extensionName)) {
+          dedicated_allocation_extension_available = true;
+        }
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
         if (!strcmp(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME,
                     device_extensions[i].extensionName)) {
@@ -686,8 +691,14 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
     fprintf(stderr, "Device extension not available: %s\n",
             VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
   }
-  if (!external_memory_extension_available || !external_semaphore_extension_available)
+  if (!dedicated_allocation_extension_available) {
+    fprintf(stderr, "Device extension not available: %s\n",
+            VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
+  }
+  if (!external_memory_extension_available || !external_semaphore_extension_available ||
+      !fuchsia_buffer_collection_extension_available || !dedicated_allocation_extension_available) {
     return VK_ERROR_INITIALIZATION_FAILED;
+  }
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
   if (!external_fence_extension_available) {
     fprintf(stderr, "External fence extension not available\n");
@@ -705,6 +716,7 @@ VKAPI_ATTR VkResult VKAPI_CALL CreateDevice(VkPhysicalDevice gpu,
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_MEMORY_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_EXTERNAL_SEMAPHORE_EXTENSION_NAME);
   enabled_extensions.push_back(VK_FUCHSIA_BUFFER_COLLECTION_EXTENSION_NAME);
+  enabled_extensions.push_back(VK_KHR_DEDICATED_ALLOCATION_EXTENSION_NAME);
 #elif defined(VK_USE_PLATFORM_WAYLAND_KHR)
   enabled_extensions.push_back(VK_KHR_EXTERNAL_SEMAPHORE_FD_EXTENSION_NAME);
   enabled_extensions.push_back(VK_KHR_EXTERNAL_FENCE_FD_EXTENSION_NAME);
