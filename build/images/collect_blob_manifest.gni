@@ -58,11 +58,12 @@ template("collect_blob_manifest") {
     inputs = [ list_path ]
     deps = [ ":$list_name" ]
 
-    hermetic_deps = false
     script = "//build/images/manifest_list_collect_unique_blobs.py"
+    depfile = "$target_gen_dir/$target_name.d"
     args = [
       rebase_path(inputs[0], root_build_dir),
       rebase_path(outputs[0], root_build_dir),
+      rebase_path(depfile, root_build_dir),
     ]
   }
 }

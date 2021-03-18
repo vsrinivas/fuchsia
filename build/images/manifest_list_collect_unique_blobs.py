@@ -18,12 +18,14 @@ import sys
 def main():
     infile = sys.argv[1]
     outfile = sys.argv[2]
+    depfile = sys.argv[3]
 
     outdir = os.path.dirname(outfile)
-
+    manifests = []
     files = {}
     with open(infile) as listfile:
         for manifest in listfile:
+            manifests.append(manifest.strip())
             with open(manifest.strip()) as f:
                 for line in f:
                     try:
@@ -37,6 +39,9 @@ def main():
                     except:
                         sys.stderr.write("Failed on line: " + line)
                         raise
+
+    with open(depfile, "w") as df:
+        df.write("{}: {}\n".format(outfile, ' '.join(manifests)))
 
     with open(outfile, "w") as f:
         for id, src in list(files.items()):
