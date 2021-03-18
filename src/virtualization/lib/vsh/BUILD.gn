@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("vsh") {
   testonly = true
@@ -73,13 +73,6 @@ executable("vsh_unittest") {
   ]
 }
 
-test_package("vsh_tests") {
+fuchsia_unittest_package("vsh_tests") {
   deps = [ ":vsh_unittest" ]
-
-  tests = [
-    {
-      name = "vsh_unittest"
-      environments = basic_envs
-    },
-  ]
 }
