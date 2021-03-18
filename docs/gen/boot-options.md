@@ -308,7 +308,7 @@ nearest power of 2 from the cpu timer counter.
 ### kernel.arm64.debug.dap-rom-soc=\<string>
 
 If set, tries to initialize the dap debug aperture at a hard coded address for the particular
-system on chip. Currently accepted value is amlogic-t931g.
+system on chip. Currently accepted values are amlogic-t931g, amlogic-s905d2, and amlogic-s905d3g.
 
 
 ## Options available only on x86 machines

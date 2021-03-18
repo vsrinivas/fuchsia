@@ -22,6 +22,7 @@
 #include <fbl/auto_call.h>
 #include <kernel/auto_preempt_disabler.h>
 #include <kernel/cpu.h>
+#include <ktl/iterator.h>
 #include <lk/init.h>
 #include <vm/vm_aspace.h>
 
@@ -49,29 +50,67 @@ fbl::Array<debug_port> daps;
 void arm_dap_init(uint level) {
   LTRACE_ENTRY;
 
+  enum {
+    None,
+    t931g,
+    s905d2,
+    s905d3g,
+  } soc = None;
+
+  // Parse the valid options out of the kernel command line
   // kernel.arm64.debug.dap-rom-soc
-  // at the moment we only understand the T931G. Abort if anything else is passed, including a null
-  // string
-  if (strncmp(gBootOptions->arm64_debug_dap_rom_soc.data(), "amlogic-t931g",
-              gBootOptions->arm64_debug_dap_rom_soc.size()) != 0) {
+  if (strcmp(gBootOptions->arm64_debug_dap_rom_soc.data(), "amlogic-t931g") == 0) {
+    soc = t931g;
+  } else if (strcmp(gBootOptions->arm64_debug_dap_rom_soc.data(), "amlogic-s905d2") == 0) {
+    soc = s905d2;
+  } else if (strcmp(gBootOptions->arm64_debug_dap_rom_soc.data(), "amlogic-s905d3g") == 0) {
+    soc = s905d3g;
+  } else if (strcmp(gBootOptions->arm64_debug_dap_rom_soc.data(), "") != 0) {
+    dprintf(INFO, "ARM DAP: unrecognized non-empty option passed '%s'\n",
+            gBootOptions->arm64_debug_dap_rom_soc.data());
+  }
+  if (soc == None) {
     return;
   }
-  // TODO: read this from ZBI
-  {
-    fbl::AllocChecker ac;
-    dap_aperture *da = new (&ac) dap_aperture[2]{};
-    if (!ac.check()) {
-      return;
-    }
-    dap_apertures = {da, 2};
 
-    // two dap register windows for T931G
-    dap_apertures[0].base = 0xf580'0000;  // A53_BASE
-    dap_apertures[0].size = 0x80'0000;
-    dap_apertures[0].cpu_base = 0;
-    dap_apertures[1].base = 0xf500'0000;  // A73_BASE
-    dap_apertures[1].size = 0x80'0000;
-    dap_apertures[1].cpu_base = 2;
+  // Set the ROM table locations to search in for DAP apertures for each cpu
+  {
+    DEBUG_ASSERT(soc != None);
+
+    // Pre-canned values for the debug rom table base, taken from
+    // the manuals for these particular SOCs.
+    // TODO: read this from ZBI as well
+    // clang-format off
+    static dap_aperture t931g_aperture[] = {
+      { .base = 0xf580'0000,  // A53_BASE
+        .size = 0x80'0000,
+        .cpu_base = 0,
+      },
+      { .base = 0xf500'0000,  // A73_BASE
+        .size = 0x80'0000,
+        .cpu_base = 2,
+      }
+    };
+    static dap_aperture s905_aperture[] = {
+      { .base = 0xf580'0000,  // A53_BASE
+        .size = 0x80'0000,
+        .cpu_base = 0,
+      },
+    };
+    // clang-format on
+
+    switch (soc) {
+      case t931g:
+        // two dap register windows for T931G
+        dap_apertures = {t931g_aperture, ktl::size(t931g_aperture)};
+        break;
+      case s905d2:
+      case s905d3g:
+        // s905d2 and s905d3g have the same aperture
+        dap_apertures = {s905_aperture, ktl::size(s905_aperture)};
+        break;
+      case None:;
+    }
   }
 
   // allocate a list of parsed dap structures, to be filled in by each cpu as they run their init
