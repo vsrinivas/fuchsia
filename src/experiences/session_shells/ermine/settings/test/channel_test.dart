@@ -10,6 +10,11 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:settings/settings.dart';
 
+const List<String> channels = [
+  'channelA',
+  'channelB',
+];
+
 void main() {
   MockControl control;
 
@@ -18,13 +23,34 @@ void main() {
   });
 
   test('Default Channel Spec', () async {
-    when(control.getTarget()).thenAnswer((_) => Future.value('devhost'));
+    when(control.getTarget()).thenAnswer((_) => Future.value(channels[0]));
+    when(control.getTargetList()).thenAnswer((_) => Future.value(channels));
 
     final channel = Channel(control);
     Spec spec = await channel.getSpec();
 
     expect(spec.title, 'Channel');
-    expect(spec.groups.first.values.first.text.text, 'devhost');
+    expect(spec.groups.first.values.first.text.text, channels[0]);
+  });
+
+  test('Change Channel', () async {
+    when(control.getTarget()).thenAnswer((_) => Future.value(channels[0]));
+    when(control.getTargetList()).thenAnswer((_) => Future.value(channels));
+
+    final channel = Channel(control);
+    Spec specA = await channel.getSpec();
+
+    expect(specA.title, 'Channel');
+    expect(specA.groups.first.values.first.text.text, channels[0]);
+
+    // Change channel
+    channel.model.channel = channels[1];
+
+    // Wait one event cycle for the change
+    await channel.getSpec();
+    Spec specB = await channel.getSpec();
+    print(specB.groups.first.values.first.text);
+    expect(specB.groups.first.values.first.text.text, channels[1]);
   });
 }
 

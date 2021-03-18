@@ -15,10 +15,13 @@ class Channel extends UiSpec {
   // Localized strings.
   static String get _title => Strings.channel;
 
-  _ChannelModel _model;
+  // Action to change channel.
+  static int changeAction = QuickAction.details.$value;
+
+  _ChannelModel model;
 
   Channel(ChannelControlProxy control) {
-    _model = _ChannelModel(control: control, onChange: _onChange);
+    model = _ChannelModel(control: control, onChange: _onChange);
   }
 
   factory Channel.withSvcPath() {
@@ -27,28 +30,68 @@ class Channel extends UiSpec {
     return Channel(control);
   }
 
-  void _onChange() {
-    spec = _specForChannel(_model.channelName);
+  void _onChange() async {
+    spec = await _specForChannel(model);
   }
 
-  // TODO(fxb/67842): Add ability to switch OTA channels.
   @override
-  void update(Value value) async {}
+  void update(Value value) async {
+    if (value.$tag == ValueTag.button &&
+        value.button.action == QuickAction.cancel.$value) {
+      spec = await _specForChannel(model);
+    } else if (value.$tag == ValueTag.text && value.text.action > 0) {
+      if (value.text.action == changeAction) {
+        spec = await _specForChannel(model, changeAction);
+      } else {
+        final index = value.text.action ^ QuickAction.submit.$value;
+        model.channel = model.channels[index];
+        spec = await _specForChannel(model);
+      }
+    }
+  }
 
   @override
   void dispose() {
-    _model.dispose();
+    model.dispose();
   }
 
-  static Spec _specForChannel(String channelName) {
-    if (channelName == null) {
-      return UiSpec.nullSpec;
+  Future<Spec> _specForChannel(_ChannelModel model, [int action = 0]) async {
+    if (action == 0 || action & QuickAction.cancel.$value > 0) {
+      return Spec(title: _title, groups: [
+        Group(title: _title, values: [
+          Value.withText(TextValue(
+            text: model.channel,
+            action: changeAction,
+          )),
+        ]),
+      ]);
+    } else if (action == changeAction) {
+      var channels = model.channels;
+      final values = List<TextValue>.generate(
+          channels.length,
+          (index) => TextValue(
+                text: channels[index],
+                action: QuickAction.submit.$value | index,
+              ));
+      return Spec(title: _title, groups: [
+        Group(title: 'Select Channel', values: [
+          Value.withGrid(GridValue(
+            columns: 1,
+            values: values,
+          )),
+          Value.withButton(ButtonValue(
+            label: 'close',
+            action: QuickAction.cancel.$value,
+          )),
+        ]),
+      ]);
+    } else {
+      return Spec(title: _title, groups: [
+        Group(title: _title, values: [
+          Value.withText(TextValue(text: 'loading...')),
+        ]),
+      ]);
     }
-    return Spec(title: _title, groups: [
-      Group(title: _title, values: [
-        Value.withText(TextValue(text: channelName)),
-      ]),
-    ]);
   }
 }
 
@@ -56,22 +99,37 @@ class _ChannelModel {
   final ChannelControlProxy control;
   final VoidCallback onChange;
 
-  String _channelName;
+  String _channel;
+  List<String> _channels;
 
   _ChannelModel({this.control, this.onChange}) {
-    control.getTarget().then((name) {
-      _channelName = name;
-      onChange?.call();
-    });
+    loadCurrentChannel();
+    loadTargetChannels();
   }
 
   void dispose() {
     control.ctrl.close();
   }
 
-  String get channelName => _channelName;
-  set channelName(String name) {
-    _channelName = name;
+  String get channel => _channel;
+  set channel(String name) {
+    _channel = name;
+    control.setTarget(name);
     onChange?.call();
+  }
+
+  List<String> get channels => _channels;
+
+  void loadCurrentChannel() {
+    control.getTarget().then((name) {
+      _channel = name;
+      onChange?.call();
+    });
+  }
+
+  void loadTargetChannels() {
+    control.getTargetList().then((channels) {
+      _channels = channels;
+    });
   }
 }
