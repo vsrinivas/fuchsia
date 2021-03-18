@@ -11,8 +11,6 @@
 #include <lib/arch/x86/feature.h>
 #include <lib/arch/x86/msr.h>
 
-#include <hwreg/bitfields.h>
-
 namespace arch {
 
 // [intel/vol4]: Table 2-2.  IA-32 Architectural MSRs (Contd.).
@@ -20,7 +18,7 @@ namespace arch {
 // IA32_TSX_CTRL.
 //
 // TSX (Transactional Synchronization Extension) controls.
-struct TsxControlMsr : public hwreg::RegisterBase<TsxControlMsr, uint64_t> {
+struct TsxControlMsr : public X86MsrBase<TsxControlMsr, X86Msr::IA32_TSX_CTRL> {
   // Bits [63:2] are reserved.
   DEF_BIT(1, rtm_disable);
   DEF_BIT(0, tsx_cpuid_clear);
@@ -29,10 +27,6 @@ struct TsxControlMsr : public hwreg::RegisterBase<TsxControlMsr, uint64_t> {
   static bool IsSupported(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
     return ArchCapabilitiesMsr::IsSupported(cpuid) &&
            ArchCapabilitiesMsr::Get().ReadFrom(&msr).tsx_ctrl();
-  }
-
-  static auto Get() {
-    return hwreg::RegisterAddr<TsxControlMsr>(static_cast<uint32_t>(X86Msr::IA32_TSX_CTRL));
   }
 };
 

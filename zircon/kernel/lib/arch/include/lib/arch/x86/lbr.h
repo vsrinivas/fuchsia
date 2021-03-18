@@ -15,6 +15,8 @@
 #include <type_traits>
 #include <utility>
 
+#include <hwreg/bitfields.h>
+
 namespace arch {
 
 // [intel/vol3]: Table 17-13.  MSR_LBR_SELECT for Intel® microarchitecture
@@ -26,7 +28,7 @@ namespace arch {
 //
 // Though the referenced section is for Haswell, the layout is generically
 // accurate, modulo EN_CALLSTACK (see note below).
-struct LbrSelectMsr : public hwreg::RegisterBase<LbrSelectMsr, uint64_t> {
+struct LbrSelectMsr : public X86MsrBase<LbrSelectMsr, X86Msr::MSR_LBR_SELECT> {
   DEF_RSVDZ_FIELD(63, 10);
   // This field is actually on present on Atom microarchitectures post-Goldmont
   // and and Core microarchitectures post-Haswell; it is otherwise reserved.
@@ -41,10 +43,6 @@ struct LbrSelectMsr : public hwreg::RegisterBase<LbrSelectMsr, uint64_t> {
   DEF_BIT(2, jcc);
   DEF_BIT(1, cpl_neq_0);
   DEF_BIT(0, cpl_eq_0);
-
-  static auto Get() {
-    return hwreg::RegisterAddr<LbrSelectMsr>(static_cast<uint32_t>(X86Msr::MSR_LBR_SELECT));
-  }
 };
 
 // [intel/vol3]: 17.4.8  LBR Stack.
@@ -52,15 +50,11 @@ struct LbrSelectMsr : public hwreg::RegisterBase<LbrSelectMsr, uint64_t> {
 // MSR_LASTBRANCH_TOS.
 //
 // Points to the "top" of the LBR stack.
-struct LbrTopOfStackMsr : public hwreg::RegisterBase<LbrTopOfStackMsr, uint64_t> {
+struct LbrTopOfStackMsr : public X86MsrBase<LbrTopOfStackMsr, X86Msr::MSR_LASTBRANCH_TOS> {
   // Gives the index of the most recent branch record, in turn given by bits
   // [stack_size:0] of the register value. We unfortunately cannot trust the
   // higher bits to be reserved as zero as that is not expressly documented.
   size_t top(size_t stack_size) { return static_cast<size_t>(reg_value()) & (stack_size - 1); }
-
-  static auto Get() {
-    return hwreg::RegisterAddr<LbrTopOfStackMsr>(static_cast<uint32_t>(X86Msr::MSR_LASTBRANCH_TOS));
-  }
 };
 
 // [intel/vol3]: 17.4.8.1  LBR Stack and Intel® 64 Processors.

@@ -10,8 +10,6 @@
 #include <lib/arch/x86/cpuid.h>
 #include <lib/arch/x86/msr.h>
 
-#include <hwreg/bitfields.h>
-
 namespace arch {
 
 // [intel/vol4]: Table 2-2.  IA-32 Architectural MSRs (Contd.).
@@ -21,7 +19,7 @@ namespace arch {
 // IA32_SPEC_CTRL.
 //
 // Speculation control.
-struct SpeculationControlMsr : public hwreg::RegisterBase<SpeculationControlMsr, uint64_t> {
+struct SpeculationControlMsr : public X86MsrBase<SpeculationControlMsr, X86Msr::IA32_SPEC_CTRL> {
   // Bits [63:3] are reserved.
   DEF_BIT(2, ssbd);
   DEF_BIT(1, stibp);
@@ -46,11 +44,6 @@ struct SpeculationControlMsr : public hwreg::RegisterBase<SpeculationControlMsr,
     const auto amd_features = cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>();
     return amd_features.ibrs() || amd_features.stibp() || amd_features.ssbd();
   }
-
-  static auto Get() {
-    return hwreg::RegisterAddr<SpeculationControlMsr>(
-        static_cast<uint32_t>(X86Msr::IA32_SPEC_CTRL));
-  }
 };
 
 // [amd/ssbd]: PRESENCE.
@@ -59,7 +52,7 @@ struct SpeculationControlMsr : public hwreg::RegisterBase<SpeculationControlMsr,
 //
 // Virtual speculation control (e.g., for hypervisor usage).
 struct AmdVirtualSpeculationControlMsr
-    : public hwreg::RegisterBase<AmdVirtualSpeculationControlMsr, uint64_t> {
+    : public X86MsrBase<AmdVirtualSpeculationControlMsr, X86Msr::MSR_VIRT_SPEC_CTRL> {
   // Bits [63:3] are reserved.
   DEF_BIT(2, ssbd);
   // Bits [1:0] are reserved.
@@ -69,11 +62,6 @@ struct AmdVirtualSpeculationControlMsr
     // [amd/ssbd]: HYPERVISOR USAGE MODELS.
     return CpuidSupports<CpuidExtendedAmdFeatureFlagsB>(cpuid) &&
            cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>().virt_ssbd();
-  }
-
-  static auto Get() {
-    return hwreg::RegisterAddr<AmdVirtualSpeculationControlMsr>(
-        static_cast<uint32_t>(X86Msr::MSR_VIRT_SPEC_CTRL));
   }
 };
 

@@ -42,6 +42,8 @@
 
 #include <stdint.h>
 
+#include <hwreg/bitfields.h>
+
 namespace arch {
 
 // MSR identifiers.  These use the ALL_CAPS name style to be consistent with
@@ -74,7 +76,12 @@ enum class X86Msr : uint32_t {
   MSRC001_1020 = 0xc001'1020,        // AMD load-store configuration.
 };
 
-// TODO: add more MSRs, add hwreg types for C++ access
+// A convenience class to inherit from in defining MSR register types. Gives a
+// cleaner and more compact definition.
+template <typename ValueType, X86Msr Msr>
+struct X86MsrBase : public hwreg::RegisterBase<ValueType, uint64_t> {
+  static auto Get() { return hwreg::RegisterAddr<ValueType>(static_cast<uint32_t>(Msr)); }
+};
 
 }  // namespace arch
 

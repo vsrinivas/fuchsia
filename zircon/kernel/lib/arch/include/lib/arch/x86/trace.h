@@ -11,15 +11,13 @@
 
 #include <optional>
 
-#include <hwreg/bitfields.h>
-
 namespace arch {
 
 // [intel/vol3]: 17.4.1 IA32_DEBUGCTL MSR.
 // [amd/vol2]: 13.1.1.6  Debug-Control MSR (DebugCtl).
 //
 // Trace/Profile Resource Control.
-struct DebugControlMsr : public hwreg::RegisterBase<DebugControlMsr, uint64_t> {
+struct DebugControlMsr : public X86MsrBase<DebugControlMsr, X86Msr::IA32_DEBUGCTL> {
   // Bits [63:16] are reserved.
   DEF_BIT(15, rtm_debug);
   DEF_BIT(14, freeze_while_smm);
@@ -34,10 +32,6 @@ struct DebugControlMsr : public hwreg::RegisterBase<DebugControlMsr, uint64_t> {
   // Bits [5:2] are reserved.
   DEF_BIT(1, btf);
   DEF_BIT(0, lbr);
-
-  static auto Get() {
-    return hwreg::RegisterAddr<DebugControlMsr>(static_cast<uint32_t>(X86Msr::IA32_DEBUGCTL));
-  }
 };
 
 // [intel/vol3]: 17.4.8.1  LBR Stack and Intel® 64 Processors.
@@ -68,7 +62,8 @@ enum class X86PebsFormat : uint8_t {
 // [intel/vol3]: Figure 18-63.  Layout of IA32_PERF_CAPABILITIES MSR.
 //
 // Enumerates the existence of performance monitoring features.
-struct PerfCapabilitiesMsr : public hwreg::RegisterBase<PerfCapabilitiesMsr, uint64_t> {
+struct PerfCapabilitiesMsr
+    : public X86MsrBase<PerfCapabilitiesMsr, X86Msr::IA32_PERF_CAPABILITIES> {
   // Bits [63: 17] are reserved.
   DEF_BIT(16, pebs_output_pt_avail);
   DEF_BIT(15, perf_metrics_available);
@@ -83,11 +78,6 @@ struct PerfCapabilitiesMsr : public hwreg::RegisterBase<PerfCapabilitiesMsr, uin
   template <typename CpuidIoProvider>
   static bool IsSupported(CpuidIoProvider&& cpuid) {
     return cpuid.template Read<CpuidFeatureFlagsC>().pdcm();
-  }
-
-  static auto Get() {
-    return hwreg::RegisterAddr<PerfCapabilitiesMsr>(
-        static_cast<uint32_t>(X86Msr::IA32_PERF_CAPABILITIES));
   }
 };
 

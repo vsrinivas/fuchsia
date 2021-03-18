@@ -10,8 +10,6 @@
 #include <lib/arch/x86/cpuid.h>
 #include <lib/arch/x86/msr.h>
 
-#include <hwreg/bitfields.h>
-
 namespace arch {
 
 // [intel/vol4]: Table 2-2.  IA-32 Architectural MSRs (Contd.).
@@ -19,7 +17,8 @@ namespace arch {
 // IA32_ARCH_CAPABILITIES.
 //
 // Enumerates general archicturectural features.
-struct ArchCapabilitiesMsr : public hwreg::RegisterBase<ArchCapabilitiesMsr, uint64_t> {
+struct ArchCapabilitiesMsr
+    : public X86MsrBase<ArchCapabilitiesMsr, X86Msr::IA32_ARCH_CAPABILITIES> {
   // Bits [63:9] are reserved.
   DEF_BIT(8, taa_no);
   DEF_BIT(7, tsx_ctrl);
@@ -35,11 +34,6 @@ struct ArchCapabilitiesMsr : public hwreg::RegisterBase<ArchCapabilitiesMsr, uin
   static bool IsSupported(CpuidIoProvider&& cpuid) {
     return cpuid.template Read<CpuidExtendedFeatureFlagsD>().ia32_arch_capabilities();
   }
-
-  static auto Get() {
-    return hwreg::RegisterAddr<ArchCapabilitiesMsr>(
-        static_cast<uint32_t>(X86Msr::IA32_ARCH_CAPABILITIES));
-  }
 };
 
 // [amd/ssbd] references bits 10, 33, 54.
@@ -53,7 +47,7 @@ struct ArchCapabilitiesMsr : public hwreg::RegisterBase<ArchCapabilitiesMsr, uin
 // (e.g., a field name/mnemonic); in those cases, we name the field
 // "erratum_${number}_workaround".
 struct AmdLoadStoreConfigurationMsr
-    : public hwreg::RegisterBase<AmdLoadStoreConfigurationMsr, uint64_t> {
+    : public X86MsrBase<AmdLoadStoreConfigurationMsr, X86Msr::MSRC001_1020> {
   // Bits [63:58] are reserved/unknown.
   DEF_BIT(57, erratum_1095_workaround);
   // Bits [56:55] are reserved/unknown.
@@ -65,11 +59,6 @@ struct AmdLoadStoreConfigurationMsr
   // Bits [9:5] are reserved/unknown.
   DEF_BIT(4, erratum_1033_workaround);
   // Bits [3:0] are reserved/unknown.
-
-  static auto Get() {
-    return hwreg::RegisterAddr<AmdLoadStoreConfigurationMsr>(
-        static_cast<uint32_t>(X86Msr::MSRC001_1020));
-  }
 };
 
 }  // namespace arch
