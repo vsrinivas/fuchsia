@@ -1037,7 +1037,6 @@ pub enum TargetQuery {
     /// Attempts to match the nodename, falling back to serial (in that order).
     NodenameOrSerial(String),
     Addr(TargetAddr),
-    OvernetId(u64),
 }
 
 impl TargetQuery {
@@ -1088,10 +1087,6 @@ impl TargetQuery {
 
                 false
             }
-            Self::OvernetId(id) => match &t.inner.state.lock().await.connection_state {
-                ConnectionState::Rcs(rcs) => rcs.overnet_id.id == *id,
-                _ => false,
-            },
         }
     }
 }
@@ -1116,12 +1111,6 @@ impl From<String> for TargetQuery {
 impl From<TargetAddr> for TargetQuery {
     fn from(t: TargetAddr) -> Self {
         Self::Addr(t)
-    }
-}
-
-impl From<u64> for TargetQuery {
-    fn from(id: u64) -> Self {
-        Self::OvernetId(id)
     }
 }
 
@@ -1639,19 +1628,6 @@ mod test {
         let query = TargetQuery::from("foo");
         let target = Arc::new(Target::new("foo"));
         assert!(query.matches(&target).await);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_target_by_overnet_id() {
-        const ID: u64 = 12345;
-        let conn = RcsConnection::new_with_proxy(
-            setup_fake_remote_control_service(false, "foo".to_owned()),
-            &NodeId { id: ID },
-        );
-        let t = Target::from_rcs_connection(conn).await.unwrap();
-        let tc = TargetCollection::new();
-        tc.merge_insert(clone_target(&t).await).await;
-        assert_eq!(tc.get(ID).await.unwrap(), t);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
