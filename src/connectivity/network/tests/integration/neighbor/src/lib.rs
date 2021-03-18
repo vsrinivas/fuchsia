@@ -467,16 +467,48 @@ fn create_metadata_stream<'a>(
     })
 }
 
-// Helper function to retrieve the next item from a fake endpoint metadata
-// stream.
-async fn read_metadata_stream<T>(
-    stream: &mut (impl futures::Stream<Item = Result<T>> + std::marker::Unpin),
-) -> Result<T> {
-    stream
-        .try_next()
-        .await
-        .context("failed to read from fake endpoint")?
-        .ok_or_else(|| anyhow::anyhow!("fake endpoint stream ended unexpectedly"))
+/// Helper function to observe the next solicitation resolution on a
+/// [`FrameMetadata`] stream.
+///
+/// This function runs a state machine that observes the next neighbor
+/// resolution on the stream. It waits for a neighbor solicitation to be
+/// observed followed by an UDP frame to that destination, asserting that any
+/// following solicitations in between are to the same IP. That allows tests to
+/// be resilient in face of ARP or NDP retransmissions.
+async fn next_solicitation_resolution(
+    stream: &mut (impl futures::Stream<Item = Result<FrameMetadata>> + std::marker::Unpin),
+) -> Result<fidl_fuchsia_net::IpAddress> {
+    let mut solicitation = None;
+    loop {
+        match stream
+            .try_next()
+            .await
+            .context("failed to read from metadata stream")?
+            .ok_or_else(|| anyhow::anyhow!("metadata stream ended unexpectedly"))?
+        {
+            FrameMetadata::NeighborSolicitation(ip) => match &solicitation {
+                Some(previous) => {
+                    assert_eq!(ip, *previous, "observed solicitation for a different IP address");
+                }
+                None => solicitation = Some(ip),
+            },
+            FrameMetadata::Udp(ip) => match solicitation {
+                Some(solicitation) => {
+                    assert_eq!(
+                        solicitation, ip,
+                        "observed UDP frame to a different address than solicitation"
+                    );
+                    // Once we observe the expected UDP frame, we can break the loop.
+                    break Ok(solicitation);
+                }
+                None => panic!(
+                    "observed UDP frame to {} without prior solicitation",
+                    fidl_fuchsia_net_ext::IpAddress::from(ip)
+                ),
+            },
+            FrameMetadata::Other => (),
+        }
+    }
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -529,12 +561,7 @@ async fn neigh_clear_entries() -> Result {
     // Attach a fake endpoint that will capture all the ARP and NDP neighbor
     // solicitations.
     let fake_ep = network.create_fake_endpoint().context("failed to create fake endpoint")?;
-    let mut solicit_stream = create_metadata_stream(&fake_ep).try_filter_map(|m| {
-        futures::future::ok(match m {
-            FrameMetadata::NeighborSolicitation(ip) => Some(ip),
-            FrameMetadata::Udp(_) | FrameMetadata::Other => None,
-        })
-    });
+    let mut solicit_stream = create_metadata_stream(&fake_ep);
 
     let (alice, bob) = create_neighbor_environments(&sandbox, &network, "neigh_clear_entries")
         .await
@@ -554,14 +581,15 @@ async fn neigh_clear_entries() -> Result {
     let () = exchange_dgrams(&alice, &bob)
         .await
         .context("failed to exchange datagrams before clearing cache")?;
+
     assert_eq!(
-        read_metadata_stream(&mut solicit_stream)
+        next_solicitation_resolution(&mut solicit_stream)
             .await
             .context("failed to observe initial IPv4 solicitation")?,
         BOB_IP
     );
     assert_eq!(
-        read_metadata_stream(&mut solicit_stream)
+        next_solicitation_resolution(&mut solicit_stream)
             .await
             .context("failed to observe initial IPv6 solicitation")?,
         bob.ipv6
@@ -621,13 +649,13 @@ async fn neigh_clear_entries() -> Result {
         .await
         .context("failed to exchange datagrams after clearing cache")?;
     assert_eq!(
-        read_metadata_stream(&mut solicit_stream)
+        next_solicitation_resolution(&mut solicit_stream)
             .await
             .context("failed to observe new IPv4 solicitation")?,
         BOB_IP
     );
     assert_eq!(
-        read_metadata_stream(&mut solicit_stream)
+        next_solicitation_resolution(&mut solicit_stream)
             .await
             .context("failed to observe new IPv6 solicitation")?,
         bob.ipv6
@@ -743,8 +771,16 @@ async fn neigh_add_remove_entry() -> Result {
     assert!(entries.is_empty(), "unexpected neighbors remaining in list: {:?}", entries);
 
     let () = exchange_dgrams(&alice, &bob).await?;
-    assert_eq!(read_metadata_stream(&mut meta_stream).await?, FrameMetadata::Udp(BOB_IP));
-    assert_eq!(read_metadata_stream(&mut meta_stream).await?, FrameMetadata::Udp(bob.ipv6));
+    for expect in [FrameMetadata::Udp(BOB_IP), FrameMetadata::Udp(bob.ipv6)].iter() {
+        assert_eq!(
+            meta_stream
+                .try_next()
+                .await
+                .context("failed to read from fake endpoint")?
+                .ok_or_else(|| anyhow::anyhow!("fake endpoint stream ended unexpectedly"))?,
+            *expect
+        );
+    }
 
     // Remove both entries and check that the list is empty afterwards.
     let () = controller
@@ -766,25 +802,18 @@ async fn neigh_add_remove_entry() -> Result {
 
     // Exchange datagrams again and assert that new solicitation requests were
     // sent (ignoring any UDP metadata this time).
-    let mut meta_stream = meta_stream.try_filter(|meta| {
-        futures::future::ready(match meta {
-            FrameMetadata::Udp(_) | FrameMetadata::Other => false,
-            FrameMetadata::NeighborSolicitation(_) => true,
-        })
-    });
-
     let () = exchange_dgrams(&alice, &bob).await.context("failed to exchange datagrams")?;
     assert_eq!(
-        read_metadata_stream(&mut meta_stream)
+        next_solicitation_resolution(&mut meta_stream)
             .await
             .context("failed to observe IPv4 solicitation")?,
-        FrameMetadata::NeighborSolicitation(BOB_IP)
+        BOB_IP
     );
     assert_eq!(
-        read_metadata_stream(&mut meta_stream)
+        next_solicitation_resolution(&mut meta_stream)
             .await
             .context("failed to observe IPv6 solicitation")?,
-        FrameMetadata::NeighborSolicitation(bob.ipv6)
+        bob.ipv6
     );
 
     Ok(())
