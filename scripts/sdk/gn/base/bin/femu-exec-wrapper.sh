@@ -161,7 +161,7 @@ echo "Waiting for emulator to start"
 COUNT=0
 COUNT_TIMEOUT=120
 while [[ $COUNT -lt $COUNT_TIMEOUT ]] ; do
-  kill -0 ${FEMU_PID} &> /dev/null || ( echo "ERROR: Emulator pid $FEMU_PID has exited, cannot connect"; dump_femu_log; exit 1; )
+  kill -0 ${FEMU_PID} &> /dev/null || { echo "ERROR: Emulator pid $FEMU_PID has exited, cannot connect"; dump_femu_log; exit 1; }
   "${SCRIPT_SRC_DIR}/fssh.sh" --device-ip "${EMULATOR_ADDRESS}" "echo hello" &> /dev/null && break
   echo "Waiting for emulator SSH server ${EMULATOR_ADDRESS} - attempt ${COUNT} ..."
   COUNT=$((COUNT+1))
