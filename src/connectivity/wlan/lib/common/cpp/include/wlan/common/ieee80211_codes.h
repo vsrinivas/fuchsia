@@ -14,8 +14,8 @@ namespace common {
 // Convert a ReasonCode value to/from a uint16_t value.  Unknown values are
 // defaulted to REASON_UNSPECIFIED.
 // IEEE Std 802.11-2016, 9.4.1.7, Table 9-45
-uint16_t ConvertReasonCode(::fuchsia::wlan::ieee80211::ReasonCode reason);
-::fuchsia::wlan::ieee80211::ReasonCode ConvertReasonCode(uint16_t reason);
+uint16_t ConvertReasonCode(::fuchsia::wlan::ieee80211::ReasonCode reason_code);
+::fuchsia::wlan::ieee80211::ReasonCode ConvertReasonCode(uint16_t reason_code);
 
 // Convert a StatusCode value to/from a uint16_t value.  Unknown values are
 // defaulted to REFUSED_REASON_UNSPECIFIED.
