@@ -35,11 +35,23 @@ use nrec::NrecProcedure;
 use query_operator_selection::QueryOperatorProcedure;
 use slc_initialization::SlcInitProcedure;
 
+const THREE_WAY_SUPPORT: &[&str] = &["0", "1", "1X", "2", "2X", "3", "4"];
+// TODO(fxb/71668) Stop using raw bytes.
+const CIND_TEST_RESPONSE_BYTES: &[u8] = b"+CIND: \
+(\"service\",(0,1)),\
+(\"call\",(0,1)),\
+(\"callsetup\",(0,3)),\
+(\"callheld\",(0,2)),\
+(\"signal\",(0,5)),\
+(\"roam\",(0,1)),\
+(\"battchg\",(0,5)\
+)";
+
 /// Errors that can occur during the operation of an HFP Procedure.
 #[derive(Clone, Error, Debug)]
 pub enum ProcedureError {
     #[error("Unexpected AG procedural update: {:?}", .0)]
-    UnexpectedAg(at::Response),
+    UnexpectedAg(AgUpdate),
     #[error("Unparseabled HF procedural update: {:?}", .0)]
     UnparsableHf(at::DeserializeError),
     #[error("Unexpected HF procedural update: {:?}", .0)]
@@ -127,7 +139,7 @@ impl ProcedureMarker {
 
     /// Matches the AG `command` to a procedure. Returns an error if the command is
     /// unable to be matched.
-    fn match_ag_command(_command: &at::Response) -> Result<Self, ProcedureError> {
+    fn match_ag_command(_command: &AgUpdate) -> Result<Self, ProcedureError> {
         Err(ProcedureError::NotImplemented)
     }
 
@@ -147,18 +159,18 @@ pub enum ProcedureRequest {
     /// Information requests - use the `response` fn to build a response to the request.
     // TODO(fxbug.dev/70591): Add to this list once more procedures are implemented.
     GetAgFeatures {
-        response: Box<dyn FnOnce(AgFeatures) -> at::Response>,
+        response: Box<dyn FnOnce(AgFeatures) -> AgUpdate>,
     },
     GetAgIndicatorStatus {
-        response: Box<dyn FnOnce(IndicatorStatus) -> at::Response>,
+        response: Box<dyn FnOnce(IndicatorStatus) -> AgUpdate>,
     },
     GetNetworkOperatorName {
-        response: Box<dyn FnOnce(Option<String>) -> at::Response>,
+        response: Box<dyn FnOnce(Option<String>) -> AgUpdate>,
     },
 
     SetNrec {
         enable: bool,
-        response: Box<dyn FnOnce(Result<(), ()>) -> at::Response>,
+        response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate>,
     },
 
     /// Error from processing an update.
@@ -185,16 +197,6 @@ impl ProcedureRequest {
             | Self::SetNrec { .. } => true,
             _ => false,
         }
-    }
-
-    pub fn send_one_message_and_ok(message: at::Response) -> Self {
-        vec![message, at::Response::Ok].into()
-    }
-}
-
-impl From<at::Response> for ProcedureRequest {
-    fn from(message: at::Response) -> Self {
-        vec![message].into()
     }
 }
 
@@ -258,7 +260,7 @@ pub trait Procedure {
     ///
     /// Developers should ensure that the final request of a Procedure does not require
     /// a response.
-    fn ag_update(&mut self, update: at::Response, _state: &mut SlcState) -> ProcedureRequest {
+    fn ag_update(&mut self, update: AgUpdate, _state: &mut SlcState) -> ProcedureRequest {
         ProcedureRequest::Error(ProcedureError::UnexpectedAg(update))
     }
 
@@ -268,21 +270,84 @@ pub trait Procedure {
     }
 }
 
+/// An update from the AG. Each update contains all the information necessary to generate a list of
+/// AT responses.
+#[derive(Debug, Clone)]
+pub enum AgUpdate {
+    /// HFP Features supported by the AG
+    Features(AgFeatures),
+    /// Three Way Calling support
+    ThreeWaySupport,
+    /// Current status of all AG Indicators
+    IndicatorStatus(IndicatorStatus),
+    /// An Update that contains no additional information
+    Ok,
+    /// An error occurred and should be communicated to the HF
+    Error,
+    /// Supported AG Indicators
+    SupportedIndicators,
+    /// Support on the AG for HF Indicators
+    SupportedHfIndicatorResponses { safety: bool, battery: bool },
+    /// The name of the network operator
+    NetworkOperatorName(at::NetworkOperatorNameFormat, String),
+}
+
+impl From<AgUpdate> for ProcedureRequest {
+    fn from(msg: AgUpdate) -> Self {
+        match msg {
+            AgUpdate::Features(features) => vec![
+                at::success(at::Success::Brsf { features: features.bits() as i64 }),
+                at::Response::Ok,
+            ],
+            AgUpdate::ThreeWaySupport => {
+                let commands = THREE_WAY_SUPPORT.into_iter().map(|&s| s.into()).collect();
+                vec![at::success(at::Success::Chld { commands }), at::Response::Ok]
+            }
+            AgUpdate::IndicatorStatus(status) => vec![
+                at::success(at::Success::Cind {
+                    service: status.service,
+                    call: status.call,
+                    callsetup: false,
+                    callheld: false,
+                    signal: status.signal as i64,
+                    roam: status.roam,
+                    battchg: status.battchg as i64,
+                }),
+                at::Response::Ok,
+            ],
+            AgUpdate::Ok => vec![at::Response::Ok],
+            AgUpdate::Error => vec![at::Response::Error],
+            AgUpdate::SupportedIndicators => {
+                vec![at::Response::RawBytes(CIND_TEST_RESPONSE_BYTES.to_vec()), at::Response::Ok]
+            }
+            AgUpdate::SupportedHfIndicatorResponses { safety, battery } => {
+                let mut indicators = vec![];
+                if battery {
+                    indicators.push(at::BluetoothHFIndicator::BatteryLevel);
+                }
+                if safety {
+                    indicators.push(at::BluetoothHFIndicator::EnhancedSafety);
+                }
+                vec![at::success(at::Success::Bind { indicators }), at::Response::Ok]
+            }
+            AgUpdate::NetworkOperatorName(format, name) => vec![
+                at::success(at::Success::Cops {
+                    format,
+                    zero: 0,
+                    // TODO(fxbug.dev/72112) Make this optional if it's not set.
+                    operator: name,
+                }),
+                at::Response::Ok,
+            ],
+        }
+        .into()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use matches::assert_matches;
-
-    /// A single response converts to the expected request
-    #[test]
-    fn at_response_to_procedure_request_conversion() {
-        let message = at::Response::Ok;
-        let request: ProcedureRequest = message.into();
-        assert_matches!(
-            request,
-            ProcedureRequest::SendMessages(messages) if messages == vec![at::Response::Ok]
-        );
-    }
 
     /// A vec of responses converts to the expected request
     #[test]

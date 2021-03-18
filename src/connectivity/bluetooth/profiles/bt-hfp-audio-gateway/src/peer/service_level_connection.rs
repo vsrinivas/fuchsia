@@ -21,7 +21,7 @@ use {
 
 use crate::{
     indicator_status::IndicatorStatus,
-    procedure::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
+    procedure::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest},
     protocol::features::{AgFeatures, HfFeatures},
 };
 
@@ -29,13 +29,13 @@ use crate::{
 #[derive(Debug, Clone)]
 pub enum Command {
     /// A command received from the AG.
-    Ag(at::Response),
+    Ag(AgUpdate),
     /// A command received from the HF.
     Hf(at::Command),
 }
 
-impl From<at::Response> for Command {
-    fn from(src: at::Response) -> Self {
+impl From<AgUpdate> for Command {
+    fn from(src: AgUpdate) -> Self {
         Self::Ag(src)
     }
 }
@@ -181,7 +181,7 @@ impl ServiceLevelConnection {
     #[allow(unused)]
     pub fn receive_ag_request(
         &mut self,
-        command: at::Response,
+        command: AgUpdate,
     ) -> Result<(ProcedureMarker, ProcedureRequest), ProcedureError> {
         self.handle_command(command.into())
     }
@@ -278,11 +278,7 @@ impl ServiceLevelConnection {
     /// Updates the the procedure specified by the `marker` with the received AG `message`.
     /// Initializes the procedure if it is not already in progress.
     /// Returns the request associated with the `message`.
-    pub fn ag_message(
-        &mut self,
-        marker: ProcedureMarker,
-        message: at::Response,
-    ) -> ProcedureRequest {
+    pub fn ag_message(&mut self, marker: ProcedureMarker, message: AgUpdate) -> ProcedureRequest {
         self.procedures
             .entry(marker)
             .or_insert(marker.initialize())
@@ -496,7 +492,7 @@ mod tests {
         // Bypass the SLCI procedure by setting the channel to initialized.
         slc.set_initialized();
 
-        let random_at = at::Response::Ok;
+        let random_at = AgUpdate::Ok;
         let res = slc.receive_ag_request(random_at);
         assert_matches!(res, Err(ProcedureError::NotImplemented));
     }

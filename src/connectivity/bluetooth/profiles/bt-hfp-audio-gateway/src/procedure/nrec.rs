@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
 use crate::peer::service_level_connection::SlcState;
 use at_commands as at;
@@ -59,7 +59,7 @@ impl Procedure for NrecProcedure {
             (State::Start, at::Command::Nrec { nrec: enable }) => {
                 self.state.transition();
                 let response = Box::new(|res: Result<(), ()>| {
-                    res.map(|()| at::Response::Ok).unwrap_or(at::Response::Error)
+                    res.map(|()| AgUpdate::Ok).unwrap_or(AgUpdate::Error)
                 });
                 ProcedureRequest::SetNrec { enable, response }
             }
@@ -67,10 +67,10 @@ impl Procedure for NrecProcedure {
         }
     }
 
-    fn ag_update(&mut self, update: at::Response, _state: &mut SlcState) -> ProcedureRequest {
+    fn ag_update(&mut self, update: AgUpdate, _state: &mut SlcState) -> ProcedureRequest {
         match (self.state, update) {
-            (State::SetRequest, update @ at::Response::Ok)
-            | (State::SetRequest, update @ at::Response::Error) => {
+            (State::SetRequest, update @ AgUpdate::Ok)
+            | (State::SetRequest, update @ AgUpdate::Error) => {
                 self.state.transition();
                 update.into()
             }
@@ -133,7 +133,7 @@ mod tests {
         let mut proc = NrecProcedure::new();
         let mut state = SlcState::default();
         // SLCI AT command.
-        let random_ag = at::Response::Success(at::Success::Brsf { features: 0 });
+        let random_ag = AgUpdate::ThreeWaySupport;
         assert_matches!(
             proc.ag_update(random_ag, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedAg(_))
@@ -163,7 +163,7 @@ mod tests {
             ProcedureRequest::Error(ProcedureError::UnexpectedHf(_))
         );
         assert_matches!(
-            proc.ag_update(at::Response::Ok, &mut state),
+            proc.ag_update(AgUpdate::Ok, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedAg(_))
         );
     }

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
 use crate::peer::service_level_connection::SlcState;
 
@@ -39,6 +39,13 @@ enum State {
 }
 
 impl State {
+    fn is_start(&self) -> bool {
+        if let Self::Start = self {
+            true
+        } else {
+            false
+        }
+    }
     /// Transition to the next state in the QOS procedure.
     /// If `skip_set_format` is set, the transition will skip the `SetFormat` state.
     fn transition(&mut self, skip_set_format: bool) {
@@ -85,37 +92,15 @@ impl Procedure for QueryOperatorProcedure {
                 // The remote peer has requested to set the network name format.
                 state.ag_network_operator_name_format = Some(format);
                 self.state.transition(/* skip_set_format= */ false);
-                ProcedureRequest::SendMessages(vec![at::Response::Ok])
+                AgUpdate::Ok.into()
             }
-            (State::Start, at::Command::CopsRead {}) => {
-                // The remote peer wants to skip setting the network name format and is querying
-                // the network operator name directly.
-                self.state.transition(/* skip_set_format= */ true);
+            (State::Start, at::Command::CopsRead {})
+            | (State::SetFormatRequest, at::Command::CopsRead {}) => {
+                self.state.transition(/* skip_set_format= */ self.state.is_start());
                 let response = Box::new(move |network_name: Option<_>| {
-                    at::Response::Success(at::Success::Cops {
-                        format,
-                        zero: 0,
-                        // TODO(fxbug.dev/72112) Make this optional if it's not set.
-                        operator: format_operator_name(
-                            format.clone(),
-                            network_name.unwrap_or(String::from("")),
-                        ),
-                    })
-                });
-                ProcedureRequest::GetNetworkOperatorName { response }
-            }
-            (State::SetFormatRequest, at::Command::CopsRead { .. }) => {
-                self.state.transition(/* skip_set_format= */ false);
-                let response = Box::new(move |network_name: Option<_>| {
-                    at::Response::Success(at::Success::Cops {
-                        format: format,
-                        zero: 0,
-                        // TODO(fxbug.dev/72112) Make this optional if it's not set.
-                        operator: format_operator_name(
-                            format,
-                            network_name.unwrap_or(String::from("")),
-                        ),
-                    })
+                    let name =
+                        format_operator_name(format, network_name.unwrap_or_else(String::new));
+                    AgUpdate::NetworkOperatorName(format, name)
                 });
                 ProcedureRequest::GetNetworkOperatorName { response }
             }
@@ -127,13 +112,13 @@ impl Procedure for QueryOperatorProcedure {
         }
     }
 
-    fn ag_update(&mut self, update: at::Response, _state: &mut SlcState) -> ProcedureRequest {
+    fn ag_update(&mut self, update: AgUpdate, _state: &mut SlcState) -> ProcedureRequest {
         match (self.state, update) {
-            (State::GetName, update @ at::Response::Success(at::Success::Cops { .. })) => {
+            (State::GetName, update @ AgUpdate::NetworkOperatorName(..)) => {
                 self.state.transition(/* skip_set_format= */ false);
-                ProcedureRequest::send_one_message_and_ok(update)
+                update.into()
             }
-            (State::Terminated, at::Response::Success(at::Success::Cops { .. })) => {
+            (State::Terminated, AgUpdate::NetworkOperatorName(..)) => {
                 ProcedureRequest::Error(ProcedureError::AlreadyTerminated)
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedAg(update)),
@@ -210,7 +195,7 @@ mod tests {
         let mut procedure = QueryOperatorProcedure::new();
         let mut state = SlcState::default();
         // SLCI AT command.
-        let random_ag = at::Response::Success(at::Success::Brsf { features: 0 });
+        let random_ag = AgUpdate::ThreeWaySupport;
         assert_matches!(
             procedure.ag_update(random_ag, &mut state),
             ProcedureRequest::Error(ProcedureError::UnexpectedAg(_))
@@ -253,11 +238,10 @@ mod tests {
         );
         assert_matches!(
             p.ag_update(
-                at::Response::Success(at::Success::Cops {
-                    format: at::NetworkOperatorNameFormat::LongAlphanumeric,
-                    zero: 0,
-                    operator: "foo".to_string()
-                }),
+                AgUpdate::NetworkOperatorName(
+                    at::NetworkOperatorNameFormat::LongAlphanumeric,
+                    "foo".into()
+                ),
                 &mut state
             ),
             ProcedureRequest::Error(ProcedureError::AlreadyTerminated)

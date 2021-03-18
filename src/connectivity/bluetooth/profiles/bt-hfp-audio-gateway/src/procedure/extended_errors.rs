@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
+use super::{AgUpdate, Procedure, ProcedureError, ProcedureMarker, ProcedureRequest};
 
 use crate::peer::service_level_connection::SlcState;
 use at_commands as at;
@@ -36,7 +36,7 @@ impl Procedure for ExtendedErrorsProcedure {
             (false, at::Command::Cmee { enable }) => {
                 self.terminated = true;
                 state.extended_errors = enable;
-                at::Response::Ok.into()
+                AgUpdate::Ok.into()
             }
             (_, update) => ProcedureRequest::Error(ProcedureError::UnexpectedHf(update)),
         }
@@ -64,8 +64,7 @@ mod tests {
         let req = proc.hf_update(at::Command::Cmer {}, &mut SlcState::default());
         assert_matches!(req, ProcedureRequest::Error(ProcedureError::UnexpectedHf(_)));
 
-        let req = proc
-            .ag_update(at::success(at::Success::Brsf { features: 0 }), &mut SlcState::default());
+        let req = proc.ag_update(AgUpdate::ThreeWaySupport, &mut SlcState::default());
         assert_matches!(req, ProcedureRequest::Error(ProcedureError::UnexpectedAg(_)));
     }
 
