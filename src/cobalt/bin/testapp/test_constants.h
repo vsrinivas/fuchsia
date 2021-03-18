@@ -65,14 +65,17 @@ const int kStreamingTimeNumWindowSizes = 2;
 
 // update_duration_new metric constants.
 const uint32_t kUpdateDurationNewErrorNameIndices[] = {0, 1, 2};
-const uint32_t kUpdateDurationNewStageIndices[] = {0, 1, 2};
+const uint32_t kUpdateDurationNewStageIndices[] = {0, 1};
 const int64_t kUpdateDurationNewValues[] = {-1, 0, 1, 10, 702};
 
 // streaming_time_new metric constants.
-const int32_t kStreamingTimeNewIndices[] = {0, 1, 2};
+const uint32_t kStreamingTimeNewTypeIndices[] = {0, 1, 2};
+const uint32_t kStreamingTimeNewModuleNameIndices[] = {0, 1};
+const int64_t kStreamingTimeNewValues[] = {0, 100, 1000, 10000};
 
 // application_memory_new metric constants
-const int32_t kApplicationMemoryNewIndices[] = {0, 1, 2};
+const uint32_t kApplicationMemoryNewMemoryTypeIndices[] = {0, 1, 2};
+const uint32_t kApplicationMemoryNewApplicationNameIndices[] = {0, 1};
 const int64_t kApplicationMemoryNewValues[] = {0, 1000, 4000, 16000, 128000, 512000};
 
 // features_active_new metric constants.
@@ -80,22 +83,27 @@ const uint32_t kFeaturesActiveNewSkillIndices[] = {0, 1, 2, 3};
 const int64_t kFeaturesActiveNewCounts[] = {1, 2, 10, 42};
 
 // file_system_cache_misses_new metric constants.
-const uint32_t kFileSystemCacheMissesNewIndices[] = {0, 1};
-const int64_t kFileSystemCacheMissesNewCountMax = 2;
+const uint32_t kFileSystemCacheMissesNewEncryptionStateIndices[] = {0, 1};
+const uint32_t kFileSystemCacheMissesNewFileSystemTypeIndices[] = {0, 1, 2};
+const int64_t kFileSystemCacheMissesNewCounts[] = {0, 1, 100, 1000};
 
 // connection_attempts_new metric constants.
-const int32_t kConnectionAttemptsNewIndices[] = {0, 1};
+const int32_t kConnectionAttemptsNewStatusIndices[] = {0, 1};
+const int32_t kConnectionAttemptsNewHostNameIndices[] = {0, 1, 2};
+const int64_t kConnectionAttemptsNewCounts[] = {0, 1, 100, 1000};
 
 // power_usage_new metric constants.
-const uint32_t kPowerUsageNewIndices[] = {0, 1};
+const uint32_t kPowerUsageNewApplicationStateIndices[] = {0, 1};
+const uint32_t kPowerUsageNewApplicationNameIndices[] = {0, 1};
 const int32_t kPowerUsageNewBuckets = 52;
 
 // bandwidth_usage_new metric constants.
-const uint32_t kBandwidthUsageNewIndices[] = {0, 1};
+const uint32_t kBandwidthUsageNewApplicationStateIndices[] = {0, 1};
+const uint32_t kBandwidthUsageNewApplicationNameIndices[] = {0, 1};
 const int64_t kBandwidthUsageNewBuckets = 22;
 
 // error_occurred_components metric constants.
-const uint32_t kErrorOccurredComponentsIndices[] = {0, 1, 2};
+const uint32_t kErrorOccurredComponentsStatusIndices[] = {0, 1, 2};
 
 // The number of locally aggregated observations that should be generated for
 // each locally aggregated report in the test_app2 project for a day, assuming
@@ -109,11 +117,14 @@ const uint32_t kErrorOccurredComponentsIndices[] = {0, 1, 2};
 // streaming_time_per_device_total: 1 ReportParticipationObservation
 std::map<std::pair<uint32_t, uint32_t>, uint64_t> kNumAggregatedObservations = {
     {{cobalt_registry::kFeaturesActiveMetricId,
-      cobalt_registry::kFeaturesActiveFeaturesActiveUniqueDevicesReportId}, 20},
+      cobalt_registry::kFeaturesActiveFeaturesActiveUniqueDevicesReportId},
+     20},
     {{cobalt_registry::kConnectionAttemptsMetricId,
-      cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId}, 1},
+      cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId},
+     1},
     {{cobalt_registry::kStreamingTimeMetricId,
-      cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId}, 1}};
+      cobalt_registry::kStreamingTimeStreamingTimePerDeviceTotalReportId},
+     1}};
 
 }  // namespace testapp
 }  // namespace cobalt

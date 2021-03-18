@@ -283,23 +283,24 @@ bool GenerateObsAndCheckCount(uint32_t day_index,
   std::vector<std::pair<uint32_t, uint32_t>> aggregatedReportIds;
   for (const auto& [ids, expected] : expected_num_obs) {
     const auto& [metric_id, report_id] = ids;
-    fuchsia::cobalt::ReportSpec report_spec = std::move(
-        fuchsia::cobalt::ReportSpec()
-            .set_customer_id(1).set_project_id(project_id)
-            .set_metric_id(metric_id).set_report_id(report_id));
+    fuchsia::cobalt::ReportSpec report_spec = std::move(fuchsia::cobalt::ReportSpec()
+                                                            .set_customer_id(1)
+                                                            .set_project_id(project_id)
+                                                            .set_metric_id(metric_id)
+                                                            .set_report_id(report_id));
     aggregatedReportSpecs.push_back(std::move(report_spec));
     aggregatedReportIds.push_back(ids);
   }
   std::vector<uint64_t> num_obs;
-  (*cobalt_controller)->GenerateAggregatedObservations(
-      day_index, std::move(aggregatedReportSpecs), &num_obs);
+  (*cobalt_controller)
+      ->GenerateAggregatedObservations(day_index, std::move(aggregatedReportSpecs), &num_obs);
   for (size_t i = 0; i < aggregatedReportIds.size(); i++) {
     const auto& [metric_id, report_id] = aggregatedReportIds[i];
     uint64_t expected = expected_num_obs[{metric_id, report_id}];
     uint64_t found = num_obs[i];
     if (found != expected) {
-      FX_LOGS(INFO) << "Expected " << expected << " observations for report MetricID "
-                    << metric_id << " ReportId " << report_id << ", found " << found;
+      FX_LOGS(INFO) << "Expected " << expected << " observations for report MetricID " << metric_id
+                    << " ReportId " << report_id << ", found " << found;
       return false;
     }
   }
@@ -377,9 +378,9 @@ bool TestLogEventCountWithAggregation(CobaltTestAppLogger* logger, SystemClockIn
           FX_LOGS(INFO) << "TestLogEventCountWithAggregation : FAIL";
           return false;
         }
-        expected_num_obs
-            [{cobalt_registry::kConnectionAttemptsMetricId,
-              cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId}] +=
+        expected_num_obs[{
+            cobalt_registry::kConnectionAttemptsMetricId,
+            cobalt_registry::kConnectionAttemptsConnectionAttemptsPerDeviceCountReportId}] +=
             kConnectionAttemptsNumWindowSizes;
       }
     }
@@ -463,41 +464,55 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogInteger";
 
-  // All SumAndCount data is aggregated into a single observation.
+  // All data for a single report is aggregated into a single observation.
   std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs = {
       {{cobalt_registry::kUpdateDurationNewMetricId,
-        cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId}, 1},
+        cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId},
+       1},
       {{cobalt_registry::kStreamingTimeNewMetricId,
-        cobalt_registry::kStreamingTimeNewStreamingTimePerDeviceTotalReportId}, 1},
+        cobalt_registry::kStreamingTimeNewStreamingTimePerDeviceTotalReportId},
+       1},
       {{cobalt_registry::kApplicationMemoryNewMetricId,
-        cobalt_registry::kApplicationMemoryNewApplicationMemoryHistogramsReportId}, 1},
+        cobalt_registry::kApplicationMemoryNewApplicationMemoryHistogramsReportId},
+       1},
       {{cobalt_registry::kApplicationMemoryNewMetricId,
-        cobalt_registry::kApplicationMemoryNewApplicationMemoryHistogramsLinearConstantWidthReportId}, 1},
+        cobalt_registry::
+            kApplicationMemoryNewApplicationMemoryHistogramsLinearConstantWidthReportId},
+       1},
       {{cobalt_registry::kApplicationMemoryNewMetricId,
-        cobalt_registry::kApplicationMemoryNewApplicationMemoryStatsReportId}, 1},
+        cobalt_registry::kApplicationMemoryNewApplicationMemoryStatsReportId},
+       1},
   };
   std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs = {
       {{cobalt_registry::kUpdateDurationNewMetricId,
-        cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId}, 0},
+        cobalt_registry::kUpdateDurationNewUpdateDurationTimingStatsReportId},
+       0},
       {{cobalt_registry::kStreamingTimeNewMetricId,
-        cobalt_registry::kStreamingTimeNewStreamingTimePerDeviceTotalReportId}, 0},
+        cobalt_registry::kStreamingTimeNewStreamingTimePerDeviceTotalReportId},
+       0},
       {{cobalt_registry::kApplicationMemoryNewMetricId,
-        cobalt_registry::kApplicationMemoryNewApplicationMemoryHistogramsReportId}, 0},
+        cobalt_registry::kApplicationMemoryNewApplicationMemoryHistogramsReportId},
+       0},
       {{cobalt_registry::kApplicationMemoryNewMetricId,
-        cobalt_registry::kApplicationMemoryNewApplicationMemoryHistogramsLinearConstantWidthReportId}, 0},
+        cobalt_registry::
+            kApplicationMemoryNewApplicationMemoryHistogramsLinearConstantWidthReportId},
+       0},
       {{cobalt_registry::kApplicationMemoryNewMetricId,
-        cobalt_registry::kApplicationMemoryNewApplicationMemoryStatsReportId}, 0},
+        cobalt_registry::kApplicationMemoryNewApplicationMemoryStatsReportId},
+       0},
   };
 
   uint32_t day_index = CurrentDayIndex(clock);
 
   // For each of the two event_codes, log one observation with an integer value.
-  for (uint32_t errorNameIndex : kUpdateDurationNewErrorNameIndices) {
-    for (uint32_t stageIndex : kUpdateDurationNewStageIndices) {
+  for (uint32_t error_name_index : kUpdateDurationNewErrorNameIndices) {
+    for (uint32_t stage_index : kUpdateDurationNewStageIndices) {
       for (int64_t value : kUpdateDurationNewValues) {
-        if (!logger->LogInteger(cobalt_registry::kUpdateDurationNewMetricId, {errorNameIndex, stageIndex}, value)) {
-          FX_LOGS(INFO) << "LogInteger(" << cobalt_registry::kUpdateDurationNewMetricId << ", {"
-                        << errorNameIndex << ", " << stageIndex << "}, " << value << ")";
+        if (!logger->LogInteger(cobalt_registry::kUpdateDurationNewMetricId,
+                                {error_name_index, stage_index}, value)) {
+          FX_LOGS(INFO) << "LogInteger(" << cobalt_registry::kUpdateDurationNewMetricId
+                        << ", { error_name: " << error_name_index
+                        << ", update_duration_stage: " << stage_index << " }, " << value << ")";
           FX_LOGS(INFO) << "TestLogInteger : FAIL";
           return false;
         }
@@ -505,27 +520,32 @@ bool TestLogInteger(CobaltTestAppLogger* logger, SystemClockInterface* clock,
     }
   }
 
-  for (uint32_t index : kStreamingTimeNewIndices) {
-    // Log a duration depending on the index.
-    if (index != 0) {
-      int64_t duration = index * 100;
-      if (!logger->LogInteger(cobalt_registry::kStreamingTimeNewMetricId, {index},
-                              duration)) {
-        FX_LOGS(INFO) << "Failed to log streaming time for index " << index << ".";
-        FX_LOGS(INFO) << "TestLogInteger : FAIL";
-        return false;
+  for (uint32_t type_index : kStreamingTimeNewTypeIndices) {
+    for (uint32_t mod_name_index : kStreamingTimeNewModuleNameIndices) {
+      for (int64_t duration : kStreamingTimeNewValues) {
+        if (!logger->LogInteger(cobalt_registry::kStreamingTimeNewMetricId,
+                                {type_index, mod_name_index}, duration)) {
+          FX_LOGS(INFO) << "LogInteger(" << cobalt_registry::kStreamingTimeNewMetricId
+                        << ", { type: " << type_index << ", module_name: " << mod_name_index
+                        << " }, " << duration << ")";
+          FX_LOGS(INFO) << "TestLogInteger: FAIL";
+          return false;
+        }
       }
     }
   }
 
-  for (uint32_t index : kApplicationMemoryNewIndices) {
-    for (int64_t value : kApplicationMemoryNewValues) {
-      if (!logger->LogInteger(cobalt_registry::kApplicationMemoryNewMetricId, {index},
-                              value)) {
-        FX_LOGS(INFO) << "LogInteger(" << cobalt_registry::kApplicationMemoryNewMetricId << ", "
-                      << index << ", " << value << ")";
-        FX_LOGS(INFO) << "TestLogInteger: FAIL";
-        return false;
+  for (uint32_t memory_type_index : kApplicationMemoryNewMemoryTypeIndices) {
+    for (uint32_t app_name_index : kApplicationMemoryNewApplicationNameIndices) {
+      for (int64_t value : kApplicationMemoryNewValues) {
+        if (!logger->LogInteger(cobalt_registry::kApplicationMemoryNewMetricId,
+                                {memory_type_index, app_name_index}, value)) {
+          FX_LOGS(INFO) << "LogInteger(" << cobalt_registry::kApplicationMemoryNewMetricId
+                        << ", { memory_type: " << memory_type_index
+                        << ", application_name: " << app_name_index << " }, " << value << ")";
+          FX_LOGS(INFO) << "TestLogInteger: FAIL";
+          return false;
+        }
       }
     }
   }
@@ -556,66 +576,82 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogOccurrence";
 
-  // All occurrence count data is aggregated into a single observation.
+  // All occurrence count data for a single report is aggregated into a single observation.
   std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs = {
       {{cobalt_registry::kFeaturesActiveNewMetricId,
-        cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId}, 1},
+        cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId},
+       1},
       {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
-        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissCountsReportId}, 1},
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissCountsReportId},
+       1},
       {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
-        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissHistogramsReportId}, 1},
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissHistogramsReportId},
+       1},
       {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
-        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissStatsReportId}, 1},
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissStatsReportId},
+       1},
       {{cobalt_registry::kConnectionAttemptsNewMetricId,
-        cobalt_registry::kConnectionAttemptsNewConnectionAttemptsPerDeviceCountReportId}, 1},
+        cobalt_registry::kConnectionAttemptsNewConnectionAttemptsPerDeviceCountReportId},
+       1},
   };
-  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs {
+  std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs{
       {{cobalt_registry::kFeaturesActiveNewMetricId,
-        cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId}, 0},
+        cobalt_registry::kFeaturesActiveNewFeaturesActiveUniqueDevicesReportId},
+       0},
       {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
-        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissCountsReportId}, 0},
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissCountsReportId},
+       0},
       {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
-        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissHistogramsReportId}, 0},
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissHistogramsReportId},
+       0},
       {{cobalt_registry::kFileSystemCacheMissesNewMetricId,
-        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissStatsReportId}, 0},
+        cobalt_registry::kFileSystemCacheMissesNewFileSystemCacheMissStatsReportId},
+       0},
       {{cobalt_registry::kConnectionAttemptsNewMetricId,
-        cobalt_registry::kConnectionAttemptsNewConnectionAttemptsPerDeviceCountReportId}, 0},
+        cobalt_registry::kConnectionAttemptsNewConnectionAttemptsPerDeviceCountReportId},
+       0},
   };
 
   uint32_t day_index = CurrentDayIndex(clock);
 
-  // For each of the four event_codes, log one event with the occurrence counts.
-  for (uint32_t skillIndex : kFeaturesActiveNewSkillIndices) {
+  for (uint32_t skill_index : kFeaturesActiveNewSkillIndices) {
     for (uint64_t count : kFeaturesActiveNewCounts) {
-      if (!logger->LogOccurrence(cobalt_registry::kFeaturesActiveNewMetricId, {skillIndex}, count)) {
-        FX_LOGS(INFO) << "LogOccurrence(" << cobalt_registry::kFeaturesActiveNewMetricId << ", {"
-                      << skillIndex << "}, " << count << ")";
+      if (!logger->LogOccurrence(cobalt_registry::kFeaturesActiveNewMetricId, {skill_index},
+                                 count)) {
+        FX_LOGS(INFO) << "LogOccurrence(" << cobalt_registry::kFeaturesActiveNewMetricId
+                      << ", { skill: " << skill_index << " }, " << count << ")";
         FX_LOGS(INFO) << "TestLogOccurrence : FAIL";
         return false;
       }
     }
   }
 
-  for (uint32_t index : kFileSystemCacheMissesNewIndices) {
-    if (!logger->LogOccurrence(cobalt_registry::kFileSystemCacheMissesNewMetricId, {index},
-                               kFileSystemCacheMissesNewCountMax - index)) {
-      FX_LOGS(INFO) << "LogOccurrence(" << cobalt_registry::kFileSystemCacheMissesNewMetricId << ", {"
-                    << index << "}, " << kFileSystemCacheMissesNewCountMax - index
-                    << ")";
-      FX_LOGS(INFO) << "TestLogOccurrence: FAIL";
-      return false;
+  for (uint32_t state_index : kFileSystemCacheMissesNewEncryptionStateIndices) {
+    for (uint32_t type_index : kFileSystemCacheMissesNewFileSystemTypeIndices) {
+      for (int64_t count : kFileSystemCacheMissesNewCounts) {
+        if (!logger->LogOccurrence(cobalt_registry::kFileSystemCacheMissesNewMetricId,
+                                   {state_index, type_index}, count)) {
+          FX_LOGS(INFO) << "LogOccurrence(" << cobalt_registry::kFileSystemCacheMissesNewMetricId
+                        << ", { encryption_state: " << state_index
+                        << ", file_system_type: " << type_index << " }, " << count << ")";
+          FX_LOGS(INFO) << "TestLogOccurrence: FAIL";
+          return false;
+        }
+      }
     }
   }
 
-  for (uint32_t index : kConnectionAttemptsNewIndices) {
-    if (index != 0) {
-      // Log a count depending on the index.
-      int64_t count = index * 5;
-      if (!logger->LogOccurrence(cobalt_registry::kConnectionAttemptsNewMetricId, {index},
-                                 count)) {
-        FX_LOGS(INFO) << "Failed to log occurrence for index " << index << ".";
-        FX_LOGS(INFO) << "TestLogOccurrence : FAIL";
-        return false;
+  for (uint32_t status_index : kConnectionAttemptsNewStatusIndices) {
+    for (uint32_t host_index : kConnectionAttemptsNewHostNameIndices) {
+      for (int64_t count : kConnectionAttemptsNewCounts) {
+        if (!logger->LogOccurrence(cobalt_registry::kConnectionAttemptsNewMetricId,
+                                   {status_index, host_index}, count)) {
+          FX_LOGS(INFO) << "LogOccurrence(" << cobalt_registry::kConnectionAttemptsNewMetricId
+                        << ", { status: " << status_index << ", host_name: " << host_index << " }, "
+                        << count << ")";
+          FX_LOGS(INFO) << "TestLogOccurrence: FAIL";
+          return false;
+        }
       }
     }
   }
@@ -640,11 +676,11 @@ bool TestLogOccurrence(CobaltTestAppLogger* logger, SystemClockInterface* clock,
 
 // power_usage_new and bandwidth_usage_new using INTEGER_HISTOGRAM metric.
 //
-// For each |event_code|, log one observation in each histogram bucket, using
+// For each event vector, log one observation in each histogram bucket, using
 // decreasing values per bucket.
 bool TestLogIntegerHistogram(CobaltTestAppLogger* logger, SystemClockInterface* clock,
-                       fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
-                       const size_t backfill_days, uint32_t project_id) {
+                             fuchsia::cobalt::ControllerSyncPtr* cobalt_controller,
+                             const size_t backfill_days, uint32_t project_id) {
   FX_LOGS(INFO) << "========================";
   FX_LOGS(INFO) << "TestLogIntegerHistogram";
   std::map<uint32_t, uint64_t> histogram;
@@ -652,15 +688,19 @@ bool TestLogIntegerHistogram(CobaltTestAppLogger* logger, SystemClockInterface* 
   // All integer histogram data is aggregated into a single observation.
   std::map<std::pair<uint32_t, uint32_t>, uint64_t> expected_num_obs = {
       {{cobalt_registry::kPowerUsageNewMetricId,
-        cobalt_registry::kPowerUsageNewPowerUsageHistogramsReportId}, 1},
+        cobalt_registry::kPowerUsageNewPowerUsageHistogramsReportId},
+       1},
       {{cobalt_registry::kBandwidthUsageNewMetricId,
-        cobalt_registry::kBandwidthUsageNewBandwidthUsageHistogramsReportId}, 1},
+        cobalt_registry::kBandwidthUsageNewBandwidthUsageHistogramsReportId},
+       1},
   };
   std::map<std::pair<uint32_t, uint32_t>, uint64_t> expect_no_obs = {
       {{cobalt_registry::kPowerUsageNewMetricId,
-        cobalt_registry::kPowerUsageNewPowerUsageHistogramsReportId}, 0},
+        cobalt_registry::kPowerUsageNewPowerUsageHistogramsReportId},
+       0},
       {{cobalt_registry::kBandwidthUsageNewMetricId,
-        cobalt_registry::kBandwidthUsageNewBandwidthUsageHistogramsReportId}, 0},
+        cobalt_registry::kBandwidthUsageNewBandwidthUsageHistogramsReportId},
+       0},
   };
 
   uint32_t day_index = CurrentDayIndex(clock);
@@ -669,12 +709,17 @@ bool TestLogIntegerHistogram(CobaltTestAppLogger* logger, SystemClockInterface* 
   for (uint32_t bucket = 0; bucket < kPowerUsageNewBuckets; bucket++) {
     histogram[bucket] = kPowerUsageNewBuckets - bucket + 1;
   }
-  for (uint32_t index : kPowerUsageNewIndices) {
-    if (!logger->LogIntegerHistogram(cobalt_registry::kPowerUsageNewMetricId, {index}, histogram)) {
-      FX_LOGS(INFO) << "LogIntegerHistogram(" << cobalt_registry::kPowerUsageNewMetricId << ", {"
-                    << index << "}, buckets[" << kPowerUsageNewBuckets << "])";
-      FX_LOGS(INFO) << "TestLogIntegerHistogram : FAIL";
-      return false;
+  for (uint32_t state_index : kPowerUsageNewApplicationStateIndices) {
+    for (uint32_t app_name_index : kPowerUsageNewApplicationNameIndices) {
+      if (!logger->LogIntegerHistogram(cobalt_registry::kPowerUsageNewMetricId,
+                                       {state_index, app_name_index}, histogram)) {
+        FX_LOGS(INFO) << "LogIntegerHistogram(" << cobalt_registry::kPowerUsageNewMetricId
+                      << ", { application_state: " << state_index
+                      << ", application_name: " << app_name_index << " }, buckets["
+                      << kPowerUsageNewBuckets << "])";
+        FX_LOGS(INFO) << "TestLogIntegerHistogram : FAIL";
+        return false;
+      }
     }
   }
 
@@ -684,13 +729,17 @@ bool TestLogIntegerHistogram(CobaltTestAppLogger* logger, SystemClockInterface* 
   for (uint32_t bucket = 0; bucket < kBandwidthUsageNewBuckets; bucket++) {
     histogram[bucket] = kBandwidthUsageNewBuckets - bucket + 1;
   }
-  for (uint32_t index : kBandwidthUsageNewIndices) {
-    if (!logger->LogIntegerHistogram(cobalt_registry::kBandwidthUsageNewMetricId, {index},
-                                     histogram)) {
-      FX_LOGS(INFO) << "LogIntegerHistogram(" << cobalt_registry::kBandwidthUsageNewMetricId << ", {"
-                    << index << "}, buckets[" << kBandwidthUsageNewBuckets << "])";
-      FX_LOGS(INFO) << "TestLogIntegerHistogram : FAIL";
-      return false;
+  for (uint32_t state_index : kBandwidthUsageNewApplicationStateIndices) {
+    for (uint32_t app_name_index : kBandwidthUsageNewApplicationNameIndices) {
+      if (!logger->LogIntegerHistogram(cobalt_registry::kBandwidthUsageNewMetricId,
+                                       {state_index, app_name_index}, histogram)) {
+        FX_LOGS(INFO) << "LogIntegerHistogram(" << cobalt_registry::kBandwidthUsageNewMetricId
+                      << ", { application_state: " << state_index
+                      << ", application_name: " << app_name_index << " }, buckets["
+                      << kBandwidthUsageNewBuckets << "])";
+        FX_LOGS(INFO) << "TestLogIntegerHistogram : FAIL";
+        return false;
+      }
     }
   }
 
@@ -730,11 +779,12 @@ bool TestLogString(CobaltTestAppLogger* logger, SystemClockInterface* clock,
                  cobalt_registry::kErrorOccurredComponentsErrorCountsReportId}] = 0;
 
   uint32_t day_index = CurrentDayIndex(clock);
-  for (uint32_t skillIndex : kErrorOccurredComponentsIndices) {
+  for (uint32_t status_index : kErrorOccurredComponentsStatusIndices) {
     for (std::string component : kApplicationComponentNames) {
-      if (!logger->LogString(cobalt_registry::kErrorOccurredComponentsMetricId, {skillIndex}, component)) {
-        FX_LOGS(INFO) << "LogString(" << cobalt_registry::kErrorOccurredComponentsMetricId << ", {"
-                      << skillIndex << "}, " << component << ")";
+      if (!logger->LogString(cobalt_registry::kErrorOccurredComponentsMetricId, {status_index},
+                             component)) {
+        FX_LOGS(INFO) << "LogString(" << cobalt_registry::kErrorOccurredComponentsMetricId
+                      << ", { status: " << status_index << " }, " << component << ")";
         FX_LOGS(INFO) << "TestLogString : FAIL";
         return false;
       }
