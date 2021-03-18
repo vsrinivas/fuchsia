@@ -373,6 +373,11 @@ zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, b
                                                               size / PAGE_SIZE, nullptr);
       ASSERT(status == ZX_OK);
     }
+    if (!exclusive) {
+      // Pin all the pages as we must never decommit any of them since they are shared elsewhere.
+      status = vmo->cow_pages_locked()->PinRangeLocked(0, size);
+      ASSERT(status == ZX_OK);
+    }
   }
 
   *obj = ktl::move(vmo);
