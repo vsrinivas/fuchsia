@@ -18,5 +18,6 @@ group("cts") {
   deps = [
     ":cts_no_e2e",
     "tests",
+    "tools",
   ]
 }
