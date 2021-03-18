@@ -66,53 +66,46 @@ async fn check_for_system_update_impl(
     let current_system_image = current_system_image_merkle(file_system)?;
     let latest_system_image = latest_system_image_merkle(&update_pkg).await?;
 
-    let update_available =
-        Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image });
+    let up_to_date = Ok(SystemUpdateStatus::UpToDate {
+        system_image: current_system_image,
+        update_package: latest_update_merkle,
+    });
 
     if let Some(last_known_update_package) = last_known_update_package {
         if *last_known_update_package == latest_update_merkle {
-            return Ok(SystemUpdateStatus::UpToDate {
-                system_image: current_system_image,
-                update_package: latest_update_merkle,
-            });
+            return up_to_date;
         }
     }
+
+    let update_available =
+        Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image });
 
     if current_system_image != latest_system_image {
         return update_available;
     }
 
-    match is_image_up_to_date(
-        &update_pkg,
-        paver,
-        ImageType::FuchsiaVbmeta,
-        Asset::VerifiedBootMetadata,
-    )
-    .await
+    // When present, checking vbmeta is sufficient, but vbmeta isn't supported on all devices.
+    for (image, asset) in [
+        (ImageType::FuchsiaVbmeta, Asset::VerifiedBootMetadata),
+        (ImageType::Zbi, Asset::Kernel),
+        (ImageType::ZbiSigned, Asset::Kernel),
+    ]
+    .iter()
     {
-        Ok(true) => {}
-        Ok(false) => {
-            return update_available;
-        }
-        Err(err) => {
-            // In the case that reading the vbmeta errors or there is no vbmeta, check the ZBI for an update.
-            fx_log_warn!("Failed to check if vbmeta is up to date: {:#}", anyhow!(err));
-            match is_image_up_to_date(&update_pkg, paver, ImageType::Zbi, Asset::Kernel).await {
-                Ok(true) => {}
-                Ok(false) => {
-                    return update_available;
-                }
-                Err(err) => {
-                    fx_log_warn!("Failed to check if zbi is up to date: {:#}", anyhow!(err));
-                }
+        match is_image_up_to_date(&update_pkg, paver, *image, *asset).await {
+            Ok(true) => return up_to_date,
+            Ok(false) => return update_available,
+            Err(err) => {
+                fx_log_warn!(
+                    "Failed to check if {} is up to date: {:#}",
+                    image.name(),
+                    anyhow!(err)
+                );
             }
         }
     }
 
-    Ok(SystemUpdateStatus::UpToDate {
-        system_image: current_system_image,
-        update_package: latest_update_merkle,
-    })
+    up_to_date
 }
 
 fn current_system_image_merkle(
@@ -310,6 +303,13 @@ pub mod test_check_for_system_update_impl {
             let PackageResolverProxyTempDir { temp_dir } =
                 Self::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
             fs::write(temp_dir.path().join("zbi"), zbi).expect("write zbi");
+            PackageResolverProxyTempDir { temp_dir }
+        }
+
+        fn new_with_zbi_signed(zbi: impl AsRef<[u8]>) -> PackageResolverProxyTempDir {
+            let PackageResolverProxyTempDir { temp_dir } =
+                Self::new_with_latest_system_image(ACTIVE_SYSTEM_IMAGE_MERKLE);
+            fs::write(temp_dir.path().join("zbi.signed"), zbi).expect("write zbi");
             PackageResolverProxyTempDir { temp_dir }
         }
     }
@@ -704,6 +704,70 @@ pub mod test_check_for_system_update_impl {
     async fn test_zbi_did_not_require_update() {
         let mut file_system = FakeFileSystem::new_with_valid_system_meta();
         let package_resolver = PackageResolverProxyTempDir::new_with_zbi([0]);
+        let mock_paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .active_config(Configuration::A)
+                .insert_hook(mock_paver::hooks::read_asset(|configuration, asset| {
+                    assert_eq!(configuration, Configuration::A);
+                    match asset {
+                        Asset::Kernel => Ok(vec![0]),
+                        Asset::VerifiedBootMetadata => panic!("no vbmeta available"),
+                    }
+                }))
+                .build(),
+        );
+        let paver = mock_paver.spawn_paver_service();
+
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpToDate { system_image, update_package: _ })
+                if system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                .parse()
+                .expect("active system image string literal")
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_zbi_signed_only_update_available() {
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyTempDir::new_with_zbi_signed([1]);
+        let mock_paver = Arc::new(
+            MockPaverServiceBuilder::new()
+                .active_config(Configuration::A)
+                .insert_hook(mock_paver::hooks::read_asset(|configuration, asset| {
+                    assert_eq!(configuration, Configuration::A);
+                    match asset {
+                        Asset::Kernel => Ok(vec![0]),
+                        Asset::VerifiedBootMetadata => panic!("no vbmeta available"),
+                    }
+                }))
+                .build(),
+        );
+        let paver = mock_paver.spawn_paver_service();
+
+        let result =
+            check_for_system_update_impl(&mut file_system, &package_resolver, &paver, None).await;
+
+        assert_matches!(
+            result,
+            Ok(SystemUpdateStatus::UpdateAvailable { current_system_image, latest_system_image })
+            if
+                current_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("active system image string literal") &&
+                latest_system_image == ACTIVE_SYSTEM_IMAGE_MERKLE
+                    .parse()
+                    .expect("new system image string literal")
+        );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_zbi_signed_did_not_require_update() {
+        let mut file_system = FakeFileSystem::new_with_valid_system_meta();
+        let package_resolver = PackageResolverProxyTempDir::new_with_zbi_signed([0]);
         let mock_paver = Arc::new(
             MockPaverServiceBuilder::new()
                 .active_config(Configuration::A)
