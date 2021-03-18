@@ -2,25 +2,24 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::convert::TryFrom;
 use std::sync::Arc;
 
-use anyhow::{format_err, Error};
 use fuchsia_async as fasync;
 use fuchsia_inspect::{self as inspect, component, Property};
 use fuchsia_syslog::fx_log_err;
 use futures::StreamExt;
 
-use crate::agent::{Context, Payload};
-use crate::base::SettingInfo;
+use crate::agent::{Context, Lifespan, Payload};
+use crate::base::{SettingInfo, SettingType};
 use crate::clock;
-use crate::handler::base::Request;
+use crate::handler::base::{Payload as SettingPayload, Request};
 use crate::handler::device_storage::DeviceStorageAccess;
-use crate::handler::setting_handler::{Command, Event, Payload as HandlerPayload};
+use crate::handler::setting_handler::{Event, Payload as HandlerPayload};
 use crate::message::base::{filter, Audience, MessageEvent, MessengerType};
 use crate::service;
-use crate::service::message::{MessageClient, Messenger, Signature};
+use crate::service::message::Messenger;
 use crate::service::TryFromWithClient;
 
 const INSPECT_NODE_NAME: &str = "setting_values";
@@ -31,6 +30,7 @@ pub struct InspectSettingAgent {
     messenger_client: Messenger,
     inspect_node: inspect::Node,
     setting_values: HashMap<&'static str, InspectSettingInfo>,
+    setting_types: HashSet<SettingType>,
 }
 
 /// Information about a setting to be written to inspect.
@@ -74,18 +74,19 @@ impl InspectSettingAgent {
                     HandlerPayload::try_from(message.payload()).map_or(false, |payload| {
                         // Only catch messages that were originally sent from the interfaces, and
                         // that contain a request for the specific setting type we're interested in.
-                        matches!(
-                            payload,
-                            HandlerPayload::Command(Command::HandleRequest(_))
-                                | HandlerPayload::Event(Event::Changed(_))
-                        )
+                        matches!(payload, HandlerPayload::Event(Event::Changed(_)))
                     })
                 })),
             ))))
             .await
             .expect("could not create inspect");
 
-        let mut agent = Self { messenger_client, inspect_node, setting_values: HashMap::new() };
+        let mut agent = Self {
+            messenger_client,
+            inspect_node,
+            setting_values: HashMap::new(),
+            setting_types: context.available_components.clone(),
+        };
 
         fasync::Task::spawn(async move {
             let event = receptor.fuse();
@@ -99,8 +100,13 @@ impl InspectSettingAgent {
                     },
                     agent_message = agent_event.select_next_some() => {
                         if let MessageEvent::Message(
-                                service::Payload::Agent(Payload::Invocation(_invocation)), client)
+                                service::Payload::Agent(Payload::Invocation(invocation)), client)
                                 = agent_message {
+
+                            if invocation.lifespan == Lifespan::Service {
+                                agent.fetch_initial_values().await;
+                            }
+
                             // Since the agent runs at creation, there is no
                             // need to handle state here.
                             client.reply(Payload::Complete(Ok(())).into()).send().ack();
@@ -112,77 +118,40 @@ impl InspectSettingAgent {
         .detach();
     }
 
-    /// Identifies [`service::message::MessageEvent`] that contains a
-    /// [`Restore`] message for setting handlers and records the setting values.
-    /// Also, identifies a changing event from a setting handler to the proxy
-    /// and records the setting values.
-    async fn process_message_event(&mut self, event: service::message::MessageEvent) {
-        if let Ok((payload, client)) = HandlerPayload::try_from_with_client(event) {
-            match payload {
-                // When we see a Restore message, we know a given setting is starting up, so
-                // we watch the reply to get the signature of the setting handler and ask
-                // for its value, so that we have the value of all settings immediately on
-                // start.
-                HandlerPayload::Command(Command::HandleRequest(Request::Restore)) => {
-                    match InspectSettingAgent::watch_reply(client).await {
-                        Ok(reply_signature) => {
-                            self.request_and_write_to_inspect(reply_signature).await.ok();
-                        }
-                        Err(err) => {
-                            fx_log_err!("Failed to watch reply to restore: {:?}", err)
-                        }
-                    }
-                }
-                // Whenever we see a setting handler tell the proxy it changed, we ask it
-                // for its value again.
-                // TODO(fxb/66294): Capture new value directly here.
-                HandlerPayload::Event(Event::Changed(_)) => {
-                    self.request_and_write_to_inspect(client.get_author())
-                        .await
-                        .map_err(|err| fx_log_err!("Failed to request value on change: {:?}", err))
-                        .ok();
-                }
-                _ => {}
+    /// This function iterates over the available components, requesting the current value with a
+    /// Get Request. The returned values combined with updates returned through watching for changes
+    /// (which should be registered for observing beforehand) provide full coverage of current
+    /// setting values.
+    async fn fetch_initial_values(&mut self) {
+        for setting_type in self.setting_types.clone() {
+            let mut receptor = self
+                .messenger_client
+                .message(
+                    SettingPayload::Request(Request::Get).into(),
+                    Audience::Address(service::Address::Handler(setting_type)),
+                )
+                .send();
+
+            if let Ok((
+                service::Payload::Setting(SettingPayload::Response(Ok(Some(setting_info)))),
+                _,
+            )) = receptor.next_payload().await
+            {
+                self.write_setting_to_inspect(setting_info).await;
+            } else {
+                fx_log_err!("Could not fetch initial value for setting type:{:?}", setting_type);
             }
         }
     }
 
-    /// Watches for the reply to a sent message and return the author of the reply.
-    async fn watch_reply(mut client: MessageClient) -> Result<Signature, Error> {
-        let mut reply_receptor = client.spawn_observer();
-
-        reply_receptor.next_payload().await.map(|(_, reply_client)| reply_client.get_author())
-    }
-
-    /// Requests the setting value from a given signature for a setting handler and records the
-    /// result in inspect.
-    async fn request_and_write_to_inspect(&mut self, signature: Signature) -> Result<(), Error> {
-        let value = self.request_value(signature).await?;
-        self.write_setting_to_inspect(value).await;
-        Ok(())
-    }
-
-    /// Requests the setting value from a given signature for a setting handler.
-    async fn request_value(&mut self, signature: Signature) -> Result<SettingInfo, Error> {
-        let mut send_receptor = self
-            .messenger_client
-            .message(
-                HandlerPayload::Command(Command::HandleRequest(Request::Get)).into(),
-                Audience::Messenger(signature),
-            )
-            .send();
-
-        send_receptor.next_payload().await.and_then(|payload| {
-            if let Ok(HandlerPayload::Result(Ok(Some(setting)))) =
-                HandlerPayload::try_from(payload.0)
-            {
-                Ok(setting)
-            } else {
-                // TODO(fxbug.dev/68479): Propagate the returned error or
-                // generate proper error.
-                Err(format_err!("did not receive setting value"))
-            }
-        })
+    /// Identifies [`service::message::MessageEvent`] that contains a changing event from a setting
+    /// handler to the proxy and records the setting values.
+    async fn process_message_event(&mut self, event: service::message::MessageEvent) {
+        if let Ok((HandlerPayload::Event(Event::Changed(setting_info)), _)) =
+            HandlerPayload::try_from_with_client(event)
+        {
+            self.write_setting_to_inspect(setting_info).await;
+        }
     }
 
     /// Writes a setting value to inspect.
@@ -219,32 +188,21 @@ impl InspectSettingAgent {
 mod tests {
     use fuchsia_inspect::assert_inspect_tree;
     use fuchsia_zircon::Time;
-    use std::collections::HashSet;
 
-    use crate::base::UnknownInfo;
-    use crate::service::message::{create_hub, Receptor};
+    use crate::agent::Invocation;
+    use crate::base::{SettingInfo, UnknownInfo};
+    use crate::message::base::Status;
+    use crate::service::message::create_hub;
+    use crate::service_context::ServiceContext;
 
     use super::*;
 
-    /// Verifies the next payload on the given receptor matches the given payload.
-    ///
-    /// Returns the message client of the received payload for convenience.
-    async fn verify_payload(mut receptor: Receptor, expected: HandlerPayload) -> MessageClient {
-        let result = receptor.next_payload().await;
-        assert!(result.is_ok());
-        let (received, message_client) = result.unwrap();
-        assert_eq!(
-            HandlerPayload::try_from(received).expect("payload should be extracted"),
-            expected
-        );
-        return message_client;
-    }
-
     async fn create_context() -> Context {
+        let hub = create_hub();
         Context::new(
-            create_hub().create(MessengerType::Unbound).await.expect("should be present").1,
-            create_hub(),
-            HashSet::new(),
+            hub.create(MessengerType::Unbound).await.expect("should be present").1,
+            hub,
+            vec![SettingType::Unknown].into_iter().collect(),
             None,
         )
         .await
@@ -253,46 +211,61 @@ mod tests {
     /// Verifies that inspect agent intercepts a restore request and writes the setting value to
     /// inspect.
     #[fuchsia_async::run_until_stalled(test)]
-    async fn test_write_inspect_on_restore() {
+    async fn test_write_inspect_on_service_lifespan() {
         // Set the clock so that timestamps will always be 0.
         clock::mock::set(Time::from_nanos(0));
 
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child(INSPECT_NODE_NAME);
         let context = create_context().await;
+        let messenger_factory = context.messenger_factory.clone();
+        let agent_signature = context.receptor.get_signature();
 
-        let (proxy, _) = context.messenger_factory.create(MessengerType::Unbound).await.unwrap();
-
-        let (_, mut setting_handler_receptor) =
-            context.messenger_factory.create(MessengerType::Unbound).await.unwrap();
-        let setting_handler_signature = setting_handler_receptor.get_signature();
+        let (_, mut setting_proxy_receptor) = context
+            .messenger_factory
+            .create(MessengerType::Addressable(service::Address::Handler(SettingType::Unknown)))
+            .await
+            .expect("should create proxy");
 
         InspectSettingAgent::create_with_node(context, inspect_node).await;
 
-        // Proxy sends restore request.
-        proxy
+        // Inspect agent should not report any setting values.
+        assert_inspect_tree!(inspector, root: {
+            setting_values: {
+            }
+        });
+
+        // Message service lifespan to agent.
+        messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("should create messenger")
+            .0
             .message(
-                HandlerPayload::Command(Command::HandleRequest(Request::Restore)).into(),
-                Audience::Messenger(setting_handler_signature),
+                Payload::Invocation(Invocation {
+                    lifespan: Lifespan::Service,
+                    service_context: ServiceContext::create(None, None),
+                })
+                .into(),
+                Audience::Messenger(agent_signature),
             )
+            .send()
+            .ack();
+
+        // Setting handler reply to get.
+        let (_, reply_client) =
+            setting_proxy_receptor.next_payload().await.expect("payload should be present");
+
+        let mut reply_receptor = reply_client
+            .reply(SettingPayload::Response(Ok(Some(UnknownInfo(true).into()))).into())
             .send();
 
-        // Setting handler acks the restore.
-        let (_, reply_client) = setting_handler_receptor.next_payload().await.unwrap();
-        reply_client.reply(HandlerPayload::Result(Ok(None)).into()).send().ack();
-
-        // Inspect agent sends get request to setting handler, handler replies with value.
-        let inspect_agent_client = verify_payload(
-            setting_handler_receptor,
-            HandlerPayload::Command(Command::HandleRequest(Request::Get)),
-        )
-        .await;
-        inspect_agent_client
-            .reply(HandlerPayload::Result(Ok(Some(UnknownInfo(true).into()))).into())
-            .send()
-            .next()
-            .await
-            .expect("failed to reply to get request");
+        while let Some(message_event) = reply_receptor.next().await {
+            if matches!(message_event, service::message::MessageEvent::Status(Status::Acknowledged))
+            {
+                break;
+            }
+        }
 
         // Inspect agent writes value to inspect.
         assert_inspect_tree!(inspector, root: {
@@ -315,48 +288,44 @@ mod tests {
         let inspector = inspect::Inspector::new();
         let inspect_node = inspector.root().create_child(INSPECT_NODE_NAME);
         let context = create_context().await;
+        let messenger_factory = context.messenger_factory.clone();
 
-        let proxy_signature = context
-            .messenger_factory
+        let mut proxy_receptor = messenger_factory
             .create(MessengerType::Unbound)
             .await
             .expect("should create proxy messenger")
-            .1
-            .get_signature();
-
-        let (setting_handler, setting_handler_receptor) =
-            context.messenger_factory.create(MessengerType::Unbound).await.unwrap();
+            .1;
 
         InspectSettingAgent::create_with_node(context, inspect_node).await;
 
-        // Setting handler notifies proxy of setting changed. The value does not
-        // matter as it is fetched.
-        // TODO(fxb/66294): Remove get call from inspect broker.
-        setting_handler
+        // Inspect agent should not report any setting values.
+        assert_inspect_tree!(inspector, root: {
+            setting_values: {
+            }
+        });
+
+        // Setting handler notifies proxy of setting changed.
+        messenger_factory
+            .create(MessengerType::Unbound)
+            .await
+            .expect("seting handler should be created")
+            .0
             .message(
-                HandlerPayload::Event(Event::Changed(UnknownInfo(true).into())).into(),
-                Audience::Messenger(proxy_signature),
+                HandlerPayload::Event(Event::Changed(SettingInfo::Unknown(UnknownInfo(false))))
+                    .into(),
+                Audience::Messenger(proxy_receptor.get_signature()),
             )
             .send();
 
-        // Inspect agent sends get request to setting handler, handler replies with value.
-        let inspect_agent_client = verify_payload(
-            setting_handler_receptor,
-            HandlerPayload::Command(Command::HandleRequest(Request::Get)),
-        )
-        .await;
-        inspect_agent_client
-            .reply(HandlerPayload::Result(Ok(Some(UnknownInfo(true).into()))).into())
-            .send()
-            .next()
-            .await
-            .expect("failed to reply to get request");
+        // Await for the event changed. The agent will intercept it in-between so capturing here
+        // will ensure the inspect operation has fully occurred.
+        let _payload = proxy_receptor.next_payload().await;
 
         // Inspect agent writes value to inspect.
         assert_inspect_tree!(inspector, root: {
             setting_values: {
                 "Unknown": {
-                    value: "UnknownInfo(true)",
+                    value: "UnknownInfo(false)",
                     timestamp: "0.000000000",
                 }
             }
