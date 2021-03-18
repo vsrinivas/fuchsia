@@ -227,8 +227,7 @@ zx_status_t IntelHDAController::SetupPCIInterrupts() {
   }
 
   // Retrieve our PCI interrupt, then use it to activate our IRQ dispatcher.
-  zx::interrupt irq;
-  res = pci.MapInterrupt(0, &irq);
+  res = pci.MapInterrupt(0, &irq_);
   if (res != ZX_OK) {
     LOG(ERROR, "Failed to map IRQ! (res %d)", res);
     return res;
