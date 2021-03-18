@@ -4,6 +4,8 @@
 
 #include "src/ui/lib/escher/shaders/util/spirv_file_util.h"
 
+#include <lib/fit/defer.h>
+
 namespace escher {
 namespace {
 
@@ -44,6 +46,7 @@ bool ReadSpirvFromDisk(const ShaderVariantArgs& args, const std::string& base_pa
   auto full_path = base_path + hash_name;
   FILE* fp = fopen(full_path.c_str(), "rb");
   if (fp) {
+    auto close_file = fit::defer([fp] { fclose(fp); });
     std::size_t binary_size;
     fseek(fp, 0, SEEK_END);
     binary_size = ftell(fp);
