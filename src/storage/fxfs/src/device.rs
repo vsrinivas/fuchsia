@@ -7,6 +7,9 @@ use {self::buffer::Buffer, anyhow::Error, async_trait::async_trait};
 pub mod buffer;
 pub mod buffer_allocator;
 
+#[cfg(target_os = "fuchsia")]
+pub mod block_device;
+
 #[async_trait]
 /// Device is an abstract representation of an underlying block device.
 pub trait Device: Send + Sync {
@@ -19,4 +22,6 @@ pub trait Device: Send + Sync {
     async fn read(&self, offset: u64, buffer: &mut Buffer<'_>) -> Result<(), Error>;
     /// Writes the contents of |buffer| to the device at |offset|.
     async fn write(&self, offset: u64, buffer: &Buffer<'_>) -> Result<(), Error>;
+    /// Closes and consumes the block device.
+    async fn close(self) -> Result<(), Error>;
 }

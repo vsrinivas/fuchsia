@@ -45,8 +45,10 @@ fxfs_sources = [
 if (is_fuchsia) {
   fxfs_deps += [
     "//src/lib/fuchsia-runtime",
+    "//src/lib/storage/block_client/rust:remote-block-device",
     "//src/lib/zircon/rust:fuchsia-zircon",
   ]
+  fxfs_sources += [ "src/device/block_device.rs" ]
 }
 
 rustc_library("lib") {

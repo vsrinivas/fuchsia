@@ -32,6 +32,7 @@ pub trait BufferSource: Any + std::fmt::Debug + Send + Sync {
     /// Panics if |range| exceeds |self.size()|.
     unsafe fn sub_slice(&self, range: &Range<usize>) -> &mut [u8];
     fn as_any(&self) -> &dyn Any;
+    fn into_any(self: Box<Self>) -> Box<dyn Any>;
 }
 
 /// A basic heap-backed memory source.
@@ -73,6 +74,10 @@ impl BufferSource for MemBufferSource {
     fn as_any(&self) -> &dyn Any {
         self
     }
+
+    fn into_any(self: Box<Self>) -> Box<dyn Any> {
+        self
+    }
 }
 
 #[derive(Debug)]
@@ -84,27 +89,30 @@ struct Inner {
 /// TODO(jfsulliv): Improve the allocation strategy (buddy allocation, perhaps).
 #[derive(Debug)]
 pub struct BufferAllocator {
-    inner: Mutex<Inner>,
+    block_size: usize,
     source: Box<dyn BufferSource>,
+    inner: Mutex<Inner>,
 }
 
 impl BufferAllocator {
-    // TODO(jfsulliv): Make this parametrizable.
-    const GRANULARITY: usize = 8192;
-
-    pub fn new(source: Box<dyn BufferSource>) -> Self {
-        Self { source, inner: Mutex::new(Inner { next_free: 0 }) }
+    pub fn new(block_size: usize, source: Box<dyn BufferSource>) -> Self {
+        Self { block_size, source, inner: Mutex::new(Inner { next_free: 0 }) }
     }
 
     pub fn buffer_source(&self) -> &dyn BufferSource {
         self.source.as_ref()
     }
 
+    /// Takes the buffer source from the allocator and consumes the allocator.
+    pub fn take_buffer_source(self) -> Box<dyn BufferSource> {
+        self.source
+    }
+
     /// Allocates a Buffer with capacity for at least |size| bytes.
     pub fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
         let mut inner = self.inner.lock().unwrap();
-        let range = inner.next_free as usize
-            ..(inner.next_free as usize + round_up(size, Self::GRANULARITY));
+        let range =
+            inner.next_free as usize..(inner.next_free as usize + round_up(size, self.block_size));
         inner.next_free = range.end as u64;
         // Safety is ensured by the allocator not double-allocating any regions.
         Buffer::new(unsafe { self.source.sub_slice(&range) }, range, &self)
@@ -127,7 +135,7 @@ mod tests {
     async fn test_allocate_buffer_read_write() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
 
-        let allocator = BufferAllocator::new(source);
+        let allocator = BufferAllocator::new(8192, source);
 
         let mut buf = allocator.allocate_buffer(8192);
         buf.as_mut_slice().fill(0xaa as u8);
@@ -140,7 +148,7 @@ mod tests {
     async fn test_allocate_buffer_consecutive_calls_do_not_overlap() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
 
-        let allocator = BufferAllocator::new(source);
+        let allocator = BufferAllocator::new(8192, source);
 
         let buf1 = allocator.allocate_buffer(8192);
         let buf2 = allocator.allocate_buffer(8192);
@@ -151,7 +159,7 @@ mod tests {
     async fn test_allocate_many_buffers() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
 
-        let allocator = BufferAllocator::new(source);
+        let allocator = BufferAllocator::new(8192, source);
 
         for _ in 0..10 {
             let _ = allocator.allocate_buffer(8192);
@@ -162,7 +170,7 @@ mod tests {
     async fn test_allocate_buffer_rounded_up_to_block() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
 
-        let allocator = BufferAllocator::new(source);
+        let allocator = BufferAllocator::new(8192, source);
 
         let mut buf = allocator.allocate_buffer(1);
         assert!(buf.size() == 8192);
@@ -176,7 +184,7 @@ mod tests {
     async fn test_allocate_small_buffers_dont_overlap() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
 
-        let allocator = BufferAllocator::new(source);
+        let allocator = BufferAllocator::new(8192, source);
 
         let buf1 = allocator.allocate_buffer(1);
         let buf2 = allocator.allocate_buffer(1);
@@ -187,7 +195,7 @@ mod tests {
     async fn test_allocate_large_buffer() {
         let source = Box::new(MemBufferSource::new(1024 * 1024));
 
-        let allocator = BufferAllocator::new(source);
+        let allocator = BufferAllocator::new(8192, source);
 
         let mut buf = allocator.allocate_buffer(1024 * 1024);
         assert_eq!(buf.size(), 1024 * 1024);
