@@ -12,6 +12,7 @@
 #include <cstring>
 #include <limits>
 #include <memory>
+#include <string>
 #include <string_view>
 
 #include <fbl/auto_call.h>
@@ -273,7 +274,9 @@ class BufferWriter : public Writer {
 
   fit::result<void, std::string> Write(uint64_t offset, fbl::Span<const uint8_t> buffer) final {
     if (offset > buffer_.size() || offset + buffer.size() > buffer_.size()) {
-      return fit::error("Out of Range");
+      return fit::error("BufferWriter: Out of Range. Offset at " + std::to_string(offset) +
+                        " and byte count is " + std::to_string(buffer.size()) + " max size is " +
+                        std::to_string(buffer_.size()) + ".");
     }
     memcpy(buffer_.data() + offset, buffer.data(), buffer.size());
     return fit::ok();
@@ -605,7 +608,7 @@ TEST(FvmSparseWriteImageTest, WithReadErrorIsError) {
   ASSERT_EQ(kReadError, write_result.error());
 }
 
-TEST(FvmSparseImageTest, WithWriteErrorIsError) {
+TEST(FvmSparseWriteImageTest, WithWriteErrorIsError) {
   ErrorWriter writer(/**error_offset=**/ 0, kWriteError);
   FvmOptions options;
   options.compression.schema = CompressionSchema::kNone;
@@ -634,7 +637,15 @@ class BufferReader final : public Reader {
     assert(image_buffer_.data() != nullptr);
   }
 
-  uint64_t length() const final { return std::numeric_limits<uint64_t>::max(); }
+  template <typename T>
+  BufferReader(uint64_t offset, const T* data, uint64_t length)
+      : image_offset_(offset),
+        image_buffer_(reinterpret_cast<const uint8_t*>(data), sizeof(T)),
+        length_(offset + length) {
+    assert(image_buffer_.data() != nullptr);
+  }
+
+  uint64_t length() const final { return length_; }
 
   fit::result<void, std::string> Read(uint64_t offset, fbl::Span<uint8_t> buffer) const final {
     // if no overlap zero the buffer.
@@ -668,6 +679,7 @@ class BufferReader final : public Reader {
  private:
   uint64_t image_offset_ = 0;
   fbl::Span<const uint8_t> image_buffer_;
+  uint64_t length_ = std::numeric_limits<uint64_t>::max();
 };
 
 TEST(GeHeaderTest, FromReaderWithBadMagicIsError) {
@@ -982,7 +994,7 @@ class FvmSparseReaderImpl final : public fvm::ReaderInterface {
   size_t cursor_ = 0;
 };
 
-TEST(FvmSparseImageTest, SparseReaderIsAbleToParseUncompressedSerializedData) {
+TEST(FvmSparseWriteImageTest, WrittenImageIsCompatibleWithLegacyImplementation) {
   SerializedImageContainer container;
   auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
 
@@ -1047,7 +1059,7 @@ TEST(FvmSparseImageTest, SparseReaderIsAbleToParseUncompressedSerializedData) {
   }
 }
 
-TEST(FvmSparseWriteImageTest, WrittenImageIsCompatibleWithLegacyImplementation) {
+TEST(FvmSparseWriteImageTest, WrittenCompressedImageIsCompatibleWithLegacyImplementation) {
   SerializedImageContainer container;
   auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
 
@@ -1525,6 +1537,139 @@ TEST(ConvertToFvmMetadataTest, WithsMultiplePartitionsAndSlicesIsOk) {
   }
 
   EXPECT_EQ(used_partitions, kUsedPartitions);
+}
+
+TEST(FvmSparseImageDecompressTest, BadSparseImageHeaderIsError) {
+  SerializedImageContainer container;
+  std::vector<uint8_t> buffer;
+  BufferWriter writer(buffer);
+  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+
+  auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  // Make the header invalid.
+  container.serialized_image().header.magic = 0;
+
+  auto decompress_or =
+      FvmSparseDecompressImage(0, BufferReader(0, &container.serialized_image()), writer);
+
+  EXPECT_TRUE(decompress_or.is_error());
+}
+
+TEST(FvmSparseImageDecompressTest, BadPartitionDescriptorIsError) {
+  SerializedImageContainer container;
+  std::vector<uint8_t> buffer;
+  BufferWriter writer(buffer);
+  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+
+  auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  // Make the descriptor invalid.
+  container.serialized_image().partition_1.descriptor.magic = 0;
+
+  auto decompress_or =
+      FvmSparseDecompressImage(0, BufferReader(0, &container.serialized_image()), writer);
+
+  EXPECT_TRUE(decompress_or.is_error());
+}
+
+TEST(FvmSparseImageDecompressTest, BadExtentDescriptorIsError) {
+  SerializedImageContainer container;
+  std::vector<uint8_t> buffer;
+  BufferWriter writer(buffer);
+  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+
+  auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  // Make the descriptor invalid.
+  container.serialized_image().partition_1.extents[0].magic = 0;
+
+  auto decompress_or =
+      FvmSparseDecompressImage(0, BufferReader(0, &container.serialized_image()), writer);
+
+  EXPECT_TRUE(decompress_or.is_error());
+}
+
+TEST(FvmSparseImageDecompressTest, CompressedImageWithBadCompresseDataIsError) {
+  SerializedImageContainer container;
+  std::vector<uint8_t> buffer;
+  BufferWriter writer(buffer);
+  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+
+  auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  // Claim the image is compressed, this will trigger a malformed framed error in Lz4.
+  container.serialized_image().header.flags |= fvm::kSparseFlagLz4;
+
+  auto decompress_or =
+      FvmSparseDecompressImage(0, BufferReader(0, &container.serialized_image()), writer);
+
+  EXPECT_TRUE(decompress_or.is_error());
+}
+
+TEST(FvmSparseImageDecompressTest, UncompressedImageReturnsFalse) {
+  SerializedImageContainer container;
+  std::vector<uint8_t> buffer;
+  BufferWriter writer(buffer);
+  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+
+  auto write_result = FvmSparseWriteImage(descriptor, &container.writer());
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  auto decompress_or =
+      FvmSparseDecompressImage(0, BufferReader(0, &container.serialized_image()), writer);
+
+  EXPECT_TRUE(decompress_or.is_ok()) << decompress_or.error();
+  EXPECT_FALSE(decompress_or.value());
+}
+
+TEST(FvmSparseImageDecompressTest, CompressedImageReturnsTrueAndIsCorrect) {
+  SerializedImageContainer compressed_container;
+  SerializedImageContainer decompressed_container;
+  SerializedImageContainer expected_container;
+
+  auto descriptor = MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kLz4));
+  auto decompressed_descriptor =
+      MakeDescriptorWithOptions(MakeOptions(8192, CompressionSchema::kNone));
+
+  Lz4Compressor compressor = Lz4Compressor::Create(descriptor.options().compression).take_value();
+
+  // Write the compressed data that we will decompress later.
+  auto write_result = FvmSparseWriteImage(descriptor, &compressed_container.writer(), &compressor);
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  // Write the decompressed version that we will compare against.
+  write_result = FvmSparseWriteImage(decompressed_descriptor, &expected_container.writer());
+  ASSERT_TRUE(write_result.is_ok()) << write_result.error();
+
+  auto decompress_or = FvmSparseDecompressImage(
+      0, BufferReader(0, &compressed_container.serialized_image(), sizeof(SerializedSparseImage)),
+      decompressed_container.writer());
+
+  EXPECT_TRUE(decompress_or.is_ok()) << decompress_or.error();
+  EXPECT_TRUE(decompress_or.value());
+
+  // Now compare the contents of the written decompressed image to the one of the generated
+  // decompressed.
+  EXPECT_THAT(decompressed_container.serialized_image().header,
+              HeaderEq(expected_container.serialized_image().header));
+  EXPECT_THAT(decompressed_container.serialized_image().partition_1.descriptor,
+              PartitionDescriptorEq(expected_container.serialized_image().partition_1.descriptor));
+  EXPECT_THAT(decompressed_container.serialized_image().partition_1.extents,
+              testing::Pointwise(ExtentDescriptorsAreEq(),
+                                 expected_container.serialized_image().partition_1.extents));
+  EXPECT_THAT(decompressed_container.serialized_image().partition_2.descriptor,
+              PartitionDescriptorEq(expected_container.serialized_image().partition_2.descriptor));
+  EXPECT_THAT(decompressed_container.serialized_image().partition_2.extents,
+              testing::Pointwise(ExtentDescriptorsAreEq(),
+                                 expected_container.serialized_image().partition_2.extents));
+
+  EXPECT_THAT(decompressed_container.serialized_image().extent_data,
+              testing::ElementsAreArray(expected_container.serialized_image().extent_data));
 }
 
 }  // namespace

@@ -16,9 +16,11 @@
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/fvm_sparse.h"
 #include "src/storage/fvm/metadata.h"
+#include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/block_utils.h"
 #include "src/storage/volume_image/utils/compressor.h"
+#include "src/storage/volume_image/utils/lz4_decompressor.h"
 
 namespace storage::volume_image {
 namespace {
@@ -493,6 +495,106 @@ fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& desc
     return FvmSparseWriteImageInternal(descriptor, writer, &noop_compressor);
   }
   return FvmSparseWriteImageInternal(descriptor, writer, compressor);
+}
+
+fit::result<bool, std::string> FvmSparseDecompressImage(uint64_t offset, const Reader& reader,
+                                                        Writer& writer) {
+  auto header_or = fvm_sparse_internal::GetHeader(offset, reader);
+  if (header_or.is_error()) {
+    return header_or.take_error_result();
+  }
+
+  // Check that everything looks good metadata wise, that is that partition and extent descriptors
+  // are well formed, so we can abort early on any error. The entries themselves are unimportant for
+  // decompressing the image.
+  auto partition_entries_or =
+      fvm_sparse_internal::GetPartitions(sizeof(fvm::SparseImage), reader, header_or.value());
+  if (partition_entries_or.is_error()) {
+    return partition_entries_or.take_error_result();
+  }
+
+  auto compression_options = fvm_sparse_internal::GetCompressionOptions(header_or.value());
+  if (compression_options.schema == CompressionSchema::kNone) {
+    return fit::ok(false);
+  }
+
+  uint64_t accumulated_offset = 0;
+  // Copy the header and partition info first.
+  std::vector<uint8_t> metadata_buffer;
+  metadata_buffer.resize(header_or.value().header_length, 0);
+
+  auto metadata_read_result = reader.Read(0, metadata_buffer);
+  if (metadata_read_result.is_error()) {
+    return metadata_read_result.take_error_result();
+  }
+  // Remove the compression flag.
+  header_or.value().flags ^= fvm::kSparseFlagLz4;
+  memcpy(metadata_buffer.data(), &header_or.value(), sizeof(fvm::SparseImage));
+
+  auto metadata_write_result = writer.Write(0, metadata_buffer);
+  if (metadata_write_result.is_error()) {
+    return metadata_write_result.take_error_result();
+  }
+  accumulated_offset += header_or.value().header_length;
+
+  auto decompressor_or = Lz4Decompressor::Create(compression_options);
+  if (decompressor_or.is_error()) {
+    return decompressor_or.take_error_result();
+  }
+  auto decompressor = decompressor_or.take_value();
+
+  auto write_decompressed =
+      [&accumulated_offset,
+       &writer](fbl::Span<const uint8_t> decompressed_data) -> fit::result<void, std::string> {
+    auto write_result = writer.Write(accumulated_offset, decompressed_data);
+    if (write_result.is_error()) {
+      return write_result;
+    }
+    accumulated_offset += decompressed_data.size();
+    return fit::ok();
+  };
+
+  auto prepare_or = decompressor.Prepare(write_decompressed);
+  if (prepare_or.is_error()) {
+    return prepare_or.take_error_result();
+  }
+
+  std::vector<uint8_t> compressed_data;
+  constexpr uint64_t kMaxBufferSize = (64 << 10);
+  compressed_data.resize(std::min(kMaxBufferSize, reader.length()), 0);
+
+  uint64_t read_offset = header_or.value().header_length;
+  while (read_offset < reader.length()) {
+    auto compressed_view = fbl::Span<uint8_t>(
+        compressed_data.data(),
+        std::min(compressed_data.size(), static_cast<size_t>(reader.length() - read_offset)));
+    auto read_or = reader.Read(read_offset, compressed_view);
+    if (read_or.is_error()) {
+      return read_or.take_error_result();
+    }
+
+    auto decompressed_or = decompressor.Decompress(compressed_view);
+    if (decompressed_or.is_error()) {
+      return decompressed_or.take_error_result();
+    }
+    auto [hint, read_bytes] = decompressed_or.value();
+
+    // Decompression finished.
+    if (hint == 0) {
+      auto finalize_result = decompressor.Finalize();
+      if (finalize_result.is_error()) {
+        return finalize_result.take_error_result();
+      }
+      break;
+    }
+
+    read_offset += read_bytes;
+    if (hint > compressed_data.size()) {
+      compressed_data.resize(hint, 0);
+    }
+  }
+
+  return fit::ok(true);
 }
 
 }  // namespace storage::volume_image

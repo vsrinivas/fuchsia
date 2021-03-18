@@ -5,6 +5,8 @@
 #ifndef SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_H_
 #define SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_H_
 
+#include <lib/fit/result.h>
+
 #include <cstdint>
 
 #include "src/storage/fvm/format.h"
@@ -15,6 +17,7 @@
 #include "src/storage/volume_image/options.h"
 #include "src/storage/volume_image/utils/compressor.h"
 #include "src/storage/volume_image/utils/decompressor.h"
+#include "src/storage/volume_image/utils/reader.h"
 #include "src/storage/volume_image/utils/writer.h"
 
 namespace storage::volume_image {
@@ -90,6 +93,14 @@ uint64_t CalculateUncompressedImageSize(const FvmDescriptor& descriptor);
 fit::result<uint64_t, std::string> FvmSparseWriteImage(const FvmDescriptor& descriptor,
                                                        Writer* writer,
                                                        Compressor* compressor = nullptr);
+
+// Returns true if |reader| is a compressed |fvm::SparseImage|, and has been successfully
+// decompressed into |writer|. If not compressed returns false, and this is not considered an error.
+//
+// On error, returns a description of the error condition.
+fit::result<bool, std::string> FvmSparseDecompressImage(uint64_t offset, const Reader& reader,
+                                                        Writer& writer);
+
 }  // namespace storage::volume_image
 
 #endif  // SRC_STORAGE_VOLUME_IMAGE_FVM_FVM_SPARSE_IMAGE_H_
