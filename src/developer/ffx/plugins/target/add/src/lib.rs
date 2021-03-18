@@ -39,7 +39,7 @@ pub async fn add(daemon_proxy: bridge::DaemonProxy, cmd: AddCommand) -> Result<(
     let addr = addr.parse::<IpAddr>()?;
 
     #[cfg(not(test))]
-    let scope = if let Some(scope) = scope {
+    let scope_id = if let Some(scope) = scope {
         unsafe {
             let scope = CString::new(scope).unwrap();
             libc::if_nametoindex(scope.as_ptr())
@@ -49,20 +49,17 @@ pub async fn add(daemon_proxy: bridge::DaemonProxy, cmd: AddCommand) -> Result<(
     };
 
     #[cfg(test)]
-    let scope = if let Some(scope) = scope { scope.parse()? } else { 0 };
+    let scope_id = if let Some(scope) = scope { scope.parse()? } else { 0 };
 
-    if port.is_some() {
-        println!("WARNING: Setting a custom port is not yet supported.");
-    }
-
-    let mut addr = bridge::TargetAddrInfo::Ip(bridge::TargetIp {
-        ip: match addr {
-            IpAddr::V6(i) => net::IpAddress::Ipv6(net::Ipv6Address { addr: i.octets().into() }),
-            IpAddr::V4(i) => net::IpAddress::Ipv4(net::Ipv4Address { addr: i.octets().into() }),
-        },
-
-        scope_id: scope,
-    });
+    let ip = match addr {
+        IpAddr::V6(i) => net::IpAddress::Ipv6(net::Ipv6Address { addr: i.octets().into() }),
+        IpAddr::V4(i) => net::IpAddress::Ipv4(net::Ipv4Address { addr: i.octets().into() }),
+    };
+    let mut addr = if let Some(port) = port {
+        bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort { ip, port, scope_id })
+    } else {
+        bridge::TargetAddrInfo::Ip(bridge::TargetIp { ip, scope_id })
+    };
 
     if let Err(e) = daemon_proxy.add_target(&mut addr).await? {
         eprintln!("ERROR: {:?}", e);
@@ -117,7 +114,7 @@ mod test {
         let server = setup_fake_daemon_server(|addr| {
             assert_eq!(
                 addr,
-                bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
                     ip: net::IpAddress::Ipv4(net::Ipv4Address {
                         addr: "123.210.123.210"
                             .parse::<std::net::Ipv4Addr>()
@@ -126,6 +123,7 @@ mod test {
                             .into()
                     }),
                     scope_id: 0,
+                    port: 2310,
                 })
             )
         });
@@ -153,11 +151,12 @@ mod test {
         let server = setup_fake_daemon_server(|addr| {
             assert_eq!(
                 addr,
-                bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
                     ip: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: "f000::1".parse::<std::net::Ipv6Addr>().unwrap().octets().into()
                     }),
                     scope_id: 0,
+                    port: 65,
                 })
             )
         });
@@ -185,11 +184,12 @@ mod test {
         let server = setup_fake_daemon_server(|addr| {
             assert_eq!(
                 addr,
-                bridge::TargetAddrInfo::Ip(bridge::TargetIp {
+                bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
                     ip: net::IpAddress::Ipv6(net::Ipv6Address {
                         addr: "f000::1".parse::<std::net::Ipv6Addr>().unwrap().octets().into()
                     }),
                     scope_id: 1,
+                    port: 640,
                 })
             )
         });

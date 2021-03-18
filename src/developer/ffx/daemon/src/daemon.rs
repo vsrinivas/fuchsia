@@ -504,11 +504,15 @@ impl Daemon {
                 return responder.send(build_info()).context("sending GetVersionInfo response");
             }
             DaemonRequest::AddTarget { ip, responder } => {
+                let ssh_port = match ip {
+                    TargetAddrInfo::IpPort(ref ipp) => Some(ipp.port),
+                    _ => None,
+                };
+                let target =
+                    Target::new_with_addrs(None, BTreeSet::from_iter(Some(ip.into()).into_iter()));
+                target.set_ssh_port(ssh_port).await;
                 self.target_collection
-                    .merge_insert(Target::new_with_addrs(
-                        None,
-                        BTreeSet::from_iter(Some(ip.into()).into_iter()),
-                    ))
+                    .merge_insert(target)
                     .then(|target| async move {
                         target
                             .update_connection_state(|s| match s {

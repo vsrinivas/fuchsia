@@ -290,7 +290,7 @@ struct TargetInner {
     addrs: RwLock<BTreeSet<TargetAddrEntry>>,
     // ssh_port if set overrides the global default configuration for ssh port,
     // for this target.
-    ssh_port: Option<u16>,
+    ssh_port: Mutex<Option<u16>>,
     // used for Fastboot
     serial: RwLock<Option<String>>,
     boot_timestamp_nanos: RwLock<Option<u64>>,
@@ -304,7 +304,7 @@ impl TargetInner {
             last_response: RwLock::new(Utc::now()),
             state: Mutex::new(TargetState::default()),
             addrs: RwLock::new(BTreeSet::new()),
-            ssh_port: None,
+            ssh_port: Mutex::new(None),
             serial: RwLock::new(None),
             boot_timestamp_nanos: RwLock::new(None),
             diagnostics_info: Arc::new(DiagnosticsStreamer::default()),
@@ -636,8 +636,16 @@ impl Target {
             .collect();
     }
 
-    pub fn ssh_port(&self) -> Option<u16> {
-        self.inner.ssh_port
+    pub async fn ssh_port(&self) -> Option<u16> {
+        self.inner.ssh_port.lock().await.clone()
+    }
+
+    pub(crate) async fn set_ssh_port(&self, port: Option<u16>) {
+        if let Some(port) = port {
+            self.inner.ssh_port.lock().await.replace(port);
+        } else {
+            self.inner.ssh_port.lock().await.take();
+        }
     }
 
     #[cfg(test)]
@@ -880,6 +888,10 @@ impl From<&bridge::TargetAddrInfo> for TargetAddr {
     fn from(t: &bridge::TargetAddrInfo) -> Self {
         let (addr, scope): (IpAddr, u32) = match t {
             bridge::TargetAddrInfo::Ip(ip) => match ip.ip {
+                IpAddress::Ipv6(Ipv6Address { addr }) => (addr.into(), ip.scope_id),
+                IpAddress::Ipv4(Ipv4Address { addr }) => (addr.into(), ip.scope_id),
+            },
+            bridge::TargetAddrInfo::IpPort(ip) => match ip.ip {
                 IpAddress::Ipv6(Ipv6Address { addr }) => (addr.into(), ip.scope_id),
                 IpAddress::Ipv4(Ipv4Address { addr }) => (addr.into(), ip.scope_id),
             },
@@ -1397,7 +1409,7 @@ mod test {
                 last_response: RwLock::new(block_on(self.last_response.read()).clone()),
                 state: Mutex::new(block_on(self.state.lock()).clone()),
                 addrs: RwLock::new(block_on(self.addrs.read()).clone()),
-                ssh_port: None,
+                ssh_port: Mutex::new(block_on(self.ssh_port.lock()).clone()),
                 serial: RwLock::new(block_on(self.serial.read()).clone()),
                 boot_timestamp_nanos: RwLock::new(
                     block_on(self.boot_timestamp_nanos.read()).clone(),
