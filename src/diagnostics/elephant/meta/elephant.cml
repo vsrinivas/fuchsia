@@ -3,7 +3,11 @@
     program: {
         runner: "elf",
         binary: "bin/launcher",
-        args: [ "elephant" ],
+        args: [
+            "elephant",
+            "--startup-delay-seconds",
+            120,
+        ],
     },
     capabilities: [
         {

@@ -11,13 +11,10 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_zircon as zx,
-    futures::{StreamExt, TryStreamExt},
+    futures::{channel::mpsc, SinkExt, StreamExt},
     log::*,
     parking_lot::Mutex,
-    std::{
-        collections::HashMap,
-        sync::{mpsc, Arc},
-    },
+    std::{collections::HashMap, sync::Arc},
 };
 
 pub struct PersistServer {
@@ -60,8 +57,8 @@ impl PersistServer {
             move |mut stream: DataPersistenceRequestStream| {
                 let mut fetchers = fetchers.clone();
                 fasync::Task::spawn(async move {
-                    while let Ok(Some(DataPersistenceRequest::Persist { tag, responder, .. })) =
-                        stream.try_next().await
+                    while let Some(Ok(DataPersistenceRequest::Persist { tag, responder, .. })) =
+                        stream.next().await
                     {
                         match fetchers.get_mut(&tag) {
                             None => {
@@ -69,7 +66,7 @@ impl PersistServer {
                                 let _ = responder.send(PersistResult::BadName);
                             }
                             Some(fetcher) => {
-                                match fetcher.queue_fetch() {
+                                match fetcher.queue_fetch().await {
                                     Ok(_) => {
                                         responder.send(PersistResult::Queued).unwrap_or_else(|err| warn!("Failed to notify client that work was queued: {}", err));
                                     }
@@ -93,7 +90,7 @@ impl PersistServer {
 #[derive(Clone)]
 struct Fetcher {
     state: Arc<Mutex<FetchState>>,
-    invoke_fetch: mpsc::SyncSender<()>,
+    invoke_fetch: mpsc::Sender<()>,
     backoff: zx::Duration,
     service_name: String,
     tag: String,
@@ -108,20 +105,22 @@ impl Fetcher {
     ) -> Fetcher {
         // To ensure we only do one fetch-and-write at a time, put it in a task
         // triggered by a stream.
-        let (invoke_fetch, receiver) = mpsc::sync_channel(0);
+        let (invoke_fetch, mut receiver) = mpsc::channel::<()>(0);
         let tag_copy = tag.to_string();
         let service_name_copy = service_name.to_string();
         fasync::Task::spawn(async move {
             loop {
-                if let Err(_) = receiver.recv() {
+                if let Some(_) = receiver.next().await {
+                    source.fetch().await.ok().map(|data| {
+                        file_handler::write(&service_name_copy, &tag_copy, &data);
+                    });
+                } else {
                     break;
                 }
-                source.fetch().await.ok().map(|data| {
-                    file_handler::write(&service_name_copy, &tag_copy, &data);
-                });
             }
         })
         .detach();
+
         let fetcher = Fetcher {
             invoke_fetch,
             backoff,
@@ -132,35 +131,48 @@ impl Fetcher {
         fetcher
     }
 
-    fn queue_fetch(&mut self) -> Result<(), Error> {
-        let mut state = self.state.lock();
-        match *state {
+    async fn queue_fetch(&mut self) -> Result<(), Error> {
+        let queue_task: Option<zx::Time> = {
+            let mut state = self.state.lock();
+            if let FetchState::LastFetched(x) = *state {
+                let last_fetched = x;
+                *state = FetchState::Pending;
+                Some(last_fetched)
+            } else {
+                None
+            }
+        };
+
+        match queue_task {
             // If we're already scheduled to fetch, we don't have to do anything.
-            FetchState::Pending => {
+            None => {
                 info!("Fetch requested for {} but is already queued till backoff.", self.tag);
                 Ok(())
             }
-            FetchState::LastFetched(last_fetched) => {
+            Some(last_fetched) => {
                 let now = fuchsia_zircon::Time::get_monotonic();
                 let earliest_fetch_allowed_time = last_fetched + self.backoff;
-                // time_until_fetch_allowed will be negative if already allowed.
-                let time_until_fetch_allowed = earliest_fetch_allowed_time - now;
-                if time_until_fetch_allowed.into_nanos() <= 0 {
-                    self.invoke_fetch.send(())?;
-                    *state = FetchState::LastFetched(now);
+
+                if earliest_fetch_allowed_time < now {
+                    self.invoke_fetch.send(()).await?;
+                    *self.state.lock() = FetchState::LastFetched(now);
                     Ok(())
                 } else {
-                    *state = FetchState::Pending;
+                    *self.state.lock() = FetchState::Pending;
                     // Clone a bunch of self's attributes so we dont pull it into the async task.
                     let state_for_async_task = self.state.clone();
-                    let invoker_for_async_task = self.invoke_fetch.clone();
+                    let mut invoker_for_async_task = self.invoke_fetch.clone();
                     let service_name_for_async_task = self.service_name.clone();
+
+                    // Calculate only if we know earliest time allowed is greater than now to avoid overflows.
+                    let time_until_fetch_allowed = earliest_fetch_allowed_time - now;
+
                     fasync::Task::spawn(async move {
                         let mut periodic_timer =
                             fasync::Interval::new(zx::Duration::from_nanos(time_until_fetch_allowed.into_nanos() as i64,));
 
                         if let Some(()) = periodic_timer.next().await {
-                            if let Ok(_) = invoker_for_async_task.send(()) {
+                            if let Ok(_) = invoker_for_async_task.send(()).await {
                                 // use earliest_fetch_allowed_time instead of now() because we want to fetch
                                 // every N seconds without penalty for the time it took to get here.
                                 *state_for_async_task.lock() =

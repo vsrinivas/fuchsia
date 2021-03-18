@@ -18,7 +18,7 @@ use {
     fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObj},
     fuchsia_inspect::component,
-    fuchsia_zircon::DurationNum,
+    fuchsia_zircon::Duration,
     futures::StreamExt,
     log::*,
     persist_server::PersistServer,
@@ -31,7 +31,12 @@ pub const PERSIST_NODE_NAME: &str = "persist";
 /// Command line args
 #[derive(FromArgs, Debug, PartialEq)]
 #[argh(subcommand, name = "elephant")]
-pub struct CommandLine {}
+pub struct CommandLine {
+    /// how long to wait before we start offering persistence
+    /// functionality.
+    #[argh(option)]
+    startup_delay_seconds: i64,
+}
 
 // on_error logs any errors from `value` and then returns a Result.
 // value must return a Result; error_message must contain one {} to put the error in.
@@ -45,16 +50,21 @@ macro_rules! on_error {
     };
 }
 
-pub async fn main() -> Result<(), Error> {
+pub async fn main(args: CommandLine) -> Result<(), Error> {
     let config = on_error!(config::load_configuration_files(), "Error loading configs: {}")?;
 
-    // Before doing anything else, wait 2 minutes for the /cache directory to stabilize.
-    fasync::Timer::new(fasync::Time::after(2_i64.minutes())).await;
+    let startup_delay_duration = Duration::from_seconds(args.startup_delay_seconds);
+
+    // Before doing anything else, wait the arg-provided seconds for the /cache directory to stabilize.
+    fasync::Timer::new(fasync::Time::after(startup_delay_duration)).await;
 
     file_handler::shuffle_at_boot();
 
-    info!("About to start servers");
     let mut fs = ServiceFs::new();
+
+    // Add a persistence fidl service for each service defined in the config files.
+    spawn_persist_services(config, &mut fs)?;
+    fs.take_and_serve_directory_handle()?;
 
     // Start serving previous boot data
     let inspector = component::inspector();
@@ -67,9 +77,6 @@ pub async fn main() -> Result<(), Error> {
             )
         })
     });
-
-    // Add a persistence fidl service for each service defined in the config files.
-    spawn_persist_services(config, &mut fs)?;
 
     Ok(fs.collect::<()>().await)
 }

@@ -66,6 +66,16 @@ fuchsia_component("elephant-component") {
   manifest = "meta/elephant.cml"
 }
 
+fuchsia_component("elephant-v1") {
+  component_name = "elephant"
+  manifest = "meta/elephant.cmx"
+  deps = [
+    ":lib",
+    "//src/diagnostics/config/elephant:elephant",
+    "//src/diagnostics/launcher:bin",
+  ]
+}
+
 fuchsia_package("elephant") {
   deps = [ ":elephant-component" ]
 }
@@ -79,6 +89,6 @@ group("tests") {
   testonly = true
   deps = [
     ":elephant-tests",
-    # TODO(next CL):  "//src/diagnostics/elephant/integration",
+    "tests:elephant-integration-tests",
   ]
 }

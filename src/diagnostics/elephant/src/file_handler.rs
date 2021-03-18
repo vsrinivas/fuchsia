@@ -5,7 +5,7 @@
 use {
     anyhow::{format_err, Error},
     glob::glob,
-    log::warn,
+    log::{info, warn},
     std::fs,
 };
 
@@ -112,8 +112,8 @@ pub fn remembered_data() -> Result<Vec<(String, Vec<(String, String)>)>, Error> 
     }
 
     if tags_retrieved == 0 {
-        Err(format_err!("No persisted data was successfully retrieved."))
-    } else {
-        Ok(service_entries)
+        info!("No persisted data was successfully retrieved.");
     }
+
+    Ok(service_entries)
 }

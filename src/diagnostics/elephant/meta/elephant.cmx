@@ -1,0 +1,22 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "elephant",
+            "--startup-delay-seconds",
+            "0"
+        ],
+        "binary": "bin/launcher"
+    },
+    "sandbox": {
+        "features": [
+            "config-data"
+        ],
+        "services": [
+            "fuchsia.diagnostics.FeedbackArchiveAccessor",
+            "fuchsia.logger.Log"
+        ]
+    }
+}

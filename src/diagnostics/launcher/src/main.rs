@@ -41,7 +41,7 @@ async fn main() -> Result<(), Error> {
     let args = v2_argh_wrapper::load_command_line::<LauncherArgs>()?;
     match args.program {
         ChildArgs::Detect(args) => detect::main(args).await,
-        ChildArgs::Elephant(_args) => elephant::main().await,
+        ChildArgs::Elephant(args) => elephant::main(args).await,
         ChildArgs::LogStats(_args) => log_stats::main().await,
         ChildArgs::Lapis(args) => sampler::main(args).await,
     }
