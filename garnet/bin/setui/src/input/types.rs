@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::base::SettingInfo;
+use crate::handler::device_storage::DeviceStorageConvertible;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::input_device_configuration::InputConfiguration;
 
@@ -15,6 +16,7 @@ use fidl_fuchsia_settings::{
     ToggleStateFlags as FidlToggleFlags,
 };
 use serde::{Deserialize, Serialize};
+use std::borrow::Cow;
 use std::collections::{HashMap, HashSet};
 use std::fmt;
 
@@ -41,6 +43,14 @@ impl From<SettingInfo> for FidlInputSettings {
 #[derive(PartialEq, Debug, Clone)]
 pub struct InputInfo {
     pub input_device_state: InputState,
+}
+
+impl DeviceStorageConvertible for InputInfo {
+    type Storable = InputInfoSources;
+
+    fn get_storable(&self) -> Cow<'_, Self::Storable> {
+        Cow::Owned(InputInfoSources { input_device_state: self.input_device_state.clone() })
+    }
 }
 
 #[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]

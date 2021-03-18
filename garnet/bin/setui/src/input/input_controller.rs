@@ -66,7 +66,13 @@ impl From<InputInfoSourcesV2> for InputInfoSources {
 
 impl Into<SettingInfo> for InputInfoSources {
     fn into(self) -> SettingInfo {
-        SettingInfo::Input(InputInfo { input_device_state: self.input_device_state })
+        SettingInfo::Input(self.into())
+    }
+}
+
+impl Into<InputInfo> for InputInfoSources {
+    fn into(self) -> InputInfo {
+        InputInfo { input_device_state: self.input_device_state }
     }
 }
 

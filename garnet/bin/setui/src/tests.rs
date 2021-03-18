@@ -1,7 +1,6 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-#![macro_use]
 
 /// Macro for generating multiple tests from a common test function
 /// # Example
@@ -15,11 +14,20 @@
 ///     assert_eq!(prop2.chars().len(), 3);
 /// }
 /// ```
+#[macro_export]
 macro_rules! async_property_test {
-    ($test_func:ident => [$($test_name:ident($($args:expr),+$(,)?)),+$(,)?]) => {
+    (
+        $test_func:ident => [$( // Test function to call, followed by list of test cases.
+            $(#[$attr:meta])* // Optional attributes.
+            $test_name:ident( // Test case name.
+                $($args:expr),+$(,)? // Arguments for test case.
+            )
+        ),+$(,)?]
+    ) => {
         $(paste::paste!{
             #[allow(non_snake_case)]
             #[fuchsia_async::run_until_stalled(test)]
+            $(#[$attr])*
             async fn [<$test_func ___ $test_name>]() {
                 $test_func($($args,)+).await;
             }
@@ -62,6 +70,7 @@ mod service_configuration_tests;
 mod setting_handler_tests;
 mod setting_proxy_tests;
 mod setup_tests;
+mod storage_agent_tests;
 mod stream_volume_tests;
 mod test_failure_utils;
 mod volume_change_earcons_tests;

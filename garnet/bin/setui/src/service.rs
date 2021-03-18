@@ -32,6 +32,7 @@ use crate::message::base::MessengerType;
 use crate::message_hub_definition;
 use crate::monitor;
 use crate::policy::{self, PolicyType};
+use crate::storage;
 
 message_hub_definition!(Payload, Address, Role);
 
@@ -45,6 +46,7 @@ pub enum Address {
     Handler(SettingType),
     PolicyHandler(PolicyType),
     EventSource(event::Address),
+    Storage,
 }
 
 /// The types of data that can be sent through the service [`MessageHub`]. This
@@ -69,6 +71,8 @@ pub enum Payload {
     Event(event::Payload),
     /// Monitor payloads contain commands and information surrounding resource usage.
     Monitor(monitor::Payload),
+    /// Storage payloads contain read and write requests to storage and their responses.
+    Storage(storage::Payload),
 }
 
 /// A trait implemented by payloads for extracting the payload and associated

@@ -113,7 +113,7 @@ generate_inspect_with_info! {
 
 /// This struct is reserved for testing purposes. Some tests need to verify data changes, bool value
 /// can be used for this purpose.
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 #[cfg(test)]
 pub struct UnknownInfo(pub bool);
 
@@ -160,10 +160,22 @@ pub fn get_all_setting_types() -> HashSet<SettingType> {
     .collect();
 }
 
-// This trait implementation is reserved for testing purposes.
 #[cfg(test)]
-impl Into<SettingInfo> for UnknownInfo {
-    fn into(self) -> SettingInfo {
-        SettingInfo::Unknown(self)
+mod testing {
+    use super::{SettingInfo, UnknownInfo};
+    use crate::handler::device_storage::DeviceStorageCompatible;
+
+    impl DeviceStorageCompatible for UnknownInfo {
+        const KEY: &'static str = "unknown_info";
+
+        fn default_value() -> Self {
+            Self(false)
+        }
+    }
+
+    impl Into<SettingInfo> for UnknownInfo {
+        fn into(self) -> SettingInfo {
+            SettingInfo::Unknown(self)
+        }
     }
 }

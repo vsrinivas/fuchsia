@@ -98,6 +98,7 @@ pub mod handler;
 pub mod message;
 pub mod monitor;
 pub mod service_context;
+pub mod storage;
 
 const DEFAULT_SETTING_PROXY_MAX_ATTEMPTS: u64 = 3;
 const DEFAULT_SETTING_PROXY_RESPONSE_TIMEOUT_MS: i64 = 10_000;
