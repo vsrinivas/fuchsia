@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/client/filter.h"
 #include "src/developer/debug/zxdb/client/remote_api.h"
 #include "src/developer/debug/zxdb/client/setting_schema_definition.h"
+#include "src/developer/debug/zxdb/client/symbol_server.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "tools/fidlcat/lib/decode_options.h"
@@ -254,6 +255,32 @@ void InterceptionWorkflow::Initialize(
     bool success = loop_->Init(&error_message);
     FX_CHECK(success) << error_message;
   }
+}
+
+void InterceptionWorkflow::AuthenticateServer(zxdb::SymbolServer* server) {
+  std::string key;
+  std::cout << "To authenticate " << server->name()
+            << ", please supply an authentication token. You can retrieve a token from:\n"
+            << server->AuthInfo() << '\n'
+            << "Enter the server authentication key: ";
+  std::cin >> key;
+
+  // Do the authentication.
+  ++remaining_authentications_;
+  server->Authenticate(
+      key, [this](const zxdb::Err& err) {
+        if (err.has_error()) {
+          FX_LOGS(ERROR) << "Server authentication failed: " << err.msg();
+          server_authentication_error_ = true;
+        }
+        if (--remaining_authentications_ == 0) {
+          if (server_authentication_error_) {
+            Shutdown();
+          } else {
+            FX_LOGS(INFO) << "Authentication successful";
+          }
+        }
+      });
 }
 
 void InterceptionWorkflow::Connect(const std::string& host, uint16_t port,

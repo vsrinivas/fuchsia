@@ -132,8 +132,6 @@ int ConsoleMain(int argc, const char* argv[]) {
   DecodeOptions decode_options;
   DisplayOptions display_options;
   std::vector<std::string> params;
-  int remaining_servers = 0;
-  bool server_error = false;
   std::string error =
       ParseCommandLine(argc, argv, &options, &decode_options, &display_options, &params);
   if (!error.empty()) {
@@ -209,36 +207,16 @@ int ConsoleMain(int argc, const char* argv[]) {
         // The first time we connect to a server, we have to provide an authentication.
         // After that, the key is cached.
         if (server->state() == zxdb::SymbolServer::State::kAuth) {
-          std::string key;
-          std::cout << "To authenticate " << server->name()
-                    << ", please supply an authentication token. You can retrieve a token from:\n"
-                    << server->AuthInfo() << '\n'
-                    << "Enter the server authentication key: ";
-          std::cin >> key;
-
-          // Do the authentication.
-          ++remaining_servers;
-          server->Authenticate(
-              key, [&workflow, &remaining_servers, &server_error](const zxdb::Err& err) {
-                if (err.has_error()) {
-                  FX_LOGS(ERROR) << "Server authentication failed: " << err.msg();
-                  server_error = true;
-                }
-                if (--remaining_servers == 0) {
-                  if (server_error) {
-                    workflow.Shutdown();
-                  } else {
-                    FX_LOGS(INFO) << "Authentication successful";
-                  }
-                }
-              });
+          workflow.AuthenticateServer(server);
         }
         // We want to know when all the symbol servers are ready. We can only start
         //  monitoring when all the servers are ready.
         server->set_state_change_callback(
             [&workflow, &options, &params](zxdb::SymbolServer* server,
                                            zxdb::SymbolServer::State state) {
-              if (state == zxdb::SymbolServer::State::kUnreachable) {
+              if (state == zxdb::SymbolServer::State::kAuth) {
+                workflow.AuthenticateServer(server);
+              } else if (state == zxdb::SymbolServer::State::kUnreachable) {
                 server->set_state_change_callback(nullptr);
                 FX_LOGS(ERROR) << "Can't connect to symbol server";
               } else if (state == zxdb::SymbolServer::State::kReady) {
