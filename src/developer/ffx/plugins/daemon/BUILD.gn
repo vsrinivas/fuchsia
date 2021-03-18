@@ -10,6 +10,7 @@ ffx_plugin("ffx_daemon_plugin") {
   plugin_deps = [
     "crash:ffx_crash",
     "echo:ffx_echo",
+    "hang:ffx_hang",
     "log:ffx_daemon_log",
     "start:ffx_daemon_start",
     "stop:ffx_daemon_stop",

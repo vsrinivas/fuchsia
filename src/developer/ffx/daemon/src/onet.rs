@@ -166,8 +166,7 @@ impl HostPipeConnection {
             let target = target.upgrade().ok_or("parent Arc<> lost. exiting".to_owned())?;
             let addrs = target.addrs().await;
             let port = target.ssh_port().await;
-            let mut cmd =
-                cmd_func(addrs, port).await.map_err(|e| e.to_string())?;
+            let mut cmd = cmd_func(addrs, port).await.map_err(|e| e.to_string())?;
 
             // Attempts to run the command. If it exits successfully (disconnect due to peer
             // dropping) then will set the target to disconnected state. If

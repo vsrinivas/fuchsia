@@ -330,6 +330,14 @@ impl Daemon {
                 responder.send(value.as_ref()).context("error sending response")?;
                 log::info!("echo response sent successfully");
             }
+            // Hang intends to block the reactor indefinitely, however
+            // that's a little tricky to do exactly. This approximation
+            // is strong enough for right now, though it may be awoken
+            // again periodically on timers, depending on implementation
+            // details of the underlying reactor.
+            DaemonRequest::Hang { .. } => loop {
+                std::thread::park()
+            },
             DaemonRequest::ListTargets { value, responder } => {
                 log::info!("Received list target request for '{:?}'", value);
                 responder
