@@ -207,6 +207,9 @@ class VmCowPages final
 
   void DumpLocked(uint depth, bool verbose) const TA_REQ(lock_);
   bool DebugValidatePageSplitsLocked() const TA_REQ(lock_);
+  // Calls DebugValidatePageSplitsLocked on this and every parent in the chain, returning true if
+  // all return true.
+  bool DebugValidatePageSplitsHierarchyLocked() const TA_REQ(lock_);
 
   // Different operations that RangeChangeUpdate* can perform against any VmMappings that are found.
   enum class RangeChangeOp {
