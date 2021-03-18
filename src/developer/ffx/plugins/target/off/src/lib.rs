@@ -3,14 +3,30 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::Result, ffx_core::ffx_plugin, ffx_off_args::OffCommand,
-    fidl_fuchsia_hardware_power_statecontrol as fpower,
+    anyhow::{bail, Result},
+    ffx_core::ffx_plugin,
+    ffx_off_args::OffCommand,
+    fidl::Error as FidlError,
+    fidl_fuchsia_hardware_power_statecontrol::AdminProxy,
 };
 
-#[ffx_plugin(fpower::AdminProxy = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin")]
-pub async fn off(admin_proxy: fpower::AdminProxy, _cmd: OffCommand) -> Result<()> {
-    admin_proxy.poweroff().await?.unwrap();
-    Ok(())
+#[ffx_plugin(AdminProxy = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin")]
+pub async fn off(admin_proxy: AdminProxy, _cmd: OffCommand) -> Result<()> {
+    let res = admin_proxy.poweroff().await;
+    match res {
+        Ok(Ok(_)) => Ok(()),
+        Ok(Err(e)) => bail!(e),
+        Err(e) => match e {
+            FidlError::ClientChannelClosed { .. } => {
+                log::info!(
+                    "Off returned a client channel closed - assuming power down succeeded: {:?}",
+                    e
+                );
+                Ok(())
+            }
+            _ => bail!(e),
+        },
+    }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -20,7 +36,7 @@ pub async fn off(admin_proxy: fpower::AdminProxy, _cmd: OffCommand) -> Result<()
 mod test {
     use {super::*, fidl_fuchsia_hardware_power_statecontrol::AdminRequest};
 
-    fn setup_fake_admin_server() -> fpower::AdminProxy {
+    fn setup_fake_admin_server() -> AdminProxy {
         setup_fake_admin_proxy(|req| match req {
             AdminRequest::Poweroff { responder } => {
                 responder.send(&mut Ok(())).unwrap();
