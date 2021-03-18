@@ -54,3 +54,16 @@ printf '// Copyright 2021 The Fuchsia Authors. All rights reserved.
 package imports
 
 import (\n%s\n)' "$IMPORTS_STR" | $GOFMT -s >imports.go
+
+# Move jiri-managed repositories out of the module.
+TMP=$(mktemp -d)
+git check-ignore * | xargs -I % mv % "$TMP"/%
+function cleanup() {
+  mv "$TMP"/* .
+}
+trap cleanup EXIT
+
+$GO get -u gvisor.dev/gvisor@go
+$GO get -u
+$GO mod tidy
+$GO mod vendor
