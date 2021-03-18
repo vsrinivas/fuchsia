@@ -15,7 +15,10 @@ use {
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon::{self as zx, HandleBased},
     futures::{channel::oneshot, prelude::*, stream::FuturesUnordered},
-    std::{sync::Arc, time::Duration},
+    std::{
+        sync::Arc,
+        time::{Duration, Instant},
+    },
 };
 
 mod config;
@@ -58,7 +61,7 @@ async fn main_inner_async() -> Result<(), Error> {
     let health_node_ref = &mut health_node;
 
     let config = Config::load_from_config_data_or_default();
-    let reboot_timer = fasync::Timer::new(MINIMUM_REBOOT_WAIT);
+    let reboot_deadline = Instant::now() + MINIMUM_REBOOT_WAIT;
 
     let paver = connect_to_service::<PaverMarker>().context("while connecting to paver")?;
     let (boot_manager, boot_manager_server_end) =
@@ -97,13 +100,14 @@ async fn main_inner_async() -> Result<(), Error> {
             .await
             {
                 let msg = format!(
-                    "Failed to put metadata in happy state. Rebooting given error {:#} and config {:?}",
+                    "Failed to put metadata in happy state. Rebooting at {:?} given error {:#} and {:?}",
+                    reboot_deadline,
                     anyhow!(e),
                     config
                 );
                 health_node_ref.set_unhealthy(&msg);
                 fx_log_warn!("{}", msg);
-                wait_and_reboot(&reboot_proxy, reboot_timer).await;
+                wait_and_reboot(fasync::Timer::new(reboot_deadline), &reboot_proxy).await;
             } else {
                 fx_log_info!("metadata is in happy state!");
                 health_node_ref.set_ok();

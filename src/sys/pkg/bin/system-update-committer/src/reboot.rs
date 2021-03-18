@@ -12,8 +12,8 @@ use {
     fuchsia_zircon::Status,
 };
 
-/// Waits for the timer to complete and then reboots the system, logging errors instead of failing.
-pub(super) async fn wait_and_reboot(proxy: &PowerStateControlProxy, timer: fasync::Timer) {
+/// Waits for a timer to fire and then reboots the system, logging errors instead of failing.
+pub(super) async fn wait_and_reboot(timer: fasync::Timer, proxy: &PowerStateControlProxy) {
     let () = timer.await;
     if let Err(e) = async move {
         proxy
@@ -55,7 +55,7 @@ mod tests {
         // Prepare futures to call reboot and receive the reboot request.
         let timer_duration = 5;
         let reboot_fut =
-            wait_and_reboot(&proxy, fasync::Timer::new(Duration::from_secs(timer_duration)));
+            wait_and_reboot(fasync::Timer::new(Duration::from_secs(timer_duration)), &proxy);
         pin_mut!(reboot_fut);
         pin_mut!(recv);
 

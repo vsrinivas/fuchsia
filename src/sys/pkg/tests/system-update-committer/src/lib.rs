@@ -380,10 +380,7 @@ async fn paver_failure_causes_reboot() {
         root: {
             "verification": {},
             "fuchsia.inspect.Health": {
-                "message": "Failed to put metadata in happy state. Rebooting given error while \
-                    interfacing with policy: the policy engine failed to build: BootManager \
-                    returned non-ok status while calling query_current_configuration: NOT_FOUND \
-                    and config Config { blobfs: Ignore }",
+                "message": AnyProperty,
                 "start_timestamp_nanos": AnyProperty,
                 "status": "UNHEALTHY"
             }
@@ -432,9 +429,7 @@ async fn verification_failure_causes_reboot() {
                 }
             },
             "fuchsia.inspect.Health": {
-                "message": "Failed to put metadata in happy state. Rebooting given error while \
-                    doing health verification: the blobfs verification failed: the verification \
-                    failed: Internal and config Config { blobfs: RebootOnFailure }",
+                "message": AnyProperty,
                 "start_timestamp_nanos": AnyProperty,
                 "status": "UNHEALTHY"
             }
