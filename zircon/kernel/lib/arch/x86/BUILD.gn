@@ -7,40 +7,34 @@
 import("//build/zircon/migrated_targets.gni")
 import("//zircon/system/ulib/hwreg/hwreg_asm_header.gni")
 
-# In the Zircon build, default_toolchain is used for the hwreg_asm_header()
-# generation action, but it cannot instantiate a compiling target like this.
-# So only define the library target in a non-default toolchain, or in the other
-# build where everything is different.
-if ("//zircon/" != "//" || current_toolchain != default_toolchain) {
-  zx_library("x86") {
-    kernel = true
-    host = true
-    static = true
-    visibility = [ "../*" ]
-    sources = []
-    public_deps = [
-      # <lib/arch/x86/cpuid.h> has #include <hwreg/bitfields.h>.
-      "//zircon/system/ulib/hwreg:headers",
+zx_library("x86") {
+  kernel = true
+  host = true
+  static = true
+  visibility = [ "../*" ]
+  sources = []
+  public_deps = [
+    # <lib/arch/x86/cpuid.h> has #include <hwreg/bitfields.h>.
+    "//zircon/system/ulib/hwreg:headers",
+  ]
+  deps = [ "//zircon/system/ulib/hwreg" ]
+
+  include_dirs = [ "../include" ]
+
+  public_deps += [ ":gen-cpuid-asm" ]
+  if (!is_host) {
+    sources = [
+      "boot-cpuid.S",
+      "boot-cpuid.cc",
     ]
-    deps = [ "//zircon/system/ulib/hwreg" ]
-
-    include_dirs = [ "../include" ]
-
-    public_deps += [ ":gen-cpuid-asm" ]
-    if (!is_host) {
-      sources = [
-        "boot-cpuid.S",
-        "boot-cpuid.cc",
-      ]
-      if (toolchain.environment != "kernel.phys32") {
-        sources += [ "descriptor-regs.S" ]
-      }
+    if (toolchain.environment != "kernel.phys32") {
+      sources += [ "descriptor-regs.S" ]
     }
-
-    sdk = "source"
-    sdk_headers = [ "lib/arch/intrin.h" ]
-    sdk_migrated = true
   }
+
+  sdk = "source"
+  sdk_headers = [ "lib/arch/intrin.h" ]
+  sdk_migrated = true
 }
 
 hwreg_asm_header("gen-cpuid-asm") {
