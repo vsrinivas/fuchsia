@@ -38,14 +38,10 @@ struct ImageMetadata {
   // account during rendering.
   bool has_transparency = false;
 
-  // Images used as render targets require different usage flags and layouts from images
-  // used as textures - so this must be set set to true for render targets.
-  bool is_render_target = false;
-
   bool operator==(const ImageMetadata& meta) const {
     return collection_id == meta.collection_id && vmo_index == meta.vmo_index &&
            width == meta.width && height == meta.height &&
-           has_transparency == meta.has_transparency && is_render_target == meta.is_render_target;
+           has_transparency == meta.has_transparency;
   }
 };
 

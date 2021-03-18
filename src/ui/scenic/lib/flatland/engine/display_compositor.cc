@@ -435,9 +435,7 @@ allocation::GlobalBufferCollectionId DisplayCompositor::AddDisplay(
                                         .vmo_index = i,
                                         .width = kWidth,
                                         .height = kHeight,
-                                        .has_transparency = false,
-                                        .is_render_target = true};
-
+                                        .has_transparency = false};
     display_engine_data.frame_event_datas.push_back(NewFrameEventData());
     display_engine_data.targets.push_back(target);
     bool res = ImportBufferImage(target);

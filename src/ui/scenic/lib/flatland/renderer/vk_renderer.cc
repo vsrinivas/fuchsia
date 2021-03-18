@@ -61,11 +61,10 @@ VkRenderer::VkRenderer(escher::EscherWeakPtr escher)
 VkRenderer::~VkRenderer() {
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
-  collections_.clear();
-  for (auto& [_, collection] : vk_collections_) {
-    vk_device.destroyBufferCollectionFUCHSIA(collection, nullptr, vk_loader);
+  for (auto& [_, collection] : collections_) {
+    vk_device.destroyBufferCollectionFUCHSIA(collection.vk_collection, nullptr, vk_loader);
   }
-  vk_collections_.clear();
+  collections_.clear();
 }
 
 bool VkRenderer::ImportBufferCollection(
@@ -81,18 +80,18 @@ void VkRenderer::ReleaseBufferCollection(GlobalBufferCollectionId collection_id)
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(lock_);
 
-  auto vk_itr = vk_collections_.find(collection_id);
+  auto collection_itr = collections_.find(collection_id);
 
   // If the collection is not in the map, then there's nothing to do.
-  if (vk_itr == vk_collections_.end()) {
+  if (collection_itr == collections_.end()) {
     FX_LOGS(WARNING) << "Attempting to release a non-existent buffer collection.";
     return;
   }
 
   auto vk_device = escher_->vk_device();
   auto vk_loader = escher_->device()->dispatch_loader();
-  vk_device.destroyBufferCollectionFUCHSIA(vk_itr->second, nullptr, vk_loader);
-  vk_collections_.erase(collection_id);
+  vk_device.destroyBufferCollectionFUCHSIA(collection_itr->second.vk_collection, nullptr,
+                                           vk_loader);
   collections_.erase(collection_id);
 }
 
@@ -170,31 +169,50 @@ bool VkRenderer::RegisterCollection(
     FX_DCHECK(vk_result == vk::Result::eSuccess);
   }
 
-  // Multiple threads may be attempting to read/write from |vk_collections_| and
-  // |collections_| so we lock this function here.
+  // Multiple threads may be attempting to read/write from |collections_|
+  // so we lock this function here.
   // TODO(fxbug.dev/44335): Convert this to a lock-free structure.
   std::unique_lock<std::mutex> lock(lock_);
-  vk_collections_[collection_id] = std::move(collection);
-  collections_[collection_id] = std::move(buffer_collection);
+  collections_[collection_id] = {
+      .collection = std::move(buffer_collection),
+      .vk_collection = std::move(collection),
+      .is_render_target = (usage == escher::RectangleCompositor::kRenderTargetUsageFlags)};
   return true;
 }
 
-bool VkRenderer::ImportBufferImage(const ImageMetadata& metadata) {
+bool VkRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
   std::unique_lock<std::mutex> lock(lock_);
+
+  // The metadata can't have an invalid collection id.
+  if (metadata.collection_id == allocation::kInvalidId) {
+    FX_LOGS(WARNING) << "Image has invalid collection id.";
+    return false;
+  }
+
+  // The metadata can't have an invalid identifier.
+  if (metadata.identifier == allocation::kInvalidImageId) {
+    FX_LOGS(WARNING) << "Image has invalid identifier.";
+    return false;
+  }
+
+  // Check we have valid dimensions.
+  if (metadata.width == 0 || metadata.height == 0) {
+    FX_LOGS(WARNING) << "Image has invalid dimensions: "
+                     << "(" << metadata.width << ", " << metadata.height << ").";
+    return false;
+  }
 
   // Make sure that the collection that will back this image's memory
   // is actually registered with the renderer.
-  auto vk_itr = vk_collections_.find(metadata.collection_id);
-  if (vk_itr == vk_collections_.end()) {
+  auto collection_itr = collections_.find(metadata.collection_id);
+  if (collection_itr == collections_.end()) {
     FX_LOGS(WARNING) << "Collection with id " << metadata.collection_id << " does not exist.";
     return false;
   }
 
   // Check to see if the buffers are allocated and return false if not.
-  auto sysmem_itr = collections_.find(metadata.collection_id);
-  FX_DCHECK(sysmem_itr->second);
   zx_status_t allocation_status = ZX_OK;
-  zx_status_t status = sysmem_itr->second->CheckBuffersAllocated(&allocation_status);
+  zx_status_t status = collection_itr->second.collection->CheckBuffersAllocated(&allocation_status);
   if (status != ZX_OK || allocation_status != ZX_OK) {
     FX_LOGS(WARNING) << "Collection was not allocated.";
     return false;
@@ -207,11 +225,11 @@ bool VkRenderer::ImportBufferImage(const ImageMetadata& metadata) {
     return false;
   }
 
-  if (metadata.is_render_target) {
-    auto image = ExtractImage(metadata, vk_itr->second,
+  if (collection_itr->second.is_render_target) {
+    auto image = ExtractImage(metadata, collection_itr->second.vk_collection,
                               escher::RectangleCompositor::kRenderTargetUsageFlags);
     if (!image) {
-      FX_LOGS(ERROR) << "Could not create image.";
+      FX_LOGS(ERROR) << "Could not extract render target.";
       return false;
     }
 
@@ -220,9 +238,9 @@ bool VkRenderer::ImportBufferImage(const ImageMetadata& metadata) {
     depth_target_map_[metadata.identifier] = CreateDepthTexture(escher_.get(), image);
     pending_render_targets_.insert(metadata.identifier);
   } else {
-    auto texture = ExtractTexture(metadata, vk_itr->second);
+    auto texture = ExtractTexture(metadata, collection_itr->second.vk_collection);
     if (!texture) {
-      FX_LOGS(ERROR) << "Could not extract render target.";
+      FX_LOGS(ERROR) << "Could not extract client texture image.";
       return false;
     }
     texture_map_[metadata.identifier] = texture;
@@ -231,7 +249,7 @@ bool VkRenderer::ImportBufferImage(const ImageMetadata& metadata) {
   return true;
 }
 
-void VkRenderer::ReleaseBufferImage(GlobalImageId image_id) {
+void VkRenderer::ReleaseBufferImage(allocation::GlobalImageId image_id) {
   std::unique_lock<std::mutex> lock(lock_);
   if (texture_map_.find(image_id) != texture_map_.end()) {
     texture_map_.erase(image_id);
@@ -241,7 +259,7 @@ void VkRenderer::ReleaseBufferImage(GlobalImageId image_id) {
   }
 }
 
-escher::ImagePtr VkRenderer::ExtractImage(const ImageMetadata& metadata,
+escher::ImagePtr VkRenderer::ExtractImage(const allocation::ImageMetadata& metadata,
                                           vk::BufferCollectionFUCHSIA collection,
                                           vk::ImageUsageFlags usage) {
   TRACE_DURATION("flatland", "VkRenderer::ExtractImage");
@@ -254,7 +272,7 @@ escher::ImagePtr VkRenderer::ExtractImage(const ImageMetadata& metadata,
 
   // Check the provided index against actually allocated number of buffers.
   if (properties.bufferCount <= metadata.vmo_index) {
-    FX_LOGS(ERROR) << "Specified vmo index is out of bounds: " << index;
+    FX_LOGS(ERROR) << "Specified vmo index is out of bounds: " << metadata.vmo_index;
     return nullptr;
   }
 
@@ -346,9 +364,14 @@ void VkRenderer::DeregisterRenderTargetCollection(GlobalBufferCollectionId colle
   ReleaseBufferCollection(collection_id);
 }
 
-escher::TexturePtr VkRenderer::ExtractTexture(const ImageMetadata& metadata,
+escher::TexturePtr VkRenderer::ExtractTexture(const allocation::ImageMetadata& metadata,
                                               vk::BufferCollectionFUCHSIA collection) {
   auto image = ExtractImage(metadata, collection, escher::RectangleCompositor::kTextureUsageFlags);
+  if (!image) {
+    FX_LOGS(ERROR) << "Image for texture was nullptr.";
+    return nullptr;
+  }
+
   escher::SamplerPtr sampler =
       escher::image_utils::IsYuvFormat(image->format())
           ? escher_->sampler_cache()->ObtainYuvSampler(image->format(), kDefaultFilter)

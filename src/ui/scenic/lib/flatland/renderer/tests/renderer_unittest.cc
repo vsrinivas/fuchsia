@@ -125,6 +125,46 @@ void BadTokenTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_al
   EXPECT_FALSE(result);
 }
 
+void BadImageInputTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* sysmem_allocator) {
+  const uint32_t kNumImages = 1;
+  auto tokens = SysmemTokens::Create(sysmem_allocator);
+
+  auto bcid = allocation::GenerateUniqueBufferCollectionId();
+  auto result =
+      renderer->RegisterRenderTargetCollection(bcid, sysmem_allocator, std::move(tokens.dup_token));
+  EXPECT_TRUE(result);
+
+  std::vector<uint64_t> additional_format_modifiers;
+  if (escher::VulkanIsSupported() && escher::test::GlobalEscherUsesVirtualGpu()) {
+    additional_format_modifiers.push_back(fuchsia::sysmem::FORMAT_MODIFIER_GOOGLE_GOLDFISH_OPTIMAL);
+  }
+  SetClientConstraintsAndWaitForAllocated(sysmem_allocator, std::move(tokens.local_token),
+                                          /* image_count */ kNumImages, /* width */ 64,
+                                          /* height */ 32, kNoneUsage, additional_format_modifiers);
+
+  // Using an invalid buffer collection id.
+  auto image_id = allocation::GenerateUniqueImageId();
+  EXPECT_FALSE(renderer->ImportBufferImage({.collection_id = allocation::kInvalidId,
+                                            .identifier = image_id,
+                                            .vmo_index = kNumImages,
+                                            .width = 1,
+                                            .height = 1}));
+
+  // Using an invalid image identifier.
+  EXPECT_FALSE(renderer->ImportBufferImage({.collection_id = bcid,
+                                            .identifier = allocation::kInvalidImageId,
+                                            .vmo_index = kNumImages,
+                                            .width = 1,
+                                            .height = 1}));
+
+  // VMO index is out of bounds.
+  EXPECT_FALSE(renderer->ImportBufferImage({.collection_id = bcid,
+                                            .identifier = image_id,
+                                            .vmo_index = kNumImages,
+                                            .width = 1,
+                                            .height = 1}));
+}
+
 // Test the ImportBufferImage() function. First call ImportBufferImage() without setting the client
 // constraints, which should return false, and then set the client constraints which
 // should cause it to return true.
@@ -203,8 +243,8 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
 
   auto texture_collection_id = allocation::GenerateUniqueBufferCollectionId();
   auto target_collection_id = allocation::GenerateUniqueBufferCollectionId();
-  auto result = renderer->RegisterRenderTargetCollection(texture_collection_id, sysmem_allocator,
-                                                         std::move(texture_tokens.dup_token));
+  auto result = renderer->ImportBufferCollection(texture_collection_id, sysmem_allocator,
+                                                 std::move(texture_tokens.dup_token));
   EXPECT_TRUE(result);
 
   result = renderer->RegisterRenderTargetCollection(target_collection_id, sysmem_allocator,
@@ -231,8 +271,7 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
                                  .identifier = allocation::GenerateUniqueImageId(),
                                  .vmo_index = 0,
                                  .width = kWidth,
-                                 .height = kHeight,
-                                 .is_render_target = true};
+                                 .height = kHeight};
   auto import_result = renderer->ImportBufferImage(render_target);
   EXPECT_TRUE(import_result);
 
@@ -241,8 +280,7 @@ void RenderImageAfterBufferCollectionReleasedTest(Renderer* renderer,
                          .identifier = allocation::GenerateUniqueImageId(),
                          .vmo_index = 0,
                          .width = kWidth,
-                         .height = kHeight,
-                         .is_render_target = false};
+                         .height = kHeight};
   import_result = renderer->ImportBufferImage(image);
   EXPECT_TRUE(import_result);
 
@@ -363,8 +401,7 @@ void AsyncEventSignalTest(Renderer* renderer, fuchsia::sysmem::Allocator_Sync* s
                                  .identifier = allocation::GenerateUniqueImageId(),
                                  .vmo_index = 0,
                                  .width = kWidth,
-                                 .height = kHeight,
-                                 .is_render_target = true};
+                                 .height = kHeight};
   auto target_import = renderer->ImportBufferImage(render_target);
   EXPECT_TRUE(target_import);
 
@@ -415,6 +452,11 @@ TEST_F(NullRendererTest, BadTokenTest) {
   BadTokenTest(&renderer, sysmem_allocator_.get());
 }
 
+TEST_F(NullRendererTest, BadImageInputTest) {
+  NullRenderer renderer;
+  BadImageInputTest(&renderer, sysmem_allocator_.get());
+}
+
 TEST_F(NullRendererTest, ImportImageTest) {
   NullRenderer renderer;
   ImportImageTest(&renderer, sysmem_allocator_.get());
@@ -463,6 +505,14 @@ VK_TEST_F(VulkanRendererTest, BadTokenTest) {
       env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
   VkRenderer renderer(unique_escher->GetWeakPtr());
   BadTokenTest(&renderer, sysmem_allocator_.get());
+}
+
+VK_TEST_F(VulkanRendererTest, BadImageInputTest) {
+  auto env = escher::test::EscherEnvironment::GetGlobalTestEnvironment();
+  auto unique_escher = std::make_unique<escher::Escher>(
+      env->GetVulkanDevice(), env->GetFilesystem(), /*gpu_allocator*/ nullptr);
+  VkRenderer renderer(unique_escher->GetWeakPtr());
+  BadImageInputTest(&renderer, sysmem_allocator_.get());
 }
 
 VK_TEST_F(VulkanRendererTest, ImportImageTest) {
@@ -586,14 +636,11 @@ VK_TEST_F(VulkanRendererTest, RenderTest) {
   const uint32_t kTargetHeight = 8;
 
   // Create the render_target image metadata.
-  ImageMetadata render_target = {
-      .collection_id = target_id,
-      .identifier = allocation::GenerateUniqueImageId(),
-      .vmo_index = 0,
-      .width = kTargetWidth,
-      .height = kTargetHeight,
-      .is_render_target = true,
-  };
+  ImageMetadata render_target = {.collection_id = target_id,
+                                 .identifier = allocation::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kTargetWidth,
+                                 .height = kTargetHeight};
 
   // Create the image meta data for the renderable.
   ImageMetadata renderable_texture = {.collection_id = collection_id,
@@ -746,14 +793,11 @@ VK_TEST_F(VulkanRendererTest, TransparencyTest) {
   const uint32_t kTargetHeight = 8;
 
   // Create the render_target image metadata.
-  ImageMetadata render_target = {
-      .collection_id = target_id,
-      .identifier = allocation::GenerateUniqueImageId(),
-      .vmo_index = 0,
-      .width = kTargetWidth,
-      .height = kTargetHeight,
-      .is_render_target = true,
-  };
+  ImageMetadata render_target = {.collection_id = target_id,
+                                 .identifier = allocation::GenerateUniqueImageId(),
+                                 .vmo_index = 0,
+                                 .width = kTargetWidth,
+                                 .height = kTargetHeight};
 
   // Create the image meta data for the renderable.
   ImageMetadata renderable_texture = {.collection_id = collection_id,
@@ -951,14 +995,11 @@ VK_TEST_P(ParameterizedRendererYuvTest, YuvTest) {
   }
 
   // Create the render_target image metadata and import.
-  ImageMetadata render_target_metadata = {
-      .collection_id = render_target_collection_id,
-      .identifier = allocation::GenerateUniqueImageId(),
-      .vmo_index = 0,
-      .width = kTargetWidth,
-      .height = kTargetHeight,
-      .is_render_target = true,
-  };
+  ImageMetadata render_target_metadata = {.collection_id = render_target_collection_id,
+                                          .identifier = allocation::GenerateUniqueImageId(),
+                                          .vmo_index = 0,
+                                          .width = kTargetWidth,
+                                          .height = kTargetHeight};
   import_res = renderer.ImportBufferImage(render_target_metadata);
   EXPECT_TRUE(import_res);
 

@@ -73,6 +73,19 @@ void NullRenderer::ReleaseBufferCollection(allocation::GlobalBufferCollectionId 
 
 bool NullRenderer::ImportBufferImage(const allocation::ImageMetadata& metadata) {
   std::unique_lock<std::mutex> lock(lock_);
+
+  // The metadata can't have an invalid collection id.
+  if (metadata.collection_id == allocation::kInvalidId) {
+    FX_LOGS(WARNING) << "Image has invalid collection id.";
+    return false;
+  }
+
+  // The metadata can't have an invalid identifier.
+  if (metadata.identifier == allocation::kInvalidImageId) {
+    FX_LOGS(WARNING) << "Image has invalid identifier.";
+    return false;
+  }
+
   const auto& collection_itr = collection_map_.find(metadata.collection_id);
   if (collection_itr == collection_map_.end()) {
     FX_LOGS(ERROR) << "Collection with id " << metadata.collection_id << " does not exist.";

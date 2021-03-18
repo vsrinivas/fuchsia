@@ -123,8 +123,7 @@ VK_TEST_F(DisplayTest, SetAllConstraintsTest) {
                                         .identifier = image_id,
                                         .vmo_index = 0,
                                         .width = kWidth,
-                                        .height = kHeight,
-                                        .is_render_target = false};
+                                        .height = kHeight};
 
   // Importing an image should fail at this point because we've only set the renderer constraints.
   auto import_result = renderer.ImportBufferImage(metadata);

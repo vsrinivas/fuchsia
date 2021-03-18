@@ -32,25 +32,27 @@ class VkRenderer final : public Renderer {
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferCollection(GlobalBufferCollectionId collection_id) override;
+  void ReleaseBufferCollection(allocation::GlobalBufferCollectionId collection_id) override;
 
   // |BufferCollectionImporter|
-  bool ImportBufferImage(const ImageMetadata& metadata) override;
+  bool ImportBufferImage(const allocation::ImageMetadata& metadata) override;
 
   // |BufferCollectionImporter|
-  void ReleaseBufferImage(GlobalImageId image_id) override;
+  void ReleaseBufferImage(allocation::GlobalImageId image_id) override;
 
   // |Renderer|.
   bool RegisterRenderTargetCollection(
-      GlobalBufferCollectionId collection_id, fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
+      allocation::GlobalBufferCollectionId collection_id,
+      fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
       fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token) override;
 
   // |Renderer|.
   void DeregisterRenderTargetCollection(GlobalBufferCollectionId collection_id) override;
 
   // |Renderer|.
-  void Render(const ImageMetadata& render_target, const std::vector<Rectangle2D>& rectangles,
-              const std::vector<ImageMetadata>& images,
+  void Render(const allocation::ImageMetadata& render_target,
+              const std::vector<Rectangle2D>& rectangles,
+              const std::vector<allocation::ImageMetadata>& images,
               const std::vector<zx::event>& release_fences = {}) override;
 
   // |Renderer|.
@@ -61,18 +63,28 @@ class VkRenderer final : public Renderer {
   void WaitIdle();
 
  private:
+  // Wrapper struct to contain the sysmem collection handle, the vulkan
+  // buffer collection and a bool to determine if the collection is meant
+  // to be used for render targets or if it's meant to be used for
+  // client textures.
+  struct CollectionData {
+    fuchsia::sysmem::BufferCollectionSyncPtr collection;
+    vk::BufferCollectionFUCHSIA vk_collection;
+    bool is_render_target;
+  };
+
   // Generic helper function used by both |ImportBufferCollection| and |RegisterTextureCollection|.
-  bool RegisterCollection(GlobalBufferCollectionId collection_id,
+  bool RegisterCollection(allocation::GlobalBufferCollectionId collection_id,
                           fuchsia::sysmem::Allocator_Sync* sysmem_allocator,
                           fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token,
                           vk::ImageUsageFlags usage);
 
   // The function ExtractImage() creates an escher Image from a sysmem collection vmo.
-  escher::ImagePtr ExtractImage(const ImageMetadata& metadata,
+  escher::ImagePtr ExtractImage(const allocation::ImageMetadata& metadata,
                                 vk::BufferCollectionFUCHSIA collection, vk::ImageUsageFlags usage);
 
   // ExtractTexture() is a wrapper function to ExtractImage().
-  escher::TexturePtr ExtractTexture(const ImageMetadata& metadata,
+  escher::TexturePtr ExtractTexture(const allocation::ImageMetadata& metadata,
                                     vk::BufferCollectionFUCHSIA collection);
 
   // Escher is how we access Vulkan.
@@ -81,11 +93,9 @@ class VkRenderer final : public Renderer {
   // Vulkan rendering component.
   escher::RectangleCompositor compositor_;
 
-  // This mutex is used to protect access to |collection_map_| and |sysmem_map_|.
+  // This mutex is used to protect access to |collections_|.
   mutable std::mutex lock_;
-  std::unordered_map<GlobalBufferCollectionId, vk::BufferCollectionFUCHSIA> vk_collections_;
-  std::unordered_map<GlobalBufferCollectionId, fuchsia::sysmem::BufferCollectionSyncPtr>
-      collections_;
+  std::unordered_map<allocation::GlobalBufferCollectionId, CollectionData> collections_;
 
   std::unordered_map<GlobalImageId, escher::TexturePtr> texture_map_;
   std::unordered_map<GlobalImageId, escher::ImagePtr> render_target_map_;
