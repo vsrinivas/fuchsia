@@ -40,9 +40,6 @@ enum BufferOp {
 };
 
 protocol Device {
-    /// Deprecated(fxbug.dev/54105)
-    Query(uint64 query_id) -> (uint64 result);
-
     /// Returns a parameter, or an error.
     Query2(uint64 query_id) -> (uint64 result) error Status;
 

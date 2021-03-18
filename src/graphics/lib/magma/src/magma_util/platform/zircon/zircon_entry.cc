@@ -66,16 +66,6 @@ class GpuDevice : public fuchsia_gpu_magma::Device::Interface,
     return MAGMA_STATUS_OK;
   }
 
-  void Query(uint64_t query_id, QueryCompleter::Sync& _completer) override {
-    uint64_t result;
-    magma::Status status = Query(query_id, &result);
-    if (!status.ok()) {
-      _completer.Close(ZX_ERR_INVALID_ARGS);
-      return;
-    }
-    _completer.Reply(result);
-  }
-
   void Query2(uint64_t query_id, Query2Completer::Sync& _completer) override {
     uint64_t result;
     magma::Status status = Query(query_id, &result);

@@ -74,7 +74,6 @@ class Mt8167sGpu : public DeviceType,
 
   zx_status_t DdkMessage(fidl_incoming_msg_t* msg, fidl_txn_t* txn);
 
-  void Query(uint64_t query_id, QueryCompleter::Sync& _completer) override {}  // Deprecated
   void Query2(uint64_t query_id, Query2Completer::Sync& _completer) override;
   void QueryReturnsBuffer(uint64_t query_id,
                           QueryReturnsBufferCompleter::Sync& _completer) override;

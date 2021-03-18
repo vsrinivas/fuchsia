@@ -43,8 +43,6 @@ using FidlStatus = fuchsia_gpu_magma::wire::Status;
 
 struct sysdrv_device_t : public fuchsia_gpu_magma::Device::Interface {
  public:
-  void Query(uint64_t query_id, QueryCompleter::Sync& _completer) override {}  // Deprecated
-
   void Query2(uint64_t query_id, Query2Completer::Sync& _completer) override {
     DLOG("sysdrv_device_t::Query2");
     DASSERT(this->magma_system_device);
