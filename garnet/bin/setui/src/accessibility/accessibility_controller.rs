@@ -5,7 +5,7 @@ use crate::accessibility::types::AccessibilityInfo;
 use crate::base::{Merge, SettingInfo};
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
     controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
@@ -53,12 +53,15 @@ impl data_controller::Create for AccessibilityController {
 impl controller::Handle for AccessibilityController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
-            Request::Get => Some(Ok(Some(SettingInfo::Accessibility(self.client.read().await)))),
-            Request::SetAccessibilityInfo(info) => Some(
-                write(&self.client, info.merge(self.client.read().await), false)
-                    .await
-                    .into_handler_result(),
+            Request::Get => Some(
+                self.client.read_setting_info::<AccessibilityInfo>().await.into_handler_result(),
             ),
+            Request::SetAccessibilityInfo(info) => {
+                let original_info = self.client.read_setting::<AccessibilityInfo>().await;
+                let result =
+                    self.client.write_setting(info.merge(original_info).into(), false).await;
+                Some(result.into_handler_result())
+            }
             _ => None,
         }
     }
