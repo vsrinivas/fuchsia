@@ -18,7 +18,7 @@ constexpr scenic::Color kChildTappedColor = {0xFF, 0xFF, 0x00, 0xFF};        // 
 /// injected-services in CMX which are injected per test package, these are injected per test and
 /// result in a more hermetic test environment.
 const std::vector<std::pair<const char*, const char*>> GetInjectedServices() {
-  static const std::vector<std::pair<const char*, const char*>> injected_services = {{
+  std::vector<std::pair<const char*, const char*>> injected_services = {{
       // clang-format off
     {
       "fuchsia.accessibility.semantics.SemanticsManager",
