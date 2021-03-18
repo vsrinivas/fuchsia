@@ -15,6 +15,10 @@ group("tools") {
   ]
 }
 
+group("tools-only") {
+  deps = [ ":magma-info" ]
+}
+
 fuchsia_component("magma-info-cmp") {
   component_name = "magma-info"
   deps = [ ":magma-info-bin" ]
