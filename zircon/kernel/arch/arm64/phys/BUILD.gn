@@ -24,10 +24,14 @@ source_set("address-space") {
 }
 
 source_set("phys") {
-  sources = [ "start.S" ]
+  sources = [
+    "setup.cc",
+    "start.S",
+  ]
   include_dirs = [ "//zircon/.." ]
   deps = [
     "//zircon/kernel/lib/arch",
+    "//zircon/kernel/phys:arch-header",
     "//zircon/system/ulib/static-pie",
   ]
 }

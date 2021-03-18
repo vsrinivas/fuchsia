@@ -14,6 +14,7 @@
 #include <ktl/byte.h>
 #include <ktl/span.h>
 
+#include "arch.h"
 #include "main.h"
 
 FILE FILE::stdout_;
@@ -89,6 +90,9 @@ void PhysMain(void* zbi, arch::EarlyTicks ticks) {
   // The global is a pointer just for uniformity between the code in phys and
   // in the kernel proper.
   gBootOptions = &boot_opts;
+
+  // Perform any architecture-specific set up.
+  ArchSetUp();
 
   // Call the real entry point now that it can use printf!  It does not return.
   ZbiMain(zbi, ticks);

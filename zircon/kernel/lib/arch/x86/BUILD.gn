@@ -32,6 +32,9 @@ if ("//zircon/" != "//" || current_toolchain != default_toolchain) {
         "boot-cpuid.S",
         "boot-cpuid.cc",
       ]
+      if (toolchain.environment != "kernel.phys32") {
+        sources += [ "descriptor-regs.S" ]
+      }
     }
 
     sdk = "source"

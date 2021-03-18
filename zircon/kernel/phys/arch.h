@@ -10,6 +10,9 @@
 #include <lib/memalloc.h>
 #include <lib/zbitl/items/mem_config.h>
 
+// Perform any architecture-specific set up.
+void ArchSetUp();
+
 // Perform any architecture-specific address space set up that needs to
 // be done prior to using memory outside the program's .data / .bss / etc.
 void ArchSetUpAddressSpace(memalloc::Allocator& allocator, zbitl::MemRangeTable table);

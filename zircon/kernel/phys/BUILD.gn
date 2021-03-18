@@ -126,8 +126,10 @@ if (toolchain.environment == "kernel.phys" ||
       "zbi-main.cc",
     ]
     deps = [
+      ":arch-header",
       ":main",
       ":zbi-memory",
+      "//zircon/kernel/arch/$zircon_cpu/phys",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",
       "//zircon/system/ulib/uart",

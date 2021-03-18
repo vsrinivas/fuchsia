@@ -37,9 +37,15 @@ if (current_toolchain == default_toolchain) {
     # All the code gets built here in the phys environment.
 
     source_set("phys") {
-      sources = [ "start.S" ]
+      sources = [
+        "gdt.cc",
+        "start.S",
+      ]
       include_dirs = [ "//zircon/.." ]
-      deps = [ "//zircon/kernel/lib/arch" ]
+      deps = [
+        "//zircon/kernel/lib/arch",
+        "//zircon/kernel/phys:arch-header",
+      ]
     }
 
     source_set("address-space") {
