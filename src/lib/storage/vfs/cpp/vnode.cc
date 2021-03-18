@@ -136,6 +136,18 @@ VnodeProtocol Vnode::Negotiate(VnodeProtocolSet protocols) const {
 }
 
 zx_status_t Vnode::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) {
+  {
+    std::lock_guard lock(mutex_);
+    open_count_++;
+  }
+
+  if (zx_status_t status = OpenNode(options, out_redirect); status != ZX_OK) {
+    // Roll back the open count since we won't get a close for it.
+    std::lock_guard lock(mutex_);
+    open_count_++;
+    return status;
+  }
+
   return ZX_OK;
 }
 
@@ -151,7 +163,13 @@ zx_status_t Vnode::OpenValidating(VnodeConnectionOptions options,
   return Open(validated_options.value(), out_redirect);
 }
 
-zx_status_t Vnode::Close() { return ZX_OK; }
+zx_status_t Vnode::Close() {
+  {
+    std::lock_guard lock(mutex_);
+    open_count_--;
+  }
+  return CloseNode();
+}
 
 zx_status_t Vnode::Read(void* data, size_t len, size_t off, size_t* out_actual) {
   return ZX_ERR_NOT_SUPPORTED;

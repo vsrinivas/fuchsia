@@ -35,7 +35,6 @@ class File final : public fs::Vnode {
   zx_status_t Write(const void* data, size_t len, size_t offset, size_t* out_actual) override;
   zx_status_t Truncate(size_t len) override;
   zx_status_t GetAttributes(fs::VnodeAttributes* attributes) override;
-  zx_status_t Close() override;
 
   // Gets file size in bytes.
   uint32_t GetSize() const;

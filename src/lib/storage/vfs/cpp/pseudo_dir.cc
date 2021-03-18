@@ -24,10 +24,6 @@ PseudoDir::~PseudoDir() {
   entries_by_id_.clear();
 }
 
-zx_status_t PseudoDir::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) {
-  return ZX_OK;
-}
-
 zx_status_t PseudoDir::GetAttributes(VnodeAttributes* attr) {
   *attr = VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;

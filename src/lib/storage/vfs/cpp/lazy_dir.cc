@@ -40,10 +40,6 @@ LazyDir::~LazyDir() = default;
 
 VnodeProtocolSet LazyDir::GetProtocols() const { return VnodeProtocol::kDirectory; }
 
-zx_status_t LazyDir::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) {
-  return ZX_OK;
-}
-
 zx_status_t LazyDir::GetAttributes(VnodeAttributes* attr) {
   *attr = VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;

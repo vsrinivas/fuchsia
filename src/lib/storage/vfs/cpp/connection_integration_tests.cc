@@ -287,20 +287,10 @@ class CountOutstandingOpenVnode : public fs::Vnode {
     return ZX_OK;
   }
 
-  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final {
-    num_open_.fetch_add(1);
-    return ZX_OK;
+  uint64_t GetOpenCount() const {
+    std::lock_guard lock(mutex_);
+    return open_count();
   }
-
-  zx_status_t Close() final {
-    num_open_.fetch_sub(1);
-    return ZX_OK;
-  }
-
-  uint64_t num_open() const { return num_open_.load(); }
-
- private:
-  std::atomic<uint64_t> num_open_ = {};
 };
 
 class ConnectionClosingTest : public zxtest::Test {
@@ -342,7 +332,7 @@ TEST_F(ConnectionClosingTest, ClosingChannelImpliesClosingNode) {
   constexpr uint32_t kOpenMode = 0755;
   constexpr int kNumActiveClients = 20;
 
-  ASSERT_EQ(count_outstanding_open_vnode()->num_open(), 0);
+  ASSERT_EQ(count_outstanding_open_vnode()->GetOpenCount(), 0);
 
   // Create a number of active connections to "count_outstanding_open_vnode".
   std::vector<zx::channel> clients;
@@ -357,14 +347,14 @@ TEST_F(ConnectionClosingTest, ClosingChannelImpliesClosingNode) {
   }
 
   ASSERT_OK(loop().RunUntilIdle());
-  ASSERT_EQ(count_outstanding_open_vnode()->num_open(), kNumActiveClients);
+  ASSERT_EQ(count_outstanding_open_vnode()->GetOpenCount(), kNumActiveClients);
 
   // Drop all the clients, leading to |Close| being invoked on "count_outstanding_open_vnode"
   // eventually.
   clients.clear();
 
   ASSERT_OK(loop().RunUntilIdle());
-  ASSERT_EQ(count_outstanding_open_vnode()->num_open(), 0);
+  ASSERT_EQ(count_outstanding_open_vnode()->GetOpenCount(), 0);
 }
 
 TEST_F(ConnectionClosingTest, ClosingNodeLeadsToClosingServerEndChannel) {

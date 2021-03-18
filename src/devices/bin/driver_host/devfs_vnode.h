@@ -20,9 +20,6 @@ class DevfsVnode : public fs::Vnode, public fuchsia_device::Controller::Interfac
   explicit DevfsVnode(fbl::RefPtr<zx_device> dev) : dev_(std::move(dev)) {}
 
   // fs::Vnode methods
-  zx_status_t Open(fs::Vnode::ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) override;
-  zx_status_t Close() override;
-
   zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) override;
   zx_status_t Write(const void* data, size_t len, size_t off, size_t* out_actual) override;
 
@@ -62,6 +59,11 @@ class DevfsVnode : public fs::Vnode, public fuchsia_device::Controller::Interfac
   void Resume(ResumeCompleter::Sync& _complete) override;
 
  private:
+  // Vnode protected implementation:
+  zx_status_t OpenNode(fs::Vnode::ValidatedOptions options,
+                       fbl::RefPtr<Vnode>* out_redirect) override;
+  zx_status_t CloseNode() override;
+
   fbl::RefPtr<zx_device> dev_;
 };
 

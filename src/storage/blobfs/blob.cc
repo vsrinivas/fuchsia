@@ -1123,6 +1123,11 @@ void Blob::VmoRead(uint64_t offset, uint64_t length) {
 }
 #endif
 
+bool Blob::HasReferences() const {
+  std::lock_guard lock(mutex_);
+  return open_count() > 0 || has_clones();
+}
+
 void Blob::CompleteSync() {
   // Called on the journal thread when the syncing is complete.
   {
@@ -1143,9 +1148,8 @@ fbl::RefPtr<Blob> Blob::CloneWatcherTeardown() {
   return nullptr;
 }
 
-zx_status_t Blob::Open([[maybe_unused]] ValidatedOptions options,
-                       fbl::RefPtr<Vnode>* out_redirect) {
-  fd_count_++;
+zx_status_t Blob::OpenNode([[maybe_unused]] ValidatedOptions options,
+                           fbl::RefPtr<Vnode>* out_redirect) {
   if (IsDataLoaded()) {
     fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
     FormatBlobDataVmoName(inode_, &data_vmo_name);
@@ -1158,10 +1162,8 @@ zx_status_t Blob::Open([[maybe_unused]] ValidatedOptions options,
   return ZX_OK;
 }
 
-zx_status_t Blob::Close() {
+zx_status_t Blob::CloseNode() {
   auto event = blobfs_->Metrics()->NewLatencyEvent(fs_metrics::Event::kClose);
-  ZX_ASSERT_MSG(fd_count_ > 0, "Closing blob with no fds open");
-  fd_count_--;
   if (IsDataLoaded() && !HasReferences()) {
     fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
     FormatInactiveBlobDataVmoName(inode_, &data_vmo_name);

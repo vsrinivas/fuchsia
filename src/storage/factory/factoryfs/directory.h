@@ -60,7 +60,6 @@ class Directory final : public fs::Vnode {
   zx_status_t QueryFilesystem(fuchsia_io::wire::FilesystemInfo* out) final;
   zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
   void Sync(SyncCallback closure) final;
-  zx_status_t Close() final;
 
   // Other functions
   //

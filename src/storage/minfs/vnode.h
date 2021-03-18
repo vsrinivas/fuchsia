@@ -104,9 +104,6 @@ class VnodeMinfs : public fs::Vnode,
 #ifdef __Fuchsia__
   void HandleFsSpecificMessage(fidl_incoming_msg_t* msg, fidl::Transaction* txn) final;
 #endif
-  using fs::Vnode::Open;
-  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
-  zx_status_t Close() final;
 
   // fbl::Recyclable interface.
   void fbl_recycle() override;
@@ -240,7 +237,8 @@ class VnodeMinfs : public fs::Vnode,
   void ValidateVmoTail(uint64_t inode_size) const;
 
  private:
-  // fs::Vnode interface.
+  // fs::Vnode protected interface.
+  zx_status_t CloseNode() final;
   zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
   zx_status_t SetAttributes(fs::VnodeAttributesUpdate a) final;
 #ifdef __Fuchsia__
@@ -285,8 +283,6 @@ class VnodeMinfs : public fs::Vnode,
   zx_status_t WatchDir(fs::Vfs* vfs, uint32_t mask, uint32_t options, zx::channel watcher) final;
 #endif
 
-  uint32_t FdCount() const { return fd_count_; }
-
   Minfs* const fs_;
 
 #ifdef __Fuchsia__
@@ -309,12 +305,6 @@ class VnodeMinfs : public fs::Vnode,
   // DataBlockAssigner may modify this field asynchronously, so a valid Transaction object must
   // be held before accessing it.
   Inode inode_{};
-
-  // This field tracks the current number of file descriptors with
-  // an open reference to this Vnode. Notably, this is distinct from the
-  // VnodeMinfs's own refcount, since there may still be filesystem
-  // work to do after the last file descriptor has been closed.
-  uint32_t fd_count_{};
 };
 
 }  // namespace minfs

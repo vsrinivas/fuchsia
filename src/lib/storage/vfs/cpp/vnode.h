@@ -120,12 +120,21 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   virtual VnodeProtocol Negotiate(VnodeProtocolSet protocols) const;
 
   // Opens the vnode. This is a callback to signal that a new connection is about to be created and
-  // I/O operations will follow. In addition, it provides an opportunity to redirect subsequent I/O
-  // operations to a different vnode.
+  // I/O operations will follow. In addition, it provides an opportunity to redirect subsequent I/O.
+  // If the open fails, the file will be deemed to be not opened and Close() will not be called.
+  //
+  // Vnode implementations should override OpenNode() which this function calls after some
+  // bookeeping.
   //
   // |options| contain the flags and rights supplied by the client, parsed into a struct with
-  // individual fields. It will have already been validated by |ValidateOptions|. Open is never
-  // invoked if |options.flags| includes |node_reference|.
+  // individual fields. It will have already been validated by |ValidateOptions|.
+  //
+  // Open is never invoked if |options.flags| includes |node_reference|. This behavior corresponds
+  // to Posix open()'s O_PATH flag which will create a thing representing the path to the file
+  // without giving the ability to do most operations like read or write. In the future, we may want
+  // the ability to track these connections, in which case we should add a Connect()/Disconnect()
+  // pair that would surround the Open()/Close() for the normal case, but would be called regardless
+  // of the flags to cover the node-reference case.
   //
   // If the implementation of |Open()| sets |out_redirect| to a non-null value, all following I/O
   // operations on the opened object will be redirected to the indicated vnode instead of being
@@ -133,13 +142,15 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // different vnode may be used for each new connection to a file. Note that the |out_redirect|
   // vnode is not |Open()|ed further for the purpose of creating this connection. Furthermore, the
   // redirected vnode must support the same set of protocols as the original vnode.
-  virtual zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect);
+  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect)
+      FS_TA_EXCLUDES(mutex_);
 
   // Same as |Open|, but calls |ValidateOptions| on |options| automatically. Errors from
   // |ValidateOptions| are propagated via the return value. This is convenient when serving a
   // connection with the validated options is unnecessary e.g. when used from a non-Fuchsia
   // operating system.
-  zx_status_t OpenValidating(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect);
+  zx_status_t OpenValidating(VnodeConnectionOptions options, fbl::RefPtr<Vnode>* out_redirect)
+      FS_TA_EXCLUDES(mutex_);
 
   // METHODS FOR OPENED NODES
   //
@@ -214,8 +225,9 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
 
   // Closes the vnode. Will be called once for each successful Open().
   //
-  // Typically, most Vnodes simply return "ZX_OK".
-  virtual zx_status_t Close();
+  // Vnode implementations should override CloseNode() which this function calls after some
+  // bookeeping.
+  zx_status_t Close() FS_TA_EXCLUDES(mutex_);
 
   // Read data from the vnode at offset.
   //
@@ -353,6 +365,20 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
  protected:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Vnode);
 
+  // Opens/Closes the vnode. These are the callbacks that the Vnode implementation overrides to do
+  // the open and close work. They are called by the public Open() and Close() functions which
+  // handles bookeeping for the base class.
+  //
+  // The open_count() will be updated BEFORE each call. If OpenNode fails, the open count will be
+  // rolled back.
+  //
+  // See Open() above for documentation.
+  virtual zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect)
+      FS_TA_EXCLUDES(mutex_) {
+    return ZX_OK;
+  }
+  virtual zx_status_t CloseNode() FS_TA_EXCLUDES(mutex_) { return ZX_OK; }
+
   // The associated Vfs pointer is optional. Subclasses should require this if they need to access
   // the Vfs, but can leave null if not. See vfs() getter for more.
   explicit Vnode(Vfs* vfs = nullptr);
@@ -370,9 +396,13 @@ class Vnode : public VnodeRefCounted<Vnode>, public fbl::Recyclable<Vnode> {
   // they can outlive the Vfs). Uses should always be inside the mutex_.
   Vfs* vfs() FS_TA_REQUIRES(mutex_) { return vfs_; }
 
+  // Returns the number of open connections, not counting node_reference connections. See Open().
+  size_t open_count() const FS_TA_REQUIRES(mutex_) { return open_count_; }
+
  private:
   Vfs* vfs_ FS_TA_GUARDED(mutex_) = nullptr;  // Possibly null, see getter above.
   size_t inflight_transactions_ FS_TA_GUARDED(mutex_) = 0;
+  size_t open_count_ FS_TA_GUARDED(mutex_) = 0;
 };
 
 // Opens a vnode by reference.

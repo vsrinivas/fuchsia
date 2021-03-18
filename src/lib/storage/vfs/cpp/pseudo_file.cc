@@ -59,7 +59,8 @@ BufferedPseudoFile::BufferedPseudoFile(ReadHandler read_handler, WriteHandler wr
 
 BufferedPseudoFile::~BufferedPseudoFile() = default;
 
-zx_status_t BufferedPseudoFile::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t BufferedPseudoFile::OpenNode(ValidatedOptions options,
+                                         fbl::RefPtr<Vnode>* out_redirect) {
   fbl::String output;
   if (options->rights.read) {
     zx_status_t status = read_handler_(&output);
@@ -68,7 +69,7 @@ zx_status_t BufferedPseudoFile::Open(ValidatedOptions options, fbl::RefPtr<Vnode
     }
   }
 
-  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), *options, std::move(output)));
+  *out_redirect = fbl::MakeRefCounted<Content>(fbl::RefPtr(this), *options, std::move(output));
   return ZX_OK;
 }
 
@@ -80,7 +81,7 @@ BufferedPseudoFile::Content::~Content() { delete[] input_data_; }
 
 VnodeProtocolSet BufferedPseudoFile::Content::GetProtocols() const { return VnodeProtocol::kFile; }
 
-zx_status_t BufferedPseudoFile::Content::Close() {
+zx_status_t BufferedPseudoFile::Content::CloseNode() {
   if (options_.rights.write) {
     return file_->write_handler_(fbl::StringPiece(input_data_, input_length_));
   }
@@ -182,8 +183,9 @@ VnodeProtocolSet UnbufferedPseudoFile::Content::GetProtocols() const {
   return VnodeProtocol::kFile;
 }
 
-zx_status_t UnbufferedPseudoFile::Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) {
-  *out_redirect = fbl::AdoptRef(new Content(fbl::RefPtr(this), *options));
+zx_status_t UnbufferedPseudoFile::OpenNode(ValidatedOptions options,
+                                           fbl::RefPtr<Vnode>* out_redirect) {
+  *out_redirect = fbl::MakeRefCounted<Content>(fbl::RefPtr(this), *options);
   return ZX_OK;
 }
 
@@ -195,12 +197,12 @@ UnbufferedPseudoFile::Content::Content(fbl::RefPtr<UnbufferedPseudoFile> file,
 
 UnbufferedPseudoFile::Content::~Content() = default;
 
-zx_status_t UnbufferedPseudoFile::Content::Open(ValidatedOptions options,
-                                                fbl::RefPtr<Vnode>* out_redirect) {
+zx_status_t UnbufferedPseudoFile::Content::OpenNode(ValidatedOptions options,
+                                                    fbl::RefPtr<Vnode>* out_redirect) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t UnbufferedPseudoFile::Content::Close() {
+zx_status_t UnbufferedPseudoFile::Content::CloseNode() {
   if (options_.rights.write && truncated_since_last_successful_write_) {
     return file_->write_handler_(fbl::StringPiece());
   }

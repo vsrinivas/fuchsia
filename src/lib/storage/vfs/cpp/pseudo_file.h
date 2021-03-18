@@ -88,22 +88,14 @@ class BufferedPseudoFile : public PseudoFile {
  public:
   // Construct with fbl::MakeRefCounted.
 
-  // |Vnode| implementation:
-  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
-
  private:
   friend fbl::internal::MakeRefCountedHelper<BufferedPseudoFile>;
   friend fbl::RefPtr<BufferedPseudoFile>;
 
   class Content final : public Vnode {
    public:
-    Content(fbl::RefPtr<BufferedPseudoFile> file, VnodeConnectionOptions options,
-            fbl::String output);
-    ~Content() override;
-
     // |Vnode| implementation:
     VnodeProtocolSet GetProtocols() const final;
-    zx_status_t Close() final;
     zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
     zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
     zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
@@ -113,6 +105,16 @@ class BufferedPseudoFile : public PseudoFile {
                                        VnodeRepresentation* info) final;
 
    private:
+    friend fbl::internal::MakeRefCountedHelper<Content>;
+    friend fbl::RefPtr<Content>;
+
+    Content(fbl::RefPtr<BufferedPseudoFile> file, VnodeConnectionOptions options,
+            fbl::String output);
+    ~Content() override;
+
+    // Vnode protected implementation:
+    zx_status_t CloseNode() final;
+
     void SetInputLength(size_t length);
 
     fbl::RefPtr<BufferedPseudoFile> const file_;
@@ -134,6 +136,9 @@ class BufferedPseudoFile : public PseudoFile {
                               size_t input_buffer_capacity = 1024);
 
   ~BufferedPseudoFile() override;
+
+  // |Vnode| protected implementation:
+  zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
 
   size_t const input_buffer_capacity_;
 
@@ -180,22 +185,14 @@ class UnbufferedPseudoFile : public PseudoFile {
  public:
   // Construct with fbl::MakeRefCounted.
 
-  // |Vnode| implementation:
-  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
-
  private:
   friend fbl::internal::MakeRefCountedHelper<UnbufferedPseudoFile>;
   friend fbl::RefPtr<UnbufferedPseudoFile>;
 
   class Content final : public Vnode {
    public:
-    Content(fbl::RefPtr<UnbufferedPseudoFile> file, VnodeConnectionOptions options);
-    ~Content() override;
-
     // |Vnode| implementation:
     VnodeProtocolSet GetProtocols() const final;
-    zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
-    zx_status_t Close() final;
     zx_status_t GetAttributes(fs::VnodeAttributes* a) final;
     zx_status_t Read(void* data, size_t length, size_t offset, size_t* out_actual) final;
     zx_status_t Write(const void* data, size_t length, size_t offset, size_t* out_actual) final;
@@ -205,6 +202,16 @@ class UnbufferedPseudoFile : public PseudoFile {
                                        VnodeRepresentation* info) final;
 
    private:
+    friend fbl::internal::MakeRefCountedHelper<Content>;
+    friend fbl::RefPtr<Content>;
+
+    Content(fbl::RefPtr<UnbufferedPseudoFile> file, VnodeConnectionOptions options);
+    ~Content() override;
+
+    // Vnode protected implementation.
+    zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
+    zx_status_t CloseNode() final;
+
     fbl::RefPtr<UnbufferedPseudoFile> const file_;
     const VnodeConnectionOptions options_;
 
@@ -219,6 +226,9 @@ class UnbufferedPseudoFile : public PseudoFile {
                                 WriteHandler write_handler = WriteHandler());
 
   ~UnbufferedPseudoFile() override;
+
+  // |Vnode| protected implementation:
+  zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(UnbufferedPseudoFile);
 };

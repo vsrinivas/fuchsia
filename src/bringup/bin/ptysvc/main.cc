@@ -35,7 +35,8 @@ class PtyGeneratingVnode : public fs::Vnode {
 
   fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kTty; }
 
-  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) override {
+ private:
+  zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) override {
     fbl::RefPtr<PtyServer> server;
     zx_status_t status = PtyServer::Create(&server, vfs_);
     if (status != ZX_OK) {
@@ -45,7 +46,6 @@ class PtyGeneratingVnode : public fs::Vnode {
     return ZX_OK;
   }
 
- private:
   fs::Vfs* vfs_;
 };
 

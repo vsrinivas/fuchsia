@@ -265,7 +265,16 @@ zx_status_t VnodeMinfs::RemoveInodeLink(Transaction* transaction) {
   }
 
   if (IsUnlinked()) {
-    if (fd_count_ == 0) {
+    // The open_count() needs to be read within the lock to make the compiler's checking happy,
+    // but we don't actually need this lock and can run into recursive locking if we hold it for
+    // the subsequent operations in this block.
+    int oc;
+    {
+      std::lock_guard lock(mutex_);
+      oc = open_count();
+    }
+
+    if (oc == 0) {
       // No need to flush/retain dirty cache or the reservations for unlinked
       // inode.
       DropCachedWrites();
@@ -310,7 +319,12 @@ void VnodeMinfs::ValidateVmoTail(uint64_t inode_size) const {
 }
 
 void VnodeMinfs::fbl_recycle() {
-  ZX_DEBUG_ASSERT(fd_count_ == 0);
+  {
+    // Need to hold the lock to check open_count(), but be careful not to hold it across this class
+    // getting deleted at the bottom of this function.
+    std::lock_guard lock(mutex_);
+    ZX_DEBUG_ASSERT(open_count() == 0);
+  }
   if (!IsUnlinked()) {
     // If this node has not been purged already, remove it from the
     // hash map. If it has been purged; it will already be absent
@@ -342,14 +356,11 @@ VnodeMinfs::~VnodeMinfs() {
   }
 }
 
-zx_status_t VnodeMinfs::Open([[maybe_unused]] ValidatedOptions options,
-                             fbl::RefPtr<Vnode>* out_redirect) {
-  fd_count_++;
-  return ZX_OK;
-}
-
 zx_status_t VnodeMinfs::Purge(Transaction* transaction) {
-  ZX_DEBUG_ASSERT(fd_count_ == 0);
+  {
+    std::lock_guard lock(mutex_);
+    ZX_DEBUG_ASSERT(open_count() == 0);
+  }
   ZX_DEBUG_ASSERT(IsUnlinked());
   fs_->VnodeRelease(this);
   return fs_->InoFree(transaction, this);
@@ -379,12 +390,12 @@ zx_status_t VnodeMinfs::RemoveUnlinked() {
   return ZX_OK;
 }
 
-zx_status_t VnodeMinfs::Close() {
-  ZX_DEBUG_ASSERT_MSG(fd_count_ > 0, "Closing ino with no fds open");
-  fd_count_--;
-
-  if (fd_count_ != 0) {
-    return ZX_OK;
+zx_status_t VnodeMinfs::CloseNode() {
+  {
+    std::lock_guard lock(mutex_);
+    if (open_count() != 0) {
+      return ZX_OK;
+    }
   }
 
   if (!IsUnlinked()) {
@@ -396,7 +407,7 @@ zx_status_t VnodeMinfs::Close() {
     return result.status_value();
   }
 
-  // This vnode is unlinked and fd_count_ == 0. We don't need not flush the dirty
+  // This vnode is unlinked and open_count() == 0. We don't need not flush the dirty
   // contents of the vnode to disk.
   DropCachedWrites();
   return RemoveUnlinked();

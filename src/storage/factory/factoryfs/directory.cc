@@ -72,8 +72,6 @@ zx_status_t Directory::Lookup(fbl::StringPiece name, fbl::RefPtr<fs::Vnode>* out
   return ZX_OK;
 }
 
-zx_status_t Directory::Close() { return ZX_OK; }
-
 #ifdef __Fuchsia__
 
 constexpr std::string_view kFsName = "factoryfs";

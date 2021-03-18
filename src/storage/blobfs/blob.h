@@ -82,9 +82,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   ////////////////
   // fs::Vnode interface.
 
-  using fs::Vnode::Open;
-  zx_status_t Open(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) final;
-  zx_status_t Close() final;
   zx_status_t GetNodeInfoForProtocol(fs::VnodeProtocol protocol, fs::Rights rights,
                                      fs::VnodeRepresentation* info) final;
   fs::VnodeProtocolSet GetProtocols() const final;
@@ -113,9 +110,13 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Other methods.
 
   // Returns whether there are any external references to the blob.
-  // Note that this *must* be called on the main dispatch thread; otherwise the underlying state of
-  // the blob could change after (or during) the call.
-  bool HasReferences() const { return fd_count_ > 0 || has_clones(); }
+  //
+  // Threading: Currently this *must* be called on the main dispatch thread; otherwise the
+  // underlying state of the blob could change after (or during) the call. It currently locks
+  // to read the Vnode's open_count_. When making Blobfs more threadsafe this should be changed to
+  // require the mutex be held, then the main-dispatch-thread-requirement can be removed (the caller
+  // can lock to ensure consistency over whatever it's doing).
+  bool HasReferences() const FS_TA_EXCLUDES(mutex_);
 
   // Identifies if we can safely remove all on-disk and in-memory storage used by this blob.
   // Note that this *must* be called on the main dispatch thread; otherwise the underlying state of
@@ -177,15 +178,14 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
  private:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blob);
 
-  ////////////////
-  // blobfs::CacheNode interface.
+  // Vnode protected overrides:
+  zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) override;
+  zx_status_t CloseNode() override;
 
+  // blobfs::CacheNode implementation:
   BlobCache& Cache() final;
   bool ShouldCache() const final;
   void ActivateLowMemory() final;
-
-  ////////////////
-  // Other methods.
 
   void set_state(BlobState new_state) { state_ = new_state; };
   BlobState state() const { return state_; }
@@ -345,8 +345,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   fbl::RefPtr<Blob> clone_ref_;
 
   zx::event readable_event_;
-
-  uint32_t fd_count_ = 0;
 
   // TODO(smklein): We are only using a few of these fields, such as:
   // - blob_size

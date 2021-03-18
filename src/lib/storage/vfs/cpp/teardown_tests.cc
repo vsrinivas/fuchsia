@@ -28,20 +28,15 @@ namespace {
 
 class FdCountVnode : public fs::Vnode {
  public:
-  FdCountVnode() : fd_count_(0) {}
-  virtual ~FdCountVnode() { EXPECT_EQ(0, fd_count_); }
-
-  int fds() const { return fd_count_; }
-
-  zx_status_t Open(ValidatedOptions, fbl::RefPtr<Vnode>* redirect) final {
-    fd_count_++;
-    return ZX_OK;
+  FdCountVnode() {}
+  virtual ~FdCountVnode() {
+    std::lock_guard lock(mutex_);
+    EXPECT_EQ(0, open_count());
   }
 
-  zx_status_t Close() final {
-    fd_count_--;
-    EXPECT_GE(fd_count_, 0);
-    return ZX_OK;
+  int fds() const {
+    std::lock_guard lock(mutex_);
+    return open_count();
   }
 
   fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
@@ -52,9 +47,6 @@ class FdCountVnode : public fs::Vnode {
     *info = fs::VnodeRepresentation::Connector();
     return ZX_OK;
   }
-
- private:
-  int fd_count_;
 };
 
 // TODO(fxbug.dev/42589): Clean up the array-of-completions pattern.

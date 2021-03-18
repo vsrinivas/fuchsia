@@ -107,6 +107,4 @@ File::~File() {
   factoryfs_.Device().BlockDetachVmo(std::move(vmoid_));
 }
 
-zx_status_t File::Close() { return ZX_OK; }
-
 }  // namespace factoryfs
