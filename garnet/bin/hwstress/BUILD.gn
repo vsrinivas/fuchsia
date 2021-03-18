@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("lib") {
   sources = [
@@ -60,53 +59,38 @@ executable("bin") {
 }
 
 # Traditional CLI package.
-package("hwstress_cli") {
+fuchsia_shell_package("hwstress_cli") {
   package_name = "hwstress-cli"
-
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      shell = true
-      name = "hwstress"
-    },
-  ]
 }
 
 # CFv1 package.
-package("hwstress_pkg") {
-  package_name = "hwstress"
-
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "hwstress"
-    },
-  ]
-
-  # We generate an in-package CMX file for the top-level "hwstress"
-  # binary, and also for each style of test we run.
-  #
-  # This is to help automated tests seperate logs for the different
-  # styles of test, where currently the CFv1 component name is the
-  # only mechanism we have to do this.
-  meta = []
-  foreach(name,
-          [
-            "hwstress",
-            "cpu",
-            "memory",
-            "flash",
-            "led",
-          ]) {
-    meta += [
-      {
-        path = rebase_path("meta/hwstress.cmx")
-        dest = name + ".cmx"
-      },
-    ]
+# We generate an in-package CMX file for the top-level "hwstress"
+# binary, and also for each style of test we run.
+#
+# This is to help automated tests seperate logs for the different
+# styles of test, where currently the CFv1 component name is the
+# only mechanism we have to do this.
+_hwstress_binaries = [
+  "hwstress",
+  "cpu",
+  "memory",
+  "flash",
+  "led",
+]
+_hwstress_components = []
+foreach(hwstress_name, _hwstress_binaries) {
+  fuchsia_component("${hwstress_name}_component") {
+    component_name = "${hwstress_name}"
+    manifest = "meta/hwstress.cmx"
+    deps = [ ":bin" ]
   }
+  _hwstress_components += [ ":${hwstress_name}_component" ]
+}
+
+fuchsia_package("hwstress_pkg") {
+  package_name = "hwstress"
+  deps = _hwstress_components
 }
 
 # Tests using CFv1.
@@ -161,31 +145,27 @@ executable("hwstress_v2_test") {
   ]
 }
 
-test_package("hwstress_test_pkg") {
+fuchsia_test_component("hwstress_v1_test_pkg") {
+  manifest = "meta/hwstress_test.cmx"
+  deps = [ ":hwstress_test" ]
+}
+
+fuchsia_test_component("hwstress_v2_test_pkg") {
+  manifest = "meta/hwstress_v2_test.cml"
+  deps = [ ":hwstress_v2_test" ]
+}
+
+fuchsia_test_package("hwstress_test_pkg") {
   package_name = "hwstress-tests"
-
-  deps = [
-    ":hwstress_test",
-    ":hwstress_v2_test",
+  test_components = [
+    ":hwstress_v1_test_pkg",
+    ":hwstress_v2_test_pkg",
   ]
-
-  tests = [
-    {
-      log_settings = {
-        max_severity = "ERROR"
-      }
-      name = "hwstress_test"
-    },
-  ]
-
-  v2_tests = [
-    {
-      name = "hwstress_v2_test"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
 
 group("tests") {

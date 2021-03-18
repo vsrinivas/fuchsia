@@ -1,11 +1,12 @@
 {
     include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
         "sdk/lib/diagnostics/syslog/client.shard.cml",
         "src/sys/test_runners/gtest/default.shard.cml",
         "src/sys/test_runners/tmp_storage.shard.cml",
     ],
     program: {
-        binary: "test/hwstress_v2_test",
+        binary: "bin/hwstress_v2_test",
     },
 
     // Start up an isolated devmgr.
