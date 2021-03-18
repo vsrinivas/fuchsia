@@ -115,15 +115,17 @@ func TestGetAvailableImages(t *testing.T) {
 	}
 }
 
-func TestGetAddressByName(t *testing.T) {
+func TestGetAddressByNameDeviceFinder(t *testing.T) {
 	ExecCommand = helperCommandForSDKCommon
 	defer func() {
 		ExecCommand = exec.Command
+		os.Unsetenv("FUCHSIA_DISABLED_ffx_discovery")
 	}()
 	testSDK := SDKProperties{
 		dataPath: t.TempDir(),
 	}
-	deviceName := "test-device"
+	os.Setenv("FUCHSIA_DISABLED_ffx_discovery", "1")
+	deviceName := "test-device-df"
 	_, err := testSDK.GetAddressByName(deviceName)
 	if err != nil {
 		t.Fatal(err)
@@ -139,7 +141,33 @@ func TestGetAddressByName(t *testing.T) {
 	} else {
 		t.Fatal("Expected exception, but did not get one")
 	}
+}
 
+func TestGetAddressByNameFfx(t *testing.T) {
+	ExecCommand = helperCommandForSDKCommon
+	defer func() {
+		ExecCommand = exec.Command
+	}()
+	testSDK := SDKProperties{
+		dataPath: t.TempDir(),
+	}
+	deviceName := "test-device"
+	_, err := testSDK.GetAddressByName(deviceName)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	deviceName = "unknown-test-device"
+	_, err = testSDK.GetAddressByName(deviceName)
+	if err != nil {
+		expected := "No devices found.: exit status 2"
+		actual := fmt.Sprintf("%v", err)
+		if actual != expected {
+			t.Fatalf("Expected exception [%v] got [%v]", expected, actual)
+		}
+	} else {
+		t.Fatal("Expected exception, but did not get one")
+	}
 }
 
 func compareFuchsiaDevices(f1, f2 *FuchsiaDevice) bool {
@@ -158,7 +186,7 @@ func TestDeviceString(t *testing.T) {
 	}
 }
 
-func TestFindDeviceByName(t *testing.T) {
+func TestFindDeviceByNameFfx(t *testing.T) {
 	ExecCommand = helperCommandForSDKCommon
 	defer func() {
 		ExecCommand = exec.Command
@@ -192,7 +220,43 @@ func TestFindDeviceByName(t *testing.T) {
 	}
 }
 
-func TestFindDeviceByIP(t *testing.T) {
+func TestFindDeviceByNameDeviceFinder(t *testing.T) {
+	ExecCommand = helperCommandForSDKCommon
+	defer func() {
+		ExecCommand = exec.Command
+		os.Unsetenv("FUCHSIA_DISABLED_ffx_discovery")
+	}()
+	testSDK := SDKProperties{
+		dataPath: t.TempDir(),
+	}
+	os.Setenv("FUCHSIA_DISABLED_ffx_discovery", "1")
+	deviceName := "test-device-df"
+	expectedFuchsiaDevice := &FuchsiaDevice{
+		IpAddr: "123-123-123-1df",
+		Name:   "test-device-df",
+	}
+	output, err := testSDK.FindDeviceByName(deviceName)
+	if err != nil {
+		t.Error(err)
+	}
+	if d := cmp.Diff(expectedFuchsiaDevice, output, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+		t.Errorf("findDeviceByName mismatch: (-want +got):\n%s", d)
+	}
+
+	deviceName = "unknown-device"
+	_, err = testSDK.FindDeviceByName(deviceName)
+	if err != nil {
+		expected := "no device with device name unknown-device found"
+		actual := fmt.Sprintf("%v", err)
+		if actual != expected {
+			t.Errorf("Expected exception [%v] got [%v]", expected, actual)
+		}
+	} else {
+		t.Error("Expected exception, but did not get one")
+	}
+}
+
+func TestFindDeviceByIPFfx(t *testing.T) {
 	ExecCommand = helperCommandForSDKCommon
 	defer func() {
 		ExecCommand = exec.Command
@@ -222,7 +286,39 @@ func TestFindDeviceByIP(t *testing.T) {
 	}
 }
 
-func TestListDevices(t *testing.T) {
+func TestFindDeviceByIPDeviceFinder(t *testing.T) {
+	ExecCommand = helperCommandForSDKCommon
+	defer func() {
+		ExecCommand = exec.Command
+		os.Unsetenv("FUCHSIA_DISABLED_ffx_discovery")
+	}()
+	testSDK := SDKProperties{
+		dataPath: t.TempDir(),
+	}
+	os.Setenv("FUCHSIA_DISABLED_ffx_discovery", "1")
+	ipAddr := "456-456-456-4df"
+	expectedFuchsiaDevice := &FuchsiaDevice{
+		IpAddr: "456-456-456-4df",
+		Name:   "another-test-device-df",
+	}
+	output, err := testSDK.FindDeviceByIP(ipAddr)
+	if err != nil {
+		t.Error(err)
+	}
+	if d := cmp.Diff(expectedFuchsiaDevice, output, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+		t.Errorf("findDeviceByIP mismatch: (-want +got):\n%s", d)
+	}
+
+	ipAddr = "999-999-999-999"
+	_, err = testSDK.FindDeviceByIP(ipAddr)
+	expected := "no device with IP address 999-999-999-999 found"
+	actual := fmt.Sprintf("%v", err)
+	if actual != expected {
+		t.Errorf("Expected exception [%v] got [%v]", expected, actual)
+	}
+}
+
+func TestListDevicesFfx(t *testing.T) {
 	ExecCommand = helperCommandForSDKCommon
 	defer func() {
 		ExecCommand = exec.Command
@@ -237,6 +333,34 @@ func TestListDevices(t *testing.T) {
 		}, {
 			IpAddr: "456-456-456-456",
 			Name:   "another-test-device",
+		},
+	}
+	output, err := testSDK.ListDevices()
+	if err != nil {
+		t.Error(err)
+	}
+	if d := cmp.Diff(expectedFuchsiaDevice, output, cmp.Comparer(compareFuchsiaDevices)); d != "" {
+		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
+	}
+}
+
+func TestListDevicesDeviceFinder(t *testing.T) {
+	ExecCommand = helperCommandForSDKCommon
+	defer func() {
+		ExecCommand = exec.Command
+		os.Unsetenv("FUCHSIA_DISABLED_ffx_discovery")
+	}()
+	testSDK := SDKProperties{
+		dataPath: t.TempDir(),
+	}
+	os.Setenv("FUCHSIA_DISABLED_ffx_discovery", "1")
+	expectedFuchsiaDevice := []*FuchsiaDevice{
+		{
+			IpAddr: "123-123-123-1df",
+			Name:   "test-device-df",
+		}, {
+			IpAddr: "456-456-456-4df",
+			Name:   "another-test-device-df",
 		},
 	}
 	output, err := testSDK.ListDevices()
@@ -746,7 +870,7 @@ func TestResolveTargetAddress(t *testing.T) {
 			deviceName:      "",
 			expectedAddress: "",
 			expectedError: `invalid arguments. Need to specify --device-ip or --device-name or use fconfig to configure a default device.
-Try running "device-finder list -full" and then "fconfig set-device <device_name> --image <image_name> --default".`,
+Try running "ffx target list --format s" and then "fconfig set-device <device_name> --image <image_name> --default".`,
 			execHelper: helperCommandForNoDefaultDevice,
 		},
 		{
@@ -778,7 +902,7 @@ Try running "device-finder list -full" and then "fconfig set-device <device_name
 			deviceName:        "unknown-test-device",
 			expectedAddress:   "",
 			expectedError: `cannot get target address for unknown-test-device.
-Try running "device-finder list -full" and verify the name matches in "fconfig get-all". resolve.go:76: no devices found for domains: [unknown-test-device]: exit status 2`,
+Try running "ffx target list --format s" and verify the name matches in "fconfig get-all". No devices found.: exit status 2`,
 			execHelper: helperCommandForGetFuchsiaProperty,
 		},
 	}
@@ -908,6 +1032,8 @@ func TestFakeSDKCommon(t *testing.T) {
 		fakeGSUtil(args)
 	case "device-finder":
 		fakeDeviceFinder(args)
+	case "ffx":
+		fakeFfxTarget(args)
 	case "ssh":
 		fakeSSH(args)
 	case "ssh-keygen":
@@ -972,11 +1098,11 @@ func fakeGSUtil(args []string) {
 
 func fakeDeviceFinder(args []string) {
 	expected := []string{}
-	expectedResolveArgs := []string{"resolve", "-device-limit", "1", "-ipv4=false", "test-device"}
+	expectedResolveArgs := []string{"resolve", "-device-limit", "1", "-ipv4=false", "test-device-df"}
 	expectedListArgs := []string{"list", "--full", "-ipv4=false"}
 	if args[0] == "resolve" {
 		expected = expectedResolveArgs
-		if args[len(args)-1] == "test-device" {
+		if args[len(args)-1] == "test-device-df" {
 			fmt.Println(resolvedAddr)
 		} else {
 			fmt.Fprintf(os.Stderr, "resolve.go:76: no devices found for domains: [%v]", args[len(args)-1])
@@ -984,12 +1110,45 @@ func fakeDeviceFinder(args []string) {
 		}
 	} else if args[0] == "list" {
 		expected = expectedListArgs
-		fmt.Printf(`123-123-123-123 test-device
-		456-456-456-456 another-test-device`)
+		fmt.Printf(`123-123-123-1df test-device-df
+		456-456-456-4df another-test-device-df`)
 	} else {
 		fmt.Fprintf(os.Stderr, "unexpected argument to device finder: %v", args[0])
 		os.Exit(1)
 	}
+	ok := len(expected) == len(args)
+	for i := range args {
+		if strings.Contains(expected[i], "*") {
+			expectedPattern := regexp.MustCompile(expected[i])
+			ok = ok && expectedPattern.MatchString(args[i])
+		} else {
+			ok = ok && args[i] == expected[i]
+		}
+	}
+	if !ok {
+		fmt.Fprintf(os.Stderr, "unexpected ssh args  %v exepected %v", args, expected)
+		os.Exit(1)
+	}
+}
+
+func fakeFfxTarget(args []string) {
+	expected := []string{}
+	expectedResolveArgs := []string{"target", "list", "--format", "a"}
+	expectedListFull := []string{"target", "list", "--format", "s"}
+	if args[0] == "target" && args[3] == "a" {
+		expected = expectedResolveArgs
+		if args[len(args)-1] == "test-device" {
+			fmt.Println(resolvedAddr)
+		} else {
+			fmt.Fprintf(os.Stderr, "No devices found.")
+			os.Exit(2)
+		}
+	} else if args[0] == "target" && args[3] == "s" {
+		expected = expectedListFull
+		fmt.Printf(`123-123-123-123 test-device
+		456-456-456-456 another-test-device`)
+	}
+	expectedResolveArgs = append(expectedResolveArgs, args[len(args)-1])
 	ok := len(expected) == len(args)
 	for i := range args {
 		if strings.Contains(expected[i], "*") {
@@ -1026,6 +1185,10 @@ func TestFakeFfx(*testing.T) {
 	}
 	if strings.HasSuffix(args[0], "device-finder") {
 		fakeDeviceFinder(args[1:])
+		os.Exit(0)
+	}
+	if strings.HasSuffix(args[0], "ffx") && args[1] == "target" {
+		fakeFfxTarget(args[1:])
 		os.Exit(0)
 	}
 	if args[1] != "config" {

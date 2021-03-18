@@ -19,27 +19,15 @@ setup_sftp() {
 INPUT
 }
 
-# Sets up a device-finder mock. The implemented mock aims to produce minimal
+# Sets up a ffx mock. The implemented mock aims to produce minimal
 # output that parses correctly but is otherwise uninteresting.
-setup_device_finder() {
-  cat >"${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
-while (("$#")); do
-  case "$1" in
-  --local)
-    # Emit a different address than the default so the device and the host can
-    # have different IP addresses.
-    echo fe80::1234%coffee
-    exit
-    ;;
-  --full)
+setup_ffx() {
+  cat >"${MOCKED_FFX}.mock_side_effects" <<"EOF"
+  if [[ "$*" =~ "--format s" ]]; then
     echo fe80::c0ff:eec0:ffee%coffee coffee-coffee-coffee-coffee
-    exit
-    ;;
-  esac
-  shift
-done
-
-echo fe80::c0ff:eec0:ffee%coffee
+  else
+    echo fe80::c0ff:eec0:ffee%coffee
+  fi
 EOF
 }
 
@@ -48,7 +36,7 @@ EOF
 # Verifies that the correct sftp command is run by fcp.
 TEST_fcp() {
   setup_sftp
-  setup_device_finder
+  setup_ffx
 
   # Run command.
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fcp.sh"  version.txt /tmp/version.txt
@@ -83,8 +71,8 @@ get \"/config/build-info/version\" \"version.txt\""
 
 TEST_fcp_with_props() {
   setup_sftp
-  setup_device_finder
-  
+  setup_ffx
+
   cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
 
   if [[ "$1" == "get" ]]; then
@@ -95,7 +83,7 @@ TEST_fcp_with_props() {
     echo ""
   fi
 EOF
-  
+
  # Run command.
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fcp.sh"  version.txt /tmp/version.txt
 
@@ -118,10 +106,10 @@ BT_FILE_DEPS=(
 
 # shellcheck disable=SC2034
 BT_MOCKED_TOOLS=(
-  "scripts/sdk/gn/base/tools/x64/device-finder"
-  "scripts/sdk/gn/base/tools/arm64/device-finder"
   "scripts/sdk/gn/base/tools/x64/fconfig"
   "scripts/sdk/gn/base/tools/arm64/fconfig"
+  "scripts/sdk/gn/base/tools/x64/ffx"
+  "scripts/sdk/gn/base/tools/arm64/ffx"
   _isolated_path_for/sftp
 )
 
@@ -134,8 +122,8 @@ BT_SET_UP() {
   export HOME="${BT_TEMP_DIR}/test-home"
   FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
 
-  MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
   MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
+  MOCKED_FFX="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/ffx"
 }
 
 BT_RUN_TESTS "$@"

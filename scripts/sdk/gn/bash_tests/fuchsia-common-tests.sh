@@ -29,6 +29,8 @@ BT_MOCKED_TOOLS=(
    "scripts/sdk/gn/base/tools/arm64/fconfig"
    "scripts/sdk/gn/base/tools/x64/device-finder"
    "scripts/sdk/gn/base/tools/arm64/device-finder"
+   "scripts/sdk/gn/base/tools/x64/ffx"
+   "scripts/sdk/gn/base/tools/arm64/ffx"
    "${MOCKED_GSUTIL}"
    "${MOCKED_CIPD}"
    "${MOCKED_PGREP}"
@@ -43,9 +45,9 @@ BT_SET_UP() {
   # shellcheck disable=SC1090
   source "${BT_TEMP_DIR}/scripts/sdk/gn/bash_tests/gn-bash-test-lib.sh"
 
-  # Set the path to the mocked device finder before adding the mocks to the path.
+  # Set the path to the mocked device finder and ffx before adding the mocks to the path.
   MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
-
+  MOCKED_FFX="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/ffx"
 
   cat > "${BT_TEMP_DIR}/${MOCKED_SSH_BIN}.mock_side_effects" <<"EOF"
       echo "$@"
@@ -148,9 +150,40 @@ EOF
     BT_EXPECT_EQ "${EXPECTED_SSH_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
 
-
-TEST_get-device-name() {
+TEST_get-device-name-one-device() {
     BT_ASSERT_FUNCTION_EXISTS get-device-name
+    cat > "${MOCKED_FFX}.mock_side_effects" <<"EOF"
+      echo fe80::4607:bff:fe69:b53e%enx44070b69b53f atom-device-name-mocked
+EOF
+    DEVICE_NAME="$(get-device-name)"
+    BT_EXPECT_EQ "${DEVICE_NAME}" "atom-device-name-mocked"
+}
+
+TEST_get-device-name-multiple-devices() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-name
+    cat > "${MOCKED_FFX}.mock_side_effects" <<"EOF"
+      echo fe80::4607:bff:fe69:b53e%enx44070b69b53f atom-device-name-mocked
+      echo fe80::2222:34ba:eaf:ab40%enx41234567 bagel-slurp-grave-multi
+EOF
+    DEVICE_NAME="$(get-device-name)"
+    BT_EXPECT_EQ "${DEVICE_NAME}" "atom-device-name-mocked"
+}
+
+TEST_get-device-name-no-device() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-name
+    cat > "${MOCKED_FFX}.mock_side_effects" <<"EOF"
+      >&2 echo No device found.
+EOF
+    DEVICE_NAME="$(get-device-name)"
+    BT_EXPECT_EQ "${DEVICE_NAME}" ""
+}
+
+TEST_get-device-name-one-device-device-finder() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-name
+
+    # Tests that get-device-ip works with device-finder when setting the FUCHSIA_DISABLED_FFX_DISCOVERY to 1.
+    export FUCHSIA_DISABLED_FFX_DISCOVERY=1
+
     cat > "${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
       echo fe80::4607:bff:fe69:b53e%enx44070b69b53f atom-device-name-mocked
 EOF
@@ -158,8 +191,46 @@ EOF
     BT_EXPECT_EQ "${DEVICE_NAME}" "atom-device-name-mocked"
 }
 
+TEST_get-device-name() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-name
+
+    get-device-name
+    # shellcheck disable=SC1090
+    source "${MOCKED_FFX}.mock_state"
+    EXPECTED_FFX_CMD_LINE=("${MOCKED_FFX}" "target" "list" "--format" "s")
+    BT_EXPECT_EQ "${EXPECTED_FFX_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
+}
+
+TEST_get-device-name-device-finder() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-name
+
+    # Tests that get-device-ip works with device-finder when setting the FUCHSIA_DISABLED_FFX_DISCOVERY to 1.
+    export FUCHSIA_DISABLED_FFX_DISCOVERY=1
+
+    MOCK_DEVICE="atom-device-name-mocked"
+    get-device-name
+    # shellcheck disable=SC1090
+    source "${MOCKED_DEVICE_FINDER}.mock_state"
+    EXPECTED_DEVICE_FINDER_CMD_LINE=("${MOCKED_DEVICE_FINDER}" "list" "-device-limit" "1" "-full")
+    BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
+}
+
 TEST_get-device-ip-by-name() {
     BT_ASSERT_FUNCTION_EXISTS get-device-ip-by-name
+    MOCK_DEVICE="atom-device-name-mocked"
+    get-device-ip-by-name "${MOCK_DEVICE}"
+    # shellcheck disable=SC1090
+    source "${MOCKED_FFX}.mock_state"
+    EXPECTED_FFX_CMD_LINE=("${MOCKED_FFX}" "target" "list" "--format" "a" "${MOCK_DEVICE}")
+    BT_EXPECT_EQ "${EXPECTED_FFX_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
+}
+
+TEST_get-device-ip-by-name-device-finder() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip-by-name
+
+    # Tests that get-device-ip works with device-finder when setting the FUCHSIA_DISABLED_FFX_DISCOVERY to 1.
+    export FUCHSIA_DISABLED_FFX_DISCOVERY=1
+
     MOCK_DEVICE="atom-device-name-mocked"
     get-device-ip-by-name "${MOCK_DEVICE}"
     # shellcheck disable=SC1090
@@ -168,8 +239,44 @@ TEST_get-device-ip-by-name() {
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
 }
 
+TEST_get-device-ip-by-name-no-device() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip-by-name
+    MOCK_DEVICE="atom-device-not-found-mocked"
+    cat > "${MOCKED_FFX}.mock_side_effects" <<"EOF"
+      >&2 echo No device found.
+EOF
+    rc=0
+    DEVICE_IP="$(get-device-ip-by-name ${MOCK_DEVICE} 2>&1)"
+    rc=$?
+
+    BT_EXPECT_EQ  $rc 1
+}
+
+TEST_get-device-ip-by-name-one-device() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip-by-name
+    MOCK_DEVICE="atom-device-name-mocked"
+    cat > "${MOCKED_FFX}.mock_side_effects" <<"EOF"
+      echo fe80::4607:bff:fe69:b53e%enx44070b69b53f
+EOF
+    DEVICE_IP="$(get-device-ip-by-name ${MOCK_DEVICE})"
+    BT_EXPECT_EQ "${DEVICE_IP}" "fe80::4607:bff:fe69:b53e%enx44070b69b53f"
+}
+
 TEST_get-device-ip-by-name-no-args() {
     BT_ASSERT_FUNCTION_EXISTS get-device-ip-by-name
+    BT_EXPECT get-device-ip-by-name > /dev/null
+    # shellcheck disable=SC1090
+    source "${MOCKED_FFX}.mock_state"
+    EXPECTED_FFX_CMD_LINE=("${MOCKED_FFX}" "target" "list" "--format" "a")
+    BT_EXPECT_EQ "${EXPECTED_FFX_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
+}
+
+TEST_get-device-ip-by-name-no-args-device-finder() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip-by-name
+
+    # Tests that get-device-ip works with device-finder when setting the FUCHSIA_DISABLED_FFX_DISCOVERY to 1.
+    export FUCHSIA_DISABLED_FFX_DISCOVERY=1
+
     BT_EXPECT get-device-ip-by-name > /dev/null
     # shellcheck disable=SC1090
     source "${MOCKED_DEVICE_FINDER}.mock_state"
@@ -182,9 +289,65 @@ TEST_get-device-ip() {
     MOCK_DEVICE="atom-device-name-mocked"
     BT_EXPECT get-device-ip
     # shellcheck disable=SC1090
+    source "${MOCKED_FFX}.mock_state"
+    EXPECTED_FFX_CMD_LINE=("${MOCKED_FFX}" "target" "list" "--format" "a")
+    BT_EXPECT_EQ "${EXPECTED_FFX_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
+}
+
+TEST_get-device-ip-one-device() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip
+    cat > "${MOCKED_FFX}.mock_side_effects" <<"EOF"
+      echo fe80::4607:bff:fe69:b53e%enx44070b69b53f
+EOF
+    DEVICE_IP="$(get-device-ip)"
+    BT_EXPECT_EQ "${DEVICE_IP}" "fe80::4607:bff:fe69:b53e%enx44070b69b53f"
+}
+
+TEST_get-device-ip-multiple-devices() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip
+    cat > "${MOCKED_FFX}.mock_side_effects" <<"EOF"
+      echo fe80::4607:bff:fe69:b53e%enx44070b69b53f
+      echo fe80::2222:34ba:eaf:ab40%enx41234567
+EOF
+    DEVICE_IP="$(get-device-ip)"
+    BT_EXPECT_EQ "${DEVICE_IP}" "fe80::4607:bff:fe69:b53e%enx44070b69b53f"
+}
+
+TEST_get-device-ip-no-device() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip
+    cat > "${MOCKED_FFX}.mock_side_effects" <<"EOF"
+      >&2 echo No device found.
+EOF
+    # shellcheck disable=SC1090
+    DEVICE_ADDR="$(get-device-ip)"
+    BT_EXPECT_EQ "${DEVICE_ADDR}" ""
+}
+
+TEST_get-device-ip-device-finder() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip
+
+    # Tests that get-device-ip works with device-finder when setting the FUCHSIA_DISABLED_FFX_DISCOVERY to 1.
+    export FUCHSIA_DISABLED_FFX_DISCOVERY=1
+
+    MOCK_DEVICE="atom-device-name-mocked"
+    BT_EXPECT get-device-ip
+    # shellcheck disable=SC1090
     source "${MOCKED_DEVICE_FINDER}.mock_state"
     EXPECTED_DEVICE_FINDER_CMD_LINE=("${MOCKED_DEVICE_FINDER}" "list" "-device-limit" "1" "-ipv4=false")
     BT_EXPECT_EQ "${EXPECTED_DEVICE_FINDER_CMD_LINE[*]}" "${BT_MOCK_ARGS[*]}"
+}
+
+TEST_get-device-ip-one-device-device-finder() {
+    BT_ASSERT_FUNCTION_EXISTS get-device-ip
+
+    # Tests that get-device-ip works with device-finder when setting the FUCHSIA_DISABLED_FFX_DISCOVERY to 1.
+    export FUCHSIA_DISABLED_FFX_DISCOVERY=1
+
+    cat > "${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
+      echo fe80::4607:bff:fe69:b53e%enx44070b69b53f
+EOF
+    DEVICE_IP="$(get-device-ip)"
+    BT_EXPECT_EQ "${DEVICE_IP}" "fe80::4607:bff:fe69:b53e%enx44070b69b53f"
 }
 
 TEST_get-sdk-version() {

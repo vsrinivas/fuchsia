@@ -26,15 +26,11 @@ set_up_ssh() {
 EOF
 }
 
-# Sets up a device-finder mock. The implemented mock aims to produce minimal
+# Sets up a ffx mock. The implemented mock aims to produce minimal
 # output that parses correctly but is otherwise uninteresting.
-set_up_device_finder() {
-  cat >"${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
- if [[ "$*" =~ -local ]]; then
-    # Emit a different address than the default so the device and the host can
-    # have different IP addresses.
-    echo fe80::1234%coffee
-  elif [[ "$*" =~ -full ]]; then
+set_up_ffx() {
+  cat >"${MOCKED_FFX}.mock_side_effects" <<"EOF"
+  if [[ "$*" =~ "--format s" ]]; then
     echo fe80::c0ff:eec0:ffee%coffee coffee-coffee-coffee-coffee
   else
     echo fe80::c0ff:eec0:ffee%coffee
@@ -45,7 +41,7 @@ EOF
 # Verify that pm serve was run correctly.
 TEST_fserve_remote() {
   set_up_ssh
-  set_up_device_finder
+  set_up_ffx
 
   REMOTE_PATH="/home/path_to_samples/third_party/fuchsia-sdk"
 
@@ -190,10 +186,10 @@ EOF
 
 TEST_fserve_remote_with_config() {
   set_up_ssh
-  set_up_device_finder
+  set_up_ffx
 
   REMOTE_PATH="/home/path_to_samples/third_party/fuchsia-sdk"
-  
+
   cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
 
   if [[ "$1" == "get" ]]; then
@@ -355,7 +351,7 @@ EOF
 
 TEST_fserve_remote_existing_session() {
   set_up_ssh
-  set_up_device_finder
+  set_up_ffx
 
   REMOTE_PATH="/home/path_to_samples/third_party/fuchsia-sdk"
 
@@ -540,7 +536,7 @@ EOF
 
 TEST_fserve_remote_pm_running() {
   set_up_ssh
-  set_up_device_finder
+  set_up_ffx
 
   REMOTE_PATH="/home/path_to_samples/third_party/fuchsia-sdk"
 
@@ -723,8 +719,8 @@ BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/x64/fconfig
   scripts/sdk/gn/base/tools/arm64/fconfig
   scripts/sdk/gn/base/bin/gsutil
-  scripts/sdk/gn/base/tools/x64/device-finder
-  scripts/sdk/gn/base/tools/arm64/device-finder
+  scripts/sdk/gn/base/tools/x64/ffx
+  scripts/sdk/gn/base/tools/arm64/ffx
   scripts/sdk/gn/base/tools/x64/pm
   scripts/sdk/gn/base/tools/arm64/pm
   isolated_path_for/ssh
@@ -753,8 +749,8 @@ BT_SET_UP() {
   mkdir -p "${BT_TEMP_DIR}/test-home"
   export HOME="${BT_TEMP_DIR}/test-home"
 
-  MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
   MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
+  MOCKED_FFX="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/ffx"
 
   if [[ "$(type -t kill)" == "builtin" ]]; then
     kill() {

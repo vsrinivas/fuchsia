@@ -18,39 +18,22 @@ set_up_ssh() {
     >"${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys"
 }
 
-# Sets up a device-finder mock. The implemented mock aims to produce minimal
+# Sets up a ffx mock. The implemented mock aims to produce minimal
 # output that parses correctly but is otherwise uninteresting.
-set_up_device_finder() {
-  cat >"${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"EOF"
-while (("$#")); do
-  case "$1" in
-  resolve)
-    if [[ "$*" =~ "unknown-device" ]]; then
-      exit 2
-    fi
-    ;;
-  --local)
-    # Emit a different address than the default so the device and the host can
-    # have different IP addresses.
-    echo fe80::1234%coffee
-    exit
-    ;;
-  --full)
+set_up_ffx() {
+  cat >"${MOCKED_FFX}.mock_side_effects" <<"EOF"
+  if [[ "$*" =~ "--format s" ]]; then
     echo fe80::c0ff:eec0:ffee%coffee coffee-coffee-coffee-coffee
     exit
-    ;;
-  *)
-    last_arg="$1"
-    ;;
-  esac
-  shift
-done
-
-if [[ "${last_arg}" == "custom-device-name" ]]; then
-  echo "fe80:cccc:cccc:cccc%dev"
-else
-  echo "fe80::c0ff:eec0:ffee%coffee"
-fi
+  fi
+  last_arg="${@: -1}"
+  if [[ "${last_arg}" =~ "unknown-device" ]]; then
+    exit 2
+  elif [[ "${last_arg}" == "custom-device-name" ]]; then
+    echo "fe80:cccc:cccc:cccc%dev"
+  else
+    echo "fe80::c0ff:eec0:ffee%coffee"
+  fi
 EOF
 }
 
@@ -113,7 +96,7 @@ set_up_sdk_stubs() {
 # device.
 TEST_fpave_restarts_device() {
   set_up_ssh
-  set_up_device_finder
+  set_up_ffx
   set_up_gsutil
   set_up_sdk_stubs
 
@@ -138,7 +121,7 @@ TEST_fpave_restarts_device() {
 # Fuchsia core SDK.
 TEST_fpave_starts_paving() {
   set_up_ssh
-  set_up_device_finder
+  set_up_ffx
   set_up_gsutil
   set_up_sdk_stubs
 
@@ -196,7 +179,7 @@ TEST_fpave_lists_images() {
 TEST_fpave_switch_types() {
  set_up_ssh
  set_up_gsutil_multibucket
- set_up_device_finder
+ set_up_ffx
 
  BT_EXPECT "${FPAVE_CMD}" --prepare --image image1 --authorized-keys "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/authorized_keys" > pave_image1.txt 2>&1
  BT_EXPECT_FILE_CONTAINS pave_image1.txt "Paving image1 system image for SDK version 8890373976687374912 from gs://fuchsia/development/8890373976687374912/images/image1.tgz"
@@ -214,7 +197,7 @@ TEST_fpave_switch_types() {
 }
 TEST_fpave_default_keys() {
   set_up_ssh
-  set_up_device_finder
+  set_up_ffx
   set_up_gsutil
   set_up_sdk_stubs
 
@@ -238,7 +221,7 @@ TEST_fpave_default_keys() {
 
 TEST_fpave_with_props() {
   set_up_ssh
-  set_up_device_finder
+  set_up_ffx
   set_up_gsutil
   set_up_sdk_stubs
 
@@ -274,7 +257,7 @@ TEST_fpave_in_zedboot() {
   # This test covers the case when the device is in zedboot, so ssh does not connect.
 
   set_up_ssh
-  set_up_device_finder
+  set_up_ffx
   set_up_gsutil
   set_up_sdk_stubs
 
@@ -304,7 +287,7 @@ TEST_fpave_in_zedboot() {
 
 TEST_fpave_name_not_resolved() {
   set_up_ssh
-  set_up_device_finder
+  set_up_ffx
   set_up_gsutil
   set_up_sdk_stubs
 
@@ -338,10 +321,10 @@ BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/x64/bootserver
   scripts/sdk/gn/base/tools/arm64/bootserver
   test-home/.fuchsia/image/pave.sh
-  scripts/sdk/gn/base/tools/x64/device-finder
-  scripts/sdk/gn/base/tools/arm64/device-finder
   scripts/sdk/gn/base/tools/x64/fconfig
   scripts/sdk/gn/base/tools/arm64/fconfig
+  scripts/sdk/gn/base/tools/x64/ffx
+  scripts/sdk/gn/base/tools/arm64/ffx
   isolated_path_for/ssh
 )
 
@@ -360,7 +343,7 @@ BT_SET_UP() {
   tar czf "${BT_TEMP_DIR}/scripts/sdk/gn/testdata/empty.tar.gz" -C "${FUCHSIA_WORK_DIR}/image"  "."
 
   MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
-  MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
+  MOCKED_FFX="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/ffx"
 
 }
 

@@ -24,19 +24,16 @@ def run_command(*args, **kwargs):
     return stdout
 
 
-def get_device_addresses(dev_finder):
+def get_target_address(ffx):
     # Find a target device.
-    stdout = run_command(dev_finder, 'list', '-device-limit', '1', '-full')
+    stdout = run_command(ffx, 'target', 'list', '--format', 's')
     match = re.match('^([^\s]+)\s+([^\s]+)$', stdout.strip())
     if not match:
         raise Exception('Could not parse target parameters in %s' % stdout)
     target_address = match.group(1)
     target_name = match.group(2)
 
-    # Get the matching host address for that device.
-    stdout = run_command(dev_finder, 'resolve', '-local', target_name)
-    host_address = stdout.strip()
-    return target_address, host_address
+    return target_address
 
 
 def serve_package(pm, package, directory):
@@ -52,34 +49,30 @@ def serve_package(pm, package, directory):
 class MyParser(argparse.ArgumentParser):
 
     def error(self, message):
-        print('Usage: bazel run <package label> -- <component name> --ssh-key '
-              '<path to private key>')
+        print(
+            'Usage: bazel run <package label> -- <component name> --ssh-key '
+            '<path to private key>')
         sys.exit(1)
 
 
 def main():
     parser = MyParser()
-    parser.add_argument('--config',
-                        help='The path to the list of components in the package',
-                        required=True)
-    parser.add_argument('--package-name',
-                        help='The name of the Fuchsia package',
-                        required=True)
-    parser.add_argument('--package',
-                        help='The path to the Fuchsia package',
-                        required=True)
-    parser.add_argument('--dev-finder',
-                        help='The path to the dev_finder tool',
-                        required=True)
-    parser.add_argument('--pm',
-                        help='The path to the pm tool',
-                        required=True)
+    parser.add_argument(
+        '--config',
+        help='The path to the list of components in the package',
+        required=True)
+    parser.add_argument(
+        '--package-name', help='The name of the Fuchsia package', required=True)
+    parser.add_argument(
+        '--package', help='The path to the Fuchsia package', required=True)
+    parser.add_argument('--ffx', help='The path to the ffx tool', required=True)
+    parser.add_argument('--pm', help='The path to the pm tool', required=True)
     subparse = parser.add_subparsers().add_parser('run')
-    subparse.add_argument('component',
-                          nargs=1)
-    subparse.add_argument('--ssh-key',
-                          help='The absolute path to a private SSH key',
-                          required=True)
+    subparse.add_argument('component', nargs=1)
+    subparse.add_argument(
+        '--ssh-key',
+        help='The absolute path to a private SSH key',
+        required=True)
     args = parser.parse_args()
 
     if not os.path.isabs(args.ssh_key):
@@ -97,21 +90,35 @@ def main():
     staging_dir = tempfile.mkdtemp(prefix='fuchsia-run')
 
     try:
-        target_address, host_address = get_device_addresses(args.dev_finder)
+        target_address = get_target_address(args.ffx)
         stop_server = serve_package(args.pm, args.package, staging_dir)
         try:
+
             def run_ssh_command(*params, **kwargs):
                 base = [
-                    'ssh', '-i', args.ssh_key,
+                    'ssh',
+                    '-i',
+                    args.ssh_key,
                     'fuchsia@' + target_address,
-                    '-o', 'StrictHostKeyChecking=no',
-                    '-o', 'UserKnownHostsFile=/dev/null',
+                    '-o',
+                    'StrictHostKeyChecking=no',
+                    '-o',
+                    'UserKnownHostsFile=/dev/null',
                 ]
                 run_command(*(base + list(params)), **kwargs)
+
+            host_address = run_ssh_command('echo $SSH_CONNECTION')
+            if "No devices found" in host_address:
+                print(
+                    'Error: could not get host address for %s' % target_address)
+                return 1
+            host_address = host_address.split(' ')[0]
+            host_address = host_address.replace('%', '%25')
             server_address = 'http://%s:8083/config.json' % host_address
-            run_ssh_command('amberctl', 'add_src', '-x', '-f', server_address)
+            run_ssh_command(
+                'amberctl', 'add_src', '-n', 'devhost', '-f', server_address)
             component_uri = "fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx" % (
-                    args.package_name, component)
+                args.package_name, component)
             run_ssh_command('run', component_uri, no_redirect=True)
         finally:
             stop_server()

@@ -312,15 +312,31 @@ func (sdk SDKProperties) GetPackageSourcePath(version string, bucket string, ima
 
 // GetAddressByName returns the IPv6 address of the device.
 func (sdk SDKProperties) GetAddressByName(deviceName string) (string, error) {
-	toolsDir, err := sdk.GetToolsDir()
-	if err != nil {
-		return "", fmt.Errorf("Could not determine tools directory %v", err)
+	// Uses ffx disovery workflow by default. The legacy device-finder
+	// workflow can be enabled by setting the environment variable FUCHSIA_DISABLED_ffx_discovery=1.
+	FUCHSIA_DISABLED_FFX_DISCOVERY := os.Getenv("FUCHSIA_DISABLED_ffx_discovery")
+
+	if FUCHSIA_DISABLED_FFX_DISCOVERY == "1" {
+		toolsDir, err := sdk.GetToolsDir()
+		if err != nil {
+			return "", fmt.Errorf("Could not determine tools directory %v", err)
+		}
+		cmd := filepath.Join(toolsDir, "device-finder")
+		args := []string{"resolve", "-device-limit", "1", "-ipv4=false", deviceName}
+		output, err := ExecCommand(cmd, args...).Output()
+		if err != nil {
+			var exitError *exec.ExitError
+			if errors.As(err, &exitError) {
+				return "", fmt.Errorf("%v: %v", string(exitError.Stderr), exitError)
+			} else {
+				return "", err
+			}
+		}
+		return strings.TrimSpace(string(output)), nil
 	}
-	cmd := filepath.Join(toolsDir, "device-finder")
-
-	args := []string{"resolve", "-device-limit", "1", "-ipv4=false", deviceName}
-
-	output, err := ExecCommand(cmd, args...).Output()
+	// TODO(fxb/69008): use ffx json output.
+	args := []string{"target", "list", "--format", "a", deviceName}
+	output, err := runFFX(sdk, args)
 	if err != nil {
 		var exitError *exec.ExitError
 		if errors.As(err, &exitError) {
@@ -367,22 +383,36 @@ func (sdk SDKProperties) FindDeviceByIP(ipAddr string) (*FuchsiaDevice, error) {
 // ListDevices returns all available fuchsia devices.
 func (sdk SDKProperties) ListDevices() ([]*FuchsiaDevice, error) {
 	var devices []*FuchsiaDevice
-	toolsDir, err := sdk.GetToolsDir()
-	if err != nil {
-		return nil, fmt.Errorf("Could not determine tools directory %v", err)
-	}
-	cmd := filepath.Join(toolsDir, "device-finder")
-
-	args := []string{"list", "--full", "-ipv4=false"}
-
-	output, err := ExecCommand(cmd, args...).Output()
-	if err != nil {
-		var exitError *exec.ExitError
-		if errors.As(err, &exitError) {
-			return nil, fmt.Errorf("%v: %v", string(exitError.Stderr), exitError)
+	var err error
+	var output []byte
+	// Uses ffx disovery workflow by default. The legacy device-finder
+	// workflow can be enabled by setting the environment variable FUCHSIA_DISABLED_ffx_discovery=1.
+	FUCHSIA_DISABLED_FFX_DISCOVERY := os.Getenv("FUCHSIA_DISABLED_ffx_discovery")
+	if FUCHSIA_DISABLED_FFX_DISCOVERY == "1" {
+		toolsDir, err := sdk.GetToolsDir()
+		if err != nil {
+			return nil, fmt.Errorf("Could not determine tools directory %v", err)
 		}
-		return nil, err
+		cmd := filepath.Join(toolsDir, "device-finder")
+
+		args := []string{"list", "--full", "-ipv4=false"}
+
+		output, err = ExecCommand(cmd, args...).Output()
+		if err != nil {
+			var exitError *exec.ExitError
+			if errors.As(err, &exitError) {
+				return nil, fmt.Errorf("%v: %v", string(exitError.Stderr), exitError)
+			}
+			return nil, err
+		}
+	} else {
+		args := []string{"target", "list", "--format", "s"}
+		output, err = runFFX(sdk, args)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	for _, line := range strings.Split(string(output), "\n") {
 		parts := strings.Split(line, " ")
 		if len(parts) == 2 {
@@ -392,6 +422,7 @@ func (sdk SDKProperties) ListDevices() ([]*FuchsiaDevice, error) {
 			})
 		}
 	}
+
 	if len(devices) < 1 {
 		return nil, fmt.Errorf("no devices found")
 	}
@@ -902,7 +933,7 @@ func (sdk SDKProperties) ResolveTargetAddress(deviceIP string, deviceName string
 		err           error
 	)
 
-	helpfulTipMsg := `Try running "device-finder list -full" and then "fconfig set-device <device_name> --image <image_name> --default".`
+	helpfulTipMsg := `Try running "ffx target list --format s" and then "fconfig set-device <device_name> --image <image_name> --default".`
 
 	// If  there is a deviceIP address, use it.
 	if deviceIP != "" {
@@ -929,12 +960,13 @@ func (sdk SDKProperties) ResolveTargetAddress(deviceIP string, deviceName string
 		if targetAddress == "" {
 			if targetAddress, err = sdk.GetAddressByName(deviceName); err != nil {
 				return "", fmt.Errorf(`cannot get target address for %v.
-Try running "device-finder list -full" and verify the name matches in "fconfig get-all". %v`, deviceName, err)
+Try running "ffx target list --format s" and verify the name matches in "fconfig get-all". %v`, deviceName, err)
 			}
 		}
 	}
 	if targetAddress == "" {
-		return "", fmt.Errorf("could not get target device IP address for %v", deviceName)
+		return "", fmt.Errorf(`could not get target device IP address for %v.
+Try running "ffx target list --format s" and verify the name matches in "fconfig get-all".`, deviceName)
 	}
 	return targetAddress, nil
 }

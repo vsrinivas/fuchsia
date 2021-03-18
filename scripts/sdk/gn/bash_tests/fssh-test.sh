@@ -24,35 +24,23 @@ BT_SET_UP() {
   export HOME="${BT_TEMP_DIR}/test-home"
   FUCHSIA_WORK_DIR="${HOME}/.fuchsia"
 
-  MOCKED_DEVICE_FINDER="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/device-finder"
   MOCKED_FCONFIG="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/fconfig"
+  MOCKED_FFX="${BT_TEMP_DIR}/scripts/sdk/gn/base/$(gn-test-tools-subdir)/ffx"
 
   # Add the ssh mock to the path so fssh uses it vs. the real ssh.
   SSH_MOCK_PATH="${BT_TEMP_DIR}/isolated_path_for"
   export PATH="${SSH_MOCK_PATH}:${PATH}"
 }
 
-# Sets up a device-finder mock. The implemented mock aims to produce minimal
+# Sets up a ffx mock. The implemented mock aims to produce minimal
 # output that parses correctly but is otherwise uninteresting.
-set_up_device_finder() {
-  cat >"${MOCKED_DEVICE_FINDER}.mock_side_effects" <<"SETVAR"
-while (("$#")); do
-  case "$1" in
-  --local)
-    # Emit a different address than the default so the device and the host can
-    # have different IP addresses.
-    echo fe80::1234%coffee
-    exit
-    ;;
-  --full)
+set_up_ffx() {
+  cat >"${MOCKED_FFX}.mock_side_effects" <<"SETVAR"
+  if [[ "$*" =~ "--format s" ]]; then
     echo fe80::c0ff:eec0:ffee%coffee coffee-coffee-coffee-coffee
-    exit
-    ;;
-  esac
-  shift
-done
-
-echo fe80::c0ff:eec0:ffee%coffee
+  else
+    echo fe80::c0ff:eec0:ffee%coffee
+  fi
 SETVAR
 }
 
@@ -84,7 +72,7 @@ All positional arguments are passed through to SSH to be executed on the device.
 
 # Verifies that the correct ssh command is run by fssh.
 TEST_fssh() {
-  set_up_device_finder
+  set_up_ffx
 
   # Run command.
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh"
@@ -99,7 +87,7 @@ TEST_fssh() {
 }
 
 TEST_fssh_by_ip() {
-  set_up_device_finder
+  set_up_ffx
 
   # Run command.
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --device-ip fe80::d098:513f:9cfb:eb53%hardcoded
@@ -112,7 +100,7 @@ TEST_fssh_by_ip() {
 }
 
 TEST_fssh_by_name() {
-   set_up_device_finder
+   set_up_ffx
 
   # Run command.
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --device-name coffee-coffee-coffee-coffee
@@ -125,8 +113,8 @@ TEST_fssh_by_name() {
 }
 
 TEST_fssh_name_not_found() {
-  echo 2 > "${MOCKED_DEVICE_FINDER}.mock_status"
-  echo "2020/02/25 07:42:59 no devices with domain matching 'name-not-found'" > "${MOCKED_DEVICE_FINDER}.stderr"
+  echo 2 > "${MOCKED_FFX}.mock_status"
+  echo "2020/02/25 07:42:59 no devices with domain matching 'name-not-found'" > "${MOCKED_FFX}.stderr"
 
   # Run command.
   BT_EXPECT_FAIL  "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" --device-name name-not-found
@@ -134,7 +122,7 @@ TEST_fssh_name_not_found() {
 
 
 TEST_fssh_with_ip_prop() {
-  set_up_device_finder
+  set_up_ffx
 
   cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
 
@@ -158,7 +146,7 @@ EOF
 }
 
 TEST_fssh_with_name_prop() {
-  set_up_device_finder
+  set_up_ffx
 
   cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
 
@@ -182,7 +170,7 @@ EOF
 }
 
 TEST_fssh_with_ip_prop_quiet() {
-  set_up_device_finder
+  set_up_ffx
   echo "my-super-cool-device" > "${SSH_MOCK_PATH}/ssh.mock_stdout"
 
   cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
@@ -209,7 +197,7 @@ EOF
 }
 
 TEST_fssh_with_all_props() {
-  set_up_device_finder
+  set_up_ffx
 
   cat >"${MOCKED_FCONFIG}.mock_side_effects" <<"EOF"
 
@@ -237,7 +225,7 @@ EOF
 }
 
 TEST_fssh_with_custom_sshconfig() {
-  set_up_device_finder
+  set_up_ffx
 
   BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fssh.sh" "--sshconfig" "custom-sshconfig" hostname
 
@@ -259,8 +247,8 @@ BT_FILE_DEPS=(
 BT_MOCKED_TOOLS=(
   scripts/sdk/gn/base/tools/x64/fconfig
   scripts/sdk/gn/base/tools/arm64/fconfig
-  scripts/sdk/gn/base/tools/x64/device-finder
-  scripts/sdk/gn/base/tools/arm64/device-finder
+  scripts/sdk/gn/base/tools/x64/ffx
+  scripts/sdk/gn/base/tools/arm64/ffx
   isolated_path_for/ssh
 )
 

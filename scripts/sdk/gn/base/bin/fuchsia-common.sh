@@ -24,6 +24,10 @@ FUCHSIA_PROPERTY_NAMES=(
   "emu-bucket" # Used as the default for bucket when running the emulator.
 )
 
+# Uses ffx disovery workflow by default. The legacy device-finder
+# workflow can be enabled by setting the environment variable FUCHSIA_DISABLED_ffx_discovery=1.
+FUCHSIA_DISABLED_FFX_DISCOVERY="${FUCHSIA_DISABLED_ffx_discovery-0}"
+
 function is-mac {
   [[ "$(uname -s)" == "Darwin" ]] && return 0
   return 1
@@ -156,15 +160,19 @@ function ssh-cmd {
 }
 
 function get-device-ip {
-  # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
-  #   forcing IPv6 allows for easier manipulation of the result.
   local device_addr
   device_addr="$(get-fuchsia-property device-ip)"
   if [[ "${device_addr}" != "" ]]; then
     echo "${device_addr}"
     return 0
   else
-    "$(get-fuchsia-sdk-tools-dir)/device-finder" list -device-limit 1 -ipv4=false
+    if [[ "${FUCHSIA_DISABLED_FFX_DISCOVERY}" == 1 ]]; then
+      # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
+      # forcing IPv6 allows for easier manipulation of the result.
+      "$(get-fuchsia-sdk-tools-dir)/device-finder" list -device-limit 1 -ipv4=false
+    else
+      "$(get-fuchsia-sdk-tools-dir)/ffx" target list --format a 2> /dev/null | head -1
+    fi
   fi
 }
 
@@ -178,8 +186,14 @@ function get-device-name {
     echo "${device_name}"
     return 0
   else
-    if device_name="$("$(get-fuchsia-sdk-tools-dir)/device-finder" list -device-limit 1 -full)"; then
-      echo "${device_name}"  | cut -d' '  -f2
+    if [[ "${FUCHSIA_DISABLED_FFX_DISCOVERY}" == 1 ]]; then
+      if device_name="$("$(get-fuchsia-sdk-tools-dir)/device-finder" list -device-limit 1 -full)"; then
+        echo "${device_name}"  | cut -d' '  -f2
+      fi
+    else
+      if device_name="$("$(get-fuchsia-sdk-tools-dir)/ffx" target list --format s 2> /dev/null)"; then
+        echo "${device_name}" | head -1 | cut -d' ' -f2
+      fi
     fi
   fi
 }
@@ -193,13 +207,25 @@ function get-device-ip-by-name {
   # returns the IP address of an arbitrarily selected Fuchsia device.
 
   if [[ "${#}" -eq 1 &&  -n "$1" ]]; then
-    # There should typically only be one device that matches the nodename
-    # but we add a device-limit to speed up resolution by exiting when the first
-    # candidate is found.
-    if ! device_ip="$("$(get-fuchsia-sdk-tools-dir)/device-finder" resolve -device-limit 1 -ipv4=false "${1}")"; then
-      return $?
+    if [[ "${FUCHSIA_DISABLED_FFX_DISCOVERY}" == 1 ]]; then
+      # There should typically only be one device that matches the nodename
+      # but we add a device-limit to speed up resolution by exiting when the first
+      # candidate is found.
+      if ! device_ip="$("$(get-fuchsia-sdk-tools-dir)/device-finder" resolve -device-limit 1 -ipv4=false "${1}")"; then
+        return $?
+      else
+        echo "${device_ip}"
+      fi
     else
-      echo "${device_ip}"
+      if ! device_ip="$("$(get-fuchsia-sdk-tools-dir)/ffx" target list --format a "${1}" 2> /dev/null)"; then
+        return $?
+      else
+        # Ffx will return status code 0 if device is not found.
+        if [[ "${device_ip}" == "" ]]; then
+          return 1
+        fi
+        echo "${device_ip}"
+      fi
     fi
   else
     #shellcheck disable=SC2119

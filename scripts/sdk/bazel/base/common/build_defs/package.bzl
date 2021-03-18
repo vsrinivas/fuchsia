@@ -193,7 +193,7 @@ def _fuchsia_package_impl(context):
     --config %s \\
     --package-name %s \\
     --package %s \\
-    --dev-finder %s \\
+    --ffx %s \\
     --pm %s \\
     run \\
     \"$@\"
@@ -202,7 +202,7 @@ def _fuchsia_package_impl(context):
         components_file.short_path,
         context.attr.name,
         package_archive.short_path,
-        context.executable._dev_finder.short_path,
+        context.executable._ffx.short_path,
         context.executable._pm.short_path,
     )
     context.actions.write(
@@ -213,7 +213,7 @@ def _fuchsia_package_impl(context):
 
     runfiles = context.runfiles(files = [
         components_file,
-        context.executable._dev_finder,
+        context.executable._ffx,
         context.executable._pm,
         context.executable._runner,
         executable_file,
@@ -243,13 +243,13 @@ fuchsia_package = rule(
             mandatory = True,
         ),
         "_pm": attr.label(
-            default = Label("//tools:pm"),
+            default = Label("//tools/x64:pm"),
             allow_single_file = True,
             executable = True,
             cfg = "host",
         ),
-        "_dev_finder": attr.label(
-            default = Label("//tools:device-finder"),
+        "_ffx": attr.label(
+            default = Label("//tools/x64:ffx"),
             allow_single_file = True,
             executable = True,
             cfg = "host",
