@@ -159,7 +159,7 @@ function get-device-ip {
   # -ipv4 false: Disable IPv4. Fuchsia devices are IPv6-compatible, so
   #   forcing IPv6 allows for easier manipulation of the result.
   local device_addr
-  device_addr="$(get-fuchsia-property device-addr)"
+  device_addr="$(get-fuchsia-property device-ip)"
   if [[ "${device_addr}" != "" ]]; then
     echo "${device_addr}"
     return 0
