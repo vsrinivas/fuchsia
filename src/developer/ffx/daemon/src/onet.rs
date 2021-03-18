@@ -45,8 +45,8 @@ async fn latency_sensitive_copy(
 }
 
 impl HostPipeChild {
-    pub async fn new(addrs: Vec<TargetAddr>) -> Result<HostPipeChild> {
-        let mut inner = build_ssh_command(addrs, vec!["remote_control_runner"])
+    pub async fn new(addrs: Vec<TargetAddr>, ssh_port: Option<u16>) -> Result<HostPipeChild> {
+        let mut inner = build_ssh_command(addrs, ssh_port, vec!["remote_control_runner"])
             .await?
             .stdout(Stdio::piped())
             .stdin(Stdio::piped())
@@ -155,7 +155,7 @@ impl HostPipeConnection {
 
     async fn new_with_cmd<F>(
         target: WeakTarget,
-        cmd_func: impl FnOnce(Vec<TargetAddr>) -> F + Send + Copy + 'static,
+        cmd_func: impl FnOnce(Vec<TargetAddr>, Option<u16>) -> F + Send + Copy + 'static,
         relaunch_command_delay: Duration,
     ) -> Result<(), String>
     where
@@ -165,7 +165,8 @@ impl HostPipeConnection {
             log::debug!("Spawning new host-pipe instance");
             let target = target.upgrade().ok_or("parent Arc<> lost. exiting".to_owned())?;
             let addrs = target.addrs().await;
-            let mut cmd = cmd_func(addrs).await.map_err(|e| e.to_string())?;
+            let port = target.ssh_port();
+            let mut cmd = cmd_func(addrs, port).await.map_err(|e| e.to_string())?;
 
             // Attempts to run the command. If it exits successfully (disconnect due to peer
             // dropping) then will set the target to disconnected state. If
@@ -236,7 +237,10 @@ mod test {
         }
     }
 
-    async fn start_child_normal_operation(_t: Vec<TargetAddr>) -> Result<HostPipeChild> {
+    async fn start_child_normal_operation(
+        _t: Vec<TargetAddr>,
+        _port: Option<u16>,
+    ) -> Result<HostPipeChild> {
         Ok(HostPipeChild::fake_new(
             std::process::Command::new("yes")
                 .arg("test-command")
@@ -247,7 +251,10 @@ mod test {
         ))
     }
 
-    async fn start_child_internal_failure(_t: Vec<TargetAddr>) -> Result<HostPipeChild> {
+    async fn start_child_internal_failure(
+        _t: Vec<TargetAddr>,
+        _port: Option<u16>,
+    ) -> Result<HostPipeChild> {
         Err(anyhow!(ERR_CTX))
     }
 

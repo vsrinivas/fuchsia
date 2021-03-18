@@ -288,6 +288,9 @@ struct TargetInner {
     state: Mutex<TargetState>,
     last_response: RwLock<DateTime<Utc>>,
     addrs: RwLock<BTreeSet<TargetAddrEntry>>,
+    // ssh_port if set overrides the global default configuration for ssh port,
+    // for this target.
+    ssh_port: Option<u16>,
     // used for Fastboot
     serial: RwLock<Option<String>>,
     boot_timestamp_nanos: RwLock<Option<u64>>,
@@ -301,6 +304,7 @@ impl TargetInner {
             last_response: RwLock::new(Utc::now()),
             state: Mutex::new(TargetState::default()),
             addrs: RwLock::new(BTreeSet::new()),
+            ssh_port: None,
             serial: RwLock::new(None),
             boot_timestamp_nanos: RwLock::new(None),
             diagnostics_info: Arc::new(DiagnosticsStreamer::default()),
@@ -630,6 +634,10 @@ impl Target {
                 }
             })
             .collect();
+    }
+
+    pub fn ssh_port(&self) -> Option<u16> {
+        self.inner.ssh_port
     }
 
     #[cfg(test)]
@@ -1389,6 +1397,7 @@ mod test {
                 last_response: RwLock::new(block_on(self.last_response.read()).clone()),
                 state: Mutex::new(block_on(self.state.lock()).clone()),
                 addrs: RwLock::new(block_on(self.addrs.read()).clone()),
+                ssh_port: None,
                 serial: RwLock::new(block_on(self.serial.read()).clone()),
                 boot_timestamp_nanos: RwLock::new(
                     block_on(self.boot_timestamp_nanos.read()).clone(),
