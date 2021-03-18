@@ -36,29 +36,42 @@ zx::status<> PagedVfs::ReportPagerError(const zx::vmo& node_vmo, uint64_t offset
   return zx::make_status(pager_.op_range(ZX_PAGER_OP_FAIL, node_vmo, offset, length, err));
 }
 
-zx::status<zx::vmo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<PagedVnode> node, uint64_t size) {
+zx::status<PagedVfs::VmoCreateInfo> PagedVfs::CreatePagedNodeVmo(fbl::RefPtr<PagedVnode> node,
+                                                                 uint64_t size) {
   // Register this node with a unique ID to associated it with pager requests.
-  uint64_t id;
+  VmoCreateInfo create_info;
   {
     std::lock_guard<std::mutex> lock(vfs_lock_);
 
-    id = next_node_id_;
+    create_info.id = next_node_id_;
     ++next_node_id_;
 
-    paged_nodes_[id] = std::move(node);
+    paged_nodes_[create_info.id] = std::move(node);
   }
 
-  zx::vmo vmo;
-  if (auto status = pager_.create_vmo(0, pager_pool_->port(), id, size, &vmo); status != ZX_OK) {
-    // On error we need to undo the owning reference from above. This would be simpler if we only
-    // store the reference once the VMO was created, but that would require two separate lock
-    // steps.
+  // Create the VMO itself outside the lock.
+  if (auto status =
+          pager_.create_vmo(0, pager_pool_->port(), create_info.id, size, &create_info.vmo);
+      status != ZX_OK) {
+    // On error we need to undo the owning reference from above.
     std::lock_guard<std::mutex> lock(vfs_lock_);
-    paged_nodes_.erase(id);
+    paged_nodes_.erase(create_info.id);
     return zx::error(status);
   }
 
-  return zx::ok(std::move(vmo));
+  return zx::ok(std::move(create_info));
+}
+
+void PagedVfs::UnregisterPagedVmo(uint64_t paged_vmo_id) {
+  std::lock_guard<std::mutex> lock(vfs_lock_);
+
+  auto found = paged_nodes_.find(paged_vmo_id);
+  if (found == paged_nodes_.end()) {
+    ZX_DEBUG_ASSERT(false);  // Should always be found.
+    return;                  // Possible race with completion message on another thread, ignore.
+  }
+
+  paged_nodes_.erase(found);
 }
 
 void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) {
@@ -77,6 +90,11 @@ void PagedVfs::PagerVmoRead(uint64_t node_id, uint64_t offset, uint64_t length) 
 
   // Handle the request outside the lock while holding a reference to the node.
   node->VmoRead(offset, length);
+}
+
+size_t PagedVfs::GetRegisteredPagedVmoCount() const {
+  std::lock_guard<std::mutex> lock(vfs_lock_);
+  return paged_nodes_.size();
 }
 
 }  // namespace fs

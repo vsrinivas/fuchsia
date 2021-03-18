@@ -133,7 +133,10 @@ class PagingTestFile : public PagedVnode {
   }
 
  protected:
-  void OnNoClones() override { shared_->SignalVmoPresenceChanged(false); }
+  void OnNoClones() override FS_TA_REQUIRES(mutex_) {
+    PagedVnode::OnNoClones();  // Do normal behavior of releasing the VMO.
+    shared_->SignalVmoPresenceChanged(false);
+  }
 
  private:
   friend fbl::RefPtr<PagingTestFile>;
@@ -225,6 +228,8 @@ class PagingTest : public zxtest::Test {
   }
 
  protected:
+  std::unique_ptr<PagedVfs> vfs_;
+
   std::shared_ptr<SharedFileState> file1_shared_;
   std::shared_ptr<SharedFileState> file_err_shared_;
   std::vector<uint8_t> file1_contents_;
@@ -242,8 +247,6 @@ class PagingTest : public zxtest::Test {
   async::Loop main_loop_;
   std::unique_ptr<std::thread> vfs_thread_;
   async::Loop vfs_loop_;
-
-  std::unique_ptr<PagedVfs> vfs_;
 
   fbl::RefPtr<PseudoDir> root_;
 };
@@ -265,12 +268,14 @@ TEST_F(PagingTest, Read) {
   // With no VMO requests, there should be no mappings of the VMO in the file.
   ASSERT_FALSE(file1_shared_->GetVmoPresent());
   EXPECT_FALSE(file1_->HasClones());
+  EXPECT_EQ(0u, vfs_->GetRegisteredPagedVmoCount());
 
   // Gets the VMO for file1, it should now have a VMO.
   zx::vmo vmo;
   ASSERT_EQ(ZX_OK, fdio_get_vmo_exact(file1_fd.get(), vmo.reset_and_get_address()));
   ASSERT_TRUE(file1_shared_->WaitForChangedVmoPresence());
   EXPECT_TRUE(file1_->HasClones());
+  EXPECT_EQ(1u, vfs_->GetRegisteredPagedVmoCount());
 
   // Map the data and validate the result can be read.
   zx_vaddr_t mapped_addr = 0;
@@ -296,6 +301,7 @@ TEST_F(PagingTest, Read) {
   ASSERT_EQ(ZX_OK, zx::vmar::root_self()->unmap(mapped_addr, mapped_len));
   ASSERT_FALSE(file1_shared_->WaitForChangedVmoPresence());
   EXPECT_FALSE(file1_->HasClones());
+  EXPECT_EQ(0u, vfs_->GetRegisteredPagedVmoCount());
 }
 
 TEST_F(PagingTest, VmoRead) {

@@ -199,7 +199,7 @@ class Vfs {
   bool ReadonlyLocked() const FS_TA_REQUIRES(vfs_lock_) { return readonly_; }
 
   // A lock which should be used to protect lookup and walk operations
-  std::mutex vfs_lock_;
+  mutable std::mutex vfs_lock_;
 
  private:
   // Starting at vnode |vn|, walk the tree described by the path string, until either there is only

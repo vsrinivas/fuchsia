@@ -13,7 +13,7 @@ PagedVnode::PagedVnode(PagedVfs* vfs) : Vnode(vfs), clone_watcher_(this) {}
 PagedVnode::~PagedVnode() {}
 
 zx::status<> PagedVnode::EnsureCreateVmo(uint64_t size) {
-  if (vmo_) {
+  if (vmo()) {
     // The derived class can choose to cache the VMO even if it has no clones, so just because the
     // VMO exists doesn't mean it has clones. As a result, we may need to arm the watcher.
     WatchForZeroVmoClones();
@@ -24,10 +24,10 @@ zx::status<> PagedVnode::EnsureCreateVmo(uint64_t size) {
   if (!paged_vfs())
     return zx::error(ZX_ERR_BAD_STATE);  // Currently shutting down.
 
-  auto vfs_or = paged_vfs()->CreatePagedNodeVmo(fbl::RefPtr<PagedVnode>(this), size);
-  if (vfs_or.is_error())
-    return vfs_or.take_error();
-  vmo_ = std::move(vfs_or).value();
+  auto info_or = paged_vfs()->CreatePagedNodeVmo(fbl::RefPtr<PagedVnode>(this), size);
+  if (info_or.is_error())
+    return info_or.take_error();
+  vmo_info_ = std::move(info_or).value();
 
   // Watch the VMO for the presence of no children. The VMO currently has no children because we
   // just created it, but the signal will be edge-triggered.
@@ -36,10 +36,19 @@ zx::status<> PagedVnode::EnsureCreateVmo(uint64_t size) {
   return zx::ok();
 }
 
+void PagedVnode::FreeVmo() {
+  ZX_DEBUG_ASSERT(vmo_info_.vmo.is_valid());
+  if (paged_vfs())
+    paged_vfs()->UnregisterPagedVmo(vmo_info_.id);
+
+  vmo_info_.vmo.reset();
+  vmo_info_.id = 0;
+}
+
 void PagedVnode::OnNoClones() {
   // It is now save to release the VMO. Since we know there are no clones, we don't have to
   // call zx_pager_detach_vmo() to stop delivery of requests.
-  vmo_.reset();
+  FreeVmo();
 }
 
 void PagedVnode::OnNoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBase* wait,
@@ -54,7 +63,7 @@ void PagedVnode::OnNoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBa
   // The kernel signal delivery could have raced with us creating a new clone. Validate that there
   // are still no clones before tearing down.
   zx_info_vmo_t info;
-  if (vmo_.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr) != ZX_OK)
+  if (vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr) != ZX_OK)
     return;  // Something wrong with the VMO, don't try to tear down.
   if (info.num_children > 0) {
     // Race with new VMO. Re-arm the clone watcher and continue as if the signal was not sent.
@@ -71,7 +80,7 @@ void PagedVnode::OnNoClonesMessage(async_dispatcher_t* dispatcher, async::WaitBa
 void PagedVnode::WatchForZeroVmoClones() {
   has_clones_ = true;
 
-  clone_watcher_.set_object(vmo_.get());
+  clone_watcher_.set_object(vmo().get());
   clone_watcher_.set_trigger(ZX_VMO_ZERO_CHILDREN);
   clone_watcher_.Begin(paged_vfs()->dispatcher());
 }

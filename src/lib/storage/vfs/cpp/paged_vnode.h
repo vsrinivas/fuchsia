@@ -53,10 +53,12 @@ class PagedVnode : public Vnode {
   }
 
   // This will be a null handle if there is no VMO associated with this vnode.
-  zx::vmo& vmo() FS_TA_REQUIRES(mutex_) { return vmo_; }
+  //
+  // Populate with EnsureCreateVmo(), free with FreeVmo().
+  const zx::vmo& vmo() const FS_TA_REQUIRES(mutex_) { return vmo_info_.vmo; }
 
   // Returns true if there are clones of the VMO alive that have been given out.
-  bool has_clones() const { return has_clones_; }
+  bool has_clones() const FS_TA_REQUIRES(mutex_) { return has_clones_; }
 
   // Populates the vmo() if necessary. Does nothing if it already exists. Access the created vmo
   // with this class' vmo() getter.
@@ -68,8 +70,11 @@ class PagedVnode : public Vnode {
   // object alive).
   zx::status<> EnsureCreateVmo(uint64_t size) FS_TA_REQUIRES(mutex_);
 
+  // Releases the vmo_ and unregisters for paging notifications from the PagedVfs.
+  void FreeVmo() FS_TA_REQUIRES(mutex_);
+
   // Implementors of this class can override this function to response to the event that there
-  // are no more clones of the vmo_. The default implementation frees the vmo_.
+  // are no more clones of the vmo_. The default implementation calls FreeVmo().
   virtual void OnNoClones() FS_TA_REQUIRES(mutex_);
 
  private:
@@ -86,12 +91,12 @@ class PagedVnode : public Vnode {
 
   // The root VMO that paging happens out of for this vnode. VMOs that map the data into user
   // processes will be children of this VMO.
-  zx::vmo vmo_ FS_TA_GUARDED(mutex_);
+  PagedVfs::VmoCreateInfo vmo_info_ FS_TA_GUARDED(mutex_);
 
   // Set when there are clones of the vmo_.
-  bool has_clones_ = false;
+  bool has_clones_ FS_TA_GUARDED(mutex_) = false;
 
-  // Watches any clones of "vmo_" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN signal.
+  // Watches any clones of "vmo()" provided to clients. Observes the ZX_VMO_ZERO_CHILDREN signal.
   // See WatchForZeroChildren().
   async::WaitMethod<PagedVnode, &PagedVnode::OnNoClonesMessage> clone_watcher_
       FS_TA_GUARDED(mutex_);
