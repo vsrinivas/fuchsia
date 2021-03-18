@@ -24,11 +24,10 @@ fuchsia_unittest_package("audio_driver_tests") {
   manifest = "meta/audio_driver_tests.cmx"
   deps = [ ":audio_driver_tests_bin" ]
 
+  # This test is intended to be run on real hardware and on a virtualized Bluetooth a2dp driver.
+  # It does not autostart virtual_audio but will also run/pass there if VA is already running.
   test_specs = {
-    # This test is intended to be run on real hardware, although it can also run on virtual_audio.
-    # virtual_audio is not automatically loaded (or involved in any way), but if loaded ahead of
-    # time, it successfully runs and passes, just like any other audio driver.
-    environments = hardware_envs
+    environments = hardware_envs + basic_envs
   }
 }
 
