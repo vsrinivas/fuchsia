@@ -114,9 +114,9 @@ impl<T> Root<T> {
     }
 
     fn pop_front(&mut self) -> Option<Arc<T>> {
-        self.entries_popped += 1;
         let prev_front = self.head.take();
         if let Some(prev) = prev_front.as_ref() {
+            self.entries_popped += 1;
             self.head = prev.next.lock().clone();
         }
         prev_front.map(|f| f.inner.clone())
@@ -170,6 +170,7 @@ pub struct Cursor<T> {
     last_id_seen: u64,
     until_id: u64,
     list: ArcList<T>,
+    mode: StreamMode,
 }
 
 impl<T> Cursor<T> {
@@ -195,13 +196,28 @@ impl<T> Cursor<T> {
             StreamMode::SnapshotThenSubscribe | StreamMode::Subscribe => std::u64::MAX,
         };
 
-        Self { id, list, last_id_seen: from, until_id: to, last_visited }
+        Self { id, list, last_id_seen: from, until_id: to, last_visited, mode }
     }
 
-    fn register_for_wakeup(&self, cx: &mut Context<'_>) -> Poll<Option<LazyItem<T>>> {
+    fn maybe_register_for_wakeup(&mut self, cx: &mut Context<'_>) -> Poll<Option<LazyItem<T>>> {
         let mut root = self.list.inner.lock();
-        if self.last_id_seen == root.final_entry {
+        let cursor_at_end = self.last_id_seen == root.final_entry;
+        let list_fully_drained = root.final_entry == root.entries_popped;
+
+        if root.entries_popped > self.last_id_seen {
+            // This happens when entries were popped before they could be returned,
+            // but there is not currently anything left to return.  We need
+            // to update our position and return the number of entries that
+            // were popped.
+            let entries_missing = root.entries_popped - self.last_id_seen;
+            self.last_id_seen = root.entries_popped;
+            Poll::Ready(Some(LazyItem::ItemsDropped(entries_missing)))
+        } else if cursor_at_end || list_fully_drained {
             trace!("{:?} has reached the end of the terminated stream.", self.id);
+            Poll::Ready(None)
+        } else if self.mode == StreamMode::Snapshot {
+            // There are no further entries to return, and we are in snapshot mode. Report that we
+            // are at the end of the stream rather than registering for a wakeup.
             Poll::Ready(None)
         } else {
             trace!("Registering {:?} for wakeup.", self.id);
@@ -257,7 +273,9 @@ impl<T> Stream for Cursor<T> {
 
             Poll::Ready(Some(item))
         } else {
-            self.register_for_wakeup(cx)
+            // No further data is waiting in the stream. Depending on the stream mode, we may
+            // register for a wakeup.
+            self.maybe_register_for_wakeup(cx)
         }
     }
 }
@@ -479,5 +497,169 @@ mod tests {
         assert!(full_cursor.next().await.is_none(), "no items left");
         assert!(dead_cursor.next().await.is_none(), "no items in list at snapshot");
         assert!(middle_cursor.next().await.is_none(), "no items left in list at snapshot");
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn post_termination_cursors() {
+        let list: ArcList<i32> = ArcList::default();
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+        list.push_back(4);
+        list.push_back(5);
+        list.terminate();
+
+        let snapshot: Vec<_> =
+            list.cursor(StreamMode::Snapshot).map(|i| *i.unwrap()).collect().await;
+        let subscribe: Vec<_> =
+            list.cursor(StreamMode::Subscribe).map(|i| *i.unwrap()).collect().await;
+        let both: Vec<_> =
+            list.cursor(StreamMode::SnapshotThenSubscribe).map(|i| *i.unwrap()).collect().await;
+
+        assert_eq!(snapshot, vec![1, 2, 3, 4, 5]);
+        assert!(subscribe.is_empty());
+        assert_eq!(both, vec![1, 2, 3, 4, 5]);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn empty_post_termination_cursors() {
+        let list: ArcList<i32> = ArcList::default();
+        list.terminate();
+
+        let snapshot: Vec<_> =
+            list.cursor(StreamMode::Snapshot).map(|i| *i.unwrap()).collect().await;
+        let subscribe: Vec<_> =
+            list.cursor(StreamMode::Subscribe).map(|i| *i.unwrap()).collect().await;
+        let both: Vec<_> =
+            list.cursor(StreamMode::SnapshotThenSubscribe).map(|i| *i.unwrap()).collect().await;
+
+        assert!(snapshot.is_empty());
+        assert!(subscribe.is_empty());
+        assert!(both.is_empty());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn drained_post_termination_cursors() {
+        let list: ArcList<i32> = ArcList::default();
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+        list.push_back(4);
+        list.push_back(5);
+        list.terminate();
+        list.pop_front();
+        list.pop_front();
+        list.pop_front();
+        list.pop_front();
+        list.pop_front();
+
+        let mut snapshot_cursor = list.cursor(StreamMode::Snapshot);
+        snapshot_cursor.next().await.unwrap().expect_dropped(5);
+        let snapshot: Vec<_> = snapshot_cursor.map(|i| *i.unwrap()).collect().await;
+        let subscribe: Vec<_> =
+            list.cursor(StreamMode::Subscribe).map(|i| *i.unwrap()).collect().await;
+        let mut both_cursor = list.cursor(StreamMode::Snapshot);
+        both_cursor.next().await.unwrap().expect_dropped(5);
+        let both: Vec<_> = both_cursor.map(|i| *i.unwrap()).collect().await;
+
+        assert!(snapshot.is_empty());
+        assert!(subscribe.is_empty());
+        assert!(both.is_empty());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn snapshot_does_not_hang_when_nothing_is_left() {
+        let list: ArcList<i32> = ArcList::default();
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+        list.push_back(4);
+        list.push_back(5);
+        list.pop_front();
+        list.pop_front();
+        list.pop_front();
+        list.pop_front();
+        list.pop_front();
+
+        let mut cursor = list.cursor(StreamMode::Snapshot);
+
+        cursor.next().await.unwrap().expect_dropped(5);
+
+        let snapshot: Vec<_> = cursor.map(|i| *i.unwrap()).collect().await;
+
+        assert!(snapshot.is_empty());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn snapshot_does_not_hang_when_values_are_popped_before_start() {
+        let list: ArcList<i32> = ArcList::default();
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+        list.push_back(4);
+        list.push_back(5);
+        list.pop_front();
+        list.pop_front();
+        list.pop_front();
+
+        let mut cursor = list.cursor(StreamMode::Snapshot);
+        cursor.next().await.expect("initial value exists").expect_dropped(3);
+
+        let snapshot: Vec<_> = cursor.map(|i| *i.unwrap()).collect().await;
+
+        assert_eq!(2, snapshot.len());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn popping_more_elements_than_exist_does_not_break_readers() {
+        let list: ArcList<i32> = ArcList::default();
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+        let mut cursor = list.cursor(StreamMode::SnapshotThenSubscribe);
+
+        assert_eq!(*cursor.next().await.unwrap().unwrap(), 1);
+        assert_eq!(*cursor.next().await.unwrap().unwrap(), 2);
+        assert_eq!(*cursor.next().await.unwrap().unwrap(), 3);
+        let mut next = cursor.next();
+        assert_eq!(poll!(&mut next), Poll::Pending);
+
+        list.pop_front();
+        list.pop_front();
+        list.pop_front();
+        list.pop_front();
+        list.pop_front();
+
+        let mut next = cursor.next();
+        assert_eq!(poll!(&mut next), Poll::Pending);
+        list.push_back(4);
+        assert_eq!(*cursor.next().await.unwrap().unwrap(), 4);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn snapshot_then_subscribe_works_when_only_dropped_notifications_are_returned() {
+        let list: ArcList<i32> = ArcList::default();
+        list.push_back(1);
+        list.push_back(2);
+        list.push_back(3);
+        list.pop_front();
+        list.pop_front();
+        list.pop_front();
+
+        let mut cursor = list.cursor(StreamMode::SnapshotThenSubscribe);
+        cursor.next().await.unwrap().expect_dropped(3);
+        let mut next = cursor.next();
+        assert_eq!(poll!(&mut next), Poll::Pending);
+
+        list.push_back(4);
+        list.pop_front();
+
+        cursor.next().await.unwrap().expect_dropped(1);
+        let mut next = cursor.next();
+        assert_eq!(poll!(&mut next), Poll::Pending);
+
+        list.terminate();
+        let snapshot: Vec<_> = cursor.map(|i| *i.unwrap()).collect().await;
+        assert!(snapshot.is_empty());
     }
 }
