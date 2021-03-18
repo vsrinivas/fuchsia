@@ -979,7 +979,7 @@ fn initiate_set_country(
         .stop_client_connections(client_types::DisconnectReason::RegulatoryRegionChange);
     let stop_aps_fut = iface_manager.stop_all_aps();
 
-    // Once the clients and APs have been stopped, set the regulatory region.
+    // Once the clients and APs have been stopped, set the country code.
     let phy_manager = iface_manager.phy_manager.clone();
     let regulatory_fut = async move {
         let client_connections_initially_enabled =
@@ -1028,13 +1028,13 @@ async fn restore_state_after_setting_country_code(
     // the interfaces themselves by making policy API requests.
     if previous_state.client_connections_initially_enabled {
         if let Err(e) = iface_manager.start_client_connections().await {
-            error!("failed to resume client connections after setting country: {:?}", e);
+            error!("failed to resume client connections after setting country code: {:?}", e);
         }
     }
 
     for config in previous_state.initial_ap_configs {
         if let Err(e) = iface_manager.start_ap(config).await {
-            error!("failed to resume AP after setting regulatory region: {:?}", e);
+            error!("failed to resume AP after setting country code: {:?}", e);
         }
     }
 
@@ -1356,7 +1356,7 @@ mod tests {
         destroy_iface_ok: bool,
         set_country_ok: bool,
         wpa3_iface: Option<u16>,
-        region_code: Option<[u8; REGION_CODE_LEN]>,
+        country_code: Option<[u8; REGION_CODE_LEN]>,
         client_connections_enabled: bool,
     }
 
@@ -1448,15 +1448,11 @@ mod tests {
             country_code: Option<[u8; REGION_CODE_LEN]>,
         ) -> Result<(), PhyManagerError> {
             if self.set_country_ok {
-                self.region_code = country_code;
+                self.country_code = country_code;
                 Ok(())
             } else {
                 Err(PhyManagerError::PhySetCountryFailure)
             }
-        }
-
-        fn save_region_code(&mut self, _region_code: Option<[u8; REGION_CODE_LEN]>) {
-            unimplemented!();
         }
 
         fn has_wpa3_client_iface(&self) -> bool {
@@ -1562,7 +1558,7 @@ mod tests {
             destroy_iface_ok: true,
             wpa3_iface: None,
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true,
         };
         let mut iface_manager = IfaceManagerService::new(
@@ -1616,7 +1612,7 @@ mod tests {
             destroy_iface_ok: true,
             wpa3_iface: None,
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true,
         };
         let mut iface_manager = IfaceManagerService::new(
@@ -2129,7 +2125,7 @@ mod tests {
             destroy_iface_ok: false,
             wpa3_iface: Some(0),
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true,
         }));
 
@@ -2532,7 +2528,7 @@ mod tests {
             destroy_iface_ok: false,
             wpa3_iface: None,
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true,
         }));
 
@@ -2749,7 +2745,7 @@ mod tests {
             destroy_iface_ok: true,
             wpa3_iface: None,
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true,
         }));
 
@@ -4306,7 +4302,7 @@ mod tests {
             destroy_iface_ok: true,
             wpa3_iface: None,
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true
         },
         TestType::Pass;
@@ -4318,7 +4314,7 @@ mod tests {
             destroy_iface_ok: true,
             wpa3_iface: None,
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true
         },
         TestType::Fail;
@@ -4330,7 +4326,7 @@ mod tests {
             destroy_iface_ok: true,
             wpa3_iface: None,
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true
         },
         TestType::ClientError;
@@ -4375,7 +4371,7 @@ mod tests {
             destroy_iface_ok: true,
             wpa3_iface: None,
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true
         },
         TestType::Pass;
@@ -4387,7 +4383,7 @@ mod tests {
             destroy_iface_ok: false,
             wpa3_iface: None,
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true
         },
         TestType::Fail;
@@ -4399,7 +4395,7 @@ mod tests {
             destroy_iface_ok: true,
             wpa3_iface: None,
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true
         },
         TestType::ClientError;
@@ -5200,7 +5196,7 @@ mod tests {
             destroy_iface_ok: true,
             wpa3_iface: Some(0),
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true,
         }));
         let fut = iface_manager.has_wpa3_capable_client();
@@ -5223,7 +5219,7 @@ mod tests {
             destroy_iface_ok: true,
             wpa3_iface: None,
             set_country_ok: true,
-            region_code: None,
+            country_code: None,
             client_connections_enabled: true,
         }));
         let fut = iface_manager.has_wpa3_capable_client();
@@ -5235,7 +5231,7 @@ mod tests {
     /// 1. Client connections and APs are initially enabled and all operations succeed.
     /// 2. Client connections are initially enabled and all operations succeed except restarting
     ///    client connections.
-    ///    * In this scenario, the region has been properly applied and the device should be
+    ///    * In this scenario, the country code has been properly applied and the device should be
     ///      allowed to continue running.  Higher layers can optionally re-enable client
     ///      connections to recover.
     /// 3. APs are initially enabled and all operations succeed except restarting the AP.
@@ -5286,7 +5282,7 @@ mod tests {
             destroy_iface_ok,
             set_country_ok,
             wpa3_iface: None,
-            region_code: None,
+            country_code: None,
             client_connections_enabled,
         }));
 
@@ -5301,7 +5297,7 @@ mod tests {
         );
 
         // If the test calls for it, create an AP interface to test that the IfaceManager preserves
-        // the configuration and restores it after setting the regulatory region.
+        // the configuration and restores it after setting the country code.
         if ap_enabled {
             let fake_ap = FakeAp { start_succeeds: true, stop_succeeds: true, exit_succeeds: true };
             let ap_container = ApIfaceContainer {
@@ -5334,7 +5330,7 @@ mod tests {
             assert_variant!(
                 exec.run_until_stalled(&mut phy_manager_fut),
                 Poll::Ready(phy_manager) => {
-                    assert_eq!(phy_manager.region_code, Some([0, 0]))
+                    assert_eq!(phy_manager.country_code, Some([0, 0]))
                 }
             );
         }

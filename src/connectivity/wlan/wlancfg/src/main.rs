@@ -60,22 +60,22 @@ async fn serve_fidl(
     ap_listener_msgs: mpsc::UnboundedReceiver<util::listener::ApMessage>,
     regulatory_receiver: oneshot::Receiver<()>,
 ) -> Result<Void, Error> {
-    // Wait a bit for the regulatory region to be set before serving the policy APIs.
+    // Wait a bit for the country code to be set before serving the policy APIs.
     let regulatory_listener_timeout =
         fasync::Timer::new(REGULATORY_LISTENER_TIMEOUT_SEC.seconds().after_now());
     select! {
         _ = regulatory_listener_timeout.fuse() => {
             info!(
-                "Regulatory region was not set after {} seconds.  Proceeding to serve policy API.",
+                "Country code was not set after {} seconds.  Proceeding to serve policy API.",
                 REGULATORY_LISTENER_TIMEOUT_SEC,
             );
         },
         result = regulatory_receiver.fuse() => {
             match result {
                 Ok(()) => {
-                    info!("Regulatory region has been set.  Proceeding to serve policy API.");
+                    info!("Country code has been set.  Proceeding to serve policy API.");
                 },
-                Err(e) => info!("Waiting for initial regulatory region failed: {:?}", e),
+                Err(e) => info!("Waiting for initial country code failed: {:?}", e),
             }
         }
     }
@@ -178,7 +178,7 @@ async fn serve_metrics(
 }
 
 // Some builds will not include the RegulatoryRegionWatcher.  In such cases, wlancfg can continue
-// to run, though it will not be able to set its regulatory region and will fallback to world wide.
+// to run, though it will not be able to set its country code and will fallback to world wide.
 fn run_regulatory_manager(
     iface_manager: Arc<Mutex<dyn IfaceManagerApi + Send>>,
     regulatory_sender: oneshot::Sender<()>,
