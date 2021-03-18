@@ -1,7 +1,7 @@
 // Copyright 2020 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::base::{SettingInfo, SettingType};
+use crate::base::{HasSettingType, SettingInfo, SettingType};
 use crate::handler::base::{Context, ControllerGenerateResult, Request};
 use crate::handler::device_storage::DeviceStorageFactory;
 use crate::message::base::Audience;
@@ -15,6 +15,7 @@ use fuchsia_syslog::fx_log_err;
 use futures::future::BoxFuture;
 use futures::lock::Mutex;
 use std::borrow::Cow;
+use std::convert::TryInto;
 use std::marker::PhantomData;
 use std::sync::Arc;
 use thiserror::Error;
@@ -339,6 +340,10 @@ pub mod persist {
     use super::*;
     use crate::base::SettingInfo;
     use crate::handler::device_storage::{DeviceStorage, DeviceStorageConvertible};
+    use crate::message::base::{Audience, MessageEvent};
+    use crate::service;
+    use crate::storage;
+    use futures::StreamExt;
     use std::borrow::Borrow;
 
     pub trait Storage: DeviceStorageConvertible + Into<SettingInfo> + Send + Sync {}
@@ -392,6 +397,47 @@ pub mod persist {
             self.storage.get::<S::Storable>().await.into()
         }
 
+        pub async fn read_setting_info<T: HasSettingType>(&self) -> SettingInfo {
+            let mut receptor = self
+                .base
+                .client_handle
+                .lock()
+                .await
+                .messenger
+                .message(
+                    storage::Payload::Request(storage::StorageRequest::Read(T::SETTING_TYPE))
+                        .into(),
+                    Audience::Address(service::Address::Storage),
+                )
+                .send();
+
+            while let Ok((payload, _)) = receptor.next_payload().await {
+                if let service::Payload::Storage(storage::Payload::Response(
+                    storage::StorageResponse::Read(setting_info),
+                )) = payload
+                {
+                    return setting_info;
+                } else {
+                    panic!("Incorrect response received from storage: {:?}", payload);
+                }
+            }
+
+            panic!("Did not get a read response");
+        }
+
+        pub async fn read_setting<T: HasSettingType + TryFrom<SettingInfo>>(&self) -> T {
+            let setting_info = self.read_setting_info::<T>().await;
+            if let Ok(info) = setting_info.clone().try_into() {
+                info
+            } else {
+                panic!(
+                    "Mismatching type during read. Expected {:?}, but got {:?}",
+                    T::SETTING_TYPE,
+                    setting_info
+                );
+            }
+        }
+
         /// Returns a boolean indicating whether the value was written or an
         /// Error if write failed. the argument `write_through` will block
         /// returning until the value has been completely written to persistent
@@ -418,6 +464,50 @@ pub mod persist {
                 Err(_) => Err(ControllerError::WriteFailure(self.setting_type)),
             }
         }
+
+        pub async fn write_setting(
+            &self,
+            setting_info: SettingInfo,
+            write_through: bool,
+        ) -> Result<UpdateState, ControllerError> {
+            let setting_type = (&setting_info).into();
+            let mut receptor = self
+                .base
+                .client_handle
+                .lock()
+                .await
+                .messenger
+                .message(
+                    storage::Payload::Request(storage::StorageRequest::Write(
+                        setting_info.clone(),
+                        write_through,
+                    ))
+                    .into(),
+                    Audience::Address(service::Address::Storage),
+                )
+                .send();
+
+            while let Some(response) = receptor.next().await {
+                if let MessageEvent::Message(
+                    service::Payload::Storage(storage::Payload::Response(
+                        storage::StorageResponse::Write(result),
+                    )),
+                    _,
+                ) = response
+                {
+                    if let Ok(UpdateState::Updated) = result {
+                        self.notify(Event::Changed(setting_info)).await;
+                    }
+
+                    return result.map_err(|e| {
+                        fx_log_err!("Failed to write setting: {:?}", e);
+                        ControllerError::WriteFailure(setting_type)
+                    });
+                }
+            }
+
+            panic!("Did not get a write response");
+        }
     }
 
     /// A trait for interpreting a `Result` into whether a notification occurred
@@ -439,6 +529,7 @@ pub mod persist {
         }
     }
 
+    // TODO(fxbug.dev/67371) Remove since this isn't really necessary.
     pub async fn write<S: Storage + 'static>(
         client: &ClientProxy,
         value: S,

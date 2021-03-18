@@ -28,6 +28,7 @@ use crate::setup::types::SetupInfo;
 use serde::{Deserialize, Serialize};
 use std::array;
 use std::collections::HashSet;
+use std::convert::TryFrom;
 
 /// The setting types supported by the service.
 #[derive(PartialEq, Debug, Eq, Hash, Clone, Copy, Serialize, Deserialize)]
@@ -108,6 +109,72 @@ generate_inspect_with_info! {
         NightMode(NightModeInfo),
         Privacy(PrivacyInfo),
         Setup(SetupInfo),
+    }
+}
+
+pub trait HasSettingType {
+    const SETTING_TYPE: SettingType;
+}
+
+macro_rules! conversion_impls {
+    ($($(#[cfg($test:meta)])? $variant:ident($info_ty:ty) => $ty_variant:ident ),+ $(,)?) => {
+        $(
+            $(#[cfg($test)])?
+            impl HasSettingType for $info_ty {
+                const SETTING_TYPE: SettingType = SettingType::$ty_variant;
+            }
+
+            $(#[cfg($test)])?
+            impl TryFrom<SettingInfo> for $info_ty {
+                type Error = ();
+
+                fn try_from(setting_info: SettingInfo) -> Result<Self, ()> {
+                    match setting_info {
+                        SettingInfo::$variant(info) => Ok(info),
+                        _ => Err(()),
+                    }
+                }
+            }
+        )+
+    }
+}
+
+conversion_impls! {
+    #[cfg(test)] Unknown(UnknownInfo) => Unknown,
+    Accessibility(AccessibilityInfo) => Accessibility,
+    Audio(AudioInfo) => Audio,
+    Brightness(DisplayInfo) => Display,
+    Device(DeviceInfo) => Device,
+    FactoryReset(FactoryResetInfo) => FactoryReset,
+    Light(LightInfo) => Light,
+    LightSensor(LightData) => LightSensor,
+    DoNotDisturb(DoNotDisturbInfo) => DoNotDisturb,
+    Input(InputInfo) => Input,
+    Intl(IntlInfo) => Intl,
+    NightMode(NightModeInfo) => NightMode,
+    Privacy(PrivacyInfo) => Privacy,
+    Setup(SetupInfo) => Setup,
+}
+
+impl Into<SettingType> for &SettingInfo {
+    fn into(self) -> SettingType {
+        match self {
+            #[cfg(test)]
+            SettingInfo::Unknown(_) => SettingType::Unknown,
+            SettingInfo::Accessibility(_) => SettingType::Accessibility,
+            SettingInfo::Audio(_) => SettingType::Audio,
+            SettingInfo::Brightness(_) => SettingType::Display,
+            SettingInfo::Device(_) => SettingType::Device,
+            SettingInfo::DoNotDisturb(_) => SettingType::DoNotDisturb,
+            SettingInfo::FactoryReset(_) => SettingType::FactoryReset,
+            SettingInfo::Input(_) => SettingType::Input,
+            SettingInfo::Intl(_) => SettingType::Intl,
+            SettingInfo::Light(_) => SettingType::Light,
+            SettingInfo::LightSensor(_) => SettingType::LightSensor,
+            SettingInfo::NightMode(_) => SettingType::NightMode,
+            SettingInfo::Privacy(_) => SettingType::Privacy,
+            SettingInfo::Setup(_) => SettingType::Setup,
+        }
     }
 }
 
