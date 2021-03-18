@@ -234,7 +234,7 @@ template("sdk_source_set") {
     }
 
     all_sources_with_prefix = []
-    foreach(source, rebase_path(all_sources, "//")) {
+    foreach(source, rebase_path(all_sources + all_headers, root_build_dir)) {
       all_sources_with_prefix += [ "src:" + source ]
     }
 

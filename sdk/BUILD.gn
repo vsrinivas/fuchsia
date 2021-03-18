@@ -47,7 +47,6 @@ generated_file("generate_profile_list") {
   testonly = true
   outputs = [ _generated_sdk_source_set_profile_list ]
   data_keys = [ "sdk_source_set_profile_sources" ]
-  walk_keys = [ "sdk_source_set_barrier" ]
   data_deps = _sdk_public_deps
 }
 
