@@ -1,0 +1,22 @@
+[
+  {
+    "data_source": "Logs",
+    "metadata": {
+      "errors": null,
+      "component_url": "fuchsia-pkg://fuchsia.com/iquery-tests#meta/basic_component.cmx",
+      "timestamp": "TIMESTAMP",
+      "severity": "INFO",
+      "size_bytes": 74
+    },
+    "moniker": "log-test/basic_component.cmx:INSTANCE_ID",
+    "payload": {
+      "root": {
+        "message": "Is great to have! ",
+        "pid": "PID",
+        "tag": "iquery_basic_component",
+        "tid": "TID"
+      }
+    },
+    "version": 1
+  }
+]

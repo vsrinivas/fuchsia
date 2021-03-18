@@ -33,6 +33,14 @@ pub async fn start_basic_component(
     Ok((env, app))
 }
 
+pub async fn start_basic_component_with_logs(
+    env_label: &str,
+) -> Result<(NestedEnvironment, App), anyhow::Error> {
+    let (env, app) = launch(env_label, BASIC_COMPONENT_URL, Some(vec!["--with-logs".to_string()]))?;
+    wait_for_out_ready(&app).await?;
+    Ok((env, app))
+}
+
 /// Creates a new environment named `env_label` and a starts the test component under it.
 pub async fn start_test_component(
     env_label: &str,
@@ -117,11 +125,49 @@ async fn wait_for_out_ready(app: &App) -> Result<(), anyhow::Error> {
 /// Cleans-up instances of:
 /// - `"start_timestamp_nanos": 7762005786231` by `"start_timestamp_nanos": TIMESTAMP`
 /// - instance ids by INSTANCE_ID
+/// - process IDs and thread IDs
+/// log-test/basic_component.cmx:82348 is replaced with log-test/basic_component.cmx:PID
+/// "moniker": "log-test/basic_component.cmx:23948134",
+// "payload": {
+///    "root": {
+///      "message": "Is great to have! ",
+///      "pid": "93724",
+///      "tag": "iquery_basic_component",
+///      "tid": "23452"
+///    }
+///  },
+/// gets replaced with
+/// "moniker": "log-test/basic_component.cmx:INSTANCE_ID",
+/// "payload": {
+///    "root": {
+///      "message": "Is great to have! ",
+///      "pid": "PID",
+///      "tag": "iquery_basic_component",
+///      "tid": "TID"
+///    }
+///  },
+/// - instance IDs in monikers
+/// - timestamps in log strings
+/// - process IDs in log strings
 fn cleanup_variable_strings(string: impl Into<String>) -> String {
     // Replace start_timestamp_nanos in fuchsia.inspect.Health entries and
     // timestamp in metadatas.
     let mut string: String = string.into();
-    for value in &["timestamp", "start_timestamp_nanos"] {
+    let re = Regex::new(&format!("(\\[\\d+\\])(\\[.*\\.cmx:)\\d+\\](.*)")).unwrap();
+    let replacement = format!("[TIMESTAMP]${{2}}PID]${{3}}");
+    string = re.replace_all(&string, replacement.as_str()).to_string();
+    // Moniker requires very special treatment. It's part-constant and part numeric
+    for value in &["timestamp", "start_timestamp_nanos", "pid", "tid", "moniker"] {
+        let re = Regex::new(&format!("\"{}\": \"(.*:)(\\d+)", value)).unwrap();
+        let replacement = format!("\"{}\": \"${{1}}INSTANCE_ID", value);
+        string = re.replace_all(&string, replacement.as_str()).to_string();
+
+        if (*value == "pid") || (*value == "tid") {
+            let re = Regex::new(&format!("\"{}\": \\d+", value)).unwrap();
+            let replacement = format!("\"{}\": \"{}\"", value, value.to_string().to_uppercase());
+            string = re.replace_all(&string, replacement.as_str()).to_string();
+        }
+
         let re = Regex::new(&format!("\"{}\": \\d+", value)).unwrap();
         let replacement = format!("\"{}\": \"TIMESTAMP\"", value);
         string = re.replace_all(&string, replacement.as_str()).to_string();

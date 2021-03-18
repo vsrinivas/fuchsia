@@ -53,6 +53,7 @@ iquery_sources = [
   "src/commands/list.rs",
   "src/commands/list_accessors.rs",
   "src/commands/list_files.rs",
+  "src/commands/logs.rs",
   "src/commands/mod.rs",
   "src/commands/selectors.rs",
   "src/commands/show.rs",
@@ -139,6 +140,8 @@ rustc_test("bin_test") {
     "test_data/show_filter_no_selectors_test.json",
     "test_data/show_test.json",
     "test_data/show_test.text",
+    "test_data/log.json",
+    "test_data/log.text",
   ]
 }
 

@@ -3,12 +3,14 @@
 // found in the LICENSE file.
 
 pub use crate::commands::{
-    list::*, list_accessors::*, list_files::*, selectors::*, show::*, show_file::*, types::*,
+    list::*, list_accessors::*, list_files::*, logs::*, selectors::*, show::*, show_file::*,
+    types::*,
 };
 
 mod list;
 mod list_accessors;
 mod list_files;
+mod logs;
 mod selectors;
 mod show;
 mod show_file;

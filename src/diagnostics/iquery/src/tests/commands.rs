@@ -119,6 +119,19 @@ async fn list_files() {
     utils::wait_for_terminated(app2).await;
 }
 
+#[fuchsia::test]
+async fn log() {
+    let (_env, app) =
+        utils::start_basic_component_with_logs("log-test").await.expect("create comp 1");
+
+    assert_command!(
+        command: "logs",
+        golden_basename: log,
+        args: []
+    );
+    utils::wait_for_terminated(app).await;
+}
+
 // Selectors command
 
 #[fuchsia::test]
