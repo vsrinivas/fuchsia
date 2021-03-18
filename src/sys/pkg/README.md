@@ -8,19 +8,20 @@
 
 ### Major Binaries
 
-Updated: September 2020
+Updated: March 2021
 
-| Subsystem             | Purpose                                                                                            | Location                                  | Language |
-|-----------------------|----------------------------------------------------------------------------------------------------|-------------------------------------------|----------|
-| amberctl              | Deprecated CLI for various components. Scheduled to be replaced by `pkgctl`.                       | `//src/sys/pkg/bin/amber/amberctl`        | Go       |
-| pkg-cache             | Caches downloaded packages in case they are needed again.                                          | `//src/sys/pkg/bin/pkg-cache`             | Rust     |
-| pkg-resolver          | Main entry point for software delivery stack. Coordinates retrieval and  installation of packages. | `//src/sys/pkg/bin/pkg-resolver`          | Rust     |
-| omaha-client          | Checks for system updates using the Omaha server infrastructure                                    | `//src/sys/pkg/bin/omaha-client`          | Rust     |
-| pkgctl                | CLI for pkg-resolver                                                                               | `//src/sys/pkg/bin/pkgctl`                | Rust     |
-| pkgfs                 | A filesystem for interacting with packages that are stored on a host.                              | `//src/sys/pkg/bin/pkgfs/pkgfs`           | Go       |
-| system-ota-test       | An end-to-end test of system over the air updates.                                                 | `//src/sys/pkg/tests/system-ota-tests`    | Go       |
-| system-update-checker | Does what it says on the tin, checks for system updates!                                           | `//src/sys/pkg/bin/system-update-checker` | Rust     |
-| system-updater        | Actually performs system updates.                                                                  | `//src/sys/pkg/bin/system-updater`        | Rust     |
+| Subsystem                 | Purpose                                                                                            | Location                                     | Language |
+|-----------------------    |----------------------------------------------------------------------------------------------------|----------------------------------------------|----------|
+| amberctl                  | Deprecated CLI for various components. Scheduled to be replaced by `pkgctl`.                       | `//src/sys/pkg/bin/amber/amberctl`           | Go       |
+| pkg-cache                 | Caches downloaded packages in case they are needed again.                                          | `//src/sys/pkg/bin/pkg-cache`                | Rust     |
+| pkg-resolver              | Main entry point for software delivery stack. Coordinates retrieval and  installation of packages. | `//src/sys/pkg/bin/pkg-resolver`             | Rust     |
+| omaha-client              | Checks for system updates using the Omaha server infrastructure                                    | `//src/sys/pkg/bin/omaha-client`             | Rust     |
+| pkgctl                    | CLI for pkg-resolver                                                                               | `//src/sys/pkg/bin/pkgctl`                   | Rust     |
+| pkgfs                     | A filesystem for interacting with packages that are stored on a host.                              | `//src/sys/pkg/bin/pkgfs/pkgfs`              | Go       |
+| system-ota-test           | An end-to-end test of system over the air updates.                                                 | `//src/sys/pkg/tests/system-ota-tests`       | Go       |
+| system-update-checker     | Does what it says on the tin, checks for system updates!                                           | `//src/sys/pkg/bin/system-update-checker`    | Rust     |
+| system-updater-committer  | Component responsible for committing the update.                                                   | `//src/sys/pkg/bin/system-update-committer`  | Rust     |
+| system-updater            | Actually performs system updates.                                                                  | `//src/sys/pkg/bin/system-updater`           | Rust     |
 
 #### Key Dependencies
 
@@ -122,6 +123,7 @@ See the instructions on
 
 ### More information:
 
+*   [OTA Flow](/docs/concepts/packages/ota.md)
 *   [Package overview](/docs/development/idk/documentation/packages.md)
 *   [Package updates](/docs/concepts/packages/package_update.md)
 *   [Package metadata](/docs/concepts/packages/package.md)

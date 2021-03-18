@@ -267,15 +267,15 @@ bar/0 = new-version-hash-bar
 ```
 
 Pkgfs then loads all these packages as base packages. The packages appear in
-/pkgfs/{packages, versions}, and then we consider them “installed” or “activated”.At this point,
+/pkgfs/{packages, versions}, and then we consider them “installed” or “activated”. At this point,
 we can start appmgr, which starts the pkg-resolver, pkg-cache, netstack, etc.
 
 ### Committing the update
 At this point, we launch the system-update-committer, which is the component responsible for
 committing the update. On launch, the system-update-committer verifies the new update is good by
-running various checks. For example, it asks BlobFs to write a blob. If the system is already
-committed on boot, we skip the checks. Note: this check framework is currently being developed
-(see [fxbug.dev/54357](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=54357) for tracking).
+running various checks. For example, it asks BlobFs to arbitrarily read 1MiB of data. If the system
+is already committed on boot, we skip the checks. Depending on how the system is [configured](https://fuchsia-review.googlesource.com/c/fuchsia/+/501423),
+the system-update-committer may trigger a reboot if the checks fail.
 
 After the update is verified, we’ll first mark the current partition (slot B) as healthy. Using the
 example from the “Staging an update” section, the boot metadata might now look like:
