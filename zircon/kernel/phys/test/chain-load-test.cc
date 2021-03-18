@@ -14,10 +14,10 @@
 
 #include <ktl/byte.h>
 #include <ktl/string_view.h>
+#include <phys/allocation.h>
+#include <phys/boot-zbi.h>
+#include <phys/zbitl-allocation.h>
 
-#include "../allocation.h"
-#include "../boot-zbi.h"
-#include "../zbitl-allocation.h"
 #include "test-main.h"
 
 const char Symbolize::kProgramName_[] = "chain-load-test";

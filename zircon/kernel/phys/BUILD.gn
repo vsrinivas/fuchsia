@@ -72,6 +72,8 @@ if (current_toolchain == default_toolchain) {
 
     # Always enable frame pointers.
     configs += [ "//build/config/zircon:frame_pointers" ]
+
+    include_dirs = [ "include" ]
   }
 
   group("phys_config_deps") {
@@ -87,11 +89,15 @@ if (toolchain.environment == "kernel.phys" ||
     defines = [ "LK_DEBUGLEVEL=2" ]
   }
 
+  config("includes") {
+    include_dirs = [ "include" ]
+  }
+
   source_set("symbolize") {
     public = [
-      "frame-pointer.h",
-      "stack.h",
-      "symbolize.h",
+      "include/phys/frame-pointer.h",
+      "include/phys/stack.h",
+      "include/phys/symbolize.h",
     ]
 
     sources = [
@@ -108,9 +114,11 @@ if (toolchain.environment == "kernel.phys" ||
     ]
 
     public_deps = [
-      # "symbolize.h" has #include "main.h".
+      # "symbolize.h" has #include <phys/main.h>.
       ":main",
     ]
+
+    public_configs = [ ":includes" ]
   }
 
   # This is used implicitly by phys_executable() targets,
@@ -139,10 +147,12 @@ if (toolchain.environment == "kernel.phys" ||
         [ "//zircon/kernel/arch/$zircon_cpu/phys:zbi_executable.config" ]
   }
 
-  # Things in other directories include main.h by source-absolute path.
-  # But they put this in their deps to get its transitive deps.
+  # Transitive dependencies for the <phys/main.h> header.
   source_set("main") {
-    public = [ "main.h" ]
+    public = [ "include/phys/main.h" ]
+
+    public_configs = [ ":includes" ]
+
     public_deps = [
       # "main.h" has #include <lib/arch/ticks.h>.
       "//zircon/kernel/lib/arch",
@@ -158,10 +168,12 @@ if (toolchain.environment == "kernel.phys" ||
     }
   }
 
-  # Things in other directories include this header by source-absolute path.
-  # But they put this in their deps to get its transitive deps.
+  # Transitive dependencies for the <phys/arch.h> header.
   source_set("arch-header") {
-    public = [ "arch.h" ]
+    public = [ "include/phys/arch.h" ]
+
+    public_configs = [ ":includes" ]
+
     public_deps = [
       "//zircon/kernel/lib/libc",
       "//zircon/kernel/phys/lib/memalloc",
@@ -177,7 +189,7 @@ if (toolchain.environment == "kernel.phys" ||
   }
 
   source_set("allocation") {
-    public = [ "allocation.h" ]
+    public = [ "include/phys/allocation.h" ]
     sources = [ "allocation.cc" ]
     deps = [
       ":main",
@@ -193,10 +205,11 @@ if (toolchain.environment == "kernel.phys" ||
       # allocation.h has #include <lib/fitx/result.h>.
       "//zircon/system/ulib/zxc",
     ]
+    public_configs = [ ":includes" ]
   }
 
   source_set("zbitl-allocation") {
-    public = [ "zbitl-allocation.h" ]
+    public = [ "include/phys/zbitl-allocation.h" ]
     sources = [ "zbitl-allocation.cc" ]
     deps = [
       ":allocation",
@@ -209,6 +222,7 @@ if (toolchain.environment == "kernel.phys" ||
       # zbitl-allocation.h has #include <lib/fitx/result.h>.
       "//zircon/system/ulib/zxc",
     ]
+    public_configs = [ ":includes" ]
   }
 
   # This is a little library instead of a source_set() so it can be included
@@ -236,7 +250,7 @@ if (toolchain.environment == "kernel.phys" ||
   }
 
   source_set("boot-zbi") {
-    public = [ "boot-zbi.h" ]
+    public = [ "include/phys/boot-zbi.h" ]
     sources = [ "boot-zbi.cc" ]
     deps = [ "//zircon/kernel/lib/arch" ]
     public_deps = [

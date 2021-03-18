@@ -7,9 +7,9 @@
 #include <stdio.h>
 #include <zircon/assert.h>
 
-#include "frame-pointer.h"
-#include "main.h"
-#include "symbolize.h"
+#include <phys/frame-pointer.h>
+#include <phys/main.h>
+#include <phys/symbolize.h>
 
 // This is what ZX_ASSERT calls.
 PHYS_SINGLETHREAD void __zx_panic(const char* format, ...) {

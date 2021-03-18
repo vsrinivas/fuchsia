@@ -4,15 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "symbolize.h"
+#include "phys/symbolize.h"
 
 #include <stdarg.h>
 #include <stdint.h>
 #include <zircon/assert.h>
 
 #include <ktl/string_view.h>
-
-#include "stack.h"
+#include <phys/stack.h>
 
 namespace {
 

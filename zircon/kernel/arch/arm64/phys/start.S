@@ -8,7 +8,7 @@
 #include <lib/arch/ticks.h>
 #include <zircon/tls.h>
 
-#include "zircon/kernel/phys/stack.h"
+#include <phys/stack.h>
 
 // This is the entry point from the boot loader or thereabouts.
 // It receives one argument, in x0, usually a pointer (physical address).

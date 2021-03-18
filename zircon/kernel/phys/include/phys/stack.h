@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_PHYS_STACK_H_
-#define ZIRCON_KERNEL_PHYS_STACK_H_
+#ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_STACK_H_
+#define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_STACK_H_
 
 #include <zircon/compiler.h>
 
@@ -41,4 +41,4 @@ extern uintptr_t boot_shadow_call_stack[BOOT_SHADOW_CALL_STACK_SIZE / sizeof(uin
 
 #endif  // __ASSEMBLER__
 
-#endif  // ZIRCON_KERNEL_PHYS_STACK_H_
+#endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_STACK_H_

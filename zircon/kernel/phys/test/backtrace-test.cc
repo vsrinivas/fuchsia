@@ -8,8 +8,9 @@
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 
-#include "../frame-pointer.h"
-#include "../symbolize.h"
+#include <phys/frame-pointer.h>
+#include <phys/symbolize.h>
+
 #include "test-main.h"
 
 const char Symbolize::kProgramName_[] = "backtrace-test";

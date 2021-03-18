@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_PHYS_BOOT_ZBI_H_
-#define ZIRCON_KERNEL_PHYS_BOOT_ZBI_H_
+#ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_BOOT_ZBI_H_
+#define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_BOOT_ZBI_H_
 
 #include <lib/arch/zbi-boot.h>
 #include <lib/fitx/result.h>
@@ -15,8 +15,7 @@
 #include <cstdint>
 
 #include <ktl/span.h>
-
-#include "allocation.h"
+#include <phys/allocation.h>
 
 // BootZbi represents a bootable ZBI and manages the memory allocation and ZBI
 // protocol details for getting its kernel image and data ZBI in place and
@@ -124,4 +123,4 @@ class BootZbi {
   const zircon_kernel_t* kernel_ = nullptr;
 };
 
-#endif  // ZIRCON_KERNEL_PHYS_BOOT_ZBI_H_
+#endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_BOOT_ZBI_H_

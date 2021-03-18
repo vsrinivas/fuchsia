@@ -13,8 +13,8 @@
 #include <zircon/boot/e820.h>
 #include <zircon/boot/multiboot.h>
 
-#include "../../../phys/allocation.h"
-#include "../../../phys/main.h"
+#include <phys/allocation.h>
+#include <phys/main.h>
 
 ktl::string_view gMultibootBootloader;
 ktl::string_view gMultibootCmdline;

@@ -9,10 +9,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "allocation.h"
-#include "boot-zbi.h"
-#include "main.h"
-#include "symbolize.h"
+#include <phys/allocation.h>
+#include <phys/boot-zbi.h>
+#include <phys/main.h>
+#include <phys/symbolize.h>
 
 // This is a trivial "no-op" ZBI-to-ZBI boot shim.  It simply treats the data
 // ZBI as a whole bootable ZBI and boots it using the modern ZBI booting

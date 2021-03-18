@@ -14,9 +14,9 @@
 
 #include <ktl/byte.h>
 #include <ktl/span.h>
+#include <phys/allocation.h>
+#include <phys/zbitl-allocation.h>
 
-#include "../allocation.h"
-#include "../zbitl-allocation.h"
 #include "test-main.h"
 
 const char Symbolize::kProgramName_[] = "decompress-test";

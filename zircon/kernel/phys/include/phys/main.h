@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_PHYS_MAIN_H_
-#define ZIRCON_KERNEL_PHYS_MAIN_H_
+#ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_MAIN_H_
+#define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_MAIN_H_
 
 #include <lib/arch/ticks.h>
 #include <zircon/compiler.h>
@@ -65,4 +65,4 @@ inline void ApplyRelocations() {
 // found for the allocator.
 void InitMemory(void* bootloader_data);
 
-#endif  // ZIRCON_KERNEL_PHYS_MAIN_H_
+#endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_MAIN_H_

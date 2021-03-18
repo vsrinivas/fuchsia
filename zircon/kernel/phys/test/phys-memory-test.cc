@@ -13,8 +13,8 @@
 #include <fbl/algorithm.h>
 #include <ktl/byte.h>
 #include <ktl/span.h>
+#include <phys/allocation.h>
 
-#include "../allocation.h"
 #include "test-main.h"
 
 const char Symbolize::kProgramName_[] = "phys-memory-test";

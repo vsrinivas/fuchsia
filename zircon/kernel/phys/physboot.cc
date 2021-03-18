@@ -15,13 +15,12 @@
 
 #include <ktl/array.h>
 #include <ktl/optional.h>
+#include <phys/allocation.h>
+#include <phys/boot-zbi.h>
+#include <phys/main.h>
+#include <phys/symbolize.h>
+#include <phys/zbitl-allocation.h>
 #include <pretty/cpp/sizes.h>
-
-#include "allocation.h"
-#include "boot-zbi.h"
-#include "main.h"
-#include "symbolize.h"
-#include "zbitl-allocation.h"
 
 const char Symbolize::kProgramName_[] = "physboot";
 
@@ -127,8 +126,7 @@ LoadedZircon LoadZircon(BootZbi::InputZbi& zbi, BootZbi::InputZbi::iterator kern
          boot.KernelLoadAddress() + boot.KernelMemorySize(),
          FormattedSize(boot.KernelHeader()->reserve_memory_size).str());
   printf("physboot: ZBI    @ [0x%016" PRIxPTR ", 0x%016" PRIxPTR ")  %s\n", boot.DataLoadAddress(),
-         boot.DataLoadAddress() + boot.DataLoadSize(),
-         FormattedSize(boot.DataLoadSize()).str());
+         boot.DataLoadAddress() + boot.DataLoadSize(), FormattedSize(boot.DataLoadSize()).str());
 
   boot.Boot();
 }

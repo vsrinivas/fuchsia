@@ -13,10 +13,9 @@
 #include <zircon/boot/image.h>
 
 #include <ktl/string_view.h>
-
-#include "allocation.h"
-#include "arch.h"
-#include "main.h"
+#include <phys/allocation.h>
+#include <phys/arch.h>
+#include <phys/main.h>
 
 namespace {
 

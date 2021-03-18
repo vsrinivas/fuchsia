@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "allocation.h"
+#include "phys/allocation.h"
 
 #include <lib/arch/sysreg.h>
 #include <lib/arch/x86/system.h>
@@ -14,8 +14,7 @@
 #include <fbl/no_destructor.h>
 #include <ktl/byte.h>
 #include <ktl/move.h>
-
-#include "main.h"
+#include <phys/main.h>
 
 namespace {
 

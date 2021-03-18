@@ -7,7 +7,7 @@
 #include <lib/arch/x86/descriptor-regs.h>
 #include <lib/arch/x86/descriptor.h>
 
-#include "zircon/kernel/phys/arch.h"
+#include <phys/arch.h>
 
 namespace {
 

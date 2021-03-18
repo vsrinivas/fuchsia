@@ -8,7 +8,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../main.h"
+#include <phys/main.h>
+
 #include "test-main.h"
 
 FILE FILE::stdout_;

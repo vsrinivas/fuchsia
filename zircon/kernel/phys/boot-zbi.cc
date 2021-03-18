@@ -4,7 +4,7 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "boot-zbi.h"
+#include "phys/boot-zbi.h"
 
 #include <lib/arch/zbi-boot.h>
 

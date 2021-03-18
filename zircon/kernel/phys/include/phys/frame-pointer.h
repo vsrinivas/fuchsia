@@ -4,8 +4,8 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_PHYS_FRAME_POINTER_H_
-#define ZIRCON_KERNEL_PHYS_FRAME_POINTER_H_
+#ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_FRAME_POINTER_H_
+#define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_FRAME_POINTER_H_
 
 #include <cstdint>
 
@@ -59,4 +59,4 @@ class FramePointer {
   value_type pc_ = 0;
 };
 
-#endif  // ZIRCON_KERNEL_PHYS_FRAME_POINTER_H_
+#endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_FRAME_POINTER_H_

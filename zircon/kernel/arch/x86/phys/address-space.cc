@@ -17,8 +17,7 @@
 #include <ktl/optional.h>
 #include <ktl/span.h>
 #include <ktl/string_view.h>
-
-#include "zircon/kernel/phys/arch.h"
+#include <phys/arch.h>
 
 namespace {
 

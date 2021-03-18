@@ -9,8 +9,8 @@
 
 #include <lib/arch/ticks.h>
 
-#include "../main.h"
-#include "../symbolize.h"
+#include <phys/main.h>
+#include <phys/symbolize.h>
 
 int TestMain(void*, arch::EarlyTicks) PHYS_SINGLETHREAD;
 

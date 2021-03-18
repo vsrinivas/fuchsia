@@ -134,11 +134,11 @@ if (current_toolchain == default_toolchain) {
         "gdt32.cc",
         "start32.S",
       ]
-      include_dirs = [ "//zircon/.." ]
       deps = [
         ":phys32-header",
         "//zircon/kernel/lib/arch",
         "//zircon/kernel/lib/ktl",
+        "//zircon/kernel/phys:symbolize",
       ]
 
       # Links use -nostdlib to avoid getting -lc et al.  But the "builtins"

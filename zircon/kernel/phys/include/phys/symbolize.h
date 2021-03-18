@@ -4,15 +4,14 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#ifndef ZIRCON_KERNEL_PHYS_SYMBOLIZE_H_
-#define ZIRCON_KERNEL_PHYS_SYMBOLIZE_H_
+#ifndef ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_SYMBOLIZE_H_
+#define ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_SYMBOLIZE_H_
 
 #include <stdint.h>
 #include <stdio.h>
 
 #include <ktl/string_view.h>
-
-#include "main.h"
+#include <phys/main.h>
 
 class Symbolize {
  public:
@@ -79,4 +78,4 @@ class Symbolize {
   }
 };
 
-#endif  // ZIRCON_KERNEL_PHYS_SYMBOLIZE_H_
+#endif  // ZIRCON_KERNEL_PHYS_INCLUDE_PHYS_SYMBOLIZE_H_

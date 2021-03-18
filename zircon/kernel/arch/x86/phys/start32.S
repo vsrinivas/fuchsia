@@ -9,7 +9,7 @@
 #include <zircon/tls.h>
 
 #include "phys32.h"
-#include "zircon/kernel/phys/stack.h"
+#include <phys/stack.h>
 
 // An argument is in %esi.
 .function Phys32Entry, global

@@ -13,9 +13,8 @@
 
 #include <ktl/byte.h>
 #include <ktl/span.h>
-
-#include "arch.h"
-#include "main.h"
+#include <phys/arch.h>
+#include <phys/main.h>
 
 FILE FILE::stdout_;
 
