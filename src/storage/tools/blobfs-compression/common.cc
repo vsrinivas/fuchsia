@@ -108,7 +108,7 @@ zx_status_t BlobfsCompress(const uint8_t* src,
     return ToZxStatus(compression_status);
   }
 
-  double saving_ratio = static_cast<double>(src_sz - compressed_size);
+  double saving_ratio = static_cast<double>(src_sz) - static_cast<double>(compressed_size);
   if (src_sz) {
     saving_ratio /= static_cast<double>(src_sz);
   } else {
