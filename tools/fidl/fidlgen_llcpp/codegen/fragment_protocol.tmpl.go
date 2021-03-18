@@ -86,7 +86,7 @@ class {{ .Name }} final {
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
     {{- end }}
     static constexpr uint32_t MaxNumHandles = {{ .Response.MaxHandles }};
-    static constexpr uint32_t PrimarySize = {{ .Response.Size }};
+    static constexpr uint32_t PrimarySize = {{ .Response.InlineSize }};
     static constexpr uint32_t MaxOutOfLine = {{ .Response.MaxOutOfLine }};
     static constexpr bool HasFlexibleEnvelope = {{ .Response.Flexible }};
     static constexpr bool HasPointer = {{ .Response.HasPointer }};
@@ -245,9 +245,9 @@ class {{ .Name }} final {
       &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
     {{- end }}
     static constexpr uint32_t MaxNumHandles = {{ .Request.MaxHandles }};
-    static constexpr uint32_t PrimarySize = {{ .Request.Size }};
+    static constexpr uint32_t PrimarySize = {{ .Request.InlineSize }};
     static constexpr uint32_t MaxOutOfLine = {{ .Request.MaxOutOfLine }};
-    static constexpr uint32_t AltPrimarySize = {{ .Request.Size }};
+    static constexpr uint32_t AltPrimarySize = {{ .Request.InlineSize }};
     static constexpr uint32_t AltMaxOutOfLine = {{ .Request.MaxOutOfLine }};
     static constexpr bool HasFlexibleEnvelope = {{ .Request.Flexible }};
     static constexpr bool HasPointer = {{ .Request.HasPointer }};

@@ -125,7 +125,7 @@ type messageInner struct {
 type message struct {
 	messageInner
 
-	Size           int
+	InlineSize     int
 	MaxHandles     int
 	MaxOutOfLine   int
 	ByteBufferType string
@@ -138,7 +138,7 @@ type message struct {
 func newMessage(inner messageInner, args []Parameter, boundedness boundedness) message {
 	return message{
 		messageInner: inner,
-		Size:         inner.TypeShape.InlineSize,
+		InlineSize:   inner.TypeShape.InlineSize,
 		MaxHandles:   inner.TypeShape.MaxHandles,
 		MaxOutOfLine: inner.TypeShape.MaxOutOfLine,
 		ByteBufferType: byteBufferType(
@@ -284,23 +284,23 @@ func (m Method) buildLLContextProps(context LLContext) LLContextProps {
 	stackAllocResponse := false
 	if context == clientContext {
 		stackAllocRequest = len(m.RequestArgs) == 0 ||
-			(m.Request.Size+m.Request.MaxOutOfLine) < llcppMaxStackAllocSize
+			(m.Request.InlineSize+m.Request.MaxOutOfLine) < llcppMaxStackAllocSize
 		stackAllocResponse = len(m.ResponseArgs) == 0 ||
-			(!m.Response.Flexible && (m.Response.Size+m.Response.MaxOutOfLine) < llcppMaxStackAllocSize)
+			(!m.Response.Flexible && (m.Response.InlineSize+m.Response.MaxOutOfLine) < llcppMaxStackAllocSize)
 	} else {
 		stackAllocRequest = len(m.RequestArgs) == 0 ||
-			(!m.Request.Flexible && (m.Request.Size+m.Request.MaxOutOfLine) < llcppMaxStackAllocSize)
+			(!m.Request.Flexible && (m.Request.InlineSize+m.Request.MaxOutOfLine) < llcppMaxStackAllocSize)
 		stackAllocResponse = len(m.ResponseArgs) == 0 ||
-			(m.Response.Size+m.Response.MaxOutOfLine) < llcppMaxStackAllocSize
+			(m.Response.InlineSize+m.Response.MaxOutOfLine) < llcppMaxStackAllocSize
 	}
 
 	stackUseRequest := 0
 	stackUseResponse := 0
 	if stackAllocRequest {
-		stackUseRequest = m.Request.Size + m.Request.MaxOutOfLine
+		stackUseRequest = m.Request.InlineSize + m.Request.MaxOutOfLine
 	}
 	if stackAllocResponse {
-		stackUseResponse = m.Response.Size + m.Response.MaxOutOfLine
+		stackUseResponse = m.Response.InlineSize + m.Response.MaxOutOfLine
 	}
 	return LLContextProps{
 		StackAllocRequest:  stackAllocRequest,
@@ -355,7 +355,7 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 			Result:       result,
 		})
 		methods = append(methods, method)
-		if size := method.Response.Size + method.Response.MaxOutOfLine; size > maxResponseSize {
+		if size := method.Response.InlineSize + method.Response.MaxOutOfLine; size > maxResponseSize {
 			maxResponseSize = size
 		}
 	}
