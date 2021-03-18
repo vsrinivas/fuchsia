@@ -16,6 +16,7 @@ use {
     fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
     fidl_fuchsia_overnet_protocol::NodeId,
     fuchsia_async::TimeoutExt,
+    futures::lock::Mutex,
     futures::{Future, FutureExt},
     lazy_static::lazy_static,
     ring::digest::{Context as ShaContext, Digest, SHA256},
@@ -23,7 +24,7 @@ use {
     std::fs::File,
     std::io::{BufReader, Read},
     std::pin::Pin,
-    std::sync::{Arc, Mutex},
+    std::sync::Arc,
     std::time::{Duration, Instant},
 };
 
@@ -57,7 +58,7 @@ rebooting the device or flashing the device into a running state.";
 
 lazy_static! {
     // Using a mutex to guard the spawning of the daemon - the value it contains is not used.
-    static ref SPAWN_GUARD: Arc<Mutex<bool>> = Arc::new(Mutex::new(false));
+    static ref SPAWN_GUARD: Arc<Mutex<()>> = Arc::new(Mutex::new(()));
 }
 
 async fn get_daemon_proxy_single_link(
@@ -89,7 +90,7 @@ async fn get_daemon_proxy_single_link(
 // This could get called multiple times by the plugin system via multiple threads - so make sure
 // the spawning only happens one thread at a time.
 async fn get_daemon_proxy() -> Result<DaemonProxy> {
-    let _guard = SPAWN_GUARD.lock().unwrap();
+    let _guard = SPAWN_GUARD.lock().await;
     if !is_daemon_running().await {
         #[cfg(not(test))]
         ffx_daemon::spawn_daemon().await?;
