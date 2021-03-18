@@ -251,9 +251,6 @@ pub struct RemoteBlockClient {
     temp_vmo_id: VmoId,
 }
 
-// Transitional type alias. Remove after soft migration.
-pub type RemoteBlockDevice = RemoteBlockClient;
-
 impl RemoteBlockClient {
     /// Returns a connection to a remote block device via the given channel.
     pub fn new(channel: zx::Channel) -> Result<Self, Error> {
