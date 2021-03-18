@@ -46,7 +46,7 @@ This is the file [`//sdk/banjo/fuchsia.hardware.i2c/i2c.banjo`](/sdk/banjo/fuchs
 [16]     bool stop;
 [17] };
 [18]
-[19] [BanjoLayout = "ddk-protocol"]
+[19] [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 [20] protocol I2c {
 [21]     /// Writes and reads data on an i2c channel. Up to I2C_MAX_RW_OPS operations can be passed in.
 [22]     /// For write ops, i2c_op_t.data points to data to write.  The data to write does not need to be
@@ -102,7 +102,7 @@ implementation (the driver) and the protocol user (the program that's using the 
 
 The more interesting part is the `protocol` specification.
 
-We'll skip the `[BanjoLayout]` (line `[19]`) and `[Async]` (line `[27]`) attributes for now,
+We'll skip the `[Transport = "Banjo", BanjoLayout]` (line `[19]`) and `[Async]` (line `[27]`) attributes for now,
 but will return to them below, in [Attributes](#attributes).
 
 The `protocol` section defines three interface methods:
@@ -657,14 +657,14 @@ at how we would use it.
 ## Attributes
 
 Recall from the example above that the `protocol` section had two attributes;
-a `[BanjoLayout]` and an `[Async]` attribute.
+a `[Transport = "Banjo", BanjoLayout]` and an `[Async]` attribute.
 
 ### The BanjoLayout attribute
 
-The line just before the `protocol` is the `[BanjoLayout]` attribute:
+The line just before the `protocol` is the `[Transport = "Banjo", BanjoLayout]` attribute:
 
 ```banjo
-[19] [BanjoLayout = "ddk-protocol"]
+[19] [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 [20] protocol I2c {
 ```
 
@@ -785,7 +785,7 @@ Argument   | Meaning
 `op_list`  | the data from the transfer
 `op_count` | the number of elements in the transfer
 
-How is this different than just using the `ddk-callback` `[BanjoLayout]` attribute we
+How is this different than just using the `ddk-callback` `[Transport = "Banjo", BanjoLayout]` attribute we
 discussed above?
 
 First, there's no `struct` with the callback and cookie value in it, they're inlined
@@ -865,7 +865,7 @@ Test code must include the protocol header with a `mock/` prefix, e.g.
 Consider the following Banjo protocol snippet:
 
 ```banjo
-[021] [BanjoLayout = "ddk-protocol"]
+[021] [Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 [022] protocol Gpio {
  ...
 [034]     /// Gets an interrupt object pertaining to a particular GPIO pin.

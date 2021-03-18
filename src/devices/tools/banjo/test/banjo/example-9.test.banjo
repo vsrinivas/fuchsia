@@ -16,7 +16,7 @@ struct EchoMore {
     uint64 second;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Echo {
     Echo32(uint32 uint32) -> (uint32 response);
     Echo64(uint64 uint64) -> (uint64 response);

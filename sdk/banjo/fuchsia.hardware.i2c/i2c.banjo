@@ -17,7 +17,7 @@ struct I2cOp {
     bool stop;
 };
 
-[BanjoLayout = "ddk-protocol", HandleWrappers]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol", HandleWrappers]
 protocol I2c {
     /// Writes and reads data on an i2c channel. Up to I2C_MAX_RW_OPS operations can be passed in
     /// with a maximum of I2C_MAX_TOTAL_TRANSFER total bytes transfered.

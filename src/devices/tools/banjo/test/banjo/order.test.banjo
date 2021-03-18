@@ -22,6 +22,7 @@ struct XxStruct {
     MmEnum field_again;
 };
 
+[Transport = "Banjo"]
 protocol IiInterface {
     DoSomething() -> ();
 };

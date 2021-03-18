@@ -6,7 +6,7 @@ use {
     super::{
         util::{
             array_bounds, get_declarations, get_doc_comment, name_buffer, name_size, not_callback,
-            primitive_type_to_c_str, to_c_name, Decl, ProtocolType,
+            primitive_type_to_c_str, to_c_name, validate_declarations, Decl, ProtocolType,
         },
         Backend,
     },
@@ -757,17 +757,13 @@ impl<'a, W: io::Write> CBackend<'a, W> {
     fn codegen_protocol_decl(&self, data: &'a Interface, ir: &FidlIr) -> Result<String, Error> {
         let name = to_c_name(&data.name.get_name());
         Ok(match ProtocolType::from(&data.maybe_attributes) {
-            ProtocolType::Interface | ProtocolType::Protocol => {
-                format!(
-                    "{async_decls}typedef struct {c_name}_protocol {c_name}_protocol_t;\n\
-                     typedef struct {c_name}_protocol_ops {c_name}_protocol_ops_t;",
-                    async_decls = self.codegen_async_decls(&name, &data.methods, ir)?,
-                    c_name = name
-                )
-            }
-            ProtocolType::Callback => {
-                format!("typedef struct {c_name} {c_name}_t;", c_name = name)
-            }
+            ProtocolType::Interface | ProtocolType::Protocol => format!(
+                "{async_decls}typedef struct {c_name}_protocol {c_name}_protocol_t;\n\
+                 typedef struct {c_name}_protocol_ops {c_name}_protocol_ops_t;",
+                async_decls = self.codegen_async_decls(&name, &data.methods, ir)?,
+                c_name = name
+            ),
+            ProtocolType::Callback => format!("typedef struct {c_name} {c_name}_t;", c_name = name),
         })
     }
 
@@ -801,6 +797,7 @@ impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
         ))?;
 
         let decl_order = get_declarations(&ir)?;
+        validate_declarations(&decl_order)?;
 
         let declarations = decl_order
             .iter()

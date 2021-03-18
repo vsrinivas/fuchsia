@@ -8,7 +8,7 @@ library banjo.examples.protocolhandle;
 
 using zx;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol SynchronousHandle {
     Handle(zx.handle h) -> (zx.handle h, zx.handle h2);
     Process(zx.handle:PROCESS h) -> (zx.handle:PROCESS h, zx.handle:PROCESS h2);
@@ -29,12 +29,12 @@ protocol SynchronousHandle {
     Profile(zx.handle:PROFILE h) -> (zx.handle:PROFILE h, zx.handle:PROFILE h2);
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol AnotherSynchronousHandle {
     Handle(zx.handle h) -> (zx.handle h, zx.handle h2);
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol AsyncHandle {
     [Async]
     Handle(zx.handle h) -> (zx.handle h, zx.handle h2);

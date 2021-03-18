@@ -24,7 +24,7 @@ struct ScpiOpp {
     uint32 count;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Scpi {
     GetSensor(string name) -> (zx.status s, uint32 sensor_id);
     GetSensorValue(uint32 sensor_id) -> (zx.status s, uint32 sensor_value);

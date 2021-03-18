@@ -8,7 +8,7 @@ using zx;
 
 /// This is somewhat of a dummy protocol that's only useful for
 /// connecting to the thermal driver's FIDL interface via Banjo.
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Thermal {
     /// Pass a channel handle to the thermal driver to connect to its
     /// FIDL interface.

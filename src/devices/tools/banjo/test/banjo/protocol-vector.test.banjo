@@ -8,7 +8,7 @@ library banjo.examples.protocolvector;
 
 using zx;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Vector {
     Bool(vector<bool>:1 b) -> (vector<bool>:1 b);
     Int8(vector<int8>:1 i8) -> (vector<int8>:1 i8);
@@ -26,7 +26,7 @@ protocol Vector {
 
 const uint32 vector_size = 32;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Vector2 {
     Bool(vector<bool>:vector_size b) -> (vector<bool>:vector_size b);
     Int8(vector<int8>:vector_size i8) -> (vector<int8>:vector_size i8);
@@ -42,7 +42,7 @@ protocol Vector2 {
     Handle(vector<zx.handle>:vector_size u64) -> (vector<zx.handle>:vector_size f64);
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol VectorOfVectors {
     Bool(vector<vector<bool>:4>:vector_size b) -> (vector<vector<bool>:4>:vector_size b);
     Int8(vector<vector<int8>:4>:vector_size i8) -> (vector<vector<int8>:4>:vector_size i8);

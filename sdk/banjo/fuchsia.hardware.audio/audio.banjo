@@ -5,13 +5,14 @@
 library fuchsia.hardware.audio;
 using zx;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Codec {
     /// This method connects a channel in order to serve FIDL over it outside the driver host
     /// control.
     Connect(zx.handle:CHANNEL channel) -> (zx.status status);
 };
 
+[Transport = "Banjo"]
 protocol Dai {
     /// This method connects a channel in order to serve FIDL over it outside the driver host
     /// control.

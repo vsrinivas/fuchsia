@@ -1264,6 +1264,12 @@ BanjoAst {
                 attributes: Attrs(
                     [
                         Attr {
+                            key: "Transport",
+                            val: Some(
+                                "Banjo",
+                            ),
+                        },
+                        Attr {
                             key: "BanjoLayout",
                             val: Some(
                                 "ddk-protocol",
@@ -2345,6 +2351,12 @@ BanjoAst {
             Protocol {
                 attributes: Attrs(
                     [
+                        Attr {
+                            key: "Transport",
+                            val: Some(
+                                "Banjo",
+                            ),
+                        },
                         Attr {
                             key: "BanjoLayout",
                             val: Some(
@@ -3683,6 +3695,12 @@ BanjoAst {
             Protocol {
                 attributes: Attrs(
                     [
+                        Attr {
+                            key: "Transport",
+                            val: Some(
+                                "Banjo",
+                            ),
+                        },
                         Attr {
                             key: "BanjoLayout",
                             val: Some(

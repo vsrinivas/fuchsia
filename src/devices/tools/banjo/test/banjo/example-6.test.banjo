@@ -6,7 +6,7 @@ library banjo.examples.example6;
 
 const int32 x = 23;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Hello {
     Say(string req) -> (string response);
 };

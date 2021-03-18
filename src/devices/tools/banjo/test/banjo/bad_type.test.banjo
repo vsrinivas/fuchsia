@@ -4,7 +4,7 @@
 
 library banjo.examples.bad_type;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol BadType {
     BadType(uint64_t p) -> ();
 };

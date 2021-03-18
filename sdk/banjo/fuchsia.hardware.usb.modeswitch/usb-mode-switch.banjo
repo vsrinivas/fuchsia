@@ -14,7 +14,7 @@ enum UsbMode : uint32 {
     OTG = 3;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol UsbModeSwitch {
     /// Sets the current USB mode.
     SetMode(UsbMode mode) -> (zx.status s);

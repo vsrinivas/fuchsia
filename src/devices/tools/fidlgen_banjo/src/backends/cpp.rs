@@ -29,14 +29,12 @@ fn get_in_args(m: &Method, wrappers: bool, ir: &FidlIr) -> Result<Vec<String>, E
         .map(|param| {
             let name = to_c_name(&param.name.0);
             match &param._type {
-                Type::Vector { .. } => {
-                    format!(
-                        "{name}_{buffer}, {name}_{size}",
-                        buffer = name_buffer(&param.maybe_attributes),
-                        size = name_size(&param.maybe_attributes),
-                        name = name
-                    )
-                }
+                Type::Vector { .. } => format!(
+                    "{name}_{buffer}, {name}_{size}",
+                    buffer = name_buffer(&param.maybe_attributes),
+                    size = name_size(&param.maybe_attributes),
+                    name = name
+                ),
                 Type::Handle { .. } => {
                     if wrappers {
                         format!(
@@ -70,9 +68,7 @@ fn get_out_args(m: &Method, client: bool, ir: &FidlIr) -> Result<(Vec<String>, b
             .map(|param| {
                 let name = to_c_name(&param.name.0);
                 match &param._type {
-                    Type::Str { .. } => {
-                        format!("out_{name}, {name}_capacity", name = name)
-                    }
+                    Type::Str { .. } => format!("out_{name}, {name}_capacity", name = name),
                     Type::Vector { .. } => {
                         if param.maybe_attributes.has("CalleeAllocated") {
                             format!(
@@ -481,6 +477,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 impl<'a, W: io::Write> Backend<'a, W> for CppBackend<'a, W> {
     fn codegen(&mut self, ir: FidlIr) -> Result<(), Error> {
         let decl_order = get_declarations(&ir)?;
+        validate_declarations(&decl_order)?;
         self.w.write_fmt(format_args!(
             include_str!("templates/cpp/header.h"),
             includes = self.codegen_includes(&decl_order, &ir)?,

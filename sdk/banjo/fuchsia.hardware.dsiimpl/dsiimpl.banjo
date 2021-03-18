@@ -78,7 +78,7 @@ struct MipiDsiCmd {
     uint32 flags;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol DsiImpl {
     /// This function is used to configure all the DSI parameters needed to operated in both
     /// Command and Video Mode

@@ -24,7 +24,7 @@ struct VregParams {
     uint32 num_steps;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Vreg {
     // Set the step which yields a voltage of min_uv + step_size_uv * step.
     SetVoltageStep(uint32 step) -> (zx.status st);

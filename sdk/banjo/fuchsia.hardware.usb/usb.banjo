@@ -8,7 +8,7 @@ using fuchsia.hardware.usb.request;
 using zircon.hw.usb;
 using zx;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Usb {
     // Initiates a control transfer with the device in the OUT direction.
     ControlOut(uint8 request_type, uint8 request, uint16 value, uint16 index, zx.time timeout,

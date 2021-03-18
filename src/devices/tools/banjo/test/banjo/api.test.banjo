@@ -6,6 +6,7 @@ library banjo.examples.api;
 
 using zx;
 
+[Transport = "Banjo"]
 protocol Api {
     bool(zx.handle handle, bool data) -> (zx.status status);
     int8(zx.handle handle, int8 data) -> (zx.status status);

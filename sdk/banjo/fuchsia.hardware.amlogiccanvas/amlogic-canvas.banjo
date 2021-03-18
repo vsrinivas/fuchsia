@@ -20,7 +20,7 @@ struct CanvasInfo {
     uint32 flags;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol AmlogicCanvas {
     /// Configures a canvas.
     /// Adds a framebuffer to the canvas lookup table.

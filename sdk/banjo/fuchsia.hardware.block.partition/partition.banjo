@@ -25,7 +25,7 @@ enum GUIDType : uint8 {
     INSTANCE = 0x01;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol BlockPartition {
     /// Get a GUID of the partition (if one exists).
     GetGuid(GUIDType guid_type) -> (zx.status status, GUID guid);

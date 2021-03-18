@@ -9,7 +9,7 @@ library banjo.examples.protocolarray;
 
 using zx;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Array {
     Bool(array<bool>:1 b) -> (array<bool>:1 b);
     Int8(array<int8>:1 i8) -> (array<int8>:1 i8);
@@ -27,7 +27,7 @@ protocol Array {
 
 const uint32 array_size = 32;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Array2 {
     Bool(array<bool>:array_size b) -> (array<bool>:array_size b);
     Int8(array<int8>:array_size i8) -> (array<int8>:array_size i8);
@@ -43,7 +43,7 @@ protocol Array2 {
     Handle(array<zx.handle>:array_size u64) -> (array<zx.handle>:array_size f64);
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol ArrayofArrays {
     Bool(array<array<bool>:4>:array_size b) -> (array<array<bool>:4>:array_size b);
     Int8(array<array<int8>:4>:array_size i8) -> (array<array<int8>:4>:array_size i8);

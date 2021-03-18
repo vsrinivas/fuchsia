@@ -20,6 +20,7 @@ struct MutableField {
   string some_default_string;
 };
 
+[Transport = "Banjo"]
 protocol InOutProtocol {
   DoSomething([InOut] SomeType param) -> ();
   DoSomeOtherThing(SomeType? param) -> ();

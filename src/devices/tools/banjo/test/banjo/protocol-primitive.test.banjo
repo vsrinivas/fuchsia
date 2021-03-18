@@ -4,7 +4,7 @@
 
 library banjo.examples.protocolprimitive;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol SynchronousPrimitive {
     Bool(bool b) -> (bool b, bool b_2);
     Int8(int8 i8) -> (int8 i8, int8 i8_2);
@@ -19,7 +19,7 @@ protocol SynchronousPrimitive {
     Float64(float64 u64) -> (float64 f64, float64 f64_2);
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol AsyncPrimitive {
     [Async]
     Bool(bool b) -> (bool b, bool b_2);

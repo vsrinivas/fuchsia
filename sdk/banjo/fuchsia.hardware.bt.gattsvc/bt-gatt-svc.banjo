@@ -83,12 +83,12 @@ struct BtGattChr {
 };
 
 /// Value change notification callback of the |EnableNotifications| function.
-[BanjoLayout = "ddk-callback"]
+[Transport = "Banjo", BanjoLayout = "ddk-callback"]
 protocol BtGattNotificationValue {
     Callback(BtGattId id, [Buffer] vector<uint8> value) -> ();
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol BtGattSvc {
     /// Connects to and starts characteristic discovery on the remote service.
     ///

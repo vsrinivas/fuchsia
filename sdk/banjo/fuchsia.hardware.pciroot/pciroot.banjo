@@ -58,7 +58,7 @@ enum PciAddressSpace : uint8 {
     Io = 0x1;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Pciroot {
     /// Legacy methods
     /// Create a sysmem connection - used to implement fuchsia.hardware.sysmem.

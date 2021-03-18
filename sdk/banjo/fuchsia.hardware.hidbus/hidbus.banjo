@@ -43,7 +43,7 @@ struct HidInfo {
     uint32 version;
 };
 
-[BanjoLayout = "ddk-interface"]
+[Transport = "Banjo", BanjoLayout = "ddk-interface"]
 protocol HidbusIfc {
     /// Queues a report received by the hidbus device.
     /// Timestamp should be whenever the report was created. Ideally it should
@@ -52,7 +52,7 @@ protocol HidbusIfc {
     IoQueue([Buffer] vector<uint8> buf, zx.time timestamp) -> ();
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Hidbus {
     /// Obtain information about the hidbus device and supported features.
     /// Safe to call at any time.

@@ -123,7 +123,7 @@ struct AddedDisplayInfo {
 
 /// The client will not make any `ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL` calls into the device
 /// during these callbacks.
-[BanjoLayout = "ddk-interface"]
+[Transport = "Banjo", BanjoLayout = "ddk-interface"]
 protocol DisplayControllerInterface {
     /// Callbacks which are invoked when displays are added or removed. |added_display_list| and
     /// |removed_display_list| point to arrays of the display ids which were added and removed. If
@@ -353,7 +353,7 @@ enum Client : uint32 {
 
 /// The client guarantees that check_configuration and apply_configuration are always
 /// made from a single thread. The client makes no other threading guarantees.
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol DisplayControllerImpl {
     /// The function will only be called once, and it will be called before any other
     /// functions are called.

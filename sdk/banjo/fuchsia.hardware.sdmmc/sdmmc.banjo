@@ -143,12 +143,12 @@ enum SdmmcVmoRight : uint32 {
     WRITE = 0x2;  // The protocol implementation can write to this VMO (used for read requests).
 };
 
-[BanjoLayout = "ddk-interface"]
+[Transport = "Banjo", BanjoLayout = "ddk-interface"]
 protocol InBandInterrupt {
     Callback() -> ();
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Sdmmc {
     /// Get host info.
     HostInfo() -> (zx.status s, SdmmcHostInfo info);

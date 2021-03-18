@@ -951,6 +951,7 @@ bool TransportConstraint(Reporter* reporter, const raw::Attribute& attribute, co
   // function-local static pointer to non-trivially-destructible type
   // is allowed by styleguide
   static const auto kValidTransports = new std::set<std::string>{
+      "Banjo",
       "Channel",
       "Syscall",
   };

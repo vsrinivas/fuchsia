@@ -429,6 +429,12 @@ BanjoAst {
                 attributes: Attrs(
                     [
                         Attr {
+                            key: "Transport",
+                            val: Some(
+                                "Banjo",
+                            ),
+                        },
+                        Attr {
                             key: "BanjoLayout",
                             val: Some(
                                 "ddk-protocol",

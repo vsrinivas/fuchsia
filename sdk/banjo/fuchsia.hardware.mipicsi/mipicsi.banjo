@@ -49,7 +49,7 @@ struct MipiAdapInfo {
     MipiPath path;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol MipiCsi {
     Init(MipiInfo mipi_info, MipiAdapInfo adap_info) -> (zx.status s);
     DeInit() -> (zx.status s);

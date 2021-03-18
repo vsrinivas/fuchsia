@@ -8,6 +8,7 @@ enum Foo {
     hello = 1;
 };
 
+[Transport = "Banjo"]
 protocol Bar {
     World(Foo foo) -> ();
 };

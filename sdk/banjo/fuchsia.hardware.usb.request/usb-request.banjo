@@ -89,7 +89,7 @@ struct UsbRequest {
     uint8 reset_address;
 };
 
-[BanjoLayout="ddk-callback"]
+[Transport = "Banjo", BanjoLayout="ddk-callback"]
 protocol UsbRequestComplete {
     Callback([InOut] UsbRequest req) -> ();
 };

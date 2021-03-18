@@ -23,12 +23,12 @@ enum Action : uint32 {
     STOP = 0x2;
 };
 
-[BanjoLayout = "ddk-callback"]
+[Transport = "Banjo", BanjoLayout = "ddk-callback"]
 protocol ActionNotify {
     Callback(Point p, Direction d) -> ();
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol ActionProtocol {
     RegisterCallback(uint32 id, ActionNotify cb) -> (zx.status s);
     GetCallback(uint32 id) -> (zx.status s, ActionNotify cb);

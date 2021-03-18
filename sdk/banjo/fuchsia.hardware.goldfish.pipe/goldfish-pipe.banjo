@@ -63,7 +63,7 @@ struct PipeCmdBuffer {
 /// the pipe and should issue a 'close' command before destroying a previously
 /// opened pipe. Failure to do so may result in host side resources that are
 /// not cleaned up properly.
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol GoldfishPipe {
     /// Create a new pipe connection. The |id| identifies the pipe and must be
     /// used for all subsequent commands. The memory that will be used as

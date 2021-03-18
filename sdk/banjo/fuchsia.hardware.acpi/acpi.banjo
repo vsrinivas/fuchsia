@@ -14,7 +14,7 @@ resource struct AcpiMmio {
     zx.handle:VMO vmo;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Acpi {
     GetPio(uint32 index) -> (zx.status s, zx.handle:RESOURCE pio);
     GetMmio(uint32 index) -> (zx.status s, AcpiMmio mmio);
@@ -27,7 +27,7 @@ protocol Acpi {
 /// A generic ACPI device. This will allow devices to query information directly
 /// from ACPI, removing the need for them to be implemented directly in the
 /// board driver.
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol AcpiDevice {
     /// For now, this has a single stub method, since banjo protocols require
     /// at least one method, but we will add methods as the requirements become

@@ -6,7 +6,7 @@ library fuchsia.hardware.usb.hub;
 
 using zx;
 
-[BanjoLayout = "ddk-interface"]
+[Transport = "Banjo", BanjoLayout = "ddk-interface"]
 protocol UsbHubInterface {
     /// Resets the specified port on the hub.
     ResetPort(uint32 port) -> (zx.status s);

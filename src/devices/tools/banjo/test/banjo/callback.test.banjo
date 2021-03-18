@@ -18,12 +18,12 @@ enum Direction : uint32 {
     Right = 3;
 };
 
-[BanjoLayout = "ddk-callback"]
+[Transport = "Banjo", BanjoLayout = "ddk-callback"]
 protocol Draw {
     Callback(Point p, Direction d) -> ();
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Drawing {
     RegisterCallback() -> ();
     DeregisterCallback() -> ();

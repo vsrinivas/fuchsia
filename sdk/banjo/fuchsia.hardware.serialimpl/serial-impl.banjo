@@ -16,12 +16,12 @@ enum SerialState : uint32 {
 /// This may be called from an interrupt thread it should just signal another thread
 /// and return as soon as possible. In particular, it may not be safe to make protocol calls
 /// from these callbacks.
-[BanjoLayout = "ddk-callback"]
+[Transport = "Banjo", BanjoLayout = "ddk-callback"]
 protocol SerialNotify {
     Callback(SerialState state) -> ();
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol SerialImpl {
     GetInfo() -> (zx.status s, fuchsia.hardware.serial.SerialPortInfo info);
     /// Configures the given serial port.

@@ -22,7 +22,7 @@ enum Direction : uint32 {
     Right = 3;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Drawing {
     Draw(Point p, Direction d) -> ();
     DrawLots(zx.handle:VMO commands) -> (zx.status result, Point p);

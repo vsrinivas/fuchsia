@@ -6,7 +6,7 @@ library banjo.examples.protocolbase;
 
 using zx;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol SynchronousBase {
     Status(zx.status status) -> (zx.status status, zx.status status_2);
     Time(zx.time time) -> (zx.time time, zx.time time_2);
@@ -19,7 +19,7 @@ protocol SynchronousBase {
     Off(zx.off off) -> (zx.off off, zx.off off_2);
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol AsyncBase {
     [Async]
     Status(zx.status status) -> (zx.status status, zx.status status_2);

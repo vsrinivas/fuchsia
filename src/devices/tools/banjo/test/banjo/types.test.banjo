@@ -14,6 +14,7 @@ union this_is_a_union {
     1: string s;
 };
 
+[Transport = "Banjo"]
 protocol this_is_an_interface {
     [SomeAttrib, AnotherAttrib="Value containing, a comma"]
     Copy(string s, uint32 count) -> (string s);

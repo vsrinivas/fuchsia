@@ -76,7 +76,7 @@ resource struct SdioRwTxn {
     uint64 buf_offset;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Sdio {
     GetDevHwInfo() -> (zx.status s, SdioHwInfo hw_info);
     EnableFn() -> (zx.status s);

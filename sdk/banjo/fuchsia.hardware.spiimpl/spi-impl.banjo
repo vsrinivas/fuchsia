@@ -13,7 +13,7 @@ enum SpiVmoRight : uint32 {
 };
 
 /// Low-level protocol for spi drivers.
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol SpiImpl {
     /// Returns the number of chip select lines available or provided by the driver instance.
     /// To be used as a limit on the acceptable values for the `chip_select' field in the Exchange()

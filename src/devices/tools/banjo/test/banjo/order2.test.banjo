@@ -4,10 +4,12 @@
 
 library banjo.examples.order2;
 
+[Transport = "Banjo"]
 protocol Foo {
     Hello() -> ();
 };
 
+[Transport = "Banjo"]
 protocol Bar {
     World(Foo foo) -> ();
 };

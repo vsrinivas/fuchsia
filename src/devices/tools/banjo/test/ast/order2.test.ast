@@ -28,7 +28,14 @@ BanjoAst {
             },
             Protocol {
                 attributes: Attrs(
-                    [],
+                    [
+                        Attr {
+                            key: "Transport",
+                            val: Some(
+                                "Banjo",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
@@ -115,7 +122,14 @@ BanjoAst {
             },
             Protocol {
                 attributes: Attrs(
-                    [],
+                    [
+                        Attr {
+                            key: "Transport",
+                            val: Some(
+                                "Banjo",
+                            ),
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(

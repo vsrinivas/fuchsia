@@ -37,7 +37,7 @@ struct Features {
   uint32 supported_modes;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol MacAddrImpl {
   /// Gets this device's MAC address.
   // TODO(fxbug.dev/44065) we need an address changed event (in lockstep with FIDL definition).

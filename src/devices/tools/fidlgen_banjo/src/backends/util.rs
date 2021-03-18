@@ -111,6 +111,31 @@ pub fn get_doc_comment(maybe_attrs: &Option<Vec<Attribute>>, tabs: usize) -> Str
     "".to_string()
 }
 
+pub fn validate_transport(maybe_attrs: &Option<Vec<Attribute>>) -> Result<(), Error> {
+    if let Some(attrs) = maybe_attrs {
+        for attr in attrs.iter() {
+            if attr.name == "Transport" {
+                if attr.value == "Banjo" {
+                    return Ok(());
+                } else {
+                    return Err(anyhow!("Invalid transport, expected \"Banjo\": {:?}", attr.value));
+                }
+            }
+        }
+    }
+    return Err(anyhow!("Transport attribute not specified, expected \"Banjo\""));
+}
+
+pub fn validate_declarations(declarations: &Vec<Decl<'_>>) -> Result<(), Error> {
+    for data in declarations.iter().filter_map(|declaration| match declaration {
+        Decl::Interface { data } => Some(data),
+        _ => None,
+    }) {
+        validate_transport(&data.maybe_attributes)?;
+    }
+    Ok(())
+}
+
 //---------------------------------------------
 // Utilities shared by the four C/C++ backends.
 

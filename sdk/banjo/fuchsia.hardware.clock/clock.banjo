@@ -6,7 +6,7 @@ library fuchsia.hardware.clock;
 
 using zx;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Clock {
 
     /// Enables (ungates) this clock.

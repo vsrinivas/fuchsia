@@ -6,7 +6,7 @@ library fuchsia.hardware.iommu;
 
 using zx;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Iommu {
     GetBti(uint32 iommu_index, uint32 bti_id) -> (zx.status s, zx.handle:BTI handle);
 };

@@ -8,12 +8,12 @@ using zx;
 
 alias ZxUnownedHandle = uint32;
 
-[BanjoLayout = "ddk-interface"]
+[Transport = "Banjo", BanjoLayout = "ddk-interface"]
 protocol DisplayCaptureInterface {
   OnCaptureComplete() -> ();
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol DisplayCaptureImpl {
     /// The function will only be called once, and it will be called before any other
     /// functions are called.

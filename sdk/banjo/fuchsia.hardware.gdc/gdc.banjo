@@ -12,7 +12,7 @@ struct GdcConfigInfo {
     uint32 size;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Gdc {
     // Registers the buffer collections and configuration which the GDC will be using
     // for this task and also the callback functions for a particular task and

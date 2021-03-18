@@ -34,7 +34,7 @@ enum SdhciQuirk : uint64 {
     USE_DMA_BOUNDARY_ALIGNMENT = 0x20;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Sdhci {
     // TODO: should be replaced with a generic busdev mechanism
     GetInterrupt() -> (zx.status s, zx.handle:INTERRUPT irq);

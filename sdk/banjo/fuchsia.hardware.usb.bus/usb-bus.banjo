@@ -14,7 +14,7 @@ enum UsbSpeed : uint32 {
 
 // Note: the "uint64 foo_device" parameters should be interpreted as zx_device_t*.
 // TODO(fxb/69023): restore types.
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol UsbBus {
     /// Configures a new hub based on its USB hub descriptor.
     ConfigureHub([InOut] uint64 hub_device, UsbSpeed speed,
@@ -29,7 +29,7 @@ protocol UsbBus {
 };
 
 /// Interface for use by the HCI controller to use to notify when devices are added and removed.
-[BanjoLayout = "ddk-interface"]
+[Transport = "Banjo", BanjoLayout = "ddk-interface"]
 protocol UsbBusInterface {
     /// Notifies the USB bus driver that a new device has been added.
     AddDevice(uint32 device_id, uint32 hub_id, UsbSpeed speed) -> (zx.status s);

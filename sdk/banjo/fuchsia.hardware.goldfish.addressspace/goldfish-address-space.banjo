@@ -14,7 +14,7 @@ enum AddressSpaceChildDriverType : uint32 {
 /// Interface for the Goldfish address space driver.
 /// See //sdk/fidl/fuchsia.hardware.goldfish for details.
 ///
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol GoldfishAddressSpace {
     OpenChildDriver(AddressSpaceChildDriverType type, zx.handle:CHANNEL req)
         -> (zx.status status);

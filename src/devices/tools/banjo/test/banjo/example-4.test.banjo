@@ -12,7 +12,7 @@ enum Enum {
     x = 23;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Interface {
     func(bool x) -> ();
 };

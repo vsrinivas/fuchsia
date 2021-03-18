@@ -6,7 +6,7 @@ library fuchsia.hardware.spi;
 
 using zx;
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Spi {
     // TODO(67570): Remove these once all drivers have switched over to the FIDL protocol.
 

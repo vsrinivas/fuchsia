@@ -16,7 +16,7 @@ const uint16 HID_MAX_DESC_LEN = 8192;
 const uint16 HID_MAX_REPORT_LEN = 8192;
 const uint16 HID_MAX_REPORT_IDS = 256;
 
-[BanjoLayout = "ddk-interface"]
+[Transport = "Banjo", BanjoLayout = "ddk-interface"]
 protocol HidReportListener {
     /// Sends a single report to the listener. This comes with a timestamp that was gotten
     /// from the computer's monotonic clock.
@@ -29,7 +29,7 @@ struct HidDeviceInfo {
     uint32 version;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol HidDevice {
     /// Register a listener to begin receiving HID Reports. At the moment only a single listener
     /// is supported. It is an error to call this without unregistering.

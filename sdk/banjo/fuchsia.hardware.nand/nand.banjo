@@ -104,7 +104,7 @@ resource union NandOperation {
     3: NandErase erase;
 };
 
-[BanjoLayout = "ddk-protocol"]
+[Transport = "Banjo", BanjoLayout = "ddk-protocol"]
 protocol Nand {
     /// Obtains the parameters of the nand device and the required
     /// size of |NandOperation|. The |NandOperation| submitted via Queue() must have

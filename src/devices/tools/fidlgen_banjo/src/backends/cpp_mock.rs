@@ -37,12 +37,10 @@ fn get_mock_out_param_types(m: &Method, ir: &FidlIr) -> Result<String, Error> {
                     }
                     match param._type {
                         Type::Str { .. } => "std::string".to_string(),
-                        Type::Vector { ref element_type, .. } => {
-                            format!(
-                                "std::vector<{}>",
-                                type_to_cpp_str(element_type, false, ir).unwrap()
-                            )
-                        }
+                        Type::Vector { ref element_type, .. } => format!(
+                            "std::vector<{}>",
+                            type_to_cpp_str(element_type, false, ir).unwrap()
+                        ),
                         _ => type_to_cpp_str(&param._type, true, ir).unwrap(),
                     }
                 })
@@ -566,6 +564,7 @@ impl<'a, W: io::Write> CppMockBackend<'a, W> {
 impl<'a, W: io::Write> Backend<'a, W> for CppMockBackend<'a, W> {
     fn codegen(&mut self, ir: FidlIr) -> Result<(), Error> {
         let decl_order = get_declarations(&ir)?;
+        validate_declarations(&decl_order)?;
         self.w.write_fmt(format_args!(
             include_str!("templates/cpp/mock_header.h"),
             includes = self.codegen_mock_includes(&decl_order, &ir)?,
