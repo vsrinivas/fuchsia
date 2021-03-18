@@ -359,8 +359,8 @@ template("assemble_system") {
   action("${image_name}_devmgr_config.txt") {
     visibility = [ ":*" ]
     forward_variables_from(invoker, [ "testonly" ])
-    hermetic_deps = false
     script = "//build/images/manifest.py"
+    inputs = [ build_info_files.minimum_utc_stamp ]
     outputs = [ "$target_out_dir/$target_name" ]
     args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
     sources = []
@@ -376,6 +376,7 @@ template("assemble_system") {
 
     deps += [
       ":${image_name}_system_image.meta",
+      "//build/info:latest-commit-date",
       pkgfs_label,
     ]
 
