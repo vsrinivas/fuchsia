@@ -25,8 +25,8 @@ DOWNLOAD_DIR="$FUCHSIA_DIR/prebuilt/gui_tools/download"
 
 if [[ $HOST_PLATFORM == "mac-x64" ]]; then
   BINARY="Fuchsia DevTools.app"
-  ZIP="macos/macos.zip"
-  ZIP_OLD="fuchsia_devtools/macos/macos.zip"
+  ZIP="macos.zip"
+  ZIP_OLD="macos/macos.zip"
   DOWNLOAD_ZIP="$DOWNLOAD_DIR/$ZIP"
   DOWNLOAD_ZIP_OLD="$DOWNLOAD_DIR/$ZIP_OLD"
   DOWNLOAD_UNZIP_DIR="$DOWNLOAD_DIR/fuchsia_devtools/macos-extracted"
@@ -36,11 +36,11 @@ if [[ $HOST_PLATFORM == "mac-x64" ]]; then
   PREBUILT_UNZIP_DIR="$PREBUILT_DIR/fuchsia_devtools/macos-extracted"
   PREBUILT="$PREBUILT_UNZIP_DIR/$BINARY"
 else
-  BINARY_OLD="fuchsia_devtools/linux/fuchsia_devtools"
+  BINARY_OLD="linux/fuchsia_devtools"
   PREBUILT_OLD="$PREBUILT_DIR/$BINARY_OLD"
   DOWNLOAD_OLD="$DOWNLOAD_DIR/$BINARY_OLD"
 
-  BINARY="linux/fuchsia_devtools"
+  BINARY="fuchsia_devtools"
   PREBUILT="$PREBUILT_DIR/$BINARY"
   DOWNLOAD="$DOWNLOAD_DIR/$BINARY"
 fi
