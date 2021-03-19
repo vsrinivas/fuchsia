@@ -10,8 +10,12 @@
 
 namespace amlogic_cpu {
 
-#define DEVICE_METADATA_AML_PERF_DOMAINS (0x50524600 | DEVICE_METADATA_PRIVATE)  // PRF
-#define DEVICE_METADATA_AML_OP_POINTS    (0x4f505000 | DEVICE_METADATA_PRIVATE)  // OPP
+#define DEVICE_METADATA_AML_PERF_DOMAINS     (0x50524600 | DEVICE_METADATA_PRIVATE)  // PRF
+#define DEVICE_METADATA_AML_OP_POINTS        (0x4f505000 | DEVICE_METADATA_PRIVATE)  // OPP
+
+// Note that this is only used for Sherlock's proxy driver and should be removed once that
+// driver is fully deprecated.
+#define DEVICE_METADATA_CLUSTER_SIZE_LEGACY  (0x544e4300 | DEVICE_METADATA_PRIVATE)  // CNT
 
 using PerfDomainId = uint32_t;
 constexpr size_t kMaxPerformanceDomainNameLength = 32;
@@ -37,6 +41,14 @@ typedef struct operating_point {
   uint32_t volt_uv;
   PerfDomainId pd_id;
 } operating_point_t;
+
+
+// Note that this is only used for Sherlock's proxy driver and should be removed once that
+// driver is fully deprecated.
+typedef struct legacy_cluster_size {
+  PerfDomainId pd_id;
+  uint32_t core_count;
+} legacy_cluster_size_t;
 
 }  // namespace amlogic_cpu
 

@@ -10,7 +10,9 @@
 #include <lib/device-protocol/pdev.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fake_ddk/fidl-helper.h>
+#include <soc/aml-common/aml-cpu-metadata.h>
 
+#include <algorithm>
 #include <memory>
 #include <vector>
 
@@ -41,6 +43,8 @@ class Bind : public fake_ddk::Bind {
     devices_.push_back(std::unique_ptr<AmlCpu>(static_cast<AmlCpu*>(args->ctx)));
     return ZX_OK;
   }
+
+  const std::vector<std::unique_ptr<AmlCpu>>& get_devices() { return devices_; }
 
   size_t num_devices_added() const { return devices_.size(); }
 
@@ -82,6 +86,21 @@ constexpr size_t kBigClusterIdx =
     static_cast<size_t>(fuchsia_thermal::wire::PowerDomain::BIG_CLUSTER_POWER_DOMAIN);
 constexpr size_t kLittleClusterIdx =
     static_cast<size_t>(fuchsia_thermal::wire::PowerDomain::LITTLE_CLUSTER_POWER_DOMAIN);
+
+constexpr uint32_t kBigClusterCoreCount = 4;
+constexpr uint32_t kLittleClusterCoreCount = 2;
+
+constexpr legacy_cluster_size_t kClusterSizeMetadata[] = {
+      {
+        .pd_id = kBigClusterIdx,
+        .core_count = kBigClusterCoreCount,
+      },
+      {
+        .pd_id = kLittleClusterIdx,
+        .core_count = kLittleClusterCoreCount,
+      },
+    };    
+
 
 constexpr size_t PowerDomainToIndex(fuchsia_thermal::wire::PowerDomain pd) {
   switch (pd) {
@@ -292,6 +311,8 @@ class AmlCpuBindingTest : public zxtest::Test {
         ZX_PROTOCOL_THERMAL,
         *reinterpret_cast<const fake_ddk::Protocol*>(thermal_device_.proto())});
     ddk_.SetFragments(std::move(fragments));
+
+    ddk_.SetMetadata(DEVICE_METADATA_CLUSTER_SIZE_LEGACY, &kClusterSizeMetadata, sizeof(kClusterSizeMetadata));
   }
 
   zx_device_t* parent() { return fake_ddk::FakeParent(); }
@@ -328,11 +349,27 @@ TEST_F(AmlCpuBindingTest, TwoDomains) {
 
   ASSERT_OK(AmlCpu::Create(nullptr, parent()));
   ASSERT_EQ(ddk_.num_devices_added(), 2);
+
+  const auto& devices = ddk_.get_devices();
+  for (const auto& device : devices) {
+    const size_t idx = device->PowerDomainIndex();
+
+    // Find the cluster metadata that corresponds to this cluster index.
+    const auto& cluster_size_meta_itr = std::find_if(
+      std::begin(kClusterSizeMetadata), std::end(kClusterSizeMetadata),
+      [idx](const legacy_cluster_size_t& elem) -> bool {
+        return idx == elem.pd_id;
+      }
+    );
+
+    ASSERT_NE(cluster_size_meta_itr, std::end(kClusterSizeMetadata));
+    ASSERT_EQ(cluster_size_meta_itr->core_count, device->ClusterCoreCount());
+  }
 }
 
 class AmlCpuTest : public AmlCpu {
  public:
-  AmlCpuTest(ThermalSyncClient thermal) : AmlCpu(nullptr, std::move(thermal), kBigClusterIdx) {}
+  AmlCpuTest(ThermalSyncClient thermal) : AmlCpu(nullptr, std::move(thermal), kBigClusterIdx, kBigClusterCoreCount) {}
 
   zx_status_t Init();
   static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn);
@@ -460,6 +497,14 @@ TEST_F(AmlCpuTestFixture, TestSetCpuInfo) {
   // cpu_package_id : 2
   ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
       cpu_info->node(), "cpu_package_id", inspect::UintPropertyValue(2)));
+}
+
+TEST_F(AmlCpuTestFixture, TestGetNumLogicalCores) {
+  auto resp = cpu_client_->GetNumLogicalCores();
+
+  ASSERT_OK(resp.status());
+
+  EXPECT_EQ(resp->count, kBigClusterCoreCount);
 }
 
 }  // namespace amlogic_cpu

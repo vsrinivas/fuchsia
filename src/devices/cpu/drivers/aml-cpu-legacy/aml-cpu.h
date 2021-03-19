@@ -30,10 +30,11 @@ class AmlCpu : public DeviceType,
  public:
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlCpu);
   AmlCpu(zx_device_t* device, fuchsia_thermal::Device::SyncClient thermal_client,
-         size_t power_domain_index)
+         size_t power_domain_index, uint32_t cluster_core_count)
       : DeviceType(device),
         thermal_client_(std::move(thermal_client)),
-        power_domain_index_(power_domain_index) {}
+        power_domain_index_(power_domain_index),
+        cluster_core_count_(cluster_core_count) {}
 
   static zx_status_t Create(void* context, zx_device_t* device);
 
@@ -55,10 +56,15 @@ class AmlCpu : public DeviceType,
   // Set CpuInfo in inspect.
   void SetCpuInfo(uint32_t cpu_version_packed);
 
+  // Accessor
+  uint32_t ClusterCoreCount() const { return cluster_core_count_; }
+  size_t PowerDomainIndex() const { return power_domain_index_; }
+
  private:
   zx_status_t GetThermalOperatingPoints(fuchsia_thermal::wire::OperatingPoint* out);
   fuchsia_thermal::Device::SyncClient thermal_client_;
   size_t power_domain_index_;
+  uint32_t cluster_core_count_;
 
  protected:
   inspect::Inspector inspector_;

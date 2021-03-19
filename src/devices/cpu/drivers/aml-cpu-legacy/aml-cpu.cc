@@ -15,8 +15,10 @@
 
 #include <memory>
 #include <optional>
+#include <map>
 
 #include <ddktl/fidl.h>
+#include <soc/aml-common/aml-cpu-metadata.h>
 
 #include "fuchsia/hardware/thermal/llcpp/fidl.h"
 #include "src/devices/cpu/drivers/aml-cpu-legacy/aml-cpu-legacy-bind.h"
@@ -71,6 +73,38 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
     perf_states[i].state_id = static_cast<uint8_t>(i);
     perf_states[i].restore_latency = 0;
   }
+
+  // Determine the cluster size of each cluster.
+  size_t cluster_count_size = 0;
+  status = device_get_metadata_size(parent, DEVICE_METADATA_CLUSTER_SIZE_LEGACY, &cluster_count_size);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to get metadata DEVICE_METADATA_CLUSTER_SIZE size. st = %d", __func__, status);
+    return status;
+  }
+
+  if (cluster_count_size % sizeof(legacy_cluster_size_t) != 0) {
+    zxlogf(ERROR, "%s: Cluster size metadata from board driver is malformed", __func__);
+    return ZX_ERR_INTERNAL;
+  }
+
+  size_t actual;
+  const size_t num_cluster_count_entries = cluster_count_size / sizeof(legacy_cluster_size_t);
+  std::unique_ptr<legacy_cluster_size_t[]> cluster_sizes = std::make_unique<legacy_cluster_size_t[]>(num_cluster_count_entries);
+  status = device_get_metadata(parent, DEVICE_METADATA_CLUSTER_SIZE_LEGACY, cluster_sizes.get(), cluster_count_size, &actual);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Failed to get cluster size metadata from board driver, st = %d", __func__, status);
+    return status;
+  }
+  if (actual != cluster_count_size) {
+    zxlogf(ERROR, "%s: Expected %lu bytes in cluster size metadata, got %lu", __func__, cluster_count_size, actual);
+    return ZX_ERR_INTERNAL;
+  }
+
+  std::map<PerfDomainId, uint32_t> cluster_core_counts;
+  for (size_t i = 0; i < num_cluster_count_entries; i++) {
+    cluster_core_counts[cluster_sizes[i].pd_id] = cluster_sizes[i].core_count;
+  }
+
 
   // The Thermal Driver is our parent and it exports an interface with one
   // method (Connect) which allows us to connect to its FIDL interface.
@@ -144,6 +178,12 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
       return ZX_ERR_INTERNAL;
     }
 
+    const auto& cluster_core_count = cluster_core_counts.find(i);
+    if (cluster_core_count == cluster_core_counts.end()) {
+      zxlogf(ERROR, "aml-cpu: Could not find cluster core count for cluster %lu", i);
+      return ZX_ERR_NOT_FOUND;
+    }
+
     const uint8_t perf_state_count = static_cast<uint8_t>(opps.count);
     zxlogf(INFO, "aml-cpu: Creating CPU Device for domain %zu with %u operating points\n", i,
            opps.count);
@@ -156,7 +196,7 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
         return status;
       }
     }
-    auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(*thermal_fidl_client), i);
+    auto cpu_device = std::make_unique<AmlCpu>(parent, std::move(*thermal_fidl_client), i, cluster_core_count->second);
     thermal_fidl_client.reset();
 
     cpu_device->SetCpuInfo(cpu_version_packed);
@@ -262,8 +302,7 @@ zx_status_t AmlCpu::GetThermalOperatingPoints(fuchsia_thermal::wire::OperatingPo
 }
 
 void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) {
-  unsigned int result = zx_system_get_num_cpus();
-  completer.Reply(result);
+  completer.Reply(ClusterCoreCount());
 }
 
 void AmlCpu::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync& completer) {
