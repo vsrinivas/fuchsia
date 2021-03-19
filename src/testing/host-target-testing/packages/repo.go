@@ -18,6 +18,8 @@ import (
 
 type Repository struct {
 	Dir string
+	// BlobsDir should be a directory called `blobs` where all the blobs are.
+	BlobsDir string
 }
 
 type signed struct {
@@ -38,8 +40,8 @@ type custom struct {
 
 // NewRepository parses the repository from the specified directory. It returns
 // an error if the repository does not exist, or it contains malformed metadata.
-func NewRepository(ctx context.Context, dir string) (*Repository, error) {
-	logger.Infof(ctx, "creating a repository for %q", dir)
+func NewRepository(ctx context.Context, dir, blobsDir string) (*Repository, error) {
+	logger.Infof(ctx, "creating a repository for %q and %q", dir, blobsDir)
 
 	// The repository may have out of date metadata. This updates the repository to
 	// the latest version so TUF won't complain about the data being old.
@@ -59,7 +61,8 @@ func NewRepository(ctx context.Context, dir string) (*Repository, error) {
 	}
 
 	return &Repository{
-		Dir: filepath.Join(dir, "repository"),
+		Dir:      filepath.Join(dir, "repository"),
+		BlobsDir: blobsDir,
 	}, nil
 }
 
@@ -71,7 +74,7 @@ func NewRepositoryFromTar(ctx context.Context, dst string, src string) (*Reposit
 		return nil, fmt.Errorf("failed to extract packages: %w", err)
 	}
 
-	return NewRepository(ctx, filepath.Join(dst, "amber-files"))
+	return NewRepository(ctx, filepath.Join(dst, "amber-files"), filepath.Join(dst, "amber-files", "repository", "blobs"))
 }
 
 // OpenPackage opens a package from the repository.
@@ -97,11 +100,11 @@ func (r *Repository) OpenPackage(path string) (Package, error) {
 }
 
 func (r *Repository) OpenBlob(merkle string) (*os.File, error) {
-	return os.Open(filepath.Join(r.Dir, "blobs", merkle))
+	return os.Open(filepath.Join(r.BlobsDir, merkle))
 }
 
 func (r *Repository) Serve(ctx context.Context, localHostname string, repoName string) (*Server, error) {
-	return newServer(ctx, r.Dir, localHostname, repoName)
+	return newServer(ctx, r.Dir, r.BlobsDir, localHostname, repoName)
 }
 
 func (r *Repository) LookupUpdateSystemImageMerkle() (string, error) {

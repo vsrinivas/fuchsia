@@ -125,14 +125,18 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 	var srcsFile string
 	if len(srcs) > 1 {
 		var filesToDownload []string
+		var filesToSkip []string
 		for _, src := range srcs {
 			path := filepath.Join(dst, src)
 
 			if _, err := os.Stat(path); err != nil {
 				filesToDownload = append(filesToDownload, src)
+			} else {
+				filesToSkip = append(filesToSkip, src)
 			}
 		}
 
+		logger.Infof(ctx, "skipping %d files to download", len(filesToSkip))
 		if len(filesToDownload) == 0 {
 			// Skip downloading if the files are already present in the build dir.
 			return nil
@@ -206,6 +210,14 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 				return err
 			}
 			dstPath := filepath.Join(dst, relPath)
+			if fi, err := os.Stat(dstPath); err == nil {
+				if fi.IsDir() {
+					// If dstPath already exists and is a directory, then return nil so
+					// we can walk the contents of the directory and move over the
+					// individual files.
+					return nil
+				}
+			}
 			if err = os.MkdirAll(filepath.Dir(dstPath), os.ModePerm); err != nil {
 				return err
 			}
