@@ -297,9 +297,8 @@ zx::status<std::unique_ptr<Blobfs>> Blobfs::Create(async_dispatcher_t* dispatche
     FX_LOGS(ERROR) << "Failed to initialize Vnodes";
     return zx::error(status);
   }
-  zx::status<BlobLoader> loader_or =
-      BlobLoader::Create(fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->pager_.get(), fs->Metrics(),
-                         options.sandbox_decompression);
+  zx::status<BlobLoader> loader_or = BlobLoader::Create(
+      fs_ptr, fs_ptr, fs->GetNodeFinder(), fs->Metrics(), options.sandbox_decompression);
   if (loader_or.is_error()) {
     FX_LOGS(ERROR) << "Failed to initialize loader: " << loader_or.status_string();
     return loader_or.take_error();

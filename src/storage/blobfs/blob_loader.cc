@@ -42,13 +42,12 @@ constexpr size_t kChunkedHeaderSize = 4 * kBlobfsBlockSize;
 }  // namespace
 
 BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
-                       NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
+                       NodeFinder* node_finder, BlobfsMetrics* metrics,
                        fzl::OwnedVmoMapper read_mapper, zx::vmo sandbox_vmo,
                        std::unique_ptr<ExternalDecompressorClient> decompressor_client)
     : txn_manager_(txn_manager),
       block_iter_provider_(block_iter_provider),
       node_finder_(node_finder),
-      pager_(pager),
       metrics_(metrics),
       read_mapper_(std::move(read_mapper)),
       sandbox_vmo_(std::move(sandbox_vmo)),
@@ -56,8 +55,8 @@ BlobLoader::BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* b
 
 zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
                                           BlockIteratorProvider* block_iter_provider,
-                                          NodeFinder* node_finder, pager::UserPager* pager,
-                                          BlobfsMetrics* metrics, bool sandbox_decompression) {
+                                          NodeFinder* node_finder, BlobfsMetrics* metrics,
+                                          bool sandbox_decompression) {
   fzl::OwnedVmoMapper read_mapper;
   zx_status_t status = read_mapper.CreateAndMap(pager::kTransferBufferSize, "blobfs-loader");
   if (status != ZX_OK) {
@@ -81,7 +80,7 @@ zx::status<BlobLoader> BlobLoader::Create(TransactionManager* txn_manager,
       decompressor_client = std::move(client_or.value());
     }
   }
-  return zx::ok(BlobLoader(txn_manager, block_iter_provider, node_finder, pager, metrics,
+  return zx::ok(BlobLoader(txn_manager, block_iter_provider, node_finder, metrics,
                            std::move(read_mapper), std::move(sandbox_vmo),
                            std::move(decompressor_client)));
 }
@@ -157,7 +156,8 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlob(
 }
 
 zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlobPaged(
-    uint32_t node_index, const BlobCorruptionNotifier* corruption_notifier) {
+    uint32_t node_index, CreateDataVmoCallback create_data,
+    const BlobCorruptionNotifier* corruption_notifier) {
   LoadResult result;
 
   ZX_DEBUG_ASSERT(read_mapper_.vmo().is_valid());
@@ -214,20 +214,16 @@ zx::status<BlobLoader::LoadResult> BlobLoader::LoadBlobPaged(
   userpager_info.data_length_bytes = inode->blob_size;
   userpager_info.verifier = std::move(verifier);
   userpager_info.decompressor = std::move(decompressor);
-  result.page_watcher = std::make_unique<pager::PageWatcher>(pager_, std::move(userpager_info));
+
+  auto data_vmo_or = create_data(blob_layout->FileBlockAlignedSize(), std::move(userpager_info));
+  if (data_vmo_or.is_error())
+    return data_vmo_or.take_error();
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> data_vmo_name;
   FormatBlobDataVmoName(*inode.value(), &data_vmo_name);
+  data_vmo_or->set_property(ZX_PROP_NAME, data_vmo_name.c_str(), data_vmo_name.length());
 
-  zx::vmo data_vmo;
-  if (zx_status_t status =
-          result.page_watcher->CreatePagedVmo(blob_layout->FileBlockAlignedSize(), &data_vmo);
-      status != ZX_OK) {
-    return zx::error(status);
-  }
-  data_vmo.set_property(ZX_PROP_NAME, data_vmo_name.c_str(), data_vmo_name.length());
-
-  if (zx_status_t status = result.data.Map(std::move(data_vmo)); status != ZX_OK) {
+  if (zx_status_t status = result.data.Map(std::move(data_vmo_or.value())); status != ZX_OK) {
     FX_LOGS(ERROR) << "Failed to create mapping for data vmo: " << zx_status_get_string(status);
     return zx::error(status);
   }

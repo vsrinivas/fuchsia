@@ -189,8 +189,9 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
   }
 
  protected:
-  std::unique_ptr<Blobfs> fs_;
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+
+  std::unique_ptr<Blobfs> fs_;
   MountOptions options_;
   BlobLayoutFormat blob_layout_format_;
 };
@@ -198,6 +199,15 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
 // A separate parameterized test fixture that will only be run with compression algorithms that
 // support paging.
 using BlobLoaderPagedTest = BlobLoaderTest;
+
+// Implementation of the "create VMO callback" for the LoadBlobPaged call. Since our tests don't
+// actually need a real paged VMO, we can just create a regular one of the requested size.
+zx::status<zx::vmo> CreateDataVmo(BlobLayout::ByteCountType aligned_size, pager::UserPagerInfo) {
+  zx::vmo vmo;
+  if (zx_status_t status = zx::vmo::create(aligned_size, 0, &vmo); status != ZX_OK)
+    return zx::error(status);
+  return zx::ok(std::move(vmo));
+};
 
 TEST_P(BlobLoaderTest, NullBlob) {
   size_t blob_len = 0;
@@ -382,7 +392,7 @@ TEST_P(BlobLoaderTest, LoadBlobWithAnInvalidNodeIndexIsAnError) {
 
 TEST_P(BlobLoaderPagedTest, LoadBlobPagedWithAnInvalidNodeIndexIsAnError) {
   uint32_t invalid_node_index = kMaxNodeId - 1;
-  auto result = loader().LoadBlobPaged(invalid_node_index, nullptr);
+  auto result = loader().LoadBlobPaged(invalid_node_index, &CreateDataVmo, nullptr);
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(result.error_value(), ZX_ERR_INVALID_ARGS);
 }
@@ -399,7 +409,7 @@ TEST_P(BlobLoaderTest, LoadBlobWithACorruptNextNodeIndexIsAnError) {
   inode->header.next_node = invalid_node_index;
   inode->extent_count = 2;
 
-  auto result = loader().LoadBlobPaged(node_index, nullptr);
+  auto result = loader().LoadBlobPaged(node_index, &CreateDataVmo, nullptr);
   ASSERT_TRUE(result.is_error());
   EXPECT_EQ(result.error_value(), ZX_ERR_IO_DATA_INTEGRITY);
 }

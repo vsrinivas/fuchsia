@@ -92,6 +92,8 @@ class Blobfs : public TransactionManager, public BlockIteratorProvider {
   VfsType* vfs() const { return vfs_; }
   void set_vfs(VfsType* vfs) { vfs_ = vfs; }
 
+  pager::UserPager* pager() const { return pager_.get(); }
+
   ////////////////
   // TransactionManager's fs::TransactionHandler interface.
   //

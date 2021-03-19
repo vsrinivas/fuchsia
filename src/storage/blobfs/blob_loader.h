@@ -35,8 +35,6 @@ class BlobLoader {
   struct LoadResult {
     fzl::OwnedVmoMapper data;
     fzl::OwnedVmoMapper merkle;
-
-    std::unique_ptr<pager::PageWatcher> page_watcher;  // Will only be set for paged blobs.
   };
 
   BlobLoader() = default;
@@ -48,8 +46,8 @@ class BlobLoader {
   // Creates a BlobLoader.
   static zx::status<BlobLoader> Create(TransactionManager* txn_manager,
                                        BlockIteratorProvider* block_iter_provider,
-                                       NodeFinder* node_finder, pager::UserPager* pager,
-                                       BlobfsMetrics* metrics, bool sandbox_decompression);
+                                       NodeFinder* node_finder, BlobfsMetrics* metrics,
+                                       bool sandbox_decompression);
 
   // Loads the merkle tree and data for the blob with index |node_index|.
   //
@@ -79,14 +77,15 @@ class BlobLoader {
   //
   // This method does *NOT* immediately verify the integrity of the blob's data, this will be
   // lazily verified by the pager as chunks of the blob are loaded.
-  zx::status<LoadResult> LoadBlobPaged(uint32_t node_index,
+  using CreateDataVmoCallback = std::function<zx::status<zx::vmo>(
+      BlobLayout::ByteCountType aligned_size, pager::UserPagerInfo info)>;
+  zx::status<LoadResult> LoadBlobPaged(uint32_t node_index, CreateDataVmoCallback create_data,
                                        const BlobCorruptionNotifier* corruption_notifier);
 
  private:
   BlobLoader(TransactionManager* txn_manager, BlockIteratorProvider* block_iter_provider,
-             NodeFinder* node_finder, pager::UserPager* pager, BlobfsMetrics* metrics,
-             fzl::OwnedVmoMapper read_mapper, zx::vmo sandbox_vmo,
-             std::unique_ptr<ExternalDecompressorClient> decompressor_client);
+             NodeFinder* node_finder, BlobfsMetrics* metrics, fzl::OwnedVmoMapper read_mapper,
+             zx::vmo sandbox_vmo, std::unique_ptr<ExternalDecompressorClient> decompressor_client);
 
   // Loads the merkle tree from disk and initializes a VMO mapping and BlobVerifier with the
   // contents. (Small blobs may have no stored tree, in which case |vmo_out| is not mapped but
@@ -131,7 +130,6 @@ class BlobLoader {
   TransactionManager* txn_manager_ = nullptr;
   BlockIteratorProvider* block_iter_provider_ = nullptr;
   NodeFinder* node_finder_ = nullptr;
-  pager::UserPager* pager_ = nullptr;
   BlobfsMetrics* metrics_ = nullptr;
   fzl::OwnedVmoMapper read_mapper_;
   zx::vmo sandbox_vmo_;

@@ -186,10 +186,15 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   zx_status_t OpenNode(ValidatedOptions options, fbl::RefPtr<Vnode>* out_redirect) override;
   zx_status_t CloseNode() override;
 
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+  // PagedVnode protected overrides:
+  void OnNoClones() override FS_TA_REQUIRES(mutex_);
+#endif
+
   // blobfs::CacheNode implementation:
   BlobCache& Cache() final;
   bool ShouldCache() const final;
-  void ActivateLowMemory() final;
+  void ActivateLowMemory() final FS_TA_EXCLUDES(mutex_);
 
   void set_state(BlobState new_state) { state_ = new_state; };
   BlobState state() const { return state_; }
@@ -292,6 +297,18 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // True if this node should be unlinked when closed.
   bool deletable_ = false;
 
+#if defined(ENABLE_BLOBFS_NEW_PAGER)
+  // When paging we can dynamically notice that a blob is corrupt. The read operation will set this
+  // flag if a corruption is encoutered at runtime and future operations will fail.
+  //
+  // This is used only in the new pager. In the old pager, this state is kept in
+  // PageWatcher::is_corrupt_.
+  bool is_corrupt_ FS_TA_GUARDED(mutex_) = false;
+
+  // In the old pager this is kepd in the PageWatcher.
+  pager::UserPagerInfo pager_info_ FS_TA_GUARDED(mutex_);
+#endif
+
   bool tearing_down_ = false;
 
   enum class SyncingState : char {
@@ -357,8 +374,10 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   struct WriteInfo;
   std::unique_ptr<WriteInfo> write_info_;
 
-  // Reads in the blob's pages on demand.
+#if !defined(ENABLE_BLOBFS_NEW_PAGER)
+  // Reads in the blob's pages on demand. Used only in the old pager path.
   std::unique_ptr<pager::PageWatcher> page_watcher_;
+#endif
 };
 
 // Returns true if the given inode supports paging.
