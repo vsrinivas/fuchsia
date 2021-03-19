@@ -373,6 +373,33 @@ fn multiple_paren_kv_args() {
     )
 }
 
+// Two response that differ in their argument delimiters.
+#[test]
+fn two_responses_same_name() {
+    test_roundtrips(
+        highlevel::Response::Success(highlevel::Success::SameOne { field: 1 }),
+        lowlevel::Response::Success {
+            name: String::from("SAME"),
+            is_extension: false,
+            arguments: lowlevel::Arguments::ArgumentList(vec![
+                lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+            ]),
+        },
+        cr_lf_delimit("SAME: 1"),
+    );
+    test_roundtrips(
+        highlevel::Response::Success(highlevel::Success::SameTwo { field: 1 }),
+        lowlevel::Response::Success {
+            name: String::from("SAME"),
+            is_extension: false,
+            arguments: lowlevel::Arguments::ParenthesisDelimitedArgumentLists(vec![vec![
+                lowlevel::Argument::PrimitiveArgument(lowlevel::PrimitiveArgument::Integer(1)),
+            ]]),
+        },
+        cr_lf_delimit("SAME: (1)"),
+    );
+}
+
 #[test]
 fn success_succeeds() {
     assert_eq!(

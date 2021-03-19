@@ -100,6 +100,10 @@ response {
         (field2: Integer, field3: List<Integer>)
 }
 
+# Two responses that differ only in their argument list delimiters.
+response SameOne { SAME: field: Integer }
+response SameTwo { SAME: (field: Integer) }
+
 # Enum with one variant
 enum TestOneVariant {
     Variant1 = 1
