@@ -3,18 +3,18 @@
 [TOC]
 
 ## Basics
-Handles are kernel constructs that allows user-mode programs to
-reference a kernel object. A handle can be thought as a session
+Handles are kernel constructs that allow user-mode programs to
+reference a kernel object. A handle can be thought of as a session
 or connection to a particular kernel object.
 
 It is often the case that multiple processes concurrently access
 the same object via different handles. However, a single handle
-can only be either bound to a single process or be bound to
+can only be either bound to a single process or be bound to the
 kernel.
 
-When it is bound to kernel we say it's 'in-transit'.
+When it is bound to the kernel we say it's 'in-transit'.
 
-In user-mode a handle is simply a specific number returned by
+In user mode a handle is simply a specific number returned by
 some syscall. Only handles that are not in-transit are visible
 to user-mode.
 
@@ -30,12 +30,12 @@ will always have two least significant bits of the handle set.  The
 mask representing these bits may be accessed using
 **ZX_HANDLE_FIXED_BITS_MASK**
 
-For kernel-mode, a handle is a C++ object that contains three
+For kernel mode, a handle is a C++ object that contains three
 logical fields:
 
 * A reference to a kernel object
 * The rights to the kernel object
-* The process it is bound to (or if it's bound to kernel)
+* The process it is bound to (or if it's bound to the kernel)
 
 The '[rights][rights]' specify what operations on the kernel object
 are allowed. It is possible for a single process to have two different
@@ -201,7 +201,7 @@ There is one syscall that just destroys a handle:
 * <code>[zx_handle_close()][zx-handle-close]</code>
 
 There is one syscall that takes a handle bound to the calling
-process and binds it into kernel (puts the handle in-transit):
+process and binds it into the kernel (puts the handle in-transit):
 
 * <code>[zx_channel_write()][zx-channel-write]</code>
 
@@ -244,7 +244,7 @@ the thread has been terminated.
 When the last reference to a kernel object is released, the kernel
 object is either destroyed or the kernel marks the object for
 garbage collection; the object will be destroyed at a later time
-when the current set of pending operations on it are completed.
+when the current set of pending operations on it is completed.
 
 ## Special Cases
 
@@ -275,7 +275,7 @@ handle hygiene is observed:
 Detecting invalid handle usage can be automated by using the
 **ZX_POL_BAD_HANDLE** Job policy with **ZX_POL_ACTION_EXCEPTION** to
 generate an exception when a process under such job object attempts any of
-the of the mentioned invalid cases.
+the mentioned invalid cases.
 
 ## See Also
 
