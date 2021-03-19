@@ -127,3 +127,8 @@ response { +CNUM:
     speed: String,
     service: Integer,
 }
+
+# Transmit DTMF Codes
+# HFP 1.8 4.34.2
+# Code should be a single ascii character 0-9,*,#,A-D
+command { AT+VTS=code: String }

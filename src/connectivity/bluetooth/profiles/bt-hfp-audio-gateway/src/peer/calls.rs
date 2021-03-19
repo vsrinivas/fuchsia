@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use {
+    crate::procedure::dtmf::DtmfCode,
     async_utils::{
         hanging_get::client::HangingGetStream,
         stream::{StreamItem, StreamMap, StreamWithEpitaph, Tagged, WithEpitaph, WithTag},
     },
     fidl::endpoints::ClientEnd,
-    fidl_fuchsia_bluetooth_hfp::{CallMarker, CallProxy, CallState, DtmfCode, PeerHandlerProxy},
+    fidl_fuchsia_bluetooth_hfp::{CallMarker, CallProxy, CallState, PeerHandlerProxy},
     futures::stream::{FusedStream, Stream, StreamExt},
     log::warn,
     std::{
@@ -115,8 +116,8 @@ impl Calls {
         self._send_call_request(number, |proxy| proxy.request_transfer_audio())
     }
 
-    /// Send a dtmf code to the call manager for the call to `number`.
-    pub fn _send_dtmf_code(&mut self, _number: Number, _code: DtmfCode) {
+    /// Send a dtmf code to the call manager for active call,
+    pub async fn send_dtmf_code(&mut self, _code: DtmfCode) {
         unimplemented!(
             "Sending a dtmf code can fail where other call requests cannot. \
             It must be handled separately"

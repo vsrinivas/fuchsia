@@ -253,6 +253,10 @@ impl PeerTask {
                     // Update the procedure with the result of retrieving the AG network name.
                     request = self.connection.ag_message(marker, response(name_option));
                 }
+                ProcedureRequest::SendDtmf { code, response } => {
+                    self.calls.send_dtmf_code(code).await;
+                    request = self.connection.ag_message(marker, response());
+                }
                 ProcedureRequest::SetNrec { enable, response } => {
                     let result = if let Some(handler) = &mut self.handler {
                         if let Ok(Ok(())) = handler.set_nrec_mode(enable).await {

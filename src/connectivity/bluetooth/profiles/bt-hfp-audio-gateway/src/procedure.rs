@@ -14,6 +14,9 @@ use crate::{
     protocol::features::AgFeatures,
 };
 
+/// Defines the implementation of the DTMF Procedure.
+pub mod dtmf;
+
 /// Defines the implementation of the Call Waiting Notifications Procedure.
 pub mod call_waiting_notifications;
 
@@ -37,6 +40,7 @@ pub mod query_operator_selection;
 
 use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
 use call_waiting_notifications::CallWaitingNotificationsProcedure;
+use dtmf::{DtmfCode, DtmfProcedure};
 use extended_errors::ExtendedErrorsProcedure;
 use nrec::NrecProcedure;
 use query_operator_selection::QueryOperatorProcedure;
@@ -64,6 +68,8 @@ pub enum ProcedureError {
     UnparsableHf(at::DeserializeError),
     #[error("Unexpected HF procedural update: {:?}", .0)]
     UnexpectedHf(at::Command),
+    #[error("Invalid HF argument in procedural update: {:?}", .0)]
+    InvalidHfArgument(at::Command),
     #[error("Unexpected procedure request")]
     UnexpectedRequest,
     #[error("Procedure has already terminated")]
@@ -95,7 +101,9 @@ impl From<&Command> for ProcedureError {
 pub enum ProcedureMarker {
     /// The Service Level Connection Initialization procedure as defined in HFP v1.8 Section 4.2.
     SlcInitialization,
-    /// The Noise Reduction/Echo Cancellation procedure as defined in HFP v1.8 Section 4.24.
+    /// The Transmit DTMF Code procedure as defined in HFP v1.8 Section 4.28.
+    Dtmf,
+    /// The Noise Reduction/Echo Cancelation procedure as defined in HFP v1.8 Section 4.24.
     Nrec,
     /// The Query Operator Selection procedure as defined in HFP v1.8 Section 4.8.
     QueryOperatorSelection,
@@ -124,6 +132,7 @@ impl ProcedureMarker {
             Self::SubscriberNumberInformation => {
                 Box::new(SubscriberNumberInformationProcedure::new())
             }
+            Self::Dtmf => Box::new(DtmfProcedure::new()),
         }
     }
 
@@ -147,6 +156,7 @@ impl ProcedureMarker {
             at::Command::Ccwa { .. } => Ok(Self::CallWaitingNotifications),
             at::Command::Clip { .. } => Ok(Self::CallLineIdentNotifications),
             at::Command::Cnum { .. } => Ok(Self::SubscriberNumberInformation),
+            at::Command::Vts { .. } => Ok(Self::Dtmf),
             _ => Err(ProcedureError::NotImplemented),
         }
     }
@@ -189,6 +199,11 @@ pub enum ProcedureRequest {
     SetNrec {
         enable: bool,
         response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate>,
+    },
+
+    SendDtmf {
+        code: DtmfCode,
+        response: Box<dyn FnOnce() -> AgUpdate>,
     },
 
     /// Error from processing an update.
@@ -235,6 +250,7 @@ impl fmt::Debug for ProcedureRequest {
             Self::SetNrec { enable: true, .. } => "SetNrec(enabled)",
             Self::SetNrec { enable: false, .. } => "SetNrec(disabled)",
             Self::GetNetworkOperatorName { .. } => "GetNetworkOperatorName",
+            Self::SendDtmf { .. } => "SendDtmf",
             event => {
                 other = format!("{:?}", event);
                 &other

@@ -56,6 +56,7 @@ rustc_binary("bin") {
     "src/procedure.rs",
     "src/procedure/call_line_ident_notifications.rs",
     "src/procedure/call_waiting_notifications.rs",
+    "src/procedure/dtmf.rs",
     "src/procedure/extended_errors.rs",
     "src/procedure/nrec.rs",
     "src/procedure/query_operator_selection.rs",
