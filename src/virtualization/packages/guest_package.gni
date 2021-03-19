@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 # Defines a guest package.
 #
@@ -27,8 +27,6 @@ template("guest_package") {
   guest_config_file = "${target_out_dir}/guest.cfg"
 
   action(guest_config_target_name) {
-    testonly = defined(invoker.testonly) && invoker.testonly
-
     script = "//src/virtualization/packages/generate_guest_config.py"
     outputs = [ guest_config_file ]
 
@@ -86,86 +84,105 @@ template("guest_package") {
     args += [ rebase_path("$guest_config_file") ]
   }
 
-  package(target_name) {
-    testonly = defined(invoker.testonly) && invoker.testonly
+  guest_resource_target_name = "${target_name}_guest_resource"
+  resource(guest_resource_target_name) {
+    deps = [ ":$guest_config_target_name" ]
+    sources = [ guest_config_file ]
+    outputs = [ "data/guest.cfg" ]
+  }
+  resources = [ ":$guest_resource_target_name" ]
 
-    deps = [ ":${guest_config_target_name}" ]
-    inputs = []
-    resources = []
-
-    if (defined(invoker.deps)) {
-      deps += invoker.deps
+  if (defined(invoker.zircon)) {
+    kernel = invoker.zircon
+  } else if (defined(invoker.linux)) {
+    kernel = invoker.linux
+  }
+  if (defined(kernel)) {
+    kernel_resource_target_name = "${target_name}_kernel_resource"
+    resource(kernel_resource_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                               "visibility",
+                             ])
+      sources = [ kernel ]
+      outputs = [ "data/kernel" ]
     }
+    resources += [ ":$kernel_resource_target_name" ]
+  }
 
-    if (defined(invoker.metadata)) {
-      metadata = invoker.metadata
+  if (defined(invoker.ramdisk)) {
+    ramdisk_resource_target_name = "${target_name}_ramdisk_resource"
+    resource(ramdisk_resource_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                               "visibility",
+                             ])
+      sources = [ invoker.ramdisk ]
+      outputs = [ "data/ramdisk" ]
     }
+    resources += [ ":$ramdisk_resource_target_name" ]
+  }
 
-    meta = [
-      {
-        path =
-            rebase_path("//src/virtualization/packages/meta/guest_package.cmx")
-        dest = "${target_name}.cmx"
-      },
-    ]
-
-    # Add kernel resource.
-    if (defined(invoker.zircon)) {
-      kernel = rebase_path(invoker.zircon)
-      inputs += [ kernel ]
-      resources += [
-        {
-          path = kernel
-          dest = "kernel"
-        },
-      ]
+  if (defined(invoker.dtb_overlay)) {
+    dtb_resource_target_name = "${target_name}_dtb_resource"
+    resource(dtb_resource_target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                               "visibility",
+                             ])
+      sources = [ invoker.dtb_overlay ]
+      outputs = [ "data/dtb_overlay" ]
     }
-    if (defined(invoker.linux)) {
-      kernel = rebase_path(invoker.linux)
-      inputs += [ kernel ]
-      resources += [
-        {
-          path = kernel
-          dest = "kernel"
-        },
-      ]
-    }
+    resources += [ ":$dtb_resource_target_name" ]
+  }
 
-    # Add ramdisk resource.
-    if (defined(invoker.ramdisk)) {
-      ramdisk = rebase_path(invoker.ramdisk)
-      inputs += [ ramdisk ]
-      resources += [
-        {
-          path = ramdisk
-          dest = "ramdisk"
-        },
-      ]
+  # Rewrite old-style package#resources as new-style resource() targets.
+  # Invokers can alternatively define resource() targets and add to deps.
+  if (defined(invoker.resources)) {
+    foreach(invoker_resource, invoker.resources) {
+      invoker_resource_target_name =
+          "${target_name}_invoker_resource_${invoker_resource.dest}"
+      resource(invoker_resource_target_name) {
+        forward_variables_from(invoker,
+                               [
+                                 "deps",
+                                 "testonly",
+                                 "visibility",
+                               ])
+        sources = [ invoker_resource.path ]
+        outputs = [ "data/${invoker_resource.dest}" ]
+      }
+      resources += [ ":$invoker_resource_target_name" ]
     }
+  }
 
-    # Add DTB overlay resource.
-    if (defined(invoker.dtb_overlay)) {
-      dtb_overlay = rebase_path(invoker.dtb_overlay)
-      inputs += [ dtb_overlay ]
-      resources += [
-        {
-          path = dtb_overlay
-          dest = "dtb_overlay"
-        },
-      ]
-    }
+  component_target_name = "${target_name}_component"
+  component_name = target_name
+  fuchsia_component(component_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    component_name = component_name
+    manifest = "//src/virtualization/packages/meta/guest_package.cmx"
+    deps = resources
+  }
 
-    resources += [
-      {
-        path = rebase_path(guest_config_file)
-        dest = "guest.cfg"
-      },
-    ]
-
-    # Pass-through any additional resources.
-    if (defined(invoker.resources)) {
-      resources += invoker.resources
-    }
+  fuchsia_package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "metadata",
+                             "visibility",
+                           ])
+    deps = [ ":${component_target_name}" ]
   }
 }
 
