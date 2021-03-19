@@ -222,14 +222,18 @@ pub async fn get_inspect_data<'a>(
                  version: _,
              }| {
                 if metadata.filename.starts_with(file_prefix) {
-                    Some(payload)
+                    Some(payload.ok_or_else(|| {
+                        anyhow::anyhow!(
+                            "empty inspect payload, metadata errors: {:?}",
+                            metadata.errors
+                        )
+                    }))
                 } else {
                     None
                 }
             },
         )
         .ok_or_else(|| anyhow::anyhow!("failed to find inspect data"))?
-        .ok_or_else(|| anyhow::anyhow!("empty inspect payload"))
 }
 
 /// Send Router Advertisement NDP message with router lifetime.
