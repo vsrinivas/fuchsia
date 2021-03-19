@@ -84,7 +84,7 @@ impl FactoryResetManager {
     }
 
     async fn restore_reset_state(&mut self, send_event: bool) -> ControllerStateResult {
-        let info = self.client.read::<FactoryResetInfo>().await;
+        let info = self.client.read_setting::<FactoryResetInfo>().await;
         self.is_local_reset_allowed = info.is_local_reset_allowed;
         if send_event {
             call!(self.factory_reset_policy_service =>
@@ -111,7 +111,7 @@ impl FactoryResetManager {
         &mut self,
         is_local_reset_allowed: bool,
     ) -> SettingHandlerResult {
-        let mut info = self.client.read::<FactoryResetInfo>().await;
+        let mut info = self.client.read_setting::<FactoryResetInfo>().await;
         self.is_local_reset_allowed = is_local_reset_allowed;
         info.is_local_reset_allowed = is_local_reset_allowed;
         call!(self.factory_reset_policy_service =>
@@ -125,7 +125,7 @@ impl FactoryResetManager {
                 "set_local_reset_allowed".into(),
             )
         })?;
-        self.client.write(info, false).await.map(|_| None)
+        self.client.write_setting(info.into(), false).await.map(|_| None)
     }
 }
 
