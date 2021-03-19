@@ -259,8 +259,10 @@ mod tests {
     use crate::fidl::{FidlServerBuilder, MockOrRealStateMachineController};
     use crate::installer::InstallerFailure;
     use anyhow::anyhow;
+    use fidl_fuchsia_feedback::CrashReport;
     use fuchsia_async::{self as fasync, Task};
     use fuchsia_inspect::Inspector;
+    use futures::channel::mpsc;
     use matches::assert_matches;
     use mock_crash_reporter::{MockCrashReporterService, ThrottleHook};
     use omaha_client::time::MockTimeSource;
@@ -423,6 +425,31 @@ mod tests {
         assert_signature(recv.next().await.unwrap(), "fuchsia-installation-error");
     }
 
+    async fn assert_files_consecutive_check_crash_report(
+        observer: &mut FuchsiaObserver<MemStorage, MockOrRealStateMachineController>,
+        n: u32,
+        recv: &mut mpsc::Receiver<CrashReport>,
+    ) {
+        observer.on_protocol_state_change(&ProtocolState {
+            consecutive_failed_update_checks: n,
+            ..ProtocolState::default()
+        });
+        let signature = format!("fuchsia-{}-consecutive-failed-update-checks", n);
+        assert_signature(recv.next().await.unwrap(), &signature);
+    }
+
+    fn assert_does_not_file_consecutive_check_crash_report(
+        observer: &mut FuchsiaObserver<MemStorage, MockOrRealStateMachineController>,
+        n: u32,
+        recv: &mut mpsc::Receiver<CrashReport>,
+    ) {
+        observer.on_protocol_state_change(&ProtocolState {
+            consecutive_failed_update_checks: n,
+            ..ProtocolState::default()
+        });
+        assert_matches!(recv.try_next(), Err(_));
+    }
+
     /// Verify we file crash reports on >= 5 consecutive failed update checks.
     #[fasync::run_singlethreaded(test)]
     async fn test_consecutive_failed_update_checks_crash_report() {
@@ -436,27 +463,22 @@ mod tests {
         );
 
         // Below 5 consecutive failed update checks, verify we DON'T file a crash report.
-        observer.on_protocol_state_change(&ProtocolState {
-            consecutive_failed_update_checks: 1,
-            ..ProtocolState::default()
-        });
-        assert_matches!(recv.try_next(), Err(_));
-        observer.on_protocol_state_change(&ProtocolState {
-            consecutive_failed_update_checks: 4,
-            ..ProtocolState::default()
-        });
-        assert_matches!(recv.try_next(), Err(_));
+        assert_does_not_file_consecutive_check_crash_report(&mut observer, 1, &mut recv);
+        assert_does_not_file_consecutive_check_crash_report(&mut observer, 2, &mut recv);
+        assert_does_not_file_consecutive_check_crash_report(&mut observer, 3, &mut recv);
+        assert_does_not_file_consecutive_check_crash_report(&mut observer, 4, &mut recv);
 
-        // >=5 consecutive failed update checks, verify we DO file a crash report.
-        observer.on_protocol_state_change(&ProtocolState {
-            consecutive_failed_update_checks: 5,
-            ..ProtocolState::default()
-        });
-        assert_signature(recv.next().await.unwrap(), "fuchsia-5-consecutive-failed-update-checks");
-        observer.on_protocol_state_change(&ProtocolState {
-            consecutive_failed_update_checks: 8,
-            ..ProtocolState::default()
-        });
-        assert_signature(recv.next().await.unwrap(), "fuchsia-8-consecutive-failed-update-checks");
+        // >=5 consecutive failed update checks, verify we DO file a crash report on a backoff.
+        assert_files_consecutive_check_crash_report(&mut observer, 5, &mut recv).await;
+
+        assert_files_consecutive_check_crash_report(&mut observer, 6, &mut recv).await;
+        assert_does_not_file_consecutive_check_crash_report(&mut observer, 7, &mut recv);
+
+        assert_files_consecutive_check_crash_report(&mut observer, 8, &mut recv).await;
+        assert_does_not_file_consecutive_check_crash_report(&mut observer, 9, &mut recv);
+        assert_does_not_file_consecutive_check_crash_report(&mut observer, 10, &mut recv);
+        assert_does_not_file_consecutive_check_crash_report(&mut observer, 11, &mut recv);
+
+        assert_files_consecutive_check_crash_report(&mut observer, 12, &mut recv).await;
     }
 }

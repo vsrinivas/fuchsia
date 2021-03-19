@@ -83,7 +83,8 @@ async fn monitor_control_requests<T: TimeSource>(
                 previous_report_filed_timestamp = Some(now);
             }
             Some(ControlRequest::ConsecutiveFailedUpdateChecks(n)) => {
-                if n >= params.min_consecutive_failed_update_checks {
+                let min = params.min_consecutive_failed_update_checks;
+                if (n >= min) && (n - min + 1).is_power_of_two() {
                     let signature = format!("fuchsia-{}-consecutive-failed-update-checks", n);
                     file_report(&params.proxy, &signature).await;
                 }
@@ -237,20 +238,27 @@ mod tests {
         let (mut ch, fut) = handle_crash_reports_impl(HandleCrashReportsParams {
             proxy,
             max_pending_crash_reports: 2,
-            min_consecutive_failed_update_checks: 5,
+            min_consecutive_failed_update_checks: 1,
             time_source: MockTimeSource::new_from_now(),
         });
         let _control_request_server = fasync::Task::local(fut);
 
         // If num checks < min, we SHOULD NOT file a crash report.
-        let () = ch.consecutive_failed_update_checks(1).unwrap();
+        let () = ch.consecutive_failed_update_checks(0).unwrap();
         assert_matches!(recv.try_next(), Err(_));
 
-        // If num checks >= min, we SHOULD file a crash report.
-        let () = ch.consecutive_failed_update_checks(5).unwrap();
-        assert_signature(recv.next().await.unwrap(), "fuchsia-5-consecutive-failed-update-checks");
-        let () = ch.consecutive_failed_update_checks(6).unwrap();
-        assert_signature(recv.next().await.unwrap(), "fuchsia-6-consecutive-failed-update-checks");
+        // If num checks >= min, we SHOULD file a crash report on a backoff (e.g. 1, 2, 4, etc).
+        let () = ch.consecutive_failed_update_checks(1).unwrap();
+        assert_signature(recv.next().await.unwrap(), "fuchsia-1-consecutive-failed-update-checks");
+
+        let () = ch.consecutive_failed_update_checks(2).unwrap();
+        assert_signature(recv.next().await.unwrap(), "fuchsia-2-consecutive-failed-update-checks");
+
+        let () = ch.consecutive_failed_update_checks(3).unwrap();
+        assert_matches!(recv.try_next(), Err(_));
+
+        let () = ch.consecutive_failed_update_checks(4).unwrap();
+        assert_signature(recv.next().await.unwrap(), "fuchsia-4-consecutive-failed-update-checks");
     }
 
     /// Tests that the number of pending crash reports is correctly bounded.
