@@ -1,6 +1,9 @@
 {
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
     "program": {
-        "binary": "test/audio_testing_unittests"
+        "binary": "bin/audio_testing_unittests"
     },
     "sandbox": {
         "features": [

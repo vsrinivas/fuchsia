@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("testing") {
   testonly = true
@@ -63,15 +63,9 @@ executable("unittest_bin") {
   ]
 }
 
-test_package("audio_testing_unittests") {
+fuchsia_unittest_package("audio_testing_unittests") {
+  manifest = "meta/audio_testing_unittests.cmx"
   deps = [ ":unittest_bin" ]
-
-  tests = [
-    {
-      name = "audio_testing_unittests"
-      environments = basic_envs
-    },
-  ]
 }
 
 group("tests") {
