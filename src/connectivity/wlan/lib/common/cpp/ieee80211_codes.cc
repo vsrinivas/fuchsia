@@ -14,6 +14,76 @@ namespace wlan_ieee80211 = ::fuchsia::wlan::ieee80211;
 namespace {
 
 template <typename T>
+constexpr bool IsValidReasonCode(T reason_code) {
+  switch (reason_code) {
+    case static_cast<T>(wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::INVALID_AUTHENTICATION):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DEAUTH):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::REASON_INACTIVITY):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::NO_MORE_STAS):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::INVALID_CLASS2_FRAME):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::INVALID_CLASS3_FRAME):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::LEAVING_NETWORK_DISASSOC):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::NOT_AUTHENTICATED):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::UNACCEPTABLE_POWER_CAPABILITY):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::UNACCEPTABLE_SUPPORTED_CHANNELS):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::BSS_TRANSITION_DISASSOC):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::REASON_INVALID_ELEMENT):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MIC_FAILURE):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::FOURWAY_HANDSHAKE_TIMEOUT):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::GK_HANDSHAKE_TIMEOUT):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::HANDSHAKE_ELEMENT_MISMATCH):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::REASON_INVALID_GROUP_CIPHER):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::REASON_INVALID_PAIRWISE_CIPHER):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::REASON_INVALID_AKMP):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::UNSUPPORTED_RSNE_VERSION):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::INVALID_RSNE_CAPABILITIES):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::IEEE802_1_X_AUTH_FAILED):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::REASON_CIPHER_OUT_OF_POLICY):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::TDLS_PEER_UNREACHABLE):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::TDLS_UNSPECIFIED_REASON):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::SSP_REQUESTED_DISASSOC):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::NO_SSP_ROAMING_AGREEMENT):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::BAD_CIPHER_OR_AKM):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::NOT_AUTHORIZED_THIS_LOCATION):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::SERVICE_CHANGE_PRECLUDES_TS):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::UNSPECIFIED_QOS_REASON):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::NOT_ENOUGH_BANDWIDTH):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MISSING_ACKS):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::EXCEEDED_TXOP):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::STA_LEAVING):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::END_TS_BA_DLS):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::UNKNOWN_TS_BA):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::TIMEOUT):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::PEERKEY_MISMATCH):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::PEER_INITIATED):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::AP_INITIATED):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::REASON_INVALID_FT_ACTION_FRAME_COUNT):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::REASON_INVALID_PMKID):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::REASON_INVALID_MDE):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::REASON_INVALID_FTE):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_PEERING_CANCELED):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_MAX_PEERS):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_CONFIGURATION_POLICY_VIOLATION):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_CLOSE_RCVD):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_MAX_RETRIES):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_CONFIRM_TIMEOUT):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_INVALID_GTK):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_INCONSISTENT_PARAMETERS):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_INVALID_SECURITY_CAPABILITY):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_PATH_ERROR_NO_PROXY_INFORMATION):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_PATH_ERROR_NO_FORWARDING_INFORMATION):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_PATH_ERROR_DESTINATION_UNREACHABLE):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS):
+    case static_cast<T>(wlan_ieee80211::ReasonCode::MESH_CHANNEL_SWITCH_UNSPECIFIED):
+      return true;
+    default:
+      return false;
+  }
+}
+
+template <typename T>
 constexpr bool IsValidStatusCode(T status_code) {
   switch (status_code) {
     case static_cast<T>(wlan_ieee80211::StatusCode::SUCCESS):
@@ -119,9 +189,9 @@ constexpr bool IsValidStatusCode(T status_code) {
 
 }  // namespace
 
-uint16_t ConvertReasonCode(wlan_ieee80211::ReasonCode reason_code) {
-  // For every RESERVED_X_TO_Y value, this will return X.
-  return static_cast<uint16_t>(reason_code);
+uint16_t ConvertReasonCode(wlan_ieee80211::ReasonCode reason) {
+  ZX_ASSERT(IsValidReasonCode(reason));
+  return static_cast<uint16_t>(reason);
 }
 
 uint16_t ConvertStatusCode(wlan_ieee80211::StatusCode status) {
@@ -129,17 +199,12 @@ uint16_t ConvertStatusCode(wlan_ieee80211::StatusCode status) {
   return static_cast<uint16_t>(status);
 }
 
-wlan_ieee80211::ReasonCode ConvertReasonCode(uint16_t reason_code) {
-  if (0 == reason_code) {
-    return wlan_ieee80211::ReasonCode::RESERVED_0;
+wlan_ieee80211::ReasonCode ConvertReasonCode(uint16_t reason) {
+  // Use a default for invalid uint16_t reason codes from external sources.
+  if (!IsValidReasonCode(reason)) {
+    return wlan_ieee80211::ReasonCode::UNSPECIFIED_REASON;
   }
-  if (67 <= reason_code && reason_code <= 127) {
-    return wlan_ieee80211::ReasonCode::RESERVED_67_TO_127;
-  }
-  if (129 <= reason_code && reason_code <= UINT16_MAX) {
-    return wlan_ieee80211::ReasonCode::RESERVED_129_TO_65535;
-  }
-  return static_cast<wlan_ieee80211::ReasonCode>(reason_code);
+  return static_cast<wlan_ieee80211::ReasonCode>(reason);
 }
 
 wlan_ieee80211::StatusCode ConvertStatusCode(uint16_t status) {
