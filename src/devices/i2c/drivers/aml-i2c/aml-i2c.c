@@ -40,7 +40,7 @@
 #define AML_I2C_CONTROL_REG_QTR_CLK_DLY_MASK \
   (uint32_t)(AML_I2C_CONTROL_REG_QTR_CLK_DLY_MAX << AML_I2C_CONTROL_REG_QTR_CLK_DLY_SHIFT)
 
-#define AML_I2C_MAX_TRANSFER 256
+#define AML_I2C_MAX_TRANSFER 512
 
 typedef volatile struct {
   uint32_t control;
