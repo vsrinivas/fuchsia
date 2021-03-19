@@ -35,7 +35,7 @@ void PageSource::Detach() {
 
   detached_ = true;
 
-  // Cancel read requests (which everything for now)
+  // Cancel read requests (which is everything for now).
   while (!outstanding_requests_.is_empty()) {
     auto req = outstanding_requests_.pop_front();
     LTRACEF("dropping request with offset %lx\n", req->offset_);
@@ -52,13 +52,17 @@ void PageSource::Close() {
   canary_.Assert();
   LTRACEF("%p\n", this);
   // TODO: Close will have more meaning once writeback is implemented
+
+  // This will be a no-op if the page source has already been detached.
   Detach();
 
   Guard<Mutex> guard{&page_source_mtx_};
-  if (!closed_) {
-    closed_ = true;
-    page_provider_->OnClose();
+  if (closed_) {
+    return;
   }
+
+  closed_ = true;
+  page_provider_->OnClose();
 }
 
 void PageSource::OnPageProviderDispatcherClose() {
@@ -246,7 +250,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
   }
 
   if (send_request) {
-    RaiseReadRequestLocked(request);
+    SendRequestToProviderLocked(request);
   }
 
   return res;
@@ -261,11 +265,11 @@ zx_status_t PageSource::FinalizeRequest(PageRequest* request) {
     return ZX_ERR_BAD_STATE;
   }
 
-  RaiseReadRequestLocked(request);
+  SendRequestToProviderLocked(request);
   return ZX_ERR_SHOULD_WAIT;
 }
 
-void PageSource::RaiseReadRequestLocked(PageRequest* request) {
+void PageSource::SendRequestToProviderLocked(PageRequest* request) {
   LTRACEF_LEVEL(2, "%p %p\n", this, request);
   // Find the node with the smallest endpoint greater than offset and then
   // check to see if offset falls within that node.
@@ -289,22 +293,22 @@ void PageSource::RaiseReadRequestLocked(PageRequest* request) {
 #endif  // DEBUG_ASSERT_IMPLEMENTED
 }
 
-void PageSource::CompleteRequestLocked(PageRequest* req, zx_status_t status) {
-  VM_KTRACE_DURATION(1, "page_request_complete", req->offset_, req->len_);
+void PageSource::CompleteRequestLocked(PageRequest* request, zx_status_t status) {
+  VM_KTRACE_DURATION(1, "page_request_complete", request->offset_, request->len_);
 
-  // Take the request back from the callback before waking
+  // Take the request back from the provider before waking
   // up the corresponding thread.
-  page_provider_->ClearAsyncRequest(&req->read_request_);
+  page_provider_->ClearAsyncRequest(&request->read_request_);
 
-  while (!req->overlap_.is_empty()) {
-    auto waiter = req->overlap_.pop_front();
+  while (!request->overlap_.is_empty()) {
+    auto waiter = request->overlap_.pop_front();
     VM_KTRACE_FLOW_BEGIN(1, "page_request_signal", reinterpret_cast<uintptr_t>(waiter));
     waiter->offset_ = UINT64_MAX;
     waiter->event_.Signal(status);
   }
-  VM_KTRACE_FLOW_BEGIN(1, "page_request_signal", reinterpret_cast<uintptr_t>(req));
-  req->offset_ = UINT64_MAX;
-  req->event_.Signal(status);
+  VM_KTRACE_FLOW_BEGIN(1, "page_request_signal", reinterpret_cast<uintptr_t>(request));
+  request->offset_ = UINT64_MAX;
+  request->event_.Signal(status);
 }
 
 void PageSource::CancelRequest(PageRequest* request) {
@@ -355,10 +359,11 @@ void PageSource::Dump() const {
   Guard<Mutex> guard{&page_source_mtx_};
   printf("page_source %p detached %d closed %d\n", this, detached_, closed_);
   for (auto& req : outstanding_requests_) {
-    printf("  vmo 0x%lx/k%lu req [%lx, %lx) pending %lx overlap %lu\n", req.vmo_debug_info_.vmo_ptr,
-           req.vmo_debug_info_.vmo_id, req.offset_, req.GetEnd(), req.pending_size_,
-           req.overlap_.size_slow());
+    printf("  vmo 0x%lx/k%lu req [0x%lx, 0x%lx) pending 0x%lx overlap %lu\n",
+           req.vmo_debug_info_.vmo_ptr, req.vmo_debug_info_.vmo_id, req.offset_, req.GetEnd(),
+           req.pending_size_, req.overlap_.size_slow());
   }
+  page_provider_->Dump();
 }
 
 PageRequest::~PageRequest() {

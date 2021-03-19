@@ -14,15 +14,16 @@
 #include <object/port_dispatcher.h>
 #include <vm/page_source.h>
 
-// Page source implementation that talks to a userspace pager service.
+// Page provider implementation that talks to a userspace pager service.
 //
-// The lifecycle of this class is a little complicated because the pager source's port potentially
-// has an unmanaged reference to the pager source through packet_. Because of this, we need to
-// ensure that the last RefPtr to the pager source isn't released too early when the pager source
-// gets closed. Normally, the dispatcher can retain its reference to the pager source until the
-// port frees its reference to packet_ (through the PortAllocator). However, if the dispatcher is
-// destroyed, if we can't revoke the port's reference to packet_, then we end up making the pager
-// source keep a reference to itself until the packet is freed.
+// The lifecycle of this class is a little complicated because the pager dispatcher's port
+// potentially has an unmanaged reference to the PageSource that contains the PagerProxy through
+// packet_. Because of this, we need to ensure that the last RefPtr to the PageSource isn't released
+// too early when the pager dispatcher gets closed. Normally, the dispatcher can retain its
+// reference to the PageSource until the port frees its reference to packet_ (through the
+// PortAllocator). However, if the dispatcher is destroyed, if we can't revoke the port's reference
+// to packet_, then we end up making the PagerProxy keep a reference to the containing PageSource
+// until the packet is freed.
 class PagerProxy : public PageProvider, public PortAllocator {
  public:
   ~PagerProxy() override;
@@ -30,18 +31,19 @@ class PagerProxy : public PageProvider, public PortAllocator {
  private:
   PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key);
 
+  // PortAllocator methods.
   PortPacket* Alloc() final {
     DEBUG_ASSERT(false);
     return nullptr;
   }
   void Free(PortPacket* port_packet) final;
 
+  // PageProvider methods.
   bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
                    paddr_t* const pa_out) final {
     // Pagers cannot synchronusly fulfill requests.
     return false;
   }
-
   void GetPageAsync(page_request_t* request) final;
   void ClearAsyncRequest(page_request_t* request) final;
   void SwapRequest(page_request_t* old, page_request_t* new_req) final;
@@ -51,6 +53,7 @@ class PagerProxy : public PageProvider, public PortAllocator {
   // Called by the pager dispatcher when it is about to go away. Handles cleaning up port's
   // reference to the containing PageSource object.
   void OnDispatcherClose() final;
+  void Dump() final;
 
   PagerDispatcher* const pager_;
   const fbl::RefPtr<PortDispatcher> port_;
@@ -93,7 +96,7 @@ class PagerProxy : public PageProvider, public PortAllocator {
   PageSource* page_source_ = nullptr;
 
   // Queues the page request, either sending it to the port or putting it in pending_requests_.
-  void QueueMessageLocked(page_request_t* request) TA_REQ(mtx_);
+  void QueuePacketLocked(page_request_t* request) TA_REQ(mtx_);
 
   // Called when the packet becomes free. If pending_requests_ is non-empty, queues the
   // next request.

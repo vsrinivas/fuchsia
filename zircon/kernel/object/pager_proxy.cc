@@ -36,10 +36,10 @@ void PagerProxy::GetPageAsync(page_request_t* request) {
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
 
-  QueueMessageLocked(request);
+  QueuePacketLocked(request);
 }
 
-void PagerProxy::QueueMessageLocked(page_request_t* request) {
+void PagerProxy::QueuePacketLocked(page_request_t* request) {
   if (packet_busy_) {
     list_add_tail(&pending_requests_, &request->provider_node);
     return;
@@ -118,7 +118,7 @@ void PagerProxy::OnDetach() {
   ASSERT(!closed_);
 
   complete_pending_ = true;
-  QueueMessageLocked(&complete_request_);
+  QueuePacketLocked(&complete_request_);
 }
 
 void PagerProxy::OnClose() {
@@ -130,7 +130,7 @@ void PagerProxy::OnClose() {
   closed_ = true;
   if (!complete_pending_) {
     // We know PagerDispatcher::on_zero_handles hasn't been invoked, since that would
-    // have already closed this pager source.
+    // have already closed this pager proxy.
     DEBUG_ASSERT(page_source_);
     self_src = pager_->ReleaseSource(page_source_);
   }  // else this is released in PagerProxy::Free
@@ -190,7 +190,7 @@ void PagerProxy::OnPacketFreedLocked() {
   packet_busy_ = false;
   active_request_ = nullptr;
   if (!list_is_empty(&pending_requests_)) {
-    QueueMessageLocked(list_remove_head_type(&pending_requests_, page_request, provider_node));
+    QueuePacketLocked(list_remove_head_type(&pending_requests_, page_request, provider_node));
   }
 }
 
@@ -221,9 +221,9 @@ zx_status_t PagerProxy::WaitOnEvent(Event* event) {
     if (gBootOptions->userpager_overtime_timeout_seconds > 0 &&
         waited * gBootOptions->userpager_overtime_wait_seconds >=
             gBootOptions->userpager_overtime_timeout_seconds) {
-      printf("ERROR Pager source %p has been blocked for %" PRIu64
+      printf("ERROR Page source %p has been blocked for %" PRIu64
              " seconds. Page request timed out.\n",
-             this, gBootOptions->userpager_overtime_timeout_seconds);
+             page_source_, gBootOptions->userpager_overtime_timeout_seconds);
       dump_thread(Thread::Current::Get(), false);
       kcounter_add(dispatcher_pager_timed_out_request_count, 1);
       return ZX_ERR_TIMED_OUT;
@@ -235,9 +235,10 @@ zx_status_t PagerProxy::WaitOnEvent(Event* event) {
       Guard<Mutex> guard{&mtx_};
       active = !!active_request_;
     }
-    printf("WARNING pager source %p has been blocked for %" PRIu64
+    printf("WARNING Page source %p has been blocked for %" PRIu64
            " seconds with%s message waiting on port.\n",
-           this, waited * gBootOptions->userpager_overtime_wait_seconds, active ? "" : " no");
+           page_source_, waited * gBootOptions->userpager_overtime_wait_seconds,
+           active ? "" : " no");
     // Dump out the rest of the state of the oustanding requests.
     DEBUG_ASSERT(page_source_);
     page_source_->Dump();
@@ -253,4 +254,24 @@ zx_status_t PagerProxy::WaitOnEvent(Event* event) {
   }
 
   return result;
+}
+
+void PagerProxy::Dump() {
+  Guard<Mutex> guard{&mtx_};
+  printf(
+      "pager_proxy %p pager_dispatcher %p page_source %p key %lu\n"
+      "  closed %d packet_busy %d complete_pending %d\n",
+      this, pager_, page_source_, key_, closed_, packet_busy_, complete_pending_);
+
+  if (active_request_) {
+    printf("  active request on pager port [0x%lx, 0x%lx)\n", active_request_->offset,
+           active_request_->length);
+  } else {
+    printf("  no active request on pager port\n");
+  }
+
+  page_request_t* req;
+  list_for_every_entry (&pending_requests_, req, page_request_t, provider_node) {
+    printf("  pending req to queue on pager port [0x%lx, 0x%lx)\n", req->offset, req->length);
+  }
 }

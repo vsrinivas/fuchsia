@@ -38,7 +38,7 @@ class PageProvider {
   // Synchronously gets a page from the backing source.
   virtual bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
                            paddr_t* const pa_out) = 0;
-  // Informs the backing source of a page request. The callback has ownership
+  // Informs the backing source of a page request. The provider has ownership
   // of |request| until the async request is cancelled.
   virtual void GetPageAsync(page_request_t* request) = 0;
   // Informs the backing source that a page request has been fulfilled. This
@@ -48,7 +48,7 @@ class PageProvider {
   // and |new_request| have the same type, offset, and length.
   virtual void SwapRequest(page_request_t* old, page_request_t* new_req) = 0;
 
-  // OnDetach is called once no more calls to GetPage/GetPageAsync will be made. It
+  // OnDetach is called once no more calls to GetPageSync/GetPageAsync will be made. It
   // will be called before OnClose and will only be called once.
   virtual void OnDetach() = 0;
   // After OnClose is called, no more calls will be made except for ::WaitOnEvent.
@@ -63,34 +63,40 @@ class PageProvider {
   // Waits on an |event| associated with a page request.
   virtual zx_status_t WaitOnEvent(Event* event) = 0;
 
+  // Dumps relevant state for debugging purposes.
+  virtual void Dump() = 0;
+
   friend PageSource;
   friend PageRequest;
 };
 
-// A page source has two parts - the PageSource and the PagerProxy. The
-// PageSource is responsible for generic functionality, mostly around managing
-// the lifecycle of page requests. The PagerProxy is responsible for actually
-// providing the pages.
+// A page source is responsible for fulfilling page requests from a VMO with backing pages.
+// The PageSource class mostly contains generic functionality around managing
+// the lifecycle of VMO page requests. The PageSource contains an reference to a PageProvider
+// implementation, which is responsible for actually providing the pages. (E.g. for VMOs backed by a
+// userspace pager, the PageProvider is a PagerProxy instance which talks to the userspace pager
+// service.)
 //
-// The synchronous fulfillment of requests is fairly straightforward, with
-// direct calls from the vm object to the PageSource to the PagerProxy.
+// The synchronous fulfillment of requests is fairly straightforward, with direct calls
+// from the vm object to the PageSource to the PageProvider.
 //
 // For asynchronous requests, the lifecycle is as follows:
-//   1) A vm object requests a page with PageSource::GetPage
+//   1) A vm object requests a page with PageSource::GetPage.
 //   2) PageSource starts tracking the request's PageRequest and then
-//      forwards the request to PagerProxy::GetPageAsync.
-//   3) The caller waits for the request with PageRequest::Wait
-//   4) At some point, whatever is backing the callback provides pages
+//      forwards the request to PageProvider::GetPageAsync.
+//   3) The caller waits for the request with PageRequest::Wait.
+//   4) At some point, whatever is backing the PageProvider provides pages
 //      to the vm object (e.g. with VmObjectPaged::SupplyPages).
 //   5) The vm object calls PageSource::OnPagesSupplied, which signals
 //      any PageRequests that have been fulfilled.
 //   6) The caller wakes up and queries the vm object again, by which
-//      point the request page will be present.
+//      point the requested page will be present.
 
 // Object which provides pages to a vm_object.
 class PageSource : public fbl::RefCounted<PageSource>,
                    public fbl::DoublyLinkedListable<fbl::RefPtr<PageSource>> {
  public:
+  PageSource() = delete;
   explicit PageSource(ktl::unique_ptr<PageProvider> page_provider);
 
   // Sends a request to the backing source to provide the requested page.
@@ -110,7 +116,7 @@ class PageSource : public fbl::RefCounted<PageSource>,
   // Returns ZX_ERR_SHOULD_WAIT if the PageRequest will be fulfilled after
   // being waited upon.
   // Returns ZX_ERR_NOT_FOUND if the request will never be resolved.
-  zx_status_t FinalizeRequest(PageRequest* node);
+  zx_status_t FinalizeRequest(PageRequest* request);
 
   // Updates the request tracking metadata to account for pages [offset, offset + len) having
   // been supplied to the owning vmo.
@@ -121,7 +127,7 @@ class PageSource : public fbl::RefCounted<PageSource>,
   // unblocked.
   void OnPagesFailed(uint64_t offset, uint64_t len, zx_status_t error_status);
 
-  // Returns true if |error_status| is a valid pager failure error code, which can be used with
+  // Returns true if |error_status| is a valid provider failure error code, which can be used with
   // |OnPagesFailed|.
   //
   // Not every error code is supported, since these errors can get returned via a zx_vmo_read() or a
@@ -156,7 +162,7 @@ class PageSource : public fbl::RefCounted<PageSource>,
   bool detached_ TA_GUARDED(page_source_mtx_) = false;
   bool closed_ TA_GUARDED(page_source_mtx_) = false;
 
-  // Tree of pending_request structs which have been sent to the callback. The list
+  // Tree of outstanding requests which have been sent to the PageProvider. The list
   // is keyed by the end offset of the requests (not the start offsets).
   fbl::WAVLTree<uint64_t, PageRequest*> outstanding_requests_ TA_GUARDED(page_source_mtx_);
 
@@ -165,14 +171,16 @@ class PageSource : public fbl::RefCounted<PageSource>,
   PageRequest* current_request_ TA_GUARDED(page_source_mtx_) = nullptr;
 #endif  // DEBUG_ASSERT_IMPLEMENTED
 
+  // PageProvider instance that will provide pages asynchronously (e.g. a userspace pager, see
+  // PagerProxy for details).
   ktl::unique_ptr<PageProvider> page_provider_;
 
-  // Sends a read request to the backing source, or queues the request if the needed
-  // region has already been requested from the source.
-  void RaiseReadRequestLocked(PageRequest* request) TA_REQ(page_source_mtx_);
+  // Sends a read request to the backing source, or adds the request to the overlap_ list if the
+  // needed region has already been requested from the source.
+  void SendRequestToProviderLocked(PageRequest* request) TA_REQ(page_source_mtx_);
 
   // Wakes up the given PageRequest and all overlapping requests, with an optional |status|.
-  void CompleteRequestLocked(PageRequest* head, zx_status_t status = ZX_OK)
+  void CompleteRequestLocked(PageRequest* request, zx_status_t status = ZX_OK)
       TA_REQ(page_source_mtx_);
 
   // Removes |request| from any internal tracking. Called by a PageRequest if
@@ -191,8 +199,8 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   explicit PageRequest(bool allow_batching = false) : allow_batching_(allow_batching) {}
   ~PageRequest();
 
-  // Returns ZX_OK on success, or a permitted error code if the pager explicitly failed this page
-  // request. Returns ZX_ERR_INTERNAL_INTR_KILLED if the thread was killed.
+  // Returns ZX_OK on success, or a permitted error code if the backing page provider explicitly
+  // failed this page request. Returns ZX_ERR_INTERNAL_INTR_KILLED if the thread was killed.
   zx_status_t Wait();
 
   DISALLOW_COPY_ASSIGN_AND_MOVE(PageRequest);
@@ -228,7 +236,7 @@ class PageRequest : public fbl::WAVLTreeContainable<PageRequest*>,
   // List node for overlapping requests.
   fbl::DoublyLinkedList<PageRequest*> overlap_;
 
-  // Request struct for the PageSourceCallback
+  // Request struct for the PageProvider.
   page_request_t read_request_;
 
   uint64_t GetEnd() const {

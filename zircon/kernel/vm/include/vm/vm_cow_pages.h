@@ -290,7 +290,7 @@ class VmCowPages final
 
   // Unmaps a range and frees up all the committed pages. Called from DecommitRangeLocked() to
   // perform the actual decommit action after some of the initial sanity checks have succeeded.
-  // Also called from DetachSourceLocked() when a VMO is detached from the pager source.
+  // Also called from DetachSourceLocked() when a VMO is detached from the page source.
   //
   // Unlike DecommitRangeLocked(), this function only operates on |this| node, which must have no
   // parent.

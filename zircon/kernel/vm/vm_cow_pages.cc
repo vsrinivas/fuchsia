@@ -2248,7 +2248,7 @@ void VmCowPages::UnpinPage(vm_page_t* page, uint64_t offset) {
 void VmCowPages::PromoteRangeForReclamationLocked(uint64_t offset, uint64_t len) {
   canary_.Assert();
 
-  // We will have pages only if we are directly backed by a pager source.
+  // We will have pages only if we are directly backed by a page source.
   if (!page_source_) {
     return;
   }
@@ -2760,7 +2760,7 @@ zx_status_t VmCowPages::SupplyPagesLocked(uint64_t offset, uint64_t len, VmPageS
       if (likely(status == ZX_ERR_ALREADY_EXISTS)) {
         status = ZX_OK;
 
-        // We hit the end of a run of absent pages, so notify the pager source
+        // We hit the end of a run of absent pages, so notify the page source
         // of any new pages that were added and reset the tracking variables.
         if (new_pages_len) {
           RangeChangeUpdateLocked(new_pages_start, new_pages_len, RangeChangeOp::Unmap);

@@ -93,7 +93,7 @@ class TestPageRequest {
 class StubPageProvider : public PageProvider {
  public:
   StubPageProvider() = default;
-  ~StubPageProvider() = default;
+  ~StubPageProvider() override = default;
 
  private:
   bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
@@ -109,6 +109,7 @@ class StubPageProvider : public PageProvider {
   void OnClose() override {}
   void OnDispatcherClose() override {}
   zx_status_t WaitOnEvent(Event* event) override { panic("Not implemented\n"); }
+  void Dump() override {}
 };
 
 // Helper function to allocate memory in a user address space.
