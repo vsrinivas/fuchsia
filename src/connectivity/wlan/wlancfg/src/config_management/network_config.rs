@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::client::types,
     fidl_fuchsia_wlan_policy as fidl_policy, fuchsia_zircon as zx,
     serde::{Deserialize, Serialize},
     std::{
@@ -14,7 +15,7 @@ use {
 
 /// The maximum number of denied connection reasons we will store for one network at a time.
 /// For now this number is chosen arbitrarily.
-const NUM_DENY_REASONS: usize = 10;
+const NUM_DENY_REASONS: usize = 20;
 /// constants for the constraints on valid credential values
 const WEP_40_ASCII_LEN: usize = 5;
 const WEP_40_HEX_LEN: usize = 10;
@@ -80,11 +81,12 @@ pub enum FailureReason {
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct ConnectFailure {
-    // TODO(fxbug.dev/53858) Add BSSID of the AP we failed to connect to
     /// For determining whether this connection failure is still relevant
     pub time: zx::Time,
     /// The reason that connection failed
     pub reason: FailureReason,
+    /// The BSSID that we failed to connect to
+    pub bssid: types::Bssid,
 }
 
 /// Ring buffer that holds network denials. It starts empty and replaces oldest when full.
@@ -100,11 +102,11 @@ impl ConnectFailureList {
     /// This function will be used in future work when Network Denial reasons are recorded.
     /// Record network denial information in the network config, dropping the oldest information
     /// if the list of denial reasons is already full before adding.
-    pub fn add(&mut self, reason: FailureReason) {
+    pub fn add(&mut self, bssid: types::Bssid, reason: FailureReason) {
         if self.0.len() == self.0.capacity() {
             self.0.pop_front();
         }
-        self.0.push_back(ConnectFailure { time: zx::Time::get_monotonic(), reason });
+        self.0.push_back(ConnectFailure { time: zx::Time::get_monotonic(), reason, bssid });
     }
 
     /// This function will be used when Network Denial reasons are used to select a network.
@@ -685,11 +687,13 @@ mod tests {
         // Get time before adding so we can get back everything we added.
         let curr_time = zx::Time::get_monotonic();
         assert!(failure_list.get_recent(curr_time).is_empty());
-        failure_list.add(FailureReason::GeneralFailure);
+        let bssid = [1; 6];
+        failure_list.add(bssid.clone(), FailureReason::GeneralFailure);
 
         let result_list = failure_list.get_recent(curr_time);
         assert_eq!(1, result_list.len());
         assert_eq!(FailureReason::GeneralFailure, result_list[0].reason);
+        assert_eq!(bssid, result_list[0].bssid);
         // Should not get any results if we request denials older than the specified time.
         let later_time = zx::Time::get_monotonic();
         assert!(failure_list.get_recent(later_time).is_empty());
@@ -703,31 +707,36 @@ mod tests {
         assert!(failure_list.get_recent(curr_time).is_empty());
         let failure_list_capacity = failure_list.0.capacity();
         assert!(failure_list_capacity >= NUM_DENY_REASONS);
+        let bssid = [0; 6];
         for _i in 0..failure_list_capacity + 2 {
-            failure_list.add(FailureReason::GeneralFailure);
+            failure_list.add(bssid, FailureReason::GeneralFailure);
         }
         // Since we do not know time of each entry in the list, check the other values and length
         assert_eq!(failure_list_capacity, failure_list.get_recent(curr_time).len());
-        for denial in failure_list.get_recent(curr_time) {
-            assert_eq!(FailureReason::GeneralFailure, denial.reason);
+        for failure in failure_list.get_recent(curr_time) {
+            assert_eq!(FailureReason::GeneralFailure, failure.reason);
+            assert_eq!(bssid, failure.bssid)
         }
     }
 
     #[test]
     fn get_part_of_failure_list() {
         let mut failure_list = ConnectFailureList::new();
+        let bssid = [0; 6];
         // curr_time is before or at the part of the list we want and after the one we don't want
         let curr_time = zx::Time::get_monotonic();
         // Inject a failure into the list that is older than the specified time.
         let old_time = curr_time - zx::Duration::from_seconds(1);
-        failure_list
-            .0
-            .push_back(ConnectFailure { reason: FailureReason::GeneralFailure, time: old_time });
+        failure_list.0.push_back(ConnectFailure {
+            reason: FailureReason::GeneralFailure,
+            time: old_time,
+            bssid: bssid.clone(),
+        });
 
         // Choose half capacity to get so that we know the previous one is still in list
         let half_capacity = failure_list.0.capacity() / 2;
         for _ in 0..half_capacity {
-            failure_list.add(FailureReason::GeneralFailure);
+            failure_list.add(bssid.clone(), FailureReason::GeneralFailure);
         }
 
         // Since we do not know time of each entry in the list, check the other values and length
@@ -737,10 +746,11 @@ mod tests {
         }
 
         // Add one more and check list again
-        failure_list.add(FailureReason::GeneralFailure);
+        failure_list.add(bssid.clone(), FailureReason::GeneralFailure);
         assert_eq!(half_capacity + 1, failure_list.get_recent(curr_time).len());
-        for denial in failure_list.get_recent(curr_time) {
-            assert_eq!(FailureReason::GeneralFailure, denial.reason);
+        for failure in failure_list.get_recent(curr_time) {
+            assert_eq!(FailureReason::GeneralFailure, failure.reason);
+            assert_eq!(bssid, failure.bssid);
         }
     }
 

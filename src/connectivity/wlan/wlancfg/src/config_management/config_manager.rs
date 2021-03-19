@@ -374,6 +374,7 @@ impl SavedNetworksManager {
         &self,
         id: NetworkIdentifier,
         credential: &Credential,
+        bssid: types::Bssid,
         connect_result: fidl_sme::ConnectResultCode,
         discovered_in_scan: Option<ScanType>,
     ) {
@@ -419,10 +420,16 @@ impl SavedNetworksManager {
                             }
                         }
                         fidl_sme::ConnectResultCode::CredentialRejected => {
-                            network.perf_stats.failure_list.add(FailureReason::CredentialRejected);
+                            network
+                                .perf_stats
+                                .failure_list
+                                .add(bssid, FailureReason::CredentialRejected);
                         }
                         fidl_sme::ConnectResultCode::Failed => {
-                            network.perf_stats.failure_list.add(FailureReason::GeneralFailure);
+                            network
+                                .perf_stats
+                                .failure_list
+                                .add(bssid, FailureReason::GeneralFailure);
                         }
                         fidl_sme::ConnectResultCode::Canceled => {}
                     }
@@ -820,12 +827,14 @@ mod tests {
 
         let network_id = NetworkIdentifier::new("bar", SecurityType::Wpa2);
         let credential = Credential::Password(b"password".to_vec());
+        let bssid = [4; 6];
 
         // If connect and network hasn't been saved, we should not save the network.
         saved_networks
             .record_connect_result(
                 network_id.clone(),
                 &credential,
+                bssid.clone(),
                 fidl_sme::ConnectResultCode::Success,
                 None,
             )
@@ -846,6 +855,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
+                bssid.clone(),
                 fidl_sme::ConnectResultCode::Success,
                 None,
             )
@@ -862,6 +872,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
+                bssid.clone(),
                 fidl_sme::ConnectResultCode::Success,
                 Some(ScanType::Active),
             )
@@ -876,6 +887,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
+                bssid,
                 fidl_sme::ConnectResultCode::Success,
                 Some(ScanType::Passive),
             )
@@ -924,6 +936,7 @@ mod tests {
         let connected_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
         // If we record a successful connection to a WPA2 network, we shouldn't mark a WPA3 network
         let saved_unrecorded_id = NetworkIdentifier::new("foo", SecurityType::Wpa3);
+        let bssid = [3; 6];
 
         saved_networks
             .store(saved_network_id.clone(), credential.clone())
@@ -938,6 +951,7 @@ mod tests {
             .record_connect_result(
                 connected_id,
                 &credential,
+                bssid,
                 fidl_sme::ConnectResultCode::Success,
                 Some(ScanType::Active),
             )
@@ -961,6 +975,7 @@ mod tests {
         let net_id = NetworkIdentifier::new("foo", SecurityType::Wpa2);
         let net_id_also_valid = NetworkIdentifier::new("foo", SecurityType::Wpa);
         let credential = Credential::Password(b"some_password".to_vec());
+        let bssid = [2; 6];
 
         // Save the networks and record a successful connection.
         saved_networks
@@ -975,6 +990,7 @@ mod tests {
             .record_connect_result(
                 net_id.clone(),
                 &credential,
+                bssid,
                 fidl_sme::ConnectResultCode::Success,
                 None,
             )
@@ -999,6 +1015,7 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
         let network_id = NetworkIdentifier::new("foo", SecurityType::None);
         let credential = Credential::None;
+        let bssid = [1; 6];
         let before_recording = zx::Time::get_monotonic();
 
         // Verify that recording connect result does not save the network.
@@ -1006,6 +1023,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
+                bssid.clone(),
                 fidl_sme::ConnectResultCode::Failed,
                 None,
             )
@@ -1022,23 +1040,40 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
+                bssid.clone(),
+                fidl_sme::ConnectResultCode::Failed,
+                None,
+            )
+            .await;
+        saved_networks
+            .record_connect_result(
+                network_id.clone(),
+                &credential,
+                bssid.clone(),
                 fidl_sme::ConnectResultCode::CredentialRejected,
                 None,
             )
             .await;
 
-        // Check that the failure was recorded correctly.
+        // Check that the failures were recorded correctly.
         assert_eq!(1, saved_networks.known_network_count().await);
         let saved_config = saved_networks
             .lookup(network_id)
             .await
             .pop()
             .expect("Failed to get saved network config");
-        let mut connect_failures =
-            saved_config.perf_stats.failure_list.get_recent(before_recording);
-        assert_eq!(1, connect_failures.len());
-        let connect_failure = connect_failures.pop().expect("Failed to get a connect failure");
-        assert_eq!(FailureReason::CredentialRejected, connect_failure.reason);
+        let connect_failures = saved_config.perf_stats.failure_list.get_recent(before_recording);
+        assert_variant!(connect_failures, failures => {
+            // There are 2 failures. One is a general failure and one rejected credentials failure.
+            assert_eq!(failures.len(), 2);
+            assert!(failures.iter().any(|failure| failure.reason == FailureReason::GeneralFailure));
+            assert!(failures.iter().any(|failure| failure.reason == FailureReason::CredentialRejected));
+            // Both failures have the correct BSSID
+            for failure in failures.iter() {
+                assert_eq!(failure.bssid, bssid);
+                assert_eq!(failure.bssid, bssid);
+            }
+        });
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -1050,6 +1085,7 @@ mod tests {
         let saved_networks = create_saved_networks(stash_id, &path, &tmp_path).await;
         let network_id = NetworkIdentifier::new("foo", SecurityType::None);
         let credential = Credential::None;
+        let bssid = [0; 6];
         let before_recording = zx::Time::get_monotonic();
 
         // Verify that recording connect result does not save the network.
@@ -1057,6 +1093,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
+                bssid.clone(),
                 fidl_sme::ConnectResultCode::Canceled,
                 None,
             )
@@ -1073,6 +1110,7 @@ mod tests {
             .record_connect_result(
                 network_id.clone(),
                 &credential,
+                bssid,
                 fidl_sme::ConnectResultCode::Canceled,
                 None,
             )

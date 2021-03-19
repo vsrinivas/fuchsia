@@ -8,7 +8,9 @@ use {
             scan::{self, ScanResultUpdate},
             types,
         },
-        config_management::{self, Credential, SavedNetworksManager},
+        config_management::{
+            self, ConnectFailure, Credential, FailureReason, SavedNetworksManager,
+        },
         mode_management::iface_manager_api::IfaceManagerApi,
     },
     async_trait::async_trait,
@@ -19,7 +21,7 @@ use {
     futures::lock::Mutex,
     log::{debug, error, info, trace},
     rand::Rng,
-    std::{cmp::Ordering, collections::HashMap, convert::TryInto, sync::Arc},
+    std::{collections::HashMap, sync::Arc},
     wlan_common::{channel::Channel, hasher::WlanHasher},
     wlan_metrics_registry::{
         ActiveScanRequestedForNetworkSelectionMetricDimensionActiveScanSsidsRequested as ActiveScanSsidsRequested,
@@ -42,6 +44,11 @@ const STALE_SCAN_AGE: zx::Duration = zx::Duration::from_millis(50);
 const RSSI_CUTOFF_5G_PREFERENCE: i8 = -64;
 /// The score boost for 5G networks that we are giving preference to.
 const RSSI_5G_PREFERENCE_BOOST: i8 = 20;
+/// The amount to decrease the score by for each failed connection attempt.
+const SCORE_PENALTY_FOR_RECENT_FAILURE: i8 = 5;
+/// This penalty is much higher than for a general failure because we are not likely to succeed
+/// on a retry.
+const SCORE_PENALTY_FOR_RECENT_CREDENTIAL_REJECTED: i8 = 30;
 
 pub struct NetworkSelector {
     saved_network_manager: Arc<SavedNetworksManager>,
@@ -60,7 +67,7 @@ struct InternalSavedNetworkData {
     network_id: types::NetworkIdentifier,
     credential: Credential,
     has_ever_connected: bool,
-    recent_failure_count: u8,
+    recent_failures: Vec<ConnectFailure>,
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -71,21 +78,47 @@ struct InternalBss<'a> {
 }
 
 impl InternalBss<'_> {
+    /// This function scores a BSS based on 3 factors: (1) RSSI (2) whether the BSS is 2.4 or 5 GHz
+    /// and (3) recent failures to connect to this BSS. No single factor is enough to decide which
+    /// BSS to connect to.
     fn score(&self) -> i8 {
-        let rssi = self.bss_info.rssi;
+        let mut score = self.bss_info.rssi;
         let channel = Channel::from_fidl(self.bss_info.channel);
 
         // If the network is 5G and has a strong enough RSSI, give it a bonus
-        if channel.is_5ghz() && rssi >= RSSI_CUTOFF_5G_PREFERENCE {
-            return rssi.saturating_add(RSSI_5G_PREFERENCE_BOOST);
+        if channel.is_5ghz() && score >= RSSI_CUTOFF_5G_PREFERENCE {
+            score = score.saturating_add(RSSI_5G_PREFERENCE_BOOST);
         }
-        return rssi;
+
+        // Count failures for rejected credentials higher since we probably won't succeed another
+        // try with the same credentials.
+        let failure_score: i8 = self
+            .network_info
+            .recent_failures
+            .iter()
+            .filter(|failure| failure.bssid == self.bss_info.bssid)
+            .map(|failure| {
+                if failure.reason == FailureReason::CredentialRejected {
+                    SCORE_PENALTY_FOR_RECENT_CREDENTIAL_REJECTED
+                } else {
+                    SCORE_PENALTY_FOR_RECENT_FAILURE
+                }
+            })
+            .sum();
+
+        return score.saturating_sub(failure_score);
     }
 
     fn print_without_pii(&self, hasher: &WlanHasher) {
         let channel = Channel::from_fidl(self.bss_info.channel);
         let rssi = self.bss_info.rssi;
-        let recent_failure_count = self.network_info.recent_failure_count;
+        let recent_failure_count = self
+            .network_info
+            .recent_failures
+            .iter()
+            .filter(|failure| failure.bssid == self.bss_info.bssid)
+            .collect::<Vec<_>>()
+            .len();
         let security_type = match self.network_info.network_id.type_ {
             fidl_policy::SecurityType::None => "open",
             fidl_policy::SecurityType::Wep => "WEP",
@@ -94,12 +127,13 @@ impl InternalBss<'_> {
             fidl_policy::SecurityType::Wpa3 => "WPA3",
         };
         info!(
-            "{}({:4}), {}, {:>4}dBm, chan {:8}{}{}{}",
+            "{}({:4}), {}, {:>4}dBm, chan {:8}, score {:4},{}{}{}",
             hasher.hash_ssid(&self.network_info.network_id.ssid),
             security_type,
             hasher.hash_mac_addr(&self.bss_info.bssid),
             rssi,
             channel,
+            self.score(),
             if !self.bss_info.compatible { ", NOT compatible" } else { "" },
             if recent_failure_count > 0 {
                 format!(", {} recent failures", recent_failure_count)
@@ -285,20 +319,14 @@ async fn load_saved_networks(
 ) -> HashMap<types::NetworkIdentifier, InternalSavedNetworkData> {
     let mut networks: HashMap<types::NetworkIdentifier, InternalSavedNetworkData> = HashMap::new();
     for saved_network in saved_network_manager.get_networks().await.into_iter() {
-        let recent_failure_count = saved_network
+        let recent_failures = saved_network
             .perf_stats
             .failure_list
-            .get_recent(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW)
-            .len()
-            .try_into()
-            .unwrap_or_else(|e| {
-                error!("Failed to convert failure count: {:?}", e);
-                u8::MAX
-            });
+            .get_recent(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW);
 
         trace!(
             "Adding saved network to hashmap{}",
-            if recent_failure_count > 0 { " with some failures" } else { "" }
+            if recent_failures.len() > 0 { " with some failures" } else { "" }
         );
         let id = types::NetworkIdentifier {
             ssid: saved_network.ssid.clone(),
@@ -312,7 +340,7 @@ async fn load_saved_networks(
                     network_id: id.clone(),
                     credential: saved_network.credential.clone(),
                     has_ever_connected: saved_network.has_ever_connected,
-                    recent_failure_count: recent_failure_count,
+                    recent_failures: recent_failures.clone(),
                 },
             );
         }
@@ -322,7 +350,7 @@ async fn load_saved_networks(
                 network_id: id,
                 credential: saved_network.credential,
                 has_ever_connected: saved_network.has_ever_connected,
-                recent_failure_count: recent_failure_count,
+                recent_failures: recent_failures,
             },
         );
     }
@@ -385,22 +413,7 @@ fn select_best_connection_candidate<'a>(
             }
             true
         })
-        .max_by(|bss_a, bss_b| {
-            // If only one network has failures, prefer the other one
-            if bss_a.network_info.recent_failure_count > 0
-                && bss_b.network_info.recent_failure_count == 0
-            {
-                return Ordering::Less;
-            }
-            if bss_a.network_info.recent_failure_count == 0
-                && bss_b.network_info.recent_failure_count > 0
-            {
-                return Ordering::Greater;
-            }
-
-            // Both networks have failures, compare their scores
-            bss_a.score().partial_cmp(&bss_b.score()).unwrap()
-        })
+        .max_by(|bss_a, bss_b| bss_a.score().partial_cmp(&bss_b.score()).unwrap())
         .map(|bss| {
             info!("Selected BSS:");
             bss.print_without_pii(hasher);
@@ -585,7 +598,8 @@ mod tests {
             task::Poll,
         },
         pin_utils::pin_mut,
-        std::sync::Arc,
+        rand::Rng,
+        std::{convert::TryInto, sync::Arc},
         test_case::test_case,
         wlan_common::assert_variant,
     };
@@ -731,10 +745,12 @@ mod tests {
             type_: types::SecurityType::Wpa3,
         };
         let credential_1 = Credential::Password("foo_pass".as_bytes().to_vec());
+        let bssid_1 = [0; 6];
         let ssid_2 = "bar".as_bytes().to_vec();
         let test_id_2 =
             types::NetworkIdentifier { ssid: ssid_2.clone(), type_: types::SecurityType::Wpa };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
+        let bssid_2 = [1, 2, 3, 4, 5, 6];
 
         // insert some new saved networks
         test_values
@@ -755,6 +771,7 @@ mod tests {
             .record_connect_result(
                 test_id_1.clone().into(),
                 &credential_1.clone(),
+                bssid_1,
                 fidl_sme::ConnectResultCode::Success,
                 None,
             )
@@ -766,6 +783,7 @@ mod tests {
             .record_connect_result(
                 test_id_2.clone().into(),
                 &credential_2.clone(),
+                bssid_2,
                 fidl_sme::ConnectResultCode::CredentialRejected,
                 None,
             )
@@ -779,27 +797,22 @@ mod tests {
                 network_id: test_id_1,
                 credential: credential_1,
                 has_ever_connected: true,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
         );
-        expected_hashmap.insert(
-            test_id_2.clone(),
-            InternalSavedNetworkData {
-                network_id: test_id_2.clone(),
-                credential: credential_2.clone(),
-                has_ever_connected: false,
-                recent_failure_count: 1,
-            },
-        );
+        let connect_failures =
+            get_connect_failures(test_id_2.clone(), &test_values.saved_network_manager).await;
+        let internal_data_2 = InternalSavedNetworkData {
+            network_id: test_id_2.clone(),
+            credential: credential_2.clone(),
+            has_ever_connected: false,
+            recent_failures: connect_failures,
+        };
+        expected_hashmap.insert(test_id_2.clone(), internal_data_2.clone());
         // Networks saved as WPA can be used to auto connect to WPA2 networks
         expected_hashmap.insert(
-            types::NetworkIdentifier { ssid: ssid_2, type_: types::SecurityType::Wpa2 },
-            InternalSavedNetworkData {
-                network_id: test_id_2.clone(),
-                credential: credential_2,
-                has_ever_connected: false,
-                recent_failure_count: 1,
-            },
+            types::NetworkIdentifier { ssid: ssid_2.clone(), type_: types::SecurityType::Wpa2 },
+            internal_data_2.clone(),
         );
         let networks = load_saved_networks(Arc::clone(&test_values.saved_network_manager)).await;
         assert_eq!(networks, expected_hashmap);
@@ -864,27 +877,6 @@ mod tests {
         };
         let credential_2 = Credential::Password("bar_pass".as_bytes().to_vec());
 
-        // create the saved networks hashmap
-        let mut saved_networks = HashMap::new();
-        saved_networks.insert(
-            test_id_1.clone(),
-            InternalSavedNetworkData {
-                network_id: test_id_1.clone(),
-                credential: credential_1.clone(),
-                has_ever_connected: true,
-                recent_failure_count: 0,
-            },
-        );
-        saved_networks.insert(
-            test_id_2.clone(),
-            InternalSavedNetworkData {
-                network_id: test_id_2.clone(),
-                credential: credential_2.clone(),
-                has_ever_connected: false,
-                recent_failure_count: 0,
-            },
-        );
-
         // build some scan results
         let mock_scan_results = vec![
             types::ScanResult {
@@ -899,35 +891,62 @@ mod tests {
             },
         ];
 
+        // create some connect failures, 3 GeneralFailures for BSSID 1 and 1 CredentialsRejected
+        // for BSSID 2
+        let bssid_1 = mock_scan_results[0].entries[0].bssid;
+        let bssid_2 = mock_scan_results[0].entries[1].bssid;
+        let recent_failures = vec![
+            connect_failure_with_bssid(bssid_1),
+            connect_failure_with_bssid(bssid_1),
+            connect_failure_with_bssid(bssid_1),
+            ConnectFailure {
+                bssid: bssid_2,
+                time: zx::Time::get_monotonic(),
+                reason: FailureReason::CredentialRejected,
+            },
+        ];
+
+        // create the saved networks hashmap
+        let mut saved_networks = HashMap::new();
+        saved_networks.insert(
+            test_id_1.clone(),
+            InternalSavedNetworkData {
+                network_id: test_id_1.clone(),
+                credential: credential_1.clone(),
+                has_ever_connected: true,
+                recent_failures: recent_failures.clone(),
+            },
+        );
+        saved_networks.insert(
+            test_id_2.clone(),
+            InternalSavedNetworkData {
+                network_id: test_id_2.clone(),
+                credential: credential_2.clone(),
+                has_ever_connected: false,
+                recent_failures: Vec::new(),
+            },
+        );
+
         // build our expected result
+        let expected_internal_data_1 = InternalSavedNetworkData {
+            network_id: test_id_1.clone(),
+            credential: credential_1.clone(),
+            has_ever_connected: true,
+            recent_failures: recent_failures.clone(),
+        };
         let expected_result = vec![
             InternalBss {
-                network_info: InternalSavedNetworkData {
-                    network_id: test_id_1.clone(),
-                    credential: credential_1.clone(),
-                    has_ever_connected: true,
-                    recent_failure_count: 0,
-                },
+                network_info: expected_internal_data_1.clone(),
                 bss_info: &mock_scan_results[0].entries[0],
                 multiple_bss_candidates: true,
             },
             InternalBss {
-                network_info: InternalSavedNetworkData {
-                    network_id: test_id_1.clone(),
-                    credential: credential_1.clone(),
-                    has_ever_connected: true,
-                    recent_failure_count: 0,
-                },
+                network_info: expected_internal_data_1.clone(),
                 bss_info: &mock_scan_results[0].entries[1],
                 multiple_bss_candidates: true,
             },
             InternalBss {
-                network_info: InternalSavedNetworkData {
-                    network_id: test_id_1.clone(),
-                    credential: credential_1.clone(),
-                    has_ever_connected: true,
-                    recent_failure_count: 0,
-                },
+                network_info: expected_internal_data_1,
                 bss_info: &mock_scan_results[0].entries[2],
                 multiple_bss_candidates: true,
             },
@@ -936,7 +955,7 @@ mod tests {
                     network_id: test_id_2.clone(),
                     credential: credential_2.clone(),
                     has_ever_connected: false,
-                    recent_failure_count: 0,
+                    recent_failures: Vec::new(),
                 },
                 bss_info: &mock_scan_results[1].entries[0],
                 multiple_bss_candidates: false,
@@ -978,13 +997,96 @@ mod tests {
                 network_id: network_id,
                 credential: Credential::None,
                 has_ever_connected: rng.gen::<bool>(),
-                recent_failure_count: rng.gen_range(0, 20),
+                recent_failures: vec![],
             },
             bss_info: &bss,
             multiple_bss_candidates: false,
         };
 
         assert_eq!(internal_bss.score(), expected_score)
+    }
+
+    #[test]
+    fn test_score_bss_prefers_less_failures() {
+        let bss_info_worse =
+            types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
+        let bss_info_better =
+            types::Bss { rssi: -60, channel: generate_channel(3), ..generate_random_bss() };
+        let (_test_id, mut internal_data) = generate_random_saved_network();
+        // Add many test failures for the worse BSS and one for the better BSS
+        let mut failures = vec![connect_failure_with_bssid(bss_info_worse.bssid); 12];
+        failures.push(connect_failure_with_bssid(bss_info_better.bssid));
+        internal_data.recent_failures = failures;
+        let bss_worse = InternalBss {
+            network_info: internal_data.clone(),
+            bss_info: &bss_info_worse,
+            multiple_bss_candidates: true,
+        };
+        let bss_better = InternalBss {
+            network_info: internal_data,
+            bss_info: &bss_info_better,
+            multiple_bss_candidates: true,
+        };
+        // Check that the better BSS has a higher score than the worse BSS.
+        assert!(bss_better.score() > bss_worse.score());
+    }
+
+    #[test]
+    fn test_score_bss_prefers_stronger_with_failures() {
+        // Test test that if one network has a few network failures but is 5 Ghz instead of 2.4,
+        // the 5 GHz network has a higher score.
+        let bss_info_worse =
+            types::Bss { rssi: -35, channel: generate_channel(3), ..generate_random_bss() };
+        let bss_info_better =
+            types::Bss { rssi: -35, channel: generate_channel(36), ..generate_random_bss() };
+        let (_test_id, mut internal_data) = generate_random_saved_network();
+        // Set the failure list to have 0 failures for the worse BSS and 4 failures for the
+        // stronger BSS.
+        internal_data.recent_failures = vec![connect_failure_with_bssid(bss_info_better.bssid); 2];
+        let bss_worse = InternalBss {
+            network_info: internal_data.clone(),
+            bss_info: &bss_info_worse,
+            multiple_bss_candidates: false,
+        };
+        let bss_better = InternalBss {
+            network_info: internal_data,
+            bss_info: &bss_info_better,
+            multiple_bss_candidates: false,
+        };
+        assert!(bss_better.score() > bss_worse.score());
+    }
+
+    #[test]
+    fn test_score_credentials_rejected_worse() {
+        // If two BSS are identical other than one failed to connect with wrong credentials and
+        // the other failed with a few connect failurs, the one with wrong credentials has a lower
+        // score.
+        let bss_info_worse =
+            types::Bss { rssi: -30, channel: generate_channel(44), ..generate_random_bss() };
+        let bss_info_better =
+            types::Bss { rssi: -30, channel: generate_channel(44), ..generate_random_bss() };
+        let (_test_id, mut internal_data) = generate_random_saved_network();
+        // Add many test failures for the worse BSS and one for the better BSS
+        let mut failures = vec![connect_failure_with_bssid(bss_info_better.bssid); 4];
+        failures.push(ConnectFailure {
+            bssid: bss_info_worse.bssid,
+            time: zx::Time::get_monotonic(),
+            reason: FailureReason::CredentialRejected,
+        });
+        internal_data.recent_failures = failures;
+
+        let bss_worse = InternalBss {
+            network_info: internal_data.clone(),
+            bss_info: &bss_info_worse,
+            multiple_bss_candidates: true,
+        };
+        let bss_better = InternalBss {
+            network_info: internal_data,
+            bss_info: &bss_info_better,
+            multiple_bss_candidates: true,
+        };
+
+        assert!(bss_better.score() > bss_worse.score());
     }
 
     #[test]
@@ -1014,7 +1116,7 @@ mod tests {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
             bss_info: &bss_info1,
             multiple_bss_candidates: true,
@@ -1031,7 +1133,7 @@ mod tests {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
             bss_info: &bss_info2,
             multiple_bss_candidates: true,
@@ -1048,7 +1150,7 @@ mod tests {
                 network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
             bss_info: &bss_info3,
             multiple_bss_candidates: false,
@@ -1118,25 +1220,35 @@ mod tests {
 
         let mut networks = vec![];
 
-        let bss_info1 = types::Bss { compatible: true, rssi: -14, ..generate_random_bss() };
+        let bss_info1 = types::Bss {
+            compatible: true,
+            rssi: -34,
+            channel: generate_channel(3),
+            ..generate_random_bss()
+        };
         networks.push(InternalBss {
             network_info: InternalSavedNetworkData {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
             bss_info: &bss_info1,
             multiple_bss_candidates: false,
         });
 
-        let bss_info2 = types::Bss { compatible: true, rssi: -100, ..generate_random_bss() };
+        let bss_info2 = types::Bss {
+            compatible: true,
+            rssi: -50,
+            channel: generate_channel(3),
+            ..generate_random_bss()
+        };
         networks.push(InternalBss {
             network_info: InternalSavedNetworkData {
                 network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
             bss_info: &bss_info2,
             multiple_bss_candidates: false,
@@ -1162,10 +1274,12 @@ mod tests {
             ))
         );
 
-        // mark the stronger network as having a failure
-        let mut modified_network = networks[0].clone();
-        modified_network.network_info.recent_failure_count = 2;
-        networks[0] = modified_network;
+        // mark the stronger network as having some failures
+        let num_failures = 4;
+        networks[0].network_info.recent_failures =
+            vec![connect_failure_with_bssid(bss_info1.bssid); num_failures];
+        networks[1].network_info.recent_failures =
+            vec![connect_failure_with_bssid(bss_info1.bssid); num_failures];
 
         // weaker network (with no failures) returned
         assert_eq!(
@@ -1188,9 +1302,8 @@ mod tests {
         );
 
         // give them both the same number of failures
-        let mut modified_network = networks[1].clone();
-        modified_network.network_info.recent_failure_count = 2;
-        networks[1] = modified_network;
+        networks[1].network_info.recent_failures =
+            vec![connect_failure_with_bssid(bss_info2.bssid.clone()); num_failures];
 
         // stronger network returned
         assert_eq!(
@@ -1240,7 +1353,7 @@ mod tests {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
             bss_info: &bss_info1,
             multiple_bss_candidates: true,
@@ -1257,7 +1370,7 @@ mod tests {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
             bss_info: &bss_info2,
             multiple_bss_candidates: true,
@@ -1274,7 +1387,7 @@ mod tests {
                 network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
             bss_info: &bss_info3,
             multiple_bss_candidates: false,
@@ -1350,7 +1463,7 @@ mod tests {
                 network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
             bss_info: &bss_info1,
             multiple_bss_candidates: false,
@@ -1362,7 +1475,7 @@ mod tests {
                 network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
                 has_ever_connected: true,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
             bss_info: &bss_info2,
             multiple_bss_candidates: false,
@@ -1661,12 +1774,14 @@ mod tests {
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_1.clone().into(),
             &credential_1.clone(),
+            [0, 0, 0, 0, 0, 0],
             fidl_sme::ConnectResultCode::Success,
             Some(fidl_common::ScanType::Passive),
         ));
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             test_id_2.clone().into(),
             &credential_2.clone(),
+            [0, 0, 0, 0, 0, 0],
             fidl_sme::ConnectResultCode::Success,
             Some(fidl_common::ScanType::Passive),
         ));
@@ -1862,12 +1977,14 @@ mod tests {
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             wpa_network_id.clone().into(),
             &credential,
+            [0, 0, 0, 0, 0, 0],
             fidl_sme::ConnectResultCode::Success,
             Some(fidl_common::ScanType::Passive),
         ));
         exec.run_singlethreaded(test_values.saved_network_manager.record_connect_result(
             wpa3_network_id.clone().into(),
             &wpa3_credential,
+            [0, 0, 0, 0, 0, 0],
             fidl_sme::ConnectResultCode::Success,
             Some(fidl_common::ScanType::Passive),
         ));
@@ -2103,7 +2220,7 @@ mod tests {
                     format!("password {}", rng.gen::<i32>()).as_bytes().to_vec(),
                 ),
                 has_ever_connected: false,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
         )
     }
@@ -2154,7 +2271,7 @@ mod tests {
                 network_id: test_id_1.clone(),
                 credential: Credential::Password("foo_pass".as_bytes().to_vec()),
                 has_ever_connected: false,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
         );
         mock_saved_networks.insert(
@@ -2163,7 +2280,7 @@ mod tests {
                 network_id: test_id_2.clone(),
                 credential: Credential::Password("bar_pass".as_bytes().to_vec()),
                 has_ever_connected: false,
-                recent_failure_count: 0,
+                recent_failures: Vec::new(),
             },
         );
         let random_saved_net = generate_random_saved_network();
@@ -2260,5 +2377,29 @@ mod tests {
         );
         // No more metrics
         assert!(cobalt_events.try_next().is_err());
+    }
+
+    /// Get the connect failures of the specified network identifier for a test. This is used
+    /// because we currently can't
+    async fn get_connect_failures(
+        id: types::NetworkIdentifier,
+        saved_networks_manager: &SavedNetworksManager,
+    ) -> Vec<ConnectFailure> {
+        saved_networks_manager
+            .lookup(id.into())
+            .await
+            .get(0)
+            .expect("failed to get config")
+            .perf_stats
+            .failure_list
+            .get_recent(zx::Time::get_monotonic() - RECENT_FAILURE_WINDOW)
+    }
+
+    fn connect_failure_with_bssid(bssid: types::Bssid) -> ConnectFailure {
+        ConnectFailure {
+            reason: FailureReason::GeneralFailure,
+            time: zx::Time::INFINITE,
+            bssid: bssid,
+        }
     }
 }

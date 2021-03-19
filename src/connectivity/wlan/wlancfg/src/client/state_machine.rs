@@ -292,7 +292,7 @@ struct ConnectingOptions {
 
 type MultipleBssCandidates = bool;
 enum SmeOperation {
-    ConnectResult(Result<fidl_sme::ConnectResultCode, anyhow::Error>),
+    ConnectResult(Result<(fidl_sme::ConnectResultCode, Box<types::Bssid>), anyhow::Error>),
     ScanResult(Option<(Box<fidl_internal::BssDescription>, MultipleBssCandidates)>),
 }
 
@@ -349,7 +349,7 @@ async fn handle_connecting_error_and_retry(
 /// - duplicate connect requests are deduped
 /// - different connect requests are serviced by passing a next_network to the DISCONNECTING state
 /// - disconnect requests cause a transition to DISCONNECTING state
-async fn connecting_state(
+async fn connecting_state<'a>(
     mut common_options: CommonStateOptions,
     mut options: ConnectingOptions,
 ) -> Result<State, ExitReason> {
@@ -442,6 +442,7 @@ async fn connecting_state(
                             return handle_connecting_error_and_retry(common_options, options).await;
                         }
                     };
+                    let bssid = Box::new(bss_info.0.bssid.clone());
                     // Send a connect request to the SME
                     let (connect_txn, remote) = create_proxy()
                         .map_err(|e| ExitReason(Err(format_err!("Failed to create proxy: {:?}", e))))?;
@@ -457,12 +458,15 @@ async fn connecting_state(
                         ExitReason(Err(format_err!("Failed to send command to wlanstack: {:?}", e)))
                     })?;
                     let pending_connect_request = wait_until_connected(connect_txn)
-                        .map(|res| SmeOperation::ConnectResult(res))
+                        .map(|res| {
+                            let result = res.map(|res| (res, bssid));
+                            SmeOperation::ConnectResult(result)
+                        })
                         .boxed();
                     internal_futures.push(pending_connect_request);
                 },
                 SmeOperation::ConnectResult(connect_result) => {
-                    let code = connect_result.map_err({
+                    let (code, bssid) = connect_result.map_err({
                         |e| ExitReason(Err(format_err!("failed to send connect to sme: {:?}", e)))
                     })?;
                     // Notify the saved networks manager. observed_in_passive_scan will be false if
@@ -475,9 +479,11 @@ async fn connecting_state(
                     common_options.saved_networks_manager.record_connect_result(
                         options.connect_request.target.network.clone().into(),
                         &options.connect_request.target.credential,
+                        *bssid,
                         code,
                         scan_type
                     ).await;
+
                     match code {
                         fidl_sme::ConnectResultCode::Success => {
                             info!("Successfully connected to network");
