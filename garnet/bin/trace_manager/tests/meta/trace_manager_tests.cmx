@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/trace_manager_tests"
+        "binary": "bin/trace_manager_tests"
     },
     "sandbox": {
         "services": [

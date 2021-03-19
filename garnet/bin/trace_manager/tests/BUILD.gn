@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -44,22 +43,23 @@ executable("trace_manager_tests_bin") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("trace_manager_tests") {
+resource("tracing.config") {
+  sources = [ "tracing.config" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
+
+fuchsia_test_component("trace_manager_tests_component") {
+  component_name = "trace_manager_tests"
+  manifest = "meta/trace_manager_tests.cmx"
   deps = [ ":trace_manager_tests_bin" ]
+}
 
-  tests = [
-    {
-      name = "trace_manager_tests"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("tracing.config")
-      dest = "tracing.config"
-    },
-  ]
+fuchsia_test_package("trace_manager_tests") {
+  test_components = [ ":trace_manager_tests_component" ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  deps = [ ":tracing.config" ]
 }

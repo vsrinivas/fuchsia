@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "trace"
@@ -58,24 +58,13 @@ source_set("options") {
   ]
 }
 
-package("trace") {
-  deps = [ ":bin" ]
+fuchsia_shell_package("trace") {
+  manifest = "meta/trace.cmx"
+  deps = [
+    ":bin",
 
-  binaries = [
-    {
-      name = "trace"
-      shell = true
-    },
+    # If your build includes the target trace tool, your $host_tools_dir
+    # contains the utilities to work with traces copied from the target.
+    "//garnet/bin/traceutil",
   ]
-
-  meta = [
-    {
-      path = rebase_path("meta/trace.cmx")
-      dest = "trace.cmx"
-    },
-  ]
-
-  # If your build includes the target trace tool, your $host_tools_dir
-  # contains the utilities to work with traces copied from the target.
-  data_deps = [ "//garnet/bin/traceutil" ]
 }

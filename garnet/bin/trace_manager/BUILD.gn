@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("lib") {
   sources = [
@@ -58,25 +58,15 @@ executable("bin") {
   ]
 }
 
-package("trace_manager") {
-  deps = [ ":bin" ]
+resource("tracing.config") {
+  sources = [ "tracing.config" ]
+  outputs = [ "data/{{source_file_part}}" ]
+}
 
-  binaries = [
-    {
-      name = "trace_manager"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/trace_manager.cmx")
-      dest = "trace_manager.cmx"
-    },
-  ]
-
-  resources = [
-    {
-      path = rebase_path("tracing.config")
-      dest = "tracing.config"
-    },
+fuchsia_package_with_single_component("trace_manager") {
+  manifest = "meta/trace_manager.cmx"
+  deps = [
+    ":bin",
+    ":tracing.config",
   ]
 }
