@@ -463,6 +463,15 @@ protocol BufferCollection {
     /// created token + children participate in constraints aggregation along
     /// with its parent.
     ///
+    /// The newly created token needs to be Sync()ed to sysmem before the new
+    /// token can be passed to BindSharedCollection().  The Sync() of the new
+    /// token can be accomplished with BufferCollection.Sync() on this
+    /// BufferCollection.  Alternately BufferCollectionToken.Sync() on the new
+    /// token also works.  A BufferCollectionToken.Sync() can be started after
+    /// any BufferCollectionToken.Duplicate() messages have been sent via the
+    /// newly created token, to also sync those additional tokens to sysmem
+    /// using a single round-trip.
+    ///
     /// These values for rights_attenuation_mask result in no attenuation (note
     /// that 0 is not on this list; 0 will output an ERROR to the system log
     /// to help diagnose the bug in client code):
