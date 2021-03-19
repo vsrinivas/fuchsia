@@ -23,9 +23,15 @@ using BlobSrcFunction = std::function<void(uint8_t* data, size_t length)>;
 
 // An in-memory representation of a blob.
 struct BlobInfo {
-  char path[PATH_MAX];
+  char path[PATH_MAX] = {0};
   std::unique_ptr<uint8_t[]> data;
-  size_t size_data;
+  size_t size_data = 0;
+
+  bool DataEquals(const uint8_t* in_data, size_t in_size) const {
+    if (!data || !in_data || in_size != size_data)
+      return false;
+    return memcmp(data.get(), in_data, in_size) == 0;
+  }
 };
 
 template <typename T, typename U>

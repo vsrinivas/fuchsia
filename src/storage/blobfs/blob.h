@@ -175,7 +175,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Exposed for testing.
   const zx::vmo& DataVmo() const { return data_mapping_.vmo(); }
 
+  // Returns whether the blob's contents are pager-backed or not.
+  bool IsPagerBacked() const;
+
  private:
+  friend class BlobLoaderTest;
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blob);
 
   // Vnode protected overrides:
@@ -268,9 +272,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // May return nullptr if the mappings have not been initialized.
   void* GetDataBuffer() const;
   void* GetMerkleTreeBuffer(const BlobLayout& blob_layout) const;
-
-  // Returns whether the blob's contents are pager-backed or not.
-  bool IsPagerBacked() const;
 
   // Returns a digest::Digest containing the blob's merkle root.
   // Equivalent to digest::Digest(GetKey()).

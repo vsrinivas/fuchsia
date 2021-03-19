@@ -31,7 +31,13 @@
 #include "src/storage/blobfs/test/unit/utils.h"
 
 namespace blobfs {
+
 namespace {
+
+constexpr uint32_t kTestBlockSize = 512;
+constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kTestBlockSize;
+
+}  // namespace
 
 using ::testing::Combine;
 using ::testing::TestParamInfo;
@@ -40,9 +46,6 @@ using ::testing::Values;
 using ::testing::ValuesIn;
 
 using block_client::FakeBlockDevice;
-
-constexpr uint32_t kBlockSize = 512;
-constexpr uint32_t kNumBlocks = 400 * kBlobfsBlockSize / kBlockSize;
 
 using TestParamType = std::tuple<CompressionAlgorithm, BlobLayoutFormat>;
 
@@ -53,7 +56,7 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     std::tie(compression_algorithm, blob_layout_format_) = GetParam();
     srand(testing::UnitTest::GetInstance()->random_seed());
 
-    auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kBlockSize);
+    auto device = std::make_unique<FakeBlockDevice>(kNumBlocks, kTestBlockSize);
     ASSERT_TRUE(device);
     FilesystemOptions options{
         .blob_layout_format = blob_layout_format_,
@@ -126,13 +129,27 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     return options_.compression_settings.compression_algorithm;
   }
 
-  uint32_t LookupInode(const BlobInfo& info) {
+  fbl::RefPtr<Blob> LookupBlob(const BlobInfo& info) {
     Digest digest;
     fbl::RefPtr<CacheNode> node;
     EXPECT_EQ(digest.Parse(info.path), ZX_OK);
     EXPECT_EQ(fs_->Cache().Lookup(digest, &node), ZX_OK);
-    auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(node));
-    return vnode->Ino();
+    return fbl::RefPtr<Blob>::Downcast(std::move(node));
+  }
+
+  uint32_t LookupInode(const BlobInfo& info) { return LookupBlob(info)->Ino(); }
+
+  std::vector<uint8_t> LoadPagedBlobData(Blob* blob) {
+    zx::vmo vmo;
+    size_t size = 0;
+    EXPECT_EQ(ZX_OK, blob->GetVmo(fuchsia_io::wire::VMO_FLAG_READ, &vmo, &size));
+    EXPECT_TRUE(vmo.is_valid());
+
+    // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
+    std::vector<uint8_t> result;
+    result.resize(size);
+    EXPECT_EQ(vmo.read(&result[0], 0, size), ZX_OK);
+    return result;
   }
 
   CompressionAlgorithm LookupCompression(const BlobInfo& info) {
@@ -145,6 +162,9 @@ class BlobLoaderTest : public TestWithParam<TestParamType> {
     EXPECT_TRUE(algorithm_or.is_ok());
     return algorithm_or.value();
   }
+
+  // This function is used to access this protected Blob member because this class is a friend.
+  const fzl::OwnedVmoMapper& GetBlobMerkleMapper(const Blob* blob) { return blob->merkle_mapping_; }
 
   void CheckMerkleTreeContents(const fzl::OwnedVmoMapper& merkle, const BlobInfo& info) {
     std::unique_ptr<MerkleTreeInfo> merkle_tree = CreateMerkleTree(
@@ -219,18 +239,16 @@ TEST_P(BlobLoaderPagedTest, SmallBlob) {
   // We explicitly don't check the compression algorithm was respected here, since files this small
   // don't need to be compressed.
 
-  auto result = loader().LoadBlobPaged(LookupInode(*info), nullptr);
-  ASSERT_TRUE(result.is_ok());
+  auto blob = LookupBlob(*info);
+  EXPECT_TRUE(blob->IsPagerBacked());
 
-  ASSERT_TRUE(result->data.vmo().is_valid());
-  ASSERT_GE(result->data.size(), info->size_data);
-  // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
-  fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
-  ASSERT_EQ(result->data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
-  EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
+  std::vector<uint8_t> data = LoadPagedBlobData(blob.get());
+  ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
 
-  EXPECT_FALSE(result->merkle.vmo().is_valid());
-  EXPECT_EQ(result->merkle.size(), 0ul);
+  // Verify there's no Merkle data for this small blob.
+  const auto& merkle = GetBlobMerkleMapper(blob.get());
+  EXPECT_FALSE(merkle.vmo().is_valid());
+  EXPECT_EQ(merkle.size(), 0ul);
 }
 
 TEST_P(BlobLoaderTest, LargeBlob) {
@@ -271,17 +289,13 @@ TEST_P(BlobLoaderPagedTest, LargeBlob) {
   ASSERT_EQ(Remount(), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
-  auto result = loader().LoadBlobPaged(LookupInode(*info), nullptr);
-  ASSERT_TRUE(result.is_ok());
+  auto blob = LookupBlob(*info);
+  EXPECT_TRUE(blob->IsPagerBacked());
 
-  ASSERT_TRUE(result->data.vmo().is_valid());
-  ASSERT_GE(result->data.size(), info->size_data);
-  // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
-  fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
-  ASSERT_EQ(result->data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
-  EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
+  std::vector<uint8_t> data = LoadPagedBlobData(blob.get());
+  ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
 
-  CheckMerkleTreeContents(result->merkle, *info);
+  CheckMerkleTreeContents(GetBlobMerkleMapper(blob.get()), *info);
 }
 
 TEST_P(BlobLoaderPagedTest, LargeBlobWithNonAlignedLength) {
@@ -290,17 +304,13 @@ TEST_P(BlobLoaderPagedTest, LargeBlobWithNonAlignedLength) {
   ASSERT_EQ(Remount(), ZX_OK);
   ASSERT_EQ(LookupCompression(*info), ExpectedAlgorithm());
 
-  auto result = loader().LoadBlobPaged(LookupInode(*info), nullptr);
-  ASSERT_TRUE(result.is_ok());
+  auto blob = LookupBlob(*info);
+  EXPECT_TRUE(blob->IsPagerBacked());
 
-  ASSERT_TRUE(result->data.vmo().is_valid());
-  ASSERT_GE(result->data.size(), info->size_data);
-  // Use vmo::read instead of direct read so that we can synchronously fail if the pager fails.
-  fbl::Array<uint8_t> buf(new uint8_t[blob_len], blob_len);
-  ASSERT_EQ(result->data.vmo().read(buf.get(), 0, blob_len), ZX_OK);
-  EXPECT_EQ(memcmp(buf.get(), info->data.get(), info->size_data), 0);
+  std::vector<uint8_t> data = LoadPagedBlobData(blob.get());
+  ASSERT_TRUE(info->DataEquals(&data[0], data.size()));
 
-  CheckMerkleTreeContents(result->merkle, *info);
+  CheckMerkleTreeContents(GetBlobMerkleMapper(blob.get()), *info);
 }
 
 TEST_P(BlobLoaderTest, MediumBlobWithRoomForMerkleTree) {
@@ -432,5 +442,4 @@ INSTANTIATE_TEST_SUITE_P(/*no prefix*/, BlobLoaderPagedTest,
                                  ValuesIn(kBlobLayoutFormats)),
                          GetTestParamName);
 
-}  // namespace
 }  // namespace blobfs
