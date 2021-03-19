@@ -329,9 +329,6 @@ impl TestServer {
             // Disable stdout capture in the Rust test harness
             // so we can capture it ourselves
             "--nocapture".to_owned(),
-            // fxbug.dev(66860): Don't print in color
-            "--color".to_owned(),
-            "never".to_owned(),
         ];
         args.extend(test_component.args.clone());
         if let Some(user_args) = &run_options.arguments {
