@@ -266,7 +266,7 @@ void DeviceImpl::OnStreamRequested(
   oss << "camera_c" << current_configuration_index_ << "_s" << index;
   executor_.schedule_task(
       sysmem_allocator_
-          .SafelyBindSharedCollection(
+          .BindSharedCollection(
               std::move(token),
               configs_[current_configuration_index_].stream_configs[index].constraints, oss.str())
           .then([this, index, format_index, request = std::move(request),
@@ -311,7 +311,6 @@ void DeviceImpl::MaybeConnectToLegacyStreams() {
       auto& [index, params] = *it;
       if (preceding_streams_bound ||
           params.requeue_count++ == kMaxLegacyStreamRequestRequeueCount) {
-
         // Definitely need an error log message if timed out because this affects the normal
         // Sherlock use cases!
         if (!preceding_streams_bound) {

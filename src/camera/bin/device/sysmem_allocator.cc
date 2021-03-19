@@ -115,7 +115,7 @@ fit::promise<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t>
 SysmemAllocator::SafelyBindSharedCollection(
     fuchsia::sysmem::BufferCollectionTokenHandle token,
     fuchsia::sysmem::BufferCollectionConstraints constraints, std::string name) {
-  TRACE_DURATION("camera", "SysmemAllocator::BindSharedCollection");
+  TRACE_DURATION("camera", "SysmemAllocator::SafelyBindSharedCollection");
   return WaitForFreeSpace(constraints)
       .then([this, token = std::move(token), constraints,
              name = std::move(name)](const fit::result<>& result) mutable
@@ -133,6 +133,19 @@ SysmemAllocator::SafelyBindSharedCollection(
       })
       .wrap_with(serialize_requests_)
       .wrap_with(scope_);
+}
+
+fit::promise<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t>
+SysmemAllocator::BindSharedCollection(fuchsia::sysmem::BufferCollectionTokenHandle token,
+                                      fuchsia::sysmem::BufferCollectionConstraints constraints,
+                                      std::string name) {
+  TRACE_DURATION("camera", "SysmemAllocator::BindSharedCollection");
+  // We expect sysmem to have free space, so bind the provided token now.
+  fuchsia::sysmem::BufferCollectionPtr collection;
+  allocator_->BindSharedCollection(std::move(token), collection.NewRequest());
+  collection->SetName(kNamePriority, std::move(name));
+  collection->SetConstraints(true, constraints);
+  return WaitForBuffersAllocated(std::move(collection)).wrap_with(scope_);
 }
 
 fit::promise<> SysmemAllocator::WaitForFreeSpace(

@@ -33,6 +33,16 @@ class SysmemAllocator {
       fuchsia::sysmem::BufferCollectionTokenHandle token,
       fuchsia::sysmem::BufferCollectionConstraints constraints, std::string name);
 
+  // This method will bind `token` to a new `BufferCollection` and `name` and `constraints` will
+  // be set on the collection. Upon a successful allocation, the collection will be closed and
+  // the `BufferCollectionInfo_2` will be returned by the promise. It does not check for free space
+  // before allocation.
+  //
+  // An error is returned from the promise if the allocation is unable to complete for any reason.
+  fit::promise<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> BindSharedCollection(
+      fuchsia::sysmem::BufferCollectionTokenHandle token,
+      fuchsia::sysmem::BufferCollectionConstraints constraints, std::string name);
+
  private:
   // Returns a promise that completes when we expect sysmem to have sufficient free space to be
   // able to allocate a buffer with `constraints`.
