@@ -16,36 +16,6 @@ DEVTOOLS_LABEL="$(echo "${DEVTOOLS_VERSION}" | tr ':/' '_')"
 # Verifies that the correct commands are run before starting Fuchsia DevTools
 TEST_fdevtools_with_authkeys_fuchsia_devtools_directory() {
   btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos/macos.zip"
-  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/linux/fuchsia_devtools"
-
-  # Run command.
-  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" \
-    --extra-fdt-arg-1 --extra-fdt-arg-2 \
-    --version "${DEVTOOLS_VERSION}" \
-    --private-key "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/private_key" > "${BT_TEMP_DIR}/launch_devtools.txt"
-
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "${FUCHSIA_WORK_DIR}/sshconfig"
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "FDT_SSH_KEY"
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/private_key"
-
-  # Verify that cipd was called to download the correct path
-  # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/cipd.mock_state"
-  gn-test-check-mock-args _ANY_ ensure -ensure-file _ANY_ -root "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}"
-
-  # Verify that the executable is called, no arguments are passed
-  # shellcheck disable=SC1090
-  if is-mac; then
-    source "${PATH_DIR_FOR_TEST}/open.mock_state"
-    gn-test-check-mock-args "${PATH_DIR_FOR_TEST}/open" "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app" "--args" "--extra-fdt-arg-1" "--extra-fdt-arg-2"
-  else
-    source "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/linux/fuchsia_devtools.mock_state"
-    gn-test-check-mock-args "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/linux/fuchsia_devtools" "--extra-fdt-arg-1" "--extra-fdt-arg-2"
-  fi
-}
-
-TEST_fdevtools_with_authkeys_no_fuchsia_devtools_directory() {
-  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos/macos.zip"
   btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/linux/fuchsia_devtools"
 
   # Run command.
@@ -74,9 +44,42 @@ TEST_fdevtools_with_authkeys_no_fuchsia_devtools_directory() {
   fi
 }
 
+TEST_fdevtools_with_authkeys_no_fuchsia_devtools_directory() {
+  if is-mac; then
+    btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos.zip"
+  else
+    btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools"
+  fi
+
+  # Run command.
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" \
+    --extra-fdt-arg-1 --extra-fdt-arg-2 \
+    --version "${DEVTOOLS_VERSION}" \
+    --private-key "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/private_key" > "${BT_TEMP_DIR}/launch_devtools.txt"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "${FUCHSIA_WORK_DIR}/sshconfig"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "FDT_SSH_KEY"
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "${BT_TEMP_DIR}/scripts/sdk/gn/base/testdata/private_key"
+
+  # Verify that cipd was called to download the correct path
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/cipd.mock_state"
+  gn-test-check-mock-args _ANY_ ensure -ensure-file _ANY_ -root "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}"
+
+  # Verify that the executable is called, no arguments are passed
+  # shellcheck disable=SC1090
+  if is-mac; then
+    source "${PATH_DIR_FOR_TEST}/open.mock_state"
+    gn-test-check-mock-args "${PATH_DIR_FOR_TEST}/open" "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app" "--args" "--extra-fdt-arg-1" "--extra-fdt-arg-2"
+  else
+    source "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools.mock_state"
+    gn-test-check-mock-args "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools" "--extra-fdt-arg-1" "--extra-fdt-arg-2"
+  fi
+}
+
 TEST_fdevtools_no_args_unzip_on_mac() {
   if is-mac; then
-    btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos/macos.zip"
+    btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos.zip"
 
     # Set the version file to match the mock
     echo "git_revision_unknown" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devtools.version"
@@ -94,7 +97,7 @@ TEST_fdevtools_no_args_unzip_on_mac() {
     # Verify that unzip was called if the directory is not already present
     # shellcheck disable=SC1090
     source "${PATH_DIR_FOR_TEST}/unzip.mock_state"
-    gn-test-check-mock-args "${PATH_DIR_FOR_TEST}/unzip" "-qq" "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos/macos.zip" "-d" "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted-temp"
+    gn-test-check-mock-args "${PATH_DIR_FOR_TEST}/unzip" "-qq" "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos.zip" "-d" "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted-temp"
 
     # Verify that the executable is called, no arguments are passed
     # shellcheck disable=SC1090
@@ -104,36 +107,6 @@ TEST_fdevtools_no_args_unzip_on_mac() {
 }
 
 TEST_fdevtools_noargs_fuchsia_devtools_directory() {
-  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos/macos.zip"
-  btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/linux/fuchsia_devtools"
-
-  # Set the version file to match the mock
-  echo "git_revision_unknown" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devtools.version"
-
-  # Run command.
-  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" > "${BT_TEMP_DIR}/launch_devtools.txt"
-
-  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "${FUCHSIA_WORK_DIR}/sshconfig"
-
-
-  # Verify that cipd was called to download the correct path
-  # shellcheck disable=SC1090
-  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/cipd.mock_state"
-  gn-test-check-mock-args _ANY_ ensure -ensure-file _ANY_ -root "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}"
-
-  # Verify that the executable is called, no arguments are passed
-  if is-mac; then
-    # shellcheck disable=SC1090
-    source "${PATH_DIR_FOR_TEST}/open.mock_state"
-    gn-test-check-mock-args "${PATH_DIR_FOR_TEST}/open" "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app" "--args"
-  else
-    # shellcheck disable=SC1090
-    source "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/linux/fuchsia_devtools.mock_state"
-    gn-test-check-mock-args "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/linux/fuchsia_devtools"
-  fi
-}
-
-TEST_fdevtools_noargs_no_fuchsia_devtools_directory() {
   btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos/macos.zip"
   btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/linux/fuchsia_devtools"
 
@@ -152,13 +125,46 @@ TEST_fdevtools_noargs_no_fuchsia_devtools_directory() {
   gn-test-check-mock-args _ANY_ ensure -ensure-file _ANY_ -root "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}"
 
   # Verify that the executable is called, no arguments are passed
+  if is-mac; then
+    # shellcheck disable=SC1090
+    source "${PATH_DIR_FOR_TEST}/open.mock_state"
+    gn-test-check-mock-args "${PATH_DIR_FOR_TEST}/open" "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app" "--args"
+  else
+    # shellcheck disable=SC1090
+    source "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/linux/fuchsia_devtools.mock_state"
+    gn-test-check-mock-args "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/linux/fuchsia_devtools"
+  fi
+}
+
+TEST_fdevtools_noargs_no_fuchsia_devtools_directory() {
+  if is-mac; then
+    btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/macos.zip"
+  else
+    btf::make_mock "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools"
+  fi
+
+  # Set the version file to match the mock
+  echo "git_revision_unknown" > "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/devtools.version"
+
+  # Run command.
+  BT_EXPECT "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/fdevtools.sh" > "${BT_TEMP_DIR}/launch_devtools.txt"
+
+  BT_EXPECT_FILE_CONTAINS_SUBSTRING "${BT_TEMP_DIR}/launch_devtools.txt" "${FUCHSIA_WORK_DIR}/sshconfig"
+
+
+  # Verify that cipd was called to download the correct path
+  # shellcheck disable=SC1090
+  source "${BT_TEMP_DIR}/scripts/sdk/gn/base/bin/cipd.mock_state"
+  gn-test-check-mock-args _ANY_ ensure -ensure-file _ANY_ -root "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}"
+
+  # Verify that the executable is called, no arguments are passed
   # shellcheck disable=SC1090
   if is-mac; then
     source "${PATH_DIR_FOR_TEST}/open.mock_state"
     gn-test-check-mock-args "${PATH_DIR_FOR_TEST}/open" "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools/macos-extracted/Fuchsia DevTools.app" "--args"
   else
-    source "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/linux/fuchsia_devtools.mock_state"
-    gn-test-check-mock-args "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/linux/fuchsia_devtools"
+    source "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools.mock_state"
+    gn-test-check-mock-args "${FUCHSIA_WORK_DIR}/fuchsia_devtools-${DEVTOOLS_LABEL}/fuchsia_devtools"
   fi
 }
 
