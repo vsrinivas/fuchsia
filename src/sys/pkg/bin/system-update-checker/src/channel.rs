@@ -29,7 +29,6 @@ use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
 use std::time::Duration;
-use sysconfig_client::channel::OtaUpdateChannelConfig;
 use thiserror::Error;
 
 static CURRENT_CHANNEL: &'static str = "current_channel.json";
@@ -240,13 +239,9 @@ impl<S: ServiceConnect> TargetChannelManager<S> {
         // Write to target_channel.json
         write_channel(&self.path, &channel)?;
 
-        // Save it to self.target_channel before writing to sysconfig (which might fail) to be
-        // consistent with target_channel.json.
+        // Save it to self.target_channel to be consistent with target_channel.json.
         *self.target_channel.lock() = Some(channel.clone());
 
-        // Write to sysconfig
-        let config = OtaUpdateChannelConfig::new(&channel, &channel)?;
-        write_channel_config(&config).await?;
         Ok(())
     }
 
@@ -304,27 +299,6 @@ fn write_channel(path: impl AsRef<Path>, channel: impl Into<String>) -> Result<(
         serde_json::to_writer(io::BufWriter::new(f), &channel)?;
     };
     fs::rename(temp_path, path)
-}
-
-#[cfg(not(test))]
-use sysconfig_client::channel::write_channel_config;
-
-#[cfg(test)]
-use mock_sysconfig::write_channel_config;
-#[cfg(test)]
-mod mock_sysconfig {
-    use super::*;
-
-    thread_local!(static LAST_CONFIG: Mutex<Option<OtaUpdateChannelConfig>> = Mutex::new(None));
-
-    pub async fn write_channel_config(config: &OtaUpdateChannelConfig) -> Result<(), Error> {
-        LAST_CONFIG.with(|last_config| *last_config.lock() = Some(config.clone()));
-        Ok(())
-    }
-
-    pub fn take_last_config() -> Option<OtaUpdateChannelConfig> {
-        LAST_CONFIG.with(|last_config| last_config.lock().take())
-    }
 }
 
 #[derive(Debug, Error)]
@@ -769,10 +743,6 @@ mod tests {
         channel_manager.set_target_channel("target-channel".to_string()).await.unwrap();
         assert_eq!(channel_manager.get_target_channel(), Some("target-channel".to_string()));
         assert_eq!(read_channel(&target_channel_path).unwrap(), "target-channel");
-        assert_eq!(
-            mock_sysconfig::take_last_config(),
-            Some(OtaUpdateChannelConfig::new("target-channel", "target-channel").unwrap())
-        );
     }
 
     #[derive(Clone)]

@@ -12,7 +12,6 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/io_util",
-    "//garnet/lib/rust/sysconfig-client",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt-rustc",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.mem:fuchsia.mem-rustc",
