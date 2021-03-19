@@ -43,20 +43,6 @@ _all_named_envs += [
   },
 ]
 
-bt_astro_astro_env = {
-  dimensions = {
-    device_type = "Astro"
-    pool = "fuchsia.tests.connectivity"
-    testbed = "bt_astro_astro"
-  }
-}
-_all_named_envs += [
-  {
-    name = "bt_astro_astro"
-    env = bt_astro_astro_env
-  },
-]
-
 linux_env = {
   dimensions = {
     os = "Linux"
