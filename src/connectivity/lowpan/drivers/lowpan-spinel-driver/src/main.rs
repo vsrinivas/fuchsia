@@ -240,7 +240,14 @@ async fn prepare_to_run(
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    use std::path::Path;
+
     fuchsia_syslog::init_with_tags(&["lowpan-spinel-driver"]).context("initialize logging")?;
+
+    if Path::new("/config/data/bootstrap_config.json").exists() {
+        fx_log_err!("Bootstrapping ot-stack. Skipping lowpan-spinel-driver launch");
+        return Ok(());
+    }
 
     let args: DriverArgs = argh::from_env();
     let mut attempt_count = 0;

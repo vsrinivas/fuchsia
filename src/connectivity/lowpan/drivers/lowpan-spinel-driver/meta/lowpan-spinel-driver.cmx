@@ -9,6 +9,9 @@
         "dev": [
             "class/ot-radio"
         ],
+        "features": [
+            "config-data"
+        ],
         "pkgfs": [
             "packages"
         ],
