@@ -17,6 +17,7 @@ rustc_library("packet-encoding") {
 }
 
 fuchsia_unittest_package("packet-encoding-tests") {
+  v2 = true
   deps = [ ":packet-encoding_test" ]
 }
 

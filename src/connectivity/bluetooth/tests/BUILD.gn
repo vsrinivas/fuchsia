@@ -4,15 +4,6 @@
 
 import("//src/sys/build/components.gni")
 
-fuchsia_unittest_component("bt-lib-fidl-unittests") {
-  manifest = "meta/bt-lib-fidl-unittests.cmx"
-  deps = [ "//src/connectivity/bluetooth/lib/fidl:tests" ]
-}
-
-fuchsia_test_package("bluetooth-tests") {
-  test_components = [ ":bt-lib-fidl-unittests" ]
-}
-
 # Define a name provider, which is required for BT-GAP
 fuchsia_component("device-name-provider") {
   testonly = true
@@ -23,7 +14,6 @@ fuchsia_component("device-name-provider") {
 group("tests") {
   testonly = true
   deps = [
-    ":bluetooth-tests",
     "audio-device-output-harness",
     "bt-bonding-integration:bt-bonding-integration-tests",
     "bt-gap-lifecycle:bt-gap-lifecycle-tests",

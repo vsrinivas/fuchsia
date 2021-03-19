@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("fidl") {
   sources = [ "hanging_getter.h" ]
@@ -10,9 +11,8 @@ source_set("fidl") {
   public_deps = [ "//zircon/public/lib/fit" ]
 }
 
-executable("tests") {
+executable("tests_bin") {
   testonly = true
-
   output_name = "bt-lib-fidl-unittests"
 
   sources = [ "hanging_getter_unittest.cc" ]
@@ -23,4 +23,14 @@ executable("tests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
+}
+
+fuchsia_unittest_package("bt-lib-fidl-tests") {
+  v2 = true
+  deps = [ ":tests_bin" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":bt-lib-fidl-tests" ]
 }

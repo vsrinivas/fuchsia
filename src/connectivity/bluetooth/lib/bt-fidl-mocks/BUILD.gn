@@ -35,6 +35,7 @@ rustc_library("bt-fidl-mocks") {
 }
 
 fuchsia_unittest_package("bt-fidl-mocks-tests") {
+  v2 = true
   deps = [ ":bt-fidl-mocks_test" ]
 }
 
