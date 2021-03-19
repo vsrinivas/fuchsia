@@ -2,10 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   name = "vsock_service"
@@ -58,28 +57,11 @@ rustc_library("lib") {
   ]
 }
 
-package("vsock_service") {
+fuchsia_package_with_single_component("vsock_service") {
+  manifest = "meta/vsock_service.cmx"
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "vsock_service"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/vsock_service.cmx")
-      dest = "vsock_service.cmx"
-    },
-  ]
 }
 
-test_package("vsock_service-tests") {
+fuchsia_unittest_package("vsock_service-tests") {
   deps = [ ":lib_test" ]
-
-  tests = [
-    {
-      name = "vsock_service_lib_lib_test"
-    },
-  ]
 }
