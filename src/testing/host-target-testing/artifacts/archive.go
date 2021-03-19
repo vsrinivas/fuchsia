@@ -184,10 +184,10 @@ func (a *Archive) download(ctx context.Context, buildID string, fromRoot bool, d
 		}
 
 		stdout, stderr, err := util.RunCommand(ctx, a.artifactsPath, args...)
+		if len(stdout) != 0 {
+			logger.Infof(ctx, "artifacts stdout:\n%s", stdout)
+		}
 		if err != nil {
-			if len(stdout) != 0 {
-				logger.Infof(ctx, "artifacts stdout:\n%s", stdout)
-			}
 			if len(stderr) != 0 {
 				logger.Infof(ctx, "artifacts stderr:\n%s", stderr)
 				return fmt.Errorf("artifacts failed: %w: %s", err, string(stderr))
