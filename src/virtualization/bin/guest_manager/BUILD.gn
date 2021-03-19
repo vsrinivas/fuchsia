@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -51,19 +51,9 @@ executable("bin") {
   deps = [ ":lib" ]
 }
 
-package("guest_manager") {
-  binaries = [
-    {
-      name = "guest_manager"
-    },
-  ]
+fuchsia_package_with_single_component("guest_manager") {
+  manifest = "meta/guest_manager.cmx"
   deps = [ ":bin" ]
-  meta = [
-    {
-      path = rebase_path("meta/guest_manager.cmx")
-      dest = "guest_manager.cmx"
-    },
-  ]
 }
 
 executable("guest_manager_unittests") {
@@ -80,15 +70,11 @@ executable("guest_manager_unittests") {
   ]
 }
 
-test_package("guest_manager_tests") {
+fuchsia_unittest_package("guest_manager_tests") {
   deps = [ ":guest_manager_unittests" ]
-
-  tests = [
-    {
-      name = "guest_manager_unittests"
-      log_settings = {
-        max_severity = "ERROR"
-      }
-    },
-  ]
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
 }
