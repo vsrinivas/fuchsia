@@ -18,7 +18,8 @@ use {
     },
 };
 
-const DEFAULT_COLLECTION_NAME: &'static str = "topology_builder_collection";
+/// The default name of the child component collection that contains built topologies.
+pub const DEFAULT_COLLECTION_NAME: &'static str = "topology_builder_collection";
 const FRAMEWORK_INTERMEDIARY_CHILD_NAME: &'static str = "topology_builder_framework_intermediary";
 
 pub mod builder;
