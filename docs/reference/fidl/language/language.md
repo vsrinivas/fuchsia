@@ -49,31 +49,36 @@ resource, struct, table, union, using, xunion.
 
 ### Identifiers
 
-FIDL identifiers must match the regex `[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?`. In
-words: identifiers must start with a letter, can contain letters, numbers, and
-underscores, but cannot end with an underscore.
+FIDL _identifiers_ label declarations and their members. FIDL identifiers must
+match the regex `[a-zA-Z]([a-zA-Z0-9_]*[a-zA-Z0-9])?`. In words: identifiers
+must start with a letter, can contain letters, numbers, and underscores, but
+cannot end with an underscore.
 
-FIDL library identifiers must match the regex `[a-z][a-z0-9]*`. In words:
-library identifiers must start with a lowercase letter, can contain lowercase
-letters, and numbers (they cannot contain uppercase letters, nor underscores).
+```fidl
+// a struct named "Foo"
+struct Foo { };
 
-Identifiers are case-sensitive.
+// an enum named "enum", containing a single member
+enum enum { WITH_A_MEMBER = 1; };
+```
+
+Note: While using keywords as identifiers is supported, it can lead to
+confusion, and should therefore be considered on a case-by-case basis. See the
+`Names` section of the [Style Rubric][naming-style].
+
+FIDL _library names_ label [FIDL libraries](#libraries). FIDL library names
+consist of one or more elements each matching the regex `[a-z][a-z0-9]*`. In
+words: library name elements must start with a lowercase letter, can contain
+lowercase letters, and numbers (they cannot contain uppercase letters, nor
+underscores). Library names are used in [Qualified
+Identifiers](#qualified-identifiers).
 
 ```fidl
 // a library named "foo"
 library foo;
-
-// a struct named "Foo"
-struct Foo { };
-
-// a struct named "struct"
-struct struct { };
 ```
 
-Note: While using keywords as identifiers is supported, it can lead to
-confusion, and should the be considered on a case-by-case basis.
-See the `Names` section of the
-[Style Rubric][naming-style]
+Identifiers and library names are case-sensitive.
 
 ### Qualified Identifiers {#qualified-identifiers}
 
@@ -168,10 +173,6 @@ file, much like C.
 
 Libraries are named containers of FIDL declarations.
 
-Each library has a name consisting of a single identifier (e.g., "objects"),
-or multiple identifiers separated by dots (e.g., "fuchsia.composition").
-Library names are used in [Qualified Identifiers](#qualified-identifiers).
-
 ```fidl
 // library identifier separated by dots
 library fuchsia.composition;
@@ -181,7 +182,6 @@ using fuchsia.buffers;
 
 // "using" to import library "fuchsia.geometry" and create a shortform called "geo"
 using fuchsia.geometry as geo;
-
 ```
 
 Libraries may declare that they use other libraries with a "using" declaration.
