@@ -121,10 +121,10 @@ func getData(tc testCase) []byte {
 	return buf.Bytes()
 }
 
-func writeTestCase(corpusDir string, tc testCase) (distributionEntry, error) {
+func writeTestCase(hostDir string, packageDataDir string, tc testCase) (distributionEntry, error) {
 	data := getData(tc)
 
-	filePath := path.Join(corpusDir, tc.name)
+	filePath := path.Join(hostDir, tc.name)
 	file, err := os.Create(filePath)
 	if err != nil {
 		return distributionEntry{}, err
@@ -137,17 +137,20 @@ func writeTestCase(corpusDir string, tc testCase) (distributionEntry, error) {
 
 	return distributionEntry{
 		Source:      filePath,
-		Destination: path.Join("corpus", tc.name),
+		Destination: path.Join("data", packageDataDir, tc.name),
 	}, err
 }
 
 func GenerateConformanceTests(gidl gidlir.All, _ fidl.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
-	if config.FuzzerCorpusDir == "" {
-		return nil, errors.New("Must specify --fuzer-corpus-dir when generating fuzzer_corpus")
+	if config.FuzzerCorpusHostDir == "" {
+		return nil, errors.New("Must specify --fuzzer-corpus-host-dir when generating fuzzer_corpus")
+	}
+	if config.FuzzerCorpusPackageDataDir == "" {
+		return nil, errors.New("Must specify --fuzzer-corpus-package-data-dir when generating fuzzer_corpus")
 	}
 
-	os.RemoveAll(config.FuzzerCorpusDir)
-	err := os.MkdirAll(config.FuzzerCorpusDir, os.ModePerm)
+	os.RemoveAll(config.FuzzerCorpusHostDir)
+	err := os.MkdirAll(config.FuzzerCorpusHostDir, os.ModePerm)
 	if err != nil {
 		return nil, err
 	}
@@ -160,7 +163,7 @@ func GenerateConformanceTests(gidl gidlir.All, _ fidl.Root, config gidlconfig.Ge
 		convertDecodeFailures(gidl.DecodeFailure),
 	} {
 		for _, tc := range tcs {
-			entry, err := writeTestCase(config.FuzzerCorpusDir, tc)
+			entry, err := writeTestCase(config.FuzzerCorpusHostDir, config.FuzzerCorpusPackageDataDir, tc)
 			if err != nil {
 				return nil, err
 			}

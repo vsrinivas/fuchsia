@@ -95,11 +95,12 @@ type GIDLFlags struct {
 	Language *string
 	Type     *string
 	// TODO(fxbug.dev/52371) It should not be necessary to specify the number of generated files.
-	NumOutputFiles            *int
-	Out                       *string
-	RustBenchmarksFidlLibrary *string
-	CppBenchmarksFidlLibrary  *string
-	FuzzerCorpusDir           *string
+	NumOutputFiles             *int
+	Out                        *string
+	RustBenchmarksFidlLibrary  *string
+	CppBenchmarksFidlLibrary   *string
+	FuzzerCorpusHostDir        *string
+	FuzzerCorpusPackageDataDir *string
 }
 
 // Valid indicates whether the parsed Flags are valid to be used.
@@ -118,8 +119,10 @@ var flags = GIDLFlags{
 		"name for the fidl library used in the rust benchmarks"),
 	CppBenchmarksFidlLibrary: flag.String("cpp-benchmarks-fidl-library", "",
 		"name for the fidl library used in the cpp benchmarks"),
-	FuzzerCorpusDir: flag.String("fuzzer-corpus-dir", "",
+	FuzzerCorpusHostDir: flag.String("fuzzer-corpus-host-dir", "",
 		"output directory for fuzzer_corpus"),
+	FuzzerCorpusPackageDataDir: flag.String("fuzzer-corpus-package-data-dir", "",
+		"directory to which fuzzer_corpus output files are mapped in their fuchsia package's data directory"),
 }
 
 func parseGidlIr(filename string) gidlir.All {
@@ -165,8 +168,11 @@ func main() {
 	if *flags.CppBenchmarksFidlLibrary != "" {
 		config.CppBenchmarksFidlLibrary = *flags.CppBenchmarksFidlLibrary
 	}
-	if *flags.FuzzerCorpusDir != "" {
-		config.FuzzerCorpusDir = *flags.FuzzerCorpusDir
+	if *flags.FuzzerCorpusHostDir != "" {
+		config.FuzzerCorpusHostDir = *flags.FuzzerCorpusHostDir
+	}
+	if *flags.FuzzerCorpusPackageDataDir != "" {
+		config.FuzzerCorpusPackageDataDir = *flags.FuzzerCorpusPackageDataDir
 	}
 
 	ir := parseFidlJSONIr(*flags.JSONPath)

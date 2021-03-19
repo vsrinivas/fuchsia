@@ -8,6 +8,8 @@ import("//build/fuzzing/fuzzer_package.gni")
 import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
+corpus_label_and_dir = "corpus"
+
 #
 # Fuzzer
 #
@@ -19,7 +21,7 @@ fuzzer("conformance-fuzzer") {
     "//zircon/system/public",
   ]
 
-  corpus = ":distribution_entries_file"
+  corpus = ":$corpus_label_and_dir"
 }
 
 fuzzer_package("fidl-fuzzers") {
@@ -39,13 +41,22 @@ gidl("generate_conformance_test") {
   inputs = conformance_suite_gidl_files
   fidl = conformance_suite_fidl_target
   output = conformance_test_source
+
+  # Fuzzer components expect the seed corpus to be in a package data subdirectory (under `pkg/data`)
+  # that matches the GN label of the corresponding corpus target.
   extra_args = [
-    "--fuzzer-corpus-dir",
-    rebase_path("$target_gen_dir/corpus", root_build_dir),
+    "--fuzzer-corpus-host-dir",
+
+    # Location from build on host is relative to `root_build_dir`.
+    rebase_path("$target_gen_dir/$corpus_label_and_dir", root_build_dir),
+    "--fuzzer-corpus-package-data-dir",
+
+    # Location served to device is relative to `root_gen_dir`.
+    rebase_path("$target_gen_dir/$corpus_label_and_dir", root_gen_dir),
   ]
 }
 
-distribution_entries_file("distribution_entries_file") {
+distribution_entries_file(corpus_label_and_dir) {
   testonly = true
   file = conformance_test_source
   deps = [ ":generate_conformance_test" ]

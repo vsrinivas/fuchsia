@@ -10,10 +10,13 @@ var DefaultBindingsDenylist = []string{"reference"}
 
 // A config passed to generators.
 type GeneratorConfig struct {
-	// Name for the fidl library used in rust benchmarks.
+	// RustBenchmarksFidlLibrary is the name for the fidl library used in rust benchmarks.
 	RustBenchmarksFidlLibrary string
-	// Name for the fidl library used in cpp benchmarks.
+	// CppBenchmarksFidlLibrary is the name for the fidl library used in cpp benchmarks.
 	CppBenchmarksFidlLibrary string
-	// Directory for generated conformance test fuzzer corpus.
-	FuzzerCorpusDir string
+	// FuzzerCorpusHostDir is the directory for generated conformance test fuzzer corpus.
+	FuzzerCorpusHostDir string
+	// FuzzerCorpusPackageDataDir is the directory to which corpus files are mapped in their fuchsia
+	// package's data directory.
+	FuzzerCorpusPackageDataDir string
 }
