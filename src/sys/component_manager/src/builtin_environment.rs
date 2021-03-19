@@ -613,9 +613,22 @@ impl BuiltinEnvironment {
         let hub = Arc::new(Hub::new(root_component_url.as_str().to_owned())?);
         model.root.hooks.install(hub.hooks()).await;
 
+        // Set up the Component Tree Diagnostics runtime statistics.
         let component_tree_stats =
-            Arc::new(ComponentTreeStats::new(inspector.root().create_child("tree_stats")));
+            ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
         model.root.hooks.install(component_tree_stats.hooks()).await;
+
+        // Serve stats about inspect in a lazy node.
+        inspector.root().record_lazy_values("inspect_stats", || {
+            async move {
+                let inspector = Inspector::new();
+                let stats_node = inspector.root().create_child("inspect_stats");
+                inspector.write_stats_to(&stats_node);
+                inspector.root().record(stats_node);
+                Ok(inspector)
+            }
+            .boxed()
+        });
 
         // Set up the capability ready notifier.
         let capability_ready_notifier =

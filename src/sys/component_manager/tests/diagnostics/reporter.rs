@@ -22,16 +22,50 @@ async fn main() {
     assert_eq!(data.len(), 1, "expected 1 match: {:?}", data);
     assert_data_tree!(data[0].payload.as_ref().unwrap(), root: {
         "fuchsia.inspect.Health": {
-            "start_timestamp_nanos": AnyProperty,
-            "status": "OK"
+            start_timestamp_nanos: AnyProperty,
+            status: "OK"
         },
-        "tree_stats": {
-            "/archivist:0": {
-                "start": AnyProperty
+        cpu_stats: {
+            measurements: {
+                "/archivist:0": {
+                    "@samples": {
+                        "0": {
+                            timestamp: AnyProperty,
+                            cpu_time: AnyProperty,
+                            queue_time: AnyProperty,
+                        }
+                    }
+                },
+                "/reporter:0": {
+                    "@samples": {
+                        "0": {
+                            timestamp: AnyProperty,
+                            cpu_time: AnyProperty,
+                            queue_time: AnyProperty,
+                        }
+                    }
+                },
+                "<component_manager>": {
+                    "@samples": {
+                        "0": {
+                            timestamp: AnyProperty,
+                            cpu_time: AnyProperty,
+                            queue_time: AnyProperty,
+                        }
+                    }
+                },
+                inspect_stats: {
+                    current_size: 4096u64,
+                    maximum_size: 262144u64,
+                    total_dynamic_children: 0u64,
+                }
             },
-            "/reporter:0": {
-                "start": AnyProperty
-            }
+            processing_times_ns: AnyProperty,
+        },
+        inspect_stats: {
+            current_size: 4096u64,
+            maximum_size: 262144u64,
+            total_dynamic_children: 0u64,
         }
     });
 

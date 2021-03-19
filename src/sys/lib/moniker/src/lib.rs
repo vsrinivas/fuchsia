@@ -407,7 +407,7 @@ impl fmt::Display for AbsoluteMoniker {
 /// One of:
 /// - An absolute moniker
 /// - A marker representing component manager's realm
-#[derive(Eq, PartialEq, Debug, Clone, Hash)]
+#[derive(Eq, Ord, PartialOrd, PartialEq, Debug, Clone, Hash)]
 pub enum ExtendedMoniker {
     ComponentInstance(AbsoluteMoniker),
     ComponentManager,
