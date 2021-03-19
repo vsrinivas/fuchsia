@@ -564,7 +564,9 @@ void ExampleProtocol_Proxy::Method(::exampleusing::Empty arg) {
       nullptr);
 }
 
-ExampleProtocol_Stub::ExampleProtocol_Stub(ExampleProtocol_clazz* impl)
+ExampleProtocol_Stub::ExampleProtocol_Stub(
+    ::fidl::test::placementofattributes::ExampleProtocol_Stub::
+        ExampleProtocol_clazz* impl)
     : impl_(impl) {
   (void)impl_;
 }

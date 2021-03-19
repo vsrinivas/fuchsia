@@ -36,8 +36,8 @@ using {{ .Name }}Handle = ::fidl::InterfaceHandle<{{ .Name }}>;
   {{- end }}
 {{- end }}
 
-{{ EnsureNamespace .RequestEncoderName }}
-class {{ .RequestEncoderName.Name }} {
+{{ EnsureNamespace .RequestEncoder }}
+class {{ .RequestEncoder.Name }} {
  public:
   {{- with $protocol := . }}
   {{- range .Methods }}
@@ -73,8 +73,8 @@ class {{ .RequestEncoderName.Name }} {
   {{- end }}
 {{- end }}
 
-{{ EnsureNamespace .ResponseEncoderName }}
-class {{ .ResponseEncoderName.Name }} {
+{{ EnsureNamespace .ResponseEncoder }}
+class {{ .ResponseEncoder.Name }} {
  public:
   {{- with $protocol := . }}
   {{- range .Methods }}

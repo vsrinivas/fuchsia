@@ -98,7 +98,11 @@ void Top_Proxy::GetFoo(GetFooCallback callback) {
       Top_GetFoo_ResponseHandler(std::move(callback)));
 }
 
-Top_Stub::Top_Stub(Top_clazz* impl) : impl_(impl) { (void)impl_; }
+Top_Stub::Top_Stub(
+    ::fidl::test::transitivedependenciescompose::Top_Stub::Top_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
 
 Top_Stub::~Top_Stub() = default;
 

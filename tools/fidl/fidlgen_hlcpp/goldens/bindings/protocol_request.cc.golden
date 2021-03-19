@@ -179,7 +179,11 @@ void Parent_Proxy::TakeChildRequest(
       nullptr);
 }
 
-Parent_Stub::Parent_Stub(Parent_clazz* impl) : impl_(impl) { (void)impl_; }
+Parent_Stub::Parent_Stub(
+    ::fidl::test::protocolrequest::Parent_Stub::Parent_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
 
 Parent_Stub::~Parent_Stub() = default;
 
@@ -400,7 +404,11 @@ zx_status_t Child_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   return status;
 }
 
-Child_Stub::Child_Stub(Child_clazz* impl) : impl_(impl) { (void)impl_; }
+Child_Stub::Child_Stub(
+    ::fidl::test::protocolrequest::Child_Stub::Child_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
 
 Child_Stub::~Child_Stub() = default;
 

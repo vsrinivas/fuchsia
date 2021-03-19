@@ -540,7 +540,9 @@ void Protocol_Proxy::RequestFlexibleResponseStrict(
           std::move(callback)));
 }
 
-Protocol_Stub::Protocol_Stub(Protocol_clazz* impl) : impl_(impl) {
+Protocol_Stub::Protocol_Stub(
+    ::fidl::test::requestflexibleenvelope::Protocol_Stub::Protocol_clazz* impl)
+    : impl_(impl) {
   (void)impl_;
 }
 

@@ -786,14 +786,17 @@ class ExampleProtocol_Stub final
  public:
   typedef class ::fidl::test::placementofattributes::ExampleProtocol
       ExampleProtocol_clazz;
-  explicit ExampleProtocol_Stub(ExampleProtocol_clazz* impl);
+  explicit ExampleProtocol_Stub(
+      ::fidl::test::placementofattributes::ExampleProtocol_Stub::
+          ExampleProtocol_clazz* impl);
   ~ExampleProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  ExampleProtocol_clazz* impl_;
+  ::fidl::test::placementofattributes::ExampleProtocol_Stub::
+      ExampleProtocol_clazz* impl_;
 };
 
 class ExampleProtocol_SyncProxy

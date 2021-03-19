@@ -791,14 +791,15 @@ class SimpleProtocol_Stub final
       public ::fidl::test::nullable::SimpleProtocol_EventSender {
  public:
   typedef class ::fidl::test::nullable::SimpleProtocol SimpleProtocol_clazz;
-  explicit SimpleProtocol_Stub(SimpleProtocol_clazz* impl);
+  explicit SimpleProtocol_Stub(
+      ::fidl::test::nullable::SimpleProtocol_Stub::SimpleProtocol_clazz* impl);
   ~SimpleProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  SimpleProtocol_clazz* impl_;
+  ::fidl::test::nullable::SimpleProtocol_Stub::SimpleProtocol_clazz* impl_;
 };
 
 class SimpleProtocol_SyncProxy

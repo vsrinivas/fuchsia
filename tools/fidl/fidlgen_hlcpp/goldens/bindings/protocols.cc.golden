@@ -883,7 +883,9 @@ void Transitional_Proxy::OneWay(int64_t x) {
       nullptr);
 }
 
-Transitional_Stub::Transitional_Stub(Transitional_clazz* impl) : impl_(impl) {
+Transitional_Stub::Transitional_Stub(
+    ::fidl::test::protocols::Transitional_Stub::Transitional_clazz* impl)
+    : impl_(impl) {
   (void)impl_;
 }
 
@@ -1216,7 +1218,8 @@ void ChannelProtocol_Proxy::MutateSocket(::zx::socket a,
       ChannelProtocol_MutateSocket_ResponseHandler(std::move(callback)));
 }
 
-ChannelProtocol_Stub::ChannelProtocol_Stub(ChannelProtocol_clazz* impl)
+ChannelProtocol_Stub::ChannelProtocol_Stub(
+    ::fidl::test::protocols::ChannelProtocol_Stub::ChannelProtocol_clazz* impl)
     : impl_(impl) {
   (void)impl_;
 }
@@ -1755,7 +1758,8 @@ void WithAndWithoutRequestResponse_Proxy::WithRequestWithResponse(
 }
 
 WithAndWithoutRequestResponse_Stub::WithAndWithoutRequestResponse_Stub(
-    WithAndWithoutRequestResponse_clazz* impl)
+    ::fidl::test::protocols::WithAndWithoutRequestResponse_Stub::
+        WithAndWithoutRequestResponse_clazz* impl)
     : impl_(impl) {
   (void)impl_;
 }
@@ -2233,7 +2237,8 @@ void WithErrorSyntax_Proxy::ErrorAsEnum(ErrorAsEnumCallback callback) {
       WithErrorSyntax_ErrorAsEnum_ResponseHandler(std::move(callback)));
 }
 
-WithErrorSyntax_Stub::WithErrorSyntax_Stub(WithErrorSyntax_clazz* impl)
+WithErrorSyntax_Stub::WithErrorSyntax_Stub(
+    ::fidl::test::protocols::WithErrorSyntax_Stub::WithErrorSyntax_clazz* impl)
     : impl_(impl) {
   (void)impl_;
 }

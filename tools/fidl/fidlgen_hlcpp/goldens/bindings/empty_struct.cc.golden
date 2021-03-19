@@ -175,7 +175,8 @@ void EmptyProtocol_Proxy::SendAndReceive(::fidl::test::emptystruct::Empty e,
       EmptyProtocol_SendAndReceive_ResponseHandler(std::move(callback)));
 }
 
-EmptyProtocol_Stub::EmptyProtocol_Stub(EmptyProtocol_clazz* impl)
+EmptyProtocol_Stub::EmptyProtocol_Stub(
+    ::fidl::test::emptystruct::EmptyProtocol_Stub::EmptyProtocol_clazz* impl)
     : impl_(impl) {
   (void)impl_;
 }

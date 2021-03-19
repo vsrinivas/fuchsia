@@ -382,14 +382,14 @@ class Example_Stub final : public ::fidl::internal::Stub,
                            public ::fidl::test::error::Example_EventSender {
  public:
   typedef class ::fidl::test::error::Example Example_clazz;
-  explicit Example_Stub(Example_clazz* impl);
+  explicit Example_Stub(::fidl::test::error::Example_Stub::Example_clazz* impl);
   ~Example_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  Example_clazz* impl_;
+  ::fidl::test::error::Example_Stub::Example_clazz* impl_;
 };
 
 class Example_SyncProxy : public ::fidl::test::error::Example_Sync {

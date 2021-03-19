@@ -277,14 +277,15 @@ class Parent_Stub final
       public ::fidl::test::protocolrequest::Parent_EventSender {
  public:
   typedef class ::fidl::test::protocolrequest::Parent Parent_clazz;
-  explicit Parent_Stub(Parent_clazz* impl);
+  explicit Parent_Stub(
+      ::fidl::test::protocolrequest::Parent_Stub::Parent_clazz* impl);
   ~Parent_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  Parent_clazz* impl_;
+  ::fidl::test::protocolrequest::Parent_Stub::Parent_clazz* impl_;
 };
 
 class Parent_SyncProxy : public ::fidl::test::protocolrequest::Parent_Sync {
@@ -363,14 +364,15 @@ class Child_Stub final
       public ::fidl::test::protocolrequest::Child_EventSender {
  public:
   typedef class ::fidl::test::protocolrequest::Child Child_clazz;
-  explicit Child_Stub(Child_clazz* impl);
+  explicit Child_Stub(
+      ::fidl::test::protocolrequest::Child_Stub::Child_clazz* impl);
   ~Child_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  Child_clazz* impl_;
+  ::fidl::test::protocolrequest::Child_Stub::Child_clazz* impl_;
 };
 
 class Child_SyncProxy : public ::fidl::test::protocolrequest::Child_Sync {

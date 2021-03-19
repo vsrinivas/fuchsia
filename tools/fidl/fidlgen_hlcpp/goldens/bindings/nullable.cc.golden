@@ -543,7 +543,8 @@ void SimpleProtocol_Proxy::Add(int32_t a, int32_t b, AddCallback callback) {
                     SimpleProtocol_Add_ResponseHandler(std::move(callback)));
 }
 
-SimpleProtocol_Stub::SimpleProtocol_Stub(SimpleProtocol_clazz* impl)
+SimpleProtocol_Stub::SimpleProtocol_Stub(
+    ::fidl::test::nullable::SimpleProtocol_Stub::SimpleProtocol_clazz* impl)
     : impl_(impl) {
   (void)impl_;
 }

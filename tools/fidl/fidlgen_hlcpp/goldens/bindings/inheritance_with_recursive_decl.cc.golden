@@ -77,7 +77,11 @@ void Parent_Proxy::First(
       nullptr);
 }
 
-Parent_Stub::Parent_Stub(Parent_clazz* impl) : impl_(impl) { (void)impl_; }
+Parent_Stub::Parent_Stub(
+    ::fidl::test::inheritancewithrecursivedecl::Parent_Stub::Parent_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
 
 Parent_Stub::~Parent_Stub() = default;
 
@@ -228,7 +232,11 @@ void Child_Proxy::Second(
       nullptr);
 }
 
-Child_Stub::Child_Stub(Child_clazz* impl) : impl_(impl) { (void)impl_; }
+Child_Stub::Child_Stub(
+    ::fidl::test::inheritancewithrecursivedecl::Child_Stub::Child_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
 
 Child_Stub::~Child_Stub() = default;
 

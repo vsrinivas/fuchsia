@@ -249,7 +249,8 @@ class EmptyProtocol_Stub final
       public ::fidl::test::emptystruct::EmptyProtocol_EventSender {
  public:
   typedef class ::fidl::test::emptystruct::EmptyProtocol EmptyProtocol_clazz;
-  explicit EmptyProtocol_Stub(EmptyProtocol_clazz* impl);
+  explicit EmptyProtocol_Stub(
+      ::fidl::test::emptystruct::EmptyProtocol_Stub::EmptyProtocol_clazz* impl);
   ~EmptyProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
@@ -257,7 +258,7 @@ class EmptyProtocol_Stub final
   void Receive(::fidl::test::emptystruct::Empty e) override;
 
  private:
-  EmptyProtocol_clazz* impl_;
+  ::fidl::test::emptystruct::EmptyProtocol_Stub::EmptyProtocol_clazz* impl_;
 };
 
 class EmptyProtocol_SyncProxy

@@ -378,7 +378,9 @@ zx_status_t SomeProtocol_Proxy::Dispatch_(
   return status;
 }
 
-SomeProtocol_Stub::SomeProtocol_Stub(SomeProtocol_clazz* impl) : impl_(impl) {
+SomeProtocol_Stub::SomeProtocol_Stub(
+    ::fidl::test::handles::SomeProtocol_Stub::SomeProtocol_clazz* impl)
+    : impl_(impl) {
   (void)impl_;
 }
 

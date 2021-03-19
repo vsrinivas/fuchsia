@@ -212,14 +212,16 @@ class Parent_Stub final
       public ::fidl::test::inheritancewithrecursivedecl::Parent_EventSender {
  public:
   typedef class ::fidl::test::inheritancewithrecursivedecl::Parent Parent_clazz;
-  explicit Parent_Stub(Parent_clazz* impl);
+  explicit Parent_Stub(
+      ::fidl::test::inheritancewithrecursivedecl::Parent_Stub::Parent_clazz*
+          impl);
   ~Parent_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  Parent_clazz* impl_;
+  ::fidl::test::inheritancewithrecursivedecl::Parent_Stub::Parent_clazz* impl_;
 };
 
 class Parent_SyncProxy
@@ -319,14 +321,16 @@ class Child_Stub final
       public ::fidl::test::inheritancewithrecursivedecl::Child_EventSender {
  public:
   typedef class ::fidl::test::inheritancewithrecursivedecl::Child Child_clazz;
-  explicit Child_Stub(Child_clazz* impl);
+  explicit Child_Stub(
+      ::fidl::test::inheritancewithrecursivedecl::Child_Stub::Child_clazz*
+          impl);
   ~Child_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  Child_clazz* impl_;
+  ::fidl::test::inheritancewithrecursivedecl::Child_Stub::Child_clazz* impl_;
 };
 
 class Child_SyncProxy

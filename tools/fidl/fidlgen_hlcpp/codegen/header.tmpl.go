@@ -73,40 +73,56 @@ const headerTemplate = `
 
 
 {{- range .Decls }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolForwardDeclaration/ProxiesAndStubs" . }}{{- end }}
-{{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceForwardDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}
+{{- template "DispatchProtocolForwardDeclaration/ProxiesAndStubs" .WithHlMessaging }}
+{{- end }}
+{{- if Eq .Kind Kinds.Service }}
+{{- template "DispatchServiceForwardDeclaration" . }}
+{{- end }}
 {{- end }}
 
 {{- range .Decls }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDeclaration/ProxiesAndStubs" . }}{{- end }}
-{{- if Eq .Kind Kinds.Service }}{{ template "DispatchServiceDeclaration" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}
+{{- template "DispatchProtocolDeclaration/ProxiesAndStubs" .WithHlMessaging }}
+{{- end }}
+{{- if Eq .Kind Kinds.Service }}
+{{- template "DispatchServiceDeclaration" . }}
+{{- end }}
 {{- end }}
 
 {{- end }}
 
 {{- define "DispatchProtocolForwardDeclaration/NaturalTypes" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" -}}{{ template "ProtocolForwardDeclaration/NaturalTypes" $ }}{{- end }}
+{{- if eq $transport "Channel" }}
+{{- template "ProtocolForwardDeclaration/NaturalTypes" $.WithHlMessaging }}
 {{- end }}
-{{- end -}}
+{{- end }}
+{{- end }}
 
 {{- define "DispatchProtocolDeclaration/NaturalTypes" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" -}}{{ template "ProtocolDeclaration/NaturalTypes" $ }}{{- end }}
+{{- if eq $transport "Channel" }}
+{{- template "ProtocolDeclaration/NaturalTypes" $.WithHlMessaging }}
 {{- end }}
-{{- end -}}
+{{- end }}
+{{- end }}
 
 {{- define "DispatchProtocolForwardDeclaration/ProxiesAndStubs" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" -}}{{ template "ProtocolForwardDeclaration/ProxiesAndStubs" $ }}{{- end }}
+{{- if eq $transport "Channel" }}
+{{- template "ProtocolForwardDeclaration/ProxiesAndStubs" $.WithHlMessaging }}
 {{- end }}
-{{- end -}}
+{{- end }}
+{{- end }}
 
 {{- define "DispatchProtocolDeclaration/ProxiesAndStubs" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" -}}{{ template "ProtocolDeclaration/ProxiesAndStubs" $ }}{{- end }}
+{{- if eq $transport "Channel" }}
+{{- template "ProtocolDeclaration/ProxiesAndStubs" $.WithHlMessaging }}
 {{- end }}
-{{- end -}}
+{{- end }}
+{{- end }}
 
 {{- define "DispatchServiceForwardDeclaration" -}}
 {{- range $transport, $_ := .Transports }}

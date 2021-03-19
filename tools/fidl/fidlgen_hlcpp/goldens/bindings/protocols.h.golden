@@ -1721,7 +1721,8 @@ class Transitional_Stub final
       public ::fidl::test::protocols::Transitional_EventSender {
  public:
   typedef class ::fidl::test::protocols::Transitional Transitional_clazz;
-  explicit Transitional_Stub(Transitional_clazz* impl);
+  explicit Transitional_Stub(
+      ::fidl::test::protocols::Transitional_Stub::Transitional_clazz* impl);
   ~Transitional_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
@@ -1729,7 +1730,7 @@ class Transitional_Stub final
   void Event(int64_t x) override;
 
  private:
-  Transitional_clazz* impl_;
+  ::fidl::test::protocols::Transitional_Stub::Transitional_clazz* impl_;
 };
 
 class Transitional_SyncProxy
@@ -1832,7 +1833,9 @@ class ChannelProtocol_Stub final
       public ::fidl::test::protocols::ChannelProtocol_EventSender {
  public:
   typedef class ::fidl::test::protocols::ChannelProtocol ChannelProtocol_clazz;
-  explicit ChannelProtocol_Stub(ChannelProtocol_clazz* impl);
+  explicit ChannelProtocol_Stub(
+      ::fidl::test::protocols::ChannelProtocol_Stub::ChannelProtocol_clazz*
+          impl);
   ~ChannelProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
@@ -1840,7 +1843,7 @@ class ChannelProtocol_Stub final
   void EventA(int64_t a, int64_t b) override;
 
  private:
-  ChannelProtocol_clazz* impl_;
+  ::fidl::test::protocols::ChannelProtocol_Stub::ChannelProtocol_clazz* impl_;
 };
 
 class ChannelProtocol_SyncProxy
@@ -1977,7 +1980,8 @@ class WithAndWithoutRequestResponse_Stub final
   typedef class ::fidl::test::protocols::WithAndWithoutRequestResponse
       WithAndWithoutRequestResponse_clazz;
   explicit WithAndWithoutRequestResponse_Stub(
-      WithAndWithoutRequestResponse_clazz* impl);
+      ::fidl::test::protocols::WithAndWithoutRequestResponse_Stub::
+          WithAndWithoutRequestResponse_clazz* impl);
   ~WithAndWithoutRequestResponse_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
@@ -1986,7 +1990,8 @@ class WithAndWithoutRequestResponse_Stub final
   void OnWithResponse(::std::string ret) override;
 
  private:
-  WithAndWithoutRequestResponse_clazz* impl_;
+  ::fidl::test::protocols::WithAndWithoutRequestResponse_Stub::
+      WithAndWithoutRequestResponse_clazz* impl_;
 };
 
 class WithAndWithoutRequestResponse_SyncProxy
@@ -2099,14 +2104,16 @@ class WithErrorSyntax_Stub final
       public ::fidl::test::protocols::WithErrorSyntax_EventSender {
  public:
   typedef class ::fidl::test::protocols::WithErrorSyntax WithErrorSyntax_clazz;
-  explicit WithErrorSyntax_Stub(WithErrorSyntax_clazz* impl);
+  explicit WithErrorSyntax_Stub(
+      ::fidl::test::protocols::WithErrorSyntax_Stub::WithErrorSyntax_clazz*
+          impl);
   ~WithErrorSyntax_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  WithErrorSyntax_clazz* impl_;
+  ::fidl::test::protocols::WithErrorSyntax_Stub::WithErrorSyntax_clazz* impl_;
 };
 
 class WithErrorSyntax_SyncProxy

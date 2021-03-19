@@ -1089,7 +1089,8 @@ class Interface_Stub final
       public ::fidl::test::doccomments::Interface_EventSender {
  public:
   typedef class ::fidl::test::doccomments::Interface Interface_clazz;
-  explicit Interface_Stub(Interface_clazz* impl);
+  explicit Interface_Stub(
+      ::fidl::test::doccomments::Interface_Stub::Interface_clazz* impl);
   ~Interface_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
@@ -1097,7 +1098,7 @@ class Interface_Stub final
   void OnEvent() override;
 
  private:
-  Interface_clazz* impl_;
+  ::fidl::test::doccomments::Interface_Stub::Interface_clazz* impl_;
 };
 
 class Interface_SyncProxy : public ::fidl::test::doccomments::Interface_Sync {

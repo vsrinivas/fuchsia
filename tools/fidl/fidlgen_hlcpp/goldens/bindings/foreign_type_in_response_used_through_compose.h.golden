@@ -156,14 +156,16 @@ class Top_Stub final
  public:
   typedef class ::fidl::test::foreigntypeinresponseusedthroughcompose::Top
       Top_clazz;
-  explicit Top_Stub(Top_clazz* impl);
+  explicit Top_Stub(::fidl::test::foreigntypeinresponseusedthroughcompose::
+                        Top_Stub::Top_clazz* impl);
   ~Top_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  Top_clazz* impl_;
+  ::fidl::test::foreigntypeinresponseusedthroughcompose::Top_Stub::Top_clazz*
+      impl_;
 };
 
 class Top_SyncProxy

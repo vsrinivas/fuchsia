@@ -308,7 +308,11 @@ void Example_Proxy::foo(::std::string s, fooCallback callback) {
       Example_foo_ResponseHandler(std::move(callback)));
 }
 
-Example_Stub::Example_Stub(Example_clazz* impl) : impl_(impl) { (void)impl_; }
+Example_Stub::Example_Stub(
+    ::fidl::test::error::Example_Stub::Example_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
 
 Example_Stub::~Example_Stub() = default;
 

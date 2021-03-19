@@ -48,14 +48,18 @@ const implementationTemplate = `
 //
 
 {{- range .Decls }}
-{{- if Eq .Kind Kinds.Protocol }}{{ template "DispatchProtocolDefinition" . }}{{- end }}
+{{- if Eq .Kind Kinds.Protocol }}
+{{- template "DispatchProtocolDefinition" .WithHlMessaging }}
+{{- end }}
 {{- end }}
 
 {{- end }}
 
 {{- define "DispatchProtocolDefinition" -}}
 {{- range $transport, $_ := .Transports }}
-{{- if eq $transport "Channel" -}}{{ template "ProtocolDefinition" $ }}{{- end }}
+{{- if eq $transport "Channel" }}
+{{- template "ProtocolDefinition" $.WithHlMessaging }}
+{{- end }}
 {{- end }}
 {{- end -}}
 `

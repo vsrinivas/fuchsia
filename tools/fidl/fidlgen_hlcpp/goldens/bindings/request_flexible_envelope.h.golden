@@ -554,14 +554,16 @@ class Protocol_Stub final
       public ::fidl::test::requestflexibleenvelope::Protocol_EventSender {
  public:
   typedef class ::fidl::test::requestflexibleenvelope::Protocol Protocol_clazz;
-  explicit Protocol_Stub(Protocol_clazz* impl);
+  explicit Protocol_Stub(
+      ::fidl::test::requestflexibleenvelope::Protocol_Stub::Protocol_clazz*
+          impl);
   ~Protocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  Protocol_clazz* impl_;
+  ::fidl::test::requestflexibleenvelope::Protocol_Stub::Protocol_clazz* impl_;
 };
 
 class Protocol_SyncProxy

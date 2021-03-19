@@ -15,22 +15,116 @@ import (
 // Generate code for sending and receiving FIDL messages i.e. the messaging API.
 //
 
+// hlMessagingDetails represents the various generated definitions associated
+// with a protocol, in the high-level C++ bindings.
+type hlMessagingDetails struct {
+	// ProtocolMarker is a pure-virtual interface corresponding to methods in
+	// the protocol. Notably, HLCPP shares the same interface type between
+	// the server and client bindings API.
+	ProtocolMarker DeclVariant
+
+	// InterfaceAliasForStub is the type alias generated within the
+	// "Stub" class, that refers to the pure-virtual interface corresponding to
+	// the protocol.
+	InterfaceAliasForStub DeclVariant
+
+	// Proxy implements the interface by encoding and making method calls.
+	Proxy DeclVariant
+
+	// Stub calls into the interface after decoding an incoming message.
+	// It also implements the EventSender interface.
+	Stub DeclVariant
+
+	// EventSender is a pure-virtual interface for sending events.
+	EventSender DeclVariant
+
+	// SyncInterface is a pure-virtual interface for making synchronous calls.
+	SyncInterface DeclVariant
+
+	// SyncProxy implements the SyncInterface.
+	SyncProxy DeclVariant
+
+	RequestEncoder  DeclVariant
+	RequestDecoder  DeclVariant
+	ResponseEncoder DeclVariant
+	ResponseDecoder DeclVariant
+}
+
+func compileHlMessagingDetails(protocol DeclName) hlMessagingDetails {
+	p := protocol.Natural
+	stub := p.AppendName("_Stub")
+	return hlMessagingDetails{
+		ProtocolMarker:        p,
+		InterfaceAliasForStub: stub.Nest(p.AppendName("_clazz").Name()),
+		Proxy:                 p.AppendName("_Proxy"),
+		Stub:                  stub,
+		EventSender:           p.AppendName("_EventSender"),
+		SyncInterface:         p.AppendName("_Sync"),
+		SyncProxy:             p.AppendName("_SyncProxy"),
+		RequestEncoder:        p.AppendName("_RequestEncoder"),
+		RequestDecoder:        p.AppendName("_RequestDecoder"),
+		ResponseEncoder:       p.AppendName("_ResponseEncoder"),
+		ResponseDecoder:       p.AppendName("_ResponseDecoder"),
+	}
+}
+
+type protocolWithHlMessaging struct {
+	*Protocol
+	hlMessagingDetails
+}
+
+// WithHlMessaging returns a new protocol IR where the HLCPP bindings details
+// are promoted to the same naming scope as the protocol. This makes it easier
+// to access the HLCPP details in golang templates.
+func (p *Protocol) WithHlMessaging() protocolWithHlMessaging {
+	return protocolWithHlMessaging{
+		Protocol:           p,
+		hlMessagingDetails: p.hlMessaging,
+	}
+}
+
+// TODO(yifeit): Move LLCPP generated code to use this skeleton instead of
+// names embedded in golang templates.
+type wireMessagingDetails struct {
+	ProtocolMarker DeclVariant
+	SyncClient     DeclVariant
+	ClientImpl     DeclVariant
+	EventHandlers  DeclVariant
+	Interface      DeclVariant
+	EventSender    DeclVariant
+}
+
+// TODO(fxbug.dev/60240): Start implementing unified bindings messaging layer
+// based on this skeleton.
+type unifiedMessagingDetails struct {
+	ClientImpl      DeclVariant
+	EventHandlers   DeclVariant
+	Interface       DeclVariant
+	EventSender     DeclVariant
+	RequestEncoder  DeclVariant
+	RequestDecoder  DeclVariant
+	ResponseEncoder DeclVariant
+	ResponseDecoder DeclVariant
+}
+
 // protocolInner contains information about a Protocol that should be
 // filled out by the compiler.
 type protocolInner struct {
 	fidl.Attributes
+	// TODO(yifeit): This should be replaced by ProtocolMarker in hlMessagingDetails
+	// and wireMessagingDetails. In particular, the unified bindings do not declare
+	// protocol marker classes.
 	DeclName
-	ClassName           string
-	ServiceName         string
-	ProxyName           DeclVariant
-	StubName            DeclVariant
-	EventSenderName     DeclVariant
-	SyncName            DeclVariant
-	SyncProxyName       DeclVariant
-	RequestEncoderName  DeclVariant
-	RequestDecoderName  DeclVariant
-	ResponseEncoderName DeclVariant
-	ResponseDecoderName DeclVariant
+
+	// [Discoverable] protocols are exported to the outgoing namespace under this
+	// name. This is deprecated by FTP-041 unified services.
+	// TODO(fxbug.dev/8035): Remove.
+	DiscoverableName string
+
+	hlMessaging hlMessagingDetails
+
+	// ClientAllocation is the allocation behavior of the client when receiving
+	// FIDL events over this protocol.
 	SyncEventAllocation allocation
 	Methods             []Method
 	FuzzingName         string
@@ -350,19 +444,10 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 
 	fuzzingName := strings.ReplaceAll(strings.ReplaceAll(string(val.Name), ".", "_"), "/", "_")
 	r := newProtocol(protocolInner{
-		Attributes:          val.Attributes,
-		DeclName:            protocolName,
-		ClassName:           protocolName.AppendName("_clazz").Natural.Name(),
-		ServiceName:         val.GetServiceName(),
-		ProxyName:           protocolName.AppendName("_Proxy").Natural,
-		StubName:            protocolName.AppendName("_Stub").Natural,
-		EventSenderName:     protocolName.AppendName("_EventSender").Natural,
-		SyncName:            protocolName.AppendName("_Sync").Natural,
-		SyncProxyName:       protocolName.AppendName("_SyncProxy").Natural,
-		RequestEncoderName:  protocolName.AppendName("_RequestEncoder").Natural,
-		RequestDecoderName:  protocolName.AppendName("_RequestDecoder").Natural,
-		ResponseEncoderName: protocolName.AppendName("_ResponseEncoder").Natural,
-		ResponseDecoderName: protocolName.AppendName("_ResponseDecoder").Natural,
+		Attributes:       val.Attributes,
+		DeclName:         protocolName,
+		hlMessaging:      compileHlMessagingDetails(protocolName),
+		DiscoverableName: val.GetServiceName(),
 		SyncEventAllocation: computeAllocation(
 			maxResponseSize, 0, messageDirectionResponse.queryBoundedness(
 				clientContext, allEventsStrict(methods))),

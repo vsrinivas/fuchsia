@@ -54,8 +54,8 @@ extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
 class {{ .Name }} final {
   {{ .Name }}() = delete;
  public:
-{{- if .ServiceName }}
-  static constexpr char Name[] = {{ .ServiceName }};
+{{- if .DiscoverableName }}
+  static constexpr char Name[] = {{ .DiscoverableName }};
 {{- end }}
 {{ "" }}
   {{- range .Methods }}

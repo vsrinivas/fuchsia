@@ -13,12 +13,12 @@ const protocolTemplateProxiesAndStubs = `
 ///{{ . }}
 {{- end }}
 using {{ .Name }}Ptr = ::fidl::InterfacePtr<{{ .Name }}>;
-class {{ .ProxyName.Name }};
-class {{ .StubName.Name }};
-class {{ .EventSenderName.Name }};
-class {{ .SyncName.Name }};
+class {{ .Proxy.Name }};
+class {{ .Stub.Name }};
+class {{ .EventSender.Name }};
+class {{ .SyncInterface.Name }};
 using {{ .Name }}SyncPtr = ::fidl::SynchronousInterfacePtr<{{ .Name }}>;
-class {{ .SyncProxyName.Name }};
+class {{ .SyncProxy.Name }};
 
 namespace internal {
 
@@ -78,11 +78,11 @@ constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal | printf "%#x" }}lu;
 {{- end }}
 class {{ .Name }} {
  public:
-  using Proxy_ = {{ .ProxyName }};
-  using Stub_ = {{ .StubName }};
-  using EventSender_ = {{ .EventSenderName }};
-  using Sync_ = {{ .SyncName }};
-  {{- if .ServiceName }}
+  using Proxy_ = {{ .Proxy }};
+  using Stub_ = {{ .Stub }};
+  using EventSender_ = {{ .EventSender }};
+  using Sync_ = {{ .SyncInterface }};
+  {{- if .DiscoverableName }}
   static const char Name_[];
   {{- end }}
   virtual ~{{ .Name }}();
@@ -105,10 +105,10 @@ class {{ .Name }} {
   {{- end }}
 };
 
-class {{ .RequestDecoderName.Name }} {
+class {{ .RequestDecoder.Name }} {
  public:
-  {{ .RequestDecoderName.Name }}() = default;
-  virtual ~{{ .RequestDecoderName.Name }}() = default;
+  {{ .RequestDecoder.Name }}() = default;
+  virtual ~{{ .RequestDecoder.Name }}() = default;
   static const fidl_type_t* GetType(uint64_t ordinal, bool* out_needs_response);
 
   {{- range .Methods }}
@@ -118,10 +118,10 @@ class {{ .RequestDecoderName.Name }} {
   {{- end }}
 };
 
-class {{ .ResponseDecoderName.Name }} {
+class {{ .ResponseDecoder.Name }} {
  public:
-  {{ .ResponseDecoderName.Name }}() = default;
-  virtual ~{{ .ResponseDecoderName.Name }}() = default;
+  {{ .ResponseDecoder.Name }}() = default;
+  virtual ~{{ .ResponseDecoder.Name }}() = default;
   static const fidl_type_t* GetType(uint64_t ordinal);
 
   {{- range .Methods }}
@@ -131,9 +131,9 @@ class {{ .ResponseDecoderName.Name }} {
   {{- end }}
 };
 
-class {{ .EventSenderName.Name }} {
+class {{ .EventSender.Name }} {
  public:
-  virtual ~{{ .EventSenderName.Name }}();
+  virtual ~{{ .EventSender.Name }}();
 
   {{- range .Methods }}
     {{- if not .HasRequest }}
@@ -144,10 +144,10 @@ class {{ .EventSenderName.Name }} {
   {{- end }}
 };
 
-class {{ .SyncName.Name }} {
+class {{ .SyncInterface.Name }} {
  public:
-  using Proxy_ = {{ .SyncProxyName }};
-  virtual ~{{ .SyncName.Name }}();
+  using Proxy_ = {{ .SyncProxy }};
+  virtual ~{{ .SyncInterface.Name }}();
 
   {{- range .Methods }}
     {{- if .HasRequest }}
@@ -156,10 +156,10 @@ class {{ .SyncName.Name }} {
   {{- end }}
 };
 
-class {{ .ProxyName.Name }} final : public ::fidl::internal::Proxy, public {{ .Name }} {
+class {{ .Proxy.Name }} final : public ::fidl::internal::Proxy, public {{ .Name }} {
  public:
-  explicit {{ .ProxyName.Name }}(::fidl::internal::ProxyController* controller);
-  ~{{ .ProxyName.Name }}() override;
+  explicit {{ .Proxy.Name }}(::fidl::internal::ProxyController* controller);
+  ~{{ .Proxy.Name }}() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message) override;
 
@@ -172,17 +172,17 @@ class {{ .ProxyName.Name }} final : public ::fidl::internal::Proxy, public {{ .N
   {{- end }}
 
  private:
-  {{ .ProxyName.Name }}(const {{ .ProxyName }}&) = delete;
-  {{ .ProxyName.Name }}& operator=(const {{ .ProxyName }}&) = delete;
+  {{ .Proxy.Name }}(const {{ .Proxy }}&) = delete;
+  {{ .Proxy.Name }}& operator=(const {{ .Proxy }}&) = delete;
 
   ::fidl::internal::ProxyController* controller_;
 };
 
-class {{ .StubName.Name }} final : public ::fidl::internal::Stub, public {{ .EventSenderName }} {
+class {{ .Stub.Name }} final : public ::fidl::internal::Stub, public {{ .EventSender }} {
  public:
-  typedef class {{ . }} {{ .ClassName }};
-  explicit {{ .StubName.Name }}({{ .ClassName }}* impl);
-  ~{{ .StubName.Name }}() override;
+  typedef class {{ . }} {{ .InterfaceAliasForStub.Unqualified }};
+  explicit {{ .Stub.Name }}({{ .InterfaceAliasForStub }}* impl);
+  ~{{ .Stub.Name }}() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
@@ -196,13 +196,13 @@ class {{ .StubName.Name }} final : public ::fidl::internal::Stub, public {{ .Eve
   {{- end }}
 
  private:
-  {{ .ClassName }}* impl_;
+  {{ .InterfaceAliasForStub }}* impl_;
 };
 
-class {{ .SyncProxyName.Name }} : public {{ .SyncName }} {
+class {{ .SyncProxy.Name }} : public {{ .SyncInterface }} {
  public:
-  explicit {{ .SyncProxyName.Name }}(::zx::channel channel);
-  ~{{ .SyncProxyName.Name }}() override;
+  explicit {{ .SyncProxy.Name }}(::zx::channel channel);
+  ~{{ .SyncProxy.Name }}() override;
 
   {{- range .Methods }}
     {{- if .HasRequest }}
@@ -237,11 +237,11 @@ extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
 {{ EnsureNamespace . }}
 {{ .Name }}::~{{ .Name }}() = default;
 
-{{- if .ServiceName }}
-const char {{ .Name }}::Name_[] = {{ .ServiceName }};
+{{- if .DiscoverableName }}
+const char {{ .Name }}::Name_[] = {{ .DiscoverableName }};
 {{- end }}
 
-const fidl_type_t* {{ .RequestDecoderName }}::GetType(uint64_t ordinal, bool* out_needs_response) {
+const fidl_type_t* {{ .RequestDecoder }}::GetType(uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
@@ -260,7 +260,7 @@ const fidl_type_t* {{ .RequestDecoderName }}::GetType(uint64_t ordinal, bool* ou
   }
 }
 
-const fidl_type_t* {{ .ResponseDecoderName.Name }}::GetType(uint64_t ordinal) {
+const fidl_type_t* {{ .ResponseDecoder.Name }}::GetType(uint64_t ordinal) {
   switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasResponse }}
@@ -273,18 +273,18 @@ const fidl_type_t* {{ .ResponseDecoderName.Name }}::GetType(uint64_t ordinal) {
   }
 }
 
-{{ .EventSenderName.Name }}::~{{ .EventSenderName.Name }}() = default;
+{{ .EventSender.Name }}::~{{ .EventSender.Name }}() = default;
 
-{{ .SyncName.Name }}::~{{ .SyncName.Name }}() = default;
+{{ .SyncInterface.Name }}::~{{ .SyncInterface.Name }}() = default;
 
-{{ .ProxyName.Name }}::{{ .ProxyName.Name }}(::fidl::internal::ProxyController* controller)
+{{ .Proxy.Name }}::{{ .Proxy.Name }}(::fidl::internal::ProxyController* controller)
     : controller_(controller) {
   (void)controller_;
 }
 
-{{ .ProxyName.Name }}::~{{ .ProxyName.Name }}() = default;
+{{ .Proxy.Name }}::~{{ .Proxy.Name }}() = default;
 
-zx_status_t {{ .ProxyName.Name }}::Dispatch_(::fidl::HLCPPIncomingMessage message) {
+zx_status_t {{ .Proxy.Name }}::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
     {{- range .Methods }}
@@ -350,9 +350,9 @@ namespace {
 
 }  // namespace
 {{- end }}
-void {{ $.ProxyName.Name }}::{{ template "RequestMethodSignature" . }} {
+void {{ $.Proxy.Name }}::{{ template "RequestMethodSignature" . }} {
   ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
-  controller_->Send(&{{ .Request.CodingTable }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  controller_->Send(&{{ .Request.CodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .RequestArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -367,11 +367,11 @@ void {{ $.ProxyName.Name }}::{{ template "RequestMethodSignature" . }} {
   {{- end }}
 {{- end }}
 
-{{ .StubName.Name }}::{{ .StubName.Name }}({{ .ClassName }}* impl) : impl_(impl) {
+{{ .Stub.Name }}::{{ .Stub.Name }}({{ .InterfaceAliasForStub }}* impl) : impl_(impl) {
   (void)impl_;
 }
 
-{{ .StubName.Name }}::~{{ .StubName.Name }}() = default;
+{{ .Stub.Name }}::~{{ .Stub.Name }}() = default;
 
 namespace {
 {{- range .Methods }}
@@ -385,7 +385,7 @@ class {{ .ResponderType }} final {
 
   void operator()({{ template "Params" .ResponseArgs }}) {
     ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
-    response_.Send(&{{ .Response.CodingTable }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
+    response_.Send(&{{ .Response.CodingTable }}, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .ResponseArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -401,11 +401,11 @@ class {{ .ResponderType }} final {
 
 }  // namespace
 
-zx_status_t {{ .StubName.Name }}::Dispatch_(
+zx_status_t {{ .Stub.Name }}::Dispatch_(
     ::fidl::HLCPPIncomingMessage message,
     ::fidl::internal::PendingResponse response) {
   bool needs_response;
-  const fidl_type_t* request_type = {{ .RequestDecoderName }}::GetType(message.ordinal(), &needs_response);
+  const fidl_type_t* request_type = {{ .RequestDecoder }}::GetType(message.ordinal(), &needs_response);
   if (request_type == nullptr) {
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -455,9 +455,9 @@ zx_status_t {{ .StubName.Name }}::Dispatch_(
 {{- range .Methods }}
   {{- if not .HasRequest }}
     {{- if .HasResponse }}
-void {{ $.StubName.Name }}::{{ template "EventMethodSignature" . }} {
+void {{ $.Stub.Name }}::{{ template "EventMethodSignature" . }} {
   ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
-  sender_()->Send(&{{ .Response.CodingTable }}, {{ $.ResponseEncoderName }}::{{ .Name }}(&_encoder
+  sender_()->Send(&{{ .Response.CodingTable }}, {{ $.ResponseEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .ResponseArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -467,20 +467,20 @@ void {{ $.StubName.Name }}::{{ template "EventMethodSignature" . }} {
   {{- end }}
 {{- end }}
 
-{{ .SyncProxyName.Name }}::{{ .SyncProxyName.Name }}(::zx::channel channel)
+{{ .SyncProxy.Name }}::{{ .SyncProxy.Name }}(::zx::channel channel)
     : proxy_(::std::move(channel)) {}
 
-{{ .SyncProxyName.Name }}::~{{ .SyncProxyName.Name }}() = default;
+{{ .SyncProxy.Name }}::~{{ .SyncProxy.Name }}() = default;
 
 {{- range .Methods }}
   {{- if .HasRequest }}
 
-zx_status_t {{ $.SyncProxyName.Name }}::{{ template "SyncRequestMethodSignature" . }} {
+zx_status_t {{ $.SyncProxy.Name }}::{{ template "SyncRequestMethodSignature" . }} {
   ::fidl::Encoder _encoder(internal::{{ .OrdinalName }});
     {{- if .HasResponse }}
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
-  zx_status_t status_ = proxy_.Call(&{{ .Request.CodingTable }}, &{{ .Response.CodingTable }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  zx_status_t status_ = proxy_.Call(&{{ .Request.CodingTable }}, &{{ .Response.CodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .RequestArgs -}}
     , &{{ $param.Name }}
   {{- end -}}
@@ -495,7 +495,7 @@ zx_status_t {{ $.SyncProxyName.Name }}::{{ template "SyncRequestMethodSignature"
       {{- end }}
   return ZX_OK;
     {{- else }}
-  return proxy_.Send(&{{ .Request.CodingTable }}, {{ $.RequestEncoderName }}::{{ .Name }}(&_encoder
+  return proxy_.Send(&{{ .Request.CodingTable }}, {{ $.RequestEncoder }}::{{ .Name }}(&_encoder
   {{- range $index, $param := .RequestArgs -}}
     , &{{ $param.Name }}
   {{- end -}}

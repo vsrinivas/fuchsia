@@ -207,14 +207,15 @@ class SecondProtocol_Stub final
       public ::fidl::test::service::SecondProtocol_EventSender {
  public:
   typedef class ::fidl::test::service::SecondProtocol SecondProtocol_clazz;
-  explicit SecondProtocol_Stub(SecondProtocol_clazz* impl);
+  explicit SecondProtocol_Stub(
+      ::fidl::test::service::SecondProtocol_Stub::SecondProtocol_clazz* impl);
   ~SecondProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  SecondProtocol_clazz* impl_;
+  ::fidl::test::service::SecondProtocol_Stub::SecondProtocol_clazz* impl_;
 };
 
 class SecondProtocol_SyncProxy
@@ -291,14 +292,15 @@ class FirstProtocol_Stub final
       public ::fidl::test::service::FirstProtocol_EventSender {
  public:
   typedef class ::fidl::test::service::FirstProtocol FirstProtocol_clazz;
-  explicit FirstProtocol_Stub(FirstProtocol_clazz* impl);
+  explicit FirstProtocol_Stub(
+      ::fidl::test::service::FirstProtocol_Stub::FirstProtocol_clazz* impl);
   ~FirstProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  FirstProtocol_clazz* impl_;
+  ::fidl::test::service::FirstProtocol_Stub::FirstProtocol_clazz* impl_;
 };
 
 class FirstProtocol_SyncProxy

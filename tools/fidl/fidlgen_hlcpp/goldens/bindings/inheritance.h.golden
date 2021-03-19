@@ -206,14 +206,14 @@ class super_Stub final : public ::fidl::internal::Stub,
                          public ::fidl::test::inheritance::super_EventSender {
  public:
   typedef class ::fidl::test::inheritance::super super_clazz;
-  explicit super_Stub(super_clazz* impl);
+  explicit super_Stub(::fidl::test::inheritance::super_Stub::super_clazz* impl);
   ~super_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  super_clazz* impl_;
+  ::fidl::test::inheritance::super_Stub::super_clazz* impl_;
 };
 
 class super_SyncProxy : public ::fidl::test::inheritance::super_Sync {
@@ -287,14 +287,14 @@ class sub_Stub final : public ::fidl::internal::Stub,
                        public ::fidl::test::inheritance::sub_EventSender {
  public:
   typedef class ::fidl::test::inheritance::sub sub_clazz;
-  explicit sub_Stub(sub_clazz* impl);
+  explicit sub_Stub(::fidl::test::inheritance::sub_Stub::sub_clazz* impl);
   ~sub_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  sub_clazz* impl_;
+  ::fidl::test::inheritance::sub_Stub::sub_clazz* impl_;
 };
 
 class sub_SyncProxy : public ::fidl::test::inheritance::sub_Sync {

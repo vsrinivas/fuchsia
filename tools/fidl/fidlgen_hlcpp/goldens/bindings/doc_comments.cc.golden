@@ -598,7 +598,9 @@ void Interface_Proxy::Method() {
       nullptr);
 }
 
-Interface_Stub::Interface_Stub(Interface_clazz* impl) : impl_(impl) {
+Interface_Stub::Interface_Stub(
+    ::fidl::test::doccomments::Interface_Stub::Interface_clazz* impl)
+    : impl_(impl) {
   (void)impl_;
 }
 

@@ -3785,14 +3785,15 @@ class TestProtocol_Stub final
       public ::fidl::test::union_::TestProtocol_EventSender {
  public:
   typedef class ::fidl::test::union_::TestProtocol TestProtocol_clazz;
-  explicit TestProtocol_Stub(TestProtocol_clazz* impl);
+  explicit TestProtocol_Stub(
+      ::fidl::test::union_::TestProtocol_Stub::TestProtocol_clazz* impl);
   ~TestProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  TestProtocol_clazz* impl_;
+  ::fidl::test::union_::TestProtocol_Stub::TestProtocol_clazz* impl_;
 };
 
 class TestProtocol_SyncProxy : public ::fidl::test::union_::TestProtocol_Sync {

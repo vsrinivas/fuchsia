@@ -77,7 +77,8 @@ void SecondProtocol_Proxy::MethodOnSecond() {
       nullptr);
 }
 
-SecondProtocol_Stub::SecondProtocol_Stub(SecondProtocol_clazz* impl)
+SecondProtocol_Stub::SecondProtocol_Stub(
+    ::fidl::test::service::SecondProtocol_Stub::SecondProtocol_clazz* impl)
     : impl_(impl) {
   (void)impl_;
 }
@@ -210,7 +211,8 @@ void FirstProtocol_Proxy::MethodOnFirst() {
       nullptr);
 }
 
-FirstProtocol_Stub::FirstProtocol_Stub(FirstProtocol_clazz* impl)
+FirstProtocol_Stub::FirstProtocol_Stub(
+    ::fidl::test::service::FirstProtocol_Stub::FirstProtocol_clazz* impl)
     : impl_(impl) {
   (void)impl_;
 }

@@ -216,3 +216,26 @@ func TestWireBindingsAllocation(t *testing.T) {
 		})
 	}
 }
+
+func TestHlMessagingProtocolAssociatedNames(t *testing.T) {
+	fidl := `
+library fuchsia.foobar;
+
+// Regular protocol
+protocol P {};
+`
+	root := compile(fidlgentest.EndToEndTest{T: t}.Single(fidl))
+
+	messaging := root.Decls[0].(*Protocol).hlMessaging
+	assertEqual(t, messaging.ProtocolMarker.String(), "::fuchsia::foobar::P")
+	assertEqual(t, messaging.InterfaceAliasForStub.String(), "::fuchsia::foobar::P_Stub::P_clazz")
+	assertEqual(t, messaging.Proxy.String(), "::fuchsia::foobar::P_Proxy")
+	assertEqual(t, messaging.Stub.String(), "::fuchsia::foobar::P_Stub")
+	assertEqual(t, messaging.EventSender.String(), "::fuchsia::foobar::P_EventSender")
+	assertEqual(t, messaging.SyncInterface.String(), "::fuchsia::foobar::P_Sync")
+	assertEqual(t, messaging.SyncProxy.String(), "::fuchsia::foobar::P_SyncProxy")
+	assertEqual(t, messaging.RequestEncoder.String(), "::fuchsia::foobar::P_RequestEncoder")
+	assertEqual(t, messaging.RequestDecoder.String(), "::fuchsia::foobar::P_RequestDecoder")
+	assertEqual(t, messaging.ResponseEncoder.String(), "::fuchsia::foobar::P_ResponseEncoder")
+	assertEqual(t, messaging.ResponseDecoder.String(), "::fuchsia::foobar::P_ResponseDecoder")
+}

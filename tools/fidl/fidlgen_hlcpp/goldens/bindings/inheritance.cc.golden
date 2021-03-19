@@ -95,7 +95,10 @@ void super_Proxy::foo(::std::string s, fooCallback callback) {
       super_foo_ResponseHandler(std::move(callback)));
 }
 
-super_Stub::super_Stub(super_clazz* impl) : impl_(impl) { (void)impl_; }
+super_Stub::super_Stub(::fidl::test::inheritance::super_Stub::super_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
 
 super_Stub::~super_Stub() = default;
 
@@ -271,7 +274,10 @@ void sub_Proxy::foo(::std::string s, fooCallback callback) {
       sub_foo_ResponseHandler(std::move(callback)));
 }
 
-sub_Stub::sub_Stub(sub_clazz* impl) : impl_(impl) { (void)impl_; }
+sub_Stub::sub_Stub(::fidl::test::inheritance::sub_Stub::sub_clazz* impl)
+    : impl_(impl) {
+  (void)impl_;
+}
 
 sub_Stub::~sub_Stub() = default;
 

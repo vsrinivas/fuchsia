@@ -456,14 +456,15 @@ class SomeProtocol_Stub final
       public ::fidl::test::handles::SomeProtocol_EventSender {
  public:
   typedef class ::fidl::test::handles::SomeProtocol SomeProtocol_clazz;
-  explicit SomeProtocol_Stub(SomeProtocol_clazz* impl);
+  explicit SomeProtocol_Stub(
+      ::fidl::test::handles::SomeProtocol_Stub::SomeProtocol_clazz* impl);
   ~SomeProtocol_Stub() override;
 
   zx_status_t Dispatch_(::fidl::HLCPPIncomingMessage message,
                         ::fidl::internal::PendingResponse response) override;
 
  private:
-  SomeProtocol_clazz* impl_;
+  ::fidl::test::handles::SomeProtocol_Stub::SomeProtocol_clazz* impl_;
 };
 
 class SomeProtocol_SyncProxy : public ::fidl::test::handles::SomeProtocol_Sync {

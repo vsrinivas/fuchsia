@@ -4259,7 +4259,9 @@ void TestProtocol_Proxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(
           std::move(callback)));
 }
 
-TestProtocol_Stub::TestProtocol_Stub(TestProtocol_clazz* impl) : impl_(impl) {
+TestProtocol_Stub::TestProtocol_Stub(
+    ::fidl::test::union_::TestProtocol_Stub::TestProtocol_clazz* impl)
+    : impl_(impl) {
   (void)impl_;
 }
 
