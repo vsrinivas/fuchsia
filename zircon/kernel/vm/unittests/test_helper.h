@@ -94,8 +94,10 @@ class StubPageSource : public PageSource {
  public:
   StubPageSource() = default;
   ~StubPageSource() = default;
-  bool GetPage(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
-               paddr_t* const pa_out) override {
+
+ private:
+  bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
+                   paddr_t* const pa_out) override {
     return false;
   }
   void GetPageAsync(page_request_t* request) override { panic("Not implemented\n"); }

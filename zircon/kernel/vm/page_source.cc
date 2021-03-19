@@ -172,7 +172,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
     return ZX_ERR_BAD_STATE;
   }
 
-  if (GetPage(offset, vmo_debug_info, page_out, pa_out)) {
+  if (GetPageSync(offset, vmo_debug_info, page_out, pa_out)) {
     return ZX_OK;
   }
 

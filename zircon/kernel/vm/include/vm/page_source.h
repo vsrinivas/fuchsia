@@ -20,6 +20,37 @@
 #include <vm/page_request.h>
 #include <vm/vm.h>
 
+class PageRequest;
+
+struct VmoDebugInfo {
+  uintptr_t vmo_ptr;
+  uint64_t vmo_id;
+};
+
+// Interface for providing pages to a VMO through page requests.
+class PageProvider {
+  // Synchronously gets a page from the backing source.
+  virtual bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
+                           paddr_t* const pa_out) = 0;
+  // Informs the backing source of a page request. The callback has ownership
+  // of |request| until the async request is cancelled.
+  virtual void GetPageAsync(page_request_t* request) = 0;
+  // Informs the backing source that a page request has been fulfilled. This
+  // must be called for all requests that are raised.
+  virtual void ClearAsyncRequest(page_request_t* request) = 0;
+  // Swaps the backing memory for a request. Assumes that |old|
+  // and |new_request| have the same type, offset, and length.
+  virtual void SwapRequest(page_request_t* old, page_request_t* new_req) = 0;
+
+  // OnDetach is called once no more calls to GetPage/GetPageAsync will be made. It
+  // will be called before OnClose and will only be called once.
+  virtual void OnDetach() = 0;
+  // After OnClose is called, no more calls will be made except for ::WaitOnEvent.
+  virtual void OnClose() = 0;
+  // Waits on an |event| associated with a page request.
+  virtual zx_status_t WaitOnEvent(Event* event) = 0;
+};
+
 // A page source has two parts - the PageSource and the PagerProxy. The
 // PageSource is responsible for generic functionality, mostly around managing
 // the lifecycle of page requests. The PagerProxy is responsible for actually
@@ -40,15 +71,8 @@
 //   6) The caller wakes up and queries the vm object again, by which
 //      point the request page will be present.
 
-class PageRequest;
-
-struct VmoDebugInfo {
-  uintptr_t vmo_ptr;
-  uint64_t vmo_id;
-};
-
 // Object which provides pages to a vm_object.
-class PageSource : public fbl::RefCounted<PageSource> {
+class PageSource : public PageProvider, public fbl::RefCounted<PageSource> {
  public:
   PageSource();
   virtual ~PageSource();
@@ -101,26 +125,14 @@ class PageSource : public fbl::RefCounted<PageSource> {
   void Dump() const;
 
  protected:
-  // Synchronously gets a page from the backing source.
-  virtual bool GetPage(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
-                       paddr_t* const pa_out) = 0;
-  // Informs the backing source of a page request. The callback has ownership
-  // of |request| until the async request is cancelled.
-  virtual void GetPageAsync(page_request_t* request) = 0;
-  // Informs the backing source that a page request has been fulfilled. This
-  // must be called for all requests that are raised.
-  virtual void ClearAsyncRequest(page_request_t* request) = 0;
-  // Swaps the backing memory for a request. Assumes that |old|
-  // and |new_request| have the same type, offset, and length.
-  virtual void SwapRequest(page_request_t* old, page_request_t* new_req) = 0;
-
-  // OnDetach is called once no more calls to GetPage/GetPageAsync will be made. It
-  // will be called before OnClose and will only be called once.
-  virtual void OnDetach() = 0;
-  // After OnClose is called, no more calls will be made except for ::WaitOnEvent.
-  virtual void OnClose() = 0;
-
-  virtual zx_status_t WaitOnEvent(Event* event) = 0;
+  bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
+                   paddr_t* const pa_out) override = 0;
+  void GetPageAsync(page_request_t* request) override = 0;
+  void ClearAsyncRequest(page_request_t* request) override = 0;
+  void SwapRequest(page_request_t* old, page_request_t* new_req) override = 0;
+  void OnClose() override = 0;
+  void OnDetach() override = 0;
+  zx_status_t WaitOnEvent(Event* event) override = 0;
 
  private:
   fbl::Canary<fbl::magic("VMPS")> canary_;
