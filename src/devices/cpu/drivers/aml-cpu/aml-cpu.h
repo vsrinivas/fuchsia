@@ -33,7 +33,8 @@ class AmlCpu : public DeviceType,
   explicit AmlCpu(zx_device_t* parent, const ddk::ClockProtocolClient& plldiv16,
                   const ddk::ClockProtocolClient& cpudiv16,
                   const ddk::ClockProtocolClient& cpuscaler, const ddk::PowerProtocolClient& pwr,
-                  const std::vector<operating_point_t>& operating_points)
+                  const std::vector<operating_point_t>& operating_points,
+                  const uint32_t core_count)
       : DeviceType(parent),
         plldiv16_(plldiv16),
         cpudiv16_(cpudiv16),
@@ -42,7 +43,8 @@ class AmlCpu : public DeviceType,
         current_pstate_(operating_points.size() -
                         1)  // Assume the core is running at the slowest clock to begin.
         ,
-        operating_points_(operating_points) {}
+        operating_points_(operating_points),
+        core_count_(core_count) {}
 
   static zx_status_t Create(void* context, zx_device_t* device);
 
@@ -78,6 +80,8 @@ class AmlCpu : public DeviceType,
 
   size_t current_pstate_;
   const std::vector<operating_point_t> operating_points_;
+
+  const uint32_t core_count_;
 };
 
 }  // namespace amlogic_cpu

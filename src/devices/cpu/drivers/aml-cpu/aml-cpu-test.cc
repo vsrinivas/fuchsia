@@ -37,13 +37,15 @@ const std::vector<operating_point_t> kTestOperatingPoints = {
     {.freq_hz = MHZ(1), .volt_uv = 150, .pd_id = 0},
 };
 
+const uint32_t kTestCoreCount = 1;
+
 class AmlCpuTest : public AmlCpu {
  public:
   AmlCpuTest(const ddk::ClockProtocolClient&& plldiv16, const ddk::ClockProtocolClient&& cpudiv16,
              const ddk::ClockProtocolClient&& cpuscaler, const ddk::PowerProtocolClient&& pwr,
-             const std::vector<operating_point_t> operating_points)
+             const std::vector<operating_point_t> operating_points, const uint32_t core_count)
       : AmlCpu(nullptr, std::move(plldiv16), std::move(cpudiv16), std::move(cpuscaler),
-               std::move(pwr), operating_points) {}
+               std::move(pwr), operating_points, core_count) {}
 
   static zx_status_t MessageOp(void* ctx, fidl_incoming_msg_t* msg, fidl_txn_t* txn) {
     return static_cast<AmlCpuTest*>(ctx)->DdkMessage(msg, txn);
@@ -64,7 +66,8 @@ class AmlCpuTestFixture : public InspectTestHelper, public zxtest::Test {
       : dut_(ddk::ClockProtocolClient(pll_clock_.GetProto()),
              ddk::ClockProtocolClient(cpu_clock_.GetProto()),
              ddk::ClockProtocolClient(scaler_clock_.GetProto()),
-             ddk::PowerProtocolClient(power_.GetProto()), kTestOperatingPoints),
+             ddk::PowerProtocolClient(power_.GetProto()), kTestOperatingPoints,
+             kTestCoreCount),
         operating_points_(kTestOperatingPoints) {}
 
   void SetUp() override {
@@ -194,6 +197,14 @@ TEST_F(AmlCpuTestFixture, TestSetCpuInfo) {
   // cpu_package_id : 2
   ASSERT_NO_FATAL_FAILURES(CheckProperty<inspect::UintPropertyValue>(
       cpu_info->node(), "cpu_package_id", inspect::UintPropertyValue(2)));
+}
+
+TEST_F(AmlCpuTestFixture, TestGetLogicalCoreCount) {
+  auto coreCountResp = cpu_client_->GetNumLogicalCores();
+
+  ASSERT_OK(coreCountResp.status());
+
+  EXPECT_EQ(coreCountResp->count, kTestCoreCount);
 }
 
 }  // namespace amlogic_cpu

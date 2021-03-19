@@ -95,7 +95,7 @@ constexpr amlogic_cpu::operating_point_t operating_points[] = {
 };
 
 constexpr amlogic_cpu::perf_domain_t performance_domains[] = {
-    {.id = kPdArmA53, .relative_performance = 255, .name = "S905D2 ARM A53"},
+    {.id = kPdArmA53, .core_count = 4, .relative_performance = 255, .name = "S905D2 ARM A53"},
 };
 
 static const pbus_metadata_t cpu_metadata[] = {

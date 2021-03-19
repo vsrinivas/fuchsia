@@ -21,6 +21,9 @@ typedef struct perf_domain {
   // operating points.
   PerfDomainId id;
 
+  // Number of logical processors in this performance domain.
+  uint32_t core_count;
+
   // An integer in the range [0-255] that defines the relative performance
   // of this domain compared to others in the system.
   uint8_t relative_performance;

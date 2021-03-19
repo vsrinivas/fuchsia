@@ -12,6 +12,7 @@
 #include <lib/mmio/mmio.h>
 
 #include <memory>
+#include <vector>
 
 #include <ddktl/fidl.h>
 #include <fbl/string_buffer.h>
@@ -194,7 +195,8 @@ zx_status_t AmlCpu::Create(void* context, zx_device_t* parent) {
 
     auto device = std::make_unique<AmlCpu>(
         parent, std::move(pll_div16_client), std::move(cpu_div16_client),
-        std::move(cpu_scaler_client), std::move(power_client), std::move(pd_op_points));
+        std::move(cpu_scaler_client), std::move(power_client), std::move(pd_op_points),
+        perf_domain.core_count);
 
     st = device->Init();
     if (st != ZX_OK) {
@@ -365,8 +367,7 @@ void AmlCpu::GetPerformanceStateInfo(uint32_t state,
 }
 
 void AmlCpu::GetNumLogicalCores(GetNumLogicalCoresCompleter::Sync& completer) {
-  unsigned int result = zx_system_get_num_cpus();
-  completer.Reply(result);
+  completer.Reply(core_count_);
 }
 
 void AmlCpu::GetLogicalCoreId(uint64_t index, GetLogicalCoreIdCompleter::Sync& completer) {
