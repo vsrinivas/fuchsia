@@ -284,6 +284,8 @@ class Parser {
 
   std::unique_ptr<raw::AliasDeclaration> ParseAliasDeclaration(
       std::unique_ptr<raw::AttributeList> attributes, ASTScope&, const Modifiers&);
+  std::unique_ptr<raw::AliasDeclaration> ParseAliasDeclarationNew(
+      std::unique_ptr<raw::AttributeList> attributes);
   std::unique_ptr<raw::Using> ParseUsing(std::unique_ptr<raw::AttributeList> attributes, ASTScope&,
                                          const Modifiers&);
 

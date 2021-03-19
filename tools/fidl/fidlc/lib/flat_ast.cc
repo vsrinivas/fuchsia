@@ -1548,13 +1548,23 @@ void Library::ConsumeUsing(std::unique_ptr<raw::Using> using_directive,
 
 bool Library::ConsumeTypeAlias(std::unique_ptr<raw::AliasDeclaration> alias_declaration,
                                fidl::utils::Syntax syntax) {
-  assert(alias_declaration->alias && alias_declaration->type_ctor);
+  assert(alias_declaration->alias &&
+         (alias_declaration->type_ctor || alias_declaration->type_ctor_new));
 
   auto alias_name = Name::CreateSourced(this, alias_declaration->alias->span());
   std::unique_ptr<TypeConstructor> type_ctor_;
-  if (!ConsumeTypeConstructor(std::move(alias_declaration->type_ctor), alias_declaration->span(),
-                              syntax, &type_ctor_))
-    return false;
+
+  // TODO(fxbug.dev/70247): Remove conditional once we're fully on the new syntax.
+  if (alias_declaration->IsNew()) {
+    type_ctor_ = ConsumeTypeConstructorNew(std::move(alias_declaration->type_ctor_new), alias_name);
+    if (type_ctor_ == nullptr)
+      return false;
+  } else {
+    if (!ConsumeTypeConstructor(std::move(alias_declaration->type_ctor), alias_declaration->span(),
+                                syntax, &type_ctor_))
+      return false;
+  }
+
   return RegisterDecl(std::make_unique<TypeAlias>(std::move(alias_declaration->attributes),
                                                   std::move(alias_name), std::move(type_ctor_),
                                                   false /* allow_partial_type_ctor */));

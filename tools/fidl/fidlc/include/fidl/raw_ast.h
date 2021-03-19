@@ -319,20 +319,46 @@ class BitsDeclaration final : public SourceElement {
   const types::Strictness strictness;
 };
 
+class TypeConstructorNew;
+
 class AliasDeclaration final : public SourceElement {
+  enum Kind {
+    kNew,
+    kOld,
+  };
+
  public:
   AliasDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
                    std::unique_ptr<Identifier> alias, std::unique_ptr<TypeConstructor> type_ctor)
       : SourceElement(element),
+        kind(Kind::kOld),
         attributes(std::move(attributes)),
         alias(std::move(alias)),
-        type_ctor(std::move(type_ctor)) {}
+        type_ctor(std::move(type_ctor)),
+        type_ctor_new(nullptr) {}
+
+  // TODO(fxbug.dev/70247): This will eventually be the only constructor.
+  AliasDeclaration(SourceElement const& element, std::unique_ptr<AttributeList> attributes,
+                   std::unique_ptr<Identifier> alias,
+                   std::unique_ptr<TypeConstructorNew> type_ctor_new)
+      : SourceElement(element),
+        kind(Kind::kNew),
+        attributes(std::move(attributes)),
+        alias(std::move(alias)),
+        type_ctor(nullptr),
+        type_ctor_new(std::move(type_ctor_new)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
+  // TODO(fxbug.dev/70247): Remove once we're fully on the new syntax.
+  bool IsNew() const { return kind == Kind::kNew; }
+
+  // TODO(fxbug.dev/70247): Remove once we're fully on the new syntax.
+  const Kind kind;
   std::unique_ptr<AttributeList> attributes;
   std::unique_ptr<Identifier> alias;
   std::unique_ptr<TypeConstructor> type_ctor;
+  std::unique_ptr<TypeConstructorNew> type_ctor_new;
 };
 
 class Using final : public SourceElement {
@@ -734,8 +760,6 @@ class UnionDeclaration final : public SourceElement {
   const bool strictness_specified;
   const types::Resourceness resourceness;
 };
-
-class TypeConstructorNew;
 
 class LayoutMember final : public SourceElement {
  public:

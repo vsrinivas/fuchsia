@@ -457,6 +457,29 @@ std::unique_ptr<raw::AliasDeclaration> Parser::ParseAliasDeclaration(
                                                  std::move(alias), std::move(type_ctor));
 }
 
+std::unique_ptr<raw::AliasDeclaration> Parser::ParseAliasDeclarationNew(
+    std::unique_ptr<raw::AttributeList> attributes) {
+  ASTScope scope(this);
+  ConsumeToken(IdentifierOfSubkind(Token::Subkind::kAlias));
+  if (!Ok())
+    return Fail();
+
+  auto alias = ParseIdentifier();
+  if (!Ok())
+    return Fail();
+
+  ConsumeToken(OfKind(Token::Kind::kEqual));
+  if (!Ok())
+    return Fail();
+
+  auto type_ctor = ParseTypeConstructorNew();
+  if (!Ok())
+    return Fail();
+
+  return std::make_unique<raw::AliasDeclaration>(scope.GetSourceElement(), std::move(attributes),
+                                                 std::move(alias), std::move(type_ctor));
+}
+
 std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeList> attributes,
                                                ASTScope& scope, const Modifiers& modifiers) {
   const auto decl_token = ConsumeToken(IdentifierOfSubkind(Token::Subkind::kUsing));
@@ -1990,6 +2013,10 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
 
   bool done_with_library_imports = false;
   auto parse_declaration = [&]() {
+    // TODO(fxbug.dev/70247): Once we're fully on the new syntax, we should refactor all of the
+    //  top-level "Parse..." methods to omit their externally defined ASTScope parameter.  This was
+    //  necessary when top-level definitions could begin with modifiers (ex: "strict struct S {...")
+    //  which is no longer possible in the new syntax.
     ASTScope scope(this);
     std::unique_ptr<raw::AttributeList> attributes = MaybeParseAttributeList();
     if (!Ok())
@@ -2010,8 +2037,7 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
 
       case CASE_IDENTIFIER(Token::Subkind::kAlias): {
         done_with_library_imports = true;
-        add(&alias_list,
-            [&] { return ParseAliasDeclaration(std::move(attributes), scope, Modifiers()); });
+        add(&alias_list, [&] { return ParseAliasDeclarationNew(std::move(attributes)); });
         return More;
       }
 

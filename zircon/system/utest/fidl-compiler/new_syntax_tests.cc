@@ -408,6 +408,25 @@ type N = S;
   ASSERT_ERR(errors[0], fidl::ErrNewTypesNotAllowed);
 }
 
+TEST(NewSyntaxTests, Alias) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+type TypeDecl = struct {
+    field1 uint16;
+    field2 uint16;
+};
+alias AliasOfDecl = TypeDecl;
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupStruct("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 2);
+  ASSERT_NOT_NULL(library.LookupTypeAlias("AliasOfDecl"));
+}
+
 TEST(NewSyntaxTests, LayoutMemberConstraints) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
