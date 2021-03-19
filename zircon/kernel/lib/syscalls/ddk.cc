@@ -722,7 +722,9 @@ zx_status_t sys_smc_call(zx_handle_t handle, user_in_ptr<const zx_smc_parameters
 
   zx_smc_result_t result;
 
-  arch_smc_call(&params, &result);
-
+  status = arch_smc_call(&params, &result);
+  if (status != ZX_OK) {
+    return status;
+  }
   return out_smc_result.copy_to_user(result);
 }
