@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("utils") {
   sources = [
@@ -27,15 +27,9 @@ source_set("utils") {
   ]
 }
 
-unittest_package("tests") {
+fuchsia_unittest_package("tests") {
   package_name = "scenic_utils_tests"
   deps = [ ":scenic_utils_unittests" ]
-  tests = [
-    {
-      name = "scenic_utils_unittests"
-      environments = basic_envs
-    },
-  ]
 }
 
 executable("scenic_utils_unittests") {
