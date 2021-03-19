@@ -81,11 +81,11 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::Open(OpenCompleter::Sync& co
   if (res == ZX_OK) {
     zxlogf(DEBUG, "open succeed, returning");
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_ON;
-    (*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kOutboundAllowanceInit);
-    ot_radio_obj_.inbound_allowance_ = 0;
-    ot_radio_obj_.outbound_allowance_ = kOutboundAllowanceInit;
-    ot_radio_obj_.inbound_cnt_ = 0;
-    ot_radio_obj_.outbound_cnt_ = 0;
+    (*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kRadioboundAllowanceInit);
+    ot_radio_obj_.clientbound_allowance_ = 0;
+    ot_radio_obj_.radiobound_allowance_ = kRadioboundAllowanceInit;
+    ot_radio_obj_.clientbound_cnt_ = 0;
+    ot_radio_obj_.radiobound_cnt_ = 0;
     completer.ReplySuccess();
   } else {
     zxlogf(ERROR, "Error in handling FIDL close req: %s, power status: %u",
@@ -118,7 +118,7 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView
   } else if (data.count() > kMaxFrameSize) {
     (*ot_radio_obj_.fidl_binding_)
         ->OnError(lowpan_spinel_fidl::wire::Error::OUTBOUND_FRAME_TOO_LARGE, false);
-  } else if (ot_radio_obj_.outbound_allowance_ == 0) {
+  } else if (ot_radio_obj_.radiobound_allowance_ == 0) {
     // Client violates the protocol, close FIDL channel and device. Will not send OnError event.
     ot_radio_obj_.power_status_ = OT_SPINEL_DEVICE_OFF;
     ot_radio_obj_.Reset();
@@ -126,18 +126,18 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView
     completer.Close(ZX_ERR_IO_OVERRUN);
   } else {
     // Send out the frame.
-    fbl::AutoLock lock(&ot_radio_obj_.outbound_lock_);
-    ot_radio_obj_.outbound_queue_.push(std::move(data));
+    fbl::AutoLock lock(&ot_radio_obj_.radiobound_lock_);
+    ot_radio_obj_.radiobound_queue_.push(std::move(data));
     lock.release();
     async::PostTask(ot_radio_obj_.loop_.dispatcher(),
-                    [this]() { this->ot_radio_obj_.TryHandleOutboundFrame(); });
+                    [this]() { this->ot_radio_obj_.TryHandleRadioboundFrame(); });
 
-    ot_radio_obj_.outbound_allowance_--;
-    ot_radio_obj_.outbound_cnt_++;
+    ot_radio_obj_.radiobound_allowance_--;
+    ot_radio_obj_.radiobound_cnt_++;
 
-    if ((ot_radio_obj_.outbound_cnt_ & 1) == 0) {
-      (*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kOutboundAllowanceInc);
-      ot_radio_obj_.outbound_allowance_ += kOutboundAllowanceInc;
+    if ((ot_radio_obj_.radiobound_cnt_ & 1) == 0) {
+      (*ot_radio_obj_.fidl_binding_)->OnReadyForSendFrames(kRadioboundAllowanceInc);
+      ot_radio_obj_.radiobound_allowance_ += kRadioboundAllowanceInc;
     }
   }
 }
@@ -145,10 +145,10 @@ void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::SendFrame(::fidl::VectorView
 void FakeOtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
     uint32_t number_of_frames, ReadyToReceiveFramesCompleter::Sync& completer) {
   zxlogf(DEBUG, "allow to receive %u frame", number_of_frames);
-  bool prev_no_inbound_allowance = ot_radio_obj_.inbound_allowance_ == 0;
-  ot_radio_obj_.inbound_allowance_ += number_of_frames;
+  bool prev_no_clientbound_allowance = ot_radio_obj_.clientbound_allowance_ == 0;
+  ot_radio_obj_.clientbound_allowance_ += number_of_frames;
 
-  if (prev_no_inbound_allowance && ot_radio_obj_.inbound_allowance_ > 0) {
+  if (prev_no_clientbound_allowance && ot_radio_obj_.clientbound_allowance_ > 0) {
     zx_port_packet packet = {PORT_KEY_INBOUND_ALLOWANCE, ZX_PKT_TYPE_USER, ZX_OK, {}};
     ot_radio_obj_.port_.queue(&packet);
   }
@@ -193,32 +193,32 @@ zx_status_t FakeOtRadioDevice::StartLoopThread() {
 zx_status_t FakeOtRadioDevice::Reset() {
   zxlogf(INFO, "fake-ot-radio: reset");
 
-  fbl::AutoLock lock_in(&inbound_lock_);
-  std::queue<std::vector<uint8_t>> empty_inbound_queue;
-  std::swap(inbound_queue_, empty_inbound_queue);
+  fbl::AutoLock lock_in(&clientbound_lock_);
+  std::queue<std::vector<uint8_t>> empty_clientbound_queue;
+  std::swap(clientbound_queue_, empty_clientbound_queue);
   lock_in.release();
 
-  fbl::AutoLock lock_out(&outbound_lock_);
-  std::queue<::fidl::VectorView<uint8_t>> empty_outbound_queue;
-  std::swap(outbound_queue_, empty_outbound_queue);
+  fbl::AutoLock lock_out(&radiobound_lock_);
+  std::queue<::fidl::VectorView<uint8_t>> empty_radiobound_queue;
+  std::swap(radiobound_queue_, empty_radiobound_queue);
   lock_out.release();
 
   zx::nanosleep(zx::deadline_after(zx::msec(kResetMsDelay)));
 
   std::vector<uint8_t> event;
   event.assign(std::begin(kNcpResetEvent), std::end(kNcpResetEvent));
-  PostSendInboundFrameTask(std::move(event));
+  PostSendClientboundFrameTask(std::move(event));
 
   return ZX_OK;
 }
 
-void FakeOtRadioDevice::TryHandleOutboundFrame() {
-  fbl::AutoLock lock(&outbound_lock_);
-  if (!outbound_queue_.empty()) {
-    zxlogf(DEBUG, "fake-ot-stack: TryHandleOutboundFrame() outbound_queue_.size():%lu",
-           outbound_queue_.size());
-    FrameHandler(std::move(outbound_queue_.front()));
-    outbound_queue_.pop();
+void FakeOtRadioDevice::TryHandleRadioboundFrame() {
+  fbl::AutoLock lock(&radiobound_lock_);
+  if (!radiobound_queue_.empty()) {
+    zxlogf(DEBUG, "fake-ot-stack: TryHandleRadioboundFrame() radiobound_queue_.size():%lu",
+           radiobound_queue_.size());
+    FrameHandler(std::move(radiobound_queue_.front()));
+    radiobound_queue_.pop();
   }
 }
 
@@ -271,7 +271,7 @@ void FakeOtRadioDevice::FrameHandler(::fidl::VectorView<uint8_t> data) {
         break;
     }
     reply[0] |= tid;
-    PostSendInboundFrameTask(std::move(reply));
+    PostSendClientboundFrameTask(std::move(reply));
   } else if (data.data()[kCmdLoc] == kPropValueSet) {
     // Handle prop value set
     // now we just reply what is being set
@@ -279,7 +279,7 @@ void FakeOtRadioDevice::FrameHandler(::fidl::VectorView<uint8_t> data) {
     std::vector<uint8_t> reply;
     reply.assign(data.cbegin(), data.cend());
     reply[1] = kPropValueIs;
-    PostSendInboundFrameTask(std::move(reply));
+    PostSendClientboundFrameTask(std::move(reply));
   } else {
     // TODO (jiamingw): Send back response for invalid request.
     zxlogf(ERROR, "fake-ot-radio: received invalid spinel frame");
@@ -289,26 +289,27 @@ void FakeOtRadioDevice::FrameHandler(::fidl::VectorView<uint8_t> data) {
 uint32_t FakeOtRadioDevice::GetTimeoutMs() {
   int timeout_ms = kLoopTimeOutMsOneDay;
 
-  fbl::AutoLock lock(&inbound_lock_);
-  if (!inbound_queue_.empty() && inbound_allowance_ > 0) {
+  fbl::AutoLock lock(&clientbound_lock_);
+  if (!clientbound_queue_.empty() && clientbound_allowance_ > 0) {
     timeout_ms = 0;
   }
 
   return timeout_ms;
 }
 
-void FakeOtRadioDevice::PostSendInboundFrameTask(std::vector<uint8_t> frame) {
-  fbl::AutoLock lock(&inbound_lock_);
-  inbound_queue_.push(std::move(frame));
+void FakeOtRadioDevice::PostSendClientboundFrameTask(std::vector<uint8_t> frame) {
+  fbl::AutoLock lock(&clientbound_lock_);
+  clientbound_queue_.push(std::move(frame));
   zx_port_packet packet = {PORT_KEY_INBOUND_FRAME, ZX_PKT_TYPE_USER, ZX_OK, {}};
   port_.queue(&packet);
 }
 
-zx_status_t FakeOtRadioDevice::TrySendInboundFrame() {
-  fbl::AutoLock lock(&inbound_lock_);
-  if (power_status_ == OT_SPINEL_DEVICE_ON && inbound_allowance_ > 0 && !inbound_queue_.empty()) {
+zx_status_t FakeOtRadioDevice::TrySendClientboundFrame() {
+  fbl::AutoLock lock(&clientbound_lock_);
+  if (power_status_ == OT_SPINEL_DEVICE_ON && clientbound_allowance_ > 0 &&
+      !clientbound_queue_.empty()) {
     // send out 1 packet
-    auto spinel_frame = inbound_queue_.front();
+    auto spinel_frame = clientbound_queue_.front();
     ::fidl::VectorView<uint8_t> data;
     data.set_count(spinel_frame.size());
     data.set_data(fidl::unowned_ptr(spinel_frame.data()));
@@ -319,9 +320,9 @@ zx_status_t FakeOtRadioDevice::TrySendInboundFrame() {
       return res;
     }
 
-    inbound_allowance_--;
-    inbound_cnt_++;
-    inbound_queue_.pop();
+    clientbound_allowance_--;
+    clientbound_cnt_++;
+    clientbound_queue_.pop();
   }
   return ZX_OK;
 }
@@ -336,7 +337,7 @@ zx_status_t FakeOtRadioDevice::RadioThread() {
     status = port_.wait(zx::deadline_after(zx::msec(timeout_ms)), &packet);
 
     if (status == ZX_ERR_TIMED_OUT) {
-      zx_status_t send_status = TrySendInboundFrame();
+      zx_status_t send_status = TrySendClientboundFrame();
       if (send_status != ZX_OK) {
         power_status_ = OT_SPINEL_DEVICE_OFF;
       }
@@ -348,7 +349,7 @@ zx_status_t FakeOtRadioDevice::RadioThread() {
     }
 
     if (packet.key == PORT_KEY_INBOUND_FRAME || packet.key == PORT_KEY_INBOUND_ALLOWANCE) {
-      zx_status_t send_status = TrySendInboundFrame();
+      zx_status_t send_status = TrySendClientboundFrame();
       if (send_status != ZX_OK) {
         power_status_ = OT_SPINEL_DEVICE_OFF;
       }

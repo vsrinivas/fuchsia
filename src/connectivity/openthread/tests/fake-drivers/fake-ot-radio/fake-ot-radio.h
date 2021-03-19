@@ -27,8 +27,8 @@ typedef enum {
 } ot_radio_power_status_e;
 
 namespace fake_ot {
-constexpr uint32_t kOutboundAllowanceInit = 4;
-constexpr uint32_t kOutboundAllowanceInc = 2;
+constexpr uint32_t kRadioboundAllowanceInit = 4;
+constexpr uint32_t kRadioboundAllowanceInc = 2;
 constexpr uint32_t kMaxFrameSize = 2048;
 constexpr uint32_t kLoopTimeOutMsOneDay = 1000 * 60 * 60 * 24;  // 24 hours
 constexpr uint32_t kResetMsDelay = 100;
@@ -60,10 +60,10 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
   // Loop
   zx_status_t RadioThread();
   uint32_t GetTimeoutMs();
-  zx_status_t TrySendInboundFrame();
-  void TryHandleOutboundFrame();
+  zx_status_t TrySendClientboundFrame();
+  void TryHandleRadioboundFrame();
   void FrameHandler(::fidl::VectorView<uint8_t> data);
-  void PostSendInboundFrameTask(std::vector<uint8_t> packet);
+  void PostSendClientboundFrameTask(std::vector<uint8_t> packet);
 
   static uint8_t ValidateSpinelHeaderAndGetTid(const uint8_t* data, uint32_t len);
 
@@ -90,16 +90,16 @@ class FakeOtRadioDevice : public ddk::Device<FakeOtRadioDevice, ddk::Unbindable,
   async::Loop loop_;
   zx::port port_;
 
-  fbl::Mutex inbound_lock_;
-  std::queue<std::vector<uint8_t>> inbound_queue_ __TA_GUARDED(inbound_lock_);
+  fbl::Mutex clientbound_lock_;
+  std::queue<std::vector<uint8_t>> clientbound_queue_ __TA_GUARDED(clientbound_lock_);
 
-  fbl::Mutex outbound_lock_;
-  std::queue<::fidl::VectorView<uint8_t>> outbound_queue_ __TA_GUARDED(outbound_lock_);
+  fbl::Mutex radiobound_lock_;
+  std::queue<::fidl::VectorView<uint8_t>> radiobound_queue_ __TA_GUARDED(radiobound_lock_);
 
-  uint32_t inbound_allowance_ = 0;
-  uint32_t outbound_allowance_ = kOutboundAllowanceInit;
-  uint64_t inbound_cnt_ = 0;
-  uint64_t outbound_cnt_ = 0;
+  uint32_t clientbound_allowance_ = 0;
+  uint32_t radiobound_allowance_ = kRadioboundAllowanceInit;
+  uint64_t clientbound_cnt_ = 0;
+  uint64_t radiobound_cnt_ = 0;
   std::optional<fidl::ServerBindingRef<fuchsia_lowpan_spinel::Device>> fidl_binding_;
   std::unique_ptr<LowpanSpinelDeviceFidlImpl> fidl_impl_obj_ = 0;
   ot_radio_power_status_e power_status_ = OT_SPINEL_DEVICE_OFF;
