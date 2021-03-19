@@ -12,15 +12,15 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 
-#include <kernel/auto_lock.h>
 #include <kernel/event.h>
+#include <kernel/lockdep.h>
 #include <kernel/percpu.h>
 #include <kernel/spinlock.h>
 #include <lk/init.h>
 
 #define DPC_THREAD_PRIORITY HIGH_PRIORITY
 
-static SpinLock dpc_lock;
+DECLARE_SINGLETON_SPINLOCK(dpc_lock);
 
 zx_status_t Dpc::Queue(bool reschedule) {
   DEBUG_ASSERT(func_);
@@ -28,7 +28,7 @@ zx_status_t Dpc::Queue(bool reschedule) {
   DpcQueue* dpc_queue;
 
   {
-    AutoSpinLock lock{&dpc_lock};
+    Guard<SpinLock, IrqSave> guard{dpc_lock::Get()};
 
     if (InContainer()) {
       return ZX_ERR_ALREADY_EXISTS;
@@ -50,7 +50,7 @@ zx_status_t Dpc::QueueThreadLocked() {
 
   // Interrupts are already disabled.
   {
-    AutoSpinLockNoIrqSave lock{&dpc_lock};
+    Guard<SpinLock, NoIrqSave> guard{dpc_lock::Get()};
 
     if (InContainer()) {
       return ZX_ERR_ALREADY_EXISTS;
@@ -81,7 +81,7 @@ zx_status_t DpcQueue::Shutdown(zx_time_t deadline) {
   Thread* t;
   Event* event;
   {
-    AutoSpinLock lock{&dpc_lock};
+    Guard<SpinLock, IrqSave> guard{dpc_lock::Get()};
 
     // Ask the Dpc's thread to terminate.
     DEBUG_ASSERT(!stop_);
@@ -103,7 +103,7 @@ zx_status_t DpcQueue::Shutdown(zx_time_t deadline) {
 }
 
 void DpcQueue::TransitionOffCpu(DpcQueue& source) {
-  AutoSpinLock lock{&dpc_lock};
+  Guard<SpinLock, IrqSave> guard{dpc_lock::Get()};
 
   // |source|'s cpu is shutting down. Assert that we are migrating to the current cpu.
   DEBUG_ASSERT(cpu_ == arch_curr_cpu_num());
@@ -133,28 +133,26 @@ int DpcQueue::Work() {
     __UNUSED zx_status_t err = event_.Wait();
     DEBUG_ASSERT(err == ZX_OK);
 
-    interrupt_saved_state_t state;
-    dpc_lock.AcquireIrqSave(state);
+    Dpc dpc_local;
+    {
+      Guard<SpinLock, IrqSave> guard{dpc_lock::Get()};
 
-    if (stop_) {
-      dpc_lock.ReleaseIrqRestore(state);
-      return 0;
+      if (stop_) {
+        return 0;
+      }
+
+      // Pop a Dpc off our list, and make a local copy.
+      Dpc* dpc = list_.pop_front();
+
+      // If our list is now empty, unsignal the event so we block until it is.
+      if (!dpc) {
+        event_.Unsignal();
+        continue;
+      }
+
+      // Copy the Dpc to the stack.
+      dpc_local = *dpc;
     }
-
-    // Pop a Dpc off our list, and make a local copy.
-    Dpc* dpc = list_.pop_front();
-
-    // If our list is now empty, unsignal the event so we block until it is.
-    if (!dpc) {
-      event_.Unsignal();
-      dpc_lock.ReleaseIrqRestore(state);
-      continue;
-    }
-
-    // Copy the Dpc to the stack.
-    Dpc dpc_local = *dpc;
-
-    dpc_lock.ReleaseIrqRestore(state);
 
     // Call the Dpc.
     dpc_local.Invoke();
