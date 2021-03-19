@@ -1955,91 +1955,100 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
                                        union_declaration->resourceness));
 }
 
+bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& context) {
+  std::vector<std::unique_ptr<TypeConstructor>> type_ctors;
+  for (auto& member : layout->members) {
+    auto name_of_anonymous_layout = Name::CreateDerived(
+        this, member->span(),
+        std::string(context.decl_name()) +
+            utils::to_upper_camel_case(std::string(member->identifier->span().data())));
+    auto type_ctor =
+        ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout);
+    if (type_ctor == nullptr) {
+      return false;
+    }
+    type_ctors.emplace_back(std::move(type_ctor));
+  }
+
+  // TODO(fxbug.dev/65978): add support for bits, enum, table.
+  switch (layout->kind) {
+    case raw::Layout::Kind::kStruct: {
+      std::vector<Struct::Member> members;
+      size_t index = 0;
+      for (auto& member : layout->members) {
+        members.emplace_back(std::move(type_ctors[index]), member->identifier->span(),
+                             /*maybe_default_value=*/nullptr, /*attributes=*/nullptr);
+        index++;
+      }
+
+      RegisterDecl(std::make_unique<Struct>(/*attributes=*/nullptr, context, std::move(members),
+                                            layout->resourceness));
+      break;
+    }
+    case raw::Layout::Kind::kUnion: {
+      std::vector<Union::Member> members;
+      size_t index = 0;
+      for (auto& member : layout->members) {
+        if (type_ctors[index]->nullability != types::Nullability::kNonnullable) {
+          Fail(ErrNullableUnionMember, member->span());
+          return false;
+        }
+        members.emplace_back(std::move(member->ordinal), std::move(type_ctors[index]),
+                             member->identifier->span(),
+                             /*attributes=*/nullptr);
+        index++;
+      }
+
+      RegisterDecl(std::make_unique<Union>(
+          /*attributes=*/nullptr, context, std::move(members),
+          layout->strictness.value_or(types::Strictness::kFlexible), layout->resourceness));
+      break;
+    }
+    default: {
+      assert(false && "not handled yet");
+    }
+  }
+
+  return true;
+}
+
+std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
+    std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor, const Name& context) {
+  std::unique_ptr<TypeConstructor> type_ctor;
+  if (raw_type_ctor->type_ref->kind == raw::LayoutReference::Kind::kInline) {
+    auto inline_ref = static_cast<raw::InlineLayoutReference*>(raw_type_ctor->type_ref.get());
+    if (!ConsumeLayout(std::move(inline_ref->layout), context)) {
+      return nullptr;
+    }
+    type_ctor = std::make_unique<TypeConstructor>(
+        context,
+        /*maybe_arg_type_ctor=*/nullptr,
+        /*handle_subtype_identifier=*/std::nullopt,
+        /*handle_rights=*/nullptr,
+        /*maybe_size=*/nullptr, types::Nullability::kNonnullable, fidl::utils::Syntax::kNew);
+    return type_ctor;
+  }
+
+  // TODO(fxbug.dev/65978): Rewrite once using identifier, instead of type_ctor_old, on type_ref.
+  auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->type_ref.get());
+  SourceSpan span = named_ref->type_ctor_old->span();
+  if (!ConsumeTypeConstructor(std::move(named_ref->type_ctor_old), span, fidl::utils::Syntax::kNew,
+                              &type_ctor)) {
+    return nullptr;
+  }
+  return type_ctor;
+}
+
 void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
-  // TODO(fxbug.dev/65978): Create a naming context, and use it to name all
-  // anonymous layouts present in this type declaration. Currently, we do this
-  // inline, and in a very crude way (simple concatenation). We'll want to unit
-  // test the naming context separately since it is a key part of the language
-  // specification, and enables stable bindings generation.
-
-  std::function<void(Name, std::unique_ptr<raw::Layout>)> process_layout;
-  process_layout = [this, &process_layout](Name context, std::unique_ptr<raw::Layout> layout) {
-    std::vector<std::unique_ptr<TypeConstructor>> type_ctors;
-    for (auto& member : layout->members) {
-      switch (member->layout->kind) {
-        case raw::Layout::Kind::kStruct:
-        case raw::Layout::Kind::kUnion: {
-          // TODO(fxbug.dev/65978): Here specifically we need the naming context
-          // mentioned above.
-          auto name_of_anonymous_layout = Name::CreateDerived(
-              this, member->span(),
-              std::string(context.decl_name()) +
-                  utils::to_upper_camel_case(std::string(member->identifier->span().data())));
-          process_layout(name_of_anonymous_layout, std::move(member->layout));
-          auto type_ctor = std::make_unique<TypeConstructor>(
-              std::move(name_of_anonymous_layout),
-              /*maybe_arg_type_ctor=*/nullptr,
-              /*handle_subtype_identifier=*/std::nullopt,
-              /*handle_rights=*/nullptr,
-              /*maybe_size=*/nullptr, types::Nullability::kNonnullable, fidl::utils::Syntax::kNew);
-          type_ctors.emplace_back(std::move(type_ctor));
-          break;
-        }
-        case raw::Layout::Kind::kTypeCtor: {
-          std::unique_ptr<TypeConstructor> type_ctor;
-          // TODO(fxbug.dev/65978): Double check the below, which was copied
-          // from other methods. Why not `member->type_ctor->span();`?
-          auto span = member->identifier->span();
-          if (!ConsumeTypeConstructor(std::move(member->layout->type_ctor), span,
-                                      fidl::utils::Syntax::kNew, &type_ctor))
-            return;
-          type_ctors.emplace_back(std::move(type_ctor));
-          break;
-        }
-      }
-    }
-
-    switch (layout->kind) {
-      case raw::Layout::Kind::kStruct: {
-        std::vector<Struct::Member> members;
-        size_t index = 0;
-        for (auto& member : layout->members) {
-          members.emplace_back(std::move(type_ctors[index]), member->identifier->span(),
-                               /*maybe_default_value=*/nullptr, /*attributes=*/nullptr);
-          index++;
-        }
-
-        RegisterDecl(std::make_unique<Struct>(/*attributes=*/nullptr, std::move(context),
-                                              std::move(members), layout->resourceness));
-        break;
-      }
-      case raw::Layout::Kind::kUnion: {
-        std::vector<Union::Member> members;
-        size_t index = 0;
-        for (auto& member : layout->members) {
-          if (type_ctors[index]->nullability != types::Nullability::kNonnullable) {
-            Fail(ErrNullableUnionMember, member->span());
-            return;
-          }
-          members.emplace_back(std::move(member->ordinal), std::move(type_ctors[index]),
-                               member->identifier->span(),
-                               /*attributes=*/nullptr);
-          index++;
-        }
-
-        RegisterDecl(std::make_unique<Union>(
-            /*attributes=*/nullptr, std::move(context), std::move(members),
-            layout->strictness.value_or(types::Strictness::kFlexible), layout->resourceness));
-        break;
-      }
-      case raw::Layout::Kind::kTypeCtor: {
-        assert(false && "not handled yet");
-      }
-    }
-  };
-
   auto name = Name::CreateSourced(this, type_decl->identifier->span());
-  process_layout(std::move(name), std::move(type_decl->layout));
+  auto& type_ref = type_decl->type_ctor->type_ref;
+  if (type_ref->kind == raw::LayoutReference::Kind::kNamed) {
+    auto named_ref = static_cast<raw::NamedLayoutReference*>(type_ref.get());
+    Fail(ErrNewTypesNotAllowed, name, named_ref->type_ctor_old->span().data());
+    return;
+  }
+
+  ConsumeTypeConstructorNew(std::move(type_decl->type_ctor), name);
 }
 
 bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
@@ -2073,9 +2082,6 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   }
 
   auto step = StartConsumeStep(file->syntax);
-
-  // TODO(fxbug.dev/70247): remove this comment and the ones below
-  // nodes that appear in old syntax only
 
   auto using_list = std::move(file->using_list);
   for (auto& using_directive : using_list) {
@@ -2131,8 +2137,6 @@ bool Library::ConsumeFile(std::unique_ptr<raw::File> file) {
   for (auto& union_declaration : union_declaration_list) {
     step.ForUnionDeclaration(std::move(union_declaration));
   }
-
-  // nodes that appear in new syntax only
 
   auto type_decls = std::move(file->type_decls);
   for (auto& type_decl : type_decls) {
@@ -3552,7 +3556,9 @@ bool Library::CompileService(Service* service_decl) {
     }
     // TODO: in the new syntax we check that the service member is a type, but
     // don't validate that it's client_end or server_end (because they don't exist yet)
-    auto expected_category = member.type_ctor->syntax == fidl::utils::Syntax::kOld ? AllowedCategories::kProtocolOnly : AllowedCategories::kTypeOnly;
+    auto expected_category = member.type_ctor->syntax == fidl::utils::Syntax::kOld
+                                 ? AllowedCategories::kProtocolOnly
+                                 : AllowedCategories::kTypeOnly;
     if (!CompileTypeConstructorAllowing(member.type_ctor.get(), expected_category))
       return false;
     if (member.type_ctor->nullability != types::Nullability::kNonnullable)

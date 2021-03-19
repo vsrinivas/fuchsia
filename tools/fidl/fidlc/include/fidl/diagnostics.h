@@ -44,6 +44,7 @@ constexpr ErrorDef ErrMissingConstraintBrackets(
     "lists of constraints must be enclosed in brackets");
 constexpr ErrorDef ErrUnnecessaryConstraintBrackets(
     "single constraints must not be enclosed in brackets");
+constexpr ErrorDef ErrEmptyTypeParameters("no type parameters specified");
 constexpr ErrorDef ErrMissingOrdinalBeforeType("missing ordinal before type");
 constexpr ErrorDef ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef ErrOrdinalsMustStartAtOne("ordinals must start at 1");
@@ -131,6 +132,9 @@ constexpr ErrorDef ErrOrOperatorOnNonPrimitiveValue(
     "Or operator can only be applied to primitive-kinded values");
 constexpr ErrorDef<std::string_view> ErrUnknownEnumMember("unknown enum member '{}'");
 constexpr ErrorDef<std::string_view> ErrUnknownBitsMember("unknown bits member '{}'");
+constexpr ErrorDef<flat::Name, std::string_view> ErrNewTypesNotAllowed(
+    "newtypes not allowed: type declaration {} defines a new type of the existing {} type, wh is "
+    "not yet supported");
 constexpr ErrorDef<flat::IdentifierConstant *> ErrExpectedValueButGotType(
     "{} is a type, but a value was expected");
 constexpr ErrorDef<flat::Name, flat::Name> ErrMismatchedNameTypeAssignment(

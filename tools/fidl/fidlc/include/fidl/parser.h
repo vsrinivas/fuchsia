@@ -341,11 +341,15 @@ class Parser {
   // TODO(fxbug.dev/70247): Consolidate the ParseFoo methods.
   // --- new syntax ---
 
-  template <typename T, typename Fn, Token::Kind ClosingToken>
+  template <typename T, typename Fn, Token::Kind>
   std::vector<std::unique_ptr<T>> ParseCommaSeparatedList(int& items_seen, Fn fn);
-  std::unique_ptr<raw::Constraints> ParseConstraints();
+  std::unique_ptr<raw::TypeParameters> MaybeParseTypeParameters();
+  std::unique_ptr<raw::TypeConstraints> MaybeParseConstraints();
   std::unique_ptr<raw::LayoutMember> ParseLayoutMember(raw::Layout::Kind);
-  std::unique_ptr<raw::Layout> ParseLayout(ASTScope&);
+  std::unique_ptr<raw::Layout> ParseLayout(ASTScope&, std::unique_ptr<raw::CompoundIdentifier>,
+                                           const Modifiers&);
+  std::unique_ptr<raw::LayoutReference> ParseLayoutReference();
+  std::unique_ptr<raw::TypeConstructorNew> ParseTypeConstructorNew();
   std::unique_ptr<raw::TypeDecl> ParseTypeDecl(ASTScope&);
   std::unique_ptr<raw::File> ParseFileNewSyntax(
       ASTScope&, std::unique_ptr<raw::AttributeList> library_attributes,

@@ -735,30 +735,21 @@ class UnionDeclaration final : public SourceElement {
   const types::Resourceness resourceness;
 };
 
-class Constraints final : public SourceElement {
- public:
-  Constraints(SourceElement const& element, std::vector<std::unique_ptr<raw::Constant>> items)
-      : SourceElement(element), items(std::move(items)) {}
-
-  void Accept(TreeVisitor* visitor) const;
-
-  std::vector<std::unique_ptr<raw::Constant>> items;
-};
-
-class Layout;
+class TypeConstructorNew;
 
 class LayoutMember final : public SourceElement {
  public:
   LayoutMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal,
-               std::unique_ptr<Identifier> identifier, std::unique_ptr<Layout> layout)
+               std::unique_ptr<Identifier> identifier,
+               std::unique_ptr<TypeConstructorNew> type_ctor)
       : SourceElement(element),
         ordinal(std::move(ordinal)),
         identifier(std::move(identifier)),
-        layout(std::move(layout)) {}
+        type_ctor(std::move(type_ctor)) {}
 
   std::unique_ptr<Ordinal64> ordinal;
   std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<Layout> layout;
+  std::unique_ptr<TypeConstructorNew> type_ctor;
 };
 
 // TODO(fxbug.dev/65978): Expand this cover enums, bits, tables.
@@ -767,29 +758,95 @@ class Layout final : public SourceElement {
   enum Kind {
     kStruct,
     kUnion,
-    kTypeCtor,
   };
 
   Layout(SourceElement const& element,
          // TODO(fxbug.dev/65978): Support layout attributes.
-         // TODO(fxbug.dev/65978): Support type decl modifiers (e.g. `flexible`).
          Kind kind, std::vector<std::unique_ptr<LayoutMember>> members,
-         std::unique_ptr<Constraints> constraints, std::unique_ptr<TypeConstructor> type_ctor,
          std::optional<types::Strictness> strictness, types::Resourceness resourceness)
       : SourceElement(element),
         kind(kind),
         members(std::move(members)),
-        constraints(std::move(constraints)),
-        type_ctor(std::move(type_ctor)),
         strictness(strictness),
         resourceness(resourceness) {}
 
   Kind kind;
   std::vector<std::unique_ptr<raw::LayoutMember>> members;
-  std::unique_ptr<Constraints> constraints;
-  std::unique_ptr<TypeConstructor> type_ctor;
   std::optional<types::Strictness> strictness;
   types::Resourceness resourceness;
+};
+
+class LayoutReference : public SourceElement {
+ public:
+  enum Kind {
+    kInline,
+    kNamed,
+  };
+
+  LayoutReference(SourceElement const& element, Kind kind) : SourceElement(element), kind(kind) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  const Kind kind;
+};
+
+class InlineLayoutReference final : public LayoutReference {
+ public:
+  explicit InlineLayoutReference(SourceElement const& element, std::unique_ptr<Layout> layout)
+      : LayoutReference(element, Kind::kInline), layout(std::move(layout)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<Layout> layout;
+};
+
+class NamedLayoutReference final : public LayoutReference {
+ public:
+  // TODO(fxbug.dev/65978): Use identifier instead.
+  explicit NamedLayoutReference(SourceElement const& element,
+                                std::unique_ptr<TypeConstructor> type_ctor_old)
+      : LayoutReference(element, Kind::kNamed), type_ctor_old(std::move(type_ctor_old)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  // TODO(fxbug.dev/65978): Use identifier instead.
+  std::unique_ptr<TypeConstructor> type_ctor_old;
+};
+
+class TypeParameters final : public SourceElement {
+ public:
+  TypeParameters(SourceElement const& element, std::vector<std::unique_ptr<raw::Constant>> items)
+      : SourceElement(element), items(std::move(items)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::vector<std::unique_ptr<raw::Constant>> items;
+};
+
+class TypeConstraints final : public SourceElement {
+ public:
+  TypeConstraints(SourceElement const& element, std::vector<std::unique_ptr<raw::Constant>> items)
+      : SourceElement(element), items(std::move(items)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::vector<std::unique_ptr<raw::Constant>> items;
+};
+
+// TODO(fxbug.dev/65978): remove the "New" suffix once new syntax is fully implemented.
+class TypeConstructorNew final : public SourceElement {
+ public:
+  TypeConstructorNew(SourceElement const& element, std::unique_ptr<LayoutReference> type_ref,
+                     std::unique_ptr<TypeParameters> parameters,
+                     std::unique_ptr<TypeConstraints> constraints)
+      : SourceElement(element),
+        type_ref(std::move(type_ref)),
+        parameters(std::move(parameters)),
+        constraints(std::move(constraints)) {}
+
+  std::unique_ptr<LayoutReference> type_ref;
+  std::unique_ptr<TypeParameters> parameters;
+  std::unique_ptr<TypeConstraints> constraints;
 };
 
 class TypeDecl final : public SourceElement {
@@ -799,13 +856,15 @@ class TypeDecl final : public SourceElement {
            std::unique_ptr<Identifier> identifier,
            // TODO(fxbug.dev/65978): We should also allow type decl over type
            // constructors, i.e. FTP-052 type declaration.
-           std::unique_ptr<Layout> layout)
-      : SourceElement(element), identifier(std::move(identifier)), layout(std::move(layout)) {}
+           std::unique_ptr<TypeConstructorNew> type_ctor)
+      : SourceElement(element),
+        identifier(std::move(identifier)),
+        type_ctor(std::move(type_ctor)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<Identifier> identifier;
-  std::unique_ptr<Layout> layout;
+  std::unique_ptr<TypeConstructorNew> type_ctor;
 };
 
 class File final : public SourceElement {

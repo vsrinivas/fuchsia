@@ -1744,7 +1744,35 @@ std::vector<std::unique_ptr<T>> Parser::ParseCommaSeparatedList(int& items_seen,
   return items;
 }
 
-std::unique_ptr<raw::Constraints> Parser::ParseConstraints() {
+std::unique_ptr<raw::TypeParameters> Parser::MaybeParseTypeParameters() {
+  if (!MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
+    return nullptr;
+  }
+
+  ASTScope scope(this);
+  int items_seen = 0;
+  auto parse_item = [&] { return ParseConstant(); };
+  // TODO(fxbug.dev/65978): figure out a solution that doesn't use decltype.
+  auto items =
+      ParseCommaSeparatedList<raw::Constant, decltype(parse_item), Token::Kind::kRightAngle>(
+          items_seen, parse_item);
+  if (!Ok())
+    return Fail();
+
+  ConsumeTokenOrRecover(OfKind(Token::Kind::kRightAngle));
+  if (items_seen == 0) {
+    Fail(ErrEmptyTypeParameters);
+  }
+  RecoverAllErrors();
+
+  return std::make_unique<raw::TypeParameters>(scope.GetSourceElement(), std::move(items));
+}
+
+std::unique_ptr<raw::TypeConstraints> Parser::MaybeParseConstraints() {
+  if (!MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
+    return nullptr;
+  }
+
   ASTScope scope(this);
   bool bracketed = false;
 
@@ -1778,7 +1806,7 @@ std::unique_ptr<raw::Constraints> Parser::ParseConstraints() {
   if (!Ok())
     return Fail();
 
-  return std::make_unique<raw::Constraints>(scope.GetSourceElement(), std::move(items));
+  return std::make_unique<raw::TypeConstraints>(scope.GetSourceElement(), std::move(items));
 }
 
 std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::Layout::Kind kind) {
@@ -1797,7 +1825,7 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::Layout::Kind k
   if (!Ok())
     return Fail();
 
-  auto layout = ParseLayout(scope);
+  auto layout = ParseTypeConstructorNew();
   if (!Ok())
     return Fail();
 
@@ -1807,68 +1835,35 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::Layout::Kind k
                                              std::move(identifier), std::move(layout));
 }
 
-std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
-  // name
-  //      [ { ... } ]
-  //      [ < ... > ]
-  //                  [ : ... ]
-
+std::unique_ptr<raw::Layout> Parser::ParseLayout(
+    ASTScope& scope, std::unique_ptr<raw::CompoundIdentifier> identifier,
+    const Modifiers& modifiers) {
   // TODO(fxbug.dev/65978): Introduce a ParseLayoutConfig struct to configure
   // how layout parse should be done e.g. has an ordinal? default value
   // allowed?.
-
-  const auto modifiers = ParseModifiers();
-  std::unique_ptr<raw::Constraints> constraints = nullptr;
-  auto identifier = ParseCompoundIdentifier();
-  if (!Ok())
-    return Fail();
-
   raw::Layout::Kind kind;
-  switch (Peek().kind()) {
-    case Token::Kind::kLeftCurly: {
-      if (identifier->components.size() != 1) {
-        // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
-        // union, table, bits, and enum layouts exist.
-        return Fail();
-      }
 
-      // TODO(fxbug.dev/65978): Once fully transitioned, we will be able to
-      // remove token subkinds for struct, union, table, bits, and enum. Or
-      // maybe we want to have a 'recognize token subkind' on an identifier
-      // instead of doing string comparison directly.
-      if (identifier->components[0]->span().data() == "struct") {
-        ValidateModifiers<types::Resourceness>(modifiers, identifier->components[0]->start_);
-        kind = raw::Layout::Kind::kStruct;
-      } else if (identifier->components[0]->span().data() == "union") {
-        ValidateModifiers<types::Strictness, types::Resourceness>(
-            modifiers, identifier->components[0]->start_);
-        kind = raw::Layout::Kind::kUnion;
-      } else {
-        // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
-        // union, table, bits, and enum layouts exist.
-        return Fail();
-      }
-      break;
-    }
-    case Token::Kind::kLeftAngle:
-    case Token::Kind::kColon:
-    case Token::Kind::kSemicolon: {
-      ValidateModifiers</* none */>(modifiers, identifier->start_);
-      auto type_ctor = ParseTypeConstructorOf(scope, std::move(identifier), true);
-      if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
-        constraints = ParseConstraints();
-      }
-      if (!Ok())
-        return Fail();
-      return std::make_unique<raw::Layout>(
-          scope.GetSourceElement(), raw::Layout::Kind::kTypeCtor,
-          std::vector<std::unique_ptr<raw::LayoutMember>>(), std::move(constraints),
-          std::move(type_ctor), /*strictness=*/std::nullopt, types::Resourceness::kValue);
-    }
-    default:
-      // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
-      // union, table, bits, and enum layouts exist.
-      return Fail();
+  if (identifier->components.size() != 1) {
+    // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
+    // union, table, bits, and enum layouts exist.
+    return Fail();
+  }
+
+  // TODO(fxbug.dev/65978): Once fully transitioned, we will be able to
+  // remove token subkinds for struct, union, table, bits, and enum. Or
+  // maybe we want to have a 'recognize token subkind' on an identifier
+  // instead of doing string comparison directly.
+  if (identifier->components[0]->span().data() == "struct") {
+    ValidateModifiers<types::Resourceness>(modifiers, identifier->components[0]->start_);
+    kind = raw::Layout::Kind::kStruct;
+  } else if (identifier->components[0]->span().data() == "union") {
+    ValidateModifiers<types::Strictness, types::Resourceness>(modifiers,
+                                                              identifier->components[0]->start_);
+    kind = raw::Layout::Kind::kUnion;
+  } else {
+    // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
+    // union, table, bits, and enum layouts exist.
+    return Fail();
   }
 
   ConsumeToken(OfKind(Token::Kind::kLeftCurly));
@@ -1879,14 +1874,10 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
   auto parse_member = [&]() {
     if (Peek().kind() == Token::Kind::kRightCurly) {
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
-      if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
-        constraints = ParseConstraints();
-      }
       return Done;
-    } else {
-      add(&members, [&] { return ParseLayoutMember(kind); });
-      return More;
     }
+    add(&members, [&] { return ParseLayoutMember(kind); });
+    return More;
   };
 
   while (parse_member() == More) {
@@ -1894,7 +1885,8 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
       const auto result = RecoverToEndOfMember();
       if (result == RecoverResult::Failure) {
         return Fail();
-      } else if (result == RecoverResult::EndOfScope) {
+      }
+      if (result == RecoverResult::EndOfScope) {
         continue;
       }
     }
@@ -1904,10 +1896,61 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(ASTScope& scope) {
     return Fail();
 
   return std::make_unique<raw::Layout>(
-      scope.GetSourceElement(), kind, std::move(members), std::move(constraints),
-      /*type_ctor=*/nullptr, modifiers.strictness,
+      scope.GetSourceElement(), kind, std::move(members), modifiers.strictness,
       modifiers.resourceness.value_or(types::Resourceness::kValue));
-};
+}
+
+std::unique_ptr<raw::LayoutReference> Parser::ParseLayoutReference() {
+  ASTScope scope(this);
+  const auto modifiers = ParseModifiers();
+  auto identifier = ParseCompoundIdentifier();
+  if (!Ok())
+    return Fail();
+
+  switch (Peek().kind()) {
+    case Token::Kind::kColon:
+    case Token::Kind::kLeftAngle:
+    case Token::Kind::kSemicolon: {
+      ValidateModifiers</* none */>(modifiers, identifier->start_);
+
+      // TODO(fxbug.dev/65978): This will currently parse <...> type parameter spans, even though
+      //  the new design deals with them separately.  This will be a placeholder until we move to
+      //  using the "identifier" argument as noted below.
+      auto type_ctor_old = ParseTypeConstructorOf(scope, std::move(identifier), true);
+
+      // TODO(fxbug.dev/65978): Use identifier instead.
+      return std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
+                                                         std::move(type_ctor_old));
+    }
+    case Token::Kind::kLeftCurly: {
+      auto layout = ParseLayout(scope, std::move(identifier), modifiers);
+      return std::make_unique<raw::InlineLayoutReference>(scope.GetSourceElement(),
+                                                          std::move(layout));
+    }
+    default: {
+      return Fail();
+    }
+  }
+}
+
+// [ name | { ... } ][ < ... > ][ : ... ]
+std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
+  ASTScope scope(this);
+  auto type_ref = ParseLayoutReference();
+  if (!Ok())
+    return Fail();
+
+  auto parameters = MaybeParseTypeParameters();
+  if (!Ok())
+    return Fail();
+
+  auto constraints = MaybeParseConstraints();
+  if (!Ok())
+    return Fail();
+
+  return std::make_unique<raw::TypeConstructorNew>(scope.GetSourceElement(), std::move(type_ref),
+                                                   std::move(parameters), std::move(constraints));
+}
 
 std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(ASTScope& scope) {
   ConsumeToken(IdentifierOfSubkind(Token::Subkind::kType));
@@ -1921,9 +1964,10 @@ std::unique_ptr<raw::TypeDecl> Parser::ParseTypeDecl(ASTScope& scope) {
   if (!Ok())
     return Fail();
 
-  auto layout = ParseLayout(scope);
+  auto layout = ParseTypeConstructorNew();
   if (!Ok())
     return Fail();
+
   return std::make_unique<raw::TypeDecl>(scope.GetSourceElement(), std::move(identifier),
                                          std::move(layout));
 }

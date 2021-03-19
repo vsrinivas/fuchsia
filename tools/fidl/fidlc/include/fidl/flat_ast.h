@@ -843,7 +843,12 @@ class Library {
   void ConsumeTableDeclaration(std::unique_ptr<raw::TableDeclaration> table_declaration);
   void ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> union_declaration);
 
+  // start new syntax
   void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
+  std::unique_ptr<TypeConstructor> ConsumeTypeConstructorNew(
+      std::unique_ptr<raw::TypeConstructorNew>, const Name&);
+  bool ConsumeLayout(std::unique_ptr<raw::Layout>, const Name&);
+  // end new syntax
 
   bool TypeCanBeConst(const Type* type);
   const Type* TypeResolve(const Type* type);
