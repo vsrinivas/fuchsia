@@ -137,11 +137,11 @@ struct TypeConstructor final {
 
   // Set during construction.
   const Name name;
-  const std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
-  const std::optional<Name> handle_subtype_identifier;
-  const std::unique_ptr<Constant> handle_rights;
-  const std::unique_ptr<Constant> maybe_size;
-  const types::Nullability nullability;
+  std::unique_ptr<TypeConstructor> maybe_arg_type_ctor;
+  std::optional<Name> handle_subtype_identifier;
+  std::unique_ptr<Constant> handle_rights;
+  std::unique_ptr<Constant> maybe_size;
+  types::Nullability nullability;
   const fidl::utils::Syntax syntax;
 
   // Set during compilation.

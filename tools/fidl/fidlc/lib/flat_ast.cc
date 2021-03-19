@@ -2025,7 +2025,11 @@ bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& con
 std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
     std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor, const Name& context) {
   std::unique_ptr<TypeConstructor> type_ctor;
+  auto params = std::move(raw_type_ctor->parameters);
+
   if (raw_type_ctor->type_ref->kind == raw::LayoutReference::Kind::kInline) {
+    assert((params == nullptr || params->items.empty()) &&
+           "anonymous layouts cannot have type parameters");
     auto inline_ref = static_cast<raw::InlineLayoutReference*>(raw_type_ctor->type_ref.get());
     if (!ConsumeLayout(std::move(inline_ref->layout), context)) {
       return nullptr;
@@ -2041,11 +2045,76 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
 
   // TODO(fxbug.dev/65978): Rewrite once using identifier, instead of type_ctor_old, on type_ref.
   auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->type_ref.get());
-  SourceSpan span = named_ref->type_ctor_old->span();
+  SourceSpan span = named_ref->type_ctor_old->identifier->span();
   if (!ConsumeTypeConstructor(std::move(named_ref->type_ctor_old), span, fidl::utils::Syntax::kNew,
                               &type_ctor)) {
     return nullptr;
   }
+
+  // TODO(fxbug.dev/71536): this mess will get fixed once the new flat AST lands.
+  // Are there type parameters?
+  if (params != nullptr && !params->items.empty()) {
+    // There are currently only 3 generic types: box<TYPE>, vector<TYPE> and array<TYPE,SIZE>.
+    // That means the logic here can be very simple (for now): assume the first type parameter is
+    // always a maybe_type_ctor, and the second (if it exists) is a maybe_size.
+    auto builtin = span.data();
+    if (builtin == "vector" || builtin == "box" || builtin == "array") {
+      std::unique_ptr<raw::TypeParameter> param;
+      if (params->items.size() >= 1) {
+        // Because all of the generic types we have today only take at most one nested type, it is
+        // okay to pass the name context through like this.  If we ever introduce generic types that
+        // take two or more types as parameters (ex: map<K,V>, or allowing things like struct{}<T>),
+        // we'll need extend the name contexts we pass down to their respective constructors.
+        param = std::move(params->items[0]);
+        auto name = Name::CreateDerived(this, span, context.full_name());
+
+        switch (param->kind) {
+          case raw::TypeParameter::Kind::kType: {
+            auto type_param = static_cast<raw::TypeTypeParameter*>(param.get());
+            type_ctor->maybe_arg_type_ctor =
+                ConsumeTypeConstructorNew(std::move(type_param->type_ctor), name);
+            break;
+          }
+          case raw::TypeParameter::Kind::kAmbiguous: {
+            auto type_param = static_cast<raw::AmbiguousTypeParameter*>(param.get());
+            auto inner_name = Name::CreateSourced(this, type_param->identifier->span());
+            type_ctor->maybe_arg_type_ctor = std::make_unique<TypeConstructor>(
+                inner_name,
+                /*maybe_arg_type_ctor=*/nullptr,
+                /*handle_subtype_identifier=*/std::nullopt,
+                /*handle_rights=*/nullptr,
+                /*maybe_size=*/nullptr, types::Nullability::kNonnullable,
+                fidl::utils::Syntax::kNew);
+            break;
+          }
+          case raw::TypeParameter::Kind::kLiteral: {
+            assert(false && "the first type parameter must be a type, not a value");
+            break;
+          }
+        }
+      }
+      if (builtin == "array" && params->items.size() >= 2) {
+        param = std::move(params->items[1]);
+        switch (param->kind) {
+          case raw::TypeParameter::Kind::kAmbiguous: {
+            auto type_param = static_cast<raw::AmbiguousTypeParameter*>(param.get());
+            type_ctor->maybe_size = std::make_unique<Constant>(Constant::Kind::kIdentifier,
+                                                               type_param->identifier->span());
+            break;
+          }
+          case raw::TypeParameter::Kind::kLiteral: {
+            auto type_param = static_cast<raw::LiteralTypeParameter*>(param.get());
+            ConsumeConstant(std::move(type_param->literal), &type_ctor->maybe_size);
+            break;
+          }
+          default: {
+            assert(false && "the second type parameter must be a numeric value");
+          }
+        }
+      }
+    }
+  }
+
   return type_ctor;
 }
 

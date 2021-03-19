@@ -345,7 +345,8 @@ class Parser {
 
   template <typename T, typename Fn, Token::Kind>
   std::vector<std::unique_ptr<T>> ParseCommaSeparatedList(int& items_seen, Fn fn);
-  std::unique_ptr<raw::TypeParameters> MaybeParseTypeParameters();
+  std::unique_ptr<raw::TypeParameter> ParseTypeParameter();
+  std::unique_ptr<raw::TypeParametersList> MaybeParseTypeParametersList();
   std::unique_ptr<raw::TypeConstraints> MaybeParseConstraints();
   std::unique_ptr<raw::LayoutMember> ParseLayoutMember(raw::Layout::Kind);
   std::unique_ptr<raw::Layout> ParseLayout(ASTScope&, std::unique_ptr<raw::CompoundIdentifier>,

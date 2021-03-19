@@ -427,6 +427,58 @@ alias AliasOfDecl = TypeDecl;
   ASSERT_NOT_NULL(library.LookupTypeAlias("AliasOfDecl"));
 }
 
+// TODO(fxbug.dev/71536): add box when its node is added to the flat AST
+TEST(NewSyntaxTests, TypeParameters) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+type Inner = struct{};
+alias Alias = Inner;
+
+type TypeDecl = struct {
+  // vector of primitive
+  v0 vector<uint8>;
+  // vector of sourced
+  v1 vector<Inner>;
+  // vector of alias
+  v2 vector<Alias>;
+  // vector of anonymous layout
+  v3 vector<struct{
+       i0 struct{};
+       i1 vector<struct{}>;
+     }>;
+  // array of primitive
+  a0 array<uint8,5>;
+  // array of sourced
+  a1 array<Inner,5>;
+  // array of alias
+  a2 array<Alias,5>;
+  // array of anonymous layout
+  a3 array<struct{
+       i0 struct{};
+       i1 array<struct{},5>;
+     },5>;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupStruct("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 8);
+  auto type_decl_vector_anon = library.LookupStruct("TypeDeclV3");
+  ASSERT_NOT_NULL(type_decl_vector_anon);
+  EXPECT_EQ(type_decl_vector_anon->members.size(), 2);
+  ASSERT_NOT_NULL(library.LookupStruct("TypeDeclV3I0"));
+  ASSERT_NOT_NULL(library.LookupStruct("TypeDeclV3I1"));
+  auto type_decl_array_anon = library.LookupStruct("TypeDeclA3");
+  ASSERT_NOT_NULL(type_decl_array_anon);
+  EXPECT_EQ(type_decl_array_anon->members.size(), 2);
+  ASSERT_NOT_NULL(library.LookupStruct("TypeDeclA3I0"));
+  ASSERT_NOT_NULL(library.LookupStruct("TypeDeclA3I1"));
+}
+
 TEST(NewSyntaxTests, LayoutMemberConstraints) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);

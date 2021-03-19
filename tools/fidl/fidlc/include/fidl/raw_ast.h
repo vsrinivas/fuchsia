@@ -837,14 +837,63 @@ class NamedLayoutReference final : public LayoutReference {
   std::unique_ptr<TypeConstructor> type_ctor_old;
 };
 
-class TypeParameters final : public SourceElement {
+class TypeParameter : public SourceElement {
  public:
-  TypeParameters(SourceElement const& element, std::vector<std::unique_ptr<raw::Constant>> items)
+  enum Kind {
+    kAmbiguous,
+    kLiteral,
+    kType,
+  };
+
+  TypeParameter(SourceElement const& element, Kind kind) : SourceElement(element), kind(kind) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  const Kind kind;
+};
+
+class LiteralTypeParameter final : public TypeParameter {
+ public:
+  explicit LiteralTypeParameter(SourceElement const& element,
+                                std::unique_ptr<LiteralConstant> literal)
+      : TypeParameter(element, Kind::kLiteral), literal(std::move(literal)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<LiteralConstant> literal;
+};
+
+class TypeTypeParameter final : public TypeParameter {
+ public:
+  explicit TypeTypeParameter(SourceElement const& element,
+                             std::unique_ptr<TypeConstructorNew> type_ctor)
+      : TypeParameter(element, Kind::kType), type_ctor(std::move(type_ctor)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<TypeConstructorNew> type_ctor;
+};
+
+class AmbiguousTypeParameter final : public TypeParameter {
+ public:
+  explicit AmbiguousTypeParameter(SourceElement const& element,
+                                  std::unique_ptr<CompoundIdentifier> identifier)
+      : TypeParameter(element, Kind::kAmbiguous), identifier(std::move(identifier)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<CompoundIdentifier> identifier;
+};
+
+class TypeParametersList final : public SourceElement {
+ public:
+  TypeParametersList(SourceElement const& element,
+                     std::vector<std::unique_ptr<raw::TypeParameter>> items)
       : SourceElement(element), items(std::move(items)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  std::vector<std::unique_ptr<raw::Constant>> items;
+  std::vector<std::unique_ptr<raw::TypeParameter>> items;
 };
 
 class TypeConstraints final : public SourceElement {
@@ -861,7 +910,7 @@ class TypeConstraints final : public SourceElement {
 class TypeConstructorNew final : public SourceElement {
  public:
   TypeConstructorNew(SourceElement const& element, std::unique_ptr<LayoutReference> type_ref,
-                     std::unique_ptr<TypeParameters> parameters,
+                     std::unique_ptr<TypeParametersList> parameters,
                      std::unique_ptr<TypeConstraints> constraints)
       : SourceElement(element),
         type_ref(std::move(type_ref)),
@@ -869,7 +918,7 @@ class TypeConstructorNew final : public SourceElement {
         constraints(std::move(constraints)) {}
 
   std::unique_ptr<LayoutReference> type_ref;
-  std::unique_ptr<TypeParameters> parameters;
+  std::unique_ptr<TypeParametersList> parameters;
   std::unique_ptr<TypeConstraints> constraints;
 };
 

@@ -44,7 +44,7 @@ constexpr ErrorDef ErrMissingConstraintBrackets(
     "lists of constraints must be enclosed in brackets");
 constexpr ErrorDef ErrUnnecessaryConstraintBrackets(
     "single constraints must not be enclosed in brackets");
-constexpr ErrorDef ErrEmptyTypeParameters("no type parameters specified");
+constexpr ErrorDef ErrEmptyTypeParametersList("no type parameters specified");
 constexpr ErrorDef ErrMissingOrdinalBeforeType("missing ordinal before type");
 constexpr ErrorDef ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef ErrOrdinalsMustStartAtOne("ordinals must start at 1");

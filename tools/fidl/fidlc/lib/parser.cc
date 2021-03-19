@@ -525,6 +525,15 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructorOf(
   std::unique_ptr<raw::Identifier> handle_subtype_identifier;
   auto nullability = types::Nullability::kNonnullable;
 
+  // The new syntax parses constraints as part of the "layout" AST node, not
+  // as part of the type constructor.
+  if (new_syntax) {
+    return std::make_unique<raw::TypeConstructor>(
+        scope.GetSourceElement(), std::move(identifier), std::move(maybe_arg_type_ctor),
+        std::move(handle_subtype_identifier), std::move(handle_rights), std::move(maybe_size),
+        nullability);
+  }
+
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     if (!Ok())
       return Fail();
@@ -534,15 +543,6 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructorOf(
     ConsumeToken(OfKind(Token::Kind::kRightAngle));
     if (!Ok())
       return Fail();
-  }
-
-  // The new syntax parses constraints as part of the "layout" AST node, not
-  // as part of the type constructor.
-  if (new_syntax) {
-    return std::make_unique<raw::TypeConstructor>(
-        scope.GetSourceElement(), std::move(identifier), std::move(maybe_arg_type_ctor),
-        std::move(handle_subtype_identifier), std::move(handle_rights), std::move(maybe_size),
-        nullability);
   }
 
   if (MaybeConsumeToken(OfKind(Token::Kind::kColon))) {
@@ -1767,28 +1767,61 @@ std::vector<std::unique_ptr<T>> Parser::ParseCommaSeparatedList(int& items_seen,
   return items;
 }
 
-std::unique_ptr<raw::TypeParameters> Parser::MaybeParseTypeParameters() {
+std::unique_ptr<raw::TypeParameter> Parser::ParseTypeParameter() {
+  ASTScope scope(this);
+
+  switch (Peek().combined()) {
+  TOKEN_LITERAL_CASES : {
+    auto literal = ParseLiteral();
+    if (!Ok())
+      return Fail();
+    auto constant = std::make_unique<raw::LiteralConstant>(std::move(literal));
+    return std::make_unique<raw::LiteralTypeParameter>(scope.GetSourceElement(),
+                                                       std::move(constant));
+  }
+  default: {
+    auto type_ctor = ParseTypeConstructorNew();
+    if (!Ok())
+      return Fail();
+
+    // For non-anonymous type constructors like "foo<T>" or "foo:optional," the presence of type
+    // parameters and constraints, respectively, confirms that "foo" refers to a type reference.
+    // In cases with no type parameters or constraints present (ie, just "foo"), it is impossible
+    // to deduce whether "foo" refers to a type or a value.  In such cases, we must discard the
+    // recently built type constructor, and convert it to a compound identifier instead.
+    if (type_ctor->type_ref->kind == raw::LayoutReference::Kind::kNamed &&
+        type_ctor->parameters == nullptr && type_ctor->constraints == nullptr) {
+      auto named_ref = static_cast<raw::NamedLayoutReference*>(type_ctor->type_ref.get());
+      return std::make_unique<raw::AmbiguousTypeParameter>(
+          scope.GetSourceElement(), std::move(named_ref->type_ctor_old->identifier));
+    }
+    return std::make_unique<raw::TypeTypeParameter>(scope.GetSourceElement(), std::move(type_ctor));
+  }
+  }
+}
+
+std::unique_ptr<raw::TypeParametersList> Parser::MaybeParseTypeParametersList() {
   if (!MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     return nullptr;
   }
 
   ASTScope scope(this);
   int items_seen = 0;
-  auto parse_item = [&] { return ParseConstant(); };
+  auto parse_item = [&] { return ParseTypeParameter(); };
   // TODO(fxbug.dev/65978): figure out a solution that doesn't use decltype.
   auto items =
-      ParseCommaSeparatedList<raw::Constant, decltype(parse_item), Token::Kind::kRightAngle>(
+      ParseCommaSeparatedList<raw::TypeParameter, decltype(parse_item), Token::Kind::kRightAngle>(
           items_seen, parse_item);
   if (!Ok())
     return Fail();
 
   ConsumeTokenOrRecover(OfKind(Token::Kind::kRightAngle));
   if (items_seen == 0) {
-    Fail(ErrEmptyTypeParameters);
+    Fail(ErrEmptyTypeParametersList);
   }
   RecoverAllErrors();
 
-  return std::make_unique<raw::TypeParameters>(scope.GetSourceElement(), std::move(items));
+  return std::make_unique<raw::TypeParametersList>(scope.GetSourceElement(), std::move(items));
 }
 
 std::unique_ptr<raw::TypeConstraints> Parser::MaybeParseConstraints() {
@@ -1931,8 +1964,15 @@ std::unique_ptr<raw::LayoutReference> Parser::ParseLayoutReference() {
     return Fail();
 
   switch (Peek().kind()) {
+    case Token::Kind::kLeftCurly: {
+      auto layout = ParseLayout(scope, std::move(identifier), modifiers);
+      return std::make_unique<raw::InlineLayoutReference>(scope.GetSourceElement(),
+                                                          std::move(layout));
+    }
     case Token::Kind::kColon:
+    case Token::Kind::kComma:
     case Token::Kind::kLeftAngle:
+    case Token::Kind::kRightAngle:
     case Token::Kind::kSemicolon: {
       ValidateModifiers</* none */>(modifiers, identifier->start_);
 
@@ -1945,14 +1985,9 @@ std::unique_ptr<raw::LayoutReference> Parser::ParseLayoutReference() {
       return std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
                                                          std::move(type_ctor_old));
     }
-    case Token::Kind::kLeftCurly: {
-      auto layout = ParseLayout(scope, std::move(identifier), modifiers);
-      return std::make_unique<raw::InlineLayoutReference>(scope.GetSourceElement(),
-                                                          std::move(layout));
-    }
     default: {
       return Fail();
-    }
+    };
   }
 }
 
@@ -1963,7 +1998,7 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
   if (!Ok())
     return Fail();
 
-  auto parameters = MaybeParseTypeParameters();
+  auto parameters = MaybeParseTypeParametersList();
   if (!Ok())
     return Fail();
 
