@@ -370,6 +370,38 @@ impl InputFacade {
     /// asynchronous event processing: it does not work in this code, and it is not how reality works
     /// either.  Instead, design your key event processing so that it is robust against the inherent
     /// non-determinism in key event delivery.
+    ///
+    /// # Arguments
+    ///
+    /// The `args` must be a JSON value that can be parsed as [types::KeyEventsRequest].
+    ///
+    /// `types::KeyEventsRequest`, in turn, has a sequence of key events that need to be injected.
+    /// Each key event is a triple of:
+    ///
+    /// * The Fuchsia encoding of the USB HID usage code (see [fuchsia_ui_input::Key]).
+    /// * The duration in milliseconds since the start of the key event sequence when this
+    ///   action must happen.
+    /// * The type of the key event (see [fuchsia_ui_input3::KeyEventType]), encoded as a
+    ///   numeric value.
+    ///
+    /// # Example:
+    ///
+    /// The above diagram would be encoded as the following sequence of events (in pseudocode):
+    ///
+    /// ```ignore
+    /// [
+    ///   { "A", 10, Pressed  },
+    ///   { "B", 10, Pressed  },
+    ///   { "A", 50, Released },
+    ///   { "B", 60, Released },
+    /// ]
+    /// ```
+    ///
+    /// # Returns
+    /// * `Ok(ActionResult::Success)` if the arguments were successfully parsed and events
+    ///    successfully injected.
+    /// * `Err(Error)` otherwise.
+    ///
     pub async fn key_events(&self, args: Value) -> Result<ActionResult, Error> {
         fx_log_info!("Executing KeyEvents in Input Facade: {:?}", args);
         let req: types::KeyEventsRequest = from_value(args)?;
