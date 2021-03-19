@@ -84,6 +84,14 @@ class ThreadLockState {
     if (LockClassState::IsReportingDisabled(lock_entry->id()))
       reporting_disabled_count_++;
 
+    // If reporting is disabled don't modify last_result_.  For example, we
+    // might be inside a call to Report that has ended up acquiring some lock
+    // (think printf) and don't want that acquire to overwrite the reported
+    // value.
+    if (!reporting_disabled()) {
+      last_result_ = LockResult::Success;
+    }
+
     // Scans the acquired lock list and performs the following operations:
     //  1. Checks that the given lock class is not already in the list unless
     //     the lock class is multi-acquire, or is nestable and external/address
@@ -94,7 +102,6 @@ class ThreadLockState {
     //     lock.
     //  4. Adds each lock class already in the list to the dependency set of the
     //     given lock class.
-    last_result_ = LockResult::Success;
     for (AcquiredLockEntry& entry : acquired_locks_) {
       if (entry.id() == lock_entry->id()) {
         if (!LockClassState::IsMultiAcquire(lock_entry->id()) &&
