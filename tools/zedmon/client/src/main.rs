@@ -140,6 +140,15 @@ fn main() -> Result<(), Error> {
                     .value_name("duration")
                     .validator(&validate_downsampling_interval)
                     .conflicts_with("average"),
+            ).arg(
+                Arg::with_name("host_timestamps")
+                    .help(
+                        "If specified, timestamps will be offset to the host clock using a \
+                        one-time estimate of the difference between the host and Zedmon \
+                        clocks. By default, raw timestamps from Zedmon's clock are emitted.")
+                    .short("t")
+                    .long("host_timestamps")
+                    .takes_value(false)
             )
         )
         .subcommand(
@@ -254,19 +263,16 @@ fn run_record(arg_matches: &ArgMatches<'_>) -> Result<(), Error> {
 
     let zedmon = lib::zedmon();
 
-    // TODO(fxbug.dev/61471): Consider incorporating the time offset directly into report
-    // timestamps.
-    let (offset, uncertainty) = zedmon.get_time_offset_nanos()?;
-    println!("Time offset: {}ns ± {}ns\n", offset, uncertainty);
-
     println!("Recording to {}.", dest_name);
+    let options = lib::ReportingOptions {
+        interval: reporting_interval,
+        use_host_timestamps: arg_matches.is_present("host_timestamps"),
+    };
     match duration {
-        Some(duration) => {
-            zedmon.read_reports(output, lib::DurationStopper::new(duration), reporting_interval)
-        }
+        Some(duration) => zedmon.read_reports(output, lib::DurationStopper::new(duration), options),
         None => {
             println!("Press ENTER to stop.");
-            zedmon.read_reports(output, StdinStopper::new(), reporting_interval)
+            zedmon.read_reports(output, StdinStopper::new(), options)
         }
     }
 }

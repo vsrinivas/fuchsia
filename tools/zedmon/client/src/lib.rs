@@ -66,7 +66,8 @@ impl StopSignal for DurationStopper {
 }
 
 /// Properties that can be queried using ZedmonClient::describe.
-pub const DESCRIBABLE_PROPERTIES: [&'static str; 2] = ["shunt_resistance", "csv_header"];
+pub const DESCRIBABLE_PROPERTIES: [&'static str; 3] =
+    ["shunt_resistance", "csv_header", "time_offset"];
 
 /// A single record of output from ZedmonClient.
 #[derive(Debug, Default, Deserialize, Serialize)]
@@ -133,12 +134,11 @@ impl Downsampler {
         }
 
         let output_micros = state.last_output_micros + self.interval_micros;
-        let t1 = state.prev_record.timestamp_micros as f32;
-        let t2 = record.timestamp_micros as f32;
+        let dt_full = (record.timestamp_micros - state.prev_record.timestamp_micros) as f32;
 
         // No output this cycle -- update the state and return None.
         if record.timestamp_micros < output_micros {
-            let dt_half = (t2 - t1) / 2.0;
+            let dt_half = dt_full / 2.0;
             state.shunt_voltage_integral +=
                 dt_half * (state.prev_record.shunt_voltage + record.shunt_voltage);
             state.bus_voltage_integral +=
@@ -149,24 +149,37 @@ impl Downsampler {
             return None;
         }
 
-        let t_out = output_micros as f32;
-        let dt_half = (t_out - t1) / 2.0;
+        // Output occurs this cycle. Subdivide the interval between the previous and current records
+        // into two intervals of length dt1 and dt2, as shown here:
+        //
+        // prev_record.timestamp_micros         output_micros          record.timestamp_micros
+        //              |                             |                           |
+        //              |                             |                           |
+        //              +-----------------------------+---------------------------+
+        //                             ^                            ^
+        //                             |                            |
+        //                            dt1                          dt2
+        let dt1 = (output_micros - state.prev_record.timestamp_micros) as f32;
+        let dt2 = (record.timestamp_micros - output_micros) as f32;
 
-        // Use linear interpolation to estimate the instantaneous value of each measured quantity at
-        // t_out.
-        let interpolate = |y1, y2| y1 + (t_out - t1) / (t2 - t1) * (y2 - y1);
+        // Use linear interpolation to estimate the instantaneous value of each measured
+        // quantity at output_micros.
+        let interpolate = |y1, y2| y1 + dt1 / dt_full * (y2 - y1);
         let shunt_voltage_interp =
             interpolate(state.prev_record.shunt_voltage, record.shunt_voltage);
         let bus_voltage_interp = interpolate(state.prev_record.bus_voltage, record.bus_voltage);
         let power_interp = interpolate(state.prev_record.power, record.power);
 
-        // For each measured quantity, use the previous value and the interpolated value to update
-        // its integral over [t1, t_out].
-        state.shunt_voltage_integral +=
-            dt_half * (state.prev_record.shunt_voltage + shunt_voltage_interp);
-        state.bus_voltage_integral +=
-            dt_half * (state.prev_record.bus_voltage + bus_voltage_interp);
-        state.power_integral += dt_half * (state.prev_record.power + power_interp);
+        // For each measured quantity, use the previous value and the interpolated value to
+        // update its integral over [previous_record.timestamp_micros, output_micros].
+        {
+            let dt1_half = dt1 / 2.0;
+            state.shunt_voltage_integral +=
+                dt1_half * (state.prev_record.shunt_voltage + shunt_voltage_interp);
+            state.bus_voltage_integral +=
+                dt1_half * (state.prev_record.bus_voltage + bus_voltage_interp);
+            state.power_integral += dt1_half * (state.prev_record.power + power_interp);
+        }
 
         // Divide each integral by the total length of the integration interval to get an average
         // value of the measured quanity. This populates the output record.
@@ -177,19 +190,31 @@ impl Downsampler {
             power: state.power_integral / (self.interval_micros as f32),
         };
 
-        // Now integrate over [t_out, t2] to seed the integrals for the next output interval. In the
-        // edge case that t2 is at the reporting interval boundary, t2 - t_out == 0.0 and the
-        // integrals will be appropriately set to 0.0.
-        let dt_half = (t2 - t_out) / 2.0;
-        state.shunt_voltage_integral = dt_half * (shunt_voltage_interp + record.shunt_voltage);
-        state.bus_voltage_integral = dt_half * (bus_voltage_interp + record.bus_voltage);
-        state.power_integral = dt_half * (power_interp + record.power);
+        // Now integrate over [output_micros, record.timestamp_micros] to seed the integrals for the
+        // next output interval. If record.timestamp_micros == output_micros, then dt2 == 0.0, and
+        // the integrals will be appropriately set to 0.0.
+        {
+            let dt2_half = dt2 / 2.0;
+            state.shunt_voltage_integral = dt2_half * (shunt_voltage_interp + record.shunt_voltage);
+            state.bus_voltage_integral = dt2_half * (bus_voltage_interp + record.bus_voltage);
+            state.power_integral = dt2_half * (power_interp + record.power);
+        }
 
         // Update remaining state and return.
         state.last_output_micros = output_micros;
         state.prev_record = record;
         Some(record_out)
     }
+}
+
+/// Options to customize the behavior of ZedmonClient::read_reports.
+pub struct ReportingOptions {
+    /// Time interval on which to resample data.
+    pub interval: Option<Duration>,
+
+    /// Whether to report timestamps using host time (based on an estimate of host/target offset)
+    /// rather than Zedmon time.
+    pub use_host_timestamps: bool,
 }
 
 /// Interface to a Zedmon device.
@@ -338,7 +363,14 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
                 let header = lines.split('\n').nth(0).unwrap();
                 Ok(json::json!(header))
             }
-            _ => panic!("'{}' is not a valid parameter name.", name),
+            "time_offset" => {
+                let (offset, uncertainty) = self.get_time_offset_micros()?;
+                Ok(json::json!({"offset_micros": offset, "uncertainty_micros": uncertainty}))
+            }
+            _ => panic!(
+                "'{}' is not a valid property name. Valid names are: {:?}",
+                name, DESCRIBABLE_PROPERTIES
+            ),
         }
     }
 
@@ -412,11 +444,23 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         v_shunt_index: usize,
         v_bus_index: usize,
         reporting_interval_micros: Option<u64>,
+        time_offset_micros: i64,
     ) -> std::thread::JoinHandle<Result<(), Error>> {
         std::thread::spawn(move || {
             // The CSV header is suppressed. Clients may query it by using `describe`.
             let mut writer = csv::WriterBuilder::new().has_headers(false).from_writer(writer);
             let mut downsampler = reporting_interval_micros.map(|r| Downsampler::new(r));
+
+            // Determine allowable bounds for the Zedmon timestamp. These values are chosen so that
+            // adding `time_offset_micros` to a raw timestamp will not cause it to wrap around u64
+            // bounds.
+            let min_zedmon_timestamp =
+                if time_offset_micros >= 0 { 0u64 } else { -time_offset_micros as u64 };
+            let max_zedmon_timestamp = if time_offset_micros >= 0 {
+                std::u64::MAX - (time_offset_micros as u64)
+            } else {
+                std::u64::MAX
+            };
 
             for buffer in packet_receiver.iter() {
                 let reports = parser.parse_reports(&buffer)?;
@@ -432,8 +476,25 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
                             }
                         };
 
+                    // Check raw timestamp against bounds, and apply the time offset.
+                    if report.timestamp_micros < min_zedmon_timestamp
+                        || report.timestamp_micros > max_zedmon_timestamp
+                    {
+                        return Err(format_err!(
+                            "Zedmon timestamp ({}) is outside of allowable bounds [{}, {}]",
+                            report.timestamp_micros,
+                            min_zedmon_timestamp,
+                            max_zedmon_timestamp
+                        ));
+                    }
+                    let timestamp_micros = if time_offset_micros < 0 {
+                        report.timestamp_micros - (-time_offset_micros as u64)
+                    } else {
+                        report.timestamp_micros + (time_offset_micros as u64)
+                    };
+
                     let record = ZedmonRecord {
-                        timestamp_micros: report.timestamp_micros,
+                        timestamp_micros,
                         shunt_voltage,
                         bus_voltage,
                         power: bus_voltage * shunt_voltage / shunt_resistance,
@@ -520,7 +581,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         &self,
         writer: Box<dyn Write + Send>,
         stopper: impl StopSignal + Send + 'static,
-        reporting_interval: Option<Duration>,
+        options: ReportingOptions,
     ) -> Result<(), Error> {
         // This function's workload is shared between its main thread and processing_thread.
         //
@@ -536,6 +597,9 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         // to stdout or a file) involve blocking on I/O.
         let (packet_sender, packet_receiver) = mpsc::channel::<Vec<u8>>();
 
+        let time_offset_micros =
+            if options.use_host_timestamps { self.get_time_offset_micros()?.0 } else { 0 };
+
         let processing_thread = Self::start_report_processing_thread(
             packet_receiver,
             protocol::ReportParser::new(&self.field_formats)?,
@@ -544,7 +608,8 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
             self.shunt_resistance,
             self.v_shunt_index,
             self.v_bus_index,
-            reporting_interval.map(|d| d.as_micros() as u64),
+            options.interval.map(|d| d.as_micros() as u64),
+            time_offset_micros,
         );
 
         let report_io_result = self.run_report_io(packet_sender);
@@ -566,17 +631,19 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
     }
 
     /// Returns a tuple consisting of:
-    ///   - An estimate of the offset between the Zedmon clock and the host clock, in nanoseconds.
+    ///   - An estimate of the offset between the Zedmon clock and the host clock, in microseconds.
     ///     The offset is defined such that, in the absence of drift,
     ///         `zedmon_clock + offset = host_time`.
-    ///     It is typically, but not necessarily, positive. (Note that: (1) the signedness prevents
-    ///     std::time::Duration from being a valid return type, and (2) i64 will suffice to
-    ///     represent an offset of over 290 years in nanoseconds.)
-    ///   - An estimate of the uncertainty in the offset, in nanoseconds. In the absence of clock
+    ///     It is typically, but not necessarily, positive. (Note the signedness prevents
+    ///     std::time::Duration from being a valid return type.)
+    ///   - An estimate of the uncertainty in the offset, in microseconds. In the absence of clock
     ///     drift, the offset is accurate within ±uncertainty.
-    // TODO(fxbug.dev/61471): Consider using microseconds instead, in correspondence with Zedmon
-    // timestamp units.
-    pub fn get_time_offset_nanos(&self) -> Result<(i64, i64), Error> {
+    pub fn get_time_offset_micros(&self) -> Result<(i64, i64), Error> {
+        // Helper to convert nanos to micros, rounding up at `threshold` nanos.
+        fn nanos_to_micros(nanos: i64, threshold: i64) -> i64 {
+            nanos / 1_000 + if nanos % 1_000 >= threshold { 1 } else { 0 }
+        }
+
         let mut interface = self.interface.borrow_mut();
 
         // For each query, we estimate that the retrieved timestamp reflects Zedmon's clock halfway
@@ -590,7 +657,7 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         // Note: Unlike other methods that interact with the USB interface, this method does not
         // separate out a "get_timestamp" function to keep the parsing time from contributing to
         // transit time.
-        let mut best_offset_nanos = 0;
+        let mut best_offset_micros = 0;
         let mut best_query_duration_nanos = i64::MAX;
 
         // Number of timestamp query round trips used to determine time offset.
@@ -617,7 +684,11 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
                 let host_nanos_at_timestamp =
                     host_clock_at_start.duration_since(SystemTime::UNIX_EPOCH)?.as_nanos() as i64
                         + query_duration_nanos / 2;
-                best_offset_nanos = host_nanos_at_timestamp - timestamp_micros * 1_000;
+
+                // Round up at 500ns to minimize average rounding error.
+                best_offset_micros =
+                    nanos_to_micros(host_nanos_at_timestamp, 500) - timestamp_micros;
+
                 best_query_duration_nanos = query_duration_nanos;
             }
         }
@@ -627,9 +698,11 @@ impl<InterfaceType: usb_bulk::Open<InterfaceType> + Read + Write> ZedmonClient<I
         //    timestamp is 999ns stale.
         //  - Estimating the instant of the timestamp in the query interval. Since we used the
         //    midpoint, at worst we're off by one half the query duration.
-        let uncertainty_nanos = 999 + best_query_duration_nanos / 2 + best_query_duration_nanos % 2;
+        // Since this is an uncertainty, any fractional part must be rounded up.
+        let uncertainty_micros =
+            nanos_to_micros(999 + best_query_duration_nanos / 2 + best_query_duration_nanos % 2, 1);
 
-        Ok((best_offset_nanos, uncertainty_nanos))
+        Ok((best_offset_micros, uncertainty_micros))
     }
 
     /// Enables or disables the relay on the Zedmon device.
@@ -1148,7 +1221,8 @@ mod tests {
 
         let (sender, receiver) = mpsc::channel();
         let writer = Box::new(ChannelWriter { sender, buffer: Vec::new() });
-        zedmon.read_reports(writer, DurationStopper::new(test_duration), reporting_interval)?;
+        let options = ReportingOptions { interval: reporting_interval, use_host_timestamps: false };
+        zedmon.read_reports(writer, DurationStopper::new(test_duration), options)?;
 
         let mut output = Vec::new();
         while let Ok(mut buffer) = receiver.recv() {
@@ -1497,25 +1571,35 @@ mod tests {
     }
 
     #[test]
-    fn test_get_time_offset_nanos() -> Result<(), Error> {
-        // This instant is effectively Zedmon's zero timestamp.
-        let zedmon_offset = SystemTime::now().duration_since(SystemTime::UNIX_EPOCH)?;
+    fn test_get_time_offset_micros() -> Result<(), Error> {
+        // Test a few different zedmon offsets across a 1-microsecond range to exercise rounding
+        // effects. The base offset is the Unix epoch at a particular time on 2021-03-15 PDT.
+        let base_offset = Duration::from_nanos(1_615_859_483_501_877_405);
+        let deltas = vec![0u64, 250, 500, 750].into_iter().map(Duration::from_nanos);
 
-        // Values are not used by this test.
-        let device_config = fake_device::DeviceConfiguration {
-            shunt_resistance: 0.0,
-            v_shunt_scale: 0.0,
-            v_bus_scale: 0.0,
-        };
+        for delta in deltas.into_iter() {
+            let zedmon_offset = base_offset + delta;
 
-        let builder =
-            fake_device::CoordinatorBuilder::new(device_config).with_offset_time(zedmon_offset);
-        let coordinator = builder.build();
-        let interface = fake_device::FakeZedmonInterface::new(coordinator);
-        let zedmon = ZedmonClient::new(interface)?;
+            // Values are not used by this test.
+            let device_config = fake_device::DeviceConfiguration {
+                shunt_resistance: 0.0,
+                v_shunt_scale: 0.0,
+                v_bus_scale: 0.0,
+            };
 
-        let (reported_offset, uncertainty) = zedmon.get_time_offset_nanos()?;
-        assert_near!(zedmon_offset.as_nanos() as i64, reported_offset, uncertainty);
+            let builder =
+                fake_device::CoordinatorBuilder::new(device_config).with_offset_time(zedmon_offset);
+            let coordinator = builder.build();
+            let interface = fake_device::FakeZedmonInterface::new(coordinator);
+            let zedmon = ZedmonClient::new(interface)?;
+
+            let (reported_offset, uncertainty) = zedmon.get_time_offset_micros()?;
+
+            // Since get_time_offset_micros incorporates the worst case nanos-to-micros error in
+            // the uncertainty, any sane rounding method here should suffice.
+            let expected_offset = zedmon_offset.as_nanos() as i64 / 1_000;
+            assert_near!(expected_offset, reported_offset, uncertainty);
+        }
 
         Ok(())
     }
@@ -1549,8 +1633,8 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_downsampler_nominal() {
+    // Runs a test of Downsampler parameterized by the start time.
+    fn run_downsampler_test(t_start_micros: u64) {
         // Total duration of the test scenario.
         let duration_micros = 1_000_000;
 
@@ -1568,24 +1652,42 @@ mod tests {
         //
         // Interval-average formulas follow from the definition
         //   avg(y(t), [t_low, t_high]) := 1 / (t_high - t_low) * \int_{t_low}^{t_high} y(s) ds.
-        let shunt_voltage_raw = |t: f32| t;
-        let shunt_voltage_average =
-            |t1: f32, t2: f32| (t2.powi(2) - t1.powi(2)) / (2.0 * (t2 - t1));
-        let bus_voltage_raw = |t: f32| t.powi(2);
-        let bus_voltage_average = |t1: f32, t2: f32| (t2.powi(3) - t1.powi(3)) / (3.0 * (t2 - t1));
-        let power_raw = |t: f32| t.powi(3);
-        let power_average = |t1: f32, t2: f32| (t2.powi(4) - t1.powi(4)) / (4.0 * (t2 - t1));
+        //
+        // With times measured in seconds,
+        //   shunt voltage: raw: t-t0, average: 1/(t2-t1) * 1/2 * ((t2-t0)^2 - (t1-t0)^2
+        //   bus voltage: raw: (t-t0)^2, average: 1/(t2-t1) * 1/3 * ((t2-t0)^3 - (t1-t0)^3
+        //   power: raw: (t-t0)^3, average: 1/(t2-t1) * 1/4 * ((t2-t0)^4 - (t1-t0)^4)
+        let to_seconds = |micros: u64| micros as f32 * 1e-6;
+        let shunt_voltage_raw = |t_micros: u64| to_seconds(t_micros - t_start_micros);
+        let shunt_voltage_average = |t1_micros: u64, t2_micros: u64| {
+            let dt1 = to_seconds(t1_micros - t_start_micros);
+            let dt2 = to_seconds(t2_micros - t_start_micros);
+            (dt2.powi(2) - dt1.powi(2)) / (2.0 * (dt2 - dt1))
+        };
+
+        let bus_voltage_raw = |t_micros: u64| to_seconds(t_micros - t_start_micros).powi(2);
+        let bus_voltage_average = |t1_micros: u64, t2_micros: u64| {
+            let dt1 = to_seconds(t1_micros - t_start_micros);
+            let dt2 = to_seconds(t2_micros - t_start_micros);
+            (dt2.powi(3) - dt1.powi(3)) / (3.0 * (dt2 - dt1))
+        };
+
+        let power_raw = |t_micros: u64| to_seconds(t_micros - t_start_micros).powi(3);
+        let power_average = |t1_micros: u64, t2_micros: u64| {
+            let dt1 = to_seconds(t1_micros - t_start_micros);
+            let dt2 = to_seconds(t2_micros - t_start_micros);
+            (dt2.powi(4) - dt1.powi(4)) / (4.0 * (dt2 - dt1))
+        };
 
         // Collect raw samples from t=0s to t=1s.
-        let mut t_micros = 0;
+        let mut t_micros = t_start_micros;
         let mut records_out = Vec::new();
-        while t_micros <= duration_micros {
-            let t_sec = t_micros as f32 / 1e6;
+        while t_micros <= t_start_micros + duration_micros {
             let record = ZedmonRecord {
                 timestamp_micros: t_micros,
-                shunt_voltage: shunt_voltage_raw(t_sec),
-                bus_voltage: bus_voltage_raw(t_sec),
-                power: power_raw(t_sec),
+                shunt_voltage: shunt_voltage_raw(t_micros),
+                bus_voltage: bus_voltage_raw(t_micros),
+                power: power_raw(t_micros),
             };
             match downsampler.process(record) {
                 Some(r) => records_out.push(r),
@@ -1595,23 +1697,32 @@ mod tests {
             t_micros += raw_interval_micros;
         }
 
-        let dt_sec = downsampling_interval_micros as f32 / 1e6;
-
         // Confirm expectations.
         assert_eq!(records_out.len(), (duration_micros / downsampling_interval_micros) as usize);
 
         for (i, record) in records_out.into_iter().enumerate() {
-            let expected_micros = ((i + 1) as u64) * downsampling_interval_micros;
-
-            // Endpoints of the interval for this sample, in seconds.
-            let t2 = expected_micros as f32 / 1e6;
-            let t1 = t2 - dt_sec;
-
-            assert_eq!(record.timestamp_micros, expected_micros);
+            // Endpoints of the interval for this sample, in microseconds.
+            let t1 = t_start_micros + (i as u64) * downsampling_interval_micros;
+            let t2 = t1 + downsampling_interval_micros;
+            println!("t1: {}, t2: {}", t1, t2);
+            assert_eq!(record.timestamp_micros, t2);
             assert_near!(record.shunt_voltage, shunt_voltage_average(t1, t2), 1e-4);
             assert_near!(record.bus_voltage, bus_voltage_average(t1, t2), 1e-4);
             assert_near!(record.power, power_average(t1, t2), 1e-4);
         }
+    }
+
+    #[test]
+    fn test_downsampler_nominal() {
+        run_downsampler_test(0);
+    }
+
+    // Using timestamps near the Unix epoch can lead to lossy calculations between u64 timestamps
+    // and f32 time deltas if appropriate care is not taken.
+    #[test]
+    fn test_downsampler_large_timestamps() {
+        let t_start_micros = 1_615_848_933_000_000; // Sometime on 2021-03-15 PDT
+        run_downsampler_test(t_start_micros);
     }
 
     #[test]

@@ -5,10 +5,6 @@
 //! Implements the Zedmon USB protocol, defined by
 //! https://fuchsia.googlesource.com/zedmon/+/HEAD/docs/usb_proto.md.
 
-// TODO(claridge): Remove once the protocol is in use. This is needed temporarily while building
-// up this crate in isolation.
-#![allow(dead_code)]
-
 use {
     byteorder::{LittleEndian as LE, ReadBytesExt},
     num::FromPrimitive,

@@ -18,7 +18,9 @@ class ZedmonException implements Exception {
   String toString() => 'ZedmonException: $message';
 }
 
-// Description of the Zedmon device and host-side client.
+/// Description of the Zedmon device and host-side client.
+// TODO(fxbug.dev/72454): Share this and other common client interfaces with
+// sdk/testing/sl4f/client/lib/src/power.dart.
 class ZedmonDescription {
   final double shuntResistance;
   final int timestampIndex;
@@ -55,15 +57,39 @@ Future<ZedmonDescription> getZedmonDescription(String zedmonPath) async {
       csvFormat.indexOf('power'));
 }
 
+/// Individual timepoint of zedmon data.
+class ZedmonRecord {
+  /// Record timestamp, relative to the time the zedmon device started.
+  int timestampMicros;
+
+  /// Measured shunt voltage (Volts).
+  double shuntVoltage;
+
+  /// Measured bus voltage (Volts).
+  double busVoltage;
+
+  /// Measured power (Watts).
+  double power;
+
+  /// Parses a [ZedmonRecord] from a line of zedmon's CSV output.
+  ZedmonRecord(String csvLine, ZedmonDescription desc) {
+    final parts = csvLine.split(',');
+    if (parts.length != 4) {
+      throw ZedmonException(
+          'Zedmon CSV line does not have 4 entries. Offending line:\n$csvLine');
+    }
+    timestampMicros = int.parse(parts[desc.timestampIndex]);
+    shuntVoltage = double.parse(parts[desc.shuntVoltageIndex]);
+    busVoltage = double.parse(parts[desc.busVoltageIndex]);
+    power = double.parse(parts[desc.powerIndex]);
+  }
+}
+
 void validateZedmonCsvLine(
     String csvLine, ZedmonDescription desc, double powerTolerance) {
-  final parts = csvLine.split(',');
-  final shuntVoltage = double.parse(parts[desc.shuntVoltageIndex]);
-  final busVoltage = double.parse(parts[desc.busVoltageIndex]);
-  final power = double.parse(parts[desc.powerIndex]);
-
-  expect(busVoltage * shuntVoltage / desc.shuntResistance,
-      closeTo(power, powerTolerance));
+  final record = ZedmonRecord(csvLine, desc);
+  expect(record.busVoltage * record.shuntVoltage / desc.shuntResistance,
+      closeTo(record.power, powerTolerance));
 }
 
 // Returns the average power measured by `zedmon record --average` for the
@@ -166,6 +192,43 @@ Future<void> main() async {
       // average bus power. Consequently, the tolerance in the power calculation
       // needs to be higher here.
       validateZedmonCsvLine(line, zedmonDescription, 0.01);
+    }
+  });
+
+  // Collects data over a brief interval using the --host_timestamps flag, and
+  // checks that the timestamps are properly offset to lie between host time
+  // instants before and after the Zedmon process runs.
+  test('zedmon record host timestamps', () async {
+    final zedmonArgs = [
+      'record',
+      '--out',
+      tempFilePath,
+      '--duration',
+      '100ms',
+      '--host_timestamps'
+    ];
+
+    final start = DateTime.now();
+    final result = await Process.run(zedmonPath, zedmonArgs);
+    final end = DateTime.now();
+
+    expect(result.exitCode, equals(0));
+    final lines = await File(tempFilePath).readAsLines();
+
+    expect(lines.length, greaterThan(0),
+        reason: 'No lines in output. stderr: "${result.stderr}"');
+
+    for (String line in lines) {
+      final record = ZedmonRecord(line, zedmonDescription);
+      final recordTime =
+          DateTime.fromMicrosecondsSinceEpoch(record.timestampMicros);
+
+      expect(recordTime.isAfter(start), true,
+          reason:
+              'Record time $recordTime is not after process start time $start.');
+      expect(recordTime.isBefore(end), true,
+          reason:
+              'Record time $recordTime is not before process end time $end.');
     }
   });
 
