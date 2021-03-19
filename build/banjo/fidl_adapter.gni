@@ -126,18 +126,20 @@ template("fidl_adapter") {
 
       public_configs = [ ":$c_config_target_name" ]
 
-      deps = [ ":$c_fidlgen_target_name" ]
+      deps = [
+        ":$c_fidlgen_target_name",
+        ":$c_verification_target_name",
+      ]
 
-      deps += [ ":$c_verification_target_name" ]
-
+      public_deps = []
       if (defined(invoker.deps)) {
         foreach(dep, invoker.deps) {
           if (dep == "//sdk/banjo/zx") {
-            deps += [ "//zircon/vdso/zx:zx_c" ]
+            public_deps += [ "//zircon/vdso/zx:zx_c" ]
           } else {
             _name = get_label_info(dep, "name")
             _dir = get_label_info(dep, "dir")
-            deps += [ "$_dir:${_name}_banjo_c" ]
+            public_deps += [ "$_dir:${_name}_banjo_c" ]
           }
         }
       }
@@ -361,16 +363,6 @@ template("fidl_adapter") {
 
       sources = [ cpp_private_file ]
 
-      public_deps = [
-        ":$c_target_name",
-
-        # The generated headers #include <ddk/*.h> and #include <ddktl/*.h>
-        # files from the libraries (that aren't generated).
-        "//src/lib/ddk",
-        "//src/lib/ddktl",
-        "//zircon/system/ulib/zx",
-      ]
-
       # Let dependencies use `#include "$file_stem.h"`.
       public_configs = [ "//build/c:banjo_gen_config" ]
 
@@ -382,12 +374,22 @@ template("fidl_adapter") {
         "//src/zircon/lib/zircon",
       ]
 
+      public_deps = [
+        ":$c_target_name",
+
+        # The generated headers #include <ddk/*.h> and #include <ddktl/*.h>
+        # files from the libraries (that aren't generated).
+        "//src/lib/ddk",
+        "//src/lib/ddktl",
+        "//zircon/system/ulib/zx",
+      ]
+
       if (defined(invoker.deps)) {
         foreach(dep, invoker.deps) {
           if (dep != "//sdk/banjo/zx") {
             _name = get_label_info(dep, "name")
             _dir = get_label_info(dep, "dir")
-            deps += [ "$_dir:${_name}_banjo_cpp" ]
+            public_deps += [ "$_dir:${_name}_banjo_cpp" ]
           }
         }
       }
@@ -398,16 +400,16 @@ template("fidl_adapter") {
 
       public = [ cpp_mock_file ]
 
-      public_deps = [
-        "//zircon/system/ulib/fbl",
-        "//zircon/system/ulib/mock-function",
-        "//zircon/system/ulib/zxtest",
-      ]
-
       deps = [
         ":$cpp_mock_fidlgen_target_name",
         ":$cpp_mock_verification_target_name",
         ":$cpp_target_name",
+      ]
+
+      public_deps = [
+        "//zircon/system/ulib/fbl",
+        "//zircon/system/ulib/mock-function",
+        "//zircon/system/ulib/zxtest",
       ]
 
       if (defined(invoker.deps)) {
@@ -415,7 +417,7 @@ template("fidl_adapter") {
           if (dep != "//sdk/banjo/zx") {
             _name = get_label_info(dep, "name")
             _dir = get_label_info(dep, "dir")
-            deps += [ "$_dir:${_name}_banjo_cpp" ]
+            public_deps += [ "$_dir:${_name}_banjo_cpp_mock" ]
           }
         }
       }
