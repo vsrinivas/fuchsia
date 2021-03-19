@@ -2,8 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
@@ -40,15 +39,8 @@ executable("bin") {
   deps = [ ":lib" ]
 }
 
-package("sched") {
+fuchsia_shell_package("sched") {
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      shell = true
-      name = "sched"
-    },
-  ]
 }
 
 executable("bin_test") {
@@ -68,15 +60,11 @@ executable("bin_test") {
   ]
 }
 
-test_package("sched_tests") {
+fuchsia_test_component("sched_tests_component") {
+  manifest = "meta/sched_tests.cmx"
   deps = [ ":bin_test" ]
+}
 
-  tests = [
-    {
-      shell = true
-      name = "sched_tests"
-      dest = "sched_tests"
-      environments = basic_envs
-    },
-  ]
+fuchsia_test_package("sched_tests") {
+  test_components = [ ":sched_tests_component" ]
 }

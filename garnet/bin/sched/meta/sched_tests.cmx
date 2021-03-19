@@ -3,7 +3,7 @@
         "sdk/lib/diagnostics/syslog/client.shard.cmx"
     ],
     "program": {
-        "binary": "test/sched_tests"
+        "binary": "bin/sched_tests"
     },
     "sandbox": {
         "boot": [
