@@ -10,8 +10,6 @@
 ## Updates third_party/rust_crates based on the contents of
 ## third_party/rust_crates/Cargo.toml
 ##
-## After updating third_party/rust_crates, the pinned revision of
-## third_party/rust_crates will need to be updated in garnet/manifest/third_party.
 ## See https://fuchsia.dev/fuchsia-src/development/languages/rust/third_party.md
 ## for more details.
 
@@ -62,6 +60,9 @@ fi
   $FUCHSIA_DIR/third_party/rust_crates/vendor \
   -q)
 
+$FUCHSIA_DIR/scripts/rust/check_rust_licenses.py \
+  --directory $FUCHSIA_DIR/third_party/rust_crates/vendor
+
 (cd $FUCHSIA_DIR; $GNAW_BIN \
    --manifest-path $FUCHSIA_DIR/third_party/rust_crates/Cargo.toml \
    --project-root $FUCHSIA_DIR \
@@ -69,6 +70,3 @@ fi
   -o $FUCHSIA_DIR/third_party/rust_crates/BUILD.gn \
   --gn-bin $PREBUILT_GN \
   --skip-root)
-
-$FUCHSIA_DIR/scripts/rust/check_rust_licenses.py \
-  --directory $FUCHSIA_DIR/third_party/rust_crates/vendor
