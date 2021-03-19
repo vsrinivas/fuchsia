@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1500
+From //build/config/BUILDCONFIG.gn:1499
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -127,15 +127,6 @@ a key which will be used to sign VBMETA and images for AVB
 **Current value (from the default):** `""`
 
 From //build/images/vbmeta.gni:21
-
-### base_cache_packages_allow_testonly
-Whether to allow testonly=true targets in base/cache pacakges. Default to
-true to allow testonly=true targets. It is preferrable to set to false for
-production builds to avoid accidental inclusion of testing targets.
-
-**Current value (from the default):** `true`
-
-From //BUILD.gn:58
 
 ### base_package_labels
 If you add package labels to this variable, the packages will be included in
@@ -875,7 +866,7 @@ List of labels for objects to include in the ZBI.
 
 **Current value (from the default):** `[]`
 
-From //build/dev.gni:37
+From //build/dev.gni:17
 
 ### dev_build_only_deps
 List of labels for targets that should be built but not included in any
@@ -885,48 +876,12 @@ build outputs that are part of the build API (e.g. zbi's, package servers).
 
 From //build/dev.gni:14
 
-### dev_fuchsia_zbi_bootfs_filelist_golden
-An optional golden file for fuchsia.zbi bootFS file list. If specified,
-this golden file would be compared against fuchsia.zbi bootFS file list
-during build time.
-
-**Current value (from the default):** `""`
-
-From //build/dev.gni:29
-
-### dev_fuchsia_zbi_kernel_cmdline_golden
-An optional golden file for fuchsia.zbi kernel cmdline args. If specified,
-this golden file would be compared against fuchsia.zbi kernel cmdline during
-build time.
-
-**Current value (from the default):** `""`
-
-From //build/dev.gni:19
-
 ### dev_recovery_bootfs_labels
 List of binary labels to include in the recovery ZBI.
 
 **Current value (from the default):** `[]`
 
-From //build/dev.gni:43
-
-### dev_recovery_zbi_bootfs_filelist_golden
-An optional golden file for recovery.zbi bootFS file list. If specified,
-this golden file would be compared against recovery.zbi bootFS file list
-during build time.
-
-**Current value (from the default):** `""`
-
-From //build/dev.gni:34
-
-### dev_recovery_zbi_kernel_cmdline_golden
-An optional golden file for recovery.zbi kernel cmdline args. If specified,
-this golden file would be compared against recovery.zbi kernel cmdline
-during build time.
-
-**Current value (from the default):** `""`
-
-From //build/dev.gni:24
+From //build/dev.gni:23
 
 ### dev_system_image_deps
 List of labels for binaries to include in the system image.
@@ -935,29 +890,12 @@ List of labels for binaries to include in the system image.
 
 From //build/dev.gni:10
 
-### dev_testonly_in_containers
-Whether to allow testonly=true targets in fuchsia ZBI or base/cache packages.
-
-Possible values are
-  "all": Allow testonly=true target in fuchsia ZBI and base/cache packages.
-  "all_but_base_cache_packages": Do not allow testonly=true target in
-     base/cache packages, but allow in other fuchsia ZBI dependencies.
-  "none": Do not allow testonly=true target in all ZBI dependencies
-     including base/cache packages.
-
-Default value is 'all', it is preferable to set to 'none' for production
-  image to avoid accidental inclusion of testing targets.
-
-**Current value (from the default):** `"all"`
-
-From //build/dev.gni:56
-
 ### dev_zedboot_bootfs_labels
 List of binary labels to include in the zedboot ZBI.
 
 **Current value (from the default):** `[]`
 
-From //build/dev.gni:40
+From //build/dev.gni:20
 
 ### devmgr_config
 List of arguments to add to /boot/config/devmgr.
@@ -1135,7 +1073,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1279
+From //build/config/BUILDCONFIG.gn:1278
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1265,6 +1203,24 @@ non-SDK buildroots.
 **Current value (from the default):** `""`
 
 From //build/fuchsia/sdk.gni:17
+
+### fuchsia_zbi_bootfs_filelist_golden
+An optional golden file for fuchsia.zbi bootFS file list. If specified,
+this golden file would be compared against fuchsia.zbi bootFS file list
+during build time.
+
+**Current value (from the default):** `""`
+
+From //build/security.gni:21
+
+### fuchsia_zbi_kernel_cmdline_golden
+An optional golden file for fuchsia.zbi kernel cmdline args. If specified,
+this golden file would be compared against fuchsia.zbi kernel cmdline during
+build time.
+
+**Current value (from the default):** `""`
+
+From //build/security.gni:11
 
 ### fvm_emmc_partition_size
 The size in bytes of the FVM partition on the target eMMC devices.
@@ -1825,7 +1781,7 @@ Each element of the list is one variant, which is a scope defining:
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1154
+From //build/config/BUILDCONFIG.gn:1153
 
 ### launch_basemgr_on_boot
 Indicates whether to include basemgr.cmx in the boot sequence for the
@@ -2831,6 +2787,24 @@ Path to file to use for recovery logo
 
 From //src/recovery/system/system_recovery_args.gni:7
 
+### recovery_zbi_bootfs_filelist_golden
+An optional golden file for recovery.zbi bootFS file list. If specified,
+this golden file would be compared against recovery.zbi bootFS file list
+during build time.
+
+**Current value (from the default):** `""`
+
+From //build/security.gni:26
+
+### recovery_zbi_kernel_cmdline_golden
+An optional golden file for recovery.zbi kernel cmdline args. If specified,
+this golden file would be compared against recovery.zbi kernel cmdline
+during build time.
+
+**Current value (from the default):** `""`
+
+From //build/security.gni:16
+
 ### run_slow_bssl_tests
 
 **Current value (from the default):** `false`
@@ -3090,7 +3064,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1490
+From //build/config/BUILDCONFIG.gn:1489
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3099,7 +3073,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1495
+From //build/config/BUILDCONFIG.gn:1494
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3131,7 +3105,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1325
+From //build/config/BUILDCONFIG.gn:1324
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3300,6 +3274,23 @@ afterwards.
 
 From //BUILD.gn:40
 
+### testonly_in_containers
+Whether to allow testonly=true targets in fuchsia ZBI or base/cache packages.
+
+Possible values are
+  "all": Allow testonly=true target in fuchsia ZBI and base/cache packages.
+  "all_but_base_cache_packages": Do not allow testonly=true target in
+     base/cache packages, but allow in other fuchsia ZBI dependencies.
+  "none": Do not allow testonly=true target in all ZBI dependencies
+     including base/cache packages.
+
+Default value is 'all', it is preferable to set to 'none' for production
+  image to avoid accidental inclusion of testing targets.
+
+**Current value (from the default):** `"all"`
+
+From //build/security.gni:39
+
 ### thinlto_cache_dir
 ThinLTO cache directory path.
 
@@ -3411,7 +3402,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1309
+From //build/config/BUILDCONFIG.gn:1308
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
