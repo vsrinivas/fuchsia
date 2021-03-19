@@ -41,6 +41,7 @@ flutter_app("ermine") {
 
   sources = [
     "main.dart",
+    "src/models/alert_model.dart",
     "src/models/app_model.dart",
     "src/models/ask_model.dart",
     "src/models/cluster_model.dart",
@@ -180,6 +181,7 @@ config_data("ermine_fonts") {
 
 flutter_test("ermine_unittests") {
   sources = [
+    "alert_model_test.dart",
     "app_model_test.dart",
     "app_widget_test.dart",
     "ask_model_test.dart",
