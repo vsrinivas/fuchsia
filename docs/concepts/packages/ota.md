@@ -23,8 +23,8 @@ The benefits of using Omaha are:
     devices are up to date.
   * Alternatively, we can choose to continue updating only the original 10% of devices, without
     touching the 90%.
-* It allows for different update channels. For example, dogfood devices can get updates from the
-  dogfood channel and get the newest (possibly unstable) software. Whereas production devices can
+* It allows for different update channels. For example, test devices can get updates from the
+  test channel and get the newest (possibly unstable) software. Whereas production devices can
   get updates from the production channel and get the most stable software. Channel information can
   be optionally given to Omaha along with product and version.
 
