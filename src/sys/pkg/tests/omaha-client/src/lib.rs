@@ -1107,7 +1107,7 @@ async fn test_crash_report_consecutive_failed_update_checks() {
 
     // But failing >=5 times will.
     do_failed_update_check(&env).await;
-    assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
+    assert_signature(recv.next().await.unwrap(), "fuchsia-5-consecutive-failed-update-checks");
     do_failed_update_check(&env).await;
-    assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
+    assert_signature(recv.next().await.unwrap(), "fuchsia-6-consecutive-failed-update-checks");
 }

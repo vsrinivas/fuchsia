@@ -452,11 +452,11 @@ mod tests {
             consecutive_failed_update_checks: 5,
             ..ProtocolState::default()
         });
-        assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
+        assert_signature(recv.next().await.unwrap(), "fuchsia-5-consecutive-failed-update-checks");
         observer.on_protocol_state_change(&ProtocolState {
             consecutive_failed_update_checks: 8,
             ..ProtocolState::default()
         });
-        assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
+        assert_signature(recv.next().await.unwrap(), "fuchsia-8-consecutive-failed-update-checks");
     }
 }

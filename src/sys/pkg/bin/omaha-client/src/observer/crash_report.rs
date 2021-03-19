@@ -84,7 +84,8 @@ async fn monitor_control_requests<T: TimeSource>(
             }
             Some(ControlRequest::ConsecutiveFailedUpdateChecks(n)) => {
                 if n >= params.min_consecutive_failed_update_checks {
-                    file_report(&params.proxy, "fuchsia-consecutive-failed-update-checks").await;
+                    let signature = format!("fuchsia-{}-consecutive-failed-update-checks", n);
+                    file_report(&params.proxy, &signature).await;
                 }
             }
             None => {
@@ -247,9 +248,9 @@ mod tests {
 
         // If num checks >= min, we SHOULD file a crash report.
         let () = ch.consecutive_failed_update_checks(5).unwrap();
-        assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
+        assert_signature(recv.next().await.unwrap(), "fuchsia-5-consecutive-failed-update-checks");
         let () = ch.consecutive_failed_update_checks(6).unwrap();
-        assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
+        assert_signature(recv.next().await.unwrap(), "fuchsia-6-consecutive-failed-update-checks");
     }
 
     /// Tests that the number of pending crash reports is correctly bounded.
@@ -268,7 +269,7 @@ mod tests {
 
         // The first control request should go through, but hang when calling `file`.
         // After this call, we're guaranteed to have 1 pending crash report.
-        let () = ch.consecutive_failed_update_checks(1).unwrap();
+        let () = ch.consecutive_failed_update_checks(0).unwrap();
 
         // After this call, we're guaranteed to have 2 pending crash reports.
         let () = ch.installation_error().unwrap();
@@ -277,14 +278,14 @@ mod tests {
         assert_matches!(ch.installation_error(), Err(mpsc::TrySendError::<ControlRequest> { .. }));
 
         // Complete a file call, so we now have 1 pending crash report.
-        assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
+        assert_signature(recv.next().await.unwrap(), "fuchsia-0-consecutive-failed-update-checks");
 
         // Now that the file call is unblocked, we can successfully make another request.
         let () = ch.consecutive_failed_update_checks(1).unwrap();
 
         // Drain remaining file calls.
         assert_signature(recv.next().await.unwrap(), "fuchsia-installation-error");
-        assert_signature(recv.next().await.unwrap(), "fuchsia-consecutive-failed-update-checks");
+        assert_signature(recv.next().await.unwrap(), "fuchsia-1-consecutive-failed-update-checks");
     }
 
     /// Tests that when the control handle is dropped, the `handle_crash_reports_impl` future
