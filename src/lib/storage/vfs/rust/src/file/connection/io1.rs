@@ -348,8 +348,14 @@ impl<T: 'static + File> FileConnection<T> {
             return (Status::BAD_HANDLE, vec![]);
         }
 
-        match self.file.read_at(offset, count).await {
-            Ok(vec) => (Status::OK, vec),
+        // TODO(auradkar): We can optimize this by no initializing the vector here. Seems like a
+        // good candidate for MaybeUninit.
+        let mut buffer = vec![0; count as usize];
+        match self.file.read_at(offset, &mut buffer).await {
+            Ok(size) => {
+                buffer.truncate(size as usize);
+                (Status::OK, buffer)
+            }
             Err(e) => (e, vec![]),
         }
     }
@@ -560,11 +566,15 @@ mod tests {
             Ok(())
         }
 
-        async fn read_at(&self, offset: u64, count: u64) -> Result<Vec<u8>, Status> {
+        async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
+            let count = buffer.len() as u64;
             self.handle_operation(FileOperation::ReadAt { offset, count })?;
 
             // Return data as if we were a file with 0..255 repeated endlessly.
-            Ok((offset..offset + count).map(|i| (i % 256) as u8).collect())
+            for i in 0..count as usize {
+                buffer[i] = ((offset as usize + i) % 256) as u8;
+            }
+            Ok(count)
         }
 
         async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {

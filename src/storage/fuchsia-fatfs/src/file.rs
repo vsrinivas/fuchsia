@@ -217,7 +217,7 @@ impl VfsFile for FatFile {
         Ok(())
     }
 
-    async fn read_at(&self, offset: u64, count: u64) -> Result<Vec<u8>, Status> {
+    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status> {
         let fs_lock = self.filesystem.lock().unwrap();
         let file = self.borrow_file_mut(&fs_lock).ok_or(Status::BAD_HANDLE)?;
 
@@ -226,20 +226,17 @@ impl VfsFile for FatFile {
         // Technically, we don't need to do this because the read should return zero bytes later,
         // but it's better to be explicit.
         if real_offset != offset {
-            return Ok(Vec::new());
+            return Ok(0);
         }
-        let mut result = Vec::with_capacity(count as usize);
-        result.resize(count as usize, 0);
         let mut total_read = 0;
-        while total_read < count as usize {
-            let read = file.read(&mut result[total_read..]).map_err(fatfs_error_to_status)?;
+        while total_read < buffer.len() {
+            let read = file.read(&mut buffer[total_read..]).map_err(fatfs_error_to_status)?;
             if read == 0 {
                 break;
             }
             total_read += read;
         }
-        result.truncate(total_read);
-        Ok(result)
+        Ok(total_read as u64)
     }
 
     async fn write_at(&self, offset: u64, content: &[u8]) -> Result<u64, Status> {
@@ -439,7 +436,8 @@ mod tests {
         // The error is not particularly important, because fat has a maximum 32-bit file size.
         // An error like this will only happen if an application deliberately seeks to a (very)
         // out-of-range position or reads at a nonsensical offset.
-        let err = file.read_at(u64::MAX - 30, 1).await.expect_err("Read fails");
+        let mut buffer: Vec<u8> = vec![0; 1];
+        let err = file.read_at(u64::MAX - 30, &mut buffer).await.expect_err("Read fails");
         assert_eq!(err, Status::INVALID_ARGS);
     }
 

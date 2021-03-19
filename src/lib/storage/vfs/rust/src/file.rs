@@ -32,8 +32,10 @@ pub trait File: Sync + Send + DirectoryEntry {
     /// the file's client.
     async fn open(&self, flags: u32) -> Result<(), Status>;
 
-    /// Read at most |count| bytes starting at |offset|, returning a vector of the read bytes.
-    async fn read_at(&self, offset: u64, count: u64) -> Result<Vec<u8>, Status>;
+    /// Read at most |buffer.len()| bytes starting at |offset| into |buffer|. The function may read
+    /// less than |count| bytes and still return success, in which case read_at returns the number
+    /// of bytes read into |buffer|.
+    async fn read_at(&self, offset: u64, buffer: &mut [u8]) -> Result<u64, Status>;
 
     /// Write |content| starting at |offset|, returning the number of bytes that were successfully
     /// written.
