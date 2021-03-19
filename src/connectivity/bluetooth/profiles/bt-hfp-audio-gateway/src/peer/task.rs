@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    async_utils::hanging_get::client::HangingGetStream,
     at_commands as at, fidl_fuchsia_bluetooth_bredr as bredr,
     fidl_fuchsia_bluetooth_hfp::{NetworkInformation, PeerHandlerProxy},
     fuchsia_async::Task,
@@ -11,9 +12,15 @@ use {
         types::PeerId,
     },
     fuchsia_zircon as zx,
-    futures::{channel::mpsc, select, StreamExt},
+    futures::{
+        channel::mpsc,
+        future::Either,
+        select,
+        stream::{empty, Empty},
+        FutureExt, StreamExt,
+    },
     log::{debug, info, warn},
-    std::convert::TryInto,
+    std::{convert::TryInto, fmt},
 };
 
 use super::{
@@ -34,6 +41,10 @@ pub(super) struct PeerTask {
     profile_proxy: bredr::ProfileProxy,
     handler: Option<PeerHandlerProxy>,
     network: NetworkInformation,
+    network_updates: Either<
+        HangingGetStream<NetworkInformation>,
+        Empty<Result<NetworkInformation, fidl::Error>>,
+    >,
     calls: Calls,
     gain_control: GainControl,
     connection: ServiceLevelConnection,
@@ -51,6 +62,7 @@ impl PeerTask {
             profile_proxy,
             handler: None,
             network: NetworkInformation::EMPTY,
+            network_updates: empty().right_stream(),
             calls: Calls::new(None),
             gain_control: GainControl::new()?,
             connection: ServiceLevelConnection::new(),
@@ -64,7 +76,7 @@ impl PeerTask {
     ) -> Result<(Task<()>, mpsc::Sender<PeerRequest>), Error> {
         let (sender, receiver) = mpsc::channel(0);
         let peer = Self::new(id, profile_proxy, local_config)?;
-        let task = Task::local(peer.run(receiver));
+        let task = Task::local(peer.run(receiver).map(|_| ()));
         Ok((task, sender))
     }
 
@@ -123,7 +135,7 @@ impl PeerTask {
             }
         };
 
-        update_network_information(&mut self.network, info);
+        self.handle_network_update(info).await;
 
         let client_end = self.gain_control.get_client_end()?;
         if let Err(e) = handler.gain_control(client_end) {
@@ -133,9 +145,16 @@ impl PeerTask {
 
         self.calls = Calls::new(Some(handler.clone()));
 
+        self.create_network_updates_stream(handler.clone());
         self.handler = Some(handler);
 
         Ok(())
+    }
+
+    /// Set a new HangingGetStream to watch for network information updates.
+    fn create_network_updates_stream(&mut self, handler: PeerHandlerProxy) {
+        let closure = move || Some(handler.watch_network_information());
+        self.network_updates = HangingGetStream::new(Box::new(closure)).left_stream();
     }
 
     async fn peer_request(&mut self, request: PeerRequest) -> Result<(), Error> {
@@ -169,11 +188,11 @@ impl PeerTask {
             match request {
                 ProcedureRequest::None => return,
                 ProcedureRequest::Error(e) => {
-                    log::warn!("Error processing procedure update: {:?}", e);
+                    warn!("Error processing procedure update: {:?}", e);
                     if let Err(err) =
                         self.connection.send_message_to_peer(at::Response::Error).await
                     {
-                        log::warn!("Unable to serialize AT error response with {:}", err);
+                        warn!("Unable to serialize AT error response with {:}", err);
                     }
                     return;
                 }
@@ -181,7 +200,7 @@ impl PeerTask {
                     // Messages to be sent to the peer via the Service Level RFCOMM Connection.
                     for message in messages {
                         if let Err(err) = self.connection.send_message_to_peer(message).await {
-                            log::warn!("Unable to serialize AT response with {:}", err);
+                            warn!("Unable to serialize AT response with {:}", err);
                         }
                     }
                     return;
@@ -218,7 +237,7 @@ impl PeerTask {
                         Some(h) => {
                             let result = h.query_operator().await;
                             if let Err(err) = &result {
-                                log::warn!(
+                                warn!(
                                     "Got error attempting to retrieve operator name from AG: {:}",
                                     err
                                 );
@@ -250,7 +269,7 @@ impl PeerTask {
         }
     }
 
-    pub async fn run(mut self, mut task_channel: mpsc::Receiver<PeerRequest>) {
+    pub async fn run(mut self, mut task_channel: mpsc::Receiver<PeerRequest>) -> Self {
         loop {
             select! {
                 // New request coming from elsewhere in the component
@@ -276,7 +295,14 @@ impl PeerTask {
                 request = self.connection.select_next_some() => {
                     match request {
                         Ok(r) => self.procedure_request(r).await,
-                        Err(e) => log::warn!("SLC stream error: {:?}", e),
+                        Err(e) => warn!("SLC stream error: {:?}", e),
+                    }
+                }
+                update = self.network_updates.next() => {
+                    if let Some(update) = stream_item_map_or_log(update, "PeerHandler::WatchNetworkUpdate") {
+                        self.handle_network_update(update).await
+                    } else {
+                        break;
                     }
                 }
                 complete => break,
@@ -284,20 +310,62 @@ impl PeerTask {
         }
 
         debug!("Stopping task for peer {}", self.id);
+
+        self
+    }
+
+    /// Update the network information with the provided `update` value. Pass updates to the HF if
+    /// the service level connection is initialized.
+    async fn handle_network_update(&mut self, update: NetworkInformation) {
+        if update_table_entry(&mut self.network.service_available, &update.service_available) {
+            if self.connection.initialized() {
+                // TODO:
+            }
+        }
+        if update_table_entry(&mut self.network.signal_strength, &update.signal_strength) {
+            if self.connection.initialized() {
+                // TODO:
+            }
+        }
+        if update_table_entry(&mut self.network.roaming, &update.roaming) {
+            if self.connection.initialized() {
+                // TODO:
+            }
+        }
     }
 }
 
-/// Update the `network` with values provided by `update`. Any fields in
-/// `update` that are `None` will not result in an update to `network`.
-fn update_network_information(network: &mut NetworkInformation, update: NetworkInformation) {
-    if update.service_available.is_some() {
-        network.service_available = update.service_available;
+/// Table entries are all optional fields. Update `dst` if `src` is present and differs from `dst`.
+///
+/// Return true if the update occurred.
+fn update_table_entry<T: PartialEq + Clone>(dst: &mut Option<T>, src: &Option<T>) -> bool {
+    if src.is_some() && src != dst {
+        *dst = src.clone();
+        true
+    } else {
+        false
     }
-    if update.signal_strength.is_some() {
-        network.signal_strength = update.signal_strength;
-    }
-    if update.roaming.is_some() {
-        network.roaming = update.roaming;
+}
+
+/// Take an item from a stream the produces results and return an `Option<T>` when available.
+/// Log a message including the `stream_name` when the stream produces an error or is exhausted.
+///
+/// This is useful when dealing with streams where the only meaningful difference between
+/// a terminated stream and an error value is how it should be logged.
+fn stream_item_map_or_log<T, E: fmt::Debug>(
+    item: Option<Result<T, E>>,
+    stream_name: &str,
+) -> Option<T> {
+    match item {
+        Some(Ok(value)) => Some(value),
+        Some(Err(e)) => {
+            warn!("Error on stream {}: {:?}", stream_name, e);
+            None
+        }
+        None => {
+            info!("Stream {} closed", stream_name);
+            None
+        }
     }
 }
 
@@ -305,10 +373,12 @@ fn update_network_information(network: &mut NetworkInformation, update: NetworkI
 mod tests {
     use {
         super::*,
+        async_utils::PollExt,
         fidl_fuchsia_bluetooth_bredr::{ProfileMarker, ProfileRequestStream},
         fidl_fuchsia_bluetooth_hfp::{PeerHandlerMarker, PeerHandlerRequest, SignalStrength},
         fuchsia_async as fasync,
         fuchsia_bluetooth::types::Channel,
+        futures::{future::ready, pin_mut, SinkExt},
         proptest::prelude::*,
     };
 
@@ -340,11 +410,30 @@ mod tests {
         }
     }
 
+    fn setup_peer_task(
+    ) -> (PeerTask, mpsc::Sender<PeerRequest>, mpsc::Receiver<PeerRequest>, ProfileRequestStream)
+    {
+        let (sender, receiver) = mpsc::channel(1);
+        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<ProfileMarker>().unwrap();
+        (
+            PeerTask::new(PeerId(1), proxy, AudioGatewayFeatureSupport::default())
+                .expect("Could not create PeerTask"),
+            sender,
+            receiver,
+            stream,
+        )
+    }
+
     proptest! {
         #[test]
         fn updates(a in arb_network(), b in arb_network()) {
-            let mut c = a.clone();
-            update_network_information(&mut c, b.clone());
+            let mut exec = fasync::Executor::new().unwrap();
+            let mut task = setup_peer_task().0;
+
+            task.network = a.clone();
+            exec.run_singlethreaded(task.handle_network_update(b.clone()));
+
+            let c = task.network.clone();
 
             // Check that the `service_available` field is correct.
             if b.service_available.is_some() {
@@ -373,57 +462,6 @@ mod tests {
                 assert_eq!(c.roaming, None);
             }
         }
-    }
-
-    /// Perform various updates on the peer's internal NetworkInformation.
-    #[test]
-    fn network_information_updates_successfully() {
-        let mut network = NetworkInformation::EMPTY;
-
-        let update_1 =
-            NetworkInformation { service_available: Some(true), ..NetworkInformation::EMPTY };
-        update_network_information(&mut network, update_1.clone());
-        assert_eq!(network, update_1);
-
-        let update_2 = NetworkInformation {
-            signal_strength: Some(SignalStrength::Low),
-            ..NetworkInformation::EMPTY
-        };
-        update_network_information(&mut network, update_2.clone());
-        let expected = NetworkInformation {
-            service_available: Some(true),
-            signal_strength: Some(SignalStrength::Low),
-            ..NetworkInformation::EMPTY
-        };
-        assert_eq!(network, expected);
-
-        let update_3 = NetworkInformation {
-            service_available: Some(false),
-            roaming: Some(false),
-            ..NetworkInformation::EMPTY
-        };
-        update_network_information(&mut network, update_3.clone());
-        let expected = NetworkInformation {
-            service_available: Some(false),
-            signal_strength: Some(SignalStrength::Low),
-            roaming: Some(false),
-            ..NetworkInformation::EMPTY
-        };
-        assert_eq!(network, expected);
-    }
-
-    fn setup_peer_task(
-    ) -> (PeerTask, mpsc::Sender<PeerRequest>, mpsc::Receiver<PeerRequest>, ProfileRequestStream)
-    {
-        let (sender, receiver) = mpsc::channel(0);
-        let (proxy, stream) = fidl::endpoints::create_proxy_and_stream::<ProfileMarker>().unwrap();
-        (
-            PeerTask::new(PeerId(1), proxy, AudioGatewayFeatureSupport::default())
-                .expect("Could not create PeerTask"),
-            sender,
-            receiver,
-            stream,
-        )
     }
 
     #[fasync::run_until_stalled(test)]
@@ -504,5 +542,85 @@ mod tests {
         let _ = exec.run_until_stalled(&mut peer_task_fut);
         // We then expect an outgoing message to the peer.
         expect_message_received_by_peer(&mut exec, &mut remote);
+    }
+
+    #[test]
+    fn network_information_updates() {
+        // This test produces the following two network updates
+        let network_update_1 = NetworkInformation {
+            signal_strength: Some(SignalStrength::Low),
+            roaming: Some(false),
+            ..NetworkInformation::EMPTY
+        };
+        let network_update_2 = NetworkInformation {
+            service_available: Some(true),
+            roaming: Some(true),
+            ..NetworkInformation::EMPTY
+        };
+
+        // The value after the updates are applied is expected to be the following
+        let expected_network = NetworkInformation {
+            service_available: Some(true),
+            roaming: Some(true),
+            signal_strength: Some(SignalStrength::Low),
+            ..NetworkInformation::EMPTY
+        };
+
+        // Set up the executor, peer, and background call manager task
+        let mut exec = fasync::Executor::new().unwrap();
+        let (peer, mut sender, receiver, _profile) = setup_peer_task();
+
+        let (proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<PeerHandlerMarker>().unwrap();
+
+        fasync::Task::local(async move {
+            // A vec to hold all the stream items we don't care about for this test.
+            let mut junk_drawer = vec![];
+
+            // Filter out all items that are irrelevant to this particular test, placing them in
+            // the junk_drawer.
+            let mut stream = stream.filter_map(move |item| {
+                let item = match item {
+                    Ok(PeerHandlerRequest::WatchNetworkInformation { responder }) => {
+                        Some(responder)
+                    }
+                    x => {
+                        junk_drawer.push(x);
+                        None
+                    }
+                };
+                ready(item)
+            });
+
+            // Send the first network update
+            let responder = stream.next().await.unwrap();
+            responder.send(network_update_1).expect("Successfully send network information");
+
+            // Send the second network update
+            let responder = stream.next().await.unwrap();
+            responder.send(network_update_2).expect("Successfully send network information");
+
+            // Call manager should collect all further network requests, without responding.
+            stream.collect::<Vec<_>>().await;
+        })
+        .detach();
+
+        // Pass in the client end connected to the call manager
+        let result = exec.run_singlethreaded(sender.send(PeerRequest::Handle(proxy)));
+        assert!(result.is_ok());
+
+        // Run the PeerTask until it has no more work to do.
+        let run_fut = peer.run(receiver);
+        pin_mut!(run_fut);
+        let result = exec.run_until_stalled(&mut run_fut);
+        assert!(result.is_pending());
+
+        // Drop the peer task sender to force the PeerTask's run future to complete
+        drop(sender);
+        let task = exec.run_until_stalled(&mut run_fut).expect("run_fut to complete");
+
+        // Check that the task's network information contains the expected values
+        // based on the updates provided by the call manager task.
+        assert_eq!(task.network, expected_network);
     }
 }

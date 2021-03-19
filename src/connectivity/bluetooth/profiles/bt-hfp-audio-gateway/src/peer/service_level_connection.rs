@@ -113,8 +113,7 @@ impl ServiceLevelConnection {
 
     /// Returns `true` if the channel has been initialized - namely the SLCI procedure has
     /// been completed for the connected channel.
-    #[cfg(test)]
-    fn initialized(&self) -> bool {
+    pub fn initialized(&self) -> bool {
         self.connected() && self.state.initialized
     }
 
