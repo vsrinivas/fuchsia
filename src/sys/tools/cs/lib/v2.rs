@@ -207,7 +207,8 @@ pub struct Details {
 
 impl V2Component {
     pub async fn explore(hub_dir: Directory, include_details: IncludeDetails) -> Self {
-        explore("<root>".to_string(), hub_dir, include_details.clone()).await
+        // '.' is representation of the root.
+        explore(".".to_string(), hub_dir, include_details.clone()).await
     }
 
     pub fn print_tree(&self, component_type: ComponentType, verbose: bool) {
@@ -248,7 +249,7 @@ impl V2Component {
     fn print_details_recursive(&self, moniker_prefix: &str, filter: &str) -> bool {
         let mut did_print = false;
         if let Some(details) = &self.details {
-            let moniker = format!("{}{}:{}", moniker_prefix, self.name, details.id);
+            let moniker = format!("{}{}", moniker_prefix, self.name);
 
             // Print if the filter matches
             if filter.is_empty() || details.url.contains(filter) || self.name.contains(filter) {
@@ -297,7 +298,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- exec
         //    |- expose
         //    |- in
@@ -327,7 +328,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- exec
         //    |- expose
         //    |- in
@@ -353,7 +354,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- exec
         //    |- expose
         //    |- in
@@ -389,7 +390,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- exec
         //    |- expose
         //    |- in
@@ -423,7 +424,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- exec
         //    |- expose
         //    |- in
@@ -445,7 +446,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- exec
         //    |- expose
         //    |- in
@@ -471,7 +472,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- exec
         //    |- expose
         //    |- in
@@ -495,7 +496,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- exec
         //    |- expose
         //    |- in
@@ -524,7 +525,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- exec
         //    |- expose
         //       |- pkgfs
@@ -550,7 +551,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- children
         fs::create_dir(root.join("children")).unwrap();
 
@@ -561,7 +562,7 @@ mod tests {
         assert!(v2_component.appmgr_root_v1_realm.is_none());
         assert_eq!(v2_component.children, vec![]);
         assert!(v2_component.details.is_none());
-        assert_eq!(v2_component.name, "<root>");
+        assert_eq!(v2_component.name, ".");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -570,7 +571,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- children
         //    |- bootstrap
         //       |- children
@@ -612,7 +613,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- children
         //       |- appmgr
         //          |- children
@@ -685,7 +686,7 @@ mod tests {
         );
 
         assert!(v2_component.details.is_none());
-        assert_eq!(v2_component.name, "<root>");
+        assert_eq!(v2_component.name, ".");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -694,7 +695,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- children
         // |- component_type
         // |- id
@@ -711,7 +712,7 @@ mod tests {
             .expect("from_namespace() failed: failed to open root hub directory!");
         let v2_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
 
-        assert_eq!(v2_component.name, "<root>");
+        assert_eq!(v2_component.name, ".");
         assert_eq!(v2_component.children, vec![]);
         assert!(v2_component.appmgr_root_v1_realm.is_none());
         assert_eq!(
@@ -731,7 +732,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- children
         //       |- appmgr
         //          |- children
@@ -814,7 +815,7 @@ mod tests {
             }],
         );
 
-        assert_eq!(v2_component.name, "<root>");
+        assert_eq!(v2_component.name, ".");
         assert_eq!(
             v2_component.details,
             Some(Details {
@@ -832,7 +833,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- children
         //    |- bootstrap
         //       |- children
@@ -889,7 +890,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- children
         // |- component_type
         // |- exec
@@ -939,7 +940,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- children
         //    |- bootstrap
         //       |- children
@@ -1002,7 +1003,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- children
         //    |- core
         //       |- children
@@ -1107,7 +1108,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- children
         //    |- bootstrap
         //       |- children

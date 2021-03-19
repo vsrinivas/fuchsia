@@ -89,7 +89,7 @@ async fn empty_component() {
     let actual_root_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
 
     let expected_root_component = V2Component {
-        name: "<root>".to_string(),
+        name: ".".to_string(),
         appmgr_root_v1_realm: None,
         children: vec![],
         details: Some(Details {
@@ -139,7 +139,7 @@ async fn tree() {
     let actual_root_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
 
     let expected_root_component = V2Component {
-        name: "<root>".to_string(),
+        name: ".".to_string(),
         appmgr_root_v1_realm: None,
         children: vec![
             V2Component {
@@ -275,7 +275,7 @@ async fn echo_realm() {
     let actual_root_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
 
     let expected_root_component = V2Component {
-        name: "<root>".to_string(),
+        name: ".".to_string(),
         appmgr_root_v1_realm: None,
         children: vec![
             V2Component {

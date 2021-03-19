@@ -347,7 +347,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- in
         // |- job-id
         // |- name
@@ -376,7 +376,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- c
         //    |- cobalt.cmx
         //       |- 13579
@@ -426,7 +426,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- in
         // |- job-id
         // |- name
@@ -466,7 +466,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- in
         // |- job-id
         // |- name
@@ -492,7 +492,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- in
         //    |- pkg
         //       |- meta
@@ -529,7 +529,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- in
         //    |- fuchsia.logger.logSink
         // |- job-id
@@ -570,7 +570,7 @@ mod tests {
         let root = test_dir.path();
 
         // Create the following structure
-        // <root>
+        // .
         // |- c
         //    |- cobalt.cmx
         //       |- 13579
