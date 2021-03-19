@@ -1,0 +1,57 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_test.gni")
+import("//src/sys/build/components.gni")
+
+rustc_binary("bin") {
+  testonly = true
+  with_unit_tests = true
+  name = "netemul_sandbox_v2"
+  edition = "2018"
+  deps = [
+    "//src/connectivity/network/testing/netemul-v2/fidl:fuchsia.netemul-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//src/lib/syslog/rust:syslog",
+    "//src/sys/lib/topology_builder",
+    "//third_party/rust_crates:anyhow",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:pin-utils",
+  ]
+  test_deps = [
+    "//src/connectivity/network/testing/netemul-v2/test-support:fidl-rustc",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+  ]
+  sources = [ "src/main.rs" ]
+}
+
+fuchsia_component("netemul-sandbox-component") {
+  testonly = true
+  component_name = "netemul-sandbox-v2"
+  manifest = "meta/netemul-sandbox-v2.cml"
+  deps = [ ":bin" ]
+}
+
+fuchsia_component("netemul_v2_bin_test") {
+  testonly = true
+  manifest = "meta/netemul-v2-tests.cml"
+  deps = [ ":bin_test" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":netemul-v2-tests" ]
+}
+
+fuchsia_test_package("netemul-v2-tests") {
+  test_components = [ ":netemul_v2_bin_test" ]
+  deps =
+      [ "//src/connectivity/network/testing/netemul-v2/test-support:counter" ]
+}

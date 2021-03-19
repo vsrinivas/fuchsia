@@ -55,6 +55,7 @@ group("tests") {
     "netstack3:tests",
     "ping3:tests",
     "testing/netemul:tests",
+    "testing/netemul-v2:tests",
     "tests",
     "tools:tests",
     "tun:tests",

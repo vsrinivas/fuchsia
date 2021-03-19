@@ -1,0 +1,25 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/lib/topology_builder/meta/topology_builder.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/netemul_sandbox_v2_bin_test",
+    },
+
+    // TODO(https://fxbug.dev/72047): rather than exposing the real syslog to
+    // the topology, netemul-sandbox-v2 should offer a custom LogSink service to
+    // the components under test that decorates the logs with the name of the
+    // containing test realm before logging them to syslog.
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#topology_builder_collection" ],
+        },
+    ],
+}
