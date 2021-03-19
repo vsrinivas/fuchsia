@@ -1,0 +1,123 @@
+#!/bin/bash
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+#### CATEGORY=Other
+### Set up the checkout for Go development.
+
+## usage: fx setup-go [-d]
+##
+## Creates symlinks from //third_party/golibs into the root of the tree
+## and the //vendor directory so that standard Go tooling and IDE features
+## will work. All of the symlink paths should already be ignored by git, so
+## this symlinking will not require any .gitignore modifications.
+##
+## This is not necessary for development, only to improve the experience when
+## using Go IDE features and standard tooling.
+##
+## Prints the names of any symlinks it creates or removes, unless the
+## operation is a no-op, in which case it prints nothing.
+##
+## optional arguments:
+##   -d     Tear down the symlinks created by `fx setup-go`. Also idempotent (i.e.
+##          safe to run multiple times in a row).
+
+set -eu -o pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
+
+function main {
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
+  # For simplicity, all functions assume that they are executed within the
+  # checkout root for simplicity.
+  pushd "$FUCHSIA_DIR" > /dev/null
+  trap 'popd > /dev/null' EXIT
+
+  while [[ $# -ne 0 ]]; do
+    case "$1" in
+      -d)
+        teardown
+        return 0
+        ;;
+      *)
+        fx-error "Unknown argument \"$1\""
+        fx-command-help
+        return 1
+        ;;
+    esac
+    shift
+  done
+
+  setup
+}
+
+# We'll write a go.mod file to each of these directories so that gopls and
+# other tools don't search these directories for Go code, which can cause a
+# significant slowdown.
+gomod_dirs=(out third_party prebuilt)
+
+function setup {
+  echo "FUCHSIA_DIR: $FUCHSIA_DIR"
+  link "third_party/golibs/go.mod" go.mod
+  link "third_party/golibs/go.sum" go.sum
+
+  find third_party/golibs/vendor -mindepth 1 -maxdepth 1 | while read -r file; do
+    base="$(basename "$file")"
+    link "../third_party/golibs/vendor/$base" "vendor/$base"
+  done
+
+  for dir in "${gomod_dirs[@]}"; do
+    if ! [ -d "$dir" ]; then
+      continue
+    fi
+    if ! [ -f "$dir/go.mod" ]; then
+      echo "creating $dir/go.mod"
+      (cd "$dir" && fx-command-run go mod init "go.fuchsia.dev/fuchsia/$dir" 2> /dev/null)
+    fi
+  done
+}
+
+function teardown {
+  # -v causes rm to print names of files it deletes.
+  rm -v -f go.mod
+  rm -v -f go.sum
+
+  # Remove all symlinks from //vendor.
+  find vendor -maxdepth 1 -type l -exec rm -v {} \;
+
+  for dir in "${gomod_dirs[@]}"; do
+    rm -v -f "$dir/go.mod"
+  done
+}
+
+# Create a symlink. Note that `src` must be a path relative to the directory
+# containing `target`.
+function link {
+  local src="$1"
+  local target="$2"
+
+  local current_src
+  local verb="creating"
+  if [ -f "$target" ] || [ -d "$target" ]; then
+    if [ -L "$target" ]; then
+      current_src="$(readlink "$target")"
+      if [ "$src" = "$current_src" ]; then
+        # If the symlink already points to the right place, don't bother
+        # rewriting it.
+        return
+      fi
+    else
+      fx-info "cannot overwrite non-symlink $target"
+      return 1
+    fi
+    verb="overwriting"
+  fi
+
+  echo "$verb symlink $target -> $src"
+  ln -sf "$src" "$target"
+}
+
+main "$@"
