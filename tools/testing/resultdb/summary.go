@@ -14,9 +14,10 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/golang/protobuf/ptypes"
 	resultpb "go.chromium.org/luci/resultdb/proto/v1"
 	sinkpb "go.chromium.org/luci/resultdb/sink/proto/v1"
+	"google.golang.org/protobuf/types/known/durationpb"
+	"google.golang.org/protobuf/types/known/timestamppb"
 
 	"go.fuchsia.dev/fuchsia/tools/testing/runtests"
 	"go.fuchsia.dev/fuchsia/tools/testing/testparser"
@@ -41,7 +42,7 @@ func SummaryToResultSink(s *runtests.TestSummary, outputRoot string) []*sinkpb.T
 		outputRoot, _ = os.Getwd()
 	}
 	rootPath, _ := filepath.Abs(outputRoot)
-	r := []*sinkpb.TestResult{}
+	var r []*sinkpb.TestResult
 	for _, test := range s.Tests {
 		if len(test.Cases) > 0 {
 			testCases := testCaseToResultSink(test.Cases, &test)
@@ -85,7 +86,7 @@ func invocationLevelArtifacts(outputRoot string) map[string]*sinkpb.Artifact {
 // to ResultSink's TestResult. A testcase will not be converted if test result cannot be
 // mapped to result_sink.Status.
 func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *runtests.TestDetails) []*sinkpb.TestResult {
-	testResult := []*sinkpb.TestResult{}
+	var testResult []*sinkpb.TestResult
 
 	// Ignore error, testStatus will be set to resultpb.TestStatus_STATUS_UNSPECIFIED if error != nil.
 	// And when passed to determineExpected, resultpb.TestStatus_STATUS_UNSPECIFIED will be handled correctly.
@@ -103,11 +104,9 @@ func testCaseToResultSink(testCases []testparser.TestCaseResult, testDetail *run
 			continue
 		}
 		r.Status = testCaseStatus
-		if startTime, err := ptypes.TimestampProto(testDetail.StartTime); err == nil {
-			r.StartTime = startTime
-		}
+		r.StartTime = timestamppb.New(testDetail.StartTime)
 		if testCase.Duration > 0 {
-			r.Duration = ptypes.DurationProto(testCase.Duration)
+			r.Duration = durationpb.New(testCase.Duration)
 		}
 		r.Expected = determineExpected(testStatus, testCaseStatus)
 		testResult = append(testResult, &r)
@@ -133,11 +132,9 @@ func testDetailsToResultSink(testDetail *runtests.TestDetails, outputRoot string
 	}
 	r.Status = testStatus
 
-	if startTime, err := ptypes.TimestampProto(testDetail.StartTime); err == nil {
-		r.StartTime = startTime
-	}
+	r.StartTime = timestamppb.New(testDetail.StartTime)
 	if testDetail.DurationMillis > 0 {
-		r.Duration = ptypes.DurationProto(time.Duration(testDetail.DurationMillis) * time.Millisecond)
+		r.Duration = durationpb.New(time.Duration(testDetail.DurationMillis) * time.Millisecond)
 	}
 	for _, of := range testDetail.OutputFiles {
 		outputFile := filepath.Join(outputRoot, of)
@@ -191,7 +188,7 @@ func testCaseStatusToResultDBStatus(result testparser.TestCaseStatus) (resultpb.
 	case testparser.Skip:
 		return resultpb.TestStatus_SKIP, nil
 	}
-	return resultpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("Cannot map Result: %s to result_sink test_result status", result)
+	return resultpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("cannot map Result: %s to result_sink test_result status", result)
 }
 
 func testDetailResultToResultDBStatus(result runtests.TestResult) (resultpb.TestStatus, error) {
@@ -201,7 +198,7 @@ func testDetailResultToResultDBStatus(result runtests.TestResult) (resultpb.Test
 	case runtests.TestFailure:
 		return resultpb.TestStatus_FAIL, nil
 	}
-	return resultpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("Cannot map Result: %s to result_sink test_result status", result)
+	return resultpb.TestStatus_STATUS_UNSPECIFIED, fmt.Errorf("cannot map Result: %s to result_sink test_result status", result)
 }
 
 func isReadable(p string) bool {
@@ -219,6 +216,6 @@ func isReadable(p string) bool {
 	if err != nil {
 		return false
 	}
-	f.Close()
+	_ = f.Close()
 	return true
 }

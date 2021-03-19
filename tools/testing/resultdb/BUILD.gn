@@ -17,6 +17,7 @@ go_library("main") {
   deps = [
     "//third_party/golibs:github.com/golang/protobuf",
     "//third_party/golibs:golang.org/x/sync",
+    "//third_party/golibs:google.golang.org/protobuf",
     "//third_party/luci-go/resultdb/proto/v1:resultdb_proto_go",
     "//third_party/luci-go/resultdb/sink/proto/v1:resultsink_proto_go",
     "//tools/lib/flagmisc",
