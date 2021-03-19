@@ -25,13 +25,17 @@ struct Args {
     /// path to an output file to generate translation code into
     #[argh(option)]
     output_translate: PathBuf,
+
+    /// suppress log output below Error severity
+    #[argh(switch)]
+    quiet: bool,
 }
 
 fn main() -> Result<()> {
-    SimpleLogger::init(LevelFilter::Info, LogConfig::default())
-        .context("Unable to initialize logger.")?;
-
     let args: Args = argh::from_env();
+
+    let log_level = if args.quiet { LevelFilter::Error } else { LevelFilter::Info };
+    SimpleLogger::init(log_level, LogConfig::default()).context("Unable to initialize logger.")?;
 
     let mut parsed_definitions = Vec::new();
 

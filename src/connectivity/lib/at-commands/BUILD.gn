@@ -36,6 +36,7 @@ compiled_action("generate_sources") {
     output_translate,
   ]
   args = [
+    "--quiet",
     "--output-types",
     rebase_path(output_types),
     "--output-translate",
