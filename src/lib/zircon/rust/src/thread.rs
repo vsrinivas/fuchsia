@@ -6,7 +6,7 @@
 
 use crate::object_get_info;
 use crate::ok;
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Profile, Status};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Profile, Status, Task};
 use crate::{ObjectQuery, Topic};
 use fuchsia_zircon_sys as sys;
 
@@ -110,6 +110,8 @@ impl Thread {
         ok(status)
     }
 }
+
+impl Task for Thread {}
 
 #[cfg(target_arch = "x86_64")]
 unsafe_handle_properties!(object: Thread,

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::ok;
-use crate::{AsHandleRef, Channel, Handle, Status};
+use crate::{object_get_info, ok};
+use crate::{AsHandleRef, Channel, Handle, ObjectQuery, Status, Topic};
 use bitflags::bitflags;
-use fuchsia_zircon_sys as sys;
+use fuchsia_zircon_sys::{self as sys, zx_duration_t};
 
 bitflags! {
     /// Options that may be used with `Task::create_exception_channel`
@@ -15,14 +15,27 @@ bitflags! {
     }
 }
 
+sys::zx_info_task_runtime_t!(TaskRuntimeInfo);
+
+impl From<sys::zx_info_task_runtime_t> for TaskRuntimeInfo {
+    fn from(info: sys::zx_info_task_runtime_t) -> TaskRuntimeInfo {
+        let sys::zx_info_task_runtime_t { cpu_time, queue_time } = info;
+        TaskRuntimeInfo { cpu_time, queue_time }
+    }
+}
+
+unsafe impl ObjectQuery for TaskRuntimeInfo {
+    const TOPIC: Topic = Topic::TASK_RUNTIME;
+    type InfoTy = TaskRuntimeInfo;
+}
+
 pub trait Task: AsHandleRef {
     /// Kill the give task (job, process, or thread).
     ///
     /// Wraps the
     /// [zx_task_kill](https://fuchsia.dev/fuchsia-src/reference/syscalls/task_kill.md)
     /// syscall.
-    // TODO: Not yet implemented on Thread, need to add object_get_info impl for Thread for proper
-    // testability.
+    // TODO(fxbug.dev/72722): guaranteed to return an error when called on a Thread.
     fn kill(&self) -> Result<(), Status> {
         ok(unsafe { sys::zx_task_kill(self.raw_handle()) })
     }
@@ -51,5 +64,15 @@ pub trait Task: AsHandleRef {
     /// syscall.
     fn create_exception_channel(&self) -> Result<Channel, Status> {
         self.create_exception_channel_with_opts(ExceptionChannelOptions::from_bits_truncate(0))
+    }
+
+    /// Returns the runtime information for the task.
+    ///
+    /// Wraps the
+    /// [zx_object_get_info]() syscall with `ZX_INFO_TASK_RUNTIME` as the topic.
+    fn get_runtime_info(&self) -> Result<TaskRuntimeInfo, Status> {
+        let mut info = TaskRuntimeInfo::default();
+        object_get_info::<TaskRuntimeInfo>(self.as_handle_ref(), std::slice::from_mut(&mut info))
+            .map(|_| info)
     }
 }

@@ -1192,6 +1192,17 @@ struct_decl_macro! {
 
 zx_info_task_stats_t!(zx_info_task_stats_t);
 
+struct_decl_macro! {
+    #[repr(C)]
+    #[derive(Default, Debug, Copy, Clone, Eq, PartialEq)]
+    pub struct <zx_info_task_runtime_t> {
+        pub cpu_time: zx_duration_t,
+        pub queue_time: zx_duration_t,
+    }
+}
+
+zx_info_task_runtime_t!(zx_info_task_runtime_t);
+
 multiconst!(zx_guest_trap_t, [
     ZX_GUEST_TRAP_BELL = 0;
     ZX_GUEST_TRAP_MEM  = 1;

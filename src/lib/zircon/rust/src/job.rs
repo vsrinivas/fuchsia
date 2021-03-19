@@ -295,6 +295,14 @@ mod tests {
     }
 
     #[test]
+    fn runtime_info_default() {
+        let job = fuchsia_runtime::job_default();
+        let info = job.get_runtime_info().unwrap();
+        assert!(info.cpu_time > 0);
+        assert!(info.queue_time > 0);
+    }
+
+    #[test]
     fn kill_and_info() {
         let default_job = fuchsia_runtime::job_default();
         let job = default_job.create_child_job().expect("Failed to create child job");
