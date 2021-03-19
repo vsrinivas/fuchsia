@@ -9,6 +9,7 @@
 
 #include <kernel/thread.h>
 #include <object/pager_dispatcher.h>
+#include <object/pager_proxy.h>
 #include <object/thread_dispatcher.h>
 
 #define LOCAL_TRACE 0
@@ -40,10 +41,18 @@ PagerDispatcher::~PagerDispatcher() {
 zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port, uint64_t key,
                                           fbl::RefPtr<PageSource>* src_out) {
   fbl::AllocChecker ac;
-  auto src = fbl::AdoptRef(new (&ac) PagerProxy(this, ktl::move(port), key));
+  auto proxy = ktl::unique_ptr<PagerProxy>(new (&ac) PagerProxy(this, ktl::move(port), key));
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
+  auto proxy_ptr = proxy.get();
+
+  auto src = fbl::AdoptRef(new (&ac) PageSource(ktl::move(proxy)));
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  proxy_ptr->page_source_ = src.get();
 
   Guard<Mutex> guard{&list_mtx_};
   srcs_.push_front(src);
@@ -51,7 +60,7 @@ zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port, uint
   return ZX_OK;
 }
 
-fbl::RefPtr<PagerProxy> PagerDispatcher::ReleaseSource(PagerProxy* src) {
+fbl::RefPtr<PageSource> PagerDispatcher::ReleaseSource(PageSource* src) {
   Guard<Mutex> guard{&list_mtx_};
   return src->InContainer() ? srcs_.erase(*src) : nullptr;
 }
@@ -59,15 +68,12 @@ fbl::RefPtr<PagerProxy> PagerDispatcher::ReleaseSource(PagerProxy* src) {
 void PagerDispatcher::on_zero_handles() {
   Guard<Mutex> guard{&list_mtx_};
   while (!srcs_.is_empty()) {
-    fbl::RefPtr<PagerProxy> src = srcs_.pop_front();
+    fbl::RefPtr<PageSource> src = srcs_.pop_front();
 
     // Call unlocked to prevent a double-lock if PagerDispatcher::ReleaseSource is called,
     // and to preserve the lock order that PagerProxy locks are acquired before the
     // list lock.
-    guard.CallUnlocked([&src]() mutable {
-      src->Close();
-      src->OnDispatcherClosed();
-    });
+    guard.CallUnlocked([&src]() mutable { src->OnPageProviderDispatcherClose(); });
   }
 }
 

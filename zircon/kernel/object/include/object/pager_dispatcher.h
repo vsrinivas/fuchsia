@@ -11,7 +11,6 @@
 
 #include <object/dispatcher.h>
 #include <object/handle.h>
-#include <object/pager_proxy.h>
 #include <object/port_dispatcher.h>
 
 class PagerDispatcher final : public SoloDispatcher<PagerDispatcher, ZX_DEFAULT_PAGER_RIGHTS> {
@@ -23,7 +22,7 @@ class PagerDispatcher final : public SoloDispatcher<PagerDispatcher, ZX_DEFAULT_
                            fbl::RefPtr<PageSource>* src);
   // Drop and return this object's reference to |src|. Must be called under
   // |src|'s lock to prevent races with dispatcher teardown.
-  fbl::RefPtr<PagerProxy> ReleaseSource(PagerProxy* src) TA_REQ(src->mtx_);
+  fbl::RefPtr<PageSource> ReleaseSource(PageSource* src);
 
   zx_status_t RangeOp(uint32_t op, fbl::RefPtr<VmObject> vmo, uint64_t offset, uint64_t length,
                       uint64_t data);
@@ -36,7 +35,7 @@ class PagerDispatcher final : public SoloDispatcher<PagerDispatcher, ZX_DEFAULT_
   explicit PagerDispatcher();
 
   mutable DECLARE_MUTEX(PagerDispatcher) list_mtx_;
-  fbl::DoublyLinkedList<fbl::RefPtr<PagerProxy>> srcs_ TA_GUARDED(list_mtx_);
+  fbl::DoublyLinkedList<fbl::RefPtr<PageSource>> srcs_ TA_GUARDED(list_mtx_);
 };
 
 #endif  // ZIRCON_KERNEL_OBJECT_INCLUDE_OBJECT_PAGER_DISPATCHER_H_

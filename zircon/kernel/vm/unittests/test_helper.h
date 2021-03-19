@@ -88,12 +88,12 @@ class TestPageRequest {
   static void drop_ref_cb(void* ctx) { static_cast<TestPageRequest*>(ctx)->OnDropRef(); }
 };
 
-// Stubbed page source that is intended to be allowed to create a vmo that believes it is backed by
-// a user pager, but is incapable of actually providing pages.
-class StubPageSource : public PageSource {
+// Stubbed page provider that is intended to be allowed to create a vmo that believes it is backed
+// by a user pager, but is incapable of actually providing pages.
+class StubPageProvider : public PageProvider {
  public:
-  StubPageSource() = default;
-  ~StubPageSource() = default;
+  StubPageProvider() = default;
+  ~StubPageProvider() = default;
 
  private:
   bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
@@ -107,6 +107,7 @@ class StubPageSource : public PageSource {
   }
   void OnDetach() override {}
   void OnClose() override {}
+  void OnDispatcherClose() override {}
   zx_status_t WaitOnEvent(Event* event) override { panic("Not implemented\n"); }
 };
 

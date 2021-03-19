@@ -22,7 +22,7 @@ KCOUNTER(dispatcher_pager_failed_request_count, "dispatcher.pager.failed_request
 KCOUNTER(dispatcher_pager_timed_out_request_count, "dispatcher.pager.timed_out_requests")
 
 PagerProxy::PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key)
-    : PageSource(), pager_(dispatcher), port_(ktl::move(port)), key_(key) {
+    : pager_(dispatcher), port_(ktl::move(port)), key_(key) {
   LTRACEF("%p key %lx\n", this, key_);
 }
 
@@ -122,7 +122,7 @@ void PagerProxy::OnDetach() {
 }
 
 void PagerProxy::OnClose() {
-  fbl::RefPtr<PagerProxy> self;
+  fbl::RefPtr<PageSource> self_src;
 
   Guard<Mutex> guard{&mtx_};
   ASSERT(!closed_);
@@ -131,11 +131,12 @@ void PagerProxy::OnClose() {
   if (!complete_pending_) {
     // We know PagerDispatcher::on_zero_handles hasn't been invoked, since that would
     // have already closed this pager source.
-    self = pager_->ReleaseSource(this);
+    DEBUG_ASSERT(page_source_);
+    self_src = pager_->ReleaseSource(page_source_);
   }  // else this is released in PagerProxy::Free
 }
 
-void PagerProxy::OnDispatcherClosed() {
+void PagerProxy::OnDispatcherClose() {
   // The pager dispatcher's reference to this object is the only one we completely control. Now
   // that it's gone, we need to make sure that port_ doesn't end up with an invalid pointer
   // to packet_ if all external RefPtrs to this object go away.
@@ -151,7 +152,8 @@ void PagerProxy::OnDispatcherClosed() {
       // PagerProxy::Free. We need to make sure the object isn't deleted too early,
       // so have it keep a reference to itself, which PagerProxy::Free will then
       // clean up.
-      self_ref_ = fbl::RefPtr(this);
+      DEBUG_ASSERT(page_source_);
+      self_src_ref_ = fbl::RefPtr(page_source_);
     }
   } else {
     // Either the complete message had already been dispatched when this object was closed or
@@ -161,7 +163,7 @@ void PagerProxy::OnDispatcherClosed() {
 }
 
 void PagerProxy::Free(PortPacket* packet) {
-  fbl::RefPtr<PagerProxy> self;
+  fbl::RefPtr<PageSource> self_src;
 
   Guard<Mutex> guard{&mtx_};
   if (active_request_ != &complete_request_) {
@@ -172,12 +174,13 @@ void PagerProxy::Free(PortPacket* packet) {
   } else {
     complete_pending_ = false;
     if (closed_) {
-      // If the source is closed, we need to do delayed cleanup. If the dispatcher
-      // has already been torn down, then there's a self-reference we need to clean
-      // up. Otherwise, clean up the dispatcher's reference to us.
-      self = ktl::move(self_ref_);
-      if (!self) {
-        self = pager_->ReleaseSource(this);
+      // If the source is closed, we need to do delayed cleanup. If the dispatcher has already been
+      // torn down, then there's a self-reference to our PageSource we need to clean up. Otherwise,
+      // clean up the dispatcher's reference to our PageSource.
+      self_src = ktl::move(self_src_ref_);
+      if (!self_src) {
+        DEBUG_ASSERT(page_source_);
+        self_src = pager_->ReleaseSource(page_source_);
       }
     }
   }
@@ -236,7 +239,8 @@ zx_status_t PagerProxy::WaitOnEvent(Event* event) {
            " seconds with%s message waiting on port.\n",
            this, waited * gBootOptions->userpager_overtime_wait_seconds, active ? "" : " no");
     // Dump out the rest of the state of the oustanding requests.
-    Dump();
+    DEBUG_ASSERT(page_source_);
+    page_source_->Dump();
   }
 
   if (result == ZX_OK) {

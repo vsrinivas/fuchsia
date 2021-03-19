@@ -1256,12 +1256,15 @@ static bool vmo_attribution_pager_test() {
   AutoVmScannerDisable scanner_disable;
 
   fbl::AllocChecker ac;
-  fbl::RefPtr<StubPageSource> pager = fbl::MakeRefCountedChecked<StubPageSource>(&ac);
+  ktl::unique_ptr<StubPageProvider> pager = ktl::make_unique<StubPageProvider>(&ac);
+  ASSERT_TRUE(ac.check());
+
+  fbl::RefPtr<PageSource> src = fbl::MakeRefCountedChecked<PageSource>(&ac, ktl::move(pager));
   ASSERT_TRUE(ac.check());
 
   static const size_t alloc_size = 2 * PAGE_SIZE;
   fbl::RefPtr<VmObjectPaged> vmo;
-  zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(pager), 0, alloc_size, &vmo);
+  zx_status_t status = VmObjectPaged::CreateExternal(ktl::move(src), 0, alloc_size, &vmo);
   ASSERT_EQ(ZX_OK, status);
   // Dummy user id to keep the cloning code happy.
   vmo->set_user_id(0xff);

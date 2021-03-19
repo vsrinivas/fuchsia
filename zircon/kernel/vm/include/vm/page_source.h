@@ -16,11 +16,13 @@
 #include <kernel/event.h>
 #include <kernel/lockdep.h>
 #include <kernel/mutex.h>
+#include <ktl/unique_ptr.h>
 #include <vm/page.h>
 #include <vm/page_request.h>
 #include <vm/vm.h>
 
 class PageRequest;
+class PageSource;
 
 struct VmoDebugInfo {
   uintptr_t vmo_ptr;
@@ -29,6 +31,10 @@ struct VmoDebugInfo {
 
 // Interface for providing pages to a VMO through page requests.
 class PageProvider {
+ public:
+  virtual ~PageProvider() = default;
+
+ private:
   // Synchronously gets a page from the backing source.
   virtual bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
                            paddr_t* const pa_out) = 0;
@@ -47,8 +53,18 @@ class PageProvider {
   virtual void OnDetach() = 0;
   // After OnClose is called, no more calls will be made except for ::WaitOnEvent.
   virtual void OnClose() = 0;
+
+  // Called from the backing source dispatcher when it is going away, in order to perform any
+  // cleanup as required. The difference between this call and OnDetach/OnClose is that typically
+  // OnDetach/OnClose are called from the VMO side, whereas OnDispatcherClose is called from the
+  // backing source side (e.g. a pager).
+  virtual void OnDispatcherClose() = 0;
+
   // Waits on an |event| associated with a page request.
   virtual zx_status_t WaitOnEvent(Event* event) = 0;
+
+  friend PageSource;
+  friend PageRequest;
 };
 
 // A page source has two parts - the PageSource and the PagerProxy. The
@@ -72,10 +88,10 @@ class PageProvider {
 //      point the request page will be present.
 
 // Object which provides pages to a vm_object.
-class PageSource : public PageProvider, public fbl::RefCounted<PageSource> {
+class PageSource : public fbl::RefCounted<PageSource>,
+                   public fbl::DoublyLinkedListable<fbl::RefPtr<PageSource>> {
  public:
-  PageSource();
-  virtual ~PageSource();
+  explicit PageSource(ktl::unique_ptr<PageProvider> page_provider);
 
   // Sends a request to the backing source to provide the requested page.
   //
@@ -113,26 +129,25 @@ class PageSource : public PageProvider, public fbl::RefCounted<PageSource> {
   // supported return error code for those syscalls.
   static bool IsValidFailureCode(zx_status_t error_status);
 
-  // Detaches the source. All future calls into the page source will fail. All
+  // Detaches the source from the VMO. All future calls into the page source will fail. All
   // pending read transactions are aborted. Pending flush transactions will still
   // be serviced.
   void Detach();
 
-  // Closes the source. All pending transactions will be aborted and all future
-  // calls will fail.
+  // Closes the source. Will call Detach() if the source is not already detached. All pending
+  // transactions will be aborted and all future calls will fail.
   void Close();
+
+  // Called when the PageProvider's backing dispatcher (e.g. a pager dispatcher) is being torn down.
+  // See PagerDispatcher::on_zero_handles().
+  void OnPageProviderDispatcherClose();
 
   void Dump() const;
 
  protected:
-  bool GetPageSync(uint64_t offset, VmoDebugInfo vmo_debug_info, vm_page_t** const page_out,
-                   paddr_t* const pa_out) override = 0;
-  void GetPageAsync(page_request_t* request) override = 0;
-  void ClearAsyncRequest(page_request_t* request) override = 0;
-  void SwapRequest(page_request_t* old, page_request_t* new_req) override = 0;
-  void OnClose() override = 0;
-  void OnDetach() override = 0;
-  zx_status_t WaitOnEvent(Event* event) override = 0;
+  // destructor should only be invoked from RefPtr
+  virtual ~PageSource();
+  friend fbl::RefPtr<PageSource>;
 
  private:
   fbl::Canary<fbl::magic("VMPS")> canary_;
@@ -149,6 +164,8 @@ class PageSource : public PageProvider, public fbl::RefCounted<PageSource> {
   // Tracks the request currently being processed (only used for verifying batching assertions).
   PageRequest* current_request_ TA_GUARDED(page_source_mtx_) = nullptr;
 #endif  // DEBUG_ASSERT_IMPLEMENTED
+
+  ktl::unique_ptr<PageProvider> page_provider_;
 
   // Sends a read request to the backing source, or queues the request if the needed
   // region has already been requested from the source.

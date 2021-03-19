@@ -14,7 +14,10 @@
 
 #define LOCAL_TRACE 0
 
-PageSource::PageSource() { LTRACEF("%p\n", this); }
+PageSource::PageSource(ktl::unique_ptr<PageProvider> page_provider)
+    : page_provider_(ktl::move(page_provider)) {
+  LTRACEF("%p\n", this);
+}
 
 PageSource::~PageSource() {
   LTRACEF("%p\n", this);
@@ -42,7 +45,7 @@ void PageSource::Detach() {
     // for this request.
     CompleteRequestLocked(req);
   }
-  OnDetach();
+  page_provider_->OnDetach();
 }
 
 void PageSource::Close() {
@@ -54,8 +57,18 @@ void PageSource::Close() {
   Guard<Mutex> guard{&page_source_mtx_};
   if (!closed_) {
     closed_ = true;
-    OnClose();
+    page_provider_->OnClose();
   }
+}
+
+void PageSource::OnPageProviderDispatcherClose() {
+  canary_.Assert();
+  LTRACEF("%p\n", this);
+
+  // Cleanup from the VMO side.
+  Close();
+  // Cleanup from the backing source side.
+  page_provider_->OnDispatcherClose();
 }
 
 void PageSource::OnPagesSupplied(uint64_t offset, uint64_t len) {
@@ -172,7 +185,7 @@ zx_status_t PageSource::GetPage(uint64_t offset, PageRequest* request, VmoDebugI
     return ZX_ERR_BAD_STATE;
   }
 
-  if (GetPageSync(offset, vmo_debug_info, page_out, pa_out)) {
+  if (page_provider_->GetPageSync(offset, vmo_debug_info, page_out, pa_out)) {
     return ZX_OK;
   }
 
@@ -268,7 +281,7 @@ void PageSource::RaiseReadRequestLocked(PageRequest* request) {
     request->read_request_.offset = request->offset_;
     request->read_request_.length = request->len_;
 
-    GetPageAsync(&request->read_request_);
+    page_provider_->GetPageAsync(&request->read_request_);
     outstanding_requests_.insert(request);
   }
 #ifdef DEBUG_ASSERT_IMPLEMENTED
@@ -281,7 +294,7 @@ void PageSource::CompleteRequestLocked(PageRequest* req, zx_status_t status) {
 
   // Take the request back from the callback before waking
   // up the corresponding thread.
-  ClearAsyncRequest(&req->read_request_);
+  page_provider_->ClearAsyncRequest(&req->read_request_);
 
   while (!req->overlap_.is_empty()) {
     auto waiter = req->overlap_.pop_front();
@@ -327,12 +340,12 @@ void PageSource::CancelRequest(PageRequest* request) {
     outstanding_requests_.erase(*request);
     outstanding_requests_.insert(new_node);
 
-    SwapRequest(&request->read_request_, &new_node->read_request_);
+    page_provider_->SwapRequest(&request->read_request_, &new_node->read_request_);
   } else if (static_cast<fbl::WAVLTreeContainable<PageRequest*>*>(request)->InContainer()) {
     LTRACEF("Outstanding no overlap\n");
     // This node is an outstanding request with no overlap
     outstanding_requests_.erase(*request);
-    ClearAsyncRequest(&request->read_request_);
+    page_provider_->ClearAsyncRequest(&request->read_request_);
   }
 
   request->offset_ = UINT64_MAX;
@@ -366,7 +379,7 @@ void PageRequest::Init(fbl::RefPtr<PageSource> src, uint64_t offset, VmoDebugInf
 
 zx_status_t PageRequest::Wait() {
   VM_KTRACE_DURATION(1, "page_request_wait", offset_, len_);
-  zx_status_t status = src_->WaitOnEvent(&event_);
+  zx_status_t status = src_->page_provider_->WaitOnEvent(&event_);
   VM_KTRACE_FLOW_END(1, "page_request_signal", reinterpret_cast<uintptr_t>(this));
   if (status != ZX_OK && !PageSource::IsValidFailureCode(status)) {
     src_->CancelRequest(this);

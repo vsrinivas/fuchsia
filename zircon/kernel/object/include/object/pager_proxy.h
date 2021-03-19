@@ -23,13 +23,12 @@
 // port frees its reference to packet_ (through the PortAllocator). However, if the dispatcher is
 // destroyed, if we can't revoke the port's reference to packet_, then we end up making the pager
 // source keep a reference to itself until the packet is freed.
-class PagerProxy : public PageSource,
-                   public PortAllocator,
-                   public fbl::DoublyLinkedListable<fbl::RefPtr<PagerProxy>> {
+class PagerProxy : public PageProvider, public PortAllocator {
+ public:
+  ~PagerProxy() override;
+
  private:
   PagerProxy(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key);
-  virtual ~PagerProxy();
-  friend fbl::RefPtr<PagerProxy>;
 
   PortPacket* Alloc() final {
     DEBUG_ASSERT(false);
@@ -49,6 +48,9 @@ class PagerProxy : public PageSource,
   void OnClose() final;
   void OnDetach() final;
   zx_status_t WaitOnEvent(Event* event) final;
+  // Called by the pager dispatcher when it is about to go away. Handles cleaning up port's
+  // reference to the containing PageSource object.
+  void OnDispatcherClose() final;
 
   PagerDispatcher* const pager_;
   const fbl::RefPtr<PortDispatcher> port_;
@@ -62,7 +64,7 @@ class PagerProxy : public PageSource,
   // while the port still has a reference to packet_.
   bool complete_pending_ TA_GUARDED(mtx_) = false;
   // Ref to keep the object alive in certain circumstances - see PagerDispatcher::on_zero_handles.
-  fbl::RefPtr<PagerProxy> self_ref_ TA_GUARDED(mtx_);
+  fbl::RefPtr<PageSource> self_src_ref_ TA_GUARDED(mtx_);
 
   // PortPacket used for sending all page requests to the pager service. The pager
   // dispatcher serves as packet_'s allocator. This informs the dispatcher when
@@ -87,16 +89,15 @@ class PagerProxy : public PageSource,
       .provider_node = LIST_INITIAL_CLEARED_VALUE,
   };
 
+  // Back pointer to the PageSource that owns this instance.
+  PageSource* page_source_ = nullptr;
+
   // Queues the page request, either sending it to the port or putting it in pending_requests_.
   void QueueMessageLocked(page_request_t* request) TA_REQ(mtx_);
 
   // Called when the packet becomes free. If pending_requests_ is non-empty, queues the
   // next request.
   void OnPacketFreedLocked() TA_REQ(mtx_);
-
-  // Called by the dispatcher when it is about to go away. Handles cleaning up port's
-  // reference to this object.
-  void OnDispatcherClosed();
 
   friend PagerDispatcher;
 };
