@@ -5,15 +5,16 @@
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/host_test.gni")
+import("//build/testing/host_test_data.gni")
 
 if (is_host) {
-  common_sources = [ "src/main.rs" ]
+  common_sources = [
+    "src/main.rs",
+    "src/simple_logger.rs",
+  ]
 
   rustc_binary("clidoc_bin") {
     name = "clidoc"
-    edition = "2020"
     sources = common_sources
     deps = [ ":rust_crates" ]
   }
@@ -24,6 +25,7 @@ if (is_host) {
       ":clidoc_bin",
       ":rust_crates",
     ]
+    non_rust_deps = [ ":clidoc_test_scripts($host_toolchain)" ]
     sources = common_sources
   }
 
@@ -34,6 +36,17 @@ if (is_host) {
       "//third_party/rust_crates:log",
       "//third_party/rust_crates:tempfile",
     ]
+  }
+
+  # Test data for generating reference docs.
+  # The shell script is the tool that has --help output,
+  # the markdown file is the expected output.
+  host_test_data("clidoc_test_scripts") {
+    sources = [
+      "src/testdata/tool_with_subcommands.md",
+      "src/testdata/tool_with_subcommands.sh",
+    ]
+    outputs = [ "${root_out_dir}/clidoc_test_data/{{source_file_part}}" ]
   }
 }
 
