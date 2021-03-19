@@ -309,6 +309,9 @@ fitx::result<BootZbi::Error> BootZbi::Load(uint32_t extra_data_capacity) {
     auto aligned_address = data_address & -arch::kZbiBootDataAlignment;
     auto discard_size = data_address - aligned_address - sizeof(hdr[1]);
     auto data_size = data_load_size + sizeof(hdr[1]) + discard_size;
+    ZX_ASSERT(data_address > aligned_address);
+    ZX_ASSERT(data_address - aligned_address >= sizeof(hdr[1]));
+    ZX_ASSERT(discard_size < data_size);
     hdr[0] = ZBI_CONTAINER_HEADER(static_cast<uint32_t>(data_size));
     hdr[1] = zbitl::SanitizeHeader({
         .type = ZBI_TYPE_DISCARD,
