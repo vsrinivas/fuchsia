@@ -336,6 +336,8 @@ It is the session's responsibility to manage the lifecycle of elements.
 
 Elements are a [Session Framework](#session-framework) concept.
 
+-   [Elements conceptual documentation](/docs/concepts/session/element.md)
+
 ### **Element Annotation** {#element-annotation}
 
 A [FIDL](#fidl) struct (see [`fuchsia.session.Annotation`]).
