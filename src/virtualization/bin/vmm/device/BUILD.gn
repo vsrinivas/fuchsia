@@ -223,6 +223,26 @@ package("virtio_gpu") {
   ]
 }
 
+source_set("magma_image") {
+  visibility = [ ":*" ]
+
+  sources = [
+    "magma_image.cc",
+    "magma_image.h",
+  ]
+  deps = [
+    "//sdk/fidl/fuchsia.sysmem",
+    "//src/graphics/lib/magma/include:magma_abi",
+    "//src/lib/fsl",
+    "//src/lib/vulkan",
+    "//third_party/mesa/include:drm-uapi",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/image-format:image-format-llcpp",
+    "//zircon/system/ulib/service:service-llcpp",
+    "//zircon/system/ulib/syslog",
+  ]
+}
+
 source_set("virtio_magma_lib") {
   visibility = [ ":*" ]
 
@@ -232,6 +252,7 @@ source_set("virtio_magma_lib") {
     "virtio_magma.h",
   ]
   deps = [
+    ":magma_image",
     ":virtio",
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/graphics/lib/magma/include/virtio",
@@ -405,6 +426,7 @@ executable("device_tests") {
   testonly = true
 
   sources = [
+    "magma_image_test.cc",
     "test_with_device.cc",
     "test_with_device.h",
     "virtio_balloon_test.cc",
@@ -423,6 +445,7 @@ executable("device_tests") {
 
   deps = [
     ":device",
+    ":magma_image",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.virtualization.hardware",
@@ -430,6 +453,7 @@ executable("device_tests") {
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/graphics/lib/magma/include/virtio:headers",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/mesa/include:drm-uapi",
     "//zircon/system/ulib/fzl",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
     "//zircon/system/ulib/virtio",

@@ -139,10 +139,78 @@ magma_status_t magma_initialize_tracing(magma_handle_t channel) {
 magma_status_t magma_virt_create_image(magma_connection_t connection,
                                        magma_image_create_info_t* create_info,
                                        magma_buffer_t* image_out) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
+#if VIRTMAGMA_DEBUG
+  printf("%s\n", __PRETTY_FUNCTION__);
+  printf("create_info %p\n", create_info);
+  printf("image_out %p\n", image_out);
+#endif
+
+  auto connection_wrapped = virtmagma_connection_t::Get(connection);
+
+  struct virtmagma_create_image_wrapper wrapper {
+    .create_info = reinterpret_cast<uintptr_t>(create_info),
+    .create_info_size = sizeof(magma_image_create_info_t),
+  };
+
+  virtio_magma_virt_create_image_ctrl request{
+      .hdr.type = VIRTIO_MAGMA_CMD_VIRT_CREATE_IMAGE,
+      .connection = reinterpret_cast<uintptr_t>(connection_wrapped->Object()),
+      .create_info = reinterpret_cast<uintptr_t>(&wrapper),
+  };
+  virtio_magma_virt_create_image_resp response{};
+
+  if (!virtmagma_send_command(connection_wrapped->Parent(), &request, sizeof(request), &response,
+                              sizeof(response))) {
+    assert(false);
+    return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+  }
+  if (response.hdr.type != VIRTIO_MAGMA_RESP_VIRT_CREATE_IMAGE)
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Wrong response header: %u", response.hdr.type);
+
+  magma_status_t result_return = static_cast<decltype(result_return)>(response.result_return);
+  if (result_return != MAGMA_STATUS_OK)
+    return DRET(result_return);
+
+  *image_out = virtmagma_buffer_t::Create(response.image_out, connection)->Wrap();
+
+  return MAGMA_STATUS_OK;
 }
 
 magma_status_t magma_virt_get_image_info(magma_connection_t connection, magma_buffer_t image,
                                          magma_image_info_t* image_info_out) {
-  return MAGMA_STATUS_UNIMPLEMENTED;
+#if VIRTMAGMA_DEBUG
+  printf("%s\n", __PRETTY_FUNCTION__);
+  printf("image = %lu\n", image);
+  printf("image_info_out = %p\n", image_info_out);
+#endif
+
+  auto connection_wrapped = virtmagma_connection_t::Get(connection);
+  auto image_wrapped = virtmagma_buffer_t::Get(image);
+
+  struct virtmagma_get_image_info_wrapper wrapper {
+    .image_info_out = reinterpret_cast<uintptr_t>(image_info_out),
+    .image_info_size = sizeof(magma_image_info_t),
+  };
+
+  virtio_magma_virt_get_image_info_ctrl request{
+      .hdr.type = VIRTIO_MAGMA_CMD_VIRT_GET_IMAGE_INFO,
+      .connection = reinterpret_cast<uintptr_t>(connection_wrapped->Object()),
+      .image = image_wrapped->Object(),
+      .image_info_out = reinterpret_cast<uintptr_t>(&wrapper),
+  };
+  virtio_magma_virt_get_image_info_resp response{};
+
+  if (!virtmagma_send_command(connection_wrapped->Parent(), &request, sizeof(request), &response,
+                              sizeof(response))) {
+    assert(false);
+    return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+  }
+  if (response.hdr.type != VIRTIO_MAGMA_RESP_VIRT_GET_IMAGE_INFO)
+    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Wrong response header: %u", response.hdr.type);
+
+  magma_status_t result_return = static_cast<decltype(result_return)>(response.result_return);
+  if (result_return != MAGMA_STATUS_OK)
+    return DRET(result_return);
+
+  return MAGMA_STATUS_OK;
 }

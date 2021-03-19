@@ -20,6 +20,7 @@
 #include <unistd.h>
 #include <zircon/status.h>
 
+#include "src/virtualization/bin/vmm/device/magma_image.h"
 #include "src/virtualization/bin/vmm/device/virtio_queue.h"
 
 static constexpr const char* kDeviceDir = "/dev/class/gpu";
@@ -114,6 +115,34 @@ zx_status_t VirtioMagma::Handle_device_import(const virtio_magma_device_import_c
   auto modified = *request;
   modified.device_channel = client_handle.release();
   return VirtioMagmaGeneric::Handle_device_import(&modified, response);
+}
+
+zx_status_t VirtioMagma::Handle_release_connection(
+    const virtio_magma_release_connection_ctrl_t* request,
+    virtio_magma_release_connection_resp_t* response) {
+  zx_status_t status = VirtioMagmaGeneric::Handle_release_connection(request, response);
+  if (status != ZX_OK)
+    return ZX_OK;
+
+  auto connection = reinterpret_cast<magma_connection_t>(request->connection);
+
+  connection_image_map_.erase(connection);
+
+  return ZX_OK;
+}
+
+zx_status_t VirtioMagma::Handle_release_buffer(const virtio_magma_release_buffer_ctrl_t* request,
+                                               virtio_magma_release_buffer_resp_t* response) {
+  zx_status_t status = VirtioMagmaGeneric::Handle_release_buffer(request, response);
+  if (status != ZX_OK)
+    return ZX_OK;
+
+  auto connection = reinterpret_cast<magma_connection_t>(request->connection);
+
+  auto& image_map = connection_image_map_[connection];
+  image_map.erase(request->buffer);
+
+  return ZX_OK;
 }
 
 zx_status_t VirtioMagma::Handle_internal_map(const virtio_magma_internal_map_ctrl_t* request,
@@ -256,6 +285,66 @@ zx_status_t VirtioMagma::Handle_execute_command_buffer_with_resources(
   request_dupe.semaphore_ids = reinterpret_cast<uintptr_t>(semaphore_ids);
 
   return VirtioMagmaGeneric::Handle_execute_command_buffer_with_resources(&request_dupe, response);
+}
+
+zx_status_t VirtioMagma::Handle_virt_create_image(
+    const virtio_magma_virt_create_image_ctrl_t* request,
+    virtio_magma_virt_create_image_resp_t* response) {
+  auto image_create_info = reinterpret_cast<const magma_image_create_info_t*>(request + 1);
+
+  magma_image_info_t image_info;
+  zx::vmo vmo;
+
+  response->hdr.type = VIRTIO_MAGMA_RESP_VIRT_CREATE_IMAGE;
+  // Assuming the current connection is on the one and only physical device.
+  uint32_t physical_device_index = 0;
+  response->result_return =
+      magma_image::CreateDrmImage(physical_device_index, image_create_info, &image_info, &vmo);
+
+  if (response->result_return != MAGMA_STATUS_OK)
+    return ZX_OK;
+
+  auto connection = reinterpret_cast<magma_connection_t>(request->connection);
+
+  {
+    magma_buffer_t image;
+    response->result_return = magma_import(connection, vmo.release(), &image);
+    if (response->result_return != MAGMA_STATUS_OK) {
+      printf("Failed to import VMO\n");
+      return ZX_OK;
+    }
+
+    response->image_out = image;
+  }
+
+  auto& map = connection_image_map_[connection];
+
+  map[response->image_out] = image_info;
+
+  return ZX_OK;
+}
+
+zx_status_t VirtioMagma::Handle_virt_get_image_info(
+    const virtio_magma_virt_get_image_info_ctrl_t* request,
+    virtio_magma_virt_get_image_info_resp_t* response) {
+  response->hdr.type = VIRTIO_MAGMA_RESP_VIRT_GET_IMAGE_INFO;
+
+  auto connection = reinterpret_cast<magma_connection_t>(request->connection);
+
+  auto& map = connection_image_map_[connection];
+
+  auto iter = map.find(request->image);
+  if (iter == map.end()) {
+    response->result_return = MAGMA_STATUS_INVALID_ARGS;
+    return ZX_OK;
+  }
+
+  auto image_info_out = reinterpret_cast<magma_image_info_t*>(
+      const_cast<virtio_magma_virt_get_image_info_ctrl_t*>(request) + 1);
+  *image_info_out = iter->second;
+
+  response->result_return = MAGMA_STATUS_OK;
+  return ZX_OK;
 }
 
 int main(int argc, char** argv) {

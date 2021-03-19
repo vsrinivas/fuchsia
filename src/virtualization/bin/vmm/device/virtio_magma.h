@@ -43,6 +43,10 @@ class VirtioMagma : public VirtioMagmaGeneric,
  private:
   zx_status_t Handle_device_import(const virtio_magma_device_import_ctrl_t* request,
                                    virtio_magma_device_import_resp_t* response) override;
+  zx_status_t Handle_release_connection(const virtio_magma_release_connection_ctrl_t* request,
+                                        virtio_magma_release_connection_resp_t* response) override;
+  zx_status_t Handle_release_buffer(const virtio_magma_release_buffer_ctrl_t* request,
+                                    virtio_magma_release_buffer_resp_t* response) override;
   zx_status_t Handle_internal_map(const virtio_magma_internal_map_ctrl_t* request,
                                   virtio_magma_internal_map_resp_t* response) override;
   zx_status_t Handle_internal_unmap(const virtio_magma_internal_unmap_ctrl_t* request,
@@ -60,11 +64,20 @@ class VirtioMagma : public VirtioMagmaGeneric,
   zx_status_t Handle_execute_command_buffer_with_resources(
       const virtio_magma_execute_command_buffer_with_resources_ctrl_t* request,
       virtio_magma_execute_command_buffer_with_resources_resp_t* response) override;
+  zx_status_t Handle_virt_create_image(const virtio_magma_virt_create_image_ctrl_t* request,
+                                       virtio_magma_virt_create_image_resp_t* response) override;
+  zx_status_t Handle_virt_get_image_info(
+      const virtio_magma_virt_get_image_info_ctrl_t* request,
+      virtio_magma_virt_get_image_info_resp_t* response) override;
 
   zx::vmar vmar_;
   VirtioQueue out_queue_;
   fuchsia::virtualization::hardware::VirtioWaylandImporterSyncPtr wayland_importer_;
   std::unordered_multimap<zx_koid_t, std::pair<zx_vaddr_t, size_t>> buffer_maps_;
+
+  // Each connection maps images to info, populated either when image is created or imported
+  using ImageMap = std::unordered_map<magma_buffer_t, magma_image_info_t>;
+  std::unordered_map<magma_connection_t, ImageMap> connection_image_map_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VirtioMagma);
 };
