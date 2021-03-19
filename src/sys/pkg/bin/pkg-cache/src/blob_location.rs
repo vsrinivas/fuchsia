@@ -7,7 +7,7 @@ use {
     fuchsia_inspect as finspect,
     fuchsia_inspect_contrib::inspectable::InspectableLen,
     fuchsia_merkle::Hash,
-    futures::{stream::FuturesUnordered, TryStreamExt},
+    futures::{StreamExt, TryStreamExt},
     pkgfs::{system::Client as SystemImage, versions::Client as Versions},
     std::{collections::HashSet, io::Read as _},
     system_image::StaticPackages,
@@ -65,10 +65,12 @@ impl BlobLocation {
                 .context("open system_image data/static_packages")?,
         )?;
 
-        let mut futures = std::iter::once(&system_image_hash)
-            .chain(static_packages.hashes())
-            .map(|p| Self::package_blobs(versions, p))
-            .collect::<FuturesUnordered<_>>();
+        let mut futures = futures::stream::iter(
+            std::iter::once(&system_image_hash)
+                .chain(static_packages.hashes())
+                .map(|p| Self::package_blobs(versions, p)),
+        )
+        .buffer_unordered(1000);
 
         let mut ret = HashSet::new();
         while let Some(p) = futures.try_next().await? {
