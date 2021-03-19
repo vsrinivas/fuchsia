@@ -14,6 +14,7 @@ import os
 import re
 import sys
 import urllib.request
+from multiprocessing import Pool
 
 repo_re = re.compile('\s*repository\s*=\s*"(.*)"\s*$')
 
@@ -74,34 +75,44 @@ def fetch_license(subdir):
         die('no licenses found under ' + repo_path)
 
 
+def check_subdir_license(arg):
+    # it seems multiprocessing only passes one argument to each function
+    (subdir, verify) = arg
+
+    if subdir.startswith('.') or not os.path.isdir(subdir):
+        sys.stdout.write("-")
+        sys.stdout.flush()
+        return
+
+    license_files = [
+        file for file in os.listdir(subdir) if file.startswith('LICENSE') or
+        file.startswith('LICENCE') or file.startswith('license')
+    ]
+    if license_files:
+        sys.stdout.write(".")
+        sys.stdout.flush()
+        return
+
+    if verify:
+        die('MISSING  %s' % subdir)
+
+    fetch_license(subdir)
+    sys.stdout.write("*")
+    sys.stdout.flush()
+
+
 def check_licenses(directory, verify=False):
     success = True
     os.chdir(directory)
-    for subdir in sorted(os.listdir(os.getcwd())):
-        # TODO(pylaligand): remove this temporary hack when a new version of
-        # the crate is published.
-        if subdir.startswith('fuchsia-zircon-sys'):
-            print('IGNORED  %s' % subdir)
-            continue
-        if subdir.startswith('.') or not os.path.isdir(subdir):
-            continue
-        license_files = [
-            file for file in os.listdir(subdir) if file.startswith('LICENSE') or
-            file.startswith('LICENCE') or file.startswith('license')
-        ]
-        if license_files:
-            print('OK       %s' % subdir)
-            continue
-        if verify:
-            print('MISSING  %s' % subdir)
-            success = False
-            continue
-        try:
-            fetch_license(subdir)
-            print('FETCH    %s' % subdir)
-        except Exception as err:
-            print('ERROR    %s (%s)' % (subdir, err))
-            success = False
+    print("Checking licenses.")
+    subdirs = sorted(os.listdir(os.getcwd()))
+    try:
+        with Pool(16) as p:
+            p.map(check_subdir_license, [(s, verify) for s in subdirs])
+    except Exception as err:
+        print('ERROR    %s' % err)
+        success = False
+    print("\nDone checking licenses.")
     return success
 
 
