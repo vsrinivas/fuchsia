@@ -1,11 +1,7 @@
-{% set rfcid = "Template" %}
+{% set rfcid = "RFC-0077" %}
 {% include "docs/contribute/governance/rfcs/_common/_rfc_header.md" %}
 # {{ rfc.name }} - {{ rfc.title }}
 <!-- *** DO NOT EDIT ABOVE THIS LINE -->
-
-<!--
-*** This should begin with an H2 element (for example, ## Summary).
--->
 
 ## Summary
 
