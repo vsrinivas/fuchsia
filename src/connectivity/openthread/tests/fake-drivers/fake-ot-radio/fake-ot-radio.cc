@@ -198,11 +198,6 @@ zx_status_t FakeOtRadioDevice::Reset() {
   std::swap(clientbound_queue_, empty_clientbound_queue);
   lock_in.release();
 
-  fbl::AutoLock lock_out(&radiobound_lock_);
-  std::queue<::fidl::VectorView<uint8_t>> empty_radiobound_queue;
-  std::swap(radiobound_queue_, empty_radiobound_queue);
-  lock_out.release();
-
   zx::nanosleep(zx::deadline_after(zx::msec(kResetMsDelay)));
 
   std::vector<uint8_t> event;
