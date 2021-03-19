@@ -269,6 +269,14 @@ impl PeerTask {
                     };
                     request = self.connection.ag_message(marker, response(result));
                 }
+                ProcedureRequest::SpeakerVolumeSynchronization { level, response } => {
+                    self.gain_control.report_speaker_gain(level);
+                    request = self.connection.ag_message(marker, response());
+                }
+                ProcedureRequest::MicrophoneVolumeSynchronization { level, response } => {
+                    self.gain_control.report_microphone_gain(level);
+                    request = self.connection.ag_message(marker, response());
+                }
             };
         }
     }

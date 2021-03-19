@@ -49,6 +49,17 @@ impl TryFrom<u8> for Gain {
     }
 }
 
+impl TryFrom<i64> for Gain {
+    type Error = Error;
+    fn try_from(x: i64) -> Result<Self, Self::Error> {
+        if 0 <= x && x <= 15 {
+            Ok(Gain(x as u8))
+        } else {
+            Err(Error::OutOfRange)
+        }
+    }
+}
+
 /// Represents the component's representation of a peer's Gain values for both Speaker and
 /// Microphone.
 ///
@@ -108,7 +119,6 @@ impl GainControl {
         Ok(client_end)
     }
 
-    #[cfg(test)]
     /// Report the speaker gain value received from the Hands Free to the call manager.
     pub fn report_speaker_gain(&mut self, gain: Gain) {
         self._speaker_gain_hanging_get.new_publisher().update(move |s| {
@@ -121,7 +131,6 @@ impl GainControl {
         });
     }
 
-    #[cfg(test)]
     /// Report the microphone gain value received from the Hands Free to the call manager.
     pub fn report_microphone_gain(&mut self, gain: Gain) {
         self._microphone_gain_hanging_get.new_publisher().update(move |s| {

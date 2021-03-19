@@ -10,7 +10,10 @@ use {
 
 use crate::{
     indicator_status::IndicatorStatus,
-    peer::service_level_connection::{Command, SlcState},
+    peer::{
+        gain_control::Gain,
+        service_level_connection::{Command, SlcState},
+    },
     protocol::features::AgFeatures,
 };
 
@@ -38,6 +41,9 @@ pub mod nrec;
 /// Defines the implementation of the Query Operator Selection Procedure.
 pub mod query_operator_selection;
 
+/// Defines the implementation of the Volume Level Synchronization Procedure.
+pub mod volume_synchronization;
+
 use call_line_ident_notifications::CallLineIdentNotificationsProcedure;
 use call_waiting_notifications::CallWaitingNotificationsProcedure;
 use dtmf::{DtmfCode, DtmfProcedure};
@@ -46,6 +52,7 @@ use nrec::NrecProcedure;
 use query_operator_selection::QueryOperatorProcedure;
 use slc_initialization::SlcInitProcedure;
 use subscriber_number_information::{build_cnum_response, SubscriberNumberInformationProcedure};
+use volume_synchronization::VolumeSynchronizationProcedure;
 
 const THREE_WAY_SUPPORT: &[&str] = &["0", "1", "1X", "2", "2X", "3", "4"];
 // TODO(fxb/71668) Stop using raw bytes.
@@ -115,6 +122,8 @@ pub enum ProcedureMarker {
     CallLineIdentNotifications,
     /// The Subscriber Number Information procedure as defined in HFP v1.8 Section 4.31.
     SubscriberNumberInformation,
+    /// The Volume Level Synchronization procedure as defined in HFP v1.8 Section 4.29.2.
+    VolumeSynchronization,
 }
 
 impl ProcedureMarker {
@@ -133,6 +142,7 @@ impl ProcedureMarker {
                 Box::new(SubscriberNumberInformationProcedure::new())
             }
             Self::Dtmf => Box::new(DtmfProcedure::new()),
+            Self::VolumeSynchronization => Box::new(VolumeSynchronizationProcedure::new()),
         }
     }
 
@@ -156,6 +166,7 @@ impl ProcedureMarker {
             at::Command::Ccwa { .. } => Ok(Self::CallWaitingNotifications),
             at::Command::Clip { .. } => Ok(Self::CallLineIdentNotifications),
             at::Command::Cnum { .. } => Ok(Self::SubscriberNumberInformation),
+            at::Command::Vgs { .. } | at::Command::Vgm { .. } => Ok(Self::VolumeSynchronization),
             at::Command::Vts { .. } => Ok(Self::Dtmf),
             _ => Err(ProcedureError::NotImplemented),
         }
@@ -206,6 +217,16 @@ pub enum ProcedureRequest {
         response: Box<dyn FnOnce() -> AgUpdate>,
     },
 
+    SpeakerVolumeSynchronization {
+        level: Gain,
+        response: Box<dyn FnOnce() -> AgUpdate>,
+    },
+
+    MicrophoneVolumeSynchronization {
+        level: Gain,
+        response: Box<dyn FnOnce() -> AgUpdate>,
+    },
+
     /// Error from processing an update.
     Error(ProcedureError),
 
@@ -242,7 +263,7 @@ impl From<Vec<at::Response>> for ProcedureRequest {
 
 impl fmt::Debug for ProcedureRequest {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        let other;
+        let s;
         let output = match &self {
             Self::GetAgFeatures { .. } => "GetAgFeatures",
             Self::GetAgIndicatorStatus { .. } => "GetAgIndicatorStatus",
@@ -250,10 +271,19 @@ impl fmt::Debug for ProcedureRequest {
             Self::SetNrec { enable: true, .. } => "SetNrec(enabled)",
             Self::SetNrec { enable: false, .. } => "SetNrec(disabled)",
             Self::GetNetworkOperatorName { .. } => "GetNetworkOperatorName",
+            // DTFM Code values are not displayed in Debug representation
             Self::SendDtmf { .. } => "SendDtmf",
+            Self::SpeakerVolumeSynchronization { level, .. } => {
+                s = format!("SpeakerVolumeSynchronization({:?})", level);
+                &s
+            }
+            Self::MicrophoneVolumeSynchronization { level, .. } => {
+                s = format!("MicrophoneVolumeSynchronization({:?})", level);
+                &s
+            }
             event => {
-                other = format!("{:?}", event);
-                &other
+                s = format!("{:?}", event);
+                &s
             }
         }
         .to_string();

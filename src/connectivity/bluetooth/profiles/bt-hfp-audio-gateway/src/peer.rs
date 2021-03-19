@@ -19,7 +19,7 @@ use {
 };
 
 mod calls;
-mod gain_control;
+pub mod gain_control;
 pub mod service_level_connection;
 mod task;
 

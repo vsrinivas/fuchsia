@@ -62,6 +62,7 @@ rustc_binary("bin") {
     "src/procedure/query_operator_selection.rs",
     "src/procedure/slc_initialization.rs",
     "src/procedure/subscriber_number_information.rs",
+    "src/procedure/volume_synchronization.rs",
     "src/profile.rs",
     "src/protocol.rs",
     "src/protocol/features.rs",
