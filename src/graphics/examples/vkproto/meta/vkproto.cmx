@@ -1,4 +1,12 @@
 {
+    "facets": {
+      "fuchsia.test": {
+        "injected-services": {
+          "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx",
+          "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
+        }
+      }
+    },
     "include": [
         "sdk/lib/diagnostics/syslog/client.shard.cmx",
         "src/lib/vulkan/test-application.shard.cmx"
