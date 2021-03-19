@@ -191,6 +191,14 @@ impl PeerTask {
                     // Update the procedure with the retrieved AG update.
                     request = self.connection.ag_message(marker, response(features));
                 }
+                ProcedureRequest::GetSubscriberNumberInformation { response } => {
+                    let result = if let Some(handler) = &mut self.handler {
+                        handler.subscriber_number_information().await.ok().unwrap_or_else(Vec::new)
+                    } else {
+                        vec![]
+                    };
+                    request = self.connection.ag_message(marker, response(result));
+                }
                 ProcedureRequest::GetAgIndicatorStatus { response } => {
                     let status = IndicatorStatus {
                         service: self.network.service_available.unwrap_or(false),

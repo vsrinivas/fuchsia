@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {at_commands as at, std::fmt, thiserror::Error};
+use {
+    at_commands as at,
+    std::{fmt, iter::once},
+    thiserror::Error,
+};
 
 use crate::{
     indicator_status::IndicatorStatus,
@@ -22,6 +26,9 @@ pub mod extended_errors;
 /// Defines the implementation of the SLC Initialization Procedure.
 pub mod slc_initialization;
 
+/// Defines the implementation of the Subscriber Number Information Procedure.
+pub mod subscriber_number_information;
+
 /// Defines the implementation of the NR/EC Procedure.
 pub mod nrec;
 
@@ -34,6 +41,7 @@ use extended_errors::ExtendedErrorsProcedure;
 use nrec::NrecProcedure;
 use query_operator_selection::QueryOperatorProcedure;
 use slc_initialization::SlcInitProcedure;
+use subscriber_number_information::{build_cnum_response, SubscriberNumberInformationProcedure};
 
 const THREE_WAY_SUPPORT: &[&str] = &["0", "1", "1X", "2", "2X", "3", "4"];
 // TODO(fxb/71668) Stop using raw bytes.
@@ -97,6 +105,8 @@ pub enum ProcedureMarker {
     CallWaitingNotifications,
     /// The Call Line Identification Notifications as defined in HFP v1.8 Section 4.23.
     CallLineIdentNotifications,
+    /// The Subscriber Number Information procedure as defined in HFP v1.8 Section 4.31.
+    SubscriberNumberInformation,
 }
 
 impl ProcedureMarker {
@@ -110,6 +120,9 @@ impl ProcedureMarker {
             Self::CallWaitingNotifications => Box::new(CallWaitingNotificationsProcedure::new()),
             Self::CallLineIdentNotifications => {
                 Box::new(CallLineIdentNotificationsProcedure::new())
+            }
+            Self::SubscriberNumberInformation => {
+                Box::new(SubscriberNumberInformationProcedure::new())
             }
         }
     }
@@ -133,6 +146,7 @@ impl ProcedureMarker {
             at::Command::Cmee { .. } => Ok(Self::ExtendedErrors),
             at::Command::Ccwa { .. } => Ok(Self::CallWaitingNotifications),
             at::Command::Clip { .. } => Ok(Self::CallLineIdentNotifications),
+            at::Command::Cnum { .. } => Ok(Self::SubscriberNumberInformation),
             _ => Err(ProcedureError::NotImplemented),
         }
     }
@@ -168,6 +182,10 @@ pub enum ProcedureRequest {
         response: Box<dyn FnOnce(Option<String>) -> AgUpdate>,
     },
 
+    GetSubscriberNumberInformation {
+        response: Box<dyn FnOnce(Vec<String>) -> AgUpdate>,
+    },
+
     SetNrec {
         enable: bool,
         response: Box<dyn FnOnce(Result<(), ()>) -> AgUpdate>,
@@ -194,7 +212,8 @@ impl ProcedureRequest {
             Self::GetAgFeatures { .. }
             | Self::GetAgIndicatorStatus { .. }
             | Self::GetNetworkOperatorName { .. }
-            | Self::SetNrec { .. } => true,
+            | Self::SetNrec { .. }
+            | Self::GetSubscriberNumberInformation { .. } => true,
             _ => false,
         }
     }
@@ -212,6 +231,7 @@ impl fmt::Debug for ProcedureRequest {
         let output = match &self {
             Self::GetAgFeatures { .. } => "GetAgFeatures",
             Self::GetAgIndicatorStatus { .. } => "GetAgIndicatorStatus",
+            Self::GetSubscriberNumberInformation { .. } => "GetSubscriberNumberInformation",
             Self::SetNrec { enable: true, .. } => "SetNrec(enabled)",
             Self::SetNrec { enable: false, .. } => "SetNrec(disabled)",
             Self::GetNetworkOperatorName { .. } => "GetNetworkOperatorName",
@@ -290,6 +310,8 @@ pub enum AgUpdate {
     SupportedHfIndicatorResponses { safety: bool, battery: bool },
     /// The name of the network operator
     NetworkOperatorName(at::NetworkOperatorNameFormat, String),
+    /// The AG's network subscriber number(s).
+    SubscriberNumbers(Vec<String>),
 }
 
 impl From<AgUpdate> for ProcedureRequest {
@@ -339,6 +361,9 @@ impl From<AgUpdate> for ProcedureRequest {
                 }),
                 at::Response::Ok,
             ],
+            AgUpdate::SubscriberNumbers(numbers) => {
+                numbers.into_iter().map(build_cnum_response).chain(once(at::Response::Ok)).collect()
+            }
         }
         .into()
     }
