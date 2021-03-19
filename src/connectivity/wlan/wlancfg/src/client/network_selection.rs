@@ -57,6 +57,7 @@ struct ScanResultCache {
 
 #[derive(Debug, PartialEq, Clone)]
 struct InternalSavedNetworkData {
+    network_id: types::NetworkIdentifier,
     credential: Credential,
     has_ever_connected: bool,
     recent_failure_count: u8,
@@ -64,7 +65,6 @@ struct InternalSavedNetworkData {
 
 #[derive(Debug, Clone, PartialEq)]
 struct InternalBss<'a> {
-    network_id: types::NetworkIdentifier,
     network_info: InternalSavedNetworkData,
     bss_info: &'a types::Bss,
     multiple_bss_candidates: bool,
@@ -86,7 +86,7 @@ impl InternalBss<'_> {
         let channel = Channel::from_fidl(self.bss_info.channel);
         let rssi = self.bss_info.rssi;
         let recent_failure_count = self.network_info.recent_failure_count;
-        let security_type = match self.network_id.type_ {
+        let security_type = match self.network_info.network_id.type_ {
             fidl_policy::SecurityType::None => "open",
             fidl_policy::SecurityType::Wep => "WEP",
             fidl_policy::SecurityType::Wpa => "WPA",
@@ -95,7 +95,7 @@ impl InternalBss<'_> {
         };
         info!(
             "{}({:4}), {}, {:>4}dBm, chan {:8}{}{}{}",
-            hasher.hash_ssid(&self.network_id.ssid),
+            hasher.hash_ssid(&self.network_info.network_id.ssid),
             security_type,
             hasher.hash_mac_addr(&self.bss_info.bssid),
             rssi,
@@ -271,7 +271,6 @@ async fn merge_saved_networks_and_scan_data<'a>(
                 merged_networks.push(InternalBss {
                     bss_info: bss,
                     multiple_bss_candidates,
-                    network_id: scan_result.id.clone(),
                     network_info: saved_network_info.clone(),
                 });
             }
@@ -301,23 +300,26 @@ async fn load_saved_networks(
             "Adding saved network to hashmap{}",
             if recent_failure_count > 0 { " with some failures" } else { "" }
         );
+        let id = types::NetworkIdentifier {
+            ssid: saved_network.ssid.clone(),
+            type_: saved_network.security_type.into(),
+        };
         // We allow networks saved as WPA to be also used as WPA2 or WPA2 to be used for WPA3
         if let Some(security_type) = upgrade_security(&saved_network.security_type) {
             networks.insert(
                 types::NetworkIdentifier { ssid: saved_network.ssid.clone(), type_: security_type },
                 InternalSavedNetworkData {
+                    network_id: id.clone(),
                     credential: saved_network.credential.clone(),
                     has_ever_connected: saved_network.has_ever_connected,
                     recent_failure_count: recent_failure_count,
                 },
             );
-        };
+        }
         networks.insert(
-            types::NetworkIdentifier {
-                ssid: saved_network.ssid,
-                type_: saved_network.security_type.into(),
-            },
+            id.clone(),
             InternalSavedNetworkData {
+                network_id: id,
                 credential: saved_network.credential,
                 has_ever_connected: saved_network.has_ever_connected,
                 recent_failure_count: recent_failure_count,
@@ -377,7 +379,7 @@ fn select_best_connection_candidate<'a>(
                 return false;
             };
             // Filter out networks we've been told to ignore
-            if ignore_list.contains(&bss.network_id) {
+            if ignore_list.contains(&bss.network_info.network_id) {
                 trace!("Network is ignored, filtering: {:?}", bss);
                 return false;
             }
@@ -404,7 +406,7 @@ fn select_best_connection_candidate<'a>(
             bss.print_without_pii(hasher);
             (
                 types::ConnectionCandidate {
-                    network: bss.network_id,
+                    network: bss.network_info.network_id,
                     credential: bss.network_info.credential,
                     observed_in_passive_scan: Some(bss.bss_info.observed_in_passive_scan),
                     bss: bss.bss_info.bss_desc.clone(),
@@ -772,16 +774,18 @@ mod tests {
         // check these networks were loaded
         let mut expected_hashmap = HashMap::new();
         expected_hashmap.insert(
-            test_id_1,
+            test_id_1.clone(),
             InternalSavedNetworkData {
+                network_id: test_id_1,
                 credential: credential_1,
                 has_ever_connected: true,
                 recent_failure_count: 0,
             },
         );
         expected_hashmap.insert(
-            test_id_2,
+            test_id_2.clone(),
             InternalSavedNetworkData {
+                network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
                 has_ever_connected: false,
                 recent_failure_count: 1,
@@ -791,6 +795,7 @@ mod tests {
         expected_hashmap.insert(
             types::NetworkIdentifier { ssid: ssid_2, type_: types::SecurityType::Wpa2 },
             InternalSavedNetworkData {
+                network_id: test_id_2.clone(),
                 credential: credential_2,
                 has_ever_connected: false,
                 recent_failure_count: 1,
@@ -864,6 +869,7 @@ mod tests {
         saved_networks.insert(
             test_id_1.clone(),
             InternalSavedNetworkData {
+                network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failure_count: 0,
@@ -872,6 +878,7 @@ mod tests {
         saved_networks.insert(
             test_id_2.clone(),
             InternalSavedNetworkData {
+                network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
                 has_ever_connected: false,
                 recent_failure_count: 0,
@@ -895,8 +902,8 @@ mod tests {
         // build our expected result
         let expected_result = vec![
             InternalBss {
-                network_id: test_id_1.clone(),
                 network_info: InternalSavedNetworkData {
+                    network_id: test_id_1.clone(),
                     credential: credential_1.clone(),
                     has_ever_connected: true,
                     recent_failure_count: 0,
@@ -905,8 +912,8 @@ mod tests {
                 multiple_bss_candidates: true,
             },
             InternalBss {
-                network_id: test_id_1.clone(),
                 network_info: InternalSavedNetworkData {
+                    network_id: test_id_1.clone(),
                     credential: credential_1.clone(),
                     has_ever_connected: true,
                     recent_failure_count: 0,
@@ -915,8 +922,8 @@ mod tests {
                 multiple_bss_candidates: true,
             },
             InternalBss {
-                network_id: test_id_1.clone(),
                 network_info: InternalSavedNetworkData {
+                    network_id: test_id_1.clone(),
                     credential: credential_1.clone(),
                     has_ever_connected: true,
                     recent_failure_count: 0,
@@ -925,8 +932,8 @@ mod tests {
                 multiple_bss_candidates: true,
             },
             InternalBss {
-                network_id: test_id_2.clone(),
                 network_info: InternalSavedNetworkData {
+                    network_id: test_id_2.clone(),
                     credential: credential_2.clone(),
                     has_ever_connected: false,
                     recent_failure_count: 0,
@@ -962,12 +969,13 @@ mod tests {
     fn scoring_test(bss: types::Bss, expected_score: i8) {
         let mut rng = rand::thread_rng();
 
+        let network_id = types::NetworkIdentifier {
+            ssid: "test".as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa3,
+        };
         let internal_bss = InternalBss {
-            network_id: types::NetworkIdentifier {
-                ssid: "test".as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa3,
-            },
             network_info: InternalSavedNetworkData {
+                network_id: network_id,
                 credential: Credential::None,
                 has_ever_connected: rng.gen::<bool>(),
                 recent_failure_count: rng.gen_range(0, 20),
@@ -1002,8 +1010,8 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            network_id: test_id_1.clone(),
             network_info: InternalSavedNetworkData {
+                network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failure_count: 0,
@@ -1019,8 +1027,8 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            network_id: test_id_1.clone(),
             network_info: InternalSavedNetworkData {
+                network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failure_count: 0,
@@ -1036,8 +1044,8 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            network_id: test_id_2.clone(),
             network_info: InternalSavedNetworkData {
+                network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
                 has_ever_connected: true,
                 recent_failure_count: 0,
@@ -1112,8 +1120,8 @@ mod tests {
 
         let bss_info1 = types::Bss { compatible: true, rssi: -14, ..generate_random_bss() };
         networks.push(InternalBss {
-            network_id: test_id_1.clone(),
             network_info: InternalSavedNetworkData {
+                network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failure_count: 0,
@@ -1124,8 +1132,8 @@ mod tests {
 
         let bss_info2 = types::Bss { compatible: true, rssi: -100, ..generate_random_bss() };
         networks.push(InternalBss {
-            network_id: test_id_2.clone(),
             network_info: InternalSavedNetworkData {
+                network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
                 has_ever_connected: true,
                 recent_failure_count: 0,
@@ -1228,8 +1236,8 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            network_id: test_id_1.clone(),
             network_info: InternalSavedNetworkData {
+                network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failure_count: 0,
@@ -1245,8 +1253,8 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            network_id: test_id_1.clone(),
             network_info: InternalSavedNetworkData {
+                network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failure_count: 0,
@@ -1262,8 +1270,8 @@ mod tests {
             ..generate_random_bss()
         };
         networks.push(InternalBss {
-            network_id: test_id_2.clone(),
             network_info: InternalSavedNetworkData {
+                network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
                 has_ever_connected: true,
                 recent_failure_count: 0,
@@ -1338,8 +1346,8 @@ mod tests {
 
         let bss_info1 = types::Bss { compatible: true, rssi: -100, ..generate_random_bss() };
         networks.push(InternalBss {
-            network_id: test_id_1.clone(),
             network_info: InternalSavedNetworkData {
+                network_id: test_id_1.clone(),
                 credential: credential_1.clone(),
                 has_ever_connected: true,
                 recent_failure_count: 0,
@@ -1350,8 +1358,8 @@ mod tests {
 
         let bss_info2 = types::Bss { compatible: true, rssi: -12, ..generate_random_bss() };
         networks.push(InternalBss {
-            network_id: test_id_2.clone(),
             network_info: InternalSavedNetworkData {
+                network_id: test_id_2.clone(),
                 credential: credential_2.clone(),
                 has_ever_connected: true,
                 recent_failure_count: 0,
@@ -1895,7 +1903,8 @@ mod tests {
             exec.run_until_stalled(&mut network_selection_fut),
             Poll::Ready(Some(connection_candidate)) => {
                 let expected_candidate = types::ConnectionCandidate {
-                    network: id.clone(),
+                    // The network ID should match network config for recording connect results.
+                    network: wpa_network_id.clone(),
                     credential,
                     bss: mixed_scan_results[0].entries[0].bss_desc.clone(),
                     observed_in_passive_scan: Some(
@@ -1907,7 +1916,7 @@ mod tests {
             }
         );
         // If the best network ID is ignored, there is no best connection candidate.
-        let ignore_list = vec![id];
+        let ignore_list = vec![wpa_network_id];
         let network_selection_fut = network_selector
             .find_best_connection_candidate(test_values.iface_manager.clone(), &ignore_list);
         pin_mut!(network_selection_fut);
@@ -2082,12 +2091,14 @@ mod tests {
 
     fn generate_random_saved_network() -> (types::NetworkIdentifier, InternalSavedNetworkData) {
         let mut rng = rand::thread_rng();
+        let net_id = types::NetworkIdentifier {
+            ssid: format!("saved network rand {}", rng.gen::<i32>()).as_bytes().to_vec(),
+            type_: types::SecurityType::Wpa,
+        };
         (
-            types::NetworkIdentifier {
-                ssid: format!("saved network rand {}", rng.gen::<i32>()).as_bytes().to_vec(),
-                type_: types::SecurityType::Wpa,
-            },
+            net_id.clone(),
             InternalSavedNetworkData {
+                network_id: net_id,
                 credential: Credential::Password(
                     format!("password {}", rng.gen::<i32>()).as_bytes().to_vec(),
                 ),
@@ -2140,6 +2151,7 @@ mod tests {
         mock_saved_networks.insert(
             test_id_1.clone(),
             InternalSavedNetworkData {
+                network_id: test_id_1.clone(),
                 credential: Credential::Password("foo_pass".as_bytes().to_vec()),
                 has_ever_connected: false,
                 recent_failure_count: 0,
@@ -2148,6 +2160,7 @@ mod tests {
         mock_saved_networks.insert(
             test_id_2.clone(),
             InternalSavedNetworkData {
+                network_id: test_id_2.clone(),
                 credential: Credential::Password("bar_pass".as_bytes().to_vec()),
                 has_ever_connected: false,
                 recent_failure_count: 0,
