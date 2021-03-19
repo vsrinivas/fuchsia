@@ -55,7 +55,7 @@ group("deprecated_package") {
   visibility = non_default_checkout_users + fuchsia_inspect_test_packages
 
   # To regenerate:
-  # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed 's|//vendor/.*|//vendor:*|' | sed 's|\(.*\):.*|"\1/*",|' | sort | uniq
+  # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed 's|\(.*\):.*|"\1/*",|' | sort | uniq
   visibility += [
     "//examples/cowsay/*",
     "//examples/criterion_bench/*",
@@ -255,7 +255,6 @@ group("deprecated_package") {
     "//third_party/protobuf/*",
     "//third_party/quickjs/*",
     "//third_party/sbase/*",
-    "//vendor/*",
   ]
 }
 
