@@ -6,8 +6,8 @@ use {
     crate::shutdown_mocks::{new_mocks_provider, Admin, Signal},
     anyhow::{format_err, Error},
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fuchsia_async as fasync,
+    fuchsia_component_test::{builder::*, mock},
     futures::{channel::mpsc, future, StreamExt},
-    topology_builder::{builder::*, mock},
 };
 
 mod shutdown_mocks;
@@ -16,7 +16,7 @@ const SHUTDOWN_SHIM_URL: &'static str =
     "fuchsia-pkg://fuchsia.com/shutdown-shim-integration-tests#meta/shutdown-shim.cm";
 
 #[derive(PartialEq)]
-enum TopologyVariant {
+enum RealmVariant {
     // Power manager is present, running, and actively handling requests.
     PowerManagerPresent,
 
@@ -29,7 +29,7 @@ enum TopologyVariant {
     PowerManagerNotPresent,
 }
 
-// Makes a new topology containing a shutdown shim and a mocks server.
+// Makes a new realm containing a shutdown shim and a mocks server.
 //
 //              root
 //             /    \
@@ -43,11 +43,11 @@ enum TopologyVariant {
 // and component_manager protocols from the mocks-server (because these are always present in
 // prod). The `variant` field determines whether the shim receives a functional version of the
 // power_manager mocks.
-async fn new_topology(
-    variant: TopologyVariant,
-) -> Result<(topology_builder::Topology, mpsc::UnboundedReceiver<Signal>), Error> {
+async fn new_realm(
+    variant: RealmVariant,
+) -> Result<(fuchsia_component_test::Realm, mpsc::UnboundedReceiver<Signal>), Error> {
     let (mocks_provider, recv_signals) = new_mocks_provider();
-    let mut builder = TopologyBuilder::new().await?;
+    let mut builder = RealmBuilder::new().await?;
     builder
         .add_component("shutdown-shim", ComponentSource::url(SHUTDOWN_SHIM_URL))
         .await?
@@ -79,14 +79,14 @@ async fn new_topology(
         })?;
 
     match variant {
-        TopologyVariant::PowerManagerPresent => {
+        RealmVariant::PowerManagerPresent => {
             builder.add_route(CapabilityRoute {
                 capability: Capability::protocol("fuchsia.hardware.power.statecontrol.Admin"),
                 source: RouteEndpoint::component("mocks-server"),
                 targets: vec![RouteEndpoint::component("shutdown-shim")],
             })?;
         }
-        TopologyVariant::PowerManagerIsntStartedYet => {
+        RealmVariant::PowerManagerIsntStartedYet => {
             builder
                 .add_component(
                     "black-hole",
@@ -115,7 +115,7 @@ async fn new_topology(
                 targets: vec![RouteEndpoint::component("shutdown-shim")],
             })?;
         }
-        TopologyVariant::PowerManagerNotPresent => (),
+        RealmVariant::PowerManagerNotPresent => (),
     }
 
     Ok((builder.build(), recv_signals))
@@ -123,11 +123,10 @@ async fn new_topology(
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_system_update() -> Result<(), Error> {
-    let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     let reason = fstatecontrol::RebootReason::SystemUpdate;
     shim_statecontrol.reboot(reason).await?.unwrap();
@@ -138,11 +137,10 @@ async fn power_manager_present_reboot_system_update() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_session_failure() -> Result<(), Error> {
-    let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     let reason = fstatecontrol::RebootReason::SessionFailure;
     shim_statecontrol.reboot(reason).await?.unwrap();
@@ -153,11 +151,10 @@ async fn power_manager_present_reboot_session_failure() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_to_bootloader() -> Result<(), Error> {
-    let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     shim_statecontrol.reboot_to_bootloader().await?.unwrap();
     let res = recv_signals.next().await;
@@ -167,11 +164,10 @@ async fn power_manager_present_reboot_to_bootloader() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_reboot_to_recovery() -> Result<(), Error> {
-    let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     shim_statecontrol.reboot_to_recovery().await?.unwrap();
     let res = recv_signals.next().await;
@@ -181,11 +177,10 @@ async fn power_manager_present_reboot_to_recovery() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_poweroff() -> Result<(), Error> {
-    let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     shim_statecontrol.poweroff().await?.unwrap();
     let res = recv_signals.next().await;
@@ -195,11 +190,10 @@ async fn power_manager_present_poweroff() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_present_suspend_to_ram() -> Result<(), Error> {
-    let (topology, mut recv_signals) = new_topology(TopologyVariant::PowerManagerPresent).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerPresent).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     shim_statecontrol.suspend_to_ram().await?.unwrap();
     let res = recv_signals.next().await;
@@ -209,12 +203,10 @@ async fn power_manager_present_suspend_to_ram() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_missing_poweroff() -> Result<(), Error> {
-    let (topology, mut recv_signals) =
-        new_topology(TopologyVariant::PowerManagerIsntStartedYet).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     // We don't expect this task to ever complete, as the shutdown shim isn't actually killed (the
     // shutdown methods it calls are mocks after all).
@@ -235,12 +227,10 @@ async fn power_manager_missing_poweroff() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_missing_reboot_system_update() -> Result<(), Error> {
-    let (topology, mut recv_signals) =
-        new_topology(TopologyVariant::PowerManagerIsntStartedYet).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     // We don't expect this task to ever complete, as the shutdown shim isn't actually killed (the
     // shutdown methods it calls are mocks after all).
@@ -258,12 +248,10 @@ async fn power_manager_missing_reboot_system_update() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_missing_mexec() -> Result<(), Error> {
-    let (topology, mut recv_signals) =
-        new_topology(TopologyVariant::PowerManagerIsntStartedYet).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerIsntStartedYet).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     let mexec_task = fasync::Task::spawn(async move { shim_statecontrol.mexec().await });
     assert_eq!(
@@ -273,7 +261,7 @@ async fn power_manager_missing_mexec() -> Result<(), Error> {
 
     // Dropping the shutdown_shim will cause the shim to be destroyed, which will trigger its
     // stop event, which the shim watches for to know when to return for an mexec
-    drop(topology_instance);
+    drop(realm_instance);
 
     // Mexec should actually return the call when it's done
     mexec_task.await?.map_err(|e| format_err!("mexec call failed: {:?}", e))?;
@@ -282,12 +270,10 @@ async fn power_manager_missing_mexec() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_not_present_poweroff() -> Result<(), Error> {
-    let (topology, mut recv_signals) =
-        new_topology(TopologyVariant::PowerManagerNotPresent).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerNotPresent).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     fasync::Task::spawn(async move {
         shim_statecontrol.poweroff().await.expect_err(
@@ -307,12 +293,10 @@ async fn power_manager_not_present_poweroff() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_not_present_reboot() -> Result<(), Error> {
-    let (topology, mut recv_signals) =
-        new_topology(TopologyVariant::PowerManagerNotPresent).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerNotPresent).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     fasync::Task::spawn(async move {
         shim_statecontrol.reboot(fstatecontrol::RebootReason::SystemUpdate).await.expect_err(
@@ -329,12 +313,10 @@ async fn power_manager_not_present_reboot() -> Result<(), Error> {
 
 #[fasync::run_singlethreaded(test)]
 async fn power_manager_not_present_mexec() -> Result<(), Error> {
-    let (topology, mut recv_signals) =
-        new_topology(TopologyVariant::PowerManagerNotPresent).await?;
-    let topology_instance = topology.create().await?;
-    let shim_statecontrol = topology_instance
-        .root
-        .connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
+    let (realm, mut recv_signals) = new_realm(RealmVariant::PowerManagerNotPresent).await?;
+    let realm_instance = realm.create().await?;
+    let shim_statecontrol =
+        realm_instance.root.connect_to_protocol_at_exposed_dir::<fstatecontrol::AdminMarker>()?;
 
     let mexec_task = fasync::Task::spawn(shim_statecontrol.mexec());
     assert_eq!(
@@ -344,7 +326,7 @@ async fn power_manager_not_present_mexec() -> Result<(), Error> {
 
     // Dropping the shutdown_shim will cause the shim to be destroyed, which will trigger its
     // stop event, which the shim watches for to know when to return for an mexec
-    drop(topology_instance);
+    drop(realm_instance);
 
     // Mexec should actually return the call when it's done
     mexec_task.await?.map_err(|e| format_err!("error returned on mexec call: {:?}", e))?;

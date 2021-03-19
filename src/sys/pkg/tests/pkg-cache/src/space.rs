@@ -146,7 +146,7 @@ async fn gc_twice_different_clients() {
     env.pkgfs.create_garbage();
     let second_connection = env
         .apps
-        .topology_instance
+        .realm_instance
         .root
         .connect_to_protocol_at_exposed_dir::<ManagerMarker>()
         .expect("connect to space manager");

@@ -1,0 +1,32 @@
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    program: {
+        runner: "elf",
+        binary: "bin/fuchsia_component_test_framework_intermediary",
+    },
+    capabilities: [
+        {
+            resolver: "fuchsia_component_test_registry",
+            path: "/svc/fuchsia.sys2.ComponentResolver",
+        },
+        {
+            runner: "fuchsia_component_test_mocks",
+            path: "/svc/fuchsia.component.runner.ComponentRunner",
+        },
+        { protocol: "fuchsia.realm.builder.FrameworkIntermediary" },
+    ],
+    expose: [
+        {
+            resolver: "fuchsia_component_test_registry",
+            from: "self",
+        },
+        {
+            runner: "fuchsia_component_test_mocks",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.realm.builder.FrameworkIntermediary",
+            from: "self",
+        },
+    ],
+}

@@ -5,7 +5,7 @@
     include: [
         "sdk/lib/diagnostics/inspect/client.shard.cml",
         "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/lib/topology_builder/meta/topology_builder.shard.cml",
+        "src/sys/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
         "src/sys/test_runners/rust/default.shard.cml",
         "src/sys/test_runners/tmp_storage.shard.cml",
     ],
@@ -42,7 +42,7 @@
                 "fuchsia.sys.Environment",
             ],
             from: "parent",
-            to: [ "#topology_builder_collection" ],
+            to: [ "#fuchsia_component_test_collection" ],
         },
     ],
 }

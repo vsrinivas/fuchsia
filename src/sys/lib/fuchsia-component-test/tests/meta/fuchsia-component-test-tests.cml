@@ -1,0 +1,19 @@
+{
+    include: [ "src/sys/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml" ],
+    program: {
+        runner: "rust_test_runner",
+        binary: "bin/fuchsia_component_test_tests_bin",
+    },
+    capabilities: [
+        {
+            protocol: "fuchsia.test.Suite",
+            path: "/svc/fuchsia.test.Suite",
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "self",
+        },
+    ],
+}

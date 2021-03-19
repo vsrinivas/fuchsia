@@ -14,20 +14,20 @@ use {
     ftest_manager::{LaunchError, LaunchOptions, SuiteControllerRequestStream},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_component_test::{
+        builder::{
+            Capability, CapabilityRoute, ComponentSource, Event, RealmBuilder, RouteEndpoint,
+        },
+        error::Error as RealmBuilderError,
+        mock::{Mock, MockHandles},
+        Realm, RealmInstance,
+    },
     fuchsia_zircon as zx,
     futures::prelude::*,
     lazy_static::lazy_static,
     regex::Regex,
     std::collections::HashMap,
     std::sync::{Arc, Mutex},
-    topology_builder::{
-        builder::{
-            Capability, CapabilityRoute, ComponentSource, Event, RouteEndpoint, TopologyBuilder,
-        },
-        error::Error as TopologyBuilderError,
-        mock::{Mock, MockHandles},
-        Topology, TopologyInstance,
-    },
     tracing::{error, warn},
 };
 
@@ -226,7 +226,7 @@ pub async fn run_test_manager_info_server(
 }
 
 struct RunningTest {
-    instance: TopologyInstance,
+    instance: RealmInstance,
     logs_iterator_task: Option<fasync::Task<Result<(), anyhow::Error>>>,
 }
 
@@ -275,11 +275,11 @@ async fn launch_test(
             .map_err(LaunchTestError::CreateProxyForArchiveAccessor)?;
 
     let archive_accessor_arc = Arc::new(archive_accessor);
-    let mut topology = get_topology(archive_accessor_arc.clone(), test_url)
+    let mut realm = get_realm(archive_accessor_arc.clone(), test_url)
         .await
-        .map_err(LaunchTestError::InitializeTestTopology)?;
-    topology.set_collection_name("tests");
-    let instance = topology.create().await.map_err(LaunchTestError::CreateTestTopology)?;
+        .map_err(LaunchTestError::InitializeTestRealm)?;
+    realm.set_collection_name("tests");
+    let instance = realm.create().await.map_err(LaunchTestError::CreateTestRealm)?;
     instance
         .root
         .connect_request_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>(
@@ -313,11 +313,11 @@ async fn launch_test(
     Ok(RunningTest { instance, logs_iterator_task })
 }
 
-async fn get_topology(
+async fn get_realm(
     archive_accessor: Arc<fdiagnostics::ArchiveAccessorProxy>,
     test_url: &str,
-) -> Result<Topology, TopologyBuilderError> {
-    let mut builder = TopologyBuilder::new().await?;
+) -> Result<Realm, RealmBuilderError> {
+    let mut builder = RealmBuilder::new().await?;
     let test_wrapper_test_root = format!("test_wrapper/{}", TEST_ROOT_REALM_NAME);
     builder
         .add_eager_component(test_wrapper_test_root.as_ref(), ComponentSource::url(test_url))

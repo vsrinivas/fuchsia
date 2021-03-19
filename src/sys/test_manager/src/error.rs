@@ -4,8 +4,8 @@
 
 use {
     anyhow, fidl_fuchsia_developer_remotecontrol::StreamError,
-    fidl_fuchsia_test_manager::LaunchError, thiserror::Error,
-    topology_builder::error::Error as TopologyBuilderError,
+    fidl_fuchsia_test_manager::LaunchError,
+    fuchsia_component_test::error::Error as RealmBuilderError, thiserror::Error,
 };
 
 /// Error encountered running test manager
@@ -26,11 +26,11 @@ pub enum LaunchTestError {
     #[error("Failed to create proxy for archive accessor")]
     CreateProxyForArchiveAccessor(#[source] fidl::Error),
 
-    #[error("Failed to initialize test topology")]
-    InitializeTestTopology(#[source] TopologyBuilderError),
+    #[error("Failed to initialize test realm")]
+    InitializeTestRealm(#[source] RealmBuilderError),
 
-    #[error("Failed to create test topology")]
-    CreateTestTopology(#[source] TopologyBuilderError),
+    #[error("Failed to create test realm")]
+    CreateTestRealm(#[source] RealmBuilderError),
 
     #[error("Failed to connect to embedded ArchiveAccessor")]
     ConnectToArchiveAccessor(#[source] anyhow::Error),
@@ -46,10 +46,10 @@ impl Into<LaunchError> for LaunchTestError {
     fn into(self) -> LaunchError {
         match self {
             Self::CreateProxyForArchiveAccessor(_)
-            | Self::InitializeTestTopology(_)
+            | Self::InitializeTestRealm(_)
             | Self::ConnectToArchiveAccessor(_)
             | Self::StreamIsolatedLogs(_) => LaunchError::InternalError,
-            Self::CreateTestTopology(_) => LaunchError::InstanceCannotResolve,
+            Self::CreateTestRealm(_) => LaunchError::InstanceCannotResolve,
             Self::ConnectToTestSuite(_) => LaunchError::FailedToConnectToTestSuite,
         }
     }

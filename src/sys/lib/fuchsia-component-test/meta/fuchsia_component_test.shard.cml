@@ -1,0 +1,50 @@
+// This is a CML shard, to be included by users of the fuchsia_component_test
+// library
+{
+    include: [ "sdk/lib/diagnostics/syslog/client.shard.cml" ],
+    children: [
+        {
+            name: "fuchsia_component_test_framework_intermediary",
+            url: "fuchsia-pkg://fuchsia.com/fuchsia-component-test#meta/framework-intermediary.cm",
+        },
+    ],
+    collections: [
+        {
+            name: "fuchsia_component_test_collection",
+            environment: "#fuchsia_component_test_env_with_registry",
+            durability: "transient",
+        },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [ "#fuchsia_component_test_framework_intermediary" ],
+        },
+    ],
+    environments: [
+        {
+            name: "fuchsia_component_test_env_with_registry",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "fuchsia_component_test_mocks",
+                    from: "#fuchsia_component_test_framework_intermediary",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "fuchsia_component_test_registry",
+                    from: "#fuchsia_component_test_framework_intermediary",
+                    scheme: "fuchsia-component-test-registry",
+                },
+            ],
+        },
+    ],
+}

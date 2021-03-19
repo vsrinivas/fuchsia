@@ -9,12 +9,12 @@ use {
     fidl_fuchsia_hardware_power_statecontrol as fstatecontrol, fidl_fuchsia_io as fio,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server as fserver,
+    fuchsia_component_test::{builder::*, mock},
     fuchsia_syslog::macros::*,
     fuchsia_zircon as zx,
     futures::{channel::mpsc, lock::Mutex, StreamExt, TryFutureExt, TryStreamExt},
     lazy_static::lazy_static,
     std::sync::Arc,
-    topology_builder::{builder::*, mock},
 };
 
 lazy_static! {

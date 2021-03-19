@@ -28,7 +28,7 @@ rustc_test("driver") {
     "//src/lib/syslog/rust:syslog",
     "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/fidl-fuchsia-pkg-ext",
-    "//src/sys/lib/topology_builder",
+    "//src/sys/lib/fuchsia-component-test",
     "//src/sys/pkg/lib/fuchsia-hash",
     "//src/sys/pkg/lib/fuchsia-merkle",
     "//src/sys/pkg/lib/fuchsia-pkg",

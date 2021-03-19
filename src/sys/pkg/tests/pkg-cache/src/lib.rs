@@ -17,6 +17,10 @@ use {
     fidl_fuchsia_update::{CommitStatusProviderMarker, CommitStatusProviderProxy},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
+    fuchsia_component_test::{
+        builder::{Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint},
+        RealmInstance,
+    },
     fuchsia_inspect::reader::DiagnosticsHierarchy,
     fuchsia_pkg_testing::{get_inspect_hierarchy, SystemImageBuilder},
     fuchsia_zircon as zx,
@@ -26,10 +30,6 @@ use {
     parking_lot::Mutex,
     pkgfs_ramdisk::PkgfsRamdisk,
     std::sync::Arc,
-    topology_builder::{
-        builder::{Capability, CapabilityRoute, ComponentSource, RouteEndpoint, TopologyBuilder},
-        TopologyInstance,
-    },
 };
 
 mod base_pkg_index;
@@ -38,8 +38,6 @@ mod get;
 mod inspect;
 mod space;
 mod sync;
-
-const TEST_CASE_COLLECTION: &str = "topology_builder_collection";
 
 trait PkgFs {
     fn root_dir_handle(&self) -> Result<ClientEnd<DirectoryMarker>, Error>;
@@ -151,7 +149,7 @@ where
 
         let fs_holder = Mutex::new(Some(fs));
 
-        let mut builder = TopologyBuilder::new().await.unwrap();
+        let mut builder = RealmBuilder::new().await.unwrap();
         builder
             .add_component("pkg_cache", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/pkg-cache.cm")).await.unwrap()
             .add_component("system_update_committer", ComponentSource::url("fuchsia-pkg://fuchsia.com/pkg-cache-integration-tests#meta/system-update-committer.cm")).await.unwrap()
@@ -225,27 +223,25 @@ where
                 targets: vec![ RouteEndpoint::AboveRoot ],
             }).unwrap();
 
-        let mut topology = builder.build();
-        topology.set_collection_name(TEST_CASE_COLLECTION);
-        let topology_instance = topology.create().await.unwrap();
+        let realm_instance = builder.build().create().await.unwrap();
 
         let proxies = Proxies {
-            commit_status_provider: topology_instance
+            commit_status_provider: realm_instance
                 .root
                 .connect_to_protocol_at_exposed_dir::<CommitStatusProviderMarker>()
                 .expect("connect to commit status provider"),
-            space_manager: topology_instance
+            space_manager: realm_instance
                 .root
                 .connect_to_protocol_at_exposed_dir::<SpaceManagerMarker>()
                 .expect("connect to space manager"),
-            package_cache: topology_instance
+            package_cache: realm_instance
                 .root
                 .connect_to_protocol_at_exposed_dir::<PackageCacheMarker>()
                 .expect("connect to package cache"),
         };
 
         TestEnv {
-            apps: Apps { topology_instance },
+            apps: Apps { realm_instance },
             pkgfs,
             proxies,
             mocks: Mocks {
@@ -270,7 +266,7 @@ pub struct Mocks {
 }
 
 struct Apps {
-    topology_instance: TopologyInstance,
+    realm_instance: RealmInstance,
 }
 
 struct TestEnv<P = PkgfsRamdisk> {
@@ -384,8 +380,8 @@ impl TestEnv<PkgfsRamdisk> {
 impl<P: PkgFs> TestEnv<P> {
     async fn inspect_hierarchy(&self) -> DiagnosticsHierarchy {
         let nested_environment_label = format!(
-            "pkg_cache_integration_test/topology_builder_collection\\:{}",
-            self.apps.topology_instance.root.child_name()
+            "pkg_cache_integration_test/fuchsia_component_test_collection\\:{}",
+            self.apps.realm_instance.root.child_name()
         );
 
         get_inspect_hierarchy(&nested_environment_label, "pkg_cache").await

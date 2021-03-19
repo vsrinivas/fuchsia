@@ -1,7 +1,7 @@
 {
     include: [
         "sdk/lib/diagnostics/syslog/client.shard.cml",
-        "src/sys/lib/topology_builder/meta/topology_builder.shard.cml",
+        "src/sys/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
     ],
     program: {
         runner: "elf",
@@ -242,15 +242,15 @@
                     from: "#go_test_runner",
                 },
                 {
-                    runner: "topology_builder_mocks",
-                    from: "#topology_builder_framework_intermediary",
+                    runner: "fuchsia_component_test_mocks",
+                    from: "#fuchsia_component_test_framework_intermediary",
                 },
             ],
             resolvers: [
                 {
-                    resolver: "topology_builder_registry",
-                    from: "#topology_builder_framework_intermediary",
-                    scheme: "topology-builder-registry",
+                    resolver: "fuchsia_component_test_registry",
+                    from: "#fuchsia_component_test_framework_intermediary",
+                    scheme: "fuchsia-component-test-registry",
                 },
             ],
             debug: [

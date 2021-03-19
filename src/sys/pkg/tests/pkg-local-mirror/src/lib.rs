@@ -15,12 +15,12 @@ use {
     fidl_fuchsia_io2 as fio2,
     fidl_fuchsia_pkg::{LocalMirrorMarker, LocalMirrorProxy},
     fuchsia_component::server::ServiceFs,
+    fuchsia_component_test::{builder::*, mock::MockHandles, RealmInstance},
     fuchsia_url::pkg_url::RepoUrl,
     fuchsia_zircon::Status,
     futures::{channel::oneshot, prelude::*},
     parking_lot::Mutex,
     std::sync::Arc,
-    topology_builder::{builder::*, mock::MockHandles, TopologyInstance},
     vfs::{
         directory::entry::{DirectoryEntry, EntryInfo},
         execution_scope::ExecutionScope,
@@ -68,7 +68,7 @@ impl TestEnvBuilder {
         const COMPONENT_UNDER_TEST: &str = "pkg-local-mirror";
         const USB_MOCK_COMPONENT: &str = "usb-source";
 
-        let mut builder = TopologyBuilder::new().await.expect("created");
+        let mut builder = RealmBuilder::new().await.expect("created");
 
         // Create the component-under-test (pkg-local-mirror) child component.
         // This is the production component + manifest.
@@ -136,7 +136,7 @@ impl TestEnvBuilder {
 }
 
 struct TestEnv {
-    instance: TopologyInstance,
+    instance: RealmInstance,
 }
 
 impl TestEnv {
