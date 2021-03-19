@@ -4,10 +4,6 @@
 
 package tefmocheck
 
-import (
-	"fmt"
-)
-
 // NoTestsRanCheck checks whether the task reported running zero tests. It may
 // actually have run tests but not reported them, which is still an issue.
 type NoTestsRanCheck struct{}
@@ -21,5 +17,5 @@ func (c NoTestsRanCheck) Name() string {
 }
 
 func (c NoTestsRanCheck) DebugText() string {
-	return fmt.Sprintf("The task didn't run any tests, or didn't produce any test results.")
+	return "The task didn't run any tests, or didn't produce any test results."
 }

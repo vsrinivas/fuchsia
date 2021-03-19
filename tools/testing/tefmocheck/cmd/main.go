@@ -35,6 +35,9 @@ func loadSwarmingTaskSummary(path string) (*tefmocheck.SwarmingTaskSummary, erro
 	if err := json.Unmarshal(data, &ret); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal swarming task summary: %w", err)
 	}
+	if ret.Results == nil {
+		return nil, fmt.Errorf("swarming task summary did not contain top level `results`. Loaded from path: %s", path)
+	}
 	return &ret, nil
 }
 

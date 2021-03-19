@@ -106,7 +106,7 @@ func (c *stringInLogCheck) checkBytes(toCheck []byte) bool {
 				// check, so check if end string appears after. If so, then this
 				// occurrence is included in this exceptBlock, so we can break and
 				// check the next occurrence of the string.
-				if bytes.Index(afterBlock, []byte(block.endString)) >= 0 {
+				if bytes.Contains(afterBlock, []byte(block.endString)) {
 					foundString = false
 					break
 				}
@@ -125,7 +125,6 @@ func (c *stringInLogCheck) checkBytes(toCheck []byte) bool {
 
 func (c *stringInLogCheck) Name() string {
 	return path.Join("string_in_log", string(c.Type), strings.ReplaceAll(c.String, " ", "_"), c.testName)
-
 }
 
 func (c *stringInLogCheck) DebugText() string {

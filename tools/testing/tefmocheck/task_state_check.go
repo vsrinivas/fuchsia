@@ -67,10 +67,10 @@ func (c *taskInternalFailureCheck) DebugText() string {
 func debugTextForSwarmingSummary(swarmingSummary *SwarmingTaskSummary) string {
 	ret := fmt.Sprintf("Swarming task state: %s.", swarmingSummary.Results.State)
 	if swarmingSummary.Results.Failure {
-		ret += fmt.Sprintf("\nTask failure.")
+		ret += "\nTask failure."
 	}
 	if swarmingSummary.Results.InternalFailure {
-		ret += fmt.Sprintf("\nTask internal failure.")
+		ret += "\nTask internal failure."
 	}
 	return fmt.Sprintf(`%s
 The task's log is in %s.
