@@ -2,23 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//src/sys/build/components.gni")
 
-package("environment_delegating_runner") {
+fuchsia_package_with_single_component("environment_delegating_runner") {
   testonly = true
-
-  binaries = [
-    {
-      name = "environment_delegating_runner"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("meta/environment_delegating_runner.cmx")
-      dest = "environment_delegating_runner.cmx"
-    },
-  ]
-
+  manifest = "meta/environment_delegating_runner.cmx"
   deps = [ ":bin" ]
 }
 

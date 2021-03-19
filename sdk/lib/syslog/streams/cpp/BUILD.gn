@@ -4,7 +4,7 @@
 
 import("//build/cpp/sdk_source_set.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 group("streams") {
   testonly = true
@@ -45,12 +45,7 @@ test("streams-encoder-test") {
   configs += [ "//build/config:Wno-conversion" ]
 }
 
-test_package("streams-cpp-tests") {
-  tests = [
-    {
-      name = "streams-encoder-test"
-    },
-  ]
-
+fuchsia_unittest_package("streams-cpp-tests") {
+  manifest = "meta/streams-encoder-test.cmx"
   deps = [ ":streams-encoder-test" ]
 }
