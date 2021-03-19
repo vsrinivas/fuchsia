@@ -5,44 +5,19 @@
 package fidlgen_cpp
 
 import (
-	"runtime"
+	"fmt"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
 )
 
-func assertEqual(t *testing.T, left interface{}, right interface{}, opts ...cmp.Option) {
+func performEqualCheck(left interface{}, right interface{}, opts ...cmp.Option) (bool, string) {
+	var failed bool
+	var log string
 	if !cmp.Equal(left, right, opts...) {
-		_, file, line, ok := runtime.Caller(1)
-		if !ok {
-			panic("Failed to get caller.")
-		}
-		t.Fatalf(
+		failed = true
+		log = fmt.Sprintf(
 			`
-At %s:%v
-Required left/right to be equal, but
-left:
-%+v
-
-right:
-%+v
-
-diff:
-%v
-`,
-			file, line, left, right, cmp.Diff(left, right, opts...))
-	}
-}
-
-func expectEqual(t *testing.T, left interface{}, right interface{}, opts ...cmp.Option) {
-	if !cmp.Equal(left, right, opts...) {
-		_, file, line, ok := runtime.Caller(1)
-		if !ok {
-			panic("Failed to get caller.")
-		}
-		t.Errorf(
-			`
-At %s:%v
 Expected left/right to be equal, but
 left:
 %+v
@@ -53,43 +28,53 @@ right:
 diff:
 %v
 `,
-			file, line, left, right, cmp.Diff(left, right, opts...))
+			left, right, cmp.Diff(left, right, opts...))
+	}
+	return failed, log
+}
+
+func assertEqual(t *testing.T, left interface{}, right interface{}, opts ...cmp.Option) {
+	t.Helper()
+	if failed, log := performEqualCheck(left, right, opts...); failed {
+		t.Fatal(log)
 	}
 }
 
-func assertNotEqual(t *testing.T, left interface{}, right interface{}, opts ...cmp.Option) {
-	if cmp.Equal(left, right, opts...) {
-		_, file, line, ok := runtime.Caller(1)
-		if !ok {
-			panic("Failed to get caller.")
-		}
-		t.Fatalf(`
-At %s:%v
-Required left/right to be different, but
-left=
-%+v
-=right
-`, file, line, left)
+func expectEqual(t *testing.T, left interface{}, right interface{}, opts ...cmp.Option) {
+	t.Helper()
+	if failed, log := performEqualCheck(left, right, opts...); failed {
+		t.Error(log)
 	}
 }
 
-func expectNotEqual(t *testing.T, left interface{}, right interface{}, opts ...cmp.Option) {
+func performNotEqualCheck(left interface{}, right interface{}, opts ...cmp.Option) (failed bool, log string) {
 	if cmp.Equal(left, right, opts...) {
-		_, file, line, ok := runtime.Caller(1)
-		if !ok {
-			panic("Failed to get caller.")
-		}
-		t.Errorf(`
-At %s:%v
+		failed = true
+		log = fmt.Sprintf(`
 Expected left/right to be different, but
 left=
 %+v
 =right
-`, file, line, left)
+`, left)
+	}
+	return
+}
+
+func assertNotEqual(t *testing.T, left interface{}, right interface{}, opts ...cmp.Option) {
+	t.Helper()
+	if failed, log := performNotEqualCheck(left, right, opts...); failed {
+		t.Fatal(log)
 	}
 }
 
-func assertPanic(t *testing.T) {
+func expectNotEqual(t *testing.T, left interface{}, right interface{}, opts ...cmp.Option) {
+	t.Helper()
+	if failed, log := performNotEqualCheck(left, right, opts...); failed {
+		t.Error(log)
+	}
+}
+
+func assertPanicOccurs(t *testing.T) {
 	if r := recover(); r == nil {
 		t.Errorf("The code did not panic")
 	}

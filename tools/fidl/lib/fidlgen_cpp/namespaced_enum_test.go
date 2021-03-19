@@ -27,13 +27,13 @@ func TestExample(t *testing.T) {
 }
 
 func TestInvalidNamespace(t *testing.T) {
-	defer assertPanic(t)
+	defer assertPanicOccurs(t)
 
 	namespacedEnum(1)
 }
 
 func TestIncompatibleField(t *testing.T) {
-	defer assertPanic(t)
+	defer assertPanicOccurs(t)
 
 	type foo namespacedEnumMember
 	type bar namespacedEnumMember
@@ -47,7 +47,7 @@ func TestIncompatibleField(t *testing.T) {
 }
 
 func TestDifferingFieldTypes(t *testing.T) {
-	defer assertPanic(t)
+	defer assertPanicOccurs(t)
 
 	type foo namespacedEnumMember
 	type bar namespacedEnumMember
