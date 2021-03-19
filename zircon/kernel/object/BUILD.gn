@@ -38,6 +38,7 @@ zx_library("object") {
     "msi_allocation.cc",
     "msi_dispatcher.cc",
     "pager_dispatcher.cc",
+    "pager_proxy.cc",
     "pci_device_dispatcher.cc",
     "pci_interrupt_dispatcher.cc",
     "pinned_memory_token_dispatcher.cc",

@@ -23,14 +23,14 @@ typedef void (*drop_ref_cb_t)(void* ctx);
 
 // Struct used for making delayed page requests to a page provider.
 //
-// Currently, the two types of page providers are the pmm and PagerSources.
+// Currently, the two types of page providers are the pmm and PagerProxy.
 typedef struct page_request {
   // Offset and length of the request. These should be initialized before being
   // passed to the provider, and should not be accessed after being passed to the provider.
   //
   // The pmm does not care about the units (i.e. bytes vs pages), as long as these fields are
-  // consistent with each other and the implementation of |pages_available_cb|. PagerSources
-  // expect units of pages.
+  // consistent with each other and the implementation of |pages_available_cb|. PagerProxy
+  // expects units of pages.
   uint64_t offset;
   uint64_t length;
 
