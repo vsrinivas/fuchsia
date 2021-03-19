@@ -115,7 +115,7 @@ func (args argsWrapper) isResource() bool {
 // messageInner contains information about a Message that should be filled out
 // by the compiler.
 type messageInner struct {
-	TypeShape   fidl.TypeShape
+	fidl.TypeShape
 	CodingTable DeclName
 }
 
@@ -125,29 +125,24 @@ type messageInner struct {
 type message struct {
 	messageInner
 
-	InlineSize     int
-	MaxHandles     int
-	MaxOutOfLine   int
+	fidl.Strictness
 	ByteBufferType string
-	Padding        bool
-	Flexible       bool
-	HasPointer     bool
 	IsResource     bool
 }
 
 func newMessage(inner messageInner, args []Parameter, boundedness boundedness) message {
+	strictness := fidl.Strictness(!inner.TypeShape.HasFlexibleEnvelope)
 	return message{
 		messageInner: inner,
-		InlineSize:   inner.TypeShape.InlineSize,
-		MaxHandles:   inner.TypeShape.MaxHandles,
-		MaxOutOfLine: inner.TypeShape.MaxOutOfLine,
+		Strictness:   strictness,
 		ByteBufferType: byteBufferType(
 			inner.TypeShape.InlineSize, inner.TypeShape.MaxOutOfLine, boundedness),
-		Padding:    inner.TypeShape.HasPadding,
-		Flexible:   inner.TypeShape.HasFlexibleEnvelope,
-		HasPointer: inner.TypeShape.Depth > 0,
 		IsResource: argsWrapper(args).isResource(),
 	}
+}
+
+func (m message) HasPointer() bool {
+	return m.Depth > 0
 }
 
 // methodInner contains information about a Method that should be filled out by
@@ -286,10 +281,10 @@ func (m Method) buildLLContextProps(context LLContext) LLContextProps {
 		stackAllocRequest = len(m.RequestArgs) == 0 ||
 			(m.Request.InlineSize+m.Request.MaxOutOfLine) < llcppMaxStackAllocSize
 		stackAllocResponse = len(m.ResponseArgs) == 0 ||
-			(!m.Response.Flexible && (m.Response.InlineSize+m.Response.MaxOutOfLine) < llcppMaxStackAllocSize)
+			(!m.Response.IsFlexible() && (m.Response.InlineSize+m.Response.MaxOutOfLine) < llcppMaxStackAllocSize)
 	} else {
 		stackAllocRequest = len(m.RequestArgs) == 0 ||
-			(!m.Request.Flexible && (m.Request.InlineSize+m.Request.MaxOutOfLine) < llcppMaxStackAllocSize)
+			(!m.Request.IsFlexible() && (m.Request.InlineSize+m.Request.MaxOutOfLine) < llcppMaxStackAllocSize)
 		stackAllocResponse = len(m.ResponseArgs) == 0 ||
 			(m.Response.InlineSize+m.Response.MaxOutOfLine) < llcppMaxStackAllocSize
 	}
