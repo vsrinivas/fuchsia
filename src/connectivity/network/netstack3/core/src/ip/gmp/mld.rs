@@ -36,7 +36,7 @@ use crate::context::{FrameContext, InstantContext, RngStateContext, TimerContext
 use crate::device::link::LinkDevice;
 use crate::device::DeviceIdContext;
 use crate::ip::gmp::{
-    Action, Actions, GmpAction, GmpStateMachine, GroupJoinResult, GroupLeaveResult,
+    Action, Actions, GmpAction, GmpHandler, GmpStateMachine, GroupJoinResult, GroupLeaveResult,
     MulticastGroupSet, ProtocolSpecific,
 };
 use crate::Instant;
@@ -76,38 +76,19 @@ pub(crate) trait MldContext<D: LinkDevice>:
 
     /// Is MLD enabled for `device`?
     ///
-    /// If `mld_enabled` returns false, then [`MldHandler::mld_join_group`] and
-    /// [`MldHandler::mld_leave_group`] will still join/leave multicast groups
-    /// locally, but no outbound MLD traffic will be generated.
+    /// If `mld_enabled` returns false, then [`GmpHandler::gmp_join_group`] and
+    /// [`GmpHandler::gmp_leave_group`] will still join/leave multicast groups
+    /// locally, and inbound MLD packets will still be processed, but no timers
+    /// will be installed, and no outbound MLD traffic will be generated.
     fn mld_enabled(&self, device: Self::DeviceId) -> bool;
 }
 
-/// An implementation of the Multicast Listener Discovery (MLD) protocol.
-pub(crate) trait MldHandler<D: LinkDevice>: DeviceIdContext<D> {
-    /// Joins the given multicast group.
-    fn mld_join_group(
+impl<D: LinkDevice, C: MldContext<D>> GmpHandler<D, Ipv6> for C {
+    fn gmp_join_group(
         &mut self,
         device: Self::DeviceId,
         group_addr: MulticastAddr<Ipv6Addr>,
-    ) -> GroupJoinResult<()>;
-
-    /// Leaves the given multicast group.
-    ///
-    /// If the `device` is not already a member of the multicast group,
-    /// `mld_leave_group` returns `Err(IgmpError::NotAMember)`.
-    fn mld_leave_group(
-        &mut self,
-        device: Self::DeviceId,
-        group_addr: MulticastAddr<Ipv6Addr>,
-    ) -> GroupLeaveResult<()>;
-}
-
-impl<D: LinkDevice, C: MldContext<D>> MldHandler<D> for C {
-    fn mld_join_group(
-        &mut self,
-        device: Self::DeviceId,
-        group_addr: MulticastAddr<Ipv6Addr>,
-    ) -> GroupJoinResult<()> {
+    ) -> GroupJoinResult {
         let now = self.now();
         let (state, rng) = self.get_state_rng_with(device);
         state
@@ -115,11 +96,11 @@ impl<D: LinkDevice, C: MldContext<D>> MldHandler<D> for C {
             .map(|actions| run_actions(self, device, actions, group_addr))
     }
 
-    fn mld_leave_group(
+    fn gmp_leave_group(
         &mut self,
         device: Self::DeviceId,
         group_addr: MulticastAddr<Ipv6Addr>,
-    ) -> GroupLeaveResult<()> {
+    ) -> GroupLeaveResult {
         self.get_state_mut_with(device)
             .leave_group_gmp(group_addr)
             .map(|actions| run_actions(self, device, actions, group_addr))
@@ -129,11 +110,11 @@ impl<D: LinkDevice, C: MldContext<D>> MldHandler<D> for C {
 /// A handler for incoming MLD packets.
 ///
 /// This trait is designed to be implemented in two situations. First, just like
-/// [`MldHandler`], a blanket implementation is provided for all `C:
+/// [`GmpHandler`], a blanket implementation is provided for all `C:
 /// MldContext`. This provides separate implementations for each link device
 /// protocol that supports MLD.
 ///
-///  Second, unlike `MldHandler`, a single impl is provided by the device layer
+/// Second, unlike `GmpHandler`, a single impl is provided by the device layer
 /// itself, setting the `D` parameter to `()`. This is used by the `icmp` module
 /// to dispatch inbound MLD packets. This impl is responsible for dispatching to
 /// the appropriate link device-specific implementation.
@@ -670,7 +651,7 @@ mod tests {
     #[test]
     fn test_mld_simple_integration() {
         let mut ctx = DummyContext::default();
-        ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
 
         receive_mld_query(&mut ctx, Duration::from_secs(10), GROUP_ADDR);
         assert!(ctx.trigger_next_timer());
@@ -690,7 +671,7 @@ mod tests {
     fn test_mld_immediate_query() {
         testutil::set_logger_for_test();
         let mut ctx = DummyContext::default();
-        ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.frames().len(), 1);
 
         receive_mld_query(&mut ctx, Duration::from_secs(0), GROUP_ADDR);
@@ -708,7 +689,7 @@ mod tests {
     #[test]
     fn test_mld_integration_fallback_from_idle() {
         let mut ctx = DummyContext::default();
-        ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.frames().len(), 1);
 
         assert!(ctx.trigger_next_timer());
@@ -737,7 +718,7 @@ mod tests {
     #[test]
     fn test_mld_integration_immediate_query_wont_fallback() {
         let mut ctx = DummyContext::default();
-        ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.frames().len(), 1);
 
         assert!(ctx.trigger_next_timer());
@@ -770,7 +751,7 @@ mod tests {
         // This seed was carefully chosen to produce a substantial duration
         // value below.
         ctx.seed_rng(123456);
-        ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         let instant1 = ctx.timers()[0].0.clone();
         let start = ctx.now();
@@ -795,14 +776,14 @@ mod tests {
     #[test]
     fn test_mld_integration_last_send_leave() {
         let mut ctx = DummyContext::default();
-        ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         // The initial unsolicited report.
         assert_eq!(ctx.frames().len(), 1);
         assert!(ctx.trigger_next_timer());
         // The report after the delay.
         assert_eq!(ctx.frames().len(), 2);
-        assert_eq!(ctx.mld_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+        assert_eq!(ctx.gmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
         // Our leave message.
         assert_eq!(ctx.frames().len(), 3);
         // The first two messages should be reports.
@@ -824,7 +805,7 @@ mod tests {
     #[test]
     fn test_mld_integration_not_last_dont_send_leave() {
         let mut ctx = DummyContext::default();
-        ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert_eq!(ctx.timers().len(), 1);
         assert_eq!(ctx.frames().len(), 1);
         receive_mld_report(&mut ctx, GROUP_ADDR);
@@ -832,7 +813,7 @@ mod tests {
         // The report should be discarded because we have received from someone
         // else.
         assert_eq!(ctx.frames().len(), 1);
-        assert_eq!(ctx.mld_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+        assert_eq!(ctx.gmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
         // A leave message is not sent.
         assert_eq!(ctx.frames().len(), 1);
         // The frames are all reports.
@@ -846,7 +827,7 @@ mod tests {
     fn test_mld_with_link_local() {
         let mut ctx = DummyContext::default();
         ctx.get_mut().ipv6_link_local = Some(MY_MAC.to_ipv6_link_local().addr());
-        ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR);
+        ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR);
         assert!(ctx.trigger_next_timer());
         for (_, frame) in ctx.frames() {
             ensure_frame(&frame, 131, GROUP_ADDR, GROUP_ADDR);
@@ -868,7 +849,7 @@ mod tests {
                 assert!(ctx.frames().is_empty());
             };
 
-            assert_eq!(ctx.mld_join_group(DummyLinkDeviceId, group), GroupJoinResult::Joined(()));
+            assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, group), GroupJoinResult::Joined(()));
             // We should have joined the group but not executed any `Actions`.
             assert_gmp_state!(ctx, &group, Delaying);
             assert_no_effect(&ctx);
@@ -885,7 +866,7 @@ mod tests {
             assert_gmp_state!(ctx, &group, Delaying);
             assert_no_effect(&ctx);
 
-            assert_eq!(ctx.mld_leave_group(DummyLinkDeviceId, group), GroupLeaveResult::Left(()));
+            assert_eq!(ctx.gmp_leave_group(DummyLinkDeviceId, group), GroupLeaveResult::Left(()));
             // We should have left the group but not executed any `Actions`.
             assert!(ctx.get_ref().groups.get(&group).is_none());
             assert_no_effect(&ctx);
@@ -918,7 +899,7 @@ mod tests {
 
         let mut ctx = DummyContext::default();
 
-        assert_eq!(ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
+        assert_eq!(ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR), GroupJoinResult::Joined(()));
         assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
         assert_eq!(ctx.frames().len(), 1);
         assert_eq!(ctx.timers().len(), 1);
@@ -927,7 +908,7 @@ mod tests {
         ensure_slice_addr(frame, 8, 24, Ipv6::UNSPECIFIED_ADDRESS);
 
         assert_eq!(
-            ctx.mld_join_group(DummyLinkDeviceId, GROUP_ADDR),
+            ctx.gmp_join_group(DummyLinkDeviceId, GROUP_ADDR),
             GroupJoinResult::AlreadyMember
         );
         assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
@@ -935,14 +916,14 @@ mod tests {
         assert_eq!(ctx.timers().len(), 1);
 
         assert_eq!(
-            ctx.mld_leave_group(DummyLinkDeviceId, GROUP_ADDR),
+            ctx.gmp_leave_group(DummyLinkDeviceId, GROUP_ADDR),
             GroupLeaveResult::StillMember
         );
         assert_gmp_state!(ctx, &GROUP_ADDR, Delaying);
         assert_eq!(ctx.frames().len(), 1);
         assert_eq!(ctx.timers().len(), 1);
 
-        assert_eq!(ctx.mld_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
+        assert_eq!(ctx.gmp_leave_group(DummyLinkDeviceId, GROUP_ADDR), GroupLeaveResult::Left(()));
         assert_eq!(ctx.frames().len(), 2);
         assert_eq!(ctx.timers().len(), 0);
         let frame = &ctx.frames().last().unwrap().1;

@@ -42,10 +42,12 @@ use alloc::vec::{self, Vec};
 use core::convert::TryFrom;
 use core::time::Duration;
 
-use net_types::ip::IpAddress;
+use net_types::ip::{Ip, IpAddress};
 use net_types::MulticastAddr;
 use rand::Rng;
 
+use crate::device::link::LinkDevice;
+use crate::device::DeviceIdContext;
 use crate::Instant;
 
 /// The result of joining a multicast group.
@@ -53,7 +55,7 @@ use crate::Instant;
 /// `GroupJoinResult` is the result of joining a multicast group in a
 /// [`MulticastGroupSet`].
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub(crate) enum GroupJoinResult<T> {
+pub(crate) enum GroupJoinResult<T = ()> {
     /// We were not previously a member of the group, so we joined the
     /// group.
     Joined(T),
@@ -79,7 +81,7 @@ impl<T> GroupJoinResult<T> {
 /// `GroupLeaveResult` is the result of leaving a multicast group in
 /// [`MulticastGroupSet`].
 #[cfg_attr(test, derive(Debug, Eq, PartialEq))]
-pub(crate) enum GroupLeaveResult<T> {
+pub(crate) enum GroupLeaveResult<T = ()> {
     /// The reference count reached 0, so we left the group.
     Left(T),
     /// The reference count did not reach 0, so we are still a member of the
@@ -215,6 +217,25 @@ impl<A: IpAddress, T> MulticastGroupSet<A, T> {
     }
 }
 
+/// An implementation of a Group Management Protocol (GMP) such as the Internet
+/// Group Management Protocol, Version 2 (IGMPv2) for IPv4 or the Multicast
+/// Listener Discovery (MLD) protocol for IPv6.
+pub(crate) trait GmpHandler<D: LinkDevice, I: Ip>: DeviceIdContext<D> {
+    /// Joins the given multicast group.
+    fn gmp_join_group(
+        &mut self,
+        device: Self::DeviceId,
+        group_addr: MulticastAddr<I::Addr>,
+    ) -> GroupJoinResult;
+
+    /// Leaves the given multicast group.
+    fn gmp_leave_group(
+        &mut self,
+        device: Self::DeviceId,
+        group_addr: MulticastAddr<I::Addr>,
+    ) -> GroupLeaveResult;
+}
+
 /// This trait is used to model the different parts of the two protocols.
 ///
 /// Though MLD and IGMPv2 share the most part of their state machines there are
@@ -307,10 +328,8 @@ enum Action<P: ProtocolSpecific> {
 struct Actions<P: ProtocolSpecific>(Vec<Action<P>>);
 
 impl<P: ProtocolSpecific> Actions<P> {
-    /// Create an initially empty set of actions.
-    fn nothing() -> Actions<P> {
-        Actions(Vec::new())
-    }
+    /// An empty set of actions.
+    const EMPTY: Actions<P> = Actions(Vec::new());
 
     /// Add a generic action to the set.
     fn push_generic(&mut self, action: GmpAction<P>) {
@@ -468,7 +487,7 @@ impl<P: ProtocolSpecific> GmpHostState<NonMember, P> {
     ) -> Transition<DelayingMember<I>, P> {
         let duration = P::cfg_unsolicited_report_interval(&self.cfg);
         let delay = random_report_timeout(rng, duration);
-        let mut actions = Actions::<P>::nothing();
+        let mut actions = Actions::EMPTY;
         actions.push_generic(GmpAction::SendReport(self.protocol_specific));
         actions.push_generic(GmpAction::ScheduleReportTimer(delay));
         self.transition(
@@ -488,7 +507,7 @@ impl<I: Instant, P: ProtocolSpecific> GmpHostState<DelayingMember<I>, P> {
         max_resp_time: Duration,
         now: I,
     ) -> Transition<DelayingMember<I>, P> {
-        let mut actions = Actions::<P>::nothing();
+        let mut actions = Actions::EMPTY;
         let last_reporter = self.state.last_reporter;
         let timer_expiration = compute_timer_expiration(
             rng,
@@ -512,7 +531,7 @@ impl<I: Instant, P: ProtocolSpecific> GmpHostState<DelayingMember<I>, P> {
     }
 
     fn leave_group(self) -> Transition<NonMember, P> {
-        let mut actions = Actions::<P>::nothing();
+        let mut actions = Actions::EMPTY;
         if self.state.last_reporter || P::cfg_send_leave_anyway(&self.cfg) {
             actions.push_generic(GmpAction::SendLeave);
         }
@@ -521,13 +540,13 @@ impl<I: Instant, P: ProtocolSpecific> GmpHostState<DelayingMember<I>, P> {
     }
 
     fn report_received(self) -> Transition<IdleMember, P> {
-        let mut actions = Actions::<P>::nothing();
+        let mut actions = Actions::EMPTY;
         actions.push_generic(GmpAction::StopReportTimer);
         self.transition(IdleMember { last_reporter: false }, actions)
     }
 
     fn report_timer_expired(self) -> Transition<IdleMember, P> {
-        let mut actions = Actions::<P>::nothing();
+        let mut actions = Actions::EMPTY;
         actions.push_generic(GmpAction::SendReport(self.protocol_specific));
         self.transition(IdleMember { last_reporter: true }, actions)
     }
@@ -541,7 +560,7 @@ impl<P: ProtocolSpecific> GmpHostState<IdleMember, P> {
         now: I,
     ) -> Transition<DelayingMember<I>, P> {
         let last_reporter = self.state.last_reporter;
-        let mut actions = Actions::<P>::nothing();
+        let mut actions = Actions::EMPTY;
         let timer_expiration = compute_timer_expiration(
             rng,
             None,
@@ -564,7 +583,7 @@ impl<P: ProtocolSpecific> GmpHostState<IdleMember, P> {
     }
 
     fn leave_group(self) -> Transition<NonMember, P> {
-        let mut actions = Actions::<P>::nothing();
+        let mut actions = Actions::EMPTY;
         if self.state.last_reporter || P::cfg_send_leave_anyway(&self.cfg) {
             actions.push_generic(GmpAction::SendLeave);
         }
@@ -661,14 +680,14 @@ impl<I: Instant, P: ProtocolSpecific> MemberState<I, P> {
     fn report_received(self) -> (MemberState<I, P>, Actions<P>) {
         match self {
             MemberState::Delaying(state) => state.report_received().into_state_actions(),
-            state => (state, Actions::nothing()),
+            state => (state, Actions::EMPTY),
         }
     }
 
     fn report_timer_expired(self) -> (MemberState<I, P>, Actions<P>) {
         match self {
             MemberState::Delaying(state) => state.report_timer_expired().into_state_actions(),
-            state => (state, Actions::nothing()),
+            state => (state, Actions::EMPTY),
         }
     }
 }
@@ -751,7 +770,7 @@ impl<I: Instant, P: ProtocolSpecific> GmpStateMachine<I, P> {
                         MemberState::Idle(GmpHostState { state, cfg, protocol_specific: ps })
                     }
                 },
-                Actions::<P>::nothing(),
+                Actions::EMPTY,
             )
         });
     }

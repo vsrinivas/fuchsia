@@ -39,13 +39,9 @@ use crate::device::{
     AddrConfigType, AddressEntry, AddressError, AddressState, BufferIpDeviceContext,
     DeviceIdContext, FrameDestination, IpDeviceContext, RecvIpFrameMeta, Tentative,
 };
-use crate::ip::gmp::igmp::{
-    IgmpContext, IgmpGroupState, IgmpHandler, IgmpPacketMetadata, IgmpTimerId,
-};
-use crate::ip::gmp::mld::{
-    MldContext, MldFrameMetadata, MldGroupState, MldHandler, MldReportDelay,
-};
-use crate::ip::gmp::{GroupJoinResult, GroupLeaveResult, MulticastGroupSet};
+use crate::ip::gmp::igmp::{IgmpContext, IgmpGroupState, IgmpPacketMetadata, IgmpTimerId};
+use crate::ip::gmp::mld::{MldContext, MldFrameMetadata, MldGroupState, MldReportDelay};
+use crate::ip::gmp::{GmpHandler, GroupJoinResult, GroupLeaveResult, MulticastGroupSet};
 #[cfg(test)]
 use crate::Context;
 use crate::Instant;
@@ -1002,10 +998,10 @@ pub(super) fn join_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
     multicast_addr: MulticastAddr<A>,
 ) {
     #[ipv4addr]
-    let res = ctx.igmp_join_group(device_id, multicast_addr);
+    let res = <C as GmpHandler<_, Ipv4>>::gmp_join_group(ctx, device_id, multicast_addr);
 
     #[ipv6addr]
-    let res = ctx.mld_join_group(device_id, multicast_addr);
+    let res = <C as GmpHandler<_, Ipv6>>::gmp_join_group(ctx, device_id, multicast_addr);
 
     match res {
         GroupJoinResult::Joined(()) => {
@@ -1051,10 +1047,10 @@ pub(super) fn leave_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
     multicast_addr: MulticastAddr<A>,
 ) {
     #[ipv4addr]
-    let res = ctx.igmp_leave_group(device_id, multicast_addr);
+    let res = <C as GmpHandler<_, Ipv4>>::gmp_leave_group(ctx, device_id, multicast_addr);
 
     #[ipv6addr]
-    let res = ctx.mld_leave_group(device_id, multicast_addr);
+    let res = <C as GmpHandler<_, Ipv6>>::gmp_leave_group(ctx, device_id, multicast_addr);
 
     match res {
         GroupLeaveResult::Left(()) => {
