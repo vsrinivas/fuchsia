@@ -4,7 +4,7 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 rustc_binary("mock_services") {
   name = "pwrbtn_monitor_mock_services"
@@ -45,36 +45,30 @@ rustc_test("test_driver") {
   sources = [ "src/test.rs" ]
 }
 
-test_package("pwrbtn-monitor-integration-test") {
-  deps = [
-    ":mock_services",
-    ":test_driver",
-    "//src/bringup/bin/pwrbtn-monitor",
-  ]
-  v2_tests = [
-    {
-      name = "pwrbtn_monitor_integration_test"
-      environments = basic_envs
-    },
-  ]
-  binaries = [
-    {
-      name = "pwrbtn-monitor"
-    },
-    {
-      name = "pwrbtn_monitor_mock_services"
-    },
-  ]
+fuchsia_component("pwrbtn_monitor_component") {
+  testonly = true
+  component_name = "pwrbtn-monitor"
+  manifest = "//src/bringup/bin/pwrbtn-monitor/meta/pwrbtn-monitor.cml"
+  deps = [ "//src/bringup/bin/pwrbtn-monitor" ]
+}
 
-  meta = [
-    {
-      path = rebase_path(
-              "//src/bringup/bin/pwrbtn-monitor/meta/pwrbtn-monitor.cml")
-      dest = "pwrbtn-monitor.cm"
-    },
-    {
-      path = rebase_path("meta/test-driver.cml")
-      dest = "test-driver.cm"
-    },
+fuchsia_component("test_driver_component") {
+  testonly = true
+  component_name = "test-driver"
+  manifest = "meta/test-driver.cml"
+  deps = [ ":test_driver" ]
+}
+
+fuchsia_test_component("mock_services_component") {
+  component_name = "mock_services"
+  manifest = "meta/pwrbtn_monitor_integration_test.cml"
+  deps = [ ":mock_services" ]
+}
+
+fuchsia_test_package("pwrbtn-monitor-integration-test") {
+  test_components = [ ":mock_services_component" ]
+  deps = [
+    ":pwrbtn_monitor_component",
+    ":test_driver_component",
   ]
 }
