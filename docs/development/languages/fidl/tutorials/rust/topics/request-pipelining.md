@@ -1,4 +1,4 @@
-# Request pipelining in rust
+# Request pipelining in Rust
 
 ## Prerequisites
 
