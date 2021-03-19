@@ -1318,23 +1318,10 @@ void LogicalBufferCollection::BindSharedCollectionInternal(BufferCollectionToken
         // related channels, and it helps get the VMO handles closed ASAP to avoid letting those
         // continue to use space of a MemoryAllocator's pool of pre-reserved space (for example).
         //
-        // We only log if a participant closed before the initiator, as the initiator closing first
-        // is considered normal.
-        if (&collection.node_properties() == root_.get()) {
-          // Normal for initiator to close first, in which case this isn't necessarily a failure.
-          // If we had client to server epitaphs, we'd be able to tell the difference and log only
-          // if a participant closed the channel without sending a ZX_OK epitaph.  But we don't have
-          // client to server epitaphs so far.
-          FailDownFrom(tree_to_fail, status);
-        } else {
-          // If this is too noisy, we can just do FailDownFrom() for both, but it'd be nice if
-          // participants other than the initiator wouldn't be the first to cause
-          // LogicalBufferCollection failure.
-          LogAndFailDownFrom(FROM_HERE, tree_to_fail, status,
-                             "Child BufferCollection failure causing LogicalBufferCollection "
-                             "failure (initiator should close first) - status: %d",
-                             status);
-        }
+        // We don't complain when a non-initiator participant closes first, since even if we prefer
+        // that the initiator close first, the channels are separate so we could see some
+        // reordering.
+        FailDownFrom(tree_to_fail, status);
       } else {
         // This also removes the sub-tree, which can reduce SUM(min_buffer_count_for_camping) (or
         // similar for other constraints) to make room for a replacement sub-tree.  The replacement
