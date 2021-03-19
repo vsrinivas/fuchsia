@@ -6,7 +6,7 @@ use crate::base::SettingInfo;
 use crate::do_not_disturb::types::DoNotDisturbInfo;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
     controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
@@ -47,16 +47,23 @@ impl controller::Handle for DoNotDisturbController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetDnD(dnd_info) => {
-                let mut stored_value = self.client.read::<DoNotDisturbInfo>().await;
+                let mut stored_value = self.client.read_setting::<DoNotDisturbInfo>().await;
                 if dnd_info.user_dnd.is_some() {
                     stored_value.user_dnd = dnd_info.user_dnd;
                 }
                 if dnd_info.night_mode_dnd.is_some() {
                     stored_value.night_mode_dnd = dnd_info.night_mode_dnd;
                 }
-                Some(write(&self.client, stored_value, false).await.into_handler_result())
+                Some(
+                    self.client
+                        .write_setting(stored_value.into(), false)
+                        .await
+                        .into_handler_result(),
+                )
             }
-            Request::Get => Some(Ok(Some(SettingInfo::DoNotDisturb(self.client.read().await)))),
+            Request::Get => Some(
+                self.client.read_setting_info::<DoNotDisturbInfo>().await.into_handler_result(),
+            ),
             _ => None,
         }
     }
