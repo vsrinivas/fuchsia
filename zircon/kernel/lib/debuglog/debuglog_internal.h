@@ -28,7 +28,7 @@ struct DLog {
   // Mark this DLog as being shutdown.  Once called, subsequent |write| operations will fail.
   void shutdown();
 
-  SpinLock lock;
+  DECLARE_SPINLOCK(DLog) lock;
 
   size_t head TA_GUARDED(lock) = 0;
   size_t tail TA_GUARDED(lock) = 0;

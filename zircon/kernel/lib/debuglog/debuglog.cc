@@ -149,7 +149,7 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str)
 
   bool holding_thread_lock;
   {
-    AutoSpinLock lock{&this->lock};
+    Guard<SpinLock, IrqSave> guard{&this->lock};
 
     if (this->shutdown_requested_) {
       return ZX_ERR_BAD_STATE;
@@ -231,7 +231,7 @@ zx_status_t DLog::write(uint32_t severity, uint32_t flags, ktl::string_view str)
 }
 
 void DLog::shutdown() {
-  AutoSpinLock lock{&this->lock};
+  Guard<SpinLock, IrqSave> guard{&lock};
   this->shutdown_requested_ = true;
 }
 
@@ -242,7 +242,7 @@ zx_status_t DlogReader::Read(uint32_t flags, dlog_record_t* record, size_t* _act
   zx_status_t status = ZX_ERR_SHOULD_WAIT;
 
   {
-    AutoSpinLock lock{&log->lock};
+    Guard<SpinLock, IrqSave> guard{&log->lock};
 
     size_t rtail = tail_;
     uint32_t rolled_out = 0;
@@ -310,7 +310,7 @@ void DlogReader::Initialize(NotifyCallback* notify, void* cookie) {
   bool do_notify = false;
 
   {
-    AutoSpinLock lock{&log->lock};
+    Guard<SpinLock, IrqSave> guard{&log->lock};
     tail_ = log->tail;
     do_notify = (log->tail != log->head);
   }
@@ -332,7 +332,7 @@ void DlogReader::InitializeForTest(DLog* log) {
   log->readers.push_back(this);
 
   {
-    AutoSpinLock lock{&log->lock};
+    Guard<SpinLock, IrqSave> guard{&log->lock};
     tail_ = log->tail;
   }
 }
