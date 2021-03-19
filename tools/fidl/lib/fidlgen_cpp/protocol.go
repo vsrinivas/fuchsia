@@ -31,7 +31,7 @@ type protocolInner struct {
 	RequestDecoderName  DeclVariant
 	ResponseEncoderName DeclVariant
 	ResponseDecoderName DeclVariant
-	ByteBufferType      string
+	SyncEventAllocation allocation
 	Methods             []Method
 	FuzzingName         string
 	TestBase            DeclName
@@ -126,18 +126,37 @@ type message struct {
 	messageInner
 
 	fidl.Strictness
-	ByteBufferType string
-	IsResource     bool
+	IsResource       bool
+	ClientAllocation allocation
+	ServerAllocation allocation
 }
 
-func newMessage(inner messageInner, args []Parameter, boundedness boundedness) message {
+// methodContext indicates where the request/response is used.
+// The allocation strategies differ for client and server contexts, in LLCPP.
+type methodContext int
+
+const (
+	_ methodContext = iota
+	clientContext
+	serverContext
+)
+
+type boundednessQuery func(methodContext, fidl.Strictness) boundedness
+
+func newMessage(inner messageInner, args []Parameter, boundednessQuery boundednessQuery) message {
 	strictness := fidl.Strictness(!inner.TypeShape.HasFlexibleEnvelope)
 	return message{
 		messageInner: inner,
 		Strictness:   strictness,
-		ByteBufferType: byteBufferType(
-			inner.TypeShape.InlineSize, inner.TypeShape.MaxOutOfLine, boundedness),
-		IsResource: argsWrapper(args).isResource(),
+		IsResource:   argsWrapper(args).isResource(),
+		ClientAllocation: computeAllocation(
+			inner.InlineSize,
+			inner.MaxOutOfLine,
+			boundednessQuery(clientContext, strictness)),
+		ServerAllocation: computeAllocation(
+			inner.InlineSize,
+			inner.MaxOutOfLine,
+			boundednessQuery(serverContext, strictness)),
 	}
 }
 
@@ -173,7 +192,38 @@ type Method struct {
 	CallbackType         string
 	ResponseHandlerType  string
 	ResponderType        string
-	LLProps              LLProps
+	// Protocol is a reference to the containing protocol, for the
+	// convenience of golang templates.
+	Protocol DeclName
+}
+
+type messageDirection int
+
+const (
+	_ messageDirection = iota
+	messageDirectionRequest
+	messageDirectionResponse
+)
+
+// Compute boundedness based on client/server, request/response, and strictness.
+func (d messageDirection) queryBoundedness(c methodContext, s fidl.Strictness) boundedness {
+	switch d {
+	case messageDirectionRequest:
+		if c == clientContext {
+			// Allocation is bounded when sending request from a client.
+			return boundednessBounded
+		} else {
+			return boundedness(s.IsStrict())
+		}
+	case messageDirectionResponse:
+		if c == serverContext {
+			// Allocation is bounded when sending response from a server.
+			return boundednessBounded
+		} else {
+			return boundedness(s.IsStrict())
+		}
+	}
+	panic(fmt.Sprintf("unexpected message direction: %v", d))
 }
 
 func newMethod(inner methodInner) Method {
@@ -182,27 +232,18 @@ func newMethod(inner methodInner) Method {
 		callbackType = changeIfReserved(fidl.Identifier(inner.Name + "Callback"))
 	}
 
-	var responseBoundedness boundedness = boundednessBounded
-	if inner.response.TypeShape.HasFlexibleEnvelope {
-		responseBoundedness = boundednessUnbounded
-	}
-
 	m := Method{
 		methodInner:          inner,
 		NameInLowerSnakeCase: fidl.ToSnakeCase(inner.Name),
 		OrdinalName:          fmt.Sprintf("k%s_%s_Ordinal", inner.protocolName.Natural.Name(), inner.Name),
-		Request:              newMessage(inner.request, inner.RequestArgs, boundednessBounded),
-		Response:             newMessage(inner.response, inner.ResponseArgs, responseBoundedness),
-		CallbackType:         callbackType,
-		ResponseHandlerType:  fmt.Sprintf("%s_%s_ResponseHandler", inner.protocolName.Natural.Name(), inner.Name),
-		ResponderType:        fmt.Sprintf("%s_%s_Responder", inner.protocolName.Natural.Name(), inner.Name),
-	}
-	m.LLProps = LLProps{
-		ProtocolName:      inner.protocolName.Wire,
-		LinearizeRequest:  len(inner.RequestArgs) > 0 && inner.request.TypeShape.Depth > 0,
-		LinearizeResponse: len(inner.ResponseArgs) > 0 && inner.response.TypeShape.Depth > 0,
-		ClientContext:     m.buildLLContextProps(clientContext),
-		ServerContext:     m.buildLLContextProps(serverContext),
+		Request: newMessage(inner.request,
+			inner.RequestArgs, messageDirectionRequest.queryBoundedness),
+		Response: newMessage(inner.response,
+			inner.ResponseArgs, messageDirectionResponse.queryBoundedness),
+		CallbackType:        callbackType,
+		ResponseHandlerType: fmt.Sprintf("%s_%s_ResponseHandler", inner.protocolName.Natural.Name(), inner.Name),
+		ResponderType:       fmt.Sprintf("%s_%s_Responder", inner.protocolName.Natural.Name(), inner.Name),
+		Protocol:            inner.protocolName,
 	}
 	return m
 }
@@ -232,28 +273,6 @@ func (m *Method) CallbackWrapper() string {
 	return "fit::function"
 }
 
-// LLContextProps contain context-dependent properties of a method specific to llcpp.
-// Context is client (write request and read response) or server (read request and write response).
-type LLContextProps struct {
-	// Should the request be allocated on the stack, in the managed flavor.
-	StackAllocRequest bool
-	// Should the response be allocated on the stack, in the managed flavor.
-	StackAllocResponse bool
-	// Total number of bytes of stack used for storing the request.
-	StackUseRequest int
-	// Total number of bytes of stack used for storing the response.
-	StackUseResponse int
-}
-
-// LLProps contain properties of a method specific to llcpp.
-type LLProps struct {
-	ProtocolName      DeclVariant
-	LinearizeRequest  bool
-	LinearizeResponse bool
-	ClientContext     LLContextProps
-	ServerContext     LLContextProps
-}
-
 type Parameter struct {
 	Type              Type
 	Name              string
@@ -265,44 +284,15 @@ func (p Parameter) NameAndType() (string, Type) {
 	return p.Name, p.Type
 }
 
-// LLContext indicates where the request/response is used.
-// The allocation strategies differ for client and server contexts.
-type LLContext int
-
-const (
-	clientContext LLContext = iota
-	serverContext LLContext = iota
-)
-
-func (m Method) buildLLContextProps(context LLContext) LLContextProps {
-	stackAllocRequest := false
-	stackAllocResponse := false
-	if context == clientContext {
-		stackAllocRequest = len(m.RequestArgs) == 0 ||
-			(m.Request.InlineSize+m.Request.MaxOutOfLine) < llcppMaxStackAllocSize
-		stackAllocResponse = len(m.ResponseArgs) == 0 ||
-			(!m.Response.IsFlexible() && (m.Response.InlineSize+m.Response.MaxOutOfLine) < llcppMaxStackAllocSize)
-	} else {
-		stackAllocRequest = len(m.RequestArgs) == 0 ||
-			(!m.Request.IsFlexible() && (m.Request.InlineSize+m.Request.MaxOutOfLine) < llcppMaxStackAllocSize)
-		stackAllocResponse = len(m.ResponseArgs) == 0 ||
-			(m.Response.InlineSize+m.Response.MaxOutOfLine) < llcppMaxStackAllocSize
+func allEventsStrict(methods []Method) fidl.Strictness {
+	strictness := fidl.IsStrict
+	for _, m := range methods {
+		if !m.HasRequest && m.HasResponse && m.Response.IsFlexible() {
+			strictness = fidl.IsFlexible
+			break
+		}
 	}
-
-	stackUseRequest := 0
-	stackUseResponse := 0
-	if stackAllocRequest {
-		stackUseRequest = m.Request.InlineSize + m.Request.MaxOutOfLine
-	}
-	if stackAllocResponse {
-		stackUseResponse = m.Response.InlineSize + m.Response.MaxOutOfLine
-	}
-	return LLContextProps{
-		StackAllocRequest:  stackAllocRequest,
-		StackAllocResponse: stackAllocResponse,
-		StackUseRequest:    stackUseRequest,
-		StackUseResponse:   stackUseResponse,
-	}
+	return strictness
 }
 
 func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
@@ -313,7 +303,6 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 		Natural: NewDeclVariant(codingTableName, protocolName.Natural.Namespace().Append("_internal")),
 	}
 	methods := []Method{}
-	maxResponseSize := 0
 	for _, v := range val.Methods {
 		name := changeIfReserved(v.Name)
 		requestCodingTable := codingTableBase.AppendName(string(v.Name) + "RequestTable")
@@ -350,13 +339,16 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 			Result:       result,
 		})
 		methods = append(methods, method)
+	}
+
+	var maxResponseSize int
+	for _, method := range methods {
 		if size := method.Response.InlineSize + method.Response.MaxOutOfLine; size > maxResponseSize {
 			maxResponseSize = size
 		}
 	}
 
 	fuzzingName := strings.ReplaceAll(strings.ReplaceAll(string(val.Name), ".", "_"), "/", "_")
-
 	r := newProtocol(protocolInner{
 		Attributes:          val.Attributes,
 		DeclName:            protocolName,
@@ -371,10 +363,12 @@ func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
 		RequestDecoderName:  protocolName.AppendName("_RequestDecoder").Natural,
 		ResponseEncoderName: protocolName.AppendName("_ResponseEncoder").Natural,
 		ResponseDecoderName: protocolName.AppendName("_ResponseDecoder").Natural,
-		ByteBufferType:      byteBufferType(maxResponseSize, 0, boundednessBounded),
-		Methods:             methods,
-		FuzzingName:         fuzzingName,
-		TestBase:            protocolName.AppendName("_TestBase").AppendNamespace("testing"),
+		SyncEventAllocation: computeAllocation(
+			maxResponseSize, 0, messageDirectionResponse.queryBoundedness(
+				clientContext, allEventsStrict(methods))),
+		Methods:     methods,
+		FuzzingName: fuzzingName,
+		TestBase:    protocolName.AppendName("_TestBase").AppendNamespace("testing"),
 	})
 	return r
 }
@@ -412,7 +406,37 @@ const (
 const llcppMaxStackAllocSize = 512
 const channelMaxMessageSize = 65536
 
-func byteBufferType(primarySize int, maxOutOfLine int, boundedness boundedness) string {
+// allocation describes the allocation strategy of some operation, such as
+// sending requests, receiving responses, or handling events. Note that the
+// allocation strategy may depend on client/server context, direction of the
+// message, and the content/shape of the message, as we make optimizations.
+type allocation struct {
+	IsStack bool
+	Size    int
+
+	bufferType bufferType
+	size       string
+}
+
+func (alloc allocation) ByteBufferType() string {
+	switch alloc.bufferType {
+	case inlineBuffer:
+		return fmt.Sprintf("::fidl::internal::InlineMessageBuffer<%s>", alloc.size)
+	case boxedBuffer:
+		return fmt.Sprintf("::fidl::internal::BoxedMessageBuffer<%s>", alloc.size)
+	}
+	panic(fmt.Sprintf("unexpected buffer type: %v", alloc.bufferType))
+}
+
+type bufferType int
+
+const (
+	_ bufferType = iota
+	inlineBuffer
+	boxedBuffer
+)
+
+func computeAllocation(primarySize int, maxOutOfLine int, boundedness boundedness) allocation {
 	var sizeString string
 	var size int
 	if boundedness == boundednessUnbounded || primarySize+maxOutOfLine > channelMaxMessageSize {
@@ -424,7 +448,18 @@ func byteBufferType(primarySize int, maxOutOfLine int, boundedness boundedness) 
 	}
 
 	if size > llcppMaxStackAllocSize {
-		return fmt.Sprintf("::fidl::internal::BoxedMessageBuffer<%s>", sizeString)
+		return allocation{
+			IsStack:    false,
+			Size:       0,
+			bufferType: boxedBuffer,
+			size:       sizeString,
+		}
+	} else {
+		return allocation{
+			IsStack:    true,
+			Size:       size,
+			bufferType: inlineBuffer,
+			size:       sizeString,
+		}
 	}
-	return fmt.Sprintf("::fidl::internal::InlineMessageBuffer<%s>", sizeString)
 }

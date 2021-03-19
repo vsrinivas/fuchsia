@@ -101,7 +101,7 @@ class {{ .Name }}::WeakEventSender {
 #ifdef __Fuchsia__
   {{- range .Events }}
     {{- /* Managed */}}
-zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
+zx_status_t {{ .Protocol.Name }}::EventSender::
 {{- template "SendEventManagedMethodSignature" . }} {
   ::fidl::OwnedEncodedMessage<{{ .Name }}Response> _response{
       {{- .ResponseArgs | ParamNames -}}
@@ -112,7 +112,7 @@ zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
     {{- /* Caller-allocated */}}
     {{- if .ResponseArgs }}
 {{ "" }}
-zx_status_t {{ .LLProps.ProtocolName.Name }}::EventSender::
+zx_status_t {{ .Protocol.Name }}::EventSender::
 {{- template "SendEventCallerAllocateMethodSignature" . }} {
   ::fidl::UnownedEncodedMessage<{{ .Name }}Response> _response(
       _buffer.data, _buffer.capacity

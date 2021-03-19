@@ -6,9 +6,11 @@ package codegen
 
 const fragmentClientAsyncMethodsTmpl = `
 {{- define "AsyncClientAllocationComment" -}}
-{{- $context := .LLProps.ClientContext }}
-{{- if $context.StackAllocRequest -}} Allocates {{ $context.StackUseRequest }} bytes of request buffer on the stack. The callback is stored on the heap.
-{{- else -}} The request and callback are allocated on the heap.
+{{- $alloc := .Request.ClientAllocation }}
+{{- if $alloc.IsStack -}}
+Allocates {{ $alloc.Size }} bytes of request buffer on the stack. The callback is stored on the heap.
+{{- else -}}
+The request and callback are allocated on the heap.
 {{- end }}
 {{- end }}
 
@@ -26,14 +28,14 @@ const fragmentClientAsyncMethodsTmpl = `
 
 {{- define "ClientAsyncRequestManagedMethodDefinition" }}
 #ifdef __Fuchsia__
-{{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::{{ .Name }}ResponseContext()
+{{ .Protocol }}::{{ .Name }}ResponseContext::{{ .Name }}ResponseContext()
     : ::fidl::internal::ResponseContext({{ .Name }}Response::Type, {{ .OrdinalName }}) {}
 
-void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* reply) {
+void {{ .Protocol }}::{{ .Name }}ResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<{{ .Name }}Response*>(reply));
 }
 
-::fidl::Result {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}(
+::fidl::Result {{ .Protocol.Name }}::ClientImpl::{{ .Name }}(
     {{ template "ClientAsyncRequestManagedMethodArguments" . }}) {
   class ResponseContext final : public {{ .Name }}ResponseContext {
    public:
@@ -64,7 +66,7 @@ void {{ .LLProps.ProtocolName }}::{{ .Name }}ResponseContext::OnReply(uint8_t* r
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-::fidl::Result {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }}) {
+::fidl::Result {{ .Protocol.Name }}::ClientImpl::{{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }}) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{ if .RequestArgs }}
   {{ .Name }}Request::UnownedEncodedMessage _request(_request_buffer.data, _request_buffer.capacity, _context->Txid()

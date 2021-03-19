@@ -24,15 +24,15 @@ class {{ .Name }};
 
 
 {{- define "ClientAllocationComment" -}}
-{{- $context := .LLProps.ClientContext }}
-{{- if StackUse $context }} Allocates {{ StackUse $context }} bytes of {{ "" }}
-{{- if not $context.StackAllocRequest -}} response {{- else -}}
-  {{- if not $context.StackAllocResponse -}} request {{- else -}} message {{- end -}}
+{{- if SyncCallTotalStackSize . }} Allocates {{ SyncCallTotalStackSize . }} bytes of {{ "" }}
+{{- if not .Request.ClientAllocation.IsStack -}} response {{- else -}}
+  {{- if not .Response.ClientAllocation.IsStack -}} request {{- else -}} message {{- end -}}
 {{- end }} buffer on the stack. {{- end }}
-{{- if and $context.StackAllocRequest $context.StackAllocResponse }} No heap allocation necessary.
+{{- if and .Request.ClientAllocation.IsStack .Response.ClientAllocation.IsStack -}}
+{{ "" }} No heap allocation necessary.
 {{- else }}
-  {{- if not $context.StackAllocRequest }} Request is heap-allocated. {{- end }}
-  {{- if not $context.StackAllocResponse }} Response is heap-allocated. {{- end }}
+  {{- if not .Request.ClientAllocation.IsStack }} Request is heap-allocated. {{- end }}
+  {{- if not .Response.ClientAllocation.IsStack }} Response is heap-allocated. {{- end }}
 {{- end }}
 {{- end }}
 
@@ -176,7 +176,7 @@ class {{ .Name }} final {
 #endif
 
      private:
-      {{ .Response.ByteBufferType }} bytes_;
+      {{ .Response.ServerAllocation.ByteBufferType }} bytes_;
       UnownedEncodedMessage message_;
     };
 
@@ -342,7 +342,7 @@ class {{ .Name }} final {
 #endif
 
      private:
-      {{ .Request.ByteBufferType }} bytes_;
+      {{ .Request.ClientAllocation.ByteBufferType }} bytes_;
       UnownedEncodedMessage message_;
     };
 
@@ -475,7 +475,7 @@ class {{ .Name }} final {
 
      private:
       {{- if .HasResponse }}
-        {{ .Response.ByteBufferType }} bytes_;
+        {{ .Response.ClientAllocation.ByteBufferType }} bytes_;
       {{- end }}
     };
     {{- end }}
@@ -554,7 +554,7 @@ class {{ .Name }} final {
       {{- end }}
     //{{ template "ClientAllocationComment" . }}
     static ResultOf::{{ .Name }} {{ .Name }}(
-          ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client_end
+          ::fidl::UnownedClientEnd<{{ .Protocol }}> _client_end
           {{- .RequestArgs | CommaParams }}) {
       return ResultOf::{{ .Name }}(_client_end
         {{- .RequestArgs | CommaParamNames -}}
@@ -885,12 +885,12 @@ extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
 {{ "" }}
     {{- if .HasRequest }}
 {{ "" }}
-    void {{ .LLProps.ProtocolName }}::{{ .Name }}Request::_InitHeader(zx_txid_t _txid) {
+    void {{ .Protocol }}::{{ .Name }}Request::_InitHeader(zx_txid_t _txid) {
       fidl_init_txn_header(&_hdr, _txid, {{ .OrdinalName }});
     }
       {{- if .Request.IsResource }}
 
-    void {{ .LLProps.ProtocolName }}::{{ .Name }}Request::_CloseHandles() {
+    void {{ .Protocol }}::{{ .Name }}Request::_CloseHandles() {
       {{- range .RequestArgs }}
         {{- CloseHandles . false false }}
       {{- end }}
@@ -899,12 +899,12 @@ extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
     {{- end }}
     {{- if .HasResponse }}
 {{ "" }}
-    void {{ .LLProps.ProtocolName }}::{{ .Name }}Response::_InitHeader() {
+    void {{ .Protocol }}::{{ .Name }}Response::_InitHeader() {
       fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
     }
       {{- if .Response.IsResource }}
 
-    void {{ .LLProps.ProtocolName }}::{{ .Name }}Response::_CloseHandles() {
+    void {{ .Protocol }}::{{ .Name }}Response::_CloseHandles() {
       {{- range .ResponseArgs }}
           {{- CloseHandles . false false }}
       {{- end }}

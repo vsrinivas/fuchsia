@@ -8,29 +8,29 @@ const fragmentClientSyncMethodsTmpl = `
 {{- define "ClientSyncRequestCallerAllocateMethodDefinition" }}
   {{- if .HasResponse }}
 #ifdef __Fuchsia__
-{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}
-{{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}_Sync(
+{{ .Protocol }}::UnownedResultOf::{{ .Name }}
+{{ .Protocol.Name }}::ClientImpl::{{ .Name }}_Sync(
      {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return UnownedResultOf::{{ .Name }}(
-      ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}>(_channel->handle())
+      ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
     {{- if .RequestArgs -}}
       , _request_buffer.data, _request_buffer.capacity
     {{- end -}}
       {{- .RequestArgs | CommaParamNames -}},
       _response_buffer.data, _response_buffer.capacity);
   }
-  return {{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}(
+  return {{ .Protocol }}::UnownedResultOf::{{ .Name }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif
   {{- else }}{{ if .RequestArgs }}
 #ifdef __Fuchsia__
-::fidl::Result {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}(
+::fidl::Result {{ .Protocol.Name }}::ClientImpl::{{ .Name }}(
     {{- template "SyncRequestCallerAllocateMethodArguments" . }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = UnownedResultOf::{{ .Name }}(
-      ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}>(_channel->handle())
+      ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
     {{- if .RequestArgs -}}
       , _request_buffer.data, _request_buffer.capacity
     {{- end }}
@@ -46,24 +46,24 @@ const fragmentClientSyncMethodsTmpl = `
 {{- define "ClientSyncRequestManagedMethodDefinition" }}
   {{- if .HasResponse }}
 #ifdef __Fuchsia__
-{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}
-{{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}_Sync({{ .RequestArgs | Params }}) {
+{{ .Protocol }}::ResultOf::{{ .Name }}
+{{ .Protocol.Name }}::ClientImpl::{{ .Name }}_Sync({{ .RequestArgs | Params }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     return ResultOf::{{ .Name }}(
-      ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}>(_channel->handle())
+      ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
       {{- .RequestArgs | CommaParamNames -}}
     );
   }
-  return {{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}(
+  return {{ .Protocol }}::ResultOf::{{ .Name }}(
     ::fidl::Result(ZX_ERR_CANCELED, ::fidl::kErrorChannelUnbound));
 }
 #endif
   {{- else }}
 #ifdef __Fuchsia__
-::fidl::Result {{ .LLProps.ProtocolName.Name }}::ClientImpl::{{ .Name }}({{ .RequestArgs | Params }}) {
+::fidl::Result {{ .Protocol.Name }}::ClientImpl::{{ .Name }}({{ .RequestArgs | Params }}) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
     auto _res = ResultOf::{{ .Name }}(
-      ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}>(_channel->handle())
+      ::fidl::UnownedClientEnd<{{ .Protocol }}>(_channel->handle())
       {{- .RequestArgs | CommaParamNames -}}
     );
     return ::fidl::Result(_res.status(), _res.error());

@@ -3648,7 +3648,7 @@ class TestProtocol final {
 #endif
 
      private:
-      ::fidl::internal::BoxedMessageBuffer<ZX_CHANNEL_MAX_MSG_BYTES> bytes_;
+      ::fidl::internal::InlineMessageBuffer<48> bytes_;
       UnownedEncodedMessage message_;
     };
 

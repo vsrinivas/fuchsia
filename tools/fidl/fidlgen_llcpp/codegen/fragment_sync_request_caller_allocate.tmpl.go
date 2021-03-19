@@ -19,7 +19,7 @@ const fragmentSyncRequestCallerAllocateTmpl = `
 {{- end }}
 
 {{- define "StaticCallSyncRequestCallerAllocateMethodArguments" -}}
-::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client_end
+::fidl::UnownedClientEnd<{{ .Protocol }}> _client_end
 {{- if .RequestArgs }}, {{ end }}
 {{- template "CallerBufferParams" .RequestArgs }}
 {{- if .HasResponse }}, ::fidl::BufferSpan _response_buffer{{ end }}
@@ -27,8 +27,8 @@ const fragmentSyncRequestCallerAllocateTmpl = `
 
 {{- define "SyncRequestCallerAllocateMethodDefinition" }}
 #ifdef __Fuchsia__
-{{ .LLProps.ProtocolName }}::UnownedResultOf::{{ .Name }}::{{ .Name }}(
-  ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
+{{ .Protocol }}::UnownedResultOf::{{ .Name }}::{{ .Name }}(
+  ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
   {{- if .RequestArgs -}}
   , uint8_t* _request_bytes, uint32_t _request_byte_capacity
   {{- end -}}

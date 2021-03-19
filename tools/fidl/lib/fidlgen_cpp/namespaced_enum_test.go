@@ -6,23 +6,7 @@ package fidlgen_cpp
 
 import (
 	"testing"
-
-	"github.com/google/go-cmp/cmp"
 )
-
-func assertEqual(t *testing.T, left interface{}, right interface{}) {
-	if !cmp.Equal(left, right) {
-		t.Fatalf(
-			"\nleft=%+v\nright=%+v\ndiff=%v",
-			left, right, cmp.Diff(left, right))
-	}
-}
-
-func assertNotEqual(t *testing.T, left interface{}, right interface{}) {
-	if cmp.Equal(left, right) {
-		t.Fatalf("\nleft=right=%+v", left)
-	}
-}
 
 func TestExample(t *testing.T) {
 	type color namespacedEnumMember
@@ -33,19 +17,13 @@ func TestExample(t *testing.T) {
 	}
 	Colors := namespacedEnum(colors{}).(colors)
 
-	assertEqual(t, Colors.Red, Colors.Red)
-	assertNotEqual(t, Colors.Red, Colors.Green)
-	assertNotEqual(t, Colors.Red, Colors.Blue)
+	expectEqual(t, Colors.Red, Colors.Red)
+	expectNotEqual(t, Colors.Red, Colors.Green)
+	expectNotEqual(t, Colors.Red, Colors.Blue)
 
-	assertEqual(t, int(Colors.Red), 1)
-	assertEqual(t, int(Colors.Green), 2)
-	assertEqual(t, int(Colors.Blue), 3)
-}
-
-func assertPanic(t *testing.T) {
-	if r := recover(); r == nil {
-		t.Errorf("The code did not panic")
-	}
+	expectEqual(t, int(Colors.Red), 1)
+	expectEqual(t, int(Colors.Green), 2)
+	expectEqual(t, int(Colors.Blue), 3)
 }
 
 func TestInvalidNamespace(t *testing.T) {

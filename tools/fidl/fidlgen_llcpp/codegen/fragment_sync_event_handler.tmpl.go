@@ -26,7 +26,7 @@ const fragmentSyncEventHandlerTmpl = `
     }
     return x;
   })();
-  {{ .ByteBufferType }} read_storage;
+  {{ .SyncEventAllocation.ByteBufferType }} read_storage;
   uint8_t* read_bytes = read_storage.data();
   zx_handle_info_t read_handles[kHandleAllocSize];
   uint32_t actual_bytes;

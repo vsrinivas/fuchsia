@@ -90,8 +90,10 @@ func (c *compiler) compileTable(val fidl.Table) Table {
 		BiggestOrdinal:  0,
 		MaxHandles:      val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine:    val.TypeShapeV1.MaxOutOfLine,
-		ByteBufferType:  byteBufferType(val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded),
-		HasPointer:      val.TypeShapeV1.Depth > 0,
+		ByteBufferType: computeAllocation(
+			val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded).
+			ByteBufferType(),
+		HasPointer: val.TypeShapeV1.Depth > 0,
 	}
 
 	for i, v := range val.SortedMembersNoReserved() {

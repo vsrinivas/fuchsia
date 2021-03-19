@@ -7,8 +7,8 @@ package codegen
 const fragmentSyncRequestManagedTmpl = `
 {{- define "SyncRequestManagedMethodDefinition" }}
 #ifdef __Fuchsia__
-{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}::{{ .Name }}(
-    ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
+{{ .Protocol }}::ResultOf::{{ .Name }}::{{ .Name }}(
+    ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
     {{- .RequestArgs | CommaMessagePrototype }})
    {
   ::fidl::OwnedEncodedMessage<{{ .Name }}Request> _request(zx_txid_t(0)
@@ -26,8 +26,8 @@ const fragmentSyncRequestManagedTmpl = `
 }
   {{- if .HasResponse }}
 
-{{ .LLProps.ProtocolName }}::ResultOf::{{ .Name }}::{{ .Name }}(
-    ::fidl::UnownedClientEnd<{{ .LLProps.ProtocolName }}> _client
+{{ .Protocol }}::ResultOf::{{ .Name }}::{{ .Name }}(
+    ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
     {{- .RequestArgs | CommaMessagePrototype -}}
     , zx_time_t _deadline)
    {

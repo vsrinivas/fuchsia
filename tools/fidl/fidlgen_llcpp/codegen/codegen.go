@@ -111,8 +111,15 @@ var (
 		"FamilyKinds": func() interface{} { return cpp.FamilyKinds },
 		"TypeKinds":   func() interface{} { return cpp.TypeKinds },
 		"Eq":          func(a interface{}, b interface{}) bool { return a == b },
-		"StackUse": func(props cpp.LLContextProps) int {
-			return props.StackUseRequest + props.StackUseResponse
+		"SyncCallTotalStackSize": func(m cpp.Method) int {
+			totalSize := 0
+			if m.Request.ClientAllocation.IsStack {
+				totalSize += m.Request.ClientAllocation.Size
+			}
+			if m.Response.ClientAllocation.IsStack {
+				totalSize += m.Response.ClientAllocation.Size
+			}
+			return totalSize
 		},
 		"CloseHandles": func(member cpp.Member,
 			access bool,

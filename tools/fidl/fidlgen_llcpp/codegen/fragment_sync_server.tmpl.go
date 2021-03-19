@@ -21,13 +21,13 @@ namespace methods {
 {{- range .Methods }}
   {{- if .HasRequest }}
 
-void {{ .LLProps.ProtocolName.Name }}Dispatch{{ .Name }}(void* interface, void* bytes,
+void {{ .Protocol.Name }}Dispatch{{ .Name }}(void* interface, void* bytes,
     ::fidl::Transaction* txn) {
   {{- if .RequestArgs }}
-  auto message = reinterpret_cast<{{ .LLProps.ProtocolName }}::{{ .Name }}Request*>(bytes);
+  auto message = reinterpret_cast<{{ .Protocol }}::{{ .Name }}Request*>(bytes);
   {{- end }}
-  {{ .LLProps.ProtocolName }}::Interface::{{ .Name }}Completer::Sync completer(txn);
-  reinterpret_cast<{{ .LLProps.ProtocolName }}::Interface*>(interface)
+  {{ .Protocol }}::Interface::{{ .Name }}Completer::Sync completer(txn);
+  reinterpret_cast<{{ .Protocol }}::Interface*>(interface)
       ->{{ .Name }}({{ template "SyncServerDispatchMoveParams" .RequestArgs }}{{ if .RequestArgs }},{{ end }}
                     completer);
 }
@@ -40,8 +40,8 @@ namespace entries {
 
 ::fidl::internal::MethodEntry {{ .Name }}[] = {
 {{- range .ClientMethods }}
-  { {{ .OrdinalName }}, {{ .LLProps.ProtocolName }}::{{ .Name }}Request::Type,
-    methods::{{ .LLProps.ProtocolName.Name }}Dispatch{{ .Name }} },
+  { {{ .OrdinalName }}, {{ .Protocol }}::{{ .Name }}Request::Type,
+    methods::{{ .Protocol.Name }}Dispatch{{ .Name }} },
 {{- end }}
 };
 

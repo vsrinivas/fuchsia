@@ -12,7 +12,7 @@ Reply(::fidl::BufferSpan _buffer {{- if .ResponseArgs }}, {{ end }}
 
 {{- define "ReplyCallerAllocateMethodDefinition" }}
 #ifdef __Fuchsia__
-::fidl::Result {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
+::fidl::Result {{ .Protocol.Name }}::Interface::{{ .Name }}CompleterBase::
 {{- template "ReplyCallerAllocateMethodSignature" . }} {
   {{ .Name }}Response::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity
   {{- .ResponseArgs | CommaParamNames -}}
@@ -29,7 +29,7 @@ ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }
 
 {{- define "ReplyCallerAllocateResultSuccessMethodDefinition" }}
 #ifdef __Fuchsia__
-::fidl::Result {{ .LLProps.ProtocolName.Name }}::Interface::{{ .Name }}CompleterBase::
+::fidl::Result {{ .Protocol.Name }}::Interface::{{ .Name }}CompleterBase::
 {{- template "ReplyCallerAllocateResultSuccessMethodSignature" . }} {
   ::fidl::aligned<{{ .Result.ValueStructDecl }}> response;
   {{- range .Result.ValueMembers }}

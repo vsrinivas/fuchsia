@@ -88,9 +88,11 @@ func (c *compiler) compileStruct(val fidl.Struct) Struct {
 		InlineSize:      val.TypeShapeV1.InlineSize,
 		MaxHandles:      val.TypeShapeV1.MaxHandles,
 		MaxOutOfLine:    val.TypeShapeV1.MaxOutOfLine,
-		ByteBufferType:  byteBufferType(val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded),
-		HasPadding:      val.TypeShapeV1.HasPadding,
-		HasPointer:      val.TypeShapeV1.Depth > 0,
+		ByteBufferType: computeAllocation(
+			val.TypeShapeV1.InlineSize, val.TypeShapeV1.MaxOutOfLine, boundednessBounded).
+			ByteBufferType(),
+		HasPadding: val.TypeShapeV1.HasPadding,
+		HasPointer: val.TypeShapeV1.Depth > 0,
 	}
 
 	for _, v := range val.Members {
