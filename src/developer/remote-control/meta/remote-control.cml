@@ -19,7 +19,6 @@
             protocol: [
                 "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
                 "fuchsia.device.NameProvider",
-                "fuchsia.hwinfo.Board",
                 "fuchsia.hwinfo.Device",
                 "fuchsia.net.stack.Stack",
                 "fuchsia.overnet.Overnet",
