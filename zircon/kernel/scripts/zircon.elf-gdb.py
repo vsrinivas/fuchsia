@@ -49,7 +49,7 @@ def _is_arm64():
 
 
 def _is_riscv64():
-    """Return True if we're on an aarch64 platform."""
+    """Return True if we're on an riscv64 platform."""
     return re.search(r"riscv:rv64", _get_architecture())
 
 # The default is 2 seconds which is too low.
@@ -874,9 +874,15 @@ class KASLRBootWatchpoint(KASLRBreakpoint):
             # x86_64 uses the physical address
             self._relocated_base_offset -= base_address
         elif _is_arm64() or _is_riscv64():
-            # Search from pc to find BOOT tag
+            # Search from pc to find BOOT tag.
+            # Round pc down to nearest loop increment.
+            range_inc = 0x10000
+            range_start = long(pc / range_inc) * range_inc
+            range_end = range_start + 0x10000000
+            print("Looking for BOOT_MAGIC in range [%s, %s)" %
+                (hex(range_start), hex(range_end)))
             found = False
-            for addr in range(pc, pc + 0x10000000, 0x10000):
+            for addr in range(range_start, range_end, range_inc):
                 data = _read_uint(addr)
                 if data == _BOOT_MAGIC:
                     self._relocated_base_offset -= base_address
@@ -885,7 +891,7 @@ class KASLRBootWatchpoint(KASLRBreakpoint):
                     break
 
             if found == False:
-                print("Error: Could not found BOOT_MAGIC")
+                print("Error: Could not find BOOT_MAGIC")
                 return
 
         self._is_valid = True
