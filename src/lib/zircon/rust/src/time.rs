@@ -10,11 +10,11 @@ use fuchsia_zircon_sys as sys;
 use std::ops;
 use std::time as stdtime;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Duration(sys::zx_duration_t);
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+#[derive(Debug, Default, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
 pub struct Time(sys::zx_time_t);
 
@@ -480,5 +480,11 @@ mod tests {
             Time::from_nanos(-10).saturating_add(Duration::from_nanos(sys::ZX_TIME_INFINITE_PAST)),
             Time::INFINITE_PAST
         );
+    }
+
+    #[test]
+    fn time_and_duration_defaults() {
+        assert_eq!(Time::default(), Time::from_nanos(0));
+        assert_eq!(Duration::default(), Duration::from_nanos(0));
     }
 }
