@@ -26,6 +26,10 @@ group("argh") {
   deps = [ ":argh-v0_1_4" ]
 }
 
+group("async-lock") {
+  deps = [ ":async-lock-v2_3_0" ]
+}
+
 if (!(current_os == "fuchsia")) {
   group("async-std") {
     deps = [ ":async-std-v1_6_0" ]
@@ -1174,6 +1178,28 @@ rust_library("async-channel-v1_6_1") {
     "--edition=2018",
     "-Cmetadata=c9fb29c233c87151",
     "-Cextra-filename=-c9fb29c233c87151",
+  ]
+}
+
+rust_library("async-lock-v2_3_0") {
+  crate_name = "async_lock"
+  crate_root = "//third_party/rust_crates/vendor/async-lock/src/lib.rs"
+  output_name = "async_lock-f387e568e95b5301"
+  configs -= [
+    "//build/config:rust_edition_2018",
+    "//build/config:rust_2018_idioms",
+  ]
+
+  deps = []
+  deps += [ ":event-listener-v2_5_1" ]
+
+  rustenv = []
+
+  rustflags = [
+    "--cap-lints=allow",
+    "--edition=2018",
+    "-Cmetadata=f387e568e95b5301",
+    "-Cextra-filename=-f387e568e95b5301",
   ]
 }
 

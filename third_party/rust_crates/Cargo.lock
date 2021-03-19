@@ -110,6 +110,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "async-lock"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "1996609732bde4a9988bc42125f55f2af5f3c36370e27c778d5191a4a1b63bfb"
+dependencies = [
+ "event-listener",
+]
+
+[[package]]
 name = "async-std"
 version = "1.6.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -966,6 +975,7 @@ dependencies = [
  "arbitrary",
  "arc-swap",
  "argh",
+ "async-lock",
  "async-std",
  "async-trait",
  "base64 0.9.3",
