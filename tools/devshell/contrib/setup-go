@@ -23,7 +23,7 @@
 ##   -d     Tear down the symlinks created by `fx setup-go`. Also idempotent (i.e.
 ##          safe to run multiple times in a row).
 
-set -eu -o pipefail
+set -e -o pipefail
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 
@@ -32,15 +32,15 @@ function main {
   set -- "${FX_ARGV[@]}"
 
   # For simplicity, all functions assume that they are executed within the
-  # checkout root for simplicity.
+  # checkout root.
   pushd "$FUCHSIA_DIR" > /dev/null
   trap 'popd > /dev/null' EXIT
 
+  local down=false
   while [[ $# -ne 0 ]]; do
     case "$1" in
       -d)
-        teardown
-        return 0
+        down=true
         ;;
       *)
         fx-error "Unknown argument \"$1\""
@@ -51,7 +51,11 @@ function main {
     shift
   done
 
-  setup
+  if $down; then
+    teardown
+  else
+    setup
+  fi
 }
 
 # We'll write a go.mod file to each of these directories so that gopls and
@@ -60,7 +64,6 @@ function main {
 gomod_dirs=(out third_party prebuilt)
 
 function setup {
-  echo "FUCHSIA_DIR: $FUCHSIA_DIR"
   link "third_party/golibs/go.mod" go.mod
   link "third_party/golibs/go.sum" go.sum
 
@@ -85,8 +88,15 @@ function teardown {
   rm -v -f go.mod
   rm -v -f go.sum
 
-  # Remove all symlinks from //vendor.
-  find vendor -maxdepth 1 -type l -exec rm -v {} \;
+  # Remove all symlinks from //vendor that point into
+  # //third_party/golibs/vendor.
+  local src
+  find vendor -maxdepth 1 -type l | while read -r file; do
+    src="$(readlink "$file")"
+    if [[ "$src" = ../third_party/golibs/vendor/* ]]; then
+      rm -v "$file"
+    fi
+  done
 
   for dir in "${gomod_dirs[@]}"; do
     rm -v -f "$dir/go.mod"
