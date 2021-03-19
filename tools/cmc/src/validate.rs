@@ -3782,7 +3782,8 @@ mod tests {
                     }
                 ],
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"#elf\", expected a name containing only alpha-numeric characters or [_-.]"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"#elf\", expected a \
+            name that consists of [A-Za-z0-9_.-] and starts with [A-Za-z0-9_]"
         ),
         test_cml_environment_with_runners_duplicate_name(
             json!({
@@ -4310,7 +4311,8 @@ mod tests {
                     },
                 ]
             }),
-            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/bad\", expected a name containing only alpha-numeric characters or [_-.]"
+            Err(Error::Parse { err, .. }) if &err == "invalid value: string \"/bad\", expected a \
+            name that consists of [A-Za-z0-9_.-] and starts with [A-Za-z0-9_]"
         ),
         test_cml_child_name_too_long(
             json!({

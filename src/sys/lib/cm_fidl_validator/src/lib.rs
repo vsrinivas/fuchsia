@@ -1792,15 +1792,24 @@ fn check_name(
 ) -> bool {
     let start_err_len = errors.len();
     check_presence_and_length(MAX_NAME_LENGTH, prop, decl_type, keyword, errors);
+    let mut invalid_field = false;
     if let Some(name) = prop {
-        for b in name.bytes() {
-            let b = b as char;
-            if b.is_ascii_alphanumeric() || b == '_' || b == '-' || b == '.' {
-                // Ok
-            } else {
-                errors.push(Error::invalid_field(decl_type, keyword));
+        let mut char_iter = name.chars();
+        if let Some(first_char) = char_iter.next() {
+            if !first_char.is_ascii_alphanumeric() && first_char != '_' {
+                invalid_field = true;
             }
         }
+        for c in char_iter {
+            if c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.' {
+                // Ok
+            } else {
+                invalid_field = true;
+            }
+        }
+    }
+    if invalid_field {
+        errors.push(Error::invalid_field(decl_type, keyword));
     }
     start_err_len == errors.len()
 }
@@ -1900,7 +1909,7 @@ mod tests {
     };
 
     const PATH_REGEX_STR: &str = r"(/[^/]+)+";
-    const NAME_REGEX_STR: &str = r"[0-9a-zA-Z_\-\.]+";
+    const NAME_REGEX_STR: &str = r"[0-9a-zA-Z_][0-9a-zA-Z_\-\.]*";
     const URL_REGEX_STR: &str = r"[0-9a-z\+\-\.]+://.+";
 
     lazy_static! {

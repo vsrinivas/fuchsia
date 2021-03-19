@@ -88,7 +88,7 @@ pub enum ParseError {
     /// A name was expected and the string was a path.
     #[error("not a name")]
     NotAName,
-    /// A path was expected and the string was a name.
+    // A path was expected and the string was a name.
     #[error("not a path")]
     NotAPath,
 }
@@ -106,8 +106,13 @@ impl Name {
         if name.is_empty() || name.len() > 100 {
             return Err(ParseError::InvalidLength);
         }
+        let mut char_iter = name.chars();
+        let first_char = char_iter.next().unwrap();
+        if !first_char.is_ascii_alphanumeric() && first_char != '_' {
+            return Err(ParseError::InvalidValue);
+        }
         let valid_fn = |c: char| c.is_ascii_alphanumeric() || c == '_' || c == '-' || c == '.';
-        if !name.chars().all(valid_fn) {
+        if !char_iter.all(valid_fn) {
             return Err(ParseError::InvalidValue);
         }
         Ok(Self(name.into_owned()))
@@ -156,9 +161,8 @@ impl<'de> de::Deserialize<'de> for Name {
 
             fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.write_str(
-                    "a non-empty string no more than 100 characters in \
-                     length, containing only alpha-numeric characters \
-                     or [_-.]",
+                    "a non-empty string no more than 100 characters in length, \
+                    consisting of [A-Za-z0-9_.-] and starting with [A-Za-z0-9_]",
                 )
             }
 
@@ -169,7 +173,7 @@ impl<'de> de::Deserialize<'de> for Name {
                 s.parse().map_err(|err| match err {
                     ParseError::InvalidValue => E::invalid_value(
                         de::Unexpected::Str(s),
-                        &"a name containing only alpha-numeric characters or [_-.]",
+                        &"a name that consists of [A-Za-z0-9_.-] and starts with [A-Za-z0-9_]",
                     ),
                     ParseError::InvalidLength => E::invalid_length(
                         s.len(),
@@ -608,13 +612,17 @@ mod tests {
     #[test]
     fn test_valid_name() {
         expect_ok!(Name, "foo");
-        expect_ok!(Name, "foO123._-");
+        expect_ok!(Name, "Foo");
+        expect_ok!(Name, "O123._-");
+        expect_ok!(Name, "_O123._-");
         expect_ok!(Name, repeat("x").take(100).collect::<String>());
     }
 
     #[test]
     fn test_invalid_name() {
         expect_err!(Name, "");
+        expect_err!(Name, "-");
+        expect_err!(Name, ".");
         expect_err!(Name, "@&%^");
         expect_err!(Name, repeat("x").take(101).collect::<String>());
     }
@@ -691,8 +699,9 @@ mod tests {
         let err = serde_json::from_str::<Name>(input).expect_err("must fail");
         assert_eq!(
             err.to_string(),
-            "invalid value: string \"foo$\", expected a name containing only \
-             alpha-numeric characters or [_-.] at line 2 column 18"
+            "invalid value: string \"foo$\", expected a name \
+            that consists of [A-Za-z0-9_.-] and starts with [A-Za-z0-9_] \
+            at line 2 column 18"
         );
         assert_eq!(err.line(), 2);
         assert_eq!(err.column(), 18);

@@ -387,8 +387,7 @@ impl<'de> de::Deserialize<'de> for StopTimeoutMs {
 /// generic references.
 #[derive(Debug, PartialEq, Eq, Hash, Clone)]
 pub enum AnyRef<'a> {
-    /// A named reference. Parsed as `#name`, where `name` contains only
-    /// alphanumeric characters, `-`, `_`, and `.`.
+    /// A named reference. Parsed as `#name`.
     Named(&'a Name),
     /// A reference to the parent. Parsed as `parent`.
     Parent,
@@ -959,8 +958,8 @@ impl<'de> de::Deserialize<'de> for Program {
         const EXPECTED_PROGRAM: &'static str =
             "a JSON object that includes a `runner` string property";
         const EXPECTED_RUNNER: &'static str =
-            "a non-empty `runner` string property no more than 100 characters in length, \
-            containing only alpha-numeric characters or [_-.]";
+            "a non-empty `runner` string property no more than 100 characters in length \
+            that consists of [A-Za-z0-9_.-] and starts with [A-Za-z0-9_]";
 
         impl<'de> de::Visitor<'de> for Visitor {
             type Value = Program;
@@ -1619,10 +1618,12 @@ mod tests {
     #[test]
     fn test_parse_named_reference() {
         assert_matches!("#some-child".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "some-child");
-        assert_matches!("#-".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "-");
-        assert_matches!("#_".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "_");
+        assert_matches!("#A".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "A");
         assert_matches!("#7".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "7");
+        assert_matches!("#_".parse::<OfferFromRef>(), Ok(OfferFromRef::Named(name)) if name == "_");
 
+        assert_matches!("#-".parse::<OfferFromRef>(), Err(_));
+        assert_matches!("#.".parse::<OfferFromRef>(), Err(_));
         assert_matches!("#".parse::<OfferFromRef>(), Err(_));
         assert_matches!("some-child".parse::<OfferFromRef>(), Err(_));
     }
