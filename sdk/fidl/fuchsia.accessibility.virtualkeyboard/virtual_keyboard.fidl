@@ -1,0 +1,65 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.accessibility.virtualkeyboard;
+
+using fuchsia.ui.views;
+
+/// Provides the ability to register a virtual keyboard.
+///
+/// This protocol exists to bind `Listener`s to `View`s (via `ViewRef`s).
+/// The binding allows, e.g., the accessibility subsystem determine if an
+/// interaction with the `View` should result in a focus transfer.
+///
+/// # Roles
+/// This protocol will typically be:
+/// * Implemented by platform components which implement accessibility.
+///   For example, a11y_manager.
+/// * Consumed by components which provide a GUI affordance for text input.
+[Discoverable]
+protocol Registry {
+    /// Registers the `View` referenced by `view_ref` as a `View`
+    /// which may contain a virtual keyboard.
+    ///
+    /// The presence or absence of a virtual keyboard within the `View`
+    /// may change dynamically.
+    /// * The initial state is indicated by `is_visible`.
+    /// * The `Registry` consumer will update state by invoking
+    ///   methods on the provided `request<Listener>`.
+    ///
+    /// # Notes
+    /// * The implementer may limit the number of simultaneous registrations
+    ///   allowed (e.g. only allowing a single registration at a time).
+    /// * The implementer should monitor the provided `ViewRef` for a
+    ///   `ZX_ERR_PEER_CLOSED` signal (see documentation for
+    ///   `fuchsia.ui.views.ViewRefControl`).
+    /// * If the request would exceed the simultaneous registration limit,
+    ///   or when the `ViewRef` receives `ZX_ERR_PEER_CLOSED`, the implementer
+    ///   should dispose of `listener`.
+    Register(
+        fuchsia.ui.views.ViewRef view_ref,
+        bool is_visible,
+        request<Listener> listener);
+};
+
+/// Provides the ability to inform an interested party ("listener") of changes
+/// in virtual keyboard state (e.g. visibility).
+///
+/// # Roles
+/// This protocol will typically be:
+/// * Implemented by platform components which implement accessibility.
+///   For example, a11y_manager.
+/// * Consumed by components which provide a GUI affordance for text input.
+///
+/// # Notes
+/// When the consumer of this protocol observes that the channel is closed,
+/// it (the protocol consumer) should retry `Registry.Register()`, applying
+/// back-off logic to avoid tight loops.
+protocol Listener {
+    /// Informs the `Listener` of a change in keyboard visibility.
+    ///
+    /// Consumers of this protocol should wait for each call to be acknowledged
+    /// before calling again, to avoid queueing large numbers of updates.
+    OnVisibilityChanged(bool updated_visibility) -> ();
+};
