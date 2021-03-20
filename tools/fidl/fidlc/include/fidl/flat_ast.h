@@ -848,6 +848,8 @@ class Library {
   std::unique_ptr<TypeConstructor> ConsumeTypeConstructorNew(
       std::unique_ptr<raw::TypeConstructorNew>, const Name&);
   bool ConsumeLayout(std::unique_ptr<raw::Layout>, const Name&);
+  bool IsOptionalConstraint(std::unique_ptr<TypeConstructor>&,
+                            const std::unique_ptr<raw::Constant>&);
   // end new syntax
 
   bool TypeCanBeConst(const Type* type);

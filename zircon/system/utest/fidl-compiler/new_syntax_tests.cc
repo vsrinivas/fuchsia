@@ -32,6 +32,8 @@ TestLibrary with_fake_zx(const std::string& in, SharedAmongstLibraries& shared,
 deprecated_syntax;
 library zx;
 
+const uint32 READ = 8;
+
 enum obj_type : uint32 {
     NONE = 0;
     PROCESS = 1;
@@ -482,6 +484,7 @@ type TypeDecl = struct {
 TEST(NewSyntaxTests, LayoutMemberConstraints) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
   SharedAmongstLibraries shared;
 
   // TODO(fxbug.dev/65978): a number of fields in this struct declaration have
@@ -494,21 +497,19 @@ type t1 = resource struct {
   h0 zx.handle;
   h1 zx.handle:optional;
   h2 zx.handle:VMO;
-  h3 zx.handle:zx.READ;
-  h4 zx.handle:[VMO,optional];
-  h5 zx.handle:[zx.READ,optional];
-  h6 zx.handle:[VMO,zx.READ];
-  h7 zx.handle:[VMO,zx.READ,optional];
-  u8 union { 1: b bool; };
-  u9 union { 1: b bool; }:optional;
-  v10 vector<bool>;
-  v11 vector<bool>:optional;
-  v12 vector<bool>:16;
-  v13 vector<bool>:[16,optional];
-  //p14 client_end:MyProtocol;
-  //p15 client_end:[MyProtocol,optional];
-  //r16 server_end:P;
-  //r17 server_end:[MyProtocol,optional];
+  h3 zx.handle:[VMO,optional];
+  h4 zx.handle:[VMO,zx.READ];
+  h5 zx.handle:[VMO,zx.READ,optional];
+  u7 union { 1: b bool; };
+  u8 union { 1: b bool; }:optional;
+  v9 vector<bool>;
+  v10 vector<bool>:optional;
+  v11 vector<bool>:16;
+  v12 vector<bool>:[16,optional];
+  //p13 client_end:MyProtocol;
+  //p14 client_end:[MyProtocol,optional];
+  //r15 server_end:P;
+  //r16 server_end:[MyProtocol,optional];
 };
 )FIDL",
                               shared, std::move(experimental_flags));
@@ -516,7 +517,7 @@ type t1 = resource struct {
 
   auto type_decl = library.LookupStruct("t1");
   ASSERT_NOT_NULL(type_decl);
-  EXPECT_EQ(type_decl->members.size(), 14);
+  EXPECT_EQ(type_decl->members.size(), 12);
   // TODO(fxbug.dev/65978): check that the flat AST has proper representation of
   //  each member's constraints. This is blocked on implementing compilation of
   //  the new constraints in the flat AST.
@@ -591,6 +592,210 @@ using foo = uint8;
   EXPECT_EQ(errors.size(), 1);
   ASSERT_ERR(errors[0], fidl::ErrOldUsingSyntaxDeprecated);
 }
+
+TEST(NewSyntaxTests, ConstraintsOnVectors) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+alias TypeAlias = vector<uint8>;
+type TypeDecl= struct {
+  v0 vector<bool>;
+  v1 vector<bool>:16;
+  v2 vector<bool>:optional;
+  v3 vector<bool>:[16,optional];
+  b4 bytes;
+  b5 bytes:16;
+  b6 bytes:optional;
+  b7 bytes:[16,optional];
+  s8 string;
+  s9 string:16;
+  s10 string:optional;
+  s11 string:[16,optional];
+  a12 TypeAlias;
+  a13 TypeAlias:16;
+  a14 TypeAlias:optional;
+  a15 TypeAlias:[16,optional];
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupStruct("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  ASSERT_EQ(type_decl->members.size(), 16);
+
+  auto& v0 = type_decl->members[0];
+  ASSERT_NULL(v0.type_ctor->maybe_size);
+  EXPECT_EQ(v0.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& v1 = type_decl->members[1];
+  ASSERT_NOT_NULL(v1.type_ctor->maybe_size);
+  EXPECT_EQ(v1.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& v2 = type_decl->members[2];
+  ASSERT_NULL(v2.type_ctor->maybe_size);
+  EXPECT_EQ(v2.type_ctor->nullability, fidl::types::Nullability::kNullable);
+
+  auto& v3 = type_decl->members[3];
+  ASSERT_NOT_NULL(v3.type_ctor->maybe_size);
+  EXPECT_EQ(v3.type_ctor->nullability, fidl::types::Nullability::kNullable);
+
+  auto& b4 = type_decl->members[4];
+  ASSERT_NULL(b4.type_ctor->maybe_size);
+  EXPECT_EQ(b4.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& b5 = type_decl->members[5];
+  ASSERT_NOT_NULL(b5.type_ctor->maybe_size);
+  EXPECT_EQ(b5.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& b6 = type_decl->members[6];
+  ASSERT_NULL(b6.type_ctor->maybe_size);
+  EXPECT_EQ(b6.type_ctor->nullability, fidl::types::Nullability::kNullable);
+
+  auto& b7 = type_decl->members[7];
+  ASSERT_NOT_NULL(b7.type_ctor->maybe_size);
+  EXPECT_EQ(b7.type_ctor->nullability, fidl::types::Nullability::kNullable);
+
+  auto& s8 = type_decl->members[8];
+  ASSERT_NULL(s8.type_ctor->maybe_size);
+  EXPECT_EQ(s8.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& s9 = type_decl->members[9];
+  ASSERT_NOT_NULL(s9.type_ctor->maybe_size);
+  EXPECT_EQ(s9.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& s10 = type_decl->members[10];
+  ASSERT_NULL(s10.type_ctor->maybe_size);
+  EXPECT_EQ(s10.type_ctor->nullability, fidl::types::Nullability::kNullable);
+
+  auto& s11 = type_decl->members[11];
+  ASSERT_NOT_NULL(s11.type_ctor->maybe_size);
+  EXPECT_EQ(s11.type_ctor->nullability, fidl::types::Nullability::kNullable);
+
+  auto& a12 = type_decl->members[12];
+  ASSERT_NULL(a12.type_ctor->maybe_size);
+  EXPECT_EQ(a12.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& a13 = type_decl->members[13];
+  ASSERT_NOT_NULL(a13.type_ctor->maybe_size);
+  EXPECT_EQ(a13.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& a14 = type_decl->members[14];
+  ASSERT_NULL(a14.type_ctor->maybe_size);
+  EXPECT_EQ(a14.type_ctor->nullability, fidl::types::Nullability::kNullable);
+
+  auto& a11 = type_decl->members[11];
+  ASSERT_NOT_NULL(a11.type_ctor->maybe_size);
+  EXPECT_EQ(a11.type_ctor->nullability, fidl::types::Nullability::kNullable);
+}
+
+TEST(NewSyntaxTests, ConstraintsOnUnions) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+type UnionDecl = union{1: foo bool;};
+alias UnionAlias = UnionDecl;
+type TypeDecl= struct {
+  u0 union{1: bar bool;};
+  u1 union{1: baz bool;}:optional;
+  u2 UnionDecl;
+  u3 UnionDecl:optional;
+  u4 UnionAlias;
+  u5 UnionAlias:optional;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupStruct("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  ASSERT_EQ(type_decl->members.size(), 6);
+
+  auto& u0 = type_decl->members[0];
+  EXPECT_EQ(u0.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& u1 = type_decl->members[1];
+  EXPECT_EQ(u1.type_ctor->nullability, fidl::types::Nullability::kNullable);
+
+  auto& u2 = type_decl->members[2];
+  EXPECT_EQ(u2.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& u3 = type_decl->members[3];
+  EXPECT_EQ(u3.type_ctor->nullability, fidl::types::Nullability::kNullable);
+
+  auto& u4 = type_decl->members[4];
+  EXPECT_EQ(u4.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& u5 = type_decl->members[5];
+  EXPECT_EQ(u5.type_ctor->nullability, fidl::types::Nullability::kNullable);
+}
+
+TEST(NewSyntaxTests, ConstraintsOnHandles) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+  SharedAmongstLibraries shared;
+
+  auto library = with_fake_zx(R"FIDL(
+library example;
+using zx;
+
+type TypeDecl = resource struct {
+  h0 zx.handle;
+  h1 zx.handle:VMO;
+  h2 zx.handle:optional;
+  h3 zx.handle:[VMO,optional];
+  h4 zx.handle:[VMO,zx.READ];
+  h5 zx.handle:[VMO,zx.READ,optional];
+};
+)FIDL",
+                              shared, std::move(experimental_flags));
+
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupStruct("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  ASSERT_EQ(type_decl->members.size(), 6);
+
+  auto& h0 = type_decl->members[0];
+  ASSERT_EQ(h0.type_ctor->handle_subtype_identifier, std::nullopt);
+  ASSERT_NULL(h0.type_ctor->handle_rights);
+  EXPECT_EQ(h0.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& h1 = type_decl->members[1];
+  ASSERT_NE(h1.type_ctor->handle_subtype_identifier, std::nullopt);
+  ASSERT_NULL(h1.type_ctor->handle_rights);
+  EXPECT_EQ(h1.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& h2 = type_decl->members[2];
+  ASSERT_EQ(h2.type_ctor->handle_subtype_identifier, std::nullopt);
+  ASSERT_NULL(h2.type_ctor->handle_rights);
+  EXPECT_EQ(h2.type_ctor->nullability, fidl::types::Nullability::kNullable);
+
+  auto& h3 = type_decl->members[3];
+  ASSERT_NE(h3.type_ctor->handle_subtype_identifier, std::nullopt);
+  ASSERT_NULL(h3.type_ctor->handle_rights);
+  EXPECT_EQ(h3.type_ctor->nullability, fidl::types::Nullability::kNullable);
+
+  auto& h4 = type_decl->members[4];
+  ASSERT_NE(h4.type_ctor->handle_subtype_identifier, std::nullopt);
+  ASSERT_NOT_NULL(h4.type_ctor->handle_rights);
+  EXPECT_EQ(h4.type_ctor->nullability, fidl::types::Nullability::kNonnullable);
+
+  auto& h5 = type_decl->members[5];
+  ASSERT_NE(h5.type_ctor->handle_subtype_identifier, std::nullopt);
+  ASSERT_NOT_NULL(h5.type_ctor->handle_rights);
+  EXPECT_EQ(h5.type_ctor->nullability, fidl::types::Nullability::kNullable);
+}
+
+// TODO(fxbug.dev/71536): once the new flat AST is in, we should add a test for
+//  partial constraints being respected.
+// TODO(fxbug.dev/68667): Add tests for constraint errors.
 
 // Ensure that we don't accidentally enable the new syntax when the new syntax
 // flag is not enabled.

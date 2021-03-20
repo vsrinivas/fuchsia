@@ -140,6 +140,10 @@ constexpr ErrorDef<flat::IdentifierConstant *> ErrExpectedValueButGotType(
 constexpr ErrorDef<flat::Name, flat::Name> ErrMismatchedNameTypeAssignment(
     "mismatched named type assignment: cannot define a constant or default value of type {} "
     "using a value of type {}");
+constexpr ErrorDef<flat::Name, size_t, size_t> ErrConstraintsOverflow(
+    "{} is of a type that may only carry {} constraints, but {} were found");
+constexpr ErrorDef<flat::Name, std::string_view> ErrConstraintOptionalMisspelled(
+    "the final constraint on {} was expected to be optional, not {}");
 constexpr ErrorDef<flat::IdentifierConstant *, const flat::TypeConstructor *, const flat::Type *>
     ErrCannotConvertConstantToType("{}, of type {}, cannot be converted to type {}");
 constexpr ErrorDef<flat::LiteralConstant *, uint64_t, const flat::Type *>

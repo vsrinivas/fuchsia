@@ -2022,10 +2022,20 @@ bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& con
   return true;
 }
 
+bool Library::IsOptionalConstraint(std::unique_ptr<TypeConstructor>& type_ctor,
+                                   const std::unique_ptr<raw::Constant>& constant) {
+  if (constant->span().data() == "optional") {
+    return true;
+  }
+  return false;
+}
+
 std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
     std::unique_ptr<raw::TypeConstructorNew> raw_type_ctor, const Name& context) {
   std::unique_ptr<TypeConstructor> type_ctor;
   auto params = std::move(raw_type_ctor->parameters);
+  auto constraints = std::move(raw_type_ctor->constraints);
+  size_t num_constraints = constraints == nullptr ? 0 : constraints->items.size();
 
   if (raw_type_ctor->type_ref->kind == raw::LayoutReference::Kind::kInline) {
     assert((params == nullptr || params->items.empty()) &&
@@ -2040,12 +2050,28 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
         /*handle_subtype_identifier=*/std::nullopt,
         /*handle_rights=*/nullptr,
         /*maybe_size=*/nullptr, types::Nullability::kNonnullable, fidl::utils::Syntax::kNew);
+
+    // Inline layouts may only plausibly have one constraints ("optional"), so
+    // check it here.
+    if (num_constraints > 1) {
+      Fail(ErrConstraintsOverflow, type_ctor->name, size_t(1), num_constraints);
+    }
+    if (num_constraints == 1) {
+      if (IsOptionalConstraint(type_ctor, constraints->items[0])) {
+        type_ctor->nullability = types::Nullability::kNullable;
+      } else {
+        Fail(ErrConstraintOptionalMisspelled, type_ctor->name,
+             constraints->items[0]->span().data());
+        return nullptr;
+      }
+    }
     return type_ctor;
   }
 
   // TODO(fxbug.dev/65978): Rewrite once using identifier, instead of type_ctor_old, on type_ref.
   auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->type_ref.get());
   SourceSpan span = named_ref->type_ctor_old->identifier->span();
+  auto last_name_component = named_ref->type_ctor_old->identifier->components.back()->span().data();
   if (!ConsumeTypeConstructor(std::move(named_ref->type_ctor_old), span, fidl::utils::Syntax::kNew,
                               &type_ctor)) {
     return nullptr;
@@ -2062,9 +2088,10 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
       std::unique_ptr<raw::TypeParameter> param;
       if (params->items.size() >= 1) {
         // Because all of the generic types we have today only take at most one nested type, it is
-        // okay to pass the name context through like this.  If we ever introduce generic types that
-        // take two or more types as parameters (ex: map<K,V>, or allowing things like struct{}<T>),
-        // we'll need extend the name contexts we pass down to their respective constructors.
+        // okay to pass the name context through like this.  If we ever introduce generic types
+        // that take two or more types as parameters (ex: map<K,V>, or allowing things like
+        // struct{}<T>), we'll need extend the name contexts we pass down to their respective
+        // constructors.
         param = std::move(params->items[0]);
         auto name = Name::CreateDerived(this, span, context.full_name());
 
@@ -2112,6 +2139,95 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
           }
         }
       }
+    }
+  }
+
+  // The rest of this function deals with properly applying constraints in two
+  // contexts: the special "handle" case where constraints must be of the form
+  // [HANDLE_SUBTYPE, HANDLE_RIGHTS, OPTIONAL], and the "default" context, which
+  // accepts constraints of [SIZE, OPTIONAL].
+  // TODO(fxbug.dev/68667): handle client and server end types when they exist.
+  // TODO(fxbug.dev/71536): The following code makes one assumption that we may
+  //  not want to keep: that the constraint optional cannot be overwritten.  In
+  //  other words, even if in a FIDL file "optional" is defined to have some
+  //  meaining, we still assume the word "optional" does not inherit that
+  //  meaning when used in constraints.  For example, consider this FIDL:
+  //
+  //    const optional uint8 = 3;
+  //    alias foo = vector<bool>:optional; // <- What does this "optional" mean?
+  //
+  //  While in the future we may like for optional to resolve to "3" in such
+  //  cases, for now this override is ignored, and "optional" always means
+  //  "optional" in the context of constraints.
+  if (last_name_component == "handle") {
+    // The parser currently only applies handle-like constraints onto types that
+    // specifically end in the word "handle" ("handle" or "zx.handle"), and does
+    // not do so to their aliases.  We replicate that behavior here.
+    if (num_constraints > 3) {
+      Fail(ErrConstraintsOverflow, type_ctor->name, size_t(3), num_constraints);
+      return nullptr;
+    }
+    if (num_constraints == 1) {
+      // The lone constraint MUST be either one of a subtype OR an "optional."
+      if (IsOptionalConstraint(type_ctor, constraints->items[0])) {
+        type_ctor->nullability = types::Nullability::kNullable;
+      } else {
+        type_ctor->handle_subtype_identifier =
+            Name::CreateSourced(this, constraints->items[0]->span());
+      }
+    } else if (num_constraints == 2) {
+      // The first constraint MUST be a subtype, the second MUST be a handle
+      // rights OR an "optional."
+      type_ctor->handle_subtype_identifier =
+          Name::CreateSourced(this, constraints->items[0]->span());
+      if (IsOptionalConstraint(type_ctor, constraints->items[1])) {
+        type_ctor->nullability = types::Nullability::kNullable;
+      } else if (!ConsumeConstant(std::move(constraints->items[1]), &type_ctor->handle_rights)) {
+        return nullptr;
+      }
+    } else if (num_constraints == 3) {
+      // The first constraint MUST be a subtype, the second MUST be a handle
+      // rights, and the third MUST be an "optional."
+      type_ctor->handle_subtype_identifier =
+          Name::CreateSourced(this, constraints->items[0]->span());
+      if (!ConsumeConstant(std::move(constraints->items[1]), &type_ctor->handle_rights)) {
+        return nullptr;
+      }
+      if (IsOptionalConstraint(type_ctor, constraints->items[2])) {
+        type_ctor->nullability = types::Nullability::kNullable;
+      } else {
+        Fail(ErrConstraintOptionalMisspelled, type_ctor->name,
+             constraints->items[2]->span().data());
+        return nullptr;
+      }
+    }
+  } else {
+    // In the non-handle case, constraints are interpreted to be of the
+    // [SIZE, OPTIONAL] format.
+    if (num_constraints > 2) {
+      Fail(ErrConstraintsOverflow, type_ctor->name, size_t(2), num_constraints);
+      return nullptr;
+    }
+    if (num_constraints == 1) {
+      // The lone constraint MUST be either one of a size OR an "optional."
+      if (IsOptionalConstraint(type_ctor, constraints->items[0])) {
+        type_ctor->nullability = types::Nullability::kNullable;
+      } else if (!ConsumeConstant(std::move(constraints->items[0]), &type_ctor->maybe_size)) {
+        return nullptr;
+      }
+    } else if (num_constraints == 2) {
+      // The first constraint MUST be a size, the second MUST be "optional."
+      if (!ConsumeConstant(std::move(constraints->items[0]), &type_ctor->maybe_size)) {
+        return nullptr;
+      }
+      if (IsOptionalConstraint(type_ctor, constraints->items[1])) {
+        type_ctor->nullability = types::Nullability::kNullable;
+      } else {
+        Fail(ErrConstraintOptionalMisspelled, type_ctor->name,
+             constraints->items[1]->span().data());
+        return nullptr;
+      }
+      type_ctor->nullability = types::Nullability::kNullable;
     }
   }
 
