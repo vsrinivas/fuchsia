@@ -13,7 +13,7 @@
         {
             name: "session-manager",
             url: "fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm",
-            environment: "#session-manager-env",
+            environment: "#universe-resolver-env",
         },
         {
             name: "system-update-committer",
@@ -51,7 +51,7 @@
         {
             name: "test_manager",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
-            environment: "#test-manager-env",
+            environment: "#universe-resolver-env",
         },
         {
             name: "font_provider",
@@ -72,10 +72,12 @@
         {
             name: "system-metrics-logger",
             url: "fuchsia-pkg://fuchsia.com/system-metrics-logger#meta/system-metrics-logger-component.cm",
+            environment: "#universe-resolver-env",
         },
         {
             name: "temperature-logger",
             url: "fuchsia-pkg://fuchsia.com/temperature-logger#meta/temperature-logger.cm",
+            environment: "#universe-resolver-env",
         },
         {
             name: "universe-resolver",
@@ -202,6 +204,7 @@
             protocol: "fuchsia.pkg.PackageResolver",
             from: "#appmgr",
             to: [ "#universe-resolver" ],
+            dependency: "weak_for_migration",
         },
         {
             directory: "pkgfs",
@@ -744,19 +747,13 @@
         },
     ],
     environments: [
+        // Components that simply need access to universe-resolver can use this environment.
+        //
+        // TODO(fxbug.dev/71657): universe-resolver cannot yet be included on the core product,
+        // so components should not use this environment if they need to function on the core
+        // product or anything derived from core that does not explicitly include universe-resolver.
         {
-            name: "test-manager-env",
-            extends: "realm",
-            resolvers: [
-                {
-                    resolver: "universe-resolver",
-                    scheme: "fuchsia-pkg",
-                    from: "#universe-resolver",
-                },
-            ],
-        },
-        {
-            name: "session-manager-env",
+            name: "universe-resolver-env",
             extends: "realm",
             resolvers: [
                 {
