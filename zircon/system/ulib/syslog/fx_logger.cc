@@ -169,14 +169,25 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
         return ZX_ERR_INVALID_ARGS;
       }
     }
+    // TODO(fxbug.dev/72675): Pass file/line info regardless of severity in all cases.
+    // This is currently only enabled for drivers.
+    char final_msg[kFormatStringLength];
+    final_msg[kFormatStringLength - 1] = 0;
+    if (file) {
+      int file_path_bytes = snprintf(final_msg, kFormatStringLength, "[%s(%d)] %s",
+                                     syslog::internal::StripFile(file, severity), line, fmt_string);
+      if (file_path_bytes < 0) {
+        return ZX_ERR_INVALID_ARGS;
+      }
+    }
     if (count >= n) {
       // truncated
       constexpr char kEllipsis[] = "...";
       constexpr size_t kEllipsisSize = sizeof(kEllipsis);
-      snprintf(&fmt_string[0] + kFormatStringLength - 1 - kEllipsisSize, kEllipsisSize, kEllipsis);
+      snprintf(&final_msg[0] + kFormatStringLength - 1 - kEllipsisSize, kEllipsisSize, kEllipsis);
     }
 
-    syslog_backend::BeginRecordWithSocket(&buffer, severity, file, line, fmt_string, nullptr,
+    syslog_backend::BeginRecordWithSocket(&buffer, severity, file, line, final_msg, nullptr,
                                           this->socket_.get());
     if (tag) {
       syslog_backend::WriteKeyValue(&buffer, "tag", tag);
