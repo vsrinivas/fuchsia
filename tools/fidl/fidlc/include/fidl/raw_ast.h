@@ -781,6 +781,7 @@ class Layout final : public SourceElement {
  public:
   enum Kind {
     kStruct,
+    kTable,
     kUnion,
   };
 

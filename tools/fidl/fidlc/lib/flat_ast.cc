@@ -1995,6 +1995,26 @@ bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& con
                                             layout->resourceness));
       break;
     }
+    case raw::Layout::Kind::kTable: {
+      std::vector<Table::Member> members;
+      size_t index = 0;
+      for (auto& member : layout->members) {
+        if (type_ctors[index]->nullability != types::Nullability::kNonnullable) {
+          Fail(ErrNullableTableMember, member->span());
+          return false;
+        }
+        members.emplace_back(std::move(member->ordinal), std::move(type_ctors[index]),
+                             member->identifier->span(),
+                             /*maybe_default_value=*/nullptr,
+                             /*attributes=*/nullptr);
+        index++;
+      }
+
+      RegisterDecl(std::make_unique<Table>(
+          /*attributes=*/nullptr, context, std::move(members), types::Strictness::kFlexible,
+          layout->resourceness));
+      break;
+    }
     case raw::Layout::Kind::kUnion: {
       std::vector<Union::Member> members;
       size_t index = 0;

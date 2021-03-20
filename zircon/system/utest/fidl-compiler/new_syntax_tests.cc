@@ -241,6 +241,51 @@ type t2 = resource struct {
   EXPECT_EQ(type_decl->resourceness, fidl::types::Resourceness::kResource);
 }
 
+TEST(NewSyntaxTests, TypeDeclOfTableLayout) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+type TypeDecl = table {
+    1: field1 uint16;
+    2: field2 uint16;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupTable("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 2);
+}
+
+TEST(NewSyntaxTests, TypeDeclOfTableLayoutWithResourceness) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  SharedAmongstLibraries shared;
+
+  auto library = with_fake_zx(R"FIDL(
+library example;
+using zx;
+type t1 = table {
+    1: f1 uint8;
+};
+type t2 = resource table {
+    1: f1 zx.handle;
+};
+)FIDL",
+                              shared, std::move(experimental_flags));
+
+  ASSERT_COMPILED(library);
+
+  auto type_decl = library.LookupTable("t1");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->resourceness, fidl::types::Resourceness::kValue);
+
+  type_decl = library.LookupTable("t2");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->resourceness, fidl::types::Resourceness::kResource);
+}
+
 TEST(NewSyntaxTests, TypeDeclOfUnionLayoutWithResourceness) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);

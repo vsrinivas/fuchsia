@@ -1871,7 +1871,7 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::Layout::Kind k
   // TODO(fxbug.dev/65978): Parse attributes.
 
   std::unique_ptr<raw::Ordinal64> ordinal = nullptr;
-  if (kind == raw::Layout::Kind::kUnion) {
+  if (kind == raw::Layout::Kind::kTable || kind == raw::Layout::Kind::kUnion) {
     ordinal = ParseOrdinal64();
     if (!Ok())
       return Fail();
@@ -1912,6 +1912,9 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
   if (identifier->components[0]->span().data() == "struct") {
     ValidateModifiers<types::Resourceness>(modifiers, identifier->components[0]->start_);
     kind = raw::Layout::Kind::kStruct;
+  } else if (identifier->components[0]->span().data() == "table") {
+    ValidateModifiers<types::Resourceness>(modifiers, identifier->components[0]->start_);
+    kind = raw::Layout::Kind::kTable;
   } else if (identifier->components[0]->span().data() == "union") {
     ValidateModifiers<types::Strictness, types::Resourceness>(modifiers,
                                                               identifier->components[0]->start_);
