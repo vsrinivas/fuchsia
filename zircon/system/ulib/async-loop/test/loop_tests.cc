@@ -942,6 +942,29 @@ TEST(Loop, PagedVmoShutdown) {
   EXPECT_TRUE(paged_vmo.IsCanceled(), "paged vmo cancel after shutdown");
 }
 
+TEST(Loop, PagedVmoAlreadyDestroyed) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  zx::pager pager;
+  EXPECT_EQ(ZX_OK, zx::pager::create(0, &pager));
+
+  // Allocate the TestPagedVMO on the heap so asan can check that there are no dereferences of it
+  // after destruction.
+  zx::vmo vmo;
+  auto paged_vmo = std::make_unique<TestPagedVmo>();
+  EXPECT_EQ(ZX_OK, paged_vmo->Create(loop.dispatcher(), pager, &vmo));
+
+  // Release the VMO before unregistering the paged_vmo. The kernel will report that detaching
+  // failed but the loop's tracking information should still be deleted.
+  vmo.reset();
+  EXPECT_NE(paged_vmo->Detach(), ZX_OK);
+  paged_vmo.reset();
+
+  // This test really just tests that this doesn't crash with a bad pointer or with an asan
+  // use-after-free error as a result of the paged_vmo watcher still being registered.
+  loop.Shutdown();
+}
+
 TEST(Loop, PagedVmoMultithreaded) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "loop runnable");

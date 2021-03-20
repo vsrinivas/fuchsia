@@ -677,10 +677,8 @@ static zx_status_t async_loop_detach_paged_vmo(async_dispatcher_t* async,
   }
 
   zx_status_t status = zx_pager_detach_vmo(paged_vmo->pager, paged_vmo->vmo);
-  if (status != ZX_OK) {
-    mtx_unlock(&loop->lock);
-    return status;
-  }
+  // Even on failure (maybe the VMO was already destroyed), remove the node from the list to
+  // prevent a crash tearing down the list.
 
   // NOTE: the client owns the VMO and is responsible for freeing it.
   list_delete(node);
