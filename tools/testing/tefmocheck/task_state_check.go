@@ -28,6 +28,10 @@ func (c *taskStateCheck) DebugText() string {
 	return debugTextForSwarmingSummary(c.swarmingSummary)
 }
 
+func (c *taskStateCheck) OutputFiles() []string {
+	return []string{}
+}
+
 // taskFailureCheck checks if the swarming task failed.
 type taskFailureCheck struct {
 	swarmingSummary *SwarmingTaskSummary
@@ -46,6 +50,10 @@ func (c *taskFailureCheck) DebugText() string {
 	return debugTextForSwarmingSummary(c.swarmingSummary)
 }
 
+func (c *taskFailureCheck) OutputFiles() []string {
+	return []string{}
+}
+
 // taskInternalFailureCheck checks if the swarming task internally failed.
 type taskInternalFailureCheck struct {
 	swarmingSummary *SwarmingTaskSummary
@@ -62,6 +70,10 @@ func (c *taskInternalFailureCheck) Name() string {
 
 func (c *taskInternalFailureCheck) DebugText() string {
 	return debugTextForSwarmingSummary(c.swarmingSummary)
+}
+
+func (c *taskInternalFailureCheck) OutputFiles() []string {
+	return []string{}
 }
 
 func debugTextForSwarmingSummary(swarmingSummary *SwarmingTaskSummary) string {

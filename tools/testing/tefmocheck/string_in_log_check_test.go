@@ -120,6 +120,7 @@ func TestStringInLogCheck(t *testing.T) {
 				SwarmingOutputPerTest: []TestLog{{
 					TestName: "foo-test",
 					Bytes:    []byte(killerString),
+					FilePath: "foo/log.txt",
 				},
 				},
 			},
@@ -139,6 +140,11 @@ func TestStringInLogCheck(t *testing.T) {
 				t.Errorf("c.Name() returned %q, want %q", gotName, tc.wantName)
 			}
 			c.DebugText() // minimal coverage, check it doesn't crash.
+			swarmingOutputPerTest := tc.testingOutputs.SwarmingOutputPerTest
+			gotOutputFiles := c.OutputFiles()
+			if len(swarmingOutputPerTest) == 1 && (len(gotOutputFiles) != 1 || swarmingOutputPerTest[0].FilePath != gotOutputFiles[0]) {
+				t.Errorf("c.OutputFiles() returned %q, want %q", gotOutputFiles, swarmingOutputPerTest[0].FilePath)
+			}
 		})
 	}
 }
