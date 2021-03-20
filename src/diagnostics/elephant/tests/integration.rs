@@ -63,6 +63,7 @@ async fn setup() -> (App, App) {
 
 /// Runs the elephant persistor and a test component that can have its inspect properties
 /// manipulated by the test via fidl. then just trigger persistence on elephant.
+#[ignore = "TODO(https://fxbug.dev/72626): Deflake and re-enable"]
 #[fasync::run_singlethreaded(test)]
 async fn event_count_sampler_test() {
     let (elephant_app, _example_app) = setup().await;
