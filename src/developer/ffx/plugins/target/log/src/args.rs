@@ -12,6 +12,30 @@ use {
     std::time::Duration,
 };
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum TimeFormat {
+    Utc,
+    Local,
+    Monotonic,
+}
+
+impl std::str::FromStr for TimeFormat {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let lower = s.to_ascii_lowercase();
+        match lower.as_str() {
+            "local" => Ok(TimeFormat::Local),
+            "utc" => Ok(TimeFormat::Utc),
+            "monotonic" => Ok(TimeFormat::Monotonic),
+            _ => Err(format!(
+                "'{}' is not a valid value: must be one of 'local', 'utc', 'monotonic'",
+                s
+            )),
+        }
+    }
+}
+
 #[ffx_command()]
 #[derive(FromArgs, Clone, Debug, PartialEq)]
 #[argh(
@@ -63,6 +87,10 @@ pub struct LogCommand {
     /// toggle coloring logs according to severity
     #[argh(option)]
     pub color: Option<bool>,
+
+    /// how to display log timestamps
+    #[argh(option, default = "TimeFormat::Monotonic")]
+    pub time: TimeFormat,
 
     /// allowed monikers
     #[argh(

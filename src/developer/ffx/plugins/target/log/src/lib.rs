@@ -10,11 +10,11 @@ use {
         sync::Arc,
     },
     async_trait::async_trait,
-    chrono::{DateTime, Local, TimeZone},
+    chrono::{DateTime, Local, TimeZone, Utc},
     diagnostics_data::{LogsData, Severity, Timestamp},
     ffx_config::get,
     ffx_core::{ffx_bail, ffx_error, ffx_plugin},
-    ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, WatchCommand},
+    ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, TimeFormat, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
     ffx_log_utils::{run_logging_pipeline, OrderedBatchPipeline},
     fidl::endpoints::create_proxy,
@@ -39,6 +39,7 @@ The proactive logger isn't connected to this target.
 Verify that the target is up with `ffx target list` and retry \
 in a few seconds.";
 const NANOS_IN_SECOND: i64 = 1_000_000_000;
+const TIMESTAMP_FORMAT: &str = "%Y-%m-%d %H:%M:%S.%3f";
 
 fn timestamp_to_partial_secs(ts: Timestamp) -> f64 {
     let u_ts: i64 = ts.into();
@@ -148,6 +149,7 @@ impl From<&LogCommand> for LogFilterCriteria {
 #[async_trait(?Send)]
 pub trait LogFormatter {
     async fn push_log(&mut self, log_entry: ArchiveIteratorResult) -> Result<()>;
+    fn set_boot_timestamp(&mut self, boot_ts_nanos: i64);
 }
 
 struct DefaultLogFormatter<'a> {
@@ -155,10 +157,15 @@ struct DefaultLogFormatter<'a> {
     has_previous_log: bool,
     filters: LogFilterCriteria,
     color: bool,
+    time_format: TimeFormat,
+    boot_ts_nanos: Option<i64>,
 }
 
 #[async_trait(?Send)]
 impl<'a> LogFormatter for DefaultLogFormatter<'_> {
+    fn set_boot_timestamp(&mut self, boot_ts_nanos: i64) {
+        self.boot_ts_nanos.replace(boot_ts_nanos);
+    }
     async fn push_log(&mut self, log_entry_result: ArchiveIteratorResult) -> Result<()> {
         let mut s = match log_entry_result {
             Ok(log_entry) => {
@@ -168,25 +175,7 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
 
                 match log_entry {
                     LogEntry { data: LogData::TargetLog(data), .. } => {
-                        let ts = timestamp_to_partial_secs(data.metadata.timestamp);
-                        let color_str = if self.color {
-                            severity_to_color_str(data.metadata.severity)
-                        } else {
-                            String::default()
-                        };
-
-                        let severity_str = &format!("{}", data.metadata.severity)[..1];
-                        format!(
-                            "[{:05.3}][{}][{}{}{}] {}{}{}",
-                            ts,
-                            data.moniker,
-                            color_str,
-                            severity_str,
-                            style::Reset,
-                            color_str,
-                            data.msg().unwrap(),
-                            style::Reset
-                        )
+                        self.format_target_log_data(data)
                     }
                     LogEntry { data: LogData::MalformedTargetLog(raw), .. } => {
                         format!("malformed target log: {}", raw)
@@ -196,8 +185,9 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
                             let ts: i64 = timestamp.into();
                             let dt = Local
                                 .timestamp(ts / NANOS_IN_SECOND, (ts % NANOS_IN_SECOND) as u32)
-                                .to_rfc2822();
-                            let mut s = format!("----[<ffx daemon>] {}: logger started.", dt);
+                                .format(TIMESTAMP_FORMAT)
+                                .to_string();
+                            let mut s = format!("[{}][<ffx daemon>]: logger started.", dt);
                             if self.has_previous_log {
                                 s.push_str(" Logs before this may have been dropped if they were not cached on the target.");
                             }
@@ -220,8 +210,66 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
 }
 
 impl<'a> DefaultLogFormatter<'a> {
-    fn new(filters: LogFilterCriteria, color: bool, writer: impl Write + Unpin + 'a) -> Self {
-        Self { filters, color, writer: Box::new(writer), has_previous_log: false }
+    fn new(
+        filters: LogFilterCriteria,
+        color: bool,
+        time_format: TimeFormat,
+        writer: impl Write + Unpin + 'a,
+    ) -> Self {
+        Self {
+            filters,
+            color,
+            writer: Box::new(writer),
+            has_previous_log: false,
+            time_format,
+            boot_ts_nanos: None,
+        }
+    }
+
+    fn format_target_timestamp(&self, ts: Timestamp) -> String {
+        let mut abs_ts = 0;
+        let time_format = match self.boot_ts_nanos {
+            Some(boot_ts) => {
+                abs_ts = boot_ts + *ts;
+                self.time_format.clone()
+            }
+            None => TimeFormat::Monotonic,
+        };
+
+        match time_format {
+            TimeFormat::Monotonic => format!("{:05.3}", timestamp_to_partial_secs(ts)),
+            TimeFormat::Local => Local
+                .timestamp(abs_ts / NANOS_IN_SECOND, (abs_ts % NANOS_IN_SECOND) as u32)
+                .format(TIMESTAMP_FORMAT)
+                .to_string(),
+            TimeFormat::Utc => Utc
+                .timestamp(abs_ts / NANOS_IN_SECOND, (abs_ts % NANOS_IN_SECOND) as u32)
+                .format(TIMESTAMP_FORMAT)
+                .to_string(),
+        }
+    }
+
+    fn format_target_log_data(&self, data: LogsData) -> String {
+        let ts = self.format_target_timestamp(data.metadata.timestamp);
+        let color_str = if self.color {
+            severity_to_color_str(data.metadata.severity)
+        } else {
+            String::default()
+        };
+        let msg = data.msg().unwrap_or("<missing message>").to_string();
+
+        let severity_str = &format!("{}", data.metadata.severity)[..1];
+        format!(
+            "[{}][{}][{}{}{}] {}{}{}",
+            ts,
+            data.moniker,
+            color_str,
+            severity_str,
+            style::Reset,
+            color_str,
+            msg,
+            style::Reset
+        )
     }
 }
 
@@ -256,6 +304,7 @@ pub async fn log(
     let mut formatter = DefaultLogFormatter::new(
         LogFilterCriteria::from(&cmd),
         should_color(config_color, cmd.color),
+        cmd.time.clone(),
         stdout(),
     );
     let ffx: ffx_lib_args::Ffx = argh::from_env();
@@ -283,6 +332,13 @@ pub async fn log_cmd(
         }
         LogSubCommand::Dump(DumpCommand { .. }) => StreamMode::SnapshotAll,
     };
+    let target_info_result = rcs.identify_host().await?;
+    let target_info =
+        target_info_result.map_err(|e| anyhow!("failed to get target info: {:?}", e))?;
+    let boot_ts_opt = target_info.boot_timestamp_nanos;
+    if let Some(ref ts) = boot_ts_opt {
+        log_formatter.set_boot_timestamp(*ts as i64);
+    }
 
     let (from_bound, to_bound) = match cmd.cmd {
         LogSubCommand::Dump(DumpCommand { from, from_monotonic, to, to_monotonic }) => {
@@ -293,8 +349,7 @@ pub async fn log_cmd(
                 ffx_bail!("only one of --to or --to-monotonic may be provided at once.");
             }
 
-            let target_info = rcs.identify_host().await.unwrap().unwrap();
-            let target_boot_time_nanos = match target_info.boot_timestamp_nanos {
+            let target_boot_time_nanos = match boot_ts_opt {
                 Some(t) => Duration::from_nanos(t),
                 None => {
                     if from.is_some() || to.is_some() {
@@ -402,6 +457,10 @@ mod test {
             self.pushed_logs.push(log_entry);
             Ok(())
         }
+
+        fn set_boot_timestamp(&mut self, boot_ts_nanos: i64) {
+            assert_eq!(boot_ts_nanos, BOOT_TS as i64)
+        }
     }
 
     impl FakeLogFormatter {
@@ -470,6 +529,7 @@ mod test {
             cmd: sub_cmd,
             filter: vec![],
             exclude: vec![],
+            time: TimeFormat::Monotonic,
             color: None,
             moniker: vec![],
             exclude_moniker: vec![],
@@ -650,13 +710,10 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_criteria_moniker_message_and_severity_matches() {
         let cmd = LogCommand {
-            cmd: empty_dump_subcommand(),
-            color: None,
-            moniker: vec![],
-            exclude_moniker: vec![],
             filter: vec!["included".to_string()],
             exclude: vec!["not this".to_string()],
             min_severity: Severity::Error,
+            ..empty_dump_command()
         };
         let criteria = LogFilterCriteria::from(&cmd);
 
@@ -704,15 +761,7 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_empty_criteria() {
-        let cmd = LogCommand {
-            cmd: empty_dump_subcommand(),
-            color: None,
-            moniker: vec![],
-            exclude_moniker: vec![],
-            filter: vec![],
-            exclude: vec![],
-            min_severity: Severity::Info,
-        };
+        let cmd = empty_dump_command();
         let criteria = LogFilterCriteria::from(&cmd);
 
         assert!(criteria.matches(&make_log_entry(
@@ -744,16 +793,11 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_criteria_multiple_moniker_matches() {
         let cmd = LogCommand {
-            cmd: empty_dump_subcommand(),
-            color: None,
             moniker: vec![
                 parse_component_selector(&"included/*".to_string()).unwrap(),
                 parse_component_selector(&"als*/moniker".to_string()).unwrap(),
             ],
-            exclude_moniker: vec![],
-            filter: vec![],
-            exclude: vec![],
-            min_severity: Severity::Info,
+            ..empty_dump_command()
         };
         let criteria = LogFilterCriteria::from(&cmd);
 
@@ -786,13 +830,8 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_criteria_multiple_matches() {
         let cmd = LogCommand {
-            cmd: empty_dump_subcommand(),
-            color: None,
-            moniker: vec![],
-            exclude_moniker: vec![],
             filter: vec!["included".to_string(), "also".to_string()],
-            exclude: vec![],
-            min_severity: Severity::Info,
+            ..empty_dump_command()
         };
         let criteria = LogFilterCriteria::from(&cmd);
 
@@ -833,16 +872,11 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_criteria_multiple_monikers_excluded() {
         let cmd = LogCommand {
-            cmd: empty_dump_subcommand(),
-            color: None,
-            moniker: vec![],
             exclude_moniker: vec![
                 parse_component_selector(&"included/*".to_string()).unwrap(),
                 parse_component_selector(&"als*/moniker".to_string()).unwrap(),
             ],
-            filter: vec![],
-            exclude: vec![],
-            min_severity: Severity::Info,
+            ..empty_dump_command()
         };
         let criteria = LogFilterCriteria::from(&cmd);
 
@@ -875,13 +909,8 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_criteria_multiple_excludes() {
         let cmd = LogCommand {
-            cmd: empty_dump_subcommand(),
-            color: None,
-            moniker: vec![],
-            exclude_moniker: vec![],
-            filter: vec![],
             exclude: vec![".cmx".to_string(), "also".to_string()],
-            min_severity: Severity::Info,
+            ..empty_dump_command()
         };
         let criteria = LogFilterCriteria::from(&cmd);
 
@@ -914,13 +943,9 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_criteria_matches_component_url() {
         let cmd = LogCommand {
-            cmd: empty_dump_subcommand(),
-            color: None,
-            moniker: vec![],
-            exclude_moniker: vec![],
             filter: vec!["fuchsia.com".to_string()],
             exclude: vec!["not-this-component.cmx".to_string()],
-            min_severity: Severity::Info,
+            ..empty_dump_command()
         };
         let criteria = LogFilterCriteria::from(&cmd);
 
@@ -963,12 +988,7 @@ mod test {
                 to: None,
                 to_monotonic: None,
             }),
-            color: None,
-            moniker: vec![],
-            exclude_moniker: vec![],
-            filter: vec![],
-            exclude: vec![],
-            min_severity: Severity::Info,
+            ..empty_dump_command()
         };
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::SnapshotAll),
@@ -997,12 +1017,7 @@ mod test {
                 to: None,
                 to_monotonic: None,
             }),
-            color: None,
-            moniker: vec![],
-            exclude_moniker: vec![],
-            filter: vec![],
-            exclude: vec![],
-            min_severity: Severity::Info,
+            ..empty_dump_command()
         };
         let params = DaemonDiagnosticsStreamParameters {
             stream_mode: Some(StreamMode::SnapshotAll),
@@ -1031,12 +1046,7 @@ mod test {
                 to: None,
                 to_monotonic: None,
             }),
-            color: None,
-            moniker: vec![],
-            exclude_moniker: vec![],
-            filter: vec![],
-            exclude: vec![],
-            min_severity: Severity::Info,
+            ..empty_dump_command()
         };
 
         assert!(log_cmd(
@@ -1062,12 +1072,7 @@ mod test {
                 from: None,
                 from_monotonic: None,
             }),
-            color: None,
-            moniker: vec![],
-            exclude_moniker: vec![],
-            filter: vec![],
-            exclude: vec![],
-            min_severity: Severity::Info,
+            ..empty_dump_command()
         };
 
         assert!(log_cmd(
