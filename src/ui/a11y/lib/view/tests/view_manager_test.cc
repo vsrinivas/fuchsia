@@ -311,12 +311,62 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDrawAndClearHighlights) {
   EXPECT_EQ(highlight->max.y, 2.0);
   EXPECT_EQ(highlight->max.z, 3.0);
 
-  view_manager_->ClearHighlight();
+  view_manager_->ClearFocusHighlights();
 
   auto maybe_highlighted_view =
       annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
   ASSERT_TRUE(maybe_highlighted_view);
   auto maybe_highlight = maybe_highlighted_view->GetCurrentFocusHighlight();
+  EXPECT_FALSE(maybe_highlight.has_value());
+}
+
+TEST_F(ViewManagerTest, FocusHighlightManagerDrawAndClearMagnificationHighlight) {
+  view_manager_->SetSemanticsEnabled(true);
+  RunLoopUntilIdle();
+
+  // Create test nodes.
+  std::vector<a11y::SemanticTree::TreeUpdate> node_updates;
+  {
+    fuchsia::ui::gfx::BoundingBox bounding_box = {.min = {.x = 0.0f, .y = 0.0f, .z = 1.0f},
+                                                  .max = {.x = 1024.0f, .y = 600.0f, .z = 1.0f}};
+    auto node = CreateTestNode(0u, "test_label_0", {});
+    node.set_transform({10, 0, 0, 0, 0, 10, 0, 0, 0, 0, 10, 0, 50, 60, 70, 1});
+    node.set_location(std::move(bounding_box));
+    node_updates.emplace_back(std::move(node));
+  }
+
+  ApplyNodeUpdates(std::move(node_updates));
+
+  // Highlight magnification viewport.
+  view_manager_->HighlightMagnificationViewport(semantic_provider_->koid(), 2.0f, -.2f, .4f);
+
+  auto highlighted_view = annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
+  const auto& highlight_bounding_box = highlighted_view->GetCurrentMagnificationHighlight();
+  EXPECT_TRUE(highlight_bounding_box.has_value());
+  EXPECT_EQ(highlight_bounding_box->min.x, 358.4f);
+  EXPECT_EQ(highlight_bounding_box->min.y, 180.0f);
+  EXPECT_EQ(highlight_bounding_box->max.x, 870.4f);
+  EXPECT_EQ(highlight_bounding_box->max.y, 480.0f);
+
+  const auto& highlight_translation =
+      highlighted_view->GetMagnificationHighlightTranslationVector();
+  EXPECT_TRUE(highlight_translation.has_value());
+  EXPECT_EQ((*highlight_translation)[0], 50.0f);
+  EXPECT_EQ((*highlight_translation)[1], 60.0f);
+  EXPECT_EQ((*highlight_translation)[2], 70.0f);
+
+  const auto& highlight_scale = highlighted_view->GetMagnificationHighlightScaleVector();
+  EXPECT_TRUE(highlight_scale.has_value());
+  EXPECT_EQ((*highlight_scale)[0], 10.0f);
+  EXPECT_EQ((*highlight_scale)[1], 10.0f);
+
+  view_manager_->ClearMagnificationHighlights();
+  RunLoopUntilIdle();
+
+  auto maybe_highlighted_view =
+      annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
+  ASSERT_TRUE(maybe_highlighted_view);
+  auto maybe_highlight = maybe_highlighted_view->GetCurrentMagnificationHighlight();
   EXPECT_FALSE(maybe_highlight.has_value());
 }
 
@@ -338,6 +388,11 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDisableAnnotations) {
   newly_highlighted_node.node_id = 1u;
 
   view_manager_->UpdateHighlight(newly_highlighted_node);
+  RunLoopUntilIdle();
+
+  // Highlight magnification viewport.
+  view_manager_->HighlightMagnificationViewport(semantic_provider_->koid(), 2.0f, -.2f, .4f);
+  RunLoopUntilIdle();
 
   auto highlighted_view = annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
   ASSERT_TRUE(highlighted_view);
@@ -350,11 +405,17 @@ TEST_F(ViewManagerTest, FocusHighlightManagerDisableAnnotations) {
   // Disable annotations.
   view_manager_->SetAnnotationsEnabled(false);
 
-  // Verify that highlights were cleared.
+  // Verify that focus highlights were cleared.
   auto maybe_highlighted_view =
       annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
   ASSERT_TRUE(maybe_highlighted_view);
   auto maybe_highlight = maybe_highlighted_view->GetCurrentFocusHighlight();
+  EXPECT_FALSE(maybe_highlight.has_value());
+
+  // Verify that magnification highlights were cleared.
+  maybe_highlighted_view = annotation_view_factory_->GetAnnotationView(semantic_provider_->koid());
+  ASSERT_TRUE(maybe_highlighted_view);
+  maybe_highlight = maybe_highlighted_view->GetCurrentMagnificationHighlight();
   EXPECT_FALSE(maybe_highlight.has_value());
 }
 

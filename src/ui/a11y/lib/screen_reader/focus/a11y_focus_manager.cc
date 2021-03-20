@@ -112,7 +112,7 @@ void A11yFocusManager::UpdateHighlights() {
 
 void A11yFocusManager::ClearA11yFocus() {
   currently_focused_view_ = ZX_KOID_INVALID;
-  focus_highlight_manager_->ClearHighlight();
+  focus_highlight_manager_->ClearFocusHighlights();
 }
 
 }  // namespace a11y

@@ -26,10 +26,20 @@ class MockFocusHighlightManager : public a11y::FocusHighlightManager {
   bool GetAnnotationsEnabled();
 
   // |FocusHighlightManager|
-  void ClearHighlight() override;
+  void ClearAllHighlights() override;
+  void ClearFocusHighlights() override;
+  void ClearMagnificationHighlights() override;
+
+  // |FocusHighlightManager|
+  void HighlightMagnificationViewport(zx_koid_t koid, float magnification_scale,
+                                      float magnification_translation_x,
+                                      float magnification_translation_y) override;
 
   // |FocusHighlightManager|
   void UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node) override;
+
+  // |FocusHighlightManager|
+  void UpdateMagnificationHighlights(zx_koid_t koid) override;
 
   // Returns currently highlighted node.
   std::optional<SemanticNodeIdentifier> GetHighlightedNode() const;
@@ -38,6 +48,10 @@ class MockFocusHighlightManager : public a11y::FocusHighlightManager {
   bool annotations_enabled_ = false;
 
   std::optional<SemanticNodeIdentifier> highlighted_node_;
+  std::optional<zx_koid_t> magnification_koid_;
+  std::optional<float> magnification_scale_;
+  std::optional<float> magnification_translation_x_;
+  std::optional<float> magnification_translation_y_;
 };
 
 }  // namespace accessibility_test

@@ -73,10 +73,20 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
       fit::function<bool(const fuchsia::accessibility::semantics::Node*)> filter) const override;
 
   // |FocusHighlightManager|
-  void ClearHighlight() override;
+  void ClearAllHighlights() override;
+  void ClearFocusHighlights() override;
+  void ClearMagnificationHighlights() override;
+
+  // |FocusHighlightManager|
+  void HighlightMagnificationViewport(zx_koid_t koid, float magnification_scale,
+                                      float magnification_translation_x,
+                                      float magnification_translation_y) override;
 
   // |FocusHighlightManager|
   void UpdateHighlight(SemanticNodeIdentifier newly_highlighted_node) override;
+
+  // |FocusHighlightManager|
+  void UpdateMagnificationHighlights(zx_koid_t koid) override;
 
   // |SemanticsSource|
   void ExecuteHitTesting(
@@ -129,6 +139,10 @@ class ViewManager : public fuchsia::accessibility::semantics::SemanticsManager,
   bool annotations_enabled_ = false;
 
   std::optional<SemanticNodeIdentifier> highlighted_node_ = std::nullopt;
+  std::optional<zx_koid_t> magnified_view_koid_ = std::nullopt;
+  std::optional<float> magnification_scale_ = std::nullopt;
+  std::optional<float> magnification_translation_x_ = std::nullopt;
+  std::optional<float> magnification_translation_y_ = std::nullopt;
 
   std::unique_ptr<SemanticTreeServiceFactory> factory_;
 

@@ -46,6 +46,10 @@ class ViewWrapper {
   // Highlights node with id |node_id|.
   void HighlightNode(uint32_t node_id);
 
+  // Draws a highlight around the magnification viewport.
+  void HighlightMagnificationViewport(float magnification_scale, float magnification_translation_x,
+                                      float magnification_translation_y);
+
   // Clears contents of annotation view.
   void ClearAllHighlights();
   void ClearFocusHighlights();
