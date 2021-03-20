@@ -43,12 +43,12 @@ protocol InputMethodEditor {
     SetKeyboardType(KeyboardType keyboard_type);
     SetState(TextInputState state);
 
-    // DEPRECATED: Will be replaced with DispatchKey3
+    // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
+    // TODO(fxbug.dev/72752)
     InjectInput(InputEvent event);
 
-    // Notify IME Service of a keyboard event. Will be migrated into
-    // fuchsia.ui.input after fuchsia.ui.input cleanup.
-    // TODO(fxbug.dev/68265)
+    // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
+    // TODO(fxbug.dev/72752)
     [Transitional]
     DispatchKey3(fuchsia.ui.input3.KeyEvent event) -> (bool handled);
 

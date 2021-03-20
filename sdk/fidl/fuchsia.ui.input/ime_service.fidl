@@ -18,14 +18,17 @@ protocol ImeService {
                          request<InputMethodEditor> editor);
     ShowKeyboard();
     HideKeyboard();
-    // DEPRECATED: Will be replaced with DispatchKey3
+
+    // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
+    // TODO(fxbug.dev/70474): remove this method.
     InjectInput(InputEvent event);
 
-    // DEPRECATED: Will be replaced with DispatchKey3
+    // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
+    // TODO(fxbug.dev/70474): remove this method.
     DispatchKey(fuchsia.ui.input2.KeyEvent event) -> (bool handled);
 
-    // Notify IME Service of a keyboard event. Will be migrated into
-    // fuchsia.ui.input after fuchsia.ui.input cleanup.
+    // DEPRECATED: Instead, use `fuchsia.ui.input3.KeyEventInjector`.
+    // TODO(fxbug.dev/70474): remove this method.
     [Transitional]
     DispatchKey3(fuchsia.ui.input3.KeyEvent event) -> (bool handled);
 

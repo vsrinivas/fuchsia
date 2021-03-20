@@ -34,6 +34,39 @@ protocol KeyboardListener {
     OnKeyEvent(KeyEvent event) -> (KeyEventStatus status);
 };
 
+/// Provides the ability to inject `KeyEvent`s into the keyboard subsystem.
+///
+/// # Roles
+/// This protocol will typically be:
+/// * Implemented by platform components which process and deliver keyboard
+///   events.
+/// * Consumed by components which originiate keyboard events. E.g.
+///   an on-screen keyboard, or the Session Framework Input Pipeline.
+///
+/// # Related protocols
+/// This protocol should be using in preference to legacy protocols which provide
+/// similar functionality. Specifically, this means this protocol should be preferred
+/// over
+/// * `fuchsia.ui.input.ImeService` which provides `InjectInput()`, `DispatchKey()`,
+///   and `DispatchKey3()`
+/// * `fuchsia.ui.input.InputMethodEditor`, which provides `InjectInput()` and
+///   `DispatchKey3()`
+///
+/// # Notes
+/// Products should take care to limit access to this protocol, as events injected
+/// with this protocol are indistinguishable from those coming from physical devices.
+[Discoverable]
+protocol KeyEventInjector {
+    /// Inject an event into the keyboard subsystem.
+    ///
+    /// # Returns
+    /// * `HANDLED` if the keyboard subsystem delivered the event to a consumer,
+    ///   and the consumer reported that it `HANDLED` the event
+    /// * `NOT_HANDLED` if the keyboard subsystem did not deliever the event to
+    ///   any consumers, or no consumer reported that it `HANDLED` the event.
+    Inject(KeyEvent key_event) -> (KeyEventStatus status);
+};
+
 /// Return type for clients key events listener.
 enum KeyEventStatus {
     /// The key event was handled and its further propagation should be stopped.
