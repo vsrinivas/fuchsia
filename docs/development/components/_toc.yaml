@@ -16,6 +16,8 @@ toc:
     path: /docs/development/components/v2/migration.md
   - title: "Troubleshooting components"
     path: /docs/development/components/v2/troubleshooting.md
+  - title: "Unstable CML features"
+    path: /docs/development/components/v2/unstable_features.md
 - title: "Build components"
   path: /docs/development/components/build.md
 - title: "Supply build-time configuration data to components"

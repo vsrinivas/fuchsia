@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::features::Feature;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
@@ -189,6 +190,11 @@ pub enum Commands {
         /// Temporarily optional for a soft transition.
         /// If not specified, will take the value of `includepath`.
         includeroot: Option<PathBuf>,
+
+        #[structopt(short = "f", long = "features")]
+        /// The set of non-standard features to compile with.
+        /// Only applies to CML files.
+        features: Vec<Feature>,
     },
 }
 

@@ -27,10 +27,20 @@ pub enum Error {
     Io(io::Error),
     FidlEncoding(fidl::Error),
     MissingRights(String),
-    Parse { err: String, location: Option<Location>, filename: Option<String> },
-    Validate { schema_name: Option<String>, err: String, filename: Option<String> },
+    Parse {
+        err: String,
+        location: Option<Location>,
+        filename: Option<String>,
+    },
+    Validate {
+        schema_name: Option<String>,
+        err: String,
+        filename: Option<String>,
+    },
     Internal(String),
     Utf8(Utf8Error),
+    /// An unstable feature was used without opting-in.
+    UnstableFeature(String),
 }
 
 impl error::Error for Error {}
@@ -120,6 +130,11 @@ impl fmt::Display for Error {
             }
             Error::Internal(err) => write!(f, "Internal error: {}", err),
             Error::Utf8(err) => write!(f, "UTF8 error: {}", err),
+            Error::UnstableFeature(feature) => write!(
+                f,
+                "Use of unstable feature \"{}\". To opt-in, see https://fuchsia.dev/fuchsia-src/development/components/v2/unstable_features",
+                feature
+            ),
         }
     }
 }

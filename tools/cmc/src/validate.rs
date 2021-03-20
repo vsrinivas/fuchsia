@@ -3,7 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{cml, error::Error, one_or_many::OneOrMany, util},
+    crate::{
+        cml,
+        error::Error,
+        features::{Feature, FeatureSet},
+        one_or_many::OneOrMany,
+        util,
+    },
     cm_json::{JsonSchema, CMX_SCHEMA},
     cm_types::Name,
     directed_graph::{self, DirectedGraph},
@@ -29,20 +35,25 @@ use {
 pub fn validate<P: AsRef<Path>>(
     files: &[P],
     extra_schemas: &[(P, Option<String>)],
+    features: &FeatureSet,
 ) -> Result<(), Error> {
     if files.is_empty() {
         return Err(Error::invalid_args("No files provided"));
     }
 
     for filename in files {
-        validate_file(filename.as_ref(), extra_schemas)?;
+        validate_file(filename.as_ref(), extra_schemas, features)?;
     }
     Ok(())
 }
 
 /// Validates a given cml.
-pub fn validate_cml(document: &cml::Document, file: &Path) -> Result<(), Error> {
-    let mut ctx = ValidationContext::new(&document);
+pub fn validate_cml(
+    document: &cml::Document,
+    file: &Path,
+    features: &FeatureSet,
+) -> Result<(), Error> {
+    let mut ctx = ValidationContext::new(&document, features);
     let mut res = ctx.validate();
     if let Err(Error::Validate { filename, .. }) = &mut res {
         *filename = Some(file.to_string_lossy().into_owned());
@@ -54,6 +65,7 @@ pub fn validate_cml(document: &cml::Document, file: &Path) -> Result<(), Error> 
 fn validate_file<P: AsRef<Path>>(
     file: &Path,
     extra_schemas: &[(P, Option<String>)],
+    features: &FeatureSet,
 ) -> Result<(), Error> {
     const BAD_EXTENSION: &str = "Input file does not have a component manifest extension \
                                  (.cml or .cmx)";
@@ -83,7 +95,7 @@ fn validate_file<P: AsRef<Path>>(
         }
         Some("cml") => {
             let document = util::read_cml(file)?;
-            validate_cml(&document, &file)?;
+            validate_cml(&document, &file, features)?;
         }
         _ => {
             return Err(Error::invalid_args(BAD_EXTENSION));
@@ -125,6 +137,7 @@ pub fn validate_json(json: &Value, schema: &JsonSchema<'_>) -> Result<(), Error>
 
 struct ValidationContext<'a> {
     document: &'a cml::Document,
+    features: &'a FeatureSet,
     all_children: HashMap<&'a cml::Name, &'a cml::Child>,
     all_collections: HashSet<&'a cml::Name>,
     all_storage_and_sources: HashMap<&'a cml::Name, &'a cml::CapabilityFromRef>,
@@ -139,9 +152,10 @@ struct ValidationContext<'a> {
 }
 
 impl<'a> ValidationContext<'a> {
-    fn new(document: &cml::Document) -> ValidationContext {
+    fn new(document: &'a cml::Document, features: &'a FeatureSet) -> Self {
         ValidationContext {
-            document: &document,
+            document,
+            features,
             all_children: HashMap::new(),
             all_collections: HashSet::new(),
             all_storage_and_sources: HashMap::new(),
@@ -314,6 +328,9 @@ impl<'a> ValidationContext<'a> {
         capability: &'a cml::Capability,
         used_ids: &mut HashMap<String, cml::CapabilityId>,
     ) -> Result<(), Error> {
+        if capability.service.is_some() {
+            self.features.check(Feature::Services)?;
+        }
         if capability.directory.is_some() && capability.path.is_none() {
             return Err(Error::validate("\"path\" should be present with \"directory\""));
         }
@@ -369,8 +386,11 @@ impl<'a> ValidationContext<'a> {
         use_: &'a cml::Use,
         used_ids: &mut HashMap<String, cml::CapabilityId>,
     ) -> Result<(), Error> {
-        if use_.service.is_some() && use_.r#as.is_some() {
-            return Err(Error::validate("\"as\" field cannot be used with \"service\""));
+        if use_.service.is_some() {
+            self.features.check(Feature::Services)?;
+            if use_.r#as.is_some() {
+                return Err(Error::validate("\"as\" field cannot be used with \"service\""));
+            }
         }
         if use_.from == Some(cml::UseFromRef::Debug) && use_.protocol.is_none() {
             return Err(Error::validate("only \"protocol\" supports source from \"debug\""));
@@ -519,6 +539,7 @@ impl<'a> ValidationContext<'a> {
 
         // Ensure that services exposed from self are defined in `capabilities`.
         if let Some(service_name) = &expose.service {
+            self.features.check(Feature::Services)?;
             if expose.from.iter().any(|r| *r == cml::ExposeFromRef::Self_) {
                 if !self.all_services.contains(service_name) {
                     return Err(Error::validate(format!(
@@ -629,6 +650,7 @@ impl<'a> ValidationContext<'a> {
 
         // Ensure that services offered from self are defined in `services`.
         if let Some(service_name) = &offer.service {
+            self.features.check(Feature::Services)?;
             if offer.from.iter().any(|r| *r == cml::OfferFromRef::Self_) {
                 if !self.all_services.contains(service_name) {
                     return Err(Error::validate(format!(
@@ -1177,6 +1199,27 @@ mod tests {
         }
     }
 
+    macro_rules! test_validate_cml_with_feature {
+        (
+            $features:expr,
+            {
+                $(
+                    $test_name:ident($input:expr, $($pattern:tt)+),
+                )+
+            }
+        ) => {
+            $(
+                #[test]
+                fn $test_name() {
+                    let input = format!("{}", $input);
+                    let features = $features;
+                    let result = write_and_validate_with_features("test.cml", input.as_bytes(), &features);
+                    assert_matches!(result, $($pattern)+);
+                }
+            )+
+        }
+    }
+
     macro_rules! test_validate_cmx {
         (
             $(
@@ -1195,10 +1238,18 @@ mod tests {
     }
 
     fn write_and_validate(filename: &str, input: &[u8]) -> Result<(), Error> {
+        write_and_validate_with_features(filename, input, &FeatureSet::empty())
+    }
+
+    fn write_and_validate_with_features(
+        filename: &str,
+        input: &[u8],
+        features: &FeatureSet,
+    ) -> Result<(), Error> {
         let tmp_dir = TempDir::new().unwrap();
         let tmp_file_path = tmp_dir.path().join(filename);
         File::create(&tmp_file_path).unwrap().write_all(input).unwrap();
-        validate(&vec![tmp_file_path], &[])
+        validate(&vec![tmp_file_path], &[], features)
     }
 
     #[test]
@@ -1218,7 +1269,7 @@ mod tests {
         let input = r##"{
             "expose": [
                 // Here are some services to expose.
-                { "service": "fuchsia.logger.Log", "from": "#logger", },
+                { "protocol": "fuchsia.logger.Log", "from": "#logger", },
                 { "directory": "blobfs", "from": "#logger", "rights": ["rw*"]},
             ],
             "children": [
@@ -1319,8 +1370,6 @@ mod tests {
         test_cml_use(
             json!({
                 "use": [
-                  { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
-                  { "service": "fuchsia.sys2.Realm", "from": "framework" },
                   { "protocol": "CoolFonts", "path": "/svc/MyFonts" },
                   { "protocol": "CoolFonts2", "path": "/svc/MyFonts2", "from": "debug" },
                   { "protocol": "fuchsia.test.hub.HubReport", "from": "framework" },
@@ -1395,18 +1444,6 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "`use` declaration is missing a capability keyword, one of: \"service\", \"protocol\", \"directory\", \"storage\", \"runner\", \"event\", \"event_stream\""
         ),
-        test_cml_use_as_with_service(
-            json!({
-                "use": [ { "service": "foo", "as": "xxx" } ]
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"service\""
-        ),
-        test_cml_use_invalid_from_with_service(
-            json!({
-                "use": [ { "service": "foo", "from": "debug" } ]
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "only \"protocol\" supports source from \"debug\""
-        ),
         test_cml_use_as_with_protocol(
             json!({
                 "use": [ { "protocol": "foo", "as": "xxx" } ]
@@ -1440,7 +1477,7 @@ mod tests {
         test_cml_use_invalid_from(
             json!({
                 "use": [
-                  { "service": "CoolFonts", "from": "self" }
+                  { "protocol": "CoolFonts", "from": "self" }
                 ]
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid value: string \"self\", expected \"parent\", \"framework\", \"debug\", \"#<capability-name>\", or none"
@@ -1468,10 +1505,10 @@ mod tests {
             json!({
                 "use": [
                   { "protocol": "fuchsia.sys2.Realm" },
-                  { "service": "fuchsia.sys2.Realm" },
+                  { "protocol": "fuchsia.sys2.Realm" },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/svc/fuchsia.sys2.Realm\" is a duplicate \"use\" target service"
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"/svc/fuchsia.sys2.Realm\" is a duplicate \"use\" target protocol"
         ),
         test_cml_use_empty_protocols(
             json!({
@@ -1521,10 +1558,10 @@ mod tests {
             json!({
                 "use": [
                     { "directory": "foobar", "path": "/foo/bar", "rights": [ "r*" ] },
-                    { "service": "fuchsia", "path": "/foo/bar/fuchsia" },
+                    { "protocol": "fuchsia", "path": "/foo/bar/fuchsia" },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "service \"/foo/bar/fuchsia\" is a prefix of \"use\" target directory \"/foo/bar\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "protocol \"/foo/bar/fuchsia\" is a prefix of \"use\" target directory \"/foo/bar\""
         ),
         test_cml_use_disallows_common_prefixes_protocol(
             json!({
@@ -1680,15 +1717,6 @@ mod tests {
             json!({
                 "expose": [
                     {
-                        "service": "fuchsia.fonts.Provider",
-                        "from": "self",
-                    },
-                    {
-                        "service": "fuchsia.logger.Log",
-                        "from": "#logger",
-                        "as": "logger"
-                    },
-                    {
                         "protocol": "A",
                         "from": "self",
                     },
@@ -1711,7 +1739,6 @@ mod tests {
                     { "resolver": "pkg_resolver", "from": "#logger" },
                 ],
                 "capabilities": [
-                    { "service": "fuchsia.fonts.Provider" },
                     { "protocol": ["A", "B", "C"] },
                     {
                         "directory": "blobfs",
@@ -1733,31 +1760,11 @@ mod tests {
             }),
             Ok(())
         ),
-        test_cml_expose_service_multiple_from(
-            json!({
-                "expose": [
-                    {
-                        "service": "fuchsia.logger.Log",
-                        "from": [ "#logger", "self" ],
-                    },
-                ],
-                "capabilities": [
-                    { "service": "fuchsia.logger.Log" },
-                ],
-                "children": [
-                    {
-                        "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
-                    },
-                ],
-            }),
-            Ok(())
-        ),
         test_cml_expose_all_valid_chars(
             json!({
                 "expose": [
                     {
-                        "service": "fuchsia.logger.Log",
+                        "protocol": "fuchsia.logger.Log",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-.",
                     },
                 ],
@@ -1779,10 +1786,10 @@ mod tests {
         test_cml_expose_missing_from(
             json!({
                 "expose": [
-                    { "service": "fuchsia.logger.Log", "from": "#missing" },
+                    { "protocol": "fuchsia.logger.Log", "from": "#missing" },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#missing\" does not appear in \"children\" or \"collections\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#missing\" does not appear in \"children\" or \"capabilities\""
         ),
         test_cml_expose_duplicate_target_names(
             json!({
@@ -1836,7 +1843,7 @@ mod tests {
         test_cml_expose_bad_from(
             json!({
                 "expose": [ {
-                    "service": "fuchsia.logger.Log", "from": "parent"
+                    "protocol": "fuchsia.logger.Log", "from": "parent"
                 } ]
             }),
             Err(Error::Parse { err, .. }) if &err == "invalid value: string \"parent\", expected one or an array of \"framework\", \"self\", or \"#<child-name>\""
@@ -1921,10 +1928,6 @@ mod tests {
             json!({
                 "expose": [
                     {
-                        "service": "foo_service",
-                        "from": "self",
-                    },
-                    {
                         "protocol": "foo_protocol",
                         "from": "self",
                     },
@@ -1946,9 +1949,6 @@ mod tests {
                     },
                 ],
                 "capabilities": [
-                    {
-                        "service": "foo_service",
-                    },
                     {
                         "protocol": "foo_protocol",
                     },
@@ -1974,17 +1974,6 @@ mod tests {
                 ]
             }),
             Ok(())
-        ),
-        test_cml_expose_service_from_self_missing(
-            json!({
-                "expose": [
-                    {
-                        "service": "pkg_service",
-                        "from": "self",
-                    },
-                ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"pkg_service\" is exposed from self, so it must be declared as a \"service\" in \"capabilities\""
         ),
         test_cml_expose_protocol_from_self_missing(
             json!({
@@ -2089,18 +2078,6 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"expose\" source \"#coll\" does not appear in \"children\""
         ),
-        test_cml_expose_service_from_collection_ok(
-            json!({
-                "collections": [ {
-                    "name": "coll",
-                    "durability": "transient",
-                } ],
-                "expose": [ {
-                    "service": "fuchsia.logger.Log", "from": "#coll"
-                }]
-            }),
-            Ok(())
-        ),
         test_cml_expose_to_framework_ok(
             json!({
                 "capabilities": [
@@ -2149,22 +2126,6 @@ mod tests {
         test_cml_offer(
             json!({
                 "offer": [
-                    {
-                        "service": "fuchsia.logger.Log",
-                        "from": "#logger",
-                        "to": [ "#echo_server", "#modular" ],
-                        "as": "fuchsia.logger.SysLog"
-                    },
-                    {
-                        "service": "fuchsia.fonts.Provider",
-                        "from": "parent",
-                        "to": [ "#echo_server" ]
-                    },
-                    {
-                        "service": "fuchsia.net.Netstack",
-                        "from": "self",
-                        "to": [ "#echo_server" ]
-                    },
                     {
                         "protocol": "fuchsia.fonts.LegacyProvider",
                         "from": "parent",
@@ -2247,7 +2208,6 @@ mod tests {
                     },
                 ],
                 "capabilities": [
-                    { "service": "fuchsia.net.Netstack" },
                     {
                         "directory": "assets",
                         "path": "/data/assets",
@@ -2262,33 +2222,11 @@ mod tests {
             }),
             Ok(())
         ),
-        test_cml_offer_service_multiple_from(
-            json!({
-                "offer": [
-                    {
-                        "service": "fuchsia.logger.Log",
-                        "from": [ "#logger", "parent" ],
-                        "to": [ "#echo_server" ],
-                    },
-                ],
-                "children": [
-                    {
-                        "name": "logger",
-                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
-                    },
-                    {
-                        "name": "echo_server",
-                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
-                    },
-                ],
-            }),
-            Ok(())
-        ),
         test_cml_offer_all_valid_chars(
             json!({
                 "offer": [
                     {
-                        "service": "fuchsia.logger.Log",
+                        "protocol": "fuchsia.logger.Log",
                         "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-from",
                         "to": [ "#abcdefghijklmnopqrstuvwxyz0123456789_-to" ],
                     },
@@ -2323,7 +2261,7 @@ mod tests {
             json!({
                     "offer": [
                         {
-                            "service": "fuchsia.logger.Log",
+                            "protocol": "fuchsia.logger.Log",
                             "from": "#missing",
                             "to": [ "#echo_server" ],
                         },
@@ -2335,7 +2273,7 @@ mod tests {
                         },
                     ],
                 }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#missing\" does not appear in \"children\" or \"collections\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#missing\" does not appear in \"children\" or \"capabilities\""
         ),
         test_cml_storage_offer_from_child(
             json!({
@@ -2362,7 +2300,7 @@ mod tests {
         test_cml_offer_bad_from(
             json!({
                     "offer": [ {
-                        "service": "fuchsia.logger.Log",
+                        "protocol": "fuchsia.logger.Log",
                         "from": "#invalid@",
                         "to": [ "#echo_server" ],
                     } ]
@@ -2505,27 +2443,11 @@ mod tests {
             }),
             Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"offer\" source \"#coll\" does not appear in \"children\""
         ),
-        test_cml_offer_service_from_collection_ok(
-            json!({
-                "collections": [ {
-                    "name": "coll",
-                    "durability": "transient",
-                } ],
-                "children": [ {
-                    "name": "echo_server",
-                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
-                } ],
-                "offer": [ {
-                    "service": "fuchsia.logger.Log", "from": "#coll", "to": [ "#echo_server" ]
-                }]
-            }),
-            Ok(())
-        ),
         test_cml_offer_empty_targets(
             json!({
                 "offer": [
                     {
-                        "service": "fuchsia.logger.Log",
+                        "protocol": "fuchsia.logger.Log",
                         "from": "#child",
                         "to": []
                     },
@@ -2542,7 +2464,7 @@ mod tests {
         test_cml_offer_duplicate_targets(
             json!({
                 "offer": [ {
-                    "service": "fuchsia.logger.Log",
+                    "protocol": "fuchsia.logger.Log",
                     "from": "#logger",
                     "to": ["#a", "#a"]
                 } ]
@@ -2552,7 +2474,7 @@ mod tests {
         test_cml_offer_target_missing_props(
             json!({
                 "offer": [ {
-                    "service": "fuchsia.logger.Log",
+                    "protocol": "fuchsia.logger.Log",
                     "from": "#logger",
                     "as": "fuchsia.logger.SysLog",
                 } ]
@@ -2562,7 +2484,7 @@ mod tests {
         test_cml_offer_target_missing_to(
             json!({
                 "offer": [ {
-                    "service": "fuchsia.logger.Log",
+                    "protocol": "fuchsia.logger.Log",
                     "from": "#logger",
                     "to": [ "#missing" ],
                 } ],
@@ -2576,7 +2498,7 @@ mod tests {
         test_cml_offer_target_bad_to(
             json!({
                 "offer": [ {
-                    "service": "fuchsia.logger.Log",
+                    "protocol": "fuchsia.logger.Log",
                     "from": "#logger",
                     "to": [ "self" ],
                     "as": "fuchsia.logger.SysLog",
@@ -2600,7 +2522,7 @@ mod tests {
         test_cml_offer_target_equals_from(
             json!({
                 "offer": [ {
-                    "service": "fuchsia.logger.Log",
+                    "protocol": "fuchsia.logger.Log",
                     "from": "#logger",
                     "to": [ "#logger" ],
                     "as": "fuchsia.logger.SysLog",
@@ -2732,11 +2654,6 @@ mod tests {
             json!({
                 "offer": [
                     {
-                        "service": "foo_service",
-                        "from": "self",
-                        "to": [ "#modular" ],
-                    },
-                    {
                         "protocol": "foo_protocol",
                         "from": "self",
                         "to": [ "#modular" ],
@@ -2770,9 +2687,6 @@ mod tests {
                 ],
                 "capabilities": [
                     {
-                        "service": "foo_service",
-                    },
-                    {
                         "protocol": "foo_protocol",
                     },
                     {
@@ -2797,24 +2711,6 @@ mod tests {
                 ]
             }),
             Ok(())
-        ),
-        test_cml_offer_service_from_self_missing(
-            json!({
-                "offer": [
-                    {
-                        "service": "pkg_service",
-                        "from": "self",
-                        "to": [ "#modular" ],
-                    },
-                ],
-                "children": [
-                    {
-                        "name": "modular",
-                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
-                    },
-                ],
-            }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"pkg_service\" is offered from self, so it must be declared as a \"service\" in \"capabilities\""
         ),
         test_cml_offer_protocol_from_self_missing(
             json!({
@@ -2927,7 +2823,7 @@ mod tests {
         test_cml_offer_dependency_on_wrong_type(
             json!({
                     "offer": [ {
-                        "service": "fuchsia.logger.Log",
+                        "resolver": "fuchsia.logger.Log",
                         "from": "parent",
                         "to": [ "#echo_server" ],
                         "dependency": "strong",
@@ -2954,7 +2850,7 @@ mod tests {
                             "to": [ "#c" ],
                         },
                         {
-                            "service": "ethernet",
+                            "protocol": "ethernet",
                             "from": "#c",
                             "to": [ "#a" ],
                         },
@@ -3363,34 +3259,6 @@ mod tests {
         ),
 
         // capabilities
-        test_cml_service(
-            json!({
-                "capabilities": [
-                    {
-                        "service": "a",
-                        "path": "/minfs",
-                    },
-                    {
-                        "service": "b",
-                        "path": "/data",
-                    },
-                    {
-                        "service": "c",
-                    },
-                ],
-            }),
-            Ok(())
-        ),
-        test_cml_service_all_valid_chars(
-            json!({
-                "capabilities": [
-                    {
-                        "service": "abcdefghijklmnopqrstuvwxyz0123456789_-service",
-                    },
-                ],
-            }),
-            Ok(())
-        ),
         test_cml_protocol(
             json!({
                 "capabilities": [
@@ -4258,7 +4126,7 @@ mod tests {
             json!({
                 "expose": [
                     {
-                        "service": "fuchsia.logger.Log",
+                        "protocol": "fuchsia.logger.Log",
                         "from": &format!("#{}", "a".repeat(101)),
                     },
                 ],
@@ -4460,6 +4328,276 @@ mod tests {
         ),
     }
 
+    // Tests the use of services when the "services" feature is set.
+    test_validate_cml_with_feature! { FeatureSet::from(vec![Feature::Services]), {
+        test_cml_validate_use_service(
+            json!({
+                "use": [
+                    { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
+                    { "service": "fuchsia.sys2.Realm", "from": "framework" },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_use_as_with_service(
+            json!({
+                "use": [ { "service": "foo", "as": "xxx" } ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"service\""
+        ),
+        test_cml_use_invalid_from_with_service(
+            json!({
+                "use": [ { "service": "foo", "from": "debug" } ]
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "only \"protocol\" supports source from \"debug\""
+        ),
+        test_cml_validate_offer_service(
+            json!({
+                "offer": [
+                    {
+                        "service": "fuchsia.logger.Log",
+                        "from": "#logger",
+                        "to": [ "#echo_server", "#modular" ],
+                        "as": "fuchsia.logger.SysLog"
+                    },
+                    {
+                        "service": "fuchsia.fonts.Provider",
+                        "from": "parent",
+                        "to": [ "#echo_server" ]
+                    },
+                    {
+                        "service": "fuchsia.net.Netstack",
+                        "from": "self",
+                        "to": [ "#echo_server" ]
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://logger",
+                    },
+                    {
+                        "name": "echo_server",
+                        "url": "fuchsia-pkg://echo_server",
+                    }
+                ],
+                "collections": [
+                    {
+                        "name": "modular",
+                        "durability": "persistent",
+                    },
+                ],
+                "capabilities": [
+                    { "service": "fuchsia.net.Netstack" },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_offer_service_multiple_from(
+            json!({
+                "offer": [
+                    {
+                        "service": "fuchsia.logger.Log",
+                        "from": [ "#logger", "parent" ],
+                        "to": [ "#echo_server" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    },
+                    {
+                        "name": "echo_server",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_offer_service_from_collection_ok(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "children": [ {
+                    "name": "echo_server",
+                    "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm",
+                } ],
+                "offer": [ {
+                    "service": "fuchsia.logger.Log", "from": "#coll", "to": [ "#echo_server" ]
+                }]
+            }),
+            Ok(())
+        ),
+        test_cml_offer_service_from_self_missing(
+            json!({
+                "offer": [
+                    {
+                        "service": "pkg_service",
+                        "from": "self",
+                        "to": [ "#modular" ],
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "modular",
+                        "url": "fuchsia-pkg://fuchsia.com/modular#meta/modular.cm"
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"pkg_service\" is offered from self, so it must be declared as a \"service\" in \"capabilities\""
+        ),
+        test_cml_validate_expose_service(
+            json!(
+                {
+                    "expose": [
+                        {
+                            "service": "fuchsia.fonts.Provider",
+                            "from": "self",
+                        },
+                        {
+                            "service": "fuchsia.logger.Log",
+                            "from": "#logger",
+                            "as": "logger"
+                        },
+                    ],
+                    "capabilities": [
+                        { "service": "fuchsia.fonts.Provider" },
+                    ],
+                    "children": [
+                        {
+                            "name": "logger",
+                            "url": "fuchsia-pkg://logger",
+                        },
+                    ]
+                }
+            ),
+            Ok(())
+        ),
+        test_cml_expose_service_multiple_from(
+            json!({
+                "expose": [
+                    {
+                        "service": "fuchsia.logger.Log",
+                        "from": [ "#logger", "self" ],
+                    },
+                ],
+                "capabilities": [
+                    { "service": "fuchsia.logger.Log" },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_expose_service_from_self_missing(
+            json!({
+                "expose": [
+                    {
+                        "service": "pkg_service",
+                        "from": "self",
+                    },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "Service \"pkg_service\" is exposed from self, so it must be declared as a \"service\" in \"capabilities\""
+        ),
+        test_cml_expose_service_from_collection_ok(
+            json!({
+                "collections": [ {
+                    "name": "coll",
+                    "durability": "transient",
+                } ],
+                "expose": [ {
+                    "service": "fuchsia.logger.Log", "from": "#coll"
+                }]
+            }),
+            Ok(())
+        ),
+        test_cml_service(
+            json!({
+                "capabilities": [
+                    {
+                        "protocol": "a",
+                        "path": "/minfs",
+                    },
+                    {
+                        "protocol": "b",
+                        "path": "/data",
+                    },
+                    {
+                        "protocol": "c",
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+        test_cml_service_all_valid_chars(
+            json!({
+                "capabilities": [
+                    {
+                        "service": "abcdefghijklmnopqrstuvwxyz0123456789_-service",
+                    },
+                ],
+            }),
+            Ok(())
+        ),
+    }}
+
+    // Tests that the use of services fail when the "services" feature is not set.
+    test_validate_cml! {
+        test_cml_use_service_without_feature(
+            json!({
+                "use": [
+                    { "service": "my.service.Service" },
+                ],
+            }),
+            Err(Error::UnstableFeature(s)) if s == "services"
+        ),
+        test_cml_offer_service_without_feature(
+            json!({
+                "offer": [
+                    {
+                        "service": "my.service.Service",
+                        "from": "parent",
+                        "to": [ "#child" ],
+                    },
+                ],
+                "children": [
+                    { "name": "child", "url": "fuchsia-pkg://child" }
+                ],
+            }),
+            Err(Error::UnstableFeature(s)) if s == "services"
+        ),
+        test_cml_expose_service_without_feature(
+            json!({
+                "expose": [
+                    {
+                        "service": "my.service.Service",
+                        "from": "#child",
+                    },
+                ],
+                "children": [
+                    { "name": "child", "url": "fuchsia-pkg://child" }
+                ],
+            }),
+            Err(Error::UnstableFeature(s)) if s == "services"
+        ),
+        test_cml_capability_service_without_feature(
+            json!({
+                "capabilities": [
+                    { "service": "my.service.Service" },
+                ]
+            }),
+            Err(Error::UnstableFeature(s)) if s == "services"
+        ),
+    }
+
     test_validate_cmx! {
         test_cmx_err_empty_json(
             json!({}),
@@ -4611,7 +4749,7 @@ mod tests {
                         .iter()
                         .map(|i| (Path::new(&*i.0.name), i.1.clone()))
                         .collect();
-                    let result = validate(&[tmp_cmx_path.as_path()], &extra_schema_paths);
+                    let result = validate(&[tmp_cmx_path.as_path()], &extra_schema_paths, &FeatureSet::empty());
                     assert_matches!(result, $($pattern)+);
                     Ok(())
                 }

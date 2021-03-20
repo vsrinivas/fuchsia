@@ -4,6 +4,7 @@
 
 use crate::cml::{self, CapabilityClause};
 use crate::error::Error;
+use crate::features::FeatureSet;
 use crate::include;
 use crate::one_or_many::OneOrMany;
 use crate::translate;
@@ -29,6 +30,7 @@ pub fn compile(
     depfile: Option<PathBuf>,
     includepath: &PathBuf,
     includeroot: &PathBuf,
+    features: &FeatureSet,
 ) -> Result<(), Error> {
     match file.extension().and_then(|e| e.to_str()) {
         Some("cml") => Ok(()),
@@ -51,7 +53,7 @@ pub fn compile(
         let mut include_document = util::read_cml(&include)?;
         document.merge_from(&mut include_document, &include)?;
     }
-    validate::validate_cml(&document, &file)?;
+    validate::validate_cml(&document, &file, &features)?;
 
     let mut out_data = compile_cml(&document)?;
     util::ensure_directory_exists(&output)?;
@@ -1057,6 +1059,7 @@ fn extract_environment_ref(r: Option<&cml::EnvironmentRef>) -> Option<cm::Name> 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::features::Feature;
     use fidl::encoding::decode_persistent;
     use matches::assert_matches;
     use serde_json::json;
@@ -1081,7 +1084,34 @@ mod tests {
                     let tmp_dir = TempDir::new().unwrap();
                     let tmp_in_path = tmp_dir.path().join("test.cml");
                     let tmp_out_path = tmp_dir.path().join("test.cm");
-                    compile_test(tmp_in_path, tmp_out_path, None, $input, $result).expect("compilation failed");
+                    compile_test(tmp_in_path, tmp_out_path, None, $input, $result, &FeatureSet::empty()).expect("compilation failed");
+                }
+            )+
+        }
+    }
+
+    macro_rules! test_compile_with_features {
+        (
+            $features:expr,
+            {
+                $(
+                    $(#[$m:meta])*
+                    $test_name:ident => {
+                        input = $input:expr,
+                        output = $result:expr,
+                    },
+                )+
+            }
+        ) => {
+            $(
+                $(#[$m])*
+                #[test]
+                fn $test_name() {
+                    let tmp_dir = TempDir::new().unwrap();
+                    let tmp_in_path = tmp_dir.path().join("test.cml");
+                    let tmp_out_path = tmp_dir.path().join("test.cm");
+                    let features = $features;
+                    compile_test(tmp_in_path, tmp_out_path, None, $input, $result, &features).expect("compilation failed");
                 }
             )+
         }
@@ -1093,10 +1123,11 @@ mod tests {
         includepath: Option<PathBuf>,
         input: serde_json::value::Value,
         expected_output: fsys::ComponentDecl,
+        features: &FeatureSet,
     ) -> Result<(), Error> {
         File::create(&in_path).unwrap().write_all(format!("{}", input).as_bytes()).unwrap();
         let includepath = includepath.unwrap_or(PathBuf::new());
-        compile(&in_path, &out_path.clone(), None, &includepath, &includepath)?;
+        compile(&in_path, &out_path.clone(), None, &includepath, &includepath, features)?;
         let mut buffer = Vec::new();
         fs::File::open(&out_path).unwrap().read_to_end(&mut buffer).unwrap();
         let output: fsys::ComponentDecl = decode_persistent(&buffer).unwrap();
@@ -1107,6 +1138,329 @@ mod tests {
     fn default_component_decl() -> fsys::ComponentDecl {
         fsys::ComponentDecl::EMPTY
     }
+
+    test_compile_with_features! { FeatureSet::from(vec![Feature::Services]), {
+        test_compile_service_capabilities => {
+            input = json!({
+                "capabilities": [
+                    {
+                        "service": "myservice",
+                        "path": "/service",
+                    },
+                    {
+                        "service": "myservice2",
+                    },
+                ]
+            }),
+            output = fsys::ComponentDecl {
+                capabilities: Some(vec![
+                    fsys::CapabilityDecl::Service (
+                        fsys::ServiceDecl {
+                            name: Some("myservice".to_string()),
+                            source_path: Some("/service".to_string()),
+                            ..fsys::ServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::CapabilityDecl::Service (
+                        fsys::ServiceDecl {
+                            name: Some("myservice2".to_string()),
+                            source_path: Some("/svc/myservice2".to_string()),
+                            ..fsys::ServiceDecl::EMPTY
+                        }
+                    ),
+                ]),
+                ..fsys::ComponentDecl::EMPTY
+            },
+        },
+        test_compile_use_service => {
+            input = json!({
+                "use": [
+                    { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
+                    { "service": "fuchsia.sys2.Realm", "from": "framework" },
+                ]
+            }),
+            output = fsys::ComponentDecl {
+                uses: Some(vec![
+                    fsys::UseDecl::Service (
+                        fsys::UseServiceDecl {
+                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            source_name: Some("CoolFonts".to_string()),
+                            target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
+                            ..fsys::UseServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::UseDecl::Service (
+                        fsys::UseServiceDecl {
+                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
+                            source_name: Some("fuchsia.sys2.Realm".to_string()),
+                            target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
+                            ..fsys::UseServiceDecl::EMPTY
+                        }
+                    ),
+                ]),
+                ..fsys::ComponentDecl::EMPTY
+            },
+        },
+        test_compile_offer_service => {
+            input = json!({
+                "offer": [
+                    {
+                        "service": "fuchsia.logger.Log",
+                        "from": "#logger",
+                        "to": [ "#netstack" ]
+                    },
+                    {
+                        "service": "fuchsia.logger.Log",
+                        "from": "#logger",
+                        "to": [ "#coll" ],
+                        "as": "fuchsia.logger.Log2",
+                    },
+                    {
+                        "service": "my.service.Service",
+                        "from": ["#logger", "self"],
+                        "to": [ "#netstack" ]
+                    },
+                    {
+                        "service": "my.service.CollectionService",
+                        "from": ["#coll"],
+                        "to": [ "#netstack" ],
+                    },
+                ],
+                "capabilities": [
+                    { "service": "my.service.Service" },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://logger.cm"
+                    },
+                    {
+                        "name": "netstack",
+                        "url": "fuchsia-pkg://netstack.cm"
+                    },
+                ],
+                "collections": [
+                    {
+                        "name": "coll",
+                        "durability": "transient",
+                    },
+                ],
+            }),
+            output = fsys::ComponentDecl {
+                offers: Some(vec![
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("fuchsia.logger.Log".to_string()),
+                            ..fsys::OfferServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
+                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
+                                name: "coll".to_string(),
+                            })),
+                            target_name: Some("fuchsia.logger.Log2".to_string()),
+                            ..fsys::OfferServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("my.service.Service".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.Service".to_string()),
+                            ..fsys::OfferServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_name: Some("my.service.Service".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.Service".to_string()),
+                            ..fsys::OfferServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::OfferDecl::Service (
+                        fsys::OfferServiceDecl {
+                            source: Some(fsys::Ref::Collection(fsys::CollectionRef { name: "coll".to_string() })),
+                            source_name: Some("my.service.CollectionService".to_string()),
+                            target: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "netstack".to_string(),
+                                collection: None,
+                            })),
+                            target_name: Some("my.service.CollectionService".to_string()),
+                            ..fsys::OfferServiceDecl::EMPTY
+                        }
+                    ),
+                ]),
+                capabilities: Some(vec![
+                    fsys::CapabilityDecl::Service (
+                        fsys::ServiceDecl {
+                            name: Some("my.service.Service".to_string()),
+                            source_path: Some("/svc/my.service.Service".to_string()),
+                            ..fsys::ServiceDecl::EMPTY
+                        }
+                    ),
+                ]),
+                children: Some(vec![
+                    fsys::ChildDecl {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://logger.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                        ..fsys::ChildDecl::EMPTY
+                    },
+                    fsys::ChildDecl {
+                        name: Some("netstack".to_string()),
+                        url: Some("fuchsia-pkg://netstack.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                        ..fsys::ChildDecl::EMPTY
+                    }
+                ]),
+                collections: Some(vec![
+                    fsys::CollectionDecl {
+                        name: Some("coll".to_string()),
+                        durability: Some(fsys::Durability::Transient),
+                        environment: None,
+                        ..fsys::CollectionDecl::EMPTY
+                    }
+                ]),
+                ..fsys::ComponentDecl::EMPTY
+            },
+        },
+        test_compile_expose_service => {
+            input = json!({
+                "expose": [
+                    {
+                        "service": "fuchsia.logger.Log",
+                        "from": "#logger",
+                        "as": "fuchsia.logger.Log2",
+                    },
+                    {
+                        "service": "my.service.Service",
+                        "from": ["#logger", "self"],
+                    },
+                    {
+                        "service": "my.service.CollectionService",
+                        "from": ["#coll"],
+                    },
+                ],
+                "capabilities": [
+                    { "service": "my.service.Service" }
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "url": "fuchsia-pkg://logger.cm"
+                    },
+                ],
+                "collections": [
+                    {
+                        "name": "coll",
+                        "durability": "transient",
+                    },
+                ],
+            }),
+            output = fsys::ComponentDecl {
+                exposes: Some(vec![
+                    fsys::ExposeDecl::Service (
+                        fsys::ExposeServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("fuchsia.logger.Log".to_string()),
+                            target_name: Some("fuchsia.logger.Log2".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            ..fsys::ExposeServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::ExposeDecl::Service (
+                        fsys::ExposeServiceDecl {
+                            source: Some(fsys::Ref::Child(fsys::ChildRef {
+                                name: "logger".to_string(),
+                                collection: None,
+                            })),
+                            source_name: Some("my.service.Service".to_string()),
+                            target_name: Some("my.service.Service".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            ..fsys::ExposeServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::ExposeDecl::Service (
+                        fsys::ExposeServiceDecl {
+                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
+                            source_name: Some("my.service.Service".to_string()),
+                            target_name: Some("my.service.Service".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            ..fsys::ExposeServiceDecl::EMPTY
+                        }
+                    ),
+                    fsys::ExposeDecl::Service (
+                        fsys::ExposeServiceDecl {
+                            source: Some(fsys::Ref::Collection(fsys::CollectionRef { name: "coll".to_string() })),
+                            source_name: Some("my.service.CollectionService".to_string()),
+                            target_name: Some("my.service.CollectionService".to_string()),
+                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
+                            ..fsys::ExposeServiceDecl::EMPTY
+                        }
+                    ),
+                ]),
+                capabilities: Some(vec![
+                    fsys::CapabilityDecl::Service (
+                        fsys::ServiceDecl {
+                            name: Some("my.service.Service".to_string()),
+                            source_path: Some("/svc/my.service.Service".to_string()),
+                            ..fsys::ServiceDecl::EMPTY
+                        }
+                    ),
+                ]),
+                children: Some(vec![
+                    fsys::ChildDecl {
+                        name: Some("logger".to_string()),
+                        url: Some("fuchsia-pkg://logger.cm".to_string()),
+                        startup: Some(fsys::StartupMode::Lazy),
+                        environment: None,
+                        ..fsys::ChildDecl::EMPTY
+                    }
+                ]),
+                collections: Some(vec![
+                    fsys::CollectionDecl {
+                        name: Some("coll".to_string()),
+                        durability: Some(fsys::Durability::Transient),
+                        environment: None,
+                        ..fsys::CollectionDecl::EMPTY
+                    }
+                ]),
+                ..fsys::ComponentDecl::EMPTY
+            },
+        },
+    }}
 
     test_compile! {
         test_compile_empty => {
@@ -1177,8 +1531,6 @@ mod tests {
         test_compile_use => {
             input = json!({
                 "use": [
-                    { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
-                    { "service": "fuchsia.sys2.Realm", "from": "framework" },
                     { "protocol": "LegacyCoolFonts", "path": "/svc/fuchsia.fonts.LegacyProvider" },
                     { "protocol": "fuchsia.sys2.LegacyRealm", "from": "framework" },
                     { "protocol": "fuchsia.sys2.StorageAdmin", "from": "#data-storage" },
@@ -1212,22 +1564,6 @@ mod tests {
             }),
             output = fsys::ComponentDecl {
                 uses: Some(vec![
-                    fsys::UseDecl::Service (
-                        fsys::UseServiceDecl {
-                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_name: Some("CoolFonts".to_string()),
-                            target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
-                            ..fsys::UseServiceDecl::EMPTY
-                        }
-                    ),
-                    fsys::UseDecl::Service (
-                        fsys::UseServiceDecl {
-                            source: Some(fsys::Ref::Framework(fsys::FrameworkRef {})),
-                            source_name: Some("fuchsia.sys2.Realm".to_string()),
-                            target_path: Some("/svc/fuchsia.sys2.Realm".to_string()),
-                            ..fsys::UseServiceDecl::EMPTY
-                        }
-                    ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -1360,19 +1696,6 @@ mod tests {
             input = json!({
                 "expose": [
                     {
-                        "service": "fuchsia.logger.Log",
-                        "from": "#logger",
-                        "as": "fuchsia.logger.Log2",
-                    },
-                    {
-                        "service": "my.service.Service",
-                        "from": ["#logger", "self"],
-                    },
-                    {
-                        "service": "my.service.CollectionService",
-                        "from": ["#coll"],
-                    },
-                    {
                         "protocol": "fuchsia.logger.Log",
                         "from": "#logger",
                         "as": "fuchsia.logger.LegacyLog",
@@ -1399,7 +1722,6 @@ mod tests {
                     { "resolver": "my_resolver", "from": "#logger", "to": "parent", "as": "pkg_resolver" }
                 ],
                 "capabilities": [
-                    { "service": "my.service.Service" },
                     { "protocol": "A" },
                     { "protocol": "B" },
                     {
@@ -1423,57 +1745,9 @@ mod tests {
                         "url": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     },
                 ],
-                "collections": [
-                    {
-                        "name": "coll",
-                        "durability": "transient",
-                    },
-                ],
             }),
             output = fsys::ComponentDecl {
                 exposes: Some(vec![
-                    fsys::ExposeDecl::Service (
-                        fsys::ExposeServiceDecl {
-                            source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "logger".to_string(),
-                                collection: None,
-                            })),
-                            source_name: Some("fuchsia.logger.Log".to_string()),
-                            target_name: Some("fuchsia.logger.Log2".to_string()),
-                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            ..fsys::ExposeServiceDecl::EMPTY
-                        }
-                    ),
-                    fsys::ExposeDecl::Service (
-                        fsys::ExposeServiceDecl {
-                            source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "logger".to_string(),
-                                collection: None,
-                            })),
-                            source_name: Some("my.service.Service".to_string()),
-                            target_name: Some("my.service.Service".to_string()),
-                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            ..fsys::ExposeServiceDecl::EMPTY
-                        }
-                    ),
-                    fsys::ExposeDecl::Service (
-                        fsys::ExposeServiceDecl {
-                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                            source_name: Some("my.service.Service".to_string()),
-                            target_name: Some("my.service.Service".to_string()),
-                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            ..fsys::ExposeServiceDecl::EMPTY
-                        }
-                    ),
-                    fsys::ExposeDecl::Service (
-                        fsys::ExposeServiceDecl {
-                            source: Some(fsys::Ref::Collection(fsys::CollectionRef { name: "coll".to_string() })),
-                            source_name: Some("my.service.CollectionService".to_string()),
-                            target_name: Some("my.service.CollectionService".to_string()),
-                            target: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            ..fsys::ExposeServiceDecl::EMPTY
-                        }
-                    ),
                     fsys::ExposeDecl::Protocol (
                         fsys::ExposeProtocolDecl {
                             source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -1577,13 +1851,6 @@ mod tests {
                 ]),
                 offers: None,
                 capabilities: Some(vec![
-                    fsys::CapabilityDecl::Service (
-                        fsys::ServiceDecl {
-                            name: Some("my.service.Service".to_string()),
-                            source_path: Some("/svc/my.service.Service".to_string()),
-                            ..fsys::ServiceDecl::EMPTY
-                        }
-                    ),
                     fsys::CapabilityDecl::Protocol (
                         fsys::ProtocolDecl {
                             name: Some("A".to_string()),
@@ -1633,14 +1900,6 @@ mod tests {
                         ..fsys::ChildDecl::EMPTY
                     }
                 ]),
-                collections: Some(vec![
-                    fsys::CollectionDecl {
-                        name: Some("coll".to_string()),
-                        durability: Some(fsys::Durability::Transient),
-                        environment: None,
-                        ..fsys::CollectionDecl::EMPTY
-                    }
-                ]),
                 ..default_component_decl()
             },
         },
@@ -1648,27 +1907,6 @@ mod tests {
         test_compile_offer => {
             input = json!({
                 "offer": [
-                    {
-                        "service": "fuchsia.logger.Log",
-                        "from": "#logger",
-                        "to": [ "#netstack" ]
-                    },
-                    {
-                        "service": "fuchsia.logger.Log",
-                        "from": "#logger",
-                        "to": [ "#modular" ],
-                        "as": "fuchsia.logger.Log2",
-                    },
-                    {
-                        "service": "my.service.Service",
-                        "from": ["#logger", "self"],
-                        "to": [ "#netstack" ]
-                    },
-                    {
-                        "service": "my.service.CollectionService",
-                        "from": ["#modular"],
-                        "to": [ "#netstack" ],
-                    },
                     {
                         "protocol": "fuchsia.logger.LegacyLog",
                         "from": "#logger",
@@ -1781,7 +2019,6 @@ mod tests {
                     },
                 ],
                 "capabilities": [
-                    { "service": "my.service.Service" },
                     {
                         "storage": "data",
                         "backing_dir": "minfs",
@@ -1791,74 +2028,6 @@ mod tests {
             }),
             output = fsys::ComponentDecl {
                 offers: Some(vec![
-                    fsys::OfferDecl::Service (
-                        fsys::OfferServiceDecl {
-                            source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "logger".to_string(),
-                                collection: None,
-                            })),
-                            source_name: Some("fuchsia.logger.Log".to_string()),
-                            target: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "netstack".to_string(),
-                                collection: None,
-                            })),
-                            target_name: Some("fuchsia.logger.Log".to_string()),
-                            ..fsys::OfferServiceDecl::EMPTY
-                        }
-                    ),
-                    fsys::OfferDecl::Service (
-                        fsys::OfferServiceDecl {
-                            source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "logger".to_string(),
-                                collection: None,
-                            })),
-                            source_name: Some("fuchsia.logger.Log".to_string()),
-                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
-                                name: "modular".to_string(),
-                            })),
-                            target_name: Some("fuchsia.logger.Log2".to_string()),
-                            ..fsys::OfferServiceDecl::EMPTY
-                        }
-                    ),
-                    fsys::OfferDecl::Service (
-                        fsys::OfferServiceDecl {
-                            source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "logger".to_string(),
-                                collection: None,
-                            })),
-                            source_name: Some("my.service.Service".to_string()),
-                            target: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "netstack".to_string(),
-                                collection: None,
-                            })),
-                            target_name: Some("my.service.Service".to_string()),
-                            ..fsys::OfferServiceDecl::EMPTY
-                        }
-                    ),
-                    fsys::OfferDecl::Service (
-                        fsys::OfferServiceDecl {
-                            source: Some(fsys::Ref::Self_(fsys::SelfRef {})),
-                            source_name: Some("my.service.Service".to_string()),
-                            target: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "netstack".to_string(),
-                                collection: None,
-                            })),
-                            target_name: Some("my.service.Service".to_string()),
-                            ..fsys::OfferServiceDecl::EMPTY
-                        }
-                    ),
-                    fsys::OfferDecl::Service (
-                        fsys::OfferServiceDecl {
-                            source: Some(fsys::Ref::Collection(fsys::CollectionRef { name: "modular".to_string() })),
-                            source_name: Some("my.service.CollectionService".to_string()),
-                            target: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "netstack".to_string(),
-                                collection: None,
-                            })),
-                            target_name: Some("my.service.CollectionService".to_string()),
-                            ..fsys::OfferServiceDecl::EMPTY
-                        }
-                    ),
                     fsys::OfferDecl::Protocol (
                         fsys::OfferProtocolDecl {
                             source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -2093,13 +2262,6 @@ mod tests {
                     ),
                 ]),
                 capabilities: Some(vec![
-                    fsys::CapabilityDecl::Service (
-                        fsys::ServiceDecl {
-                            name: Some("my.service.Service".to_string()),
-                            source_path: Some("/svc/my.service.Service".to_string()),
-                            ..fsys::ServiceDecl::EMPTY
-                        }
-                    ),
                     fsys::CapabilityDecl::Storage (
                         fsys::StorageDecl {
                             name: Some("data".to_string()),
@@ -2258,13 +2420,6 @@ mod tests {
             input = json!({
                 "capabilities": [
                     {
-                        "service": "myservice",
-                        "path": "/service",
-                    },
-                    {
-                        "service": "myservice2",
-                    },
-                    {
                         "protocol": "myprotocol",
                         "path": "/protocol",
                     },
@@ -2307,20 +2462,6 @@ mod tests {
             }),
             output = fsys::ComponentDecl {
                 capabilities: Some(vec![
-                    fsys::CapabilityDecl::Service (
-                        fsys::ServiceDecl {
-                            name: Some("myservice".to_string()),
-                            source_path: Some("/service".to_string()),
-                            ..fsys::ServiceDecl::EMPTY
-                        }
-                    ),
-                    fsys::CapabilityDecl::Service (
-                        fsys::ServiceDecl {
-                            name: Some("myservice2".to_string()),
-                            source_path: Some("/svc/myservice2".to_string()),
-                            ..fsys::ServiceDecl::EMPTY
-                        }
-                    ),
                     fsys::CapabilityDecl::Protocol (
                         fsys::ProtocolDecl {
                             name: Some("myprotocol".to_string()),
@@ -2648,7 +2789,6 @@ mod tests {
                     "binary": "bin/app",
                 },
                 "use": [
-                    { "service": "CoolFonts", "path": "/svc/fuchsia.fonts.Provider" },
                     { "protocol": "LegacyCoolFonts", "path": "/svc/fuchsia.fonts.LegacyProvider" },
                     { "protocol": [ "ReallyGoodFonts", "IWouldNeverUseTheseFonts"]},
                     { "protocol":  "DebugProtocol", "from": "debug"},
@@ -2657,11 +2797,6 @@ mod tests {
                     { "directory": "blobfs", "from": "self", "rights": ["r*"]},
                 ],
                 "offer": [
-                    {
-                        "service": "fuchsia.logger.Log",
-                        "from": "#logger",
-                        "to": [ "#netstack", "#modular" ]
-                    },
                     {
                         "protocol": "fuchsia.logger.LegacyLog",
                         "from": "#logger",
@@ -2734,14 +2869,6 @@ mod tests {
                     ..fsys::ProgramDecl::EMPTY
                 }),
                 uses: Some(vec![
-                    fsys::UseDecl::Service (
-                        fsys::UseServiceDecl {
-                            source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                            source_name: Some("CoolFonts".to_string()),
-                            target_path: Some("/svc/fuchsia.fonts.Provider".to_string()),
-                            ..fsys::UseServiceDecl::EMPTY
-                        }
-                    ),
                     fsys::UseDecl::Protocol (
                         fsys::UseProtocolDecl {
                             source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
@@ -2793,35 +2920,6 @@ mod tests {
                     ),
                 ]),
                 offers: Some(vec![
-                    fsys::OfferDecl::Service (
-                        fsys::OfferServiceDecl {
-                            source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "logger".to_string(),
-                                collection: None,
-                            })),
-                            source_name: Some("fuchsia.logger.Log".to_string()),
-                            target: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "netstack".to_string(),
-                                collection: None,
-                            })),
-                            target_name: Some("fuchsia.logger.Log".to_string()),
-                            ..fsys::OfferServiceDecl::EMPTY
-                        }
-                    ),
-                    fsys::OfferDecl::Service (
-                        fsys::OfferServiceDecl {
-                            source: Some(fsys::Ref::Child(fsys::ChildRef {
-                                name: "logger".to_string(),
-                                collection: None,
-                            })),
-                            source_name: Some("fuchsia.logger.Log".to_string()),
-                            target: Some(fsys::Ref::Collection(fsys::CollectionRef {
-                                name: "modular".to_string(),
-                            })),
-                            target_name: Some("fuchsia.logger.Log".to_string()),
-                            ..fsys::OfferServiceDecl::EMPTY
-                        }
-                    ),
                     fsys::OfferDecl::Protocol (
                         fsys::OfferProtocolDecl {
                             source: Some(fsys::Ref::Child(fsys::ChildRef {
@@ -2968,6 +3066,7 @@ mod tests {
                 None,
                 &PathBuf::new(),
                 &PathBuf::new(),
+                &FeatureSet::empty(),
             );
             assert_matches!(
                 result,
@@ -2992,6 +3091,7 @@ mod tests {
             Some(tmp_dir.into_path()),
             json!({ "include": [ "doesnt_exist.cml" ] }),
             default_component_decl(),
+            &FeatureSet::empty(),
         );
         assert_matches!(
             result,
@@ -3034,6 +3134,7 @@ mod tests {
                 }),
                 ..default_component_decl()
             },
+            &FeatureSet::empty(),
         )
         .unwrap();
     }
@@ -3079,6 +3180,7 @@ mod tests {
                 }),
                 ..default_component_decl()
             },
+            &FeatureSet::empty(),
         )
         .unwrap();
     }
@@ -3112,6 +3214,7 @@ mod tests {
                 },
             }),
             default_component_decl(),
+            &FeatureSet::empty(),
         );
         assert_matches!(result, Err(Error::Parse { err, .. }) if err.contains("Includes cycle"));
     }
@@ -3152,6 +3255,7 @@ mod tests {
                 },
             }),
             default_component_decl(),
+            &FeatureSet::empty(),
         );
         // Including both foo.cml and bar.cml should fail to validate because of an incoming
         // namespace collision.
@@ -3210,6 +3314,7 @@ mod tests {
                 })]),
                 ..default_component_decl()
             },
+            &FeatureSet::empty(),
         );
         // Including both foo1.cml and foo2.cml is fine because they overlap,
         // so merging foo2.cml after having merged foo1.cml is a no-op.

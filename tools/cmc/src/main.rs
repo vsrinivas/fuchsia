@@ -15,6 +15,7 @@ use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 mod compile;
+mod features;
 mod format;
 mod include;
 mod merge;
@@ -43,7 +44,7 @@ fn run_cmc() -> Result<(), Error> {
     let opt = opts::Opt::from_args();
     match opt.cmd {
         opts::Commands::Validate { files, extra_schemas } => {
-            validate::validate(&files, &extra_schemas)?
+            validate::validate(&files, &extra_schemas, &features::FeatureSet::empty())?
         }
         opts::Commands::ValidateReferences { component_manifest, package_manifest, gn_label } => {
             reference::validate(&component_manifest, &package_manifest, gn_label.as_ref())?
@@ -86,7 +87,7 @@ fn run_cmc() -> Result<(), Error> {
             }
             format::format(&file, pretty, cml, output)?;
         }
-        opts::Commands::Compile { file, output, depfile, includepath, includeroot } => {
+        opts::Commands::Compile { file, output, depfile, includepath, includeroot, features } => {
             path_exists(&file)?;
             compile::compile(
                 &file,
@@ -94,6 +95,7 @@ fn run_cmc() -> Result<(), Error> {
                 depfile,
                 &includepath,
                 &includeroot.unwrap_or(includepath.clone()),
+                &features.into(),
             )?
         }
     }

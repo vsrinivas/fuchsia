@@ -68,6 +68,13 @@ import("fuchsia_test_component_manifest.gni")
 #     If `manifest` is specified then this is ignored.
 #     Type: boolean
 #
+#   unstable_features (optional)
+#     The set of unstable CML features to allow. Only applicable to v2 components.
+#     The set of features is allowlisted here: //src/sys/build/unstable_features/BUILD.gn
+#     where each feature name is represented by a group of the same name.
+#     Type: list of strings
+#     Default: []
+#
 #   deps
 #   visibility
 template("fuchsia_unittest_component") {
@@ -90,6 +97,7 @@ template("fuchsia_unittest_component") {
                            [
                              "deps",
                              "manifest",
+                             "unstable_features",
                              "visibility",
                            ])
     component_name = target_name
