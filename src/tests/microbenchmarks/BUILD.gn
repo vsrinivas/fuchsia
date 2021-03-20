@@ -3,7 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/fidl/fidl.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 executable("bin") {
   output_name = "fuchsia_microbenchmarks"
@@ -137,22 +137,12 @@ fidl("fidl_interface") {
 #     not work: It results in the creation of a shard to run tests under
 #     QEMU, but running Fuchsia on QEMU on that builder does not work
 #     (perhaps because of missing dependencies).
-test_package("fuchsia_microbenchmarks_unittestmode") {
+fuchsia_unittest_package("fuchsia_microbenchmarks_unittestmode") {
   package_name = "fuchsia_microbenchmarks"
 
+  manifest = "meta/fuchsia_microbenchmarks.cmx"
+
   deps = [ ":bin" ]
-
-  binaries = [
-    {
-      name = "fuchsia_microbenchmarks"
-    },
-  ]
-
-  tests = [
-    {
-      name = "fuchsia_microbenchmarks"
-    },
-  ]
 }
 
 # This package contains the fuchsia_microbenchmarks executable and installs
@@ -161,33 +151,16 @@ test_package("fuchsia_microbenchmarks_unittestmode") {
 # tests as a performance test (i.e. outputting performance results data).
 # This package can be installed without installing the
 # fuchsia_microbenchmarks_unittestmode package.
-package("fuchsia_microbenchmarks_perftestmode") {
+fuchsia_shell_package("fuchsia_microbenchmarks_perftestmode") {
   testonly = true
+
+  manifest = "meta/fuchsia_microbenchmarks.cmx"
 
   deps = [
     ":bin",
     ":context_switch_overhead_helper",
     ":fdio_spawn_helper",
     ":get_info_helper",
-  ]
-
-  binaries = [
-    {
-      name = "fdio_spawn_helper"
-      shell = true
-    },
-    {
-      name = "context_switch_overhead_helper"
-      shell = true
-    },
-    {
-      name = "get_info_helper"
-      shell = true
-    },
-    {
-      name = "fuchsia_microbenchmarks"
-      shell = true
-    },
   ]
 }
 
