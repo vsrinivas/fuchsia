@@ -33,7 +33,7 @@ pub fn system_run_command(args: &Vec<&str>) -> Result<(ExitStatus, String, Strin
         .context(format!("Could not run '{}'", args.join(" ")))?;
     Ok((
         ExitStatus(output.status.code().ok_or_else(|| anyhow!("No exit code from command"))?),
-        String::from_utf8(output.stdout)?,
+        String::from(String::from_utf8(output.stdout)?.trim()),
         String::from_utf8(output.stderr)?,
     ))
 }
