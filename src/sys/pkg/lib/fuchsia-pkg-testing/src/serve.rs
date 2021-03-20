@@ -11,7 +11,6 @@ use {
     fidl_fuchsia_pkg_ext::{MirrorConfig, MirrorConfigBuilder, RepositoryConfig},
     fuchsia_async::{self as fasync, net::TcpListener, Task},
     fuchsia_url::pkg_url::RepoUrl,
-    fuchsia_zircon as zx,
     futures::{future::BoxFuture, prelude::*},
     http::Uri,
     http_sse::{Event, EventSender, SseResponseCreator},
@@ -31,6 +30,7 @@ use {
             atomic::{AtomicU64, Ordering},
             Arc,
         },
+        time::Duration,
     },
 };
 
@@ -295,7 +295,7 @@ impl ServedRepository {
             } else if connected > n {
                 panic!("ServedRepository too many auto clients connected.");
             }
-            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+            fasync::Timer::new(Duration::from_millis(10)).await;
         }
     }
 

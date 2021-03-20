@@ -159,7 +159,7 @@ mod test {
 
     async fn wait_for_states(callback: &FakeStateNotifier, len: usize) {
         while callback.states.lock().len() != len {
-            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+            fasync::Timer::new(Duration::from_millis(10)).await;
         }
     }
 

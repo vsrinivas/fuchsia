@@ -798,7 +798,7 @@ impl MockLoggerFactory {
             if events.len() >= n {
                 return events;
             }
-            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+            fasync::Timer::new(Duration::from_millis(10)).await;
         }
     }
 }
@@ -905,7 +905,7 @@ impl<P: PkgFs> TestEnv<P> {
     /// Wait until pkg-resolver inspect state satisfies `desired_state`.
     pub async fn wait_for_pkg_resolver_inspect_state(&self, desired_state: TreeAssertion<String>) {
         while desired_state.run(&self.pkg_resolver_inspect_hierarchy().await).is_err() {
-            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+            fasync::Timer::new(Duration::from_millis(10)).await;
         }
     }
 

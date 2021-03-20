@@ -10,7 +10,7 @@ use {
     futures::StreamExt,
     maplit::btreeset,
     matches::assert_matches,
-    std::io::Write,
+    std::{io::Write, time::Duration},
 };
 
 // merkle root of b"Hello world!\n".
@@ -140,10 +140,7 @@ async fn wait_for_blob_to_be_creatable(blobfs: &DirectoryProxy, merkle: &str) {
         .await;
         match res {
             Err(zx::Status::ACCESS_DENIED) => {
-                fuchsia_async::Timer::new(fuchsia_async::Time::after(zx::Duration::from_millis(
-                    10,
-                )))
-                .await;
+                fuchsia_async::Timer::new(Duration::from_millis(10)).await;
                 continue;
             }
             Err(err) => {

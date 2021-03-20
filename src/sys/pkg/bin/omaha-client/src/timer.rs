@@ -34,21 +34,16 @@ impl FuchsiaTimer {
             }
         }
     }
-
-    // Make an async timer for the given duration.
-    fn make_fasync_timer(duration: Duration) -> fasync::Timer {
-        fasync::Timer::new(fasync::Time::after(duration.into()))
-    }
 }
 impl Timer for FuchsiaTimer {
     /// Wait until at least one of the given time bounds has been reached.
     fn wait_until(&mut self, time: impl Into<PartialComplexTime>) -> BoxFuture<'static, ()> {
-        Self::make_fasync_timer(Self::determine_wait_until(time.into())).boxed()
+        fasync::Timer::new(Self::determine_wait_until(time.into())).boxed()
     }
 
     /// Wait for the given duration (from now).
     fn wait_for(&mut self, duration: Duration) -> BoxFuture<'static, ()> {
-        Self::make_fasync_timer(duration).boxed()
+        fasync::Timer::new(duration).boxed()
     }
 }
 

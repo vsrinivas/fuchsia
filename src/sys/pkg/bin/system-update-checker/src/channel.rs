@@ -165,8 +165,7 @@ impl<S: ServiceConnect> CurrentChannelNotifier<S> {
     }
 
     async fn sleep() {
-        let delay = fasync::Time::after(Duration::from_secs(5).into());
-        fasync::Timer::new(delay).await;
+        fasync::Timer::new(Duration::from_secs(5)).await;
     }
 }
 

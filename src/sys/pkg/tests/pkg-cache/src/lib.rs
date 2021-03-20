@@ -29,7 +29,7 @@ use {
     mock_verifier::MockVerifierService,
     parking_lot::Mutex,
     pkgfs_ramdisk::PkgfsRamdisk,
-    std::sync::Arc,
+    std::{sync::Arc, time::Duration},
 };
 
 mod base_pkg_index;
@@ -360,7 +360,7 @@ impl MockLoggerFactory {
             if events.len() >= n {
                 return events;
             }
-            fasync::Timer::new(fasync::Time::after(zx::Duration::from_millis(10))).await;
+            fasync::Timer::new(Duration::from_millis(10)).await;
         }
     }
 }

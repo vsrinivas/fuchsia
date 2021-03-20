@@ -119,7 +119,7 @@ async fn main_inner() -> Result<(), Error> {
     futures.push(
         async move {
             if config.poll_frequency().is_some() {
-                fasync::Timer::new(fasync::Time::after(Duration::from_secs(60).into())).await;
+                fasync::Timer::new(Duration::from_secs(60)).await;
                 let options = CheckOptions::builder().initiator(Initiator::Service).build();
                 if let Err(e) = update_manager.try_start_update(options, None).await {
                     fx_log_warn!("Update check failed with error: {:?}", e);

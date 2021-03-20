@@ -27,6 +27,7 @@ use {
         net::{IpAddr, Ipv4Addr, Ipv6Addr},
         path::Path,
         sync::Arc,
+        time::Duration,
     },
 };
 
@@ -662,7 +663,7 @@ async fn test_concurrent_blob_writes() {
     // permission denied error when trying to update the blob in blobfs.
     let blobfs_dir = env.pkgfs.blobfs().root_dir().expect("blobfs has root dir");
     while blobfs_dir.update_file(Path::new(&duplicate_blob_merkle), 0).is_ok() {
-        fasync::Timer::new(fasync::Time::after(fuchsia_zircon::Duration::from_millis(10))).await;
+        fasync::Timer::new(Duration::from_millis(10)).await;
     }
 
     // At this point, we are confident that the duplicate blob is truncated. So, if we enqueue
@@ -674,7 +675,7 @@ async fn test_concurrent_blob_writes() {
 
     // Wait for the unique blob to exist in blobfs.
     while blobfs_dir.update_file(Path::new(&unique_blob_merkle), 0).is_ok() {
-        fasync::Timer::new(fasync::Time::after(fuchsia_zircon::Duration::from_millis(10))).await;
+        fasync::Timer::new(Duration::from_millis(10)).await;
     }
 
     // At this point, both package resolves should be blocked on the shared blob download. Unblock
