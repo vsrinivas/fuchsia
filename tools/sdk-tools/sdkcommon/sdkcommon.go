@@ -310,6 +310,17 @@ func (sdk SDKProperties) GetPackageSourcePath(version string, bucket string, ima
 	return fmt.Sprintf("gs://%s/development/%s/packages/%s.tar.gz", bucket, version, image)
 }
 
+// RunFFXDoctor runs common checks for the ffx tool and host environment and returns
+// the stdout.
+func (sdk SDKProperties) RunFFXDoctor() (string, error) {
+	args := []string{"doctor"}
+	output, err := runFFX(sdk, args)
+	if err != nil {
+		return "", err
+	}
+	return string(output), nil
+}
+
 // GetAddressByName returns the IPv6 address of the device.
 func (sdk SDKProperties) GetAddressByName(deviceName string) (string, error) {
 	// Uses ffx disovery workflow by default. The legacy device-finder

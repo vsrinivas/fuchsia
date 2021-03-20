@@ -925,6 +925,23 @@ Try running "ffx target list --format s" and verify the name matches in "fconfig
 	}
 }
 
+func TestRunFFXDoctor(t *testing.T) {
+	sdk := SDKProperties{}
+
+	ExecCommand = helperCommandForSetTesting
+	defer func() { ExecCommand = exec.Command }()
+
+	output, err := sdk.RunFFXDoctor()
+	if err != nil {
+		t.Fatalf("unexpected err %v", err)
+	}
+
+	expectedOutput := "Welcome to ffx doctor."
+	if output != expectedOutput {
+		t.Fatalf("Expected %v, got %v", expectedOutput, output)
+	}
+}
+
 func helperCommandForInitEnv(command string, s ...string) (cmd *exec.Cmd) {
 	cs := []string{"-test.run=TestFakeFfx", "--"}
 	cs = append(cs, command)
@@ -1185,6 +1202,10 @@ func TestFakeFfx(*testing.T) {
 	}
 	if strings.HasSuffix(args[0], "device-finder") {
 		fakeDeviceFinder(args[1:])
+		os.Exit(0)
+	}
+	if strings.HasSuffix(args[0], "ffx") && args[1] == "doctor" {
+		fmt.Printf("Welcome to ffx doctor.")
 		os.Exit(0)
 	}
 	if strings.HasSuffix(args[0], "ffx") && args[1] == "target" {
