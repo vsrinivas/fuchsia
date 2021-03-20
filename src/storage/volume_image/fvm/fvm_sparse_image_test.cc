@@ -1554,7 +1554,7 @@ TEST(ConvertToFvmMetadataTest, WithsMultiplePartitionsAndSlicesIsOk) {
   EXPECT_EQ(used_partitions, kUsedPartitions);
 }
 
-TEST(FvmSparseImageDecompressTest, BadSparseImageHeaderIsError) {
+TEST(FvmSparseDecompressImageTest, BadSparseImageHeaderIsError) {
   SerializedImageContainer container;
   std::vector<uint8_t> buffer;
   BufferWriter writer(buffer);
@@ -1572,7 +1572,7 @@ TEST(FvmSparseImageDecompressTest, BadSparseImageHeaderIsError) {
   EXPECT_TRUE(decompress_or.is_error());
 }
 
-TEST(FvmSparseImageDecompressTest, BadPartitionDescriptorIsError) {
+TEST(FvmSparseDecompressImageTest, BadPartitionDescriptorIsError) {
   SerializedImageContainer container;
   std::vector<uint8_t> buffer;
   BufferWriter writer(buffer);
@@ -1590,7 +1590,7 @@ TEST(FvmSparseImageDecompressTest, BadPartitionDescriptorIsError) {
   EXPECT_TRUE(decompress_or.is_error());
 }
 
-TEST(FvmSparseImageDecompressTest, BadExtentDescriptorIsError) {
+TEST(FvmSparseDecompressImageTest, BadExtentDescriptorIsError) {
   SerializedImageContainer container;
   std::vector<uint8_t> buffer;
   BufferWriter writer(buffer);
@@ -1608,7 +1608,7 @@ TEST(FvmSparseImageDecompressTest, BadExtentDescriptorIsError) {
   EXPECT_TRUE(decompress_or.is_error());
 }
 
-TEST(FvmSparseImageDecompressTest, CompressedImageWithBadCompresseDataIsError) {
+TEST(FvmSparseDecompressImageTest, CompressedImageWithBadCompresseDataIsError) {
   SerializedImageContainer container;
   std::vector<uint8_t> buffer;
   BufferWriter writer(buffer);
@@ -1626,7 +1626,7 @@ TEST(FvmSparseImageDecompressTest, CompressedImageWithBadCompresseDataIsError) {
   EXPECT_TRUE(decompress_or.is_error());
 }
 
-TEST(FvmSparseImageDecompressTest, UncompressedImageReturnsFalse) {
+TEST(FvmSparseDecompressImageTest, UncompressedImageReturnsFalse) {
   SerializedImageContainer container;
   std::vector<uint8_t> buffer;
   BufferWriter writer(buffer);
@@ -1642,7 +1642,7 @@ TEST(FvmSparseImageDecompressTest, UncompressedImageReturnsFalse) {
   EXPECT_FALSE(decompress_or.value());
 }
 
-TEST(FvmSparseImageDecompressTest, CompressedImageReturnsTrueAndIsCorrect) {
+TEST(FvmSparseDecompressImageTest, CompressedImageReturnsTrueAndIsCorrect) {
   SerializedImageContainer compressed_container;
   SerializedImageContainer decompressed_container;
   SerializedImageContainer expected_container;
