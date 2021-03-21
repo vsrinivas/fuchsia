@@ -4,7 +4,6 @@
 
 import("//build/config/clang/clang.gni")
 import("//build/config/sysroot.gni")
-import("//build/rust/config.gni")
 
 config("compiler") {
   cflags = []

@@ -4,7 +4,6 @@
 
 import("//build/test.gni")
 import("//src/lib/vulkan/build/vulkan_targets.gni")
-import("//src/ui/lib/escher/build_args.gni")
 
 if (is_host && !has_prebuilt_vulkan_runtime) {
   # Escher cannot run without prebuilt Vulkan runtime on host for now.

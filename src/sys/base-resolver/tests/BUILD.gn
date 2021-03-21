@@ -7,7 +7,6 @@ import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
-import("//tools/cmc/build/cml.gni")
 
 group("tests") {
   testonly = true

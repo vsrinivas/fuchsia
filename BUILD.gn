@@ -11,11 +11,9 @@ import("//build/info/info.gni")
 import("//build/rust/config.gni")
 import("//build/security.gni")
 import("//build/testing/platforms.gni")
-import("//build/toolchain/ccache.gni")
 import("//build/toolchain/goma.gni")
 import("//build/toolchain/zircon/clang.gni")
 import("//build/zbi/zbi.gni")
-import("//build/zircon/build_args.gni")
 
 declare_args() {
   # If you add package labels to this variable, the packages will be included in

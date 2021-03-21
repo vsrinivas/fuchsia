@@ -6,7 +6,6 @@ import("//build/config/zircon/standard.gni")
 import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
 import("//src/sys/build/fuchsia_unittest_package.gni")
-import("//zircon/vdso/vdso.gni")
 import("libc.gni")
 
 assert(libc == get_path_info(get_path_info(".", "abspath"), "dir"),

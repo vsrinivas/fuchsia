@@ -5,7 +5,6 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//build/testing/golden_file.gni")
 import("//third_party/protobuf/proto_library.gni")
 
 go_library("fint_lib") {

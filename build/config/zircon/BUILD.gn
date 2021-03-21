@@ -8,7 +8,6 @@ import("//build/config/clang/crash_diagnostics.gni")
 import("//build/config/compiler.gni")
 import("//build/config/linker.gni")
 import("//build/config/zircon/levels.gni")
-import("//build/toolchain/goma.gni")
 import("//build/toolchain/variant.gni")
 
 # NOTE: This file provides the GN configs used by Zircon toolchains

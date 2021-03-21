@@ -5,7 +5,6 @@
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
 import("//build/test.gni")
-import("//build/testing/bootfs_test.gni")
 import("//src/sys/build/fuchsia_component.gni")
 import("//src/sys/build/fuchsia_test_package.gni")
 

@@ -4,8 +4,6 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-import("//zircon/kernel/params.gni")
-
 source_set("generic-arm") {
   sources = [ "platform.cc" ]
   deps = [

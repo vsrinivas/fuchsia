@@ -8,7 +8,6 @@ import("//build/package.gni")
 import("//build/test.gni")
 import("//sdk/cts/build/cts.gni")
 import("//src/sys/build/components.gni")
-import("//src/tests/fidl/conformance_suite/gidl-conformance-suite.gni")
 import("//tools/fidl/gidl/gidl.gni")
 
 # The complete high-level C++ bindings library supporting both asynchronous

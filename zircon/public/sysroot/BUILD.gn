@@ -95,7 +95,6 @@
 import("//zircon/system/ulib/c/libc_toolchain.gni")
 import("cpp.gni")
 import("go.gni")
-import("rust.gni")
 
 # Import the scope definitions that list all sysroot headers.
 import("//src/zircon/lib/zircon/sysroot_entries.gni")
