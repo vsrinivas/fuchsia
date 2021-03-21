@@ -161,9 +161,9 @@ _all_named_envs += [
 
 ### Aliases ###
 
-if (host_os == "linux") {
+if (current_os == "linux") {
   host_env = linux_env
-} else if (host_os == "mac") {
+} else if (current_os == "mac") {
   host_env = mac_env
 }
 
