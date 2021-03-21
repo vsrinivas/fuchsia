@@ -109,6 +109,10 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   ////////////////
   // Other methods.
 
+  // Returns a digest::Digest containing the blob's merkle root.
+  // Equivalent to digest::Digest(GetKey()).
+  digest::Digest MerkleRoot() const;
+
   // Returns whether there are any external references to the blob.
   //
   // Threading: Currently this *must* be called on the main dispatch thread; otherwise the
@@ -171,6 +175,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Sets the target_compression_size in write_info to |size|.
   // Setter made public for testing.
   void SetTargetCompressionSize(uint64_t size);
+
+  // Reads in and verifies the contents of this Blob.
+  zx_status_t Verify();
 
   // Exposed for testing.
   const zx::vmo& DataVmo() const { return data_mapping_.vmo(); }
@@ -261,9 +268,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Commits all the data pages of the blob into memory, i.e. reads them from disk.
   zx_status_t CommitDataBuffer();
 
-  // Verifies the integrity of the in-memory Blob - operates on the entire blob at once.
-  // LoadVmosFromDisk() must have already been called for this blob.
-  zx_status_t Verify() const;
+  // Verifies the integrity of the null blob (i.e. that its name is correct). Can only be called on
+  // the null blob and will assert otherwise.
+  zx_status_t VerifyNullBlob() const;
 
   // Called by the Vnode once the last write has completed, updating the
   // on-disk metadata.
@@ -277,10 +284,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // May return nullptr if the mappings have not been initialized.
   void* GetDataBuffer() const;
   void* GetMerkleTreeBuffer(const BlobLayout& blob_layout) const;
-
-  // Returns a digest::Digest containing the blob's merkle root.
-  // Equivalent to digest::Digest(GetKey()).
-  digest::Digest MerkleRoot() const;
 
   // Commits the blob to persistent storage.
   zx_status_t Commit();

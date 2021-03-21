@@ -27,6 +27,7 @@ void BlobCache::Reset() {
     // If someone races alongside Reset, and evicts an open node concurrently with us,
     // a status other than "ZX_OK" may be returned. This is allowed.
     __UNUSED zx_status_t status = Evict(node);
+    return ZX_OK;
   });
 
   fbl::AutoLock lock(&hash_lock_);
@@ -42,7 +43,7 @@ void BlobCache::ResetLocked() {
   }
 }
 
-void BlobCache::ForAllOpenNodes(NextNodeCallback callback) {
+zx_status_t BlobCache::ForAllOpenNodes(NextNodeCallback callback) {
   fbl::RefPtr<CacheNode> old_vnode = nullptr;
   fbl::RefPtr<CacheNode> vnode = nullptr;
 
@@ -52,7 +53,7 @@ void BlobCache::ForAllOpenNodes(NextNodeCallback callback) {
     {
       fbl::AutoLock lock(&hash_lock_);
       if (open_hash_.is_empty()) {
-        return;
+        return ZX_OK;
       }
 
       CacheNode* raw_vnode = nullptr;
@@ -64,13 +65,13 @@ void BlobCache::ForAllOpenNodes(NextNodeCallback callback) {
         // of the current node.
         auto current = open_hash_.lower_bound(old_vnode->GetKey());
         if (current == open_hash_.end()) {
-          return;
+          return ZX_OK;
         } else if (current.CopyPointer() != old_vnode.get()) {
           raw_vnode = current.CopyPointer();
         } else {
           auto next = ++current;
           if (next == open_hash_.end()) {
-            return;
+            return ZX_OK;
           }
           raw_vnode = next.CopyPointer();
         }
@@ -82,9 +83,16 @@ void BlobCache::ForAllOpenNodes(NextNodeCallback callback) {
         continue;
       }
     }
-    callback(vnode);
+    zx_status_t status = callback(vnode);
     old_vnode = std::move(vnode);
+    if (status == ZX_ERR_STOP) {
+      break;
+    }
+    if (status != ZX_ERR_NEXT && status != ZX_OK) {
+      return status;
+    }
   }
+  return ZX_OK;
 }
 
 zx_status_t BlobCache::Lookup(const Digest& digest, fbl::RefPtr<CacheNode>* out) {

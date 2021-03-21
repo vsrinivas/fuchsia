@@ -55,8 +55,11 @@ class BlobCache {
   //
   // If a node is inserted into the "live set" via a concurrent call to |Add|, or evicted
   // with a concurrent call to |Evict|, it is undefined if that node will be returned.
-  using NextNodeCallback = fbl::Function<void(fbl::RefPtr<CacheNode>)>;
-  void ForAllOpenNodes(NextNodeCallback callback);
+  //
+  // Returns the first error encountered, or ZX_OK once finished.
+  // |callback| respects flow control status codes (i.e. ZX_ERR_STOP, ZX_ERR_NEXT).
+  using NextNodeCallback = fbl::Function<zx_status_t(fbl::RefPtr<CacheNode>)>;
+  zx_status_t ForAllOpenNodes(NextNodeCallback callback);
 
   // Searches for a blob by |digest|.
   //

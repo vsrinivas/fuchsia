@@ -399,7 +399,12 @@ std::unique_ptr<BlockDevice> Blobfs::Destroy(std::unique_ptr<Blobfs> blobfs) {
 Blobfs::~Blobfs() { Reset(); }
 
 zx_status_t Blobfs::LoadAndVerifyBlob(uint32_t node_index) {
-  return Blob::LoadAndVerifyBlob(this, node_index);
+  auto inode = GetNode(node_index);
+  if (inode.is_error()) {
+    return inode.status_value();
+  }
+  fbl::RefPtr<Blob> blob = fbl::MakeRefCounted<Blob>(this, node_index, *inode.value());
+  return blob->Verify();
 }
 
 void Blobfs::PersistBlocks(const ReservedExtent& reserved_extent, BlobTransaction& transaction) {
@@ -832,6 +837,7 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
   Cache().ForAllOpenNodes([](fbl::RefPtr<CacheNode> cache_node) {
     auto vnode = fbl::RefPtr<Blob>::Downcast(std::move(cache_node));
     vnode->CloneWatcherTeardown();
+    return ZX_OK;
   });
 
   // Write the clean bit.

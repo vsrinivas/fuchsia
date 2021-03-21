@@ -19,7 +19,7 @@ namespace {
 
 namespace fuv = fuchsia_update_verify;
 
-class HealthCheckTest : public ParameterizedBlobfsTest {
+class VerifierServiceTest : public BlobfsTest {
  protected:
   fuv::BlobfsVerifier::SyncClient ConnectToHealthCheckService() {
     auto endpoints = fidl::CreateEndpoints<fuv::BlobfsVerifier>();
@@ -34,16 +34,13 @@ class HealthCheckTest : public ParameterizedBlobfsTest {
   }
 };
 
-TEST_P(HealthCheckTest, EmptyFilesystem) {
+// This test mainly exists to ensure that the service is exported correctly. The business logic is
+// exercised by other unit tests.
+TEST_F(VerifierServiceTest, EmptyFilesystemIsValid) {
   fuv::wire::VerifyOptions options;
   auto status = ConnectToHealthCheckService().Verify(std::move(options));
   ASSERT_EQ(status.status(), ZX_OK) << status.error();
 }
-
-INSTANTIATE_TEST_SUITE_P(/*no prefix*/, HealthCheckTest,
-                         testing::Values(BlobfsDefaultTestParam(), BlobfsWithFvmTestParam(),
-                                         BlobfsWithCompactLayoutTestParam()),
-                         testing::PrintToStringParamName());
 
 }  // namespace
 }  // namespace blobfs

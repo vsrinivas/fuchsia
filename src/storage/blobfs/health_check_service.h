@@ -13,6 +13,7 @@
 #include <lib/async/dispatcher.h>
 
 #include "src/lib/storage/vfs/cpp/service.h"
+#include "src/storage/blobfs/blobfs.h"
 
 namespace blobfs {
 
@@ -29,9 +30,12 @@ class HealthCheckService : public fuchsia_update_verify::BlobfsVerifier::Interfa
   friend fbl::internal::MakeRefCountedHelper<HealthCheckService>;
   friend fbl::RefPtr<HealthCheckService>;
 
-  explicit HealthCheckService(async_dispatcher_t* dispatcher);
+  HealthCheckService(async_dispatcher_t* dispatcher, Blobfs& blobfs);
 
   ~HealthCheckService() override = default;
+
+ private:
+  Blobfs& blobfs_;
 };
 
 }  // namespace blobfs

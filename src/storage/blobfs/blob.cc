@@ -120,41 +120,16 @@ bool SupportsPaging(const Inode& inode) {
   return false;
 }
 
-zx_status_t Blob::Verify() const {
-  if (inode_.blob_size > 0) {
-    ZX_ASSERT(IsDataLoaded());
-  }
-
-  auto blob_layout =
-      BlobLayout::CreateFromInode(GetBlobLayoutFormat(blobfs_->Info()), inode_, GetBlockSize());
-  if (blob_layout.is_error()) {
-    FX_LOGS(ERROR) << "Failed to create blob layout: " << blob_layout.status_string();
-    return blob_layout.status_value();
-  }
-
-  zx_status_t status;
+zx_status_t Blob::VerifyNullBlob() const {
+  ZX_ASSERT(inode_.blob_size == 0);
   std::unique_ptr<BlobVerifier> verifier;
-
-  if (blob_layout->MerkleTreeSize() == 0) {
-    // No merkle tree is stored for small blobs, because the entire blob can be verified based
-    // on its merkle root digest (i.e. the blob's merkle tree is just a single root digest).
-    // Still verify the blob's contents in this case.
-    if ((status = BlobVerifier::CreateWithoutTree(
-             MerkleRoot(), blobfs_->Metrics(), inode_.blob_size,
-             &blobfs_->blob_corruption_notifier(), &verifier)) != ZX_OK) {
-      return status;
-    }
-  } else {
-    ZX_ASSERT(IsMerkleTreeLoaded());
-    if ((status = BlobVerifier::Create(
-             MerkleRoot(), blobfs_->Metrics(), GetMerkleTreeBuffer(*blob_layout.value()),
-             blob_layout->MerkleTreeSize(), blob_layout->Format(), inode_.blob_size,
-             &blobfs_->blob_corruption_notifier(), &verifier)) != ZX_OK) {
-      return status;
-    }
+  if (zx_status_t status =
+          BlobVerifier::CreateWithoutTree(MerkleRoot(), blobfs_->Metrics(), inode_.blob_size,
+                                          &blobfs_->blob_corruption_notifier(), &verifier);
+      status != ZX_OK) {
+    return status;
   }
-
-  return verifier->Verify(data_mapping_.start(), inode_.blob_size, data_mapping_.size());
+  return verifier->Verify(nullptr, 0, 0);
 }
 
 uint64_t Blob::SizeData() const {
@@ -184,7 +159,7 @@ zx_status_t Blob::WriteNullBlob() {
   ZX_DEBUG_ASSERT(inode_.blob_size == 0);
   ZX_DEBUG_ASSERT(inode_.block_count == 0);
 
-  zx_status_t status = Verify();
+  zx_status_t status = VerifyNullBlob();
   if (status != ZX_OK) {
     return status;
   }
@@ -928,31 +903,25 @@ zx_status_t Blob::QueueUnlink() {
 zx_status_t Blob::CommitDataBuffer() {
   if (inode_.blob_size == 0) {
     // It's the null blob, so just verify.
-    return Verify();
+    return VerifyNullBlob();
   } else {
     return data_mapping_.vmo().op_range(ZX_VMO_OP_COMMIT, 0, inode_.blob_size, nullptr, 0);
   }
 }
 
-zx_status_t Blob::LoadAndVerifyBlob(Blobfs* bs, uint32_t node_index) {
-  auto inode = bs->GetNode(node_index);
-  if (inode.is_error()) {
-    return inode.status_value();
-  }
-  fbl::RefPtr<Blob> vn = fbl::MakeRefCounted<Blob>(bs, node_index, *inode.value());
-
-  auto status = vn->LoadVmosFromDisk();
+zx_status_t Blob::Verify() {
+  auto status = LoadVmosFromDisk();
   if (status != ZX_OK) {
     return status;
   }
 
   // Blobs that are not pager-backed are already verified when they are loaded.
   // For pager-backed blobs, commit the entire blob in memory. This will cause all of the pages to
-  // be verified as they are read in. Note that a separate call to Verify() is not required. If the
-  // commit operation fails due to a verification failure, we do propagate the error back via the
-  // return status.
-  if (vn->IsPagerBacked()) {
-    return vn->CommitDataBuffer();
+  // be verified as they are read in (or for the null bob we just verify immediately).
+  // If the commit operation fails due to a verification failure, we do propagate the error back via
+  // the return status.
+  if (IsPagerBacked()) {
+    return CommitDataBuffer();
   }
   return ZX_OK;
 }

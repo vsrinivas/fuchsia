@@ -4,6 +4,8 @@
 
 #include "src/storage/blobfs/blob_cache.h"
 
+#include <zircon/compiler.h>
+
 #include <iterator>
 
 #include <gtest/gtest.h>
@@ -69,7 +71,7 @@ Digest GenerateDigest(size_t seed) {
 
 void CheckNothingOpenHelper(BlobCache* cache) {
   ASSERT_TRUE(cache);
-  cache->ForAllOpenNodes([](fbl::RefPtr<CacheNode>) { ZX_ASSERT(false); });
+  cache->ForAllOpenNodes([](fbl::RefPtr<CacheNode>) -> zx_status_t { ZX_ASSERT(false); });
 }
 
 TEST(BlobCacheTest, Null) {
@@ -164,6 +166,7 @@ void CheckExistsAloneInOpenCache(BlobCache* cache, void* node_ptr) {
   cache->ForAllOpenNodes([&node_count, &node_ptr](fbl::RefPtr<CacheNode> node) {
     node_count++;
     ZX_ASSERT(node.get() == node_ptr);
+    return ZX_OK;
   });
   ASSERT_EQ(1, node_count);
 }
@@ -286,7 +289,7 @@ TEST(BlobCacheTest, ForAllOpenNodes) {
       if (open_nodes[i] && open_nodes[i].get() == node.get()) {
         open_nodes[i] = nullptr;
         node_index++;
-        return;
+        return ZX_OK;
       }
     }
     ZX_ASSERT_MSG(false, "Found open node not contained in expected open set");

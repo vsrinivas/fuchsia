@@ -70,6 +70,7 @@ test("blobfs_unittest") {
     "unit/format_test.cc",
     "unit/fsck_test.cc",
     "unit/get_allocated_regions_test.cc",
+    "unit/health_check_service_test.cc",
     "unit/metrics_test.cc",
     "unit/node_populator_test.cc",
     "unit/node_reserver_test.cc",
@@ -180,11 +181,11 @@ test("blobfs_integration") {
     "integration/blobfs_integration_test.cc",
     "integration/fdio_test.cc",
     "integration/fdio_test.h",
-    "integration/health_check_test.cc",
     "integration/mount_test.cc",
     "integration/query_service_test.cc",
     "integration/superblock_test.cc",
     "integration/sync_test.cc",
+    "integration/verifier_service_test.cc",
   ]
   deps = [
     ":test_utils",
