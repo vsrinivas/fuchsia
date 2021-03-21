@@ -43,6 +43,4 @@ type FailureModeCheck interface {
 	Name() string
 	// DebugText is human-readable text intended to help debug a check failure.
 	DebugText() string
-	// OutputFiles are paths associated with this check. Often empty.
-	OutputFiles() []string
 }

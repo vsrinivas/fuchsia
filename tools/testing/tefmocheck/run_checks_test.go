@@ -31,10 +31,6 @@ func (c alwaysTrueCheck) DebugText() string {
 	return "True dat"
 }
 
-func (c alwaysTrueCheck) OutputFiles() []string {
-	return []string{"true.txt"}
-}
-
 type alwaysFalseCheck struct{}
 
 func (c alwaysFalseCheck) Check(*TestingOutputs) bool {
@@ -47,10 +43,6 @@ func (c alwaysFalseCheck) Name() string {
 
 func (c alwaysFalseCheck) DebugText() string {
 	return "Lies!"
-}
-
-func (c alwaysFalseCheck) OutputFiles() []string {
-	return []string{}
 }
 
 type alwaysPanicCheck struct{}
@@ -67,10 +59,6 @@ func (c alwaysPanicCheck) DebugText() string {
 	return ""
 }
 
-func (c alwaysPanicCheck) OutputFiles() []string {
-	return []string{}
-}
-
 func TestRunChecks(t *testing.T) {
 	falseCheck := alwaysFalseCheck{}
 	trueCheck := alwaysTrueCheck{}
@@ -79,16 +67,14 @@ func TestRunChecks(t *testing.T) {
 		falseCheck, trueCheck, panicCheck,
 	}
 	outputsDir := t.TempDir()
-	debugPath := debugPathForCheck(trueCheck)
 	want := []runtests.TestDetails{
 		{
 			Name:                 path.Join(checkTestNamePrefix, trueCheck.Name()),
 			Result:               runtests.TestFailure,
 			IsTestingFailureMode: true,
-			OutputFiles:          []string{debugPath},
+			OutputFiles:          []string{debugPathForCheck(trueCheck)},
 		},
 	}
-	want[0].OutputFiles = append(want[0].OutputFiles, trueCheck.OutputFiles()...)
 	startTime := time.Now()
 
 	got, err := RunChecks(checks, nil, outputsDir)
@@ -106,10 +92,6 @@ func TestRunChecks(t *testing.T) {
 		got[i].StartTime = defaultTime
 		got[i].DurationMillis = 0
 		for _, outputFile := range td.OutputFiles {
-			// RunChecks() is only responsible for writing the debug text to a file.
-			if outputFile != debugPath {
-				continue
-			}
 			if _, err := os.Stat(filepath.Join(outputsDir, outputFile)); err != nil {
 				t.Errorf("failed to stat OutputFile %s: %v", outputFile, err)
 			}

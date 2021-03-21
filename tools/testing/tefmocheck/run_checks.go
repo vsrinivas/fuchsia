@@ -61,7 +61,6 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string)
 				return nil, err
 			}
 		}
-		testDetails.OutputFiles = append(testDetails.OutputFiles, check.OutputFiles()...)
 		checkTests = append(checkTests, testDetails)
 		// We run more specific checks first, so it's not useful to run any checks
 		// once we have our first failure.

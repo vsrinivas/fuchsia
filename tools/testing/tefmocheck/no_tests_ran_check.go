@@ -19,7 +19,3 @@ func (c NoTestsRanCheck) Name() string {
 func (c NoTestsRanCheck) DebugText() string {
 	return "The task didn't run any tests, or didn't produce any test results."
 }
-
-func (c NoTestsRanCheck) OutputFiles() []string {
-	return []string{}
-}
