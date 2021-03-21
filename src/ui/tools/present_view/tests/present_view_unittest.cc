@@ -4,232 +4,159 @@
 
 #include "src/ui/tools/present_view/present_view.h"
 
-#include <fuchsia/ui/app/cpp/fidl.h>
-#include <fuchsia/ui/app/cpp/fidl_test_base.h>
-#include <fuchsia/ui/policy/cpp/fidl.h>
-#include <fuchsia/ui/policy/cpp/fidl_test_base.h>
-#include <lib/async/cpp/wait.h>
-#include <lib/fidl/cpp/binding.h>
-#include <lib/fidl/cpp/binding_set.h>
-#include <lib/fidl/cpp/interface_handle.h>
-#include <lib/fidl/cpp/interface_request.h>
-#include <lib/sys/cpp/component_context.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
-#include <lib/sys/cpp/testing/fake_component.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
-#include <lib/zx/eventpair.h>
-#include <lib/zx/time.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
+#include <string>
+#include <vector>
+
 #include <gtest/gtest.h>
 
-#include "lib/gtest/test_loop_fixture.h"
 #include "src/lib/fsl/handles/object_info.h"
-
-namespace {
-
-constexpr char kNonexistentViewComponentUrl[] = "file://nonexistent_view.cmx";
-constexpr char kFakeViewComponentUrl[] = "file://fake_view.cmx";
-constexpr zx::duration kTimeout = zx::sec(1);
-
-class FakePresentation : public fuchsia::ui::policy::testing::Presentation_TestBase {
- public:
-  FakePresentation(fuchsia::ui::views::ViewHolderToken view_holder_token,
-                   fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request)
-      : binding_(this, std::move(presentation_request)),
-        token_waiter_(std::make_unique<async::Wait>(view_holder_token.value.get(),
-                                                    __ZX_OBJECT_PEER_CLOSED, 0, std::bind([this]() {
-                                                      FAIL();
-                                                      token_peer_disconnected_ = true;
-                                                    }))),
-        token_(std::move(view_holder_token)) {}
-  ~FakePresentation() override = default;
-  FakePresentation(FakePresentation&& other) noexcept
-      : binding_(this, other.binding_.Unbind()),
-        token_waiter_(std::move(other.token_waiter_)),
-        token_(std::move(other.token_)),
-        token_peer_disconnected_(other.token_peer_disconnected_) {}
-
-  const fuchsia::ui::views::ViewHolderToken& token() const { return token_; }
-  bool peer_disconnected() const { return token_peer_disconnected_; }
-
-  void NotImplemented_(const std::string& /*name*/) final { FAIL(); }
-
- private:
-  fidl::Binding<fuchsia::ui::policy::Presentation> binding_;
-  std::unique_ptr<async::Wait> token_waiter_;
-
-  fuchsia::ui::views::ViewHolderToken token_;
-  bool token_peer_disconnected_ = false;
-};
-
-class FakePresenter : public fuchsia::ui::policy::testing::Presenter_TestBase {
- public:
-  FakePresenter() : binding_(this) {}
-  ~FakePresenter() override = default;
-
-  const std::vector<FakePresentation>& presentations() const { return presentations_; }
-  bool bound() const { return binding_.is_bound(); }
-  fidl::InterfaceRequestHandler<fuchsia::ui::policy::Presenter> handler() {
-    return [this](fidl::InterfaceRequest<fuchsia::ui::policy::Presenter> request) {
-      EXPECT_FALSE(bound());
-      binding_.Bind(std::move(request));
-    };
-  }
-
-  // |fuchsia::ui::policy::Presenter|
-  void PresentView(
-      fuchsia::ui::views::ViewHolderToken view_holder_token,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request) final {
-    presentations_.emplace_back(std::move(view_holder_token), std::move(presentation_request));
-  }
-  void NotImplemented_(const std::string& /*name*/) final { FAIL(); }
-
- private:
-  fidl::Binding<fuchsia::ui::policy::Presenter> binding_;
-
-  std::vector<FakePresentation> presentations_;
-};
-
-class FakeViewComponent : public fuchsia::ui::app::testing::ViewProvider_TestBase {
- public:
-  explicit FakeViewComponent(sys::testing::FakeLauncher& fake_launcher) : binding_(this) {
-    component_.Register(kFakeViewComponentUrl, fake_launcher);
-    component_.AddPublicService<fuchsia::ui::app::ViewProvider>(
-        [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
-          binding_.Bind(std::move(request));
-        });
-  }
-
-  bool bound() const { return binding_.is_bound(); }
-  const fuchsia::ui::views::ViewToken& token() const { return token_; }
-  bool peer_disconnected() const { return token_peer_disconnected_; }
-
-  // |fuchsia::ui::app::ViewProvider|
-  void CreateView(
-      zx::eventpair view_token,
-      fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> /*incoming_services*/,
-      fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> /*outgoing_services*/) final {
-    // Wait on the passed-in |ViewToken| so we can detect if the peer token is destroyed.
-    token_waiter_ =
-        std::make_unique<async::Wait>(view_token.get(), __ZX_OBJECT_PEER_CLOSED, 0,
-                                      std::bind([this]() { token_peer_disconnected_ = true; }));
-
-    token_.value = std::move(view_token);
-  }
-  void NotImplemented_(const std::string& /*name*/) final { FAIL(); }
-
- private:
-  sys::testing::FakeComponent component_;
-  fidl::Binding<fuchsia::ui::app::ViewProvider> binding_;
-  std::unique_ptr<async::Wait> token_waiter_;
-
-  fuchsia::ui::views::ViewToken token_;
-  bool token_peer_disconnected_ = false;
-};
-
-}  // namespace
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ui/tools/present_view/testing/fake_presenter.h"
+#include "src/ui/tools/present_view/testing/fake_unittest_view.h"
 
 namespace present_view::test {
 
+// This test fixture tests |PresentView| logic on a single thread.
+//
+// The test fixture provides fake |fuchsia.ui.policy.Presenter| and |fuchsia.ui.app.ViewProvider|
+// implementations and services them on its main loop.
+//
+// Each test also instantiates a |PresentView| object and services that object on its main loop.
 class PresentViewTest : public gtest::TestLoopFixture {
  protected:
   PresentViewTest()
-      : fake_view_component_(fake_launcher_),
-        present_view_app_(fake_context_provider_.TakeContext()) {
+      : present_view_(fake_context_provider_.TakeContext(),
+                      [this](std::string error_string, zx_status_t status) {
+                        service_error_string_ = std::move(error_string);
+                        service_status_ = status;
+                      }),
+        fake_view_(fake_launcher_) {
     fake_context_provider_.service_directory_provider()->AddService(fake_launcher_.GetHandler());
-    fake_context_provider_.service_directory_provider()->AddService(fake_presenter_.handler());
+    fake_context_provider_.service_directory_provider()->AddService(fake_presenter_.GetHandler());
   }
 
-  zx_status_t LaunchPresentViewComponentAndWait(present_view::ViewInfo view_info) {
-    zx_status_t present_status = ZX_OK;
-    bool present_success = present_view_app_.Present(
-        std::move(view_info), [&present_status](zx_status_t status) { present_status = status; });
-    if (!present_success) {
-      return ZX_ERR_INTERNAL;
+  bool LaunchPresentViewComponentAndWait(present_view::ViewInfo view_info) {
+    bool success = present_view_.Present(std::move(view_info));
+    if (success) {
+      success = success && RunLoopUntilIdle();
     }
 
-    RunLoopFor(kTimeout);
-
-    return present_status;
+    return success;
   }
 
   sys::testing::ComponentContextProvider fake_context_provider_;
   sys::testing::FakeLauncher fake_launcher_;
-  FakePresenter fake_presenter_;
-  FakeViewComponent fake_view_component_;
 
-  present_view::PresentView present_view_app_;
+  present_view::PresentView present_view_;
+  present_view::testing::FakePresenter fake_presenter_;
+  present_view::testing::FakeUnitTestView fake_view_;
+
+  std::string service_error_string_;
+  zx_status_t service_status_ = ZX_OK;
 };
 
 TEST_F(PresentViewTest, NoUrl) {
-  // Passing no params is invalid.
+  // Passing no params does nothing (but prints a warning).
   //
-  // present_view should fail immediately, and never create a token pair.
-  EXPECT_EQ(ZX_ERR_INTERNAL, LaunchPresentViewComponentAndWait({}));
-  EXPECT_FALSE(fake_view_component_.bound());
+  // present_view should exit immediately without connecting to any services, and never create a
+  // token pair.
+  EXPECT_FALSE(LaunchPresentViewComponentAndWait({}));
+  EXPECT_EQ(ZX_OK, service_status_);
+  EXPECT_FALSE(fake_view_.bound());
   EXPECT_FALSE(fake_presenter_.bound());
-  EXPECT_EQ(0u, fake_presenter_.presentations().size());
+  EXPECT_FALSE(fake_presenter_.presentation());
 
-  auto& view_token = fake_view_component_.token();
+  auto& view_token = fake_view_.token();
   EXPECT_FALSE(view_token.value);
 
-  // Passing no url is invalid, even with valid options passed.
+  // Passing no url does nothing (but prints a warning), even with valid options passed.
   //
-  // present_view should fail immediately, and never create a token pair.
-  EXPECT_EQ(ZX_ERR_INTERNAL, LaunchPresentViewComponentAndWait({
-                                 .arguments = std::vector{std::string{"foo"}},
-                             }));
-  EXPECT_FALSE(fake_view_component_.bound());
+  // present_view should exit immediately without connecting to any services, and never create a
+  // token pair.
+  EXPECT_FALSE(LaunchPresentViewComponentAndWait({
+      .url = std::string{},
+      .arguments = std::vector{std::string{"foo"}},
+  }));
+  EXPECT_EQ(ZX_OK, service_status_);
+  EXPECT_FALSE(fake_view_.bound());
   EXPECT_FALSE(fake_presenter_.bound());
-  EXPECT_EQ(0u, fake_presenter_.presentations().size());
+  EXPECT_FALSE(fake_presenter_.presentation());
 
-  auto& view_token2 = fake_view_component_.token();
+  auto& view_token2 = fake_view_.token();
   EXPECT_FALSE(view_token2.value);
 }
 
 TEST_F(PresentViewTest, InvalidUrl) {
   // Invalid url's cause present_view to fail asynchronously.
   //
-  // present_view should bind to |Presenter|, but stop the loop with
-  // |ZX_ERR_PEER_CLOSED| once the specified component fails to launch.
-  EXPECT_EQ(ZX_ERR_PEER_CLOSED, LaunchPresentViewComponentAndWait({
-                                    .url = std::string{kNonexistentViewComponentUrl},
-                                }));
-  EXPECT_FALSE(fake_view_component_.bound());
-  EXPECT_TRUE(fake_presenter_.bound());
-  EXPECT_EQ(1u, fake_presenter_.presentations().size());
+  // present_view should bind to |Presenter|, but stop the loop with |ZX_ERR_PEER_CLOSED| and unbind
+  // from |Presenter| once the specified component fails to launch.
+  EXPECT_TRUE(LaunchPresentViewComponentAndWait({
+      .url = std::string{testing::kNonexistentViewUri},
+  }));
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, service_status_);
+  EXPECT_FALSE(fake_view_.bound());
+  EXPECT_FALSE(fake_presenter_.bound());
+  EXPECT_TRUE(fake_presenter_.presentation());
+  EXPECT_TRUE(fake_presenter_.presentation()->peer_disconnected());
 
-  auto& view_holder_token = fake_presenter_.presentations()[0].token();
-  bool view_disconnected = fake_presenter_.presentations()[0].peer_disconnected();
+  auto& view_holder_token = fake_presenter_.presentation()->token();
   EXPECT_TRUE(view_holder_token.value);
-  EXPECT_FALSE(view_disconnected);
 }
 
 TEST_F(PresentViewTest, Launch) {
-  // present_view should create a token pair and launch the specified component,
-  // passing one end to |Presenter| and the other end to a |ViewProvider| from
-  // the component.
-  EXPECT_EQ(ZX_OK, LaunchPresentViewComponentAndWait({
-                       .url = std::string{kFakeViewComponentUrl},
-                   }));
-  EXPECT_TRUE(fake_view_component_.bound());
+  // present_view should create a token pair and launch the specified component, passing one end to
+  // |Presenter| and the other end to a |ViewProvider| from the component.
+  //
+  // Once present_view is closed, the client View and the Presenter both keep running without any
+  // need for `present_view`'s intervention.
+  //
+  // Once the client View closes, the Presenter gets a disconnect signal on its View token.
+  EXPECT_TRUE(LaunchPresentViewComponentAndWait({
+      .url = std::string{testing::kFakeViewUri},
+  }));
+  EXPECT_EQ(ZX_OK, service_status_);
+  EXPECT_TRUE(fake_view_.bound());
+  EXPECT_FALSE(fake_view_.peer_disconnected());
   EXPECT_TRUE(fake_presenter_.bound());
-  EXPECT_EQ(1u, fake_presenter_.presentations().size());
+  EXPECT_TRUE(fake_presenter_.presentation());
+  EXPECT_FALSE(fake_presenter_.presentation()->peer_disconnected());
 
-  auto& view_token = fake_view_component_.token();
-  auto& view_holder_token = fake_presenter_.presentations()[0].token();
-  bool view_disconnected = fake_presenter_.presentations()[0].peer_disconnected();
-  bool view_holder_disconnected = fake_view_component_.peer_disconnected();
+  // Validate the Presenter and View's tokens came from the same eventpair.
+  auto& view_token = fake_view_.token();
+  auto& view_holder_token = fake_presenter_.presentation()->token();
   EXPECT_TRUE(view_token.value);
   EXPECT_TRUE(view_holder_token.value);
-  EXPECT_FALSE(view_disconnected);
-  EXPECT_FALSE(view_holder_disconnected);
   EXPECT_EQ(fsl::GetKoid(view_token.value.get()),
             fsl::GetRelatedKoid(view_holder_token.value.get()));
   EXPECT_EQ(fsl::GetKoid(view_holder_token.value.get()),
             fsl::GetRelatedKoid(view_token.value.get()));
+
+  // Kill present_view.
+  // present_view will now disconnect from the token exchange interface for the client.
+  // The Presenter and the client View tokens will remain linked.
+  present_view_.Kill();
+  EXPECT_TRUE(RunLoopUntilIdle());
+  EXPECT_FALSE(fake_presenter_.bound());         // present_view disconnects from Presenter
+  EXPECT_FALSE(fake_view_.bound());              // present_view disconnects from client View
+  EXPECT_FALSE(fake_view_.peer_disconnected());  // Clients token still linked
+  EXPECT_FALSE(
+      fake_presenter_.presentation()->peer_disconnected());  // Presenters token still linked
+
+  // Kill the fake View.
+  // This will cause a peer_disconnect event in the Presenter.
+  fake_view_.Kill();
+  EXPECT_TRUE(RunLoopUntilIdle());
+  EXPECT_TRUE(fake_view_.killed());              // Client forcibly killed
+  EXPECT_FALSE(fake_view_.peer_disconnected());  // Client killed, so never disconnected
+  EXPECT_FALSE(fake_view_.token().value);        // Client destroyed its token
+  EXPECT_TRUE(
+      fake_presenter_.presentation()->peer_disconnected());  // Presenters token disconnected
 }
 
 }  // namespace present_view::test

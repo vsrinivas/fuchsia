@@ -7,6 +7,7 @@
 #include <lib/sys/cpp/component_context.h>
 #include <lib/syslog/cpp/macros.h>
 #include <lib/trace-provider/provider.h>
+#include <zircon/status.h>
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -43,35 +44,25 @@ int main(int argc, const char** argv) {
 
   auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   if (!fxl::SetLogSettingsFromCommandLine(command_line)) {
+    FX_LOGS(INFO) << "Unable to set log settings from command line.";
     return 1;
   }
 
-  FX_LOGS(WARNING) << "BE ADVISED: The present_view tool takes the URL to an "
-                      "app that provided the ViewProvider interface and makes "
-                      "its view the root view.";
-  FX_LOGS(WARNING) << "This tool is intended for testing and debugging purposes "
-                      "only and may cause problems if invoked incorrectly.";
-  FX_LOGS(WARNING) << "Do not invoke present_view if a view tree already exists "
-                      "(i.e. if any process that creates a view is already "
-                      "running).";
-  FX_LOGS(WARNING) << "If scenic is already running on your system you "
-                      "will probably want to kill it before invoking this tool.";
-
+  bool present_view_error = false;
   present_view::ViewInfo view_info = ParseCommandLine(command_line);
-  present_view::PresentView present_view(sys::ComponentContext::CreateAndServeOutgoingDirectory());
-
-  int retval = 0;
-  bool present_success =
-      present_view.Present(std::move(view_info), [&loop, &retval](zx_status_t status) {
-        FX_LOGS(INFO) << "Launched component terminated; status: " << status;
-        retval = 1;
+  present_view::PresentView present_view(
+      sys::ComponentContext::CreateAndServeOutgoingDirectory(),
+      [&loop, &present_view_error](std::string error_string, zx_status_t status) {
+        FX_LOGS(INFO) << error_string << "; status: " << zx_status_get_string(status);
+        present_view_error = true;
         loop.Quit();
       });
-  if (!present_success) {
+
+  if (!present_view.Present(std::move(view_info))) {
+    FX_LOGS(INFO) << "present_view requires the url of an application to display.";
     return 1;
   }
-
   loop.Run();
 
-  return retval;
+  return present_view_error ? 1 : 0;
 }

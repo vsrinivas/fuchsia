@@ -1,4 +1,4 @@
-# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -7,96 +7,74 @@ import("//src/sys/build/components.gni")
 group("tests") {
   testonly = true
 
-  deps = [
-    ":present_view_apptests",
+  deps = [ ":present_view_tests" ]
+}
+
+fuchsia_test_component("present_view_integration_tests") {
+  deps = [ ":present_view_integration_tests_bin" ]
+  manifest = "meta/present_view_integration_tests.cmx"
+}
+
+fuchsia_unittest_component("present_view_unittests") {
+  deps = [ ":present_view_unittests_bin" ]
+}
+
+fuchsia_test_component("present_view") {
+  deps = [ "..:present_view" ]
+  manifest = "../meta/present_view.cmx"
+}
+
+fuchsia_test_package("present_view_tests") {
+  test_components = [
+    ":present_view_integration_tests",
     ":present_view_unittests",
   ]
 
-  # TODO(fxbug.dev/70869): Re-enable this test in profile build when it passes
-  # consistently in profile build.
-  if (select_variant + [ "profile" ] - [ "profile" ] == select_variant) {
-    deps += [ ":present_view_integration_tests" ]
-  }
-}
-
-fuchsia_unittest_package("present_view_apptests") {
-  deps = [ ":present_view_apptests_bin" ]
-}
-
-fuchsia_unittest_package("present_view_integration_tests") {
-  manifest = "meta/present_view_integration_tests.cmx"
-  deps = [ ":present_view_integration_tests_bin" ]
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-}
-
-fuchsia_unittest_package("present_view_unittests") {
-  deps = [ ":present_view_unittests_bin" ]
-  test_specs = {
-    log_settings = {
-      max_severity = "ERROR"
-    }
-  }
-}
-
-executable("present_view_unittests_bin") {
-  output_name = "present_view_unittests"
-  testonly = true
-
-  sources = [ "present_view_unittest.cc" ]
-
-  deps = [
-    "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp/testing:unit",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/ui/tools/present_view:lib",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-  ]
-}
-
-executable("present_view_apptests_bin") {
-  output_name = "present_view_apptests"
-  testonly = true
-
-  sources = [ "present_view_apptest.cc" ]
-
-  deps = [
-    "//garnet/public/lib/gtest",
-    "//sdk/fidl/fuchsia.sys",
-    "//sdk/fidl/fuchsia.ui.app",
-    "//sdk/fidl/fuchsia.ui.policy",
-    "//sdk/fidl/fuchsia.ui.views",
-    "//sdk/lib/fidl/cpp",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/fsl",
-    "//src/lib/fxl/test:gtest_main",
-    "//zircon/system/ulib/async-loop:async-loop-cpp",
-  ]
+  # The integration tests need to launch the `present_view` component.
+  # Depending on the component here places it inside of the test package, improving heremticity.
+  deps = [ ":present_view" ]
 }
 
 executable("present_view_integration_tests_bin") {
-  output_name = "present_view_integration_tests"
   testonly = true
+
+  output_name = "present_view_integration_tests"
 
   sources = [ "present_view_integration_test.cc" ]
 
   deps = [
-    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
+    "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/tools/present_view/testing:integration",
+  ]
+}
+
+executable("present_view_unittests_bin") {
+  testonly = true
+
+  output_name = "present_view_unittests"
+
+  sources = [ "present_view_unittest.cc" ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.sys",
+    "//sdk/fidl/fuchsia.ui.app",
+    "//sdk/fidl/fuchsia.ui.policy",
+    "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
+    "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
-    "//src/ui/tools/present_view",
-    "//third_party/googletest:gmock",
-    "//third_party/googletest:gtest",
+    "//src/lib/testing/loop_fixture",
+    "//src/ui/tools/present_view:lib",
+    "//src/ui/tools/present_view/testing:unit",
   ]
 }

@@ -1,13 +1,12 @@
 # Scenic View Debugger
 
-This directory contains `present_view`, a utility which can debug processes that
-provide Views via the ViewProvider interface.
+This directory contains `present_view`, a utility which can debug processes that provide Views via the
+`fuchsia.ui.app.ViewProvider` or `fuchsia.ui.views.View` interfaces.
 
-The present_view tool takes the URL to a process that exposes the ViewProvider
-interface and makes its View the root (fullscreen) View.
+The `present_view` tool takes the URL to a process that exposes one of these interfaces and makes its View the root
+(fullscreen) View.
 
-This tool is intended for testing and debugging purposes only and may cause
-problems if invoked incorrectly.
+This tool is intended for testing and debugging purposes only and may cause problems if invoked incorrectly.
 
 ## Usage
 
@@ -17,10 +16,7 @@ e.g.
 $ present_view spinning_square_view
 ```
 
-When a view is presented, it takes over the entire display. To switch between
-presentations, type Control-Alt-'[' or Control-Alt-']'.
-
-Alternatively, kill any other view-providing processes like so:
+If another view-providing process is already using the display, kill it like so:
 ```shell
 $ killall spinning_square_view
 ```
@@ -40,4 +36,3 @@ $ present_view --locale=<locale_id>[,<locale_id>]... <view_provider_process>
 e.g.
 $ present_view --locale=nl-NL,ru-RU spinning_square_view
 ```
-
