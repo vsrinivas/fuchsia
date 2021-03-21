@@ -2282,4 +2282,71 @@ TEST_P(ParameterizedYuvPixelTest, YuvImagesOnImage2) {
   session->DeregisterBufferCollection(kBufferId);
 }
 
+// This test ensures that |inset_from_min| and |inset_from_max| are only used
+// as hints for clients, and they won't affect rendering of Views in Scenic.
+TEST_F(ScenicPixelTest, InsetNotEnforced) {
+  auto test_session = SetUpTestSession();
+  scenic::Session* const session = &test_session->session;
+  const auto [display_width, display_height] = test_session->display_dimensions;
+
+  test_session->SetUpCamera().SetProjection(0);
+
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+
+  scenic::View view(session, std::move(view_token), "View");
+  scenic::ViewHolder view_holder(session, std::move(view_holder_token), "ViewHolder");
+
+  // We set non-zero |inset_from_min| and |inset_from_max|.
+  // These properties should work only as hints, but not affect actual rendered
+  // Views.
+  view_holder.SetViewProperties({.bounding_box =
+                                     {
+                                         .min = {0, 0, -2},
+                                         .max = {display_width, display_height, 1},
+                                     },
+                                 .inset_from_min = {display_width / 4, display_height / 4, 0},
+                                 .inset_from_max = {display_width / 4, display_height / 4, 0}});
+
+  // The bounding box of |pane_shape| exceeds the View's bounding box with
+  // inset. Since inset properties are only hints, they should not affect the
+  // rendered size of |pane_shape|.
+  // Solid color
+  scenic::Rectangle pane_shape(session, display_width, display_height);
+  scenic::Material pane_material(session);
+  pane_material.SetColor(255, 0, 255, 255);  // Magenta.
+
+  scenic::ShapeNode pane_node(session);
+  pane_node.SetShape(pane_shape);
+  pane_node.SetMaterial(pane_material);
+  pane_node.SetTranslation(display_width / 2, display_height / 2, 0);
+
+  test_session->scene.AddChild(view_holder);
+  view.AddChild(pane_node);
+
+  Present(session);
+  scenic::Screenshot screenshot = TakeScreenshot();
+  EXPECT_EQ(screenshot.ColorAt(.5f, .5f), scenic::Color(255, 0, 255, 255));    // Magenta
+  EXPECT_EQ(screenshot.ColorAt(.125f, .5f), scenic::Color(255, 0, 255, 255));  // Magenta
+  EXPECT_EQ(screenshot.ColorAt(.875f, .5f), scenic::Color(255, 0, 255, 255));  // Magenta
+  EXPECT_EQ(screenshot.ColorAt(.5f, .125f), scenic::Color(255, 0, 255, 255));  // Magenta
+  EXPECT_EQ(screenshot.ColorAt(.5f, .875f), scenic::Color(255, 0, 255, 255));  // Magenta
+
+  // Set a new ViewProperties with different inset values won't affect View
+  // rendering.
+  view_holder.SetViewProperties({.bounding_box =
+                                     {
+                                         .min = {0, 0, -2},
+                                         .max = {display_width, display_height, 1},
+                                     },
+                                 .inset_from_min = {display_width / 3, display_height / 3, 0},
+                                 .inset_from_max = {display_width / 3, display_height / 3, 0}});
+  Present(session);
+  scenic::Screenshot screenshot2 = TakeScreenshot();
+  EXPECT_EQ(screenshot2.ColorAt(.5f, .5f), scenic::Color(255, 0, 255, 255));   // Magenta
+  EXPECT_EQ(screenshot2.ColorAt(.25f, .5f), scenic::Color(255, 0, 255, 255));  // Magenta
+  EXPECT_EQ(screenshot2.ColorAt(.75f, .5f), scenic::Color(255, 0, 255, 255));  // Magenta
+  EXPECT_EQ(screenshot2.ColorAt(.5f, .25f), scenic::Color(255, 0, 255, 255));  // Magenta
+  EXPECT_EQ(screenshot2.ColorAt(.5f, .75f), scenic::Color(255, 0, 255, 255));  // Magenta
+}
+
 }  // namespace

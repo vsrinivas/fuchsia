@@ -38,16 +38,21 @@ by specifying their minimum and maximum points (xyz) in 3D space.
 
 ### Bound Extent and Insets {#bound-extent-and-insets}
 
-There are four values needed to set a view's bounds properly, `bounds_min`,
-`bounds_max`, `inset_min` and `inset_max`. The minimum and maximum bounds
-represent the minimum and maximum coordinate points of an axis-aligned bounding
-box. The minimum and maximum insets specify the distances between the view’s
-bounding box and that of its parent. So the final extent of a view's bounds can
-be defined with the following formula:
+The `bounding_box` property in `ViewProperties` struct set is used to set the
+bounds of a view. The minimum and maximum bounds represent the minimum and
+maximum coordinate points of an axis-aligned bounding box.
+
+The `insets_from_min` and `insets_from_max` properties provide a hint
+that the region between the bounding box and the inset may be obscured.
+Scenic does not use the inset values to determine the bounding box,
+but anything drawn outside of
 
 ```cpp
-{ bounds_min + inset_min, bounds_max - inset_max}
+{ bounding_box.min + inset_from_min, bounding_box.max - inset_from_max }
 ```
+
+may be obscured by its ancestor view. The reason for obscuring, and the rules
+surrounding it, is specific to each product.
 
 ### Example {#example-1}
 
@@ -66,8 +71,8 @@ view_holder.SetViewProperties({.bounding_box{.min{0, 0, -200}, .max{500, 500, 0}
                                .inset_from_max{20, 30, 0}});
 ```
 
-The above code creates a View and ViewHolder pair whose bounds start at `(20,
-30, -200)` and extend out to `(480, 470, 0)`. The bounds themselves are always
+The above code creates a View and ViewHolder pair whose bounds start at `(0,
+0, -200)` and extend out to `(500, 500, 0)`. The bounds themselves are always
 axis-aligned.
 
 ## Coordinate System {#coordinate-system}

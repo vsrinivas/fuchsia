@@ -163,7 +163,9 @@ VK_TEST_F(ViewClippingTest, InsetsTest) {
   Apply(scenic::NewSetViewPropertiesCmd(view_holder_id, bbox_min, bbox_max, inset_min, inset_max));
 
   // Test to make sure the bounding boxes are the same.
-  BoundingBox test_bbox(vec3(10, 20, -70), vec3(460, 450, -60));
+  // inset_min and inset_max are used as hints only. They should not affect
+  // View's bounding box.
+  BoundingBox test_bbox(vec3(0, 0, -100), vec3(500, 500, 0));
   const BoundingBox view_bounding_box = view_holder->GetLocalBoundingBox();
   EXPECT_EQ(test_bbox, view_bounding_box);
 

@@ -219,7 +219,7 @@ struct BoundingBox {
 /// Represents the properties for a View.
 struct ViewProperties {
     /// The View's bounding box extents can be defined as:
-    ///    { bounding_box.min + inset_from_min, bounding_box.max - inset_from_max }
+    ///    { bounding_box.min, bounding_box.max }
     /// Content contained within the View is clipped to this bounding box.
     ///
     // TODO(fxbug.dev/24037): should we just have a vec3 extent instead of a bounding box
@@ -228,6 +228,14 @@ struct ViewProperties {
 
     /// `insets_from_min` and `insets_from_max` specify the distances between the
     /// view's bounding box and that of its parent.
+    ///
+    /// These properties are not strictly enforced by Scenic, but only used
+    /// as hints for clients and other components that receives ViewProperties:
+    ///
+    /// View clients can assume that anything drawn outside of
+    ///    { bounding_box.min + inset_from_min, bounding_box.max - inset_from_max }
+    /// may be obscured by an ancestor view. The reason for obscuring, and the rules
+    /// surrounding it, is specific to each product.
     vec3 inset_from_min;
     vec3 inset_from_max;
 

@@ -108,10 +108,8 @@ void ViewHolder::LinkInvalidated(bool on_link_destruction) {
 // Generates an escher::BoundingBox from the given view properties.
 // TODO(fxbug.dev/24680) Create internal ViewProperties type.
 escher::BoundingBox ViewHolder::GetLocalBoundingBox() const {
-  escher::vec3 min =
-      Unwrap(view_properties_.bounding_box.min) + Unwrap(view_properties_.inset_from_min);
-  escher::vec3 max =
-      Unwrap(view_properties_.bounding_box.max) - Unwrap(view_properties_.inset_from_max);
+  escher::vec3 min = Unwrap(view_properties_.bounding_box.min);
+  escher::vec3 max = Unwrap(view_properties_.bounding_box.max);
   // Empty, point, or line view-bounds are permissible, but we collapse these to "empty".
   // In contrast, 2d surfaces (like rectangles) and 3d volumes (like cubes) are okay.
   return escher::BoundingBox::NewChecked(min, max, /* max degenerate dimension */ 1);
