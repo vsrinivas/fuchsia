@@ -13,11 +13,8 @@ group("tests") {
     ":hw_tests",
     "goldfish_benchmark",
     "goldfish_test",
+    "vkreadback:linux_arm64",
   ]
-
-  if (is_linux) {
-    deps += [ "vkreadback:linux_arm64" ]
-  }
 }
 
 group("hw_tests") {

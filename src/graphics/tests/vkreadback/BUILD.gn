@@ -31,11 +31,9 @@ executable("vkreadback_bin") {
   deps = [ ":src" ]
 }
 
-if (is_linux) {
-  group("linux_arm64") {
-    testonly = true
-    deps = [ ":vkreadback_bin(//build/toolchain:linux_arm64)" ]
-  }
+group("linux_arm64") {
+  testonly = true
+  deps = [ ":vkreadback_bin(//build/toolchain:linux_arm64)" ]
 }
 
 fuchsia_component("vkreadback_cmp") {
