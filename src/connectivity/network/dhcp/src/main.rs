@@ -297,14 +297,7 @@ fn create_sockets_from_params<S: SocketServerDispatcher>(
     params: &configuration::ServerParameters,
 ) -> std::io::Result<Vec<S::Socket>> {
     let configuration::ServerParameters { bound_device_names, .. } = params;
-    bound_device_names.iter().map(String::as_str).try_fold::<_, _, std::io::Result<_>>(
-        Vec::new(),
-        |mut acc, name| {
-            let sock = S::create_socket(name, Ipv4Addr::UNSPECIFIED)?;
-            let () = acc.push(sock);
-            Ok(acc)
-        },
-    )
+    bound_device_names.iter().map(|name| S::create_socket(name, Ipv4Addr::UNSPECIFIED)).collect()
 }
 
 /// Helper struct to handle buffer data from sockets.
@@ -407,10 +400,10 @@ async fn define_msg_handling_loop_future<DS: DataStore>(
 fn define_lease_expiration_handler_future<'a, DS: DataStore>(
     server: &'a RefCell<ServerDispatcherRuntime<Server<DS>>>,
 ) -> impl Future<Output = Result<(), Error>> + 'a {
-    let expiration_interval = Interval::new(EXPIRATION_INTERVAL_SECS.seconds());
-    expiration_interval
-        .map(move |()| server.borrow_mut().release_expired_leases())
-        .map(|_| Ok(()))
+    Interval::new(EXPIRATION_INTERVAL_SECS.seconds())
+        .map(move |()| {
+            server.borrow_mut().release_expired_leases().context("failed to release expired leases")
+        })
         .try_collect::<()>()
 }
 
