@@ -6,7 +6,7 @@ use crate::base::{Merge, SettingInfo, SettingType};
 use crate::call_async;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
     controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
@@ -63,7 +63,9 @@ impl controller::Handle for IntlController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetIntlInfo(info) => Some(self.set(info).await),
-            Request::Get => Some(Ok(Some(SettingInfo::Intl(self.client.read().await)))),
+            Request::Get => {
+                Some(self.client.read_setting_info::<IntlInfo>().await.into_handler_result())
+            }
             _ => None,
         }
     }
@@ -99,9 +101,8 @@ impl IntlController {
 
         self.write_intl_info_to_service(info.clone()).await;
 
-        let current = self.client.read().await;
-
-        write(&self.client, info.merge(current), false).await.into_handler_result()
+        let current = self.client.read_setting::<IntlInfo>().await;
+        self.client.write_setting(info.merge(current).into(), false).await.into_handler_result()
     }
 
     /// Checks if the given IntlInfo is valid.
