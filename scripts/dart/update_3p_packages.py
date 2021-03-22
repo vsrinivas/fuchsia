@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2016 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -70,7 +70,9 @@ def main():
     flutter_tool = os.path.join(flutter_absolute_root, 'bin', 'flutter')
     subprocess.check_call([flutter_tool, '--version'])
 
-    args = [importer_path]
+    python_tool = os.path.join(paths.FUCHSIA_ROOT, 'prebuilt', 'third_party',
+                               'python3', platform, 'bin', 'python3.8')
+    args = [python_tool, importer_path]
     if script_args.debug:
         args.append('--debug')
     args.extend(['--pub', pub_path])
