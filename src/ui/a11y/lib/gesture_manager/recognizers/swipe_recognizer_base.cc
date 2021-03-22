@@ -98,8 +98,7 @@ void SwipeRecognizerBase::HandleEvent(
 
       // Validate pointer events.
       if (!(ValidatePointerEvent(gesture_context_, pointer_event) &&
-            ValidateSwipePath(pointer_id, pointer_event) &&
-            ValidateSwipeDistance(pointer_id, pointer_event))) {
+            ValidateSwipePath(pointer_id, pointer_event))) {
         contest_->member->Reject();
         break;
       }
@@ -108,8 +107,15 @@ void SwipeRecognizerBase::HandleEvent(
 
       // If all the Up events are detected then call Accept.
       if (!NumberOfFingersOnScreen(gesture_context_)) {
-        contest_->member->Accept();
-        contest_.reset();
+        if (SquareDistanceBetweenPoints(gesture_context_.CurrentCentroid(false),
+                                        gesture_context_.StartingCentroid(false)) >=
+            kMinSwipeDistance * kMinSwipeDistance) {
+          contest_->member->Accept();
+          contest_.reset();
+        } else {
+          contest_->member->Reject();
+          break;
+        }
       }
 
       break;
@@ -141,22 +147,6 @@ bool SwipeRecognizerBase::ValidateSwipePath(
   auto dy = pointer_event.ndc_point().y - it->second.ndc_point.y;
 
   return SwipeHasValidSlopeAndDirection(dx, dy);
-}
-
-bool SwipeRecognizerBase::ValidateSwipeDistance(
-    uint32_t pointer_id,
-    const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const {
-  auto it = gesture_context_.starting_pointer_locations.find(pointer_id);
-  if (it == gesture_context_.starting_pointer_locations.end()) {
-    return false;
-  }
-
-  float dx = pointer_event.ndc_point().x - it->second.ndc_point.x;
-  float dy = pointer_event.ndc_point().y - it->second.ndc_point.y;
-
-  float d2 = dx * dx + dy * dy;
-
-  return d2 >= kMinSwipeDistance * kMinSwipeDistance && d2 <= kMaxSwipeDistance * kMaxSwipeDistance;
 }
 
 bool SwipeRecognizerBase::MinSwipeLengthAchieved(

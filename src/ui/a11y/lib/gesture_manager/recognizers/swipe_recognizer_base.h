@@ -28,10 +28,6 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // considered a swipe.
   static constexpr float kMinSwipeDistance = 2.f / 8;
 
-  // Max distance between finger down and finger up events for gesture to be considered
-  // a swipe.
-  static constexpr float kMaxSwipeDistance = 1.5;
-
   // Maximum duration of swipe (in milliseconds).
   static constexpr zx::duration kDefaultSwipeGestureTimeout = zx::msec(500);
 
@@ -75,12 +71,6 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // Determines whether a gesture's is close enough to up, down, left, or right to be
   // remain in consideration as a swipe. Returns true if so, false otherwise.
   bool ValidateSwipePath(
-      uint32_t pointer_id,
-      const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
-
-  // Checks if the distance between the start and end points of a swipe fall within the accepted
-  // range.
-  bool ValidateSwipeDistance(
       uint32_t pointer_id,
       const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) const;
 

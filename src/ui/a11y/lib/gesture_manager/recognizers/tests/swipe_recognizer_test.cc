@@ -272,6 +272,31 @@ TEST_P(SwipeRecognizerBaseTest, AcceptWhenDistanceIsLarge) {
   EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
 }
 
+// Tests case in which swipe gesture covers a large distance. We are using the entire upper range,
+// so there is no case where the distance between Up and Down is more than 1NDC.
+TEST_P(SwipeRecognizerBaseTest, AcceptWhenOnlyCentroidDistanceIsLarge) {
+  recognizer()->OnContestStarted(member()->TakeInterface());
+  for (uint32_t finger = 0; finger < GetParam(); finger++) {
+    SendPointerEvents(DownEvents(finger, {}));
+  }
+  // UP event must be between .25 and 1 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  for (uint32_t finger = 0; finger < GetParam(); finger++) {
+    // If this is a multi-finger swipe, leave one finger in its original
+    // location. In this case, the centroid will have moved by more than the
+    // swipe displacement threshold, but one of the fingers will not. In this
+    // case, we should still accept.
+    if (GetParam() > 1 && finger == 0) {
+      SendPointerEvent({finger, Phase::UP, {0, 0}});
+      continue;
+    }
+
+    SendPointerEvent({finger, Phase::UP, {0, 1}});
+  }
+
+  EXPECT_EQ(member()->status(), a11y::ContestMember::Status::kAccepted);
+}
+
 TEST_P(UpSwipeRecognizerTest, MoveEventAtSameLocationAsDown) {
   recognizer()->OnContestStarted(member()->TakeInterface());
 
