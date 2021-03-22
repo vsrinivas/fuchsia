@@ -669,53 +669,99 @@ pub fn make_app_assistant() -> AssistantCreatorFunc {
     Box::new(make_app_assistant_fut)
 }
 
-const DEV_BLOCK: &'static str = "/dev/class/block/000";
+const SAMPLE_BLOBFS: &'static str = "/dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm/ftl/block/fvm/blobfs-p-1/block";
+const DEV_BLOCK: &'static str = "/dev/class/block";
 use anyhow::Context as _;
-use fidl_fuchsia_device as device;
+use fidl_fuchsia_device::ControllerProxy;
 use fs_management::{Blobfs, Filesystem};
-async fn check_blobfs_health() {
-    let path = DEV_BLOCK;
-    println!("Check block {}", path);
-    let (controller, req) =
-        fidl::endpoints::create_proxy::<device::ControllerMarker>().unwrap();
-    let res =
-        fdio::service_connect(&path, req.into_channel().into()).with_context(|| {
-            format!("error calling fdio::service_connect({})", path)
-        });
-
-    println!("service_connect -> {:?}", res);
-
-    let topo_path = controller.get_topological_path().await.unwrap().unwrap();
-    println!("path->topo path {:?}->{:?}", path, topo_path);
-    if topo_path.contains("/fvm/") && !topo_path.contains("ramdisk") {
-        let fvm_path = topo_path + "/fvm/blobfs-p-1/block";
-        println!("This is the fvm, check it! {}", fvm_path);
-        check_blobfs(&fvm_path);
-    } else {
-        println!("Not the fvm, skip");
+use std::fs;
+use fuchsia_zircon::{self as zx};
+use fidl::endpoints::Proxy;
+async fn connect_to_fdio_service(path: &str) -> Result<fidl::AsyncChannel, Error> {
+    let (local, remote) = zx::Channel::create().context("Creating channel")?;
+    fdio::service_connect(path, remote).context("Connecting to service")?;
+    let local = fidl::AsyncChannel::from_channel(local).context("Creating AsyncChannel")?;
+    Ok(local)
+}
+async fn get_topo_path(channel: fidl::AsyncChannel) -> Option<String> {
+    let controller = ControllerProxy::from_channel(channel);
+    match controller.get_topological_path().await {
+        Ok(res) => {
+            match res {
+                Ok(path) => {
+                    println!("Returned path: {}", path);
+                    Some(path)
+                },
+                Err(errno) => {
+                    println!("Received topo_path error value: {}", errno);
+                    None
+                }
+            }
+        },
+        Err(e) => {
+            println!("Error getting topological path {:#}", e);
+            None
+        }
     }
 }
+async fn check_blobfs_health() {
+    // lsblk
+    match fs::read_dir(DEV_BLOCK) {
+        Ok(rd) => {
+            println!("Read block: OK");
+            for entry in rd {
+                let entry = entry.unwrap();
+                let pathbuf = entry.path();
+                let path = pathbuf.to_str().unwrap();
+                println!("Found entry {:?} path {:?}", entry, path);
 
-fn check_blobfs(path: &str) {
-    let config = Blobfs { verbose: true, readonly: true, metrics: true, ..Blobfs::default() };
-    let res = Filesystem::from_path(path, config);
+                match connect_to_fdio_service(path).await {
+                    Ok(channel) => {
+                        if let Some(topo_path) = get_topo_path(channel).await {
+                            if topo_path.contains("/fvm/blobfs-p-1/block") && !topo_path.contains("ramdisk") {
+                                println!("This is the expected blobfs, mount it! {}", topo_path);
+                                check_blobfs(&topo_path, true);
+                            } else {
+                                println!("Not the fvm, skip");
+                            }
+                        }
+                    },
+                    Err(e) => {
+                        println!("Error connected to service for path {}, {:#}", path, e);
+                    }
+                }
+            }
+        }
+        Err(e) => {
+            println!("Couldn't read block: {:#}", e);
+        }
+    }
+
+    // Check a sample path without readonly to see if it matches 
+    println!("Check sample path {}", SAMPLE_BLOBFS);
+    check_blobfs(SAMPLE_BLOBFS, false);
+}
+
+fn check_blobfs(path: &str, readonly: bool) {
+    let config = Blobfs { verbose: true, readonly: readonly, metrics: true, ..Blobfs::default() };
+    let res = Filesystem::from_path(path, config).context("Filesystem::from_path");
     match res {
         Ok(b) => {
             println!("Attempting to run fsck on Blobfs");
-            let mut x: Filesystem<Blobfs> = b;
-            match x.fsck() {
+            let mut b: Filesystem<Blobfs> = b;
+            match b.fsck() {
                 Ok(_) => {
                     println!("Blobfs-fsck OK");
                 },
-                Err(e) => println!("Error occurred during fsck() {}", e),
+                Err(e) => println!("Error occurred during fsck() {:#}", e),
             }
             println!("Attempting to mount Blobfs");
-            match x.mount("/fuchsia-blob-existing") {
+            match b.mount("/fuchsia-blob-existing") {
                 Ok(_) => println!("Mount succeeded"),
-                Err(e) => println!("Mount failed: {}", e),
+                Err(e) => println!("Mount failed: {:#}", e),
             }
         }
-        Err(_) => println!("Mount failed"),
+        Err(e) => println!("Mount failed: {:#}", e),
     }
 }
 
