@@ -16,10 +16,13 @@ type Bits struct {
 	Mask     string
 	MaskName DeclName
 	Members  []BitsMember
-
-	// Kind is a type tag; omit when initializing the struct.
-	Kind bitsKind
 }
+
+func (Bits) Kind() declKind {
+	return Kinds.Bits
+}
+
+var _ Kinded = (*Bits)(nil)
 
 type BitsMember struct {
 	fidl.Attributes

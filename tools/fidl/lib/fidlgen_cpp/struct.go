@@ -31,10 +31,13 @@ type Struct struct {
 	// e.g. has no padding.
 	// See the struct template for usage.
 	FullDeclMemcpyCompatibleDeps []string
-
-	// Kind is a type tag; omit when initializing the struct.
-	Kind structKind
 }
+
+func (Struct) Kind() declKind {
+	return Kinds.Struct
+}
+
+var _ Kinded = (*Struct)(nil)
 
 type StructMember struct {
 	fidl.Attributes
@@ -45,7 +48,7 @@ type StructMember struct {
 	HandleInformation *HandleInformation
 }
 
-func (m *StructMember) AsParameter() Parameter {
+func (m StructMember) AsParameter() Parameter {
 	return Parameter{
 		Type:              m.Type,
 		Name:              m.Name,

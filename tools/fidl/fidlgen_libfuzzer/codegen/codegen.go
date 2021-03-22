@@ -34,8 +34,7 @@ func NewFidlGenerator() *FidlGenerator {
 			}
 			return s2
 		},
-		"Protocols":      protocols,
-		"UnwrapProtocol": unwrapProtocol,
+		"Protocols": protocols,
 	})
 
 	template.Must(tmpls.Parse(tmplBits))
@@ -197,17 +196,12 @@ func prepareTree(name fidl.EncodedLibraryIdentifier, includeStem string, tree *c
 	tree.Headers = []string{pkgPath}
 }
 
-func protocols(decls []cpp.Decl) []*cpp.Protocol {
-	protocols := make([]*cpp.Protocol, 0, len(decls))
+func protocols(decls []cpp.Kinded) []cpp.Protocol {
+	protocols := make([]cpp.Protocol, 0, len(decls))
 	for _, decl := range decls {
-		if protocol := unwrapProtocol(decl); protocol != nil {
-			protocols = append(protocols, protocol)
+		if decl.Kind() == cpp.Kinds.Protocol {
+			protocols = append(protocols, decl.(cpp.Protocol))
 		}
 	}
 	return protocols
-}
-
-func unwrapProtocol(decl cpp.Decl) *cpp.Protocol {
-	protocol, _ := decl.(*cpp.Protocol)
-	return protocol
 }

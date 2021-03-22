@@ -11,33 +11,28 @@ import (
 	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
-// These are used in header/impl templates to select the correct type-specific template.
-// Each individual type is embedded into the corresponding C++ IR struct. Omit those
-// fields when initializing IRs.
-type (
-	bitsKind     struct{}
-	constKind    struct{}
-	enumKind     struct{}
-	protocolKind struct{}
-	serviceKind  struct{}
-	structKind   struct{}
-	tableKind    struct{}
-	unionKind    struct{}
-)
+type declKind namespacedEnumMember
 
-var Kinds = struct {
-	Const    constKind
-	Bits     bitsKind
-	Enum     enumKind
-	Protocol protocolKind
-	Service  serviceKind
-	Struct   structKind
-	Table    tableKind
-	Union    unionKind
-}{}
+type declKinds struct {
+	Bits     declKind
+	Const    declKind
+	Enum     declKind
+	Protocol declKind
+	Service  declKind
+	Struct   declKind
+	Table    declKind
+	Union    declKind
+}
 
-// A Decl is any type with a .Kind field.
-type Decl interface{}
+// Kinds are the different kinds of FIDL declarations. They are used in
+// header/impl templates to select the correct decl-specific template.
+var Kinds = namespacedEnum(declKinds{}).(declKinds)
+
+// A Kinded value is a declaration in FIDL, for which we would like to
+// generate some corresponding C++ code.
+type Kinded interface {
+	Kind() declKind
+}
 
 type familyKind namespacedEnumMember
 
@@ -81,7 +76,7 @@ type typeKinds struct {
 	Protocol  typeKind
 }
 
-// TypeKinds are the kinds of declarations (arrays, primitives, structs, ...).
+// TypeKinds are the kinds of C++ types (arrays, primitives, structs, ...).
 var TypeKinds = namespacedEnum(typeKinds{}).(typeKinds)
 
 type Type struct {
@@ -159,7 +154,7 @@ type Root struct {
 	HandleTypes     []string
 	Library         fidl.LibraryIdentifier
 	LibraryReversed fidl.LibraryIdentifier
-	Decls           []Decl
+	Decls           []Kinded
 }
 
 // Holds information about error results on methods
@@ -434,27 +429,23 @@ func compile(r fidl.Root) Root {
 	}
 	root.LibraryReversed = libraryReversed
 
-	decls := make(map[fidl.EncodedCompoundIdentifier]Decl)
+	decls := make(map[fidl.EncodedCompoundIdentifier]Kinded)
 
 	for _, v := range r.Bits {
-		d := c.compileBits(v)
-		decls[v.Name] = &d
+		decls[v.Name] = c.compileBits(v)
 	}
 
 	for _, v := range r.Consts {
-		d := c.compileConst(v)
-		decls[v.Name] = &d
+		decls[v.Name] = c.compileConst(v)
 	}
 
 	for _, v := range r.Enums {
-		d := c.compileEnum(v)
-		decls[v.Name] = &d
+		decls[v.Name] = c.compileEnum(v)
 	}
 
 	// Note: for Result calculation unions must be compiled before structs.
 	for _, v := range r.Unions {
-		d := c.compileUnion(v)
-		decls[v.Name] = &d
+		decls[v.Name] = c.compileUnion(v)
 	}
 
 	for _, v := range r.Structs {
@@ -462,23 +453,19 @@ func compile(r fidl.Root) Root {
 		if v.Anonymous {
 			continue
 		}
-		d := c.compileStruct(v)
-		decls[v.Name] = &d
+		decls[v.Name] = c.compileStruct(v)
 	}
 
 	for _, v := range r.Tables {
-		d := c.compileTable(v)
-		decls[v.Name] = &d
+		decls[v.Name] = c.compileTable(v)
 	}
 
 	for _, v := range r.Protocols {
-		d := c.compileProtocol(v)
-		decls[v.Name] = d
+		decls[v.Name] = c.compileProtocol(v)
 	}
 
 	for _, v := range r.Services {
-		d := c.compileService(v)
-		decls[v.Name] = &d
+		decls[v.Name] = c.compileService(v)
 	}
 
 	for _, v := range r.DeclOrder {

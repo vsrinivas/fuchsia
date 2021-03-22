@@ -18,10 +18,13 @@ type Service struct {
 	DeclName
 	ServiceName string
 	Members     []ServiceMember
-
-	// Kind is a type tag; omit when initializing the struct.
-	Kind serviceKind
 }
+
+func (Service) Kind() declKind {
+	return Kinds.Service
+}
+
+var _ Kinded = (*Service)(nil)
 
 type ServiceMember struct {
 	fidl.Attributes

@@ -15,12 +15,15 @@ type Enum struct {
 	Enum    fidl.Enum
 	Type    TypeName
 	Members []EnumMember
-
-	// Kind is a type tag; omit when initializing the struct.
-	Kind enumKind
 }
 
-func (e *Enum) UnknownValueForTmpl() interface{} {
+func (Enum) Kind() declKind {
+	return Kinds.Enum
+}
+
+var _ Kinded = (*Enum)(nil)
+
+func (e Enum) UnknownValueForTmpl() interface{} {
 	return e.Enum.UnknownValueForTmpl()
 }
 

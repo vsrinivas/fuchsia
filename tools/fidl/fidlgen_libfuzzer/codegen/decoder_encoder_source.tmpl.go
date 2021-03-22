@@ -28,9 +28,7 @@ const tmplDecoderEncoderSource = `
 ::std::vector<::fidl::fuzzing::DecoderEncoder>
 ::fuzzing::{{ range .Library }}{{ . }}_{{ end }}decoder_encoders = {
 {{ range .Decls }}
-{{- if Eq .Kind Kinds.Protocol -}}
-{{ $protocol := UnwrapProtocol . }}{{ template "ProtocolDecoderEncoders" $protocol }}
-{{- end -}}
+{{- if Eq .Kind Kinds.Protocol -}}{{ template "ProtocolDecoderEncoders" . }}{{- end -}}
 {{- if Eq .Kind Kinds.Struct }}{{ template "DecoderEncoder" . }},{{- end -}}
 {{- if Eq .Kind Kinds.Table }}{{ template "DecoderEncoder" . }},{{- end -}}
 {{- end }}

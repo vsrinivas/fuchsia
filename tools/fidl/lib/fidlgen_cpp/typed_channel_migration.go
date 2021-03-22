@@ -37,7 +37,7 @@ func (m *Method) ShouldEmitTypedChannelCascadingInheritance() bool {
 // during the migration to typed channels in LLCPP.
 // TODO(fxbug.dev/65212): We should always only generate the version with typed
 // channels.
-func (p *Protocol) ShouldEmitTypedChannelCascadingInheritance() bool {
+func (p Protocol) ShouldEmitTypedChannelCascadingInheritance() bool {
 	// Note: using the "natural" domain object name, so the migration
 	// to the wire namespace would not interfere with this check.
 	if !rawChannelInterfaceAllowed[p.DeclName.Wire.String()] {

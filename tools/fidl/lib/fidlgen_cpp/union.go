@@ -22,10 +22,13 @@ type Union struct {
 	MaxOutOfLine    int
 	Result          *Result
 	HasPointer      bool
-
-	// Kind is a type tag; omit when initializing the struct.
-	Kind unionKind
 }
+
+func (Union) Kind() declKind {
+	return Kinds.Union
+}
+
+var _ Kinded = (*Union)(nil)
 
 type UnionMember struct {
 	fidl.Attributes

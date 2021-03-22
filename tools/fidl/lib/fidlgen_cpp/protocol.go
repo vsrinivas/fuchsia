@@ -69,14 +69,14 @@ func compileHlMessagingDetails(protocol DeclName) hlMessagingDetails {
 }
 
 type protocolWithHlMessaging struct {
-	*Protocol
+	Protocol
 	hlMessagingDetails
 }
 
 // WithHlMessaging returns a new protocol IR where the HLCPP bindings details
 // are promoted to the same naming scope as the protocol. This makes it easier
 // to access the HLCPP details in golang templates.
-func (p *Protocol) WithHlMessaging() protocolWithHlMessaging {
+func (p Protocol) WithHlMessaging() protocolWithHlMessaging {
 	return protocolWithHlMessaging{
 		Protocol:           p,
 		hlMessagingDetails: p.hlMessaging,
@@ -151,24 +151,27 @@ type Protocol struct {
 	// Events contains the list of events (i.e. initiated by servers)
 	// in the protocol.
 	Events []Method
-
-	// Kind is a type tag; omit when initializing the struct.
-	Kind protocolKind
 }
 
-func (p *Protocol) Name() string {
+func (Protocol) Kind() declKind {
+	return Kinds.Protocol
+}
+
+var _ Kinded = (*Protocol)(nil)
+
+func (p Protocol) Name() string {
 	return p.Wire.Name() // TODO: not the wire name, maybe?
 }
 
-func (p *Protocol) NaturalType() string {
+func (p Protocol) NaturalType() string {
 	return string(p.Natural.Type())
 }
 
-func (p *Protocol) WireType() string {
+func (p Protocol) WireType() string {
 	return string(p.Wire.Type())
 }
 
-func newProtocol(inner protocolInner) *Protocol {
+func newProtocol(inner protocolInner) Protocol {
 	type kinds []methodKind
 
 	filterBy := func(kinds kinds) []Method {
@@ -184,7 +187,7 @@ func newProtocol(inner protocolInner) *Protocol {
 		return out
 	}
 
-	return &Protocol{
+	return Protocol{
 		protocolInner: inner,
 		OneWayMethods: filterBy(kinds{oneWayMethod}),
 		TwoWayMethods: filterBy(kinds{twoWayMethod}),
@@ -389,7 +392,7 @@ func allEventsStrict(methods []Method) fidl.Strictness {
 	return strictness
 }
 
-func (c *compiler) compileProtocol(val fidl.Protocol) *Protocol {
+func (c *compiler) compileProtocol(val fidl.Protocol) Protocol {
 	protocolName := c.compileDeclName(val.Name)
 	codingTableName := codingTableName(val.Name)
 	codingTableBase := DeclName{

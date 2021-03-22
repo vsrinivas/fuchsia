@@ -27,10 +27,13 @@ type Table struct {
 
 	// FrameItems stores the members in ordinal order; "null" for reserved.
 	FrameItems []TableFrameItem
-
-	// Kind is a type tag; omit when initializing the struct.
-	Kind tableKind
 }
+
+func (Table) Kind() declKind {
+	return Kinds.Table
+}
+
+var _ Kinded = (*Table)(nil)
 
 type TableMember struct {
 	fidl.Attributes

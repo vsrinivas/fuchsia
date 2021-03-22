@@ -20,11 +20,11 @@ type ConstantValue struct {
 	Wire    string
 }
 
-func (cv *ConstantValue) IsSet() bool {
+func (cv ConstantValue) IsSet() bool {
 	return cv.Natural != "" && cv.Wire != ""
 }
 
-func (cv *ConstantValue) String() string {
+func (cv ConstantValue) String() string {
 	switch currentVariant {
 	case noVariant:
 		fidl.TemplateFatalf(
@@ -75,10 +75,13 @@ type Const struct {
 	Decorator string
 	Type      Type
 	Value     ConstantValue
-
-	// Kind is a type tag; omit when initializing the struct.
-	Kind constKind
 }
+
+func (Const) Kind() declKind {
+	return Kinds.Const
+}
+
+var _ Kinded = (*Const)(nil)
 
 func (c *compiler) compileConst(val fidl.Const) Const {
 	n := c.compileDeclName(val.Name)
