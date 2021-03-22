@@ -201,7 +201,7 @@ mod tests {
     #[test]
     fn procedure_handles_invalid_messages() {
         let mut proc = DtmfProcedure::new();
-        let req = proc.hf_update(at::Command::Cmer {}, &mut SlcState::default());
+        let req = proc.hf_update(at::Command::CindRead {}, &mut SlcState::default());
         assert_matches!(req, ProcedureRequest::Error(ProcedureError::UnexpectedHf(_)));
 
         let req = proc.ag_update(AgUpdate::ThreeWaySupport, &mut SlcState::default());

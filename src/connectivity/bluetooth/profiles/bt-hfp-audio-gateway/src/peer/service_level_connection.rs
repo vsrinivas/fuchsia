@@ -57,6 +57,8 @@ pub struct SlcState {
     pub hf_features: HfFeatures,
     /// The codecs supported by the HF.
     pub hf_supported_codecs: Option<Vec<u32>>,
+    /// Whether indicator events reporting is enabled.
+    pub indicator_events_reporting: bool,
     /// The current indicator status of the AG.
     pub ag_indicator_status: IndicatorStatus,
     /// The format used when representing the network operator name on the AG.
@@ -128,6 +130,16 @@ impl ServiceLevelConnection {
         self.channel = Some(channel);
     }
 
+    /// Connects and initializes the provided `channel` with `state`.
+    /// This method should be used in integration-style tests in order to bypass the
+    /// back-and-forth needed to complete the SLC Initialization procedure.
+    #[cfg(test)]
+    pub fn initialize_at_state(&mut self, channel: Channel, state: SlcState) {
+        self.connect(channel);
+        self.state = state;
+        self.set_initialized();
+    }
+
     /// Sets the channel status to initialized.
     /// Note: This should only be called when the SLCI Procedure has successfully finished
     /// or in testing scenarios.
@@ -176,8 +188,6 @@ impl ServiceLevelConnection {
 
     /// Consume and handle a command received from the local device.
     /// On success, returns the identifier and request from handling the `command`.
-    // TODO(fxbug.dev/70591): Remove this allow once it is used by procedures initiated by the local device.
-    #[allow(unused)]
     pub fn receive_ag_request(
         &mut self,
         command: AgUpdate,
@@ -323,11 +333,11 @@ impl FusedStream for ServiceLevelConnection {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use {
         super::*,
         crate::{
-            indicator_status::IndicatorStatus,
+            procedure::phone_status::PhoneStatus,
             protocol::features::{AgFeatures, HfFeatures},
         },
         fuchsia_async as fasync,
@@ -336,12 +346,24 @@ mod tests {
         matches::assert_matches,
     };
 
+    /// Builds and returns a connected service level connection. Returns the SLC and
+    /// the remote end of the channel.
     fn create_and_connect_slc() -> (ServiceLevelConnection, Channel) {
         let mut slc = ServiceLevelConnection::new();
         let (local, remote) = Channel::create();
         slc.connect(local);
 
         (slc, remote)
+    }
+
+    /// Builds and returns a service level connection that is connected and initialized with
+    /// the provided `state`.
+    /// Returns the SLC and the remote end of the channel.
+    pub fn create_and_initialize_slc(state: SlcState) -> (ServiceLevelConnection, Channel) {
+        let mut connection = ServiceLevelConnection::new();
+        let (local, remote) = Channel::create();
+        connection.initialize_at_state(local, state);
+        (connection, remote)
     }
 
     #[fasync::run_until_stalled(test)]
@@ -454,7 +476,7 @@ mod tests {
 
         // We then expect HF to request enabling Ind Status update in the AG - expect an outgoing
         // message to the peer.
-        let command4 = format!("AT+CMER\r").into_bytes();
+        let command4 = format!("AT+CMER=3,0,0,1\r").into_bytes();
         let _ = remote.as_ref().write(&command4);
         expect_outgoing_message_to_peer(&mut slc).await;
 
@@ -484,15 +506,25 @@ mod tests {
         );
     }
 
-    // TODO(fxbug.dev/70591): Remove this test once locally-initiated procedures are implemented.
     #[fasync::run_singlethreaded(test)]
-    async fn local_request_returns_error_because_not_implemented() {
-        let (mut slc, _remote) = create_and_connect_slc();
-        // Bypass the SLCI procedure by setting the channel to initialized.
-        slc.set_initialized();
+    async fn locally_initiated_phone_status_procedure_returns_message() {
+        // Bypass the SLCI procedure by setting the channel to initialized and enable indicator
+        // reporting.
+        let state = SlcState { indicator_events_reporting: true, ..SlcState::default() };
+        let (mut slc, _remote) = create_and_initialize_slc(state);
 
-        let random_at = AgUpdate::Ok;
-        let res = slc.receive_ag_request(random_at);
-        assert_matches!(res, Err(ProcedureError::NotImplemented));
+        // Local device wants to initiate a phone status update.
+        let expected_marker = ProcedureMarker::PhoneStatus;
+        let status = PhoneStatus::BatteryLevel(2);
+        let (marker, request) = slc.receive_ag_request(status.into()).unwrap();
+        // We expect the PhoneStatus Procedure to be initiated and an outgoing message to the peer
+        // with the status update.
+        assert_eq!(marker, expected_marker);
+        // Battery Level has Index 7.
+        let expected_messages = vec![at::Response::Success(at::Success::Ciev { ind: 7, value: 2 })];
+        assert_matches!(request, ProcedureRequest::SendMessages(m) if m == expected_messages);
+
+        // Since status updates require no response, the procedure should be terminated.
+        assert!(!slc.is_active(&expected_marker));
     }
 }

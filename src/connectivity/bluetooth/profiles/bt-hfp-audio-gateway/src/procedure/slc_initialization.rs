@@ -12,6 +12,12 @@ use crate::{
 
 use at_commands as at;
 
+/// This mode's behavior is to forward unsolicited result codes directly per
+/// 3GPP TS 27.007 version 6.8.0, Section 8.10.
+/// This is the only supported mode in the Event Reporting Enabling AT command (AT+CMER).
+/// Defined in HFP v1.8 Section 4.34.2.
+const SUPPORTED_EVENT_REPORTING_MODE: i64 = 3;
+
 /// A singular state within the SLC Initialization Procedure.
 pub trait SlcProcedureState {
     /// Returns the next state in the procedure based on the current state and the given
@@ -242,8 +248,14 @@ impl SlcProcedureState for AgIndicatorStatusReceived {
 
     fn hf_update(&self, update: at::Command, state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         // Only a HF request to enable the AG Indicator Status will continue the procedure.
+        // Ensure that the requested `mode` and `ind` values are valid per HFP v1.8 Section 4.34.2.
         match update {
-            at::Command::Cmer {} => {
+            at::Command::Cmer { mode, ind, .. } => {
+                let is_valid = mode == SUPPORTED_EVENT_REPORTING_MODE && (ind == 0 || ind == 1);
+                if !is_valid {
+                    return SlcErrorState::invalid_hf_argument(update.clone());
+                }
+                state.indicator_events_reporting = ind != 0;
                 Box::new(AgIndicatorStatusEnableReceived { state: state.clone() })
             }
             m => SlcErrorState::unexpected_hf(m),
@@ -372,6 +384,11 @@ impl SlcErrorState {
         Box::new(SlcErrorState { error: Error::UnexpectedHf(m) })
     }
 
+    /// Builds and returns the error state for a HF message with invalid arguments.
+    fn invalid_hf_argument(m: at::Command) -> Box<dyn SlcProcedureState> {
+        Box::new(SlcErrorState { error: Error::InvalidHfArgument(m) })
+    }
+
     /// Builds and returns the error state for the already terminated error case.
     fn already_terminated() -> Box<dyn SlcProcedureState> {
         Box::new(SlcErrorState { error: Error::AlreadyTerminated })
@@ -461,6 +478,43 @@ mod tests {
         assert_matches!(procedure.hf_update(update, &mut state), ProcedureRequest::Error(_));
     }
 
+    #[test]
+    fn indicator_status_enable_with_invalid_mode_returns_error() {
+        let mut state = SlcState {
+            hf_features: HfFeatures::all(),
+            ag_features: AgFeatures::all(),
+            ..SlcState::default()
+        };
+        let mut procedure =
+            SlcInitProcedure::new_at_state(AgIndicatorStatusReceived { state: state.clone() });
+
+        // `mode` = 4 is invalid.
+        let invalid_enable = at::Command::Cmer { mode: 4, keyp: 0, disp: 0, ind: 1 };
+        assert_matches!(
+            procedure.hf_update(invalid_enable, &mut state),
+            ProcedureRequest::Error(Error::InvalidHfArgument(_))
+        );
+    }
+
+    #[test]
+    fn indicator_status_enable_with_invalid_ind_returns_error() {
+        let mut state = SlcState {
+            hf_features: HfFeatures::all(),
+            ag_features: AgFeatures::all(),
+            ..SlcState::default()
+        };
+        let mut procedure =
+            SlcInitProcedure::new_at_state(AgIndicatorStatusReceived { state: state.clone() });
+
+        // `ind` = 9 is invalid.
+        let invalid_enable =
+            at::Command::Cmer { mode: SUPPORTED_EVENT_REPORTING_MODE, keyp: 0, disp: 0, ind: 9 };
+        assert_matches!(
+            procedure.hf_update(invalid_enable, &mut state),
+            ProcedureRequest::Error(Error::InvalidHfArgument(_))
+        );
+    }
+
     /// Validates the entire mandatory state machine for the SLCI Procedure, see
     /// Section 4.2.1.6 of HFP v1.8 for the mandatory steps. We can trigger the mandatory
     /// sequence of operations by specifying the lack of codec support, 3-way calling, and
@@ -506,7 +560,7 @@ mod tests {
         assert_matches!(slc_proc.ag_update(update5, &mut state), ProcedureRequest::SendMessages(_));
 
         // Lastly, the HF should request to enable the indicator status update on the AG.
-        let update6 = at::Command::Cmer {};
+        let update6 = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };
         assert_matches!(slc_proc.hf_update(update6, &mut state), ProcedureRequest::SendMessages(_));
 
         // Since both the AG and HF don't support 3-way calling and HF-indicators flags, we
@@ -550,7 +604,7 @@ mod tests {
         let update6 = AgUpdate::IndicatorStatus(IndicatorStatus::default());
         assert_matches!(slc_proc.ag_update(update6, &mut state), ProcedureRequest::SendMessages(_));
 
-        let update7 = at::Command::Cmer {};
+        let update7 = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };
         assert_matches!(slc_proc.hf_update(update7, &mut state), ProcedureRequest::SendMessages(_));
 
         // Optional
@@ -591,7 +645,7 @@ mod tests {
         let mut state =
             SlcState { hf_features: HfFeatures::CODEC_NEGOTIATION, ..SlcState::default() };
         slc_proc = SlcInitProcedure::new_at_state(HfFeaturesReceived);
-        let unexpected_update2 = at::Command::Cmer {};
+        let unexpected_update2 = at::Command::Cmer { mode: 3, keyp: 0, disp: 0, ind: 1 };
         assert_matches!(
             slc_proc.hf_update(unexpected_update2, &mut state),
             ProcedureRequest::Error(_)

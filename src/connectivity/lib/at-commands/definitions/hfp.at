@@ -77,7 +77,7 @@ response { +CHLD: commands: List<String>}
 
 # Standard Event Reporting command
 # HFP 1.8 4.34.2
-command { AT+CMER }
+command { AT+CMER=mode: Integer, keyp: Integer, disp: Integer, ind: Integer }
 
 # Standard Noise Cancelling command
 # HFP 1.8 4.34.2
@@ -137,3 +137,7 @@ command { AT+VTS=code: String }
 # HFP 1.8 4.34.2
 command { AT+VGS=level: Integer }
 command { AT+VGM=level: Integer }
+
+# Standard indicator events reporting command
+# HFP 1.8 4.34.2
+response { +CIEV: ind: Integer, value: Integer }

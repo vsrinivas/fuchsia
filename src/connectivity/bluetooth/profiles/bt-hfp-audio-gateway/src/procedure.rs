@@ -41,6 +41,9 @@ pub mod nrec;
 /// Defines the implementation of the Query Operator Selection Procedure.
 pub mod query_operator_selection;
 
+/// Defines the implementation of the Phone Status Procedures.
+pub mod phone_status;
+
 /// Defines the implementation of the Volume Level Synchronization Procedure.
 pub mod volume_synchronization;
 
@@ -49,6 +52,7 @@ use call_waiting_notifications::CallWaitingNotificationsProcedure;
 use dtmf::{DtmfCode, DtmfProcedure};
 use extended_errors::ExtendedErrorsProcedure;
 use nrec::NrecProcedure;
+use phone_status::{PhoneStatus, PhoneStatusProcedure};
 use query_operator_selection::QueryOperatorProcedure;
 use slc_initialization::SlcInitProcedure;
 use subscriber_number_information::{build_cnum_response, SubscriberNumberInformationProcedure};
@@ -120,6 +124,8 @@ pub enum ProcedureMarker {
     CallWaitingNotifications,
     /// The Call Line Identification Notifications as defined in HFP v1.8 Section 4.23.
     CallLineIdentNotifications,
+    /// The Transfer of Phone Status procedures as defined in HFP v1.8 Section 4.4 - 4.7.
+    PhoneStatus,
     /// The Subscriber Number Information procedure as defined in HFP v1.8 Section 4.31.
     SubscriberNumberInformation,
     /// The Volume Level Synchronization procedure as defined in HFP v1.8 Section 4.29.2.
@@ -138,6 +144,7 @@ impl ProcedureMarker {
             Self::CallLineIdentNotifications => {
                 Box::new(CallLineIdentNotificationsProcedure::new())
             }
+            Self::PhoneStatus => Box::new(PhoneStatusProcedure::new()),
             Self::SubscriberNumberInformation => {
                 Box::new(SubscriberNumberInformationProcedure::new())
             }
@@ -174,8 +181,11 @@ impl ProcedureMarker {
 
     /// Matches the AG `command` to a procedure. Returns an error if the command is
     /// unable to be matched.
-    fn match_ag_command(_command: &AgUpdate) -> Result<Self, ProcedureError> {
-        Err(ProcedureError::NotImplemented)
+    fn match_ag_command(command: &AgUpdate) -> Result<Self, ProcedureError> {
+        match command {
+            AgUpdate::PhoneStatusIndicator(..) => Ok(ProcedureMarker::PhoneStatus),
+            _ => Err(ProcedureError::NotImplemented),
+        }
     }
 
     pub fn match_command(command: &Command) -> Result<Self, ProcedureError> {
@@ -356,6 +366,8 @@ pub enum AgUpdate {
     SupportedHfIndicatorResponses { safety: bool, battery: bool },
     /// The name of the network operator
     NetworkOperatorName(at::NetworkOperatorNameFormat, String),
+    /// Phone status indicator
+    PhoneStatusIndicator(PhoneStatus),
     /// The AG's network subscriber number(s).
     SubscriberNumbers(Vec<String>),
 }
@@ -407,6 +419,9 @@ impl From<AgUpdate> for ProcedureRequest {
                 }),
                 at::Response::Ok,
             ],
+            AgUpdate::PhoneStatusIndicator(status) => {
+                vec![status.into()]
+            }
             AgUpdate::SubscriberNumbers(numbers) => {
                 numbers.into_iter().map(build_cnum_response).chain(once(at::Response::Ok)).collect()
             }
