@@ -1,4 +1,4 @@
-// Copyright 2020 The Fuchsia Authors. All rights reserved.
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
@@ -30,22 +30,17 @@ type CircularLogs struct {
 
 	// first points to the oldest entry in the logs.
 	first int
-
-	// ignoreDuplicates indicates whether a new entry should be ignored if its
-	// content is the same as the last entry in the circular logs.
-	ignoreDuplicates bool
 }
 
 // MakeCircularLogs initializes a CircularLogs struct with the given capacity.
 //
 // This function will panic if it is called with a zero capacity.
-func MakeCircularLogs(capacity int, ignoreDuplicates bool) CircularLogs {
+func MakeCircularLogs(capacity int) CircularLogs {
 	if capacity == 0 {
 		panic("attempted to create CircularLogs with a zero capacity")
 	}
 	c := CircularLogs{
-		capacity:         capacity,
-		ignoreDuplicates: ignoreDuplicates,
+		capacity: capacity,
 	}
 	c.mu.logs = make([]LogEntry, 0, capacity)
 	return c
@@ -53,15 +48,17 @@ func MakeCircularLogs(capacity int, ignoreDuplicates bool) CircularLogs {
 
 // Push records a new entry in the logs.
 //
+// The timestamp of the entry is set to the current monotonic time.
+//
 // If the capacity of the logs has been reached, the new entry will replace the
-// oldest entry. If ignoreDuplicates is true and the new entry has the same
-// content as the last entry added, nothing will happen.
-func (c *CircularLogs) Push(newEntry LogEntry) {
+// oldest entry.
+func (c *CircularLogs) Push(content string) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
-	if c.ignoreDuplicates && c.lastEntryHasSameContent(newEntry.Content) {
-		return
+	newEntry := LogEntry{
+		Timestamp: zx.Sys_clock_get_monotonic(),
+		Content:   content,
 	}
 
 	if len(c.mu.logs) < c.capacity {
@@ -70,18 +67,6 @@ func (c *CircularLogs) Push(newEntry LogEntry) {
 		c.mu.logs[c.first] = newEntry
 		c.first = (c.first + 1) % c.capacity
 	}
-}
-
-// lastEntryHasSameContent returns true if the last entry has the same content
-// than the given content.
-//
-// Precondition: c.mu must be locked.
-func (c *CircularLogs) lastEntryHasSameContent(content string) bool {
-	if len(c.mu.logs) == 0 {
-		return false
-	}
-	lastEntryIndex := (c.first + len(c.mu.logs) - 1) % c.capacity
-	return c.mu.logs[lastEntryIndex].Content == content
 }
 
 // BuildLogs copies the content of the circular array in a new slice.

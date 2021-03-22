@@ -13,7 +13,6 @@ import (
 	"math/rand"
 	"net"
 	"sync/atomic"
-	"syscall/zx"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/src/connectivity/network/netstack/util"
@@ -175,7 +174,7 @@ func NewClient(
 		retransTimeout:     time.After,
 		acquire:            acquire,
 		now:                time.Now,
-		stateRecentHistory: util.MakeCircularLogs(stateRecentHistoryLength, true /* ignoreDuplicates */),
+		stateRecentHistory: util.MakeCircularLogs(stateRecentHistoryLength),
 	}
 	c.StoreInfo(&Info{
 		NICID:          nicid,
@@ -194,8 +193,11 @@ func (c *Client) Info() Info {
 
 // StoreInfo updates the synchronized copy of the DHCP Info and if the client's
 // state changed, it will log it in the state recent history.
+//
+// Because of the size of Info, it is passed as a pointer to avoid an extra
+// unnecessary copy.
 func (c *Client) StoreInfo(info *Info) {
-	c.stateRecentHistory.Push(util.LogEntry{zx.Sys_clock_get_monotonic(), info.State.String()})
+	c.stateRecentHistory.Push(info.State.String())
 	c.info.Store(*info)
 }
 

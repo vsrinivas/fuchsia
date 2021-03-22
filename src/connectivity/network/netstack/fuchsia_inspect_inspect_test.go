@@ -394,17 +394,12 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
 	}
 
-	var child inspectInner
-	var ok bool
-	child = v.GetChild("Stats")
-	_, ok = child.(*statCounterInspectImpl)
-	if !ok {
-		t.Errorf("got GetChild(Stats) = %T, want %T", child, &statCounterInspectImpl{})
-	}
-	child = v.GetChild("DHCP State Recent History")
-	recentHistory, ok := child.(*circularLogsInspectImpl)
-	if !ok {
-		t.Errorf("got GetChild(DHCP State Recent History) = %T, want %T", child, &statCounterInspectImpl{})
+	{
+		child := v.GetChild("Stats")
+		_, ok := child.(*statCounterInspectImpl)
+		if !ok {
+			t.Errorf("got GetChild(Stats) = %T, want %T", child, &statCounterInspectImpl{})
+		}
 	}
 
 	childName := "not a real child"
@@ -438,28 +433,36 @@ func TestDHCPInfoInspectImpl(t *testing.T) {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
 	}
 
-	if recentHistory != nil {
-		expectedChildren := []string{"0", "1"}
-		expectedChildrenData := []inspect.Object{
-			{
-				Name: "0",
-				Properties: []inspect.Property{
-					{Key: "@time", Value: inspect.PropertyValueWithStr("1")},
-					{Key: "value", Value: inspect.PropertyValueWithStr("1")},
-				},
-			},
-			{
-				Name: "1",
-				Properties: []inspect.Property{
-					{Key: "@time", Value: inspect.PropertyValueWithStr("2")},
-					{Key: "value", Value: inspect.PropertyValueWithStr("2")},
-				},
-			},
+	{
+		child := v.GetChild("DHCP State Recent History")
+		recentHistory, ok := child.(*circularLogsInspectImpl)
+		if !ok {
+			t.Errorf("got GetChild(DHCP State Recent History) = %T, want %T", child, &statCounterInspectImpl{})
 		}
 
-		errors := circularLogsChecker(recentHistory, expectedChildren, expectedChildrenData)
-		for _, err := range errors {
-			t.Error(err)
+		if recentHistory != nil {
+			expectedChildren := []string{"0", "1"}
+			expectedChildrenData := []inspect.Object{
+				{
+					Name: "0",
+					Properties: []inspect.Property{
+						{Key: "@time", Value: inspect.PropertyValueWithStr("1")},
+						{Key: "value", Value: inspect.PropertyValueWithStr("1")},
+					},
+				},
+				{
+					Name: "1",
+					Properties: []inspect.Property{
+						{Key: "@time", Value: inspect.PropertyValueWithStr("2")},
+						{Key: "value", Value: inspect.PropertyValueWithStr("2")},
+					},
+				},
+			}
+
+			errors := circularLogsChecker(recentHistory, expectedChildren, expectedChildrenData)
+			for _, err := range errors {
+				t.Error(err)
+			}
 		}
 	}
 }

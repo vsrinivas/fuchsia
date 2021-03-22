@@ -54,7 +54,6 @@ const (
 	rxWrites                    = "RxWrites"
 	txReads                     = "TxReads"
 	txWrites                    = "TxWrites"
-	base10                      = 10
 )
 
 // An adapter that implements fuchsia.inspect.InspectWithCtx using the above.
@@ -209,7 +208,7 @@ func (impl *logEntryInspectImpl) ReadData() inspect.Object {
 	return inspect.Object{
 		Name: impl.index,
 		Properties: []inspect.Property{
-			{Key: "@time", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(impl.entry.Timestamp), base10))},
+			{Key: "@time", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(impl.entry.Timestamp), 10))},
 			{Key: "value", Value: inspect.PropertyValueWithStr(impl.entry.Content)},
 		},
 	}
@@ -239,22 +238,22 @@ func (impl *circularLogsInspectImpl) ReadData() inspect.Object {
 func (impl *circularLogsInspectImpl) ListChildren() []string {
 	children := make([]string, 0, len(impl.value))
 	for i := range impl.value {
-		children = append(children, strconv.FormatInt(int64(i), base10))
+		children = append(children, strconv.FormatUint(uint64(i), 10))
 	}
 	return children
 }
 
 func (impl *circularLogsInspectImpl) GetChild(childName string) inspectInner {
-	index, err := strconv.ParseUint(childName, 10, 32)
+	index, err := strconv.ParseUint(childName, 10, 64)
 	if err != nil {
-		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(%s): %s", childName, err)
+		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(): %s", err)
 		return nil
 	}
 	if index >= uint64(len(impl.value)) {
 		_ = syslog.VLogTf(
 			syslog.DebugVerbosity,
 			inspect.InspectName,
-			"GetChild(%s): out of bound index: got = %d, want < %d",
+			"GetChild(%s): index %d out of bounds, there are %d entries in the circular logs",
 			childName,
 			index,
 			len(impl.value),
@@ -297,7 +296,7 @@ func (*nicInfoMapInspectImpl) ReadData() inspect.Object {
 func (impl *nicInfoMapInspectImpl) ListChildren() []string {
 	var children []string
 	for nicID := range impl.value {
-		children = append(children, strconv.FormatUint(uint64(nicID), base10))
+		children = append(children, strconv.FormatUint(uint64(nicID), 10))
 	}
 	sort.Strings(children)
 	return children
@@ -306,7 +305,7 @@ func (impl *nicInfoMapInspectImpl) ListChildren() []string {
 func (impl *nicInfoMapInspectImpl) GetChild(childName string) inspectInner {
 	id, err := strconv.ParseInt(childName, 10, 32)
 	if err != nil {
-		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(%s): %s", childName, err)
+		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(): %s", err)
 		return nil
 	}
 	if child, ok := impl.value[tcpip.NICID(id)]; ok {
@@ -330,7 +329,7 @@ func (impl *nicInfoInspectImpl) ReadData() inspect.Object {
 		Name: impl.name,
 		Properties: []inspect.Property{
 			{Key: "Name", Value: inspect.PropertyValueWithStr(impl.value.Name)},
-			{Key: "NICID", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.nicid), base10))},
+			{Key: "NICID", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.nicid), 10))},
 			{Key: "AdminUp", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.adminUp))},
 			{Key: "LinkOnline", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.linkOnline))},
 			{Key: "Up", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Flags.Up))},
@@ -674,7 +673,7 @@ func (impl *fifoStatsInspectImpl) ReadData() inspect.Object {
 		batchSize := i + 1
 		if v := impl.value(batchSize).Value(); v != 0 {
 			metrics = append(metrics, inspect.Metric{
-				Key:   strconv.FormatInt(int64(batchSize), base10),
+				Key:   strconv.FormatUint(uint64(batchSize), 10),
 				Value: inspect.MetricValueWithUintValue(v),
 			})
 		}
@@ -708,7 +707,7 @@ func (*socketInfoMapInspectImpl) ReadData() inspect.Object {
 func (impl *socketInfoMapInspectImpl) ListChildren() []string {
 	var children []string
 	impl.value.Range(func(key uint64, _ tcpip.Endpoint) bool {
-		children = append(children, strconv.FormatUint(uint64(key), base10))
+		children = append(children, strconv.FormatUint(uint64(key), 10))
 		return true
 	})
 	return children
@@ -717,7 +716,7 @@ func (impl *socketInfoMapInspectImpl) ListChildren() []string {
 func (impl *socketInfoMapInspectImpl) GetChild(childName string) inspectInner {
 	id, err := strconv.ParseUint(childName, 10, 64)
 	if err != nil {
-		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(%s): %s", childName, err)
+		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(): %s", err)
 		return nil
 	}
 	if ep, ok := impl.value.Load(uint64(id)); ok {
@@ -792,8 +791,8 @@ func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 		remoteAddress = zeroAddress
 	}
 
-	localAddr := net.JoinHostPort(localAddress.String(), strconv.FormatUint(uint64(common.ID.LocalPort), base10))
-	remoteAddr := net.JoinHostPort(remoteAddress.String(), strconv.FormatUint(uint64(common.ID.RemotePort), base10))
+	localAddr := net.JoinHostPort(localAddress.String(), strconv.FormatUint(uint64(common.ID.LocalPort), 10))
+	remoteAddr := net.JoinHostPort(remoteAddress.String(), strconv.FormatUint(uint64(common.ID.RemotePort), 10))
 	properties := []inspect.Property{
 		{Key: "NetworkProtocol", Value: inspect.PropertyValueWithStr(netString)},
 		{Key: "TransportProtocol", Value: inspect.PropertyValueWithStr(transString)},
@@ -801,8 +800,8 @@ func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 		{Key: "LocalAddress", Value: inspect.PropertyValueWithStr(localAddr)},
 		{Key: "RemoteAddress", Value: inspect.PropertyValueWithStr(remoteAddr)},
 		{Key: "BindAddress", Value: inspect.PropertyValueWithStr(common.BindAddr.String())},
-		{Key: "BindNICID", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(common.BindNICID), base10))},
-		{Key: "RegisterNICID", Value: inspect.PropertyValueWithStr(strconv.FormatInt(int64(common.RegisterNICID), base10))},
+		{Key: "BindNICID", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(common.BindNICID), 10))},
+		{Key: "RegisterNICID", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(common.RegisterNICID), 10))},
 	}
 
 	return inspect.Object{
@@ -852,7 +851,7 @@ func (*routingTableInspectImpl) ReadData() inspect.Object {
 func (impl *routingTableInspectImpl) ListChildren() []string {
 	children := make([]string, len(impl.value))
 	for i := range impl.value {
-		children[i] = strconv.FormatUint(uint64(i), base10)
+		children[i] = strconv.FormatUint(uint64(i), 10)
 	}
 	return children
 }
@@ -860,14 +859,14 @@ func (impl *routingTableInspectImpl) ListChildren() []string {
 func (impl *routingTableInspectImpl) GetChild(childName string) inspectInner {
 	routeIndex, err := strconv.ParseUint(childName, 10, 64)
 	if err != nil {
-		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(%s): %s", childName, err)
+		_ = syslog.VLogTf(syslog.DebugVerbosity, inspect.InspectName, "GetChild(): %s", err)
 		return nil
 	}
 	if routeIndex >= uint64(len(impl.value)) {
 		_ = syslog.VLogTf(
 			syslog.DebugVerbosity,
 			inspect.InspectName,
-			"GetChild(%s): index %d out of bounds; there are %d entries in the routing table",
+			"GetChild(%s): index %d out of bounds, there are %d entries in the routing table",
 			childName,
 			routeIndex,
 			len(impl.value),
@@ -893,8 +892,8 @@ func (impl *routeInfoInspectImpl) ReadData() inspect.Object {
 		Properties: []inspect.Property{
 			{Key: "Destination", Value: inspect.PropertyValueWithStr(impl.value.Route.Destination.String())},
 			{Key: "Gateway", Value: inspect.PropertyValueWithStr(impl.value.Route.Gateway.String())},
-			{Key: "NIC", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.Route.NIC), base10))},
-			{Key: "Metric", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.Metric), base10))},
+			{Key: "NIC", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.Route.NIC), 10))},
+			{Key: "Metric", Value: inspect.PropertyValueWithStr(strconv.FormatUint(uint64(impl.value.Metric), 10))},
 			{Key: "MetricTracksInterface", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.MetricTracksInterface))},
 			{Key: "Dynamic", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Dynamic))},
 			{Key: "Enabled", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.Enabled))},
