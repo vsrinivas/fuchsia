@@ -1,0 +1,223 @@
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/lib/fuchsia-component-test/meta/fuchsia_component_test.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/test_manager",
+    },
+    children: [
+        {
+            name: "elf_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/elf-test-runner#meta/elf-test-runner.cm",
+        },
+        {
+            name: "gtest_runner",
+            url: "fuchsia-pkg://fuchsia.com/gtest-runner#meta/gtest-runner.cm",
+        },
+        {
+            name: "rust_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/rust-test-runner#meta/rust-test-runner.cm",
+        },
+        {
+            name: "go_test_runner",
+            url: "fuchsia-pkg://fuchsia.com/go-test-runner#meta/go-test-runner.cm",
+        },
+        {
+            name: "runner_memfs",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm",
+        },
+        {
+            name: "test_tmpfs",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/memfs.cm",
+        },
+        {
+            name: "debug_data",
+            url: "fuchsia-pkg://fuchsia.com/test_manager#meta/debug_data.cm",
+        },
+    ],
+    collections: [
+        {
+            name: "tests",
+            environment: "#test-env",
+            durability: "transient",
+        },
+    ],
+    capabilities: [
+        {
+            storage: "data",
+            from: "#runner_memfs",
+            backing_dir: "memfs",
+        },
+        {
+            storage: "temp",
+            from: "#test_tmpfs",
+            subdir: "temp",
+            backing_dir: "memfs",
+        },
+        {
+            storage: "cache",
+            from: "#test_tmpfs",
+            subdir: "cache",
+            backing_dir: "memfs",
+        },
+        { protocol: "fuchsia.test.manager.Harness" },
+        { protocol: "fuchsia.test.internal.Info" },
+    ],
+    use: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.sys2.EventSource",
+            ],
+            from: "parent",
+            to: [ "#tests" ],
+        },
+        {
+            protocol: [ "fuchsia.sys2.EventSource" ],
+            from: "parent",
+            to: [ "#debug_data" ],
+        },
+        {
+            protocol: [ "fuchsia.test.internal.Info" ],
+            from: "self",
+            to: [ "#debug_data" ],
+        },
+
+        // These capabilities are offered for use by certain non-hermetic tests.
+        {
+            protocol: [
+                "fuchsia.hardware.display.Provider",
+                "fuchsia.scheduler.ProfileProvider",
+                "fuchsia.sysmem.Allocator",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#tests" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#debug_data",
+                "#elf_test_runner",
+                "#go_test_runner",
+                "#gtest_runner",
+                "#runner_memfs",
+                "#rust_test_runner",
+                "#test_tmpfs",
+            ],
+        },
+        {
+            protocol: "fuchsia.process.Launcher",
+            from: "parent",
+            to: [
+                "#elf_test_runner",
+                "#go_test_runner",
+                "#gtest_runner",
+                "#rust_test_runner",
+            ],
+        },
+        {
+            event: "capability_requested",
+            from: "framework",
+            to: [ "#debug_data" ],
+            filter: { name: "fuchsia.debugdata.DebugData" },
+        },
+        {
+            event: [ "stopped" ],
+            from: "framework",
+            to: [ "#debug_data" ],
+            modes: [ "async" ],
+        },
+        {
+            storage: "data",
+            from: "self",
+            to: [
+                "#gtest_runner",
+                "#rust_test_runner",
+                "#tests",
+            ],
+        },
+        {
+            directory: "config-ssl",
+            from: "parent",
+            to: [ "#tests" ],
+            rights: [ "r*" ],
+        },
+        {
+            directory: "tmp-debug-data",
+            from: "parent",
+            as: "data",
+            to: [ "#debug_data" ],
+            rights: [ "rw*" ],
+        },
+
+        // Some components run under test need access to /config/data.
+        {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#tests" ],
+        },
+        {
+            storage: "temp",
+            from: "self",
+            to: [ "#tests" ],
+        },
+        {
+            storage: "cache",
+            from: "self",
+            to: [ "#tests" ],
+        },
+
+        // temporary solution for tests that depend on having admin rights on
+        // /tmp. Will be removed once these tests either remove this requirement
+        // or begin hosting their own memfs.
+        {
+            directory: "memfs",
+            from: "#test_tmpfs",
+            as: "deprecated-tmp",
+            to: [ "#tests" ],
+        },
+
+        // fuchsia-pkg://fuchsia.com/input_session_tests#meta/input_session_bin_test.cm
+        // needs access to /dev/class/input-report.
+        {
+            directory: "dev-input-report",
+            from: "parent",
+            to: [ "#tests" ],
+            rights: [ "r*" ],
+        },
+
+        // Some non-hermetic tests require access to the real display controller.
+        {
+            directory: "dev-display-controller",
+            from: "parent",
+            to: [ "#tests" ],
+            rights: [ "rw*" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.manager.Harness",
+            from: "self",
+        },
+        {
+            protocol: "fuchsia.test.internal.Info",
+            from: "self",
+        },
+        {
+            directory: "hub",
+            from: "framework",
+        },
+    ],
+}

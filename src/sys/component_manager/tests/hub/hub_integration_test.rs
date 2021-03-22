@@ -118,10 +118,13 @@ impl TestRunner {
         )
         .expect("Could not open directory externally");
 
-        let actual_listing = list_directory(&dir_proxy).await.expect(&format!(
+        let mut actual_listing = list_directory(&dir_proxy).await.expect(&format!(
             "failed to verify that {} contains {:?}",
             relative_path, expected_listing
         ));
+        // this listing is added by profile variant.
+        actual_listing.retain(|s| s != "fuchsia.debugdata.DebugData");
+
         assert_eq!(expected_listing, actual_listing);
     }
 

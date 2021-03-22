@@ -1,3 +1,5 @@
+// We don't include "debug" section in this cml file as that is not
+// allowed by the security policy.
 {
     include: [ "src/sys/test_manager/meta/common.shard.cml" ],
     environments: [
@@ -31,12 +33,6 @@
                     resolver: "fuchsia_component_test_registry",
                     from: "#fuchsia_component_test_framework_intermediary",
                     scheme: "fuchsia-component-test-registry",
-                },
-            ],
-            debug: [
-                {
-                    protocol: "fuchsia.debugdata.DebugData",
-                    from: "#debug_data",
                 },
             ],
         },

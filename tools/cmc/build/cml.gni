@@ -46,6 +46,29 @@ template("cm") {
     }
     invoker.deps += [ ":" + check_includes_target ]
   }
+  input_manifest = invoker.manifest
+
+  # for the profile variant we need to inject a use clause for DebugData.
+  needs_debugdata =
+      select_variant + [ "profile" ] - [ "profile" ] != select_variant
+  if (needs_debugdata) {
+    cmc_merge("${target_name}_merge") {
+      sources = [
+        "//build/config/sanitizers/debugdata.cml",
+        invoker.manifest,
+      ]
+      output_name = "${target_name}_merge.cml"
+      forward_variables_from(invoker,
+                             [
+                               "deps",
+                               "testonly",
+                             ])
+      visibility = [ ":*" ]
+    }
+    invoker.deps += [ ":${target_name}_merge" ]
+    merged = get_target_outputs(":${target_name}_merge")
+    input_manifest = merged[0]
+  }
 
   cmc(target_name) {
     forward_variables_from(invoker,
@@ -61,7 +84,7 @@ template("cm") {
     }
 
     compiled_output = "${target_out_dir}/${output_name}"
-    inputs = [ invoker.manifest ]
+    inputs = [ input_manifest ]
     outputs = [ compiled_output ]
     depfile = "${target_out_dir}/${target_name}.d"
 

@@ -33,11 +33,11 @@ fn validate_executions(actual: &Option<Execution>, expected: &Option<Execution>)
             // The string is irrelevant
             assert!(merkle_root.chars().all(char::is_alphanumeric));
         }
+        let mut actual_incoming_capabilities = actual_execution.incoming_capabilities.clone();
+        // this protocol is added by profile variant.
+        actual_incoming_capabilities.retain(|s| s != "fuchsia.debugdata.DebugData");
 
-        assert_eq!(
-            actual_execution.incoming_capabilities,
-            expected_execution.incoming_capabilities
-        );
+        assert_eq!(actual_incoming_capabilities, expected_execution.incoming_capabilities);
         assert_eq!(
             actual_execution.outgoing_capabilities,
             expected_execution.outgoing_capabilities

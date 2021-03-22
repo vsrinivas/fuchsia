@@ -211,35 +211,23 @@ mod tests {
         let ResolvedComponent { resolved_url, decl, package, .. } = component;
         assert_eq!(resolved_url, url);
 
-        let info = Some(fdata::Dictionary {
-            entries: Some(vec![fdata::DictionaryEntry {
-                key: "binary".to_string(),
-                value: Some(Box::new(fdata::DictionaryValue::Str("bin/hello_world".to_string()))),
-            }]),
-            ..fdata::Dictionary::EMPTY
-        });
-        let expected_decl = fsys::ComponentDecl {
-            program: Some(fsys::ProgramDecl {
-                runner: Some("elf".to_string()),
-                info,
-                ..fsys::ProgramDecl::EMPTY
+        let expected_program = Some(fsys::ProgramDecl {
+            runner: Some("elf".to_string()),
+            info: Some(fdata::Dictionary {
+                entries: Some(vec![fdata::DictionaryEntry {
+                    key: "binary".to_string(),
+                    value: Some(Box::new(fdata::DictionaryValue::Str(
+                        "bin/hello_world".to_string(),
+                    ))),
+                }]),
+                ..fdata::Dictionary::EMPTY
             }),
-            uses: Some(vec![fsys::UseDecl::Protocol(fsys::UseProtocolDecl {
-                source: Some(fsys::Ref::Parent(fsys::ParentRef {})),
-                source_name: Some("fuchsia.logger.LogSink".to_string()),
-                target_path: Some("/svc/fuchsia.logger.LogSink".to_string()),
-                ..fsys::UseProtocolDecl::EMPTY
-            })]),
-            exposes: None,
-            offers: None,
-            facets: None,
-            capabilities: None,
-            children: None,
-            collections: None,
-            environments: None,
-            ..fsys::ComponentDecl::EMPTY
-        };
-        assert_eq!(decl, expected_decl);
+            ..fsys::ProgramDecl::EMPTY
+        });
+
+        // no need to check full decl as we just want to make
+        // sure that we were able to resolve.
+        assert_eq!(decl.program, expected_program);
 
         let fsys::Package { package_url, package_dir, .. } = package.unwrap();
         assert_eq!(package_url.unwrap(), "fuchsia-pkg://fuchsia.com/hello-world");
@@ -248,12 +236,12 @@ mod tests {
         let path = Path::new("meta/hello-world.cm");
         let file_proxy = io_util::open_file(&dir_proxy, path, fio::OPEN_RIGHT_READABLE)
             .expect("could not open cm");
-        assert_eq!(
-            io_util::read_file_fidl::<fsys::ComponentDecl>(&file_proxy)
-                .await
-                .expect("could not read cm"),
-            expected_decl
-        );
+
+        let decl = io_util::read_file_fidl::<fsys::ComponentDecl>(&file_proxy)
+            .await
+            .expect("could not read cm");
+
+        assert_eq!(decl.program, expected_program);
 
         // Try to load an executable file, like a binary, reusing the library_loader helper that
         // opens with OPEN_RIGHT_EXECUTABLE and gets a VMO with VMO_FLAG_EXEC.

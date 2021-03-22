@@ -14,7 +14,29 @@ use std::path::PathBuf;
 fn main() {
     // example.cm has already been compiled by cmc as part of the build process
     // See: https://fuchsia.googlesource.com/fuchsia/+/c4b7ddf8128e782f957374c64f57aa2508ac3fe2/build/package.gni#304
-    let cm_decl = read_cm("/pkg/meta/example.cm").expect("could not read cm file");
+    let mut cm_decl = read_cm("/pkg/meta/example.cm").expect("could not read cm file");
+
+    // profile variant injects this protocol.
+    if let Some(uses) = &mut cm_decl.uses {
+        uses.retain(|u| match u {
+            UseDecl::Protocol(decl) => {
+                if decl.source_name == Some("fuchsia.debugdata.DebugData".to_owned()) {
+                    assert_eq!(
+                        decl,
+                        &UseProtocolDecl {
+                            source: Some(Ref::Debug(DebugRef {})),
+                            source_name: Some("fuchsia.debugdata.DebugData".to_string()),
+                            target_path: Some("/svc/fuchsia.debugdata.DebugData".to_string()),
+                            ..UseProtocolDecl::EMPTY
+                        }
+                    );
+                    return false;
+                }
+                return true;
+            }
+            _ => true,
+        })
+    }
 
     let expected_decl = {
         let program = ProgramDecl {
