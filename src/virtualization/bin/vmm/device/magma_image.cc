@@ -5,6 +5,7 @@
 #include "magma_image.h"
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/service/llcpp/service.h>
 #include <lib/syslog/global.h>
@@ -19,7 +20,7 @@
 #include <vulkan/vulkan.hpp>
 
 #define LOG_VERBOSE(msg, ...) \
-  if (true)                   \
+  if (false)                  \
   FX_LOGF(INFO, "magma_image", msg, ##__VA_ARGS__)
 
 namespace {
@@ -42,6 +43,25 @@ static uint64_t SysmemModifierToDrmModifier(uint64_t modifier) {
   }
   return DRM_FORMAT_MOD_INVALID;
 }
+
+// Use async fidl to receive epitaph on buffer collection.
+class AsyncHandler : public fuchsia_sysmem::BufferCollection::AsyncEventHandler {
+ public:
+  AsyncHandler() : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
+
+  void Unbound(::fidl::UnbindInfo info) override {
+    unbind_info_ = info;
+    loop_.Quit();
+  }
+
+  async::Loop& loop() { return loop_; }
+
+  auto& unbind_info() { return unbind_info_; }
+
+ private:
+  async::Loop loop_;
+  std::optional<fidl::UnbindInfo> unbind_info_;
+};
 
 class VulkanImageCreator {
  public:
@@ -66,7 +86,8 @@ class VulkanImageCreator {
   fuchsia_sysmem::Allocator::SyncClient sysmem_allocator_;
   fuchsia_sysmem::BufferCollectionToken::SyncClient local_token_;
   fuchsia_sysmem::BufferCollectionToken::SyncClient vulkan_token_;
-  fuchsia_sysmem::BufferCollection::SyncClient collection_;
+  std::shared_ptr<AsyncHandler> async_handler_;
+  fidl::Client<fuchsia_sysmem::BufferCollection> collection_;
 };
 
 vk::Result VulkanImageCreator::InitVulkan(uint32_t physical_device_index) {
@@ -262,6 +283,8 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
     }
   }
 
+  async_handler_ = std::make_shared<AsyncHandler>();
+
   {
     auto endpoints = fidl::CreateEndpoints<fuchsia_sysmem::BufferCollection>();
     if (!endpoints.is_ok()) {
@@ -276,7 +299,8 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
       return vk::Result::eErrorInitializationFailed;
     }
 
-    collection_ = fuchsia_sysmem::BufferCollection::SyncClient(std::move(endpoints->client));
+    collection_.Bind(std::move(endpoints->client), async_handler_->loop().dispatcher(),
+                     async_handler_);
   }
 
   {
@@ -305,7 +329,7 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
       image_constraints.pixel_format.format_modifier.value = modifiers[index];
     }
 
-    auto result = collection_.SetConstraints(true, constraints);
+    auto result = collection_->SetConstraints(true, constraints);
     if (!result.ok()) {
       LOG_VERBOSE("Failed to set constraints: %d", result.status());
       return vk::Result::eErrorInitializationFailed;
@@ -317,13 +341,28 @@ vk::Result VulkanImageCreator::CreateCollection(vk::ImageCreateInfo* image_creat
 
 zx_status_t VulkanImageCreator::GetImageInfo(uint32_t width, uint32_t height, zx::vmo* vmo_out,
                                              magma_image_info_t* image_info_out) {
-  auto result = collection_.WaitForBuffersAllocated();
+  auto result = collection_->WaitForBuffersAllocated_Sync();
+
+  // Process any epitaphs to detect any allocation errors
+  async_handler_->loop().RunUntilIdle();
+
+  auto unbind_info = async_handler_->unbind_info();
+  if (unbind_info && unbind_info->status != ZX_OK) {
+    LOG_VERBOSE("Unbind: reason %d status %d", unbind_info->reason, unbind_info->status);
+    return unbind_info->status;
+  }
+
+  // Run the loop to ensure local unbind completes and async_handler_ is freed
+  collection_.Unbind();
+  async_handler_->loop().RunUntilIdle();
+
   if (!result.ok()) {
-    LOG_VERBOSE("Failed to wait for buffers allocated: %d", result.status());
+    LOG_VERBOSE("WaitForBuffersAllocated failed: %d", result.status());
     return result.status();
   }
 
   auto response = result.Unwrap();
+
   if (response->status != ZX_OK) {
     LOG_VERBOSE("Buffer allocation failed: %d", response->status);
     return response->status;
