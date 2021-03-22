@@ -194,16 +194,16 @@ func (b *ArtifactsBuild) getExpandedPackageRepository(ctx context.Context) (*pac
 	}
 	logger.Infof(ctx, "all_blobs contains %d blobs", len(blobsList))
 
-	blobsDir := filepath.Join(b.dir, "blobs")
-	p, err := packages.NewRepository(ctx, packagesDir, blobsDir)
+	p, err := packages.NewRepository(ctx, packagesDir)
 	if err != nil {
 		return nil, err
 	}
 	b.packages = p
 
-	if err := b.archive.download(ctx, b.id, true, filepath.Dir(blobsDir), blobsList); err != nil {
-		logger.Errorf(ctx, "failed to download blobs to %s: %v", blobsDir, err)
-		return nil, fmt.Errorf("failed to download blobs to %s: %w", blobsDir, err)
+	repoDir := filepath.Join(packagesDir, "repository")
+	if err := b.archive.download(ctx, b.id, true, repoDir, blobsList); err != nil {
+		logger.Errorf(ctx, "failed to download blobs to %s: %v", repoDir, err)
+		return nil, fmt.Errorf("failed to download blobs to %s: %w", repoDir, err)
 	}
 
 	return b.packages, nil
@@ -351,7 +351,7 @@ func (b *FuchsiaDirBuild) GetBootserver(ctx context.Context) (string, error) {
 }
 
 func (b *FuchsiaDirBuild) GetPackageRepository(ctx context.Context) (*packages.Repository, error) {
-	return packages.NewRepository(ctx, filepath.Join(b.dir, "amber-files"), filepath.Join(b.dir, "amber-files", "repository", "blobs"))
+	return packages.NewRepository(ctx, filepath.Join(b.dir, "amber-files"))
 }
 
 func (b *FuchsiaDirBuild) GetPaverDir(ctx context.Context) (string, error) {

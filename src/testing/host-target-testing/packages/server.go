@@ -25,14 +25,13 @@ import (
 
 type Server struct {
 	Dir          string
-	BlobsDir     string
 	URL          string
 	Hash         string
 	server       *http.Server
 	shuttingDown chan struct{}
 }
 
-func newServer(ctx context.Context, dir, blobsDir string, localHostname string, repoName string) (*Server, error) {
+func newServer(ctx context.Context, dir string, localHostname string, repoName string) (*Server, error) {
 	listener, err := net.Listen("tcp", ":0")
 	if err != nil {
 		return nil, err
@@ -53,10 +52,6 @@ func newServer(ctx context.Context, dir, blobsDir string, localHostname string, 
 		w.WriteHeader(200)
 		w.Write(config)
 	})
-	// Blobs requests come as `/blobs/<merkle>` so the directory we actually
-	// serve from should be the parent directory of the blobsDir and the blobsDir
-	// should be called `blobs`.
-	mux.Handle("/blobs/", http.FileServer(http.Dir(filepath.Dir(blobsDir))))
 	mux.Handle("/", http.FileServer(http.Dir(dir)))
 
 	server := &http.Server{
@@ -87,7 +82,6 @@ func newServer(ctx context.Context, dir, blobsDir string, localHostname string, 
 
 	return &Server{
 		Dir:          dir,
-		BlobsDir:     blobsDir,
 		URL:          configURL,
 		Hash:         configHash,
 		server:       server,
