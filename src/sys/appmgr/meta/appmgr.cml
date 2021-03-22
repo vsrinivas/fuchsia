@@ -36,6 +36,7 @@
         // be disallowed in the future.
         {
             protocol: [
+                "fuchsia.buildinfo.Provider",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.exception.Handler",
                 "fuchsia.feedback.CrashReporter",
@@ -405,6 +406,7 @@
         },
         {
             protocol: [
+                "fuchsia.buildinfo.Provider",
                 "fuchsia.cobalt.LoggerFactory",
                 "fuchsia.exception.Handler",
                 "fuchsia.feedback.CrashReporter",

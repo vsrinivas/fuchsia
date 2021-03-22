@@ -17,6 +17,7 @@
         },
         {
             protocol: [
+                "fuchsia.buildinfo.Provider",
                 "fuchsia.developer.remotecontrol.RemoteDiagnosticsBridge",
                 "fuchsia.device.NameProvider",
                 "fuchsia.hwinfo.Device",
