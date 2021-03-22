@@ -389,6 +389,12 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
     cmdline_append(cmdline_file, csz);
   }
 
+  uint32_t enable_serial = cmdline_get_uint32("bootloader.serial", 0);
+  if (!enable_serial) {
+    // TODO(https://fxbug.dev/72512): Remove when GCE handles serial i/o.
+    gSerial = NULL;
+  }
+
   efi_graphics_output_protocol* gop;
   efi_status status = gBS->LocateProtocol(&GraphicsOutputProtocol, NULL, (void**)&gop);
   bool have_fb = !EFI_ERROR(status);

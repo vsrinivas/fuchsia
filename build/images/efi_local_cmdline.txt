@@ -1,2 +1,3 @@
 bootloader.default=local
 bootloader.timeout=1
+bootloader.serial=1
