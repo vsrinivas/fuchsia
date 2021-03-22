@@ -483,24 +483,54 @@ TEST_F(SemanticTreeTest, InspectOutput) {
       }));
   ASSERT_TRUE(hierarchy.is_ok());
 
-  auto* test_inspect_hierarchy = hierarchy.value().GetByPath({kInspectNodeName});
+  using namespace inspect::testing;
+  using testing::UnorderedElementsAre;
 
-  // TODO(fxb/61828): Refactor to use Inspect node matchers.
-  // Verify that inspect has recorded the correct number of tree updates.
-  auto* tree_update_count = test_inspect_hierarchy->node().get_property<inspect::UintPropertyValue>(
-      SemanticTree::kUpdateCountInspectNodeName);
-  ASSERT_TRUE(tree_update_count);
-  EXPECT_EQ(tree_update_count->value(), 7u);
+  auto node3 = AllOf(
+      NodeMatches(AllOf(NameMatches("node_3"), PropertyList(UnorderedElementsAre(
+                                                   UintIs("id", 3), StringIs("label", "Node-3"),
+                                                   UintIs("label_length", 6))))),
+      ChildrenMatch(UnorderedElementsAre()));
+  auto node4 = AllOf(
+      NodeMatches(AllOf(NameMatches("node_4"), PropertyList(UnorderedElementsAre(
+                                                   UintIs("id", 4), StringIs("label", "Node-4"),
+                                                   UintIs("label_length", 6))))),
+      ChildrenMatch(UnorderedElementsAre()));
+  auto node5 = AllOf(
+      NodeMatches(AllOf(NameMatches("node_5"), PropertyList(UnorderedElementsAre(
+                                                   UintIs("id", 5), StringIs("label", "Node-5"),
+                                                   UintIs("label_length", 6))))),
+      ChildrenMatch(UnorderedElementsAre()));
+  auto node6 = AllOf(
+      NodeMatches(AllOf(NameMatches("node_6"), PropertyList(UnorderedElementsAre(
+                                                   UintIs("id", 6), StringIs("label", "Node-6"),
+                                                   UintIs("label_length", 6))))),
+      ChildrenMatch(UnorderedElementsAre()));
+  auto node1 = AllOf(
+      NodeMatches(AllOf(NameMatches("node_1"), PropertyList(UnorderedElementsAre(
+                                                   UintIs("id", 1), StringIs("label", "Node-1"),
+                                                   UintIs("label_length", 6))))),
+      ChildrenMatch(UnorderedElementsAre(node3, node4)));
+  auto node2 = AllOf(
+      NodeMatches(AllOf(NameMatches("node_2"), PropertyList(UnorderedElementsAre(
+                                                   UintIs("id", 2), StringIs("label", "Node-2"),
+                                                   UintIs("label_length", 6))))),
+      ChildrenMatch(UnorderedElementsAre(node5, node6)));
 
-  // Verify that inspect has recorded the correct state of the semantic tree.
-  // Assuming that SemanticTree::ToString() is working correctly, we just need
-  // verifying that one of the nodes is present in the dump should be
-  // sufficient.
-  auto* tree_dump = test_inspect_hierarchy->node().get_property<inspect::StringPropertyValue>(
-      SemanticTree::kTreeDumpInspectPropertyName);
-  ASSERT_TRUE(tree_dump);
+  auto root_node =
+      AllOf(NodeMatches(AllOf(
+                NameMatches("semantic_tree_root"),
+                PropertyList(UnorderedElementsAre(UintIs("id", 0), StringIs("label", "Node-0"),
+                                                  UintIs("label_length", 6))))),
+            ChildrenMatch(UnorderedElementsAre(node1, node2)));
 
-  EXPECT_THAT(tree_dump->value(), HasSubstr("Label:Node-0"));
+  auto tree_inspect_hierarchy = hierarchy.value().GetByPath({kInspectNodeName});
+  ASSERT_NE(tree_inspect_hierarchy, nullptr);
+
+  EXPECT_THAT(
+      *tree_inspect_hierarchy,
+      AllOf(NodeMatches(PropertyList(UnorderedElementsAre(UintIs("tree_update_count", 7u)))),
+            ChildrenMatch(UnorderedElementsAre(root_node))));
 }
 
 }  // namespace

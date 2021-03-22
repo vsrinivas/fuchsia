@@ -68,7 +68,7 @@ class SemanticTree {
   using SemanticsEventCallback = fit::function<void(SemanticsEventInfo event_info)>;
 
   static constexpr char kUpdateCountInspectNodeName[] = "tree_update_count";
-  static constexpr char kTreeDumpInspectPropertyName[] = "semantic_tree";
+  static constexpr char kTreeDumpInspectPropertyName[] = "semantic_tree_root";
   static constexpr char kTreeDumpFailedError[] = "tree_dump_failed";
 
   // A SemanticTree object is normally maintained by a semantics provider while
@@ -174,6 +174,9 @@ class SemanticTree {
   // Returns true if a node has a label OR represents a button.
   // Returns false otherwise.
   bool NodeIsDescribable(const fuchsia::accessibility::semantics::Node* node) const;
+
+  // Fill out an inspect tree based on the current semantic information
+  void FillInspectTree(inspect::Node node, inspect::Inspector* inspector) const;
 
   // Keeps all node updates to this tree which were not applied yet. Nodes are
   // just copied to their final location in the tree once a validation confirms

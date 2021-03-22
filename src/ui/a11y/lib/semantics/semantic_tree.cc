@@ -175,7 +175,8 @@ SemanticTree::SemanticTree(inspect::Node inspect_node)
   // fails. Therefore, we use an error message for this node name.
   inspect_node_tree_dump_ = inspect_node_.CreateLazyValues(kTreeDumpFailedError, [this]() {
     inspect::Inspector inspector;
-    inspector.GetRoot().CreateString(kTreeDumpInspectPropertyName, this->ToString(), &inspector);
+
+    FillInspectTree(inspector.GetRoot().CreateChild(kTreeDumpInspectPropertyName), &inspector);
     return fit::make_ok_promise(std::move(inspector));
   });
 }
@@ -474,6 +475,59 @@ std::string actionsToString(const std::vector<fuchsia::accessibility::semantics:
     retval.append(fxl::StringPrintf("%s, ", actionToString(action).c_str()));
   }
   return retval.append("}");
+}
+
+void SemanticTree::FillInspectTree(inspect::Node inspect_node,
+                                   inspect::Inspector* inspector) const {
+  std::function<void(const Node*, int, inspect::Node)> fillTree;
+
+  fillTree = [this, inspector, &fillTree](const Node* node, int current_level,
+                                          inspect::Node inspect_node) {
+    if (!node) {
+      return;
+    }
+
+    inspect_node.CreateUint("id", node->node_id(), inspector);
+    if (node->has_attributes() && node->attributes().has_label()) {
+      inspect_node.CreateString("label", node->attributes().label(), inspector);
+      inspect_node.CreateUint("label_length", node->attributes().label().size(), inspector);
+    }
+    if (node->has_location()) {
+      inspect_node.CreateString("location", locationToString(node->location()), inspector);
+    }
+    if (node->has_transform()) {
+      inspect_node.CreateString("transform", mat4ToString(node->transform()), inspector);
+    }
+    if (node->has_role()) {
+      inspect_node.CreateString("role", roleToString(node->role()), inspector);
+    }
+    if (node->has_actions()) {
+      inspect_node.CreateString("action", actionsToString(node->actions()), inspector);
+    }
+
+    if (!node->has_child_ids()) {
+      inspector->emplace(std::move(inspect_node));
+      return;
+    }
+    for (const auto& child_id : node->child_ids()) {
+      const auto* child = GetNode(child_id);
+      FX_DCHECK(child);
+
+      auto name = fxl::StringPrintf("node_%u", child->node_id());
+      fillTree(child, current_level + 1, inspect_node.CreateChild(name));
+    }
+    inspector->emplace(std::move(inspect_node));
+  };
+
+  const auto* root = GetNode(kRootNodeId);
+
+  if (!root) {
+    inspect_node.CreateString(kTreeDumpInspectPropertyName, "Root Node not found.", inspector);
+    inspector->emplace(std::move(inspect_node));
+    return;
+  }
+
+  fillTree(root, 0, std::move(inspect_node));
 }
 
 std::string SemanticTree::ToString() const {
