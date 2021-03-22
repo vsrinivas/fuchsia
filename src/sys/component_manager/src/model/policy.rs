@@ -297,6 +297,7 @@ mod tests {
                 resolver::ResolverRegistry,
             },
         },
+        ::routing::component_instance::ComponentInstanceInterface,
         cm_rust::*,
         fidl_fuchsia_sys2 as fsys,
         matches::assert_matches,

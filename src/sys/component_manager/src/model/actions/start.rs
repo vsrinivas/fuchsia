@@ -15,6 +15,7 @@ use {
         namespace::IncomingNamespace,
         runner::Runner,
     },
+    ::routing::component_instance::ComponentInstanceInterface,
     async_trait::async_trait,
     fidl::endpoints::{self, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,

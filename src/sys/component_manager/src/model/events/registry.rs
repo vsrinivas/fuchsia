@@ -448,6 +448,9 @@ mod tests {
                 testing::test_helpers::{TestModelResult, *},
             },
         },
+        ::routing::{
+            component_instance::ComponentInstanceInterface, error::ComponentInstanceError,
+        },
         cm_rust::ProtocolDecl,
         fuchsia_async as fasync, fuchsia_zircon as zx,
         matches::assert_matches,
@@ -624,7 +627,9 @@ mod tests {
         assert_matches!(
             event.result,
             Err(EventError {
-                source: ModelError::InstanceNotFound { .. },
+                source: ModelError::ComponentInstanceError {
+                    err: ComponentInstanceError::InstanceNotFound { .. }
+                },
                 event_error_payload: EventErrorPayload::Resolved,
             })
         );

@@ -31,6 +31,7 @@ use {
         },
         path::PathBufExt,
     },
+    ::routing::component_instance::ComponentInstanceInterface,
     async_trait::async_trait,
     cm_rust::{
         self, CapabilityName, CapabilityPath, DirectoryDecl, ExposeDecl, ExposeDirectoryDecl,

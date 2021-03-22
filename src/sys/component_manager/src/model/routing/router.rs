@@ -11,6 +11,7 @@ use {
             routing::error::RoutingError,
         },
     },
+    ::routing::component_instance::ComponentInstanceInterface,
     cm_rust::{
         CapabilityDecl, CapabilityDeclCommon, CapabilityName, ComponentDecl, ExposeDecl,
         ExposeDeclCommon, ExposeSource, ExposeTarget, OfferDecl, OfferDeclCommon, OfferSource,

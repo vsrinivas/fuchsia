@@ -140,6 +140,7 @@ mod tests {
             environment::Environment,
             testing::{mocks, test_helpers, test_helpers::*},
         },
+        ::routing::component_instance::ComponentInstanceInterface,
         cm_rust::{
             CapabilityName, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl,
             ExposeRunnerDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,

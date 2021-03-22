@@ -1,4 +1,4 @@
-# Copyright 2020 The Fuchsia Authors. All rights reserved.
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -6,30 +6,28 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
 
-rustc_library("moniker") {
+rustc_library("routing") {
   with_unit_tests = true
   edition = "2018"
 
   visibility = [
     "//src/sys/component_manager/*",
-    "//src/sys/lib/component_id_index/*",
-    "//src/sys/lib/moniker/*",
     "//src/sys/lib/routing/*",
-    "//tools/component_id_index/*",
     "//tools/lib/cm_fidl_analyzer/*",
   ]
 
   deps = [
-    "//third_party/rust_crates:itertools",
-    "//third_party/rust_crates:log",
+    "//src/sys/lib/moniker",
     "//third_party/rust_crates:thiserror",
   ]
 
-  test_deps = [ "//third_party/rust_crates:anyhow" ]
-
-  sources = [ "src/lib.rs" ]
+  sources = [
+    "src/component_instance.rs",
+    "src/error.rs",
+    "src/lib.rs",
+  ]
 }
 
-fuchsia_unittest_package("moniker-tests") {
-  deps = [ ":moniker_test" ]
+fuchsia_unittest_package("routing-tests") {
+  deps = [ ":routing_test" ]
 }

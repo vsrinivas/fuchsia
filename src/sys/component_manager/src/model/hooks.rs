@@ -670,7 +670,9 @@ struct StrongHookEntry {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, matches::assert_matches, std::sync::Arc};
+    use {
+        super::*, ::routing::error::ComponentInstanceError, matches::assert_matches, std::sync::Arc,
+    };
 
     #[derive(Clone)]
     struct EventLog {
@@ -884,7 +886,12 @@ mod tests {
 
         assert_eq!(log(vec!["[CallCounter] Err: resolved",]), event_log.get().await);
 
-        assert_matches!(call_counter.last_error().await, Some(ModelError::InstanceNotFound { .. }));
+        assert_matches!(
+            call_counter.last_error().await,
+            Some(ModelError::ComponentInstanceError {
+                err: ComponentInstanceError::InstanceNotFound { .. }
+            })
+        );
     }
 
     // This test verifies that the payload of the CapabilityRequested event will be transferred.

@@ -8,6 +8,7 @@ use {
         error::ModelError,
         routing,
     },
+    ::routing::component_instance::ComponentInstanceInterface,
     anyhow::Error,
     async_trait::async_trait,
     clonable_error::ClonableError,
@@ -209,8 +210,8 @@ impl ResolverError {
         ResolverError::MalformedUrl(err.into().into())
     }
 
-    pub fn routing_error(err: ModelError) -> ResolverError {
-        ResolverError::RoutingError(Box::new(err))
+    pub fn routing_error(err: impl Into<ModelError>) -> ResolverError {
+        ResolverError::RoutingError(Box::new(err.into()))
     }
 
     pub fn fidl_error(err: impl Into<Error>) -> ResolverError {

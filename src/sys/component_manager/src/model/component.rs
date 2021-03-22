@@ -25,6 +25,7 @@ use {
             runner::{NullRunner, RemoteRunner, Runner},
         },
     },
+    ::routing::component_instance::{ComponentInstanceInterface, WeakComponentInstanceInterface},
     clonable_error::ClonableError,
     cm_rust::{self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
@@ -52,6 +53,10 @@ use {
     },
     vfs::path::Path,
 };
+
+pub type WeakComponentInstance = WeakComponentInstanceInterface<ComponentInstance>;
+pub type ExtendedInstance = ExtendedInstanceInterface<ComponentInstance>;
+pub type WeakExtendedInstance = WeakExtendedInstanceInterface<ComponentInstance>;
 
 /// Describes the reason a component instance is being requested to start.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -151,36 +156,6 @@ impl TryFrom<fsys::Package> for Package {
 
 pub const DEFAULT_KILL_TIMEOUT: Duration = Duration::from_secs(1);
 
-/// A wrapper for a weak reference to `ComponentInstance`. Provides the absolute moniker of the
-/// component instance, which is useful for error reporting if the original `ComponentInstance` has
-/// been destroyed.
-#[derive(Default, Clone)]
-pub struct WeakComponentInstance {
-    inner: Weak<ComponentInstance>,
-    /// The absolute moniker of the original component instance.
-    pub moniker: AbsoluteMoniker,
-}
-
-impl From<&Arc<ComponentInstance>> for WeakComponentInstance {
-    fn from(component: &Arc<ComponentInstance>) -> Self {
-        Self { inner: Arc::downgrade(component), moniker: component.abs_moniker.clone() }
-    }
-}
-
-impl WeakComponentInstance {
-    /// Attempts to upgrade this `WeakComponentInstance` into an `Arc<ComponentInstance>`, if the
-    /// original component instance has not been destroyed.
-    pub fn upgrade(&self) -> Result<Arc<ComponentInstance>, ModelError> {
-        self.inner.upgrade().ok_or_else(|| ModelError::instance_not_found(self.moniker.clone()))
-    }
-}
-
-impl fmt::Debug for WeakComponentInstance {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.debug_struct("WeakComponentInstance").field("moniker", &self.moniker).finish()
-    }
-}
-
 /// Models a component instance, possibly with links to children.
 pub struct ComponentInstance {
     /// The registry for resolving component URLs within the component instance.
@@ -207,29 +182,34 @@ pub struct ComponentInstance {
     actions: Mutex<ActionSet>,
 }
 
-/// A `ComponentInstance` or `ComponentManagerInstance`.
+/// A `ComponentManagerInstance` or a type implementing `ComponentInstanceInterface`.
 #[derive(Debug, Clone)]
-pub enum ExtendedInstance {
-    Component(Arc<ComponentInstance>),
+pub enum ExtendedInstanceInterface<C: ComponentInstanceInterface> {
+    Component(Arc<C>),
     AboveRoot(Arc<ComponentManagerInstance>),
 }
 
-/// A `ComponentInstance` or `ComponentManagerInstance`, as a weak pointer.
+/// A `ComponentManagerInstance` or a type implementing `ComponentInstanceInterface`,
+/// as a weak pointer.
 #[derive(Debug)]
-pub enum WeakExtendedInstance {
-    Component(WeakComponentInstance),
+pub enum WeakExtendedInstanceInterface<C: ComponentInstanceInterface> {
+    Component(WeakComponentInstanceInterface<C>),
     AboveRoot(Weak<ComponentManagerInstance>),
 }
 
-impl WeakExtendedInstance {
-    /// Attempts to upgrade this `WeakComponentInstance` into an `Arc<ComponentInstance>`, if the
-    /// original component instance has not been destroyed.
-    pub fn upgrade(&self) -> Result<ExtendedInstance, ModelError> {
+impl<C: ComponentInstanceInterface> WeakExtendedInstanceInterface<C> {
+    /// Attempts to upgrade this `WeakExtendedInstanceInterface<C>` into an
+    /// `ExtendedInstanceInterface<C>`, if the original extended instance has not been destroyed.
+    pub fn upgrade(&self) -> Result<ExtendedInstanceInterface<C>, ModelError> {
         match self {
-            WeakExtendedInstance::Component(p) => Ok(ExtendedInstance::Component(p.upgrade()?)),
-            WeakExtendedInstance::AboveRoot(p) => Ok(ExtendedInstance::AboveRoot(
-                p.upgrade().ok_or(ModelError::model_not_available())?,
-            )),
+            WeakExtendedInstanceInterface::Component(p) => {
+                Ok(ExtendedInstanceInterface::Component(p.upgrade()?))
+            }
+            WeakExtendedInstanceInterface::AboveRoot(p) => {
+                Ok(ExtendedInstanceInterface::AboveRoot(
+                    p.upgrade().ok_or(ModelError::model_not_available())?,
+                ))
+            }
         }
     }
 }
@@ -291,11 +271,6 @@ impl ComponentInstance {
         })
     }
 
-    /// Returns a new `WeakComponentInstance` pointing to this component instance.
-    pub fn as_weak(self: &Arc<Self>) -> WeakComponentInstance {
-        WeakComponentInstance { inner: Arc::downgrade(self), moniker: self.abs_moniker.clone() }
-    }
-
     /// Locks and returns the instance's mutable state.
     pub async fn lock_state(&self) -> MutexGuard<'_, InstanceState> {
         self.state.lock().await
@@ -319,11 +294,6 @@ impl ComponentInstance {
     /// Gets the context, if it exists, or returns a '`ContextNotFound` error.
     pub fn try_get_context(&self) -> Result<Arc<ModelContext>, ModelError> {
         self.context.upgrade()
-    }
-
-    /// Returns this `ComponentInstance`'s child moniker, if it is not the root instance.
-    pub fn child_moniker(&self) -> Option<&ChildMoniker> {
-        self.abs_moniker.leaf()
     }
 
     /// Locks and returns a lazily resolved and populated `ResolvedInstanceState`. Does not
@@ -668,6 +638,12 @@ impl ComponentInstance {
         self.try_get_context()
             .map(|ctx| ctx.component_id_index().look_up_moniker(&self.abs_moniker).cloned())
             .unwrap_or(None)
+    }
+}
+
+impl ComponentInstanceInterface for ComponentInstance {
+    fn abs_moniker(&self) -> &AbsoluteMoniker {
+        &self.abs_moniker
     }
 }
 

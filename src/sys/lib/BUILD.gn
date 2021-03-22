@@ -21,6 +21,7 @@ group("tests") {
     "library_loader:tests",
     "moniker:moniker-tests",
     "payload_streamer:tests",
+    "routing:routing-tests",
     "runner:tests",
   ]
 }

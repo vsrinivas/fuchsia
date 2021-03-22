@@ -8,6 +8,7 @@ use {
         resolver::ResolverError, rights::RightsError, routing::RoutingError, runner::RunnerError,
         storage::StorageError,
     },
+    ::routing::error::ComponentInstanceError,
     anyhow::Error,
     clonable_error::ClonableError,
     fuchsia_inspect, fuchsia_zircon as zx,
@@ -25,8 +26,6 @@ pub enum ModelError {
     InstanceAlreadyExists { moniker: AbsoluteMoniker, child: PartialMoniker },
     #[error("component instance with moniker {} has shut down", moniker)]
     InstanceShutDown { moniker: AbsoluteMoniker },
-    #[error("component instance {} not found", moniker)]
-    InstanceNotFound { moniker: AbsoluteMoniker },
     #[error("component collection not found with name {}", name)]
     CollectionNotFound { name: String },
     #[error("context not found")]
@@ -81,6 +80,11 @@ pub enum ModelError {
     StorageError {
         #[from]
         err: StorageError,
+    },
+    #[error("component instance error: {}", err)]
+    ComponentInstanceError {
+        #[from]
+        err: ComponentInstanceError,
     },
     #[error("failed to add entry {} to {}", entry_name, moniker)]
     AddEntryError { moniker: AbsoluteMoniker, entry_name: String },
@@ -143,7 +147,7 @@ impl ModelError {
     }
 
     pub fn instance_not_found(moniker: AbsoluteMoniker) -> ModelError {
-        ModelError::InstanceNotFound { moniker }
+        ModelError::from(ComponentInstanceError::instance_not_found(moniker))
     }
 
     pub fn collection_not_found(name: impl Into<String>) -> ModelError {
@@ -213,7 +217,9 @@ impl ModelError {
             ModelError::RoutingError { err } => err.as_zx_status(),
             ModelError::RightsError { err } => err.as_zx_status(),
             ModelError::PolicyError { err } => err.as_zx_status(),
-            ModelError::InstanceNotFound { .. } => zx::Status::UNAVAILABLE,
+            ModelError::ComponentInstanceError {
+                err: ComponentInstanceError::InstanceNotFound { .. },
+            } => zx::Status::UNAVAILABLE,
             ModelError::Unsupported { .. } => zx::Status::NOT_SUPPORTED,
             // Any other type of error is not expected.
             _ => zx::Status::INTERNAL,
