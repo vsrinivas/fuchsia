@@ -15,6 +15,11 @@
     ],
     offer: [
         {
+            directory: "hub",
+            from: "framework",
+            to: [ "#reporter" ],
+        },
+        {
             protocol: [
                 "fuchsia.logger.LogSink",
                 "fuchsia.sys2.EventSource",

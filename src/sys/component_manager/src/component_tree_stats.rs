@@ -15,12 +15,13 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_inspect::{self as inspect, HistogramProperty},
-    fuchsia_zircon::{self as zx, HandleBased, Task},
+    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Task},
     futures::{lock::Mutex, FutureExt},
     log::warn,
     moniker::ExtendedMoniker,
     std::{
         collections::{BTreeMap, VecDeque},
+        convert::{TryFrom, TryInto},
         ops::Deref,
         sync::{Arc, Weak},
         time::Duration,
@@ -195,6 +196,63 @@ impl Hook for ComponentTreeStats {
     }
 }
 
+struct ComponentStats {
+    parent_task: Option<TaskInfo>,
+    component_task: Option<TaskInfo>,
+    _task: Option<fasync::Task<()>>,
+}
+
+impl ComponentStats {
+    /// Creates a new `ComponentStats` awaiting the component tasks not ready to take measurements
+    /// yet.
+    pub fn pending(task: fasync::Task<()>) -> Self {
+        Self { parent_task: None, component_task: None, _task: Some(task) }
+    }
+
+    /// Creates a new `ComponentStats` and starts taking measurements.
+    pub fn ready(tasks: ComponentTasks) -> Self {
+        let mut this = Self {
+            component_task: tasks.component_task.and_then(|task| task.try_into().ok()),
+            parent_task: tasks.parent_task.and_then(|task| task.try_into().ok()),
+            _task: None,
+        };
+        this.measure();
+        this
+    }
+
+    /// Whether or not the stats are ready to provide measurements or not.
+    pub fn is_ready(&self) -> bool {
+        self.parent_task.is_some() || self.component_task.is_some()
+    }
+
+    /// Start reading CPU stats.
+    pub fn start_measuring(&mut self, tasks: ComponentTasks) {
+        self.component_task = tasks.component_task.and_then(|task| task.try_into().ok());
+        self.parent_task = tasks.parent_task.and_then(|task| task.try_into().ok());
+        self.measure();
+    }
+
+    /// Takes a runtime info measurement and records it. Drops old ones if the maximum amount is
+    /// exceeded.
+    pub fn measure(&mut self) {
+        if let Some(task) = &mut self.component_task {
+            task.measure();
+        }
+
+        // TODO(fxbug.dev/56570): use this.
+        if let Some(_) = self.parent_task {}
+    }
+
+    /// Writes the stats to inspect under the given node.
+    pub fn write_to_inspect(&self, node: &inspect::Node) {
+        if let Some(task) = &self.component_task {
+            task.write_inspect_to(&node)
+        }
+        // TODO(fxbug.dev/56570): use this.
+        if let Some(_) = &self.component_task {}
+    }
+}
+
 struct Measurement {
     timestamp: zx::Time,
     cpu_time: zx::Duration,
@@ -211,55 +269,21 @@ impl From<zx::TaskRuntimeInfo> for Measurement {
     }
 }
 
-struct ComponentStats {
-    tasks: Option<ComponentTasks>,
+struct TaskInfo {
+    koid: zx::Koid,
+    task: DiagnosticsTask,
     measurements: MeasurementsQueue,
-    _task: Option<fasync::Task<()>>,
 }
 
-impl ComponentStats {
-    /// Creates a new `ComponentStats` awaiting the component tasks not ready to take measurements
-    /// yet.
-    pub fn pending(task: fasync::Task<()>) -> Self {
-        Self { tasks: None, measurements: MeasurementsQueue::new(), _task: Some(task) }
-    }
-
-    /// Creates a new `ComponentStats` and starts taking measurements.
-    pub fn ready(tasks: ComponentTasks) -> Self {
-        let mut this =
-            Self { _task: None, tasks: Some(tasks), measurements: MeasurementsQueue::new() };
-        this.measure();
-        this
-    }
-
-    /// Takes a runtime info measurement and records it. Drops old ones if the maximum amount is
-    /// exceeded.
+impl TaskInfo {
     pub fn measure(&mut self) {
-        if let Some(tasks) = &self.tasks {
-            if let Some(task) = &tasks.component_task {
-                if let Ok(runtime_info) = Self::get_runtime_info(task) {
-                    self.measurements.insert(runtime_info.into());
-                }
-            }
-
-            // TODO(fxbug.dev/56570): use this.
-            if let Some(_) = tasks.parent_task {}
+        if let Ok(runtime_info) = self.get_runtime_info() {
+            self.measurements.insert(runtime_info.into());
         }
     }
 
-    /// Start reading CPU stats.
-    pub fn start_measuring(&mut self, tasks: ComponentTasks) {
-        self.tasks = Some(tasks);
-        self.measure();
-    }
-
-    /// Whether or not the stats are ready to provide measurements or not.
-    pub fn is_ready(&self) -> bool {
-        self.tasks.is_some()
-    }
-
-    /// Writes the stats to inspect under the given node.
-    pub fn write_to_inspect(&self, node: &inspect::Node) {
+    pub fn write_inspect_to(&self, parent: &inspect::Node) {
+        let node = parent.create_child(self.koid.raw_koid().to_string());
         let samples = node.create_child("@samples");
         for (i, measurement) in self.measurements.iter().enumerate() {
             let child = samples.create_child(i.to_string());
@@ -269,10 +293,11 @@ impl ComponentStats {
             samples.record(child);
         }
         node.record(samples);
+        parent.record(node);
     }
 
-    fn get_runtime_info(task: &DiagnosticsTask) -> Result<zx::TaskRuntimeInfo, zx::Status> {
-        match task {
+    fn get_runtime_info(&self) -> Result<zx::TaskRuntimeInfo, zx::Status> {
+        match &self.task {
             DiagnosticsTask::Job(job) => job.get_runtime_info(),
             DiagnosticsTask::Process(process) => process.get_runtime_info(),
             DiagnosticsTask::Thread(thread) => thread.get_runtime_info(),
@@ -280,6 +305,21 @@ impl ComponentStats {
                 unreachable!("only jobs, threads and processes are tasks");
             }
         }
+    }
+}
+
+impl TryFrom<DiagnosticsTask> for TaskInfo {
+    type Error = zx::Status;
+    fn try_from(task: DiagnosticsTask) -> Result<Self, Self::Error> {
+        let info = match &task {
+            DiagnosticsTask::Job(job) => job.basic_info(),
+            DiagnosticsTask::Process(process) => process.basic_info(),
+            DiagnosticsTask::Thread(thread) => thread.basic_info(),
+            TaskUnknown!() => {
+                unreachable!("only jobs, threads and processes are tasks");
+            }
+        }?;
+        Ok(Self { koid: info.koid, task, measurements: MeasurementsQueue::new() })
     }
 }
 
@@ -340,6 +380,11 @@ mod tests {
         let stats = &test.builtin_environment.component_tree_stats;
         test.bind_instance(&moniker).await.expect("bind instance b success");
 
+        // The test runner uses the default job just for testing purposes. We use its koid for
+        // asserting here.
+        let koid =
+            fuchsia_runtime::job_default().basic_info().expect("got basic info").koid.raw_koid();
+
         // Wait for the diagnostics event to be received
         assert!(stats.tree.lock().await.get(&extended_moniker).is_some());
 
@@ -349,29 +394,35 @@ mod tests {
                 processing_times_ns: AnyProperty,
                 measurements: {
                     "<component_manager>": {
-                        "@samples": {
-                            "0": {
-                                timestamp: AnyProperty,
-                                cpu_time: AnyProperty,
-                                queue_time: AnyProperty,
+                        koid.to_string() => {
+                            "@samples": {
+                                "0": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: AnyProperty,
+                                    queue_time: AnyProperty,
+                                }
                             }
                         }
                     },
                     "/": {
-                        "@samples": {
-                            "0": {
-                                timestamp: AnyProperty,
-                                cpu_time: AnyProperty,
-                                queue_time: AnyProperty,
+                        koid.to_string() => {
+                            "@samples": {
+                                "0": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: AnyProperty,
+                                    queue_time: AnyProperty,
+                                }
                             }
                         }
                     },
                     "/a:0": {
-                        "@samples": {
-                            "0": {
-                                timestamp: AnyProperty,
-                                cpu_time: AnyProperty,
-                                queue_time: AnyProperty,
+                        koid.to_string() => {
+                            "@samples": {
+                                "0": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: AnyProperty,
+                                    queue_time: AnyProperty,
+                                }
                             }
                         }
                     },
@@ -399,20 +450,24 @@ mod tests {
                 processing_times_ns: AnyProperty,
                 measurements: {
                     "<component_manager>": {
-                        "@samples": {
-                            "0": {
-                                timestamp: AnyProperty,
-                                cpu_time: AnyProperty,
-                                queue_time: AnyProperty,
+                        koid.to_string() => {
+                            "@samples": {
+                                "0": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: AnyProperty,
+                                    queue_time: AnyProperty,
+                                }
                             }
                         }
                     },
                     "/": {
-                        "@samples": {
-                            "0": {
-                                timestamp: AnyProperty,
-                                cpu_time: AnyProperty,
-                                queue_time: AnyProperty,
+                        koid.to_string() => {
+                            "@samples": {
+                                "0": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: AnyProperty,
+                                    queue_time: AnyProperty,
+                                }
                             }
                         }
                     },
@@ -437,29 +492,35 @@ mod tests {
                 processing_times_ns: AnyProperty,
                 measurements: {
                     "<component_manager>": {
-                        "@samples": {
-                            "0": {
-                                timestamp: AnyProperty,
-                                cpu_time: AnyProperty,
-                                queue_time: AnyProperty,
+                        koid.to_string() => {
+                            "@samples": {
+                                "0": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: AnyProperty,
+                                    queue_time: AnyProperty,
+                                }
                             }
                         }
                     },
                     "/": {
-                        "@samples": {
-                            "0": {
-                                timestamp: AnyProperty,
-                                cpu_time: AnyProperty,
-                                queue_time: AnyProperty,
+                        koid.to_string() => {
+                            "@samples": {
+                                "0": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: AnyProperty,
+                                    queue_time: AnyProperty,
+                                }
                             }
                         }
                     },
                     "/a:0": {
-                        "@samples": {
-                            "0": {
-                                timestamp: AnyProperty,
-                                cpu_time: AnyProperty,
-                                queue_time: AnyProperty,
+                        koid.to_string() => {
+                            "@samples": {
+                                "0": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: AnyProperty,
+                                    queue_time: AnyProperty,
+                                }
                             }
                         }
                     },

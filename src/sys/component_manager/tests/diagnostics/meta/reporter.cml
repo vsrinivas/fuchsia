@@ -9,6 +9,12 @@
     },
     use: [
         {
+            directory: "hub",
+            from: "parent",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
+        {
             protocol: [
                 "fidl.examples.routing.echo.Echo",
                 "fuchsia.diagnostics.ArchiveAccessor",

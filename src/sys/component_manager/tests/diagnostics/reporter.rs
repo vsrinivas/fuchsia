@@ -4,10 +4,19 @@
 
 use {
     diagnostics_reader::{assert_data_tree, AnyProperty, ArchiveReader, Inspect},
-    fidl_fidl_examples_routing_echo as fecho, fuchsia_async as fasync,
+    fidl_fidl_examples_routing_echo as fecho, fidl_fuchsia_io as fio, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
-    fuchsia_syslog as syslog,
+    fuchsia_syslog as syslog, io_util,
+    std::path::Path,
 };
+
+async fn read_file<'a>(root_proxy: &'a fio::DirectoryProxy, path: &'a str) -> String {
+    let file_proxy =
+        io_util::open_file(&root_proxy, &Path::new(path), io_util::OPEN_RIGHT_READABLE)
+            .expect("Failed to open file.");
+    let res = io_util::read_file(&file_proxy).await;
+    res.expect("Unable to read file.")
+}
 
 #[fasync::run_singlethreaded]
 async fn main() {
@@ -19,6 +28,17 @@ async fn main() {
         .await
         .expect("got inspect data");
 
+    let hub_proxy = io_util::open_directory_in_namespace("/hub", io_util::OPEN_RIGHT_READABLE)
+        .expect("Unable to open directory in namespace");
+    let archivist_job_koid = read_file(&hub_proxy, "children/archivist/exec/runtime/elf/job_id")
+        .await
+        .parse::<u64>()
+        .unwrap();
+    let reporter_job_koid = read_file(&hub_proxy, "children/reporter/exec/runtime/elf/job_id")
+        .await
+        .parse::<u64>()
+        .unwrap();
+
     assert_eq!(data.len(), 1, "expected 1 match: {:?}", data);
     assert_data_tree!(data[0].payload.as_ref().unwrap(), root: {
         "fuchsia.inspect.Health": {
@@ -26,39 +46,29 @@ async fn main() {
             status: "OK"
         },
         cpu_stats: {
-            measurements: {
+            measurements: contains {
                 "/archivist:0": {
-                    "@samples": {
-                        "0": {
-                            timestamp: AnyProperty,
-                            cpu_time: AnyProperty,
-                            queue_time: AnyProperty,
+                    archivist_job_koid.to_string() => {
+                        "@samples": {
+                            "0": {
+                                timestamp: AnyProperty,
+                                cpu_time: AnyProperty,
+                                queue_time: AnyProperty,
+                            }
                         }
                     }
                 },
                 "/reporter:0": {
-                    "@samples": {
-                        "0": {
-                            timestamp: AnyProperty,
-                            cpu_time: AnyProperty,
-                            queue_time: AnyProperty,
+                    reporter_job_koid.to_string() => {
+                        "@samples": {
+                            "0": {
+                                timestamp: AnyProperty,
+                                cpu_time: AnyProperty,
+                                queue_time: AnyProperty,
+                            }
                         }
                     }
                 },
-                "<component_manager>": {
-                    "@samples": {
-                        "0": {
-                            timestamp: AnyProperty,
-                            cpu_time: AnyProperty,
-                            queue_time: AnyProperty,
-                        }
-                    }
-                },
-                inspect_stats: {
-                    current_size: 4096u64,
-                    maximum_size: 262144u64,
-                    total_dynamic_children: 0u64,
-                }
             },
             processing_times_ns: AnyProperty,
         },
