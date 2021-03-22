@@ -463,7 +463,7 @@ From //build/images/args.gni:14
 
 **Current value (from the default):** `false`
 
-From //src/media/codec/examples/BUILD.gn:11
+From //src/media/codec/examples/BUILD.gn:10
 
 ### build_id_format
 Build ID algorithm to use for Fuchsia-target code.  This does not apply
@@ -625,7 +625,7 @@ Include the vulkan validation layers in carnelian examples.
 
 **Current value (from the default):** `false`
 
-From //src/lib/ui/carnelian/BUILD.gn:15
+From //src/lib/ui/carnelian/BUILD.gn:14
 
 ### check_production_eligibility
 Whether to perform check on the build's eligibility for production.
@@ -990,7 +990,7 @@ Enables the tracing feature of mdns, which can be turned on using
 
 **Current value (from the default):** `false`
 
-From //src/connectivity/network/mdns/service/BUILD.gn:14
+From //src/connectivity/network/mdns/service/BUILD.gn:13
 
 ### enable_netboot
 Whether to build the netboot zbi by default.
@@ -1505,7 +1505,7 @@ See symbols/test_data/README.md for how to download the data required for this t
 
 **Current value (from the default):** `false`
 
-From //src/developer/debug/zxdb/BUILD.gn:13
+From //src/developer/debug/zxdb/BUILD.gn:12
 
 ### inet_config_enable_async_dns_sockets
 Tells inet to support additionally support async dns sockets.
@@ -3751,7 +3751,7 @@ Selects the wlan configuration type to use. Choices:
 
 **Current value (from the default):** `"client"`
 
-From //src/connectivity/wlan/wlancfg/BUILD.gn:18
+From //src/connectivity/wlan/wlancfg/BUILD.gn:16
 
 ### zbi_compression
 Compression setting for ZBI "storage" items.
