@@ -8,9 +8,10 @@
 #include <lib/async/cpp/task.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/driver.h>
+#include <lib/ddk/hw/reg.h>
+#include <lib/ddk/metadata.h>
 #include <lib/driver-unit-test/utils.h>
 #include <lib/fidl/llcpp/server.h>
-#include <lib/ddk/hw/reg.h>
 #include <stdio.h>
 #include <sys/types.h>
 #include <zircon/compiler.h>
@@ -19,7 +20,6 @@
 
 #include <iterator>
 
-#include <lib/ddk/metadata.h>
 #include <ddktl/fidl.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -120,6 +120,10 @@ void OtRadioDevice::LowpanSpinelDeviceFidlImpl::ReadyToReceiveFrames(
   ot_radio_obj_.inbound_allowance_ += number_of_frames;
   if (ot_radio_obj_.inbound_allowance_ > 0 && ot_radio_obj_.spinel_framer_.get()) {
     ot_radio_obj_.spinel_framer_->SetInboundAllowanceStatus(true);
+    if (ot_radio_obj_.interrupt_is_asserted_) {
+      // signal the event loop thread to handle interrupt
+      ot_radio_obj_.InvokeInterruptHandler();
+    }
     ot_radio_obj_.ReadRadioPacket();
   }
 }
@@ -301,6 +305,21 @@ zx_status_t OtRadioDevice::RadioPacketTx(uint8_t* frameBuffer, uint16_t length) 
   return port_.queue(&packet);
 }
 
+zx_status_t OtRadioDevice::InvokeInterruptHandler() {
+  zxlogf(DEBUG, "ot-radio: InvokeInterruptHandler");
+  zx_port_packet packet = {PORT_KEY_RADIO_IRQ, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  if (!port_.is_valid()) {
+    return ZX_ERR_BAD_STATE;
+  }
+  return port_.queue(&packet);
+}
+
+bool OtRadioDevice::IsInterruptAsserted() {
+  uint8_t pin_level = 0;
+  gpio_[OT_RADIO_INT_PIN].Read(&pin_level);
+  return pin_level == 0;
+}
+
 zx_status_t OtRadioDevice::DriverUnitTestGetNCPVersion() { return GetNCPVersion(); }
 
 zx_status_t OtRadioDevice::GetNCPVersion() {
@@ -374,20 +393,12 @@ zx_status_t OtRadioDevice::RadioThread() {
     } else if (packet.key == PORT_KEY_RADIO_IRQ) {
       interrupt_.ack();
       zxlogf(DEBUG, "ot-radio: interrupt");
-      spinel_framer_->HandleInterrupt();
-      ReadRadioPacket();
-      while (true) {
-        uint8_t pin_level = 0;
-        gpio_[OT_RADIO_INT_PIN].Read(&pin_level);
-        // Interrupt has de-asserted or no more frames can be received.
-        if (pin_level != 0 || inbound_allowance_ == 0) {
-          zxlogf(DEBUG, "ot-radio: break int handling: int_pin:%d, inbound_allowance_:%d",
-                 pin_level, inbound_allowance_);
-          break;
-        }
+      do {
         spinel_framer_->HandleInterrupt();
         ReadRadioPacket();
-      }
+
+        interrupt_is_asserted_ = IsInterruptAsserted();
+      } while (interrupt_is_asserted_ || inbound_allowance_ == 0);
     } else if (packet.key == PORT_KEY_TX_TO_RADIO) {
       spinel_framer_->SendPacketToRadio(spi_tx_buffer_, spi_tx_buffer_len_);
     }

@@ -106,6 +106,8 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
   zx_status_t ReadRadioPacket();
   zx_status_t HandleRadioRxFrame(uint8_t* frameBuffer, uint16_t length);
   zx_status_t RadioPacketTx(uint8_t* frameBuffer, uint16_t length);
+  zx_status_t InvokeInterruptHandler();
+  bool IsInterruptAsserted();
 #ifdef INTERNAL_ACCESS
   zx_status_t CheckFWUpdateRequired(bool* update_fw);
 #endif
@@ -154,6 +156,7 @@ class OtRadioDevice : public ddk::Device<OtRadioDevice, ddk::Unbindable, ddk::Me
   std::optional<fidl::ServerBindingRef<fuchsia_lowpan_spinel::Device>> fidl_binding_;
   std::unique_ptr<LowpanSpinelDeviceFidlImpl> fidl_impl_obj_ = 0;
   ot_radio_power_status_e power_status_ = OT_SPINEL_DEVICE_OFF;
+  bool interrupt_is_asserted_ = false;
 };
 
 }  // namespace ot
