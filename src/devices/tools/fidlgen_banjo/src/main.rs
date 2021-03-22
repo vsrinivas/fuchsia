@@ -5,7 +5,7 @@
 use {
     anyhow::Error,
     fidlgen_banjo_lib::{backends::*, fidl::FidlIr},
-    std::{fs::File, path::PathBuf, str::FromStr},
+    std::{fs::File, io::BufReader, path::PathBuf, str::FromStr},
     structopt::StructOpt,
 };
 
@@ -59,6 +59,6 @@ fn main() -> Result<(), Error> {
         BackendName::CppMock => Box::new(CppMockBackend::new(&mut output)),
         BackendName::Rust => Box::new(RustBackend::new(&mut output)),
     };
-    let ir: FidlIr = serde_json::from_reader(File::open(flags.ir)?)?;
+    let ir: FidlIr = serde_json::from_reader(BufReader::new(File::open(flags.ir)?))?;
     backend.codegen(ir)
 }
