@@ -6,7 +6,7 @@ use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
     controller, ControllerError, ControllerStateResult, IntoHandlerResult, SettingHandlerResult,
     State,
@@ -72,6 +72,12 @@ impl Into<SettingInfo> for InputInfoSources {
 impl Into<InputInfo> for InputInfoSources {
     fn into(self) -> InputInfo {
         InputInfo { input_device_state: self.input_device_state }
+    }
+}
+
+impl Into<SettingInfo> for InputInfo {
+    fn into(self) -> SettingInfo {
+        SettingInfo::Input(self)
     }
 }
 
@@ -156,8 +162,8 @@ impl InputControllerInner {
     // as the default value if the read value is empty. It may be empty
     // after a migration from a previous InputInfoSources version
     // or on pave.
-    async fn get_stored_info(&self) -> InputInfoSources {
-        let mut input_info = self.client.read::<InputInfoSources>().await;
+    async fn get_stored_info(&self) -> InputInfo {
+        let mut input_info = self.client.read_setting::<InputInfo>().await;
         if input_info.input_device_state.is_empty() {
             input_info.input_device_state = self.input_device_config.clone().into();
         }
@@ -188,7 +194,7 @@ impl InputControllerInner {
         );
 
         // Store the newly set value.
-        write(&self.client, input_info, true).await.into_handler_result()
+        self.client.write_setting(input_info.into(), true).await.into_handler_result()
     }
 
     /// Sets the hardware mic state to `muted`.
@@ -220,7 +226,7 @@ impl InputControllerInner {
             DeviceStateSource::SOFTWARE,
             if disabled { DeviceState::MUTED } else { DeviceState::AVAILABLE },
         );
-        write(&self.client, input_info, true).await.into_handler_result()
+        self.client.write_setting(input_info.into(), true).await.into_handler_result()
     }
 
     // A helper for setting the hw state for a |device_type| given the
@@ -270,7 +276,7 @@ impl InputControllerInner {
         );
 
         // Store the newly set value.
-        write(&self.client, input_info, true).await.into_handler_result()
+        self.client.write_setting(input_info.into(), true).await.into_handler_result()
     }
 
     /// Sets state for the given input devices.
@@ -305,7 +311,7 @@ impl InputControllerInner {
         }
 
         // Store the newly set value.
-        write(&self.client, input_info, true).await.into_handler_result()
+        self.client.write_setting(input_info.into(), true).await.into_handler_result()
     }
 
     /// Pulls the current software state of the camera from the device state.
