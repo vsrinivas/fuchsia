@@ -108,7 +108,6 @@ group("test_manager") {
   deps = [
     ":test_manager_pkg",
     "//src/sys/lib/fuchsia-component-test/framework_intermediary:fuchsia-component-test",
-    "//src/sys/lib/topology_builder/framework_intermediary:topology-builder",
     "//src/sys/test_runners",
     "//src/sys/universe-resolver",
   ]

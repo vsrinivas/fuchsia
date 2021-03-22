@@ -21,7 +21,7 @@ type Result<T = (), E = anyhow::Error> = std::result::Result<T, E>;
 
 struct ManagedRealm {
     server_end: ServerEnd<ManagedRealmMarker>,
-    topology: topology_builder::TopologyInstance,
+    realm: fuchsia_component_test::RealmInstance,
 }
 
 impl ManagedRealm {
@@ -29,21 +29,20 @@ impl ManagedRealm {
         server_end: ServerEnd<ManagedRealmMarker>,
         options: RealmOptions,
     ) -> Result<ManagedRealm> {
-        use topology_builder::builder::{
-            Capability, CapabilityRoute, ComponentSource, RouteEndpoint, TopologyBuilder,
+        use fuchsia_component_test::builder::{
+            Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint,
         };
 
         let RealmOptions { name, children, .. } = options;
-        // TODO(https://fxbug.dev/72169): use `name` as the moniker of the generated topology
+        // TODO(https://fxbug.dev/72169): use `name` as the moniker of the generated realm
         // collection.
         info!("creating new ManagedRealm with name '{:?}'", name);
         let mut exposed_services = HashSet::new();
-        let mut builder =
-            TopologyBuilder::new().await.context("error creating new `TopologyBuilder`")?;
+        let mut builder = RealmBuilder::new().await.context("error creating new `RealmBuilder`")?;
         for ChildDef { url, name, exposes, uses, .. } in children.unwrap_or_default() {
             let url = url.ok_or(anyhow!("no url provided"))?;
             let name = name.ok_or(anyhow!("no name provided"))?;
-            let _: &mut TopologyBuilder = builder
+            let _: &mut RealmBuilder = builder
                 .add_component(name.clone(), ComponentSource::url(url.clone()))
                 .await
                 .with_context(|| {
@@ -51,7 +50,7 @@ impl ManagedRealm {
                 })?;
             if let Some(exposes) = exposes {
                 for exposed in exposes {
-                    let _: &mut TopologyBuilder = builder
+                    let _: &mut RealmBuilder = builder
                         .add_route(CapabilityRoute {
                             capability: Capability::protocol(exposed.clone()),
                             source: RouteEndpoint::component(name.clone()),
@@ -79,12 +78,12 @@ impl ManagedRealm {
                         for cap in caps {
                             match cap {
                                 // TODO(https://fxbug.dev/72047): rather than exposing the real
-                                // syslog to the topology, netemul-sandbox-v2 should offer a custom
+                                // syslog to the realm, netemul-sandbox-v2 should offer a custom
                                 // LogSink service to the components under test that decorates the
                                 // logs with the name of the containing test realm before logging
                                 // them to syslog.
                                 fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
-                                    let _: &mut TopologyBuilder =
+                                    let _: &mut RealmBuilder =
                                         builder.add_route(CapabilityRoute {
                                             capability: Capability::protocol(
                                                 "fuchsia.logger.LogSink",
@@ -103,13 +102,12 @@ impl ManagedRealm {
                 }
             }
         }
-        let topology =
-            builder.build().create().await.context("error creating `TopologyInstance`")?;
-        Ok(ManagedRealm { server_end, topology })
+        let realm = builder.build().create().await.context("error creating `RealmInstance`")?;
+        Ok(ManagedRealm { server_end, realm })
     }
 
     async fn run_service(self) -> Result {
-        let Self { server_end, topology } = self;
+        let Self { server_end, realm } = self;
         let mut stream = server_end.into_stream().context("failed to acquire request stream")?;
         while let Some(request) = stream.try_next().await.context("FIDL error")? {
             match request {
@@ -131,7 +129,7 @@ impl ManagedRealm {
                         "connecting to service `{}` exposed by child `{:?}`",
                         service_name, child_name
                     );
-                    let () = topology
+                    let () = realm
                         .root
                         .connect_request_to_named_service_at_exposed_dir(&service_name, req)
                         .with_context(|| {

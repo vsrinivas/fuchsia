@@ -18,7 +18,8 @@ use {
     },
 };
 
-const DEFAULT_COLLECTION_NAME: &'static str = "fuchsia_component_test_collection";
+/// The default name of the child component collection that contains built topologies.
+pub const DEFAULT_COLLECTION_NAME: &'static str = "fuchsia_component_test_collection";
 const FRAMEWORK_INTERMEDIARY_CHILD_NAME: &'static str =
     "fuchsia_component_test_framework_intermediary";
 
