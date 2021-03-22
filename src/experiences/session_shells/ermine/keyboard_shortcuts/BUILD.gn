@@ -17,7 +17,6 @@ dart_library("keyboard_shortcuts") {
 
   deps = [
     "//sdk/fidl/fuchsia.input",
-    "//sdk/fidl/fuchsia.ui.input2",
     "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.ui.views",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
@@ -34,7 +33,6 @@ flutter_test("keyboard_shortcuts_unittests") {
   deps = [
     ":keyboard_shortcuts",
     "//sdk/fidl/fuchsia.input",
-    "//sdk/fidl/fuchsia.ui.input2",
     "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.ui.views",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
