@@ -12,7 +12,6 @@ void main() {
 
   setUp(() async {
     await sl4fDriver.startServer();
-    deviceController = sl4f.Device(sl4fDriver);
   });
 
   tearDown(() async {
@@ -33,6 +32,7 @@ void main() {
 
     // Get the device into fastboot.
     await sl4fDriver.ssh.run('dm reboot-bootloader');
+    await sl4fDriver.stopServer();
 
     // Wait 30 seconds for the device to enter fastboot.
     sleep(Duration(seconds: 30));
@@ -46,6 +46,10 @@ void main() {
 
     // Wait 45 seconds for the device to enter fuchsia after flashing.
     sleep(Duration(seconds: 45));
+
+    // Start sl4f.
+    await sl4fDriver.startServer();
+    deviceController = sl4f.Device(sl4fDriver);
 
     // Verify that the device came back by checking the nodename.
     expect(await deviceController.getDeviceName(), equals(nodename),
