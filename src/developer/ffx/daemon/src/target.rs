@@ -11,7 +11,7 @@ use {
     crate::fastboot::open_interface_with_serial,
     crate::logger::{streamer::DiagnosticsStreamer, Logger},
     crate::onet::HostPipeConnection,
-    anyhow::{anyhow, Context, Error, Result},
+    anyhow::{anyhow, bail, Context, Error, Result},
     async_std::{
         future::{timeout, TimeoutError},
         sync::RwLock,
@@ -25,7 +25,7 @@ use {
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_developer_bridge as bridge,
     fidl_fuchsia_developer_remotecontrol::{
-        IdentifyHostError, RemoteControlMarker, RemoteControlProxy,
+        IdentifyHostError, IdentifyHostResponse, RemoteControlMarker, RemoteControlProxy,
     },
     fidl_fuchsia_net::{IpAddress, Ipv4Address, Ipv6Address, Subnet},
     fidl_fuchsia_overnet_protocol::NodeId,
@@ -34,8 +34,9 @@ use {
     futures::lock::Mutex,
     futures::prelude::*,
     hoist::OvernetInstance,
+    rand::random,
     std::cmp::Ordering,
-    std::collections::{BTreeSet, HashMap},
+    std::collections::{BTreeSet, HashMap, HashSet},
     std::default::Default,
     std::fmt,
     std::fmt::{Debug, Display},
@@ -277,13 +278,18 @@ impl PartialOrd for TargetAddrEntry {
     }
 }
 
-#[derive(Debug, Default)]
-#[cfg_attr(test, derive(Clone, PartialEq, Eq))]
+#[derive(Debug, Default, Clone)]
+#[cfg_attr(test, derive(PartialEq, Eq))]
 pub struct TargetState {
     pub connection_state: ConnectionState,
 }
 
 struct TargetInner {
+    // id is the locally created "primary identifier" for this target.
+    id: u64,
+    // ids keeps track of additional ids discovered over Overnet, these could
+    // come from old Daemons, or other Daemons. The set should be used
+    ids: Mutex<HashSet<u64>>,
     nodename: Mutex<Option<String>>,
     state: Mutex<TargetState>,
     last_response: RwLock<DateTime<Utc>>,
@@ -297,9 +303,32 @@ struct TargetInner {
     diagnostics_info: Arc<DiagnosticsStreamer<'static>>,
 }
 
+impl Debug for TargetInner {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        smol::block_on(async {
+            f.debug_struct("TargetInner")
+                .field("id", &self.id)
+                .field("ids", &self.ids.lock().await.clone())
+                .field("nodename", &self.nodename.lock().await.clone())
+                .field("state", &self.state.lock().await.clone())
+                .field("last_response", &self.last_response.read().await.clone())
+                .field("addrs", &self.addrs.read().await.clone())
+                .field("ssh_port", &self.ssh_port.lock().await.clone())
+                .field("serial", &self.serial.read().await.clone())
+                .field("boot_timestamp_nanos", &self.boot_timestamp_nanos.read().await.clone())
+                .finish()
+        })
+    }
+}
+
 impl TargetInner {
     fn new(nodename: Option<String>) -> Self {
+        let id = random::<u64>();
+        let mut ids = HashSet::new();
+        ids.insert(id.clone());
         Self {
+            id: id.clone(),
+            ids: Mutex::new(ids),
             nodename: Mutex::new(nodename),
             last_response: RwLock::new(Utc::now()),
             state: Mutex::new(TargetState::default()),
@@ -327,6 +356,27 @@ impl TargetInner {
 
     pub fn new_with_serial(nodename: Option<String>, serial: &str) -> Self {
         Self { serial: RwLock::new(Some(serial.to_string())), ..Self::new(nodename) }
+    }
+
+    pub fn id(&self) -> u64 {
+        self.id.clone()
+    }
+
+    pub async fn ids(&self) -> HashSet<u64> {
+        self.ids.lock().await.clone()
+    }
+
+    pub async fn has_id<'a, I>(&self, ids: I) -> bool
+    where
+        I: Iterator<Item = &'a u64>,
+    {
+        let my_ids = self.ids.lock().await;
+        for id in ids {
+            if my_ids.contains(id) {
+                return true;
+            }
+        }
+        false
     }
 
     /// Dependency injection constructor so we can insert a fake time for
@@ -527,6 +577,33 @@ impl Target {
         }
     }
 
+    // Get the locally minted identifier for the target
+    pub fn id(&self) -> u64 {
+        self.inner.id()
+    }
+
+    // Get all known ids for the target
+    pub async fn ids(&self) -> HashSet<u64> {
+        self.inner.ids().await
+    }
+
+    pub async fn has_id<'a, I>(&self, ids: I) -> bool
+    where
+        I: Iterator<Item = &'a u64>,
+    {
+        self.inner.has_id(ids).await
+    }
+
+    pub async fn merge_ids<'a, I>(&self, new_ids: I)
+    where
+        I: Iterator<Item = &'a u64>,
+    {
+        let mut my_ids = self.inner.ids.lock().await;
+        for id in new_ids {
+            my_ids.insert(*id);
+        }
+    }
+
     /// Dependency injection constructor so we can insert a fake time for
     /// testing.
     #[cfg(test)]
@@ -697,11 +774,17 @@ impl Target {
     {
         let now = Utc::now();
         let mut addrs = self.inner.addrs.write().await;
-        // This is functionally the same as the regular extend function, instead
-        // replacing each item. This is to ensure that the timestamps are
-        // updated as they are seen.
-        new_addrs.into_iter().for_each(move |new_addr| {
-            let mut addr = new_addr;
+
+        for mut addr in new_addrs.into_iter() {
+            // Do not add localhost to the collection during extend.
+            // Note: localhost addresses are added sometimes by direct
+            // insertion, in the manual add case.
+            let localhost_v4 = IpAddr::V4(Ipv4Addr::LOCALHOST);
+            let localhost_v6 = IpAddr::V6(Ipv6Addr::LOCALHOST);
+            if addr.ip() == localhost_v4 || addr.ip() == localhost_v6 {
+                continue;
+            }
+
             // Subtle:
             // Some sources of addresses can not be scoped, such as those which come from queries
             // over Overnet.
@@ -716,13 +799,14 @@ impl Target {
                 if let Some(entry) = addrs.get(&(addr, now.clone()).into()) {
                     addr.scope_id = entry.addr.scope_id;
                 }
+
                 // Note: not adding ipv6 link-local addresses without scopes here is deliberate!
                 if addr.ip().is_link_local_addr() && addr.scope_id == 0 {
-                    return;
+                    continue;
                 }
             }
             addrs.replace((addr, now.clone()).into());
-        });
+        }
     }
 
     async fn update_last_response(&self, other: DateTime<Utc>) {
@@ -746,52 +830,51 @@ impl Target {
         }
     }
 
-    pub async fn from_rcs_connection(r: RcsConnection) -> Result<Self, RcsConnectionError> {
+    pub async fn from_identify(identify: IdentifyHostResponse) -> Result<Self, Error> {
+        // TODO(raggi): allow targets to truly be created without a nodename.
+        let nodename = match identify.nodename {
+            Some(n) => n,
+            None => bail!("Target identification missing a nodename: {:?}", identify),
+        };
+
+        let target = Target::new(nodename);
+        target.update_last_response(Utc::now().into()).await;
+        if let Some(ids) = identify.ids {
+            target.merge_ids(ids.iter()).await;
+        }
+        if let Some(t) = identify.boot_timestamp_nanos {
+            target.inner.boot_timestamp_nanos.write().await.replace(t);
+        }
+        if let Some(addrs) = identify.addresses {
+            let mut taddrs = target.inner.addrs.write().await;
+            for addr in addrs.iter().map(|addr| TargetAddr::from(addr.clone())) {
+                taddrs.insert(addr.into());
+            }
+        }
+        if let Some(serial) = identify.serial_number {
+            target.inner.serial.write().await.replace(serial);
+        }
+        Ok(target)
+    }
+
+    pub async fn from_rcs_connection(rcs: RcsConnection) -> Result<Self, RcsConnectionError> {
         let identify_result =
-            timeout(Duration::from_millis(IDENTIFY_HOST_TIMEOUT_MILLIS), r.proxy.identify_host())
+            timeout(Duration::from_millis(IDENTIFY_HOST_TIMEOUT_MILLIS), rcs.proxy.identify_host())
                 .await
                 .map_err(|e| RcsConnectionError::ConnectionTimeoutError(e))?;
-        let fidl_target = match identify_result {
+
+        let identify = match identify_result {
             Ok(res) => match res {
                 Ok(target) => target,
                 Err(e) => return Err(RcsConnectionError::RemoteControlError(e)),
             },
             Err(e) => return Err(RcsConnectionError::FidlConnectionError(e)),
         };
-        let nodename = fidl_target
-            .nodename
-            .ok_or(RcsConnectionError::TargetError(anyhow!("nodename required")))?;
 
-        // TODO(awdavies): Merge target addresses once the scope_id is picked
-        // up properly, else there will be duplicate link-local addresses that
-        // aren't usable.
-        let target = match fidl_target.boot_timestamp_nanos {
-            Some(t) => Target::new_with_boot_timestamp(nodename.to_string(), t),
-            None => Target::new(nodename.to_string()),
-        };
-
-        // Forces drop of target state mutex so that target can be returned.
-        {
-            let mut target_state = target.inner.state.lock().await;
-            target_state.connection_state = ConnectionState::Rcs(r);
-        }
-        {
-            let mut target_addrs = target.inner.addrs.write().await;
-            let localhost_v4 = IpAddr::V4(Ipv4Addr::LOCALHOST);
-            let localhost_v6 = IpAddr::V6(Ipv6Addr::LOCALHOST);
-            for addr in fidl_target.addresses {
-                for subnet in addr {
-                    // Note: This does not have a valid scope!
-                    let ta: TargetAddr = subnet.clone().into();
-                    // Do not add localhost addresses to the daemon from RCS, as every node has them.
-                    if ta.ip() == localhost_v4 || ta.ip() == localhost_v6 {
-                        continue;
-                    }
-                    target_addrs.replace(ta.into());
-                }
-            }
-        }
-
+        let target = Target::from_identify(identify)
+            .await
+            .map_err(|e| RcsConnectionError::TargetError(e))?;
+        target.update_connection_state(move |_| ConnectionState::Rcs(rcs)).await;
         Ok(target)
     }
 
@@ -857,7 +940,7 @@ impl ToFidlTarget for Target {
 
 impl Debug for Target {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Target {{ {:?} }}", self.inner.nodename)
+        write!(f, "Target {{ {:?} }}", self.inner)
     }
 }
 
@@ -1234,28 +1317,38 @@ impl TargetCollection {
         }
     }
 
-    pub async fn merge_insert(&self, t: Target) -> Target {
+    pub async fn merge_insert(&self, new_target: Target) -> Target {
+        let new_ids = new_target.ids().await;
+        let new_nodename = new_target.nodename().await;
+        let new_ips =
+            new_target.addrs().await.iter().map(|addr| addr.ip.clone()).collect::<Vec<IpAddr>>();
+
         let mut inner = self.inner.write().await;
 
         let mut unnamed_match = None;
 
-        'outer: for (i, to_update) in inner.unnamed.iter().enumerate() {
-            for addr in to_update.addrs().await.into_iter() {
-                for other in t.addrs().await.into_iter() {
-                    if addr.ip == other.ip {
-                        unnamed_match = Some(i);
-                        break 'outer;
-                    }
-                }
+        // Look for an unnamed match by index, so we can move it if found.
+        for (i, unnamed_target) in inner.unnamed.iter().enumerate() {
+            // Look for an unnamed target with a matching ID
+            if unnamed_target.has_id(new_target.ids().await.iter()).await {
+                unnamed_match = Some(i);
+                break;
+            }
+
+            // Or a matching address
+            if unnamed_target.addrs().await.iter().any(|addr| new_ips.contains(&addr.ip)) {
+                unnamed_match = Some(i);
+                break;
             }
         }
 
-        let to_update = if let Some(unnamed_match) = unnamed_match {
-            if let Some(name) = t.inner.nodename.lock().await.clone() {
+        // If an unnamed entry was found, attempt to name it, moving it to the named set.
+        let mut to_update = if let Some(unnamed_match) = unnamed_match {
+            if let Some(name) = new_target.inner.nodename.lock().await.clone() {
                 let mergeable = inner.unnamed.remove(unnamed_match);
                 *mergeable.inner.nodename.lock().await = Some(name.clone());
-                inner.named.insert(name, mergeable);
-                None
+                inner.named.insert(name.clone(), mergeable);
+                inner.named.get(&name)
             } else {
                 Some(&inner.unnamed[unnamed_match])
             }
@@ -1263,62 +1356,60 @@ impl TargetCollection {
             None
         };
 
-        let nodename = t.inner.nodename.lock().await;
-
-        // TODO(awdavies): better merging (using more indices for matching).
-        match to_update.or_else(|| nodename.as_ref().and_then(|name| inner.named.get(name))) {
-            Some(to_update) => {
-                log::trace!(
-                    "attempting to merge info into target: {}",
-                    t.inner.nodename_str().await
-                );
-                futures::join!(
-                    to_update.update_last_response(t.last_response().await),
-                    to_update.addrs_extend(t.addrs().await),
-                    to_update.update_boot_timestamp(t.boot_timestamp_nanos().await),
-                    to_update.overwrite_state(TargetState {
-                        connection_state: std::mem::replace(
-                            &mut t.inner.state.lock().await.connection_state,
-                            ConnectionState::Disconnected
-                        ),
-                    }),
-                );
-                to_update.events.push(TargetEvent::Rediscovered).await.unwrap_or_else(|err| {
-                    log::warn!("unable to enqueue rediscovered event: {:#}", err)
-                });
-                to_update.clone()
-            }
-            None => {
-                std::mem::drop(nodename);
-                if let Some(name) = t.nodename().await.as_ref() {
-                    let insertable = t.clone();
-                    insertable.drop_unscoped_link_local_addrs().await;
-                    inner.named.insert(name.to_owned(), insertable);
-                    log::info!("New target: {}", name);
-                    if let Some(e) = self.events.read().await.as_ref() {
-                        e.push(DaemonEvent::NewTarget(t.target_info().await)).await.unwrap_or_else(
-                            |e| log::warn!("unable to push new target event: {}", e),
-                        );
-                    }
-                } else {
-                    for to_return in inner.named.values() {
-                        for addr in to_return.addrs().await.into_iter() {
-                            for other in t.addrs().await.into_iter() {
-                                if addr.ip == other.ip {
-                                    to_return.update_last_response(t.last_response().await).await;
-                                    return to_return.clone();
-                                }
-                            }
-                        }
-                    }
-
-                    let insertable = t.clone();
-                    insertable.drop_unscoped_link_local_addrs().await;
-                    inner.unnamed.push(insertable);
+        // If we haven't yet found a target, try to find one from the named set
+        // by ID, nodename, or address.
+        if to_update.is_none() {
+            for (_, named_target) in inner.named.iter() {
+                if named_target.has_id(new_ids.iter()).await
+                    || new_nodename == named_target.nodename().await
+                    || named_target.addrs().await.iter().any(|addr| new_ips.contains(&addr.ip))
+                {
+                    to_update.replace(named_target);
+                    break;
                 }
-
-                t
             }
+        }
+
+        if let Some(to_update) = to_update {
+            futures::join!(
+                to_update.update_last_response(new_target.last_response().await),
+                to_update.addrs_extend(new_target.addrs().await),
+                to_update.update_boot_timestamp(new_target.boot_timestamp_nanos().await),
+                to_update.overwrite_state(TargetState {
+                    connection_state: std::mem::replace(
+                        &mut new_target.inner.state.lock().await.connection_state,
+                        ConnectionState::Disconnected
+                    ),
+                }),
+            );
+
+            to_update.events.push(TargetEvent::Rediscovered).await.unwrap_or_else(|err| {
+                log::warn!("unable to enqueue rediscovered event: {:#}", err)
+            });
+            to_update.clone()
+        } else {
+            new_target.drop_unscoped_link_local_addrs().await;
+            let result = new_target.clone();
+
+            if let Some(name) = new_target.nodename().await {
+                inner.named.insert(name, new_target);
+
+                let info = result.target_info().await;
+                if let Some(e) = self.events.read().await.as_ref() {
+                    e.push(DaemonEvent::NewTarget(info))
+                        .await
+                        .unwrap_or_else(|e| log::warn!("unable to push new target event: {}", e));
+                }
+            } else {
+                inner.unnamed.push(new_target);
+            }
+
+            log::info!(
+                "New target ({}): {}",
+                result.id(),
+                result.nodename().await.unwrap_or("<unnamed>".to_string())
+            );
+            result
         }
     }
 
@@ -1473,6 +1564,8 @@ mod test {
     impl Clone for TargetInner {
         fn clone(&self) -> Self {
             Self {
+                id: self.id.clone(),
+                ids: Mutex::new(block_on(self.ids.lock()).clone()),
                 nodename: Mutex::new(block_on(self.nodename.lock()).clone()),
                 last_response: RwLock::new(block_on(self.last_response.read()).clone()),
                 state: Mutex::new(block_on(self.state.lock()).clone()),

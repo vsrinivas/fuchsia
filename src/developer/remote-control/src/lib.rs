@@ -9,6 +9,7 @@ use {
     fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_io as io, fidl_fuchsia_net as fnet,
     fidl_fuchsia_net_stack as fnetstack, fuchsia_zircon as zx,
     futures::prelude::*,
+    std::cell::RefCell,
     std::rc::Rc,
     tracing::*,
 };
@@ -22,6 +23,7 @@ pub struct RemoteControlService {
     name_provider_proxy: fdevice::NameProviderProxy,
     hwinfo_proxy: hwinfo::DeviceProxy,
     boot_timestamp_nanos: u64,
+    ids: RefCell<Vec<u64>>,
 }
 
 impl RemoteControlService {
@@ -43,7 +45,13 @@ impl RemoteControlService {
         hwinfo_proxy: hwinfo::DeviceProxy,
         boot_timestamp_nanos: u64,
     ) -> Self {
-        return Self { netstack_proxy, name_provider_proxy, hwinfo_proxy, boot_timestamp_nanos };
+        return Self {
+            netstack_proxy,
+            name_provider_proxy,
+            hwinfo_proxy,
+            boot_timestamp_nanos,
+            ids: RefCell::new(vec![]),
+        };
     }
 
     pub async fn serve_stream(
@@ -52,6 +60,10 @@ impl RemoteControlService {
     ) -> Result<(), Error> {
         while let Some(request) = stream.try_next().await.context("next RemoteControl request")? {
             match request {
+                rcs::RemoteControlRequest::AddId { id, responder } => {
+                    self.ids.borrow_mut().push(id);
+                    responder.send()?;
+                }
                 rcs::RemoteControlRequest::IdentifyHost { responder } => {
                     self.clone().identify_host(responder).await?;
                 }
@@ -210,12 +222,16 @@ impl RemoteControlService {
             }
         };
 
+        // TODO(raggi): limit size to stay under message size limit.
+        let ids = self.ids.borrow().clone();
+
         responder
             .send(&mut Ok(rcs::IdentifyHostResponse {
                 nodename: Some(nodename),
                 addresses: Some(result),
                 boot_timestamp_nanos: Some(self.boot_timestamp_nanos),
                 serial_number,
+                ids: Some(ids),
                 ..rcs::IdentifyHostResponse::EMPTY
             }))
             .context("sending IdentifyHost response")?;
@@ -373,6 +389,25 @@ mod tests {
         assert_eq!(v6.addr, fnet::IpAddress::Ipv6(fnet::Ipv6Address { addr: IPV6_ADDR }));
 
         assert_eq!(resp.boot_timestamp_nanos.unwrap(), BOOT_TIME);
+
+        Ok(())
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_ids_in_host_identify() -> Result<(), Error> {
+        let rcs_proxy = setup_rcs_proxy();
+
+        let ident = rcs_proxy.identify_host().await.unwrap().unwrap();
+        assert_eq!(ident.ids, Some(vec![]));
+
+        rcs_proxy.add_id(1234).await.unwrap();
+        rcs_proxy.add_id(4567).await.unwrap();
+
+        let ident = rcs_proxy.identify_host().await.unwrap().unwrap();
+        let ids = ident.ids.unwrap();
+        assert_eq!(ids.len(), 2);
+        assert_eq!(1234u64, ids[0]);
+        assert_eq!(4567u64, ids[1]);
 
         Ok(())
     }

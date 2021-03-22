@@ -130,30 +130,25 @@ impl DaemonEventHandler {
     }
 
     async fn handle_overnet_peer(&self, node_id: u64, tc: &TargetCollection) {
-        // It's possible that the target will be dropped in the middle of this operation.
-        // Do not exit an error, just log and exit this round.
-        let res = {
-            match RcsConnection::new(&mut NodeId { id: node_id })
-                .await
-                .context("unable to convert proxy to target")
-            {
-                Ok(r) => Target::from_rcs_connection(r)
-                    .await
-                    .map_err(|e| anyhow!("unable to convert proxy to target: {}", e)),
-                Err(e) => Err(e),
-            }
-        };
-
-        let target = match res {
-            Ok(t) => t,
+        let rcs = match RcsConnection::new(&mut NodeId { id: node_id }).await {
+            Ok(rcs) => rcs,
             Err(e) => {
-                log::error!("{:#?}", e);
+                log::error!("Target from Overnet {} failed to connect to RCS: {:?}", node_id, e);
                 return;
             }
         };
 
-        log::trace!("Found new target via overnet: {}", target.nodename_str().await);
-        tc.merge_insert(target).then(|target| async move { target.run_logger().await }).await;
+        let target = match Target::from_rcs_connection(rcs).await {
+            Ok(target) => target,
+            Err(err) => {
+                log::error!("Target from Overnet {} could not be identified: {:?}", node_id, err);
+                return;
+            }
+        };
+
+        log::trace!("Target from Overnet {} is {}", node_id, target.nodename_str().await);
+        let target = tc.merge_insert(target).await;
+        target.run_logger().await;
     }
 
     async fn handle_fastboot(&self, t: TargetInfo, tc: &TargetCollection) {
@@ -635,6 +630,7 @@ impl Daemon {
 mod test {
     use {
         super::*,
+        crate::target::TargetAddr,
         anyhow::bail,
         async_std::future::timeout,
         fidl_fuchsia_developer_bridge as bridge,
@@ -642,10 +638,10 @@ mod test {
         fidl_fuchsia_developer_remotecontrol as rcs,
         fidl_fuchsia_developer_remotecontrol::{RemoteControlMarker, RemoteControlProxy},
         fidl_fuchsia_net as fidl_net,
-        fidl_fuchsia_net::{IpAddress, Ipv4Address, Subnet},
+        fidl_fuchsia_net::Subnet,
         fidl_fuchsia_overnet_protocol::NodeId,
         fuchsia_async::Task,
-        std::net::{SocketAddr, SocketAddrV6},
+        std::net::SocketAddr,
     };
 
     struct TestHookFakeFastboot {
@@ -666,7 +662,9 @@ mod test {
         pub async fn send_mdns_discovery_event(&mut self, t: Target) {
             let nodename =
                 t.nodename().await.expect("Should not send mDns discovery for unnamed node.");
+
             let nodename_clone = nodename.clone();
+
             self.event_queue
                 .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
                     nodename: Some(nodename.clone()),
@@ -686,14 +684,8 @@ mod test {
                 .await
                 .unwrap();
 
-            self.tc
-                .get(nodename)
-                .await
-                .unwrap()
-                .events
-                .wait_for(None, |e| e == TargetEvent::RcsActivated)
-                .await
-                .unwrap();
+            let target = self.tc.get(nodename).await.unwrap();
+            target.events.wait_for(None, |e| e == TargetEvent::RcsActivated).await.unwrap();
         }
 
         pub async fn send_fastboot_discovery_event(&mut self, t: Target) {
@@ -740,7 +732,7 @@ mod test {
                         .await;
                 }
                 DaemonEvent::NewTarget(_) => {}
-                _ => panic!("unexpected event"),
+                e => panic!("unexpected event: {:#?}", e),
             }
 
             Ok(false)
@@ -758,14 +750,14 @@ mod test {
                 DaemonEvent::WireTraffic(WireTrafficType::Mdns(t)) => {
                     tc.merge_insert(Target::from_target_info(t)).await;
                 }
-                DaemonEvent::NewTarget(TargetInfo { nodename: Some(n), .. }) => {
+                DaemonEvent::NewTarget(TargetInfo { nodename: Some(n), addresses, .. }) => {
                     let rcs = RcsConnection::new_with_proxy(
-                        setup_fake_target_service(n),
+                        setup_fake_target_service(n, addresses.iter().map(Into::into).collect()),
                         &NodeId { id: 0u64 },
                     );
                     tc.merge_insert(Target::from_rcs_connection(rcs).await.unwrap()).await;
                 }
-                _ => panic!("unexpected event"),
+                e => panic!("unexpected event: {:#?}", e),
             }
 
             Ok(false)
@@ -816,12 +808,12 @@ mod test {
     ) -> (TargetControl, Arc<Ascendd>) {
         let mut res = spawn_daemon_server_with_target_ctrl(stream).await;
         let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let fake_target = Target::new(nodename.to_string());
-        fake_target
-            .addrs_insert(
-                SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 1)).into(),
-            )
-            .await;
+        let fake_target = Target::new_with_addrs(
+            Some(nodename.to_string()),
+            BTreeSet::from_iter(
+                vec![TargetAddr::from("[fe80::1%1]:22".parse::<SocketAddr>().unwrap())].into_iter(),
+            ),
+        );
         res.send_mdns_discovery_event(fake_target).await;
         (res, ascendd)
     }
@@ -837,7 +829,7 @@ mod test {
         (res, ascendd)
     }
 
-    fn setup_fake_target_service(nodename: String) -> RemoteControlProxy {
+    fn setup_fake_target_service(nodename: String, addrs: Vec<SocketAddr>) -> RemoteControlProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RemoteControlMarker>().unwrap();
 
@@ -845,16 +837,27 @@ mod test {
             while let Ok(Some(req)) = stream.try_next().await {
                 match req {
                     rcs::RemoteControlRequest::IdentifyHost { responder } => {
-                        let result: Vec<Subnet> = vec![Subnet {
-                            addr: IpAddress::Ipv4(Ipv4Address { addr: [254, 254, 0, 1] }),
-                            prefix_len: 24,
-                        }];
+                        let addrs = addrs
+                            .iter()
+                            .map(|addr| Subnet {
+                                addr: match addr.ip() {
+                                    std::net::IpAddr::V4(i) => fidl_fuchsia_net::IpAddress::Ipv4(
+                                        fidl_fuchsia_net::Ipv4Address { addr: i.octets() },
+                                    ),
+                                    std::net::IpAddr::V6(i) => fidl_fuchsia_net::IpAddress::Ipv6(
+                                        fidl_fuchsia_net::Ipv6Address { addr: i.octets() },
+                                    ),
+                                },
+                                // XXX: fictitious.
+                                prefix_len: 24,
+                            })
+                            .collect();
                         let nodename =
                             if nodename.len() == 0 { None } else { Some(nodename.clone()) };
                         responder
                             .send(&mut Ok(rcs::IdentifyHostResponse {
                                 nodename,
-                                addresses: Some(result),
+                                addresses: Some(addrs),
                                 ..rcs::IdentifyHostResponse::EMPTY
                             }))
                             .context("sending testing response")
@@ -936,6 +939,7 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
+
         ctrl.send_mdns_discovery_event(Target::new("baz".to_string())).await;
         ctrl.send_mdns_discovery_event(Target::new("quux".to_string())).await;
         let res = daemon_proxy.list_targets("").await.unwrap();

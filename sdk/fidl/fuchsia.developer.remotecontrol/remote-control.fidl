@@ -42,4 +42,12 @@ protocol RemoteControl {
     Select(diagnostics.Selector selector)
         -> (vector<ServiceMatch>:MAX_NUM_MATCHES matches)
         error SelectError;
+
+    // AddId adds an identifier that can be recovered from IdentifyHost in order
+    // to match this peer against a list of possible source peers. Callers are
+    // expected to pick IDs randomly across the ID space, and only to add new
+    // IDs to help identify transport or physical layer topologies. ffx uses
+    // this API to pair an RCS instance discovered on Overnet to a device that
+    // was discovered over mdns, for example.
+    AddId(uint64 id) -> ();
 };
