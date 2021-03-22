@@ -880,58 +880,17 @@ func (c *compiler) compileParameterArray(payload fidl.EncodedCompoundIdentifier)
 }
 
 func (c *compiler) compileMethodResponse(method fidl.Method) MethodResponse {
-	var (
-		resultUnion    fidl.Union
-		resultType     fidl.Type
-		valueStruct    *fidl.Struct
-		valueType      fidl.Type
-		isResult       bool
-		isReponseUnion bool
-		parameters     []StructMember
-	)
-	payload := c.getPayload(method.ResponsePayload).Members
-
-	// Method needs to have exactly one response arg
-	if !method.HasResponse || len(payload) != 1 {
-		goto NotAResult
-	}
-	// That arg must be a non-nullable identifier
-	resultType = payload[0].Type
-	if resultType.Kind != fidl.IdentifierType || resultType.Nullable {
-		goto NotAResult
-	}
-	// That identifier is for a union
-	isReponseUnion = false
-	for _, union := range c.typesRoot.Unions {
-		if union.Name == resultType.Identifier {
-			resultUnion = union
-			isReponseUnion = true
-			break
+	if method.MethodResult == nil {
+		response := c.compileParameterArray(method.ResponsePayload)
+		return MethodResponse{
+			WireParameters:   response,
+			MethodParameters: response,
 		}
-	}
-	if !isReponseUnion {
-		goto NotAResult
-	}
-	// Union needs the [Result] attribute, two members
-	_, isResult = resultUnion.LookupAttribute("Result")
-	if !isResult || len(resultUnion.Members) != 2 {
-		goto NotAResult
-	}
-
-	// Find the struct
-	valueType = resultUnion.Members[0].Type
-	for _, decl := range c.typesRoot.Structs {
-		if decl.Name == valueType.Identifier {
-			valueStruct = &decl
-			break
-		}
-	}
-	if valueStruct == nil {
-		goto NotAResult
 	}
 
 	// Turn the struct into a parameter array that will be used for function arguments.
-	for _, v := range valueStruct.Members {
+	var parameters []StructMember
+	for _, v := range method.MethodResult.ValueStruct.Members {
 		parameters = append(parameters, c.compileStructMember(v))
 	}
 
@@ -939,16 +898,9 @@ func (c *compiler) compileMethodResponse(method fidl.Method) MethodResponse {
 		WireParameters:   c.compileParameterArray(method.ResponsePayload),
 		MethodParameters: parameters,
 		HasError:         true,
-		ResultType:       c.compileUnion(resultUnion),
-		ValueType:        c.compileType(resultUnion.Members[0].Type),
-		ErrorType:        c.compileType(resultUnion.Members[1].Type),
-	}
-
-NotAResult:
-	response := c.compileParameterArray(method.ResponsePayload)
-	return MethodResponse{
-		WireParameters:   response,
-		MethodParameters: response,
+		ResultType:       c.compileUnion(*method.MethodResult.ResultUnion),
+		ValueType:        c.compileType(method.MethodResult.ValueType),
+		ErrorType:        c.compileType(method.MethodResult.ErrorType),
 	}
 }
 

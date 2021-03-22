@@ -82,27 +82,13 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 		r.Members = append(r.Members, c.compileUnionMember(v))
 	}
 
-	// TODO(yifeit): Refer to fxrev.dev/502839 and replace this with equivalent logic in fidlgen.
-	if val.Attributes.HasAttribute("Result") {
-		if len(r.Members) != 2 {
-			panic(fmt.Sprintf("result union must have two members: %v", val.Name))
-		}
-		if val.Members[0].Type.Kind != fidl.IdentifierType {
-			panic(fmt.Sprintf("value member of result union must be an identifier: %v", val.Name))
-		}
-		valueStructDeclInfo, ok := c.decls[val.Members[0].Type.Identifier]
-		if !ok {
-			panic(fmt.Sprintf("unknown identifier: %v", val.Members[0].Type.Identifier))
-		}
-		if valueStructDeclInfo.Type != "struct" {
-			panic(fmt.Sprintf("first member of result union not a struct: %v", val.Name))
-		}
+	if val.MethodResult != nil {
 		result := Result{
 			ResultDecl:      r.DeclName,
 			ValueStructDecl: r.Members[0].Type.TypeName,
 			ErrorDecl:       r.Members[1].Type.TypeName,
 		}
-		c.resultForStruct[val.Members[0].Type.Identifier] = &result
+		c.resultForStruct[val.MethodResult.ValueType.Identifier] = &result
 		c.resultForUnion[val.Name] = &result
 		r.Result = &result
 	}

@@ -47,6 +47,7 @@ func DecodeJSONIr(r io.Reader) (Root, error) {
 	}
 
 	root.initializeDeclarationsMap()
+	root.initializeMethodResults()
 
 	return root, nil
 }
@@ -633,6 +634,8 @@ type Union struct {
 	Strictness   `json:"strict"`
 	Resourceness `json:"resource"`
 	TypeShapeV1  TypeShape `json:"type_shape_v1"`
+
+	MethodResult *MethodResult
 }
 
 // UnionMember represents the declaration of a field in a FIDL extensible
@@ -701,6 +704,8 @@ type Struct struct {
 	Members      []StructMember `json:"members"`
 	Resourceness `json:"resource"`
 	TypeShapeV1  TypeShape `json:"type_shape_v1"`
+
+	MethodResult *MethodResult
 }
 
 // StructMember represents the declaration of a field in a FIDL struct.
@@ -796,12 +801,57 @@ type Method struct {
 	ResponseTypeShapeV1 TypeShape                 `json:"maybe_response_type_shape_v1,omitempty"`
 	ResponsePadding     bool                      `json:"maybe_response_has_padding,omitempty"`
 	ResponseFlexible    bool                      `json:"experimental_maybe_response_has_flexible_envelope,omitempty"`
+
+	MethodResult *MethodResult
 }
 
 // IsTransitional returns whether this method has the `Transitional` attribute.
 func (m *Method) IsTransitional() bool {
 	_, transitional := m.LookupAttribute("Transitional")
 	return transitional
+}
+
+// MethodResult represents how FIDL methods that use the error syntax are manifested in the IR.
+type MethodResult struct {
+	Method      *Method
+	ResultType  Type
+	ResultUnion *Union
+	ValueMember *UnionMember
+	ValueType   Type
+	ValueStruct *Struct
+	ErrorMember *UnionMember
+	ErrorType   Type
+}
+
+func (m *Method) calculateMethodResult(r *Root) *MethodResult {
+	var mr = MethodResult{Method: m}
+
+	// Methods with a result have a single response parameter.
+	if !m.HasResponse || len(m.Response) != 1 {
+		return nil
+	}
+	mr.ResultType = m.Response[0].Type
+
+	// Result response parameters are always unions
+	if mr.ResultType.Kind != IdentifierType ||
+		r.Decls[mr.ResultType.Identifier] != UnionDeclType {
+		return nil
+	}
+
+	// Find the result union
+	mr.ResultUnion, _ = r.LookupDecl(mr.ResultType.Identifier).(*Union)
+	if !mr.ResultUnion.HasAttribute("Result") {
+		// After all that it's not even a result union.
+		return nil
+	}
+
+	mr.ValueMember = &mr.ResultUnion.Members[0]
+	mr.ValueType = mr.ValueMember.Type
+	mr.ValueStruct = r.LookupDecl(mr.ValueType.Identifier).(*Struct)
+	mr.ErrorMember = &mr.ResultUnion.Members[1]
+	mr.ErrorType = mr.ErrorMember.Type
+
+	return &mr
 }
 
 // Parameter represents a parameter to a FIDL method.
@@ -1022,6 +1072,20 @@ func (r *Root) initializeDeclarationsMap() {
 	}
 	for i, d := range r.Unions {
 		r.declarations[d.Name] = &r.Unions[i]
+	}
+}
+
+func (r *Root) initializeMethodResults() {
+	for p := 0; p < len(r.Protocols); p++ {
+		protocol := &r.Protocols[p]
+		for m := 0; m < len(protocol.Methods); m++ {
+			mr := protocol.Methods[m].calculateMethodResult(r)
+			if mr != nil {
+				mr.Method.MethodResult = mr
+				mr.ResultUnion.MethodResult = mr
+				mr.ValueStruct.MethodResult = mr
+			}
+		}
 	}
 }
 

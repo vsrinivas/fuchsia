@@ -1154,34 +1154,26 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 	return r
 }
 
-func (c *compiler) compileResultFromUnion(val fidl.Union, root Root) Result {
+func (c *compiler) compileResultFromUnion(val fidl.Union, mr fidl.MethodResult, root Root) Result {
 	r := Result{
 		Attributes: val.Attributes,
 		ECI:        val.Name,
 		Name:       c.compileCamelCompoundIdentifier(val.Name),
 		Ok:         []ResultOkEntry{},
-		ErrOGType:  val.Members[1].Type,
-		ErrType:    c.compileUnionMember(val.Members[1]).Type,
+		ErrOGType:  mr.ErrorType,
+		ErrType:    c.compileUnionMember(*mr.ErrorMember).Type,
 		Size:       val.TypeShapeV1.InlineSize,
 		Alignment:  val.TypeShapeV1.Alignment,
 	}
 
-	OkArm := val.Members[0]
-	ci := c.compileCamelCompoundIdentifier(OkArm.Type.Identifier)
-
-	// always a struct on the Ok arms in Results
-	for _, v := range root.Structs {
-		if v.Name == ci {
-			for _, m := range v.Members {
-				wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&m.OGType)
-				r.Ok = append(r.Ok, ResultOkEntry{
-					OGType:            m.OGType,
-					Type:              m.Type,
-					HasHandleMetadata: hasHandleMetadata,
-					HandleWrapperName: wrapperName,
-				})
-			}
-		}
+	for _, m := range root.findStruct(mr.ValueStruct.Name).Members {
+		wrapperName, hasHandleMetadata := c.compileHandleMetadataWrapper(&m.OGType)
+		r.Ok = append(r.Ok, ResultOkEntry{
+			OGType:            m.OGType,
+			Type:              m.Type,
+			HasHandleMetadata: hasHandleMetadata,
+			HandleWrapperName: wrapperName,
+		})
 	}
 
 	c.results[r.ECI] = r
@@ -1585,8 +1577,9 @@ func Compile(r fidl.Root) Root {
 	}
 
 	for _, v := range r.Unions {
-		if v.Attributes.HasAttribute("Result") {
-			root.Results = append(root.Results, c.compileResultFromUnion(v, root))
+		if v.MethodResult != nil {
+			root.Results = append(root.Results,
+				c.compileResultFromUnion(v, *v.MethodResult, root))
 		} else {
 			root.Unions = append(root.Unions, c.compileUnion(v))
 		}
