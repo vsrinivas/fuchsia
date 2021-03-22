@@ -334,7 +334,9 @@ END_DATA(zbi_paddr)
 DATA(kernel_entry_paddr)
     .quad -1
 END_DATA(kernel_entry_paddr)
-
+DATA(kernel_entry_ticks)
+    .quad -1, -1
+END_DATA(kernel_entry_ticks)
 DATA(page_tables_not_ready)
     .long       1
 END_DATA(page_tables_not_ready)
