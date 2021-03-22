@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::accessibility::types::AccessibilityInfo,
-    crate::agent::restore_agent,
+    crate::agent::{restore_agent, Blueprint},
     crate::base::{get_all_setting_types, SettingInfo, SettingType, UnknownInfo},
     crate::do_not_disturb::types::DoNotDisturbInfo,
     crate::handler::base::{ContextBuilder, Request},
@@ -11,7 +11,7 @@ use {
     crate::handler::device_storage::{DeviceStorageCompatible, DeviceStorageFactory},
     crate::handler::setting_handler::persist::WriteResult,
     crate::handler::setting_handler::{
-        controller, persist, persist::controller as data_controller, persist::write,
+        controller, persist, persist::controller as data_controller,
         persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, persist::Storage,
         BoxedController, ClientImpl, ClientProxy, Command, ControllerError, ControllerStateResult,
         Event, GenerateController, Handler, IntoHandlerResult, Payload, SettingHandlerResult,
@@ -24,7 +24,7 @@ use {
     async_trait::async_trait,
     futures::channel::mpsc::{unbounded, UnboundedSender},
     futures::StreamExt,
-    std::collections::HashMap,
+    std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
     std::marker::PhantomData,
     std::sync::Arc,
@@ -136,8 +136,47 @@ async fn test_write_notify() {
         .expect("messenger should be created")
         .1
         .get_signature();
+
     let storage_factory = Arc::new(InMemoryStorageFactory::new());
     storage_factory.initialize_storage::<AccessibilityInfo>().await;
+
+    let (invocation_messenger, _) = factory.create(MessengerType::Unbound).await.unwrap();
+    let (_, agent_receptor) = factory.create(MessengerType::Unbound).await.unwrap();
+    let agent_receptor_signature = agent_receptor.get_signature();
+    let agent_context = crate::agent::Context::new(
+        agent_receptor,
+        factory,
+        {
+            let mut settings = HashSet::new();
+            settings.insert(SettingType::Accessibility);
+            settings
+        },
+        None,
+    )
+    .await;
+
+    let blueprint = crate::agent::storage_agent::Blueprint::new(Arc::clone(&storage_factory));
+    blueprint.create(agent_context).await;
+    let mut invocation_receptor = invocation_messenger
+        .message(
+            service::Payload::Agent(crate::agent::Payload::Invocation(crate::agent::Invocation {
+                lifespan: crate::agent::Lifespan::Initialization,
+                service_context: crate::service_context::ServiceContext::create(None, None),
+            })),
+            crate::message::base::Audience::Messenger(agent_receptor_signature),
+        )
+        .send();
+    // Wait for storage to be initialized.
+    while let Ok((payload, _)) = invocation_receptor.next_payload().await {
+        if let service::Payload::Agent(crate::agent::Payload::Complete(result)) = payload {
+            if let Ok(()) = result {
+                break;
+            } else {
+                panic!("Bad result from storage agent invocation: {:?}", result);
+            }
+        }
+    }
+
     let context = ContextBuilder::new(
         SettingType::Accessibility,
         Arc::clone(&storage_factory),
@@ -206,7 +245,7 @@ async fn verify_write_behavior<S: DeviceStorageCompatible + Into<SettingInfo> + 
     value: S,
     notified: bool,
 ) {
-    let result = write(proxy, value, false).await;
+    let result = proxy.write_setting(value.into(), false).await;
 
     assert_eq!(notified, result.notified());
     assert!(result.is_ok() && result.into_handler_result().is_ok());

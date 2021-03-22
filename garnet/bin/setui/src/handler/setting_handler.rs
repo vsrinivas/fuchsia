@@ -356,7 +356,6 @@ pub mod persist {
     use crate::service;
     use crate::storage;
     use futures::StreamExt;
-    use std::borrow::Borrow;
 
     pub trait Storage: DeviceStorageConvertible + Into<SettingInfo> + Send + Sync {}
     impl<T: DeviceStorageConvertible + Into<SettingInfo> + Send + Sync> Storage for T {}
@@ -381,17 +380,17 @@ pub mod persist {
     #[derive(Clone)]
     pub struct ClientProxy {
         base: BaseProxy,
-        storage: Arc<DeviceStorage>,
         setting_type: SettingType,
     }
 
     impl ClientProxy {
         pub async fn new(
             base_proxy: BaseProxy,
-            storage: Arc<DeviceStorage>,
+            // TODO(fxbug.dev/72706) Remove storage from clients.
+            _storage: Arc<DeviceStorage>,
             setting_type: SettingType,
         ) -> Self {
-            Self { base: base_proxy, storage, setting_type }
+            Self { base: base_proxy, setting_type }
         }
 
         pub async fn get_service_context(&self) -> ServiceContextHandle {
@@ -400,13 +399,6 @@ pub mod persist {
 
         pub async fn notify(&self, event: Event) {
             self.base.notify(event).await;
-        }
-
-        pub async fn read<S>(&self) -> S
-        where
-            S: Storage + 'static,
-        {
-            self.storage.get::<S::Storable>().await.into()
         }
 
         pub async fn read_setting_info<T: HasSettingType>(&self) -> SettingInfo {
@@ -450,33 +442,8 @@ pub mod persist {
             }
         }
 
-        /// Returns a boolean indicating whether the value was written or an
-        /// Error if write failed. the argument `write_through` will block
-        /// returning until the value has been completely written to persistent
-        /// store, rather than any temporary in-memory caching.
-        pub async fn write<S>(
-            &self,
-            value: S,
-            write_through: bool,
-        ) -> Result<UpdateState, ControllerError>
-        where
-            S: Storage + 'static,
-        {
-            let storable_value = value.get_storable();
-            let storable_value: &S::Storable = storable_value.borrow();
-            if storable_value == &self.storage.get::<S::Storable>().await {
-                return Ok(UpdateState::Unchanged);
-            }
-
-            match self.storage.write(storable_value, write_through).await {
-                Ok(_) => {
-                    self.notify(Event::Changed(value.into())).await;
-                    Ok(UpdateState::Updated)
-                }
-                Err(_) => Err(ControllerError::WriteFailure(self.setting_type)),
-            }
-        }
-
+        /// The argument `write_through` will block returning until the value has been completely
+        /// written to persistent store, rather than any temporary in-memory caching.
         pub async fn write_setting(
             &self,
             setting_info: SettingInfo,
@@ -539,15 +506,6 @@ pub mod persist {
         fn into_handler_result(self) -> SettingHandlerResult {
             self.map(|_| None)
         }
-    }
-
-    // TODO(fxbug.dev/67371) Remove since this isn't really necessary.
-    pub async fn write<S: Storage + 'static>(
-        client: &ClientProxy,
-        value: S,
-        write_through: bool,
-    ) -> Result<UpdateState, ControllerError> {
-        client.write(value, write_through).await
     }
 
     pub struct Handler<C: controller::Create + super::controller::Handle + Send + Sync + 'static> {
