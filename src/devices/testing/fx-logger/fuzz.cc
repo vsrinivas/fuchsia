@@ -27,7 +27,12 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
   FuzzedDataProvider provider(data, size);
   std::string str = provider.ConsumeRandomLengthString();
   std::string tag = provider.ConsumeRandomLengthString();
+  std::string file = provider.ConsumeRandomLengthString();
+  int line = provider.ConsumeIntegral<int>();
   FX_LOGF(DEBUG, tag.c_str(), "%s%d%d%lu", str.c_str(), provider.ConsumeIntegral<int>(),
           provider.ConsumeIntegral<int>(), provider.ConsumeIntegral<uint64_t>());
+  fx_logger_logf_with_source(fx_log_get_logger(), FX_LOG_INFO, tag.c_str(), file.c_str(), line,
+                             "%s%d%d%lu", str.c_str(), provider.ConsumeIntegral<int>(),
+                             provider.ConsumeIntegral<int>(), provider.ConsumeIntegral<uint64_t>());
   return 0;
 }
