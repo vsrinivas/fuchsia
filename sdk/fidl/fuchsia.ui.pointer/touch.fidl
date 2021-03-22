@@ -4,7 +4,9 @@
 
 library fuchsia.ui.pointer;
 
-const uint32 MAX_EVENT = 128;
+using zx;
+
+const uint32 TOUCH_MAX_EVENT = 128;
 
 /// A method for a client to receive touch pointer events and respond in a
 /// global gesture disambiguation protocol.
@@ -60,7 +62,7 @@ protocol TouchEventSource {
     ///
     /// [1] The hanging get pattern enables straightforward API evolution, but
     /// unfortunately does not admit an idiomatic matching of response to event.
-    Watch(vector<TouchResponse>:MAX_EVENT responses) -> (vector<TouchEvent>:MAX_EVENT events);
+    Watch(vector<TouchResponse>:TOUCH_MAX_EVENT responses) -> (vector<TouchEvent>:TOUCH_MAX_EVENT events);
 
     /// The gesture protocol allows a client to enact a "hold" on an event
     /// stream, to prevent resolution of event stream ownership, even after the
@@ -107,9 +109,6 @@ table TouchEvent {
     /// An identifier to correlate this event's send/receive occurrence across
     /// component boundaries or abstraction layers.
     6: uint64 trace_flow_id;
-
-    /// Certain clients may receive augmented data.
-    7: fuchsia.ui.pointer.augment.LocalHitData local_hit_data;
 };
 
 /// Information about a device that issues touch event streams.

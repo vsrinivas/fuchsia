@@ -5,12 +5,17 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.ui.pointer") {
-  sdk_category = "experimental"
+  sdk_category = "partner"
 
   sources = [
     "mouse.fidl",
     "state.fidl",
     "touch.fidl",
     "view.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.input.report",
+    "//zircon/vdso/zx",
   ]
 }

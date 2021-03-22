@@ -4,10 +4,10 @@
 
 library fuchsia.ui.pointer;
 
-using fuchsia.input.report;
-using fuchsia.ui.pointer.augment;
+using fuchsia.input.report as device;
+using zx;
 
-const uint32 MAX_EVENT = 128;
+const uint32 MOUSE_MAX_EVENT = 128;
 
 /// A method for a client to receive mouse pointer events.
 ///
@@ -48,7 +48,7 @@ protocol MouseEventSource {
     /// notifying the client. If a |MouseEvent| carries |ViewParameters|, these
     /// parameters apply to successive |MousePointerSample|s until the next
     /// |ViewParameters|.
-    Watch() -> (vector<MouseEvent>:MAX_EVENT events);
+    Watch() -> (vector<MouseEvent>:MOUSE_MAX_EVENT events);
 };
 
 /// The self-sufficient, self-consistent collection of pointer-related data,
@@ -85,9 +85,6 @@ table MouseEvent {
     /// An identifier to correlate this event's send/receive occurrence across
     /// component boundaries or abstraction layers.
     6: uint64 trace_flow_id;
-
-    /// Certain clients may receive augmented data.
-    7: fuchsia.ui.pointer.augment.ViewGlobalMouseEvent global_mouse_event;
 };
 
 /// Information about a device that issues a mouse event stream.
@@ -103,7 +100,7 @@ table MouseDeviceInfo {
     3: fuchsia.input.report.Axis scroll_h_range;
 
     /// Button identifiers issued by the device.
-    4: vector<uint8>:MOUSE_MAX_NUM_BUTTONS buttons;
+    4: vector<uint8>:device.MOUSE_MAX_NUM_BUTTONS buttons;
 };
 
 /// A description of each sampled data point in a mouse event stream.
@@ -127,7 +124,7 @@ table MousePointerSample {
     5: int64 scroll_h;
 
     /// Identifiers of currently pressed buttons.
-    6: vector<uint8>:MOUSE_MAX_NUM_BUTTONS pressed_buttons;
+    6: vector<uint8>:device.MOUSE_MAX_NUM_BUTTONS pressed_buttons;
 };
 
 /// The status of a mouse event stream, sent from server to client.
