@@ -5,7 +5,7 @@
 use crate::base::SettingInfo;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
     controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
@@ -47,13 +47,15 @@ impl controller::Handle for PrivacyController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetUserDataSharingConsent(user_data_sharing_consent) => {
-                let mut current = self.client.read::<PrivacyInfo>().await;
+                let mut current = self.client.read_setting::<PrivacyInfo>().await;
 
                 // Save the value locally.
                 current.user_data_sharing_consent = user_data_sharing_consent;
-                Some(write(&self.client, current, false).await.into_handler_result())
+                Some(self.client.write_setting(current.into(), false).await.into_handler_result())
             }
-            Request::Get => Some(Ok(Some(SettingInfo::Privacy(self.client.read().await)))),
+            Request::Get => {
+                Some(self.client.read_setting_info::<PrivacyInfo>().await.into_handler_result())
+            }
             _ => None,
         }
     }
