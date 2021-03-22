@@ -217,7 +217,16 @@ func displayAsDefault(node *Node, level int) string {
 	}
 	path = fmt.Sprintf("%s%s", strings.Repeat("  ", level), path)
 	ret := fmt.Sprintf("%-80s | %10s %10s\n", path, formatSize(node.size), copies)
-	for _, n := range node.children {
+
+	// Iterate over the childen in a sorted order.
+	keys := make([]string, 0, len(node.children))
+	for k := range node.children {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		n := node.children[k]
 		ret += n.storageBreakdown(level + 1)
 	}
 	return ret
@@ -229,7 +238,16 @@ func displayAsDefault(node *Node, level int) string {
 func displayAsBlob(node *Node, level int) string {
 	nc := len(node.children)
 	ret := fmt.Sprintf("%vBlob ID %v (%v reuses):\n", strings.Repeat("  ", level), node.fullPath, nc)
-	for _, n := range node.children {
+
+	// Iterate over the childen in a sorted order.
+	keys := make([]string, 0, len(node.children))
+	for k := range node.children {
+		keys = append(keys, k)
+	}
+	sort.Strings(keys)
+
+	for _, k := range keys {
+		n := node.children[k]
 		ret += n.storageBreakdown(level + 1)
 	}
 	return ret
