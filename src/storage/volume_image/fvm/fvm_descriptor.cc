@@ -7,13 +7,16 @@
 #include <cstdint>
 #include <functional>
 #include <limits>
+#include <optional>
 #include <string>
 #include <string_view>
 #include <utility>
 
 #include <fbl/algorithm.h>
+#include <fbl/span.h>
 
 #include "src/storage/fvm/format.h"
+#include "src/storage/fvm/metadata.h"
 #include "src/storage/volume_image/address_descriptor.h"
 #include "src/storage/volume_image/fvm/options.h"
 #include "src/storage/volume_image/options.h"
@@ -145,6 +148,151 @@ fit::result<FvmDescriptor, std::string> FvmDescriptor::Builder::Build() {
   descriptor.options_ = std::move(options_.value());
 
   return fit::ok(std::move(descriptor));
+}
+
+fit::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& writer) const {
+  fvm::Header header = internal::MakeHeader(options_, slice_count_);
+
+  std::vector<fvm::VPartitionEntry> vpartitions;
+  vpartitions.reserve(partitions_.size());
+
+  std::vector<fvm::SliceEntry> slices;
+  slices.reserve(slice_count_);
+
+  // Partitions start at index 1.
+  size_t current_vpartition = 1;
+  for (const auto& partition : partitions()) {
+    fvm::VPartitionEntry vpartition = {};
+    uint64_t partition_slices = 0;
+
+    memcpy(vpartition.unsafe_name, partition.volume().name.data(), partition.volume().name.size());
+    memcpy(vpartition.type, partition.volume().type.data(), partition.volume().type.size());
+    memcpy(vpartition.guid, partition.volume().instance.data(), partition.volume().instance.size());
+    vpartition.flags = 0;
+
+    for (const auto& mapping : partition.address().mappings) {
+      // Slice info for each mapping.
+      uint64_t size = std::max(mapping.count, mapping.size.value_or(0));
+      uint64_t slice_count = GetBlockCount(mapping.target, size, options_.slice_size);
+      partition_slices += slice_count;
+      uint64_t start_slice = GetBlockFromBytes(mapping.target, options_.slice_size);
+
+      if (!IsOffsetBlockAligned(mapping.target, options_.slice_size)) {
+        return fit::error("Partition " + partition.volume().name + " contains unaligned mapping " +
+                          std::to_string(mapping.target) +
+                          ". FVM Sparse Image requires slice aligned extent |vslice_start|.");
+      }
+
+      // Slice entry for each slice in the mapping.
+      for (uint64_t vslice_offset = 0; vslice_offset < slice_count; ++vslice_offset) {
+        slices.emplace_back(current_vpartition, start_slice + vslice_offset);
+      }
+    }
+    vpartition.slices = partition_slices;
+    vpartitions.push_back(vpartition);
+    current_vpartition++;
+  }
+
+  // At this point we've written all the slice contents, now write the metadata.
+  auto fvm_metadata_or = fvm::Metadata::Synthesize(header, vpartitions.data(), vpartitions.size(),
+                                                   slices.data(), slices.size());
+  if (fvm_metadata_or.is_error()) {
+    return fit::error(
+        "FvmDescriptor::WriteBlockImage failed to synthesize fvm metadata with error code : " +
+        std::to_string(fvm_metadata_or.status_value()));
+  }
+  auto fvm_metadata = std::move(fvm_metadata_or.value());
+
+  auto metadata_view = fbl::Span<const uint8_t>(
+      reinterpret_cast<const uint8_t*>(fvm_metadata.Get()->data()), fvm_metadata.Get()->size());
+  auto metadata_write_result = writer.Write(
+      fvm_metadata.GetHeader().GetSuperblockOffset(fvm::SuperblockType::kPrimary), metadata_view);
+  if (metadata_write_result.is_error()) {
+    return metadata_write_result.take_error_result();
+  }
+
+  auto secondary_metadata_write_result = writer.Write(
+      fvm_metadata.GetHeader().GetSuperblockOffset(fvm::SuperblockType::kSecondary), metadata_view);
+  if (secondary_metadata_write_result.is_error()) {
+    return secondary_metadata_write_result.take_error_result();
+  }
+
+  // Now write the data for each slice starting at physical slice 1, since it 1-indexed.
+  // This is achieved by streaming the data into the slices, in the same order they are read.
+  //
+  // Slices that are prefilled will have 0, and slices that are allocated but not used will be
+  // skipped.
+  //
+  // In order to guarantee that image has the right size, if the last slice of the image is not
+  // written, the last block of the last slice, will be filled with zeroes. This will force the
+  // image to have the right size, if its growing dynamically.
+  uint64_t current_physical_slice = 1;
+  std::vector<uint8_t> slice_buffer;
+  slice_buffer.resize(options_.slice_size, 0);
+
+  for (const auto& partition : partitions()) {
+    for (const auto& mapping : partition.address().mappings) {
+      uint64_t size = std::max(mapping.count, mapping.size.value_or(0));
+      uint64_t slice_count = GetBlockCount(mapping.target, size, options_.slice_size);
+      uint64_t data_slice_count = GetBlockCount(mapping.target, mapping.count, options_.slice_size);
+
+      // Check if we should fill non data backed slices in this partition mapping explicitly.
+      auto fill_value_it = mapping.options.find(EnumAsString(AddressMapOption::kFill));
+      std::optional<uint8_t> fill_value = std::nullopt;
+      if (fill_value_it != mapping.options.end()) {
+        fill_value = static_cast<uint8_t>(fill_value_it->second);
+      }
+
+      for (uint64_t slice = 0; slice < slice_count; ++slice) {
+        auto slice_data_view = fbl::Span<uint8_t>(slice_buffer);
+        if (slice < data_slice_count) {
+          // Byte offset of current slice.
+          const uint64_t slice_offset = slice * options_.slice_size;
+          const uint64_t vslice_offset =
+              volume_image::GetBlockFromBytes(mapping.target, options_.slice_size) *
+                  options_.slice_size +
+              slice_offset;
+
+          // Check if the start of the extent is not aligned with the slice.
+          // All extents targets are slice aligned, but that may not be the case when reading
+          // from the source.
+          const uint64_t data_vslice_start =
+              mapping.target > vslice_offset ? mapping.target - vslice_offset : 0;
+
+          // Check if the extent data does not end in slice boundary.
+          const uint64_t data_vslice_end = mapping.target + mapping.count;
+          const uint64_t vslice_end = vslice_offset + options_.slice_size;
+          uint64_t data_length = data_vslice_end < vslice_end
+                                     ? data_vslice_end - data_vslice_start
+                                     : options_.slice_size - data_vslice_start;
+          slice_data_view = slice_data_view.subspan(data_vslice_start, data_length);
+          auto read_result =
+              partition.reader()->Read(slice_offset + data_vslice_start, slice_data_view);
+          if (read_result.is_error()) {
+            return read_result.take_error_result();
+          }
+        }
+
+        // Skip all allocated slices that are not backed by data if we dont need to fill.
+        if (slice > data_slice_count && !fill_value.has_value()) {
+          current_physical_slice += slice_count - data_slice_count;
+          break;
+        }
+
+        // Finally write current slice.
+        const uint64_t physical_slice_offset = header.GetSliceDataOffset(current_physical_slice);
+        auto write_result = writer.Write(physical_slice_offset, slice_buffer);
+        if (write_result.is_error()) {
+          return write_result.take_error_result();
+        }
+
+        // Clean up the buffer for next read.
+        memset(slice_buffer.data(), fill_value.value_or(0), slice_buffer.size());
+        current_physical_slice++;
+      }
+    }
+  }
+  return fit::ok();
 }
 
 }  // namespace storage::volume_image
