@@ -20,6 +20,7 @@ template("_banjo_library_sdk") {
   file_base = "banjo/$library_name"
   all_files = []
   sdk_sources = []
+  sdk_unrebased_sources = []
   foreach(source, invoker.sources) {
     relative_source = rebase_path(source, ".")
     if (string_replace(relative_source, "..", "bogus") != relative_source) {
@@ -29,6 +30,7 @@ template("_banjo_library_sdk") {
     }
     destination = "$file_base/$relative_source"
     sdk_sources += [ destination ]
+    sdk_unrebased_sources += [ source ]
     all_files += [
       {
         source = rebase_path(source)
@@ -62,7 +64,9 @@ template("_banjo_library_sdk") {
 
     inputs = sdk_metas
 
-    sources = sdk_sources
+    # Use the unrebased source name. GN automatically converts
+    # sources to be relative to the build directory.
+    sources = sdk_unrebased_sources
 
     outputs = [ meta_file ]
 

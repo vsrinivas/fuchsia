@@ -6,6 +6,7 @@ import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
+import("//build/sdk/sdk_host_tool.gni")
 
 group("banjo") {
   public_deps = [ ":banjo_bin($host_toolchain)" ]
@@ -329,4 +330,10 @@ if (host_toolchain == current_toolchain) {
       "//sdk/banjo/zx/zx.banjo",
     ]
   }
+}
+
+sdk_host_tool("banjo_bin_sdk") {
+  category = "partner"
+  output_name = "banjo_bin"
+  deps = [ ":banjo_bin" ]
 }
