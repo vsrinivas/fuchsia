@@ -16,9 +16,10 @@ pub trait TryIntoTargetInfo: Sized {
 
 #[derive(Debug, Default, Hash, Clone, PartialEq, Eq)]
 pub struct TargetInfo {
-    pub nodename: String,
+    pub nodename: Option<String>,
     pub addresses: Vec<target::TargetAddr>,
     pub serial: Option<String>,
+    pub ssh_port: Option<u16>,
 }
 
 #[derive(Debug, Hash, Clone, PartialEq, Eq)]
@@ -35,6 +36,6 @@ pub enum WireTrafficType {
 pub enum DaemonEvent {
     WireTraffic(WireTrafficType),
     OvernetPeer(u64),
-    NewTarget(Option<String>),
+    NewTarget(TargetInfo),
     // TODO(awdavies): Stale target event, target shutdown event, etc.
 }

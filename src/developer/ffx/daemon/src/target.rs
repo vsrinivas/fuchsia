@@ -298,9 +298,9 @@ struct TargetInner {
 }
 
 impl TargetInner {
-    fn new(nodename: Option<&str>) -> Self {
+    fn new(nodename: Option<String>) -> Self {
         Self {
-            nodename: Mutex::new(nodename.map(str::to_string)),
+            nodename: Mutex::new(nodename),
             last_response: RwLock::new(Utc::now()),
             state: Mutex::new(TargetState::default()),
             addrs: RwLock::new(BTreeSet::new()),
@@ -311,28 +311,28 @@ impl TargetInner {
         }
     }
 
-    pub fn new_with_boot_timestamp(nodename: &str, boot_timestamp_nanos: u64) -> Self {
+    pub fn new_with_boot_timestamp(nodename: String, boot_timestamp_nanos: u64) -> Self {
         Self {
             boot_timestamp_nanos: RwLock::new(Some(boot_timestamp_nanos)),
             ..Self::new(Some(nodename))
         }
     }
 
-    pub fn new_with_addrs(nodename: Option<&str>, addrs: BTreeSet<TargetAddr>) -> Self {
+    pub fn new_with_addrs(nodename: Option<String>, addrs: BTreeSet<TargetAddr>) -> Self {
         Self {
             addrs: RwLock::new(addrs.iter().map(|e| (*e, Utc::now()).into()).collect()),
             ..Self::new(nodename)
         }
     }
 
-    pub fn new_with_serial(nodename: &str, serial: &str) -> Self {
-        Self { serial: RwLock::new(Some(serial.to_string())), ..Self::new(Some(nodename)) }
+    pub fn new_with_serial(nodename: Option<String>, serial: &str) -> Self {
+        Self { serial: RwLock::new(Some(serial.to_string())), ..Self::new(nodename) }
     }
 
     /// Dependency injection constructor so we can insert a fake time for
     /// testing.
     #[cfg(test)]
-    pub fn new_with_time(nodename: &str, time: DateTime<Utc>) -> Self {
+    pub fn new_with_time(nodename: String, time: DateTime<Utc>) -> Self {
         Self { last_response: RwLock::new(time), ..Self::new(Some(nodename)) }
     }
 
@@ -477,39 +477,61 @@ impl Target {
         Self { inner, events, task_manager }
     }
 
-    pub fn new(nodename: &str) -> Self {
-        let inner = Arc::new(TargetInner::new(Some(nodename)));
+    pub fn new<S>(nodename: S) -> Self
+    where
+        S: Into<String>,
+    {
+        let inner = Arc::new(TargetInner::new(Some(nodename.into())));
         Self::from_inner(inner)
     }
 
-    pub fn new_with_boot_timestamp(nodename: &str, boot_timestamp_nanos: u64) -> Self {
-        let inner = Arc::new(TargetInner::new_with_boot_timestamp(nodename, boot_timestamp_nanos));
+    pub fn new_with_boot_timestamp<S>(nodename: S, boot_timestamp_nanos: u64) -> Self
+    where
+        S: Into<String>,
+    {
+        let inner =
+            Arc::new(TargetInner::new_with_boot_timestamp(nodename.into(), boot_timestamp_nanos));
         Self::from_inner(inner)
     }
 
-    pub fn new_with_addrs(nodename: Option<&str>, addrs: BTreeSet<TargetAddr>) -> Self {
-        let inner = Arc::new(TargetInner::new_with_addrs(nodename, addrs));
+    pub fn new_with_addrs<S>(nodename: Option<S>, addrs: BTreeSet<TargetAddr>) -> Self
+    where
+        S: Into<String>,
+    {
+        let inner = Arc::new(TargetInner::new_with_addrs(nodename.map(Into::into), addrs));
         Self::from_inner(inner)
     }
 
-    pub fn new_with_serial(nodename: &str, serial: &str) -> Self {
-        let inner = Arc::new(TargetInner::new_with_serial(nodename, serial));
+    pub fn new_with_serial<S>(nodename: Option<S>, serial: &str) -> Self
+    where
+        S: Into<String>,
+    {
+        let inner = Arc::new(TargetInner::new_with_serial(nodename.map(Into::into), serial));
         Self::from_inner(inner)
     }
 
     pub fn from_target_info(mut t: TargetInfo) -> Self {
         if let Some(s) = t.serial {
-            Self::new_with_serial(t.nodename.as_ref(), &s)
+            Self::new_with_serial(t.nodename, &s)
         } else {
-            Self::new_with_addrs(Some(t.nodename.as_ref()), t.addresses.drain(..).collect())
+            Self::new_with_addrs(t.nodename, t.addresses.drain(..).collect())
+        }
+    }
+
+    pub async fn target_info(&self) -> TargetInfo {
+        TargetInfo {
+            nodename: self.nodename().await,
+            addresses: self.addrs().await,
+            serial: self.serial().await,
+            ssh_port: self.ssh_port().await,
         }
     }
 
     /// Dependency injection constructor so we can insert a fake time for
     /// testing.
     #[cfg(test)]
-    pub fn new_with_time(nodename: &str, time: DateTime<Utc>) -> Self {
-        let inner = Arc::new(TargetInner::new_with_time(nodename, time));
+    pub fn new_with_time<S: Into<String>>(nodename: S, time: DateTime<Utc>) -> Self {
+        let inner = Arc::new(TargetInner::new_with_time(nodename.into(), time));
         Self::from_inner(inner)
     }
 
@@ -744,8 +766,8 @@ impl Target {
         // up properly, else there will be duplicate link-local addresses that
         // aren't usable.
         let target = match fidl_target.boot_timestamp_nanos {
-            Some(t) => Target::new_with_boot_timestamp(nodename.as_ref(), t),
-            None => Target::new(nodename.as_ref()),
+            Some(t) => Target::new_with_boot_timestamp(nodename.to_string(), t),
+            None => Target::new(nodename.to_string()),
         };
 
         // Forces drop of target state mutex so that target can be returned.
@@ -794,7 +816,7 @@ impl Target {
 impl EventSynthesizer<DaemonEvent> for Target {
     async fn synthesize_events(&self) -> Vec<DaemonEvent> {
         if self.inner.state.lock().await.connection_state.is_connected() {
-            vec![DaemonEvent::NewTarget(self.nodename().await)]
+            vec![DaemonEvent::NewTarget(self.target_info().await)]
         } else {
             vec![]
         }
@@ -1033,61 +1055,54 @@ impl<'a, T: Iterator<Item = &'a Target> + Send> MatchTarget for &'a mut T {
     }
 }
 
+#[derive(Debug)]
 pub enum TargetQuery {
     /// Attempts to match the nodename, falling back to serial (in that order).
     NodenameOrSerial(String),
+    AddrPort((TargetAddr, u16)),
     Addr(TargetAddr),
+    First,
 }
 
 impl TargetQuery {
-    pub async fn matches(&self, t: &Target) -> bool {
+    pub fn match_info(&self, t: &TargetInfo) -> bool {
         match self {
-            // Simultaneously attempts to match either the nodename or the
-            // serial number.
             Self::NodenameOrSerial(arg) => {
-                let (a, b) = futures::join!(
-                    async {
-                        t.inner
-                            .nodename
-                            .lock()
-                            .await
-                            .as_ref()
-                            .map(|nodename| (*nodename).contains(arg))
-                            .unwrap_or(false)
-                    },
-                    async {
-                        t.inner
-                            .serial
-                            .read()
-                            .await
-                            .as_ref()
-                            .map(|serial| (*serial).contains(arg))
-                            .unwrap_or(false)
-                    }
-                );
-                a || b
-            }
-            Self::Addr(addr) => {
-                let addrs = t.addrs().await;
-                // Try to do the lookup if either the scope_id is non-zero (and
-                // the IP address is IPv6 OR if the address is just IPv4 (as the
-                // scope_id is always zero in this case).
-                if addr.scope_id != 0 || addr.ip.is_ipv4() {
-                    return addrs.contains(addr);
-                }
-
-                // Currently there's no way to parse an IP string w/ a scope_id,
-                // so if we're at this stage the address is IPv6 and has been
-                // probably parsed with a string (or it's a global IPv6 addr).
-                for target_addr in addrs.iter() {
-                    if target_addr.ip == addr.ip {
+                if let Some(ref nodename) = t.nodename {
+                    if nodename.contains(arg) {
                         return true;
                     }
                 }
-
+                if let Some(ref serial) = t.serial {
+                    if serial.contains(arg) {
+                        return true;
+                    }
+                }
                 false
             }
+            Self::AddrPort((addr, port)) => {
+                t.ssh_port == Some(*port) && Self::Addr(*addr).match_info(t)
+            }
+            Self::Addr(addr) => t.addresses.iter().any(|a| {
+                // If the query does not contain a scope, allow a match against
+                // only the IP.
+                a == addr || addr.scope_id == 0 && a.ip == addr.ip
+            }),
+            Self::First => true,
         }
+    }
+
+    pub async fn matches(&self, t: &Target) -> bool {
+        self.match_info(&t.target_info().await)
+    }
+}
+
+impl<T> From<Option<T>> for TargetQuery
+where
+    T: Into<TargetQuery>,
+{
+    fn from(o: Option<T>) -> Self {
+        o.map(Into::into).unwrap_or(Self::First)
     }
 }
 
@@ -1101,8 +1116,19 @@ impl From<String> for TargetQuery {
     /// If the string can be parsed as some kind of IP address, will attempt to
     /// match based on that, else fall back to the nodename or serial matches.
     fn from(s: String) -> Self {
+        // TODO(raggi): add support for named scopes in the strings
+
+        if let Ok(saddr) = s.parse::<SocketAddr>() {
+            if saddr.port() == 0 {
+                return Self::Addr(saddr.into());
+            } else {
+                let port = saddr.port();
+                return Self::AddrPort((saddr.into(), port));
+            }
+        }
+
         match s.parse::<IpAddr>() {
-            Ok(a) => Self::Addr((a, 0).into()),
+            Ok(a) => Self::Addr(TargetAddr::from((a, 0))),
             Err(_) => Self::NodenameOrSerial(s),
         }
     }
@@ -1270,7 +1296,7 @@ impl TargetCollection {
                     inner.named.insert(name.to_owned(), insertable);
                     log::info!("New target: {}", name);
                     if let Some(e) = self.events.read().await.as_ref() {
-                        e.push(DaemonEvent::NewTarget(t.nodename().await)).await.unwrap_or_else(
+                        e.push(DaemonEvent::NewTarget(t.target_info().await)).await.unwrap_or_else(
                             |e| log::warn!("unable to push new target event: {}", e),
                         );
                     }
@@ -1294,6 +1320,59 @@ impl TargetCollection {
                 t
             }
         }
+    }
+
+    /// wait_for_match attempts to find a target matching "matcher". If no
+    /// matcher is provided, either the default target is matched, or, if there
+    /// is no default a single target is returned iff it is the only target in
+    /// the collection. If there is neither a matcher or a defualt, and there are
+    /// several targets in the collection when the query starts, a
+    /// DaemonError::TargetAmbiguous error is returned. The matcher is converted to a
+    /// TargetQuery for matching, and follows the TargetQuery semantics.
+    pub async fn wait_for_match(&self, matcher: Option<String>) -> Result<Target, DaemonError> {
+        // If there is no matcher, and there are already multiple targets in the
+        // target collection, we know that the target is ambiguous and thus
+        // produce an actionable error to the user.
+        if matcher.is_none() {
+            // PERFORMANCE: it's possible to avoid the discarded clones here, with more work.
+            if self.targets().await.len() > 1 {
+                return Err(DaemonError::TargetAmbiguous);
+            }
+        }
+
+        // If there's nothing to match against, unblock on the first target.
+        let target_query = TargetQuery::from(matcher.clone());
+
+        // Infinite timeout here is fine, as the client dropping connection
+        // will lead to this being cleaned up eventually. It is the client's
+        // responsibility to determine their respective timeout(s).
+        self.events
+            .read()
+            .await
+            .as_ref()
+            .expect("target event queue must be initialized by now")
+            .wait_for(None, move |e| {
+                if let DaemonEvent::NewTarget(ref target_info) = e {
+                    target_query.match_info(target_info)
+                } else {
+                    false
+                }
+            })
+            .await
+            .map_err(|e| {
+                log::warn!("{}", e);
+                DaemonError::TargetCacheError
+            })?;
+
+        // TODO(awdavies): It's possible something might happen between the new
+        // target event and now, so it would make sense to give the
+        // user some information on what happened: likely something
+        // to do with the target suddenly being forced out of the cache
+        // (this isn't a problem yet, but will be once more advanced
+        // lifetime tracking is implemented). If a name isn't specified it's
+        // possible a secondary/tertiary target showed up, and those cases are
+        // handled here.
+        self.get(matcher).await.ok_or(DaemonError::TargetNotFound)
     }
 
     /// Attempts to get a target based off of the default. Returns an error if
@@ -1756,7 +1835,10 @@ mod test {
         assert_eq!(vec.len(), 1);
         assert_eq!(
             vec.iter().next().expect("events empty"),
-            &DaemonEvent::NewTarget(Some("clopperdoop".to_string()))
+            &DaemonEvent::NewTarget(TargetInfo {
+                nodename: Some("clopperdoop".to_string()),
+                ..Default::default()
+            })
         );
     }
 
@@ -1774,18 +1856,21 @@ mod test {
 
         let events = tc.synthesize_events().await;
         assert_eq!(events.len(), 3);
-        assert!(events
-            .iter()
-            .any(|e| e == &DaemonEvent::NewTarget(Some("clam-chowder-is-tasty".to_string()))));
-        assert!(events
-            .iter()
-            .any(|e| e == &DaemonEvent::NewTarget(Some("this-is-a-crunchy-falafel".to_string()))));
-        assert!(
-            events
-                .iter()
-                .any(|e| e
-                    == &DaemonEvent::NewTarget(Some("i-should-probably-eat-lunch".to_string())))
-        );
+        assert!(events.iter().any(|e| e
+            == &DaemonEvent::NewTarget(TargetInfo {
+                nodename: Some("clam-chowder-is-tasty".to_string()),
+                ..Default::default()
+            })));
+        assert!(events.iter().any(|e| e
+            == &DaemonEvent::NewTarget(TargetInfo {
+                nodename: Some("this-is-a-crunchy-falafel".to_string()),
+                ..Default::default()
+            })));
+        assert!(events.iter().any(|e| e
+            == &DaemonEvent::NewTarget(TargetInfo {
+                nodename: Some("i-should-probably-eat-lunch".to_string()),
+                ..Default::default()
+            })));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1819,7 +1904,7 @@ mod test {
     #[async_trait]
     impl events::EventHandler<DaemonEvent> for EventPusher {
         async fn on_event(&self, event: DaemonEvent) -> Result<bool> {
-            if let DaemonEvent::NewTarget(Some(s)) = event {
+            if let DaemonEvent::NewTarget(TargetInfo { nodename: Some(s), .. }) = event {
                 self.got.unbounded_send(s).unwrap();
                 Ok(false)
             } else {
@@ -2129,7 +2214,7 @@ mod test {
         // link-local address.
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip, scope_id: 0xbadf00d });
-        let t1 = Target::new_with_addrs(None, addr_set);
+        let t1 = Target::new_with_addrs(Option::<String>::None, addr_set);
 
         // t2 is an incoming target that has the same address, but, it is
         // missing scope information, this is essentially what occurs when we
@@ -2203,7 +2288,7 @@ mod test {
         let ip2 = "f111::4".parse().unwrap();
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
-        let t1 = Target::new_with_addrs(None, addr_set);
+        let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new();
         t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
@@ -2228,7 +2313,7 @@ mod test {
         let ip2 = "f111::4".parse().unwrap();
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
-        let t1 = Target::new_with_addrs(None, addr_set);
+        let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new();
         t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
@@ -2253,7 +2338,7 @@ mod test {
         let ip2 = "f111::4".parse().unwrap();
         let mut addr_set = BTreeSet::new();
         addr_set.replace(TargetAddr { ip: ip1, scope_id: 0xbadf00d });
-        let t1 = Target::new_with_addrs(None, addr_set);
+        let t1 = Target::new_with_addrs::<String>(None, addr_set);
         let t2 = Target::new("this-is-a-crunchy-falafel");
         let tc = TargetCollection::new();
         t2.inner.addrs.write().await.replace(TargetAddr { ip: ip2, scope_id: 0 }.into());
@@ -2274,12 +2359,80 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_match_serial() {
-        let t = Target::new_with_serial("turritopsis-dohrnii-is-an-immortal-jellyfish", "florp");
+        let t =
+            Target::new_with_serial(Some("turritopsis-dohrnii-is-an-immortal-jellyfish"), "florp");
         let tc = TargetCollection::new();
         tc.merge_insert(clone_target(&t).await).await;
         assert_eq!(
             t.nodename().await.unwrap(),
             tc.get("flor").await.unwrap().nodename().await.unwrap()
         );
+    }
+
+    #[test]
+    fn test_target_query_from_sockaddr() {
+        let tq = TargetQuery::from("127.0.0.1:8022");
+        let ti = TargetInfo {
+            addresses: vec![("127.0.0.1".parse::<IpAddr>().unwrap(), 0).into()],
+            ssh_port: Some(8022),
+            ..Default::default()
+        };
+        assert!(
+            matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && Some(port) == ti.ssh_port)
+        );
+        assert!(tq.match_info(&ti));
+
+        let tq = TargetQuery::from("[::1]:8022");
+        let ti = TargetInfo {
+            addresses: vec![("::1".parse::<IpAddr>().unwrap(), 0).into()],
+            ssh_port: Some(8022),
+            ..Default::default()
+        };
+        assert!(
+            matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && Some(port) == ti.ssh_port)
+        );
+        assert!(tq.match_info(&ti));
+
+        let tq = TargetQuery::from("[fe80::1]:22");
+        let ti = TargetInfo {
+            addresses: vec![("fe80::1".parse::<IpAddr>().unwrap(), 0).into()],
+            ssh_port: Some(22),
+            ..Default::default()
+        };
+        assert!(
+            matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && Some(port) == ti.ssh_port)
+        );
+        assert!(tq.match_info(&ti));
+
+        let tq = TargetQuery::from("192.168.0.1:22");
+        let ti = TargetInfo {
+            addresses: vec![("192.168.0.1".parse::<IpAddr>().unwrap(), 0).into()],
+            ssh_port: Some(22),
+            ..Default::default()
+        };
+        assert!(
+            matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && Some(port) == ti.ssh_port)
+        );
+        assert!(tq.match_info(&ti));
+
+        // Note: socketaddr only supports numeric scopes
+        let tq = TargetQuery::from("[fe80::1%1]:22");
+        let ti = TargetInfo {
+            addresses: vec![("fe80::1".parse::<IpAddr>().unwrap(), 1).into()],
+            ssh_port: Some(22),
+            ..Default::default()
+        };
+        assert!(
+            matches!(tq, TargetQuery::AddrPort((addr, port)) if addr == ti.addresses[0] && Some(port) == ti.ssh_port)
+        );
+        assert!(tq.match_info(&ti));
+    }
+
+    #[test]
+    fn test_target_query_with_no_scope_matches_scoped_target_info() {
+        let addr: TargetAddr =
+            (IpAddr::from([0xfe80, 0x0, 0x0, 0x0, 0xdead, 0xbeef, 0xbeef, 0xbeef]), 3).into();
+        let tq = TargetQuery::from("fe80::dead:beef:beef:beef");
+        assert!(tq.match_info(&TargetInfo { addresses: vec![addr], ..Default::default() }))
     }
 }

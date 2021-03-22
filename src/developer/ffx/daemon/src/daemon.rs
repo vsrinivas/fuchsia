@@ -86,8 +86,11 @@ impl DaemonEventHandler {
         tc: &'a TargetCollection,
         cr: Weak<dyn ConfigReader>,
     ) -> impl Future<Output = ()> + 'a {
-        log::trace!("Found new target via mdns: {}", t.nodename);
-        tc.merge_insert(Target::from_target_info(t)).then(|target| {
+        log::trace!(
+            "Found new target via mdns: {}",
+            t.nodename.clone().unwrap_or("<unknown>".to_string())
+        );
+        tc.merge_insert(Target::from_target_info(t.clone())).then(|target| {
             async move {
                 let nodename = target.nodename().await;
 
@@ -154,7 +157,10 @@ impl DaemonEventHandler {
     }
 
     async fn handle_fastboot(&self, t: TargetInfo, tc: &TargetCollection) {
-        log::trace!("Found new target via fastboot: {}", t.nodename);
+        log::trace!(
+            "Found new target via fastboot: {}",
+            t.nodename.clone().unwrap_or("<unknown>".to_string())
+        );
         tc.merge_insert(Target::from_target_info(t.into()))
             .then(|target| async move {
                 target
@@ -225,36 +231,14 @@ impl Daemon {
         Ok(Daemon { target_collection: target_collection.clone(), event_queue: queue, ascendd })
     }
 
-    pub async fn get_default_target(&self, n: Option<String>) -> Result<Target, DaemonError> {
-        let n_clone = n.clone();
-        // Infinite timeout here is fine, as the client dropping connection
-        // will lead to this being cleaned up eventually. It is the client's
-        // responsibility to determine their respective timeout(s).
-        self.event_queue
-            .wait_for(None, move |e| {
-                if let DaemonEvent::NewTarget(Some(n)) = e {
-                    // Gets either a target with the correct name if matching,
-                    // or returns true if there is ANY target at all.
-                    n_clone.as_ref().map(|s| n.contains(s)).unwrap_or(true)
-                } else {
-                    false
-                }
-            })
+    /// get_target attempts to get the target that matches the match string if
+    /// provided, otherwise the default target from the target collection.
+    pub async fn get_target(&self, matcher: Option<String>) -> Result<Target, DaemonError> {
+        // TODO(72818): make target match timeout configurable / paramterable
+        self.target_collection
+            .wait_for_match(matcher)
+            .on_timeout(Duration::from_secs(8), || Err(DaemonError::TargetNotFound))
             .await
-            .map_err(|e| {
-                log::warn!("{}", e);
-                DaemonError::TargetStateError
-            })?;
-
-        // TODO(awdavies): It's possible something might happen between the new
-        // target event and now, so it would make sense to give the
-        // user some information on what happened: likely something
-        // to do with the target suddenly being forced out of the cache
-        // (this isn't a problem yet, but will be once more advanced
-        // lifetime tracking is implemented). If a name isn't specified it's
-        // possible a secondary/tertiary target showed up, and those cases are
-        // handled here.
-        self.target_collection.get_default(n).await
     }
 
     #[cfg(test)]
@@ -375,7 +359,7 @@ impl Daemon {
                     .context("error sending response")?;
             }
             DaemonRequest::GetRemoteControl { target, remote, responder } => {
-                let target = match self.get_default_target(target).await {
+                let target = match self.get_target(target).await {
                     Ok(t) => t,
                     Err(e) => {
                         responder.send(&mut Err(e)).context("sending error response")?;
@@ -419,7 +403,7 @@ impl Daemon {
                 responder.send(&mut response).context("error sending response")?;
             }
             DaemonRequest::GetFastboot { target, fastboot, responder } => {
-                let target = match self.get_default_target(target).await {
+                let target = match self.get_target(target).await {
                     Ok(t) => t,
                     Err(e) => {
                         log::warn!("{:?}", e);
@@ -484,7 +468,7 @@ impl Daemon {
             }
             DaemonRequest::GetSshAddress { responder, target, timeout } => {
                 let fut = async move {
-                    let target = self.get_default_target(target).await?;
+                    let target = self.get_target(target).await?;
                     let poll_duration = std::time::Duration::from_millis(15);
                     loop {
                         let addrs = target.addrs().await;
@@ -516,8 +500,10 @@ impl Daemon {
                     TargetAddrInfo::IpPort(ref ipp) => Some(ipp.port),
                     _ => None,
                 };
-                let target =
-                    Target::new_with_addrs(None, BTreeSet::from_iter(Some(ip.into()).into_iter()));
+                let target = Target::new_with_addrs(
+                    Option::<String>::None,
+                    BTreeSet::from_iter(Some(ip.clone().into()).into_iter()),
+                );
                 target.set_ssh_port(ssh_port).await;
                 self.target_collection
                     .merge_insert(target)
@@ -547,7 +533,7 @@ impl Daemon {
             }
             DaemonRequest::StreamDiagnostics { target, parameters, iterator, responder } => {
                 let target = match self
-                    .get_default_target(target.clone())
+                    .get_target(target.clone())
                     .on_timeout(Duration::from_secs(3), || Err(DaemonError::Timeout))
                     .await
                 {
@@ -683,7 +669,7 @@ mod test {
             let nodename_clone = nodename.clone();
             self.event_queue
                 .push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
-                    nodename: nodename.clone(),
+                    nodename: Some(nodename.clone()),
                     addresses: t.addrs().await.iter().cloned().collect(),
                     ..Default::default()
                 })))
@@ -691,9 +677,15 @@ mod test {
                 .unwrap();
 
             self.event_queue
-                .wait_for(None, move |e| e == DaemonEvent::NewTarget(Some(nodename_clone.clone())))
+                .wait_for(None, move |e| match e {
+                    DaemonEvent::NewTarget(TargetInfo { nodename, .. }) => {
+                        nodename.map(|n| n == nodename_clone).unwrap_or(false)
+                    }
+                    _ => false,
+                })
                 .await
                 .unwrap();
+
             self.tc
                 .get(nodename)
                 .await
@@ -712,14 +704,19 @@ mod test {
             let nodename_clone = nodename.clone();
             self.event_queue
                 .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(TargetInfo {
-                    nodename: nodename.clone(),
+                    nodename: Some(nodename.clone()),
                     serial: Some(serial.clone()),
                     ..Default::default()
                 })))
                 .await
                 .unwrap();
             self.event_queue
-                .wait_for(None, move |e| e == DaemonEvent::NewTarget(Some(nodename_clone.clone())))
+                .wait_for(None, move |e| match e {
+                    DaemonEvent::NewTarget(TargetInfo { nodename, .. }) => {
+                        nodename.map(|n| n == nodename_clone).unwrap_or(false)
+                    }
+                    _ => false,
+                })
                 .await
                 .unwrap();
         }
@@ -761,7 +758,7 @@ mod test {
                 DaemonEvent::WireTraffic(WireTrafficType::Mdns(t)) => {
                     tc.merge_insert(Target::from_target_info(t)).await;
                 }
-                DaemonEvent::NewTarget(Some(n)) => {
+                DaemonEvent::NewTarget(TargetInfo { nodename: Some(n), .. }) => {
                     let rcs = RcsConnection::new_with_proxy(
                         setup_fake_target_service(n),
                         &NodeId { id: 0u64 },
@@ -819,7 +816,7 @@ mod test {
     ) -> (TargetControl, Arc<Ascendd>) {
         let mut res = spawn_daemon_server_with_target_ctrl(stream).await;
         let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let fake_target = Target::new(nodename);
+        let fake_target = Target::new(nodename.to_string());
         fake_target
             .addrs_insert(
                 SocketAddr::V6(SocketAddrV6::new("fe80::1".parse().unwrap(), 0, 0, 1)).into(),
@@ -835,7 +832,7 @@ mod test {
     ) -> (TargetControl, Arc<Ascendd>) {
         let mut res = spawn_daemon_server_with_target_ctrl_for_fastboot(stream).await;
         let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let fake_target = Target::new_with_serial(nodename, "florp");
+        let fake_target = Target::new_with_serial(Some(nodename.to_string()), "florp");
         res.send_fastboot_discovery_event(fake_target).await;
         (res, ascendd)
     }
@@ -878,7 +875,7 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
         let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
         if let Ok(_) = daemon_proxy.get_remote_control(None, remote_server_end).await.unwrap() {
             panic!("failure expected for multiple targets");
         }
@@ -892,7 +889,7 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
         let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
         if let Err(_) = daemon_proxy.get_remote_control(Some(""), remote_server_end).await.unwrap()
         {
             panic!("failure expected for multiple targets");
@@ -907,7 +904,7 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
         let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
         if let Err(_) =
             daemon_proxy.get_remote_control(Some("foobar"), remote_server_end).await.unwrap()
         {
@@ -923,7 +920,7 @@ mod test {
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
         let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new("bazmumble")).await;
+        ctrl.send_mdns_discovery_event(Target::new("bazmumble".to_string())).await;
         if let Ok(_) = timeout(Duration::from_millis(10), async move {
             daemon_proxy.get_remote_control(Some("rando"), remote_server_end).await.unwrap()
         })
@@ -939,8 +936,8 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (mut ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
-        ctrl.send_mdns_discovery_event(Target::new("baz")).await;
-        ctrl.send_mdns_discovery_event(Target::new("quux")).await;
+        ctrl.send_mdns_discovery_event(Target::new("baz".to_string())).await;
+        ctrl.send_mdns_discovery_event(Target::new("quux".to_string())).await;
         let res = daemon_proxy.list_targets("").await.unwrap();
 
         // Daemon server contains one fake target plus these two.
@@ -1027,7 +1024,7 @@ mod test {
         };
         assert!(!handler
             .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
-                nodename: t.nodename().await.expect("mdns target should always have a name."),
+                nodename: Some(t.nodename().await.expect("mdns target should always have a name.")),
                 ..Default::default()
             })))
             .await
@@ -1061,7 +1058,7 @@ mod test {
         };
         assert!(!handler
             .on_event(DaemonEvent::WireTraffic(WireTrafficType::Mdns(TargetInfo {
-                nodename: t.nodename().await.expect("Handling Mdns traffic for unnamed node"),
+                nodename: Some(t.nodename().await.expect("Handling Mdns traffic for unnamed node")),
                 ..Default::default()
             })))
             .await
@@ -1104,7 +1101,7 @@ mod test {
         let nodename = "where-is-my-hasenpfeffer";
         let t = Target::new_autoconnected(nodename).await;
         d.target_collection.merge_insert(t.clone()).await;
-        assert_eq!(nodename, d.get_default_target(None).await.unwrap().nodename().await.unwrap());
+        assert_eq!(nodename, d.get_target(None).await.unwrap().nodename().await.unwrap());
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1116,12 +1113,7 @@ mod test {
         d.target_collection.merge_insert(t.clone()).await;
         assert_eq!(
             nodename,
-            d.get_default_target(Some(nodename.to_string()))
-                .await
-                .unwrap()
-                .nodename()
-                .await
-                .unwrap()
+            d.get_target(Some(nodename.to_string())).await.unwrap().nodename().await.unwrap()
         );
     }
 
@@ -1133,7 +1125,7 @@ mod test {
         let t2 = Target::new_autoconnected("it-is-rabbit-season").await;
         d.target_collection.merge_insert(t.clone()).await;
         d.target_collection.merge_insert(t2.clone()).await;
-        assert_eq!(Err(DaemonError::TargetAmbiguous), d.get_default_target(None).await);
+        assert_eq!(Err(DaemonError::TargetAmbiguous), d.get_target(None).await);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

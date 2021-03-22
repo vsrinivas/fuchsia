@@ -220,7 +220,7 @@ async fn recv_loop(sock: Arc<UdpSocket>, e: events::Queue<DaemonEvent>) {
             log::trace!(
                 "packet from {} ({}) on {}",
                 addr,
-                info.nodename,
+                info.nodename.clone().unwrap_or("<unknown>".to_string()),
                 sock.local_addr().unwrap()
             );
             e.push(DaemonEvent::WireTraffic(WireTrafficType::Mdns(info)))
@@ -357,7 +357,11 @@ impl<B: ByteSlice + Clone> TryIntoTargetInfo for dns::Message<B> {
         if nodename.len() == 0 {
             return Err(MdnsConvertError::NodenameMissing);
         }
-        Ok(TargetInfo { nodename, addresses: addrs.drain().collect(), ..Default::default() })
+        Ok(TargetInfo {
+            nodename: Some(nodename),
+            addresses: addrs.drain().collect(),
+            ..Default::default()
+        })
     }
 }
 

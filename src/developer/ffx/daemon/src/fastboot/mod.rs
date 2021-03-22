@@ -355,10 +355,9 @@ pub(crate) fn spawn_fastboot_discovery(queue: events::Queue<DaemonEvent>) {
             let fastboot_devices = find_devices().await;
             for dev in fastboot_devices {
                 // Add to target collection
-                let nodename = format!("{:?}", dev);
                 queue
                     .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(TargetInfo {
-                        nodename,
+                        nodename: Option::<String>::None,
                         serial: Some(dev.serial),
                         ..Default::default()
                     })))

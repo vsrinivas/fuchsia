@@ -28,10 +28,33 @@ use {
 
 // Config key for event timeout.
 const PROXY_TIMEOUT_SECS: &str = "proxy.timeout_secs";
-// TODO: a nice way to focus this error message would be to get a list of targets from the daemon
-// and be able to distinguish whether there are in fact 0 or multiple available targets.
+
+// TODO(72818): improve error text for these cases
+const TARGET_AMBIGUOUS_MSG: &str = "\
+We found multiple target devices matching your request.
+
+If a target matcher was given with --target, or a default target match is
+set, we may have found multiple targets that match. If no target matcher was
+specified, we may simply have found more than one potential target.
+
+Use `ffx target list` to list the currently visible targets.
+
+Use `ffx --target <matcher>` to specify a matcher for the execution of a
+single command, or `ffx target default set <matcher>` to set the default
+matcher.";
+
+// TODO(72818): improve error text for these cases
+const TARGET_NOT_FOUND_MSG: &str = "\
+We weren't able to find a target matching your request.
+
+Use `ffx target list` to verify the state of connected devices, or use `ffx
+--target <matcher>` to specify a different target for your request. To set
+the default target to be used in requests without an explicit matcher, use
+`ffx target default set <matcher>`.";
+
+// TODO(72818): improve error text for these cases
 const TARGET_FAILURE_MSG: &str = "\
-We weren't able to open a connection to a target.
+We weren't able to open a connection to a target device.
 
 Use `ffx target list` to verify the state of connected devices. This error
 probably means that either:
@@ -45,11 +68,13 @@ you always want to use a particular target.";
 
 const CURRENT_EXE_HASH: &str = "current.hash";
 
+// TODO(72818): improve error text for these cases
 const NON_FASTBOOT_MSG: &str = "\
 This command needs to be run against a target in the Fastboot state.
 Try rebooting the device into Fastboot with the command `ffx target
 reboot --bootloader` and try re-running this command.";
 
+// TODO(72818): improve error text for these cases
 const TARGET_IN_FASTBOOT: &str = "\
 This command cannot be run against a target in the Fastboot state. Try
 rebooting the device or flashing the device into a running state.";
@@ -186,10 +211,12 @@ async fn get_remote_proxy() -> Result<RemoteControlProxy> {
     )
     .await
     .context("timeout")?
-    .context("connecting to daemon")?;
+    .context("connecting to target via daemon")?;
 
     match result {
         Ok(_) => Ok(remote_proxy),
+        Err(DaemonError::TargetAmbiguous) => Err(ffx_error!(TARGET_AMBIGUOUS_MSG).into()),
+        Err(DaemonError::TargetNotFound) => Err(ffx_error!(TARGET_NOT_FOUND_MSG).into()),
         Err(DaemonError::TargetCacheError) => Err(ffx_error!(TARGET_FAILURE_MSG).into()),
         Err(DaemonError::TargetInFastboot) => Err(ffx_error!(TARGET_IN_FASTBOOT).into()),
         Err(e) => Err(anyhow!("unexpected failure connecting to RCS: {:?}", e)),
