@@ -1,0 +1,70 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/golden_file.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+# Compiles a protocol buffer for Go and defines it as a golden checked-in file
+# in the source tree.
+#
+# Parameters (all delegate to proto_library)
+#
+#   generate_descriptor_set (optional, default false)
+#       Generate a descriptor set file.
+#
+#   import_protobuf_full (optional)
+#       Allows .proto files to import .proto files from protobuf_full, without
+#       adding a dependency on all the C++ code in that library.
+template("golden_go_proto") {
+  _proto_name = "${target_name}_proto"
+  proto_library(_proto_name) {
+    forward_variables_from(invoker,
+                           [
+                             "generate_descriptor_set",
+                             "import_protobuf_full",
+                             "sources",
+                           ])
+    generate_cc = false
+    generate_go = true
+    generate_python = false
+  }
+
+  _here = rebase_path(".", "//")
+  _proto_dir = "${root_gen_dir}/go-proto-gen/src/${_here}"
+  _goldens = []
+  foreach(source, invoker.sources) {
+    _name = get_path_info(source, "name")
+    _dir = rebase_path(get_path_info(source, "dir"), ".")
+
+    _output = "${_name}.pb.go"
+    _golden_name = "${_name}_pb_go_diff"
+    golden_file(_golden_name) {
+      golden = "${_dir}/${_output}"
+      current = "${_proto_dir}/${golden}"
+      deps = [ ":${_proto_name}" ]
+
+      # The pb.go files contain protoc version strings, so failing on diffs
+      # would make it more difficult to roll updates to it.
+      warn_on_changes = true
+    }
+    _goldens += [ ":${_golden_name}" ]
+  }
+
+  if (defined(invoker.generate_descriptor_set) &&
+      invoker.generate_descriptor_set) {
+    _golden_name = "${target_name}_desc_pb_diff"
+    _target_name = target_name
+    golden_file(_golden_name) {
+      golden = "${_dir}/${_target_name}.desc.pb"
+      current = "${target_out_dir}/${_proto_name}.desc.pb"
+      deps = [ ":${_proto_name}" ]
+    }
+
+    _goldens += [ ":${_golden_name}" ]
+  }
+
+  group(target_name) {
+    public_deps = [ ":${_proto_name}" ] + _goldens
+  }
+}

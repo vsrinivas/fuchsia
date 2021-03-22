@@ -7,14 +7,10 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 
 go_library("codecoverage_api") {
-  name =
-      "go.fuchsia.dev/fuchsia/tools/debug/covargs/api/third_party/codecoverage"
   source_dir = "api/third_party/codecoverage"
-  sources = [
-    "code_coverage.pb.go",
-    "gen.go",
-  ]
+  sources = [ "code_coverage.pb.go" ]
   deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
+  non_go_deps = [ "api/third_party/codecoverage:proto" ]
 }
 
 go_library("llvm_api") {
@@ -76,4 +72,9 @@ go_test("covargs_tests") {
     "//tools/debug/elflib",
     "//tools/debug/symbolize:symbolize_lib",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":covargs_tests" ]
 }

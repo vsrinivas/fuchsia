@@ -3,8 +3,13 @@
 # found in the LICENSE file.
 
 import("//build/go/go_library.gni")
+import("//build/go/golden_go_proto.gni")
 import("//build/host.gni")
-import("//third_party/protobuf/proto_library.gni")
+
+golden_go_proto("proto") {
+  sources = [ "proto/emulator_controller.proto" ]
+  import_protobuf_full = true
+}
 
 go_library("proto_lib") {
   source_dir = "proto"
@@ -18,4 +23,13 @@ go_library("proto_lib") {
 go_library("femu-grpc_lib") {
   sources = [ "femu-grpc.go" ]
   deps = [ ":proto_lib" ]
+}
+
+group("tests") {
+  testonly = true
+
+  # TODO(https://fxbug.dev/72810): proto_library doesn't support grpc-go.
+  if (false) {
+    deps = [ ":proto_goldens" ]
+  }
 }

@@ -45,5 +45,8 @@ install_host_tools("host") {
 
 group("tests") {
   testonly = true
-  deps = [ ":femu-control_tests($host_toolchain)" ]
+  deps = [
+    ":femu-control_tests($host_toolchain)",
+    "femu-grpc:tests",
+  ]
 }

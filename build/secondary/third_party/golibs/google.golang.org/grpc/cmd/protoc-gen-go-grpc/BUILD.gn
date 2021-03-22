@@ -1,0 +1,18 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/host.gni")
+
+assert(is_host)
+
+go_binary("protoc-gen-go-grpc") {
+  gopackage = "google.golang.org/grpc/cmd/protoc-gen-go-grpc"
+  deps = [ "//third_party/golibs:google.golang.org/grpc" ]
+}
+
+install_host_tools("host") {
+  deps = [ ":protoc-gen-go-grpc" ]
+  outputs = [ "protoc-gen-go-grpc" ]
+}
