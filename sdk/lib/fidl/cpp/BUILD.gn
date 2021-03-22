@@ -4,7 +4,6 @@
 
 import("//build/cpp/sdk_source_set.gni")
 import("//build/fidl/fidl.gni")
-import("//build/package.gni")
 import("//build/test.gni")
 import("//sdk/cts/build/cts.gni")
 import("//src/sys/build/components.gni")

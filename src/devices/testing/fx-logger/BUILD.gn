@@ -6,7 +6,6 @@ import("//build/cpp/sdk_shared_library.gni")
 import("//build/cpp/sdk_source_set.gni")
 import("//build/fuzzing/fuzzer.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 
 fuzzer("fx-log-fuzzer") {
   sources = [ "fuzz.cc" ]

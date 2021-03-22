@@ -5,7 +5,6 @@
 import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
 import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 

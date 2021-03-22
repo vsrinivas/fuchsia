@@ -5,7 +5,6 @@
 import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/host.gni")
-import("//build/package.gni")
 
 go_library("lib") {
   name = "tally"

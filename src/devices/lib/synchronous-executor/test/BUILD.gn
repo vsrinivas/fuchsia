@@ -4,7 +4,6 @@
 
 import("//build/config/fuchsia/rules.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
 
 test("synchronous-executor-test") {

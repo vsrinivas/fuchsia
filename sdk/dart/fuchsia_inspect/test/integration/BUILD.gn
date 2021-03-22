@@ -4,7 +4,6 @@
 
 import("//build/dart/dart_app.gni")
 import("//build/dart/fidl_move.gni")
-import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 

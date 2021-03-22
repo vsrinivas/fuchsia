@@ -4,8 +4,6 @@
 
 import("//build/component/component_id_index.gni")
 import("//build/config.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
 
 source_set("lib") {

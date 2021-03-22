@@ -7,7 +7,6 @@ import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 import("//build/test.gni")
-import("//build/test/test_package.gni")
 import("//src/sys/build/components.gni")
 
 config_9364_path = "gt6853/goodix_cfg_group_fiti9364.bin"

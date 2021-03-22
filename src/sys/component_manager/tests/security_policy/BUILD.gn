@@ -5,7 +5,6 @@
 import("//build/fidl/fidl.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_test.gni")
-import("//build/test/test_package.gni")
 
 group("tests") {
   testonly = true

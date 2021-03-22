@@ -4,7 +4,6 @@
 
 import("//build/config.gni")
 import("//build/fuzzing/fuzzer.gni")
-import("//build/package.gni")
 import("//build/test.gni")
 import("//src/sys/build/components.gni")
 
