@@ -1005,6 +1005,7 @@ dependencies = [
  "difference",
  "euclid",
  "eui48",
+ "event-listener",
  "fatfs",
  "flate2",
  "freetype",

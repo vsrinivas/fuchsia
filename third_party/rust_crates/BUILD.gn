@@ -162,6 +162,10 @@ if (current_os == "fuchsia") {
   }
 }
 
+group("event-listener") {
+  deps = [ ":event-listener-v2_5_1" ]
+}
+
 group("fatfs") {
   deps = [ ":fatfs-v0_4_0" ]
 }
