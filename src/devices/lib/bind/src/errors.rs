@@ -119,8 +119,8 @@ impl From<BindParserError> for UserError {
             BindParserError::AcceptKeyword(span) => {
                 UserError::new("E020", "Expected 'accept' keyword.", Some(span), false)
             }
-            BindParserError::AbortKeyword(span) => {
-                UserError::new("E024", "Expected 'abort' keyword.", Some(span), false)
+            BindParserError::FalseKeyword(span) => {
+                UserError::new("E026", "Expected 'false' keyword.", Some(span), false)
             }
             BindParserError::NoStatements(span) => UserError::new(
                 "E021",
@@ -133,6 +133,9 @@ impl From<BindParserError> for UserError {
             }
             BindParserError::UnterminatedComment => {
                 UserError::new("E023", "Found an unterminated multiline comment.", None, false)
+            }
+            BindParserError::TrueKeyword(span) => {
+                UserError::new("E027", "Expected 'true' keyword.", Some(span), false)
             }
             BindParserError::Unknown(span, kind) => UserError::new(
                 "E022",
@@ -201,6 +204,12 @@ impl From<CompilerError> for UserError {
                 None,
                 false,
             ),
+            CompilerError::TrueStatementMustBeIsolated => {
+                UserError::new("E110", "`true` must be the only statement in a block", None, false)
+            }
+            CompilerError::FalseStatementMustBeIsolated => {
+                UserError::new("E111", "`true` must be the only statement in a block", None, false)
+            }
         }
     }
 }

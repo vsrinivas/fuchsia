@@ -13,5 +13,5 @@ if fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.synaptics.platform.BIND_PLATFORM_DEV
 } else if fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.google.platform.BIND_PLATFORM_DEV_VID.GOOGLE {
   fuchsia.BIND_PLATFORM_DEV_PID == fuchsia.google.platform.BIND_PLATFORM_DEV_PID.VISALIA;
 } else {
-  abort;
+  false;
 }

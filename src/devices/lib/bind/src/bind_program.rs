@@ -52,7 +52,10 @@ pub enum Statement<'a> {
         blocks: Vec<(Condition<'a>, Vec<Statement<'a>>)>,
         else_block: Vec<Statement<'a>>,
     },
-    Abort {
+    False {
+        span: Span<'a>,
+    },
+    True {
         span: Span<'a>,
     },
 }
@@ -63,7 +66,8 @@ impl<'a> Statement<'a> {
             Statement::ConditionStatement { span, .. } => span,
             Statement::Accept { span, .. } => span,
             Statement::If { span, .. } => span,
-            Statement::Abort { span } => span,
+            Statement::False { span } => span,
+            Statement::True { span } => span,
         }
     }
 }
@@ -161,18 +165,28 @@ fn accept(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> {
     Ok((to, Statement::Accept { span, identifier, values }))
 }
 
-fn abort(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> {
+fn keyword_false(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> {
     let from = skip_ws(input)?;
-    let keyword_abort = ws(map_err(tag("abort"), BindParserError::AbortKeyword));
+    let keyword = ws(map_err(tag("false"), BindParserError::FalseKeyword));
     let terminator = ws(map_err(tag(";"), BindParserError::Semicolon));
-    let (to, _) = terminated(keyword_abort, terminator)(from)?;
+    let (to, _) = terminated(keyword, terminator)(from)?;
 
     let span = Span::from_to(&from, &to);
-    Ok((to, Statement::Abort { span }))
+    Ok((to, Statement::False { span }))
+}
+
+fn keyword_true(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> {
+    let from = skip_ws(input)?;
+    let keyword = ws(map_err(tag("true"), BindParserError::TrueKeyword));
+    let terminator = ws(map_err(tag(";"), BindParserError::Semicolon));
+    let (to, _) = terminated(keyword, terminator)(from)?;
+
+    let span = Span::from_to(&from, &to);
+    Ok((to, Statement::True { span }))
 }
 
 fn statement(input: NomSpan) -> IResult<NomSpan, Statement, BindParserError> {
-    alt((condition_statement, if_statement, accept, abort))(input)
+    alt((condition_statement, if_statement, accept, keyword_false, keyword_true))(input)
 }
 
 fn program(input: NomSpan) -> IResult<NomSpan, Ast, BindParserError> {
@@ -572,61 +586,6 @@ mod test {
         fn span() {
             // Span doesn't contain leading or trailing whitespace, and line number is correct.
             check_result(
-                condition(NomSpan::new(" \n\t\r\nabc \n\t\r\n== \n\t\r\ntrue \n\t\r\n")),
-                " \n\t\r\n",
-                Condition {
-                    span: Span { offset: 5, line: 3, fragment: "abc \n\t\r\n== \n\t\r\ntrue" },
-                    lhs: make_identifier!["abc"],
-                    op: ConditionOp::Equals,
-                    rhs: Value::BoolLiteral(true),
-                },
-            );
-        }
-    }
-
-    mod aborts {
-        use super::*;
-
-        #[test]
-        fn simple() {
-            check_result(
-                abort(NomSpan::new("abort;")),
-                "",
-                Statement::Abort { span: Span { offset: 0, line: 1, fragment: "abort;" } },
-            );
-        }
-
-        #[test]
-        fn invalid() {
-            // Must have abort keyword.
-            assert_eq!(
-                abort(NomSpan::new("a;")),
-                Err(nom::Err::Error(BindParserError::AbortKeyword("a;".to_string())))
-            );
-            assert_eq!(
-                abort(NomSpan::new(";")),
-                Err(nom::Err::Error(BindParserError::AbortKeyword(";".to_string())))
-            );
-
-            // Must have semicolon.
-            assert_eq!(
-                abort(NomSpan::new("abort")),
-                Err(nom::Err::Error(BindParserError::Semicolon("".to_string())))
-            );
-        }
-
-        #[test]
-        fn empty() {
-            assert_eq!(
-                abort(NomSpan::new("")),
-                Err(nom::Err::Error(BindParserError::AbortKeyword("".to_string())))
-            );
-        }
-
-        #[test]
-        fn span() {
-            // Span doesn't contain leading or trailing whitespace, and line number is correct.
-            check_result(
                 accept(NomSpan::new(" \n\t\r\naccept a \n\t\r\n{ 1 } \n\t\r\n")),
                 " \n\t\r\n",
                 Statement::Accept {
@@ -634,6 +593,106 @@ mod test {
                     identifier: make_identifier!["a"],
                     values: vec![Value::NumericLiteral(1)],
                 },
+            );
+        }
+    }
+
+    mod false_statement {
+        use super::*;
+
+        #[test]
+        fn simple() {
+            check_result(
+                keyword_false(NomSpan::new("false;")),
+                "",
+                Statement::False { span: Span { offset: 0, line: 1, fragment: "false;" } },
+            );
+        }
+
+        #[test]
+        fn invalid() {
+            // Must have false keyword.
+            assert_eq!(
+                keyword_false(NomSpan::new("a;")),
+                Err(nom::Err::Error(BindParserError::FalseKeyword("a;".to_string())))
+            );
+            assert_eq!(
+                keyword_false(NomSpan::new(";")),
+                Err(nom::Err::Error(BindParserError::FalseKeyword(";".to_string())))
+            );
+
+            // Must have semicolon.
+            assert_eq!(
+                keyword_false(NomSpan::new("false")),
+                Err(nom::Err::Error(BindParserError::Semicolon("".to_string())))
+            );
+        }
+
+        #[test]
+        fn empty() {
+            assert_eq!(
+                keyword_false(NomSpan::new("")),
+                Err(nom::Err::Error(BindParserError::FalseKeyword("".to_string())))
+            );
+        }
+
+        #[test]
+        fn span() {
+            // Span doesn't contain leading or trailing whitespace, and line number is correct.
+            check_result(
+                keyword_false(NomSpan::new(" \n\t\r\nfalse; \n\t\r\n")),
+                " \n\t\r\n",
+                Statement::False { span: Span { offset: 5, line: 3, fragment: "false;" } },
+            );
+        }
+    }
+
+    mod true_statement {
+        use super::*;
+
+        #[test]
+        fn simple() {
+            check_result(
+                keyword_true(NomSpan::new("true;")),
+                "",
+                Statement::True { span: Span { offset: 0, line: 1, fragment: "true;" } },
+            );
+        }
+
+        #[test]
+        fn invalid() {
+            // Must have true keyword.
+            assert_eq!(
+                keyword_true(NomSpan::new("p;")),
+                Err(nom::Err::Error(BindParserError::TrueKeyword("p;".to_string())))
+            );
+            assert_eq!(
+                keyword_true(NomSpan::new(";")),
+                Err(nom::Err::Error(BindParserError::TrueKeyword(";".to_string())))
+            );
+
+            // Must have semicolon.
+            assert_eq!(
+                keyword_true(NomSpan::new("true")),
+                Err(nom::Err::Error(BindParserError::Semicolon("".to_string())))
+            );
+        }
+
+        #[test]
+        fn empty() {
+            assert_eq!(
+                keyword_true(NomSpan::new("")),
+                Err(nom::Err::Error(BindParserError::TrueKeyword("".to_string())))
+            );
+        }
+
+        #[test]
+        fn span() {
+            // Span doesn't contain leading or trailing whitespace, and line number is correct.
+            check_result(
+                keyword_true(NomSpan::new(" \n\t\r\ntrue; \n\t\r\n")),
+                " \n\t\r\n",
+                Statement::True { span: Span { offset: 5, line: 3, fragment: "true;" } },
             );
         }
     }
@@ -703,7 +762,7 @@ mod test {
             // TODO(fxbug.dev/35146): Improve the error type that is returned here.
             assert_eq!(
                 program(NomSpan::new("x == 1")),
-                Err(nom::Err::Error(BindParserError::AbortKeyword("x == 1".to_string())))
+                Err(nom::Err::Error(BindParserError::TrueKeyword("x == 1".to_string())))
             );
         }
 
@@ -711,7 +770,7 @@ mod test {
         fn multiple_statements() {
             check_result(
                 program(NomSpan::new(
-                    "x == 1; accept y { true } abort; if z == 2 { a != 3; } else { a == 3; }",
+                    "x == 1; accept y { true } false; if z == 2 { a != 3; } else { a == 3; }",
                 )),
                 "",
                 Ast {
@@ -731,7 +790,7 @@ mod test {
                             identifier: make_identifier!["y"],
                             values: vec![Value::BoolLiteral(true)],
                         },
-                        Statement::Abort { span: Span { offset: 26, line: 1, fragment: "abort;" } },
+                        Statement::False { span: Span { offset: 26, line: 1, fragment: "false;" } },
                         Statement::If {
                             span: Span {
                                 offset: 33,

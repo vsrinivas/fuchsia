@@ -33,6 +33,8 @@ pub enum CompilerError {
     InvalidExtendsKeyword(CompoundIdentifier),
     UnknownKey(CompoundIdentifier),
     IfStatementMustBeTerminal,
+    TrueStatementMustBeIsolated,
+    FalseStatementMustBeIsolated,
 }
 
 impl fmt::Display for CompilerError {
@@ -534,6 +536,7 @@ impl<'a> Compiler<'a> {
     }
 
     fn compile_block(&mut self, statements: Vec<Statement<'a>>) -> Result<(), CompilerError> {
+        let num_statements = statements.len();
         let mut iter = statements.into_iter().peekable();
         while let Some(statement) = iter.next() {
             match statement {
@@ -654,11 +657,20 @@ impl<'a> Compiler<'a> {
                         instruction: SymbolicInstruction::Label(final_label_id),
                     });
                 }
-                Statement::Abort { span: _ } => {
+                Statement::False { span: _ } => {
+                    if num_statements != 1 {
+                        return Err(CompilerError::FalseStatementMustBeIsolated);
+                    }
                     self.bind_program.instructions.push(SymbolicInstructionInfo {
-                        location: Some(AstLocation::AbortStatement(statement)),
+                        location: Some(AstLocation::FalseStatement(statement)),
                         instruction: SymbolicInstruction::UnconditionalAbort,
                     });
+                }
+                Statement::True { .. } => {
+                    // A `true` statement doesn't require an instruction.
+                    if num_statements != 1 {
+                        return Err(CompilerError::TrueStatementMustBeIsolated);
+                    }
                 }
             }
         }
@@ -1301,8 +1313,8 @@ mod test {
     }
 
     #[test]
-    fn abort() {
-        let abort_statement = Statement::Abort { span: Span::new() };
+    fn false_statement() {
+        let abort_statement = Statement::False { span: Span::new() };
 
         let program =
             bind_program::Ast { using: vec![], statements: vec![abort_statement.clone()] };
@@ -1312,7 +1324,7 @@ mod test {
             compile_statements(program.statements, symbol_table).unwrap().instructions,
             vec![
                 SymbolicInstructionInfo {
-                    location: Some(AstLocation::AbortStatement(abort_statement)),
+                    location: Some(AstLocation::FalseStatement(abort_statement)),
                     instruction: SymbolicInstruction::UnconditionalAbort
                 },
                 SymbolicInstructionInfo {
@@ -1320,6 +1332,64 @@ mod test {
                     instruction: SymbolicInstruction::UnconditionalBind
                 }
             ]
+        );
+    }
+
+    #[test]
+    fn false_statement_must_be_isolated() {
+        let condition_statement = Statement::ConditionStatement {
+            span: Span::new(),
+            condition: Condition {
+                span: Span::new(),
+                lhs: make_identifier!("abc"),
+                op: ConditionOp::Equals,
+                rhs: Value::NumericLiteral(42),
+            },
+        };
+        let abort_statement = Statement::False { span: Span::new() };
+
+        let program = bind_program::Ast {
+            using: vec![],
+            statements: vec![condition_statement.clone(), abort_statement.clone()],
+        };
+        let mut symbol_table = HashMap::new();
+        symbol_table.insert(
+            make_identifier!("abc"),
+            Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+        );
+
+        assert_eq!(
+            compile_statements(program.statements, symbol_table),
+            Err(CompilerError::FalseStatementMustBeIsolated)
+        );
+    }
+
+    #[test]
+    fn true_statement_must_be_isolated() {
+        let condition_statement = Statement::ConditionStatement {
+            span: Span::new(),
+            condition: Condition {
+                span: Span::new(),
+                lhs: make_identifier!("abc"),
+                op: ConditionOp::Equals,
+                rhs: Value::NumericLiteral(42),
+            },
+        };
+        let abort_statement = Statement::True { span: Span::new() };
+
+        let program = bind_program::Ast {
+            using: vec![],
+            statements: vec![condition_statement.clone(), abort_statement.clone()],
+        };
+        let mut symbol_table = HashMap::new();
+        symbol_table.insert(
+            make_identifier!("abc"),
+            Symbol::Key("abc".to_string(), bind_library::ValueType::Number),
+        );
+
+        assert_eq!(
+            compile_statements(program.statements, symbol_table),
+            Err(CompilerError::TrueStatementMustBeIsolated)
         );
     }
 

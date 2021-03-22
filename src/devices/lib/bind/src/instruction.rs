@@ -51,7 +51,7 @@ pub enum RawAstLocation {
     AcceptStatementValue,
     AcceptStatementFailure,
     IfCondition,
-    AbortStatement,
+    FalseStatement,
 }
 
 #[derive(Clone)]

@@ -18,5 +18,5 @@ if fuchsia.BIND_USB_VID == fuchsia.usb.BIND_USB_VID.INTEL {
   }
 } else {
   // If the vendor is neither Intel or Realtek, do not bind.
-  abort;
+  false;
 }

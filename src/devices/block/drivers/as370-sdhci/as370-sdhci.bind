@@ -15,5 +15,5 @@ if fuchsia.BIND_COMPOSITE == 1 {
     fuchsia.synaptics.platform.BIND_PLATFORM_DEV_DID.VS680_SDHCI0,
   }
 } else {
-  abort;
+  false;
 }

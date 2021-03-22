@@ -37,7 +37,7 @@ type DevicePropertyMap = HashMap<u32, u32>;
 #[derive(Debug, PartialEq)]
 enum DebuggerOutput {
     ConditionStatement { key: u32, condition: RawCondition, success: bool, line: u32 },
-    AbortStatement { line: u32 },
+    FalseStatement { line: u32 },
     AcceptStatementSuccess { key: u32, value: u32, line: u32 },
     AcceptStatementFailure { key: u32, line: u32 },
     IfCondition { key: u32, condition: RawCondition, success: bool, line: u32 },
@@ -215,8 +215,8 @@ impl<'a> Debugger<'a> {
                         line: instruction.line(),
                     })
                 }
-                RawAstLocation::AbortStatement => {
-                    self.output.push(DebuggerOutput::AbortStatement { line: instruction.line() })
+                RawAstLocation::FalseStatement => {
+                    self.output.push(DebuggerOutput::FalseStatement { line: instruction.line() })
                 }
                 _ => return Err(DebuggerError::IncorrectAstLocation),
             },
@@ -271,7 +271,7 @@ impl<'a> Debugger<'a> {
                 DebuggerOutput::ConditionStatement { key, condition, success, line } => {
                     self.log_condition_statement(*key, *condition, *success, *line)?;
                 }
-                DebuggerOutput::AbortStatement { line } => self.log_abort_statement(*line),
+                DebuggerOutput::FalseStatement { line } => self.log_false_statement(*line),
                 DebuggerOutput::AcceptStatementSuccess { key, value, line } => {
                     self.log_accept_statement_success(*key, *value, *line)?
                 }
@@ -303,8 +303,8 @@ impl<'a> Debugger<'a> {
         Ok(())
     }
 
-    fn log_abort_statement(&self, line: u32) {
-        println!("Line {}: Abort statement reached.", line);
+    fn log_false_statement(&self, line: u32) {
+        println!("Line {}: False statement reached.", line);
     }
 
     fn log_accept_statement_success(
@@ -972,18 +972,7 @@ mod test {
         use super::*;
 
         fn abort_instructions() -> Vec<RawInstruction<[u32; 3]>> {
-            let statements = vec![
-                Statement::ConditionStatement {
-                    span: span_with_line(7),
-                    condition: Condition {
-                        span: span_with_line(7),
-                        lhs: make_identifier!("abc"),
-                        op: ConditionOp::Equals,
-                        rhs: Value::NumericLiteral(42),
-                    },
-                },
-                Statement::Abort { span: span_with_line(8) },
-            ];
+            let statements = vec![Statement::False { span: span_with_line(8) }];
             let mut symbol_table = HashMap::new();
             symbol_table.insert(make_identifier!("abc"), Symbol::DeprecatedKey(0x0100));
 
@@ -992,7 +981,7 @@ mod test {
 
         #[test]
         fn aborts() {
-            // Doesn't bind when abort statement is present.
+            // Doesn't bind when false statement is present.
             let raw_instructions = abort_instructions();
             let properties = vec![
                 DeviceProperty { key: 0x0100, value: 42 },
@@ -1000,18 +989,7 @@ mod test {
             ];
             let mut debugger = Debugger::new(&raw_instructions, &properties).unwrap();
             assert!(debugger.evaluate_bind_program().unwrap().is_none());
-            assert_eq!(
-                debugger.output,
-                vec![
-                    DebuggerOutput::ConditionStatement {
-                        key: 0x0100,
-                        condition: RawCondition::Equal,
-                        success: true,
-                        line: 7
-                    },
-                    DebuggerOutput::AbortStatement { line: 8 },
-                ]
-            );
+            assert_eq!(debugger.output, vec![DebuggerOutput::FalseStatement { line: 8 },]);
         }
     }
 
@@ -1021,7 +999,7 @@ mod test {
         fn full_program_instructions() -> Vec<RawInstruction<[u32; 3]>> {
             /*
             if abc == 42 {
-                abort;
+                false;
             } else {
                 accept xyz {1, 2};
                 pqr != 5;
@@ -1034,7 +1012,7 @@ mod test {
                 op: ConditionOp::Equals,
                 rhs: Value::NumericLiteral(42),
             };
-            let abort_statement = Statement::Abort { span: span_with_line(2) };
+            let false_statement = Statement::False { span: span_with_line(2) };
             let accept_statement = Statement::Accept {
                 span: span_with_line(4),
                 identifier: make_identifier!("xyz"),
@@ -1052,7 +1030,7 @@ mod test {
 
             let statements = vec![Statement::If {
                 span: span_with_line(1),
-                blocks: vec![(condition, vec![abort_statement])],
+                blocks: vec![(condition, vec![false_statement])],
                 else_block: vec![accept_statement, condition_statement],
             }];
             let mut symbol_table = HashMap::new();
@@ -1079,7 +1057,7 @@ mod test {
                         success: true,
                         line: 1
                     },
-                    DebuggerOutput::AbortStatement { line: 2 },
+                    DebuggerOutput::FalseStatement { line: 2 },
                 ]
             );
         }

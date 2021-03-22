@@ -47,7 +47,7 @@ pub enum AstLocation<'a> {
     AcceptStatementValue { identifier: CompoundIdentifier, value: Value, span: Span<'a> },
     AcceptStatementFailure { identifier: CompoundIdentifier, symbol: Symbol, span: Span<'a> },
     IfCondition(Condition<'a>),
-    AbortStatement(Statement<'a>),
+    FalseStatement(Statement<'a>),
 }
 
 impl<'a> AstLocation<'a> {
@@ -73,9 +73,9 @@ impl<'a> AstLocation<'a> {
                 ast_location: RawAstLocation::IfCondition,
                 extra: 0,
             },
-            AstLocation::AbortStatement(statement) => InstructionDebug {
+            AstLocation::FalseStatement(statement) => InstructionDebug {
                 line: statement.get_span().line,
-                ast_location: RawAstLocation::AbortStatement,
+                ast_location: RawAstLocation::FalseStatement,
                 extra: 0,
             },
         }
@@ -88,7 +88,7 @@ enum DebuggerOutput<'a> {
         statement: &'a Statement<'a>,
         success: bool,
     },
-    AbortStatement {
+    FalseStatement {
         statement: &'a Statement<'a>,
     },
     AcceptStatementSuccess {
@@ -319,8 +319,8 @@ impl<'a> Debugger<'a> {
         location: &'a Option<AstLocation>,
     ) -> Result<(), DebuggerError> {
         match location {
-            Some(AstLocation::AbortStatement(statement)) => {
-                self.output.push(DebuggerOutput::AbortStatement { statement });
+            Some(AstLocation::FalseStatement(statement)) => {
+                self.output.push(DebuggerOutput::FalseStatement { statement });
                 Ok(())
             }
             Some(AstLocation::AcceptStatementFailure { identifier, span, symbol: _ }) => {
@@ -337,7 +337,7 @@ impl<'a> Debugger<'a> {
                 DebuggerOutput::ConditionStatement { statement, success } => {
                     self.log_condition_statement(statement, *success)?;
                 }
-                DebuggerOutput::AbortStatement { statement } => self.log_abort_statement(statement),
+                DebuggerOutput::FalseStatement { statement } => self.log_abort_statement(statement),
                 DebuggerOutput::AcceptStatementSuccess {
                     identifier,
                     value,
@@ -380,7 +380,7 @@ impl<'a> Debugger<'a> {
     }
 
     fn log_abort_statement(&self, statement: &Statement) {
-        if let Statement::Abort { span } = statement {
+        if let Statement::False { span } = statement {
             println!("Line {}: Abort statement reached.", span.line);
         }
     }
@@ -848,17 +848,8 @@ mod test {
 
     #[test]
     fn abort() {
-        let condition_statement = Statement::ConditionStatement {
-            span: Span::new(),
-            condition: Condition {
-                span: Span::new(),
-                lhs: make_identifier!("abc"),
-                op: ConditionOp::Equals,
-                rhs: Value::NumericLiteral(42),
-            },
-        };
-        let abort_statement = Statement::Abort { span: Span::new() };
-        let statements = vec![condition_statement.clone(), abort_statement.clone()];
+        let abort_statement = Statement::False { span: Span::new() };
+        let statements = vec![abort_statement.clone()];
         let mut symbol_table = HashMap::new();
         symbol_table.insert(
             make_identifier!("abc"),
@@ -874,13 +865,7 @@ mod test {
         assert!(!debugger.evaluate_bind_program().unwrap());
         assert_eq!(
             debugger.output,
-            vec![
-                DebuggerOutput::ConditionStatement {
-                    statement: &condition_statement,
-                    success: true
-                },
-                DebuggerOutput::AbortStatement { statement: &abort_statement }
-            ]
+            vec![DebuggerOutput::FalseStatement { statement: &abort_statement }]
         );
     }
 
@@ -982,7 +967,7 @@ mod test {
             op: ConditionOp::Equals,
             rhs: Value::NumericLiteral(42),
         };
-        let abort_statement = Statement::Abort { span: Span::new() };
+        let abort_statement = Statement::False { span: Span::new() };
         let condition_statement = Statement::ConditionStatement {
             span: Span::new(),
             condition: Condition {
@@ -1029,7 +1014,7 @@ mod test {
             debugger.output,
             vec![
                 DebuggerOutput::IfCondition { condition: &condition, success: true },
-                DebuggerOutput::AbortStatement { statement: &abort_statement }
+                DebuggerOutput::FalseStatement { statement: &abort_statement }
             ]
         );
 
