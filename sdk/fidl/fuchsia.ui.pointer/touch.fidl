@@ -23,7 +23,7 @@ const uint32 TOUCH_MAX_EVENT = 128;
 /// swipe will be observed at a constant scale, even under effects such as
 /// magnification or panning. However, other effects, such as enlargening the
 /// view's clip bounds, may trigger a change in the viewport extents.
-protocol TouchEventSource {
+protocol TouchSource {
     /// A method for a client to receive touch pointer events.
     ///
     /// This call is formulated as a "hanging get" pattern: the client asks for
