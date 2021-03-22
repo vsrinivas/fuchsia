@@ -14,7 +14,9 @@ use home::home_dir;
 use hyper::{StatusCode, Uri};
 use std::convert::From;
 use std::env;
-use std::fs::{create_dir, create_dir_all, read_to_string, remove_dir_all, remove_file, File};
+use std::fs::{
+    create_dir, create_dir_all, read_dir, read_to_string, remove_dir_all, remove_file, File,
+};
 use std::io::{BufRead, BufReader};
 use std::os::unix;
 use std::path::PathBuf;
@@ -23,6 +25,25 @@ pub fn read_env_path(var: &str) -> Result<PathBuf> {
     env::var_os(var)
         .map(PathBuf::from)
         .ok_or(anyhow!("{} is not a valid environment variable", var))
+}
+
+/// Walks the current execution path and its parent directories to find
+/// .fx-ssh-path file.
+pub fn get_fuchsia_ssh_path() -> Result<PathBuf> {
+    for ancester in std::env::current_exe()?.ancestors() {
+        if let Ok(entries) = read_dir(ancester) {
+            for entry in entries {
+                if let Ok(entry) = entry {
+                    if entry.file_name() == ".fx-ssh-path" {
+                        return Ok(entry.path());
+                    }
+                }
+            }
+        }
+    }
+    ffx_bail!(
+        "Cannot find .fx-ssh-path from current execution location and its parent directories"
+    );
 }
 
 /// Returns GN SDK tools directory. This assumes that fvdl is located in
@@ -355,9 +376,9 @@ impl SSHKeys {
 
     /// Initialize SSH key files for in-tree usage.
     ///
-    /// Requires the environment variable FUCHSIA_DIR & FUCHSIA_BUILD_DIR to be specified.
+    /// Requires the environment variable FUCHSIA_BUILD_DIR to be specified.
     pub fn from_tree_env() -> Result<SSHKeys> {
-        let ssh_file = File::open(read_env_path("FUCHSIA_DIR")?.join(".fx-ssh-path"))?;
+        let ssh_file = File::open(get_fuchsia_ssh_path()?)?;
         let ssh_file = BufReader::new(ssh_file);
         let mut lines = ssh_file.lines();
 
@@ -612,10 +633,12 @@ mod tests {
 /usr/local/home/foo/.ssh/fuchsia_authorized_keys
 ",
         );
-        let tmp_dir = Builder::new().prefix("fvdl_test_ssh_").tempdir()?;
-        File::create(tmp_dir.path().join(".fx-ssh-path"))?.write_all(data.as_bytes())?;
+        let current_parent = std::env::current_exe()?
+            .parent()
+            .ok_or(anyhow!("Cannot get parent path"))?
+            .to_path_buf();
+        File::create(current_parent.join(".fx-ssh-path"))?.write_all(data.as_bytes())?;
 
-        env::set_var("FUCHSIA_DIR", tmp_dir.path());
         env::set_var("FUCHSIA_BUILD_DIR", "/build/out");
         let mut ssh_files = SSHKeys::from_tree_env()?;
         assert_eq!(
@@ -626,8 +649,9 @@ mod tests {
             ssh_files.auth_key.to_str().unwrap(),
             "/usr/local/home/foo/.ssh/fuchsia_authorized_keys"
         );
+        let tmp_dir = Builder::new().prefix("fvdl_test_ssh_").tempdir()?;
         ssh_files.stage_files(&tmp_dir.path().to_owned())?;
-        assert_eq!(ssh_files.private_key.to_str(), tmp_dir.path().join("id_ed25519").to_str());
+        assert!(ssh_files.private_key.ends_with("id_ed25519"));
         Ok(())
     }
 

@@ -515,6 +515,7 @@ impl VDLFiles {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::anyhow;
     use serial_test::serial;
     use std::io::Write;
 
@@ -529,15 +530,18 @@ mod tests {
         env::remove_var("PREBUILT_GRPCWEBPROXY_DIR");
     }
 
-    pub fn create_fake_ssh() -> Result<PathBuf> {
+    pub fn create_fake_ssh() -> Result<()> {
         let data = format!(
             "/usr/local/home/foo/.ssh/fuchsia_ed25519
 /usr/local/home/foo/.ssh/fuchsia_authorized_keys
 ",
         );
-        let tmp_dir = Builder::new().prefix("fvdl_fake_ssh_").tempdir()?;
-        File::create(tmp_dir.path().join(".fx-ssh-path"))?.write_all(data.as_bytes())?;
-        Ok(tmp_dir.into_path())
+        let current_parent = std::env::current_exe()?
+            .parent()
+            .ok_or(anyhow!("Cannot get parent path"))?
+            .to_path_buf();
+        File::create(current_parent.join(".fx-ssh-path"))?.write_all(data.as_bytes())?;
+        Ok(())
     }
 
     pub fn create_start_command() -> StartCommand {
@@ -581,9 +585,7 @@ mod tests {
     #[serial]
     fn test_choosing_prebuild_with_path_specified() -> Result<()> {
         setup();
-        // hold on to the temp dir created in create_fake_ssh(), so it does not get deleted.
-        env::set_var("FUCHSIA_DIR", create_fake_ssh()?);
-
+        create_fake_ssh()?;
         let start_command = &create_start_command();
 
         // --sdk
@@ -608,8 +610,7 @@ mod tests {
     #[serial]
     fn test_choosing_prebuild_with_cipd_label_specified() -> Result<()> {
         setup();
-        // hold on to the temp dir created in create_fake_ssh(), so it does not get deleted.
-        env::set_var("FUCHSIA_DIR", create_fake_ssh()?);
+        create_fake_ssh()?;
 
         let tmp_dir = Builder::new().prefix("fvdl_test_cipd_label_").tempdir()?;
         env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.path());
@@ -641,8 +642,7 @@ mod tests {
     #[serial]
     fn test_choosing_prebuild_default() -> Result<()> {
         setup();
-        // hold on to the temp dir created in create_fake_ssh(), so it does not get deleted.
-        env::set_var("FUCHSIA_DIR", create_fake_ssh()?);
+        create_fake_ssh()?;
 
         let tmp_dir = Builder::new().prefix("fvdl_test_default_").tempdir()?;
         env::set_var("FEMU_DOWNLOAD_DIR", tmp_dir.path());
