@@ -18,8 +18,8 @@ flutter_app("button_flutter") {
   ]
 
   deps = [
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_scenic_flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_scenic_flutter,
   ]
 }

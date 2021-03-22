@@ -22,6 +22,7 @@ dart_library("settings") {
   ]
 
   deps = [
+    "//sdk/dart/fuchsia_services",
     "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.media",
@@ -36,7 +37,6 @@ dart_library("settings") {
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/async",
     "//third_party/dart-pkg/pub/intl",
-    dart_package_label.fuchsia_services,
   ]
 }
 
@@ -54,6 +54,7 @@ flutter_test("ermine_settings_unittests") {
 
   deps = [
     ":settings",
+    "//sdk/dart/fidl",
     "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.media",
@@ -67,6 +68,5 @@ flutter_test("ermine_settings_unittests") {
     "//src/experiences/session_shells/ermine/internationalization",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/mockito",
-    dart_package_label.fidl,
   ]
 }

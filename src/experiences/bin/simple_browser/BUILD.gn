@@ -40,6 +40,13 @@ dart_library("lib") {
   ]
 
   deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_internationalization_flutter",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_scenic",
+    "//sdk/dart/fuchsia_scenic_flutter",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.io",
     "//sdk/fidl/fuchsia.ui.shortcut",
@@ -54,13 +61,6 @@ dart_library("lib") {
     "//third_party/dart-pkg/pub/http",
     "//third_party/dart-pkg/pub/intl",
     "//third_party/dart-pkg/pub/meta",
-    dart_package_label.fidl,
-    dart_package_label.fuchsia_internationalization_flutter,
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_scenic,
-    dart_package_label.fuchsia_scenic_flutter,
-    dart_package_label.fuchsia_services,
-    dart_package_label.zircon,
   ]
 }
 
@@ -105,13 +105,13 @@ flutter_test("simple_browser_unittests") {
 
   deps = [
     ":lib",
+    "//sdk/dart/fuchsia_logger",
     "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.web",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
-    dart_package_label.fuchsia_logger,
   ]
 }
 

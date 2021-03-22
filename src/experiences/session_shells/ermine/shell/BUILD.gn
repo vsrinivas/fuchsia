@@ -91,6 +91,14 @@ flutter_app("ermine") {
   ]
 
   deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_internationalization_flutter",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_scenic",
+    "//sdk/dart/fuchsia_scenic_flutter",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.bluetooth.control",
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.feedback",
@@ -123,14 +131,6 @@ flutter_app("ermine") {
     "//third_party/dart-pkg/pub/meta",
     "//third_party/dart-pkg/pub/uuid",
     "//third_party/dart-pkg/pub/vector_math",
-    dart_package_label.fidl,
-    dart_package_label.fuchsia_inspect,
-    dart_package_label.fuchsia_internationalization_flutter,
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_scenic,
-    dart_package_label.fuchsia_scenic_flutter,
-    dart_package_label.fuchsia_services,
-    dart_package_label.zircon,
   ]
 
   non_dart_deps = [ ":time_zone_list" ]
@@ -197,6 +197,13 @@ flutter_test("ermine_unittests") {
 
   deps = [
     ":ermine_dart_library",
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_internationalization_flutter",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_scenic_flutter",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.device.manager",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.ui.focus",
@@ -209,13 +216,6 @@ flutter_test("ermine_unittests") {
     "//third_party/dart-pkg/pub/intl",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
-    dart_package_label.fidl,
-    dart_package_label.fuchsia_inspect,
-    dart_package_label.fuchsia_internationalization_flutter,
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_scenic_flutter,
-    dart_package_label.fuchsia_services,
-    dart_package_label.zircon,
   ]
 }
 
