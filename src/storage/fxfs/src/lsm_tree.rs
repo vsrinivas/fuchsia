@@ -15,7 +15,7 @@ use {
         ops::Bound,
         sync::{Arc, RwLock},
     },
-    types::{Item, ItemRef, Key, Layer, MutableLayer, OrdLowerBound, Value},
+    types::{IntoLayerRefs, Item, ItemRef, Key, Layer, MutableLayer, OrdLowerBound, Value},
 };
 
 const SKIP_LIST_LAYER_ITEMS: usize = 512;
@@ -39,7 +39,7 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
     pub fn new(merge_fn: merge::MergeFn<K, V>) -> Self {
         LSMTree {
             data: RwLock::new(Inner {
-                mutable_layer: Arc::new(skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS)),
+                mutable_layer: skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS),
                 layers: Vec::new(),
             }),
             merge_fn,
@@ -53,7 +53,7 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
     ) -> Self {
         LSMTree {
             data: RwLock::new(Inner {
-                mutable_layer: Arc::new(skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS)),
+                mutable_layer: skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS),
                 layers: Self::layers_from_handles(handles),
             }),
             merge_fn,
@@ -77,7 +77,7 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
         let mut data = self.data.write().unwrap();
         let layer = data.mutable_layer.clone().as_layer();
         data.layers.insert(0, layer);
-        data.mutable_layer = Arc::new(skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS));
+        data.mutable_layer = skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS);
     }
 
     // TODO(csuter): This should run as a different task.
@@ -94,8 +94,7 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
                 &mut object_handle,
                 SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE,
             );
-            let iterators = layers.iter().map(|x| x.get_iterator()).collect();
-            let mut merger = merge::Merger::new(iterators, self.merge_fn);
+            let mut merger = merge::Merger::new(&layers.into_layer_refs(), self.merge_fn);
             merger.advance().await?;
             while let Some(item_ref) = merger.get() {
                 log::debug!("compact: writing {:?}", item_ref);
@@ -106,10 +105,10 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
         }
         {
             let mut data = self.data.write().unwrap();
-            data.layers = vec![Arc::new(simple_persistent_layer::SimplePersistentLayer::new(
+            data.layers = vec![simple_persistent_layer::SimplePersistentLayer::new(
                 object_handle,
                 SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE,
-            ))];
+            )];
         }
         Ok(())
     }
@@ -170,10 +169,10 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
             .into_vec()
             .drain(..)
             .map(|h| {
-                Arc::new(simple_persistent_layer::SimplePersistentLayer::new(
+                simple_persistent_layer::SimplePersistentLayer::new(
                     h,
                     SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE,
-                )) as Arc<dyn Layer<K, V>>
+                ) as Arc<dyn Layer<K, V>>
             })
             .collect()
     }
@@ -192,10 +191,7 @@ impl<
     > LayerSet<K, V>
 {
     pub fn get_iterator(&self) -> LSMTreeIter<'_, K, V> {
-        LSMTreeIter(merge::Merger::new(
-            self.layers.iter().map(|x| x.get_iterator()).collect(),
-            self.merge_fn,
-        ))
+        LSMTreeIter(merge::Merger::new(&self.layers.as_slice().into_layer_refs(), self.merge_fn))
     }
 
     pub fn add_layer(&mut self, layer: Arc<dyn Layer<K, V>>) {
@@ -206,10 +202,9 @@ impl<
 pub struct LSMTreeIter<'a, K, V>(merge::Merger<'a, K, V>);
 
 impl<
-        'a,
         K: std::fmt::Debug + OrdLowerBound + Unpin + 'static,
         V: std::fmt::Debug + Unpin + 'static,
-    > LSMTreeIter<'a, K, V>
+    > LSMTreeIter<'_, K, V>
 {
     pub fn get(&self) -> Option<ItemRef<'_, K, V>> {
         self.0.get()

@@ -4,7 +4,7 @@
 
 use {
     crate::lsm_tree::types::{
-        BoxedLayerIterator, Item, ItemRef, LayerIterator, LayerIteratorMut, OrdLowerBound,
+        Item, ItemRef, Layer, LayerIterator, LayerIteratorMut, OrdLowerBound,
     },
     anyhow::Error,
     futures::try_join,
@@ -62,9 +62,9 @@ pub enum MergeResult<K, V> {
 pub type MergeFn<K, V> =
     fn(&MergeIterator<'_, K, V>, &MergeIterator<'_, K, V>) -> MergeResult<K, V>;
 
-pub enum MergeItem<'item, K, V> {
+pub enum MergeItem<'a, K, V> {
     None,
-    Ref(ItemRef<'item, K, V>),
+    Ref(ItemRef<'a, K, V>),
     Item(Item<K, V>),
 }
 
@@ -87,25 +87,27 @@ impl<K, V> MergeItem<'_, K, V> {
 
 // An iterator that keeps track of where we are for each of the layers. We push these onto a
 // min-heap.
-pub struct MergeIterator<'iter, K, V> {
+pub struct MergeIterator<'a, K, V> {
+    layer: Option<&'a dyn Layer<K, V>>,
+
     // The underlying iterator, which can be const or mutable.
-    iter: Option<Box<dyn LayerIterator<K, V> + 'iter>>,
+    iter: Option<Box<dyn LayerIterator<K, V> + 'a>>,
 
     // The index of the layer this is for.
-    pub layer: u16,
+    pub layer_index: u16,
 
     // The item we are currently pointing at.
-    item: MergeItem<'iter, K, V>,
+    item: MergeItem<'a, K, V>,
 }
 
-impl<'iter, K, V> MergeIterator<'iter, K, V> {
-    fn new(layer: u16, iter: BoxedLayerIterator<'iter, K, V>) -> Self {
-        MergeIterator { iter: Some(iter), layer, item: MergeItem::None }
+impl<'a, K, V> MergeIterator<'a, K, V> {
+    fn new(layer_index: u16, layer: &'a dyn Layer<K, V>) -> Self {
+        MergeIterator { layer: Some(layer), iter: None, layer_index, item: MergeItem::None }
     }
 
     #[cfg(test)]
-    pub fn new_with_item(layer: u16, item: Item<K, V>) -> Self {
-        MergeIterator { iter: None, layer, item: MergeItem::Item(item) }
+    pub fn new_with_item(layer_index: u16, item: Item<K, V>) -> Self {
+        MergeIterator { layer: None, iter: None, layer_index, item: MergeItem::Item(item) }
     }
 
     pub fn item(&self) -> ItemRef<'_, K, V> {
@@ -132,7 +134,7 @@ impl<'iter, K, V> MergeIterator<'iter, K, V> {
         self.iter.as_mut().unwrap().as_mut()
     }
 
-    fn set_item(&mut self, item: MergeItem<'iter, K, V>) {
+    fn set_item(&mut self, item: MergeItem<'a, K, V>) {
         self.item = item;
     }
 
@@ -158,14 +160,14 @@ impl<'iter, K, V> MergeIterator<'iter, K, V> {
     }
 }
 
-struct MergeIteratorRef<'iter, K, V> {
-    ptr: NonNull<MergeIterator<'iter, K, V>>,
+struct MergeIteratorRef<'a, K, V> {
+    ptr: NonNull<MergeIterator<'a, K, V>>,
 }
 
 unsafe impl<K, V> Send for MergeIteratorRef<'_, K, V> {}
 
-impl<'iter, 'layer, K, V> MergeIteratorRef<'iter, K, V> {
-    fn new(m: &mut MergeIterator<'iter, K, V>) -> MergeIteratorRef<'iter, K, V> {
+impl<'a, K, V> MergeIteratorRef<'a, K, V> {
+    fn new(m: &mut MergeIterator<'a, K, V>) -> Self {
         MergeIteratorRef { ptr: NonNull::from(m) }
     }
 
@@ -179,18 +181,16 @@ impl<'iter, 'layer, K, V> MergeIteratorRef<'iter, K, V> {
     }
 }
 
-impl<'iter, 'layer, K, V> std::ops::Deref for MergeIteratorRef<'iter, K, V> {
-    type Target = MergeIterator<'iter, K, V>;
+impl<'a, K, V> std::ops::Deref for MergeIteratorRef<'a, K, V> {
+    type Target = MergeIterator<'a, K, V>;
 
     fn deref(&self) -> &Self::Target {
         unsafe { &*self.ptr.as_ptr() }
     }
 }
 
-impl<'iter, 'layer, K, V> std::convert::AsMut<MergeIterator<'iter, K, V>>
-    for MergeIteratorRef<'iter, K, V>
-{
-    fn as_mut(&mut self) -> &mut MergeIterator<'iter, K, V> {
+impl<'a, K, V> std::convert::AsMut<MergeIterator<'a, K, V>> for MergeIteratorRef<'a, K, V> {
+    fn as_mut(&mut self) -> &mut MergeIterator<'a, K, V> {
         return &mut *self;
     }
 }
@@ -202,10 +202,10 @@ impl<K, V> std::ops::DerefMut for MergeIteratorRef<'_, K, V> {
 }
 
 // -- Ord and friends --
-impl<'a, 'b, K: OrdLowerBound, V> Ord for MergeIteratorRef<'_, K, V> {
+impl<K: OrdLowerBound, V> Ord for MergeIteratorRef<'_, K, V> {
     fn cmp(&self, other: &Self) -> Ordering {
         // Reverse ordering because we want min-heap not max-heap.
-        other.key().cmp_lower_bound(self.key()).then(other.layer.cmp(&self.layer))
+        other.key().cmp_lower_bound(self.key()).then(other.layer_index.cmp(&self.layer_index))
     }
 }
 impl<K: OrdLowerBound, V> PartialOrd for MergeIteratorRef<'_, K, V> {
@@ -222,16 +222,16 @@ impl<K: OrdLowerBound, V> Eq for MergeIteratorRef<'_, K, V> {}
 
 // As we merge items, the current item can be an item that has been replaced (and later emitted) by
 // the merge function, or an item referenced by an iterator, or nothing.
-enum CurrentItem<'iter, K, V> {
+enum CurrentItem<'a, K, V> {
     None,
     Item(Item<K, V>),
-    Iterator(MergeIteratorRef<'iter, K, V>),
+    Iterator(MergeIteratorRef<'a, K, V>),
 }
 
-impl<'iter, K, V> CurrentItem<'iter, K, V> {
+impl<'a, K, V> CurrentItem<'a, K, V> {
     // Takes the iterator if one is present and replaces the current item with None; otherwise,
     // leaves the current item untouched.
-    fn take_iterator(&mut self) -> Option<MergeIteratorRef<'iter, K, V>> {
+    fn take_iterator(&mut self) -> Option<MergeIteratorRef<'a, K, V>> {
         if let CurrentItem::Iterator(_) = self {
             let mut result = CurrentItem::None;
             std::mem::swap(self, &mut result);
@@ -246,8 +246,8 @@ impl<'iter, K, V> CurrentItem<'iter, K, V> {
     }
 }
 
-impl<'a, K, V> From<&'a CurrentItem<'_, K, V>> for Option<ItemRef<'a, K, V>> {
-    fn from(iter: &'a CurrentItem<'_, K, V>) -> Option<ItemRef<'a, K, V>> {
+impl<'a, K, V> From<&'a CurrentItem<'a, K, V>> for Option<ItemRef<'a, K, V>> {
+    fn from(iter: &'a CurrentItem<'a, K, V>) -> Option<ItemRef<'a, K, V>> {
         match iter {
             CurrentItem::None => None,
             CurrentItem::Iterator(iterator) => Some(iterator.item()),
@@ -257,42 +257,35 @@ impl<'a, K, V> From<&'a CurrentItem<'_, K, V>> for Option<ItemRef<'a, K, V>> {
 }
 
 /// Merger is the main entry point to merging.
-pub struct Merger<'iter, K, V> {
+pub struct Merger<'a, K, V> {
     // The number of iterators that we've initialised.
     pub iterators_initialized: usize,
 
     // A buffer containing all the MergeIterator objects.
-    iterators: Pin<Vec<MergeIterator<'iter, K, V>>>,
+    iterators: Pin<Vec<MergeIterator<'a, K, V>>>,
 
     // A heap with the merge iterators.
-    heap: BinaryHeap<MergeIteratorRef<'iter, K, V>>,
+    heap: BinaryHeap<MergeIteratorRef<'a, K, V>>,
 
     // The current item.
-    item: CurrentItem<'iter, K, V>,
+    item: CurrentItem<'a, K, V>,
 
     // The function to be used for merging items.
     merge_fn: MergeFn<K, V>,
 }
 
-unsafe impl<K, V> Send for Merger<'_, K, V> {}
-unsafe impl<K, V> Sync for Merger<'_, K, V> {}
-
 impl<
-        'iter,
+        'a,
         K: std::fmt::Debug + std::marker::Unpin + OrdLowerBound + 'static,
         V: std::fmt::Debug + std::marker::Unpin + 'static,
-    > Merger<'iter, K, V>
+    > Merger<'a, K, V>
 {
     /// Returns a Merger prepared for merging.
-    pub(super) fn new(
-        layer_iterators: Box<[BoxedLayerIterator<'iter, K, V>]>,
-        merge_fn: MergeFn<K, V>,
-    ) -> Merger<'iter, K, V> {
-        let iterators = layer_iterators
-            .into_vec()
-            .drain(..)
+    pub(super) fn new(layers: &[&'a dyn Layer<K, V>], merge_fn: MergeFn<K, V>) -> Self {
+        let iterators = layers
+            .iter()
             .enumerate()
-            .map(|(index, iter)| MergeIterator::new(index as u16, iter))
+            .map(|(index, layer)| MergeIterator::new(index as u16, *layer))
             .collect();
         Merger {
             iterators_initialized: 0,
@@ -318,7 +311,8 @@ impl<
         if self.iterators_initialized == 0 {
             // Push all the iterators on.
             for iter in &mut self.iterators[self.iterators_initialized..] {
-                iter.iter_mut().seek(std::ops::Bound::Unbounded).await?;
+                iter.iter =
+                    Some(iter.layer.as_ref().unwrap().seek(std::ops::Bound::Unbounded).await?);
                 iter.set_item_from_iter();
                 if iter.is_some() {
                     self.heap.push(MergeIteratorRef::new(iter));
@@ -361,7 +355,7 @@ impl<
 
     // Updates the merge iterator depending on |op|. If discarding, the iterator should have already
     // been advanced.
-    fn update_item(&mut self, mut item: MergeIteratorRef<'iter, K, V>, op: ItemOp<K, V>) {
+    fn update_item(&mut self, mut item: MergeIteratorRef<'a, K, V>, op: ItemOp<K, V>) {
         match op {
             ItemOp::Keep => self.heap.push(item),
             ItemOp::Discard => {
@@ -386,17 +380,16 @@ impl<
     pub(super) async fn merge_into(
         mut mut_iter: Box<dyn LayerIteratorMut<K, V> + '_>,
         item: Item<K, V>,
-        lower_bound: &K,
         merge_fn: MergeFn<K, V>,
     ) -> Result<(), Error> {
-        mut_iter.seek(Bound::Included(lower_bound)).await?;
         let mut mut_merge_iter = MergeIterator {
+            layer: None,
             iter: None,
-            layer: 1,
+            layer_index: 1,
             item: unsafe { MergeItem::from(mut_iter.get()) },
         };
         let mut item_merge_iter =
-            MergeIterator { iter: None, layer: 0, item: MergeItem::Item(item) };
+            MergeIterator { layer: None, iter: None, layer_index: 0, item: MergeItem::Item(item) };
         while mut_merge_iter.is_some() && item_merge_iter.is_some() {
             if MergeIteratorRef::new(&mut mut_merge_iter)
                 > MergeIteratorRef::new(&mut item_merge_iter)
@@ -412,15 +405,15 @@ impl<
                 match merge_result {
                     MergeResult::EmitLeft => {
                         if let MergeItem::Item(item) = mut_merge_iter.item {
-                            mut_iter.insert_before(item);
+                            mut_iter.insert(item);
+                        } else {
+                            mut_iter.advance().await?;
                         }
-                        mut_iter.advance().await?;
                         mut_merge_iter.item = unsafe { MergeItem::from(mut_iter.get()) };
                     }
                     MergeResult::Other { emit, left, right } => {
                         if let Some(emit) = emit {
-                            mut_iter.insert_before(emit);
-                            mut_iter.advance().await?;
+                            mut_iter.insert(emit);
                             if let ItemOp::Keep = left {
                                 // This isn't necessary with our skip list implementation because
                                 // the existing node shouldn't have been moved, but other layers
@@ -466,8 +459,7 @@ impl<
                     MergeResult::EmitLeft => break, // Item is inserted outside the loop
                     MergeResult::Other { emit, left, right } => {
                         if let Some(emit) = emit {
-                            mut_iter.insert_before(emit);
-                            mut_iter.advance().await?;
+                            mut_iter.insert(emit);
                             if let ItemOp::Keep = right {
                                 // This isn't necessary with our skip list implementation because
                                 // the existing node shouldn't have been moved, but other layers
@@ -504,12 +496,13 @@ impl<
         } // while ...
           // The only way we could get here with both items is via the break above, so we know the
           // correct order required here.
-        if let MergeItem::Item(item) = mut_merge_iter.item {
-            mut_iter.insert_before(item);
-        }
         if let MergeItem::Item(item) = item_merge_iter.item {
-            mut_iter.insert_before(item);
+            mut_iter.insert(item);
         }
+        if let MergeItem::Item(item) = mut_merge_iter.item {
+            mut_iter.insert(item);
+        }
+        mut_iter.commit().await;
         Ok(())
     }
 
@@ -536,7 +529,8 @@ impl<
         {
             let index = self.iterators_initialized;
             let iter = &mut self.iterators[index];
-            iter.iter_mut().seek(std::ops::Bound::Included(hint)).await?;
+            iter.iter =
+                Some(iter.layer.as_ref().unwrap().seek(std::ops::Bound::Included(hint)).await?);
             iter.set_item_from_iter();
             if iter.is_some() {
                 self.heap.push(MergeIteratorRef::new(iter));
@@ -572,7 +566,7 @@ mod tests {
         },
         crate::lsm_tree::{
             skip_list_layer::SkipListLayer,
-            types::{Item, ItemRef, Layer, MutableLayer, OrdLowerBound},
+            types::{IntoLayerRefs, Item, ItemRef, Layer, MutableLayer, OrdLowerBound},
         },
         fuchsia_async as fasync,
         rand::Rng,
@@ -606,8 +600,8 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[1].clone()).await;
         skip_lists[1].insert(items[0].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::EmitLeft);
+        let mut merger =
+            Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::EmitLeft);
 
         merger.advance().await.unwrap();
         let ItemRef { key, value } = merger.get().expect("missing item");
@@ -625,12 +619,12 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[1].clone()).await;
         skip_lists[1].insert(items[0].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
-            emit: Some(Item::new(TestKey(3..3), 3)),
-            left: Discard,
-            right: Discard,
-        });
+        let mut merger =
+            Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::Other {
+                emit: Some(Item::new(TestKey(3..3), 3)),
+                left: Discard,
+                right: Discard,
+            });
 
         merger.advance().await.unwrap();
         let ItemRef { key, value } = merger.get().expect("missing item");
@@ -645,12 +639,12 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[1].clone()).await;
         skip_lists[1].insert(items[0].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
-            emit: None,
-            left: Replace(Item::new(TestKey(3..3), 3)),
-            right: Discard,
-        });
+        let mut merger =
+            Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::Other {
+                emit: None,
+                left: Replace(Item::new(TestKey(3..3), 3)),
+                right: Discard,
+            });
 
         // The merger should replace the left item and then after discarding the right item, it
         // should emit the replacement.
@@ -667,12 +661,12 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[1].clone()).await;
         skip_lists[1].insert(items[0].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
-            emit: None,
-            left: Discard,
-            right: Replace(Item::new(TestKey(3..3), 3)),
-        });
+        let mut merger =
+            Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::Other {
+                emit: None,
+                left: Discard,
+                right: Replace(Item::new(TestKey(3..3), 3)),
+            });
 
         // The merger should replace the right item and then after discarding the left item, it
         // should emit the replacement.
@@ -689,8 +683,7 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[1].clone()).await;
         skip_lists[1].insert(items[0].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |left, right| {
+        let mut merger = Merger::new(&skip_lists.into_layer_refs(), |left, right| {
             assert_eq!((left.key(), left.value()), (&TestKey(1..1), &1));
             assert_eq!((right.key(), right.value()), (&TestKey(2..2), &2));
             MergeResult::EmitLeft
@@ -705,12 +698,11 @@ mod tests {
         let item = Item::new(TestKey(1..1), 1);
         skip_lists[0].insert(item.clone()).await;
         skip_lists[1].insert(item.clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |left, right| {
+        let mut merger = Merger::new(&skip_lists.into_layer_refs(), |left, right| {
             assert_eq!((left.key(), left.value()), (&TestKey(1..1), &1));
             assert_eq!((left.key(), left.value()), (&TestKey(1..1), &1));
-            assert_eq!(left.layer, 0);
-            assert_eq!(right.layer, 1);
+            assert_eq!(left.layer_index, 0);
+            assert_eq!(right.layer_index, 1);
             MergeResult::EmitLeft
         });
 
@@ -723,8 +715,7 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[1].clone()).await;
         skip_lists[1].insert(items[0].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |left, right| {
+        let mut merger = Merger::new(&skip_lists.into_layer_refs(), |left, right| {
             if left.key() == &TestKey(1..1) {
                 MergeResult::Other {
                     emit: None,
@@ -754,8 +745,8 @@ mod tests {
         for i in 0..100 {
             skip_lists[rng.gen_range(0, 10) as usize].insert(Item::new(TestKey(i..i), i)).await;
         }
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::EmitLeft);
+        let mut merger =
+            Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::EmitLeft);
 
         for i in 0..100 {
             merger.advance().await.unwrap();
@@ -772,8 +763,8 @@ mod tests {
         let items = [Item::new(TestKey(1..10), 1), Item::new(TestKey(2..3), 2)];
         skip_lists[0].insert(items[1].clone()).await;
         skip_lists[1].insert(items[0].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::EmitLeft);
+        let mut merger =
+            Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::EmitLeft);
 
         merger.advance().await.unwrap();
         let ItemRef { key, value } = merger.get().expect("missing item");
@@ -796,8 +787,7 @@ mod tests {
             .merge_into(items[1].clone(), &items[0].key, |_left, _right| MergeResult::EmitLeft)
             .await;
 
-        let mut iter = skip_list.get_iterator();
-        iter.advance().await.unwrap();
+        let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.unwrap();
@@ -833,8 +823,7 @@ mod tests {
             })
             .await;
 
-        let mut iter = skip_list.get_iterator();
-        iter.advance().await.unwrap();
+        let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[1].key, &items[1].value));
         iter.advance().await.unwrap();
@@ -867,8 +856,7 @@ mod tests {
             })
             .await;
 
-        let mut iter = skip_list.get_iterator();
-        iter.advance().await.unwrap();
+        let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&TestKey(2..2), &2));
         iter.advance().await.unwrap();
@@ -910,8 +898,7 @@ mod tests {
             })
             .await;
 
-        let mut iter = skip_list.get_iterator();
-        iter.advance().await.unwrap();
+        let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&TestKey(2..2), &2));
         iter.advance().await.unwrap();
@@ -937,8 +924,7 @@ mod tests {
             })
             .await;
 
-        let mut iter = skip_list.get_iterator();
-        iter.advance().await.unwrap();
+        let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&TestKey(2..2), &2));
         iter.advance().await.unwrap();
@@ -977,8 +963,7 @@ mod tests {
             })
             .await;
 
-        let mut iter = skip_list.get_iterator();
-        iter.advance().await.unwrap();
+        let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&TestKey(4..4), &4));
         iter.advance().await.unwrap();
@@ -1006,8 +991,7 @@ mod tests {
             })
             .await;
 
-        let mut iter = skip_list.get_iterator();
-        iter.advance().await.unwrap();
+        let mut iter = skip_list.seek(Bound::Unbounded).await.unwrap();
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.unwrap();
@@ -1023,11 +1007,8 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(1..1), 2)];
         skip_lists[0].insert(items[0].clone()).await;
         skip_lists[1].insert(items[1].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
-            emit: None,
-            left: Discard,
-            right: Keep,
+        let mut merger = Merger::new(&skip_lists.into_layer_refs(), |_left, _right| {
+            MergeResult::Other { emit: None, left: Discard, right: Keep }
         });
         merger.seek(Bound::Included(&items[0].key)).await.expect("seek failed");
 
@@ -1045,8 +1026,8 @@ mod tests {
         skip_lists[0].insert(items[0].clone()).await;
         skip_lists[0].insert(items[1].clone()).await;
         skip_lists[1].insert(items[2].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::EmitLeft);
+        let mut merger =
+            Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::EmitLeft);
         merger.seek(Bound::Included(&items[0].key)).await.expect("seek failed");
         // This should still find the 2..2 key.
         merger.advance_with_hint(&items[2].key).await.expect("advance_with_hint failed");
@@ -1065,8 +1046,8 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[0].clone()).await;
         skip_lists[1].insert(items[1].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::EmitLeft);
+        let mut merger =
+            Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::EmitLeft);
         merger.seek(Bound::Included(&items[0].key)).await.expect("seek failed");
         // This should skip over the 2..2 key.
         merger.advance_with_hint(&TestKey(100..100)).await.expect("advance_with_hint failed");
@@ -1079,11 +1060,8 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[0].clone()).await;
         skip_lists[1].insert(items[1].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
-            emit: None,
-            left: Discard,
-            right: Keep,
+        let mut merger = Merger::new(&skip_lists.into_layer_refs(), |_left, _right| {
+            MergeResult::Other { emit: None, left: Discard, right: Keep }
         });
         merger.seek(Bound::Included(&items[1].key)).await.expect("seek failed");
 
@@ -1102,11 +1080,8 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[0].clone()).await;
         skip_lists[1].insert(items[1].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
-            emit: None,
-            left: Discard,
-            right: Keep,
+        let mut merger = Merger::new(&skip_lists.into_layer_refs(), |_left, _right| {
+            MergeResult::Other { emit: None, left: Discard, right: Keep }
         });
         // Search for a key before 1..1.
         merger.seek(Bound::Included(&TestKey(0..0))).await.expect("seek failed");
@@ -1122,11 +1097,8 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[0].clone()).await;
         skip_lists[1].insert(items[1].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
-            emit: None,
-            left: Discard,
-            right: Keep,
+        let mut merger = Merger::new(&skip_lists.into_layer_refs(), |_left, _right| {
+            MergeResult::Other { emit: None, left: Discard, right: Keep }
         });
         merger.seek(Bound::Included(&TestKey(3..3))).await.expect("seek failed");
 
@@ -1139,8 +1111,8 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[0].clone()).await;
         skip_lists[1].insert(items[1].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::EmitLeft);
+        let mut merger =
+            Merger::new(&skip_lists.into_layer_refs(), |_left, _right| MergeResult::EmitLeft);
         merger.seek(Bound::Included(&items[1].key)).await.expect("seek failed");
         merger.seek(Bound::Unbounded).await.expect("seek failed");
 
@@ -1154,11 +1126,8 @@ mod tests {
         let items = [Item::new(TestKey(1..1), 1), Item::new(TestKey(2..2), 2)];
         skip_lists[0].insert(items[1].clone()).await;
         skip_lists[1].insert(items[0].clone()).await;
-        let iterators = skip_lists.iter().map(|sl| sl.get_iterator()).collect();
-        let mut merger = Merger::new(iterators, |_left, _right| MergeResult::Other {
-            emit: None,
-            left: Discard,
-            right: Discard,
+        let mut merger = Merger::new(&skip_lists.into_layer_refs(), |_left, _right| {
+            MergeResult::Other { emit: None, left: Discard, right: Discard }
         });
 
         merger.advance().await.unwrap();

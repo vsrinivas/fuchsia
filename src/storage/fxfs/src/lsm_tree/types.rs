@@ -16,6 +16,7 @@ use {
 pub trait Key:
     std::cmp::Ord
     + std::fmt::Debug
+    + Clone
     + Send
     + Sync
     + std::marker::Unpin
@@ -27,6 +28,7 @@ pub trait Key:
 impl<K> Key for K where
     K: std::cmp::Ord
         + std::fmt::Debug
+        + Clone
         + Send
         + Sync
         + std::marker::Unpin
@@ -38,6 +40,7 @@ impl<K> Key for K where
 
 pub trait Value:
     std::fmt::Debug
+    + Clone
     + Send
     + Sync
     + serde::de::DeserializeOwned
@@ -48,6 +51,7 @@ pub trait Value:
 }
 impl<V> Value for V where
     V: std::fmt::Debug
+        + Clone
         + Send
         + Sync
         + std::marker::Unpin
@@ -63,6 +67,12 @@ impl<V> Value for V where
 pub struct ItemRef<'a, K, V> {
     pub key: &'a K,
     pub value: &'a V,
+}
+
+impl<K: Clone, V: Clone> ItemRef<'_, K, V> {
+    pub fn cloned(&self) -> Item<K, V> {
+        Item::new(self.key.clone(), self.value.clone())
+    }
 }
 
 impl<'a, K, V> Clone for ItemRef<'a, K, V> {
@@ -115,11 +125,12 @@ pub trait OrdLowerBound {
 }
 
 /// Layer is a trait that all layers need to implement (mutable and immutable).
+#[async_trait]
 pub trait Layer<K, V>: Send + Sync {
-    /// Returns an iterator for the layer. The iterator that is returned is positioned prior to the
-    /// first item in the layer. The caller needs to call advance() or seek() to position the
-    /// iterator on an item.
-    fn get_iterator(&self) -> BoxedLayerIterator<'_, K, V>;
+    /// Searches for a key. Bound::Excluded is not supported. Bound::Unbounded positions the
+    /// iterator on the first item in the layer.
+    async fn seek(&self, bound: std::ops::Bound<&K>)
+        -> Result<BoxedLayerIterator<'_, K, V>, Error>;
 }
 
 /// MutableLayer is a trait that only mutable layers need to implement.
@@ -138,13 +149,9 @@ pub trait MutableLayer<K, V>: Layer<K, V> {
     async fn replace_or_insert(&self, item: Item<K, V>);
 }
 
-/// Something that implements LayerIterator is returned by the get_iterator function.
+/// Something that implements LayerIterator is returned by the seek function.
 #[async_trait]
-pub trait LayerIterator<K, V>: Send {
-    /// Searches for a key. Bound::Excluded is not supported. Bound::Unbounded positions the
-    /// iterator on the first item in the layer.
-    async fn seek(&mut self, bound: std::ops::Bound<&K>) -> Result<(), Error>;
-
+pub trait LayerIterator<K, V>: Send + Sync {
     /// Advances the iterator.
     async fn advance(&mut self) -> Result<(), Error>;
 
@@ -157,6 +164,7 @@ pub trait LayerIterator<K, V>: Send {
 pub type BoxedLayerIterator<'iter, K, V> = Box<dyn LayerIterator<K, V> + 'iter>;
 
 /// Mutable layers need an iterator that implements this in order to make merge_into work.
+#[async_trait]
 pub(super) trait LayerIteratorMut<K, V>: LayerIterator<K, V> {
     /// Casts to super-traits.
     fn as_iterator_mut(&mut self) -> &mut dyn LayerIterator<K, V>;
@@ -167,5 +175,48 @@ pub(super) trait LayerIteratorMut<K, V>: LayerIterator<K, V> {
     fn erase(&mut self);
 
     /// Inserts the given item immediately prior to the item the iterator is currently pointing at.
-    fn insert_before(&mut self, item: Item<K, V>);
+    fn insert(&mut self, item: Item<K, V>);
+
+    /// Commits the changes. This must be called before the iteratore is dropped if there
+    /// have been any changes.
+    async fn commit(&mut self);
+}
+
+/// Trait for writing new layers.
+#[async_trait]
+pub trait LayerWriter {
+    /// Writes the given item to this layer.
+    async fn write<K: Send + Serialize + Sync, V: Send + Serialize + Sync>(
+        &mut self,
+        item: ItemRef<'_, K, V>,
+    ) -> Result<(), Error>;
+
+    /// Flushes any buffered items to the backing storage.
+    async fn flush(&mut self) -> Result<(), Error>;
+}
+
+/// A helper trait that converts arrays of layers into arrays of references to layers.
+pub trait IntoLayerRefs<'a, K, V, T: AsRef<U> + 'a, U: ?Sized>
+where
+    Self: IntoIterator<Item = &'a T>,
+{
+    fn into_layer_refs(self) -> Box<[&'a dyn Layer<K, V>]>;
+}
+
+// Generic implementation where we need the cast to &dyn Layer.
+impl<'a, K, V, T: AsRef<U>, U: Layer<K, V> + 'a> IntoLayerRefs<'a, K, V, T, U> for &'a [T] {
+    fn into_layer_refs(self) -> Box<[&'a dyn Layer<K, V>]> {
+        let refs: Vec<_> = self.iter().map(|x| x.as_ref() as &dyn Layer<K, V>).collect();
+        refs.into_boxed_slice()
+    }
+}
+
+// Generic implementation where we already have &dyn Layer.
+impl<'a, K, V, T: AsRef<dyn Layer<K, V>>> IntoLayerRefs<'a, K, V, T, dyn Layer<K, V>>
+    for &'a [T]
+{
+    fn into_layer_refs(self) -> Box<[&'a dyn Layer<K, V>]> {
+        let refs: Vec<_> = self.iter().map(|x| x.as_ref()).collect();
+        refs.into_boxed_slice()
+    }
 }

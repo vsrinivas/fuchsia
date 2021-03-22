@@ -170,7 +170,7 @@ pub fn merge(
     ) = (left.key(), right.key(), left.value(), right.value())
     {
         if let (None, None) = (left_extent.device_offset, right_extent.device_offset) {
-            if (left.layer as i32 - right.layer as i32).abs() == 1 {
+            if (left.layer_index as i32 - right.layer_index as i32).abs() == 1 {
                 // Two deletions in adjacent layers can be merged.
                 return merge_deleted_extents(
                     left.key().object_id,
@@ -181,8 +181,8 @@ pub fn merge(
         }
         return merge_extents(
             left.key().object_id,
-            left.layer,
-            right.layer,
+            left.layer_index,
+            right.layer_index,
             left_extent_key,
             right_extent_key,
             left_extent,

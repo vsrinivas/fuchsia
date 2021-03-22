@@ -53,64 +53,6 @@ impl<K, V> Iterator<'_, K, V> {
 
 #[async_trait]
 impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
-    async fn seek(&mut self, bound: Bound<&K>) -> Result<(), Error> {
-        let key;
-        self.pos = 0;
-        self.item_index = 0;
-        self.item_count = 0;
-        match bound {
-            Bound::Unbounded => {
-                self.advance().await?;
-                return Ok(());
-            }
-            Bound::Included(k) => {
-                key = k;
-            }
-            Bound::Excluded(_) => panic!("Excluded bound not supported"),
-        }
-        let mut left_offset = 0;
-        let mut right_offset = round_up(self.layer.object_handle.get_size(), self.layer.block_size);
-        self.advance().await?;
-        match self.get() {
-            None => {
-                return Ok(());
-            }
-            Some(item) => {
-                if item.key >= key {
-                    return Ok(());
-                }
-            }
-        }
-        while right_offset - left_offset > self.layer.block_size as u64 {
-            // Pick a block midway.
-            let mid_offset =
-                round_down(left_offset + (right_offset - left_offset) / 2, self.layer.block_size);
-            let mut iterator = Iterator::new(self.layer, mid_offset);
-            iterator.advance().await?;
-            if iterator.get().unwrap().key >= key {
-                right_offset = mid_offset;
-            } else {
-                left_offset = mid_offset;
-                *self = iterator;
-            }
-        }
-        // At this point, we know that left_key < key and right_key >= key, so we have to iterate
-        // through left_key to find the key we want.
-        loop {
-            self.advance().await?;
-            match self.get() {
-                None => {
-                    return Ok(());
-                }
-                Some(item) => {
-                    if item.key >= key {
-                        return Ok(());
-                    }
-                }
-            }
-        }
-    }
-
     async fn advance(&mut self) -> Result<(), Error> {
         if self.item_index >= self.item_count {
             if self.pos >= self.layer.object_handle.get_size() {
@@ -156,14 +98,67 @@ impl SimplePersistentLayer {
     /// Opens an existing layer that is accessible via |object_handle| (which provides a read
     /// interface to the object).  The layer should have been written prior using
     /// SimplePersistentLayerWriter.
-    pub fn new(object_handle: impl ObjectHandle + 'static, block_size: u32) -> Self {
-        SimplePersistentLayer { object_handle: Arc::new(object_handle), block_size }
+    pub fn new(object_handle: impl ObjectHandle + 'static, block_size: u32) -> Arc<Self> {
+        Arc::new(SimplePersistentLayer { object_handle: Arc::new(object_handle), block_size })
     }
 }
 
+#[async_trait]
 impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
-    fn get_iterator(&self) -> BoxedLayerIterator<'_, K, V> {
-        Box::new(Iterator::new(self, 0))
+    async fn seek<'a>(&'a self, bound: Bound<&K>) -> Result<BoxedLayerIterator<'a, K, V>, Error> {
+        let key;
+        match bound {
+            Bound::Unbounded => {
+                let mut iterator = Iterator::new(self, 0);
+                iterator.advance().await?;
+                return Ok(Box::new(iterator));
+            }
+            Bound::Included(k) => {
+                key = k;
+            }
+            Bound::Excluded(_) => panic!("Excluded bound not supported"),
+        }
+        let mut left_offset = 0;
+        let mut right_offset = round_up(self.object_handle.get_size(), self.block_size);
+        let mut left = Iterator::new(self, left_offset);
+        left.advance().await?;
+        match left.get() {
+            None => {
+                return Ok(Box::new(left));
+            }
+            Some(item) => {
+                if item.key >= key {
+                    return Ok(Box::new(left));
+                }
+            }
+        }
+        while right_offset - left_offset > self.block_size as u64 {
+            // Pick a block midway.
+            let mid_offset =
+                round_down(left_offset + (right_offset - left_offset) / 2, self.block_size);
+            let mut iterator = Iterator::new(self, mid_offset);
+            iterator.advance().await?;
+            if iterator.get().unwrap().key >= key {
+                right_offset = mid_offset;
+            } else {
+                left_offset = mid_offset;
+                left = iterator;
+            }
+        }
+        // At this point, we know that left_key < key and right_key >= key, so we have to iterate
+        // through left_key to find the key we want.
+        loop {
+            left.advance().await?;
+            match left.get() {
+                None => break,
+                Some(item) => {
+                    if item.key >= key {
+                        break;
+                    }
+                }
+            }
+        }
+        Ok(Box::new(left))
     }
 }
 
@@ -263,13 +258,12 @@ mod tests {
             writer.close().await.expect("close failed");
         }
         let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
-        let mut iterator = layer.get_iterator();
+        let mut iterator = layer.seek(Bound::Unbounded).await.expect("seek failed");
         for i in 0..ITEM_COUNT {
-            iterator.advance().await.expect("failed to advance");
             let ItemRef { key, value } = iterator.get().expect("missing item");
             assert_eq!((key, value), (&i, &i));
+            iterator.advance().await.expect("failed to advance");
         }
-        iterator.advance().await.expect("failed to advance");
         assert!(iterator.get().is_none());
     }
 
@@ -287,9 +281,8 @@ mod tests {
             writer.close().await.expect("close failed");
         }
         let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
-        let mut iterator = layer.get_iterator();
         for i in 0..ITEM_COUNT {
-            iterator.seek(Bound::Included(&i)).await.expect("failed to seek");
+            let mut iterator = layer.seek(Bound::Included(&i)).await.expect("failed to seek");
             let ItemRef { key, value } = iterator.get().expect("missing item");
             assert_eq!((key, value), (&i, &i));
 
@@ -319,8 +312,7 @@ mod tests {
             writer.close().await.expect("close failed");
         }
         let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
-        let mut iterator = layer.get_iterator();
-        iterator.seek(Bound::Unbounded).await.expect("failed to seek");
+        let mut iterator = layer.seek(Bound::Unbounded).await.expect("failed to seek");
         let ItemRef { key, value } = iterator.get().expect("missing item");
         assert_eq!((key, value), (&0, &0));
 
@@ -341,8 +333,10 @@ mod tests {
         }
 
         let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
-        let mut iterator = (&layer as &dyn Layer<i32, i32>).get_iterator();
-        iterator.advance().await.expect("failed to advance");
+        let iterator = (layer.as_ref() as &dyn Layer<i32, i32>)
+            .seek(Bound::Unbounded)
+            .await
+            .expect("seek failed");
         assert!(iterator.get().is_none())
     }
 
@@ -362,13 +356,12 @@ mod tests {
         }
 
         let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
-        let mut iterator = layer.get_iterator();
+        let mut iterator = layer.seek(Bound::Unbounded).await.expect("seek failed");
         for i in 0..ITEM_COUNT {
-            iterator.advance().await.expect("failed to advance");
             let ItemRef { key, value } = iterator.get().expect("missing item");
             assert_eq!((key, value), (&i, &i));
+            iterator.advance().await.expect("failed to advance");
         }
-        iterator.advance().await.expect("failed to advance");
         assert!(iterator.get().is_none());
     }
 }
