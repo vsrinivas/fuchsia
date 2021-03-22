@@ -54,6 +54,8 @@ pub enum CapabilityId {
     UsedProtocol(Path),
     // A directory in a `use` declaration has a target path in the component's namespace.
     UsedDirectory(Path),
+    // A storage in a `use` declaration has a target path in the component's namespace.
+    UsedStorage(Path),
     Storage(Name),
     Runner(Name),
     Resolver(Name),
@@ -69,8 +71,9 @@ impl CapabilityId {
             CapabilityId::Protocol(_) => "protocol",
             CapabilityId::Directory(_) => "directory",
             CapabilityId::UsedService(_) => "service",
-            CapabilityId::UsedDirectory(_) => "directory",
             CapabilityId::UsedProtocol(_) => "protocol",
+            CapabilityId::UsedDirectory(_) => "directory",
+            CapabilityId::UsedStorage(_) => "storage",
             CapabilityId::Storage(_) => "storage",
             CapabilityId::Runner(_) => "runner",
             CapabilityId::Resolver(_) => "resolver",
@@ -85,11 +88,156 @@ impl CapabilityId {
             CapabilityId::UsedService(p) => path::Path::new(p.as_str()).parent(),
             CapabilityId::UsedProtocol(p) => path::Path::new(p.as_str()).parent(),
             CapabilityId::UsedDirectory(p) => Some(path::Path::new(p.as_str())),
+            CapabilityId::UsedStorage(p) => Some(path::Path::new(p.as_str())),
             _ => None,
         }
     }
 
-    /// Given a Capability, Use, Offer or Expose clause, return the set of target identifiers.
+    /// Given a Use clause, return the set of target identifiers.
+    ///
+    /// When only one capability identifier is specified, the target identifier name is derived
+    /// using the "path" clause. If a "path" clause is not specified, the target identifier is the
+    /// same name as the source.
+    ///
+    /// When multiple capability identifiers are specified, the target names are the same as the
+    /// source names.
+    pub fn from_use(use_: &Use) -> Result<Vec<CapabilityId>, Error> {
+        // TODO: Validate that exactly one of these is set.
+        if let Some(n) = use_.service().as_ref() {
+            let path = match use_.path.as_ref() {
+                Some(path) => path.clone(),
+                None => format!("/svc/{}", n).parse().unwrap(),
+            };
+            return Ok(vec![CapabilityId::UsedService(path)]);
+        } else if let Some(OneOrMany::One(protocol)) = use_.protocol() {
+            let path = match use_.path.as_ref() {
+                Some(path) => path.clone(),
+                None => format!("/svc/{}", protocol).parse().unwrap(),
+            };
+            return Ok(vec![CapabilityId::UsedProtocol(path)]);
+        } else if let Some(OneOrMany::Many(protocols)) = use_.protocol() {
+            return if protocols.len() == 1 {
+                let protocol = &protocols[0];
+                let path = match use_.path.as_ref() {
+                    Some(path) => path.clone(),
+                    None => format!("/svc/{}", protocol).parse().unwrap(),
+                };
+                Ok(vec![CapabilityId::UsedProtocol(path)])
+            } else {
+                if use_.path.is_some() {
+                    return Err(Error::validate(
+                        "\"path\" can only be specified when one `protocol` is supplied.",
+                    ));
+                }
+                return Ok(protocols
+                    .iter()
+                    .map(|protocol: &Name| {
+                        let protocol: Path = format!("/svc/{}", protocol).parse().unwrap();
+                        CapabilityId::UsedProtocol(protocol)
+                    })
+                    .collect());
+            };
+        } else if let Some(_) = use_.directory() {
+            if use_.path.is_none() {
+                return Err(Error::validate("\"path\" should be present for `use directory`."));
+            }
+            return Ok(vec![CapabilityId::UsedDirectory(use_.path.as_ref().unwrap().clone())]);
+        } else if let Some(_) = use_.storage() {
+            if use_.path.is_none() {
+                return Err(Error::validate("\"path\" should be present for `use storage`."));
+            }
+            return Ok(vec![CapabilityId::UsedStorage(use_.path.as_ref().unwrap().clone())]);
+        } else if let Some(OneOrMany::One(n)) = use_.event().as_ref() {
+            return Ok(vec![CapabilityId::Event(alias_or_name(use_.r#as.as_ref(), n))]);
+        } else if let Some(OneOrMany::Many(events)) = use_.event() {
+            return match (use_.r#as.as_ref(), use_.filter.as_ref(), events.len()) {
+                (Some(alias), _, 1) => Ok(vec![CapabilityId::Event(alias.clone())]),
+                (None, Some(_), 1) => Ok(vec![CapabilityId::Event(events[0].clone())]),
+                (Some(_), None, _) => Err(Error::validate(
+                    "\"as\" can only be specified when one `event` is supplied",
+                )),
+                (None, Some(_), _) => Err(Error::validate(
+                    "\"filter\" can only be specified when one `event` is supplied",
+                )),
+                (Some(_), Some(_), _) => Err(Error::validate(
+                    "\"as\",\"filter\" can only be specified when one `event` is supplied",
+                )),
+                (None, None, _) => Ok(events
+                    .iter()
+                    .map(|event: &Name| CapabilityId::Event(event.clone()))
+                    .collect()),
+            };
+        } else if let Some(name) = use_.event_stream() {
+            return Ok(vec![CapabilityId::EventStream(name.clone())]);
+        }
+
+        // Unsupported capability type.
+        let supported_keywords = use_
+            .supported()
+            .into_iter()
+            .map(|k| format!("\"{}\"", k))
+            .collect::<Vec<_>>()
+            .join(", ");
+        Err(Error::validate(format!(
+            "`{}` declaration is missing a capability keyword, one of: {}",
+            use_.decl_type(),
+            supported_keywords,
+        )))
+    }
+
+    pub fn from_capability(capability: &Capability) -> Result<Vec<CapabilityId>, Error> {
+        // TODO: Validate that exactly one of these is set.
+        if let Some(n) = capability.service() {
+            return Ok(vec![CapabilityId::Service(n.clone())]);
+        } else if let Some(OneOrMany::One(protocol)) = capability.protocol() {
+            return Ok(vec![CapabilityId::Protocol(protocol.clone())]);
+        } else if let Some(OneOrMany::Many(protocols)) = capability.protocol() {
+            return if protocols.len() == 1 {
+                Ok(vec![CapabilityId::Protocol(protocols[0].clone())])
+            } else {
+                if capability.path.is_some() {
+                    return Err(Error::validate(
+                        "\"path\" can only be specified when one `protocol` is supplied.",
+                    ));
+                }
+                Ok(protocols
+                    .iter()
+                    .map(|protocol: &Name| CapabilityId::Protocol(protocol.clone()))
+                    .collect())
+            };
+        } else if let Some(n) = capability.directory() {
+            return Ok(vec![CapabilityId::Directory(n.clone())]);
+        } else if let Some(n) = capability.storage() {
+            return Ok(vec![CapabilityId::Storage(n.clone())]);
+        } else if let Some(n) = capability.runner() {
+            return Ok(vec![CapabilityId::Runner(n.clone())]);
+        } else if let Some(n) = capability.resolver() {
+            return Ok(vec![CapabilityId::Resolver(n.clone())]);
+        } else if let Some(OneOrMany::One(n)) = capability.event() {
+            return Ok(vec![CapabilityId::Event(n.clone())]);
+        } else if let Some(OneOrMany::Many(events)) = capability.event() {
+            return if events.len() == 1 {
+                Ok(vec![CapabilityId::Event(events[0].clone())])
+            } else {
+                Ok(events.iter().map(|event: &Name| CapabilityId::Event(event.clone())).collect())
+            };
+        }
+
+        // Unsupported capability type.
+        let supported_keywords = capability
+            .supported()
+            .into_iter()
+            .map(|k| format!("\"{}\"", k))
+            .collect::<Vec<_>>()
+            .join(", ");
+        Err(Error::validate(format!(
+            "`{}` declaration is missing a capability keyword, one of: {}",
+            capability.decl_type(),
+            supported_keywords,
+        )))
+    }
+
+    /// Given an Offer or Exposeclause, return the set of target identifiers.
     ///
     /// When only one capability identifier is specified, the target identifier name is derived
     /// using the "as" clause. If an "as" clause is not specified, the target identifier is the
@@ -97,120 +245,32 @@ impl CapabilityId {
     ///
     /// When multiple capability identifiers are specified, the target names are the same as the
     /// source names.
-    // TODO: Break up this function by clause type, it's trying to do too much. This will be easier
-    // to do once name-based capabilities have fully replaced path-based.
-    pub fn from_clause<T>(
-        clause: &T,
-        clause_type: RoutingClauseType,
-    ) -> Result<Vec<CapabilityId>, Error>
+    pub fn from_offer_expose<T>(clause: &T) -> Result<Vec<CapabilityId>, Error>
     where
-        T: CapabilityClause + AsClause + PathClause + FilterClause + fmt::Debug,
+        T: CapabilityClause + AsClause + FilterClause + fmt::Debug,
     {
-        // For directory/service/runner types, return the source name,
-        // using the "as" clause to rename if neccessary.
         // TODO: Validate that exactly one of these is set.
         let alias = clause.r#as();
-        let path = clause.path();
         if let Some(n) = clause.service().as_ref() {
-            return match clause_type {
-                RoutingClauseType::Use => {
-                    let path = match path {
-                        Some(path) => path.clone(),
-                        None => format!("/svc/{}", n).parse().unwrap(),
-                    };
-                    Ok(vec![CapabilityId::UsedService(path)])
-                }
-                _ => Ok(vec![CapabilityId::Service(alias_or_name(alias, n))]),
-            };
+            return Ok(vec![CapabilityId::Service(alias_or_name(alias, n))]);
         } else if let Some(OneOrMany::One(protocol)) = clause.protocol() {
-            return match (clause_type, protocol) {
-                (RoutingClauseType::Capability, protocol) => {
-                    Ok(vec![CapabilityId::Protocol(protocol)])
-                }
-                (RoutingClauseType::Use, protocol) => {
-                    let path = match path {
-                        Some(path) => path.clone(),
-                        None => format!("/svc/{}", protocol).parse().unwrap(),
-                    };
-                    Ok(vec![CapabilityId::UsedProtocol(path)])
-                }
-                (_, protocol) => Ok(vec![CapabilityId::Protocol(alias_or_name(alias, &protocol))]),
-            };
+            return Ok(vec![CapabilityId::Protocol(alias_or_name(alias, &protocol))]);
         } else if let Some(OneOrMany::Many(protocols)) = clause.protocol() {
-            return match clause_type {
-                RoutingClauseType::Use if protocols.len() == 1 => {
-                    let protocol = &protocols[0];
-                    let path = match path {
-                        Some(path) => path.clone(),
-                        None => format!("/svc/{}", protocol).parse().unwrap(),
-                    };
-                    Ok(vec![CapabilityId::UsedProtocol(path)])
+            return if protocols.len() == 1 {
+                Ok(vec![CapabilityId::Protocol(alias_or_name(alias, &protocols[0]))])
+            } else {
+                if alias.is_some() {
+                    return Err(Error::validate(
+                        "\"as\" can only be specified when one `protocol` is supplied.",
+                    ));
                 }
-                RoutingClauseType::Use => {
-                    if alias.is_some() {
-                        return Err(Error::validate(
-                            "\"as\" field can only be specified when one `protocol` is supplied.",
-                        ));
-                    }
-                    if path.is_some() {
-                        return Err(Error::validate(
-                            "\"path\" field can only be specified when one `protocol` is supplied.",
-                        ));
-                    }
-                    Ok(protocols
-                        .iter()
-                        .map(|protocol: &Name| {
-                            let protocol: Path = format!("/svc/{}", protocol).parse().unwrap();
-                            CapabilityId::UsedProtocol(protocol)
-                        })
-                        .collect())
-                }
-                RoutingClauseType::Capability if protocols.len() == 1 => {
-                    Ok(vec![CapabilityId::Protocol(protocols[0].clone())])
-                }
-                RoutingClauseType::Capability => {
-                    if path.is_some() {
-                        return Err(Error::validate(
-                            "\"path\" field can only be specified when one `protocol` is supplied.",
-                        ));
-                    }
-                    Ok(protocols
-                        .iter()
-                        .map(|protocol: &Name| CapabilityId::Protocol(protocol.clone()))
-                        .collect())
-                }
-                _ if protocols.len() == 1 => {
-                    Ok(vec![CapabilityId::Protocol(alias_or_name(alias, &protocols[0]))])
-                }
-                _ => {
-                    if alias.is_some() {
-                        return Err(Error::validate(
-                            "\"as\" field can only be specified when one `protocol` is supplied.",
-                        ));
-                    }
-                    Ok(protocols
-                        .iter()
-                        .map(|protocol: &Name| CapabilityId::Protocol(protocol.clone()))
-                        .collect())
-                }
+                Ok(protocols
+                    .iter()
+                    .map(|protocol: &Name| CapabilityId::Protocol(protocol.clone()))
+                    .collect())
             };
-        } else if let Some(directory) = clause.directory() {
-            return match (clause_type, directory) {
-                (RoutingClauseType::Capability, directory) => {
-                    Ok(vec![CapabilityId::Directory(directory)])
-                }
-                (RoutingClauseType::Use, _) => {
-                    if path.is_none() {
-                        return Err(Error::validate(
-                            "\"path\" field should be present for `use directory`.",
-                        ));
-                    }
-                    Ok(vec![CapabilityId::UsedDirectory(path.unwrap().clone())])
-                }
-                (_, directory) => {
-                    Ok(vec![CapabilityId::Directory(alias_or_name(alias, &directory))])
-                }
-            };
+        } else if let Some(n) = clause.directory().as_ref() {
+            return Ok(vec![CapabilityId::Directory(alias_or_name(alias, n))]);
         } else if let Some(n) = clause.storage().as_ref() {
             return Ok(vec![CapabilityId::Storage(alias_or_name(alias, n))]);
         } else if let Some(n) = clause.runner().as_ref() {
@@ -224,24 +284,22 @@ impl CapabilityId {
                 (Some(alias), _, 1) => Ok(vec![CapabilityId::Event(alias.clone())]),
                 (None, Some(_), 1) => Ok(vec![CapabilityId::Event(events[0].clone())]),
                 (Some(_), None, _) => Err(Error::validate(
-                    "\"as\" field can only be specified when one `event` is supplied",
+                    "\"as\" can only be specified when one `event` is supplied",
                 )),
                 (None, Some(_), _) => Err(Error::validate(
-                    "\"filter\" field can only be specified when one `event` is supplied",
+                    "\"filter\" can only be specified when one `event` is supplied",
                 )),
                 (Some(_), Some(_), _) => Err(Error::validate(
-                    "\"as\",\"filter\" fields can only be specified when one `event` is supplied",
+                    "\"as\",\"filter\" can only be specified when one `event` is supplied",
                 )),
                 (None, None, _) => Ok(events
                     .iter()
                     .map(|event: &Name| CapabilityId::Event(event.clone()))
                     .collect()),
             };
-        } else if let Some(name) = clause.event_stream().as_ref() {
-            return Ok(vec![CapabilityId::EventStream(name.clone())]);
         }
 
-        // Unknown capability type.
+        // Unsupported capability type.
         let supported_keywords = clause
             .supported()
             .into_iter()
@@ -267,7 +325,8 @@ impl fmt::Display for CapabilityId {
             | CapabilityId::Event(n) => n.as_str(),
             CapabilityId::UsedService(p)
             | CapabilityId::UsedProtocol(p)
-            | CapabilityId::UsedDirectory(p) => p.as_str(),
+            | CapabilityId::UsedDirectory(p)
+            | CapabilityId::UsedStorage(p) => p.as_str(),
             CapabilityId::EventStream(p) => p.as_str(),
             CapabilityId::Protocol(p) | CapabilityId::Directory(p) => p.as_str(),
         };
@@ -1090,18 +1149,6 @@ pub trait FromClause {
     fn from_(&self) -> OneOrMany<AnyRef<'_>>;
 }
 
-/// Type for generic functions that need to adjust their behavior based on the type of clause
-/// provided.
-// TODO: Refactor the methods that use this so they don't require this, probably by breaking
-// them up.
-#[derive(Debug, PartialEq, Eq)]
-pub enum RoutingClauseType {
-    Capability,
-    Use,
-    Offer,
-    Expose,
-}
-
 pub trait CapabilityClause {
     fn service(&self) -> &Option<Name>;
     fn protocol(&self) -> Option<OneOrMany<Name>>;
@@ -1826,137 +1873,115 @@ mod tests {
     fn test_capability_id() -> Result<(), Error> {
         // service
         assert_eq!(
-            CapabilityId::from_clause(
-                &Offer { service: Some("a".parse().unwrap()), ..empty_offer() },
-                RoutingClauseType::Offer
-            )?,
+            CapabilityId::from_offer_expose(&Offer {
+                service: Some("a".parse().unwrap()),
+                ..empty_offer()
+            },)?,
             vec![CapabilityId::Service("a".parse().unwrap())]
         );
         assert_eq!(
-            CapabilityId::from_clause(
-                &Use { service: Some("a".parse().unwrap()), ..empty_use() },
-                RoutingClauseType::Use
-            )?,
+            CapabilityId::from_use(&Use { service: Some("a".parse().unwrap()), ..empty_use() },)?,
             vec![CapabilityId::UsedService("/svc/a".parse().unwrap())]
         );
         assert_eq!(
-            CapabilityId::from_clause(
-                &Use {
-                    service: Some("a".parse().unwrap()),
-                    path: Some("/b".parse().unwrap()),
-                    ..empty_use()
-                },
-                RoutingClauseType::Use
-            )?,
+            CapabilityId::from_use(&Use {
+                service: Some("a".parse().unwrap()),
+                path: Some("/b".parse().unwrap()),
+                ..empty_use()
+            },)?,
             vec![CapabilityId::UsedService("/b".parse().unwrap())]
         );
 
         // protocol
         assert_eq!(
-            CapabilityId::from_clause(
-                &Offer { protocol: Some(OneOrMany::One("a".parse().unwrap())), ..empty_offer() },
-                RoutingClauseType::Offer
-            )?,
+            CapabilityId::from_offer_expose(&Offer {
+                protocol: Some(OneOrMany::One("a".parse().unwrap())),
+                ..empty_offer()
+            },)?,
             vec![CapabilityId::Protocol("a".parse().unwrap())]
         );
         assert_eq!(
-            CapabilityId::from_clause(
-                &Offer {
-                    protocol: Some(OneOrMany::Many(vec![
-                        "a".parse().unwrap(),
-                        "b".parse().unwrap()
-                    ],)),
-                    ..empty_offer()
-                },
-                RoutingClauseType::Offer
-            )?,
+            CapabilityId::from_offer_expose(&Offer {
+                protocol: Some(OneOrMany::Many(vec!["a".parse().unwrap(), "b".parse().unwrap()],)),
+                ..empty_offer()
+            },)?,
             vec![
                 CapabilityId::Protocol("a".parse().unwrap()),
                 CapabilityId::Protocol("b".parse().unwrap())
             ]
         );
         assert_eq!(
-            CapabilityId::from_clause(
-                &Use { protocol: Some(OneOrMany::One("a".parse().unwrap())), ..empty_use() },
-                RoutingClauseType::Use
-            )?,
+            CapabilityId::from_use(&Use {
+                protocol: Some(OneOrMany::One("a".parse().unwrap())),
+                ..empty_use()
+            },)?,
             vec![CapabilityId::UsedProtocol("/svc/a".parse().unwrap())]
         );
         assert_eq!(
-            CapabilityId::from_clause(
-                &Use {
-                    protocol: Some(OneOrMany::Many(vec![
-                        "a".parse().unwrap(),
-                        "b".parse().unwrap(),
-                    ],)),
-                    ..empty_use()
-                },
-                RoutingClauseType::Use
-            )?,
+            CapabilityId::from_use(&Use {
+                protocol: Some(OneOrMany::Many(vec!["a".parse().unwrap(), "b".parse().unwrap(),],)),
+                ..empty_use()
+            },)?,
             vec![
                 CapabilityId::UsedProtocol("/svc/a".parse().unwrap()),
                 CapabilityId::UsedProtocol("/svc/b".parse().unwrap())
             ]
         );
         assert_eq!(
-            CapabilityId::from_clause(
-                &Use {
-                    protocol: Some(OneOrMany::One("a".parse().unwrap())),
-                    path: Some("/b".parse().unwrap()),
-                    ..empty_use()
-                },
-                RoutingClauseType::Use
-            )?,
+            CapabilityId::from_use(&Use {
+                protocol: Some(OneOrMany::One("a".parse().unwrap())),
+                path: Some("/b".parse().unwrap()),
+                ..empty_use()
+            },)?,
             vec![CapabilityId::UsedProtocol("/b".parse().unwrap())]
         );
 
         // directory
         assert_eq!(
-            CapabilityId::from_clause(
-                &Offer { directory: Some("a".parse().unwrap()), ..empty_offer() },
-                RoutingClauseType::Offer
-            )?,
+            CapabilityId::from_offer_expose(&Offer {
+                directory: Some("a".parse().unwrap()),
+                ..empty_offer()
+            },)?,
             vec![CapabilityId::Directory("a".parse().unwrap())]
         );
         assert_eq!(
-            CapabilityId::from_clause(
-                &Use {
-                    directory: Some("a".parse().unwrap()),
-                    path: Some("/b".parse().unwrap()),
-                    ..empty_use()
-                },
-                RoutingClauseType::Use
-            )?,
+            CapabilityId::from_use(&Use {
+                directory: Some("a".parse().unwrap()),
+                path: Some("/b".parse().unwrap()),
+                ..empty_use()
+            },)?,
             vec![CapabilityId::UsedDirectory("/b".parse().unwrap())]
         );
 
         // storage
         assert_eq!(
-            CapabilityId::from_clause(
-                &Offer { storage: Some("cache".parse().unwrap()), ..empty_offer() },
-                RoutingClauseType::Offer
-            )?,
+            CapabilityId::from_offer_expose(&Offer {
+                storage: Some("cache".parse().unwrap()),
+                ..empty_offer()
+            },)?,
             vec![CapabilityId::Storage("cache".parse().unwrap())],
+        );
+        assert_eq!(
+            CapabilityId::from_use(&Use {
+                storage: Some("a".parse().unwrap()),
+                path: Some("/b".parse().unwrap()),
+                ..empty_use()
+            },)?,
+            vec![CapabilityId::UsedStorage("/b".parse().unwrap())]
         );
 
         // "as" aliasing.
         assert_eq!(
-            CapabilityId::from_clause(
-                &Offer {
-                    service: Some("a".parse().unwrap()),
-                    r#as: Some("b".parse().unwrap()),
-                    ..empty_offer()
-                },
-                RoutingClauseType::Offer
-            )?,
+            CapabilityId::from_offer_expose(&Offer {
+                service: Some("a".parse().unwrap()),
+                r#as: Some("b".parse().unwrap()),
+                ..empty_offer()
+            },)?,
             vec![CapabilityId::Service("b".parse().unwrap())]
         );
 
         // Error case.
-        assert_matches!(
-            CapabilityId::from_clause(&empty_offer(), RoutingClauseType::Offer),
-            Err(_)
-        );
+        assert_matches!(CapabilityId::from_offer_expose(&empty_offer()), Err(_));
 
         Ok(())
     }

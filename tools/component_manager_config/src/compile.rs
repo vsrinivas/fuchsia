@@ -358,8 +358,7 @@ impl Config {
         }
 
         // Disallow multiple capability ids of the same name.
-        let capability_ids =
-            cml::CapabilityId::from_clause(capability, cml::RoutingClauseType::Capability)?;
+        let capability_ids = cml::CapabilityId::from_capability(capability)?;
         for capability_id in capability_ids {
             if !used_ids.insert(capability_id.to_string()) {
                 return Err(Error::validate(format!(

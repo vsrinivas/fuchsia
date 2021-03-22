@@ -367,8 +367,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Disallow multiple capability ids of the same name.
-        let capability_ids =
-            cml::CapabilityId::from_clause(capability, cml::RoutingClauseType::Capability)?;
+        let capability_ids = cml::CapabilityId::from_capability(capability)?;
         for capability_id in capability_ids {
             if used_ids.insert(capability_id.to_string(), capability_id.clone()).is_some() {
                 return Err(Error::validate(format!(
@@ -389,17 +388,17 @@ impl<'a> ValidationContext<'a> {
         if use_.service.is_some() {
             self.features.check(Feature::Services)?;
             if use_.r#as.is_some() {
-                return Err(Error::validate("\"as\" field cannot be used with \"service\""));
+                return Err(Error::validate("\"as\" cannot be used with \"service\""));
             }
         }
         if use_.from == Some(cml::UseFromRef::Debug) && use_.protocol.is_none() {
             return Err(Error::validate("only \"protocol\" supports source from \"debug\""));
         }
         if use_.protocol.is_some() && use_.r#as.is_some() {
-            return Err(Error::validate("\"as\" field cannot be used with \"protocol\""));
+            return Err(Error::validate("\"as\" cannot be used with \"protocol\""));
         }
         if use_.directory.is_some() && use_.r#as.is_some() {
-            return Err(Error::validate("\"as\" field cannot be used with \"directory\""));
+            return Err(Error::validate("\"as\" cannot be used with \"directory\""));
         }
         if use_.event.is_some() && use_.from.is_none() {
             return Err(Error::validate("\"from\" should be present with \"event\""));
@@ -408,10 +407,10 @@ impl<'a> ValidationContext<'a> {
             return Err(Error::validate("\"filter\" can only be used with \"event\""));
         }
         if use_.storage.is_some() && use_.from.is_some() {
-            return Err(Error::validate("\"from\" field cannot be used with \"storage\""));
+            return Err(Error::validate("\"from\" cannot be used with \"storage\""));
         }
         if use_.storage.is_some() && use_.r#as.is_some() {
-            return Err(Error::validate("\"as\" field cannot be used with \"storage\""));
+            return Err(Error::validate("\"as\" cannot be used with \"storage\""));
         }
 
         match (use_.event_stream.as_ref(), use_.subscriptions.as_ref()) {
@@ -448,7 +447,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Disallow multiple capability ids of the same name.
-        let capability_ids = cml::CapabilityId::from_clause(use_, cml::RoutingClauseType::Use)?;
+        let capability_ids = cml::CapabilityId::from_use(use_)?;
         for capability_id in capability_ids {
             if used_ids.insert(capability_id.to_string(), capability_id.clone()).is_some() {
                 return Err(Error::validate(format!(
@@ -474,30 +473,34 @@ impl<'a> ValidationContext<'a> {
                 };
 
                 if match (used_id, &capability_id) {
-                    // Directories can't be the same or partially overlap.
-                    (cml::CapabilityId::UsedDirectory(_), cml::CapabilityId::UsedDirectory(_)) => {
+                    // Directories and storage can't be the same or partially overlap.
+                    (cml::CapabilityId::UsedDirectory(_), cml::CapabilityId::UsedStorage(_))
+                    | (cml::CapabilityId::UsedStorage(_), cml::CapabilityId::UsedDirectory(_))
+                    | (cml::CapabilityId::UsedDirectory(_), cml::CapabilityId::UsedDirectory(_))
+                    | (cml::CapabilityId::UsedStorage(_), cml::CapabilityId::UsedStorage(_)) => {
                         dir == used_dir || dir.starts_with(used_dir) || used_dir.starts_with(dir)
                     }
 
-                    // Protocols and Services can't overlap with Directories.
-                    (_, cml::CapabilityId::UsedDirectory(_))
-                    | (cml::CapabilityId::UsedDirectory(_), _) => {
+                    // Protocols and services can't overlap with directories or storage.
+                    (cml::CapabilityId::UsedDirectory(_), _)
+                    | (cml::CapabilityId::UsedStorage(_), _)
+                    | (_, cml::CapabilityId::UsedDirectory(_))
+                    | (_, cml::CapabilityId::UsedStorage(_)) => {
                         dir == used_dir || dir.starts_with(used_dir) || used_dir.starts_with(dir)
                     }
 
-                    // Protocols and Services containing directories may be same, but
+                    // Protocols and services containing directories may be same, but
                     // partial overlap is disallowed.
                     (_, _) => {
                         dir != used_dir && (dir.starts_with(used_dir) || used_dir.starts_with(dir))
                     }
                 } {
-                    // TODO: This error message is in the wrong order
                     return Err(Error::validate(format!(
                         "{} \"{}\" is a prefix of \"use\" target {} \"{}\"",
-                        capability_id.type_str(),
-                        capability_id,
                         used_id.type_str(),
                         used_id,
+                        capability_id.type_str(),
+                        capability_id,
                     )));
                 }
             }
@@ -621,8 +624,7 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure we haven't already exposed an entity of the same name.
-        let capability_ids =
-            cml::CapabilityId::from_clause(expose, cml::RoutingClauseType::Expose)?;
+        let capability_ids = cml::CapabilityId::from_offer_expose(expose)?;
         for capability_id in capability_ids {
             if used_ids.insert(capability_id.to_string(), capability_id.clone()).is_some() {
                 return Err(Error::validate(format!(
@@ -753,7 +755,7 @@ impl<'a> ValidationContext<'a> {
         }?;
 
         // Validate every target of this offer.
-        let target_cap_ids = cml::CapabilityId::from_clause(offer, cml::RoutingClauseType::Offer)?;
+        let target_cap_ids = cml::CapabilityId::from_offer_expose(offer)?;
         for to in &offer.to.0 {
             // Ensure the "to" value is a child.
             let to_target = match to {
@@ -1389,9 +1391,6 @@ mod tests {
                   },
                   { "storage": "data", "path": "/example" },
                   { "storage": "cache", "path": "/tmp" },
-                  { "storage": "meta" },
-                  { "storage": "ephemral" },
-                  { "storage": "hippos", "path": "/i-love-hippos" },
                   { "event": [ "started", "stopped"], "from": "parent" },
                   { "event": [ "launched"], "from": "framework" },
                   { "event": "destroyed", "from": "framework", "as": "destroyed_x" },
@@ -1448,7 +1447,7 @@ mod tests {
             json!({
                 "use": [ { "protocol": "foo", "as": "xxx" } ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"protocol\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" cannot be used with \"protocol\""
         ),
         test_cml_use_invalid_from_with_directory(
             json!({
@@ -1460,19 +1459,19 @@ mod tests {
             json!({
                 "use": [ { "directory": "foo", "as": "xxx" } ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"directory\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" cannot be used with \"directory\""
         ),
         test_cml_use_as_with_storage(
             json!({
                 "use": [ { "storage": "cache", "as": "mystorage" } ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"storage\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" cannot be used with \"storage\""
         ),
         test_cml_use_from_with_storage(
             json!({
                 "use": [ { "storage": "cache", "from": "parent" } ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from\" field cannot be used with \"storage\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"from\" cannot be used with \"storage\""
         ),
         test_cml_use_invalid_from(
             json!({
@@ -1499,7 +1498,7 @@ mod tests {
                     }
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"path\" field can only be specified when one `protocol` is supplied."
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"path\" can only be specified when one `protocol` is supplied."
         ),
         test_cml_use_bad_duplicate_target_names(
             json!({
@@ -1545,14 +1544,32 @@ mod tests {
             Err(Error::Parse { err, .. }) if &err == "unknown field `resolver`, expected one of `service`, `protocol`, `directory`, `storage`, `from`, `path`, `as`, `rights`, `subdir`, `event`, `event_stream`, `filter`, `modes`, `subscriptions`"
         ),
 
-        test_cml_use_disallows_nested_dirs(
+        test_cml_use_disallows_nested_dirs_directory(
             json!({
                 "use": [
                     { "directory": "foobar", "path": "/foo/bar", "rights": [ "r*" ] },
                     { "directory": "foobarbaz", "path": "/foo/bar/baz", "rights": [ "r*" ] },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "directory \"/foo/bar/baz\" is a prefix of \"use\" target directory \"/foo/bar\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "directory \"/foo/bar\" is a prefix of \"use\" target directory \"/foo/bar/baz\""
+        ),
+        test_cml_use_disallows_nested_dirs_storage(
+            json!({
+                "use": [
+                    { "storage": "foobar", "path": "/foo/bar" },
+                    { "storage": "foobarbaz", "path": "/foo/bar/baz" },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "storage \"/foo/bar\" is a prefix of \"use\" target storage \"/foo/bar/baz\""
+        ),
+        test_cml_use_disallows_nested_dirs_directory_and_storage(
+            json!({
+                "use": [
+                    { "directory": "foobar", "path": "/foo/bar", "rights": [ "r*" ] },
+                    { "storage": "foobarbaz", "path": "/foo/bar/baz" },
+                ],
+            }),
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "directory \"/foo/bar\" is a prefix of \"use\" target storage \"/foo/bar/baz\""
         ),
         test_cml_use_disallows_common_prefixes_service(
             json!({
@@ -1561,7 +1578,7 @@ mod tests {
                     { "protocol": "fuchsia", "path": "/foo/bar/fuchsia" },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "protocol \"/foo/bar/fuchsia\" is a prefix of \"use\" target directory \"/foo/bar\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "directory \"/foo/bar\" is a prefix of \"use\" target protocol \"/foo/bar/fuchsia\""
         ),
         test_cml_use_disallows_common_prefixes_protocol(
             json!({
@@ -1570,7 +1587,7 @@ mod tests {
                     { "protocol": "fuchsia", "path": "/foo/bar/fuchsia.2" },
                 ],
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "protocol \"/foo/bar/fuchsia.2\" is a prefix of \"use\" target directory \"/foo/bar\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "directory \"/foo/bar\" is a prefix of \"use\" target protocol \"/foo/bar/fuchsia.2\""
         ),
         test_cml_use_disallows_filter_on_non_events(
             json!({
@@ -1590,7 +1607,7 @@ mod tests {
                     }
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field can only be specified when one `event` is supplied"
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" can only be specified when one `event` is supplied"
         ),
         test_cml_use_invalid_from_in_event(
             json!({
@@ -1696,7 +1713,7 @@ mod tests {
                     }
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"filter\" field can only be specified when one `event` is supplied"
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"filter\" can only be specified when one `event` is supplied"
         ),
         test_cml_use_bad_filter_and_as_in_event(
             json!({
@@ -1709,7 +1726,7 @@ mod tests {
                     }
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\",\"filter\" fields can only be specified when one `event` is supplied"
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\",\"filter\" can only be specified when one `event` is supplied"
         ),
 
         // expose
@@ -1865,7 +1882,7 @@ mod tests {
                     }
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field can only be specified when one `protocol` is supplied."
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" can only be specified when one `protocol` is supplied."
         ),
         test_cml_expose_empty_protocols(
             json!({
@@ -2629,7 +2646,7 @@ mod tests {
                     }
                 ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field can only be specified when one `protocol` is supplied."
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" can only be specified when one `protocol` is supplied."
         ),
         test_cml_offer_bad_subdir(
             json!({
@@ -3296,7 +3313,7 @@ mod tests {
                     },
                 ],
             }),
-            Err(Error::Validate { err, .. }) if &err == "\"path\" field can only be specified when one `protocol` is supplied."
+            Err(Error::Validate { err, .. }) if &err == "\"path\" can only be specified when one `protocol` is supplied."
         ),
         test_cml_protocol_all_valid_chars(
             json!({
@@ -4343,7 +4360,7 @@ mod tests {
             json!({
                 "use": [ { "service": "foo", "as": "xxx" } ]
             }),
-            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" field cannot be used with \"service\""
+            Err(Error::Validate { schema_name: None, err, .. }) if &err == "\"as\" cannot be used with \"service\""
         ),
         test_cml_use_invalid_from_with_service(
             json!({
