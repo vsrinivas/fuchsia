@@ -150,7 +150,7 @@ async fn test_write_notify() {
 
     let (client_tx, mut client_rx) = futures::channel::mpsc::unbounded::<persist::ClientProxy>();
 
-    let storage = storage_factory.get_store(context.id).await;
+    let storage = storage_factory.get_store().await;
     let setting_type = context.setting_type;
 
     ClientImpl::create(

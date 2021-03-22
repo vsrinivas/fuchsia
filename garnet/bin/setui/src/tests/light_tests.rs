@@ -13,7 +13,7 @@ use crate::agent::BlueprintHandle;
 use crate::base::SettingType;
 use crate::config::base::AgentType;
 use crate::handler::base::{Context, GenerateHandler};
-use crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext};
+use crate::handler::device_storage::testing::InMemoryStorageFactory;
 use crate::handler::device_storage::{DeviceStorage, DeviceStorageFactory};
 use crate::handler::setting_handler::persist::ClientProxy;
 use crate::handler::setting_handler::{BoxedController, ClientImpl};
@@ -29,7 +29,6 @@ use crate::{EnvironmentBuilder, LightHardwareConfiguration};
 type HardwareLightServiceHandle = Arc<Mutex<HardwareLightService>>;
 
 const ENV_NAME: &str = "settings_service_light_test_environment";
-const CONTEXT_ID: u64 = 0;
 
 const LIGHT_NAME_1: &str = "light_name_1";
 const LIGHT_NAME_2: &str = "light_name_2";
@@ -200,8 +199,7 @@ impl TestLightEnvironmentBuilder {
                 Box::new(move |context: Context<InMemoryStorageFactory>| {
                     let config_clone = config.clone();
                     Box::pin(async move {
-                        let storage =
-                            context.environment.storage_factory.get_store(context.id).await;
+                        let storage = context.environment.storage_factory.get_store().await;
 
                         let setting_type = context.setting_type;
                         ClientImpl::create(
@@ -237,8 +235,7 @@ impl TestLightEnvironmentBuilder {
         let env = environment_builder.spawn_and_get_nested_environment(ENV_NAME).await.unwrap();
 
         let light_service = env.connect_to_service::<LightMarker>().unwrap();
-        let store =
-            storage_factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+        let store = storage_factory.get_device_storage().await;
 
         TestLightEnvironment { light_service, store, input_service: input_service_handle }
     }

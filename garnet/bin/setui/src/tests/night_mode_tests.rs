@@ -3,16 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::base::SettingType,
-    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
-    crate::night_mode::types::NightModeInfo,
-    crate::EnvironmentBuilder,
-    fidl_fuchsia_settings::NightModeMarker,
-    std::sync::Arc,
+    crate::base::SettingType, crate::handler::device_storage::testing::InMemoryStorageFactory,
+    crate::night_mode::types::NightModeInfo, crate::EnvironmentBuilder,
+    fidl_fuchsia_settings::NightModeMarker, std::sync::Arc,
 };
 
 const ENV_NAME: &str = "settings_service_night_mode_test_environment";
-const CONTEXT_ID: u64 = 0;
 
 #[fuchsia_async::run_until_stalled(test)]
 async fn test_night_mode() {
@@ -41,7 +37,7 @@ async fn test_night_mode() {
         .expect("set completed")
         .expect("set successful");
 
-    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+    let store = factory.get_device_storage().await;
     // Verify the value we set is persisted in DeviceStorage.
     let retrieved_struct = store.get().await;
     assert_eq!(changed_value, retrieved_struct);

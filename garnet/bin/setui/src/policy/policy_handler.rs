@@ -100,7 +100,7 @@ where
     C: Create + PolicyHandler + Send + Sync + 'static,
 {
     Box::pin(async move {
-        let storage = context.storage_factory.get_store(context.id).await;
+        let storage = context.storage_factory.get_store().await;
 
         let proxy = ClientProxy::new(context.service_messenger, storage, context.policy_type);
 
@@ -193,8 +193,6 @@ mod tests {
     use crate::service;
     use crate::tests::message_utils::verify_payload;
 
-    const CONTEXT_ID: u64 = 0;
-
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_client_proxy_send_setting_request() {
         let policy_type = PolicyType::Unknown;
@@ -210,7 +208,7 @@ mod tests {
             .expect("setting proxy messenger created");
         let storage_factory = InMemoryStorageFactory::new();
         storage_factory.initialize_storage::<PrivacyInfo>().await;
-        let storage = storage_factory.get_store(CONTEXT_ID).await;
+        let storage = storage_factory.get_store().await;
 
         let client_proxy = ClientProxy {
             service_messenger: service_messenger_factory
@@ -250,7 +248,7 @@ mod tests {
                 .await
                 .expect("messenger should be created")
                 .0,
-            storage: InMemoryStorageFactory::new().get_store(CONTEXT_ID).await,
+            storage: InMemoryStorageFactory::new().get_store().await,
             policy_type,
         };
 

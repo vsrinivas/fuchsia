@@ -4,7 +4,7 @@
 
 use {
     crate::base::SettingType,
-    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     anyhow::format_err,
@@ -22,7 +22,6 @@ use {
 use crate::intl::types::IntlInfo;
 
 const ENV_NAME: &str = "settings_service_intl_test_environment";
-const CONTEXT_ID: u64 = 0;
 const INITIAL_LOCALE: &str = "en-US-x-fxdef";
 
 async fn create_test_intl_env(storage_factory: Arc<InMemoryStorageFactory>) -> IntlProxy {
@@ -122,7 +121,7 @@ async fn test_intl_e2e() {
     assert_eq!(settings, intl_settings.clone());
 
     // Verify the value we set is persisted in DeviceStorage.
-    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+    let store = factory.get_device_storage().await;
     let retrieved_struct = store.get::<IntlInfo>().await;
     assert_eq!(retrieved_struct, intl_settings.clone().into());
 }
@@ -132,7 +131,7 @@ async fn test_intl_e2e_set_twice() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = Arc::new(InMemoryStorageFactory::new());
     let intl_service = create_test_intl_env(Arc::clone(&factory)).await;
-    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+    let store = factory.get_device_storage().await;
 
     // Initial value is not None.
     let settings = intl_service.watch().await.expect("watch completed");
@@ -172,7 +171,7 @@ async fn test_intl_e2e_idempotent_set() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = Arc::new(InMemoryStorageFactory::new());
     let intl_service = create_test_intl_env(Arc::clone(&factory)).await;
-    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+    let store = factory.get_device_storage().await;
 
     // Check if the initial value is correct.
     let settings = intl_service.watch().await.expect("watch completed");

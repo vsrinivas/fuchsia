@@ -153,7 +153,7 @@ where
     where
         S: DeviceStorageConvertible + Into<SettingInfo>,
     {
-        let store = self.storage_factory.get_store(0).await;
+        let store = self.storage_factory.get_store().await;
         let setting: S = store.get::<S::Storable>().await.into();
         responder.reply(Payload::Response(StorageResponse::Read(setting.into())).into()).send();
     }
@@ -163,7 +163,7 @@ where
         S: DeviceStorageConvertible,
     {
         let update_result = {
-            let store = self.storage_factory.get_store(0).await;
+            let store = self.storage_factory.get_store().await;
             let storable_value = data.get_storable();
             let storable_value: &S::Storable = storable_value.borrow();
             if storable_value == &store.get::<S::Storable>().await {

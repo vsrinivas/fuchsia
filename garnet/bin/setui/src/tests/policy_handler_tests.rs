@@ -17,8 +17,6 @@ use anyhow::Error;
 use async_trait::async_trait;
 use futures::future::BoxFuture;
 
-const CONTEXT_ID: u64 = 0;
-
 pub type HandlePolicyRequestCallback =
     Box<dyn Fn(PolicyRequest, ClientProxy) -> BoxFuture<'static, Response> + Send + Sync>;
 
@@ -72,7 +70,7 @@ async fn test_write() {
 
     let storage_factory = InMemoryStorageFactory::new();
     storage_factory.initialize_storage::<PrivacyInfo>().await;
-    let store = storage_factory.get_store(CONTEXT_ID).await;
+    let store = storage_factory.get_store().await;
     let client_proxy = ClientProxy::new(messenger, store.clone(), PolicyType::Unknown);
 
     // Create a handler that writes a value through the client proxy when handle_policy_request is

@@ -30,8 +30,6 @@ use futures::StreamExt;
 use matches::assert_matches;
 use std::sync::Arc;
 
-const CONTEXT_ID: u64 = 0;
-
 // The types of data that can be sent.
 #[cfg_attr(test, derive(PartialEq))]
 #[derive(Clone, Debug)]
@@ -62,7 +60,7 @@ impl TestEnvironment {
         let storage_factory = InMemoryStorageFactory::new();
         // Initialize storage since there's no EnvironmentBuilder to manage that here.
         storage_factory.initialize_storage::<State>().await;
-        return storage_factory.get_store(CONTEXT_ID).await;
+        return storage_factory.get_store().await;
     }
 
     async fn new() -> Self {

@@ -5,7 +5,7 @@
 use {
     crate::accessibility::types::{AccessibilityInfo, ColorBlindnessType},
     crate::base::SettingType,
-    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::tests::test_failure_utils::create_test_env_with_failures,
     crate::EnvironmentBuilder,
     fidl::Error::ClientChannelClosed,
@@ -17,7 +17,6 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_accessibility_test_environment";
-const CONTEXT_ID: u64 = 0;
 
 async fn create_test_accessibility_env(
     storage_factory: Arc<InMemoryStorageFactory>,
@@ -83,7 +82,7 @@ async fn test_accessibility_set_all() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = Arc::new(InMemoryStorageFactory::new());
     let accessibility_proxy = create_test_accessibility_env(Arc::clone(&factory)).await;
-    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+    let store = factory.get_device_storage().await;
 
     // Fetch the initial value.
     let settings = accessibility_proxy.watch().await.expect("watch completed");
@@ -138,7 +137,7 @@ async fn test_accessibility_set_captions() {
     // Create and fetch a store from device storage so we can read stored value for testing.
     let factory = Arc::new(InMemoryStorageFactory::new());
     let accessibility_proxy = create_test_accessibility_env(Arc::clone(&factory)).await;
-    let store = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+    let store = factory.get_device_storage().await;
 
     // Set for_media and window_color in the top-level CaptionsSettings.
     let mut first_set = AccessibilitySettings::EMPTY;

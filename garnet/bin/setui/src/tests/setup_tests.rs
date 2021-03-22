@@ -4,7 +4,7 @@
 
 use {
     crate::base::SettingType,
-    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::setup::types::{ConfigurationInterfaceFlags, SetupInfo},
     crate::tests::fakes::hardware_power_statecontrol_service::{
         Action, HardwarePowerStatecontrolService,
@@ -17,7 +17,6 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_setup_test_environment";
-const CONTEXT_ID: u64 = 0;
 
 // Ensures the default value returned is WiFi.
 #[fuchsia_async::run_until_stalled(test)]
@@ -90,7 +89,7 @@ async fn test_setup_with_reboot() {
     let settings = setup_service.watch().await.expect("watch completed");
     assert_eq!(settings.enabled_configuration_interfaces, Some(expected_interfaces));
 
-    let store = storage_factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+    let store = storage_factory.get_device_storage().await;
     // Check to make sure value wrote out to store correctly
     assert_eq!(
         store.get::<SetupInfo>().await.configuration_interfaces,

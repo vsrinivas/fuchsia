@@ -412,7 +412,7 @@ pub trait DeviceStorageFactory {
         T: DeviceStorageAccess;
 
     /// Retrieve the store singleton instance.
-    async fn get_store(&self, context_id: u64) -> Arc<DeviceStorage>;
+    async fn get_store(&self) -> Arc<DeviceStorage>;
 }
 
 /// The state of the factory. Only one state can be active at a time because once
@@ -476,7 +476,7 @@ impl DeviceStorageFactory for StashDeviceStorageFactory {
         self.initialize_storage(T::STORAGE_KEYS).await
     }
 
-    async fn get_store(&self, _context_id: u64) -> Arc<DeviceStorage> {
+    async fn get_store(&self) -> Arc<DeviceStorage> {
         let initialization = &mut *self.device_storage_cache.lock().await;
         match initialization {
             InitializationState::Initializing(initial_keys) => {
@@ -531,12 +531,6 @@ pub mod testing {
         pub fn get_record_count(&self, action: StashAction) -> usize {
             return self.actions.iter().filter(|&target| *target == action).count();
         }
-    }
-
-    #[derive(PartialEq)]
-    pub enum StorageAccessContext {
-        Production,
-        Test,
     }
 
     /// Storage that does not write to disk, for testing.
@@ -603,13 +597,7 @@ pub mod testing {
         }
 
         /// Retrieve the [`DeviceStorage`] singleton.
-        pub async fn get_device_storage(
-            &self,
-            // TODO(fxbug.dev/67371) Remove StorageAccessContent
-            _access_context: StorageAccessContext,
-            // TODO(fxbug.dev/67371) Remove context_id
-            _context_id: u64,
-        ) -> Arc<DeviceStorage> {
+        pub async fn get_device_storage(&self) -> Arc<DeviceStorage> {
             let initialization = &mut *self.device_storage_cache.lock().await;
             match initialization {
                 InitializationState::Initializing(initial_keys) => {
@@ -648,8 +636,8 @@ pub mod testing {
             Ok(())
         }
 
-        async fn get_store(&self, context_id: u64) -> Arc<DeviceStorage> {
-            self.get_device_storage(StorageAccessContext::Production, context_id).await
+        async fn get_store(&self) -> Arc<DeviceStorage> {
+            self.get_device_storage().await
         }
     }
 
@@ -715,7 +703,6 @@ mod tests {
     use std::task::Poll;
     use testing::*;
 
-    const CONTEXT_ID: u64 = 0;
     const VALUE0: i32 = 3;
     const VALUE1: i32 = 33;
     const VALUE2: i32 = 128;
@@ -1053,8 +1040,8 @@ mod tests {
         let factory = InMemoryStorageFactory::new();
         factory.initialize_storage::<TestStruct>().await;
 
-        let store_1 = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
-        let store_2 = factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+        let store_1 = factory.get_device_storage().await;
+        let store_2 = factory.get_device_storage().await;
 
         // Write initial data through first store.
         let test_struct = TestStruct { value: VALUE0 };

@@ -6,7 +6,7 @@ use {
     crate::audio::default_audio_info,
     crate::audio::types::{AudioSettingSource, AudioStream, AudioStreamType},
     crate::base::SettingType,
-    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::handler::device_storage::DeviceStorage,
     crate::input::common::MediaButtonsEventBuilder,
     crate::message::base::MessengerType,
@@ -31,7 +31,6 @@ use {
 };
 
 const ENV_NAME: &str = "volume_change_earcons_test_environment";
-const CONTEXT_ID: u64 = 0;
 const INITIAL_VOLUME_LEVEL: f32 = 0.5;
 const CHANGED_VOLUME_LEVEL_2: f32 = 0.8;
 const MAX_VOLUME_LEVEL: f32 = 1.0;
@@ -213,7 +212,7 @@ async fn create_environment(
         .await
         .expect("Should be able to retrieve messenger for publisher");
 
-    let store = storage_factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+    let store = storage_factory.get_device_storage().await;
     (env, store, receptor)
 }
 

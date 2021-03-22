@@ -34,7 +34,7 @@ async fn create_test_environment() -> (service::message::Factory, Arc<DeviceStor
         .spawn_nested(ENV_NAME)
         .await
         .unwrap();
-    let store = storage_factory.get_store(0).await;
+    let store = storage_factory.get_store().await;
     store.write(&UnknownInfo(ORIGINAL_VALUE), true).await.expect("Write should succeed");
     (env.messenger_factory, store)
 }

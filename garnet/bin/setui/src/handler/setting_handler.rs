@@ -559,7 +559,7 @@ pub mod persist {
             context: Context<F>,
         ) -> BoxFuture<'static, ControllerGenerateResult> {
             Box::pin(async move {
-                let storage = context.environment.storage_factory.get_store(context.id).await;
+                let storage = context.environment.storage_factory.get_store().await;
                 let setting_type = context.setting_type;
 
                 ClientImpl::create(

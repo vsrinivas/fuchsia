@@ -9,7 +9,7 @@ use {
     },
     crate::audio::{create_default_modified_counters, default_audio_info},
     crate::base::SettingType,
-    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::handler::device_storage::DeviceStorage,
     crate::input::common::MediaButtonsEventBuilder,
     crate::tests::fakes::audio_core_service::{self, AudioCoreService},
@@ -30,7 +30,6 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_audio_test_environment";
-const CONTEXT_ID: u64 = 0;
 
 const CHANGED_VOLUME_LEVEL: f32 = 0.7;
 const CHANGED_VOLUME_LEVEL_2: f32 = 0.95;
@@ -154,7 +153,7 @@ async fn create_environment(
         .spawn_and_get_nested_environment(ENV_NAME)
         .await
         .unwrap();
-    let store = storage_factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+    let store = storage_factory.get_device_storage().await;
     (env, store)
 }
 

@@ -4,7 +4,7 @@
 
 use {
     crate::base::SettingType,
-    crate::handler::device_storage::testing::{InMemoryStorageFactory, StorageAccessContext},
+    crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::handler::device_storage::DeviceStorage,
     crate::privacy::types::PrivacyInfo,
     crate::tests::test_failure_utils::create_test_env_with_failures,
@@ -17,7 +17,6 @@ use {
 };
 
 const ENV_NAME: &str = "settings_service_privacy_test_environment";
-const CONTEXT_ID: u64 = 0;
 
 /// Creates an environment that will fail on a get request.
 async fn create_privacy_test_env_with_failures() -> PrivacyProxy {
@@ -39,7 +38,7 @@ async fn create_test_privacy_env(
         .unwrap();
 
     let privacy_service = env.connect_to_service::<PrivacyMarker>().unwrap();
-    let store = storage_factory.get_device_storage(StorageAccessContext::Test, CONTEXT_ID).await;
+    let store = storage_factory.get_device_storage().await;
 
     (privacy_service, store)
 }
