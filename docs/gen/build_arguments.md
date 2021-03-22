@@ -141,7 +141,7 @@ From //out/not-default/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:26
+From //BUILD.gn:24
 
 **Current value for `target_cpu = "x64"`:** `["//bundles:kitchen_sink"]`
 
@@ -149,7 +149,7 @@ From //out/not-default/args.gn:3
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:26
+From //BUILD.gn:24
 
 ### basic_env_names
 The list of environment names to include in "basic_envs".
@@ -592,7 +592,7 @@ From //products/bringup.gni:53
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:34
+From //BUILD.gn:32
 
 **Current value for `target_cpu = "x64"`:** `[]`
 
@@ -600,7 +600,7 @@ From //products/bringup.gni:53
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:34
+From //BUILD.gn:32
 
 ### camera_debug
 
@@ -1415,7 +1415,7 @@ From //products/bringup.gni:62
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:53
+From //BUILD.gn:51
 
 **Current value for `target_cpu = "x64"`:** `["//tools/devshell:fx", "//tools/bindc:host"]`
 
@@ -1423,7 +1423,7 @@ From //products/bringup.gni:62
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:53
+From //BUILD.gn:51
 
 ### host_os
 
@@ -2178,7 +2178,7 @@ From //src/connectivity/management/BUILD.gn:6
 
 **Current value (from the default):** `[]`
 
-From //src/bringup/bin/netsvc/BUILD.gn:23
+From //src/bringup/bin/netsvc/BUILD.gn:22
 
 ### omaha_app_id
 Default app id will always return no update.
@@ -3272,7 +3272,7 @@ afterwards.
 
 **Current value (from the default):** `""`
 
-From //BUILD.gn:40
+From //BUILD.gn:38
 
 ### testonly_in_containers
 Whether to allow testonly=true targets in fuchsia ZBI or base/cache packages.
@@ -3418,7 +3418,7 @@ From //products/bringup.gni:55
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:48
+From //BUILD.gn:46
 
 **Current value for `target_cpu = "x64"`:** `["//tools/net/device-finder:host", "//build/images:fastboot"]`
 
@@ -3426,7 +3426,7 @@ From //products/bringup.gni:55
 
 **Overridden from the default:** `[]`
 
-From //BUILD.gn:48
+From //BUILD.gn:46
 
 ### unpack_debug_archives
 To ensure that everything can be built without debug symbols present we
