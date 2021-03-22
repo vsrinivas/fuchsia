@@ -5,6 +5,24 @@ This guide provides instructions for the following tasks:
 *   [Download the Fuchsia source code](#download-fuchsia-source).
 *   [Set up environment variables](#set-up-environment-variables).
 
+## Before you start
+
+We recommend you run `ffx platform preflight` before you continue.
+`preflight` examines your development machine and informs you of issues that
+may affect building Fuchsia from source or running the Fuchsia emulator.
+
+*   For **Linux**, run:
+
+    ```posix-terminal
+    curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-linux && chmod +x ffx-linux && ./ffx-linux platform preflight
+    ```
+    
+*   For **MacOS***, run:
+
+    ```posix-terminal
+    curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-macos && chmod +x ffx-macos && ./ffx-macos platform preflight
+    ```
+
 ## Prerequisites
 
 The Fuchsia project requires `curl`, `unzip`, and `git` to be up-to-date:
