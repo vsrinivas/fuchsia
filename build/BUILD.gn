@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/fidl_move.gni")
-
 # The tests listed in this target will be built by the default build.
 group("tests") {
   testonly = true
@@ -45,14 +43,7 @@ group("deprecated_package") {
     "//third_party/vulkan-cts/fuchsia/split-cts/*",
   ]
 
-  fuchsia_inspect_test_packages = [
-    get_label_info(dart_package_label.fuchsia_inspect, "dir") +
-        "/test/integration/*",
-    get_label_info(dart_package_label.fuchsia_inspect, "dir") +
-        "/test/validator_puppet/*",
-  ]
-
-  visibility = non_default_checkout_users + fuchsia_inspect_test_packages
+  visibility = non_default_checkout_users
 
   # To regenerate:
   # fx gn refs $(fx get-build-dir) //build:deprecated_package | sed 's|\(.*\):.*|"\1/*",|' | sort | uniq
@@ -65,6 +56,28 @@ group("deprecated_package") {
     "//garnet/bin/test_runner/*",
     "//garnet/bin/trace/tests/*",
     "//garnet/bin/wayland/*",
+    "//garnet/examples/benchmark/*",
+    "//garnet/examples/components/*",
+    "//garnet/examples/http/httpget_cpp/*",
+    "//garnet/examples/http/httpget_rust/*",
+    "//garnet/examples/http/postfile/*",
+    "//garnet/examples/intl/manager/*",
+    "//garnet/examples/intl/wisdom/cpp/*",
+    "//garnet/examples/intl/wisdom/rust/*",
+    "//garnet/examples/intl/wisdom/rust/client/*",
+    "//garnet/examples/intl/wisdom/rust/server/*",
+    "//garnet/examples/intl/wisdom/tests/*",
+    "//garnet/lib/trace_converters/*",
+    "//garnet/public/lib/fostr/*",
+    "//sdk/dart/fuchsia_inspect/test/integration/*",
+    "//sdk/dart/fuchsia_inspect/test/validator_puppet/*",
+    "//sdk/lib/fuzzing/cpp/*",
+    "//sdk/lib/inspect/contrib/cpp/*",
+    "//sdk/lib/inspect/contrib/cpp/tests/*",
+    "//sdk/lib/media/cpp/*",
+    "//sdk/lib/sys/cpp/testing/environment_delegating_runner/*",
+    "//sdk/lib/sys/cpp/testing/examples/*",
+    "//sdk/lib/sys/cpp/testing/examples/test_with_environment/*",
     "//sdk/lib/syslog/cpp/*",
     "//src/developer/debug/debug_agent/*",
     "//src/developer/remote-control/*",

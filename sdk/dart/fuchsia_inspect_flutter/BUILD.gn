@@ -19,9 +19,9 @@ dart_library("fuchsia_inspect_flutter") {
   ]
 
   deps = [
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_services",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
-    dart_package_label.fuchsia_inspect,
-    dart_package_label.fuchsia_services,
   ]
 }
 
@@ -31,10 +31,10 @@ flutter_test("inspect_flutter_test") {
 
   deps = [
     ":fuchsia_inspect_flutter",
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_services",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/test",
-    dart_package_label.fuchsia_inspect,
-    dart_package_label.fuchsia_services,
   ]
 }

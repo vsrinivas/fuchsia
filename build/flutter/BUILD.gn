@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/dart/fidl_move.gni")
-
 # TODO(fxb/58062): Delete after all packages are migrated away from dart_app
 # and flutter_app.
 group("deprecated_flutter_app_allowlist") {
@@ -18,6 +16,7 @@ group("deprecated_flutter_app_allowlist") {
   # This is an allowlist of packages that have not migrated to use flutter_component.
   # This is only intended to be used as a temporary allowlist. Do not add to this list.
   allowlist = [
+    "//sdk/dart/fuchsia_inspect/test/inspect_flutter_integration_tester:inspect-flutter-integration-tester",
     "//src/experiences/benchmarks/bin/button_flutter:button-flutter",
     "//src/experiences/benchmarks/bin/clockface_flutter:clockface-flutter",
     "//src/experiences/benchmarks/bin/gamma_flutter:gamma-flutter",
@@ -32,7 +31,6 @@ group("deprecated_flutter_app_allowlist") {
     "//topaz/examples/fuchsia_modular_examples/multilevel_mod:multilevel-mod",
     "//topaz/examples/fuchsia_modular_examples/slider_mod:slider-mod",
     "//topaz/examples/fuchsia_webview_flutter_examples/webview_mod:webview-mod",
-    get_label_info(dart_package_label.fuchsia_inspect, "dir") + "/test/inspect_flutter_integration_tester:inspect-flutter-integration-tester",
     "//topaz/public/dart/fuchsia_inspect_flutter/examples/torus15:torus15-flutter",
     "//topaz/public/dart/fuchsia_modular/examples/multilevel_mod:multilevel-mod",
     "//topaz/public/dart/fuchsia_modular/examples/slider_mod:slider-mod",

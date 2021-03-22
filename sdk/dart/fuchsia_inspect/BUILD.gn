@@ -40,15 +40,15 @@ dart_library("fuchsia_inspect") {
   ]
 
   deps = [
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/fuchsia_vfs",
+    "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.sys",
     "//third_party/dart-pkg/pub/collection",
     "//third_party/dart-pkg/pub/matcher",
     "//third_party/dart-pkg/pub/meta",
-    dart_package_label.fuchsia_vfs,
-    dart_package_label.fuchsia_services,
-    dart_package_label.zircon,
   ]
 }
 
@@ -77,10 +77,10 @@ dart_test("fuchsia_inspect_package_unittests") {
 
   deps = [
     ":fuchsia_inspect",
+    "//sdk/dart/fuchsia_services",
     "//third_party/dart-pkg/pub/collection",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
-    dart_package_label.fuchsia_services,
   ]
 }
 
@@ -90,12 +90,12 @@ dart_test_component("dart-archive-reader-test-component") {
   sources = [ "reader/reader_test.dart" ]
   deps = [
     ":fuchsia_inspect",
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_services",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.sys",
     "//third_party/dart-pkg/pub/pedantic",
     "//third_party/dart-pkg/pub/test",
-    dart_package_label.fuchsia_inspect,
-    dart_package_label.fuchsia_services,
   ]
 }
 

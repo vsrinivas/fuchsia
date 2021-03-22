@@ -24,6 +24,11 @@ dart_library("fuchsia_modular_testing") {
   ]
 
   deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_modular",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.session",
@@ -31,11 +36,6 @@ dart_library("fuchsia_modular_testing") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.views",
     "//third_party/dart-pkg/pub/meta",
-    dart_package_label.fidl,
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_modular,
-    dart_package_label.fuchsia_services,
-    dart_package_label.zircon,
   ]
 }
 
@@ -65,15 +65,15 @@ dart_test_component("integration-test-component") {
   deps = [
     ":fuchsia_modular_testing",
     ":test_fidl",
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_modular",
+    "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.modular.testing",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
-    dart_package_label.fidl,
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_modular,
-    dart_package_label.zircon,
   ]
 }
 

@@ -32,7 +32,7 @@ dart_library("fidl") {
   ]
 
   deps = [
+    "//sdk/dart/zircon",
     "//third_party/dart-pkg/pub/meta",
-    dart_package_label.zircon,
   ]
 }

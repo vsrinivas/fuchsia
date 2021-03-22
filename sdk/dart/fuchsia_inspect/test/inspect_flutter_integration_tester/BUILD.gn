@@ -26,12 +26,12 @@ flutter_app("inspect_flutter_integration_tester") {
   ]
 
   deps = [
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_modular",
+    "//sdk/dart/fuchsia_services",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_driver",
-    dart_package_label.fuchsia_inspect,
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_modular,
-    dart_package_label.fuchsia_services,
   ]
 }
 
@@ -41,6 +41,8 @@ dart_test_component("integration-test-component") {
   sources = [ "integration_driver_test.dart" ]
 
   deps = [
+    "//sdk/dart/fuchsia_inspect",
+    "//sdk/dart/fuchsia_services",
     "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.testing",
@@ -49,8 +51,6 @@ dart_test_component("integration-test-component") {
     "//third_party/dart-pkg/git/flutter/packages/fuchsia_remote_debug_protocol",
     "//third_party/dart-pkg/pub/glob",
     "//third_party/dart-pkg/pub/test",
-    dart_package_label.fuchsia_inspect,
-    dart_package_label.fuchsia_services,
   ]
 }
 

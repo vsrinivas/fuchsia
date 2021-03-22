@@ -18,13 +18,13 @@ dart_app("timestamp-server-dart") {
 
   sources = [ "main.dart" ]
   deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
     "//src/testing/fidl:placeholders",
     "//third_party/dart-pkg/pub/intl",
-    dart_package_label.fidl,
-    dart_package_label.fuchsia,
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_services,
-    dart_package_label.zircon,
   ]
   resources = [
     {
@@ -49,13 +49,13 @@ flutter_app("timestamp-server-flutter") {
 
   sources = [ "main.dart" ]
   deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
     "//src/testing/fidl:placeholders",
     "//third_party/dart-pkg/pub/intl",
-    dart_package_label.fidl,
-    dart_package_label.fuchsia,
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_services,
-    dart_package_label.zircon,
   ]
   resources = [
     {

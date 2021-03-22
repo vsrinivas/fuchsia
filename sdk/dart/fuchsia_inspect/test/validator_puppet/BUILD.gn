@@ -16,12 +16,12 @@ dart_app("dart-inspect-validator-puppet") {
       main_dart = "lib/main.dart"
       sources = [ "main.dart" ]
       deps = [
+        "//sdk/dart/fidl",
+        "//sdk/dart/fuchsia_inspect",
+        "//sdk/dart/fuchsia_logger",
+        "//sdk/dart/fuchsia_services",
         "//sdk/fidl/fuchsia.sys",
         "//src/diagnostics/validator/inspect/fidl:validate",
-        dart_package_label.fidl,
-        dart_package_label.fuchsia_inspect,
-        dart_package_label.fuchsia_logger,
-        dart_package_label.fuchsia_services,
       ]
     },
   ]

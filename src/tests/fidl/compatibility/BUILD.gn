@@ -116,10 +116,10 @@ dart_library("dart_server") {
   package_root = "dart"
   sources = [ "main.dart" ]
   deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_services",
     "//sdk/fidl/fuchsia.sys",
     "//src/tests/fidl/compatibility:fidl",
-    dart_package_label.fidl,
-    dart_package_label.fuchsia_services,
   ]
 }
 

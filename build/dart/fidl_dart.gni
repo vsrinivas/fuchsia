@@ -4,7 +4,6 @@
 
 import("//build/compiled_action.gni")
 import("//build/dart/dart_library.gni")
-import("//build/dart/fidl_move.gni")
 import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/sdk/sdk_atom_alias.gni")
@@ -117,9 +116,9 @@ template("fidl_dart") {
       ":$copy_options_target_name",
       ":$copy_pubspec_target_name",
       ":$generation_target_name",
+      "//sdk/dart/fidl",
+      "//sdk/dart/zircon",
       "//third_party/dart-pkg/pub/meta",
-      dart_package_label.fidl,
-      dart_package_label.zircon,
     ]
 
     if (defined(invoker.public_deps)) {

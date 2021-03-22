@@ -30,14 +30,14 @@ dart_test_component("benchmark-component") {
   package_root = benchmark_dir
   sources = [ benchmark_file ]
   deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia",
+    "//sdk/dart/zircon",
     "//sdk/testing/sl4f/client",
     "//src/lib/fidl/dart/gidl",
     "//third_party/dart-pkg/pub/args",
     "//third_party/dart-pkg/pub/test",
     benchmark_suite_fidl_target,
-    dart_package_label.zircon,
-    dart_package_label.fuchsia,
-    dart_package_label.fidl,
   ]
   non_dart_deps = [ ":benchmark_suite" ]
 

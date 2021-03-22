@@ -14,9 +14,9 @@ dart_library("gidl") {
   ]
 
   deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/zircon",
     "//third_party/dart-pkg/pub/test",
-    dart_package_label.zircon,
-    dart_package_label.fidl,
   ]
 }
 
@@ -25,8 +25,8 @@ dart_test_component("gidl-library-test") {
   sources = [ "handles_test.dart" ]
   deps = [
     ":gidl",
+    "//sdk/dart/zircon",
     "//third_party/dart-pkg/pub/test",
-    dart_package_label.zircon,
   ]
 }
 

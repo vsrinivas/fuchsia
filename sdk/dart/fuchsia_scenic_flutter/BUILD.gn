@@ -29,14 +29,14 @@ dart_library("fuchsia_scenic_flutter") {
   ]
 
   deps = [
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_scenic",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//sdk/fidl/fuchsia.ui.views",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/meta",
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_scenic,
-    dart_package_label.fuchsia_services,
-    dart_package_label.zircon,
   ]
 }
 
@@ -53,15 +53,15 @@ flutter_test("fuchsia_scenic_flutter_unittests") {
 
   deps = [
     ":fuchsia_scenic_flutter",
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.ui.pointerinjector",
     "//sdk/fidl/fuchsia.ui.views",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_test",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
-    dart_package_label.fidl,
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_services,
-    dart_package_label.zircon,
   ]
 }

@@ -37,18 +37,18 @@ dart_library("fuchsia_modular") {
   ]
 
   deps = [
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_scenic",
+    "//sdk/dart/fuchsia_services",
+    "//sdk/dart/zircon",
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.views",
     "//third_party/dart-pkg/pub/meta",
-    dart_package_label.zircon,
-    dart_package_label.fidl,
-    dart_package_label.fuchsia,
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_scenic,
-    dart_package_label.fuchsia_services,
   ]
 }
 
@@ -69,13 +69,13 @@ flutter_test("fuchsia_modular_package_unittests") {
 
   deps = [
     ":fuchsia_modular",
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_logger",
+    "//sdk/dart/fuchsia_services",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.sys",
     "//third_party/dart-pkg/pub/mockito",
     "//third_party/dart-pkg/pub/test",
-    dart_package_label.fidl,
-    dart_package_label.fuchsia_logger,
-    dart_package_label.fuchsia_services,
   ]
 }
 
@@ -100,18 +100,18 @@ dart_test_component("integration-tests-component") {
 
   deps = [
     ":fuchsia_modular",
+
+    # TODO(fxb/70818): Add these dependencies back after fuchsia_modular_testing is migrated to fuchisa.git.
+    # "//sdk/dart/fuchsia_modular_testing",
+    # "//sdk/dart/fuchsia_modular_testing:test_fidl",
+    "//sdk/dart/fidl",
+    "//sdk/dart/fuchsia_services",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.modular.session",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/fidl/fuchsia.sys",
     "//third_party/dart-pkg/pub/mockito",  # TODO(fxbug.dev/3114): Remove
     "//third_party/dart-pkg/pub/test",
-
-    # TODO(fxb/70818): Add these dependencies back after fuchsia_modular_testing is migrated to fuchisa.git.
-    # "//sdk/dart/fuchsia_modular_testing",
-    # "//sdk/dart/fuchsia_modular_testing:test_fidl",
-    dart_package_label.fidl,
-    dart_package_label.fuchsia_services,
   ]
 }
 

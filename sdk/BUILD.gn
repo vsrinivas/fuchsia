@@ -564,41 +564,19 @@ sdk("fuchsia_dart") {
     # makes it impossible to land certain changes without breaking
     # //topaz.
     # If a FIDL deps is part of the SDK, it should be explicitly listed here.
+    "//sdk/dart/fidl:fidl_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia:fuchsia_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia_inspect:fuchsia_inspect_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia_logger:fuchsia_logger_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia_modular:fuchsia_modular_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia_modular_testing:fuchsia_modular_testing_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia_scenic:fuchsia_scenic_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia_scenic_flutter:fuchsia_scenic_flutter_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia_services:fuchsia_services_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia_vfs:fuchsia_vfs_sdk($dart_toolchain)",
+    "//sdk/dart/fuchsia_webview_flutter:fuchsia_webview_flutter_sdk($dart_toolchain)",
     "//sdk/fidl/fuchsia.element:fuchsia.element_sdk",
     "//sdk/fidl/fuchsia.hardware.audio:fuchsia.hardware.audio_sdk",
     "//tools/fidl/fidlgen_dart:fidlgen_dart_sdk_legacy($host_toolchain)",
-    get_label_info(dart_package_label.fidl, "dir") + ":" +
-        get_label_info(dart_package_label.fidl, "name") +
-        "_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia, "dir") + ":" +
-        get_label_info(dart_package_label.fuchsia, "name") +
-        "_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia_inspect, "dir") + ":" +
-        get_label_info(dart_package_label.fuchsia_inspect, "name") +
-        "_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia_logger, "dir") + ":" +
-        get_label_info(dart_package_label.fuchsia_logger, "name") +
-        "_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia_modular, "dir") + ":" +
-        get_label_info(dart_package_label.fuchsia_modular, "name") +
-        "_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia_modular_testing, "dir") + ":" +
-        get_label_info(dart_package_label.fuchsia_modular_testing, "name") +
-        "_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia_scenic, "dir") + ":" +
-        get_label_info(dart_package_label.fuchsia_scenic, "name") +
-        "_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia_scenic_flutter, "dir") + ":" +
-        get_label_info(dart_package_label.fuchsia_scenic_flutter, "name") +
-        "_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia_services, "dir") + ":" +
-        get_label_info(dart_package_label.fuchsia_services, "name") +
-        "_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia_vfs, "dir") + ":" +
-        get_label_info(dart_package_label.fuchsia_vfs, "name") +
-        "_sdk($dart_toolchain)",
-    get_label_info(dart_package_label.fuchsia_webview_flutter, "dir") + ":" +
-        get_label_info(dart_package_label.fuchsia_webview_flutter, "name") +
-        "_sdk($dart_toolchain)",
   ]
 }
