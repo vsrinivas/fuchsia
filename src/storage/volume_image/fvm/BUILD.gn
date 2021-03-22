@@ -27,6 +27,16 @@ source_set("fvm-descriptor") {
   ]
 }
 
+source_set("fvm-image-extend") {
+  sources = [ "fvm_image_extend.cc" ]
+  public = [ "fvm_image_extend.h" ]
+  public_deps = [
+    ":options",
+    "//src/storage/volume_image/utils:io-interfaces",
+  ]
+  deps = [ "//src/storage/fvm" ]
+}
+
 source_set("fvm-sparse-image") {
   sources = [
     "fvm_sparse_image.cc",
@@ -50,10 +60,12 @@ source_set("fvm-test") {
   testonly = true
   sources = [
     "fvm_descriptor_test.cc",
+    "fvm_image_extend_test.cc",
     "fvm_sparse_image_test.cc",
   ]
   deps = [
     ":fvm-descriptor",
+    ":fvm-image-extend",
     ":fvm-sparse-image",
     "//sdk/lib/stdcompat",
     "//src/lib/json_parser",
