@@ -107,6 +107,7 @@ void ViewWrapper::HighlightMagnificationViewport(float magnification_scale,
   magnification_viewport_bounding_box.max.y =
       magnification_viewport_bounding_box.min.y + (height / magnification_scale);
 
+  // Compute the local->global coordinate transform, which will just be the
   // root node's transform since the root node doesn't have a parent.
   SemanticTransform transform;
   if (root_node->has_transform()) {

@@ -43,12 +43,20 @@ class ViewWrapper {
   // Returns a clone of the ViewRef owned by this object.
   fuchsia::ui::views::ViewRef ViewRefClone() const;
 
-  // Highlights node with id |node_id|.
-  void HighlightNode(uint32_t node_id);
-
-  // Draws a highlight around the magnification viewport.
+  // Draws a bounding box around the magnification viewport.
+  // This method computes the local bounds of the magnification viewport, and
+  // draws a highlight around it.
+  // |magnification_scale|, |magnification_translation_x|, and
+  // |magnification_translation_y| specify the clip space transform for the
+  // current magnification state. The clip space transform is applied to the NDC
+  // space (scale-then-translate).
+  // NOTE: This approach only works if the view to which magnification is
+  // applied spans the entire screen in the unmagnified state.
   void HighlightMagnificationViewport(float magnification_scale, float magnification_translation_x,
                                       float magnification_translation_y);
+
+  // Highlights node with id |node_id|.
+  void HighlightNode(uint32_t node_id);
 
   // Clears contents of annotation view.
   void ClearAllHighlights();
