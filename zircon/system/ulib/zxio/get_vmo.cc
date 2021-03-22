@@ -12,6 +12,7 @@
 #include <zircon/syscalls.h>
 
 #include <algorithm>
+#include <vector>
 
 namespace fio = fuchsia_io;
 
@@ -43,10 +44,11 @@ static zx_status_t read_at(zxio_t* io, void* buf, size_t len, off_t offset, size
   return ZX_OK;
 }
 
-constexpr size_t kMinWindow = PAGE_SIZE * 4;
-constexpr size_t kMaxWindow = 64 << 20;
-
 static zx_status_t read_file_into_vmo(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size) {
+  const size_t kPageSize = zx_system_get_page_size();
+  const size_t kMinWindow = kPageSize * 4;
+  constexpr size_t kMaxWindow = 64 << 20;
+
   auto current_vmar = zx::vmar::root_self();
 
   zxio_node_attributes_t attr;
@@ -68,14 +70,15 @@ static zx_status_t read_file_into_vmo(zxio_t* io, zx_handle_t* out_vmo, size_t* 
     if (size < kMinWindow) {
       // There is little enough left that copying is less overhead
       // than fiddling with the page tables.
-      char buffer[PAGE_SIZE];
-      size_t xfer = std::min(size, sizeof(buffer));
+      std::vector<char> buffer;
+      buffer.resize(kPageSize);
+      size_t xfer = std::min(size, buffer.size());
       size_t nread;
-      status = read_at(io, buffer, xfer, offset, &nread);
+      status = read_at(io, buffer.data(), xfer, offset, &nread);
       if (status != ZX_OK) {
         return status;
       }
-      status = vmo.write(buffer, offset, nread);
+      status = vmo.write(buffer.data(), offset, nread);
       if (status != ZX_OK) {
         return status;
       }
@@ -85,7 +88,7 @@ static zx_status_t read_file_into_vmo(zxio_t* io, zx_handle_t* out_vmo, size_t* 
       // Map the VMO into our own address space so we can read into
       // it directly and avoid double-buffering.
       size_t chunk = std::min(size, kMaxWindow);
-      size_t window = (chunk + PAGE_SIZE - 1) & -PAGE_SIZE;
+      size_t window = (chunk + kPageSize - 1) & -kPageSize;
       uintptr_t start = 0;
       status =
           current_vmar->map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, vmo, offset, window, &start);

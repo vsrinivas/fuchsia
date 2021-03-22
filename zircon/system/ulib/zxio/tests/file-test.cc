@@ -244,7 +244,7 @@ TEST_F(File, GetVmoPropagatesError) {
 class TestServerChannel final : public TestServerBase {
  public:
   TestServerChannel() {
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &store_));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &store_));
     const size_t kZero = 0u;
     ASSERT_OK(store_.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kZero, sizeof(kZero)));
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
@@ -338,7 +338,7 @@ TEST_F(File, ReadWriteChannel) {
 class TestServerStream final : public TestServerBase {
  public:
   TestServerStream() {
-    ASSERT_OK(zx::vmo::create(PAGE_SIZE, 0, &store_));
+    ASSERT_OK(zx::vmo::create(zx_system_get_page_size(), 0, &store_));
     const size_t kZero = 0u;
     ASSERT_OK(store_.set_property(ZX_PROP_VMO_CONTENT_SIZE, &kZero, sizeof(kZero)));
     ASSERT_OK(zx::stream::create(ZX_STREAM_MODE_READ | ZX_STREAM_MODE_WRITE, store_, 0, &stream_));
