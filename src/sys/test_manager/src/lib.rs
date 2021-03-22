@@ -133,6 +133,12 @@ impl TestMap {
         }
     }
 
+    /// Delete cache entry without marking it as stale and waiting for cleanup.
+    pub fn delete(&self, k: &str) {
+        let mut test_map = self.test_map.lock().unwrap();
+        test_map.remove(k);
+    }
+
     /// Mark cache entry as stale which would be deleted in future if not accessed.
     pub fn mark_as_stale(&self, k: &str) {
         let mut test_map = self.test_map.lock().unwrap();
@@ -168,10 +174,9 @@ pub async fn run_test_manager(
                     Ok(c) => c,
                 };
 
-                match launch_test(&test_url, suite, options).await {
+                match launch_test(&test_url, suite, test_map.clone(), options).await {
                     Ok(test) => {
                         let test_name = test.instance.root.child_name();
-                        test_map.insert(test_name.clone(), test_url.clone());
                         responder.send(&mut Ok(())).map_err(TestManagerError::Response)?;
                         let test_map = test_map.clone();
                         fasync::Task::spawn(async move {
@@ -267,6 +272,7 @@ impl RunningTest {
 async fn launch_test(
     test_url: &str,
     suite_request: ServerEnd<SuiteMarker>,
+    test_map: Arc<TestMap>,
     options: LaunchOptions,
 ) -> Result<RunningTest, LaunchTestError> {
     // This archive accessor will be served by the embedded archivist.
@@ -280,37 +286,47 @@ async fn launch_test(
         .map_err(LaunchTestError::InitializeTestRealm)?;
     realm.set_collection_name("tests");
     let instance = realm.create().await.map_err(LaunchTestError::CreateTestRealm)?;
-    instance
-        .root
-        .connect_request_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>(
-            archive_accessor_server_end,
-        )
-        .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
+    let test_name = instance.root.child_name();
+    test_map.insert(test_name.clone(), test_url.to_string());
 
-    let mut isolated_logs_provider = IsolatedLogsProvider::new(archive_accessor_arc);
-    let logs_iterator_task = match options.logs_iterator {
-        None => None,
-        Some(ftest_manager::LogsIterator::Archive(iterator)) => {
-            let task = isolated_logs_provider
-                .spawn_iterator_server(iterator)
-                .map_err(LaunchTestError::StreamIsolatedLogs)?;
-            Some(task)
-        }
-        Some(ftest_manager::LogsIterator::Batch(iterator)) => {
-            isolated_logs_provider
-                .start_streaming_logs(iterator)
-                .map_err(LaunchTestError::StreamIsolatedLogs)?;
-            None
-        }
-        Some(_) => None,
+    let connect_to_instance_services = async move {
+        instance
+            .root
+            .connect_request_to_protocol_at_exposed_dir::<fdiagnostics::ArchiveAccessorMarker>(
+                archive_accessor_server_end,
+            )
+            .map_err(LaunchTestError::ConnectToArchiveAccessor)?;
+
+        let mut isolated_logs_provider = IsolatedLogsProvider::new(archive_accessor_arc);
+        let logs_iterator_task = match options.logs_iterator {
+            None => None,
+            Some(ftest_manager::LogsIterator::Archive(iterator)) => {
+                let task = isolated_logs_provider
+                    .spawn_iterator_server(iterator)
+                    .map_err(LaunchTestError::StreamIsolatedLogs)?;
+                Some(task)
+            }
+            Some(ftest_manager::LogsIterator::Batch(iterator)) => {
+                isolated_logs_provider
+                    .start_streaming_logs(iterator)
+                    .map_err(LaunchTestError::StreamIsolatedLogs)?;
+                None
+            }
+            Some(_) => None,
+        };
+
+        instance
+            .root
+            .connect_request_to_protocol_at_exposed_dir(suite_request)
+            .map_err(LaunchTestError::ConnectToTestSuite)?;
+        Ok(RunningTest { instance, logs_iterator_task })
     };
 
-    instance
-        .root
-        .connect_request_to_protocol_at_exposed_dir(suite_request)
-        .map_err(LaunchTestError::ConnectToTestSuite)?;
-
-    Ok(RunningTest { instance, logs_iterator_task })
+    let running_test_result = connect_to_instance_services.await;
+    if running_test_result.is_err() {
+        test_map.delete(&test_name);
+    }
+    running_test_result
 }
 
 async fn get_realm(
@@ -588,5 +604,16 @@ mod tests {
         pin_mut!(fut);
         let _poll = executor.run_until_stalled(&mut fut);
         assert_eq!(test_map.get("other_test"), None);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_map_delete() {
+        let test_map = TestMap::new(zx::Duration::from_seconds(10));
+        test_map.insert("my_test".into(), "my_test_url".into());
+        assert_eq!(test_map.get("my_test"), Some("my_test_url".into()));
+        test_map.insert("other_test".into(), "other_test_url".into());
+        test_map.delete("my_test");
+        assert_eq!(test_map.get("my_test"), None);
+        assert_eq!(test_map.get("other_test"), Some("other_test_url".into()));
     }
 }

@@ -7,18 +7,23 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/syslog/cpp/log_settings.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/syslog/global.h>
 
 #include <memory>
 
+#include <fbl/unique_fd.h>
+#include <src/lib/files/directory.h>
+
 #include "data_processor.h"
 #include "event_stream.h"
-#include "fbl/unique_fd.h"
-#include "src/lib/files/directory.h"
 
 using TakeStaticEventStream_Result = fuchsia::sys2::EventSource_TakeStaticEventStream_Result;
 
 int main(int argc, const char** argv) {
+  // diagnostic is tagging this component_manager_dor_test by default.
+  syslog::SetTags({"debug_data"});
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
