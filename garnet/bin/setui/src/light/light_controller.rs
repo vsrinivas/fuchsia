@@ -9,7 +9,7 @@ use crate::base::{SettingInfo, SettingType};
 use crate::config::default_settings::DefaultSetting;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
     controller, ControllerError, ControllerStateResult, IntoHandlerResult, SettingHandlerResult,
 };
@@ -87,7 +87,7 @@ impl controller::Handle for LightController {
                 // value to ensure we have the latest light state.
                 // TODO(fxbug.dev/56319): remove once all clients are migrated.
                 self.restore().await.ok();
-                Some(Ok(Some(SettingInfo::Light(self.client.read().await))))
+                Some(self.client.read_setting_info::<LightInfo>().await.into_handler_result())
             }
             _ => None,
         }
@@ -119,7 +119,7 @@ impl LightController {
     }
 
     async fn set(&self, name: String, state: Vec<LightState>) -> SettingHandlerResult {
-        let mut current = self.client.read::<LightInfo>().await;
+        let mut current = self.client.read_setting::<LightInfo>().await;
 
         let mut entry = match current.light_groups.entry(name.clone()) {
             Entry::Vacant(_) => {
@@ -164,7 +164,7 @@ impl LightController {
         // After the main validations, write the state to the hardware.
         self.write_light_group_to_hardware(group, &state).await?;
 
-        write(&self.client, current, false).await.into_handler_result()
+        self.client.write_setting(current.into(), false).await.into_handler_result()
     }
 
     /// Writes the given list of light states for a light group to the actual hardware.
@@ -223,8 +223,7 @@ impl LightController {
     }
 
     async fn on_mic_mute(&self, mic_mute: bool) -> SettingHandlerResult {
-        let mut current = self.client.read::<LightInfo>().await;
-
+        let mut current = self.client.read_setting::<LightInfo>().await;
         for light in current
             .light_groups
             .values_mut()
@@ -235,7 +234,7 @@ impl LightController {
             light.enabled = mic_mute;
         }
 
-        write(&self.client, current, false).await.into_handler_result()
+        self.client.write_setting(current.into(), false).await.into_handler_result()
     }
 
     async fn restore(&self) -> SettingHandlerResult {
@@ -255,7 +254,7 @@ impl LightController {
         &self,
         config: LightHardwareConfiguration,
     ) -> SettingHandlerResult {
-        let current = self.client.read::<LightInfo>().await;
+        let current = self.client.read_setting::<LightInfo>().await;
         let mut light_groups: HashMap<String, LightGroup> = HashMap::new();
         for group_config in config.light_groups {
             let mut light_state: Vec<LightState> = Vec::new();
@@ -290,7 +289,10 @@ impl LightController {
             );
         }
 
-        write(&self.client, LightInfo { light_groups }, false).await.into_handler_result()
+        self.client
+            .write_setting(LightInfo { light_groups }.into(), false)
+            .await
+            .into_handler_result()
     }
 
     /// Restores the light information when no hardware configuration is specified by reading from
@@ -307,7 +309,7 @@ impl LightController {
                 ))
             })?;
 
-        let mut current = self.client.read::<LightInfo>().await;
+        let mut current = self.client.read_setting::<LightInfo>().await;
         for i in 0..num_lights {
             let info = match call_async!(self.light_proxy => get_info(i)).await {
                 Ok(Ok(info)) => info,
@@ -323,7 +325,7 @@ impl LightController {
             current.light_groups.insert(name, group);
         }
 
-        write(&self.client, current, false).await.into_handler_result()
+        self.client.write_setting(current.into(), false).await.into_handler_result()
     }
 
     /// Converts an Info object from the fuchsia.hardware.Light API into a LightGroup, the internal
