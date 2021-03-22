@@ -23,9 +23,11 @@ async fn scoped_instances() -> Result<(), Error> {
 
     let mut event_source = test.connect_to_event_source().await?;
     let event = EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:auto-*".to_string());
-    let expected_events: Vec<_> = (0..3).map(|_| event.clone()).collect();
+    let mut expected_events: Vec<_> = (0..3).map(|_| event.clone()).collect();
+    expected_events
+        .push(EventMatcher::ok().r#type(Stopped::TYPE).moniker("./coll:static_name".to_string()));
     let expectation = EventSequence::new()
-        .all_of(expected_events, Ordering::Ordered)
+        .all_of(expected_events, Ordering::Unordered)
         .subscribe_and_expect(&mut event_source)
         .await?;
 

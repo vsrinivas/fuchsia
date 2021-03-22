@@ -44,15 +44,24 @@ fn main() {
 }
 
 async fn create_instances() -> Result<Vec<ScopedInstance>, Error> {
-    // Create 3 scoped instances, and confirm that each is funcitoning correctly by using a FIDL
+    let url = "fuchsia-pkg://fuchsia.com/fuchsia-component-tests#meta/echo_server.cm".to_string();
+    // Create 4 scoped instances, and confirm that each is funcitoning correctly by using a FIDL
     // service from it
-    let mut instances = vec![];
-    for _ in 1..=3 {
-        let url =
-            "fuchsia-pkg://fuchsia.com/fuchsia-component-tests#meta/echo_server.cm".to_string();
-        let scoped_instance = ScopedInstance::new("coll".to_string(), url)
+    let instances = vec![
+        ScopedInstance::new("coll".to_string(), url.clone())
             .await
-            .context("instance creation failed")?;
+            .context("instance creation failed")?,
+        ScopedInstance::new("coll".to_string(), url.clone())
+            .await
+            .context("instance creation failed")?,
+        ScopedInstance::new("coll".to_string(), url.clone())
+            .await
+            .context("instance creation failed")?,
+        ScopedInstance::new_with_name("static_name".to_string(), "coll".to_string(), url.clone())
+            .await
+            .context("instance creation failed")?,
+    ];
+    for scoped_instance in instances.iter() {
         {
             let echo_proxy = scoped_instance
                 .connect_to_protocol_at_exposed_dir::<fecho::EchoMarker>()
@@ -78,7 +87,6 @@ async fn create_instances() -> Result<Vec<ScopedInstance>, Error> {
                 .ok_or(format_err!("empty result"))?;
             assert_eq!(out, "hippos");
         }
-        instances.push(scoped_instance);
     }
     Ok(instances)
 }
