@@ -159,8 +159,14 @@ bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
   TRACE_DURATION("audio", "PointSamplerImpl::Mix");
 
   auto info = &bookkeeping();
+  // CheckPositions expects a frac_pos_filter_length value that _includes_ [0], thus the '+1'
+  // TODO(fxbug.dev/72561): Convert Mixer class and the rest of audio_core to define filter width as
+  // including the center position in its count (as PositionManager and Filter::Length do). Then the
+  // distinction between filter length and filter width would go away, this kFracPositiveFilterWidth
+  // constant would be changed, and the below "+ 1" would be removed.
   PositionManager::CheckPositions(dest_frames, dest_offset_ptr, source_frames,
-                                  source_offset_ptr->raw_value(), kFracPositiveFilterWidth, info);
+                                  source_offset_ptr->raw_value(), kFracPositiveFilterWidth + 1,
+                                  info);
 
   if (info->gain.IsUnity()) {
     return accumulate ? Mix<ScalerType::EQ_UNITY, true>(dest_ptr, dest_frames, dest_offset_ptr,
@@ -267,8 +273,14 @@ bool NxNPointSamplerImpl<SourceSampleType>::Mix(float* dest_ptr, int64_t dest_fr
   TRACE_DURATION("audio", "NxNPointSamplerImpl::Mix");
 
   auto info = &bookkeeping();
+  // CheckPositions expects a frac_pos_filter_length value that _includes_ [0], thus the '+1'
+  // TODO(fxbug.dev/72561): Convert Mixer class and the rest of audio_core to define filter width as
+  // including the center position in its count (as PositionManager and Filter::Length do). Then the
+  // distinction between filter length and filter width would go away, this kFracPositiveFilterWidth
+  // constant would be changed, and the below "+ 1" would be removed.
   PositionManager::CheckPositions(dest_frames, dest_offset_ptr, source_frames,
-                                  source_offset_ptr->raw_value(), kFracPositiveFilterWidth, info);
+                                  source_offset_ptr->raw_value(), kFracPositiveFilterWidth + 1,
+                                  info);
 
   if (info->gain.IsUnity()) {
     return accumulate ? Mix<ScalerType::EQ_UNITY, true>(dest_ptr, dest_frames, dest_offset_ptr,

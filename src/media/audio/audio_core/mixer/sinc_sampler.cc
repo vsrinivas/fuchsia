@@ -27,14 +27,16 @@ class SincSamplerImpl : public SincSampler {
             SincFilter::Length(source_frame_rate, dest_frame_rate) - Fixed::FromRaw(1),
             // Sinc filters are symmetric (pos == neg, for coefficient values)
             SincFilter::Length(source_frame_rate, dest_frame_rate) - Fixed::FromRaw(1)),
+        frac_filter_length_(SincFilter::Length(source_frame_rate, dest_frame_rate).raw_value()),
         source_rate_(source_frame_rate),
         dest_rate_(dest_frame_rate),
-        position_(SourceChanCount, DestChanCount, pos_filter_width().raw_value(),
-                  neg_filter_width().raw_value()),
+        position_(SourceChanCount, DestChanCount, frac_filter_length_, frac_filter_length_),
         working_data_(DestChanCount, kDataCacheLength),
         // SincFilter holds one side of coefficients; we invert position to calc the negative side.
-        filter_(source_rate_, dest_rate_,
-                SincFilter::Length(source_frame_rate, dest_frame_rate).raw_value()) {
+        filter_(source_rate_, dest_rate_, frac_filter_length_) {
+    FX_CHECK(pos_filter_width() == neg_filter_width())
+        << "SincSampler assumes a symmetric filter, pos_filter_width (" << ffl::String::DecRational
+        << pos_filter_width() << ") != neg_filter_width (" << neg_filter_width() << ")";
     // SincFilter draws from range [ceil(frac_pos - neg_width), floor(frac_pos + pos_width)].
     // Including the center, SincFilter can require floor(neg_width + one + pos_width) samples.
     // Be careful: this is not (necessarily) the same as floor(neg_width) + one + floor(pos_width)
@@ -87,8 +89,9 @@ class SincSamplerImpl : public SincSampler {
                                                   ChannelStrip* channel_strip,
                                                   int64_t next_cache_idx_to_fill);
 
-  uint32_t source_rate_;
-  uint32_t dest_rate_;
+  const int64_t frac_filter_length_;
+  const uint32_t source_rate_;
+  const uint32_t dest_rate_;
 
   PositionManager position_;
   ChannelStrip working_data_;
@@ -245,9 +248,13 @@ bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
     int64_t source_frames, Fixed* source_offset_ptr, bool accumulate) {
   auto info = &bookkeeping();
 
+  // CheckPositions expects a frac_pos_filter_length param that _includes_ [0], so we use
+  // frac_filter_length_ instead of pos_filter_width().
+  // TODO(fxbug.dev/72561): Convert Mixer class (and audio_core all-up) to define filter width as
+  // including the center in its count (as PositionManager and Filter::Length do). Any distinction
+  // between filter length/filter width would go away. We would use pos_filter_width() here.
   PositionManager::CheckPositions(dest_frames, dest_offset_ptr, source_frames,
-                                  source_offset_ptr->raw_value(), pos_filter_width().raw_value(),
-                                  info);
+                                  source_offset_ptr->raw_value(), frac_filter_length_, info);
 
   if (info->gain.IsUnity()) {
     return accumulate

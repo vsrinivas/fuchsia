@@ -6,6 +6,7 @@
 #define SRC_MEDIA_AUDIO_LIB_FORMAT_FRAMES_H_
 
 #include <ffl/fixed.h>
+#include <ffl/string.h>
 
 #include "src/media/audio/lib/format/constants.h"
 

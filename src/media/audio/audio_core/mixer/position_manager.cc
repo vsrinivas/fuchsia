@@ -75,6 +75,10 @@ void PositionManager::SetDestValues(float* dest_ptr, int64_t dest_frames,
 
 // static
 void PositionManager::CheckDestPositions(int64_t dest_frames, int64_t* dest_offset_ptr) {
+  // Location of first dest frame cannot be negative.
+  FX_CHECK(*dest_offset_ptr >= 0) << "dest_offset (" << *dest_offset_ptr
+                                  << ") must be non-negative";
+
   // Location of first dest frame to produce must be within the provided buffer.
   FX_CHECK(*dest_offset_ptr < dest_frames)
       << "dest_offset (" << *dest_offset_ptr << ") must be less than dest_frames (" << dest_frames
