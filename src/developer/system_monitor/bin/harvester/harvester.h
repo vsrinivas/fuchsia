@@ -53,7 +53,9 @@ class Harvester {
   GatherMemory gather_memory_{info_resource_, dockyard_proxy_.get()};
   GatherTasks gather_tasks_{info_resource_, dockyard_proxy_.get()};
   GatherThreadsAndCpu gather_threads_and_cpu_{info_resource_,
-                                              dockyard_proxy_.get()};
+                                              dockyard_proxy_.get(),
+                                              g_fast_data_task_tree,
+                                              os_.get()};
   GatherProcessesAndMemory gather_processes_and_memory_{info_resource_,
                                                         dockyard_proxy_.get()};
   GatherVmos gather_vmos_{info_resource_, dockyard_proxy_.get(),

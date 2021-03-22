@@ -30,7 +30,7 @@ class GatherTasks : public GatherCategory {
       : GatherCategory(info_resource, dockyard_proxy) {}
 
   // GatherCategory.
-  void Gather() override;
+  void Gather() override {}
 };
 
 }  // namespace harvester

@@ -32,8 +32,9 @@ class MockTaskTree : public harvester::TaskTree {
 
 class MockOS : public harvester::OS {
  public:
+  MOCK_METHOD(zx_duration_t, HighResolutionNow, (), (override));
   MOCK_METHOD(zx_status_t, GetInfo,
-              (zx_handle_t parent, int children_kind, void* out_buffer,
+              (zx_handle_t parent, unsigned int children_kind, void* out_buffer,
                size_t buffer_size, size_t* actual, size_t* avail),
               (override));
 };
@@ -62,7 +63,7 @@ class GatherVmosTest : public ::testing::Test {
     return vmo;
   }
 
-  zx_status_t GetVmoCount(zx_handle_t parent, int children_kind,
+  zx_status_t GetVmoCount(zx_handle_t parent, unsigned int children_kind,
                           void* out_buffer, size_t buffer_size, size_t* actual,
                           size_t* avail) {
     if (process_handle_to_vmos_.count(parent) == 0) {
@@ -76,7 +77,7 @@ class GatherVmosTest : public ::testing::Test {
     return ZX_OK;
   }
 
-  zx_status_t GetVmoInfo(zx_handle_t parent, int children_kind,
+  zx_status_t GetVmoInfo(zx_handle_t parent, unsigned int children_kind,
                          void* out_buffer, size_t buffer_size, size_t* actual,
                          size_t* avail) {
     size_t capacity = buffer_size / sizeof(zx_info_vmo_t);

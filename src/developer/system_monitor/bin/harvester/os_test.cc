@@ -16,15 +16,16 @@ using testing::Return;
 // Used to mock out the zx_* calls for hermetic tests.
 class MockOS : public harvester::OS {
  public:
+  MOCK_METHOD(zx_duration_t, HighResolutionNow, (), (override));
   MOCK_METHOD(zx_status_t, GetInfo,
-              (zx_handle_t parent, int children_kind, void* out_buffer,
+              (zx_handle_t parent, unsigned int children_kind, void* out_buffer,
                size_t buffer_size, size_t* actual, size_t* avail),
               (override));
 };
 
 class OSTest : public ::testing::Test {
  public:
-  zx_status_t GetChildCount(zx_handle_t parent, int children_kind,
+  zx_status_t GetChildCount(zx_handle_t parent, unsigned int children_kind,
                           void* out_buffer, size_t buffer_size, size_t* actual,
                           size_t* avail) {
     if (handle_to_children_.count(parent) == 0) {
@@ -38,7 +39,7 @@ class OSTest : public ::testing::Test {
     return ZX_OK;
   }
 
-  zx_status_t GetChildInfo(zx_handle_t parent, int children_kind,
+  zx_status_t GetChildInfo(zx_handle_t parent, unsigned int children_kind,
                          void* out_buffer, size_t buffer_size, size_t* actual,
                          size_t* avail) {
     size_t capacity = buffer_size / sizeof(zx_koid_t);

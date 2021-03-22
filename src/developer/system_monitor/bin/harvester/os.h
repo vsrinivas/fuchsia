@@ -22,10 +22,12 @@ class OS {
 
   // Convenience methods.
 
+  virtual zx_duration_t HighResolutionNow() = 0;
+
   // Wrapper around GetInfo for fetching singular info objects.
   template <typename T>
-  zx_status_t GetInfo(zx_handle_t parent, zx_koid_t parent_koid, int kind,
-                      const char* kind_name, T& info_object) {
+  zx_status_t GetInfo(zx_handle_t parent, zx_koid_t parent_koid,
+                      unsigned int kind, const char* kind_name, T& info_object) {
     zx_status_t status = GetInfo(parent, kind, &info_object, sizeof(T), nullptr,
                                  nullptr);
 
@@ -41,7 +43,7 @@ class OS {
   // Wrapper around GetInfo for fetching vectors of children.
   template <typename T = zx_koid_t>
   zx_status_t GetChildren(zx_handle_t parent, zx_koid_t parent_koid,
-                          int children_kind, const char* kind_name,
+                          unsigned int children_kind, const char* kind_name,
                           std::vector<T>& children) {
     zx_status_t status;
 
@@ -100,7 +102,7 @@ class OS {
 
   // Thin wrappers around OS calls. Allows for mocking.
 
-  virtual zx_status_t GetInfo(zx_handle_t parent, int children_kind,
+  virtual zx_status_t GetInfo(zx_handle_t parent, unsigned int children_kind,
                               void* out_buffer, size_t buffer_size,
                               size_t* actual, size_t* avail) = 0;
 };
@@ -109,11 +111,18 @@ class OSImpl : public OS {
  public:
   ~OSImpl() = default;
 
-  virtual zx_status_t GetInfo(zx_handle_t parent, int children_kind,
+  virtual zx_status_t GetInfo(zx_handle_t parent, unsigned int children_kind,
                               void* out_buffer, size_t buffer_size,
                               size_t* actual, size_t* avail) override {
     return zx_object_get_info(parent, children_kind, out_buffer, buffer_size,
                               actual, avail);
+  }
+
+  virtual zx_duration_t HighResolutionNow() override {
+    auto now = std::chrono::high_resolution_clock::now();
+    return std::chrono::duration_cast<std::chrono::nanoseconds>(
+        now.time_since_epoch())
+        .count();
   }
 };
 

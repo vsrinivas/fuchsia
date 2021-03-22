@@ -132,7 +132,6 @@ executable("system_monitor_harvester_test") {
     "gather_device_info_test.cc",
     "gather_memory_test.cc",
     "gather_processes_and_memory_test.cc",
-    "gather_tasks_test.cc",
     "gather_threads_and_cpu_test.cc",
     "gather_vmos_test.cc",
     "harvester_fake.h",

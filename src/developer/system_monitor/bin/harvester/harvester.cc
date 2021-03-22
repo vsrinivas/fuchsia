@@ -18,7 +18,6 @@
 #include "gather_device_info.h"
 #include "gather_memory.h"
 #include "gather_processes_and_memory.h"
-#include "gather_tasks.h"
 #include "gather_threads_and_cpu.h"
 
 namespace harvester {
@@ -36,7 +35,6 @@ void Harvester::GatherDeviceProperties() {
   gather_device_info_.GatherDeviceProperties();
   gather_cpu_.GatherDeviceProperties();
   gather_memory_.GatherDeviceProperties();
-  gather_tasks_.GatherDeviceProperties();
 
   gather_vmos_.GatherDeviceProperties();
 }

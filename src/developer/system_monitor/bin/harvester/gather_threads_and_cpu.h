@@ -13,16 +13,19 @@ namespace harvester {
 // Gather samples for threads and global CPU stats.
 class GatherThreadsAndCpu : public GatherCategory {
  public:
-  GatherThreadsAndCpu(zx_handle_t info_resource,
-                      harvester::DockyardProxy* dockyard_proxy);
+  GatherThreadsAndCpu(zx_handle_t info_resource, DockyardProxy* dockyard_proxy,
+                      TaskTree& task_tree, OS* os)
+      : GatherCategory(info_resource, dockyard_proxy),
+        task_tree_(task_tree),
+        os_(os) {}
 
   // GatherCategory.
   void Gather() override;
 
  private:
   RateLimiter limiter_{20};
-
-  GatherThreadsAndCpu() = delete;
+  TaskTree& task_tree_;
+  OS* os_;
 };
 
 }  // namespace harvester

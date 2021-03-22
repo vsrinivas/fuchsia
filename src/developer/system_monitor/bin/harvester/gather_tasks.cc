@@ -50,14 +50,6 @@ class SampleBundleBuilder final {
   // |koid| must refer to the same process as the process handle.
   void AddProcessStats(zx_handle_t process, zx_koid_t koid);
 
-  // Gather state info for a specific thread.
-  // |koid| must refer to the same thread as the thread handle.
-  void AddThreadState(zx_handle_t thread, zx_koid_t koid);
-
-  // Gather cpu info for a specific thread.
-  // |koid| must refer to the same thread as the thread handle.
-  void AddThreadCpu(zx_handle_t thread, zx_koid_t koid);
-
  private:
   SampleBundle* sample_bundle_;
 
@@ -125,34 +117,6 @@ void SampleBundleBuilder::AddProcessStats(zx_handle_t process, zx_koid_t koid) {
                info.mem_private_bytes + info.mem_scaled_shared_bytes);
 }
 
-// Gather state info for a specific thread.
-// |koid| must refer to the same thread as the thread handle.
-void SampleBundleBuilder::AddThreadState(zx_handle_t thread, zx_koid_t koid) {
-  zx_info_thread_t info;
-  zx_status_t status =
-      zx_object_get_info(thread, ZX_INFO_THREAD, &info, sizeof(info),
-                         /*actual=*/nullptr, /*avail=*/nullptr);
-  if (status != ZX_OK) {
-    FX_VLOGS(VERBOSE_FOR_FILE) << ZxErrorString("AddThreadState", status);
-    return;
-  }
-  AddKoidValue(koid, "thread_state", info.state);
-}
-
-// Gather cpu info for a specific thread.
-// |koid| must refer to the same thread as the thread handle.
-void SampleBundleBuilder::AddThreadCpu(zx_handle_t thread, zx_koid_t koid) {
-  zx_info_thread_stats_t stats;
-  zx_status_t status =
-      zx_object_get_info(thread, ZX_INFO_THREAD_STATS, &stats, sizeof(stats),
-                         /*actual=*/nullptr, /*avail=*/nullptr);
-  if (status != ZX_OK) {
-    FX_VLOGS(VERBOSE_FOR_FILE) << ZxErrorString("AddThreadCpu", status);
-    return;
-  }
-  AddKoidValue(koid, "cpu_total", stats.total_runtime);
-}
-
 }  // namespace
 
 void AddTaskBasics(SampleBundle* samples,
@@ -180,29 +144,6 @@ void AddProcessStats(SampleBundle* samples,
   for (const auto& task : tasks) {
     builder.AddProcessStats(task.handle, task.koid);
   }
-}
-
-void AddThreadStats(SampleBundle* samples,
-                    const std::vector<TaskTree::Task>& tasks) {
-  SampleBundleBuilder builder(samples);
-  for (const auto& task : tasks) {
-    builder.AddThreadState(task.handle, task.koid);
-    builder.AddThreadCpu(task.handle, task.koid);
-  }
-}
-
-void GatherTasks::Gather() {
-  TaskTree task_tree;
-  task_tree.Gather();
-  SampleBundle samples;
-  AddTaskBasics(&samples, task_tree.Jobs(), dockyard::KoidType::JOB);
-  AddTaskBasics(&samples, task_tree.Processes(), dockyard::KoidType::PROCESS);
-  AddTaskBasics(&samples, task_tree.Threads(), dockyard::KoidType::THREAD);
-
-  AddJobStats(&samples, task_tree.Jobs());
-  AddProcessStats(&samples, task_tree.Processes());
-  AddThreadStats(&samples, task_tree.Threads());
-  samples.Upload(DockyardPtr());
 }
 
 }  // namespace harvester
