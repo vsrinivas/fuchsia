@@ -5,7 +5,7 @@
 use crate::base::SettingInfo;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
     controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
@@ -47,13 +47,15 @@ impl controller::Handle for NightModeController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetNightModeInfo(night_mode_info) => {
-                let mut current = self.client.read::<NightModeInfo>().await;
+                let mut current = self.client.read_setting::<NightModeInfo>().await;
 
                 // Save the value locally.
                 current.night_mode_enabled = night_mode_info.night_mode_enabled;
-                Some(write(&self.client, current, false).await.into_handler_result())
+                Some(self.client.write_setting(current.into(), false).await.into_handler_result())
             }
-            Request::Get => Some(Ok(Some(SettingInfo::NightMode(self.client.read().await)))),
+            Request::Get => {
+                Some(self.client.read_setting_info::<NightModeInfo>().await.into_handler_result())
+            }
             _ => None,
         }
     }
