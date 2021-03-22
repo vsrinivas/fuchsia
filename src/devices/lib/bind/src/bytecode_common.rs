@@ -9,7 +9,6 @@ use thiserror::Error;
 
 // Common functions and enums for interpreting the bytecode.
 
-#[allow(dead_code)]
 #[derive(Debug, Error, Clone, PartialEq)]
 pub enum BytecodeError {
     UnexpectedEnd,
@@ -20,6 +19,11 @@ pub enum BytecodeError {
     Utf8ConversionFailure,
     InvalidSymbolTableKey(u32),
     IncorrectSectionSize,
+    InvalidOp(u8),
+    InvalidValueType(u8),
+    InvalidBoolValue(u32),
+    MissingEntryInSymbolTable(u32),
+    MismatchValueTypes,
 }
 
 impl fmt::Display for BytecodeError {
@@ -34,7 +38,6 @@ pub fn next_u8(iter: &mut BytecodeIter) -> Result<u8, BytecodeError> {
     iter.next().ok_or(BytecodeError::UnexpectedEnd)
 }
 
-#[allow(dead_code)]
 pub fn next_u32(iter: &mut BytecodeIter) -> Result<u32, BytecodeError> {
     let mut bytes: [u8; 4] = [0; 4];
     for i in 0..4 {

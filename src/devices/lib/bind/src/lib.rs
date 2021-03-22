@@ -20,6 +20,7 @@ pub mod encode_bind_program_v2;
 mod errors;
 pub mod instruction;
 pub mod linter;
+pub mod match_bind;
 pub mod offline_debugger;
 mod parser_common;
 pub mod test;

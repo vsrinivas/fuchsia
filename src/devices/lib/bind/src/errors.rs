@@ -482,6 +482,24 @@ impl From<BytecodeError> for UserError {
                 None,
                 false,
             ),
+            BytecodeError::InvalidOp(op) => {
+                UserError::new("E809", &format!("Invalid operation value: {}", op), None, false)
+            }
+            BytecodeError::InvalidValueType(val_type) => {
+                UserError::new("E810", &format!("Invalid value type: {}", val_type), None, false)
+            }
+            BytecodeError::InvalidBoolValue(val) => {
+                UserError::new("E811", &format!("Invalid boolean value: {}", val), None, false)
+            }
+            BytecodeError::MismatchValueTypes => {
+                UserError::new("E812", "Comparing different value types", None, false)
+            }
+            BytecodeError::MissingEntryInSymbolTable(id) => UserError::new(
+                "E813",
+                &format!("Missing entry for key {} in symbol table", id),
+                None,
+                false,
+            ),
         }
     }
 }
