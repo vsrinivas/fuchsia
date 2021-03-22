@@ -5,7 +5,7 @@
 use crate::base::SettingInfo;
 use crate::handler::base::Request;
 use crate::handler::device_storage::{DeviceStorageAccess, DeviceStorageCompatible};
-use crate::handler::setting_handler::persist::{controller as data_controller, write, ClientProxy};
+use crate::handler::setting_handler::persist::{controller as data_controller, ClientProxy};
 use crate::handler::setting_handler::{
     controller, ControllerError, IntoHandlerResult, SettingHandlerResult,
 };
@@ -47,13 +47,17 @@ impl controller::Handle for SetupController {
     async fn handle(&self, request: Request) -> Option<SettingHandlerResult> {
         match request {
             Request::SetConfigurationInterfaces(interfaces) => {
-                let mut info = self.client.read::<SetupInfo>().await;
+                let mut info = self.client.read_setting::<SetupInfo>().await;
                 info.configuration_interfaces = interfaces;
 
-                return Some(write(&self.client, info, true).await.into_handler_result());
+                return Some(
+                    self.client.write_setting(info.into(), true).await.into_handler_result(),
+                );
             }
             Request::Get => {
-                return Some(Ok(Some(SettingInfo::Setup(self.client.read().await))));
+                return Some(
+                    self.client.read_setting_info::<SetupInfo>().await.into_handler_result(),
+                );
             }
             _ => None,
         }
