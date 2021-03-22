@@ -24,7 +24,15 @@ impl<'a> BuildPrereqs<'a> {
     }
 
     async fn run_linux(&self) -> Result<PreflightCheckResult> {
-        // Ensure on a debian-flavor distribution first.
+        // Ensure we're not on ARM.
+        if self.did_find_linux_arm()? {
+            return Ok(PreflightCheckResult::Failure(
+                "ARM architectures are not supported at this time".to_string(),
+                None,
+            ));
+        }
+
+        // Ensure on a debian-flavor distribution.
         let (dpkg_status, _, __) = (self.command_runner)(&vec!["which", "dpkg"])?;
         if !dpkg_status.success() {
             return Ok(PreflightCheckResult::Failure(
@@ -48,6 +56,15 @@ impl<'a> BuildPrereqs<'a> {
             ));
         }
         Ok(Success(format!("Found all needed build dependencies: {}", LINUX_PACKAGES.join(", "))))
+    }
+
+    fn did_find_linux_arm(&self) -> Result<bool, anyhow::Error> {
+        let (status, stdout, stderr) =
+            (self.command_runner)(&vec!["uname", "-m"]).context("Failed to run uname -m")?;
+        if !status.success() {
+            return Err(anyhow!("uname -m exited with {}: {}", status.code(), stderr));
+        }
+        Ok(stdout.starts_with("arm"))
     }
 
     async fn run_macos(
@@ -141,6 +158,9 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_success_linux() -> Result<()> {
         let run_command: CommandRunner = |args| {
+            if args.to_vec() == vec!["uname", "-m"] {
+                return Ok((ExitStatus(0), "x86_64".to_string(), "".to_string()));
+            }
             if args.to_vec() == vec!["which", "dpkg"] {
                 return Ok((ExitStatus(0), "".to_string(), "".to_string()));
             }
@@ -155,9 +175,28 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_arm_linux() -> Result<()> {
+        // Return "arm64" from uname -m, which should cause a Failure().
+        let run_command: CommandRunner = |args| {
+            if args.to_vec() == vec!["uname", "-m"] {
+                return Ok((ExitStatus(0), "arm64".to_string(), "".to_string()));
+            }
+            unreachable!();
+        };
+
+        let check = BuildPrereqs::new(&run_command);
+        let response = check.run(&PreflightConfig { system: OperatingSystem::Linux }).await;
+        assert!(matches!(response?, PreflightCheckResult::Failure(..)));
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
     async fn test_non_debian_linux() -> Result<()> {
         // Fail one of the queries for a package.
         let run_command: CommandRunner = |args| {
+            if args.to_vec() == vec!["uname", "-m"] {
+                return Ok((ExitStatus(0), "x86_64".to_string(), "".to_string()));
+            }
             if args.to_vec() == vec!["which", "dpkg"] {
                 return Ok((ExitStatus(1), "".to_string(), "".to_string()));
             }
@@ -174,6 +213,9 @@ mod test {
     async fn test_missing_package_linux() -> Result<()> {
         // Fail one of the queries for a package.
         let run_command: CommandRunner = |args| {
+            if args.to_vec() == vec!["uname", "-m"] {
+                return Ok((ExitStatus(0), "x86_64".to_string(), "".to_string()));
+            }
             if args.to_vec() == vec!["which", "dpkg"] {
                 return Ok((ExitStatus(0), "".to_string(), "".to_string()));
             }
