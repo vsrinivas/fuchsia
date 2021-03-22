@@ -9,4 +9,7 @@ package imports
 import (
 	// //build/secondary/third_party/golibs/github.com/golang/protobuf/protoc-gen-go
 	_ "github.com/golang/protobuf/protoc-gen-go"
+
+	// //build/secondary/third_party/golibs/google.golang.org/protobuf/cmd/protoc-gen-go
+	_ "google.golang.org/protobuf/cmd/protoc-gen-go"
 )
