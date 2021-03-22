@@ -8,10 +8,10 @@ using zx;
 
 const uint32 TOUCH_MAX_EVENT = 128;
 
-/// A method for a client to receive touch pointer events and respond in a
-/// global gesture disambiguation protocol.
+/// A method for a client to receive touch events and respond in a global
+/// gesture disambiguation protocol.
 ///
-/// The position of a pointer event is defined in the context of a viewport,
+/// The position of a touch event is defined in the context of a viewport,
 /// situated in the view. The dimensions of the view and viewport, and their
 /// spatial relationship (defined with a transform matrix), are supplied
 /// synchronously in a |ViewParameter| table. A view may retrieve a pointer's
@@ -19,7 +19,7 @@ const uint32 TOUCH_MAX_EVENT = 128;
 /// transform matrix.
 ///
 /// The viewport is embedded in an independent and stable coordinate system,
-/// suitable for interpreting pointer events in a scale-independent manner; a
+/// suitable for interpreting touch events in a scale-independent manner; a
 /// swipe will be observed at a constant scale, even under effects such as
 /// magnification or panning. However, other effects, such as enlargening the
 /// view's clip bounds, may trigger a change in the viewport extents.
@@ -51,7 +51,7 @@ protocol TouchSource {
     /// Initial response. The first call to |Watch| must be an empty vector.
     ///
     /// Event times. The timestamps on each event in the event vector are *not*
-    /// guaranteed monotonic; pointer events from different devices may be
+    /// guaranteed monotonic; touch events from different devices may be
     /// injected into Scenic at different times. Generally, events from a single
     /// device are expected to have monotonically increasing timestamps.
     ///
@@ -64,20 +64,22 @@ protocol TouchSource {
     /// unfortunately does not admit an idiomatic matching of response to event.
     Watch(vector<TouchResponse>:TOUCH_MAX_EVENT responses) -> (vector<TouchEvent>:TOUCH_MAX_EVENT events);
 
-    /// The gesture protocol allows a client to enact a "hold" on an event
-    /// stream, to prevent resolution of event stream ownership, even after the
-    /// stream has finished. This method updates the client's "hold" by
-    /// replacing it with a response that allows ownership resolution to
-    /// proceed.
+    /// The gesture protocol allows a client to enact a "hold" on an open
+    /// interaction of touch events; it prevents resolution of interaction
+    /// ownership, even after the interaction closes. This method updates the
+    /// client's previous "hold" by replacing it with a response that allows
+    /// ownership resolution to proceed.
+    ///
+    /// See |EventPhase| for how a stream is structured into interactions.
     ///
     /// Flow control. The caller is allowed at most one |UpdateResponse| call
-    /// per event stream, after the event stream has finished. It is a logical
+    /// per interaction, and it must be on a closed interaction. It is a logical
     /// error to call |UpdateResponse| when a normal response is possible with
     /// the |Watch| call.
     ///
     /// Validity. This TouchResponse must not be another "hold" response, and
-    /// the prior response is expected to be a "hold" response.
-    UpdateResponse(TouchEventStreamId stream, TouchResponse response) -> ();
+    /// the overwritten response is expected to be a "hold" response.
+    UpdateResponse(TouchInteractionId interaction, TouchResponse response) -> ();
 };
 
 /// The self-sufficient, self-consistent collection of pointer-related data,
@@ -89,7 +91,7 @@ table TouchEvent {
 
     /// The parameters of the associated view and viewport, sufficient to
     /// correctly interpret the position, orientation, magnitude, and
-    /// inter-event distance of pointer events dispatched to a view.
+    /// inter-event distance of touch events dispatched to a view.
     /// - It is issued on connection and on change.
     2: ViewParameters view_parameters;
 
@@ -98,13 +100,14 @@ table TouchEvent {
     /// - It is issued once per device.
     3: TouchDeviceInfo device_info;
 
-    /// A description of each sampled data point in a pointer event stream.
-    /// - It is issued on every sample in the pointer event stream.
+    /// A description of each sampled data point in an interaction of touch
+    /// events.
+    /// - It is issued on every sample in the interaction.
     4: TouchPointerSample pointer_sample;
 
-    /// The result of gesture disambiguation for a pointer event stream.
-    /// - It is issued once per pointer event stream.
-    5: TouchEventStreamInfo stream_info;
+    /// The result of gesture disambiguation for a interaction of touch events.
+    /// - It is issued once per interaction.
+    5: TouchInteractionResult interaction_result;
 
     /// An identifier to correlate this event's send/receive occurrence across
     /// component boundaries or abstraction layers.
@@ -114,64 +117,67 @@ table TouchEvent {
 /// Information about a device that issues touch event streams.
 table TouchDeviceInfo {
     /// An identifier for the touch device that issues touch event streams.
-    /// A device may own multiple pointers, each with its own pointer id.
+    /// A device may own multiple pointers, each with its own pointer id and its
+    /// own touch event stream.
     /// Required.
     1: uint32 id;
 };
 
-/// A unique identifier for a pointer event stream.
-struct TouchEventStreamId {
-    /// An identifier for the pointer device that issues pointer event streams.
+/// A unique identifier for a "interaction" of touch events.
+/// See |EventPhase| for how a stream is structured into interactions.
+struct TouchInteractionId {
+    /// An identifier for the pointer device that issues touch event streams.
     /// A device may own multiple pointers, each with its own |pointer_id|.
     uint32 device_id;
 
     /// An identifier of the pointer that issued this event. It is unique only
     /// to a specific |device_id|. Each (device_id, pointer_id) pair issues at
-    /// most one pointer event stream at a time.
+    /// most one open interaction at a time.
     uint32 pointer_id;
 
-    /// An identifier of the pointer event stream. It is unique only to a
-    /// specific (device_id, pointer_id) pair.
+    /// An identifier of the interaction. It is unique only to a specific
+    /// (device_id, pointer_id) pair.
     uint32 stream_id;
 };
 
-/// A description of each sampled data point in a pointer event stream.
+/// A description of each sampled data point in a touch event stream.
 /// All fields are required.
 table TouchPointerSample {
-    /// The unique stream identifier that this pointer sample belongs to.
-    1: TouchEventStreamId stream;
+    /// The interaction that this pointer sample belongs to.
+    1: TouchInteractionId interaction;
 
-    /// The state of this event in the pointer event stream's state machine.
+    /// The state of this event in the interaction's state machine.
     2: EventPhase phase;
 
     /// The position of this event, in the viewport's coordinate system.
     3: Point2 position_in_viewport;
 };
 
-/// The status of a pointer event stream, sent from server to client.
-struct TouchEventStreamInfo {
-    /// The unique stream identifier that this pointer sample belongs to.
-    TouchEventStreamId stream;
+/// The result of gesture disambiguation for a interaction of touch events, sent
+/// from server to client.
+struct TouchInteractionResult {
+    /// The interaction that this pointer sample belongs to.
+    TouchInteractionId interaction;
 
-    /// The pointer event stream's disposition, sent from server to client.
-    TouchEventStreamStatus status;
+    /// The interaction's disposition, sent from server to client.
+    TouchInteractionStatus status;
 };
 
-/// A description of the touch event stream's relationship to this client.
-enum TouchEventStreamStatus {
-    /// The client has been denied ownership of the event stream.
+/// A description of the interaction's relationship to this client.
+enum TouchInteractionStatus {
+    /// The client has been denied ownership of the interaction.
     DENIED = 1;
 
-    /// The client has been granted ownership of the event stream.
+    /// The client has been granted ownership of the interaction.
     GRANTED = 2;
 };
 
 /// A feedback event per |Event|, sent from client to server.
 ///
-/// Only |TouchPointerSample| requires a |TouchResponseType|; for other events, an empty
-/// |Response| table is sent to the server.
+/// Only |TouchPointerSample| requires a |TouchResponseType|; for other events,
+/// the server expects an empty |TouchResponse| table.
 table TouchResponse {
-    /// The event stream disposition that a client responds with for a given
+    /// The interaction disposition that a client responds with for a given
     /// |TouchPointerSample|.
     1: TouchResponseType response_type;
 
@@ -180,66 +186,65 @@ table TouchResponse {
     2: uint64 trace_flow_id;
 };
 
-/// The possible event stream dispositions that a client can respond with to a
+/// The possible interaction dispositions that a client can respond with to a
 /// given |TouchPointerSample|. Used as part of a gesture disambiguation scheme.
 ///
-/// The responses revolve around the idea of an ownership claim on a pointer event
-/// stream (i.e., current and future events of that event stream). Clients may
-/// assert a claim of ownership on the current event stream, but only one
+/// The responses are based on the idea of an ownership claim on a interaction.
+/// Clients may assert a claim of ownership on an open interaction, but only one
 /// client's claim is granted by the server; other clients' claims are denied.
 enum TouchResponseType {
-    /// The client has no further interest in this event stream; it declines
-    /// ownership of the event stream. The client will stop receiving events
-    /// from the pointer event stream.
+    /// The client has no further interest in this interaction; it declines
+    /// ownership of the interaction. The client will stop receiving events for
+    /// this interaction.
     NO = 1;
 
-    /// The client is interested in this event stream, but needs to see more
-    /// events to decide; the client has not yet claimed ownership of the event
-    /// stream.
+    /// The client is interested in this interaction, but needs to see more
+    /// events to decide; the client has not yet claimed ownership of this
+    /// interaction.
     MAYBE = 2;
 
-    /// The client is interested in this event stream, but needs to see more
-    /// events to decide; the client has not yet claimed ownership of the event
-    /// stream. During ownership resolution, it exerts its priority over
+    /// The client is interested in this interaction, but needs to see more
+    /// events to decide; the client has not yet claimed ownership of the
+    /// interaction. During ownership resolution, it exerts its priority over
     /// lower-priority "maybe" claims, but always loses to a "yes" claim.
-    MAYBE_PRIORITY = 3;
+    MAYBE_PRIORITIZE = 3;
 
-    /// The client is interested in this event stream, but needs to see more
-    /// events to decide; the client has not yet claimed ownership of the event
-    /// stream. Moreover, it suppresses lower-priority claims that try to
-    /// resolve stream ownership.
+    /// The client is interested in this interaction, but needs to see more
+    /// events to decide; the client has not yet claimed ownership of the
+    /// interaction. Moreover, it suppresses lower-priority claims that try to
+    /// resolve interaction ownership.
     MAYBE_SUPPRESS = 4;
 
-    /// The client is interested in this event stream, but needs to see more
-    /// events to decide; the client has not yet claimed ownership of the event
-    /// stream. Moreover, it suppresses lower-priority claims that try to
-    /// resolve stream ownership. During ownership resolution, it exerts its
-    /// priority over lower-priority "maybe" claims, but always loses to a "yes"
-    /// claim.
-    MAYBE_PRIORITY_SUPPRESS = 5;
+    /// The client is interested in this interaction, but needs to see more
+    /// events to decide; the client has not yet claimed ownership of the
+    /// interaction. Moreover, it suppresses lower-priority claims that try to
+    /// resolve interaction ownership. During ownership resolution, it exerts
+    /// its priority over lower-priority "maybe" claims, but always loses to a
+    /// "yes" claim.
+    MAYBE_PRIORITIZE_SUPPRESS = 5;
 
-    /// The client is interested in this event stream, but needs to see a
-    /// subsequent event stream to decide; the client has not yet claimed
-    /// ownership of the event stream. It prevents ownership resolution when the
-    /// stream ends.
+    /// The client is interested in this interaction, but needs to see a
+    /// subsequent interaction to decide; the client has not yet claimed
+    /// ownership of this interaction. It prevents ownership resolution when the
+    /// interaction closes.
     HOLD = 6;
 
-    /// The client is interested in this event stream, but needs to see a
-    /// subsequent event stream to decide; the client has not yet claimed
-    /// ownership of the event stream. It prevents ownership resolution when the
-    /// stream ends. Moreover, it suppresses lower-priority claims that try to
-    /// resolve stream ownership.
+    /// The client is interested in this interaction, but needs to see a
+    /// subsequent interaction to decide; the client has not yet claimed
+    /// ownership of this interaction. It prevents ownership resolution when the
+    /// interaction closes. Moreover, it suppresses lower-priority claims that
+    /// try to resolve interaction ownership.
     HOLD_SUPPRESS = 7;
 
-    /// The client wishes exclusive access to the remaining events in this event
-    /// stream; it claims ownership of the event stream (but that claim may or
-    /// may not be granted). During ownership resolution, it yields its priority
-    /// to lower-priority "yes" claims.
+    /// The client wishes exclusive access to the remaining events in this
+    /// interaction; it claims ownership of this interaction (but that claim may
+    /// be granted or denied). During ownership resolution, it yields its
+    /// priority to lower-priority "yes" claims.
     YES = 8;
 
-    /// The client wishes exclusive access to the remaining events in this event
-    /// stream; it claims ownership of the event stream (but that claim may or
-    /// may not be granted). During ownership resolution, it exerts its priority
-    /// over lower-priority "yes" claims.
-    YES_PRIORITY = 9;
+    /// The client wishes exclusive access to the remaining events in this
+    /// interaction; it claims ownership of this interaction (but that claim may
+    /// be granted or denied). During ownership resolution, it exerts its
+    /// priority over lower-priority "yes" claims.
+    YES_PRIORITIZE = 9;
 };

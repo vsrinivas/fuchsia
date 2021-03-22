@@ -4,10 +4,36 @@
 
 library fuchsia.ui.pointer;
 
-/// The possible states of a pointer event stream's state machine.
-/// A pointer event stream follows these state machines:
-/// ADD - CHANGE* - REMOVE
-/// ADD - CHANGE* - CANCEL
+/// The possible states of a pointer event. These phases of events in a stream
+/// follow a state machine that starts with the `ADD` phase, followed by zero or
+/// more `CHANGE` phases, and finally terminates with `REMOVE` or `CANCEL`
+/// phase.
+/// ```
+/// ADD ---> CHANGE* -+-> REMOVE
+///                   |
+///                   +-> CANCEL
+/// ```
+///
+/// A finite sequence of pointer events that follows this state machine,
+/// starting from the initial state, is called an **interaction**. A closed (or
+/// past) interaction is one where it has reached the terminal state; an open
+/// (or current) interaction is one where it has not.
+///
+/// For a given device pointer, a stream of events is observed as a succession
+/// of zero or more closed interactions (the past history of user engagement),
+/// followed by at most one open interaction (the current user engagement).
+///
+/// When we need to group pointer events by their interaction, an event carries
+/// an **interaction id** that is unique in that pointer stream. This common
+/// reference makes it possible to operate on a closed interaction, as well as
+/// an open interaction.
+///
+/// For example, touch events are typically observed as a succession of
+/// interactions, as fingers engage and disengage with the display. In contrast,
+/// mouse events are typically observed as just one open interaction: the stream
+/// starts with the `ADD` event (when it is connected), and movements are
+/// represented as `CHANGE` events. As a result, in the context of mouse, we
+/// talk about a stream or interaction interchangeably.
 enum EventPhase {
     /// The device has started tracking the pointer.
     ADD = 1;
@@ -18,6 +44,6 @@ enum EventPhase {
     /// The device has stopped tracking the pointer.
     REMOVE = 3;
 
-    /// The event stream is no longer available.
+    /// The pointer is no longer available.
     CANCEL = 4;
 };
