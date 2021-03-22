@@ -25,8 +25,11 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
 
   // The file table usually has a bunch of entries not referenced by the line table (these are
   // usually for declarations of things).
+  //
+  // The extra "+1" is required because the file name indices count from 1. The 0-index file name
+  // index implicitly takes the file name from the compilation unit.
   std::vector<FileChecked> checked;
-  checked.resize(line_table.GetNumFileNames(), FileChecked::kUnchecked);
+  checked.resize(line_table.GetNumFileNames() + 1, FileChecked::kUnchecked);
 
   // Once we find a file match, assume there aren't any others so we don't need to keep looking up
   // file names.
@@ -48,26 +51,25 @@ std::vector<LineMatch> GetAllLineTableMatchesInUnit(const LineTable& line_table,
       if (!row.IsStmt || row.EndSequence)
         continue;
 
-      auto file_id = row.File;  // 1-based!
-      if (file_id < 1 && file_id > checked.size())
+      auto file_id = row.File;
+      if (file_id >= checked.size())
         continue;  // Symbols are corrupt.
 
-      auto file_index = file_id - 1;  // 0-based for indexing into array.
-      if (!file_match_found && checked[file_index] == FileChecked::kUnchecked) {
+      if (!file_match_found && checked[file_id] == FileChecked::kUnchecked) {
         // Look up effective file name and see if it's a match.
         if (auto file_name = line_table.GetFileNameByIndex(file_id)) {
           if (full_path == *file_name) {
             file_match_found = true;
-            checked[file_index] = FileChecked::kMatch;
+            checked[file_id] = FileChecked::kMatch;
           } else {
-            checked[file_index] = FileChecked::kNoMatch;
+            checked[file_id] = FileChecked::kNoMatch;
           }
         } else {
-          checked[file_index] = FileChecked::kNoMatch;
+          checked[file_id] = FileChecked::kNoMatch;
         }
       }
 
-      if (checked[file_index] == FileChecked::kMatch) {
+      if (checked[file_id] == FileChecked::kMatch) {
         int row_line = static_cast<int>(row.Line);
         if (line <= row_line) {
           // All lines >= to the line in question are possibilities.
