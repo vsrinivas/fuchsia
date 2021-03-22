@@ -42,7 +42,7 @@ class String {
     // the denominator is always 2^FractionalBits. Examples:
     //
     //    Fixed<int8_t,2>::FromRaw(0x0f) => "3+3/4"
-    //    Fixed<int8_t,2>::FromRaw(0xff) => "-1-1/4"
+    //    Fixed<int8_t,2>::FromRaw(0xee) => "-4-2/4"
     //
     DecRational,
   };
