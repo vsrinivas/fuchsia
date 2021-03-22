@@ -52,10 +52,15 @@ protocol UsageReporter {
 /// A protocol for setting up watchers of usage gain.
 [Discoverable]
 protocol UsageGainReporter {
+    // TODO(fxbug.dev/71946): Only report volume-to-gain translation, without
+    // including muting/ducking gain adjustments. Determine whether separate
+    // muting/ducking gain reporting is necessary
+    //
     /// Connects a listener to a stream of usage gain setting changes
     /// for `usage` on the device identified by `device_token`. Usage
     /// Gain is not set directly by any client; it is a translation of
-    /// the usage volume setting for each device.
+    /// the usage volume setting for each device, summed with active
+    /// muting/ducking gain adjustments.
     ///
     /// Devices may map the same volume level to different dbfs, so
     /// a `device_unique_id` is needed to indentify the device.
@@ -78,5 +83,8 @@ protocol UsageGainListener {
     ///
     /// Clients must respond to acknowledge the event. Clients that do not acknowledge their
     /// events will eventually be disconnected.
+    ///
+    /// Note: This API does not have mute reporting implemented; `muted` is always false.
+    // TODO(fxbug.dev/54949): Update implementation to report on mute state.
     OnGainMuteChanged(bool muted, float32 gain_dbfs) -> ();
 };
