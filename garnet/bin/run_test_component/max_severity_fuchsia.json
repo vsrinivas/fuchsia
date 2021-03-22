@@ -18,6 +18,10 @@
         },
         {
             "max_severity": "ERROR",
+            "url": "fuchsia-pkg://fuchsia.com/cobalt_tests_do_not_run_manually#meta/cobalt_testapp_for_prober_do_not_run_manually.cmx"
+        },
+        {
+            "max_severity": "ERROR",
             "url": "fuchsia-pkg://fuchsia.com/ddk-lifecycle-test#meta/ddk-lifecycle-test-package.cmx"
         },
         {
