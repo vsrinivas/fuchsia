@@ -8,11 +8,12 @@ use {
     crate::model::{
         actions::{ActionKey, DiscoverAction},
         binding::Binder,
-        component::{BindReason, ComponentInstance, ComponentManagerInstance},
+        component::{BindReason, ComponentInstance},
         context::ModelContext,
         environment::Environment,
         error::ModelError,
     },
+    ::routing::component_instance::ComponentManagerInstance,
     moniker::AbsoluteMoniker,
     std::sync::Arc,
 };

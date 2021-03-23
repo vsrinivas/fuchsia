@@ -9,10 +9,16 @@ use {moniker::AbsoluteMoniker, thiserror::Error};
 pub enum ComponentInstanceError {
     #[error("component instance {} not found", moniker)]
     InstanceNotFound { moniker: AbsoluteMoniker },
+    #[error("component manager instance unavailable")]
+    ComponentManagerInstanceUnavailable {},
 }
 
 impl ComponentInstanceError {
     pub fn instance_not_found(moniker: AbsoluteMoniker) -> ComponentInstanceError {
         ComponentInstanceError::InstanceNotFound { moniker }
+    }
+
+    pub fn cm_instance_unavailable() -> ComponentInstanceError {
+        ComponentInstanceError::ComponentManagerInstanceUnavailable {}
     }
 }

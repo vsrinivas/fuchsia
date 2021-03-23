@@ -4,7 +4,6 @@
 
 use {
     crate::{
-        capability::NamespaceCapabilities,
         channel,
         model::{
             actions::{
@@ -25,7 +24,10 @@ use {
             runner::{NullRunner, RemoteRunner, Runner},
         },
     },
-    ::routing::component_instance::{ComponentInstanceInterface, WeakComponentInstanceInterface},
+    ::routing::component_instance::{
+        ComponentInstanceInterface, ComponentManagerInstance, ExtendedInstanceInterface,
+        WeakComponentInstanceInterface, WeakExtendedInstanceInterface,
+    },
     clonable_error::ClonableError,
     cm_rust::{self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
@@ -182,52 +184,6 @@ pub struct ComponentInstance {
     actions: Mutex<ActionSet>,
 }
 
-/// A `ComponentManagerInstance` or a type implementing `ComponentInstanceInterface`.
-#[derive(Debug, Clone)]
-pub enum ExtendedInstanceInterface<C: ComponentInstanceInterface> {
-    Component(Arc<C>),
-    AboveRoot(Arc<ComponentManagerInstance>),
-}
-
-/// A `ComponentManagerInstance` or a type implementing `ComponentInstanceInterface`,
-/// as a weak pointer.
-#[derive(Debug)]
-pub enum WeakExtendedInstanceInterface<C: ComponentInstanceInterface> {
-    Component(WeakComponentInstanceInterface<C>),
-    AboveRoot(Weak<ComponentManagerInstance>),
-}
-
-impl<C: ComponentInstanceInterface> WeakExtendedInstanceInterface<C> {
-    /// Attempts to upgrade this `WeakExtendedInstanceInterface<C>` into an
-    /// `ExtendedInstanceInterface<C>`, if the original extended instance has not been destroyed.
-    pub fn upgrade(&self) -> Result<ExtendedInstanceInterface<C>, ModelError> {
-        match self {
-            WeakExtendedInstanceInterface::Component(p) => {
-                Ok(ExtendedInstanceInterface::Component(p.upgrade()?))
-            }
-            WeakExtendedInstanceInterface::AboveRoot(p) => {
-                Ok(ExtendedInstanceInterface::AboveRoot(
-                    p.upgrade().ok_or(ModelError::model_not_available())?,
-                ))
-            }
-        }
-    }
-}
-
-/// A special instance identified with component manager. This is stored with the root component
-/// instance.
-#[derive(Debug)]
-pub struct ComponentManagerInstance {
-    /// The list of capabilities offered from component manager's namespace.
-    pub namespace_capabilities: NamespaceCapabilities,
-}
-
-impl ComponentManagerInstance {
-    pub fn new(namespace_capabilities: NamespaceCapabilities) -> Self {
-        Self { namespace_capabilities }
-    }
-}
-
 impl ComponentInstance {
     /// Instantiates a new root component instance.
     pub fn new_root(
@@ -288,7 +244,7 @@ impl ComponentInstance {
 
     /// Gets the parent, if it still exists, or returns an `InstanceNotFound` error.
     pub fn try_get_parent(&self) -> Result<ExtendedInstance, ModelError> {
-        self.parent.upgrade()
+        self.parent.upgrade().map_err(|e| e.into())
     }
 
     /// Gets the context, if it exists, or returns a '`ContextNotFound` error.

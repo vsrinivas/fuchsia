@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::error::ComponentInstanceError,
+    crate::{capability_source::NamespaceCapabilities, error::ComponentInstanceError},
     moniker::{AbsoluteMoniker, ChildMoniker},
     std::fmt,
     std::{
@@ -75,5 +75,51 @@ impl<C: ComponentInstanceInterface> Default for WeakComponentInstanceInterface<C
             inner: Weak::new(),
             moniker: AbsoluteMoniker::default(),
         }
+    }
+}
+
+/// A `ComponentManagerInstance` or a type implementing `ComponentInstanceInterface`.
+#[derive(Debug, Clone)]
+pub enum ExtendedInstanceInterface<C: ComponentInstanceInterface> {
+    Component(Arc<C>),
+    AboveRoot(Arc<ComponentManagerInstance>),
+}
+
+/// A `ComponentManagerInstance` or a type implementing `ComponentInstanceInterface`,
+/// as a weak pointer.
+#[derive(Debug)]
+pub enum WeakExtendedInstanceInterface<C: ComponentInstanceInterface> {
+    Component(WeakComponentInstanceInterface<C>),
+    AboveRoot(Weak<ComponentManagerInstance>),
+}
+
+impl<C: ComponentInstanceInterface> WeakExtendedInstanceInterface<C> {
+    /// Attempts to upgrade this `WeakExtendedInstanceInterface<C>` into an
+    /// `ExtendedInstanceInterface<C>`, if the original extended instance has not been destroyed.
+    pub fn upgrade(&self) -> Result<ExtendedInstanceInterface<C>, ComponentInstanceError> {
+        match self {
+            WeakExtendedInstanceInterface::Component(p) => {
+                Ok(ExtendedInstanceInterface::Component(p.upgrade()?))
+            }
+            WeakExtendedInstanceInterface::AboveRoot(p) => {
+                Ok(ExtendedInstanceInterface::AboveRoot(
+                    p.upgrade().ok_or(ComponentInstanceError::cm_instance_unavailable())?,
+                ))
+            }
+        }
+    }
+}
+
+/// A special instance identified with component manager. This is stored with the root component
+/// instance.
+#[derive(Debug)]
+pub struct ComponentManagerInstance {
+    /// The list of capabilities offered from component manager's namespace.
+    pub namespace_capabilities: NamespaceCapabilities,
+}
+
+impl ComponentManagerInstance {
+    pub fn new(namespace_capabilities: NamespaceCapabilities) -> Self {
+        Self { namespace_capabilities }
     }
 }
