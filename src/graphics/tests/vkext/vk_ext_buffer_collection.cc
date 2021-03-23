@@ -95,6 +95,14 @@ class VulkanExtensionTest : public testing::Test {
     return false;
   }
 
+  VulkanContext &vulkan_context() { return *ctx_; }
+
+  bool IsMemoryTypeCoherent(uint32_t memoryTypeIndex);
+  void WriteLinearImage(vk::DeviceMemory memory, bool is_coherent, uint32_t width, uint32_t height,
+                        uint32_t fill);
+  void CheckLinearImage(vk::DeviceMemory memory, bool is_coherent, uint32_t width, uint32_t height,
+                        uint32_t fill);
+
  protected:
   using UniqueBufferCollection =
       vk::UniqueHandle<vk::BufferCollectionFUCHSIA, vk::DispatchLoaderDynamic>;
@@ -116,8 +124,9 @@ class VulkanExtensionTest : public testing::Test {
       fuchsia::sysmem::BufferCollectionTokenSyncPtr token);
   void InitializeDirectImage(vk::BufferCollectionFUCHSIA collection,
                              vk::ImageCreateInfo image_create_info);
-  void InitializeDirectImageMemory(vk::BufferCollectionFUCHSIA collection,
-                                   uint32_t expected_count = 1);
+  // Returns the memory type index.
+  uint32_t InitializeDirectImageMemory(vk::BufferCollectionFUCHSIA collection,
+                                       uint32_t expected_count = 1);
   void CheckLinearSubresourceLayout(VkFormat format, uint32_t width);
   void ValidateBufferProperties(const VkMemoryRequirements &requirements,
                                 const vk::BufferCollectionFUCHSIA collection,
@@ -380,8 +389,8 @@ void VulkanExtensionTest::InitializeDirectImage(vk::BufferCollectionFUCHSIA coll
   vk_image_ = std::move(vk_image);
 }
 
-void VulkanExtensionTest::InitializeDirectImageMemory(vk::BufferCollectionFUCHSIA collection,
-                                                      uint32_t expected_count) {
+uint32_t VulkanExtensionTest::InitializeDirectImageMemory(vk::BufferCollectionFUCHSIA collection,
+                                                          uint32_t expected_count) {
   const vk::Device &device = *ctx_->device();
   VkMemoryRequirements requirements;
   vkGetImageMemoryRequirements(device, *vk_image_, &requirements);
@@ -403,6 +412,7 @@ void VulkanExtensionTest::InitializeDirectImageMemory(vk::BufferCollectionFUCHSI
 
   EXPECT_EQ(vk::Result::eSuccess,
             ctx_->device()->bindImageMemory(*vk_image_, *vk_device_memory_, 0u));
+  return memory_type;
 }
 
 VulkanExtensionTest::UniqueBufferCollection VulkanExtensionTest::CreateVkBufferCollectionForImage(
@@ -585,6 +595,51 @@ bool VulkanExtensionTest::ExecBuffer(uint32_t size) {
 
   ctx_->device()->destroyBufferCollectionFUCHSIA(collection, nullptr, loader_);
   return true;
+}
+
+bool VulkanExtensionTest::IsMemoryTypeCoherent(uint32_t memoryTypeIndex) {
+  vk::PhysicalDeviceMemoryProperties props = ctx_->physical_device().getMemoryProperties();
+  assert(memoryTypeIndex < props.memoryTypeCount);
+  return static_cast<bool>(props.memoryTypes[memoryTypeIndex].propertyFlags &
+                           vk::MemoryPropertyFlagBits::eHostCoherent);
+}
+
+void VulkanExtensionTest::WriteLinearImage(vk::DeviceMemory memory, bool is_coherent,
+                                           uint32_t width, uint32_t height, uint32_t fill) {
+  void *addr;
+  vk::Result result =
+      ctx_->device()->mapMemory(memory, 0 /* offset */, VK_WHOLE_SIZE, vk::MemoryMapFlags{}, &addr);
+  ASSERT_EQ(vk::Result::eSuccess, result);
+
+  for (uint32_t i = 0; i < width * height; i++) {
+    reinterpret_cast<uint32_t *>(addr)[i] = fill;
+  }
+
+  if (!is_coherent) {
+    auto range = vk::MappedMemoryRange().setMemory(memory).setSize(VK_WHOLE_SIZE);
+    ctx_->device()->flushMappedMemoryRanges(1, &range);
+  }
+
+  ctx_->device()->unmapMemory(memory);
+}
+
+void VulkanExtensionTest::CheckLinearImage(vk::DeviceMemory memory, bool is_coherent,
+                                           uint32_t width, uint32_t height, uint32_t fill) {
+  void *addr;
+  vk::Result result =
+      ctx_->device()->mapMemory(memory, 0 /* offset */, VK_WHOLE_SIZE, vk::MemoryMapFlags{}, &addr);
+  ASSERT_EQ(vk::Result::eSuccess, result);
+
+  if (!is_coherent) {
+    auto range = vk::MappedMemoryRange().setMemory(memory).setSize(VK_WHOLE_SIZE);
+    ctx_->device()->invalidateMappedMemoryRanges(1, &range);
+  }
+
+  for (uint32_t i = 0; i < width * height; i++) {
+    EXPECT_EQ(fill, reinterpret_cast<uint32_t *>(addr)[i]) << "i " << i;
+  }
+
+  ctx_->device()->unmapMemory(memory);
 }
 
 // Parameter is true if the image should be linear.
@@ -1599,6 +1654,203 @@ TEST_F(VulkanExtensionTest, BufferCollectionProtectedBuffer) {
   ASSERT_TRUE(Initialize());
   ASSERT_TRUE(device_supports_protected_memory());
   ASSERT_TRUE(ExecBuffer(16384));
+}
+
+TEST_F(VulkanExtensionTest, ImportAliasing) {
+  ASSERT_TRUE(Initialize());
+  if (!SupportsMultiImageBufferCollection())
+    GTEST_SKIP();
+
+  constexpr bool kUseProtectedMemory = false;
+  constexpr bool kUseLinear = true;
+  constexpr uint32_t kSrcHeight = kDefaultHeight;
+  constexpr uint32_t kDstHeight = kSrcHeight * 2;
+  constexpr uint32_t kPattern = 0xaabbccdd;
+
+  vk::UniqueImage src_image1, src_image2;
+  vk::UniqueDeviceMemory src_memory1, src_memory2;
+
+  {
+    auto [vulkan_token] = MakeSharedCollection<1>();
+
+    vk::ImageCreateInfo image_create_info = GetDefaultImageCreateInfo(
+        kUseProtectedMemory, kDefaultFormat, kDefaultWidth, kSrcHeight, kUseLinear);
+    image_create_info.setUsage(vk::ImageUsageFlagBits::eTransferSrc);
+    image_create_info.setInitialLayout(vk::ImageLayout::ePreinitialized);
+
+    vk::ImageFormatConstraintsInfoFUCHSIA format_constraints;
+
+    UniqueBufferCollection collection = CreateVkBufferCollectionForMultiImage(
+        std::move(vulkan_token), image_create_info, &format_constraints,
+        vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuReadOften |
+            vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuWriteOften);
+
+    InitializeDirectImage(*collection, image_create_info);
+
+    uint32_t memoryTypeIndex = InitializeDirectImageMemory(*collection);
+    bool src_is_coherent = IsMemoryTypeCoherent(memoryTypeIndex);
+
+    src_image1 = std::move(vk_image_);
+    src_memory1 = std::move(vk_device_memory_);
+
+    WriteLinearImage(src_memory1.get(), src_is_coherent, kDefaultWidth, kSrcHeight, kPattern);
+
+    InitializeDirectImage(*collection, image_create_info);
+    InitializeDirectImageMemory(*collection);
+
+    // src2 is alias of src1
+    src_image2 = std::move(vk_image_);
+    src_memory2 = std::move(vk_device_memory_);
+  }
+
+  vk::UniqueImage dst_image;
+  vk::UniqueDeviceMemory dst_memory;
+  bool dst_is_coherent;
+
+  {
+    auto [vulkan_token] = MakeSharedCollection<1>();
+
+    vk::ImageCreateInfo image_create_info = GetDefaultImageCreateInfo(
+        kUseProtectedMemory, kDefaultFormat, kDefaultWidth, kDstHeight, kUseLinear);
+    image_create_info.setUsage(vk::ImageUsageFlagBits::eTransferDst);
+    image_create_info.setInitialLayout(vk::ImageLayout::ePreinitialized);
+
+    vk::ImageFormatConstraintsInfoFUCHSIA format_constraints;
+
+    UniqueBufferCollection collection = CreateVkBufferCollectionForMultiImage(
+        std::move(vulkan_token), image_create_info, &format_constraints,
+        vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuReadOften |
+            vk::ImageConstraintsInfoFlagBitsFUCHSIA::eCpuWriteOften);
+
+    InitializeDirectImage(*collection, image_create_info);
+
+    uint32_t memoryTypeIndex = InitializeDirectImageMemory(*collection);
+    dst_is_coherent = IsMemoryTypeCoherent(memoryTypeIndex);
+
+    dst_image = std::move(vk_image_);
+    dst_memory = std::move(vk_device_memory_);
+
+    WriteLinearImage(dst_memory.get(), dst_is_coherent, kDefaultWidth, kDstHeight, 0xffffffff);
+  }
+
+  vk::UniqueCommandPool command_pool;
+  {
+    auto info =
+        vk::CommandPoolCreateInfo().setQueueFamilyIndex(vulkan_context().queue_family_index());
+    auto result = vulkan_context().device()->createCommandPoolUnique(info);
+    ASSERT_EQ(vk::Result::eSuccess, result.result);
+    command_pool = std::move(result.value);
+  }
+
+  std::vector<vk::UniqueCommandBuffer> command_buffers;
+  {
+    auto info = vk::CommandBufferAllocateInfo()
+                    .setCommandPool(command_pool.get())
+                    .setLevel(vk::CommandBufferLevel::ePrimary)
+                    .setCommandBufferCount(1);
+    auto result = vulkan_context().device()->allocateCommandBuffersUnique(info);
+    ASSERT_EQ(vk::Result::eSuccess, result.result);
+    command_buffers = std::move(result.value);
+  }
+
+  {
+    auto info = vk::CommandBufferBeginInfo();
+    command_buffers[0]->begin(&info);
+  }
+
+  for (vk::Image image : std::vector<vk::Image>{src_image1.get(), src_image2.get()}) {
+    auto range = vk::ImageSubresourceRange()
+                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                     .setLevelCount(1)
+                     .setLayerCount(1);
+    auto barrier = vk::ImageMemoryBarrier()
+                       .setImage(image)
+                       .setSrcAccessMask(vk::AccessFlagBits::eHostWrite)
+                       .setDstAccessMask(vk::AccessFlagBits::eTransferRead)
+                       .setOldLayout(vk::ImageLayout::ePreinitialized)
+                       .setNewLayout(vk::ImageLayout::eTransferSrcOptimal)
+                       .setSubresourceRange(range);
+    command_buffers[0]->pipelineBarrier(
+        vk::PipelineStageFlagBits::eHost,     /* srcStageMask */
+        vk::PipelineStageFlagBits::eTransfer, /* dstStageMask */
+        vk::DependencyFlags{}, 0 /* memoryBarrierCount */, nullptr /* pMemoryBarriers */,
+        0 /* bufferMemoryBarrierCount */, nullptr /* pBufferMemoryBarriers */,
+        1 /* imageMemoryBarrierCount */, &barrier);
+  }
+  {
+    auto range = vk::ImageSubresourceRange()
+                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                     .setLevelCount(1)
+                     .setLayerCount(1);
+    auto barrier = vk::ImageMemoryBarrier()
+                       .setImage(dst_image.get())
+                       .setSrcAccessMask(vk::AccessFlagBits::eHostWrite)
+                       .setDstAccessMask(vk::AccessFlagBits::eTransferWrite)
+                       .setOldLayout(vk::ImageLayout::ePreinitialized)
+                       .setNewLayout(vk::ImageLayout::eTransferDstOptimal)
+                       .setSubresourceRange(range);
+    command_buffers[0]->pipelineBarrier(
+        vk::PipelineStageFlagBits::eHost,     /* srcStageMask */
+        vk::PipelineStageFlagBits::eTransfer, /* dstStageMask */
+        vk::DependencyFlags{}, 0 /* memoryBarrierCount */, nullptr /* pMemoryBarriers */,
+        0 /* bufferMemoryBarrierCount */, nullptr /* pBufferMemoryBarriers */,
+        1 /* imageMemoryBarrierCount */, &barrier);
+  }
+
+  {
+    auto layer = vk::ImageSubresourceLayers()
+                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                     .setLayerCount(1);
+    auto copy1 = vk::ImageCopy()
+                     .setSrcSubresource(layer)
+                     .setDstSubresource(layer)
+                     .setSrcOffset({0, 0, 0})
+                     .setDstOffset({0, 0, 0})
+                     .setExtent({kDefaultWidth, kSrcHeight, 1});
+    command_buffers[0]->copyImage(src_image1.get(), vk::ImageLayout::eTransferSrcOptimal,
+                                  dst_image.get(), vk::ImageLayout::eTransferDstOptimal, 1, &copy1);
+    auto copy2 = vk::ImageCopy()
+                     .setSrcSubresource(layer)
+                     .setDstSubresource(layer)
+                     .setSrcOffset({0, 0, 0})
+                     .setDstOffset({0, kSrcHeight, 0})
+                     .setExtent({kDefaultWidth, kSrcHeight, 1});
+    command_buffers[0]->copyImage(src_image2.get(), vk::ImageLayout::eTransferSrcOptimal,
+                                  dst_image.get(), vk::ImageLayout::eTransferDstOptimal, 1, &copy2);
+  }
+  {
+    auto range = vk::ImageSubresourceRange()
+                     .setAspectMask(vk::ImageAspectFlagBits::eColor)
+                     .setLevelCount(1)
+                     .setLayerCount(1);
+    auto barrier = vk::ImageMemoryBarrier()
+                       .setImage(dst_image.get())
+                       .setSrcAccessMask(vk::AccessFlagBits::eTransferWrite)
+                       .setDstAccessMask(vk::AccessFlagBits::eHostRead)
+                       .setOldLayout(vk::ImageLayout::eTransferDstOptimal)
+                       .setNewLayout(vk::ImageLayout::eGeneral)
+                       .setSubresourceRange(range);
+    command_buffers[0]->pipelineBarrier(
+        vk::PipelineStageFlagBits::eTransfer, /* srcStageMask */
+        vk::PipelineStageFlagBits::eHost,     /* dstStageMask */
+        vk::DependencyFlags{}, 0 /* memoryBarrierCount */, nullptr /* pMemoryBarriers */,
+        0 /* bufferMemoryBarrierCount */, nullptr /* pBufferMemoryBarriers */,
+        1 /* imageMemoryBarrierCount */, &barrier);
+  }
+
+  command_buffers[0]->end();
+
+  {
+    auto command_buffer_temp = command_buffers[0].get();
+    auto info = vk::SubmitInfo().setCommandBufferCount(1).setPCommandBuffers(&command_buffer_temp);
+    vulkan_context().queue().submit(1, &info, vk::Fence());
+  }
+
+  vulkan_context().queue().waitIdle();
+
+  // TODO(fxbug.dev/72893) - enable unconditionally
+  if (dst_is_coherent)
+    CheckLinearImage(dst_memory.get(), dst_is_coherent, kDefaultWidth, kDstHeight, kPattern);
 }
 
 }  // namespace

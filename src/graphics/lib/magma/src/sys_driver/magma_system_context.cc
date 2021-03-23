@@ -16,9 +16,6 @@
 magma::Status MagmaSystemContext::ExecuteCommandBufferWithResources(
     std::unique_ptr<magma_system_command_buffer> cmd_buf,
     std::vector<magma_system_exec_resource> resources, std::vector<uint64_t> semaphores) {
-  // used to validate that buffers are not duplicated
-  std::unordered_set<uint64_t> id_set;
-
   // used to keep resources in scope until msd_context_execute_command_buffer returns
   std::vector<std::shared_ptr<MagmaSystemBuffer>> system_resources;
   system_resources.reserve(cmd_buf->resource_count);
@@ -48,11 +45,6 @@ magma::Status MagmaSystemContext::ExecuteCommandBufferWithResources(
       return DRET_MSG(MAGMA_STATUS_INVALID_ARGS,
                       "ExecuteCommandBuffer: exec resource has invalid buffer handle");
 
-    auto iter = id_set.find(id);
-    if (iter != id_set.end())
-      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "ExecuteCommandBuffer: duplicate exec resource");
-
-    id_set.insert(id);
     system_resources.push_back(buf);
     msd_resources.push_back(buf->msd_buf());
 

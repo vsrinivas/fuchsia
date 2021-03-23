@@ -46,7 +46,7 @@ TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidExecResourceHandle) {
 TEST(MagmaSystemContext, ExecuteCommandBuffer_DuplicateExecResourceHandle) {
   auto cmd_buf = CommandBufferHelper::Create();
   cmd_buf->abi_resources()[1].buffer_id = cmd_buf->abi_resources()[0].buffer_id;
-  EXPECT_FALSE(cmd_buf->Execute());
+  EXPECT_TRUE(cmd_buf->Execute());
 }
 
 TEST(MagmaSystemContext, ExecuteCommandBuffer_InvalidWaitSemaphore) {
