@@ -9,8 +9,9 @@
 // clang-format on
 
 #include <lib/zx/channel.h>
-#include <ramdevice-client/ramnand.h>
 #include <zircon/hw/gpt.h>
+
+#include <ramdevice-client/ramnand.h>
 #include <zxtest/zxtest.h>
 
 namespace {
@@ -131,7 +132,7 @@ void SkipBlockDevice::Create(const fuchsia_hardware_nand_RamNandInfo& nand_info,
 void CreatePayload(size_t size, zx::vmo* out, uint8_t data = 0x4a) {
   zx::vmo vmo;
   fzl::VmoMapper mapper;
-  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(size, ZX_PAGE_SIZE),
+  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(size, zx_system_get_page_size()),
                                 ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, nullptr, &vmo));
   memset(mapper.start(), data, mapper.size());
   *out = std::move(vmo);
@@ -259,7 +260,7 @@ TEST_F(SyncClientTest, ReadPartitionSysconfig) {
   ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
 
   fzl::OwnedVmoMapper mapper;
-  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(60 * kKilobyte, ZX_PAGE_SIZE), "test"));
+  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(60 * kKilobyte, zx_system_get_page_size()), "test"));
 
   ASSERT_NO_FATAL_FAILURES(WriteData(0, 60 * kKilobyte));
   ASSERT_OK(client->ReadPartition(PartitionType::kSysconfig, mapper.vmo(), 0));
@@ -271,7 +272,7 @@ TEST_F(SyncClientTest, ReadPartitionAbrMetadata) {
   ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
 
   fzl::OwnedVmoMapper mapper;
-  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(4 * kKilobyte, ZX_PAGE_SIZE), "test"));
+  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(4 * kKilobyte, zx_system_get_page_size()), "test"));
 
   ASSERT_NO_FATAL_FAILURES(WriteData(60 * kKilobyte, 4 * kKilobyte));
   ASSERT_OK(client->ReadPartition(PartitionType::kABRMetadata, mapper.vmo(), 0));
@@ -283,7 +284,7 @@ TEST_F(SyncClientTest, ReadPartitionVbMetaA) {
   ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
 
   fzl::OwnedVmoMapper mapper;
-  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(64 * kKilobyte, ZX_PAGE_SIZE), "test"));
+  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(64 * kKilobyte, zx_system_get_page_size()), "test"));
 
   ASSERT_NO_FATAL_FAILURES(WriteData(64 * kKilobyte, 64 * kKilobyte));
   ASSERT_OK(client->ReadPartition(PartitionType::kVerifiedBootMetadataA, mapper.vmo(), 0));
@@ -295,7 +296,7 @@ TEST_F(SyncClientTest, ReadPartitionVbMetaB) {
   ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
 
   fzl::OwnedVmoMapper mapper;
-  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(64 * kKilobyte, ZX_PAGE_SIZE), "test"));
+  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(64 * kKilobyte, zx_system_get_page_size()), "test"));
 
   ASSERT_NO_FATAL_FAILURES(WriteData(128 * kKilobyte, 64 * kKilobyte));
   ASSERT_OK(client->ReadPartition(PartitionType::kVerifiedBootMetadataB, mapper.vmo(), 0));
@@ -307,7 +308,7 @@ TEST_F(SyncClientTest, ReadPartitionVbMetaR) {
   ASSERT_OK(sysconfig::SyncClient::Create(device_->devfs_root(), &client));
 
   fzl::OwnedVmoMapper mapper;
-  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(64 * kKilobyte, ZX_PAGE_SIZE), "test"));
+  ASSERT_OK(mapper.CreateAndMap(fbl::round_up(64 * kKilobyte, zx_system_get_page_size()), "test"));
 
   ASSERT_NO_FATAL_FAILURES(WriteData(192 * kKilobyte, 64 * kKilobyte));
   ASSERT_OK(client->ReadPartition(PartitionType::kVerifiedBootMetadataR, mapper.vmo(), 0));

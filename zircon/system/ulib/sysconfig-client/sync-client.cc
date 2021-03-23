@@ -424,7 +424,8 @@ zx_status_t SyncClient::InitializeReadMapper() {
   }
   const uint64_t block_size = result.value().partition_info.block_size_bytes;
 
-  return read_mapper_.CreateAndMap(fbl::round_up(block_size, ZX_PAGE_SIZE), "sysconfig read");
+  return read_mapper_.CreateAndMap(fbl::round_up(block_size, zx_system_get_page_size()),
+                                   "sysconfig read");
 }
 
 zx_status_t SyncClient::ReadPartition(PartitionType partition, const zx::vmo& vmo,
