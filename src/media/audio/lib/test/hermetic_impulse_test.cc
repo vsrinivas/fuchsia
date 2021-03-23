@@ -29,10 +29,10 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
                           tc.pipeline.pos_filter_width + tc.pipeline.neg_filter_width;
 
   // Helper to translate from an input frame number to an output frame number.
-  auto input_frame_to_output_frame = [&tc](size_t input_frame) {
+  auto input_frame_to_output_frame = [&tc](int64_t input_frame) {
     auto input_fps = static_cast<double>(tc.input_format.frames_per_second());
     auto output_fps = static_cast<double>(tc.output_format.frames_per_second());
-    return static_cast<size_t>(std::ceil(output_fps / input_fps * input_frame));
+    return static_cast<int64_t>(std::ceil(output_fps / input_fps * input_frame));
   };
 
   auto num_output_frames = input_frame_to_output_frame(num_input_frames);
@@ -48,9 +48,9 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
   AudioBuffer<InputFormat> input(tc.input_format, num_input_frames);
   for (auto start_frame : tc.impulse_locations_in_frames) {
     start_frame += input_impulse_start;
-    for (size_t f = start_frame; f < start_frame + tc.impulse_width_in_frames; f++) {
-      for (size_t c = 0; c < tc.input_format.channels(); c++) {
-        input.samples()[input.SampleIndex(f, c)] = tc.impulse_magnitude;
+    for (auto f = start_frame; f < start_frame + tc.impulse_width_in_frames; f++) {
+      for (auto chan = 0; chan < tc.input_format.channels(); chan++) {
+        input.samples()[input.SampleIndex(f, chan)] = tc.impulse_magnitude;
       }
     }
   }
@@ -67,15 +67,15 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
   // Due to smoothing effects, the detected leading edge of each impulse might be offset
   // slightly from the expected location, however each impulse should be offset by the
   // same amount. Empirically, we see offsets as high as 0.5ms. Allow up to 1ms.
-  ssize_t max_impulse_offset_frames = tc.output_format.frames_per_ns().Scale(zx::msec(1).get());
-  std::unordered_map<size_t, ssize_t> first_impulse_offset_per_channel;
-  size_t search_start_frame = 0;
-  size_t search_end_frame = 0;
+  int64_t max_impulse_offset_frames = tc.output_format.frames_per_ns().Scale(zx::msec(1).get());
+  std::unordered_map<int32_t, int64_t> first_impulse_offset_per_channel;
+  int64_t search_start_frame = 0;
+  int64_t search_end_frame = 0;
 
-  for (size_t k = 0; k < tc.impulse_locations_in_frames.size(); k++) {
+  for (int64_t k = 0; k < static_cast<int64_t>(tc.impulse_locations_in_frames.size()); k++) {
     // End this search halfway between impulses k and k+1.
-    size_t input_next_midpoint_frame;
-    if (k + 1 < tc.impulse_locations_in_frames.size()) {
+    int64_t input_next_midpoint_frame;
+    if (k + 1 < static_cast<int64_t>(tc.impulse_locations_in_frames.size())) {
       auto curr = input_impulse_start + tc.impulse_locations_in_frames[k];
       auto next = input_impulse_start + tc.impulse_locations_in_frames[k + 1];
       input_next_midpoint_frame = curr + (next - curr) / 2;
@@ -93,7 +93,7 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
         input_frame_to_output_frame(input_impulse_start + tc.impulse_locations_in_frames[k]);
 
     // Test each channel.
-    for (size_t chan = 0; chan < tc.output_format.channels(); chan++) {
+    for (int32_t chan = 0; chan < tc.output_format.channels(); chan++) {
       SCOPED_TRACE(testing::Message() << "Channel " << chan);
       auto output_chan = AudioBufferSlice<OutputFormat>(&ring_buffer).GetChannel(chan);
       auto slice = AudioBufferSlice(&output_chan, search_start_frame, search_end_frame);
@@ -105,11 +105,10 @@ void HermeticImpulseTest::Run(const HermeticImpulseTest::TestCase<InputFormat, O
         output_chan.Display(search_start_frame, search_end_frame);
         continue;
       }
-      auto output_frame = *relative_output_frame + search_start_frame;
+      int64_t output_frame = *relative_output_frame + search_start_frame;
       if (k == 0) {
         // First impulse decides the offset.
-        auto offset =
-            static_cast<ssize_t>(output_frame) - static_cast<ssize_t>(expected_output_frame);
+        int64_t offset = output_frame - expected_output_frame;
         EXPECT_LE(std::abs(offset), max_impulse_offset_frames)
             << "Found impulse " << k << " at an unexpected location: at frame " << output_frame
             << ", expected within " << max_impulse_offset_frames << " frames of "

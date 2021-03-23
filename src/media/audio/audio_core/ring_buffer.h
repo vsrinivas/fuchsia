@@ -42,13 +42,13 @@ class BaseRingBuffer {
   static std::shared_ptr<ReadableRingBuffer> CreateReadableHardwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-      AudioClock& audio_clock, zx::vmo vmo, uint32_t frame_count,
+      AudioClock& audio_clock, zx::vmo vmo, int64_t frame_count,
       SafeReadWriteFrameFn safe_read_frame);
 
   static std::shared_ptr<WritableRingBuffer> CreateWritableHardwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-      AudioClock& audio_clock, zx::vmo vmo, uint32_t frame_count,
+      AudioClock& audio_clock, zx::vmo vmo, int64_t frame_count,
       SafeReadWriteFrameFn safe_write_frame);
 
   struct Endpoints {
@@ -60,7 +60,7 @@ class BaseRingBuffer {
   static Endpoints AllocateSoftwareBuffer(
       const Format& format,
       fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
-      AudioClock& audio_clock, uint32_t frame_count, SafeReadWriteFrameFn safe_write_frame);
+      AudioClock& audio_clock, int64_t frame_count, SafeReadWriteFrameFn safe_write_frame);
 
   uint64_t size() const { return vmo_mapper_->size(); }
   uint32_t frames() const { return frames_; }
@@ -70,7 +70,7 @@ class BaseRingBuffer {
   BaseRingBuffer(const Format& format,
                  fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                  AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
-                 uint32_t frame_count);
+                 int64_t frame_count);
   virtual ~BaseRingBuffer() = default;
 
   BaseStream::TimelineFunctionSnapshot ReferenceClockToFixedImpl() const;
@@ -88,12 +88,12 @@ class ReadableRingBuffer : public ReadableStream, public BaseRingBuffer {
   ReadableRingBuffer(const Format& format,
                      fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                      AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
-                     uint32_t frame_count, SafeReadWriteFrameFn safe_read_frame);
+                     int64_t frame_count, SafeReadWriteFrameFn safe_read_frame);
 
   // |media::audio::ReadableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return audio_clock_; }
-  std::optional<ReadableStream::Buffer> ReadLock(Fixed frame, size_t frame_count) override;
+  std::optional<ReadableStream::Buffer> ReadLock(Fixed frame, int64_t frame_count) override;
   // Since we have no buffers to free, Trim is a no-op.
   void Trim(Fixed frame) override {}
 
@@ -109,12 +109,12 @@ class WritableRingBuffer : public WritableStream, public BaseRingBuffer {
   WritableRingBuffer(const Format& format,
                      fbl::RefPtr<VersionedTimelineFunction> ref_time_to_frac_presentation_frame,
                      AudioClock& audio_clock, fbl::RefPtr<RefCountedVmoMapper> vmo_mapper,
-                     uint32_t frame_count, SafeReadWriteFrameFn safe_write_frame);
+                     int64_t frame_count, SafeReadWriteFrameFn safe_write_frame);
 
   // |media::audio::WritableStream|
   BaseStream::TimelineFunctionSnapshot ref_time_to_frac_presentation_frame() const override;
   AudioClock& reference_clock() override { return audio_clock_; }
-  std::optional<WritableStream::Buffer> WriteLock(int64_t frame, size_t frame_count) override;
+  std::optional<WritableStream::Buffer> WriteLock(int64_t frame, int64_t frame_count) override;
 
  private:
   friend class BaseRingBuffer;

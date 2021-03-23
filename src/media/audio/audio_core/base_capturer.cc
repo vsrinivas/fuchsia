@@ -807,8 +807,8 @@ void BaseCapturer::UpdateFormat(Format format) {
   auto mix_stage_format =
       Format::Create({
                          .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-                         .channels = format_->channels(),
-                         .frames_per_second = format_->frames_per_second(),
+                         .channels = static_cast<uint32_t>(format_->channels()),
+                         .frames_per_second = static_cast<uint32_t>(format_->frames_per_second()),
                      })
           .take_value();
 

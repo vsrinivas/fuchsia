@@ -22,8 +22,7 @@ class Format {
   static fit::result<Format> Create(fuchsia::media::AudioStreamType stream_type);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  static fit::result<TypedFormat<SampleFormat>> Create(uint32_t channels,
-                                                       uint32_t frames_per_second);
+  static fit::result<TypedFormat<SampleFormat>> Create(int32_t channels, int32_t frames_per_second);
 
   Format(const Format&) = default;
   Format& operator=(const Format&) = default;
@@ -32,8 +31,8 @@ class Format {
   bool operator!=(const Format& other) const { return !(*this == other); }
 
   const fuchsia::media::AudioStreamType& stream_type() const { return stream_type_; }
-  uint32_t channels() const { return stream_type_.channels; }
-  uint32_t frames_per_second() const { return stream_type_.frames_per_second; }
+  int32_t channels() const { return stream_type_.channels; }
+  int32_t frames_per_second() const { return stream_type_.frames_per_second; }
   fuchsia::media::AudioSampleFormat sample_format() const { return stream_type_.sample_format; }
 
   const TimelineRate& frames_per_ns() const { return frames_per_ns_; }

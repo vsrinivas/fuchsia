@@ -34,14 +34,14 @@ class RendererShimImpl {
   VmoBackedBuffer& payload() { return payload_buffer_; }
   const Format& format() const { return format_; }
 
-  size_t num_packet_frames() const { return format_.frames_per_second() / 1000 * kPacketMs; }
-  size_t num_packet_samples() const { return num_packet_frames() * format_.channels(); }
-  size_t num_packet_bytes() const { return num_packet_frames() * format_.bytes_per_frame(); }
+  int64_t num_packet_frames() const { return format_.frames_per_second() / 1000 * kPacketMs; }
+  int64_t num_packet_samples() const { return num_packet_frames() * format_.channels(); }
+  int64_t num_packet_bytes() const { return num_packet_frames() * format_.bytes_per_frame(); }
 
-  size_t num_payload_frames() const { return payload_frame_count_; }
-  size_t num_payload_packets() const { return payload_frame_count_ / num_packet_frames(); }
-  size_t num_payload_samples() const { return payload_frame_count_ * format_.channels(); }
-  size_t num_payload_bytes() const { return payload_frame_count_ * format_.bytes_per_frame(); }
+  int64_t num_payload_frames() const { return payload_frame_count_; }
+  int64_t num_payload_packets() const { return payload_frame_count_ / num_packet_frames(); }
+  int64_t num_payload_samples() const { return payload_frame_count_ * format_.channels(); }
+  int64_t num_payload_bytes() const { return payload_frame_count_ * format_.bytes_per_frame(); }
 
   // Minimum lead time for the AudioRenderer.
   zx::duration min_lead_time() const { return min_lead_time_.value(); }
@@ -86,7 +86,7 @@ class RendererShimImpl {
   // start_pts. If |ring_out_frames| > 0, we wait for all |packets| to be rendered, plus an
   // additional |ring_out_frames|.
   void WaitForPackets(TestFixture* fixture, const PacketVector& packets,
-                      size_t ring_out_frames = 0);
+                      int64_t ring_out_frames = 0);
 
   // Reset the payload buffer to all zeros and seek back to the start.
   void ClearPayload() { payload_buffer_.Clear(); }
@@ -97,7 +97,7 @@ class RendererShimImpl {
   const zx::clock& reference_clock() const { return reference_clock_; }
 
  protected:
-  RendererShimImpl(Format format, size_t payload_frame_count, size_t inspect_id)
+  RendererShimImpl(Format format, int64_t payload_frame_count, size_t inspect_id)
       : format_(format),
         payload_frame_count_(payload_frame_count),
         inspect_id_(inspect_id),
@@ -116,7 +116,7 @@ class RendererShimImpl {
 
  private:
   const Format format_;
-  const size_t payload_frame_count_;
+  const int64_t payload_frame_count_;
   const size_t inspect_id_;
 
   zx::clock reference_clock_;
@@ -142,7 +142,7 @@ class AudioRendererShim : public RendererShimImpl {
   // Don't call this directly. Use HermeticAudioTest::CreateAudioRenderer so the object is
   // appropriately bound into the test environment.
   AudioRendererShim(TestFixture* fixture, fuchsia::media::AudioCorePtr& audio_core, Format fmt,
-                    size_t payload_frame_count, fuchsia::media::AudioRenderUsage usage,
+                    int64_t payload_frame_count, fuchsia::media::AudioRenderUsage usage,
                     size_t inspect_id, std::optional<zx::clock> reference_clock)
       : RendererShimImpl(fmt, payload_frame_count, inspect_id) {
     audio_core->CreateAudioRenderer(fidl().NewRequest());
@@ -153,9 +153,10 @@ class AudioRendererShim : public RendererShimImpl {
       SetReferenceClock(fixture, *reference_clock);
     }
     fidl()->SetUsage(usage);
-    fidl()->SetPcmStreamType({.sample_format = format().sample_format(),
-                              .channels = format().channels(),
-                              .frames_per_second = format().frames_per_second()});
+    fidl()->SetPcmStreamType(
+        {.sample_format = format().sample_format(),
+         .channels = static_cast<uint32_t>(format().channels()),
+         .frames_per_second = static_cast<uint32_t>(format().frames_per_second())});
 
     SetPtsUnits(format().frames_per_second(), 1);
     fidl()->AddPayloadBuffer(0, payload_buffer().CreateAndMapVmo(false));
@@ -178,16 +179,16 @@ class UltrasoundRendererShim : public RendererShimImpl {
   // Don't call this directly. Use HermeticAudioTest::CreateUltrasoundRenderer so the object is
   // appropriately bound into the test environment.
   UltrasoundRendererShim(TestFixture* fixture, fuchsia::ultrasound::FactoryPtr& ultrasound_factory,
-                         Format fmt, size_t payload_frame_count, size_t inspect_id)
+                         Format fmt, int64_t payload_frame_count, size_t inspect_id)
       : RendererShimImpl(fmt, payload_frame_count, inspect_id), fixture_(fixture) {
-    ultrasound_factory->CreateRenderer(
-        fidl().NewRequest(), [this](auto ref_clock, auto stream_type) {
-          created_ = true;
-          set_reference_clock(std::move(ref_clock));
-          EXPECT_EQ(stream_type.sample_format, format().sample_format());
-          EXPECT_EQ(stream_type.channels, format().channels());
-          EXPECT_EQ(stream_type.frames_per_second, format().frames_per_second());
-        });
+    ultrasound_factory->CreateRenderer(fidl().NewRequest(), [this](auto ref_clock,
+                                                                   auto stream_type) {
+      created_ = true;
+      set_reference_clock(std::move(ref_clock));
+      EXPECT_EQ(stream_type.sample_format, format().sample_format());
+      EXPECT_EQ(stream_type.channels, static_cast<uint32_t>(format().channels()));
+      EXPECT_EQ(stream_type.frames_per_second, static_cast<uint32_t>(format().frames_per_second()));
+    });
     fixture->AddErrorHandler(fidl(), "UltrasoundRenderer");
 
     WatchEvents();

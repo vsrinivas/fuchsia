@@ -25,10 +25,10 @@ using AudioRenderUsage = fuchsia::media::AudioRenderUsage;
 namespace media::audio::test {
 
 namespace {
-constexpr size_t kNumPacketsInPayload = 50;
-constexpr size_t kDebugFramesPerPacket = 480;
+constexpr int64_t kNumPacketsInPayload = 50;
+constexpr int64_t kDebugFramesPerPacket = 480;
 // The one-sided filter width of the SincSampler.
-constexpr size_t kSincSamplerHalfFilterWidth = 13;
+constexpr int64_t kSincSamplerHalfFilterWidth = 13;
 // The length of gain ramp for each volume change.
 // Must match the constant in audio_core.
 constexpr zx::duration kVolumeRampDuration = zx::msec(5);
@@ -37,10 +37,10 @@ constexpr zx::duration kVolumeRampDuration = zx::msec(5);
 template <ASF SampleType>
 class AudioRendererPipelineTest : public HermeticAudioTest {
  protected:
-  static constexpr size_t kOutputFrameRate = 48000;
-  static constexpr size_t kNumChannels = 2;
+  static constexpr int32_t kOutputFrameRate = 48000;
+  static constexpr int32_t kNumChannels = 2;
 
-  static size_t PacketsToFrames(size_t num_packets, size_t frame_rate) {
+  static int64_t PacketsToFrames(int64_t num_packets, int32_t frame_rate) {
     return num_packets * frame_rate * RendererShimImpl::kPacketMs / 1000;
   }
 
@@ -58,7 +58,7 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
   }
 
   std::pair<AudioRendererShim<SampleType>*, TypedFormat<SampleType>> CreateRenderer(
-      size_t frame_rate,
+      int32_t frame_rate,
       fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA) {
     auto format = Format::Create<SampleType>(2, frame_rate).take_value();
     return std::make_pair(
@@ -72,13 +72,13 @@ class AudioRendererPipelineTest : public HermeticAudioTest {
   // the driver. We don't have direct access to the driver's timers, however, we know that
   // the driver must wake up at least once every MinLeadTime. Therefore, we return enough
   // packets to exceed one MinLeadTime.
-  std::pair<size_t, size_t> NumPacketsAndFramesPerBatch(AudioRendererShim<SampleType>* renderer) {
+  std::pair<int64_t, int64_t> NumPacketsAndFramesPerBatch(AudioRendererShim<SampleType>* renderer) {
     auto min_lead_time = renderer->min_lead_time();
     FX_CHECK(min_lead_time.get() > 0);
     // In exceptional cases, min_lead_time might be smaller than one packet.
     // Ensure we have at least a handful of packets.
     auto num_packets =
-        std::max(5lu, static_cast<size_t>(min_lead_time / zx::msec(RendererShimImpl::kPacketMs)));
+        std::max(5l, static_cast<int64_t>(min_lead_time / zx::msec(RendererShimImpl::kPacketMs)));
     FX_CHECK(num_packets < kNumPacketsInPayload);
     return std::make_pair(num_packets,
                           PacketsToFrames(num_packets, renderer->format().frames_per_second()));
@@ -318,7 +318,7 @@ TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
   // The output should contain a sequence at half volume, followed by a ramp,
   // followed by a sequence at full volume. Verify that the length of the ramp
   // matches the expected ramp duration.
-  size_t start = ring_buffer.NumFrames() - 1;
+  int64_t start = ring_buffer.NumFrames() - 1;
   for (;; start--) {
     if (ring_buffer.SampleAt(start, 0) == kSampleHalfVolume) {
       break;
@@ -329,7 +329,7 @@ TEST_F(AudioRendererPipelineTestInt16, RampOnGainChanges) {
       return;
     }
   }
-  size_t end = start + 1;
+  int64_t end = start + 1;
   for (;; end++) {
     if (ring_buffer.SampleAt(end, 0) == kSampleFullVolume) {
       break;
@@ -359,21 +359,21 @@ TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
 
   auto [renderer, format] = CreateRenderer(kOutputFrameRate);
   const auto kPacketFrames = PacketsToFrames(1, kOutputFrameRate);
-  size_t num_frames =
+  int64_t num_frames =
       std::pow(2, std::floor(std::log2(PacketsToFrames(kNumPacketsInPayload, kOutputFrameRate))));
 
   // At 48kHz, this is 5.33ms per sinusoidal period. This is chosen intentionally to
   // (a) not align with volume updates, which happen every 10ms, and (b) include a
   // power-of-2 number of frames, to simplify the FFT comparison.
-  const size_t kFramesPerPeriod = 256;
-  const size_t freq = num_frames / kFramesPerPeriod;
+  const int64_t kFramesPerPeriod = 256;
+  const int32_t freq = num_frames / kFramesPerPeriod;
   auto input_buffer = GenerateCosineAudio(format, num_frames, freq);
   auto packets = renderer->AppendPackets({&input_buffer});
   auto start_time = renderer->PlaySynchronized(this, output_, 0);
 
   // Wait until the first packet will be rendered, then make a few gain toggles.
   RunLoopWithTimeout(zx::time(start_time) - zx::clock::get_monotonic());
-  for (size_t k = 0; k < num_frames / kPacketFrames; k++) {
+  for (int64_t k = 0; k < num_frames / kPacketFrames; k++) {
     volume->SetVolume((k % 2) == 0 ? 1.0 : 0.5);
     RunLoopWithTimeout(zx::msec(RendererShimImpl::kPacketMs));
   }
@@ -394,8 +394,8 @@ TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
   // As of early Aug 2020, typical noise_ratio values are:
   // * 0.05-0.07 without ramping
   // * 0.001-0.015 with ramping
-  std::unordered_set<size_t> highfreqs;
-  for (size_t f = freq << 4; f < output_buffer.NumFrames() / 2; f++) {
+  std::unordered_set<int32_t> highfreqs;
+  for (int32_t f = freq << 4; f < output_buffer.NumFrames() / 2; f++) {
     highfreqs.insert(f);
   }
   auto result = MeasureAudioFreqs(AudioBufferSlice(&output_buffer), highfreqs);
@@ -406,7 +406,7 @@ TEST_F(AudioRendererPipelineTestFloat, NoDistortionOnGainChanges) {
 
 class AudioRendererPipelineUnderflowTest : public HermeticAudioTest {
  protected:
-  static constexpr size_t kFrameRate = 48000;
+  static constexpr int32_t kFrameRate = 48000;
   static constexpr auto kPacketFrames = kFrameRate / 100;
 
   static void SetUpTestSuite() {
@@ -469,7 +469,7 @@ class AudioRendererPipelineEffectsTest : public AudioRendererPipelineTestInt16 {
 
   void RunInversionFilter(AudioBuffer<ASF::SIGNED_16>* audio_buffer_ptr) {
     auto& samples = audio_buffer_ptr->samples();
-    for (size_t sample = 0; sample < samples.size(); sample++) {
+    for (auto sample = 0u; sample < samples.size(); sample++) {
       samples[sample] = -samples[sample];
     }
   }
@@ -569,7 +569,7 @@ class AudioRendererPipelineTuningTest : public AudioRendererPipelineTestInt16 {
 
   void RunInversionFilter(AudioBuffer<ASF::SIGNED_16>* audio_buffer_ptr) {
     auto& samples = audio_buffer_ptr->samples();
-    for (size_t sample = 0; sample < samples.size(); sample++) {
+    for (auto sample = 0u; sample < samples.size(); sample++) {
       samples[sample] = -samples[sample];
     }
   }

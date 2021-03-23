@@ -53,13 +53,13 @@ class AudioBuffer {
     return buffer;
   }
 
-  AudioBuffer(const Format& f, size_t num_frames)
+  AudioBuffer(const Format& f, int64_t num_frames)
       : format_(Format::Create<SampleFormat>(f.channels(), f.frames_per_second()).take_value()),
         samples_(num_frames * f.channels()) {
     FX_CHECK(SampleFormat == f.sample_format());
   }
 
-  AudioBuffer(const TypedFormat<SampleFormat>& f, size_t num_frames)
+  AudioBuffer(const TypedFormat<SampleFormat>& f, int64_t num_frames)
       : format_(f), samples_(num_frames * f.channels()) {
     FX_CHECK(SampleFormat == f.sample_format());
   }
@@ -68,11 +68,13 @@ class AudioBuffer {
   const std::vector<SampleT>& samples() const { return samples_; }
   std::vector<SampleT>& samples() { return samples_; }
 
-  size_t NumSamples() const { return samples_.size(); }
-  size_t NumFrames() const { return samples_.size() / format_.channels(); }
-  size_t NumBytes() const { return NumFrames() * format_.bytes_per_frame(); }
-  size_t SampleIndex(size_t frame, size_t chan) const { return frame * format_.channels() + chan; }
-  SampleT SampleAt(size_t frame, size_t chan) const { return samples_[SampleIndex(frame, chan)]; }
+  int64_t NumSamples() const { return samples_.size(); }
+  int64_t NumFrames() const { return samples_.size() / format_.channels(); }
+  int64_t NumBytes() const { return NumFrames() * format_.bytes_per_frame(); }
+  int64_t SampleIndex(int64_t frame, int32_t chan) const {
+    return frame * format_.channels() + chan;
+  }
+  SampleT SampleAt(int64_t frame, int32_t chan) const { return samples_[SampleIndex(frame, chan)]; }
 
   void Append(const AudioBufferSlice<SampleFormat>& slice_to_append) {
     FX_CHECK(format() == slice_to_append.format());
@@ -82,14 +84,14 @@ class AudioBuffer {
 
   // For debugging, display a given range of frames in aligned columns. Column width is a power-of-2
   // based on sample width and number of channels. For row 0, display space until the first frame.
-  void Display(size_t start_frame, size_t end_frame, std::string tag = "") const {
+  void Display(int64_t start_frame, int64_t end_frame, std::string tag = "") const {
     start_frame = std::min(start_frame, NumFrames());
     end_frame = std::min(end_frame, NumFrames());
 
     if (tag.size()) {
       printf("%s\n", tag.c_str());
     }
-    printf("  Frames %zu to %zu:", start_frame, end_frame);
+    printf("  Frames %zd to %zd:", start_frame, end_frame);
 
     // Frames that fit in a 200-char row (11 for row label, 1 between samps, +1 between frames)...
     size_t frames_per_row =
@@ -98,14 +100,16 @@ class AudioBuffer {
     // ...rounded _down_ to the closest power-of-2, for quick visual scanning.
     frames_per_row = fbl::roundup_pow2(frames_per_row + 1) / 2;
 
-    for (auto frame = fbl::round_down(start_frame, frames_per_row); frame < end_frame; ++frame) {
+    for (auto frame = static_cast<int64_t>(
+             fbl::round_down(static_cast<size_t>(start_frame), frames_per_row));
+         frame < end_frame; ++frame) {
       if (frame % frames_per_row == 0) {
         printf("\n  [%6lu] ", frame);
       } else {
         printf(" ");
       }
 
-      for (auto chan = 0u; chan < format_.channels(); ++chan) {
+      for (auto chan = 0; chan < format_.channels(); ++chan) {
         auto offset = frame * format_.channels() + chan;
         if (frame >= start_frame) {
           printf(" %s", SampleFormatTraits<SampleFormat>::ToString(samples_[offset]).c_str());
@@ -136,11 +140,11 @@ class AudioBufferSlice {
   AudioBufferSlice(const AudioBuffer<SampleFormat>* b)
       : buf_(b), start_frame_(0), end_frame_(b->NumFrames()) {}
 
-  AudioBufferSlice(const AudioBuffer<SampleFormat>* b, size_t s, size_t e)
+  AudioBufferSlice(const AudioBuffer<SampleFormat>* b, int64_t start, int64_t end)
       : buf_(b),
-        start_frame_(std::min(s, b->NumFrames())),
-        end_frame_(std::min(e, b->NumFrames())) {
-    FX_CHECK(s <= e) << "start=" << s << ", end=" << e;
+        start_frame_(std::min(start, b->NumFrames())),
+        end_frame_(std::min(end, b->NumFrames())) {
+    FX_CHECK(start <= end) << "start=" << start << ", end=" << end;
   }
 
   const AudioBuffer<SampleFormat>* buf() const { return buf_; }
@@ -148,8 +152,8 @@ class AudioBufferSlice {
     FX_CHECK(buf_);
     return buf_->format();
   }
-  size_t start_frame() const { return start_frame_; }
-  size_t end_frame() const { return end_frame_; }
+  int64_t start_frame() const { return start_frame_; }
+  int64_t end_frame() const { return end_frame_; }
   bool empty() const { return !buf_ || start_frame_ == end_frame_; }
 
   typename std::vector<SampleT>::const_iterator begin() const {
@@ -159,34 +163,35 @@ class AudioBufferSlice {
     return buf_->samples().begin() + end_frame_ * format().channels();
   };
 
-  size_t NumFrames() const { return end_frame_ - start_frame_; }
-  size_t NumSamples() const { return NumFrames() * format().channels(); }
-  size_t NumBytes() const { return NumFrames() * format().bytes_per_frame(); }
-  size_t SampleIndex(size_t frame, size_t chan) const {
+  int64_t NumFrames() const { return end_frame_ - start_frame_; }
+  int64_t NumSamples() const { return NumFrames() * format().channels(); }
+  int64_t NumBytes() const { return NumFrames() * format().bytes_per_frame(); }
+  int64_t SampleIndex(int64_t frame, int32_t chan) const {
     FX_CHECK(buf_);
     return buf_->SampleIndex(start_frame_ + frame, chan);
   }
-  SampleT SampleAt(size_t frame, size_t chan) const {
+  SampleT SampleAt(int64_t frame, int32_t chan) const {
     FX_CHECK(buf_);
     return buf_->SampleAt(start_frame_ + frame, chan);
   }
 
   // Return a subslice of this slice.
-  AudioBufferSlice<SampleFormat> Subslice(size_t slice_start, size_t slice_end) const {
+  AudioBufferSlice<SampleFormat> Subslice(int64_t slice_start, int64_t slice_end) const {
     return AudioBufferSlice<SampleFormat>(buf_, start_frame_ + slice_start,
                                           start_frame_ + slice_end);
   }
 
   // Return a buffer containing the given channel only.
-  AudioBuffer<SampleFormat> GetChannel(size_t chan) const {
-    auto new_format = Format::Create({
-                                         .sample_format = SampleFormat,
-                                         .channels = 1,
-                                         .frames_per_second = format().frames_per_second(),
-                                     })
-                          .take_value();
+  AudioBuffer<SampleFormat> GetChannel(int32_t chan) const {
+    auto new_format =
+        Format::Create({
+                           .sample_format = SampleFormat,
+                           .channels = 1,
+                           .frames_per_second = static_cast<uint32_t>(format().frames_per_second()),
+                       })
+            .take_value();
     AudioBuffer<SampleFormat> out(new_format, NumFrames());
-    for (size_t frame = 0; frame < NumFrames(); frame++) {
+    for (int64_t frame = 0; frame < NumFrames(); frame++) {
       out.samples()[frame] = SampleAt(frame, chan);
     }
     return out;
@@ -195,8 +200,8 @@ class AudioBufferSlice {
   // Return a buffer that contains a clone of this slice.
   AudioBuffer<SampleFormat> Clone() const {
     AudioBuffer<SampleFormat> out(format(), NumFrames());
-    for (size_t frame = 0; frame < NumFrames(); frame++) {
-      for (size_t chan = 0; chan < format().channels(); chan++) {
+    for (int64_t frame = 0; frame < NumFrames(); frame++) {
+      for (int32_t chan = 0; chan < format().channels(); chan++) {
         out.samples()[out.SampleIndex(frame, chan)] = SampleAt(frame, chan);
       }
     }
@@ -205,8 +210,8 @@ class AudioBufferSlice {
 
  private:
   const AudioBuffer<SampleFormat>* buf_;
-  size_t start_frame_;
-  size_t end_frame_;
+  int64_t start_frame_;
+  int64_t end_frame_;
 };
 
 }  // namespace media::audio

@@ -56,36 +56,36 @@ class HermeticAudioTest : public TestFixture {
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   VirtualOutput<SampleFormat>* CreateOutput(
       const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format,
-      size_t frame_count, std::optional<DevicePlugProperties> plug_properties = std::nullopt,
+      int64_t frame_count, std::optional<DevicePlugProperties> plug_properties = std::nullopt,
       float device_gain_db = 0,
       std::optional<DeviceClockProperties> device_clock_properties = std::nullopt);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   VirtualInput<SampleFormat>* CreateInput(
       const audio_stream_unique_id_t& device_id, TypedFormat<SampleFormat> format,
-      size_t frame_count, std::optional<DevicePlugProperties> plug_properties = std::nullopt,
+      int64_t frame_count, std::optional<DevicePlugProperties> plug_properties = std::nullopt,
       float device_gain_db = 0,
       std::optional<DeviceClockProperties> device_clock_properties = std::nullopt);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   AudioRendererShim<SampleFormat>* CreateAudioRenderer(
-      TypedFormat<SampleFormat> format, size_t frame_count,
+      TypedFormat<SampleFormat> format, int64_t frame_count,
       fuchsia::media::AudioRenderUsage usage = fuchsia::media::AudioRenderUsage::MEDIA,
       std::optional<zx::clock> reference_clock = std::nullopt);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   AudioCapturerShim<SampleFormat>* CreateAudioCapturer(
-      TypedFormat<SampleFormat> format, size_t frame_count,
+      TypedFormat<SampleFormat> format, int64_t frame_count,
       fuchsia::media::AudioCapturerConfiguration config);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   UltrasoundRendererShim<SampleFormat>* CreateUltrasoundRenderer(TypedFormat<SampleFormat> format,
-                                                                 size_t frame_count,
+                                                                 int64_t frame_count,
                                                                  bool wait_for_creation = true);
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   UltrasoundCapturerShim<SampleFormat>* CreateUltrasoundCapturer(TypedFormat<SampleFormat> format,
-                                                                 size_t frame_count,
+                                                                 int64_t frame_count,
                                                                  bool wait_for_creation = true);
 
   // Validate inspect metrics.

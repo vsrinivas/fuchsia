@@ -67,18 +67,18 @@ TEST_F(EffectsProcessorTest, AddEffectWithMismatchedChannelConfig) {
   Effect two_channel_effect = effects_loader()->CreateEffect(0, "", 1, 2, 2, {});
 
   EffectsProcessor processor;
-  EXPECT_EQ(processor.channels_in(), 0u);
-  EXPECT_EQ(processor.channels_out(), 0u);
+  EXPECT_EQ(processor.channels_in(), 0);
+  EXPECT_EQ(processor.channels_out(), 0);
 
   // Add a single channel effect (chans in == chans out == 1).
   EXPECT_EQ(processor.AddEffect(std::move(single_channel_effect1)), ZX_OK);
-  EXPECT_EQ(processor.channels_in(), 1u);
-  EXPECT_EQ(processor.channels_out(), 1u);
+  EXPECT_EQ(processor.channels_in(), 1);
+  EXPECT_EQ(processor.channels_out(), 1);
 
   // Add a second single channel effect.
   EXPECT_EQ(processor.AddEffect(std::move(single_channel_effect2)), ZX_OK);
-  EXPECT_EQ(processor.channels_in(), 1u);
-  EXPECT_EQ(processor.channels_out(), 1u);
+  EXPECT_EQ(processor.channels_in(), 1);
+  EXPECT_EQ(processor.channels_out(), 1);
 
   // Add a two channel effect. This should fail as the processor is currently producing single
   // channel audio out of the last effect.
@@ -177,30 +177,30 @@ TEST_F(EffectsProcessorTest, ReportBlockSize) {
 
   // Create processor and verify default block_size.
   EffectsProcessor processor;
-  EXPECT_EQ(1u, processor.block_size());
+  EXPECT_EQ(1, processor.block_size());
 
   // Add an effect and observe a change in block_size.
   Effect effect1 = effects_loader()->CreateEffectByName("block_size_3", "", 1, 1, 1, {});
   ASSERT_TRUE(effect1);
   processor.AddEffect(std::move(effect1));
-  EXPECT_EQ(3u, processor.block_size());
+  EXPECT_EQ(3, processor.block_size());
 
   // Add another effect and observe a change in block_size (lcm(3,5)
   Effect effect2 = effects_loader()->CreateEffectByName("block_size_5", "", 1, 1, 1, {});
   ASSERT_TRUE(effect2);
   processor.AddEffect(std::move(effect2));
-  EXPECT_EQ(15u, processor.block_size());
+  EXPECT_EQ(15, processor.block_size());
 
   // Add some final effects that should not change block_size.
   Effect effect3 = effects_loader()->CreateEffectByName("block_size_any", "", 1, 1, 1, {});
   ASSERT_TRUE(effect3);
   processor.AddEffect(std::move(effect3));
-  EXPECT_EQ(15u, processor.block_size());
+  EXPECT_EQ(15, processor.block_size());
 
   Effect effect4 = effects_loader()->CreateEffectByName("block_size_1", "", 1, 1, 1, {});
   ASSERT_TRUE(effect4);
   processor.AddEffect(std::move(effect4));
-  EXPECT_EQ(15u, processor.block_size());
+  EXPECT_EQ(15, processor.block_size());
 }
 
 TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
@@ -214,32 +214,32 @@ TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
 
   // Create processor and verify default block_size.
   EffectsProcessor processor;
-  EXPECT_EQ(0u, processor.max_batch_size());
+  EXPECT_EQ(0, processor.max_batch_size());
 
   // Add an effect and observe a change in buffer size.
   {
     Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
-    EXPECT_EQ(1024u, processor.max_batch_size());
+    EXPECT_EQ(1024, processor.max_batch_size());
   }
   {
     Effect effect = effects_loader()->CreateEffectByName("max_buffer_512", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
-    EXPECT_EQ(512u, processor.max_batch_size());
+    EXPECT_EQ(512, processor.max_batch_size());
   }
   {
     Effect effect = effects_loader()->CreateEffectByName("max_buffer_256", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
-    EXPECT_EQ(256u, processor.max_batch_size());
+    EXPECT_EQ(256, processor.max_batch_size());
   }
   {
     Effect effect = effects_loader()->CreateEffectByName("max_buffer_128", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
-    EXPECT_EQ(128u, processor.max_batch_size());
+    EXPECT_EQ(128, processor.max_batch_size());
   }
 
   // Add a final effect with an increasing max block size to verify we don't increase the reported
@@ -248,7 +248,7 @@ TEST_F(EffectsProcessorTest, ReportMaxBufferSize) {
     Effect effect = effects_loader()->CreateEffectByName("max_buffer_1024", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
-    EXPECT_EQ(128u, processor.max_batch_size());
+    EXPECT_EQ(128, processor.max_batch_size());
   }
 }
 
@@ -273,16 +273,16 @@ TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
 
   // Create processor and verify default block_size.
   EffectsProcessor processor;
-  EXPECT_EQ(0u, processor.max_batch_size());
-  EXPECT_EQ(1u, processor.block_size());
+  EXPECT_EQ(0, processor.max_batch_size());
+  EXPECT_EQ(1, processor.block_size());
 
   {
     Effect effect =
         effects_loader()->CreateEffectByName("max_buffer_1024_any_align", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
-    EXPECT_EQ(1024u, processor.max_batch_size());
-    EXPECT_EQ(1u, processor.block_size());
+    EXPECT_EQ(1024, processor.max_batch_size());
+    EXPECT_EQ(1, processor.block_size());
   }
 
   // Adding an effect with 300 alignment should drop our max buffer size from 1024 -> 900.
@@ -290,8 +290,8 @@ TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
     Effect effect = effects_loader()->CreateEffectByName("any_buffer_300_align", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
-    EXPECT_EQ(900u, processor.max_batch_size());
-    EXPECT_EQ(300u, processor.block_size());
+    EXPECT_EQ(900, processor.max_batch_size());
+    EXPECT_EQ(300, processor.block_size());
   }
   // Adding an effect with max buffer of 800 should drop aggregate max buffer to 600.
   {
@@ -299,8 +299,8 @@ TEST_F(EffectsProcessorTest, AlignBufferWithBlockSize) {
         effects_loader()->CreateEffectByName("max_buffer_800_any_align", "", 1, 1, 1, {});
     ASSERT_TRUE(effect);
     processor.AddEffect(std::move(effect));
-    EXPECT_EQ(600u, processor.max_batch_size());
-    EXPECT_EQ(300u, processor.block_size());
+    EXPECT_EQ(600, processor.max_batch_size());
+    EXPECT_EQ(300, processor.block_size());
   }
 }
 
@@ -322,18 +322,18 @@ TEST_F(EffectsProcessorTest, ProcessOutOfPlace) {
   EffectsProcessor processor;
   EXPECT_EQ(processor.AddEffect(std::move(effect1)), ZX_OK);
   EXPECT_EQ(processor.size(), 1u);
-  EXPECT_EQ(processor.channels_in(), 1u);
-  EXPECT_EQ(processor.channels_out(), 2u);
+  EXPECT_EQ(processor.channels_in(), 1);
+  EXPECT_EQ(processor.channels_out(), 2);
 
   EXPECT_EQ(processor.AddEffect(std::move(effect2)), ZX_OK);
   EXPECT_EQ(processor.size(), 2u);
-  EXPECT_EQ(processor.channels_in(), 1u);
-  EXPECT_EQ(processor.channels_out(), 2u);
+  EXPECT_EQ(processor.channels_in(), 1);
+  EXPECT_EQ(processor.channels_out(), 2);
 
   EXPECT_EQ(processor.AddEffect(std::move(effect3)), ZX_OK);
   EXPECT_EQ(processor.size(), 3u);
-  EXPECT_EQ(processor.channels_in(), 1u);
-  EXPECT_EQ(processor.channels_out(), 4u);
+  EXPECT_EQ(processor.channels_in(), 1);
+  EXPECT_EQ(processor.channels_out(), 4);
 
   float buff[4] = {0, 1.0, 2.0, 3.0};
   float* out;
@@ -372,8 +372,8 @@ TEST_F(EffectsProcessorTest, AddEffectFailsWithInvalidChannelization) {
   ASSERT_TRUE(effect1);
   EXPECT_EQ(processor.AddEffect(std::move(effect1)), ZX_OK);
   EXPECT_EQ(processor.size(), 1u);
-  EXPECT_EQ(processor.channels_in(), 1u);
-  EXPECT_EQ(processor.channels_out(), 1u);
+  EXPECT_EQ(processor.channels_in(), 1);
+  EXPECT_EQ(processor.channels_out(), 1);
 
   // Create an effect with 2 chans in. This should be rejected by the processor since it's currently
   // producing 1 channel audio.
@@ -381,8 +381,8 @@ TEST_F(EffectsProcessorTest, AddEffectFailsWithInvalidChannelization) {
   ASSERT_TRUE(effect2);
   EXPECT_EQ(processor.AddEffect(std::move(effect2)), ZX_ERR_INVALID_ARGS);
   EXPECT_EQ(processor.size(), 1u);
-  EXPECT_EQ(processor.channels_in(), 1u);
-  EXPECT_EQ(processor.channels_out(), 1u);
+  EXPECT_EQ(processor.channels_in(), 1);
+  EXPECT_EQ(processor.channels_out(), 1);
 }
 
 TEST_F(EffectsProcessorTest, SetStreamInfo) {
@@ -436,8 +436,8 @@ TEST_F(EffectsProcessorTest, FilterWidth) {
   processor.AddEffect(effects_loader()->CreateEffectByName("effect2", "", 1, 1, 1, {}));
 
   // Sum of the inputs.
-  EXPECT_EQ(60u, processor.delay_frames());
-  EXPECT_EQ(23u, processor.ring_out_frames());
+  EXPECT_EQ(60, processor.delay_frames());
+  EXPECT_EQ(23, processor.ring_out_frames());
 }
 
 }  // namespace

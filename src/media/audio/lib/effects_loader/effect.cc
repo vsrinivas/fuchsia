@@ -49,21 +49,23 @@ zx_status_t Effect::UpdateConfiguration(std::string_view config) const {
              : ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Effect::ProcessInPlace(uint32_t num_frames, float* audio_buff_in_out) const {
+zx_status_t Effect::ProcessInPlace(int64_t num_frames, float* audio_buff_in_out) const {
   TRACE_DURATION("audio", "Effect::ProcessInPlace", "num_frames", num_frames);
   FX_DCHECK(module_);
   FX_DCHECK(effects_handle_ != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
-  return module_->process_inplace(effects_handle_, num_frames, audio_buff_in_out)
+  return module_->process_inplace(effects_handle_, static_cast<uint32_t>(num_frames),
+                                  audio_buff_in_out)
              ? ZX_OK
              : ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Effect::Process(uint32_t num_frames, const float* audio_buff_in,
+zx_status_t Effect::Process(int64_t num_frames, const float* audio_buff_in,
                             float** audio_buff_out) const {
   TRACE_DURATION("audio", "Effect::Process", "num_frames", num_frames);
   FX_DCHECK(module_);
   FX_DCHECK(effects_handle_ != FUCHSIA_AUDIO_EFFECTS_INVALID_HANDLE);
-  return module_->process(effects_handle_, num_frames, audio_buff_in, audio_buff_out)
+  return module_->process(effects_handle_, static_cast<uint32_t>(num_frames), audio_buff_in,
+                          audio_buff_out)
              ? ZX_OK
              : ZX_ERR_NOT_SUPPORTED;
 }

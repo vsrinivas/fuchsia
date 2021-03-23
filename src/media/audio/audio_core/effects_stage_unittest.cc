@@ -343,15 +343,15 @@ TEST_F(EffectsStageTest, CreateStageWithRechannelization) {
 
   // Enqueue 10ms of frames in the packet queue. All samples will be initialized to 1.0.
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(10)));
-  EXPECT_EQ(4u, effects_stage->format().channels());
+  EXPECT_EQ(4, effects_stage->format().channels());
 
   {
     // Read from the effects stage. Since our effect adds 1.0 to each sample, and we populated the
     // packet with 1.0 samples, we expect to see only 2.0 samples in the result.
     auto buf = effects_stage->ReadLock(Fixed(0), 480);
     ASSERT_TRUE(buf);
-    EXPECT_EQ(0u, buf->start().Floor());
-    EXPECT_EQ(480u, buf->length().Floor());
+    EXPECT_EQ(0, buf->start().Floor());
+    EXPECT_EQ(480, buf->length().Floor());
 
     // Expect 480, 4-channel frames.
     auto& arr = as_array<float, 480 * 4>(buf->payload());
@@ -399,8 +399,8 @@ TEST_F(EffectsStageTest, ReleasePacketWhenFullyConsumed) {
   auto buf = effects_stage->ReadLock(Fixed(0), 480);
   RunLoopUntilIdle();
   ASSERT_TRUE(buf);
-  EXPECT_EQ(0u, buf->start().Floor());
-  EXPECT_EQ(480u, buf->length().Floor());
+  EXPECT_EQ(0, buf->start().Floor());
+  EXPECT_EQ(480, buf->length().Floor());
   EXPECT_FALSE(packet_released);
 
   // Now release |buf| and mark it as fully consumed. This should release the underlying packet.
@@ -441,7 +441,7 @@ TEST_F(EffectsStageTest, ReleasePacketWhenNoLongerReferenced) {
   auto buf = effects_stage->ReadLock(Fixed(0), 480);
   RunLoopUntilIdle();
   ASSERT_TRUE(buf);
-  EXPECT_EQ(0u, buf->start().Floor());
+  EXPECT_EQ(0, buf->start().Floor());
   EXPECT_EQ(480u, buf->length().Floor());
   EXPECT_FALSE(packet_released);
 
@@ -561,7 +561,7 @@ TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
       .effect_config = "",
   });
   auto effects_stage = EffectsStage::Create(effects, stream, volume_curve_);
-  EXPECT_EQ(2u, effects_stage->format().channels());
+  EXPECT_EQ(2, effects_stage->format().channels());
 
   // Add 48 frames to our source.
   stream->PushPacket(packet_factory.CreatePacket(1.0, zx::msec(1)));
@@ -569,8 +569,8 @@ TEST_F(EffectsStageTest, SkipRingoutIfDiscontinuous) {
   {  // Read the frames out.
     auto buf = effects_stage->ReadLock(Fixed(0), 480);
     ASSERT_TRUE(buf);
-    EXPECT_EQ(0u, buf->start().Floor());
-    EXPECT_EQ(48u, buf->length().Floor());
+    EXPECT_EQ(0, buf->start().Floor());
+    EXPECT_EQ(48, buf->length().Floor());
   }
 
   // Now we expect 3 buffers of ringout; Read the first.
@@ -657,7 +657,7 @@ TEST_P(EffectsStageRingoutTest, RingoutFrames) {
       .effect_config = "",
   });
   auto effects_stage = EffectsStage::Create(effects, stream_, volume_curve_);
-  EXPECT_EQ(2u, effects_stage->format().channels());
+  EXPECT_EQ(2, effects_stage->format().channels());
 
   // Add 48 frames to our source.
   stream_->PushPacket(packet_factory_.CreatePacket(1.0, zx::msec(1)));
@@ -665,8 +665,8 @@ TEST_P(EffectsStageRingoutTest, RingoutFrames) {
   {  // Read the frames out.
     auto buf = effects_stage->ReadLock(Fixed(0), 480);
     ASSERT_TRUE(buf);
-    EXPECT_EQ(0u, buf->start().Floor());
-    EXPECT_EQ(48u, buf->length().Floor());
+    EXPECT_EQ(0, buf->start().Floor());
+    EXPECT_EQ(48, buf->length().Floor());
   }
 
   // Now we expect our ringout to be split across many buffers.
@@ -698,7 +698,7 @@ TEST_P(EffectsStageRingoutTest, RingoutFrames) {
     auto buf = effects_stage->ReadLock(Fixed(start_frame), 48);
     ASSERT_TRUE(buf);
     EXPECT_EQ(start_frame, buf->start().Floor());
-    EXPECT_EQ(48u, buf->length().Floor());
+    EXPECT_EQ(48, buf->length().Floor());
     start_frame += buf->length().Floor();
   }
 

@@ -673,7 +673,7 @@ TEST_F(MixStageTest, CachedUntilFullyConsumed) {
 // scaled from the old denominator to the new one.
 TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   auto audio_clock = context().clock_manager()->CreateClientFixed(clock::CloneOfMonotonic());
-  constexpr uint32_t dest_frames_per_mix = 12;
+  constexpr int32_t dest_frames_per_mix = 12;
 
   // We set our timeline slow by 1 frac-frame per nsec.
   auto nsec_to_frac_source =
@@ -694,10 +694,12 @@ TEST_F(MixStageTest, MicroSrc_SourcePositionAccountingAcrossRateChange) {
   mix_stage_->ReadLock(Fixed(0), dest_frames_per_mix);
 
   // At a 48k nominal rate, we expect rate_modulo to be 47999 and denom to be 48000.
-  EXPECT_EQ(bookkeeping.rate_modulo(), kDefaultFormat.frames_per_second() - 1);
-  EXPECT_EQ(bookkeeping.denominator(), kDefaultFormat.frames_per_second());
+  EXPECT_EQ(bookkeeping.rate_modulo(),
+            static_cast<uint64_t>(kDefaultFormat.frames_per_second()) - 1);
+  EXPECT_EQ(bookkeeping.denominator(), static_cast<uint64_t>(kDefaultFormat.frames_per_second()));
   // next_source_pos_modulo should show that we lose 1 source_pos_modulo per dest frame.
-  EXPECT_EQ(bookkeeping.denominator() - info.next_source_pos_modulo, dest_frames_per_mix);
+  EXPECT_EQ(static_cast<int64_t>(bookkeeping.denominator() - info.next_source_pos_modulo),
+            dest_frames_per_mix);
   // ... which also means we'll be one frac-frame behind.
   EXPECT_EQ(Fixed(info.next_dest_frame), Fixed(info.next_source_frame + Fixed::FromRaw(1)));
   // At this point we expect long-running and current source_pos_modulo to be exactly equal.

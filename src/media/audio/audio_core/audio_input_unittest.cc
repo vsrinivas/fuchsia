@@ -13,10 +13,10 @@
 namespace media::audio {
 namespace {
 
-constexpr size_t kRingBufferSizeBytes = 8 * PAGE_SIZE;
+constexpr int64_t kRingBufferSizeBytes = 8 * PAGE_SIZE;
 
 class AudioInputTestDriver : public testing::ThreadingModelFixture,
-                             public ::testing::WithParamInterface<uint32_t> {
+                             public ::testing::WithParamInterface<int32_t> {
  protected:
   AudioInputTestDriver()
       : ThreadingModelFixture(
@@ -74,8 +74,8 @@ TEST_P(AudioInputTestDriver, RequestHardwareRateInConfigIfSupported) {
 }
 
 TEST_P(AudioInputTestDriver, FallBackToAlternativeRateIfPreferredRateIsNotSupported) {
-  ASSERT_NE(GetParam(), static_cast<uint32_t>(0));  // Invalid frame rate passed as test parameter.
-  const uint32_t kSupportedRate = GetParam() * 2;
+  ASSERT_NE(GetParam(), 0);  // Invalid frame rate passed as test parameter.
+  const int32_t kSupportedRate = GetParam() * 2;
   fuchsia::hardware::audio::PcmSupportedFormats formats = {};
   formats.number_of_channels.push_back(1);
   formats.sample_formats.push_back(fuchsia::hardware::audio::SampleFormat::PCM_SIGNED);

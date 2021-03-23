@@ -19,7 +19,7 @@ namespace media::audio::test {
 
 class VmoBackedBuffer {
  public:
-  VmoBackedBuffer(const Format& format, size_t frame_count)
+  VmoBackedBuffer(const Format& format, int64_t frame_count)
       : format_(format), frame_count_(frame_count) {}
 
   // Allocate an appropriately-sized VMO. The memory is initialized to all zeros.
@@ -45,7 +45,7 @@ class VmoBackedBuffer {
     uint64_t vmo_size;
     zx_status_t status = vmo.get_size(&vmo_size);
     ASSERT_EQ(status, ZX_OK) << "VMO get_size failed: " << status;
-    ASSERT_GE(vmo_size, SizeBytes())
+    ASSERT_GE(static_cast<int64_t>(vmo_size), SizeBytes())
         << "Buffer size " << SizeBytes() << " is greater than VMO size " << vmo_size;
 
     zx_vm_option_t flags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
@@ -58,7 +58,7 @@ class VmoBackedBuffer {
   bool IsValid() const { return BufferStart() != nullptr; }
 
   // Size of this payload buffer.
-  size_t SizeBytes() const { return format_.bytes_per_frame() * frame_count_; }
+  int64_t SizeBytes() const { return format_.bytes_per_frame() * frame_count_; }
 
   // Take a snapshot of the buffer.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -70,7 +70,7 @@ class VmoBackedBuffer {
 
   // Take a snapshot of a slice of the buffer. The slice must not include a partial frame.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  AudioBuffer<SampleFormat> SnapshotSlice(size_t offset, size_t size_bytes) {
+  AudioBuffer<SampleFormat> SnapshotSlice(int64_t offset, int64_t size_bytes) {
     auto bpf = format_.bytes_per_frame();
     FX_CHECK(size_bytes % bpf == 0) << "size_bytes " << size_bytes << " bytes_per_frame " << bpf;
     AudioBuffer<SampleFormat> out(format_, size_bytes / bpf);
@@ -79,7 +79,7 @@ class VmoBackedBuffer {
   }
 
   // Returns the offset (in frames) that will be written to by the next call to Append.
-  size_t GetCurrentOffset() const { return append_offset_frames_; }
+  int64_t GetCurrentOffset() const { return append_offset_frames_; }
 
   // Append a slice to the buffer, advancing the current seek position.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
@@ -95,18 +95,18 @@ class VmoBackedBuffer {
   }
 
   // Seek to the given offset of the buffer, relative to the start of the buffer.
-  void Seek(size_t offset) { append_offset_frames_ = offset; }
+  void Seek(int64_t offset) { append_offset_frames_ = offset; }
 
   // Write a slice to the given absolute frame number. The actual buffer index
   // is given by start_frame % buffer_size and the write can wrap-around the end
   // of the buffer, however the slice must fit within the buffer.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  void WriteAt(size_t frame_number, AudioBufferSlice<SampleFormat> slice) {
+  void WriteAt(int64_t frame_number, AudioBufferSlice<SampleFormat> slice) {
     FX_CHECK(slice.NumFrames() <= frame_count_);
 
     // First batch.
     auto start_index = frame_number % frame_count_;
-    auto num_frames = std::min(frame_count_ - start_index, slice.NumFrames());
+    auto num_frames = std::min(static_cast<int64_t>(frame_count_ - start_index), slice.NumFrames());
     CopyToBuffer(start_index, AudioBufferSlice(slice.buf(), 0, num_frames));
 
     // Optional second batch (wrap-around).
@@ -118,7 +118,7 @@ class VmoBackedBuffer {
   // Set every sample to the given value.
   template <fuchsia::media::AudioSampleFormat SampleFormat>
   void Memset(typename SampleFormatTraits<SampleFormat>::SampleT value) {
-    for (size_t k = 0; k < frame_count_ * format_.channels(); k++) {
+    for (int64_t k = 0; k < frame_count_ * format_.channels(); k++) {
       auto dst = reinterpret_cast<typename SampleFormatTraits<SampleFormat>::SampleT*>(
           BufferStart() + k * format_.bytes_per_sample());
       *dst = value;
@@ -129,7 +129,7 @@ class VmoBackedBuffer {
   uint8_t* BufferStart() const { return reinterpret_cast<uint8_t*>(vmo_mapper_.start()); }
 
   template <fuchsia::media::AudioSampleFormat SampleFormat>
-  void CopyToBuffer(size_t dst_frame_index, AudioBufferSlice<SampleFormat> slice) {
+  void CopyToBuffer(int64_t dst_frame_index, AudioBufferSlice<SampleFormat> slice) {
     FX_CHECK(dst_frame_index < frame_count_);
     FX_CHECK(dst_frame_index + slice.NumFrames() <= frame_count_);
 
@@ -139,10 +139,10 @@ class VmoBackedBuffer {
   }
 
   const Format format_;
-  const size_t frame_count_;
+  const int64_t frame_count_;
 
   fzl::VmoMapper vmo_mapper_;
-  size_t append_offset_frames_ = 0;
+  int64_t append_offset_frames_ = 0;
 };
 
 }  // namespace media::audio::test

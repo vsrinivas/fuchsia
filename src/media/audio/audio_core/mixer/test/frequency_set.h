@@ -63,16 +63,16 @@ class FrequencySet {
   static constexpr int32_t kFirstInBandRefFreqIdx = 0;
 
   // Each val represents a standard frequency within the broad set.
-  static const std::array<uint32_t, kNumReferenceFreqs> kReferenceFreqs;
+  static const std::array<int32_t, kNumReferenceFreqs> kReferenceFreqs;
 
   // Because of translation between power-of-two-sized buffers and sample rate,
   // values in kReferenceFreqs translate into the following actual frequencies:
-  static const std::array<uint32_t, kNumReferenceFreqs> kRefFreqsTranslated;
+  static const std::array<int32_t, kNumReferenceFreqs> kRefFreqsTranslated;
 
   // Certain tests (such as noise floor and sinad) are evaluated with a
   // sinusoidal input at a single reference frequency (usually close to 1 kHz).
   static constexpr int32_t kRefFreqIdx = 20;  // [20] is 1kHz reference tone.
-  static const uint32_t kReferenceFreq;
+  static const int32_t kReferenceFreq;
 
   // Summary audio tests use a small frequency set taken from the full list.
   static constexpr int32_t kNumSummaryIdxs = 4;

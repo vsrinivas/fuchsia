@@ -245,19 +245,19 @@ void InverseFFT(double* reals, double* imags, uint32_t buf_size) {
 // signal-to-noise. Internally uses an FFT, so slice.NumFrames() must be a power-of-two.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
-                                  std::unordered_set<size_t> freqs) {
-  FX_CHECK(fbl::is_pow2(slice.NumFrames()));
+                                  std::unordered_set<int32_t> freqs) {
+  FX_CHECK(fbl::is_pow2(static_cast<uint64_t>(slice.NumFrames())));
   FX_CHECK(slice.format().channels() == 1);
 
-  const size_t buf_size = slice.NumFrames();
-  const size_t buf_sz_2 = buf_size >> 1;
+  const int64_t buf_size = slice.NumFrames();
+  const int64_t buf_sz_2 = buf_size >> 1;
 
   // Copy input to double buffer, before doing a high-res FFT (freq-analysis). Note that we set
   // imags[] to zero: MeasureAudioFreq retrieves a REAL (not Complex) FFT for the data, the return
   // real and imaginary frequency-domain data only spans 0...N/2 (inclusive).
   std::vector<double> reals(buf_size);
   std::vector<double> imags(buf_size);
-  for (size_t frame = 0; frame < buf_size; ++frame) {
+  for (int64_t frame = 0; frame < buf_size; ++frame) {
     reals[frame] = internal::SampleToDouble(slice.SampleAt(frame, 0));
     imags[frame] = 0.0;
   }
@@ -269,7 +269,7 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
   // have meaning through buf_sz_2. Thus, for the frequency bins [1 thru buf_sz_2 - 1], we could
   // either add in the identical "negative" (beyond buf_size/2) frequency vals, or multiply by two
   // (with upcoming div-by-buf_size, this becomes div-by-buf_sz_2 for those elements).
-  for (uint32_t bin = 1; bin < buf_sz_2; ++bin) {
+  for (int64_t bin = 1; bin < buf_sz_2; ++bin) {
     reals[bin] /= static_cast<double>(buf_sz_2);
     imags[bin] /= static_cast<double>(buf_sz_2);
   }
@@ -281,7 +281,7 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
 
   AudioFreqResult out;
 
-  for (uint32_t bin = 0; bin <= buf_sz_2; ++bin) {
+  for (int64_t bin = 0; bin <= buf_sz_2; ++bin) {
     out.all_square_magnitudes.push_back(reals[bin] * reals[bin] + imags[bin] * imags[bin]);
   }
 
@@ -299,7 +299,7 @@ AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
 
   // Calculate magnitude of all other frequencies
   double sum_sq_magn_other = 0.0;
-  for (uint32_t bin = 0; bin <= buf_sz_2; ++bin) {
+  for (int32_t bin = 0; bin <= buf_sz_2; ++bin) {
     if (freqs.count(bin) == 0) {
       sum_sq_magn_other += out.all_square_magnitudes[bin];
     }
@@ -315,15 +315,15 @@ AudioBuffer<SampleFormat> MultiplyByTukeyWindow(AudioBufferSlice<SampleFormat> s
   FX_CHECK(alpha <= 1);
 
   auto out = slice.Clone();
-  size_t ramp_length_frames =
-      static_cast<size_t>(alpha * static_cast<double>(slice.NumFrames()) / 2);
+  auto ramp_length_frames =
+      static_cast<int64_t>(alpha * static_cast<double>(slice.NumFrames()) / 2);
 
-  for (size_t frame = 0; frame < ramp_length_frames; ++frame) {
+  for (int64_t frame = 0; frame < ramp_length_frames; ++frame) {
     double x = static_cast<double>(frame) / static_cast<double>(ramp_length_frames);
     double w = 0.5 * (1.0 - std::cos(M_PI * x));
-    for (size_t chan = 0; chan < out.format().channels(); ++chan) {
-      size_t a = out.SampleIndex(frame, chan);
-      size_t b = out.NumSamples() - 1 - a;
+    for (int32_t chan = 0; chan < out.format().channels(); ++chan) {
+      int64_t a = out.SampleIndex(frame, chan);
+      int64_t b = out.NumSamples() - 1 - a;
 
       double a_val = w * internal::SampleToDouble(out.samples()[a]);
       double b_val = w * internal::SampleToDouble(out.samples()[b]);
@@ -337,8 +337,8 @@ AudioBuffer<SampleFormat> MultiplyByTukeyWindow(AudioBufferSlice<SampleFormat> s
 }
 
 // Explicitly instantiate all possible implementations.
-#define INSTANTIATE(T)                                                                            \
-  template AudioFreqResult MeasureAudioFreqs<T>(AudioBufferSlice<T>, std::unordered_set<size_t>); \
+#define INSTANTIATE(T)                                                                             \
+  template AudioFreqResult MeasureAudioFreqs<T>(AudioBufferSlice<T>, std::unordered_set<int32_t>); \
   template AudioBuffer<T> MultiplyByTukeyWindow<T>(AudioBufferSlice<T>, double);
 
 INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)

@@ -27,7 +27,7 @@ using testing::FloatEq;
 
 namespace media::audio {
 namespace {
-constexpr size_t kRingBufferSizeBytes = 8 * PAGE_SIZE;
+constexpr int64_t kRingBufferSizeBytes = 8 * PAGE_SIZE;
 constexpr zx::duration kExpectedMixInterval =
     DriverOutput::kDefaultHighWaterNsec - DriverOutput::kDefaultLowWaterNsec;
 constexpr zx::duration kBeyondSubmittedPackets = zx::sec(1);
@@ -36,8 +36,8 @@ constexpr zx::duration kBeyondSubmittedPackets = zx::sec(1);
 
 class DriverOutputTest : public testing::ThreadingModelFixture {
  protected:
-  static constexpr uint32_t kRequestedDeviceRate = 48000;
-  static constexpr uint16_t kRequestedDeviceChannels = 4;
+  static constexpr int32_t kRequestedDeviceRate = 48000;
+  static constexpr int16_t kRequestedDeviceChannels = 4;
   static PipelineConfig CreatePipelineConfig() {
     PipelineConfig config;
     config.mutable_root().name = "default";
@@ -429,8 +429,8 @@ TEST_F(DriverOutputTest, UseBestAvailableSampleRateAndChannelization) {
   formats.valid_bits_per_sample.push_back(16);
 
   // Support the requested channelization but not the requested sample rate.
-  static constexpr uint32_t kSupportedFrameRate = kRequestedDeviceRate / 2;
-  static constexpr uint16_t kSupportedChannels = kRequestedDeviceChannels / 2;
+  static constexpr int32_t kSupportedFrameRate = kRequestedDeviceRate / 2;
+  static constexpr int16_t kSupportedChannels = kRequestedDeviceChannels / 2;
   formats.number_of_channels.push_back(kSupportedChannels);
   formats.frame_rates.push_back(kSupportedFrameRate);
   ConfigureDriverForSampleFormats(std::move(formats));

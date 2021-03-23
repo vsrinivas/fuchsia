@@ -14,8 +14,8 @@ namespace media::audio {
 
 class PipelineConfig {
  public:
-  static constexpr uint32_t kDefaultMixGroupRate = 48000;
-  static constexpr uint16_t kDefaultMixGroupChannels = 2;
+  static constexpr int32_t kDefaultMixGroupRate = 48000;
+  static constexpr int16_t kDefaultMixGroupChannels = 2;
 
   struct Effect {
     // The name of the shared object to load the effect from.
@@ -43,12 +43,12 @@ class PipelineConfig {
     std::vector<MixGroup> inputs;
     bool loopback = false;
     // TODO(fxbug.dev/70642): rename these fields require that they be specified explicitly
-    uint32_t output_rate = kDefaultMixGroupRate;
-    uint16_t output_channels = kDefaultMixGroupChannels;
+    int32_t output_rate = kDefaultMixGroupRate;
+    int16_t output_channels = kDefaultMixGroupChannels;
   };
 
-  static PipelineConfig Default(uint32_t frame_rate = kDefaultMixGroupRate,
-                                uint16_t channels = kDefaultMixGroupChannels) {
+  static PipelineConfig Default(int32_t frame_rate = kDefaultMixGroupRate,
+                                int16_t channels = kDefaultMixGroupChannels) {
     PipelineConfig config;
     config.root_.name = "default";
     config.root_.input_streams = {
@@ -68,8 +68,8 @@ class PipelineConfig {
 
   MixGroup& mutable_root() { return root_; }
 
-  uint16_t channels() const;
-  uint32_t frames_per_second() const { return root_.output_rate; }
+  int16_t channels() const;
+  int32_t frames_per_second() const { return root_.output_rate; }
 
  private:
   friend class ProcessConfigBuilder;

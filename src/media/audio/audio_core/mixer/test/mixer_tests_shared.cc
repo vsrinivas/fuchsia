@@ -19,8 +19,8 @@ using Resampler = ::media::audio::Mixer::Resampler;
 // a dest_format. Actual frame rate values are unimportant, but inter-rate RATIO
 // is VERY important: required SRC is the primary factor in Mix selection.
 std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat source_format,
-                                   uint32_t source_channels, uint32_t source_frame_rate,
-                                   uint32_t dest_channels, uint32_t dest_frame_rate,
+                                   int32_t source_channels, int32_t source_frame_rate,
+                                   int32_t dest_channels, int32_t dest_frame_rate,
                                    Resampler resampler) {
   if (resampler == Resampler::Default) {
     EXPECT_TRUE(false);
@@ -47,7 +47,7 @@ std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat source_form
 // frames_per_second is unimportant and num_channels is only needed so that they
 // can calculate the size of a (multi-channel) audio frame.
 std::unique_ptr<OutputProducer> SelectOutputProducer(fuchsia::media::AudioSampleFormat dest_format,
-                                                     uint32_t num_channels) {
+                                                     int32_t num_channels) {
   fuchsia::media::AudioStreamType dest_details;
   dest_details.sample_format = dest_format;
   dest_details.channels = num_channels;

@@ -26,8 +26,8 @@ std::vector<StreamUsage> UsagesFromRenderUsages(const std::vector<RenderUsage>& 
 const Format FormatForMixGroup(const PipelineConfig::MixGroup& mix_group) {
   return Format::Create(fuchsia::media::AudioStreamType{
                             .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
-                            .channels = mix_group.output_channels,
-                            .frames_per_second = mix_group.output_rate,
+                            .channels = static_cast<uint32_t>(mix_group.output_channels),
+                            .frames_per_second = static_cast<uint32_t>(mix_group.output_rate),
                         })
       .take_value();
 }

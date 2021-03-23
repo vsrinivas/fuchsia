@@ -9,17 +9,17 @@
 namespace media::audio {
 namespace {
 
-void ValidateConstruction(mixer::ChannelStrip* strip, uint32_t num_channels, uint32_t length) {
+void ValidateConstruction(mixer::ChannelStrip* strip, int32_t num_channels, int32_t length) {
   ASSERT_NE(strip, nullptr);
-  ASSERT_GT(num_channels, 0u);
-  ASSERT_GT(length, 0u);
+  ASSERT_GT(num_channels, 0);
+  ASSERT_GT(length, 0);
 
   EXPECT_EQ(strip->num_channels(), num_channels);
   EXPECT_EQ(strip->length(), length);
 
-  for (auto chan = 0u; chan < num_channels; ++chan) {
-    EXPECT_EQ((*strip)[chan].size(), length);
-    for (auto idx = 0u; idx < length; ++idx) {
+  for (auto chan = 0; chan < num_channels; ++chan) {
+    EXPECT_EQ((*strip)[chan].size(), static_cast<size_t>(length));
+    for (auto idx = 0; idx < length; ++idx) {
       EXPECT_EQ((*strip)[chan][idx], 0.0f);
     }
   }
@@ -28,8 +28,8 @@ void ValidateConstruction(mixer::ChannelStrip* strip, uint32_t num_channels, uin
 // Validate ctor default and parameters
 TEST(ChannelStripTest, Construction) {
   mixer::ChannelStrip data;
-  auto num_chans = 1u;
-  auto strip_len = 1u;
+  auto num_chans = 1;
+  auto strip_len = 1;
   ValidateConstruction(&data, num_chans, strip_len);
 
   num_chans = 1;
@@ -37,15 +37,15 @@ TEST(ChannelStripTest, Construction) {
   mixer::ChannelStrip data2(num_chans, strip_len);
   ValidateConstruction(&data2, num_chans, strip_len);
 
-  num_chans = 4u;
-  strip_len = 2u;
+  num_chans = 4;
+  strip_len = 2;
   mixer::ChannelStrip data3(num_chans, strip_len);
   ValidateConstruction(&data3, num_chans, strip_len);
 }
 
 // Sanity test for [] operator
 TEST(ChannelStripTest, SetValues) {
-  mixer::ChannelStrip data(2u, 3u);
+  mixer::ChannelStrip data(2, 3);
 
   auto& channel_0 = data[0];
   auto& channel_0_watcher = data[0];
@@ -66,7 +66,7 @@ TEST(ChannelStripTest, SetValues) {
 
 // Clear should zero-out the entire length of each chan, regardless of num_chans/length.
 TEST(ChannelStripTest, Clear) {
-  mixer::ChannelStrip data(2u, 2u);
+  mixer::ChannelStrip data(2, 2);
   auto& channel_1 = data[1];
 
   data[0][0] = 1.0f;
@@ -87,7 +87,7 @@ TEST(ChannelStripTest, Clear) {
 // Test shifting by various conditions. Shift-by-0 should lead to no change. Shift-by-length (or
 // more) should clear the strip: all values are shifted out, replaced by shifted-in zeroes.
 TEST(ChannelStripTest, ShiftBy) {
-  mixer::ChannelStrip data(2u, 2u);
+  mixer::ChannelStrip data(2, 2);
 
   data[0][0] = 1.0f;
   data[0][1] = 2.0f;

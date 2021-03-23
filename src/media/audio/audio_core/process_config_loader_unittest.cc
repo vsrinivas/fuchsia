@@ -634,8 +634,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
     }
     ASSERT_EQ(1u, mix_group.inputs.size());
     ASSERT_FALSE(mix_group.loopback);
-    ASSERT_EQ(96000u, mix_group.output_rate);
-    EXPECT_EQ(4u, mix_group.output_channels);
+    ASSERT_EQ(96000, mix_group.output_rate);
+    EXPECT_EQ(4, mix_group.output_channels);
   }
 
   const auto& mix = root.inputs[0];
@@ -650,11 +650,11 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_EQ("effect3", effect.effect_name);
       EXPECT_EQ("", effect.effect_config);
       EXPECT_TRUE(effect.output_channels);
-      EXPECT_EQ(4u, *effect.output_channels);
+      EXPECT_EQ(4, *effect.output_channels);
     }
     ASSERT_EQ(2u, mix_group.inputs.size());
     ASSERT_TRUE(mix_group.loopback);
-    ASSERT_EQ(48000u, mix_group.output_rate);
+    ASSERT_EQ(48000, mix_group.output_rate);
   }
 
   {  // output mix_group 1
@@ -678,8 +678,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_FALSE(effect.output_channels);
     }
     ASSERT_FALSE(mix_group.loopback);
-    EXPECT_EQ(48000u, mix_group.output_rate);
-    EXPECT_EQ(2u, mix_group.output_channels);
+    EXPECT_EQ(48000, mix_group.output_rate);
+    EXPECT_EQ(2, mix_group.output_channels);
     ASSERT_EQ(PipelineConfig::kDefaultMixGroupRate, mix_group.output_rate);
   }
 
@@ -697,8 +697,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithEffects) {
       EXPECT_FALSE(effect.output_channels);
     }
     ASSERT_FALSE(mix_group.loopback);
-    EXPECT_EQ(48000u, mix_group.output_rate);
-    EXPECT_EQ(2u, mix_group.output_channels);
+    EXPECT_EQ(48000, mix_group.output_rate);
+    EXPECT_EQ(2, mix_group.output_channels);
     ASSERT_EQ(PipelineConfig::kDefaultMixGroupRate, mix_group.output_rate);
   }
 }

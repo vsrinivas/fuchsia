@@ -146,7 +146,7 @@ class Capture {
         for (auto f = search_frame_start; f < search_frame_end; f++) {
           auto val = buffer_.SampleAt(f, 0);
           if (val > kNoiseFloor) {
-            size_t slice_index = f - search_frame_start;
+            int64_t slice_index = f - search_frame_start;
             printf("[verbose] frame %lu, sample %f%s\n", f, val,
                    (max_frame && slice_index == *max_frame) ? " (left edge)" : "");
           }
@@ -289,7 +289,7 @@ void PlaySound(fuchsia::media::AudioPtr& audio, zx::clock reference_clock, zx::t
       .pts = 0,
       .payload_buffer_id = 0,
       .payload_offset = 0,
-      .payload_size = sound.NumBytes(),
+      .payload_size = static_cast<size_t>(sound.NumBytes()),
   };
 
   // Play this sound and tear down the renderer once the sound has been played.

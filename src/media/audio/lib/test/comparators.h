@@ -34,7 +34,7 @@ struct CompareAudioBufferOptions {
 
   // These options control additional debugging output of CompareAudioBuffer in failure cases.
   std::string test_label;
-  size_t num_frames_per_packet = 100;
+  int64_t num_frames_per_packet = 100;
 };
 
 // Compares got_slice to want_slice, reporting any differences. If got_slice is larger than
@@ -65,7 +65,7 @@ void CompareAudioBuffers(AudioBufferSlice<SampleFormat> got_slice,
 struct ExpectAudioBufferOptions {
   // These options control additional debugging output in failure cases.
   std::string test_label;
-  size_t num_frames_per_packet = 100;
+  int64_t num_frames_per_packet = 100;
 };
 
 // Expect that the given slice is silent.

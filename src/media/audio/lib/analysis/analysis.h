@@ -48,9 +48,9 @@ struct AudioFreqResult {
   std::vector<double> all_square_magnitudes;
 
   // Mapping from frequency -> magnitude, for each requested frequency.
-  std::unordered_map<size_t, double> magnitudes;
+  std::unordered_map<int32_t, double> magnitudes;
   // Phase in radians, for each requested frequency.
-  std::unordered_map<size_t, double> phases;
+  std::unordered_map<int32_t, double> phases;
   // Total magnitude over all requested frequencies.
   // Magnitude is the root-sum-of-squares of the magnitude at all requested frequencies.
   double total_magn_signal;
@@ -68,11 +68,11 @@ struct AudioFreqResult {
 // buffer.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
 AudioFreqResult MeasureAudioFreqs(AudioBufferSlice<SampleFormat> slice,
-                                  std::unordered_set<size_t> freqs);
+                                  std::unordered_set<int32_t> freqs);
 
 // Shorthand that analyzes a single frequency.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-AudioFreqResult MeasureAudioFreq(AudioBufferSlice<SampleFormat> slice, size_t freq) {
+AudioFreqResult MeasureAudioFreq(AudioBufferSlice<SampleFormat> slice, int32_t freq) {
   auto result = MeasureAudioFreqs(slice, {freq});
   FX_DCHECK(result.total_magn_signal == result.magnitudes[freq]);
   return result;
@@ -83,8 +83,8 @@ template <fuchsia::media::AudioSampleFormat SampleFormat>
 double MeasureAudioRMS(AudioBufferSlice<SampleFormat> slice) {
   FX_CHECK(slice.NumFrames() > 0);
   double sum = 0;
-  for (size_t frame = 0; frame < slice.NumFrames(); frame++) {
-    for (size_t chan = 0; chan < slice.format().channels(); chan++) {
+  for (int64_t frame = 0; frame < slice.NumFrames(); frame++) {
+    for (int32_t chan = 0; chan < slice.format().channels(); chan++) {
       double s = SampleFormatTraits<SampleFormat>::ToFloat(slice.SampleAt(frame, chan));
       sum += s * s;
     }
@@ -96,7 +96,7 @@ double MeasureAudioRMS(AudioBufferSlice<SampleFormat> slice) {
 // than the given noise floor. Returns the frame index if found, and std::nullopt otherwise.
 // The given slice must have a single channel. We assume the impulse has a positive signal.
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-std::optional<size_t> FindImpulseLeadingEdge(
+std::optional<int64_t> FindImpulseLeadingEdge(
     AudioBufferSlice<SampleFormat> slice,
     typename SampleFormatTraits<SampleFormat>::SampleT noise_floor) {
   FX_CHECK(slice.format().channels() == 1);
@@ -114,10 +114,10 @@ std::optional<size_t> FindImpulseLeadingEdge(
   // do this by finding the first value such that there does not exist a value
   // more than 50% larger.
   float max_value = 0;
-  for (size_t f = 0; f < slice.NumFrames(); f++) {
+  for (int64_t f = 0; f < slice.NumFrames(); f++) {
     max_value = std::max(max_value, normalize(slice.SampleAt(f, 0)));
   }
-  for (size_t f = 0; f < slice.NumFrames(); f++) {
+  for (int64_t f = 0; f < slice.NumFrames(); f++) {
     float val = normalize(slice.SampleAt(f, 0));
     if (val <= noise_floor) {
       continue;

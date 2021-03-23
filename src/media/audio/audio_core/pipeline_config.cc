@@ -6,7 +6,7 @@
 
 namespace media::audio {
 
-uint16_t PipelineConfig::channels() const {
+int16_t PipelineConfig::channels() const {
   // The bottommost effect that defines output_channels will define our channelization.
   for (auto it = root_.effects.rbegin(); it != root_.effects.rend(); ++it) {
     if (it->output_channels) {

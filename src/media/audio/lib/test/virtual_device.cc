@@ -14,7 +14,7 @@ namespace media::audio::test {
 template <class Iface>
 VirtualDevice<Iface>::VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
                                     const audio_stream_unique_id_t& device_id, Format format,
-                                    size_t frame_count, size_t inspect_id,
+                                    int64_t frame_count, size_t inspect_id,
                                     std::optional<DevicePlugProperties> plug_properties,
                                     float expected_gain_db,
                                     std::optional<DeviceClockProperties> device_clock_properties)
@@ -81,7 +81,7 @@ void VirtualDevice<Iface>::ResetEvents() {
 
 template <class Iface>
 void VirtualDevice<Iface>::WatchEvents() {
-  fidl_.events().OnSetFormat = [this](uint32_t fps, uint32_t fmt, uint32_t num_chans,
+  fidl_.events().OnSetFormat = [this](int32_t fps, uint32_t fmt, int32_t num_chans,
                                       zx_duration_t ext_delay) {
     received_set_format_ = true;
     EXPECT_EQ(fps, format_.frames_per_second());

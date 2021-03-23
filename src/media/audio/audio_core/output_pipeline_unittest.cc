@@ -604,7 +604,7 @@ TEST_F(OutputPipelineTest, ReportPresentationDelay) {
       << " nsec";
 }
 
-void* SampleOffset(void* ptr, size_t offset) {
+void* SampleOffset(void* ptr, int64_t offset) {
   return reinterpret_cast<void*>(reinterpret_cast<float*>(ptr) + offset);
 }
 
@@ -664,7 +664,7 @@ void OutputPipelineTest::TestDifferentMixRates(ClockMode clock_mode) {
                      resampler);
 
   bool packet_released[3] = {};
-  constexpr auto kFramesPerRead = 240u;
+  constexpr auto kFramesPerRead = 240;
 
   constexpr auto kVal1 = 1.0f;
   constexpr auto kVal2 = -1.0f;
@@ -782,8 +782,8 @@ TEST_F(OutputPipelineTest, PipelineWithRechannelEffects) {
                                                        kDefaultTransform, *device_clock_);
 
   // Verify the pipeline format includes the rechannel effect.
-  EXPECT_EQ(4u, pipeline->format().channels());
-  EXPECT_EQ(48000u, pipeline->format().frames_per_second());
+  EXPECT_EQ(4, pipeline->format().channels());
+  EXPECT_EQ(48000, pipeline->format().frames_per_second());
   EXPECT_EQ(fuchsia::media::AudioSampleFormat::FLOAT, pipeline->format().sample_format());
 }
 

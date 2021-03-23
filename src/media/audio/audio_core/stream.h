@@ -165,7 +165,7 @@ class ReadableStream : public BaseStream {
   //
   // TODO(fxbug.dev/50669): Implementations must return std::nullopt if they have no frames for the
   // requested range. This requirement is not enforced by all implementations (e.g., PacketQueue).
-  virtual std::optional<Buffer> ReadLock(Fixed dest_frame, size_t frame_count) = 0;
+  virtual std::optional<Buffer> ReadLock(Fixed dest_frame, int64_t frame_count) = 0;
 
   // Trims the stream by releasing any frames before the given frame. When invoked,
   // the caller is making a promise that they will not try to ReadLock any frame before
@@ -238,7 +238,7 @@ class WritableStream : public BaseStream {
   //
   // Callers can write directly to the payload. The buffer will remain locked until it is
   // destructed. It is illegal to call WriteLock again until the lock has been released.
-  virtual std::optional<Buffer> WriteLock(int64_t frame, size_t frame_count) = 0;
+  virtual std::optional<Buffer> WriteLock(int64_t frame, int64_t frame_count) = 0;
 };
 
 }  // namespace media::audio

@@ -98,7 +98,7 @@ void PacketQueue::Flush(const fbl::RefPtr<PendingFlushToken>& flush_token) {
   }
 }
 
-std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(Fixed frame, size_t frame_count) {
+std::optional<ReadableStream::Buffer> PacketQueue::ReadLock(Fixed frame, int64_t frame_count) {
   TRACE_DURATION("audio", "PacketQueue::ReadLock");
   std::lock_guard<std::mutex> locker(pending_mutex_);
 

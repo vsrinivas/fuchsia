@@ -17,8 +17,8 @@ namespace media::audio::mixer {
 namespace {
 
 std::unique_ptr<Mixer> SelectSincSampler(
-    uint32_t source_channels, uint32_t dest_channels, uint32_t source_frame_rate,
-    uint32_t dest_frame_rate, fuchsia::media::AudioSampleFormat source_format,
+    int32_t source_channels, int32_t dest_channels, int32_t source_frame_rate,
+    int32_t dest_frame_rate, fuchsia::media::AudioSampleFormat source_format,
     fuchsia::media::AudioSampleFormat dest_format = fuchsia::media::AudioSampleFormat::FLOAT) {
   fuchsia::media::AudioStreamType source_stream_type;
   source_stream_type.channels = source_channels;
@@ -34,22 +34,22 @@ std::unique_ptr<Mixer> SelectSincSampler(
 }
 
 // These are common frame rates, not the only supported rates
-const uint32_t kFrameRates[] = {
+const int32_t kFrameRates[] = {
     8000,  11025, 16000, 22050, 24000,  32000,
     44100, 48000, 88200, 96000, 176400, fuchsia::media::MAX_PCM_FRAMES_PER_SECOND,
 };
 
-const uint32_t kUnsupportedFrameRates[] = {fuchsia::media::MIN_PCM_FRAMES_PER_SECOND - 1,
-                                           fuchsia::media::MAX_PCM_FRAMES_PER_SECOND + 1};
+const int32_t kUnsupportedFrameRates[] = {fuchsia::media::MIN_PCM_FRAMES_PER_SECOND - 1,
+                                          fuchsia::media::MAX_PCM_FRAMES_PER_SECOND + 1};
 
-const std::pair<uint32_t, uint32_t> kChannelConfigs[] = {
+const std::pair<int32_t, int32_t> kChannelConfigs[] = {
     {1, 1}, {1, 2}, {1, 3}, {1, 4},  // Valid channel
     {2, 1}, {2, 2}, {2, 3}, {2, 4},  // configurations
     {3, 1}, {3, 2}, {3, 3},          // for SincSampler
     {4, 1}, {4, 2}, {4, 4},
 };
 
-const std::pair<uint32_t, uint32_t> kUnsupportedChannelConfigs[] = {
+const std::pair<int32_t, int32_t> kUnsupportedChannelConfigs[] = {
     {0, 0},                          //
     {1, 0}, {1, 5}, {1, 8}, {1, 9},  // Unsupported channel
     {2, 0}, {2, 5}, {2, 8}, {2, 9},  // channel
@@ -192,8 +192,8 @@ TEST(SincSamplerTest, SamplingPosition_Basic) {
 
 // Validate the "seam" between buffers, at unity rate-conversion
 TEST(SincSamplerTest, SamplingValues_DC_Unity) {
-  constexpr uint32_t kSourceRate = 44100;
-  constexpr uint32_t kDestRate = 44100;
+  constexpr int32_t kSourceRate = 44100;
+  constexpr int32_t kDestRate = 44100;
   auto mixer =
       SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
 
@@ -237,8 +237,8 @@ TEST(SincSamplerTest, SamplingValues_DC_Unity) {
 
 // Validate the "seam" between buffers, while down-sampling
 TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
-  constexpr uint32_t kSourceRate = 48000;
-  constexpr uint32_t kDestRate = 44100;
+  constexpr int32_t kSourceRate = 48000;
+  constexpr int32_t kDestRate = 44100;
   auto mixer =
       SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
 
@@ -284,8 +284,8 @@ TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
 
 // Validate the "seam" between buffers, while up-sampling
 TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
-  constexpr uint32_t kSourceRate = 12000;
-  constexpr uint32_t kDestRate = 48000;
+  constexpr int32_t kSourceRate = 12000;
+  constexpr int32_t kDestRate = 48000;
   auto mixer =
       SelectSincSampler(1, 1, kSourceRate, kDestRate, fuchsia::media::AudioSampleFormat::FLOAT);
 

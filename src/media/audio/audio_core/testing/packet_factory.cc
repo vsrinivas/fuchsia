@@ -21,7 +21,7 @@ PacketFactory::PacketFactory(async_dispatcher_t* dispatcher, const Format& forma
 
 fbl::RefPtr<Packet> PacketFactory::CreatePacket(float val, zx::duration duration,
                                                 fit::closure callback) {
-  uint32_t frame_count = format().frames_per_ns().Scale(duration.to_nsecs());
+  int64_t frame_count = format().frames_per_ns().Scale(duration.to_nsecs());
   size_t payload_offset = buffer_offset_;
   size_t payload_size = format().bytes_per_frame() * frame_count;
   buffer_offset_ += payload_size;

@@ -12,8 +12,8 @@ namespace {
 
 TEST(PointFilterTest, Construction) {
   {
-    auto expected_source_rate = 48000u;                              // default
-    auto expected_dest_rate = 48000u;                                // default
+    auto expected_source_rate = 48000;                               // default
+    auto expected_dest_rate = 48000;                                 // default
     int32_t expected_num_frac_bits = Fixed::Format::FractionalBits;  // default
     PointFilter filter;
     auto expected_side_length = (1 << (expected_num_frac_bits - 1)) + 1;
@@ -26,8 +26,8 @@ TEST(PointFilterTest, Construction) {
   }
 
   {
-    auto source_rate = 16000u;
-    auto dest_rate = 48000u;
+    auto source_rate = 16000;
+    auto dest_rate = 48000;
     int32_t expected_num_frac_bits = Fixed::Format::FractionalBits;  // default
     PointFilter filter(source_rate, dest_rate);
     auto expected_side_length = (1 << (expected_num_frac_bits - 1)) + 1;
@@ -40,8 +40,8 @@ TEST(PointFilterTest, Construction) {
   }
 
   {
-    auto source_rate = 44100u;
-    auto dest_rate = 22050u;
+    auto source_rate = 44100;
+    auto dest_rate = 22050;
     int32_t num_frac_bits = 4;
     PointFilter filter(source_rate, dest_rate, num_frac_bits);
     auto expected_side_length = (1 << (num_frac_bits - 1)) + 1;
@@ -56,8 +56,8 @@ TEST(PointFilterTest, Construction) {
 
 TEST(LinearFilterTest, Construction) {
   {
-    auto expected_source_rate = 48000u;                              // default
-    auto expected_dest_rate = 48000u;                                // default
+    auto expected_source_rate = 48000;                               // default
+    auto expected_dest_rate = 48000;                                 // default
     int32_t expected_num_frac_bits = Fixed::Format::FractionalBits;  // default
     LinearFilter filter;
     auto expected_side_length = 1 << expected_num_frac_bits;
@@ -70,8 +70,8 @@ TEST(LinearFilterTest, Construction) {
   }
 
   {
-    auto source_rate = 32000u;
-    auto dest_rate = 96000u;
+    auto source_rate = 32000;
+    auto dest_rate = 96000;
     int32_t expected_num_frac_bits = Fixed::Format::FractionalBits;  // default
     LinearFilter filter(source_rate, dest_rate);
     auto expected_side_length = 1 << expected_num_frac_bits;
@@ -84,8 +84,8 @@ TEST(LinearFilterTest, Construction) {
   }
 
   {
-    auto source_rate = 96000u;
-    auto dest_rate = 48000u;
+    auto source_rate = 96000;
+    auto dest_rate = 48000;
     int32_t num_frac_bits = 6;
     LinearFilter filter(source_rate, dest_rate, num_frac_bits);
     auto expected_side_length = 1 << num_frac_bits;
@@ -100,8 +100,8 @@ TEST(LinearFilterTest, Construction) {
 
 TEST(SincFilterTest, Construction) {
   {
-    auto expected_source_rate = 48000u;                              // default
-    auto expected_dest_rate = 48000u;                                // default
+    auto expected_source_rate = 48000;                               // default
+    auto expected_dest_rate = 48000;                                 // default
     int32_t expected_num_frac_bits = Fixed::Format::FractionalBits;  // default
     auto num_taps = SincFilter::kSideTaps;                           // default
     auto side_length = (num_taps + 1) << expected_num_frac_bits;     // default
@@ -115,8 +115,8 @@ TEST(SincFilterTest, Construction) {
   }
 
   {
-    auto source_rate = 32000u;
-    auto dest_rate = 96000u;
+    auto source_rate = 32000;
+    auto dest_rate = 96000;
     int32_t expected_num_frac_bits = Fixed::Format::FractionalBits;  // default
     auto num_taps = SincFilter::kSideTaps;                           // default
     auto side_length = (num_taps + 1) << expected_num_frac_bits;     // default
@@ -130,8 +130,8 @@ TEST(SincFilterTest, Construction) {
   }
 
   {
-    auto source_rate = 96000u;
-    auto dest_rate = 48000u;
+    auto source_rate = 96000;
+    auto dest_rate = 48000;
     auto num_taps = 9;
     int32_t num_frac_bits = Fixed::Format::FractionalBits;
     auto side_length = (num_taps + 1) << num_frac_bits;
@@ -145,8 +145,8 @@ TEST(SincFilterTest, Construction) {
   }
 
   {
-    auto source_rate = 16000u;
-    auto dest_rate = 96000u;
+    auto source_rate = 16000;
+    auto dest_rate = 96000;
     int32_t num_frac_bits = 4;
     auto num_taps = 10;
     auto side_length = (num_taps + 1) << num_frac_bits;
@@ -161,8 +161,8 @@ TEST(SincFilterTest, Construction) {
 }
 
 TEST(PointFilterTest, FilterCoefficients) {
-  auto source_rate = 48000u;
-  auto dest_rate = 48000u;
+  auto source_rate = 48000;
+  auto dest_rate = 48000;
   int32_t num_frac_bits = 4;
   PointFilter filter(source_rate, dest_rate, num_frac_bits);
 
@@ -179,8 +179,8 @@ TEST(PointFilterTest, FilterCoefficients) {
 }
 
 TEST(LinearFilterTest, FilterCoefficients) {
-  auto source_rate = 48000u;
-  auto dest_rate = 48000u;
+  auto source_rate = 48000;
+  auto dest_rate = 48000;
   int32_t num_frac_bits = 6;
   LinearFilter filter(source_rate, dest_rate, num_frac_bits);
 
@@ -194,8 +194,8 @@ TEST(LinearFilterTest, FilterCoefficients) {
 }
 
 TEST(SincFilterTest, FilterCoefficients_Unity) {
-  auto source_rate = 48000u;
-  auto dest_rate = 48000u;
+  auto source_rate = 48000;
+  auto dest_rate = 48000;
   auto num_taps = 10;
   int32_t num_frac_bits = 4;
   auto side_length = ((num_taps + 1) << num_frac_bits);
@@ -225,8 +225,8 @@ TEST(SincFilterTest, FilterCoefficients_Unity) {
 }
 
 TEST(SincFilterTest, FilterCoefficients_DownSample) {
-  auto source_rate = 48000u;
-  auto dest_rate = 24000u;
+  auto source_rate = 48000;
+  auto dest_rate = 24000;
   auto num_taps = 9;
   int32_t num_frac_bits = 4;
   auto side_length = ((num_taps + 1) << num_frac_bits);
@@ -239,8 +239,8 @@ TEST(SincFilterTest, FilterCoefficients_DownSample) {
 }
 
 TEST(SincFilterTest, FilterCoefficients_UpSample) {
-  auto source_rate = 24000u;
-  auto dest_rate = 48000u;
+  auto source_rate = 24000;
+  auto dest_rate = 48000;
   auto num_taps = 8;
   int32_t num_frac_bits = 3;
   auto side_length = ((num_taps + 1) << num_frac_bits);
@@ -254,8 +254,8 @@ TEST(SincFilterTest, FilterCoefficients_UpSample) {
 
 // TODO(mpuryear): validate other rate-conversion ratios
 TEST(PointFilterTest, ComputeSample) {
-  auto source_rate = 48000u;
-  auto dest_rate = 48000u;
+  auto source_rate = 48000;
+  auto dest_rate = 48000;
   int32_t num_frac_bits = 4;
   auto frac_size = 1 << num_frac_bits;
   auto frac_half = frac_size >> 1;
@@ -269,8 +269,8 @@ TEST(PointFilterTest, ComputeSample) {
 }
 
 TEST(LinearFilterTest, ComputeSample) {
-  auto source_rate = 48000u;
-  auto dest_rate = 48000u;
+  auto source_rate = 48000;
+  auto dest_rate = 48000;
   int32_t num_frac_bits = 4;
   LinearFilter filter(source_rate, dest_rate, num_frac_bits);
 
@@ -285,7 +285,7 @@ TEST(LinearFilterTest, ComputeSample) {
                   (data[3] + 3.0f * data[4]) / 4.0f);
 }
 
-void ValidateSincComputeSample(uint32_t source_rate, uint32_t dest_rate, int64_t side_length,
+void ValidateSincComputeSample(int32_t source_rate, int32_t dest_rate, int64_t side_length,
                                int32_t num_frac_bits) {
   SincFilter filter(source_rate, dest_rate, side_length, num_frac_bits);
 
@@ -324,31 +324,31 @@ void ValidateSincComputeSample(uint32_t source_rate, uint32_t dest_rate, int64_t
 
 TEST(SincFilterTest, ComputeSample) {
   // Unity rate ratio
-  auto source_rate = 48000u;
-  auto dest_rate = 48000u;
+  auto source_rate = 48000;
+  auto dest_rate = 48000;
   auto num_taps = 2;
   int32_t num_frac_bits = 2;
   auto side_length = (num_taps + 1) << num_frac_bits;
   ValidateSincComputeSample(source_rate, dest_rate, side_length, num_frac_bits);
 
   // Up-sampling rate ratio
-  source_rate = 24000u;
-  dest_rate = 48000u;
+  source_rate = 24000;
+  dest_rate = 48000;
   num_taps = 3;
   num_frac_bits = 2;
   side_length = (num_taps + 1) << num_frac_bits;
   ValidateSincComputeSample(source_rate, dest_rate, side_length, num_frac_bits);
 
   // Down-sampling rate ratio
-  source_rate = 48000u;
-  dest_rate = 24000u;
+  source_rate = 48000;
+  dest_rate = 24000;
   num_taps = 3;
   num_frac_bits = 3;
   side_length = ((num_taps + 1) << num_frac_bits) * 2;
   ValidateSincComputeSample(source_rate, dest_rate, side_length, num_frac_bits);
 
-  source_rate = 148500u;  // rates don't change results calculated in ValidateSincComputeSample
-  dest_rate = 36000u;
+  source_rate = 148500;  // rates don't change results calculated in ValidateSincComputeSample
+  dest_rate = 36000;
   num_taps = 3;
   num_frac_bits = 3;
 

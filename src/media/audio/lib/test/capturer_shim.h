@@ -73,9 +73,10 @@ class AudioCapturerShim : public CapturerShimImpl {
                                                      fidl_.NewRequest());
     fixture->AddErrorHandler(fidl_, "AudioCapturer");
 
-    fidl_->SetPcmStreamType({.sample_format = format_.sample_format(),
-                             .channels = format_.channels(),
-                             .frames_per_second = format_.frames_per_second()});
+    fidl_->SetPcmStreamType(
+        {.sample_format = format_.sample_format(),
+         .channels = static_cast<uint32_t>(format_.channels()),
+         .frames_per_second = static_cast<uint32_t>(format_.frames_per_second())});
     fidl_->AddPayloadBuffer(0, payload_buffer_.CreateAndMapVmo(true));
   }
 };
@@ -104,8 +105,9 @@ class UltrasoundCapturerShim : public CapturerShimImpl {
           created_ = true;
           reference_clock_ = std::move(ref_clock);
           EXPECT_EQ(stream_type.sample_format, format_.sample_format());
-          EXPECT_EQ(stream_type.channels, format_.channels());
-          EXPECT_EQ(stream_type.frames_per_second, format_.frames_per_second());
+          EXPECT_EQ(static_cast<int32_t>(stream_type.channels), format_.channels());
+          EXPECT_EQ(static_cast<int32_t>(stream_type.frames_per_second),
+                    format_.frames_per_second());
           // TODO(fxbug.dev/55243): Enable AddPayloadBuffer before the capturer is created.
           fidl_->AddPayloadBuffer(0, std::move(vmo));
         });

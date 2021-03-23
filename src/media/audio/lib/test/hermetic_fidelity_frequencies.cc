@@ -11,7 +11,7 @@ namespace media::audio::test {
 // Frequencies at which we do fidelity testing. We test a broad spectrum of 3 freqs/octave
 // (10 freqs/decade), omitting some subsonic frequencies and adding others near the top of the
 // audible range. The last five frequencies expressly frame the ultrasound range.
-const std::array<uint32_t, HermeticFidelityTest::kNumReferenceFreqs>
+const std::array<int32_t, HermeticFidelityTest::kNumReferenceFreqs>
     HermeticFidelityTest::kReferenceFrequencies = {
         // clang-format off
   0,      12,     20,     25,     31,     40,     50,     62,     80,     100,

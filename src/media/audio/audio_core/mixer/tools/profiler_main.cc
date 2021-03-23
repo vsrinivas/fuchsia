@@ -23,40 +23,6 @@ namespace {
 
 enum class Benchmark { Create, Mix, Output };
 
-struct Options {
-  // Duration and iteration limits per config.
-  AudioPerformance::Limits limits;
-
-  std::set<Benchmark> enabled;
-  bool enable_pprof;
-
-  // MixerConfig + OutputProducerConfig.
-  std::set<ASF> sample_formats;
-  std::set<std::pair<uint32_t, uint32_t>> num_input_output_chans;
-
-  // MixerConfig.
-  std::set<Resampler> samplers;
-  std::set<std::pair<uint32_t, uint32_t>> source_dest_rates;
-  std::set<GainType> gain_types;
-  std::set<bool> accumulates;
-
-  // OutputProducerConfig.
-  std::set<OutputRange> output_ranges;
-
-  // JSON filepath to export perftest results.
-  std::optional<std::string> perftest_json;
-
-  // Provide matching source and dest rates if available; else, return a default.
-  const std::pair<uint32_t, uint32_t> matching_rates() const {
-    for (auto [src, dest] : source_dest_rates) {
-      if (src == dest) {
-        return {src, dest};
-      }
-    }
-    return {48000, 48000};
-  }
-};
-
 constexpr char kBenchmarkDurationSwitch[] = "bench-time";
 
 constexpr char kBenchmarkRunsSwitch[] = "bench-runs";
@@ -102,23 +68,57 @@ constexpr zx::duration kBenchmarkDurationDefault = zx::msec(250);
 constexpr size_t kBenchmarkRunsDefault = 1000;
 constexpr size_t kBenchmarkMinRuns = 5;
 
-constexpr uint32_t kPreferredInputChans = 1;
-constexpr uint32_t kPreferredOutputChans = 1;
-constexpr uint32_t kPreferredSourceRate = 48000;
-constexpr uint32_t kPreferredDestRate = 48000;
+constexpr int32_t kPreferredInputChans = 1;
+constexpr int32_t kPreferredOutputChans = 1;
+constexpr int32_t kPreferredSourceRate = 48000;
+constexpr int32_t kPreferredDestRate = 48000;
 constexpr ASF kPreferredSampleFormat = ASF::FLOAT;
 constexpr GainType kPreferredGainType = GainType::Unity;
 constexpr bool kPreferredAccumSetting = false;
 
-constexpr uint32_t kAltPreferredInputChans = 2;
-constexpr uint32_t kAltPreferredOutputChans = 2;
-constexpr uint32_t kAltPreferredSourceRate = 44100;
-constexpr uint32_t kAltPreferredDestRate = 48000;
+constexpr int32_t kAltPreferredInputChans = 2;
+constexpr int32_t kAltPreferredOutputChans = 2;
+constexpr int32_t kAltPreferredSourceRate = 44100;
+constexpr int32_t kAltPreferredDestRate = 48000;
 constexpr ASF kAltPreferredSampleFormat = ASF::SIGNED_16;
 constexpr GainType kAltPreferredGainType = GainType::Scaled;
 constexpr bool kAltPreferredAccumSetting = true;
 
 constexpr OutputRange kPreferredOutputRange = OutputRange::Normal;
+
+struct Options {
+  // Duration and iteration limits per config.
+  AudioPerformance::Limits limits;
+
+  std::set<Benchmark> enabled;
+  bool enable_pprof;
+
+  // MixerConfig + OutputProducerConfig.
+  std::set<ASF> sample_formats;
+  std::set<std::pair<int32_t, int32_t>> num_input_output_chans;
+
+  // MixerConfig.
+  std::set<Resampler> samplers;
+  std::set<std::pair<int32_t, int32_t>> source_dest_rates;
+  std::set<GainType> gain_types;
+  std::set<bool> accumulates;
+
+  // OutputProducerConfig.
+  std::set<OutputRange> output_ranges;
+
+  // JSON filepath to export perftest results.
+  std::optional<std::string> perftest_json;
+
+  // Provide matching source and dest rates if available; else return a default.
+  const std::pair<int32_t, int32_t> matching_rates() const {
+    for (auto [src, dest] : source_dest_rates) {
+      if (src == dest) {
+        return {src, dest};
+      }
+    }
+    return {kPreferredSourceRate, kPreferredDestRate};
+  }
+};
 
 std::vector<MixerConfig> ConfigsForMixerCreation(const Options& opt) {
   if (opt.enabled.count(Benchmark::Create) == 0) {
@@ -541,8 +541,8 @@ Options ParseCommandLine(int argc, char** argv) {
     }
   };
 
-  auto uint32_pair_flagset = [&command_line](const std::string& flag_name,
-                                             std::set<std::pair<uint32_t, uint32_t>>& out) {
+  auto int32_pair_flagset = [&command_line](const std::string& flag_name,
+                                            std::set<std::pair<int32_t, int32_t>>& out) {
     if (!command_line.HasOption(flag_name)) {
       return;
     }
@@ -552,8 +552,7 @@ Options ParseCommandLine(int argc, char** argv) {
     for (auto s : fxl::SplitStringCopy(str, ",", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty)) {
       auto pair = fxl::SplitStringCopy(s, ":", fxl::kTrimWhitespace, fxl::kSplitWantNonEmpty);
       if (pair.size() == 2) {
-        out.insert(
-            {static_cast<uint32_t>(std::stoi(pair[0])), static_cast<uint32_t>(std::stoi(pair[1]))});
+        out.insert({std::stoi(pair[0]), std::stoi(pair[1])});
       }
     }
   };
@@ -602,8 +601,8 @@ Options ParseCommandLine(int argc, char** argv) {
                    {kSamplerSincOption, Resampler::WindowedSinc},
                });
 
-  uint32_pair_flagset(kChannelsSwitch, opt.num_input_output_chans);
-  uint32_pair_flagset(kFrameRatesSwitch, opt.source_dest_rates);
+  int32_pair_flagset(kChannelsSwitch, opt.num_input_output_chans);
+  int32_pair_flagset(kFrameRatesSwitch, opt.source_dest_rates);
 
   enum_flagset(kSampleFormatsSwitch, opt.sample_formats,
                std::map<std::string, ASF>{

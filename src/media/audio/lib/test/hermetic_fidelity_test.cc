@@ -31,7 +31,7 @@ namespace media::audio::test {
 namespace {
 struct ResultsIndex {
   HermeticFidelityTest::RenderPath path;
-  size_t channel;
+  int32_t channel;
   uint32_t thermal_state;
 
   bool operator<(const ResultsIndex& rhs) const {
@@ -53,7 +53,7 @@ struct ResultsIndex {
 // static
 // Retrieve (initially allocating, if necessary) the array of level results for this path|channel.
 std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTest::level_results(
-    RenderPath path, size_t channel, uint32_t thermal_state) {
+    RenderPath path, int32_t channel, uint32_t thermal_state) {
   // Allocated only when first needed, and automatically cleaned up when process exits.
   static auto results_level_db =
       new std::map<ResultsIndex, std::array<double, HermeticFidelityTest::kNumReferenceFreqs>>();
@@ -75,7 +75,7 @@ std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTe
 // Retrieve (initially allocating, if necessary) the array of sinad results for this path|channel.
 // A map of these array results is saved as a function-local static variable.
 std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& HermeticFidelityTest::sinad_results(
-    RenderPath path, size_t channel, uint32_t thermal_state) {
+    RenderPath path, int32_t channel, uint32_t thermal_state) {
   // Allocated only when first needed, and automatically cleaned up when process exits.
   static auto results_sinad_db =
       new std::map<ResultsIndex, std::array<double, HermeticFidelityTest::kNumReferenceFreqs>>();
@@ -124,19 +124,19 @@ void HermeticFidelityTest::SetUp() {
 // We also want these internal frequencies to have fewer common factors with our buffer size and
 // frame rates, as this can mask problems where previous buffer sections are erroneously repeated.
 // So if a computed internal frequency is not integral, we use the odd neighbor, rather than round.
-void HermeticFidelityTest::TranslateReferenceFrequencies(uint32_t device_frame_rate) {
+void HermeticFidelityTest::TranslateReferenceFrequencies(int32_t device_frame_rate) {
   for (auto freq_idx = 0u; freq_idx < kReferenceFrequencies.size(); ++freq_idx) {
     double internal_freq =
         static_cast<double>(kReferenceFrequencies[freq_idx] * kFreqTestBufSize) / device_frame_rate;
-    uint32_t floor_freq = std::floor(internal_freq);
-    uint32_t ceil_freq = std::ceil(internal_freq);
+    int32_t floor_freq = std::floor(internal_freq);
+    int32_t ceil_freq = std::ceil(internal_freq);
     translated_ref_freqs_[freq_idx] = (floor_freq % 2) ? floor_freq : ceil_freq;
   }
 }
 
-// Retrieve the number of thermal subscribers, and set them all to the specified thermal state.
+// Retrieve the number of thermal subscribers, and set them all to the specified thermal_state.
 // thermal_test_control is synchronous: when SetThermalState returns, a change is committed.
-zx_status_t HermeticFidelityTest::ConfigurePipelineForThermal(uint32_t state) {
+zx_status_t HermeticFidelityTest::ConfigurePipelineForThermal(uint32_t thermal_state) {
   constexpr size_t kMaxRetries = 100;
   constexpr zx::duration kRetryPeriod = zx::msec(10);
 
@@ -170,14 +170,15 @@ zx_status_t HermeticFidelityTest::ConfigurePipelineForThermal(uint32_t state) {
     return ZX_ERR_TIMED_OUT;
   }
 
-  auto max_state = subscriber_data[audio_subscriber.value()].num_thermal_states - 1;
-  if (state > max_state) {
-    ADD_FAILURE() << "Subscriber cannot be put into thermal state " << state
-                  << " (max: " << max_state << ")";
+  auto max_thermal_state = subscriber_data[audio_subscriber.value()].num_thermal_states - 1;
+  if (thermal_state > max_thermal_state) {
+    ADD_FAILURE() << "Subscriber cannot be put into thermal_state " << thermal_state << " (max "
+                  << max_thermal_state << ")";
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  auto status = this->thermal_test_control()->SetThermalState(audio_subscriber.value(), state);
+  auto status =
+      this->thermal_test_control()->SetThermalState(audio_subscriber.value(), thermal_state);
   if (status != ZX_OK) {
     ADD_FAILURE() << "SetThermalState failed: " << status;
     return status;
@@ -188,7 +189,7 @@ zx_status_t HermeticFidelityTest::ConfigurePipelineForThermal(uint32_t state) {
 
 template <ASF InputFormat, ASF OutputFormat>
 AudioBuffer<OutputFormat> HermeticFidelityTest::GetRendererOutput(
-    TypedFormat<InputFormat> input_format, size_t input_buffer_frames, RenderPath path,
+    TypedFormat<InputFormat> input_format, int64_t input_buffer_frames, RenderPath path,
     AudioBuffer<InputFormat> input, VirtualOutput<OutputFormat>* device) {
   FX_CHECK(input_format.frames_per_second() == 96000);
 
@@ -284,7 +285,7 @@ template <ASF InputFormat, ASF OutputFormat>
 void HermeticFidelityTest::Run(
     const HermeticFidelityTest::TestCase<InputFormat, OutputFormat>& tc) {
   // Compute input signal length: time to ramp in, enough to analyze, time to ramp out.
-  size_t input_signal_frames =
+  int64_t input_signal_frames =
       std::ceil(static_cast<double>(kFreqTestBufSize * tc.input_format.frames_per_second()) /
                 tc.output_format.frames_per_second());
   // Compute the renderer payload buffer size (including pre-signal and post-signal silence).
@@ -298,7 +299,7 @@ void HermeticFidelityTest::Run(
   FX_CHECK(tc.input_format.frames_per_second() == 96000)
       << "For now, non-96k renderer frame rates are disallowed in this test";
   // Translate from input frame number to output frame number.
-  auto input_frame_to_output_frame = [](size_t input_frame) { return input_frame; };
+  auto input_frame_to_output_frame = [](int64_t input_frame) { return input_frame; };
 
   auto input_type_mono =
       Format::Create<InputFormat>(1, tc.input_format.frames_per_second()).take_value();
@@ -308,12 +309,14 @@ void HermeticFidelityTest::Run(
 
   // We create the AudioBuffer later. Ensure no out-of-range channels are requested to play.
   for (const auto& channel : tc.channels_to_play) {
-    ASSERT_LT(channel, tc.input_format.channels()) << "Cannot play out-of-range input channel";
+    ASSERT_LT(static_cast<int32_t>(channel), tc.input_format.channels())
+        << "Cannot play out-of-range input channel";
   }
 
   //
   // Then, calculate the length of the output signal and set up the VAD, with a 1-sec ring-buffer.
-  auto output_buffer_frames = input_frame_to_output_frame(input_buffer_frames);
+  auto output_buffer_frames =
+      static_cast<int64_t>(input_frame_to_output_frame(input_buffer_frames));
   FX_CHECK(output_buffer_frames < tc.output_format.frames_per_second());
   FX_CHECK(tc.output_format.frames_per_second() == 96000)
       << "For now, non-96k device frame rates are disallowed in this test";
@@ -345,13 +348,13 @@ void HermeticFidelityTest::Run(
     input_mono.Append(AudioBufferSlice(
         &signal_section, 0, tc.pipeline.neg_filter_width + tc.pipeline.pos_filter_width));
     input_mono.Append(AudioBufferSlice(&bookend_silence));
-    FX_CHECK(input_mono.NumFrames() == total_input_frames)
+    FX_CHECK(input_mono.NumFrames() == static_cast<int64_t>(total_input_frames))
         << "Miscalculated input_mono length: testcode error";
 
     auto silence_mono = GenerateSilentAudio(input_type_mono, total_input_frames);
 
     std::vector<AudioBufferSlice<InputFormat>> channels;
-    for (auto play_channel = 0u; play_channel < tc.input_format.channels(); ++play_channel) {
+    for (auto play_channel = 0; play_channel < tc.input_format.channels(); ++play_channel) {
       if (tc.channels_to_play.find(play_channel) != tc.channels_to_play.end()) {
         channels.push_back(AudioBufferSlice(&input_mono));
       } else {
@@ -359,7 +362,8 @@ void HermeticFidelityTest::Run(
       }
     }
     auto input = AudioBuffer<InputFormat>::Interleave(channels);
-    FX_CHECK(input.NumFrames() == total_input_frames);
+    FX_CHECK(input.NumFrames() == static_cast<int64_t>(total_input_frames))
+        << "Miscalculated input length: testcode error";
 
     if constexpr (kDebugInputBuffer) {
       // We construct the input buffer in pieces. If signals don't align at these seams, it causes
@@ -420,7 +424,7 @@ void HermeticFidelityTest::Run(
 
       double sinad_db, level_db = 0.0;
       if (!out_of_band) {
-        auto result = MeasureAudioFreqs(output, {freq});
+        auto result = MeasureAudioFreqs(output, {static_cast<int32_t>(freq)});
         level_db = DoubleToDb(result.magnitudes[freq]);
         sinad_db = DoubleToDb(result.magnitudes[freq] / result.total_magn_other);
         if constexpr (kDisplayInProgressResults) {

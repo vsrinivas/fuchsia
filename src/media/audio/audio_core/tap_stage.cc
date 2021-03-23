@@ -18,7 +18,7 @@ TapStage::TapStage(std::shared_ptr<ReadableStream> source, std::shared_ptr<Writa
   FX_CHECK(source_->reference_clock() == tap_->reference_clock());
 }
 
-std::optional<ReadableStream::Buffer> TapStage::ReadLock(Fixed dest_frame, size_t frame_count) {
+std::optional<ReadableStream::Buffer> TapStage::ReadLock(Fixed dest_frame, int64_t frame_count) {
   TRACE_DURATION("audio", "TapStage::ReadLock", "frame", dest_frame.Floor(), "length", frame_count);
 
   // The source and tap may have different frame timelines.

@@ -27,9 +27,9 @@ class HermeticImpulseTest : public HermeticPipelineTest {
 
     // Width, height, and location of the input impulses. Impulses should be separated by
     // at least pipeline.pre_end_ramp_frames + pipeline.post_start_ramp_frames.
-    size_t impulse_width_in_frames;
+    int64_t impulse_width_in_frames;
     typename SampleFormatTraits<InputFormat>::SampleT impulse_magnitude;
-    std::vector<size_t> impulse_locations_in_frames;
+    std::vector<int64_t> impulse_locations_in_frames;
   };
 
   template <fuchsia::media::AudioSampleFormat InputFormat,

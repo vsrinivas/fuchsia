@@ -25,7 +25,7 @@ class TapStage : public ReadableStream {
     return source_->ref_time_to_frac_presentation_frame();
   }
   AudioClock& reference_clock() override { return source_->reference_clock(); }
-  std::optional<ReadableStream::Buffer> ReadLock(Fixed dest_frame, size_t frame_count) override;
+  std::optional<ReadableStream::Buffer> ReadLock(Fixed dest_frame, int64_t frame_count) override;
   void Trim(Fixed dest_frame) override { source_->Trim(dest_frame); }
 
   void SetPresentationDelay(zx::duration external_delay) override;

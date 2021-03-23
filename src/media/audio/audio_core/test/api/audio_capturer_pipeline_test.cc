@@ -30,7 +30,7 @@ struct CapturedPacket {
 };
 
 // Represents a pointer to a specific frame in a vector of packets.
-using PacketAndFrameIdx = std::pair<std::vector<CapturedPacket>::const_iterator, size_t>;
+using PacketAndFrameIdx = std::pair<std::vector<CapturedPacket>::const_iterator, int64_t>;
 
 // Represents an AudioRenderer along with its input packets.
 struct RendererHolder {
@@ -41,8 +41,8 @@ struct RendererHolder {
 
 class AudioCapturerPipelineTest : public HermeticAudioTest {
  protected:
-  static constexpr size_t kFrameRate = 48000;
-  static constexpr size_t kPacketFrames = kFrameRate / 1000 * RendererShimImpl::kPacketMs;
+  static constexpr int32_t kFrameRate = 48000;
+  static constexpr int64_t kPacketFrames = kFrameRate / 1000 * RendererShimImpl::kPacketMs;
   const TypedFormat<ASF::SIGNED_16> format_;
 
   AudioCapturerPipelineTest() : format_(Format::Create<ASF::SIGNED_16>(2, kFrameRate).value()) {}
@@ -140,8 +140,8 @@ TEST_F(AudioCapturerPipelineTest, CaptureWithPts) {
 
 class AudioLoopbackPipelineTest : public HermeticAudioTest {
  protected:
-  static constexpr size_t kFrameRate = 48000;
-  static constexpr size_t kPacketFrames = kFrameRate / 1000 * RendererShimImpl::kPacketMs;
+  static constexpr int32_t kFrameRate = 48000;
+  static constexpr int64_t kPacketFrames = kFrameRate / 1000 * RendererShimImpl::kPacketMs;
   const TypedFormat<ASF::SIGNED_16> format_;
 
   AudioLoopbackPipelineTest() : format_(Format::Create<ASF::SIGNED_16>(2, kFrameRate).value()) {}
@@ -155,7 +155,7 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
   std::optional<PacketAndFrameIdx> FindFirstFrame(const std::vector<CapturedPacket>& packets,
                                                   int16_t first_sample_value) {
     for (auto p = packets.begin(); p != packets.end(); p++) {
-      for (size_t f = 0; f < p->data.NumFrames(); f++) {
+      for (int64_t f = 0; f < p->data.NumFrames(); f++) {
         if (p->data.SampleAt(f, 0) == first_sample_value) {
           return std::make_pair(p, f);
         }
@@ -178,7 +178,7 @@ class AudioLoopbackPipelineTest : public HermeticAudioTest {
 
     // Create one renderer per input.
     std::vector<RendererHolder> renderers;
-    size_t num_input_frames = 0;
+    int64_t num_input_frames = 0;
     for (auto& i : inputs) {
       auto r = CreateAudioRenderer(format_, kFrameRate);
       renderers.push_back({r, r->AppendPackets({&i})});
@@ -281,8 +281,8 @@ TEST_F(AudioLoopbackPipelineTest, TwoRenderers) {
   auto input1 = GenerateSequentialAudio<ASF::SIGNED_16>(format_, num_frames, 0x1000);
 
   AudioBuffer<ASF::SIGNED_16> out(format_, num_frames);
-  for (size_t f = 0; f < out.NumFrames(); f++) {
-    for (size_t c = 0; c < format_.channels(); c++) {
+  for (int64_t f = 0; f < out.NumFrames(); f++) {
+    for (int32_t c = 0; c < format_.channels(); c++) {
       out.samples()[out.SampleIndex(f, c)] = input0.SampleAt(f, c) + input1.SampleAt(f, c);
     }
   }
@@ -296,10 +296,10 @@ class AudioCapturerReleaseTest : public HermeticAudioTest {
  protected:
   // VMO size is rounded up to the nearest multiple of 4096. These numbers are
   // designed so that kNumPackets * kFramesPerPacket rounds up to 4096.
-  const size_t kNumPackets = 5;
-  const size_t kFramesPerPacket = (4096 / sizeof(int16_t)) / kNumPackets;
-  const size_t kBytesPerPacket = kFramesPerPacket * sizeof(int16_t);
-  const size_t kFrameRate = 8000;
+  const int64_t kNumPackets = 5;
+  const int64_t kFramesPerPacket = (4096 / sizeof(int16_t)) / kNumPackets;
+  const int64_t kBytesPerPacket = kFramesPerPacket * sizeof(int16_t);
+  const int32_t kFrameRate = 8000;
   const zx::duration kPacketDuration = zx::nsec(1'000'000'000 * kFramesPerPacket / kFrameRate);
 
   void SetUp() {
@@ -317,7 +317,7 @@ class AudioCapturerReleaseTest : public HermeticAudioTest {
 
 TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsManuallyReleased) {
   zx::time start_pts;
-  size_t count = 0;
+  int64_t count = 0;
   capturer_->fidl().events().OnPacketProduced = [this, &count,
                                                  &start_pts](fuchsia::media::StreamPacket p) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", count));
@@ -334,8 +334,8 @@ TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsManuallyReleased) {
     }
 
     EXPECT_EQ(p.payload_buffer_id, 0u);
-    EXPECT_EQ(p.payload_offset, (count % kNumPackets) * kBytesPerPacket);
-    EXPECT_EQ(p.payload_size, kBytesPerPacket);
+    EXPECT_EQ(p.payload_offset, static_cast<uint64_t>((count % kNumPackets) * kBytesPerPacket));
+    EXPECT_EQ(p.payload_size, static_cast<uint64_t>(kBytesPerPacket));
     EXPECT_EQ((count == 0), (p.flags & fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY) != 0)
         << "\nflags: " << std::hex << p.flags;
     count++;
@@ -362,7 +362,7 @@ TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsNotManuallyReleased) {
 
   // Do NOT manually release any packets.
   zx::time start_pts;
-  size_t count = 0;
+  int64_t count = 0;
   capturer_->fidl().events().OnPacketProduced = [this, &count, &start_pts,
                                                  &packets](fuchsia::media::StreamPacket p) {
     SCOPED_TRACE(fxl::StringPrintf("packet %lu", count));
@@ -379,8 +379,8 @@ TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsNotManuallyReleased) {
     }
 
     EXPECT_EQ(p.payload_buffer_id, 0u);
-    EXPECT_EQ(p.payload_offset, (count % kNumPackets) * kBytesPerPacket);
-    EXPECT_EQ(p.payload_size, kBytesPerPacket);
+    EXPECT_EQ(p.payload_offset, static_cast<uint64_t>((count % kNumPackets) * kBytesPerPacket));
+    EXPECT_EQ(p.payload_size, static_cast<uint64_t>(kBytesPerPacket));
     EXPECT_EQ((count == 0), (p.flags & fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY) != 0)
         << "\nflags: " << std::hex << p.flags;
     count++;
@@ -415,7 +415,7 @@ TEST_F(AudioCapturerReleaseTest, AsyncCapture_PacketsNotManuallyReleased) {
     auto last_end_pts = kPacketDuration * kNumPackets;
     EXPECT_GT(pts.get(), last_end_pts.get());
     EXPECT_EQ(p.payload_buffer_id, 0u);
-    EXPECT_EQ(p.payload_size, kBytesPerPacket);
+    EXPECT_EQ(p.payload_size, static_cast<uint64_t>(kBytesPerPacket));
     EXPECT_EQ((count == 0), (p.flags & fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY) != 0)
         << "\nflags: " << std::hex << p.flags;
     count++;

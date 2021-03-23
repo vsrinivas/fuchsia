@@ -21,13 +21,13 @@ namespace media::audio::test {
 
 // Find a suitable mixer for the provided format, channels and frame rates.
 std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat source_format,
-                                   uint32_t source_channels, uint32_t source_frame_rate,
-                                   uint32_t dest_channels, uint32_t dest_frame_rate,
+                                   int32_t source_channels, int32_t source_frame_rate,
+                                   int32_t dest_channels, int32_t dest_frame_rate,
                                    Mixer::Resampler resampler);
 
 // OutputProducers convert frames from accumulation format to dest format.
 std::unique_ptr<OutputProducer> SelectOutputProducer(fuchsia::media::AudioSampleFormat dest_format,
-                                                     uint32_t num_channels);
+                                                     int32_t num_channels);
 
 // When doing direct bit-for-bit comparisons in our tests, we must factor in the
 // conversion that occurs, from non-float inputs into our internal accumulator's

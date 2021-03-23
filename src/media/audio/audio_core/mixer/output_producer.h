@@ -48,17 +48,17 @@ class OutputProducer {
   virtual void FillWithSilence(void* dest_void_ptr, int64_t frames) const = 0;
 
   const fuchsia::media::AudioStreamType& format() const { return format_; }
-  uint32_t channels() const { return channels_; }
-  uint32_t bytes_per_sample() const { return bytes_per_sample_; }
-  uint32_t bytes_per_frame() const { return bytes_per_frame_; }
+  int32_t channels() const { return channels_; }
+  int32_t bytes_per_sample() const { return bytes_per_sample_; }
+  int32_t bytes_per_frame() const { return bytes_per_frame_; }
 
  protected:
-  OutputProducer(const fuchsia::media::AudioStreamType& output_format, uint32_t bytes_per_sample);
+  OutputProducer(const fuchsia::media::AudioStreamType& output_format, int32_t bytes_per_sample);
 
   fuchsia::media::AudioStreamType format_;
-  uint32_t channels_ = 0;
-  uint32_t bytes_per_sample_ = 0;
-  uint32_t bytes_per_frame_ = 0;
+  int32_t channels_ = 0;
+  int32_t bytes_per_sample_ = 0;
+  int32_t bytes_per_frame_ = 0;
 };
 
 }  // namespace media::audio

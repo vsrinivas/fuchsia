@@ -22,7 +22,7 @@ namespace media::audio::mixer {
 // Child classes differ only in their filter coefficients.
 class Filter {
  public:
-  Filter(uint32_t source_rate, uint32_t dest_rate, int64_t side_length,
+  Filter(int32_t source_rate, int32_t dest_rate, int64_t side_length,
          int32_t num_frac_bits = Fixed::Format::FractionalBits)
       : source_rate_(source_rate),
         dest_rate_(dest_rate),
@@ -38,8 +38,8 @@ class Filter {
 
   virtual float ComputeSample(int64_t frac_offset, float* center) = 0;
 
-  uint32_t source_rate() const { return source_rate_; }
-  uint32_t dest_rate() const { return dest_rate_; }
+  int32_t source_rate() const { return source_rate_; }
+  int32_t dest_rate() const { return dest_rate_; }
   int64_t side_length() const { return side_length_; }
   int32_t num_frac_bits() const { return num_frac_bits_; }
   int64_t frac_size() const { return frac_size_; }
@@ -58,8 +58,8 @@ class Filter {
   void DisplayTable(const CoefficientTable& filter_coefficients);
 
  private:
-  uint32_t source_rate_;
-  uint32_t dest_rate_;
+  int32_t source_rate_;
+  int32_t dest_rate_;
   int64_t side_length_;
 
   int32_t num_frac_bits_;
@@ -82,7 +82,7 @@ class Filter {
 // TODO(fxbug.dev/37356): Make the fixed-point fractional scale typesafe.
 class PointFilter : public Filter {
  public:
-  PointFilter(uint32_t source_rate, uint32_t dest_rate,
+  PointFilter(int32_t source_rate, int32_t dest_rate,
               int32_t num_frac_bits = Fixed::Format::FractionalBits)
       : Filter(source_rate, dest_rate,
                /* side_length= */ (1 << (num_frac_bits - 1)) + 1, num_frac_bits),
@@ -130,7 +130,7 @@ class PointFilter : public Filter {
 //  (Restated: source pos N.000 requires frame N only; no need to interpolate with neighbors.)
 class LinearFilter : public Filter {
  public:
-  LinearFilter(uint32_t source_rate, uint32_t dest_rate,
+  LinearFilter(int32_t source_rate, int32_t dest_rate,
                int32_t num_frac_bits = Fixed::Format::FractionalBits)
       : Filter(source_rate, dest_rate,
                /* side_length= */ 1 << num_frac_bits, num_frac_bits),
@@ -178,8 +178,10 @@ class SincFilter : public Filter {
   static constexpr double kMaxDownsampleRatioForFullSideTaps = 27.5;
   static constexpr int64_t kMaxFracSideLength = static_cast<int64_t>(
       kMaxDownsampleRatioForFullSideTaps * static_cast<double>(kFracSideLength));
+  static_assert(kMaxFracSideLength > kFracSideLength,
+                "kMaxFracSideLength cannot be less than kFracSideLength");
 
-  SincFilter(uint32_t source_rate, uint32_t dest_rate, int64_t side_length = kFracSideLength,
+  SincFilter(int32_t source_rate, int32_t dest_rate, int64_t side_length = kFracSideLength,
              int32_t num_frac_bits = Fixed::Format::FractionalBits)
       : Filter(source_rate, dest_rate, side_length, num_frac_bits),
         filter_coefficients_(cache_, Inputs{
@@ -189,7 +191,7 @@ class SincFilter : public Filter {
                                      }) {}
   SincFilter() : SincFilter(48000, 48000){};
 
-  static inline Fixed Length(uint32_t source_frame_rate, uint32_t dest_frame_rate) {
+  static inline Fixed Length(int32_t source_frame_rate, int32_t dest_frame_rate) {
     int64_t filter_length = kFracSideLength;
     if (source_frame_rate > dest_frame_rate) {
       filter_length =

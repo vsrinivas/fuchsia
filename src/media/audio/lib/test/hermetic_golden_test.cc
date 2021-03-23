@@ -45,7 +45,7 @@ class WaveformTestRunner {
   void CompareRMSE(AudioBufferSlice<OutputFormat> actual, AudioBufferSlice<OutputFormat> expected);
   void CompareRMS(AudioBufferSlice<OutputFormat> actual, AudioBufferSlice<OutputFormat> expected);
   void CompareFreqs(AudioBufferSlice<OutputFormat> actual, AudioBufferSlice<OutputFormat> expected,
-                    std::vector<size_t> hz_signals);
+                    std::vector<int32_t> hz_signals);
 
   void ExpectSilence(AudioBufferSlice<OutputFormat> actual);
 
@@ -76,7 +76,7 @@ void WaveformTestRunner<InputFormat, OutputFormat>::CompareRMS(
 template <ASF InputFormat, ASF OutputFormat>
 void WaveformTestRunner<InputFormat, OutputFormat>::CompareFreqs(
     AudioBufferSlice<OutputFormat> actual, AudioBufferSlice<OutputFormat> expected,
-    std::vector<size_t> hz_signals) {
+    std::vector<int32_t> hz_signals) {
   ASSERT_EQ(expected.NumFrames(), actual.NumFrames());
 
   // FFT requires a power-of-2 number of samples.
@@ -86,16 +86,16 @@ void WaveformTestRunner<InputFormat, OutputFormat>::CompareFreqs(
   actual = AudioBufferSlice(&actual_buf);
 
   // Translate hz to periods.
-  std::unordered_set<size_t> freqs_in_unit_periods;
+  std::unordered_set<int32_t> freqs_in_unit_periods;
   for (auto hz : hz_signals) {
-    ASSERT_GT(hz, 0u);
+    ASSERT_GT(hz, 0);
 
     // Frames per period at frequency hz.
-    size_t fpp = expected.format().frames_per_second() / hz;
+    int64_t fpp = expected.format().frames_per_second() / hz;
 
     // If there are an integer number of periods, we can precisely measure the magnitude at hz.
     // Otherwise, the magnitude will be smeared between the two adjacent integers.
-    size_t periods = expected.NumFrames() / fpp;
+    int64_t periods = expected.NumFrames() / fpp;
     freqs_in_unit_periods.insert(periods);
     if (expected.NumFrames() % fpp > 0) {
       freqs_in_unit_periods.insert(periods + 1);
@@ -177,7 +177,7 @@ void HermeticGoldenTest::Run(const HermeticGoldenTest::TestCase<InputFormat, Out
   runner.CompareRMSE(&expected_output, output_data);
   runner.ExpectSilence(output_silence);
 
-  for (size_t chan = 0; chan < expected_output.format().channels(); chan++) {
+  for (int32_t chan = 0; chan < expected_output.format().channels(); chan++) {
     auto expected_chan = AudioBufferSlice<OutputFormat>(&expected_output).GetChannel(chan);
     auto output_chan = output_data.GetChannel(chan);
     SCOPED_TRACE(testing::Message() << "Channel " << chan);

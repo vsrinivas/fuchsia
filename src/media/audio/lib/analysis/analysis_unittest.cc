@@ -18,7 +18,7 @@ namespace {
 constexpr double RT_2 = 1.4142135623730950488016887242;
 
 // Local version of GenerateCosineAudio that uses doubles, the same type used by our FFT methods.
-void OverwriteCosine(double* buffer, uint32_t buf_size, double freq, double magn = 1.0,
+void OverwriteCosine(double* buffer, int64_t buf_size, double freq, double magn = 1.0,
                      double phase = 0.0) {
   // If frequency is 0 (constant val), phase offset causes reduced amplitude
   FX_DCHECK(freq > 0.0 || (freq == 0.0 && phase == 0.0));
@@ -74,10 +74,10 @@ TEST(AnalysisHelpers, RectToPolar) {
 
 TEST(AnalysisHelpers, RealDFT) {
   double reals[16];
-  const uint32_t buf_size = std::size(reals);
+  const auto buf_size = std::size(reals);
   const double epsilon = 0.0000001024;
 
-  const uint32_t buf_sz_2 = buf_size >> 1;
+  const auto buf_sz_2 = buf_size >> 1;
   double real_freq[9];
   double imag_freq[9];
   static_assert(std::size(real_freq) == buf_sz_2 + 1, "buf sizes must match");
@@ -153,13 +153,13 @@ TEST(AnalysisHelpers, RealDFT) {
 TEST(AnalysisHelpers, IDFT) {
   double reals[16];
   double expects[16];
-  const uint32_t buf_size = std::size(reals);
+  const auto buf_size = std::size(reals);
   const double epsilon = 0.00000002;
   static_assert(buf_size == std::size(expects), "buf size mismatch");
 
   double real_freq[9];
   double imag_freq[9];
-  const uint32_t buf_sz_2 = buf_size >> 1;
+  const auto buf_sz_2 = buf_size >> 1;
   static_assert(std::size(real_freq) == buf_sz_2 + 1, "buf size mismatch");
   static_assert(std::size(imag_freq) == buf_sz_2 + 1, "buf size mismatch");
 
@@ -232,9 +232,9 @@ TEST(AnalysisHelpers, FFT) {
   double imags[16];
   const double epsilon = 0.00000015;
 
-  const uint32_t buf_size = std::size(reals);
+  const auto buf_size = std::size(reals);
   static_assert(std::size(imags) == buf_size, "buf sizes must match");
-  const uint32_t buf_sz_2 = buf_size >> 1;
+  const auto buf_sz_2 = buf_size >> 1;
 
   // Impulse input produces constant val in all frequency bins
   OverwriteCosine(reals, buf_size, 0.0, 0.0);
@@ -317,8 +317,8 @@ TEST(AnalysisHelpers, IFFT) {
   double reals[16];
   double imags[16];
   double expects[16];
-  const uint32_t buf_size = std::size(reals);
-  const uint32_t buf_sz_2 = buf_size >> 1;
+  const auto buf_size = std::size(reals);
+  const auto buf_sz_2 = buf_size >> 1;
 
   const double epsilon = 0.00000002;
   static_assert(buf_size == std::size(imags), "buf size mismatch");
@@ -514,7 +514,7 @@ TEST(AnalysisHelpers, FindImpulseLeadingEdge) {
   reals.samples()[5] = 0.7;
   result = FindImpulseLeadingEdge(AudioBufferSlice(&reals), 0);
   EXPECT_TRUE(result);
-  EXPECT_EQ(*result, 5lu);
+  EXPECT_EQ(*result, 5);
 
   // Impulse with ring in. The left edge occurs at the largest positive sample
   // such that there is no value 50% larger. In the samples below, the edge occurs
@@ -524,7 +524,7 @@ TEST(AnalysisHelpers, FindImpulseLeadingEdge) {
   };
   result = FindImpulseLeadingEdge(AudioBufferSlice(&reals), 0.01);
   EXPECT_TRUE(result);
-  EXPECT_EQ(*result, 6lu);
+  EXPECT_EQ(*result, 6);
 }
 
 TEST(AnalysisHelpers, MultiplyByTukeyWindow) {

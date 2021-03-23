@@ -253,7 +253,7 @@ void MeasureFreqRespSinadPhase(Mixer* mixer, int32_t source_frames, double* leve
 
     // If frequency is too high to be characterized in this buffer, skip it. Per Nyquist limit,
     // buffer length must be at least 2x the frequency we want to measure.
-    if (frequency_to_measure * 2 >= static_cast<uint64_t>(source_frames)) {
+    if (frequency_to_measure * 2 >= source_frames) {
       if (freq_idx < FrequencySet::kFirstOutBandRefFreqIdx) {
         level_db[freq_idx] = -INFINITY;
         phase_rad[freq_idx] = -INFINITY;
@@ -348,7 +348,7 @@ void EvaluateFreqRespResults(double* freq_resp_results, const double* freq_resp_
       use_full_set ? FrequencySet::kFirstOutBandRefFreqIdx : FrequencySet::kSummaryIdxs.size();
 
   for (auto idx = first_idx; idx < last_idx; ++idx) {
-    uint32_t freq_idx = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
+    int32_t freq_idx = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
 
     EXPECT_GE(freq_resp_results[freq_idx],
               freq_resp_limits[freq_idx] - AudioResult::kFreqRespTolerance)
@@ -373,7 +373,7 @@ void EvaluateSinadResults(double* sinad_results, const double* sinad_limits,
       use_full_set ? FrequencySet::kFirstOutBandRefFreqIdx : FrequencySet::kSummaryIdxs.size();
 
   for (auto idx = first_idx; idx < last_idx; ++idx) {
-    uint32_t freq_idx = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
+    int32_t freq_idx = use_full_set ? idx : FrequencySet::kSummaryIdxs[idx];
 
     EXPECT_GE(sinad_results[freq_idx], sinad_limits[freq_idx] - AudioResult::kSinadTolerance)
         << " [" << freq_idx << "]  " << std::fixed << std::setprecision(3)
@@ -391,7 +391,7 @@ void EvaluateRejectionResults(double* rejection_results, const double* rejection
     return;
   }
 
-  for (uint32_t freq_idx = 0u; freq_idx < FrequencySet::kNumReferenceFreqs; ++freq_idx) {
+  for (int32_t freq_idx = 0u; freq_idx < FrequencySet::kNumReferenceFreqs; ++freq_idx) {
     if (freq_idx < FrequencySet::kFirstInBandRefFreqIdx ||
         freq_idx >= FrequencySet::kFirstOutBandRefFreqIdx) {
       EXPECT_GE(rejection_results[freq_idx],
@@ -793,15 +793,15 @@ TEST(Phase, Sinc_UpSamp3) {
 
 // For each summary frequency, populate a sinusoid into a mono buffer, and copy-interleave mono[]
 // into one of the channels of the N-channel source.
-AudioBuffer<ASF::FLOAT> PopulateNxNSourceBuffer(size_t num_frames, uint32_t num_chans,
-                                                uint32_t rate) {
+AudioBuffer<ASF::FLOAT> PopulateNxNSourceBuffer(int64_t num_frames, int32_t num_chans,
+                                                int32_t rate) {
   auto format = Format::Create<ASF::FLOAT>(num_chans, rate).take_value();
   auto source = AudioBuffer(format, num_frames);
 
   // For each summary frequency, populate a sinusoid into mono, and copy-interleave mono into one of
   // the channels of the N-channel source.
-  for (uint32_t idx = 0; idx < num_chans; ++idx) {
-    uint32_t freq_idx = FrequencySet::kSummaryIdxs[idx];
+  for (auto idx = 0; idx < num_chans; ++idx) {
+    int32_t freq_idx = FrequencySet::kSummaryIdxs[idx];
 
     // If frequency is too high to be characterized in this buffer length, skip it.
     if (FrequencySet::kReferenceFreqs[freq_idx] * 2 > num_frames) {
@@ -813,7 +813,7 @@ AudioBuffer<ASF::FLOAT> PopulateNxNSourceBuffer(size_t num_frames, uint32_t num_
     auto mono = GenerateCosineAudio(format, num_frames, FrequencySet::kReferenceFreqs[freq_idx]);
 
     // Copy-interleave mono into the N-channel source[].
-    for (uint32_t frame_num = 0; frame_num < num_frames; ++frame_num) {
+    for (int32_t frame_num = 0; frame_num < num_frames; ++frame_num) {
       source.samples()[frame_num * num_chans + idx] = mono.samples()[frame_num];
     }
   }

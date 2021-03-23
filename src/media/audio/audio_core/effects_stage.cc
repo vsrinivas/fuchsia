@@ -161,11 +161,12 @@ std::shared_ptr<EffectsStage> EffectsStage::Create(
 }
 
 Format ComputeFormat(const Format& source_format, const EffectsProcessor& processor) {
-  return Format::Create(fuchsia::media::AudioStreamType{
-                            .sample_format = source_format.sample_format(),
-                            .channels = processor.channels_out(),
-                            .frames_per_second = source_format.frames_per_second(),
-                        })
+  return Format::Create(
+             fuchsia::media::AudioStreamType{
+                 .sample_format = source_format.sample_format(),
+                 .channels = static_cast<uint32_t>(processor.channels_out()),
+                 .frames_per_second = static_cast<uint32_t>(source_format.frames_per_second()),
+             })
       .take_value();
 }
 
@@ -182,7 +183,8 @@ EffectsStage::EffectsStage(std::shared_ptr<ReadableStream> source,
   SetPresentationDelay(zx::duration(0));
 }
 
-std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(Fixed dest_frame, size_t frame_count) {
+std::optional<ReadableStream::Buffer> EffectsStage::ReadLock(Fixed dest_frame,
+                                                             int64_t frame_count) {
   TRACE_DURATION("audio", "EffectsStage::ReadLock", "frame", dest_frame.Floor(), "length",
                  frame_count);
 

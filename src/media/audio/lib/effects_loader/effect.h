@@ -66,9 +66,8 @@ class Effect {
   // Note that this will invalidate the `Effect` even if the operation fails.
   zx_status_t Delete();
   zx_status_t UpdateConfiguration(std::string_view config) const;
-  zx_status_t ProcessInPlace(uint32_t num_frames, float* audio_buff_in_out) const;
-  zx_status_t Process(uint32_t num_frames, const float* audio_buff_in,
-                      float** audio_buff_out) const;
+  zx_status_t ProcessInPlace(int64_t num_frames, float* audio_buff_in_out) const;
+  zx_status_t Process(int64_t num_frames, const float* audio_buff_in, float** audio_buff_out) const;
   zx_status_t Flush() const;
   zx_status_t GetParameters(fuchsia_audio_effects_parameters* params) const;
   void SetStreamInfo(const fuchsia_audio_effects_stream_info& stream_info) const;

@@ -45,7 +45,7 @@ class VirtualDevice {
   ~VirtualDevice();
 
   fidl::InterfacePtr<Interface>& fidl() { return fidl_; }
-  size_t frame_count() const { return frame_count_; }
+  int64_t frame_count() const { return frame_count_; }
 
   uint64_t token() const { return token_; }
   void set_token(uint64_t t) { token_ = t; }
@@ -68,7 +68,7 @@ class VirtualDevice {
 
  protected:
   VirtualDevice(TestFixture* fixture, HermeticAudioEnvironment* environment,
-                const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
+                const audio_stream_unique_id_t& device_id, Format format, int64_t frame_count,
                 size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
                 float expected_gain_db,
                 std::optional<DeviceClockProperties> device_clock_properties);
@@ -77,7 +77,7 @@ class VirtualDevice {
   void WatchEvents();
 
   const Format format_;
-  const size_t frame_count_;
+  int64_t frame_count_;
   const size_t inspect_id_;
   const float expected_gain_db_;
 
@@ -111,7 +111,7 @@ class VirtualOutput : public VirtualOutputImpl {
   // Don't call this directly. Use HermeticAudioTest::CreateOutput so the object is
   // appropriately bound into the test environment.
   VirtualOutput(TestFixture* fixture, HermeticAudioEnvironment* environment,
-                const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
+                const audio_stream_unique_id_t& device_id, Format format, int64_t frame_count,
                 size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
                 float expected_gain_db,
                 std::optional<DeviceClockProperties> device_clock_properties)
@@ -132,7 +132,7 @@ class VirtualInput : public VirtualInputImpl {
   // Don't call this directly. Use HermeticAudioTest::CreateInput so the object is
   // appropriately bound into the test environment.
   VirtualInput(TestFixture* fixture, HermeticAudioEnvironment* environment,
-               const audio_stream_unique_id_t& device_id, Format format, size_t frame_count,
+               const audio_stream_unique_id_t& device_id, Format format, int64_t frame_count,
                size_t inspect_id, std::optional<DevicePlugProperties> plug_properties,
                float expected_gain_db, std::optional<DeviceClockProperties> device_clock_properties)
       : VirtualDevice(fixture, environment, device_id, format, frame_count, inspect_id,

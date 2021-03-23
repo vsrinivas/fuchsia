@@ -54,12 +54,11 @@ fit::result<Format> Format::Create(fuchsia::media::AudioStreamType stream_type) 
 }
 
 template <fuchsia::media::AudioSampleFormat SampleFormat>
-fit::result<TypedFormat<SampleFormat>> Format::Create(uint32_t channels,
-                                                      uint32_t frames_per_second) {
+fit::result<TypedFormat<SampleFormat>> Format::Create(int32_t channels, int32_t frames_per_second) {
   fuchsia::media::AudioStreamType stream_type = {
       .sample_format = SampleFormat,
-      .channels = channels,
-      .frames_per_second = frames_per_second,
+      .channels = static_cast<uint32_t>(channels),
+      .frames_per_second = static_cast<uint32_t>(frames_per_second),
   };
   if (!Validate(stream_type)) {
     return fit::error();
@@ -108,9 +107,9 @@ bool Format::operator==(const Format& other) const {
 }
 
 // Explicitly instantiate all possible implementations.
-#define INSTANTIATE(T)                                                      \
-  template fit::result<TypedFormat<T>> Format::Create<T>(uint32_t channels, \
-                                                         uint32_t frames_per_seconds);
+#define INSTANTIATE(T)                                                     \
+  template fit::result<TypedFormat<T>> Format::Create<T>(int32_t channels, \
+                                                         int32_t frames_per_seconds);
 
 INSTANTIATE_FOR_ALL_FORMATS(INSTANTIATE)
 

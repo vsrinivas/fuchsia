@@ -43,10 +43,10 @@ class AudioPerformance {
 
   struct MixerConfig {
     Mixer::Resampler sampler_type;
-    uint32_t num_input_chans;
-    uint32_t num_output_chans;
-    uint32_t source_rate;
-    uint32_t dest_rate;
+    int32_t num_input_chans;
+    int32_t num_output_chans;
+    int32_t source_rate;
+    int32_t dest_rate;
     fuchsia::media::AudioSampleFormat sample_format;
     GainType gain_type;  // ProfileMixing() only
     bool accumulate;     // ProfileMixing() only
@@ -63,7 +63,7 @@ class AudioPerformance {
   struct OutputProducerConfig {
     fuchsia::media::AudioSampleFormat sample_format;
     OutputSourceRange output_range;
-    uint32_t num_chans;
+    int32_t num_chans;
 
     bool operator==(const OutputProducerConfig& other) const;
     bool operator!=(const OutputProducerConfig& other) const;

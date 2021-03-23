@@ -31,7 +31,7 @@ class TestOutputPipeline : public OutputPipeline {
   void Enqueue(ReadableStream::Buffer buffer) { buffers_.push_back(std::move(buffer)); }
 
   // |media::audio::ReadableStream|
-  std::optional<ReadableStream::Buffer> ReadLock(Fixed frame, size_t frame_count) override {
+  std::optional<ReadableStream::Buffer> ReadLock(Fixed frame, int64_t frame_count) override {
     if (buffers_.empty()) {
       return std::nullopt;
     }

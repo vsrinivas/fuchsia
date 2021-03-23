@@ -18,7 +18,7 @@ bool FrequencySet::UseFullFrequencySet = false;
 //
 // The extended audio analysis tests use this large set of standard frequencies.
 constexpr int32_t FrequencySet::kNumReferenceFreqs;
-const std::array<uint32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kReferenceFreqs = {
+const std::array<int32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kReferenceFreqs = {
     // clang-format off
     0,     18,    23,    27,    34,    41,    53,    67,    85,    109,
     137,   169,   221,   271,   341,   431,   541,   683,   859,   1091,
@@ -35,7 +35,7 @@ const std::array<uint32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kRefe
 //
 // The below is an actual representation of the standard set of audio
 // frequencies for fidelity testing -- reverse-calculated from the above values.
-const std::array<uint32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kRefFreqsTranslated = {
+const std::array<int32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kRefFreqsTranslated = {
     // clang-format off
     0,     13,    17,    20,    25,    30,    39,    49,    62,    80,
     100,   124,   162,   198,   250,   316,   396,   500,   630,   799,
@@ -49,7 +49,7 @@ const std::array<uint32_t, FrequencySet::kNumReferenceFreqs> FrequencySet::kRefF
 // Certain tests (such as noise floor and sinad) are evaluated with a sinusoidal
 // input at a single reference frequency (usually close to 1 kHz).
 constexpr int32_t FrequencySet::kRefFreqIdx;  // 1kHz reference tone
-const uint32_t FrequencySet::kReferenceFreq = kReferenceFreqs[kRefFreqIdx];
+const int32_t FrequencySet::kReferenceFreq = kReferenceFreqs[kRefFreqIdx];
 
 //
 // Summary audio tests use a small set of frequencies, taken from the full set.

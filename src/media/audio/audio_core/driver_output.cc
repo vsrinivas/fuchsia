@@ -375,7 +375,7 @@ void DriverOutput::OnDriverInfoFetched() {
 
   auto format_result = Format::Create(fuchsia::media::AudioStreamType{
       .sample_format = pref_fmt,
-      .channels = pref_chan,
+      .channels = static_cast<uint32_t>(pref_chan),
       .frames_per_second = pref_fps,
   });
   if (format_result.is_error()) {
@@ -383,32 +383,34 @@ void DriverOutput::OnDriverInfoFetched() {
     return;
   }
   auto& format = format_result.value();
+  int32_t frame_rate = static_cast<int32_t>(pref_fps);
+  int16_t num_chans = static_cast<int16_t>(pref_chan);
 
   // Update our pipeline to produce audio in the compatible format.
-  if (pipeline_config.frames_per_second() != pref_fps) {
+  if (pipeline_config.frames_per_second() != frame_rate) {
     FX_LOGS(WARNING) << "Hardware does not support the requested rate of "
                      << pipeline_config.root().output_rate << " fps; hardware will run at "
-                     << pref_fps << " fps";
-    pipeline_config.mutable_root().output_rate = pref_fps;
+                     << frame_rate << " fps";
+    pipeline_config.mutable_root().output_rate = frame_rate;
   }
-  if (pipeline_config.channels() != pref_chan) {
+  if (pipeline_config.channels() != num_chans) {
     FX_LOGS(WARNING) << "Hardware does not support the requested channelization of "
                      << pipeline_config.channels() << " channels; hardware will run at "
-                     << pref_chan << " channels";
-    pipeline_config.mutable_root().output_channels = pref_chan;
+                     << num_chans << " channels";
+    pipeline_config.mutable_root().output_channels = num_chans;
     // Some effects may perform rechannelization. If the hardware does not support the
     // channelization with rechannelization effects we clear all effects on the final stage. This
     // is a compromise in being robust and gracefully handling misconfiguration.
     for (const auto& effect : pipeline_config.root().effects) {
-      if (effect.output_channels && effect.output_channels != pref_chan) {
+      if (effect.output_channels && effect.output_channels != num_chans) {
         FX_LOGS(ERROR) << "Removing effects on the root stage due to unsupported channelization";
         pipeline_config.mutable_root().effects.clear();
         break;
       }
     }
   }
-  FX_DCHECK(pipeline_config.frames_per_second() == pref_fps);
-  FX_DCHECK(pipeline_config.channels() == pref_chan);
+  FX_CHECK(pipeline_config.frames_per_second() == frame_rate);
+  FX_CHECK(pipeline_config.channels() == num_chans);
 
   // Update the AudioDevice |config_| with the updated |pipeline_config|.
   // Only |frames_per_second| and |channels| were potentially updated in |pipeline_config|, so it is
@@ -423,8 +425,8 @@ void DriverOutput::OnDriverInfoFetched() {
   // Select our output producer
   output_producer_ = OutputProducer::Select(format.stream_type());
   if (!output_producer_) {
-    FX_LOGS(ERROR) << "Output: OutputProducer cannot support this request: " << pref_fps << " Hz, "
-                   << pref_chan << "-channel, sample format 0x" << std::hex
+    FX_LOGS(ERROR) << "Output: OutputProducer cannot support this request: " << frame_rate
+                   << " Hz, " << num_chans << "-channel, sample format 0x" << std::hex
                    << static_cast<uint32_t>(pref_fmt);
     return;
   }
@@ -432,9 +434,9 @@ void DriverOutput::OnDriverInfoFetched() {
   // Start the process of configuring our driver
   res = driver()->Configure(format, min_rb_duration);
   if (res != ZX_OK) {
-    FX_LOGS(ERROR) << "Output: failed to configure driver for: " << pref_fps << " Hz, " << pref_chan
-                   << "-channel, sample format 0x" << std::hex << static_cast<uint32_t>(pref_fmt)
-                   << " (res " << std::dec << res << ")";
+    FX_LOGS(ERROR) << "Output: failed to configure driver for: " << frame_rate << " Hz, "
+                   << num_chans << "-channel, sample format 0x" << std::hex
+                   << static_cast<uint32_t>(pref_fmt) << " (res " << std::dec << res << ")";
     return;
   }
 
@@ -442,8 +444,8 @@ void DriverOutput::OnDriverInfoFetched() {
     std::string file_name_ = kDefaultWavFilePathName;
     uint32_t instance_count = final_mix_instance_num_.fetch_add(1);
     file_name_ += (std::to_string(instance_count) + kWavFileExtension);
-    wav_writer_.Initialize(file_name_.c_str(), pref_fmt, pref_chan, pref_fps,
-                           format.bytes_per_frame() * 8 / pref_chan);
+    wav_writer_.Initialize(file_name_.c_str(), pref_fmt, num_chans, frame_rate,
+                           format.bytes_per_frame() * 8 / num_chans);
   }
 
   // Success; now wait until configuration completes.

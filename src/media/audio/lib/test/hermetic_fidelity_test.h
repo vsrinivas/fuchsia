@@ -20,11 +20,11 @@ namespace media::audio::test {
 // (respectively, frequency response and signal-to-noise-and-distortion).
 class HermeticFidelityTest : public HermeticPipelineTest {
  public:
-  static constexpr size_t kNumReferenceFreqs = 42;
+  static constexpr int64_t kNumReferenceFreqs = 42;
   // The (approximate) frequencies represented by limit-threshold arrays freq_resp_lower_limits_db
   // and sinad_lower_limits_db, and corresponding actual results arrays gathered during the tests.
   // The actual frequencies (within a buffer of kFreqTestBufSize) are found in kRefFreqsInternal.
-  static const std::array<uint32_t, kNumReferenceFreqs> kReferenceFrequencies;
+  static const std::array<int32_t, kNumReferenceFreqs> kReferenceFrequencies;
 
   // Test the three render paths present in today's effects configuration.
   enum class RenderPath {
@@ -34,11 +34,11 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   };
   // Specify an output channel to measure, and thresholds against which to compare it.
   struct ChannelMeasurement {
-    size_t channel;
+    int32_t channel;
     const std::array<double, kNumReferenceFreqs> freq_resp_lower_limits_db;
     const std::array<double, kNumReferenceFreqs> sinad_lower_limits_db;
 
-    ChannelMeasurement(size_t chan, std::array<double, kNumReferenceFreqs> freqs,
+    ChannelMeasurement(int32_t chan, std::array<double, kNumReferenceFreqs> freqs,
                        std::array<double, kNumReferenceFreqs> sinads)
         : channel(chan), freq_resp_lower_limits_db(freqs), sinad_lower_limits_db(sinads) {}
   };
@@ -51,11 +51,11 @@ class HermeticFidelityTest : public HermeticPipelineTest {
 
     TypedFormat<InputFormat> input_format;
     RenderPath path;
-    const std::set<size_t> channels_to_play;
+    const std::set<int32_t> channels_to_play;
 
     PipelineConstants pipeline;
-    uint32_t low_cut_frequency = 0;
-    uint32_t low_pass_frequency = fuchsia::media::MAX_PCM_FRAMES_PER_SECOND;
+    int32_t low_cut_frequency = 0;
+    int32_t low_pass_frequency = fuchsia::media::MAX_PCM_FRAMES_PER_SECOND;
     std::optional<uint32_t> thermal_state = std::nullopt;
 
     TypedFormat<OutputFormat> output_format;
@@ -98,26 +98,26 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   static constexpr double kFidelityDbTolerance = 0.001;
 
   // The power-of-two size of our spectrum analysis buffer.
-  static constexpr size_t kFreqTestBufSize = 65536;
+  static constexpr int64_t kFreqTestBufSize = 65536;
 
   // Saving all input|output files (if --save-input-and-output specified) consumes too much
   // on-device storage. These tests save only the input|output files for this specified frequency.
-  static constexpr uint32_t kFrequencyForSavedWavFiles = 1000;
+  static constexpr int32_t kFrequencyForSavedWavFiles = 1000;
 
   static inline double DoubleToDb(double val) { return std::log10(val) * 20.0; }
 
   static std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& level_results(
-      RenderPath path, size_t channel, uint32_t thermal_state);
+      RenderPath path, int32_t channel, uint32_t thermal_state);
   static std::array<double, HermeticFidelityTest::kNumReferenceFreqs>& sinad_results(
-      RenderPath path, size_t channel, uint32_t thermal_state);
+      RenderPath path, int32_t channel, uint32_t thermal_state);
 
-  void TranslateReferenceFrequencies(uint32_t device_frame_rate);
+  void TranslateReferenceFrequencies(int32_t device_frame_rate);
 
   // Create a renderer for this path, submit and play the input buffer, retrieve the ring buffer.
   template <fuchsia::media::AudioSampleFormat InputFormat,
             fuchsia::media::AudioSampleFormat OutputFormat>
   AudioBuffer<OutputFormat> GetRendererOutput(TypedFormat<InputFormat> input_format,
-                                              size_t input_buffer_frames, RenderPath path,
+                                              int64_t input_buffer_frames, RenderPath path,
                                               AudioBuffer<InputFormat> input,
                                               VirtualOutput<OutputFormat>* device);
 
@@ -132,11 +132,11 @@ class HermeticFidelityTest : public HermeticPipelineTest {
   void VerifyResults(const TestCase<InputFormat, OutputFormat>& test_case);
 
   // Change the output pipeline's thermal state, blocking until the state change completes.
-  zx_status_t ConfigurePipelineForThermal(uint32_t state);
+  zx_status_t ConfigurePipelineForThermal(uint32_t thermal_state);
 
  private:
   // Ref frequencies, internally translated to values corresponding to a buffer[kFreqTestBufSize].
-  std::array<uint32_t, kNumReferenceFreqs> translated_ref_freqs_;
+  std::array<int32_t, kNumReferenceFreqs> translated_ref_freqs_;
 
   bool save_fidelity_wav_files_;
 };

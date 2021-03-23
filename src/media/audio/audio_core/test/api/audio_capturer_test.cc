@@ -37,14 +37,14 @@ class AudioCapturerTestOldAPI : public HermeticAudioTest {
     HermeticAudioTest::TearDown();
   }
 
-  void SetFormat(size_t frames_per_second = 16000) {
+  void SetFormat(int32_t frames_per_second = 16000) {
     auto t = media::CreateAudioStreamType(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
                                           frames_per_second);
     format_ = Format::Create(t).take_value();
     audio_capturer_->SetPcmStreamType(t);
   }
 
-  void SetUpPayloadBuffer(size_t num_frames = 16000, zx::vmo* vmo_out = nullptr) {
+  void SetUpPayloadBuffer(int64_t num_frames = 16000, zx::vmo* vmo_out = nullptr) {
     zx::vmo audio_capturer_vmo;
 
     auto status = zx::vmo::create(num_frames * sizeof(int16_t), 0, &audio_capturer_vmo);
@@ -536,8 +536,8 @@ TEST_F(AudioCapturerTest, CaptureAsyncNoDevice) {
   EXPECT_NE(capture_packet->payload_size, 0u);
   auto buffer = capturer->payload().SnapshotSlice<ASF::SIGNED_16>(capture_packet->payload_offset,
                                                                   capture_packet->payload_size);
-  ASSERT_EQ(1u, buffer.format().channels());
-  for (size_t frame = 0; frame < buffer.NumFrames(); ++frame) {
+  ASSERT_EQ(1, buffer.format().channels());
+  for (int64_t frame = 0; frame < buffer.NumFrames(); ++frame) {
     ASSERT_EQ(buffer.SampleAt(frame, 0), 0) << "at frame " << frame;
   }
 }

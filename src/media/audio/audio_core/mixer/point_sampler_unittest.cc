@@ -22,11 +22,11 @@ using Resampler = ::media::audio::Mixer::Resampler;
 // so they run on SincSampler as well  (perhaps moving them into a mixer_unittest.cc).
 class PointSamplerTest : public testing::Test {
  protected:
-  static const std::vector<uint32_t> kFrameRates;
-  static const std::vector<uint32_t> kUnsupportedFrameRates;
+  static const std::vector<int32_t> kFrameRates;
+  static const std::vector<int32_t> kUnsupportedFrameRates;
 
-  static const std::vector<std::pair<uint32_t, uint32_t>> kChannelConfigs;
-  static const std::vector<std::pair<uint32_t, uint32_t>> kUnsupportedChannelConfigs;
+  static const std::vector<std::pair<int32_t, int32_t>> kChannelConfigs;
+  static const std::vector<std::pair<int32_t, int32_t>> kUnsupportedChannelConfigs;
 
   static const std::vector<fuchsia::media::AudioSampleFormat> kFormats;
   const fuchsia::media::AudioSampleFormat kInvalidFormat =
@@ -34,8 +34,8 @@ class PointSamplerTest : public testing::Test {
           static_cast<int64_t>(kFormats[std::size(kFormats) - 1]) + 1);
 
   std::unique_ptr<Mixer> SelectPointSampler(
-      uint32_t source_channels, uint32_t dest_channels, uint32_t source_frame_rate,
-      uint32_t dest_frame_rate, fuchsia::media::AudioSampleFormat source_format,
+      int32_t source_channels, int32_t dest_channels, int32_t source_frame_rate,
+      int32_t dest_frame_rate, fuchsia::media::AudioSampleFormat source_format,
       fuchsia::media::AudioSampleFormat dest_format = fuchsia::media::AudioSampleFormat::FLOAT) {
     fuchsia::media::AudioStreamType source_stream_type;
     source_stream_type.channels = source_channels;
@@ -84,17 +84,17 @@ class PointSamplerTest : public testing::Test {
   }
 };
 
-const std::vector<uint32_t> PointSamplerTest::kFrameRates = {
+const std::vector<int32_t> PointSamplerTest::kFrameRates = {
     8000,  11025, 16000, 22050, 24000,  32000,
     44100, 48000, 88200, 96000, 176400, fuchsia::media::MAX_PCM_FRAMES_PER_SECOND,
 };
 
-const std::vector<uint32_t> PointSamplerTest::kUnsupportedFrameRates = {
+const std::vector<int32_t> PointSamplerTest::kUnsupportedFrameRates = {
     fuchsia::media::MIN_PCM_FRAMES_PER_SECOND - 1,
     fuchsia::media::MAX_PCM_FRAMES_PER_SECOND + 1,
 };
 
-const std::vector<std::pair<uint32_t, uint32_t>> PointSamplerTest::kChannelConfigs = {
+const std::vector<std::pair<int32_t, int32_t>> PointSamplerTest::kChannelConfigs = {
     {1, 1}, {1, 2}, {1, 3}, {1, 4},  //
     {2, 1}, {2, 2}, {2, 3}, {2, 4},  //
     {3, 1}, {3, 2}, {3, 3},          //
@@ -102,7 +102,7 @@ const std::vector<std::pair<uint32_t, uint32_t>> PointSamplerTest::kChannelConfi
     {5, 5}, {6, 6}, {7, 7}, {8, 8},
 };
 
-const std::vector<std::pair<uint32_t, uint32_t>> PointSamplerTest::kUnsupportedChannelConfigs = {
+const std::vector<std::pair<int32_t, int32_t>> PointSamplerTest::kUnsupportedChannelConfigs = {
     {1, 5}, {1, 8}, {1, 9},  // Unsupported channel
     {2, 5}, {2, 8}, {2, 9},  // configurations --
     {3, 5}, {3, 8}, {3, 9},  // maximum number of

@@ -83,8 +83,8 @@ struct Stats {
 // a dest_format. Actual frame rate values are unimportant, but inter-rate RATIO
 // is VERY important: required SRC is the primary factor in Mix selection.
 std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat source_format,
-                                   uint32_t source_channels, uint32_t source_frame_rate,
-                                   uint32_t dest_channels, uint32_t dest_frame_rate,
+                                   int32_t source_channels, int32_t source_frame_rate,
+                                   int32_t dest_channels, int32_t dest_frame_rate,
                                    Resampler resampler) {
   if (resampler == Resampler::Default) {
     FX_LOGS(FATAL) << "Profiler should specify the Resampler exactly";
@@ -109,7 +109,7 @@ std::unique_ptr<Mixer> SelectMixer(fuchsia::media::AudioSampleFormat source_form
 // rate-conversion, gain scaling or rechannelization, so frames_per_second is unreferenced.
 // Num_channels and sample_format are used, to calculate the size of a (multi-channel) audio frame.
 std::unique_ptr<OutputProducer> SelectOutputProducer(fuchsia::media::AudioSampleFormat dest_format,
-                                                     uint32_t num_channels) {
+                                                     int32_t num_channels) {
   fuchsia::media::AudioStreamType dest_details;
   dest_details.sample_format = dest_format;
   dest_details.channels = num_channels;
@@ -188,7 +188,7 @@ std::string AudioPerformance::MixerConfig::ToPerftestFormatForCreate() const {
 
   std::string format = AsfToString(sample_format, /*abbreviate=*/false);
 
-  return fxl::StringPrintf("%s/%s/Channels_%u:%u/FrameRates_%06u:%06u", sampler.c_str(),
+  return fxl::StringPrintf("%s/%s/Channels_%d:%d/FrameRates_%06d:%06d", sampler.c_str(),
                            format.c_str(), num_input_chans, num_output_chans, source_rate,
                            dest_rate);
 }
@@ -413,7 +413,7 @@ void AudioPerformance::ProfileMixer(const MixerConfig& cfg, const Limits& limits
 
   // Allocate enough source and destination frames for kMixLength.
   // When allocating source frames, we round up to ensure we have enough source frames.
-  const uint32_t dest_frame_count =
+  const int32_t dest_frame_count =
       TimelineRate(cfg.dest_rate, 1'000'000'000)
           .Scale(kMixLength.to_nsecs(), TimelineRate::RoundingMode::Floor);
   const int64_t source_frames =
@@ -563,8 +563,8 @@ void AudioPerformance::ProfileOutputProducer(const OutputProducerConfig& cfg, co
 
   // Produce 10ms worth of output at 48kHz.
   using SampleT = typename SampleFormatTraits<SampleFormat>::SampleT;
-  uint32_t frame_count = TimelineRate(48000, 1'000'000'000).Scale(kMixLength.to_nsecs());
-  uint32_t num_samples = frame_count * cfg.num_chans;
+  int32_t frame_count = TimelineRate(48000, 1'000'000'000).Scale(kMixLength.to_nsecs());
+  int32_t num_samples = frame_count * cfg.num_chans;
   auto dest = std::make_unique<SampleT[]>(num_samples);
 
   Stats stats(results ? results->AddTestCase("fuchsia.audio.mixer_output",
@@ -591,7 +591,7 @@ void AudioPerformance::ProfileOutputProducer(const OutputProducerConfig& cfg, co
     switch (cfg.output_range) {
       case OutputSourceRange::OutOfRange:
         accum = AudioBuffer(accum_format, frame_count);
-        for (uint32_t idx = 0; idx < num_samples; ++idx) {
+        for (int32_t idx = 0; idx < num_samples; ++idx) {
           accum.samples()[idx] = (idx % 2 ? -1.5f : 1.5f);
         }
         break;

@@ -88,7 +88,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
   testing::PacketFactory& packet_factory() { return packet_factory_; }
   ReadableRingBuffer& ring_buffer() { return *ring_buffer_; }
 
-  template <size_t frame_count>
+  template <int64_t frame_count>
   void CheckBuffer(const ReadableStream::Buffer& buffer, int64_t frame, float expected_sample) {
     EXPECT_EQ(buffer.start(), Fixed(frame));
     EXPECT_EQ(buffer.length(), Fixed(frame_count));
@@ -99,7 +99,7 @@ class TapStageTest : public testing::ThreadingModelFixture {
   // Assert that |stream| contains a buffer that is exactly |frame_count| frames starting at |frame|
   // with data that matches only |expected_sample| (that is all the samples in the buffer match
   // |expected_sample|).
-  template <size_t frame_count>
+  template <int64_t frame_count>
   void CheckStream(ReadableStream* stream, int64_t frame, float expected_sample,
                    bool release = true) {
     auto buffer = stream->ReadLock(Fixed(frame), frame_count);
@@ -120,7 +120,7 @@ TEST_F(TapStageTest, CopySinglePacket) {
   packet_queue().PushPacket(packet_factory().CreatePacket(1.0, kPacketDuration));
 
   // We expect the tap and ring buffer to both be in sync for the first 480.
-  constexpr size_t frame_count = kPacketFrames;
+  constexpr int64_t frame_count = kPacketFrames;
   CheckStream<frame_count>(&tap(), 0, 1.0, true);
   AdvanceTo(kPacketDuration);
   CheckStream<frame_count>(&ring_buffer(), 0, 1.0, true);
@@ -131,7 +131,7 @@ TEST_F(TapStageTest, CopySinglePacket) {
 TEST_F(TapStageTest, TruncateToInputBuffer) {
   packet_queue().PushPacket(packet_factory().CreatePacket(1.0, kPacketDuration));
 
-  constexpr uint32_t frame_count = kPacketFrames;
+  constexpr int64_t frame_count = kPacketFrames;
   {  // Read from the tap, expect to get the same bytes from the packet.
     auto buffer = tap().ReadLock(Fixed(0), frame_count * 2);
     ASSERT_TRUE(buffer);
@@ -155,7 +155,7 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
   packet_queue().PushPacket(packet_factory().CreatePacket(3.0, kPacketDuration));
 
   {  // With the first packet, we'll be fully in sync between the tap and the ring buffer.
-    constexpr size_t frame_count = kPacketFrames;
+    constexpr int64_t frame_count = kPacketFrames;
     SCOPED_TRACE("first packet in tap");
     CheckStream<frame_count>(&tap(), 0, 1.0, true);
     SCOPED_TRACE("first packet in ring buffer");
@@ -164,7 +164,7 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
   }
 
   {  // The second packet is still fully in sync between the tap and the ring buffer.
-    constexpr size_t frame_count = kPacketFrames;
+    constexpr int64_t frame_count = kPacketFrames;
     SCOPED_TRACE("second packet in tap");
     CheckStream<frame_count>(&tap(), frame_count, 2.0, true);
     SCOPED_TRACE("second packet in ring buffer");
@@ -174,7 +174,7 @@ TEST_F(TapStageTest, WrapAroundRingBuffer) {
 
   {  // For the final packet, we expect the Tap to return one buffer with the entire contents (this
     // is the packet buffer.
-    constexpr size_t frame_count = kPacketFrames;
+    constexpr int64_t frame_count = kPacketFrames;
     SCOPED_TRACE("final packet in tap");
     CheckStream<frame_count>(&tap(), 2 * frame_count, 3.0, true);
   }
@@ -377,7 +377,7 @@ TEST_F(TapStageFrameConversionTest, CopySinglePacket) {
   packet_queue().PushPacket(packet_factory().CreatePacket(1.0, kPacketDuration));
 
   // We expect the tap and ring buffer to both be in sync for the first 480.
-  constexpr size_t frame_count = kPacketFrames;
+  constexpr int64_t frame_count = kPacketFrames;
   CheckStream<frame_count>(&tap(), 0, 1.0, true);
   AdvanceTo(kPacketDuration);
   CheckStream<frame_count>(&ring_buffer(), 0, 1.0, true);

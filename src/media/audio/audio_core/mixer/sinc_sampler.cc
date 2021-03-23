@@ -17,10 +17,10 @@
 
 namespace media::audio::mixer {
 
-template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
+template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 class SincSamplerImpl : public SincSampler {
  public:
-  SincSamplerImpl(uint32_t source_frame_rate, uint32_t dest_frame_rate)
+  SincSamplerImpl(int32_t source_frame_rate, int32_t dest_frame_rate)
       : SincSampler(
             // TODO(fxbug.dev/72561): Convert Mixer and the rest of audio_core to a filter_width
             // definition that includes [0] in its count (as SincFilter::Length does).
@@ -90,8 +90,8 @@ class SincSamplerImpl : public SincSampler {
                                                   int64_t next_cache_idx_to_fill);
 
   const int64_t frac_filter_length_;
-  const uint32_t source_rate_;
-  const uint32_t dest_rate_;
+  const int32_t source_rate_;
+  const int32_t dest_rate_;
 
   PositionManager position_;
   ChannelStrip working_data_;
@@ -101,7 +101,7 @@ class SincSamplerImpl : public SincSampler {
 // Implementation
 //
 // static
-template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
+template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 inline void
 SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::PopulateFramesToChannelStrip(
     const void* source_void_ptr, int64_t next_source_idx_to_copy, const int64_t frames_needed,
@@ -124,7 +124,7 @@ SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::PopulateFrame
 
 // If upper layers call with ScaleType MUTED, they must set DoAccumulate=TRUE. They guarantee new
 // buffers are cleared before usage; we optimize accordingly.
-template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
+template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 template <ScalerType ScaleType, bool DoAccumulate>
 inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
@@ -242,7 +242,7 @@ inline bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::M
   return position_.SourceIsConsumed();
 }
 
-template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
+template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr, bool accumulate) {
@@ -291,14 +291,14 @@ bool SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
 }
 
 // Templates used to expand  the different combinations of possible SincSampler configurations.
-template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
+template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& source_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   return std::make_unique<SincSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>>(
       source_format.frames_per_second, dest_format.frames_per_second);
 }
 
-template <size_t DestChanCount, typename SourceSampleType>
+template <int32_t DestChanCount, typename SourceSampleType>
 static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& source_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SelectSSM(dChan,sType)");
@@ -342,7 +342,7 @@ static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStream
   return nullptr;
 }
 
-template <size_t DestChanCount>
+template <int32_t DestChanCount>
 static inline std::unique_ptr<Mixer> SelectSSM(const fuchsia::media::AudioStreamType& source_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SelectSSM(dChan)");

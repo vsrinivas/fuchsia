@@ -60,7 +60,7 @@ class HermeticGoldenTest : public HermeticPipelineTest {
 
     // A set of frequencies to compare in the input vs output using an FFT analysis.
     // Frequencies are specified in hz.
-    std::vector<size_t> frequencies_hz_to_analyze;
+    std::vector<int32_t> frequencies_hz_to_analyze;
   };
 
   template <fuchsia::media::AudioSampleFormat InputFormat,

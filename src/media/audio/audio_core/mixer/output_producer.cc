@@ -122,7 +122,7 @@ class OutputProducerImpl : public OutputProducer {
 
 // Constructor/destructor for the common OutputProducer base class.
 OutputProducer::OutputProducer(const fuchsia::media::AudioStreamType& format,
-                               uint32_t bytes_per_sample)
+                               int32_t bytes_per_sample)
     : channels_(format.channels),
       bytes_per_sample_(bytes_per_sample),
       bytes_per_frame_(bytes_per_sample * format.channels) {

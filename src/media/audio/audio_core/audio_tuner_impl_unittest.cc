@@ -48,7 +48,7 @@ void ExpectEq(const PipelineConfig::Effect& expected,
   EXPECT_EQ(expected.effect_name, result.type().effect_name());
   EXPECT_EQ(expected.instance_name, result.instance_name());
   EXPECT_EQ(expected.effect_config, result.configuration());
-  EXPECT_EQ(expected.output_channels, result.output_channels());
+  EXPECT_EQ(expected.output_channels, static_cast<int32_t>(result.output_channels()));
 }
 
 void ExpectEq(const PipelineConfig::MixGroup& expected,
@@ -69,8 +69,8 @@ void ExpectEq(const PipelineConfig::MixGroup& expected,
   for (size_t i = 0; i < expected.inputs.size(); ++i) {
     ExpectEq(expected.inputs[i], *result.inputs[i].get());
   }
-  EXPECT_EQ(expected.output_rate, result.output_rate);
-  EXPECT_EQ(expected.output_channels, result.output_channels);
+  EXPECT_EQ(expected.output_rate, static_cast<int32_t>(result.output_rate));
+  EXPECT_EQ(expected.output_channels, static_cast<int32_t>(result.output_channels));
 }
 
 class TestDevice : public AudioOutput {

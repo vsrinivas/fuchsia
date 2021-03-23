@@ -120,7 +120,7 @@ void MixStage::RemoveInput(const ReadableStream& stream) {
   streams_.erase(it);
 }
 
-std::optional<ReadableStream::Buffer> MixStage::ReadLock(Fixed dest_frame, size_t frame_count) {
+std::optional<ReadableStream::Buffer> MixStage::ReadLock(Fixed dest_frame, int64_t frame_count) {
   TRACE_DURATION("audio", "MixStage::ReadLock", "frame", dest_frame.Floor(), "length", frame_count);
 
   // If we have a partially consumed block, return that here.

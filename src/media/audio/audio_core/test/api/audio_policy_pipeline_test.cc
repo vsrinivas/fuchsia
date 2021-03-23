@@ -64,7 +64,7 @@ class AudioAdminTest : public HermeticAudioTest {
   // Expect that the given packet contains nothing but the given samples.
   void ExpectPacketContains(std::string label, const fuchsia::media::StreamPacket& packet,
                             const AudioBuffer<kSampleFormat>& payload,
-                            size_t expected_frames_per_packet, int16_t expected_data);
+                            int64_t expected_frames_per_packet, int16_t expected_data);
 };
 
 // AudioAdminTest implementation
@@ -97,7 +97,7 @@ void AudioAdminTest::SetUpVirtualAudioInput() {
   auto input = CreateInput(kUniqueId, kFormat, kRingBufferFrames);
 
   AudioBuffer buf(kFormat, kRingBufferFrames);
-  for (size_t k = 0; k < buf.samples().size(); k++) {
+  for (auto k = 0u; k < buf.samples().size(); k++) {
     buf.samples()[k] = kVirtualInputSampleValue;
   }
   input->WriteRingBufferAt(0, &buf);
@@ -111,7 +111,7 @@ AudioRendererShim<kSampleFormat>* AudioAdminTest::SetUpRenderer(
   auto r = CreateAudioRenderer(kFormat, kRingBufferFrames, usage);
 
   AudioBuffer buf(kFormat, kRingBufferFrames);
-  for (size_t k = 0; k < buf.samples().size(); k++) {
+  for (auto k = 0u; k < buf.samples().size(); k++) {
     buf.samples()[k] = data;
   }
   r->payload().Append(AudioBufferSlice(&buf));
@@ -143,17 +143,18 @@ zx_duration_t AudioAdminTest::GetMinLeadTime(
 void AudioAdminTest::ExpectPacketContains(std::string label,
                                           const fuchsia::media::StreamPacket& packet,
                                           const AudioBuffer<kSampleFormat>& payload,
-                                          size_t expected_frames_per_packet,
+                                          int64_t expected_frames_per_packet,
                                           int16_t expected_data) {
-  ASSERT_EQ(packet.payload_size, expected_frames_per_packet * kFormat.bytes_per_frame())
+  ASSERT_EQ(static_cast<int64_t>(packet.payload_size),
+            expected_frames_per_packet * kFormat.bytes_per_frame())
       << "unexpected frame count for packet " << label;
 
-  for (size_t f = 0; f < expected_frames_per_packet; f++) {
-    for (size_t c = 0; c < kFormat.channels(); c++) {
-      size_t offset =
+  for (int64_t f = 0; f < expected_frames_per_packet; f++) {
+    for (int32_t c = 0; c < kFormat.channels(); c++) {
+      int64_t offset =
           (packet.payload_offset + f * kFormat.bytes_per_frame() + c * kFormat.bytes_per_sample()) %
           kRingBufferBytes;
-      size_t sample = offset / kFormat.bytes_per_sample();
+      int64_t sample = offset / kFormat.bytes_per_sample();
       ASSERT_EQ(fxl::StringPrintf("0x%x", payload.samples()[sample]),
                 fxl::StringPrintf("0x%x", expected_data))
           << "unexpected value at sample[" << sample << "] for packet " << label;

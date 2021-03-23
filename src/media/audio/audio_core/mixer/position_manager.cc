@@ -7,7 +7,7 @@
 
 namespace media::audio::mixer {
 
-PositionManager::PositionManager(uint32_t num_source_chans, uint32_t num_dest_chans,
+PositionManager::PositionManager(int32_t num_source_chans, int32_t num_dest_chans,
                                  int64_t frac_positive_length, int64_t frac_negative_length)
     : num_source_chans_(num_source_chans),
       num_dest_chans_(num_dest_chans),

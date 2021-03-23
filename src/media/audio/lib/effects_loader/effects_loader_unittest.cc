@@ -14,8 +14,8 @@ namespace {
 class EffectsLoaderTest : public testing::EffectsLoaderTestBase {};
 
 static constexpr uint32_t kInvalidEffectId = 1;
-static constexpr uint32_t kFrameRate = 48000;
-static constexpr uint16_t kTwoChannels = 2;
+static constexpr int32_t kFrameRate = 48000;
+static constexpr int32_t kTwoChannels = 2;
 
 static const std::string kInstanceName = "instance name";
 
@@ -131,7 +131,7 @@ TEST_F(EffectsLoaderTest, CreateEffectInvalidChannelConfiguration) {
 }
 
 TEST_F(EffectsLoaderTest, CreateEffectTooManyChannels) {
-  static constexpr uint32_t kTooManyChannels = FUCHSIA_AUDIO_EFFECTS_CHANNELS_MAX + 1;
+  static constexpr int32_t kTooManyChannels = FUCHSIA_AUDIO_EFFECTS_CHANNELS_MAX + 1;
   Effect e =
       effects_loader()->CreateEffect(0, "", kFrameRate, kTooManyChannels, kTooManyChannels, {});
   EXPECT_FALSE(e);

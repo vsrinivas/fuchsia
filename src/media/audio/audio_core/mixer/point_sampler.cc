@@ -17,7 +17,7 @@
 namespace media::audio::mixer {
 
 // Point Sample Mixer implementation.
-template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
+template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 class PointSamplerImpl : public PointSampler {
  public:
   PointSamplerImpl()
@@ -52,7 +52,7 @@ class PointSamplerImpl : public PointSampler {
 template <typename SourceSampleType>
 class NxNPointSamplerImpl : public PointSampler {
  public:
-  NxNPointSamplerImpl(uint32_t chan_count)
+  NxNPointSamplerImpl(int32_t chan_count)
       : PointSampler(Fixed::FromRaw(kFracPositiveFilterWidth),
                      Fixed::FromRaw(kFracNegativeFilterWidth)),
         chan_count_(chan_count) {}
@@ -75,13 +75,13 @@ class NxNPointSamplerImpl : public PointSampler {
   template <ScalerType ScaleType, bool DoAccumulate>
   static inline bool Mix(float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr,
                          const void* source_void_ptr, int64_t source_frames,
-                         Fixed* source_offset_ptr, Bookkeeping* info, uint32_t chan_count);
-  uint32_t chan_count_ = 0;
+                         Fixed* source_offset_ptr, Bookkeeping* info, int32_t chan_count);
+  int32_t chan_count_ = 0;
 };
 
 // If upper layers call with ScaleType MUTED, they must set DoAccumulate=TRUE. They guarantee new
 // buffers are cleared before usage; we optimize accordingly.
-template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
+template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 template <ScalerType ScaleType, bool DoAccumulate>
 inline bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
@@ -125,7 +125,7 @@ inline bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
         amplitude_scale = info->scale_arr[frame_num];
       }
 
-      for (size_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
+      for (int32_t dest_chan = 0; dest_chan < DestChanCount; ++dest_chan) {
         float sample = SR::Read(source_ptr + source_sample_idx, dest_chan);
         out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
       }
@@ -152,7 +152,7 @@ inline bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::
 // The caller is responsible for clearing the destination buffer before Mix is initially called.
 // DoAccumulate is still valuable in the non-mute case, as it saves a read+FADD per sample.
 //
-template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
+template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 bool PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
     int64_t source_frames, Fixed* source_offset_ptr, bool accumulate) {
@@ -206,7 +206,7 @@ template <typename SourceSampleType>
 template <ScalerType ScaleType, bool DoAccumulate>
 inline bool NxNPointSamplerImpl<SourceSampleType>::Mix(
     float* dest_ptr, int64_t dest_frames, int64_t* dest_offset_ptr, const void* source_void_ptr,
-    int64_t source_frames, Fixed* source_offset_ptr, Bookkeeping* info, uint32_t chan_count) {
+    int64_t source_frames, Fixed* source_offset_ptr, Bookkeeping* info, int32_t chan_count) {
   TRACE_DURATION("audio", "NxNPointSamplerImpl::MixInternal");
   static_assert(ScaleType != ScalerType::MUTED || DoAccumulate == true,
                 "Mixing muted streams without accumulation is explicitly unsupported");
@@ -245,7 +245,7 @@ inline bool NxNPointSamplerImpl<SourceSampleType>::Mix(
         amplitude_scale = info->scale_arr[frame_num];
       }
 
-      for (size_t dest_chan = 0; dest_chan < chan_count; ++dest_chan) {
+      for (int32_t dest_chan = 0; dest_chan < chan_count; ++dest_chan) {
         float sample = SR::Read(source_ptr + source_sample_idx, dest_chan);
         out[dest_chan] = DM::Mix(out[dest_chan], sample, amplitude_scale);
       }
@@ -315,14 +315,14 @@ bool NxNPointSamplerImpl<SourceSampleType>::Mix(float* dest_ptr, int64_t dest_fr
 }
 
 // Templates used to expand the combinations of possible PointSampler configurations.
-template <size_t DestChanCount, typename SourceSampleType, size_t SourceChanCount>
+template <int32_t DestChanCount, typename SourceSampleType, int32_t SourceChanCount>
 static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStreamType& source_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SelectPSM(dChan,sType,sChan)");
   return std::make_unique<PointSamplerImpl<DestChanCount, SourceSampleType, SourceChanCount>>();
 }
 
-template <size_t DestChanCount, typename SourceSampleType>
+template <int32_t DestChanCount, typename SourceSampleType>
 static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStreamType& source_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SelectPSM(dChan,sType)");
@@ -354,7 +354,7 @@ static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStream
   return nullptr;
 }
 
-template <size_t DestChanCount>
+template <int32_t DestChanCount>
 static inline std::unique_ptr<Mixer> SelectPSM(const fuchsia::media::AudioStreamType& source_format,
                                                const fuchsia::media::AudioStreamType& dest_format) {
   TRACE_DURATION("audio", "SelectPSM(dChan)");

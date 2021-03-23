@@ -106,7 +106,7 @@ template <fuchsia::media::AudioSampleFormat SampleFormat>
 RendererShimImpl::PacketVector RendererShimImpl::AppendPackets(
     const std::vector<AudioBufferSlice<SampleFormat>>& slices, int64_t initial_pts) {
   // Where in the payload buffer (in bytes) to write the next packet.
-  size_t payload_offset = payload_buffer_.GetCurrentOffset() * format().bytes_per_frame();
+  int64_t payload_offset = payload_buffer_.GetCurrentOffset() * format().bytes_per_frame();
 
   // Where in the media timeline (in PTS units; frames by default) to write the next packet.
   int64_t pts = initial_pts;
@@ -116,9 +116,9 @@ RendererShimImpl::PacketVector RendererShimImpl::AppendPackets(
     payload_buffer_.Append(slice);
     initial_pts = pts;
 
-    for (size_t frame = 0; frame < slice.NumFrames(); frame += num_packet_frames()) {
+    for (int64_t frame = 0; frame < slice.NumFrames(); frame += num_packet_frames()) {
       // Every packet is kPacketMs long, except the last packet might be shorter.
-      size_t num_frames = std::min(num_packet_frames(), slice.NumFrames() - frame);
+      int64_t num_frames = std::min(num_packet_frames(), slice.NumFrames() - frame);
       auto packet = std::make_shared<Packet>();
       packet->start_pts = pts;
       packet->end_pts = initial_pts + pts_ticks_per_frame_.Scale(frame + num_frames);
@@ -126,8 +126,8 @@ RendererShimImpl::PacketVector RendererShimImpl::AppendPackets(
 
       fuchsia::media::StreamPacket stream_packet{
           .pts = pts,
-          .payload_offset = payload_offset,
-          .payload_size = num_frames * slice.format().bytes_per_frame(),
+          .payload_offset = static_cast<uint64_t>(payload_offset),
+          .payload_size = static_cast<uint64_t>(num_frames * slice.format().bytes_per_frame()),
       };
 
       FX_LOGS(TRACE) << " sending pkt at pts " << packet->start_pts << ", frame " << frame
@@ -148,7 +148,7 @@ RendererShimImpl::PacketVector RendererShimImpl::AppendPackets(
 
 void RendererShimImpl::WaitForPackets(TestFixture* fixture,
                                       const std::vector<std::shared_ptr<Packet>>& packets,
-                                      size_t ring_out_frames) {
+                                      int64_t ring_out_frames) {
   FX_CHECK(!packets.empty());
   auto end_time_reference = (*packets.rbegin())->end_ref_time;
   auto end_time_mono =

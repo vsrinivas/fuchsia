@@ -93,8 +93,8 @@ inline fuchsia::media::tuning::AudioMixGroup ToAudioMixGroup(
       streams.push_back(stream.value());
     }
   }
-  uint32_t output_rate = mix_group.output_rate;
-  uint16_t output_channels = mix_group.output_channels;
+  auto output_rate = static_cast<uint32_t>(mix_group.output_rate);
+  auto output_channels = static_cast<uint16_t>(mix_group.output_channels);
   return fuchsia::media::tuning::AudioMixGroup{
       name, loopback, std::move(effects), std::move(inputs), streams, output_rate, output_channels};
 }
@@ -138,10 +138,10 @@ inline PipelineConfig::MixGroup ToPipelineConfigMixGroup(
     inputs.push_back(ToPipelineConfigMixGroup(std::move(*mix_group.inputs[i])));
   }
   bool loopback = mix_group.loopback;
-  uint32_t output_rate =
+  int32_t output_rate =
       mix_group.output_rate ? mix_group.output_rate : PipelineConfig::kDefaultMixGroupRate;
-  uint16_t output_channels = mix_group.output_channels ? mix_group.output_channels
-                                                       : PipelineConfig::kDefaultMixGroupChannels;
+  int16_t output_channels = mix_group.output_channels ? mix_group.output_channels
+                                                      : PipelineConfig::kDefaultMixGroupChannels;
 
   return PipelineConfig::MixGroup{name,     input_streams, effects,        inputs,
                                   loopback, output_rate,   output_channels};

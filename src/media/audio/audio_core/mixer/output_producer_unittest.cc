@@ -34,7 +34,7 @@ using testing::Pointwise;
 class OutputProducerTest : public testing::Test {
  public:
   std::unique_ptr<OutputProducer> SelectOutputProducer(
-      fuchsia::media::AudioSampleFormat dest_format, uint32_t num_channels) {
+      fuchsia::media::AudioSampleFormat dest_format, int32_t num_channels) {
     fuchsia::media::AudioStreamType dest_details;
     dest_details.sample_format = dest_format;
     dest_details.channels = num_channels;

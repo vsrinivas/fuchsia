@@ -243,7 +243,7 @@ CoefficientTable* CreateSincFilterTable(SincFilter::Inputs inputs) {
 SincFilter::CacheT* CreateSincFilterCoefficientTableCache() {
   auto cache = new SincFilter::CacheT(CreateSincFilterTable);
 
-  auto make_inputs = [](uint32_t source_rate, uint32_t dest_rate) {
+  auto make_inputs = [](int32_t source_rate, int32_t dest_rate) {
     return SincFilter::Inputs{
         .side_length = SincFilter::Length(source_rate, dest_rate).raw_value(),
         .num_frac_bits = Fixed::Format::FractionalBits,

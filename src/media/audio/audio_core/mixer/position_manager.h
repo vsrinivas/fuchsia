@@ -18,7 +18,7 @@ class PositionManager {
  public:
   PositionManager() : PositionManager(1, 1, 1, kOneFrame.raw_value()) {}
 
-  PositionManager(uint32_t num_source_chans, uint32_t num_dest_chans, int64_t positive_length,
+  PositionManager(int32_t num_source_chans, int32_t num_dest_chans, int64_t positive_length,
                   int64_t negative_length);
   PositionManager(const PositionManager& not_ctor_copyable) = delete;
   PositionManager& operator=(const PositionManager& not_copyable) = delete;
@@ -93,8 +93,8 @@ class PositionManager {
   static void CheckRateValues(int64_t frac_step_size, uint64_t rate_modulo, uint64_t denominator,
                               uint64_t* source_position_modulo_ptr);
 
-  uint32_t num_source_chans_;
-  uint32_t num_dest_chans_;
+  int32_t num_source_chans_;
+  int32_t num_dest_chans_;
   int64_t frac_positive_length_;
   int64_t frac_negative_length_;
 

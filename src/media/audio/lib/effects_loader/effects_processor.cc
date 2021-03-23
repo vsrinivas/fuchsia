@@ -12,9 +12,9 @@
 namespace media::audio {
 namespace {
 
-uint32_t ComputeMinBlockSize(uint32_t a, uint32_t b) { return std::lcm(a, b); }
+int64_t ComputeMinBlockSize(int64_t a, int64_t b) { return std::lcm(a, b); }
 
-uint32_t ComputeMaxFramesPerBuffer(uint32_t max_frames_per_buffer, uint32_t block_size) {
+int64_t ComputeMaxFramesPerBuffer(int64_t max_frames_per_buffer, int64_t block_size) {
   // Align max batch size to work with our block size.
   return max_frames_per_buffer - (max_frames_per_buffer % block_size);
 }
@@ -43,8 +43,8 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
   channels_out_ = params.channels_out;
 
   if (params.block_size_frames != FUCHSIA_AUDIO_EFFECTS_BLOCK_SIZE_ANY &&
-      params.block_size_frames != block_size_) {
-    block_size_ = ComputeMinBlockSize(block_size_, params.block_size_frames);
+      static_cast<int32_t>(params.block_size_frames) != block_size_) {
+    block_size_ = ComputeMinBlockSize(block_size_, static_cast<int32_t>(params.block_size_frames));
     if (max_batch_size_ != 0) {
       // Recompute our max batch size to be block aligned.
       max_batch_size_ = ComputeMaxFramesPerBuffer(max_batch_size_, block_size_);
@@ -52,8 +52,10 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
   }
 
   if (params.max_frames_per_buffer != FUCHSIA_AUDIO_EFFECTS_FRAMES_PER_BUFFER_ANY &&
-      (max_batch_size_ == 0 || params.max_frames_per_buffer < max_batch_size_)) {
-    max_batch_size_ = ComputeMaxFramesPerBuffer(params.max_frames_per_buffer, block_size_);
+      (max_batch_size_ == 0 ||
+       static_cast<int64_t>(params.max_frames_per_buffer) < max_batch_size_)) {
+    max_batch_size_ =
+        ComputeMaxFramesPerBuffer(static_cast<int64_t>(params.max_frames_per_buffer), block_size_);
   }
 
   delay_frames_ += params.signal_latency_frames;
@@ -64,9 +66,9 @@ zx_status_t EffectsProcessor::AddEffect(Effect e) {
 }
 
 // Aborts if position is out-of-range.
-const Effect& EffectsProcessor::GetEffectAt(size_t position) const {
+const Effect& EffectsProcessor::GetEffectAt(int64_t position) const {
   TRACE_DURATION("audio", "EffectsProcessor::GetEffectAt", "position", position);
-  FX_DCHECK(position < effects_chain_.size());
+  FX_CHECK(static_cast<uint64_t>(position) < effects_chain_.size());
   return effects_chain_[position];
 }
 
@@ -74,7 +76,7 @@ const Effect& EffectsProcessor::GetEffectAt(size_t position) const {
 // Per spec, fail if audio_buff_in_out is nullptr (even if num_frames is 0).
 // Also, if any instance fails Process, exit without calling the others.
 // TODO(mpuryear): Should we still call the other instances, if one fails?
-zx_status_t EffectsProcessor::ProcessInPlace(uint32_t num_frames, float* audio_buff_in_out) const {
+zx_status_t EffectsProcessor::ProcessInPlace(int64_t num_frames, float* audio_buff_in_out) const {
   TRACE_DURATION("audio", "EffectsProcessor::ProcessInPlace", "num_frames", num_frames,
                  "num_effects", effects_chain_.size());
   if (audio_buff_in_out == nullptr) {
@@ -98,7 +100,7 @@ zx_status_t EffectsProcessor::ProcessInPlace(uint32_t num_frames, float* audio_b
   return ZX_OK;
 }
 
-zx_status_t EffectsProcessor::Process(uint32_t num_frames, float* audio_buff_in,
+zx_status_t EffectsProcessor::Process(int64_t num_frames, float* audio_buff_in,
                                       float** audio_buff_out) const {
   TRACE_DURATION("audio", "EffectsProcessor::Process", "num_frames", num_frames, "num_effects",
                  effects_chain_.size());
@@ -109,7 +111,7 @@ zx_status_t EffectsProcessor::Process(uint32_t num_frames, float* audio_buff_in,
     return ZX_OK;
   }
 
-  uint32_t channels_in = channels_in_;
+  int32_t channels_in = channels_in_;
   float* input = audio_buff_in;
   for (size_t i = 0; i < effects_chain_.size(); ++i) {
     const auto& effect = effects_chain_[i];
