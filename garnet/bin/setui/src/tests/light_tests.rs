@@ -14,7 +14,7 @@ use crate::base::SettingType;
 use crate::config::base::AgentType;
 use crate::handler::base::{Context, GenerateHandler};
 use crate::handler::device_storage::testing::InMemoryStorageFactory;
-use crate::handler::device_storage::{DeviceStorage, DeviceStorageFactory};
+use crate::handler::device_storage::DeviceStorage;
 use crate::handler::setting_handler::persist::ClientProxy;
 use crate::handler::setting_handler::{BoxedController, ClientImpl};
 use crate::input::common::MediaButtonsEventBuilder;
@@ -199,17 +199,13 @@ impl TestLightEnvironmentBuilder {
                 Box::new(move |context: Context<InMemoryStorageFactory>| {
                     let config_clone = config.clone();
                     Box::pin(async move {
-                        let storage = context.environment.storage_factory.get_store().await;
-
                         let setting_type = context.setting_type;
                         ClientImpl::create(
                             context,
                             Box::new(move |proxy| {
                                 let config = config_clone.clone();
-                                let storage = storage.clone();
                                 Box::pin(async move {
-                                    let proxy =
-                                        ClientProxy::new(proxy, storage, setting_type).await;
+                                    let proxy = ClientProxy::new(proxy, setting_type).await;
                                     let controller_result = LightController::create_with_config(
                                         proxy,
                                         Some(config.clone()),

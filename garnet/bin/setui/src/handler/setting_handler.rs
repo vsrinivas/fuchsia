@@ -351,7 +351,7 @@ pub mod persist {
     use super::ClientProxy as BaseProxy;
     use super::*;
     use crate::base::SettingInfo;
-    use crate::handler::device_storage::{DeviceStorage, DeviceStorageConvertible};
+    use crate::handler::device_storage::DeviceStorageConvertible;
     use crate::message::base::{Audience, MessageEvent};
     use crate::service;
     use crate::storage;
@@ -384,12 +384,7 @@ pub mod persist {
     }
 
     impl ClientProxy {
-        pub async fn new(
-            base_proxy: BaseProxy,
-            // TODO(fxbug.dev/72706) Remove storage from clients.
-            _storage: Arc<DeviceStorage>,
-            setting_type: SettingType,
-        ) -> Self {
+        pub async fn new(base_proxy: BaseProxy, setting_type: SettingType) -> Self {
             Self { base: base_proxy, setting_type }
         }
 
@@ -517,15 +512,13 @@ pub mod persist {
             context: Context<F>,
         ) -> BoxFuture<'static, ControllerGenerateResult> {
             Box::pin(async move {
-                let storage = context.environment.storage_factory.get_store().await;
                 let setting_type = context.setting_type;
 
                 ClientImpl::create(
                     context,
                     Box::new(move |proxy| {
-                        let storage = storage.clone();
                         Box::pin(async move {
-                            let proxy = ClientProxy::new(proxy, storage, setting_type).await;
+                            let proxy = ClientProxy::new(proxy, setting_type).await;
                             let controller_result = C::create(proxy).await;
 
                             match controller_result {

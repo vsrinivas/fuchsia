@@ -388,7 +388,6 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         let mut handler_factory = SettingHandlerFactoryImpl::new(
             settings.clone(),
             service_context.clone(),
-            self.storage_factory.clone(),
             context_id_counter.clone(),
         );
 

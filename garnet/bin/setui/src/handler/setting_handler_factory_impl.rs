@@ -108,11 +108,10 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactoryImpl<T> {
     pub fn new(
         settings: HashSet<SettingType>,
         service_context_handle: ServiceContextHandle,
-        storage_factory: Arc<T>,
         context_id_counter: Arc<AtomicU64>,
     ) -> SettingHandlerFactoryImpl<T> {
         SettingHandlerFactoryImpl {
-            environment: Environment::new(settings, service_context_handle, storage_factory),
+            environment: Environment::new(settings, service_context_handle),
             generators: HashMap::new(),
             context_id_counter,
         }
@@ -177,7 +176,6 @@ mod tests {
                 settings
             },
             ServiceContext::create(None, Some(messenger_factory.clone())),
-            Arc::new(InMemoryStorageFactory::new()),
             Arc::new(AtomicU64::new(0)),
         );
 

@@ -23,7 +23,7 @@ use async_trait::async_trait;
 use futures::future::BoxFuture;
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::sync::Arc;
+use std::marker::PhantomData;
 use thiserror;
 
 #[cfg(test)]
@@ -293,28 +293,24 @@ pub trait SettingHandlerFactory {
     ) -> Result<Signature, SettingHandlerFactoryError>;
 }
 
+// TODO(fxbug.dev/72706) Remove generics.
 pub struct Environment<T: DeviceStorageFactory> {
     pub settings: HashSet<SettingType>,
     pub service_context_handle: ServiceContextHandle,
-    pub storage_factory: Arc<T>,
+    _phantom: PhantomData<T>,
 }
 
 impl<T: DeviceStorageFactory> Clone for Environment<T> {
     fn clone(&self) -> Environment<T> {
-        Environment::new(
-            self.settings.clone(),
-            self.service_context_handle.clone(),
-            self.storage_factory.clone(),
-        )
+        Environment::new(self.settings.clone(), self.service_context_handle.clone())
     }
 }
 impl<T: DeviceStorageFactory> Environment<T> {
     pub fn new(
         settings: HashSet<SettingType>,
         service_context_handle: ServiceContextHandle,
-        storage_factory: Arc<T>,
     ) -> Environment<T> {
-        Environment { settings, service_context_handle, storage_factory }
+        Environment { settings, service_context_handle, _phantom: PhantomData }
     }
 }
 
@@ -345,22 +341,22 @@ impl<T: DeviceStorageFactory> Context<T> {
 /// ContextBuilder is a convenience builder to facilitate creating a Context
 /// (and associated environment).
 #[cfg(test)]
+// TODO(fxbug.dev/72706) Remove generics.
 pub struct ContextBuilder<T: DeviceStorageFactory> {
     setting_type: SettingType,
-    storage_factory: Arc<T>,
     settings: HashSet<SettingType>,
     service_context: Option<ServiceContextHandle>,
     messenger: Messenger,
     receptor: Receptor,
     notifier_signature: Signature,
     id: u64,
+    _phantom: PhantomData<T>,
 }
 
 #[cfg(test)]
 impl<T: DeviceStorageFactory> ContextBuilder<T> {
     pub fn new(
         setting_type: SettingType,
-        storage_factory: Arc<T>,
         messenger: Messenger,
         receptor: Receptor,
         notifier_signature: Signature,
@@ -368,13 +364,13 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
     ) -> Self {
         Self {
             setting_type,
-            storage_factory,
             settings: HashSet::new(),
             service_context: None,
             messenger,
             receptor,
             notifier_signature,
             id,
+            _phantom: PhantomData,
         }
     }
 
@@ -401,7 +397,7 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
         } else {
             self.service_context.unwrap()
         };
-        let environment = Environment::new(self.settings, service_context, self.storage_factory);
+        let environment = Environment::new(self.settings, service_context);
 
         // Note: ContextBuilder should use the same context id system as the SettingHandlerFactoryImpl.
         // If it is used in conjunction with Context::new, then a new way of tracking unique Contexts
