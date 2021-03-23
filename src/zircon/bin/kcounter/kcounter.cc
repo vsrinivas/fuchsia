@@ -17,6 +17,7 @@
 #include <cstdio>
 #include <cstring>
 #include <utility>
+#include <vector>
 
 #include <fbl/array.h>
 #include <fbl/unique_fd.h>
@@ -174,12 +175,38 @@ int main(int argc, char** argv) {
   uint64_t cpu_range_start = (cmdline.cpuid != kNoCpuIdChosen) ? cmdline.cpuid : 0;
   uint64_t cpu_range_end = (cmdline.cpuid != kNoCpuIdChosen) ? cmdline.cpuid + 1 : desc->max_cpus;
 
+  size_t match_count = 0;
+  size_t max_name_length = 0;
+  for (size_t i = 0; i < desc->num_counters(); ++i) {
+    const auto& entry = desc->descriptor_table[i];
+    if (matches(entry.name)) {
+      max_name_length = std::max(max_name_length, strlen(entry.name));
+      match_count++;
+    }
+  }
+  std::vector<int64_t> previous_values(cmdline.verbose ? 0 : match_count);
+
+  // Set last sample time to zero so that the system and period averages match
+  // on the first iteration.
+  zx_time_t last_sample_time = 0;
+
+  // The printf modifier * expects an int for the field size. A negative value
+  // specifies left justification.
+  const auto name_field_width = -static_cast<int>(max_name_length);
+
   while (true) {
     if (cmdline.period != 0) {
       deadline += ZX_SEC(cmdline.period);
       printf("[%zu]\n", times);
     }
 
+    if (!cmdline.terse && !cmdline.verbose && !cmdline.list) {
+      printf("%*s     %-10s     %-9s   %-10s\n", name_field_width, "Counter", "Value", "Sys Avg",
+             "Period Avg");
+    }
+
+    const zx_time_t sample_time = zx_clock_get_monotonic();
+    size_t match_index = 0;
     for (size_t i = 0; i < desc->num_counters(); ++i) {
       const auto& entry = desc->descriptor_table[i];
       if (matches(entry.name)) {
@@ -201,7 +228,7 @@ int main(int argc, char** argv) {
           }
         } else {
           if (!cmdline.terse) {
-            printf("%s =%s", entry.name,
+            printf("%*s =%s", name_field_width, entry.name,
                    !cmdline.verbose                     ? " "
                    : entry.type == counters::Type::kMin ? " min("
                    : entry.type == counters::Type::kMax ? " max("
@@ -238,20 +265,27 @@ int main(int argc, char** argv) {
             printf("%s = %" PRId64 "\n", entry.type == counters::Type::kSum ? "" : ")", value);
           } else {
             int64_t ev_per_nsec = 0;
-            if (unlikely(mul_overflow(value, 1000000000LL, &ev_per_nsec))) {
-              printf("%" PRId64 " [rate overflow]\n", value);
+            const bool overflow = mul_overflow(value, 1000000000LL, &ev_per_nsec);
+            const int64_t system_rate = ev_per_nsec / sample_time;
+            const int64_t delta_value = value - previous_values[match_index];
+            const int64_t delta_sample_time = sample_time - last_sample_time;
+            const int64_t period_rate = delta_value * 1000000000LL / delta_sample_time;
+
+            previous_values[match_index] = value;
+
+            if (!overflow) {
+              printf("%12" PRId64 " [%8" PRId64 "/sec %8" PRId64 "/sec]\n", value, system_rate,
+                     period_rate);
             } else {
-              auto rate = ev_per_nsec / zx_clock_get_monotonic();
-              if (rate != 0) {
-                printf("%" PRId64 " [%" PRId64 "/sec]\n", value, rate);
-              } else {
-                printf("%" PRId64 "\n", value);
-              }
+              printf("%12" PRId64 " [%8s     %8" PRId64 "/sec]\n", value, "overflow", period_rate);
             }
           }
         }
-      }
-    }
+
+        match_index++;
+      }  // if (matches(entry.name))
+    }    // for (size_t i = 0; i < desc->num_counters(); ++i)
+    last_sample_time = sample_time;
 
     // Check that each prefix was actually used.
     if (times == 1) {
