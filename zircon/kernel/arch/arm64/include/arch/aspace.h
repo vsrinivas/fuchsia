@@ -92,9 +92,10 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
                                uint index_shift, uint page_size_shift, volatile pte_t* page_table,
                                ConsistencyManager& cm) TA_REQ(lock_);
 
-  void HarvestAccessedPageTable(vaddr_t vaddr_in, vaddr_t vaddr_rel_in, size_t size_in,
-                                uint index_shift, uint page_size_shift, volatile pte_t* page_table,
-                                const HarvestCallback& accessed_callback, ConsistencyManager& cm)
+  size_t HarvestAccessedPageTable(size_t* entry_limit, vaddr_t vaddr_in, vaddr_t vaddr_rel_in,
+                                  size_t size_in, uint index_shift, uint page_size_shift,
+                                  volatile pte_t* page_table,
+                                  const HarvestCallback& accessed_callback, ConsistencyManager& cm)
       TA_REQ(lock_);
 
   void MarkAccessedPageTable(vaddr_t vaddr, vaddr_t vaddr_rel_in, size_t size, uint index_shift,
