@@ -73,7 +73,7 @@ func NewSocket(ctx context.Context, socketPath string) (io.ReadWriteCloser, erro
 	// new cursor anyways when it is ready to receive input.
 	io.WriteString(socket, asSerialCmd([]string{}))
 	// Look for the cursor, which should indicate that the console is ready for input.
-	ctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
 	defer cancel()
 	m := iomisc.NewMatchingReader(socket, [][]byte{[]byte(consoleCursor)})
 	if _, err = iomisc.ReadUntilMatch(ctx, m); err != nil {
