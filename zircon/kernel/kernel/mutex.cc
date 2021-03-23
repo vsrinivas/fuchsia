@@ -129,9 +129,13 @@ void Mutex::Acquire(zx_duration_t spin_max_duration) {
   const uintptr_t new_mutex_state = reinterpret_cast<uintptr_t>(current_thread);
 
   // Fast path: The mutex is unlocked and uncontested. Try to acquire it immediately.
+  //
+  // We use the weak form of compare exchange here, which is faster on some
+  // architectures (e.g. aarch64). In the rare case it spuriously fails, the slow
+  // path will handle it.
   uintptr_t old_mutex_state = STATE_FREE;
-  if (likely(val_.compare_exchange_strong(old_mutex_state, new_mutex_state,
-                                          ktl::memory_order_acquire, ktl::memory_order_relaxed))) {
+  if (likely(val_.compare_exchange_weak(old_mutex_state, new_mutex_state, ktl::memory_order_acquire,
+                                        ktl::memory_order_relaxed))) {
     // Don't bother to update the ownership of the wait queue. If another thread
     // attempts to acquire the mutex and discovers it to be already locked, it
     // will take care of updating the wait queue ownership while it is inside of
