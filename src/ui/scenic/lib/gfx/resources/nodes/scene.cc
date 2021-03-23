@@ -52,8 +52,13 @@ Scene::Scene(Session* session, SessionId session_id, ResourceId node_id,
     fit::function<bool()> may_receive_focus = [] { return true; };
     // Scene is *never* input suppressed.
     fit::function<bool()> is_input_suppressed = [] { return false; };
-    fit::function<std::optional<glm::mat4>()> global_transform = [weak_ptr = GetWeakPtr()] {
-      return weak_ptr ? std::optional<glm::mat4>{weak_ptr->GetGlobalTransform()} : std::nullopt;
+    fit::function<glm::mat4()> global_transform = [weak_ptr = GetWeakPtr()] {
+      if (weak_ptr) {
+        return weak_ptr->GetGlobalTransform();
+      }
+
+      FX_NOTREACHED() << "impossible";
+      return glm::mat4(1.f);
     };
     fit::function<void(ViewHolderPtr)> add_annotation_view_holder = [](auto) {
       FX_NOTREACHED() << "Cannot create Annotation ViewHolder for Scene.";

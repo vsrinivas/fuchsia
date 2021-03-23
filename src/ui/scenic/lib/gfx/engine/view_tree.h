@@ -92,7 +92,7 @@ class ViewTree {
     fit::function<bool()> is_input_suppressed;
 
     // Park a callback that returns the current global transform of the node.
-    fit::function<std::optional<glm::mat4>()> global_transform;
+    fit::function<glm::mat4()> global_transform;
 
     // Park a callback that performs a hit test starting at this node.
     fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator,
@@ -149,7 +149,7 @@ class ViewTree {
   EventReporterWeakPtr EventReporterOf(zx_koid_t koid) const;
 
   // Return the global transform of the node attached to a tracked |koid|.
-  // Returns std::nullopt if no node was found or the node had no valid global transform.
+  // Returns std::nullopt if no node was found or if the node is disconnected.
   std::optional<glm::mat4> GlobalTransformOf(zx_koid_t koid) const;
 
   // Performs a hit test starting from the node corresponding to |starting_view_koid|. The hit test
@@ -323,7 +323,7 @@ struct ViewTreeNewRefNode {
   EventReporterWeakPtr event_reporter;
   fit::function<bool()> may_receive_focus;
   fit::function<bool()> is_input_suppressed;
-  fit::function<std::optional<glm::mat4>()> global_transform;
+  fit::function<glm::mat4()> global_transform;
   fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator,
                      bool semantic_hit_test)>
       hit_test;

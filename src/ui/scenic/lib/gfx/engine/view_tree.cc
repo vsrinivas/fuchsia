@@ -151,7 +151,7 @@ bool ViewTree::IsInputSuppressed(zx_koid_t koid) const {
 }
 
 std::optional<glm::mat4> ViewTree::GlobalTransformOf(zx_koid_t koid) const {
-  if (!IsTracked(koid) || !IsRefNode(koid)) {
+  if (!IsTracked(koid) || !IsRefNode(koid) || !IsConnectedToScene(koid)) {
     return std::nullopt;
   }
 

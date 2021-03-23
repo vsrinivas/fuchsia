@@ -80,11 +80,14 @@ View::View(Session* session, ResourceId id, ViewRefControl control_ref, ViewRef 
       return IsInputSuppressed(view_ptr->GetViewNode());
     };
 
-    fit::function<std::optional<glm::mat4>()> global_transform = [weak_ptr = GetWeakPtr()] {
+    fit::function<glm::mat4()> global_transform = [weak_ptr = GetWeakPtr()] {
       // Return the global transform if the view is still alive and attached to a scene.
-      return weak_ptr && weak_ptr->GetViewNode()->scene()
-                 ? std::optional<glm::mat4>{weak_ptr->GetViewNode()->GetGlobalTransform()}
-                 : std::nullopt;
+      if (weak_ptr) {
+        return weak_ptr->GetViewNode()->GetGlobalTransform();
+      }
+
+      FX_NOTREACHED() << "impossible";
+      return glm::mat4(1.f);
     };
 
     fit::function<void(const escher::ray4& world_space_ray, HitAccumulator<ViewHit>* accumulator,
