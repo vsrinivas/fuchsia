@@ -300,6 +300,33 @@ List<double> _computeRenderFrameTotalDurations(Model model) {
   return renderFrameTotalDurations;
 }
 
+// We compute the number of frames Flutter produces that are undisplayed, meaning will not be displayed for at least one vsync interval.
+// We can do this by measuring how many of Flutter's frames flow into the same Scenic RenderFrame. If N Flutter frames flow into 1 Scenic
+// RenderFrame, then we have N-1 undisplayed frames.
+int _computeUndisplayedFrameCount(Model model) {
+  final startRenderingEvents = filterEventsTyped<DurationEvent>(
+      getAllEvents(model),
+      category: 'flutter',
+      name: 'GPURasterizer::Draw');
+
+  // Make sure the list is de-duped.
+  final endRenderingEvents = startRenderingEvents
+      .map((DurationEvent durationEvent) {
+        final followingEvents = filterEventsTyped<DurationEvent>(
+            getFollowingEvents(durationEvent),
+            category: 'gfx',
+            name: 'RenderFrame');
+        if (followingEvents.isEmpty) {
+          return null;
+        }
+        return followingEvents.first;
+      })
+      .toSet()
+      .toList();
+
+  return startRenderingEvents.length - endRenderingEvents.length;
+}
+
 class _Results {
   String appName;
   _FpsResult fpsResult;
@@ -307,6 +334,7 @@ class _Results {
   List<double> frameRasterizerTimes;
   List<double> frameLatencies;
   List<double> renderFrameTotalDurations;
+  int undisplayedFrameCount;
 }
 
 String _appResultToString(_Results results) {
@@ -335,6 +363,10 @@ ${results.appName} Flutter Frame Stats
     ..write('\n')
     ..write('render_frame_total_durations:\n')
     ..write(describeValues(results.renderFrameTotalDurations, indent: 2))
+    ..write('\n')
+    ..write('undisplayed frame count:\n')
+    ..write('  ${results.undisplayedFrameCount}\n')
+    ..write('\n')
     ..write(
         'frame_time_discrepancy: ${results.fpsResult.frameTimeDiscrepancy.toMillisecondsF()}\n')
     ..write('\n');
@@ -419,7 +451,8 @@ List<_Results> _flutterFrameStats(Model model, {String flutterAppName}) {
             .map(getDurationInMilliseconds)
             .toList()
         ..frameLatencies = _computeFrameLatencies(uiThread)
-        ..renderFrameTotalDurations = _computeRenderFrameTotalDurations(model));
+        ..renderFrameTotalDurations = _computeRenderFrameTotalDurations(model)
+        ..undisplayedFrameCount = _computeUndisplayedFrameCount(model));
     }
   }
 
@@ -470,6 +503,8 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
         '${flutterAppName}_frame_time_discrepancy',
         Unit.milliseconds,
         [results.fpsResult.frameTimeDiscrepancy.toMillisecondsF()]),
+    TestCaseResults('${flutterAppName}_undisplayed_frame_count', Unit.count,
+        [results.undisplayedFrameCount.toDouble()]),
   ];
 }
 

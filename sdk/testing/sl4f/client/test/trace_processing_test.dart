@@ -419,6 +419,8 @@ void main(List<String> args) {
     expect(computeMean(results[4].values), _closeTo(10.729088445497638));
     expect(results[5].label, 'flutter_app_frame_time_discrepancy');
     expect(results[5].values[0], _closeTo(300.633182));
+    expect(results[6].label, 'flutter_app_undisplayed_frame_count');
+    expect(results[6].values[0], 4.0);
   });
 
   test('Flutter frame stats with long name app', () async {
@@ -438,6 +440,9 @@ void main(List<String> args) {
     expect(results[4].label,
         'flutter_app_long_name_xy_render_frame_total_durations');
     expect(computeMean(results[4].values), _closeTo(10.729088445497638));
+    expect(
+        results[6].label, 'flutter_app_long_name_xy_undisplayed_frame_count');
+    expect(results[6].values[0], 4.0);
   });
 
   test('Flutter frame stats metric (no Scenic edge case)', () async {
