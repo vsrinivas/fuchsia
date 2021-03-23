@@ -599,4 +599,39 @@ TEST(InvokeTraitsTest, IsAliasForStd) {
 
 #endif  // __cpp_lib_is_invocable >= 201703L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
+constexpr int TestIsConstantEvaluated(int x) {
+  if (cpp20::is_constant_evaluated()) {
+    return x + 2;
+  }
+  return x + 3;
+}
+
+TEST(ContextTraits, IsConstantEvaluated) {
+  constexpr decltype(auto) is = cpp20::is_constant_evaluated();
+  static_assert(cpp17::is_same_v<std::decay_t<decltype(is)>, bool>, "");
+
+  decltype(auto) is_not = cpp20::is_constant_evaluated();
+  static_assert(cpp17::is_same_v<decltype(is_not), bool>, "");
+  EXPECT_FALSE(is_not);
+
+  int x = 2;
+  int y = TestIsConstantEvaluated(x);
+
+#if defined(__cpp_lib_is_constant_evaluated) || \
+    (defined(__has_builtin) && __has_builtin(__builtin_is_constant_evaluated))
+  static_assert(is, "");
+  constexpr int z = TestIsConstantEvaluated(2);
+  static_assert(z == 4, "");
+  EXPECT_EQ(5, y);
+#else
+  EXPECT_EQ(4, y);
+#endif
+}
+
+#if __cpp_lib_is_constant_evaluated >= 201811L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+TEST(ContextTraits, IsConstantEvaluatedIsAliasForStdWhenAvailable) {
+  static_assert(&cpp20::is_consant_evaluated == &std::is_constant_evaluated, "");
+}
+#endif
+
 }  // namespace

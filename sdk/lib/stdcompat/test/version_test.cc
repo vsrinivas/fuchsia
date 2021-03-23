@@ -48,6 +48,10 @@ TEST(VersionTest, FeatureTestMacrosForCpp20) {
   static_assert(__cpp_lib_is_scoped_enum == 202011L,
                 "'__cpp_lib_is_scoped_enum' should be using draft 202011L for c++20.");
 #endif
+#if defined(__cpp_lib_is_constant_evaluated)
+  static_assert(__cpp_lib_is_constant_evaluated == 201811L,
+                "'__cpp_lib_is_constant_evaluated' should be using draft 201811L for c++20.");
+#endif
 }
 
 #elif __cplusplus > 201402L
@@ -96,6 +100,9 @@ TEST(VersionTest, FeatureTestMacrosForCpp17) {
   static_assert(__cpp_lib_invoke == 201411L,
                 "'__cpp_lib_invoke' should be using draft 201411L in c++17.");
 #endif
+#if defined(__cpp_lib_is_constant_evaluated)
+  static_assert(false, "'__cpp_lib_is_constant_evaluated' should not be defined in c++17.");
+#endif
 }
 
 #elif __cplusplus > 201103L
@@ -143,6 +150,9 @@ TEST(VersionTest, FeatureTestMacrosForCpp14) {
 #endif
 #if defined(__cpp_lib_as_const)
   static_assert(false, "'__cpp_lib_as_const' should not be defined in c++14.");
+#endif
+#if defined(__cpp_lib_is_constant_evaluated)
+  static_assert(false, "'__cpp_lib_is_constant_evaluated ' should not be defined in c++14.");
 #endif
 }
 

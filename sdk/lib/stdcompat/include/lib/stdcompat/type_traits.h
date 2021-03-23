@@ -444,6 +444,24 @@ using type_identity_t = typename type_identity<T>::type;
 
 #endif  // __cpp_lib_type_identity >= 201806L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
 
+#if __cpp_lib_is_constant_evaluated >= 201811L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
+using std::is_constant_evaluated;
+
+#else  // Provide polyfill for std::is_constant_evaluated
+
+#if defined(__has_builtin) && __has_builtin(__builtin_is_constant_evaluated)
+
+inline constexpr bool is_constant_evaluated() noexcept { return __builtin_is_constant_evaluated(); }
+
+#else
+
+inline constexpr bool is_constant_evaluated() noexcept { return false; }
+
+#endif  // __has_builtin(__builtin_is_constant_evaluated)
+
+#endif  // __cpp_lib_is_constant_evaluated >= 201811L && !defined(LIB_STDCOMPAT_USE_POLYFILLS)
+
 }  // namespace cpp20
 
 namespace cpp23 {
