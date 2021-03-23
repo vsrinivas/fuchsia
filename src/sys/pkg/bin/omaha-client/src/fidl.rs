@@ -559,6 +559,10 @@ where
                         warn!("error trying to flush monitor_queue: {:#}", anyhow!(e));
                     }
                 }
+
+                if let Err(e) = monitor_queue.clear().await {
+                    warn!("error clearing clients of monitor_queue: {:?}", e);
+                }
             }
             state_machine::State::Idle => {
                 // State is back to idle, clear the current update monitor handles.

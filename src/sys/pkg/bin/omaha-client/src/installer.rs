@@ -5,7 +5,7 @@
 //! This is the Fuchsia Installer implementation that talks to fuchsia.update.installer FIDL API.
 
 use crate::install_plan::FuchsiaInstallPlan;
-use anyhow::Context as _;
+use anyhow::{anyhow, Context as _};
 use fidl_connector::{Connect, ServiceReconnector};
 use fidl_fuchsia_hardware_power_statecontrol::RebootReason;
 use fidl_fuchsia_update_installer::{
@@ -15,6 +15,7 @@ use fidl_fuchsia_update_installer_ext::{
     start_update, FetchFailureReason, Initiator, MonitorUpdateAttemptError, Options,
     PrepareFailureReason, State, StateId, UpdateAttemptError,
 };
+use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use futures::future::BoxFuture;
@@ -24,6 +25,7 @@ use omaha_client::{
     installer::{Installer, ProgressObserver},
     protocol::request::InstallSource,
 };
+use std::time::Duration;
 use thiserror::Error;
 
 /// Represents possible reasons the installer could have ended in a failure state. Not exhaustive.
@@ -208,7 +210,9 @@ impl<C: Connect<Proxy = InstallerProxy> + Send> Installer for FuchsiaInstaller<C
         async move {
             match self.reboot_controller.take() {
                 Some(reboot_controller) => {
-                    reboot_controller.unblock().context("notify installer it can reboot when ready")
+                    reboot_controller
+                        .unblock()
+                        .context("notify installer it can reboot when ready")?;
                 }
                 None => {
                     // FIXME Need the direct reboot path anymore?
@@ -216,9 +220,16 @@ impl<C: Connect<Proxy = InstallerProxy> + Send> Installer for FuchsiaInstaller<C
                         .reboot(RebootReason::SystemUpdate)
                         .await?
                         .map_err(zx::Status::from_raw)
-                        .context("reboot error")
+                        .context("reboot error")?;
                 }
             }
+
+            // Device should be rebooting now, do not return because state machine expects
+            // perform_reboot() to block, wait for 5 minutes and if reboot still hasn't happened,
+            // return an error.
+            fasync::Timer::new(Duration::from_secs(60 * 5)).await;
+
+            Err(anyhow!("timed out while waiting for device to reboot"))
         }
         .boxed()
     }
@@ -235,7 +246,7 @@ mod tests {
         fuchsia_async as fasync,
         matches::assert_matches,
         parking_lot::Mutex,
-        std::{convert::TryInto, sync::Arc},
+        std::{convert::TryInto, sync::Arc, task::Poll},
     };
 
     const TEST_URL: &str = "fuchsia-pkg://fuchsia.com/update/0";
@@ -494,16 +505,27 @@ mod tests {
         );
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn test_reboot() {
+    #[test]
+    fn test_reboot() {
+        let mut exec = fasync::Executor::new().unwrap();
+
         let (mut installer, _) = new_mock_installer();
         let (reboot_controller, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<RebootControllerMarker>().unwrap();
         installer.reboot_controller = Some(reboot_controller);
 
-        installer.perform_reboot().await.unwrap();
+        {
+            let mut reboot_future = installer.perform_reboot();
+            assert_matches!(exec.run_until_stalled(&mut reboot_future), Poll::Pending);
+            assert_matches!(exec.wake_next_timer(), Some(_));
+            assert_matches!(exec.run_until_stalled(&mut reboot_future), Poll::Ready(Err(_)));
+        }
+
         assert_matches!(installer.reboot_controller, None);
-        assert_matches!(stream.next().await, Some(Ok(RebootControllerRequest::Unblock { .. })));
-        assert_matches!(stream.next().await, None);
+        assert_matches!(
+            exec.run_singlethreaded(stream.next()),
+            Some(Ok(RebootControllerRequest::Unblock { .. }))
+        );
+        assert_matches!(exec.run_singlethreaded(stream.next()), None);
     }
 }

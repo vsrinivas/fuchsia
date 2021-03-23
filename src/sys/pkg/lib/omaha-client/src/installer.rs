@@ -47,7 +47,7 @@ pub trait Installer {
     ) -> BoxFuture<'a, Result<(), Self::Error>>;
 
     /// Perform a reboot of the system (in whichever manner that the installer needs to perform
-    /// a reboot.  This fn may not get an opportunity to return.
+    /// a reboot.  This fn should not return unless reboot failed.
     fn perform_reboot(&mut self) -> BoxFuture<'_, Result<(), anyhow::Error>>;
 }
 
