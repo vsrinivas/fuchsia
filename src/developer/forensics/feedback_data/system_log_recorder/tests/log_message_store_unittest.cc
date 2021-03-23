@@ -463,6 +463,30 @@ DONE
   EXPECT_FALSE(end_of_block);
 }
 
+TEST(LogMessageStoreTest, VerifyNoRepeatWarningAfter_AppendToEnd) {
+  bool end_of_block;
+  // Set up the store to hold 2 log line. Verify time ordering: a message cannot be counted as
+  // repeated if it's in between messages, even if those messages get dropped.
+  LogMessageStore store(kVeryLargeBlockSize, kMaxLogLineSize * 2, MakeIdentityEncoder());
+  store.TurnOnRateLimiting();
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+  store.AppendToEnd("DONE\n");
+
+  EXPECT_EQ(store.Consume(&end_of_block), R"([15604.000][07559][07687][] INFO: line 0
+!!! MESSAGE REPEATED 1 MORE TIME !!!
+DONE
+)");
+  EXPECT_FALSE(end_of_block);
+
+  EXPECT_TRUE(store.Add(BuildLogMessage(FX_LOG_INFO, "line 0")));
+
+  EXPECT_EQ(store.Consume(&end_of_block), R"([15604.000][07559][07687][] INFO: line 0
+)");
+  EXPECT_FALSE(end_of_block);
+}
+
 }  // namespace
 }  // namespace system_log_recorder
 }  // namespace feedback_data

@@ -120,9 +120,13 @@ std::string LogMessageStore::Consume(bool* end_of_block) {
     last_pushed_message_count_ = 0;
   }
 
+  // Optionally log important message at the end.
   if (to_append_.has_value()) {
     AddToBuffer(to_append_.value());
     to_append_ = std::nullopt;
+    // We are changing the last message so we want to reset the last message pushed.
+    last_pushed_message_ = "";
+    last_pushed_message_count_ = 0;
   }
 
   // We assume all messages end with a newline character.
