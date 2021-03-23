@@ -16,12 +16,19 @@
 
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
+#include <algorithm>
 #include <string>
+#include <vector>
 
 #include "brcmu_utils.h"
 #include "debug.h"
 #include "linuxisms.h"
 #include "netbuf.h"
+
+#define SSID_PREFIX "<ssid-"
+#define SSID_PREFIX_LEN strlen(SSID_PREFIX)
+#define SSID_SUFFIX ">"
+#define SSID_SUFFIX_LEN strlen(SSID_SUFFIX)
 
 struct brcmf_netbuf* brcmu_pkt_buf_get_netbuf(uint len) {
   struct brcmf_netbuf* netbuf;
@@ -404,21 +411,26 @@ void brcmu_set_rx_rate_index_hist_rx11ac(
   }
 }
 
-size_t brcmu_ssid_hash(const std::vector<uint8_t>& ssid) {
-  std::string ssid_str(ssid.begin(), ssid.end());
-  std::hash<std::string> ssid_hash;
-  return ssid_hash(ssid_str);
+std::string brcmu_ssid_format_vector(const std::vector<uint8_t>& ssid) {
+  return brcmu_ssid_format_bytes(ssid.data(), ssid.size());
 }
 
-std::string brcmu_mac_hash(const uint8_t bssid[ETH_ALEN]) {
-  // Create a hash from the last three octets of the MAC
-  std::string mac_id_str(&bssid[3], &bssid[5] + 1);
-  std::hash<std::string> bssid_hash;
-  size_t id_hash = bssid_hash(mac_id_str);
+std::string brcmu_ssid_format_bytes(uint8_t const ssid_bytes[], size_t ssid_len) {
+  size_t ssid_num_bytes = std::min(IEEE80211_MAX_SSID_LEN, ssid_len);
+  char buf[SSID_PREFIX_LEN + (IEEE80211_MAX_SSID_LEN * 2) + SSID_SUFFIX_LEN + 1];
+  char* p = buf;
 
-  // Print into a string, preserving the OUI
-  char tmp_buf[(ETH_ALEN * 3) + (sizeof(size_t) * 2) + 1];
-  snprintf(tmp_buf, sizeof(tmp_buf), "%02x:%02x:%02x:%zx", bssid[0], bssid[1], bssid[2], id_hash);
-  std::string mac_as_str(tmp_buf);
-  return mac_as_str;
+  // Write SSID_PREFIX
+  strncpy(p, SSID_PREFIX, SSID_PREFIX_LEN + 1);
+  p += SSID_PREFIX_LEN;
+
+  // Write ssid_bytes in hexadecimal characters
+  for (size_t i = 0; i < ssid_num_bytes; i++) {
+    snprintf(p, 3, "%02x", ssid_bytes[i]);
+    p += 2;
+  }
+
+  // Write SSID_SUFFIX
+  strncpy(p, SSID_SUFFIX, SSID_SUFFIX_LEN + 1);
+  return buf;
 }

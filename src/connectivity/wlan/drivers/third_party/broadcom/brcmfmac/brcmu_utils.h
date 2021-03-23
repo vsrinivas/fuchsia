@@ -18,10 +18,7 @@
 #define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_UTILS_H_
 
 #include <fuchsia/hardware/wlanif/c/banjo.h>
-#include <netinet/if_ether.h>
 #include <zircon/compiler.h>
-
-#include <vector>
 
 #include <third_party/bcmdhd/crossdriver/dhd.h>
 
@@ -241,14 +238,18 @@ void brcmu_set_rx_rate_index_hist_rx11ac(
     const uint32_t (
         &rx11ac)[WSTATS_NSS_RANGE][WSTATS_SGI_RANGE][WSTATS_BW_RANGE_11AC][WSTATS_MCS_RANGE_11AC],
     uint32_t* out_rx_rate);
+
 /*
- * Convert SSID into a hashed value for identification without revealing the actual SSID.
+ * Return a string representing the `ssid` vector as "<ssid-BYTES>" where BYTES is
+ * a string of hexadecimal characters corresponding to the bytes of the SSID.
  */
-size_t brcmu_ssid_hash(const std::vector<uint8_t>& ssid);
+std::string brcmu_ssid_format_vector(const std::vector<uint8_t>& ssid);
+
 /*
- * Convert MAC into a string value that preserves OUI but hashes the last three octets to protect
- * personally-identifiable information.
+ * Return a string representing the `ssid_bytes` array of length `ssid_len` as
+ * "<ssid-BYTES>" where BYTES is a string of hexadecimal characters
+ * corresponding to the bytes of the SSID.
  */
-std::string brcmu_mac_hash(const uint8_t bssid[ETH_ALEN]);
+std::string brcmu_ssid_format_bytes(uint8_t const ssid_bytes[], size_t ssid_len);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_UTILS_H_
