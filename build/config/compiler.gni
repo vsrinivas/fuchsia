@@ -19,6 +19,7 @@ declare_args() {
   # * `speed`: optimized purely for speed
   # * `sanitizer`: optimized for sanitizers (ASan, etc.)
   # * `profile`: optimized for coverage/profile data collection
+  # * `coverage`: optimized for coverage data collection
   optimize = default_optimize
 }
 
@@ -30,6 +31,7 @@ _optimize_valid = [
   "speed",
   "sanitizer",
   "profile",
+  "coverage",
 ]
 
 assert(_optimize_valid + [ optimize ] - [ optimize ] != _optimize_valid,

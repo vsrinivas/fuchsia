@@ -1161,6 +1161,14 @@ declare_args() {
     },
 
     {
+      configs = [ "//build/config/profile:coverage" ]
+      tags = [
+        "instrumented",
+        "profile",
+      ]
+    },
+
+    {
       configs = [ "//build/config/profile" ]
       tags = [
         "instrumented",
@@ -1338,6 +1346,17 @@ declare_args() {
       select_variant = [
         {
           variant = "asan-ubsan"
+          host = true
+        },
+      ]
+    },
+
+    {
+      name = "host_coverage"
+      select_variant = []
+      select_variant = [
+        {
+          variant = "coverage"
           host = true
         },
       ]

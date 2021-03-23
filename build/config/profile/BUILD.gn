@@ -27,6 +27,28 @@ if (coverage_sdk_source_sets) {
   profile_source_files_list_files += [ coverage_sdk_source_sets_profile_list ]
 }
 
+variant("coverage") {
+  common_flags = [
+    "-fprofile-instr-generate",
+    "-fcoverage-mapping",
+  ]
+
+  inputs = profile_source_files_list_files
+  foreach(file, profile_source_files_list_files) {
+    common_flags += [ "-fprofile-list=" + rebase_path(file, root_build_dir) ]
+  }
+
+  if (!is_kernel && is_fuchsia) {
+    # The statically-linked profiling runtime depends on libzircon.
+    # TODO(fxbug.dev/61522): Ensure this works with shared_library() instances too!
+    deps = [ "//src/zircon/lib/zircon" ]
+
+    dynamic_linker_flags = "-dynamic-linker=profile/ld.so.1"
+    ldflags = [ "-Wl,$dynamic_linker_flags" ]
+    rustflags = [ "-Clink-arg=$dynamic_linker_flags" ]
+  }
+}
+
 variant("profile") {
   common_flags = [
     "-fprofile-instr-generate",

@@ -230,8 +230,14 @@ template("cmx") {
                            ])
   }
 
-  needs_debugdata =
-      select_variant + [ "profile" ] - [ "profile" ] != select_variant
+  needs_debugdata = select_variant + [
+                      "coverage",
+                      "profile",
+                    ] -
+                    [
+                      "coverage",
+                      "profile",
+                    ] != select_variant
 
   cmc_merge("${target_name}_merge") {
     sources = [

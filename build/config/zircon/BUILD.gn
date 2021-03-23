@@ -368,6 +368,13 @@ config("optimize_profile") {
   configs = [ "//build/config:optimize_default" ]
 }
 
+config("optimize_coverage") {
+  # NOTE: Unlike //build/config:optimize_coverage", this must always enable
+  # optimizations to ensure userboot.so is compiled with -O2
+  # See https://fxbug.dev/67467 for more context.
+  configs = [ "//build/config:optimize_default" ]
+}
+
 config("default_optimize") {
   configs = [ ":optimize_${optimize}" ]
 }

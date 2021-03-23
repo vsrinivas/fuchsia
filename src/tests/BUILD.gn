@@ -9,7 +9,14 @@ group("tests") {
 
   # TODO(fxbug.dev/67539): remove this check when we can better distinguish e2e
   # tests.
-  if (select_variant + [ "profile" ] - [ "profile" ] == select_variant) {
+  if (select_variant + [
+        "coverage",
+        "profile",
+      ] -
+      [
+        "coverage",
+        "profile",
+      ] == select_variant) {
     # WARNING: Only tests that are NOT end to end (E2E) product tests must be
     # added to this target.
     #

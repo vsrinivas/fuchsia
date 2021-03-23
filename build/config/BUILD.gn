@@ -449,6 +449,12 @@ config("optimize_profile") {
   rustflags = [ "-Copt-level=1" ]
 }
 
+config("optimize_coverage") {
+  cflags = [ "-O1" ]
+  ldflags = cflags
+  rustflags = [ "-Copt-level=1" ]
+}
+
 config("default_optimize") {
   configs = [ ":optimize_${optimize}" ]
 }
