@@ -8,12 +8,14 @@ use {
     tempfile::tempdir,
 };
 
-/// Constructs a simple fake data model with a tempdata() uri and tempdata()
+/// Constructs a simple fake data model with an in memory uri and tempdata()
 /// build directory.
 pub fn fake_data_model() -> Arc<DataModel> {
-    let store_tmp_dir = tempdir().unwrap();
-    let build_tmp_dir = tempdir().unwrap();
-    let uri = store_tmp_dir.into_path().into_os_string().into_string().unwrap();
-    let build_path = build_tmp_dir.into_path();
-    Arc::new(DataModel::connect(ModelEnvironment { uri, build_path }).unwrap())
+    Arc::new(
+        DataModel::connect(ModelEnvironment {
+            uri: "{memory}".to_string(),
+            build_path: tempdir().unwrap().into_path(),
+        })
+        .unwrap(),
+    )
 }
