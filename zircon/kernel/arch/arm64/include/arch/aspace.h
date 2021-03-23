@@ -61,6 +61,14 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
   // HarvestAccessed.
   static constexpr bool HasNonTerminalAccessedFlag() { return false; }
 
+  static constexpr vaddr_t NextUserPageTableOffset(vaddr_t va) {
+    // Work out the virtual address the next page table would start at by first masking the va down
+    // to determine its index, then adding 1 and turning it back into a virtual address.
+    const uint pt_bits = (MMU_USER_PAGE_SIZE_SHIFT - 3);
+    const uint page_pt_shift = MMU_USER_PAGE_SIZE_SHIFT + pt_bits;
+    return ((va >> page_pt_shift) + 1) << page_pt_shift;
+  }
+
  private:
   class ConsistencyManager;
   inline bool IsValidVaddr(vaddr_t vaddr) const {

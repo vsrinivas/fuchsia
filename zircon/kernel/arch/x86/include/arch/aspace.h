@@ -125,6 +125,15 @@ class X86ArchVmAspace final : public ArchVmAspaceInterface {
   // needing to harvest individual page mappings via HarvestAccessed.
   static constexpr bool HasNonTerminalAccessedFlag() { return true; }
 
+  static constexpr vaddr_t NextUserPageTableOffset(vaddr_t va) {
+    // This logic only works for 'regular' page sizes that match the hardware page sizes.
+    static_assert(PAGE_SIZE_SHIFT == 12 || PAGE_SIZE_SHIFT == 21);
+
+    const uint pt_bits = 9;
+    const uint page_pt_shift = PAGE_SIZE_SHIFT + pt_bits;
+    return ((va >> page_pt_shift) + 1) << page_pt_shift;
+  }
+
  private:
   // Test the vaddr against the address space's range.
   bool IsValidVaddr(vaddr_t vaddr) { return (vaddr >= base_ && vaddr <= base_ + size_ - 1); }
