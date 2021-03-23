@@ -333,7 +333,7 @@ impl Router {
                 futures::future::try_join4(
                     summon_clients(router.clone(), routes.new_forwarding_table_observer()),
                     routes.run_planner(node_id, link_state_observable.new_observer()),
-                    run_link_status_updater(node_id, link_state_observable, link_state_receiver),
+                    run_link_status_updater(link_state_observable, link_state_receiver),
                     async move {
                         run_diagostic_service_request_handler(router).await?;
                         Ok(())

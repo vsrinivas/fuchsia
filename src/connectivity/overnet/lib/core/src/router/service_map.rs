@@ -64,7 +64,7 @@ impl ServiceMap {
         ServiceMap {
             local_services: Mutex::new(BTreeMap::new()),
             local_node_id,
-            local_service_list: Observable::new_traced(Vec::new(), false),
+            local_service_list: Observable::new(Vec::new()),
             list_peers: Observable::new(listable_peers.clone()),
             listable_peer_set: Mutex::new(ListablePeerSet {
                 listable_peers,

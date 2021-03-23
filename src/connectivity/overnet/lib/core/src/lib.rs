@@ -6,9 +6,6 @@
 
 #![deny(missing_docs)]
 
-#[macro_use]
-extern crate rental;
-
 mod coding;
 mod future_help;
 mod handle_info;

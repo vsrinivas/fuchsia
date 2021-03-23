@@ -7,7 +7,6 @@ use crate::{NodeId, NodeLinkId};
 use anyhow::Error;
 use fidl_fuchsia_overnet_protocol::RouteMetrics;
 use fuchsia_async::Task;
-use futures::prelude::*;
 use std::collections::BTreeMap;
 use std::convert::TryInto;
 use std::sync::Arc;

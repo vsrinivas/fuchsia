@@ -3,16 +3,10 @@
 // found in the LICENSE file.
 
 use anyhow::Error;
-use futures::{
-    lock::{Mutex, MutexGuard, MutexLockFuture},
-    prelude::*,
-};
-use rental::*;
-use std::collections::HashMap;
-use std::pin::Pin;
-use std::sync::atomic::{AtomicU64, Ordering};
+use async_lock::RwLock;
+use event_listener::Event;
+use futures::prelude::*;
 use std::sync::{Arc, Weak};
-use std::task::{Context, Poll, Waker};
 
 /// Takes a future that returns an error, and transforms it to a future that logs said error
 pub async fn log_errors(
@@ -24,93 +18,29 @@ pub async fn log_errors(
     }
 }
 
-pub(crate) trait LockInner: 'static {
-    type Inner;
-    fn lock_inner<'a>(&'a self) -> MutexLockFuture<'a, Self::Inner>;
-}
-
-rental! {
-    mod rentals {
-        use super::*;
-
-        #[rental(covariant)]
-        pub(super) struct PollWeakMutexLocking<T: LockInner> {
-            inner: Arc<T>,
-            lock: MutexLockFuture<'inner, T::Inner>,
-        }
-    }
-}
-
-use rentals::PollWeakMutexLocking;
-
-pub(crate) struct PollWeakMutex<T: LockInner> {
-    weak: Weak<T>,
-    lock: Option<PollWeakMutexLocking<T>>,
-}
-
-impl<T: LockInner> PollWeakMutex<T> {
-    pub fn new(weak: Weak<T>) -> Self {
-        Self { weak, lock: None }
-    }
-
-    pub fn poll_fn<R>(
-        &mut self,
-        ctx: &mut Context<'_>,
-        f: impl FnOnce(&mut Context<'_>, &mut MutexGuard<'_, T::Inner>) -> Poll<R>,
-    ) -> Poll<Option<R>> {
-        let mut locking = match self.lock.take() {
-            None => match Weak::upgrade(&self.weak) {
-                None => return Poll::Ready(None),
-                Some(inner) => PollWeakMutexLocking::new(inner, |inner| inner.lock_inner()),
-            },
-            Some(locking) => locking,
-        };
-        let (keep, ret) = locking.rent_mut(|lock| match lock.poll_unpin(ctx) {
-            Poll::Pending => (true, Poll::Pending),
-            Poll::Ready(mut g) => (false, f(ctx, &mut g).map(Some)),
-        });
-        if keep {
-            self.lock = Some(locking);
-        }
-        ret
-    }
+struct Stamped<T> {
+    current: T,
+    stamp: u64,
 }
 
 struct ObservableState<T> {
-    current: T,
-    version: u64,
-    waiters: HashMap<u64, Waker>,
+    value: RwLock<Stamped<T>>,
+    next_version: Event,
 }
 
 impl<T> Drop for ObservableState<T> {
     fn drop(&mut self) {
-        for (_, waiter) in std::mem::replace(&mut self.waiters, HashMap::new()).into_iter() {
-            waiter.wake()
-        }
+        self.next_version.notify_relaxed(usize::MAX);
     }
 }
 
-struct ObservableInner<T> {
-    state: Mutex<ObservableState<T>>,
-    next_observer_key: AtomicU64,
+pub struct Observable<T> {
+    state: Arc<ObservableState<T>>,
 }
-
-impl<T: 'static> LockInner for ObservableInner<T> {
-    type Inner = ObservableState<T>;
-    fn lock_inner<'a>(&'a self) -> MutexLockFuture<'a, ObservableState<T>> {
-        self.state.lock()
-    }
-}
-
-static NEXT_TRACE_ID: AtomicU64 = AtomicU64::new(0);
-
-pub struct Observable<T>(Arc<ObservableInner<T>>, Option<u64>);
 
 pub struct Observer<T: 'static> {
-    lock: PollWeakMutex<ObservableInner<T>>,
-    version: u64,
-    key: u64,
-    traced: Option<u64>,
+    state: Weak<ObservableState<T>>,
+    observed: u64,
 }
 
 /// Asynchronously observable item... observers will be notified on changes, and see a None when
@@ -119,47 +49,24 @@ pub struct Observer<T: 'static> {
 /// most recent change).
 impl<T: std::fmt::Debug> Observable<T> {
     pub fn new(current: T) -> Self {
-        Self::new_traced(current, false)
-    }
-
-    pub fn new_traced(current: T, traced: bool) -> Self {
-        Self(
-            Arc::new(ObservableInner {
-                state: Mutex::new(ObservableState { version: 1, current, waiters: HashMap::new() }),
-                next_observer_key: AtomicU64::new(0),
+        Self {
+            state: Arc::new(ObservableState {
+                value: RwLock::new(Stamped { current, stamp: 1 }),
+                next_version: Event::new(),
             }),
-            if traced { Some(NEXT_TRACE_ID.fetch_add(1, Ordering::Relaxed)) } else { None },
-        )
+        }
     }
 
     pub fn new_observer(&self) -> Observer<T> {
-        Observer {
-            lock: PollWeakMutex::new(Arc::downgrade(&self.0)),
-            version: 0,
-            key: self.0.next_observer_key.fetch_add(1, Ordering::Relaxed),
-            traced: self.1,
-        }
+        Observer { state: Arc::downgrade(&self.state), observed: 0 }
     }
 
     async fn maybe_mutate(&self, f: impl FnOnce(&mut T) -> bool) -> bool {
-        let mut inner = self.0.state.lock().await;
-        if let Some(trace_id) = self.1 {
-            log::info!("[{}] edit version={} prev={:?}", trace_id, inner.version, inner.current);
-        }
-        let changed = f(&mut inner.current);
+        let mut lock = self.state.value.write().await;
+        let changed = f(&mut lock.current);
         if changed {
-            inner.version += 1;
-            if let Some(trace_id) = self.1 {
-                log::info!(
-                    "[{}] edited version={} current={:?}",
-                    trace_id,
-                    inner.version,
-                    inner.current
-                );
-            }
-            std::mem::replace(&mut inner.waiters, Default::default())
-                .into_iter()
-                .for_each(|(_, w)| w.wake());
+            lock.stamp += 1;
+            self.state.next_version.notify_relaxed(usize::MAX);
         }
         changed
     }
@@ -191,31 +98,20 @@ impl<T: std::fmt::Debug> Observable<T> {
     }
 }
 
-impl<T: Clone + std::fmt::Debug> futures::Stream for Observer<T> {
-    type Item = T;
-    fn poll_next(self: Pin<&mut Self>, ctx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
-        let this = &mut Pin::into_inner(self);
-        let this_version = &mut this.version;
-        let this_key = this.key;
-        let trace = this.traced;
-        this.lock.poll_fn(ctx, |ctx, guard| {
-            if let Some(trace_id) = trace {
-                log::info!(
-                    "[{}] poll observer: this.version={} observable.version={} value={:?}",
-                    trace_id,
-                    *this_version,
-                    guard.version,
-                    guard.current
-                );
+impl<T: Clone + std::fmt::Debug> Observer<T> {
+    pub async fn next(&mut self) -> Option<T> {
+        while let Some(state) = Weak::upgrade(&self.state) {
+            let lock = state.value.read().await;
+            if lock.stamp != self.observed {
+                self.observed = lock.stamp;
+                return Some(lock.current.clone());
             }
-            if *this_version != guard.version {
-                *this_version = guard.version;
-                Poll::Ready(guard.current.clone())
-            } else {
-                guard.waiters.insert(this_key, ctx.waker().clone());
-                Poll::Pending
-            }
-        })
+            let next_version = state.next_version.listen();
+            drop(lock);
+            drop(state);
+            next_version.await;
+        }
+        None
     }
 }
 
