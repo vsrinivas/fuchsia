@@ -440,6 +440,53 @@ func (sdk SDKProperties) ListDevices() ([]*FuchsiaDevice, error) {
 	return devices, nil
 }
 
+func getCommonSSHArgs(sdk SDKProperties, customSSHConfig string, privateKey string) []string {
+	var cmdArgs []string
+	if customSSHConfig != "" {
+		cmdArgs = append(cmdArgs, "-F", customSSHConfig)
+	} else {
+		cmdArgs = append(cmdArgs, "-F", getFuchsiaSSHConfigFile(sdk))
+	}
+	if privateKey != "" {
+		cmdArgs = append(cmdArgs, "-i", privateKey)
+	}
+	return cmdArgs
+}
+
+// RunSFTPCommand runs sftp (one of SSH's file copy tools).
+// Setting to_target to true will copy file SRC from host to DST on the target.
+// Otherwise it will copy file from SRC from target to DST on the host.
+// The return value is the error if any.
+func (sdk SDKProperties) RunSFTPCommand(targetAddress string, customSSHConfig string, privateKey string, to_target bool, src string, dst string) error {
+	commonArgs := []string{"-q", "-b", "-"}
+	if customSSHConfig == "" || privateKey == "" {
+		if err := checkSSHConfig(sdk); err != nil {
+			return err
+		}
+	}
+	cmdArgs := getCommonSSHArgs(sdk, customSSHConfig, privateKey)
+
+	cmdArgs = append(cmdArgs, commonArgs...)
+	if targetAddress == "" {
+		return errors.New("target address must be specified")
+	}
+	// SFTP needs the [] around the ipv6 address, which is different than ssh.
+	if strings.Contains(targetAddress, ":") {
+		targetAddress = fmt.Sprintf("[%v]", targetAddress)
+	}
+	cmdArgs = append(cmdArgs, targetAddress)
+
+	stdin := ""
+
+	if to_target {
+		stdin = fmt.Sprintf("put %v %v", src, dst)
+	} else {
+		stdin = fmt.Sprintf("get %v %v", src, dst)
+	}
+
+	return runSFTP(cmdArgs, stdin)
+}
+
 // RunSSHCommand runs the command provided in args on the given target device.
 // The customSSHconfig is optional and overrides the SSH configuration defined by the SDK.
 // privateKey is optional to specify a private key to use to access the device.
@@ -480,15 +527,7 @@ func buildSSHArgs(sdk SDKProperties, targetAddress string, customSSHConfig strin
 		}
 	}
 
-	var cmdArgs []string
-	if customSSHConfig != "" {
-		cmdArgs = append(cmdArgs, "-F", customSSHConfig)
-	} else {
-		cmdArgs = []string{"-F", getFuchsiaSSHConfigFile(sdk)}
-	}
-	if privateKey != "" {
-		cmdArgs = append(cmdArgs, "-i", privateKey)
-	}
+	cmdArgs := getCommonSSHArgs(sdk, customSSHConfig, privateKey)
 	if verbose {
 		cmdArgs = append(cmdArgs, "-v")
 	}

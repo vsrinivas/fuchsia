@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 func runGSUtil(args []string) (string, error) {
@@ -50,6 +51,18 @@ func runSSH(args []string, interactive bool) (string, error) {
 		return "", err
 	}
 	return string(out), err
+}
+
+func runSFTP(args []string, stdin string) error {
+	path, err := ExecLookPath("sftp")
+	if err != nil {
+		return fmt.Errorf("could not find sftp on path: %v", err)
+	}
+	cmd := ExecCommand(path, args...)
+	cmd.Stderr = os.Stderr
+	cmd.Stdout = os.Stdout
+	cmd.Stdin = strings.NewReader(stdin)
+	return cmd.Run()
 }
 
 func GCSFileExists(gcsPath string) (string, error) {

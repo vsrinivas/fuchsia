@@ -383,6 +383,8 @@ func TestRunSSHCommand(t *testing.T) {
 	GetUsername = mockedUserProperty("testuser")
 	GetHostname = mockedUserProperty("test-host")
 	defer func() {
+		os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "")
+		os.Setenv("FSERVE_TEST_USE_PRIVATE_KEY", "")
 		ExecCommand = exec.Command
 		GetUserHomeDir = DefaultGetUserHomeDir
 		GetUsername = DefaultGetUsername
@@ -415,6 +417,62 @@ func TestRunSSHCommand(t *testing.T) {
 	os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "")
 	os.Setenv("FSERVE_TEST_USE_PRIVATE_KEY", "1")
 	if _, err := testSDK.RunSSHCommand(targetAddress, customSSHConfig, privateKey, false, args); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func TestRunRunSFTPCommand(t *testing.T) {
+	tempDir := t.TempDir()
+	homeDir := filepath.Join(tempDir, "_TEMP_HOME")
+	if err := os.MkdirAll(homeDir, 0o700); err != nil {
+		t.Fatal(err)
+	}
+	ExecCommand = helperCommandForSDKCommon
+	GetUserHomeDir = mockedUserProperty(homeDir)
+	GetUsername = mockedUserProperty("testuser")
+	GetHostname = mockedUserProperty("test-host")
+	defer func() {
+		ExecCommand = exec.Command
+		GetUserHomeDir = DefaultGetUserHomeDir
+		GetUsername = DefaultGetUsername
+		GetHostname = DefaultGetHostname
+		os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "")
+		os.Setenv("FSERVE_TEST_USE_PRIVATE_KEY", "")
+		os.Setenv("SFTP_TO_TARGET", "")
+	}()
+	testSDK := SDKProperties{
+		dataPath: t.TempDir(),
+	}
+
+	targetAddress := resolvedAddr
+	customSSHConfig := ""
+	privateKey := ""
+
+	src := "/some/src/file"
+	dst := "/dst/file"
+
+	if err := testSDK.RunSFTPCommand(targetAddress, customSSHConfig, privateKey, false, src, dst); err != nil {
+		t.Fatal(err)
+	}
+
+	os.Setenv("SFTP_TO_TARGET", "1")
+	if err := testSDK.RunSFTPCommand(targetAddress, customSSHConfig, privateKey, true, src, dst); err != nil {
+		t.Fatal(err)
+	}
+
+	customSSHConfig = "custom-sshconfig"
+	os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "1")
+	os.Setenv("SFTP_TO_TARGET", "")
+	if err := testSDK.RunSFTPCommand(targetAddress, customSSHConfig, privateKey, false, src, dst); err != nil {
+		t.Fatal(err)
+	}
+
+	customSSHConfig = ""
+	privateKey = "private-key"
+	os.Setenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG", "")
+	os.Setenv("FSERVE_TEST_USE_PRIVATE_KEY", "1")
+	os.Setenv("SFTP_TO_TARGET", "1")
+	if err := testSDK.RunSFTPCommand(targetAddress, customSSHConfig, privateKey, true, src, dst); err != nil {
 		t.Fatal(err)
 	}
 }
@@ -1053,6 +1111,8 @@ func TestFakeSDKCommon(t *testing.T) {
 		fakeFfxTarget(args)
 	case "ssh":
 		fakeSSH(args)
+	case "sftp":
+		fakeSFTP(args, os.Stdin)
 	case "ssh-keygen":
 		fakeSSHKeygen(args)
 	default:
@@ -1405,6 +1465,61 @@ func handleRemoveFake(args []string) {
 		}
 	default:
 		fmt.Fprintf(os.Stderr, "Unexpected property being removed: %v", parts)
+		os.Exit(1)
+	}
+}
+
+func fakeSFTP(args []string, stdin *os.File) {
+	expected := []string{}
+	sshConfigMatch := "/.*/sshconfig"
+	if os.Getenv("FSERVE_TEST_USE_CUSTOM_SSH_CONFIG") != "" {
+		sshConfigMatch = "custom-sshconfig"
+	}
+	sshConfigArgs := []string{"-F", sshConfigMatch}
+	expected = append(expected, sshConfigArgs...)
+
+	targetaddr := "[fe80::c0ff:eee:fe00:4444%en0]"
+
+	privateKeyArgs := []string{"-i", "private-key"}
+	if os.Getenv("FSERVE_TEST_USE_PRIVATE_KEY") != "" {
+		expected = append(expected, privateKeyArgs...)
+	}
+
+	expected = append(expected, "-q", "-b", "-", targetaddr)
+
+	ok := len(args) == len(expected)
+	if ok {
+		for i := range args {
+			if strings.Contains(expected[i], "*") {
+				expectedPattern := regexp.MustCompile(expected[i])
+				ok = ok && expectedPattern.MatchString(args[i])
+			} else {
+				ok = ok && args[i] == expected[i]
+			}
+		}
+	}
+	if !ok {
+		fmt.Fprintf(os.Stderr, "unexpected sftp args  %v expected %v", args, expected)
+		os.Exit(1)
+	}
+
+	expectedSrc := "/some/src/file"
+	expectedDst := "/dst/file"
+
+	expectedSFTPInput := fmt.Sprintf("get %v %v", expectedSrc, expectedDst)
+
+	if os.Getenv("SFTP_TO_TARGET") == "1" {
+		expectedSFTPInput = fmt.Sprintf("put %v %v", expectedSrc, expectedDst)
+	}
+
+	inputToSFTP, err := ioutil.ReadAll(stdin)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "got error converting stdin to string: %v", err)
+		os.Exit(1)
+	}
+	actualInputToSFTP := string(inputToSFTP)
+	if actualInputToSFTP != expectedSFTPInput {
+		fmt.Fprintf(os.Stderr, "expected %v, got %v", expectedSFTPInput, actualInputToSFTP)
 		os.Exit(1)
 	}
 }
