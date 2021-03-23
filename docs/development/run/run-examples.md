@@ -111,16 +111,16 @@ To run a Fuchsia component, use its
 [Fuchsia package URL](/docs/glossary.md#fuchsia-pkg-url) as an argument
 to the `fx shell run` command:
 
-1.  Open a terminal and run `fx serve`:
+1.  Open a terminal and run `fx serve-updates`:
 
     ```posix-terminal
-    fx serve
+    fx serve-updates
     ```
 
 1.  Open another terminal and run the example component:
 
     ```posix-terminal
-    fx shell run fuchsia-pkg://fuchsia.com/hello_world_cpp#meta/hello_world_cpp.cmx
+    fx shell run fuchsia-pkg://fuchsia.com/hello-world-cpp#meta/hello-world-cpp.cmx
     ```
 
 This command prints the following output:
@@ -129,52 +129,32 @@ This command prints the following output:
 Hello, World!
 ```
 
-If `fx serve` is not running, the command prints an error message from
+If `fx serve-updates` is not running, the command prints an error message from
 the device or emulator.
 
-If `fx serve` is running, but the package is not found,
+If `fx serve-updates` is running, but the package is not found,
 then [try going through these steps again](#include-the-example-package-in-your-fuchsia-image),
-rebuilding your Fuchsia image
-to include this package and repaving it to the device.
+rebuilding your Fuchsia image to include this package and repaving it to the device.
 
-### Run the example component using a simple string {#run-the-example-component-using-a-simple-string}
+### Explore your product configuration {#explore-your-product-configuration}
 
-The `fx shell run` command can match a string to a package URL
-if the string is only mapped to one component
-in your product configuration. For example:
+You can explore the contents of your product configuration using the 
+`list-packages` command.
+
+List all:
 
 ```posix-terminal
-$ fx shell run hello_world_cpp.cmx
+fx list-packages
 ```
 
-If multiple matches exist, the command prints the list of matches:
+There may be many entries, so add the name to find the one you're looking for:
 
-```none
-$ fx shell run hello_world
-fuchsia-pkg://fuchsia.com/hello_world_cpp_tests#meta/hello_world_cpp_unittests.cmx
-fuchsia-pkg://fuchsia.com/hello_world_cpp#meta/hello_world_cpp.cmx
-Error: "hello_world" matched multiple components.
+```posix-terminal
+fx list-packages hello-world
+hello-world-cpp-unittests
+hello-world-dart
+hello-world-rust-tests
+hello-world-cpp
+hello-world-rust
 ```
 
-### Explore the components in your product configuration {#explore-components-in-product-configuration}
-
-You can explore what components are in your product configuration using the
-`locate` command.
-
-*   Find your favorite component:
-
-    ```posix-terminal
-    fx shell locate hello_world_cpp.cmx
-    ```
-
-*   Find all runnable components:
-
-    ```posix-terminal
-    fx shell locate --list cmx
-    ```
-
-*   Find multiple test components:
-
-    ```posix-terminal
-    fx shell locate --list test
-    ```
