@@ -11,6 +11,7 @@
 #include <lib/boot-options/boot-options.h>
 #include <lib/crypto/global_prng.h>
 #include <lib/crypto/prng.h>
+#include <lib/ktrace.h>
 #include <lib/userabi/vdso.h>
 #include <lib/zircon-internal/macros.h>
 #include <stdlib.h>
@@ -35,6 +36,8 @@
 #include <vm/vm_object_physical.h>
 
 #include "vm_priv.h"
+
+using LocalTraceDuration = TraceDuration<TraceEnabled<false>, KTRACE_GRP_VM, TraceContext::Thread>;
 
 #define LOCAL_TRACE VM_GLOBAL_TRACE(0)
 
@@ -527,6 +530,7 @@ void VmAspace::AttachToThread(Thread* t) {
 }
 
 zx_status_t VmAspace::PageFault(vaddr_t va, uint flags) {
+  LocalTraceDuration trace{"VmAspace::PageFault"_stringref};
   canary_.Assert();
   DEBUG_ASSERT(!aspace_destroyed_);
   LTRACEF("va %#" PRIxPTR ", flags %#x\n", va, flags);
@@ -571,6 +575,7 @@ zx_status_t VmAspace::SoftFault(vaddr_t va, uint flags) {
 }
 
 zx_status_t VmAspace::AccessedFault(vaddr_t va) {
+  LocalTraceDuration trace{"VmAspace::AccessedFault"_stringref};
   // There are no permissions etc associated with accessed bits so we can skip any vmar walking and
   // just let the hardware aspace walk for the virtual address.
   va = ROUNDDOWN(va, PAGE_SIZE);
