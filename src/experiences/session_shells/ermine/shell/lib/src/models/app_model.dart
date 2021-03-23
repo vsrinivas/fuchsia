@@ -351,7 +351,6 @@ class AppModel {
     // Get the story whose [ViewRef] is in [focusedViews].
     final story = clustersModel.findStory(focusedViews);
     if (story != null) {
-      story.focus();
       // Also dismiss any system overlays.
       onCancel();
     }
