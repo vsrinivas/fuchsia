@@ -107,7 +107,7 @@ def main():
         # file bytes.
         # This option is left as an exercise to the reader.
         new_manifest_contents = re.sub(
-            "^\s*<project [\S\s]*?path\s*=\s*\"" + re.escape(path) +
+            "^\s*<project [^\>]*?path\s*=\s*\"" + re.escape(path) +
             "\"[\S\s]*?\/>\n",
             "",
             manifest_contents,
