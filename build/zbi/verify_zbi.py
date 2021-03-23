@@ -142,7 +142,12 @@ def verify_bootfs_filelist(bootfs_filelist_golden_file, scrutiny_out):
         print_error('```')
         print_error('')
         print_error('Diff:')
-        print_error(difflib.context_diff(golden_file_content, got_content))
+        sys.stderr.writelines(
+            difflib.context_diff(
+                golden_file_content.splitlines(keepends=True),
+                got_content.splitlines(keepends=True),
+                fromfile='want',
+                tofile='got'))
         return False
     return True
 
