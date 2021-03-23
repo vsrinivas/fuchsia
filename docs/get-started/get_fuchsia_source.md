@@ -16,8 +16,8 @@ may affect building Fuchsia from source or running the Fuchsia emulator.
     ```posix-terminal
     curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-linux && chmod +x ffx-linux && ./ffx-linux platform preflight
     ```
-    
-*   For **MacOS***, run:
+
+*   For **MacOS**, run:
 
     ```posix-terminal
     curl -sO https://storage.googleapis.com/fuchsia-ffx/ffx-macos && chmod +x ffx-macos && ./ffx-macos platform preflight
