@@ -181,6 +181,7 @@ template("esp") {
         "--cmdline",
         rebase_path(invoker.cmdline),
       ]
+      inputs += [ invoker.cmdline ]
     }
 
     if (!defined(deps)) {
