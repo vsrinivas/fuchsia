@@ -546,35 +546,31 @@ where
         s.state_node.set(&s.state);
 
         match state {
-            state_machine::State::WaitingForReboot => {
+            state_machine::State::Idle | state_machine::State::WaitingForReboot => {
                 let mut monitor_queue = s.monitor_queue.clone();
+                let app_set = s.app_set.clone();
                 drop(s);
-                match monitor_queue.try_flush(Duration::from_secs(5)).await {
-                    Ok(flush_future) => {
-                        if let Err(e) = flush_future.await {
-                            warn!("Timed out flushing monitor_queue: {:#}", anyhow!(e));
+
+                // Try to flush the states before starting to reboot.
+                if state == state_machine::State::WaitingForReboot {
+                    match monitor_queue.try_flush(Duration::from_secs(5)).await {
+                        Ok(flush_future) => {
+                            if let Err(e) = flush_future.await {
+                                warn!("Timed out flushing monitor_queue: {:#}", anyhow!(e));
+                            }
+                        }
+                        Err(e) => {
+                            warn!("error trying to flush monitor_queue: {:#}", anyhow!(e));
                         }
                     }
-                    Err(e) => {
-                        warn!("error trying to flush monitor_queue: {:#}", anyhow!(e));
-                    }
                 }
 
                 if let Err(e) = monitor_queue.clear().await {
                     warn!("error clearing clients of monitor_queue: {:?}", e);
                 }
-            }
-            state_machine::State::Idle => {
-                // State is back to idle, clear the current update monitor handles.
-                let mut monitor_queue = s.monitor_queue.clone();
-                drop(s);
-                if let Err(e) = monitor_queue.clear().await {
-                    warn!("error clearing clients of monitor_queue: {:?}", e);
-                }
 
-                // The state machine might make changes to apps only when state changes to `Idle`,
+                // The state machine might make changes to apps only at the end of an update,
                 // update the apps node in inspect.
-                let app_set = server.borrow().app_set.clone();
                 let app_set = app_set.to_vec().await;
                 server.borrow().apps_node.set(&app_set);
             }
@@ -1263,21 +1259,23 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn test_inspect_apps_on_state_change() {
-        let inspector = Inspector::new();
-        let apps_node = AppsNode::new(inspector.root().create_child("apps"));
-        let fidl = FidlServerBuilder::new().with_apps_node(apps_node).build().await;
+        for &state in &[state_machine::State::Idle, state_machine::State::WaitingForReboot] {
+            let inspector = Inspector::new();
+            let apps_node = AppsNode::new(inspector.root().create_child("apps"));
+            let fidl = FidlServerBuilder::new().with_apps_node(apps_node).build().await;
 
-        StubFidlServer::on_state_change(Rc::clone(&fidl), state_machine::State::Idle).await;
+            StubFidlServer::on_state_change(Rc::clone(&fidl), state).await;
 
-        let app_set = fidl.borrow().app_set.clone();
-        assert_inspect_tree!(
-            inspector,
-            root: {
-                apps: {
-                    apps: format!("{:?}", app_set.to_vec().await),
+            let app_set = fidl.borrow().app_set.clone();
+            assert_inspect_tree!(
+                inspector,
+                root: {
+                    apps: {
+                        apps: format!("{:?}", app_set.to_vec().await),
+                    }
                 }
-            }
-        );
+            );
+        }
     }
 
     #[fasync::run_singlethreaded(test)]
