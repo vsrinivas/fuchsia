@@ -488,6 +488,10 @@ config("linker_gc_profile") {
   configs = [ ":linker_gc" ]
 }
 
+config("linker_gc_coverage") {
+  configs = [ ":linker_gc" ]
+}
+
 config("default_linker_gc") {
   configs = [ ":linker_gc_$optimize" ]
 }
