@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/bind/bind.gni")
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
@@ -27,14 +28,32 @@ if (target_cpu == "arm64") {
     deps = [
       ":amlogic_decoder_firmware",
       ":amlogic_decoder_test_package",
+      ":amlogic_video_bind_test",
       ":test_amlogic_codec_factory_package",
       "tests/runner:amlogic_decoder_integration_tests",
       "tests/unit_tests:amlogic-decoder-unittest",
     ]
   }
 
+  bind_rules("amlogic_video_bind") {
+    rules = "amlogic_video.bind"
+    output = "amlogic_video_bind.h"
+    tests = "bind_tests.json"
+    deps = [ "//src/devices/bind/amlogic.platform" ]
+  }
+
+  # Note: This target uses the same source as above, the only difference is the addition of
+  # `diasable_autobind = true`, and tests are omitted.
+  bind_rules("amlogic_video_test_bind") {
+    rules = "amlogic_video.bind"
+    output = "amlogic_video_test_bind.h"
+    disable_autobind = true
+    deps = [ "//src/devices/bind/amlogic.platform" ]
+  }
+
   driver_module("amlogic_video_decoder") {
     deps = [
+      ":amlogic_video_bind",
       ":sources",
       ":test_support",
       "//sdk/lib/syslog/cpp:backend_legacy",
@@ -50,6 +69,7 @@ if (target_cpu == "arm64") {
     testonly = true
 
     deps = [
+      ":amlogic_video_test_bind",
       ":sources",
       ":test_sources",
       ":test_support",
@@ -69,11 +89,9 @@ if (target_cpu == "arm64") {
 
   source_set("test_support") {
     deps = [
+      ":amlogic_video_test_bind",
       "//src/devices/lib/driver",
       "//src/lib/ddk",
-
-      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-      "//src/lib/ddk:ddk-deprecated-binding-headers",
     ]
     sources = [ "tests/test_support.h" ]
   }
@@ -141,6 +159,7 @@ if (target_cpu == "arm64") {
       "local_codec_factory.h",
     ]
     public_deps = [
+      ":amlogic_video_test_bind",
       "h264:h264_parser",
       "//sdk/banjo/fuchsia.hardware.amlogiccanvas",
       "//sdk/banjo/fuchsia.hardware.platform.device",
@@ -152,9 +171,6 @@ if (target_cpu == "arm64") {
       "//src/devices/lib/driver",
       "//src/devices/lib/mmio",
       "//src/lib/ddk",
-
-      # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-      "//src/lib/ddk:ddk-deprecated-binding-headers",
       "//src/lib/ddktl",
       "//src/media/lib/extend_bits",
       "//src/media/lib/internal_buffer",

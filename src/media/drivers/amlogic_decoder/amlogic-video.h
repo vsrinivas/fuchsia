@@ -10,7 +10,6 @@
 #include <fuchsia/hardware/sysmem/cpp/banjo.h>
 #include <fuchsia/hardware/tee/cpp/banjo.h>
 #include <fuchsia/tee/cpp/fidl.h>
-#include <lib/ddk/binding.h>
 #include <lib/ddk/debug.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
