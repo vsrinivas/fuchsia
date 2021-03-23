@@ -520,10 +520,6 @@ group("regex-syntax") {
   deps = [ ":regex-syntax-v0_6_17" ]
 }
 
-group("rental") {
-  deps = [ ":rental-v0_5_4" ]
-}
-
 group("ring") {
   deps = [ ":ring-v0_16_12" ]
 }
@@ -7494,55 +7490,6 @@ rust_library("remove_dir_all-v0_5_1") {
   ]
 }
 
-rust_library("rental-v0_5_4") {
-  crate_name = "rental"
-  crate_root = "//third_party/rust_crates/vendor/rental/src/lib.rs"
-  output_name = "rental-9bf0e036dc6b950b"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":rental-impl-v0_5_4($host_toolchain)" ]
-  deps += [ ":stable_deref_trait-v1_1_1" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=9bf0e036dc6b950b",
-    "-Cextra-filename=-9bf0e036dc6b950b",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"std\"",
-  ]
-}
-
-rust_proc_macro("rental-impl-v0_5_4") {
-  crate_name = "rental_impl"
-  crate_root = "//third_party/rust_crates/vendor/rental-impl/src/lib.rs"
-  output_name = "rental_impl-3fbb9126d186639f"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":proc-macro2-v0_4_27" ]
-  deps += [ ":quote-v0_6_11" ]
-  deps += [ ":syn-v0_15_26" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=3fbb9126d186639f",
-    "-Cextra-filename=-3fbb9126d186639f",
-  ]
-}
-
 rust_library("ring-v0_16_12") {
   crate_name = "ring"
   crate_root = "//third_party/rust_crates/vendor/ring/src/lib.rs"
@@ -9111,7 +9058,6 @@ rust_library("syn-v0_15_26") {
     "--cfg=feature=\"default\"",
     "--cfg=feature=\"derive\"",
     "--cfg=feature=\"extra-traits\"",
-    "--cfg=feature=\"fold\"",
     "--cfg=feature=\"full\"",
     "--cfg=feature=\"parsing\"",
     "--cfg=feature=\"printing\"",

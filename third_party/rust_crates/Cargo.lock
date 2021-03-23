@@ -1073,7 +1073,6 @@ dependencies = [
  "rayon",
  "regex",
  "regex-syntax",
- "rental",
  "ring",
  "rouille",
  "rust-crypto",
@@ -2785,27 +2784,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "3488ba1b9a2084d38645c4c08276a1752dcbf2c7130d74f1569681ad5d2799c5"
 dependencies = [
  "winapi",
-]
-
-[[package]]
-name = "rental"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01916ebd9fc2e81978a5dc9542a2fa47f5bb2ca3402e14c7cc42d6e3c5123e1f"
-dependencies = [
- "rental-impl",
- "stable_deref_trait",
-]
-
-[[package]]
-name = "rental-impl"
-version = "0.5.4"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "82260d54cf2cbe9608df161f7e7c98e81fae702aa13af9e4d5d39dc2ffb25ab6"
-dependencies = [
- "proc-macro2 0.4.27",
- "quote 0.6.11",
- "syn 0.15.26",
 ]
 
 [[package]]
