@@ -14,7 +14,7 @@ status_re = re.compile('#define\s+(ZX_\w+)\s+\((\-?\d+)\)$')
 
 def parse(in_filename):
     result = []
-    for line in file(in_filename):
+    for line in open(in_filename):
         m = status_re.match(line)
         if m:
             result.append((m.group(1), int(m.group(2))))

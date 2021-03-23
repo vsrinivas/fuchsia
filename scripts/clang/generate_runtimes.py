@@ -90,7 +90,7 @@ def generate_entry(filename, clang_dir, build_id_dir, dump_syms):
     if not os.path.exists(debug_file):
         try:
             os.link(filename, debug_file)
-        except OSError, e:
+        except OSError as e:
             if e.errno == errno.EXDEV:
                 shutil.copyfile(filename, debug_file)
             else:

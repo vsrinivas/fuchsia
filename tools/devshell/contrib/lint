@@ -165,7 +165,7 @@ $GET_FILES
 # the ones in //prebuilt, so that they'll work properly on the tree.
 declare CLANG_TIDY="${PREBUILT_CLANG_DIR}/bin/clang-tidy"
 declare CLANG_APPLY_REPLACEMENTS="${PREBUILT_CLANG_DIR}/bin/clang-apply-replacements"
-declare RUN_CLANG_TIDY="${PREBUILT_CLANG_DIR}/share/clang/run-clang-tidy.py"
+declare RUN_CLANG_TIDY="${PREBUILT_CLANG_DIR}/bin/run-clang-tidy"
 
 # Suppress the "name-repeats-*" checks for now. These produce a high number of
 # linter warnings, many of which are questionable. The algorithm will be refined.
@@ -216,7 +216,7 @@ function add_file_to_linter() {
       *.h) CLANG_TIDY_FILES+=(${file}) ;;
       *.hh) CLANG_TIDY_FILES+=(${file}) ;;
       *.hpp) CLANG_TIDY_FILES+=(${file}) ;;
-      *.rs) RUST_LINT_FILES+=(${file}) ;;
+      # *.rs) RUST_LINT_FILES+=(${file}) ;;  # run-clippy.py is not working (fxbug.dev/72865)
     esac
 
     # Note: clang-tidy can produce errors on header files (*.h, *.hh, *.hpp)

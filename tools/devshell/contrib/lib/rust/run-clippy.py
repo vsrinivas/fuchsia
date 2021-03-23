@@ -59,7 +59,7 @@ def main():
         except ValueError as e:
             # The target may not be a Rust one, so it's okay if it didn't find the Cargo.toml.
             if args.v:
-                print "No Rust target found for %s: %s" % (target, e)
+                print("No Rust target found for %s:\n%s" % (target, e))
 
     for file in args.files:
         # Skip non-rust files.
@@ -72,7 +72,7 @@ def main():
                 return 1
         except ValueError as e:
             # The target should be a Rust one, so any error is bad.
-            print "No Rust target found for %s: %s" % (file, e)
+            print("No Rust target found for %s:\n%s" % (file, e))
             return 1
 
         targets.add(target)
@@ -83,7 +83,7 @@ def main():
         if cargo and os.path.isfile(cargo):
             cargos.add(cargo)
         else:
-            print "Cargo.toml file not found for %s, try running fx build." % target
+            print("Cargo.toml file not found for %s, try running fx build." % target)
             return 1
 
     rust_tool_prebuilts = \
@@ -118,7 +118,7 @@ def main():
         # issues in those crates. Cap all lints at `warn` to avoid this.
         cargo_args += ['--', '--cap-lints', 'warn']
         if args.v:
-            print " ".join(call_args + cargo_args)
+            print(" ".join(call_args + cargo_args))
         with cwd(os.path.dirname(cargo)):
             return subprocess.call(call_args + cargo_args, env=env)
 

@@ -62,17 +62,17 @@ class GnTarget:
     @property
     def gn_target(self):
         """The canonical GN label of this target, including the leading '//'."""
-        return '//%s' % self.ninja_target
+        return "//%s" % self.ninja_target
 
     @property
     def toolchain_suffix(self):
         """The GN path suffix for this target's toolchain, if it is not the default."""
         if self.explicit_toolchain is None:
-            return ''
-        if 'fuchsia' in self.explicit_toolchain:
+            return ""
+        if "fuchsia" in self.explicit_toolchain:
             # Default toolchain.
-            return ''
-        return '(%s)' % self.explicit_toolchain
+            return ""
+        return "(%s)" % self.explicit_toolchain
 
     @property
     def src_path(self):
@@ -105,11 +105,15 @@ def get_rust_target_from_file(file):
     ]
 
     p = subprocess.Popen(
-        ninja_query_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        ninja_query_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
     out, err = p.communicate()
     if p.returncode:
-        print(err)
-        raise None
+        err = (
+            "Error running ninja query for target:\n" +
+            " ".join(ninja_query_args) + "\n" +
+            err.decode("utf-8")
+        )
+        raise ValueError(err)
 
     # Expected Ninja query output is:
     # ../../filename.rs:
@@ -117,12 +121,15 @@ def get_rust_target_from_file(file):
     #     rust_crates/binary
     lines = out.splitlines()
     if len(lines) < 3:
-        print(f"Unexpected Ninja output: {out}")
+        print(f"{ninja_query_args}\nUnexpected Ninja output: {out}")
         return None
 
     output_files = [
         os.path.join(FUCHSIA_BUILD_DIR, l.strip()) for l in lines[2:]
     ]
+
+    gn_cmd = {}
+    refs = {}
 
     # For each output file in Ninja, check to see if it's produced by a Rust build
     # target. If so, return the base target name.
@@ -136,20 +143,36 @@ def get_rust_target_from_file(file):
         ]
 
         p = subprocess.Popen(
-            gn_refs_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            gn_refs_args, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         out, err = p.communicate()
         if p.returncode:
-            print(err)
-            raise None
+            err = (
+                "Error running gn refs for target:\n" +
+                " ".join(gn_refs_args) + "\n" +
+                err.decode("utf-8")
+            )
+            raise ValueError(err)
 
         # Expected GN refs output is:
         # //path/to/target:bin_build
         # //path/to/target:bin_copy
+        gn_cmd[output_file] = gn_refs_args
+        refs[output_file] = []
         lines = out.splitlines()
+
         for line in lines:
             line = line.strip()
+            refs[output_file].append(line)
             if line.endswith("_build"):
                 return GnTarget(line.rstrip("_build"))
 
     print(f"Unable to find Rust build target for {file}")
+
+    print("gn refs and results:\n\n%s" % "\n".join(map(
+        lambda f: "%s\n    %s" % (
+            " ".join(gn_cmd[f]),
+            "\n    ".join(refs[f]),
+        ),
+        output_files
+    )))
     return None

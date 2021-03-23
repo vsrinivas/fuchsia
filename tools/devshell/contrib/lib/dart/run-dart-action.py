@@ -84,7 +84,7 @@ targets. Extra flags will be passed to the supporting Dart tool if applicable.
     scripts = []
     targets = gn_describe(tree)
     if not targets:
-        print 'No targets found...'
+        print('No targets found...')
         exit(1)
 
     for target_name, properties in targets.items():
