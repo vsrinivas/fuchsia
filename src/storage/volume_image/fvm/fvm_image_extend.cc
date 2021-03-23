@@ -42,10 +42,9 @@ class MetadataBufferView final : public fvm::MetadataBuffer {
   mutable std::variant<fbl::Span<uint8_t>, std::vector<uint8_t>> data_;
 };
 
-}  // namespace
-
-fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const FvmOptions& options,
-                                              Writer& target_image) {
+fit::result<fvm::Metadata, std::string> GetMetadata(
+    const Reader& source_image, std::vector<uint8_t>& primary_metadata_buffer,
+    std::vector<uint8_t>& secondary_metadata_buffer) {
   fvm::Header header = {};
   auto header_view = fbl::Span<uint8_t>(reinterpret_cast<uint8_t*>(&header), sizeof(fvm::Header));
 
@@ -58,7 +57,6 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
                       std::to_string(header.magic) + " expected " + std::to_string(fvm::kMagic));
   }
 
-  std::vector<uint8_t> primary_metadata_buffer;
   primary_metadata_buffer.resize(header.GetMetadataAllocatedBytes());
   if (auto primary_metadata_read_result = source_image.Read(
           header.GetSuperblockOffset(fvm::SuperblockType::kPrimary), primary_metadata_buffer);
@@ -67,7 +65,6 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
   }
   auto primary_metadata = std::make_unique<MetadataBufferView>(primary_metadata_buffer);
 
-  std::vector<uint8_t> secondary_metadata_buffer;
   secondary_metadata_buffer.resize(header.GetMetadataAllocatedBytes());
   if (auto secondary_metadata_read_result = source_image.Read(
           header.GetSuperblockOffset(fvm::SuperblockType::kPrimary), secondary_metadata_buffer);
@@ -81,6 +78,21 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
     return fit::error("Failed to create FVM Metadata from image. Error Code: " +
                       std::to_string(metadata.error_value()));
   }
+  return fit::ok(std::move(metadata.value()));
+}
+
+}  // namespace
+
+fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const FvmOptions& options,
+                                              Writer& target_image) {
+  std::vector<uint8_t> primary_metadata_buffer;
+  std::vector<uint8_t> secondary_metadata_buffer;
+
+  auto metadata_or = GetMetadata(source_image, primary_metadata_buffer, secondary_metadata_buffer);
+  if (metadata_or.is_error()) {
+    return metadata_or.take_error_result();
+  }
+  const auto& header = metadata_or.value().GetHeader();
 
   // At this point we know we have a valid header and metadata, so we can check the validity of the
   // options.
@@ -98,9 +110,8 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
   // careful in the order in which we do the operations. First move all slices(if necessary) to
   // match the new offset. Starting from the last slice to the first one, so there is no data
   // overwritten.
-  auto new_header = fvm::Header::FromDiskSize(header.GetPartitionTableEntryCount(),
-                                              options.target_volume_size.value(),
-                                              metadata->GetHeader().slice_size);
+  auto new_header = fvm::Header::FromDiskSize(
+      header.GetPartitionTableEntryCount(), options.target_volume_size.value(), header.slice_size);
 
   // At most we read 64 Kb at a time, or one slice slice, whichever is smaller.
   // If updating this value, make sure that big slice test, uses a slice bigger than this.
@@ -109,21 +120,22 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
   read_buffer.resize(std::min(header.slice_size, kMaxBufferSize));
 
   for (uint64_t pslice = header.pslice_count; pslice >= 1; --pslice) {
-    auto& slice_entry = metadata->GetSliceEntry(pslice);
+    auto& slice_entry = metadata_or.value().GetSliceEntry(pslice);
 
     // If the slice is not allocated to any partition, dont bother.
     if (!slice_entry.IsAllocated()) {
       continue;
     }
 
-    uint64_t read_slice_start = metadata->GetHeader().GetSliceDataOffset(pslice);
+    uint64_t read_slice_start = metadata_or.value().GetHeader().GetSliceDataOffset(pslice);
     uint64_t write_slice_start = new_header.GetSliceDataOffset(pslice);
     uint64_t moved_bytes = 0;
 
     // The size of the slice is arbitrary, so we se a maximum buffer size, and stream the contents.
-    while (moved_bytes < metadata->GetHeader().slice_size) {
-      auto chunk_view = fbl::Span<uint8_t>(read_buffer)
-                            .subspan(0, std::min(kMaxBufferSize, metadata->GetHeader().slice_size));
+    while (moved_bytes < metadata_or.value().GetHeader().slice_size) {
+      auto chunk_view =
+          fbl::Span<uint8_t>(read_buffer)
+              .subspan(0, std::min(kMaxBufferSize, metadata_or.value().GetHeader().slice_size));
 
       if (auto read_result = source_image.Read(read_slice_start + moved_bytes, chunk_view);
           read_result.is_error()) {
@@ -140,7 +152,7 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
 
   // Now we copy the new metadata over, which is the old metadata, plus new entries, this can be
   // done by recreating the metadata.
-  auto new_metadata = metadata->CopyWithNewDimensions(new_header);
+  auto new_metadata = metadata_or.value().CopyWithNewDimensions(new_header);
   if (new_metadata.is_error()) {
     return fit::error("Failed to synthesize metadata for extended FVM. Error code: " +
                       std::to_string(new_metadata.error_value()));
@@ -164,6 +176,61 @@ fit::result<void, std::string> FvmImageExtend(const Reader& source_image, const 
   }
 
   return fit::ok();
+}
+
+fit::result<uint64_t, std::string> FvmImageGetTrimmedSize(const Reader& source_image,
+                                                          const FvmOptions& options) {
+  if (!options.target_volume_size.has_value()) {
+    return fit::error("FvmImageGetTrimmedSize requires |options.target_volume_size|.");
+  }
+
+  std::vector<uint8_t> primary_metadata_buffer;
+  std::vector<uint8_t> secondary_metadata_buffer;
+
+  auto metadata_or = GetMetadata(source_image, primary_metadata_buffer, secondary_metadata_buffer);
+  if (metadata_or.is_error()) {
+    return metadata_or.take_error_result();
+  }
+  const auto& header = metadata_or.value().GetHeader();
+
+  if (options.target_volume_size.value() > header.fvm_partition_size) {
+    return fit::error(
+        "|FvmImageGetTrimmedSize| calculated size cannot be bigger that the original image.");
+  }
+
+  uint64_t last_allocated_slice = 0;
+  for (uint64_t pslice = header.pslice_count; pslice > 0; --pslice) {
+    const auto& slice_entry = metadata_or.value().GetSliceEntry(pslice);
+
+    if (slice_entry.IsAllocated()) {
+      last_allocated_slice = pslice;
+      break;
+    }
+  }
+
+  uint64_t last_offset = header.GetSliceDataOffset(last_allocated_slice);
+  if (last_offset < header.GetSuperblockOffset(fvm::SuperblockType::kPrimary)) {
+    last_offset = header.GetSuperblockOffset(fvm::SuperblockType::kPrimary) +
+                  header.GetMetadataAllocatedBytes();
+  }
+
+  if (last_offset < header.GetSuperblockOffset(fvm::SuperblockType::kSecondary)) {
+    last_offset = header.GetSuperblockOffset(fvm::SuperblockType::kSecondary) +
+                  header.GetMetadataAllocatedBytes();
+  }
+
+  if (options.target_volume_size.value() < last_offset) {
+    return fit::error(
+        "FvmImageGetTrimmedSize cannot remove metadata or allocated slice data. Minimum image "
+        "size: " +
+        std::to_string(last_offset) +
+        " target volume size: " + std::to_string(options.target_volume_size.value()) + ".");
+  }
+
+  // At the very least the target size is is same as last_offset.
+  last_offset = options.target_volume_size.value();
+
+  return fit::ok(last_offset);
 }
 
 }  // namespace storage::volume_image
