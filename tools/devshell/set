@@ -172,12 +172,28 @@ function main {
 
   if ! is_feature_enabled "legacy_set"; then
     # Cache the compiled executable for later invocations.
-    local exe_path="${FX_CACHE_DIR}/fx-set"
+    readonly exe_path="${FX_CACHE_DIR}/fx-set"
 
-    # A `jiri update` hook deletes the fx-set executable (see
-    # //scripts/devshell/lib/delete_fx_set_executable.sh), so we only need to
-    # recompile fx-set if it's missing.
-    if $dev || [ ! -f "$exe_path" ]; then
+    readonly revision_file="${FX_CACHE_DIR}/fx-set-revision"
+    local current_revision
+    current_revision="$(git -C "$FUCHSIA_DIR" rev-parse JIRI_HEAD)"
+
+    # Determine whether we need to rebuild the fx-set executable. We'll only
+    # skip rebuilding if the --dev flag is unset, or if it has already been
+    # built since the last `jiri update`. We determine that by storing the
+    # current JIRI_HEAD of fuchsia.git in a cached version file whenever we
+    # build fx-set, and then we only rebuild if the current JIRI_HEAD differs
+    # from the revision referenced in the cached file.
+    local should_rebuild=true
+    if ! $dev && [ -f "$exe_path" ] && [ -f "$revision_file" ]; then
+      local fx_set_revision
+      fx_set_revision="$(head -n 1 "$revision_file")"
+      if [ "$fx_set_revision" = "$current_revision" ]; then
+        should_rebuild=false
+      fi
+    fi
+
+    if $should_rebuild; then
       # It may take upwards of 3 seconds to build the tool depending on the
       # state of the system's Go build cache. Add a temporary log so the user
       # knows what's going on (but only do it if stdout is terminal, since
@@ -204,6 +220,11 @@ function main {
         # output.
         echo -n -e "\r\033[1A\033[0K"
       fi
+
+      # Record the current JIRI_HEAD *after* building fx-set so that we always
+      # try to rebuild on subsequent attempts if compilation fails the first
+      # time.
+      echo "$current_revision" > "$revision_file"
     fi
 
     exec "$exe_path" "$@"
