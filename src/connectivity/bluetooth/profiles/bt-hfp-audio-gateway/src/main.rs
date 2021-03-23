@@ -7,19 +7,17 @@ use {
     anyhow::{Context, Error},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
-    futures::{future, pin_mut, StreamExt},
+    futures::{channel::mpsc, future, pin_mut, StreamExt},
     log::warn,
 };
 
 use crate::{
-    call_manager::CallManager,
     config::AudioGatewayFeatureSupport,
-    fidl_service::{handle_hfp_client_connection, Services},
+    fidl_service::{handle_hfp_client_connection, Services, MAX_CONCURRENT_CONNECTIONS},
     hfp::Hfp,
     profile::Profile,
 };
 
-mod call_manager;
 mod config;
 mod error;
 mod fidl_service;
@@ -37,10 +35,10 @@ async fn main() -> Result<(), Error> {
 
     let feature_support = AudioGatewayFeatureSupport::load()?;
     let profile = Profile::register_audio_gateway(feature_support)?;
-    let mut call_manager = CallManager::new();
-    let service_provider =
-        call_manager.service_provider().expect("A valid call manager service provider");
-    let hfp = Hfp::new(profile, call_manager, feature_support).run();
+
+    let (call_manager_sender, call_manager_receiver) = mpsc::channel(1);
+
+    let hfp = Hfp::new(profile, call_manager_receiver, feature_support).run();
     pin_mut!(hfp);
 
     let mut fs = ServiceFs::new();
@@ -52,8 +50,8 @@ async fn main() -> Result<(), Error> {
     }
 
     fs.take_and_serve_directory_handle().context("Failed to serve ServiceFs directory")?;
-    let fs = fs.for_each_concurrent(10_000, move |Services::Hfp(stream)| {
-        handle_hfp_client_connection(stream, service_provider.clone())
+    let fs = fs.for_each_concurrent(MAX_CONCURRENT_CONNECTIONS, move |Services::Hfp(stream)| {
+        handle_hfp_client_connection(stream, call_manager_sender.clone())
     });
     pin_mut!(fs);
 

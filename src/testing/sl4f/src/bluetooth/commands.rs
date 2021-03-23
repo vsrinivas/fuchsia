@@ -757,7 +757,7 @@ impl Facade for HfpFacade {
     async fn handle_request(&self, method: String, args: Value) -> Result<Value, Error> {
         match method.as_ref() {
             "HfpInit" => {
-                let result = self.init_hfp_service_proxy().await?;
+                let result = self.init_hfp_service().await?;
                 Ok(to_value(result)?)
             }
             "HfpRemoveService" => {

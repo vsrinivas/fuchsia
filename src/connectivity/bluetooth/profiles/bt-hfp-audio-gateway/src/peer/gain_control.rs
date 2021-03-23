@@ -231,7 +231,7 @@ impl FusedStream for GainControl {
 #[cfg(test)]
 mod tests {
     use {
-        super::*, async_utils::PollExt, fidl_fuchsia_bluetooth_hfp::CallManagerMarker,
+        super::*, async_utils::PollExt, fidl_fuchsia_bluetooth_bredr as bredr,
         fuchsia_async as fasync, matches::assert_matches,
     };
 
@@ -281,11 +281,15 @@ mod tests {
     async fn stream_error_returns_none_and_terminates() {
         let mut ctrl = GainControl::new().unwrap();
         let client_end = ctrl.get_client_end().unwrap();
-        let wrong_client_end: ClientEnd<CallManagerMarker> =
+        let wrong_client_end: ClientEnd<bredr::ProfileMarker> =
             ClientEnd::new(client_end.into_channel());
         let wrong_proxy = wrong_client_end.into_proxy().unwrap();
 
-        let _resp = wrong_proxy.watch_for_peer();
+        let _resp = wrong_proxy.connect(
+            &mut fidl_fuchsia_bluetooth::PeerId { value: 1 },
+            &mut bredr::ConnectParameters::L2cap(bredr::L2capParameters::EMPTY),
+        );
+
         let result = ctrl.next().await;
         assert!(result.is_none());
         assert!(ctrl.is_terminated());

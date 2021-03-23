@@ -67,41 +67,28 @@ alias Number = string:256;
 /// Represents a specific phone book memory location
 alias Memory = string:256;
 
-/// Represents a Bluetooth peer device with HFP support.
-resource table Peer {
-    /// Unique ID assigned to this peer.
-    1: bt.PeerId id;
-    /// Handle to the protocol for this individual peer.
-    2: request<PeerHandler> handle;
-};
-
 [Discoverable]
 protocol Hfp {
     /// Register as the call manager for this device.
     ///
-    /// `network` represents the current available network information,
-    /// to be provided to headsets. All fields in `network` must be populated.
-    ///
     /// There can only be one call manager registered at a time. If one is
     /// registered at the time a call to `Register` is made, the newer
-    /// CallManager channel will be closed with a `ZX_ERR_ALREADY_BOUND`
-    /// epitaph.
-    Register(request<CallManager> manager);
+    /// CallManager channel will be closed.
+    Register(CallManager manager);
 };
 
 protocol CallManager {
-    /// Wait for a peer that supports the HFP Hands-Free role to connect to the
-    /// Bluetooth subsystem.
+    /// Signal that a peer that supports the HFP Hands-Free role is connected.
     ///
-    /// Returns the unique `id` associated with the peer and the `handle` that
-    /// the call manager should use to handle a peer. If the call manager does
-    /// not intend to handle a given peer, it must close the handle with a
-    /// `ZX_ERR_UNAVAILABLE` epitaph.
+    /// `id` is the unique identifier associated with the peer.
+    /// `handle` is the channel that the call manager should use to manage
+    /// a the peer. If the call manager does not intend to handle a given peer,
+    /// it must close the handle with a `ZX_ERR_UNAVAILABLE` epitaph.
     ///
-    /// There can only be one outstanding `WatchForPeer` request at a time. The
-    /// channel will be closed with a `ZX_ERR_BAD_STATE` epitaph if additional
-    /// requests are made while one is already outstanding.
-    WatchForPeer() -> (bt.PeerId id, request<PeerHandler> handle);
+    /// Multiple concurrent PeerConnected requests can be made by the client.
+    /// The empty response is used as a flow control mechanism to allow the
+    /// client to limit the number of pending PeerConnected requests.
+    PeerConnected(bt.PeerId id, request<PeerHandler> handle) -> ();
 };
 
 /// The Call Service will serve a call handler protocol for each connected

@@ -7,16 +7,18 @@ use async_utils::hanging_get::client::HangingGetStream;
 use derivative::Derivative;
 use fidl_fuchsia_bluetooth::PeerId;
 use fidl_fuchsia_bluetooth_hfp::{
-    CallManagerMarker, CallManagerProxy, CallMarker, CallRequest, CallRequestStream,
-    CallState as FidlCallState, CallWatchStateResponder, DtmfCode, HeadsetGainProxy, HfpMarker,
-    HfpProxy, NetworkInformation, PeerHandlerRequest, PeerHandlerRequestStream,
-    PeerHandlerWaitForCallResponder, PeerHandlerWatchNetworkInformationResponder, SignalStrength,
+    CallManagerMarker, CallManagerRequest, CallManagerRequestStream, CallMarker, CallRequest,
+    CallRequestStream, CallState as FidlCallState, CallWatchStateResponder, DtmfCode,
+    HeadsetGainProxy, HfpMarker, HfpProxy, NetworkInformation, PeerHandlerRequest,
+    PeerHandlerRequestStream, PeerHandlerWaitForCallResponder,
+    PeerHandlerWatchNetworkInformationResponder, SignalStrength,
 };
 use fuchsia_async as fasync;
 use fuchsia_component::client;
+// TODO (fxbug.dev/72691): Replace usage with `log` macros.
 use fuchsia_syslog::macros::*;
 use fuchsia_zircon as zx;
-use futures::{lock::Mutex, stream::StreamExt, FutureExt};
+use futures::{lock::Mutex, stream::StreamExt, FutureExt, TryStreamExt};
 use serde::Serialize;
 use std::{collections::HashMap, sync::Arc};
 
@@ -25,10 +27,12 @@ pub const HFP_AG_URL: &str =
 
 type CallId = u64;
 
-#[derive(Debug)]
+#[derive(Derivative)]
+#[derivative(Debug)]
 /// State associated with the call manager (client) end of the HFP fidl service.
 struct ManagerState {
-    proxy: Option<CallManagerProxy>,
+    #[derivative(Debug = "ignore")]
+    peer_watcher: Option<fasync::Task<()>>,
     network: NetworkInformation,
     reported_network: Option<NetworkInformation>,
     network_responder: Option<PeerHandlerWatchNetworkInformationResponder>,
@@ -40,7 +44,7 @@ struct ManagerState {
 impl Default for ManagerState {
     fn default() -> Self {
         Self {
-            proxy: None,
+            peer_watcher: None,
             network: NetworkInformation::EMPTY,
             reported_network: None,
             network_responder: None,
@@ -229,56 +233,43 @@ impl TestCallManager {
         TestCallManager { inner: Arc::new(Mutex::new(TestCallManagerInner::default())) }
     }
 
-    pub async fn set_proxy(&self, proxy: CallManagerProxy) {
-        let mut inner = self.inner.lock().await;
-        inner.manager.proxy = Some(proxy.clone());
-        fasync::Task::spawn(
-            self.clone().watch_for_peers(proxy.clone()).map(|f| f.unwrap_or_else(|_| {})),
-        )
-        .detach();
+    pub async fn set_request_stream(&self, stream: CallManagerRequestStream) {
+        let task = fasync::Task::spawn(
+            self.clone().watch_for_peers(stream).map(|f| f.unwrap_or_else(|_| {})),
+        );
+        self.inner.lock().await.manager.peer_watcher = Some(task);
     }
 
     pub async fn register_manager(&self, proxy: HfpProxy) -> Result<(), Error> {
-        let (manager_proxy, server_end) = fidl::endpoints::create_proxy::<CallManagerMarker>()?;
-        proxy.register(server_end)?;
-        self.set_proxy(manager_proxy).await;
+        let (client_end, stream) = fidl::endpoints::create_request_stream::<CallManagerMarker>()?;
+        proxy.register(client_end)?;
+        self.set_request_stream(stream).await;
         Ok(())
     }
 
-    /// Return an HFP CallManagerProxy. If one does not exist, create it and store it in the Facade.
-    async fn hfp_service_proxy(&self) -> Result<CallManagerProxy, Error> {
+    /// Initialize the HFP service.
+    pub async fn init_hfp_service(&self) -> Result<(), Error> {
         let mut inner = self.inner.lock().await;
-        let needs_watcher = inner.manager.proxy.is_none();
-        let proxy = match inner.manager.proxy.clone() {
-            Some(proxy) => proxy,
-            None => {
-                fx_log_info!("Launching HFP and setting new service proxy");
-                let launcher = client::launcher()
-                    .map_err(|err| format_err!("Failed to get launcher service: {}", err))?;
-                let bt_hfp = client::launch(&launcher, HFP_AG_URL.to_string(), None)?;
 
-                let hfp_service_proxy = bt_hfp
-                    .connect_to_service::<HfpMarker>()
-                    .map_err(|err| format_err!("Failed to create HFP service proxy: {}", err))?;
-                inner.hfp_component = Some(bt_hfp);
-                let (proxy, server_end) = fidl::endpoints::create_proxy::<CallManagerMarker>()?;
-                hfp_service_proxy.register(server_end)?;
-                inner.manager.proxy = Some(proxy.clone());
-                proxy
-            }
-        };
-        if needs_watcher {
-            fasync::Task::spawn(
-                self.clone().watch_for_peers(proxy.clone()).map(|f| f.unwrap_or_else(|_| {})),
-            )
-            .detach();
+        if inner.manager.peer_watcher.is_none() {
+            fx_log_info!("Launching HFP and setting new service proxy");
+            let launcher = client::launcher()
+                .map_err(|err| format_err!("Failed to get launcher service: {}", err))?;
+            let bt_hfp = client::launch(&launcher, HFP_AG_URL.to_string(), None)?;
+
+            let hfp_service_proxy = bt_hfp
+                .connect_to_service::<HfpMarker>()
+                .map_err(|err| format_err!("Failed to create HFP service proxy: {}", err))?;
+            inner.hfp_component = Some(bt_hfp);
+            let (client_end, stream) =
+                fidl::endpoints::create_request_stream::<CallManagerMarker>()?;
+            hfp_service_proxy.register(client_end)?;
+
+            let task = fasync::Task::spawn(
+                self.clone().watch_for_peers(stream).map(|f| f.unwrap_or_else(|_| {})),
+            );
+            inner.manager.peer_watcher = Some(task);
         }
-        Ok(proxy)
-    }
-
-    /// Initialize the HFP service
-    pub async fn init_hfp_service_proxy(&self) -> Result<(), Error> {
-        self.hfp_service_proxy().await?;
         Ok(())
     }
 
@@ -581,14 +572,18 @@ impl TestCallManager {
     /// Arguments:
     ///     `proxy`: The client end of the CallManager protocol which is used to watch for new
     ///     Bluetooth peers.
-    async fn watch_for_peers(self, proxy: CallManagerProxy) -> Result<(), fidl::Error> {
+    async fn watch_for_peers(
+        self,
+        mut stream: CallManagerRequestStream,
+    ) -> Result<(), fidl::Error> {
         // Entries are only removed from the map when they are replaced, so the size of `peers`
         // will grow as the total number of unique peers grows. This is acceptable as the number of
         // unique peers that connect to a DUT is expected to be relatively small.
         let mut peers = HashMap::new();
-        loop {
-            let (id, server) = proxy.watch_for_peer().await?;
-            let stream = server.into_stream()?;
+        while let Some(CallManagerRequest::PeerConnected { id, handle, responder }) =
+            stream.try_next().await?
+        {
+            let stream = handle.into_stream()?;
             fx_log_info!("Handling Peer: {:?}", id);
             {
                 let mut inner = self.inner.lock().await;
@@ -598,7 +593,9 @@ impl TestCallManager {
 
             let task = fasync::Task::spawn(self.clone().manage_peer(id, stream));
             peers.insert(id, task);
+            let _ = responder.send();
         }
+        Ok(())
     }
 
     /// Manage an ongoing call that is being routed to the Hands Free peer. Handle any requests
