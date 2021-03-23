@@ -7,7 +7,7 @@
 
 use {
     crate::lsm_tree::{
-        merge::{MergeFn, Merger},
+        merge::{self, MergeFn},
         types::{
             BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerIteratorMut,
             MutableLayer, OrdLowerBound, Value,
@@ -207,7 +207,7 @@ impl<K: Key + OrdLowerBound, V: Value> MutableLayer<K, V> for SkipListLayer<K, V
     }
 
     async fn merge_into(&self, item: Item<K, V>, lower_bound: &K, merge_fn: MergeFn<K, V>) {
-        Merger::merge_into(
+        merge::merge_into(
             Box::new(SkipListLayerIterMut::new(self, Bound::Included(lower_bound)).await),
             item,
             merge_fn,

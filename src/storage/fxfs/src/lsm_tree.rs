@@ -218,11 +218,10 @@ impl<
     }
 
     pub async fn seek<'a>(&'a self, bound: Bound<&K>) -> Result<LSMTreeIter<'a, K, V>, Error> {
-        let mut iter = LSMTreeIter(merge::Merger::new(
-            &self.layers.as_slice().into_layer_refs(),
-            self.merge_fn,
-        ));
-        iter.0.seek(bound).await?;
+        let iter = LSMTreeIter(
+            merge::Merger::new(&self.layers.as_slice().into_layer_refs(), self.merge_fn, bound)
+                .await?,
+        );
         Ok(iter)
     }
 }
