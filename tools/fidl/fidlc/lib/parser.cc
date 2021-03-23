@@ -1698,72 +1698,56 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
       std::move(comment_tokens_), fidl::utils::Syntax::kOld);
 }
 
-// A helper function to parse any comma separated list into a vector of some
-// type T. The items_seen reference tracks how many item parsings were
-// attempted. This information may be useful for callers that want to error in
-// certain cases, like empty lists or lists with greater than N members.  If
-// such a reference were not passed in, this error logic could only account for
-// successfully parsed list members, resulting in situations where lists with a
-// single malformed member are mistaken for empty lists, and so on.
 template <typename T, typename Fn, Token::Kind ClosingToken>
-std::vector<std::unique_ptr<T>> Parser::ParseCommaSeparatedList(int& items_seen, Fn fn) {
+std::vector<std::unique_ptr<T>> Parser::ParseCommaSeparatedList(Fn parse_element, size_t* items_seen) {
   std::vector<std::unique_ptr<T>> items;
+  size_t seen = 0;
 
-  auto parse_item = [&]() {
+  auto consume_next = [&]() {
     switch (Peek().kind()) {
-      case Token::Kind::kComma: {
-        if (items_seen == 0) {
-          Fail(ErrLeadingComma);
+      case Token::Kind::kSemicolon:
+      case ClosingToken: {
+        if (previous_token_.kind() == Token::Kind::kComma) {
+          Fail(ErrTrailingComma);
+          RecoverOneError();
         }
-        ConsumeToken(OfKind(Token::Kind::kComma));
-
-        switch (Peek().kind()) {
-          case Token::Kind::kComma: {
-            Fail(ErrConsecutiveComma);
-            break;
-          }
-          case Token::Kind::kSemicolon:
-          case ClosingToken: {
-            Fail(ErrTrailingComma);
-            break;
-          }
-          default: {
-            add(&items, fn);
-            break;
-          }
-        }
-        return More;
-      }
-      case ClosingToken:
-      case Token::Kind::kSemicolon: {
         return Done;
       }
-      default:
-        if (items_seen == 0) {
-          add(&items, fn);
-        } else {
-          Fail(ErrMissingComma);
+      case Token::Kind::kComma: {
+        if (previous_token_.kind() == Token::Kind::kComma) {
+          Fail(ErrConsecutiveComma);
+        } else if (seen == 0) {
+          Fail(ErrLeadingComma);
         }
+        seen++;
+        ConsumeToken(OfKind(Token::Kind::kComma));
         return More;
+      }
+      default: {
+        if (seen > 0 && previous_token_.kind() != Token::Kind::kComma)
+          Fail(ErrMissingComma);
+        add(&items, parse_element);
+        seen++;
+        return More;
+      }
     }
   };
 
-  while (parse_item() == More) {
-    ++items_seen;
+  while (consume_next() == More) {
     if (!Ok()) {
       const auto result = RecoverToEndOfListItem<ClosingToken>();
-      if (result == RecoverResult::Failure) {
-        if (Peek().kind() == Token::Kind::kSemicolon) {
-          continue;
-        }
-        Fail();
-        return items;
-      } else if (result == RecoverResult::EndOfScope) {
+      if (result == RecoverResult::Failure && Peek().kind() != Token::Kind::kSemicolon) {
+        break;
+      }
+      if (result == RecoverResult::EndOfScope) {
         continue;
       }
     }
   }
 
+  if (items_seen != nullptr) {
+    *items_seen = seen;
+  }
   return items;
 }
 
@@ -1806,12 +1790,11 @@ std::unique_ptr<raw::TypeParameterList> Parser::MaybeParseTypeParameterList() {
   }
 
   ASTScope scope(this);
-  int items_seen = 0;
+  size_t items_seen = 0;
   auto parse_item = [&] { return ParseTypeParameter(); };
-  // TODO(fxbug.dev/65978): figure out a solution that doesn't use decltype.
   auto items =
       ParseCommaSeparatedList<raw::TypeParameter, decltype(parse_item), Token::Kind::kRightAngle>(
-          items_seen, parse_item);
+          parse_item, &items_seen);
   if (!Ok())
     return Fail();
 
@@ -1837,12 +1820,12 @@ std::unique_ptr<raw::TypeConstraints> Parser::MaybeParseConstraints() {
     bracketed = true;
   }
 
-  int items_seen = 0;
+  size_t items_seen = 0;
   auto parse_item = [&] { return ParseConstant(); };
-  // TODO(fxbug.dev/65978): figure out a solution that doesn't use decltype.
   auto items =
       ParseCommaSeparatedList<raw::Constant, decltype(parse_item), Token::Kind::kRightSquare>(
-          items_seen, parse_item);
+          parse_item, &items_seen);
+
   if (!Ok())
     return Fail();
 
@@ -1858,10 +1841,6 @@ std::unique_ptr<raw::TypeConstraints> Parser::MaybeParseConstraints() {
     Fail(ErrMissingConstraintBrackets);
   }
   RecoverAllErrors();
-
-  if (!Ok())
-    return Fail();
-
   return std::make_unique<raw::TypeConstraints>(scope.GetSourceElement(), std::move(items));
 }
 
@@ -2041,7 +2020,7 @@ std::unique_ptr<raw::LayoutReference> Parser::ParseLayoutReference() {
     default: {
       return Fail();
     }
-  };
+  }
 }
 
 // [ name | { ... } ][ < ... > ][ : ... ]
