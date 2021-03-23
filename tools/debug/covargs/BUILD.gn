@@ -9,7 +9,7 @@ import("//build/go/go_test.gni")
 go_library("codecoverage_api") {
   source_dir = "api/third_party/codecoverage"
   sources = [ "code_coverage.pb.go" ]
-  deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
+  deps = [ "//third_party/golibs:google.golang.org/protobuf" ]
   non_go_deps = [ "api/third_party/codecoverage:proto" ]
 }
 
@@ -32,8 +32,8 @@ go_library("covargs_lib") {
   deps = [
     ":codecoverage_api",
     ":llvm_api",
-    "//third_party/golibs:github.com/golang/protobuf",
     "//third_party/golibs:golang.org/x/sync",
+    "//third_party/golibs:google.golang.org/protobuf",
     "//tools/debug/symbolize:symbolize_lib",
     "//tools/lib/logger",
     "//tools/testing/runtests",

@@ -18,10 +18,10 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/golang/protobuf/jsonpb"
 	"go.fuchsia.dev/fuchsia/tools/debug/covargs/api/llvm"
 	"go.fuchsia.dev/fuchsia/tools/debug/covargs/api/third_party/codecoverage"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 // DiffMapping represents a source transformation done by a diff (i.e. patch),
@@ -393,12 +393,15 @@ func saveReport(report *codecoverage.CoverageReport, filename string) error {
 	defer f.Close()
 	w := zlib.NewWriter(f)
 	defer w.Close()
-	m := &jsonpb.Marshaler{
-		OrigName:     true,
-		EmitDefaults: true,
-	}
-	if err := m.Marshal(w, report); err != nil {
+	b, err := protojson.MarshalOptions{
+		UseProtoNames:   true,
+		EmitUnpopulated: true,
+	}.Marshal(report)
+	if err != nil {
 		return fmt.Errorf("cannot marshal report: %w", err)
+	}
+	if _, err := w.Write(b); err != nil {
+		return fmt.Errorf("cannot emit report: %w", err)
 	}
 	return nil
 }

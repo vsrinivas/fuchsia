@@ -7,32 +7,33 @@ package fint
 import (
 	"io/ioutil"
 
-	"github.com/golang/protobuf/proto"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
+
+	"google.golang.org/protobuf/encoding/prototext"
 )
 
 // ReadStatic deserializes a Static proto from a textproto file.
 func ReadStatic(path string) (*fintpb.Static, error) {
-	message := &fintpb.Static{}
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	if err := proto.UnmarshalText(string(bytes), message); err != nil {
+	var message fintpb.Static
+	if err := prototext.Unmarshal(bytes, &message); err != nil {
 		return nil, err
 	}
-	return message, nil
+	return &message, nil
 }
 
 // ReadContext deserializes a Context proto from a textproto file.
 func ReadContext(path string) (*fintpb.Context, error) {
-	message := &fintpb.Context{}
 	bytes, err := ioutil.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
-	if err := proto.UnmarshalText(string(bytes), message); err != nil {
+	var message fintpb.Context
+	if err := prototext.Unmarshal(bytes, &message); err != nil {
 		return nil, err
 	}
-	return message, nil
+	return &message, nil
 }

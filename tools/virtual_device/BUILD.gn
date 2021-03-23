@@ -34,7 +34,7 @@ go_library("fvd_lib") {
   deps = [
     ":proto",
     ":virtual_device",
-    "//third_party/golibs:github.com/golang/protobuf",
+    "//third_party/golibs:google.golang.org/protobuf",
     "//tools/build",
     "//tools/lib/jsonutil",
   ]
@@ -69,6 +69,10 @@ action("default") {
 go_library("proto") {
   source_dir = "proto"
   sources = [ "virtual_device.pb.go" ]
-  deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
+  deps = [
+    # TODO(https://fxbug.dev/70570): Remove this when we're on protoc 3.14.0 or higher.
+    "//third_party/golibs:github.com/golang/protobuf",
+    "//third_party/golibs:google.golang.org/protobuf",
+  ]
   non_go_deps = [ "proto:lib" ]
 }

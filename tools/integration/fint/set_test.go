@@ -13,10 +13,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
 	"github.com/google/go-cmp/cmp"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/testing/protocmp"
 )
 

@@ -9,11 +9,13 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/golang/protobuf/proto"
-	"github.com/google/go-cmp/cmp"
-	"github.com/google/go-cmp/cmp/cmpopts"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
+
+	"github.com/google/go-cmp/cmp"
+	"github.com/google/go-cmp/cmp/cmpopts"
+	"google.golang.org/protobuf/encoding/prototext"
+	"google.golang.org/protobuf/proto"
 )
 
 func TestReadStatic(t *testing.T) {
@@ -69,7 +71,11 @@ func writeTextproto(t *testing.T, path string, message proto.Message) {
 	defer f.Close()
 	t.Cleanup(func() { os.Remove(path) })
 
-	if err := proto.MarshalText(f, message); err != nil {
+	b, err := prototext.Marshal(message)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := f.Write(b); err != nil {
 		t.Fatal(err)
 	}
 }

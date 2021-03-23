@@ -21,10 +21,11 @@ import (
 	"io"
 	"os"
 
-	"github.com/golang/protobuf/jsonpb"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	"go.fuchsia.dev/fuchsia/tools/lib/jsonutil"
 	"go.fuchsia.dev/fuchsia/tools/virtual_device"
+
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 func main() {
@@ -70,6 +71,14 @@ func mainImpl() error {
 		out = fd
 	}
 
-	m := jsonpb.Marshaler{Indent: "  "}
-	return m.Marshal(out, fvd)
+	b, err := protojson.MarshalOptions{
+		Indent: "  ",
+	}.Marshal(fvd)
+	if err != nil {
+		return fmt.Errorf("failed to marshal fvd: %w", err)
+	}
+	if _, err := out.Write(b); err != nil {
+		return fmt.Errorf("failed to write fvd: %w", err)
+	}
+	return nil
 }

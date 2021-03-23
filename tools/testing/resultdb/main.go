@@ -13,10 +13,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/golang/protobuf/jsonpb"
 	sinkpb "go.chromium.org/luci/resultdb/sink/proto/v1"
 	"go.fuchsia.dev/fuchsia/tools/lib/flagmisc"
 	"golang.org/x/sync/errgroup"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var (
@@ -61,17 +61,13 @@ func mainImpl() error {
 	}
 
 	var eg errgroup.Group
-	m := jsonpb.Marshaler{}
 	ctx, err := resultSinkCtx()
 	if err != nil {
 		return err
 	}
 
 	for _, request := range requests {
-		testResult, err := m.MarshalToString(request)
-		if err != nil {
-			return err
-		}
+		testResult := protojson.Format(request)
 		<-semaphore
 		eg.Go(func() error {
 			defer func() { semaphore <- struct{}{} }()
@@ -79,10 +75,7 @@ func mainImpl() error {
 		})
 	}
 
-	testResult, err := m.MarshalToString(invocationRequest)
-	if err != nil {
-		return err
-	}
+	testResult := protojson.Format(invocationRequest)
 
 	<-semaphore
 	eg.Go(func() error {

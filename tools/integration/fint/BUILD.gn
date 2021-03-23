@@ -24,7 +24,11 @@ go_library("proto_lib") {
     "set_artifacts.pb.go",
     "static.pb.go",
   ]
-  deps = [ "//third_party/golibs:github.com/golang/protobuf" ]
+  deps = [
+    # TODO(https://fxbug.dev/70570): Remove this when we're on protoc 3.14.0 or higher.
+    "//third_party/golibs:github.com/golang/protobuf",
+    "//third_party/golibs:google.golang.org/protobuf",
+  ]
   non_go_deps = [
     ":context",
     ":set_artifacts",
@@ -60,7 +64,6 @@ go_library("fint_lib") {
   deps = [
     ":filetype_lib",
     ":proto_lib",
-    "//third_party/golibs:github.com/golang/protobuf",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:github.com/google/subcommands",
     "//third_party/golibs:google.golang.org/protobuf",

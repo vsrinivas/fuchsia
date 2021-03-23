@@ -10,10 +10,10 @@ import (
 	"fmt"
 	"path/filepath"
 
-	"github.com/golang/protobuf/jsonpb"
 	"github.com/google/subcommands"
 	"go.fuchsia.dev/fuchsia/tools/integration/fint"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
@@ -55,13 +55,16 @@ func (c *SetCommand) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interfac
 		artifacts, setErr := fint.Set(ctx, staticSpec, contextSpec)
 
 		if contextSpec.ArtifactDir != "" {
+			b, err := protojson.Marshal(artifacts)
+			if err != nil {
+				return fmt.Errorf("failed to marshal artifacts: %w", err)
+			}
 			f, err := osmisc.CreateFile(filepath.Join(contextSpec.ArtifactDir, artifactsManifest))
 			if err != nil {
 				return fmt.Errorf("failed to create artifacts file: %w", err)
 			}
 			defer f.Close()
-			m := jsonpb.Marshaler{}
-			if err := m.Marshal(f, artifacts); err != nil {
+			if _, err := f.Write(b); err != nil {
 				return fmt.Errorf("failed to write artifacts file: %w", err)
 			}
 		}
