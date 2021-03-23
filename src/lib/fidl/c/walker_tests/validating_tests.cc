@@ -189,6 +189,47 @@ TEST(Walker, validate_walker_table_max_out_of_line_depth_matched) {
 }
 #endif
 
+TEST(BufferTooSmall, validate_overflow_buffer_on_FidlAlign) {
+  // Message: Struct with 1 1-byte (uint8) field.
+  // Field type.
+  const FidlCodedPrimitive element_field_type = {
+      .tag = kFidlTypePrimitive,
+      .type = kFidlCodedPrimitiveSubtype_Uint8,
+  };
+  // Field.
+  const FidlStructElement element = {
+      .field =
+          {
+              .header =
+                  {
+                      .element_type = kFidlStructElementType_Field,
+                      .is_resource = kFidlIsResource_NotResource,
+                  },
+              .offset = 0,
+              .field_type = &element_field_type,
+          },
+  };
+  // Struct.
+  const FidlCodedStruct type = {
+      .tag = kFidlTypeStruct,
+      .element_count = 1,
+      .size = 1,
+      .elements = &element,
+      .name = nullptr,
+  };
+  // Message: Aligned and 0-padded to exercise checks after 0-pad check.
+  alignas(FIDL_ALIGNMENT) uint8_t message[2 * FIDL_ALIGNMENT] = {};
+  const char* error = nullptr;
+
+  // Message intended to contain 1 byte (though more bytes prepared/0-padded).
+  auto status = fidl_validate(&type, &message, 1, 0, &error);
+
+  // Expect error to be something about buffer too small (for for properly padded message).
+  EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+  EXPECT_NOT_NULL(error);
+  ASSERT_SUBSTR(error, "too small");
+}
+
 TEST(Handles, validate_single_present_handle) {
   nonnullable_handle_message_layout message = {};
   message.inline_struct.handle = FIDL_HANDLE_PRESENT;
