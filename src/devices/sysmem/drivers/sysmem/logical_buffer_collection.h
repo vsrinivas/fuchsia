@@ -529,6 +529,8 @@ class LogicalBufferCollection : public fbl::RefCounted<LogicalBufferCollection> 
     LogTableDiffs<fuchsia_sysmem2::wire::BufferCollectionInfo>("", o, n);
   }
 
+  void LogConstraints(Location location, NodeProperties* node_properties, const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints) const;
+
   Device* parent_device_ = nullptr;
 
   // We occasionally swap out the allocator for a fresh one, to avoid the possibility of churn

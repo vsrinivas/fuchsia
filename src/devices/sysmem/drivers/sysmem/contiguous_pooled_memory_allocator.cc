@@ -250,7 +250,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size,
   RegionAllocator::Region::UPtr region;
   zx::vmo result_parent_vmo;
 
-  const uint64_t guard_region_size = guard_region_data_.size();
+  const uint64_t guard_region_size = has_internal_guard_regions_ ? guard_region_data_.size() : 0;
   uint64_t allocation_size = size + guard_region_data_.size() * 2;
   // TODO(fxbug.dev/43184): Use a fragmentation-reducing allocator (such as best fit).
   //

@@ -13,6 +13,7 @@
 #include <unordered_map>
 
 #include "table_holder.h"
+#include "logging.h"
 
 namespace sysmem_driver {
 
@@ -166,6 +167,11 @@ class NodeProperties {
   uint32_t connected_client_count() const;
   uint32_t buffer_collection_count() const;
   uint32_t buffer_collection_token_count() const;
+
+  void LogInfo(Location location, const char* format, ...) const __PRINTFLIKE(3, 4);
+
+  // For debugging.
+  void LogConstraints(Location location);
 
  private:
   friend class LogicalBufferCollection;

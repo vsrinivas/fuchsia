@@ -186,13 +186,13 @@ void BufferCollection::SetConstraintsAuxBuffers(
 }
 
 void BufferCollection::SetConstraints(bool has_constraints_param,
-                                      fuchsia_sysmem::wire::BufferCollectionConstraints constraints,
+                                      fuchsia_sysmem::wire::BufferCollectionConstraints constraints_param,
                                       SetConstraintsCompleter::Sync& completer) {
   TRACE_DURATION("gfx", "BufferCollection::SetConstraints", "this", this,
                  "logical_buffer_collection", &logical_buffer_collection());
   table_set_.MitigateChurn();
   std::optional<fuchsia_sysmem::wire::BufferCollectionConstraints> local_constraints(
-      std::move(constraints));
+      std::move(constraints_param));
   if (is_set_constraints_seen_) {
     FailSync(FROM_HERE, completer, ZX_ERR_NOT_SUPPORTED, "2nd SetConstraints() causes failure.");
     return;
@@ -236,6 +236,9 @@ void BufferCollection::SetConstraints(bool has_constraints_param,
 
   // No longer needed.
   constraints_aux_buffers_.reset();
+
+  node_properties().LogInfo(FROM_HERE, "BufferCollection::SetConstraints()");
+  node_properties().LogConstraints(FROM_HERE);
 
   // LogicalBufferCollection will ask for constraints when it needs them,
   // possibly during this call if this is the last participant to report

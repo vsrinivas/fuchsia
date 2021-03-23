@@ -1509,6 +1509,9 @@ LogicalBufferCollection::CombineConstraints(ConstraintsList* constraints_list) {
     return fit::error();
   }
 
+  LogInfo(FROM_HERE, "After combining constraints:");
+  LogConstraints(FROM_HERE, nullptr, acc);
+
   return fit::ok(std::move(acc));
 }
 
@@ -1907,7 +1910,6 @@ bool LogicalBufferCollection::AccumulateConstraintBufferCollection(
 
   acc->min_buffer_count_for_camping() += c.min_buffer_count_for_camping();
   acc->min_buffer_count_for_dedicated_slack() += c.min_buffer_count_for_dedicated_slack();
-
   acc->min_buffer_count_for_shared_slack() =
       std::max(acc->min_buffer_count_for_shared_slack(), c.min_buffer_count_for_shared_slack());
   acc->min_buffer_count() = std::max(acc->min_buffer_count(), c.min_buffer_count());
@@ -3121,6 +3123,91 @@ std::vector<const BufferCollection*> LogicalBufferCollection::collection_views()
     }
   }
   return result;
+}
+
+#define LOG_UINT32_FIELD(location, prefix, field_name) \
+  do { \
+    if (!(prefix).has_##field_name()) { \
+      LogClientInfo(location, node_properties, "!%s.has_%s()", #prefix, #field_name); \
+    } else { \
+      LogClientInfo(location, node_properties, "%s.%s(): %u", #prefix, #field_name, prefix.field_name()); \
+    } \
+  } while(0)
+
+#define LOG_UINT64_FIELD(location, prefix, field_name) \
+  do { \
+    if (!(prefix).has_##field_name()) { \
+      LogClientInfo(location, node_properties, "!%s.has_%s()", #prefix, #field_name); \
+    } else { \
+      LogClientInfo(location, node_properties, "%s.%s(): %" PRIx64, #prefix, #field_name, (prefix).field_name()); \
+    } \
+  } while(0)
+
+#define LOG_BOOL_FIELD(location, prefix, field_name) \
+  do { \
+    if (!(prefix).has_##field_name()) { \
+      LogClientInfo(location, node_properties, "!%s.has_%s()", #prefix, #field_name); \
+    } else { \
+      LogClientInfo(location, node_properties, "%s.%s(): %u", #prefix, #field_name, (prefix).field_name()); \
+    } \
+  } while(0)
+
+void LogicalBufferCollection::LogConstraints(Location location, NodeProperties* node_properties, const fuchsia_sysmem2::wire::BufferCollectionConstraints& constraints) const {
+  const fuchsia_sysmem2::wire::BufferCollectionConstraints& c = constraints;
+
+  LOG_UINT32_FIELD(FROM_HERE, c, min_buffer_count);
+  LOG_UINT32_FIELD(FROM_HERE, c, min_buffer_count_for_camping);
+  LOG_UINT32_FIELD(FROM_HERE, c, min_buffer_count_for_dedicated_slack);
+  LOG_UINT32_FIELD(FROM_HERE, c, min_buffer_count_for_shared_slack);
+
+  if (!c.has_buffer_memory_constraints()) {
+    LogInfo(FROM_HERE, "!c.has_buffer_memory_constraints()");
+  } else {
+    const fuchsia_sysmem2::wire::BufferMemoryConstraints& bmc = c.buffer_memory_constraints();
+    LOG_UINT32_FIELD(FROM_HERE, bmc, min_size_bytes);
+    LOG_UINT32_FIELD(FROM_HERE, bmc, max_size_bytes);
+    LOG_BOOL_FIELD(FROM_HERE, bmc, physically_contiguous_required);
+    LOG_BOOL_FIELD(FROM_HERE, bmc, secure_required);
+    LOG_BOOL_FIELD(FROM_HERE, bmc, cpu_domain_supported);
+    LOG_BOOL_FIELD(FROM_HERE, bmc, ram_domain_supported);
+    LOG_BOOL_FIELD(FROM_HERE, bmc, inaccessible_domain_supported);
+  }
+
+  uint32_t image_format_constraints_count = c.has_image_format_constraints() ? c.image_format_constraints().count() : 0;
+  LogInfo(
+    FROM_HERE,
+    "image_format_constraints.count() %u", image_format_constraints_count);
+  for (uint32_t i = 0; i < image_format_constraints_count; ++i) {
+    LogInfo(
+      FROM_HERE, "image_format_constraints[%u] (ifc):", i);
+    const fuchsia_sysmem2::wire::ImageFormatConstraints& ifc = c.image_format_constraints()[i];
+    if (!ifc.has_pixel_format()) {
+      LogInfo(
+        FROM_HERE, "!ifc.has_pixel_format()");
+    } else {
+      LOG_UINT32_FIELD(FROM_HERE, ifc.pixel_format(), type);
+      LOG_UINT64_FIELD(FROM_HERE, ifc.pixel_format(), format_modifier_value);
+    }
+    LOG_UINT32_FIELD(FROM_HERE, ifc, min_coded_width);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, max_coded_width);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, min_coded_height);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, max_coded_height);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, min_bytes_per_row);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, max_bytes_per_row);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, max_coded_width_times_coded_height);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, coded_width_divisor);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, coded_height_divisor);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, bytes_per_row_divisor);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, start_offset_divisor);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, display_width_divisor);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, display_height_divisor);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, required_min_coded_width);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, required_max_coded_width);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, required_min_coded_height);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, required_max_coded_height);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, required_min_bytes_per_row);
+    LOG_UINT32_FIELD(FROM_HERE, ifc, required_max_bytes_per_row);
+  }
 }
 
 }  // namespace sysmem_driver

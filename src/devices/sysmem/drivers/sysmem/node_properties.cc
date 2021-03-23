@@ -8,6 +8,7 @@
 
 #include <vector>
 
+#include "fuchsia/sysmem2/llcpp/fidl.h"
 #include "logical_buffer_collection.h"
 
 namespace sysmem_driver {
@@ -187,6 +188,21 @@ uint32_t NodeProperties::buffer_collection_count() const { return buffer_collect
 
 uint32_t NodeProperties::buffer_collection_token_count() const {
   return buffer_collection_token_count_;
+}
+
+void NodeProperties::LogInfo(Location location, const char* format, ...) const {
+  va_list args;
+  va_start(args, format);
+  logical_buffer_collection_->VLogClientInfo(location, this, format, args);
+  va_end(args);
+}
+
+void NodeProperties::LogConstraints(Location location) {
+  if (!has_constraints()) {
+    LogInfo(FROM_HERE, "No constraints yet.");
+    return;
+  }
+  logical_buffer_collection_->LogConstraints(location, this, *buffer_collection_constraints());
 }
 
 }  // namespace sysmem_driver
