@@ -64,6 +64,10 @@ class Importer {
                             uint64_t virtual_address, uint32_t flags);
   bool HandlePageFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                            uint64_t virtual_address, uint32_t flags);
+  bool HandleAccessFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                            uint64_t virtual_address, uint32_t flags);
+  bool HandleAccessFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                           uint64_t virtual_address, uint32_t flags);
   bool HandleContextSwitch(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
                            trace_thread_state_t outgoing_thread_state,
                            trace_thread_priority_t outgoing_thread_priority,
@@ -176,6 +180,7 @@ class Importer {
   trace_string_ref_t const num_bytes_name_ref_;
   trace_string_ref_t const num_handles_name_ref_;
   trace_string_ref_t const page_fault_name_ref_;
+  trace_string_ref_t const access_fault_name_ref_;
   trace_string_ref_t const vaddr_name_ref_;
   trace_string_ref_t const flags_name_ref_;
   trace_string_ref_t const exit_address_name_ref_;

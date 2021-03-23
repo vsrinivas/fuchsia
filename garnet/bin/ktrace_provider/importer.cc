@@ -86,6 +86,7 @@ Importer::Importer(trace_context_t* context)
       num_bytes_name_ref_(MAKE_STRING("num_bytes")),
       num_handles_name_ref_(MAKE_STRING("num_handles")),
       page_fault_name_ref_(MAKE_STRING("page_fault")),
+      access_fault_name_ref_(MAKE_STRING("access_fault")),
       vaddr_name_ref_(MAKE_STRING("vaddr")),
       flags_name_ref_(MAKE_STRING("flags")),
       exit_address_name_ref_(MAKE_STRING("exit_address")),
@@ -239,6 +240,10 @@ bool Importer::ImportQuadRecord(const ktrace_rec_32b_t* record, const TagInfo& t
       return HandlePageFaultEnter(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
     case KTRACE_EVENT(TAG_PAGE_FAULT_EXIT):
       return HandlePageFaultExit(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
+    case KTRACE_EVENT(TAG_ACCESS_FAULT):
+      return HandleAccessFaultEnter(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
+    case KTRACE_EVENT(TAG_ACCESS_FAULT_EXIT):
+      return HandleAccessFaultExit(record->ts, record->d, ToUInt64(record->a, record->b), record->c);
     case KTRACE_EVENT(TAG_CONTEXT_SWITCH): {
       trace_cpu_number_t cpu = record->b & 0xff;
       trace_thread_state_t outgoing_thread_state = ToTraceThreadState((record->b >> 8) & 0xff);
@@ -629,6 +634,34 @@ bool Importer::HandlePageFaultExit(trace_ticks_t event_time, trace_cpu_number_t 
         trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
     trace_context_write_duration_end_event_record(context_, event_time, &thread_ref,
                                                   &vm_category_ref_, &page_fault_name_ref_, args,
+                                                  std::size(args));
+  }
+  return true;
+}
+
+bool Importer::HandleAccessFaultEnter(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                                      uint64_t virtual_address, uint32_t flags) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_arg_t args[] = {
+        trace_make_arg(vaddr_name_ref_, trace_make_pointer_arg_value(virtual_address)),
+        trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
+    trace_context_write_duration_begin_event_record(context_, event_time, &thread_ref,
+                                                    &vm_category_ref_, &access_fault_name_ref_,
+                                                    args, std::size(args));
+  }
+  return true;
+}
+
+bool Importer::HandleAccessFaultExit(trace_ticks_t event_time, trace_cpu_number_t cpu_number,
+                                     uint64_t virtual_address, uint32_t flags) {
+  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  if (!trace_is_unknown_thread_ref(&thread_ref)) {
+    trace_arg_t args[] = {
+        trace_make_arg(vaddr_name_ref_, trace_make_pointer_arg_value(virtual_address)),
+        trace_make_arg(flags_name_ref_, trace_make_uint32_arg_value(flags))};
+    trace_context_write_duration_end_event_record(context_, event_time, &thread_ref,
+                                                  &vm_category_ref_, &access_fault_name_ref_, args,
                                                   std::size(args));
   }
   return true;

@@ -47,7 +47,15 @@ zx_status_t vmm_accessed_fault_handler(vaddr_t addr) {
     return ZX_ERR_NOT_FOUND;
   }
 
-  return aspace->AccessedFault(addr);
+  ktrace(TAG_ACCESS_FAULT, static_cast<uint32_t>(addr >> 32), static_cast<uint32_t>(addr), 0,
+         arch_curr_cpu_num());
+
+  const zx_status_t status = aspace->AccessedFault(addr);
+
+  ktrace(TAG_ACCESS_FAULT_EXIT, static_cast<uint32_t>(addr >> 32), static_cast<uint32_t>(addr), 0,
+         arch_curr_cpu_num());
+
+  return status;
 }
 
 zx_status_t vmm_page_fault_handler(vaddr_t addr, uint flags) {
