@@ -28,6 +28,7 @@ typedef struct {
   __typeof(zx_vmo_create_physical)* vmo_physical_create;
   __typeof(zx_vmo_replace_as_executable)* vmo_replace_as_executable;
   __typeof(zx_thread_exit)* thread_exit;
+  __typeof(zx_system_get_page_size)* system_get_page_size;
 } minip_ctx_t;
 
 // Subsequent messages and replies are of this format. The |what| parameter is

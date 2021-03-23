@@ -175,7 +175,8 @@ __attribute__((section(".text.not-split"))) void minipr_thread_loop(zx_handle_t 
 
           // This call will fail because we don't have a bti handle, but that's OK because
           // we only care about *how* it fails.
-          cmd.status = ctx.vmo_contiguous_create(ZX_HANDLE_INVALID, ZX_PAGE_SIZE, 0u, &handle[0]);
+          cmd.status = ctx.vmo_contiguous_create(ZX_HANDLE_INVALID, ctx.system_get_page_size(), 0u,
+                                                 &handle[0]);
           goto reply;
         }
         if (what & MINIP_CMD_CREATE_VMO_PHYSICAL) {
