@@ -17,23 +17,16 @@ use {
 
 #[ffx_plugin(AdminProxy = "core/appmgr:out:fuchsia.hardware.power.statecontrol.Admin")]
 pub async fn reboot(
-    admin_proxy: Option<AdminProxy>,
-    fastboot_proxy: Option<FastbootProxy>,
+    admin_proxy: Result<AdminProxy>,
+    fastboot_proxy: Result<FastbootProxy>,
     cmd: RebootCommand,
 ) -> Result<()> {
     if cmd.bootloader && cmd.recovery {
         ffx_bail!("Cannot specify booth bootloader and recovery switches at the same time.");
     }
-    match admin_proxy {
-        Some(a) => reboot_target(a, cmd).await,
-        None => match fastboot_proxy {
-            Some(f) => reboot_fastboot(f, cmd).await,
-            None => ffx_bail!(
-                "Could not connect with target.\n\
-                    Make sure a target exists in `ffx target list` and try again. \n\
-                    If the problem persists, try `ffx doctor` to correct the issue."
-            ),
-        },
+    match fastboot_proxy {
+        Ok(f) => reboot_fastboot(f, cmd).await,
+        Err(_) => reboot_target(admin_proxy?, cmd).await,
     }
 }
 
@@ -131,7 +124,7 @@ mod test {
     async fn run_reboot_test(cmd: RebootCommand) {
         let admin_proxy = setup_fake_admin_server(cmd);
 
-        let result = reboot(Some(admin_proxy), None, cmd).await.unwrap();
+        let result = reboot(Ok(admin_proxy), Err(anyhow!("dummy")), cmd).await.unwrap();
         assert_eq!(result, ());
     }
 
@@ -155,7 +148,7 @@ mod test {
     async fn test_error() -> Result<()> {
         let cmd = RebootCommand { bootloader: true, recovery: true };
         let admin_proxy = setup_fake_admin_server(cmd);
-        let result = reboot(Some(admin_proxy), None, cmd).await;
+        let result = reboot(Ok(admin_proxy), Err(anyhow!("dummy")), cmd).await;
         assert!(result.is_err());
         Ok(())
     }
