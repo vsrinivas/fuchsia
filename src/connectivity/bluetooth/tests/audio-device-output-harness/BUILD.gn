@@ -7,8 +7,7 @@ import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "audio_device_output_harness"
-  edition = "2018"
+  output_name = "audio_device_output_harness"
 
   deps = [
     "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",

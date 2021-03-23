@@ -6,7 +6,6 @@ import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
 
 rustc_test("bt_profile_integration_tests") {
-  edition = "2018"
   source_root = "src/lib.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
@@ -25,8 +24,7 @@ rustc_test("bt_profile_integration_tests") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_component("bt-profile-integration-tests-component") {
-  testonly = true
+fuchsia_test_component("bt-profile-integration-tests-component") {
   manifest = "meta/bt-profile-integration-tests.cmx"
   deps = [ ":bt_profile_integration_tests" ]
 }

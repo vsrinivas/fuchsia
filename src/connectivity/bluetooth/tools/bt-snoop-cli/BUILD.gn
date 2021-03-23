@@ -7,7 +7,6 @@ import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   output_name = "bt-snoop-cli"
-  edition = "2018"
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",

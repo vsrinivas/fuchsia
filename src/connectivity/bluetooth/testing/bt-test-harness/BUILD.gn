@@ -3,12 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("bt-test-harness") {
-  name = "bt_test_harness"
-  version = "0.1.0"
-  edition = "2018"
   with_unit_tests = true
 
   deps = [

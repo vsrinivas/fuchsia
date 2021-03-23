@@ -6,8 +6,7 @@ import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "bt_gap"
-  edition = "2018"
+  output_name = "bt_gap"
   with_unit_tests = true
 
   deps = [
@@ -112,20 +111,17 @@ fuchsia_package("bt-gap") {
   ]
 }
 
-fuchsia_component("test-stash-secure") {
-  testonly = true
+fuchsia_test_component("test-stash-secure") {
   deps = [ "//src/sys/stash:bin" ]
   manifest = "meta/test-stash-secure.cml"
 }
 
-fuchsia_component("test-driver") {
-  testonly = true
+fuchsia_test_component("test-driver") {
   deps = [ ":bin_test" ]
   manifest = "meta/test-driver.cml"
 }
 
-fuchsia_component("test-component") {
-  testonly = true
+fuchsia_test_component("test-component") {
   manifest = "meta/bt-gap-unittests.cml"
 }
 

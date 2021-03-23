@@ -7,7 +7,6 @@ import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   output_name = "bt-pairing-tool"
-  edition = "2018"
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",

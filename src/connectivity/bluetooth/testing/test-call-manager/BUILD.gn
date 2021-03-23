@@ -3,13 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//src/sys/build/components.gni")
 
 rustc_library("test-call-manager") {
-  name = "test_call_manager"
-  version = "0.1.0"
-  edition = "2018"
-
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.hfp:fuchsia.bluetooth.hfp-rustc",

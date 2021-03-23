@@ -6,7 +6,6 @@ import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
 
 rustc_test("bt_gap_lifecycle_tests") {
-  edition = "2018"
   source_root = "src/lib.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
@@ -22,8 +21,7 @@ rustc_test("bt_gap_lifecycle_tests") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_component("bt-gap-lifecycle-tests-component") {
-  testonly = true
+fuchsia_test_component("bt-gap-lifecycle-tests-component") {
   manifest = "meta/bt-gap-lifecycle-tests.cmx"
   deps = [ ":bt_gap_lifecycle_tests" ]
 }

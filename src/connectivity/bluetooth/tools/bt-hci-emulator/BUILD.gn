@@ -8,7 +8,6 @@ import("//src/sys/build/components.gni")
 rustc_binary("bin") {
   output_name = "bt-hci-emulator"
   with_unit_tests = true
-  edition = "2018"
 
   deps = [
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",

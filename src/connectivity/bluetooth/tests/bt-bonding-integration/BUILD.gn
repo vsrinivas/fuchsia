@@ -6,7 +6,6 @@ import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
 
 rustc_test("bt_bonding_integration_tests") {
-  edition = "2018"
   source_root = "src/lib.rs"
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
@@ -19,8 +18,7 @@ rustc_test("bt_bonding_integration_tests") {
   sources = [ "src/lib.rs" ]
 }
 
-fuchsia_component("bt-bonding-integration-tests-component") {
-  testonly = true
+fuchsia_test_component("bt-bonding-integration-tests-component") {
   manifest = "meta/bt-bonding-integration-tests.cmx"
   deps = [ ":bt_bonding_integration_tests" ]
 }

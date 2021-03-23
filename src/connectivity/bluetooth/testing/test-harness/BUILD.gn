@@ -3,13 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/rust/rustc_library.gni")
-import("//build/testing/environments.gni")
 
 rustc_library("test-harness") {
-  name = "test_harness"
-  version = "0.1.0"
-  edition = "2018"
-
   deps = [
     "//src/connectivity/bluetooth/testing/test-harness-macro",
     "//src/lib/fuchsia-async",

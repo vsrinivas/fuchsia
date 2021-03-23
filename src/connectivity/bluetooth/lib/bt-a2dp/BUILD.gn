@@ -15,9 +15,6 @@ metrics_registry("bt_a2dp_metrics") {
 }
 
 rustc_library("bt-a2dp") {
-  name = "bt_a2dp"
-  version = "0.1.0"
-  edition = "2018"
   with_unit_tests = true
 
   deps = [

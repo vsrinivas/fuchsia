@@ -6,8 +6,7 @@ import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "bt_snoop"
-  edition = "2018"
+  output_name = "bt_snoop"
   with_unit_tests = true
 
   deps = [

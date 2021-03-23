@@ -3,8 +3,6 @@
 # found in the LICENSE file.
 
 executable("bt-le-heart-rate-peripheral") {
-  output_name = "bt-le-heart-rate-peripheral"
-
   sources = [
     "app.cc",
     "app.h",

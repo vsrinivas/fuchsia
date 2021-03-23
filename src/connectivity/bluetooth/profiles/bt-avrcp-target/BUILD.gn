@@ -7,7 +7,6 @@ import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
   output_name = "bt_avrcp_target"
-  edition = "2018"
   with_unit_tests = true
 
   deps = [

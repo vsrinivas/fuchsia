@@ -5,8 +5,7 @@
 import("//src/sys/build/components.gni")
 
 # Define a name provider, which is required for BT-GAP
-fuchsia_component("device-name-provider") {
-  testonly = true
+fuchsia_test_component("device-name-provider") {
   manifest = "meta/device-name-provider.cmx"
   deps = [ "//src/bringup/bin/device-name-provider" ]
 }

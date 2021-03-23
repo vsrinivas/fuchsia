@@ -6,8 +6,7 @@ import("//build/rust/rustc_binary.gni")
 import("//src/sys/build/components.gni")
 
 rustc_binary("bin") {
-  name = "bt_a2dp_loopback"
-  edition = "2018"
+  output_name = "bt_a2dp_loopback"
   source_root = "src/main.rs"
 
   deps = [
@@ -34,8 +33,7 @@ rustc_binary("bin") {
   sources = [ "src/main.rs" ]
 }
 
-fuchsia_component("bt-a2dp-loopback-component") {
-  testonly = true
+fuchsia_test_component("bt-a2dp-loopback-component") {
   component_name = "bt-a2dp-loopback"
   manifest = "meta/bt-a2dp-loopback.cmx"
   deps = [ ":bin" ]

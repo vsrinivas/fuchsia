@@ -5,9 +5,6 @@
 import("//build/rust/rustc_macro.gni")
 
 rustc_macro("test-harness-macro") {
-  version = "0.1.0"
-  edition = "2018"
-
   deps = [
     "//third_party/rust_crates:proc-macro2",
     "//third_party/rust_crates:quote",

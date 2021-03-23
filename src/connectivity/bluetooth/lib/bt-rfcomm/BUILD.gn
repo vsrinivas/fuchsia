@@ -6,9 +6,6 @@ import("//build/rust/rustc_library.gni")
 import("//src/sys/build/components.gni")
 
 rustc_library("bt-rfcomm") {
-  name = "bt_rfcomm"
-  version = "0.1.0"
-  edition = "2018"
   with_unit_tests = true
 
   deps = [
