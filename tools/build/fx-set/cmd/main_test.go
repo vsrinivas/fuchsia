@@ -415,7 +415,8 @@ func TestConstructStaticSpec(t *testing.T) {
 			createFile(t, checkoutDir, expected.Board)
 			createFile(t, checkoutDir, expected.Product)
 
-			got, err := constructStaticSpec(ctx, tc.runner, checkoutDir, tc.args)
+			fx := fxRunner{sr: tc.runner, checkoutDir: checkoutDir}
+			got, err := constructStaticSpec(ctx, fx, checkoutDir, tc.args)
 			if err != nil {
 				t.Fatal(err)
 			}

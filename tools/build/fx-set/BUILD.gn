@@ -22,7 +22,6 @@ go_library("main") {
     "//tools/integration/fint:proto_lib",
     "//tools/lib/color",
     "//tools/lib/command",
-    "//tools/lib/hostplatform",
     "//tools/lib/logger",
     "//tools/lib/osmisc",
     "//tools/lib/runner",

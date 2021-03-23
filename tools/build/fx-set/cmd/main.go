@@ -21,7 +21,6 @@ import (
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/command"
-	"go.fuchsia.dev/fuchsia/tools/lib/hostplatform"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
@@ -48,20 +47,27 @@ type subprocessRunner interface {
 	RunWithStdin(ctx context.Context, cmd []string, stdout, stderr io.Writer, stdin io.Reader) error
 }
 
+// fxRunner is a utility for running fx commands as subprocesses.
 type fxRunner struct {
-	subprocessRunner
+	sr          subprocessRunner
 	checkoutDir string
+}
+
+func (r *fxRunner) constructCommand(command string, args []string) []string {
+	fxPath := filepath.Join(r.checkoutDir, "scripts", "fx-reentry")
+	cmd := []string{fxPath, command}
+	return append(cmd, args...)
 }
 
 // run runs the given fx command with optional args.
 func (r *fxRunner) run(ctx context.Context, command string, args ...string) error {
-	// fx-reentry is specifically intended to let non-shell fx commands invoke
-	// other fx commands. We can use it to invoke fx subcommands, just like the
-	// regular fx executable.
-	fxPath := filepath.Join(r.checkoutDir, "scripts", "fx-reentry")
-	cmd := []string{fxPath, command}
-	cmd = append(cmd, args...)
-	return r.subprocessRunner.RunWithStdin(ctx, cmd, os.Stdout, os.Stderr, os.Stdin)
+	return r.sr.RunWithStdin(ctx, r.constructCommand(command, args), os.Stdout, os.Stderr, os.Stdin)
+}
+
+// runWithNoStdio is the same as run, but discards any stdout and stderr and
+// doesn't forward stdin to the subprocess.
+func (r *fxRunner) runWithNoStdio(ctx context.Context, command string, args ...string) error {
+	return r.sr.Run(ctx, r.constructCommand(command, args), nil, nil)
 }
 
 func main() {
@@ -93,11 +99,14 @@ func mainImpl(ctx context.Context) error {
 		}
 	}
 
-	r := &runner.SubprocessRunner{}
+	fx := fxRunner{
+		sr:          &runner.SubprocessRunner{},
+		checkoutDir: args.checkoutDir,
+	}
 
 	var staticSpec *fintpb.Static
 	if args.fintParamsPath == "" {
-		staticSpec, err = constructStaticSpec(ctx, r, args.checkoutDir, args)
+		staticSpec, err = constructStaticSpec(ctx, fx, args.checkoutDir, args)
 		if err != nil {
 			return err
 		}
@@ -120,11 +129,6 @@ func mainImpl(ctx context.Context) error {
 	_, err = fint.Set(ctx, staticSpec, contextSpec)
 	if err != nil {
 		return err
-	}
-
-	fx := fxRunner{
-		subprocessRunner: r,
-		checkoutDir:      args.checkoutDir,
 	}
 
 	// Set the build dir used by subsequent fx commands.
@@ -288,7 +292,7 @@ func parseArgsAndEnv(args []string, env map[string]string) (*setArgs, error) {
 	return cmd, nil
 }
 
-func constructStaticSpec(ctx context.Context, r subprocessRunner, checkoutDir string, args *setArgs) (*fintpb.Static, error) {
+func constructStaticSpec(ctx context.Context, fx fxRunner, checkoutDir string, args *setArgs) (*fintpb.Static, error) {
 	productPath, err := findGNIFile(checkoutDir, "products", args.product)
 	if err != nil {
 		return nil, fmt.Errorf("no such product %q", args.product)
@@ -318,7 +322,7 @@ func constructStaticSpec(ctx context.Context, r subprocessRunner, checkoutDir st
 	// Automatically detect goma and ccache if none of the goma and ccache flags
 	// are specified explicitly.
 	if !(args.useGoma || args.noGoma || args.useCcache || args.noCcache) && args.gomaDir == "" {
-		gomaAuth, err := isGomaAuthenticated(ctx, r, args.checkoutDir)
+		gomaAuth, err := isGomaAuthenticated(ctx, fx)
 		if err != nil {
 			return nil, err
 		}
@@ -425,15 +429,8 @@ func allEnvVars() map[string]string {
 	return env
 }
 
-func isGomaAuthenticated(ctx context.Context, r subprocessRunner, checkoutDir string) (bool, error) {
-	platform, err := hostplatform.Name()
-	if err != nil {
-		// Platform unrecognized, so Goma is not supported.
-		return false, nil
-	}
-
-	gomaAuthPath := filepath.Join(checkoutDir, "prebuilt", "third_party", "goma", platform, "goma_auth.py")
-	if err := r.Run(ctx, []string{gomaAuthPath, "info"}, nil, nil); err != nil {
+func isGomaAuthenticated(ctx context.Context, fx fxRunner) (bool, error) {
+	if err := fx.runWithNoStdio(ctx, "goma_auth", "info"); err != nil {
 		var exitError *exec.ExitError
 		if errors.As(err, &exitError) {
 			// The command failed, which probably means the user isn't logged
