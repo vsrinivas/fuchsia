@@ -26,7 +26,6 @@
 #include <fuchsia/hardware/tee/cpp/banjo.h>
 #include <fuchsia/hardware/usb/modeswitch/cpp/banjo.h>
 #include <fuchsia/hardware/vreg/cpp/banjo.h>
-#include <lib/ddk/binding.h>
 #include <lib/ddk/device.h>
 #include <lib/ddk/driver.h>
 #include <lib/zx/channel.h>

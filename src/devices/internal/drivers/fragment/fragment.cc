@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fragment.h"
+#include "src/devices/internal/drivers/fragment/fragment.h"
 
 #include <fuchsia/hardware/goldfish/addressspace/c/banjo.h>
 #include <lib/ddk/debug.h>
@@ -19,7 +19,8 @@
 
 #include <fbl/algorithm.h>
 
-#include "proxy-protocol.h"
+#include "src/devices/internal/drivers/fragment/fragment-bind.h"
+#include "src/devices/internal/drivers/fragment/proxy-protocol.h"
 
 namespace fragment {
 
@@ -1369,6 +1370,4 @@ const zx_driver_ops_t driver_ops = []() {
 
 }  // namespace fragment
 
-ZIRCON_DRIVER_BEGIN(fragment, fragment::driver_ops, "zircon", "0.1", 1)
-BI_MATCH()  // This driver is excluded from the normal matching process, so this is fine.
-ZIRCON_DRIVER_END(fragment)
+ZIRCON_DRIVER(fragment, fragment::driver_ops, "zircon", "0.1");

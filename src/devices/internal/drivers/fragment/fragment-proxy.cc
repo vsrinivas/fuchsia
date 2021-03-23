@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fragment-proxy.h"
+#include "src/devices/internal/drivers/fragment/fragment-proxy.h"
 
 #include <lib/ddk/debug.h>
 #include <lib/ddk/trace/event.h>
 #include <lib/sync/completion.h>
 
 #include <memory>
+
+#include "src/devices/internal/drivers/fragment/fragment-proxy-bind.h"
 
 namespace fragment {
 
@@ -1131,7 +1133,4 @@ const zx_driver_ops_t driver_ops = []() {
 
 }  // namespace fragment
 
-ZIRCON_DRIVER_BEGIN(fragment_proxy, fragment::driver_ops, "zircon", "0.1", 1)
-// Unmatchable.  This is loaded via the proxy driver mechanism instead of the binding process
-BI_ABORT()
-ZIRCON_DRIVER_END(fragment_proxy)
+ZIRCON_DRIVER(fragment_proxy, fragment::driver_ops, "zircon", "0.1");
