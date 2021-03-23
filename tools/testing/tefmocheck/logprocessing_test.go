@@ -87,8 +87,7 @@ foo
 foo
 foo
 foo
-foo
-`
+foo`
 
 func TestSplitTruncatedLog(t *testing.T) {
 	input := []byte(truncatedLog)
