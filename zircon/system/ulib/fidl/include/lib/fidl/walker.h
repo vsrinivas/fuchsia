@@ -21,11 +21,6 @@ namespace fidl {
 
 namespace internal {
 
-// The MSB is an ownership bit in the count field of vectors.
-constexpr uint64_t kVectorOwnershipMask = uint64_t(1) << 63;
-// The LSB is an ownership bit in tracking_ptr of non-array type.
-constexpr uint64_t kNonArrayTrackingPtrOwnershipMask = uint64_t(1) << 0;
-
 // Some assumptions about data type layout.
 static_assert(offsetof(fidl_string_t, size) == 0u, "fidl_string_t layout");
 static_assert(offsetof(fidl_string_t, data) == 8u, "fidl_string_t layout");
@@ -555,10 +550,7 @@ Result Walker<VisitorImpl>::WalkString(const FidlCodedString* coded_string,
                                        Walker<VisitorImpl>::Position position,
                                        OutOfLineDepth depth) {
   auto string_ptr = PtrTo<fidl_string_t>(position);
-  // The MSB of the size is reserved for an ownership bit used by fidl::StringView.
-  // fidl::StringView's count() would be ideally used in place of the direct bit masking
-  // here, but because of build dependencies this is currently not possible.
-  const uint64_t size = string_ptr->size & ~kVectorOwnershipMask;
+  const uint64_t size = string_ptr->size;
   auto status = visitor_->VisitVectorOrStringCount(&string_ptr->size);
   FIDL_STATUS_GUARD(status);
   if (string_ptr->data == nullptr) {
@@ -618,10 +610,7 @@ Result Walker<VisitorImpl>::WalkVector(const FidlCodedVector* coded_vector,
                                        Walker<VisitorImpl>::Position position,
                                        OutOfLineDepth depth) {
   auto vector_ptr = PtrTo<fidl_vector_t>(position);
-  // The MSB of the count is reserved for an ownership bit used by fidl::VectorView.
-  // fidl::VectorView's count() would be ideally used in place of the direct bit masking
-  // here, but because of build dependencies this is currently not possible.
-  const uint64_t count = vector_ptr->count & ~kVectorOwnershipMask;
+  const uint64_t count = vector_ptr->count;
   auto status = visitor_->VisitVectorOrStringCount(&vector_ptr->count);
   FIDL_STATUS_GUARD(status);
 

@@ -9,7 +9,6 @@
 #include "builder.h"
 #include "decode_benchmark_util.h"
 #include "encode_benchmark_util.h"
-#include "util.h"
 
 namespace {
 

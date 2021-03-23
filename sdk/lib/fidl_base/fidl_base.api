@@ -5,5 +5,5 @@
   "pkg/fidl_base/include/lib/fidl/trace.h": "85da85ca3d983353d8acd8b02dd12506",
   "pkg/fidl_base/include/lib/fidl/txn_header.h": "f02014427e7bc0762f680a561699acc2",
   "pkg/fidl_base/include/lib/fidl/visitor.h": "d83e41306db3c26afc6a7cff8389bced",
-  "pkg/fidl_base/include/lib/fidl/walker.h": "e49ed8805cba8810a51ba8b8f2be5074"
+  "pkg/fidl_base/include/lib/fidl/walker.h": "f180701dd39f3b0bf72dda817478b8e6"
 }

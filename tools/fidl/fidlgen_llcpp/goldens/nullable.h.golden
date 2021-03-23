@@ -12,7 +12,6 @@
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
@@ -70,8 +69,6 @@ class SimpleUnion {
   SimpleUnion(SimpleUnion&&) = default;
   SimpleUnion& operator=(SimpleUnion&&) = default;
 
-  ~SimpleUnion() { reset_ptr(nullptr); }
-
   enum class Tag : fidl_xunion_tag_t {
     kA = 1,  // 0x1
     kB = 2,  // 0x2
@@ -81,9 +78,9 @@ class SimpleUnion {
 
   bool is_a() const { return ordinal_ == Ordinal::kA; }
 
-  static SimpleUnion WithA(::fidl::tracking_ptr<int32_t>&& val) {
+  static SimpleUnion WithA(::fidl::ObjectView<int32_t> val) {
     SimpleUnion result;
-    result.set_a(std::move(val));
+    result.set_a(val);
     return result;
   }
 
@@ -95,9 +92,10 @@ class SimpleUnion {
     return result;
   }
 
-  void set_a(::fidl::tracking_ptr<int32_t>&& elem) {
+  void set_a(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kA;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -117,9 +115,9 @@ class SimpleUnion {
 
   bool is_b() const { return ordinal_ == Ordinal::kB; }
 
-  static SimpleUnion WithB(::fidl::tracking_ptr<float>&& val) {
+  static SimpleUnion WithB(::fidl::ObjectView<float> val) {
     SimpleUnion result;
-    result.set_b(std::move(val));
+    result.set_b(val);
     return result;
   }
 
@@ -131,9 +129,10 @@ class SimpleUnion {
     return result;
   }
 
-  void set_b(::fidl::tracking_ptr<float>&& elem) {
+  void set_b(::fidl::ObjectView<float> elem) {
     ordinal_ = Ordinal::kB;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -168,25 +167,6 @@ class SimpleUnion {
     kA = 1,  // 0x1
     kB = 2,  // 0x2
   };
-
-  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
-    // To clear the existing value, std::move it and let it go out of scope.
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1: {
-        ::fidl::tracking_ptr<int32_t> to_destroy =
-            static_cast<::fidl::tracking_ptr<int32_t>>(
-                std::move(envelope_.data));
-        break;
-      }
-      case 2: {
-        ::fidl::tracking_ptr<float> to_destroy =
-            static_cast<::fidl::tracking_ptr<float>>(std::move(envelope_.data));
-        break;
-      }
-    }
-
-    envelope_.data = std::move(new_ptr);
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
@@ -390,7 +370,7 @@ struct StructWithNullableStruct {
   [[maybe_unused]] static constexpr uint32_t MaxOutOfLine = 8;
   static constexpr bool HasPointer = true;
 
-  ::fidl::tracking_ptr<::fidl_test_nullable::wire::Int32Wrapper> val = {};
+  ::fidl::ObjectView<::fidl_test_nullable::wire::Int32Wrapper> val = {};
 
   class UnownedEncodedMessage final {
    public:

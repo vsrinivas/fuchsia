@@ -50,7 +50,6 @@ test("fidl_llcpp_builder_tests_bin") {
   output_name = "fidl_llcpp_builder_tests"
   sources = [
     "aligned_test.cc",
-    "tracking_ptr_test.cc",
     "unowned_ptr_test.cc",
     "vector_view_test.cc",
   ]

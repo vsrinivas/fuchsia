@@ -386,7 +386,7 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 					if declType == fidlgen.UnionDeclType {
 						return n
 					} else {
-						return n.WithTemplate("::fidl::tracking_ptr")
+						return n.WithTemplate("::fidl::ObjectView")
 					}
 				})
 				r.NeedsDtor = true

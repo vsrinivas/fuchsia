@@ -48,26 +48,21 @@ public:
   }
   {{- /* TODO(fxbug.dev/7999): The elem pointer should be const if it has no handles. */}}
   {{ $.Name }}& set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->{{ .Name }}_.data = elem;
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
     return *this;
   }
   {{ $.Name }}& set_{{ .Name }}(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->{{ .Name }}_.data = nullptr;
     return *this;
   }
   template <typename... Args>
   {{ $.Name }}& set_{{ .Name }}(::fidl::AnyAllocator& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->{{ .Name }}_.data =
         ::fidl::ObjectView<{{ .Type }}>(allocator, std::forward<Args>(args)...);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
-    return *this;
-  }
-  {{ $.Name }}& set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type }}> elem) {
-    frame_ptr_->{{ .Name }}_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>({{ .Ordinal }}));
     return *this;
   }
@@ -81,8 +76,6 @@ public:
   // As soon as the frame is given to the table, it must not be used directly or for another table.
   explicit {{ .Name }}(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  explicit {{ .Name }}(::fidl::tracking_ptr<Frame>&& frame_ptr)
-      : frame_ptr_(std::move(frame_ptr)) {}
   ~{{ .Name }}() = default;
   {{ .Name }}({{ .Name }}&& other) noexcept = default;
   {{ .Name }}& operator=({{ .Name }}&& other) noexcept = default;
@@ -98,7 +91,7 @@ public:
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
   }
-  void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
+  void Init(::fidl::ObjectView<Frame>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -227,9 +220,8 @@ public:
   };
 
  private:
-  {{ .Name }}(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr) : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
-  ::fidl::tracking_ptr<Frame> frame_ptr_;
+  ::fidl::ObjectView<Frame> frame_ptr_;
 };
 
 {{- if .IsResourceType }}

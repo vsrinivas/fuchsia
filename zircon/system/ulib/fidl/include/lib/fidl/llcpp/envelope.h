@@ -7,7 +7,7 @@
 
 #include <zircon/fidl.h>
 
-#include "tracking_ptr.h"
+#include <lib/fidl/llcpp/object_view.h>
 
 namespace fidl {
 
@@ -25,7 +25,7 @@ struct Envelope {
   uint32_t num_handles = 0;
 
   // A pointer to the out-of-line envelope data.
-  tracking_ptr<T> data;
+  ObjectView<T> data;
 };
 
 static_assert(sizeof(Envelope<void>) == sizeof(fidl_envelope_t),

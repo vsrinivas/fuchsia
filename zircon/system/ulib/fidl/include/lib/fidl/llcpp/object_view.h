@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_OBJECT_VIEW_H_
 #define LIB_FIDL_LLCPP_OBJECT_VIEW_H_
 
+#include <lib/fidl/llcpp/aligned.h>
 #include <lib/fidl/llcpp/fidl_allocator.h>
 #include <lib/fidl/llcpp/unowned_ptr.h>
 
@@ -19,7 +20,10 @@ class ObjectView final {
   explicit ObjectView(AnyAllocator& allocator, Args&&... args)
       : object_(allocator.Allocate<T>(std::forward<Args>(args)...)) {}
   // Uses an object already allocated and managed elsewhere.
-  explicit ObjectView(unowned_ptr_t<T> other) { object_ = other.get(); }
+  ObjectView(unowned_ptr_t<T> other) { object_ = other.get(); }  // NOLINT
+  // This constructor exists to strip off 'aligned' from the type (aligned<bool> -> bool).
+  ObjectView(unowned_ptr_t<aligned<T>> other) { object_ = &other.get()->value; }  // NOLINT
+  ObjectView(std::nullptr_t) {}  // NOLINT
 
   template <typename U = T, typename = std::enable_if_t<!std::is_void<U>::value>>
   U& operator*() const {
@@ -30,6 +34,14 @@ class ObjectView final {
   U* operator->() const noexcept {
     return object_;
   }
+
+  bool operator==(std::nullptr_t) const noexcept { return object_ == nullptr; }
+  template <typename T2>
+  bool operator==(ObjectView<T2> other) const noexcept { return object_ == other.object_; }
+
+  bool operator!=(std::nullptr_t) const noexcept { return object_ != nullptr; }
+  template <typename T2>
+  bool operator!=(ObjectView<T2> other) const noexcept { return object_ != other.object_; }
 
   T* get() const noexcept { return object_; }
 
@@ -44,6 +56,16 @@ class ObjectView final {
  private:
   T* object_ = nullptr;
 };
+
+template <typename T>
+bool operator==(std::nullptr_t, ObjectView<T> p) {
+  return p.get() == nullptr;
+}
+
+template <typename T>
+bool operator!=(std::nullptr_t, ObjectView<T> p) {
+  return p.get() != nullptr;
+}
 
 }  // namespace fidl
 

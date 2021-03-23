@@ -14,12 +14,7 @@ namespace fidl {
 
 // fidl::aligned wraps and aligns values to FIDL_ALIGNMENT.
 //
-// This enables 1-byte values like uint8_t, int8_t and bool to be pointed
-// to by tracking_ptr as unowned memory. Heap allocated values do not need
-// fidl::aligned because they are already aligned to std::max_align_t.
-//
-// Usage:
-// fidl::aligned<uint8_t> x = 5;
+// This is deprecated. Do not use anymore.
 template <typename T>
 struct aligned final {
  public:

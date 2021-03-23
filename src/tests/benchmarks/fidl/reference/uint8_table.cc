@@ -12,7 +12,6 @@
 #include "builder.h"
 #include "decode_benchmark_util.h"
 #include "encode_benchmark_util.h"
-#include "util.h"
 
 #ifdef __Fuchsia__
 #include <zircon/syscalls.h>
@@ -29,8 +28,8 @@ bool EncodeUint8TableStruct(void* value, const char** error,
   uint8_t* next = out_buf;
 
   fidl_vector_t* table_vec = reinterpret_cast<fidl_vector_t*>(value);
-  size_t count = CLEAR_COUNT_OWNERSHIP_BIT(table_vec->count);
-  void* data = CLEAR_PTR_OWNERSHIP_BIT(table_vec->data);
+  size_t count = table_vec->count;
+  void* data = table_vec->data;
   if (unlikely(data == nullptr && count != 0)) {
     *error = "table with null data had non-zero element count";
     return false;
@@ -59,7 +58,7 @@ bool EncodeUint8TableStruct(void* value, const char** error,
           .num_handles = 0,
           .presence = FIDL_ALLOC_PRESENT,
       };
-      *next_out_of_line = *reinterpret_cast<uint8_t*>(CLEAR_PTR_OWNERSHIP_BIT(envelope->data));
+      *next_out_of_line = *reinterpret_cast<uint8_t*>(envelope->data);
       next_out_of_line++;
     }
     next += sizeof(fidl_vector_t);

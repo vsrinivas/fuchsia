@@ -31,9 +31,9 @@ ReplySuccess({{ .Result.ValueMembers | Params }})
 ::fidl::Result
 {{ .Protocol.Name }}::Interface::{{ .Name }}CompleterBase::
     {{- template "ReplyManagedResultSuccessMethodSignature" . }} {
-  ::fidl::aligned<{{ .Result.ValueStructDecl }}> _response;
+  {{ .Result.ValueStructDecl }} _response;
   {{- range .Result.ValueMembers }}
-  _response.value.{{ .Name }} = std::move({{ .Name }});
+  _response.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
   return Reply({{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&_response)));

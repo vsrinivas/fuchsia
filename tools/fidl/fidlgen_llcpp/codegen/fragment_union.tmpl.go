@@ -29,10 +29,6 @@ class {{ .Name }} {
   {{ .Name }}({{ .Name }}&&) = default;
   {{ .Name }}& operator=({{ .Name }}&&) = default;
 
-  ~{{ .Name }}() {
-    reset_ptr(nullptr);
-  }
-
   enum class Tag : fidl_xunion_tag_t {
   {{- range .Members }}
     {{ .TagName }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
@@ -48,9 +44,9 @@ class {{ .Name }} {
 
   bool is_{{ .Name }}() const { return ordinal_ == Ordinal::{{ .TagName }}; }
 
-  static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::tracking_ptr<{{ .Type }}>&& val) {
+  static {{ $.Name }} With{{ .UpperCamelCaseName }}(::fidl::ObjectView<{{ .Type }}> val) {
     {{ $.Name }} result;
-    result.set_{{ .Name }}(std::move(val));
+    result.set_{{ .Name }}(val);
     return result;
   }
 
@@ -65,9 +61,10 @@ class {{ .Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  void set_{{ .Name }}(::fidl::tracking_ptr<{{ .Type }}>&& elem) {
+  void set_{{ .Name }}(::fidl::ObjectView<{{ .Type }}> elem) {
     ordinal_ = Ordinal::{{ .TagName }};
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data =
+        ::fidl::ObjectView<void>(::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -117,21 +114,6 @@ class {{ .Name }} {
     {{ .TagName }} = {{ .Ordinal }},  // {{ .Ordinal | printf "%#x" }}
   {{- end }}
   };
-
-  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
-    // To clear the existing value, std::move it and let it go out of scope.
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-    {{- range .Members }}
-    case {{ .Ordinal }}: {
-      ::fidl::tracking_ptr<{{ .Type }}> to_destroy =
-        static_cast<::fidl::tracking_ptr<{{ .Type }}>>(std::move(envelope_.data));
-      break;
-    }
-    {{- end }}
-    }
-
-    envelope_.data = std::move(new_ptr);
-  }
 
   static void SizeAndOffsetAssertionHelper();
 

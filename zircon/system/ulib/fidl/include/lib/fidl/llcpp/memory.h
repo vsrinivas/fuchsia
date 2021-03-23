@@ -19,14 +19,14 @@
 
 namespace fidl {
 
-// Create a unowned_ptr_t from a raw pointer, which can be used to construct a tracking_ptr.
+// Create a unowned_ptr_t from a raw pointer, which can be used to construct an ObjectView.
 //
 // This makes code less verbose by inferring the unowned_ptr_t type. Better type inference directly
 // on unique_ptr depends on C++17 features like class type deduction and deduction rules.
 //
 // Example:
 // uint32_t x;
-// tracking_ptr<uint32_t> ptr = fidl::unowned_ptr(x);
+// ObjectView<uint32_t> ptr = fidl::unowned_ptr(x);
 template <typename T, typename ElemType = std::remove_extent_t<T>>
 unowned_ptr_t<ElemType> unowned_ptr(T* ptr) {
   return unowned_ptr_t<T>(ptr);

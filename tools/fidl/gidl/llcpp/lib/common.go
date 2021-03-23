@@ -30,7 +30,7 @@ func typeNameImpl(decl gidlmixer.Declaration, ignoreNullable bool) string {
 		return "fidl::StringView"
 	case *gidlmixer.StructDecl:
 		if !ignoreNullable && decl.IsNullable() {
-			return fmt.Sprintf("fidl::tracking_ptr<%s>", declName(decl))
+			return fmt.Sprintf("fidl::ObjectView<%s>", declName(decl))
 		}
 		return declName(decl)
 	case gidlmixer.NamedDeclaration:

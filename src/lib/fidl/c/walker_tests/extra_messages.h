@@ -77,9 +77,9 @@ class LLCPPStyleUnion {
 
   ~LLCPPStyleUnion() { reset_ptr(nullptr); }
 
-  void set_Primitive(::fidl::tracking_ptr<int32_t>&& elem) {
+  void set_Primitive(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kPrimitive;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    reset_ptr(::fidl::unowned_ptr(static_cast<void*>(elem.get())));
   }
 
  private:
@@ -88,21 +88,7 @@ class LLCPPStyleUnion {
     kPrimitive = 1,  // 0x1
   };
 
-  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
-    // To clear the existing value, std::move it and let it go out of scope.
-    switch (ordinal_) {
-      case Ordinal::Invalid: {
-        return;
-      }
-      case Ordinal::kPrimitive: {
-        ::fidl::tracking_ptr<int32_t> to_destroy =
-            static_cast<::fidl::tracking_ptr<int32_t>>(std::move(envelope_.data));
-        break;
-      }
-    }
-
-    envelope_.data = std::move(new_ptr);
-  }
+  void reset_ptr(::fidl::ObjectView<void> new_ptr) { envelope_.data = new_ptr; }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;

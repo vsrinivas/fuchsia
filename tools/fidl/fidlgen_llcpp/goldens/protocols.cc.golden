@@ -2737,12 +2737,11 @@ namespace entries {
 ::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
     int64_t a, int64_t b, int64_t c) {
-  ::fidl::aligned<
-      ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Response>
+  ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Response
       _response;
-  _response.value.a = std::move(a);
-  _response.value.b = std::move(b);
-  _response.value.c = std::move(c);
+  _response.a = std::move(a);
+  _response.b = std::move(b);
+  _response.c = std::move(c);
 
   return Reply(
       ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result::
@@ -2773,12 +2772,11 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplyError(
 ::fidl::Result
 WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer, int64_t a, int64_t b, int64_t c) {
-  ::fidl::aligned<
-      ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Response>
+  ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Response
       response;
-  response.value.a = std::move(a);
-  response.value.b = std::move(b);
-  response.value.c = std::move(c);
+  response.a = std::move(a);
+  response.b = std::move(b);
+  response.c = std::move(c);
 
   return Reply(
       std::move(_buffer),
@@ -2798,8 +2796,7 @@ WithErrorSyntax::Interface::ResponseAsStructCompleterBase::ReplySuccess(
 #ifdef __Fuchsia__
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess() {
-  ::fidl::aligned<
-      ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Response>
+  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Response
       _response;
 
   return Reply(
@@ -2831,8 +2828,7 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplyError(
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer) {
-  ::fidl::aligned<
-      ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Response>
+  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Response
       response;
 
   return Reply(
@@ -2852,9 +2848,7 @@ WithErrorSyntax::Interface::ErrorAsPrimitiveCompleterBase::ReplySuccess(
 #ifdef __Fuchsia__
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
-  ::fidl::aligned<
-      ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
-      _response;
+  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response _response;
 
   return Reply(::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
                    WithResponse(::fidl::unowned_ptr(&_response)));
@@ -2882,9 +2876,7 @@ WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess() {
 ::fidl::Result
 WithErrorSyntax::Interface::ErrorAsEnumCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer) {
-  ::fidl::aligned<
-      ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
-      response;
+  ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response response;
 
   return Reply(std::move(_buffer),
                ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::

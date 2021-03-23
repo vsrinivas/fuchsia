@@ -17,9 +17,9 @@ namespace fidl {
 //
 // Functionally, unowned_ptr_t behaves like a raw pointer - it can be copied, dereferenced
 // and reassigned. The motivation for unowned_ptr_t is to make ownership explicit within
-// tracking_ptr.
+// ObjectView.
 // For example:
-// tracking_ptr<T> obj = unowned_ptr_t<T>(&x);
+// ObjectView<T> obj = unowned_ptr_t<T>(&x);
 template <typename T>
 class unowned_ptr_t {
   template <typename U>

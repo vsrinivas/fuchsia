@@ -180,11 +180,7 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
     // For pointers in types other than vectors and strings, the LSB is reserved to mark ownership
     // and may be set to 1 if the object is heap allocated. However, the original pointer has this
     // bit cleared. For vectors and strings, any value is accepted.
-    void* object_ptr =
-        pointee_type == PointeeType::kVector || pointee_type == PointeeType::kString
-            ? *object_ptr_ptr
-            : reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(*object_ptr_ptr) &
-                                      ~fidl::internal::kNonArrayTrackingPtrOwnershipMask);
+    void* object_ptr = *object_ptr_ptr;
     uint32_t new_offset;
     if (unlikely(!FidlAddOutOfLine(next_out_of_line_, inline_size, &new_offset))) {
       SetError("overflow updating out-of-line offset");
@@ -248,12 +244,6 @@ class FidlEncoder final : public ::fidl::Visitor<fidl::MutatingVisitorTrait, Enc
   }
 
   Status VisitVectorOrStringCount(CountPointer ptr) {
-    if (mode == Mode::LinearizeAndEncode) {
-      // Clear the MSB that is used for storing ownership information for vectors and strings.
-      // While this operation could be considered part of encoding, it is LLCPP specific so it
-      // is done during linearization.
-      *ptr &= ~fidl::internal::kVectorOwnershipMask;
-    }
     return Status::kSuccess;
   }
 

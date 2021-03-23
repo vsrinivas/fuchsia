@@ -31,9 +31,9 @@ ReplySuccess(::fidl::BufferSpan _buffer {{- if .Result.ValueMembers }}, {{ end }
 #ifdef __Fuchsia__
 ::fidl::Result {{ .Protocol.Name }}::Interface::{{ .Name }}CompleterBase::
 {{- template "ReplyCallerAllocateResultSuccessMethodSignature" . }} {
-  ::fidl::aligned<{{ .Result.ValueStructDecl }}> response;
+  {{ .Result.ValueStructDecl }} response;
   {{- range .Result.ValueMembers }}
-  response.value.{{ .Name }} = std::move({{ .Name }});
+  response.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
   return Reply(std::move(_buffer), {{ .Result.ResultDecl }}::WithResponse(::fidl::unowned_ptr(&response)));

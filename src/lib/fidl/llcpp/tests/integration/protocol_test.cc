@@ -369,29 +369,6 @@ TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterVectorMove) {
   }
 }
 
-TEST_F(HandleTest, HandleClosedOnResultOfDestructorAfterTrackingPtrMove) {
-  auto client = TakeClient();
-  zx::event dupe;
-
-  {
-    auto result = client.GetHandleUnion();
-
-    ASSERT_TRUE(result.ok()) << result.error();
-    ASSERT_TRUE(result->value.u.h().is_valid());
-    ASSERT_EQ(result->value.u.h().duplicate(ZX_RIGHT_SAME_RIGHTS, &dupe), ZX_OK);
-
-    { auto release = std::move(result->value); }  // ~HandleUnion
-
-    // std::move of tracking_ptr in union only moves pointers, not handles.
-    // 1 handle in ResultOf + 1 handle in dupe = 2.
-    ASSERT_EQ(GetHandleCount(dupe.borrow()), 2u);
-  }
-
-  // Handle cleaned up after ResultOf destructor is called.
-  // Remaining handle is the dupe.
-  ASSERT_EQ(GetHandleCount(dupe.borrow()), 1u);
-}
-
 class EmptyImpl : public test::Empty::Interface {
  public:
 };

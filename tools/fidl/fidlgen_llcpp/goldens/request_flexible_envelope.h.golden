@@ -12,7 +12,6 @@
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
@@ -55,8 +54,6 @@ class StrictFoo {
   StrictFoo(StrictFoo&&) = default;
   StrictFoo& operator=(StrictFoo&&) = default;
 
-  ~StrictFoo() { reset_ptr(nullptr); }
-
   enum class Tag : fidl_xunion_tag_t {
     kS = 1,  // 0x1
     kI = 2,  // 0x2
@@ -66,9 +63,9 @@ class StrictFoo {
 
   bool is_s() const { return ordinal_ == Ordinal::kS; }
 
-  static StrictFoo WithS(::fidl::tracking_ptr<::fidl::StringView>&& val) {
+  static StrictFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
     StrictFoo result;
-    result.set_s(std::move(val));
+    result.set_s(val);
     return result;
   }
 
@@ -80,9 +77,10 @@ class StrictFoo {
     return result;
   }
 
-  void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
+  void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kS;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -103,9 +101,9 @@ class StrictFoo {
 
   bool is_i() const { return ordinal_ == Ordinal::kI; }
 
-  static StrictFoo WithI(::fidl::tracking_ptr<int32_t>&& val) {
+  static StrictFoo WithI(::fidl::ObjectView<int32_t> val) {
     StrictFoo result;
-    result.set_i(std::move(val));
+    result.set_i(val);
     return result;
   }
 
@@ -117,9 +115,10 @@ class StrictFoo {
     return result;
   }
 
-  void set_i(::fidl::tracking_ptr<int32_t>&& elem) {
+  void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kI;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -155,26 +154,6 @@ class StrictFoo {
     kI = 2,  // 0x2
   };
 
-  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
-    // To clear the existing value, std::move it and let it go out of scope.
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1: {
-        ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
-            static_cast<::fidl::tracking_ptr<::fidl::StringView>>(
-                std::move(envelope_.data));
-        break;
-      }
-      case 2: {
-        ::fidl::tracking_ptr<int32_t> to_destroy =
-            static_cast<::fidl::tracking_ptr<int32_t>>(
-                std::move(envelope_.data));
-        break;
-      }
-    }
-
-    envelope_.data = std::move(new_ptr);
-  }
-
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -190,8 +169,6 @@ class FlexibleFoo {
   FlexibleFoo(FlexibleFoo&&) = default;
   FlexibleFoo& operator=(FlexibleFoo&&) = default;
 
-  ~FlexibleFoo() { reset_ptr(nullptr); }
-
   enum class Tag : fidl_xunion_tag_t {
     kS = 1,  // 0x1
     kI = 2,  // 0x2
@@ -202,9 +179,9 @@ class FlexibleFoo {
 
   bool is_s() const { return ordinal_ == Ordinal::kS; }
 
-  static FlexibleFoo WithS(::fidl::tracking_ptr<::fidl::StringView>&& val) {
+  static FlexibleFoo WithS(::fidl::ObjectView<::fidl::StringView> val) {
     FlexibleFoo result;
-    result.set_s(std::move(val));
+    result.set_s(val);
     return result;
   }
 
@@ -216,9 +193,10 @@ class FlexibleFoo {
     return result;
   }
 
-  void set_s(::fidl::tracking_ptr<::fidl::StringView>&& elem) {
+  void set_s(::fidl::ObjectView<::fidl::StringView> elem) {
     ordinal_ = Ordinal::kS;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -239,9 +217,9 @@ class FlexibleFoo {
 
   bool is_i() const { return ordinal_ == Ordinal::kI; }
 
-  static FlexibleFoo WithI(::fidl::tracking_ptr<int32_t>&& val) {
+  static FlexibleFoo WithI(::fidl::ObjectView<int32_t> val) {
     FlexibleFoo result;
-    result.set_i(std::move(val));
+    result.set_i(val);
     return result;
   }
 
@@ -253,9 +231,10 @@ class FlexibleFoo {
     return result;
   }
 
-  void set_i(::fidl::tracking_ptr<int32_t>&& elem) {
+  void set_i(::fidl::ObjectView<int32_t> elem) {
     ordinal_ = Ordinal::kI;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -287,26 +266,6 @@ class FlexibleFoo {
     kS = 1,  // 0x1
     kI = 2,  // 0x2
   };
-
-  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
-    // To clear the existing value, std::move it and let it go out of scope.
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1: {
-        ::fidl::tracking_ptr<::fidl::StringView> to_destroy =
-            static_cast<::fidl::tracking_ptr<::fidl::StringView>>(
-                std::move(envelope_.data));
-        break;
-      }
-      case 2: {
-        ::fidl::tracking_ptr<int32_t> to_destroy =
-            static_cast<::fidl::tracking_ptr<int32_t>>(
-                std::move(envelope_.data));
-        break;
-      }
-    }
-
-    envelope_.data = std::move(new_ptr);
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;

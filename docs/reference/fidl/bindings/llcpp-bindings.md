@@ -71,9 +71,9 @@ non-nullable counterparts in LLCPP, and are omitted from the table above.
 In LLCPP, a user defined type (bits, enum, constant, struct, union, or table) is
 referred to using the generated class or variable (see [Type
 Definitions](#type-definitions)). The nullable version of a user defined type
-`T` is referred to using a `fidl::tracking_ptr` of the generated type *except*
+`T` is referred to using a `fidl::ObjectView` of the generated type *except*
 for unions, which simply use the generated type itself. Refer to the [LLCPP
-memory guide][llcpp-allocation] for information about `tracking_ptr`.
+memory guide][llcpp-allocation] for information about `ObjectView`.
 
 ## Type definitions {#type-definitions}
 
@@ -233,8 +233,8 @@ definition. Reserved fields do not have any generated code.
 * `~JsonValue()`: Destructor that clears the underlying union data.
 * `JsonValue(JsonValue&&)`: Default move constructor.
 * `JsonValue& operator=(JsonValue&&)`: Default move assignment
-* `static JsonValue WithIntValue(fidl::tracking_ptr<int32>&&)` and `static
-  JsonValue WithStringValue(fidl::tracking_ptr<fidl::StringView>&&)`: Static
+* `static JsonValue WithIntValue(fidl::ObjectView<int32>)` and `static
+  JsonValue WithStringValue(fidl::ObjectView<fidl::StringView>)`: Static
   constructors that directly construct a specific variant of the union.
 * `bool has_invalid_tag()`: Returns `true` if the instance of `JsonValue` does
    not yet have a variant set. Calling this method without first setting the
@@ -248,8 +248,8 @@ definition. Reserved fields do not have any generated code.
 * `int32_t& int_value()` and `fidl::StringView& string_value()`: Mutable
   accessor methods for each variant. These methods will fail if `JsonValue` does
   not have the specified variant set
-* `void set_int_value(fidl::tracking_ptr<int32_t>&& value)` and `void
-  set_string_value(fidl::tracking_ptr<fidl::StringView>&& value)`: Setter
+* `void set_int_value(fidl::ObjectView<int32_t> value)` and `void
+  set_string_value(fidl::ObjectView<fidl::StringView>&& value)`: Setter
   methods for each variant. These setters will overwrite the previously selected
   member, if any.
 * `Tag which() const`: returns the current [tag][union-lexicon] of the
@@ -318,25 +318,15 @@ fields unset.
   arguments.
 * `void set_name(std::nullptr_t)`: unset name.
 
-In order to build a table, two additional classes are generated:
-`User::Frame` and `User::UnownedBuilder`.
+In order to build a table, one additional class is generated: `User::Frame`.
 
 `User::Frame` is a container for the table's internal storage, and is allocated
 separately from the builder because LLCPP maintains the object layout of the
-underlying wire format. It is only use internally by `User(::fidl::AnyAllocator&)` and
-`User::UnownedBuilder`. `User::Frame` has the following methods:
+underlying wire format. It is only use internally by `User(::fidl::AnyAllocator&)`.
+
+`User::Frame` has the following methods:
 
 * `Frame()`: Default constructor.
-
-`User::UnownedBuilder` provide thes following methods for constructing a new `User`:
-
-* `UnownedBuilder&& set_age(fidl::tracking_ptr<uint8_t> elem)` and `UnownedBuilder&&
-  set_name(fidl::tracking_ptr<fidl::StringView> elem)`: Sets the specified field
-  and returns the updated Builder.
-* `User build()`: Returns a User based on the Builder's data.
-
-`User::UnownedBuilder` directly owns the underlying `Frame`, which simplifies working with unowned
-data. The unowned builder is constructed using the default constructor.
 
 Example usage:
 
@@ -344,7 +334,7 @@ Example usage:
 {%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/llcpp/unittests/main.cc" region_tag="tables" adjust_indentation="auto" exclude_regexp="^TEST|^}" %}
 ```
 
-In addition to assigning fields with `std::unique_ptr`, any of the allocation
+In addition to assigning fields with `fidl::ObjectView`, any of the allocation
 strategies described in the [tutorial][llcpp-allocation] can also be used.
 
 Note: Tables with unknown fields will decode successfully but will fail to
@@ -764,9 +754,9 @@ correspond to the variants present in the [client API](#client). For example,
 both `MakeMoveCompleter::Sync` and `MakeMoveCompleter::Async` provide the
 following `Reply` methods:
 
-* `::fidl::Result Reply(bool success, fidl::tracking_ptr<GameState> new_state)`
+* `::fidl::Result Reply(bool success, fidl::ObjectView<GameState> new_state)`
 * `::fidl::Result Reply(fidl::BufferSpan _buffer, bool success,
-  fidl::tracking_ptr<GameState> new_state)`
+  fidl::ObjectView<GameState> new_state)`
 
 Because the status returned by Reply is identical to the unbinding status, it
 can be safely ignored.

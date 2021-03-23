@@ -12,7 +12,6 @@
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
@@ -91,8 +90,6 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   WithErrorSyntax_ResponseAsStruct_Result& operator=(
       WithErrorSyntax_ResponseAsStruct_Result&&) = default;
 
-  ~WithErrorSyntax_ResponseAsStruct_Result() { reset_ptr(nullptr); }
-
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
@@ -103,11 +100,11 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   static WithErrorSyntax_ResponseAsStruct_Result WithResponse(
-      ::fidl::tracking_ptr<::fidl_test_protocols::wire::
-                               WithErrorSyntax_ResponseAsStruct_Response>&&
+      ::fidl::ObjectView<::fidl_test_protocols::wire::
+                             WithErrorSyntax_ResponseAsStruct_Response>
           val) {
     WithErrorSyntax_ResponseAsStruct_Result result;
-    result.set_response(std::move(val));
+    result.set_response(val);
     return result;
   }
 
@@ -122,11 +119,13 @@ class WithErrorSyntax_ResponseAsStruct_Result {
     return result;
   }
 
-  void set_response(::fidl::tracking_ptr<
-                    ::fidl_test_protocols::wire::
-                        WithErrorSyntax_ResponseAsStruct_Response>&& elem) {
+  void set_response(
+      ::fidl::ObjectView<::fidl_test_protocols::wire::
+                             WithErrorSyntax_ResponseAsStruct_Response>
+          elem) {
     ordinal_ = Ordinal::kResponse;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -156,9 +155,9 @@ class WithErrorSyntax_ResponseAsStruct_Result {
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   static WithErrorSyntax_ResponseAsStruct_Result WithErr(
-      ::fidl::tracking_ptr<uint32_t>&& val) {
+      ::fidl::ObjectView<uint32_t> val) {
     WithErrorSyntax_ResponseAsStruct_Result result;
-    result.set_err(std::move(val));
+    result.set_err(val);
     return result;
   }
 
@@ -171,9 +170,10 @@ class WithErrorSyntax_ResponseAsStruct_Result {
     return result;
   }
 
-  void set_err(::fidl::tracking_ptr<uint32_t>&& elem) {
+  void set_err(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = Ordinal::kErr;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -210,29 +210,6 @@ class WithErrorSyntax_ResponseAsStruct_Result {
     kErr = 2,       // 0x2
   };
 
-  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
-    // To clear the existing value, std::move it and let it go out of scope.
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1: {
-        ::fidl::tracking_ptr<::fidl_test_protocols::wire::
-                                 WithErrorSyntax_ResponseAsStruct_Response>
-            to_destroy = static_cast<::fidl::tracking_ptr<
-                ::fidl_test_protocols::wire::
-                    WithErrorSyntax_ResponseAsStruct_Response>>(
-                std::move(envelope_.data));
-        break;
-      }
-      case 2: {
-        ::fidl::tracking_ptr<uint32_t> to_destroy =
-            static_cast<::fidl::tracking_ptr<uint32_t>>(
-                std::move(envelope_.data));
-        break;
-      }
-    }
-
-    envelope_.data = std::move(new_ptr);
-  }
-
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -252,8 +229,6 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   WithErrorSyntax_ErrorAsPrimitive_Result& operator=(
       WithErrorSyntax_ErrorAsPrimitive_Result&&) = default;
 
-  ~WithErrorSyntax_ErrorAsPrimitive_Result() { reset_ptr(nullptr); }
-
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
@@ -264,11 +239,11 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(
-      ::fidl::tracking_ptr<::fidl_test_protocols::wire::
-                               WithErrorSyntax_ErrorAsPrimitive_Response>&&
+      ::fidl::ObjectView<::fidl_test_protocols::wire::
+                             WithErrorSyntax_ErrorAsPrimitive_Response>
           val) {
     WithErrorSyntax_ErrorAsPrimitive_Result result;
-    result.set_response(std::move(val));
+    result.set_response(val);
     return result;
   }
 
@@ -283,11 +258,13 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
     return result;
   }
 
-  void set_response(::fidl::tracking_ptr<
-                    ::fidl_test_protocols::wire::
-                        WithErrorSyntax_ErrorAsPrimitive_Response>&& elem) {
+  void set_response(
+      ::fidl::ObjectView<::fidl_test_protocols::wire::
+                             WithErrorSyntax_ErrorAsPrimitive_Response>
+          elem) {
     ordinal_ = Ordinal::kResponse;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -317,9 +294,9 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(
-      ::fidl::tracking_ptr<uint32_t>&& val) {
+      ::fidl::ObjectView<uint32_t> val) {
     WithErrorSyntax_ErrorAsPrimitive_Result result;
-    result.set_err(std::move(val));
+    result.set_err(val);
     return result;
   }
 
@@ -332,9 +309,10 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
     return result;
   }
 
-  void set_err(::fidl::tracking_ptr<uint32_t>&& elem) {
+  void set_err(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = Ordinal::kErr;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -371,29 +349,6 @@ class WithErrorSyntax_ErrorAsPrimitive_Result {
     kErr = 2,       // 0x2
   };
 
-  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
-    // To clear the existing value, std::move it and let it go out of scope.
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1: {
-        ::fidl::tracking_ptr<::fidl_test_protocols::wire::
-                                 WithErrorSyntax_ErrorAsPrimitive_Response>
-            to_destroy = static_cast<::fidl::tracking_ptr<
-                ::fidl_test_protocols::wire::
-                    WithErrorSyntax_ErrorAsPrimitive_Response>>(
-                std::move(envelope_.data));
-        break;
-      }
-      case 2: {
-        ::fidl::tracking_ptr<uint32_t> to_destroy =
-            static_cast<::fidl::tracking_ptr<uint32_t>>(
-                std::move(envelope_.data));
-        break;
-      }
-    }
-
-    envelope_.data = std::move(new_ptr);
-  }
-
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -413,8 +368,6 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   WithErrorSyntax_ErrorAsEnum_Result& operator=(
       WithErrorSyntax_ErrorAsEnum_Result&&) = default;
 
-  ~WithErrorSyntax_ErrorAsEnum_Result() { reset_ptr(nullptr); }
-
   enum class Tag : fidl_xunion_tag_t {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
@@ -425,11 +378,11 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   static WithErrorSyntax_ErrorAsEnum_Result WithResponse(
-      ::fidl::tracking_ptr<
-          ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>&&
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
           val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
-    result.set_response(std::move(val));
+    result.set_response(val);
     return result;
   }
 
@@ -445,11 +398,12 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   }
 
   void set_response(
-      ::fidl::tracking_ptr<
-          ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>&&
+      ::fidl::ObjectView<
+          ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
           elem) {
     ordinal_ = Ordinal::kResponse;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -479,9 +433,9 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   static WithErrorSyntax_ErrorAsEnum_Result WithErr(
-      ::fidl::tracking_ptr<::fidl_test_protocols::wire::ErrorEnun>&& val) {
+      ::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnun> val) {
     WithErrorSyntax_ErrorAsEnum_Result result;
-    result.set_err(std::move(val));
+    result.set_err(val);
     return result;
   }
 
@@ -495,9 +449,10 @@ class WithErrorSyntax_ErrorAsEnum_Result {
   }
 
   void set_err(
-      ::fidl::tracking_ptr<::fidl_test_protocols::wire::ErrorEnun>&& elem) {
+      ::fidl::ObjectView<::fidl_test_protocols::wire::ErrorEnun> elem) {
     ordinal_ = Ordinal::kErr;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -535,30 +490,6 @@ class WithErrorSyntax_ErrorAsEnum_Result {
     kResponse = 1,  // 0x1
     kErr = 2,       // 0x2
   };
-
-  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
-    // To clear the existing value, std::move it and let it go out of scope.
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1: {
-        ::fidl::tracking_ptr<
-            ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Response>
-            to_destroy = static_cast<
-                ::fidl::tracking_ptr<::fidl_test_protocols::wire::
-                                         WithErrorSyntax_ErrorAsEnum_Response>>(
-                std::move(envelope_.data));
-        break;
-      }
-      case 2: {
-        ::fidl::tracking_ptr<::fidl_test_protocols::wire::ErrorEnun>
-            to_destroy = static_cast<
-                ::fidl::tracking_ptr<::fidl_test_protocols::wire::ErrorEnun>>(
-                std::move(envelope_.data));
-        break;
-      }
-    }
-
-    envelope_.data = std::move(new_ptr);
-  }
 
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;

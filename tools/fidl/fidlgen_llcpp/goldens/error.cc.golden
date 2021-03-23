@@ -206,8 +206,8 @@ namespace entries {
 #endif
 #ifdef __Fuchsia__
 ::fidl::Result Example::Interface::fooCompleterBase::ReplySuccess(int64_t y) {
-  ::fidl::aligned<::fidl_test_error::wire::Example_foo_Response> _response;
-  _response.value.y = std::move(y);
+  ::fidl_test_error::wire::Example_foo_Response _response;
+  _response.y = std::move(y);
 
   return Reply(::fidl_test_error::wire::Example_foo_Result::WithResponse(
       ::fidl::unowned_ptr(&_response)));
@@ -233,8 +233,8 @@ namespace entries {
 #ifdef __Fuchsia__
 ::fidl::Result Example::Interface::fooCompleterBase::ReplySuccess(
     ::fidl::BufferSpan _buffer, int64_t y) {
-  ::fidl::aligned<::fidl_test_error::wire::Example_foo_Response> response;
-  response.value.y = std::move(y);
+  ::fidl_test_error::wire::Example_foo_Response response;
+  response.y = std::move(y);
 
   return Reply(std::move(_buffer),
                ::fidl_test_error::wire::Example_foo_Result::WithResponse(

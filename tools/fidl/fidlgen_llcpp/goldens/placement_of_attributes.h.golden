@@ -12,7 +12,6 @@
 #include <lib/fidl/llcpp/message_storage.h>
 #include <lib/fidl/llcpp/object_view.h>
 #include <lib/fidl/llcpp/string_view.h>
-#include <lib/fidl/llcpp/tracking_ptr.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
@@ -166,8 +165,6 @@ class ExampleXUnion {
   ExampleXUnion(ExampleXUnion&&) = default;
   ExampleXUnion& operator=(ExampleXUnion&&) = default;
 
-  ~ExampleXUnion() { reset_ptr(nullptr); }
-
   enum class Tag : fidl_xunion_tag_t {
     kVariant = 1,  // 0x1
     kUnknown = ::std::numeric_limits<::fidl_union_tag_t>::max(),
@@ -177,9 +174,9 @@ class ExampleXUnion {
 
   bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
-  static ExampleXUnion WithVariant(::fidl::tracking_ptr<uint32_t>&& val) {
+  static ExampleXUnion WithVariant(::fidl::ObjectView<uint32_t> val) {
     ExampleXUnion result;
-    result.set_variant(std::move(val));
+    result.set_variant(val);
     return result;
   }
 
@@ -192,9 +189,10 @@ class ExampleXUnion {
     return result;
   }
 
-  void set_variant(::fidl::tracking_ptr<uint32_t>&& elem) {
+  void set_variant(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = Ordinal::kVariant;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -227,20 +225,6 @@ class ExampleXUnion {
     kVariant = 1,  // 0x1
   };
 
-  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
-    // To clear the existing value, std::move it and let it go out of scope.
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1: {
-        ::fidl::tracking_ptr<uint32_t> to_destroy =
-            static_cast<::fidl::tracking_ptr<uint32_t>>(
-                std::move(envelope_.data));
-        break;
-      }
-    }
-
-    envelope_.data = std::move(new_ptr);
-  }
-
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -256,8 +240,6 @@ class ExampleUnion {
   ExampleUnion(ExampleUnion&&) = default;
   ExampleUnion& operator=(ExampleUnion&&) = default;
 
-  ~ExampleUnion() { reset_ptr(nullptr); }
-
   enum class Tag : fidl_xunion_tag_t {
     kVariant = 1,  // 0x1
   };
@@ -266,9 +248,9 @@ class ExampleUnion {
 
   bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
-  static ExampleUnion WithVariant(::fidl::tracking_ptr<uint32_t>&& val) {
+  static ExampleUnion WithVariant(::fidl::ObjectView<uint32_t> val) {
     ExampleUnion result;
-    result.set_variant(std::move(val));
+    result.set_variant(val);
     return result;
   }
 
@@ -281,9 +263,10 @@ class ExampleUnion {
     return result;
   }
 
-  void set_variant(::fidl::tracking_ptr<uint32_t>&& elem) {
+  void set_variant(::fidl::ObjectView<uint32_t> elem) {
     ordinal_ = Ordinal::kVariant;
-    reset_ptr(static_cast<::fidl::tracking_ptr<void>>(std::move(elem)));
+    envelope_.data = ::fidl::ObjectView<void>(
+        ::fidl::unowned_ptr_t<void>(static_cast<void*>(elem.get())));
   }
 
   template <typename... Args>
@@ -319,20 +302,6 @@ class ExampleUnion {
     kVariant = 1,  // 0x1
   };
 
-  void reset_ptr(::fidl::tracking_ptr<void>&& new_ptr) {
-    // To clear the existing value, std::move it and let it go out of scope.
-    switch (static_cast<fidl_xunion_tag_t>(ordinal_)) {
-      case 1: {
-        ::fidl::tracking_ptr<uint32_t> to_destroy =
-            static_cast<::fidl::tracking_ptr<uint32_t>>(
-                std::move(envelope_.data));
-        break;
-      }
-    }
-
-    envelope_.data = std::move(new_ptr);
-  }
-
   static void SizeAndOffsetAssertionHelper();
   Ordinal ordinal_;
   FIDL_ALIGNDECL
@@ -360,26 +329,21 @@ class ExampleTable final {
     return max_ordinal_ >= 1 && frame_ptr_->member_.data != nullptr;
   }
   ExampleTable& set_member(::fidl::ObjectView<uint32_t> elem) {
-    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->member_.data = elem;
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
   ExampleTable& set_member(std::nullptr_t) {
-    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->member_.data = nullptr;
     return *this;
   }
   template <typename... Args>
   ExampleTable& set_member(::fidl::AnyAllocator& allocator, Args&&... args) {
-    ZX_DEBUG_ASSERT(frame_ptr_.get() != nullptr);
+    ZX_DEBUG_ASSERT(frame_ptr_ != nullptr);
     frame_ptr_->member_.data =
         ::fidl::ObjectView<uint32_t>(allocator, std::forward<Args>(args)...);
-    max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
-    return *this;
-  }
-  ExampleTable& set_member(::fidl::tracking_ptr<uint32_t> elem) {
-    frame_ptr_->member_.data = std::move(elem);
     max_ordinal_ = std::max(max_ordinal_, static_cast<uint64_t>(1));
     return *this;
   }
@@ -393,8 +357,6 @@ class ExampleTable final {
   // another table.
   explicit ExampleTable(::fidl::ObjectView<Frame>&& frame)
       : frame_ptr_(std::move(frame)) {}
-  explicit ExampleTable(::fidl::tracking_ptr<Frame>&& frame_ptr)
-      : frame_ptr_(std::move(frame_ptr)) {}
   ~ExampleTable() = default;
   ExampleTable(ExampleTable&& other) noexcept = default;
   ExampleTable& operator=(ExampleTable&& other) noexcept = default;
@@ -410,7 +372,7 @@ class ExampleTable final {
     max_ordinal_ = 0;
     frame_ptr_ = ::fidl::ObjectView<Frame>(allocator);
   }
-  void Init(::fidl::tracking_ptr<Frame>&& frame_ptr) {
+  void Init(::fidl::ObjectView<Frame>&& frame_ptr) {
     max_ordinal_ = 0;
     frame_ptr_ = std::move(frame_ptr);
   }
@@ -517,10 +479,8 @@ class ExampleTable final {
   };
 
  private:
-  ExampleTable(uint64_t max_ordinal, ::fidl::tracking_ptr<Frame>&& frame_ptr)
-      : max_ordinal_(max_ordinal), frame_ptr_(std::move(frame_ptr)) {}
   uint64_t max_ordinal_ = 0;
-  ::fidl::tracking_ptr<Frame> frame_ptr_;
+  ::fidl::ObjectView<Frame> frame_ptr_;
 };
 
 extern "C" const fidl_type_t fidl_test_placementofattributes_ExampleStructTable;

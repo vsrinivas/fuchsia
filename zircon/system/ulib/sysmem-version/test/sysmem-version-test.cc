@@ -39,7 +39,7 @@ class LinearSnap {
   }
 
   // This value is similar to an in-place decode received LLCPP message, in that it can be moved out
-  // syntatically, but really any tracking_ptr<>(s) are non-owned, so callers should take care to
+  // syntatically, but really any ObjectView<>(s) are non-owned, so callers should take care to
   // not use the returned logical FidlType& (even if syntatically moved out) beyond ~LinearSnap.
   FidlType& value() { return *decoded_.value().PrimaryObject(); }
 

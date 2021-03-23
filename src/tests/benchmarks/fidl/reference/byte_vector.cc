@@ -10,7 +10,6 @@
 #include "builder.h"
 #include "decode_benchmark_util.h"
 #include "encode_benchmark_util.h"
-#include "util.h"
 
 namespace {
 
@@ -19,7 +18,7 @@ bool EncodeByteVector(void* value, const char** error,
                       fit::function<void(const uint8_t*, size_t)> callback) {
   fidl_vector_t* vec = reinterpret_cast<fidl_vector_t*>(value);
 
-  size_t count = CLEAR_COUNT_OWNERSHIP_BIT(vec->count);
+  size_t count = vec->count;
   size_t aligned_size = FIDL_ALIGN(count);
   size_t needed_buffer_size = aligned_size + sizeof(fidl_vector_t);
 
