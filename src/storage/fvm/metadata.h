@@ -10,6 +10,7 @@
 
 #include <limits>
 
+#include "fbl/span.h"
 #include "src/storage/fvm/format.h"
 #include "src/storage/fvm/metadata_buffer.h"
 
@@ -58,9 +59,20 @@ class Metadata {
   // and slices in the tables past |partitions| and |slices| are default-initialized.
   // The passed |header| must be configured appropriately to manage tables at least as big as
   // |num_partitions| and |num_slices| respectively. If not, an error is returned.
+  //
+  // Note: The user has no need to concern themselves with reserved pslice zero, since this is
+  //       adjusted internally. Though, all vpartitions' indexes must be in the range [1,
+  //       VPartitionEntryCount).
   static zx::status<Metadata> Synthesize(const fvm::Header& header,
                                          const VPartitionEntry* partitions, size_t num_partitions,
                                          const SliceEntry* slices, size_t num_slices);
+
+  // See Synthesize(fvm::Header, const VPartition,* size_t, const SliceEntry*, size_t);
+  static zx::status<Metadata> Synthesize(const fvm::Header& header,
+                                         fbl::Span<const VPartitionEntry> vpartitions,
+                                         fbl::Span<const SliceEntry> slices) {
+    return Synthesize(header, vpartitions.data(), vpartitions.size(), slices.data(), slices.size());
+  }
 
   // Checks the validity of the metadata. The underlying device's information is passed in, see
   // fvm::Header::IsValid(). The defaults for the disk information skips validation of the metadata

@@ -200,6 +200,20 @@ TEST(CreateMetadata, OnePartitionNoSlices) {
   ValidateMetadata(result.value(), partitions, slices);
 }
 
+TEST(CreateMetadata, OnePartitionNoSlicesOverloadCheck) {
+  constexpr size_t kSliceSize = 32 * 1024;
+  constexpr size_t kSlices = 1024;
+  Header header = Header::FromSliceCount(kMaxUsablePartitions, kSlices, kSliceSize);
+
+  std::vector<SliceEntry> slices;
+  std::vector<VPartitionEntry> partitions{
+      CreatePartitionEntry(0),
+  };
+  auto result = Metadata::Synthesize(header, partitions, slices);
+  ASSERT_TRUE(result.is_ok());
+  ValidateMetadata(result.value(), partitions, slices);
+}
+
 TEST(CreateMetadata, SeveralPartitionsAndSlices) {
   constexpr size_t kSliceSize = 32 * 1024;
   constexpr size_t kSlices = 1024;
