@@ -137,7 +137,9 @@ async fn record_cmd_impl<'a, L: LineWaiter<'a>, W: Write>(
 
     record_trace(opts, controller_proxy, server_socket, waiter, writer).await?;
 
-    t.cancel().await;
+    // The trace controller closes the socket on tracing termination.  This
+    // task will complete when that happens.
+    t.await.map_err(|e| anyhow!("Error while copying trace data: {}", e))?;
 
     Ok(())
 }
@@ -187,6 +189,8 @@ mod tests {
                     state.output = Some(output);
                 }
                 ControllerRequest::TerminateTracing { options: _, responder } => {
+                    let mut state = state.lock().unwrap();
+                    state.output = None;
                     responder.send(TerminateResult::EMPTY).unwrap();
                 }
                 ControllerRequest::StartTracing { options: _, responder } => {
