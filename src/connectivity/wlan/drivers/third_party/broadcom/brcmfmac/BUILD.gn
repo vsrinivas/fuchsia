@@ -11,6 +11,7 @@
 # NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF OR IN CONNECTION WITH THE USE OR PERFORMANCE
 # OF THIS SOFTWARE.
 
+import("//build/bind/bind.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/driver_package.gni")
 import("config.gni")
@@ -226,17 +227,36 @@ source_set("driver_sources") {
   }
 }
 
+bind_library("fuchsia.brcmfmac") {
+  source = "fuchsia.brcmfmac.bind"
+}
+
+bind_rules("brcmfmac_pcie_bind") {
+  rules = "brcmfmac_pcie.bind"
+  output = "brcmfmac_pcie_bind.h"
+  deps = [
+    ":fuchsia.brcmfmac",
+    "//src/devices/bind/fuchsia.pci",
+    "//src/devices/bind/fuchsia.pci.network",
+  ]
+}
+
+bind_rules("brcmfmac_sdio_bind") {
+  rules = "brcmfmac_sdio.bind"
+  output = "brcmfmac_sdio_bind.h"
+  deps = [ "//src/devices/bind/fuchsia.broadcom.platform" ]
+}
+
 # Driver module for the brcmfmac driver.
 driver_module("driver_module") {
   output_name = "brcmfmac"
   sources = [ "binding.cc" ]
   deps = [
+    ":brcmfmac_pcie_bind",
+    ":brcmfmac_sdio_bind",
     ":core",
     ":driver_sources",
     "//src/connectivity/wlan/lib/common/cpp:common",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
   ]
   visibility += [ "//src/connectivity/wlan:drivers" ]
 }
@@ -247,11 +267,9 @@ driver_module("test_driver_module") {
   output_name = "brcmfmac-test"
   sources = [ "binding.cc" ]
   deps = [
+    ":brcmfmac_pcie_bind",
     ":core",
     ":driver_sources",
-
-    # TODO(fxb/38132): Migrate to the new bind rules and delete the below
-    "//src/lib/ddk:ddk-deprecated-binding-headers",
 
     # All driver test targets are linked into the driver test.  The appropriate test will be
     # executed at runtime.
@@ -343,8 +361,13 @@ group("brcmfmac_tests") {
     "msgbuf/test:brcmfmac_msgbuf_test",
     "sdio/test:brcmfmac_sdio_test",
     "sim/test:brcmfmac_sim_test",
-    "test:brcmfmac_test",
   ]
+  testonly = true
+  visibility += [ "*" ]
+}
+
+group("brcmfmac_host_tests") {
+  deps = [ "test:brcmfmac_host_tests" ]
   testonly = true
   visibility += [ "*" ]
 }

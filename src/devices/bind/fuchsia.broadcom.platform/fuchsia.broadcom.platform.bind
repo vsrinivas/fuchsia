@@ -7,3 +7,12 @@ library fuchsia.broadcom.platform;
 extend uint fuchsia.BIND_PLATFORM_DEV_VID {
   BROADCOM = 6,
 };
+
+extend uint fuchsia.BIND_PLATFORM_DEV_PID {
+  BCM4356 = 1,
+  BCM43458 = 2,
+};
+
+extend uint fuchsia.BIND_PLATFORM_DEV_DID {
+  WIFI = 1,
+};

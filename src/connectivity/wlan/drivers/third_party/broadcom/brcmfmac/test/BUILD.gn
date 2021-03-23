@@ -12,6 +12,7 @@
 # ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
 # OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
 
+import("//build/bind/bind.gni")
 import("//src/sys/build/components.gni")
 
 source_set("stub_netbuf") {
@@ -279,4 +280,28 @@ fuchsia_test_package("brcmfmac_test") {
   foreach(test_name, _tests) {
     test_components += [ ":${test_name}_component" ]
   }
+}
+
+bind_test("brcmfmac_pcie_bind_test") {
+  rules = "../brcmfmac_pcie.bind"
+  tests = "bind_pcie_tests.json"
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:fuchsia.brcmfmac",
+    "//src/devices/bind/fuchsia.pci",
+    "//src/devices/bind/fuchsia.pci.network",
+  ]
+}
+
+bind_test("brcmfmac_sdio_bind_test") {
+  rules = "../brcmfmac_sdio.bind"
+  tests = "bind_sdio_tests.json"
+  deps = [ "//src/devices/bind/fuchsia.broadcom.platform" ]
+}
+
+group("brcmfmac_host_tests") {
+  testonly = true
+  deps = [
+    ":brcmfmac_pcie_bind_test",
+    ":brcmfmac_sdio_bind_test",
+  ]
 }

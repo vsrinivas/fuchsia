@@ -1,0 +1,21 @@
+[
+    {
+        "device": {
+            "fuchsia.BIND_COMPOSITE": "1",
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.broadcom.platform.BIND_PLATFORM_DEV_DID.WIFI",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "fuchsia.broadcom.platform.BIND_PLATFORM_DEV_PID.BCM43458",
+            "fuchsia.BIND_PLATFORM_DEV_VID": "fuchsia.broadcom.platform.BIND_PLATFORM_DEV_VID.BROADCOM"
+        },
+        "expected": "match",
+        "name": "SDIO"
+    },
+    {
+        "device": {
+            "fuchsia.BIND_PLATFORM_DEV_DID": "fuchsia.broadcom.platform.BIND_PLATFORM_DEV_DID.WIFI",
+            "fuchsia.BIND_PLATFORM_DEV_PID": "42",
+            "fuchsia.BIND_PROTOCOL": "fuchsia.composite.BIND_PROTOCOL.DEVICE"
+        },
+        "expected": "abort",
+        "name": "SDIO incorrect DID"
+    }
+]

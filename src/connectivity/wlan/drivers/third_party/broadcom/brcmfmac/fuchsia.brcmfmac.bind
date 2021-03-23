@@ -1,0 +1,34 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.brcmfmac;
+
+extend uint fuchsia.BIND_PCI_VID {
+  BROADCOM = 0x14e4,
+};
+
+extend uint fuchsia.BIND_PCI_DID {
+  BCM4350 = 0x43a3,
+  BCM4354 = 0x43df,
+  BCM4356 = 0x43ec,
+  BCM43567 = 0x43d3,
+  BCM43570 = 0x43d9,
+  BCM4358 = 0x43e9,
+  BCM4359 = 0x43ef,
+  BCM43602 = 0x43ba,
+  BCM43602_2G = 0x43bb,
+  BCM43602_5G = 0x43bc,
+  BCM43602_RAW = 43602,
+
+  // TODO(cphoenix): support this chipset.
+  // BRCMF_PCIE_DEVICE_SUB(0x4365, BRCM_PCIE_VENDOR_ID_BROADCOM, 0x4365),
+  BCM4365 = 0x43ca,
+  BCM4365_2G = 0x43cb,
+  BCM4365_5G = 0x43cc,
+
+  BCM4366 = 0x43c3,
+  BCM4366_2G = 0x43c4,
+  BCM4366_5G = 0x43c5,
+  BCM4371 = 0x440d,
+};

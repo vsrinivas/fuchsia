@@ -1,0 +1,13 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+using fuchsia.broadcom.platform;
+
+fuchsia.BIND_COMPOSITE == 1;
+fuchsia.BIND_PLATFORM_DEV_VID == fuchsia.broadcom.platform.BIND_PLATFORM_DEV_VID.BROADCOM;
+fuchsia.BIND_PLATFORM_DEV_DID == fuchsia.broadcom.platform.BIND_PLATFORM_DEV_DID.WIFI;
+accept fuchsia.BIND_PLATFORM_DEV_PID {
+  fuchsia.broadcom.platform.BIND_PLATFORM_DEV_PID.BCM4356,
+  fuchsia.broadcom.platform.BIND_PLATFORM_DEV_PID.BCM43458,
+}

@@ -1,0 +1,18 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.pci.network;
+
+extend uint fuchsia.BIND_PCI_SUBCLASS {
+  ETHERNET = 0x00,
+  TOKEN_RING = 0x01,
+  FDDI = 0x02,
+  ATM = 0x03,
+  ISDN = 0x04,
+  WORLDFIP = 0x05,
+  PICMG = 0x06,
+  INFINIBAND = 0x07,
+  FABRIC = 0x08,
+  NETWORK = 0x80,
+};

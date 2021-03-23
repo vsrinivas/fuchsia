@@ -48,6 +48,7 @@ template("bind_host_test") {
     if (is_host) {
       deps = [ ":${test_target}" ]
     }
+    forward_variables_from(invoker, [ "visibility" ])
   }
 
   if (is_host) {
