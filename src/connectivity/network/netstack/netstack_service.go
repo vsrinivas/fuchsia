@@ -101,9 +101,9 @@ func (ns *Netstack) getNetInterfaces2() []netstack.NetInterface2 {
 			netInterface.Features |= client.Info.Features
 		}
 
-		addrWithPrefix, ok := ifs.ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber)
-		if !ok {
-			_ = syslog.Warnf("stack.GetMainNICAddress(%[1]d, ipv4.ProtocolNumber) = (_, false); was NICID(%[1]d) removed?", ifs.nicid)
+		addrWithPrefix, err := ifs.ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber)
+		if err != nil {
+			_ = syslog.Warnf("stack.GetMainNICAddress(%d, ipv4.ProtocolNumber): %s", ifs.nicid, err)
 		}
 
 		if addrWithPrefix == (tcpip.AddressWithPrefix{}) {

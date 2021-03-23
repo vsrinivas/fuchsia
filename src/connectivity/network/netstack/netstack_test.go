@@ -201,8 +201,8 @@ func TestStackNICRemove(t *testing.T) {
 	if _, ok := ns.stack.NICInfo()[ifs.nicid]; !ok {
 		t.Errorf("missing NICInfo for NIC %d", ifs.nicid)
 	}
-	if _, ok := ns.stack.GetMainNICAddress(ifs.nicid, header.IPv6ProtocolNumber); !ok {
-		t.Errorf("GetMainNICAddress(%d, header.IPv6ProtocolNumber): (_, false)", ifs.nicid)
+	if _, err := ns.stack.GetMainNICAddress(ifs.nicid, header.IPv6ProtocolNumber); err != nil {
+		t.Errorf("GetMainNICAddress(%d, header.IPv6ProtocolNumber): %s", ifs.nicid, err)
 	}
 
 	nicName := ns.stack.FindNICNameFromID(ifs.nicid)
@@ -227,8 +227,11 @@ func TestStackNICRemove(t *testing.T) {
 	if nicInfo, ok := ns.stack.NICInfo()[ifs.nicid]; ok {
 		t.Errorf("unexpected NICInfo found for NIC %d = %+v", ifs.nicid, nicInfo)
 	}
-	if addr, ok := ns.stack.GetMainNICAddress(ifs.nicid, header.IPv6ProtocolNumber); ok {
-		t.Errorf("got GetMainNICAddress(%d, header.IPv6ProtocolNumber) = (%s, true), want = (_, false)", ifs.nicid, addr)
+	{
+		addr, err := ns.stack.GetMainNICAddress(ifs.nicid, header.IPv6ProtocolNumber)
+		if _, ok := err.(*tcpip.ErrUnknownNICID); !ok {
+			t.Errorf("got GetMainNICAddress(%d, header.IPv6ProtocolNumber) = (%s, %T), want = (_, *tcpip.ErrUnknownNICID)", ifs.nicid, addr, err)
+		}
 	}
 	if nicRemovedHandler.removedNICID != ifs.nicid {
 		t.Errorf("got nicRemovedHandler.removedNICID = %d, want = %d", nicRemovedHandler.removedNICID, ifs.nicid)
@@ -1006,8 +1009,8 @@ func TestStaticIPConfiguration(t *testing.T) {
 				t.Fatalf("got ns.addInterfaceAddr(%d, %#v) = %#v, want = Response()", ifs.nicid, ifAddr, result)
 			}
 
-			if mainAddr, ok := ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber); !ok {
-				t.Errorf("stack.GetMainNICAddress(%d, ipv4.ProtocolNumber): (_, false)", ifs.nicid)
+			if mainAddr, err := ns.stack.GetMainNICAddress(ifs.nicid, ipv4.ProtocolNumber); err != nil {
+				t.Errorf("stack.GetMainNICAddress(%d, ipv4.ProtocolNumber): %s", ifs.nicid, err)
 			} else if got := mainAddr.Address; got != testV4Address {
 				t.Errorf("got stack.GetMainNICAddress(%d, ipv4.ProtocolNumber).Addr = %s, want = %s", ifs.nicid, got, testV4Address)
 			}
