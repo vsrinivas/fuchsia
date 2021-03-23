@@ -174,12 +174,6 @@ group("flate2") {
   deps = [ ":flate2-v1_0_14" ]
 }
 
-if (current_os == "fuchsia") {
-  group("freetype") {
-    deps = [ ":freetype-v0_4_1" ]
-  }
-}
-
 group("futures") {
   deps = [ ":futures-v0_3_12" ]
 }
@@ -3291,35 +3285,6 @@ rust_library("fragile-v1_0_0") {
     "-Cmetadata=4fff0e17f0e7f677",
     "-Cextra-filename=-4fff0e17f0e7f677",
   ]
-}
-
-static_library("freetype-v0_4_1") {
-  crate_name = "freetype"
-  crate_root = "//third_party/rust_crates/vendor/freetype/src/lib.rs"
-  output_name = "freetype-7e0fcaa8724dd96"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-  deps += [ ":libc-v0_2_88" ]
-  deps += [ ":servo-freetype-sys-v4_0_5" ]
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=7e0fcaa8724dd96",
-    "-Cextra-filename=-7e0fcaa8724dd96",
-    "--cfg=feature=\"default\"",
-    "--cfg=feature=\"servo-freetype-sys\"",
-  ]
-
-  aliased_deps = {
-    freetype_sys = ":servo-freetype-sys-v4_0_5"
-  }
 }
 
 rust_library("fuchsia-cprng-v0_1_1") {
@@ -8610,28 +8575,6 @@ rust_proc_macro("serial_test_derive-v0_5_1") {
     "--edition=2018",
     "-Cmetadata=349c76aef8defaba",
     "-Cextra-filename=-349c76aef8defaba",
-  ]
-}
-
-rust_library("servo-freetype-sys-v4_0_5") {
-  crate_name = "freetype_sys"
-  crate_root =
-      "//third_party/rust_crates/tiny_mirrors/servo-freetype-sys/src/lib.rs"
-  output_name = "freetype_sys-b176f3e101aab84"
-  configs -= [
-    "//build/config:rust_edition_2018",
-    "//build/config:rust_2018_idioms",
-  ]
-
-  deps = []
-
-  rustenv = []
-
-  rustflags = [
-    "--cap-lints=allow",
-    "--edition=2015",
-    "-Cmetadata=b176f3e101aab84",
-    "-Cextra-filename=-b176f3e101aab84",
   ]
 }
 

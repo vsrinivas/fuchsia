@@ -953,16 +953,6 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "69a039c3498dc930fe810151a34ba0c1c70b02b8625035592e74432f678591f2"
 
 [[package]]
-name = "freetype"
-version = "0.4.1"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "11926b2b410b469d0e9399eca4cbbe237a9ef02176c485803b29216307e8e028"
-dependencies = [
- "libc",
- "servo-freetype-sys",
-]
-
-[[package]]
 name = "fuchsia-cprng"
 version = "0.1.1"
 
@@ -1008,7 +998,6 @@ dependencies = [
  "event-listener",
  "fatfs",
  "flate2",
- "freetype",
  "futures",
  "futures-channel",
  "futures-core",
@@ -3234,10 +3223,6 @@ dependencies = [
  "quote 1.0.7",
  "syn 1.0.58",
 ]
-
-[[package]]
-name = "servo-freetype-sys"
-version = "4.0.5"
 
 [[package]]
 name = "sha-1"
