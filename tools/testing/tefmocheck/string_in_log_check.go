@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"fmt"
 	"path"
+	"path/filepath"
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver/bootserverconstants"
@@ -34,6 +35,7 @@ type stringInLogCheck struct {
 	Type           logType
 	swarmingResult *SwarmingRpcsTaskResult
 	testName       string
+	outputFile     string
 }
 
 func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
@@ -56,6 +58,7 @@ func (c *stringInLogCheck) Check(to *TestingOutputs) bool {
 		for _, testLog := range to.SwarmingOutputPerTest {
 			if c.checkBytes(testLog.Bytes) {
 				c.testName = testLog.TestName
+				c.outputFile = testLog.FilePath
 				return true
 			}
 		}
@@ -128,7 +131,12 @@ func (c *stringInLogCheck) Name() string {
 }
 
 func (c *stringInLogCheck) DebugText() string {
-	debugStr := fmt.Sprintf("Found the string \"%s\" in %s for task %s.", c.String, c.Type, c.swarmingResult.TaskId)
+	debugStr := fmt.Sprintf("Found the string \"%s\" in ", c.String)
+	if c.outputFile != "" && c.testName != "" {
+		debugStr += fmt.Sprintf("%s of test %s.", filepath.Base(c.outputFile), c.testName)
+	} else {
+		debugStr += fmt.Sprintf("%s for task %s.", c.Type, c.swarmingResult.TaskId)
+	}
 	debugStr += "\nThat file should be accessible from the build result page or Sponge.\n"
 	if c.ExceptString != "" {
 		debugStr += fmt.Sprintf("\nDid not find the exception string \"%s\"", c.ExceptString)
@@ -139,6 +147,13 @@ func (c *stringInLogCheck) DebugText() string {
 		}
 	}
 	return debugStr
+}
+
+func (c *stringInLogCheck) OutputFiles() []string {
+	if c.outputFile == "" {
+		return []string{}
+	}
+	return []string{c.outputFile}
 }
 
 func driverHostCrash(hostName, exceptHost string) *stringInLogCheck {

@@ -61,6 +61,13 @@ func RunChecks(checks []FailureModeCheck, to *TestingOutputs, outputsDir string)
 				return nil, err
 			}
 		}
+		for _, cof := range check.OutputFiles() {
+			relPath, err := filepath.Rel(outputsDir, cof)
+			if err != nil {
+				return nil, err
+			}
+			testDetails.OutputFiles = append(testDetails.OutputFiles, relPath)
+		}
 		checkTests = append(checkTests, testDetails)
 		// We run more specific checks first, so it's not useful to run any checks
 		// once we have our first failure.

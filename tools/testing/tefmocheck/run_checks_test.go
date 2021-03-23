@@ -17,7 +17,9 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 )
 
-type alwaysTrueCheck struct{}
+type alwaysTrueCheck struct {
+	outputsDir string
+}
 
 func (c alwaysTrueCheck) Check(*TestingOutputs) bool {
 	return true
@@ -29,6 +31,10 @@ func (c alwaysTrueCheck) Name() string {
 
 func (c alwaysTrueCheck) DebugText() string {
 	return "True dat"
+}
+
+func (c alwaysTrueCheck) OutputFiles() []string {
+	return []string{filepath.Join(c.outputsDir, "true.txt")}
 }
 
 type alwaysFalseCheck struct{}
@@ -45,6 +51,10 @@ func (c alwaysFalseCheck) DebugText() string {
 	return "Lies!"
 }
 
+func (c alwaysFalseCheck) OutputFiles() []string {
+	return []string{}
+}
+
 type alwaysPanicCheck struct{}
 
 func (c alwaysPanicCheck) Check(*TestingOutputs) bool {
@@ -59,21 +69,29 @@ func (c alwaysPanicCheck) DebugText() string {
 	return ""
 }
 
+func (c alwaysPanicCheck) OutputFiles() []string {
+	return []string{}
+}
+
 func TestRunChecks(t *testing.T) {
 	falseCheck := alwaysFalseCheck{}
-	trueCheck := alwaysTrueCheck{}
+	outputsDir := t.TempDir()
+	trueCheck := alwaysTrueCheck{outputsDir}
 	panicCheck := alwaysPanicCheck{}
 	checks := []FailureModeCheck{
 		falseCheck, trueCheck, panicCheck,
 	}
-	outputsDir := t.TempDir()
+	debugPath := debugPathForCheck(trueCheck)
 	want := []runtests.TestDetails{
 		{
 			Name:                 path.Join(checkTestNamePrefix, trueCheck.Name()),
 			Result:               runtests.TestFailure,
 			IsTestingFailureMode: true,
-			OutputFiles:          []string{debugPathForCheck(trueCheck)},
+			OutputFiles:          []string{debugPath},
 		},
+	}
+	for _, of := range trueCheck.OutputFiles() {
+		want[0].OutputFiles = append(want[0].OutputFiles, filepath.Base(of))
 	}
 	startTime := time.Now()
 
@@ -92,6 +110,10 @@ func TestRunChecks(t *testing.T) {
 		got[i].StartTime = defaultTime
 		got[i].DurationMillis = 0
 		for _, outputFile := range td.OutputFiles {
+			// RunChecks() is only responsible for writing the debug text to a file.
+			if outputFile != debugPath {
+				continue
+			}
 			if _, err := os.Stat(filepath.Join(outputsDir, outputFile)); err != nil {
 				t.Errorf("failed to stat OutputFile %s: %v", outputFile, err)
 			}
