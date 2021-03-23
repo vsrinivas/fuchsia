@@ -18,8 +18,9 @@ bitflags! {
 sys::zx_info_task_runtime_t!(TaskRuntimeInfo);
 
 impl From<sys::zx_info_task_runtime_t> for TaskRuntimeInfo {
-    fn from(info: sys::zx_info_task_runtime_t) -> TaskRuntimeInfo {
-        let sys::zx_info_task_runtime_t { cpu_time, queue_time } = info;
+    fn from(
+        sys::zx_info_task_runtime_t { cpu_time, queue_time }: sys::zx_info_task_runtime_t,
+    ) -> TaskRuntimeInfo {
         TaskRuntimeInfo { cpu_time, queue_time }
     }
 }
