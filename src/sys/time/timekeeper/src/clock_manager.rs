@@ -55,32 +55,132 @@ const ERROR_BOUND_UPDATE: u64 = 100_000_000; // 100ms
 /// The interval at which the error bound will be refreshed while no other events are in progress.
 const ERROR_REFRESH_INTERVAL: zx::Duration = zx::Duration::from_minutes(6);
 
-/// Describes how a clock will be slewed in order to correct time.
-#[derive(PartialEq)]
-struct Slew {
-    /// Clock adjustment in parts per million.
-    rate_adjust: i32,
-    /// Duration for which the slew is to maintained.
+/// Describes at a high level how a clock will be slewed in order to correct time.
+#[derive(Clone, Debug, PartialEq)]
+struct SlewParameters {
+    /// Additional clock rate adjustment to execute the slew, in parts per million.
+    slew_rate_adjust: i32,
+    /// Monotonic duration for which the slew is to be maintained.
     duration: zx::Duration,
 }
 
-impl Slew {
+impl SlewParameters {
     /// Returns the total correction achieved by the slew.
     fn correction(&self) -> zx::Duration {
-        zx::Duration::from_nanos((self.duration.into_nanos() * self.rate_adjust as i64) / MILLION)
+        zx::Duration::from_nanos(
+            (self.duration.into_nanos() * self.slew_rate_adjust as i64) / MILLION,
+        )
     }
 }
 
-impl Default for Slew {
-    fn default() -> Slew {
-        Slew { rate_adjust: 0, duration: zx::Duration::from_nanos(0) }
+impl Default for SlewParameters {
+    fn default() -> SlewParameters {
+        // Default lets clock correction strategies that don't require a slew generate a
+        // null-like value.
+        SlewParameters { slew_rate_adjust: 0, duration: zx::Duration::from_nanos(0) }
+    }
+}
+
+/// Describes in detail how a clock will be slewed in order to correct time.
+#[derive(PartialEq)]
+struct Slew {
+    /// Clock rate adjustment to account for estimated oscillator error, in parts per million.
+    base_rate_adjust: i32,
+    /// Additional clock rate adjustment to execute the slew, in parts per million.
+    slew_rate_adjust: i32,
+    /// Monotonic duration for which the slew is to be maintained.
+    duration: zx::Duration,
+    /// Error bound at start of the slew
+    start_error_bound: u64,
+    /// Error bound at completion of the slew
+    end_error_bound: u64,
+}
+
+impl Slew {
+    /// Returns a fully defined slew to achieve the supplied parameters, calculating error bounds
+    /// using the supplied estimator assuming the slew starts at the supplied monotonic time.
+    fn new<D: Diagnostics>(
+        parameters: SlewParameters,
+        start_time: zx::Time,
+        estimator: &Estimator<D>,
+    ) -> Self {
+        let absolute_slew_correction_nanos = parameters.correction().into_nanos().abs() as u64;
+        Slew {
+            // TODO(jsankey): Set from the estimator once it might vary the frequency.
+            base_rate_adjust: 0,
+            slew_rate_adjust: parameters.slew_rate_adjust,
+            duration: parameters.duration,
+            // The initial error bound is the estimate error bound plus the entire correction.
+            start_error_bound: estimator.error_bound(start_time) + absolute_slew_correction_nanos,
+            end_error_bound: estimator.error_bound(start_time + parameters.duration),
+        }
+    }
+
+    /// Returns the overall rate adjustment applied while the slew is in progress, composed of the
+    /// base rate due to oscillator error plus an additional rate to conduct the correction.
+    fn total_rate_adjust(&self) -> i32 {
+        self.base_rate_adjust + self.slew_rate_adjust
+    }
+
+    /// Returns a vector of (async::Time, zx::ClockUpdate, ClockUpdateReason) tuples describing the
+    /// updates to make to a clock during the slew. The first update is guaranteed to be requested
+    /// immediately.
+    fn clock_updates(&self) -> Vec<(fasync::Time, zx::ClockUpdate, ClockUpdateReason)> {
+        // Note: fuchsia_async time can be mocked independently so can't assume its equivalent to
+        // the supplied monotonic time.
+        let start_time = fasync::Time::now();
+        let finish_time = start_time + self.duration;
+
+        // For large slews we expect the reduction in error bound while applying the correction to
+        // exceed the growth in error bound due to oscillator error but there is no guarantee of
+        // this. If error bound will increase through the slew, just use the worst case throughout.
+        let begin_error_bound = cmp::max(self.start_error_bound, self.end_error_bound);
+
+        // The final vector is composed of an initial update to start the slew...
+        let mut updates = vec![(
+            start_time,
+            zx::ClockUpdate::new()
+                .rate_adjust(self.total_rate_adjust())
+                .error_bounds(begin_error_bound),
+            ClockUpdateReason::BeginSlew,
+        )];
+
+        // ... intermediate updates to reduce the error bound if it reduces by more than the
+        // threshold during the course of the slew ...
+        if self.start_error_bound > self.end_error_bound + ERROR_BOUND_UPDATE {
+            let bound_change = (self.start_error_bound - self.end_error_bound) as i64;
+            let error_update_interval = zx::Duration::from_nanos(
+                ((self.duration.into_nanos() as i128 * ERROR_BOUND_UPDATE as i128)
+                    / bound_change as i128) as i64,
+            );
+            let mut i: i64 = 1;
+            while start_time + error_update_interval * i < finish_time {
+                updates.push((
+                    start_time + error_update_interval * i,
+                    zx::ClockUpdate::new()
+                        .error_bounds(self.start_error_bound - ERROR_BOUND_UPDATE * i as u64),
+                    ClockUpdateReason::ReduceError,
+                ));
+                i += 1;
+            }
+        }
+
+        // ... and a final update to return the rate to normal.
+        updates.push((
+            finish_time,
+            zx::ClockUpdate::new()
+                .rate_adjust(self.base_rate_adjust)
+                .error_bounds(self.end_error_bound),
+            ClockUpdateReason::EndSlew,
+        ));
+        updates
     }
 }
 
 impl Debug for Slew {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Slew")
-            .field("rate_ppm", &self.rate_adjust)
+            .field("rate_ppm", &self.slew_rate_adjust)
             .field("duration_ms", &self.duration.into_millis())
             .finish()
     }
@@ -224,7 +324,7 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
         let track = self.track;
         let estimator = self.estimator.as_ref().expect("Estimator not initialized");
 
-        let (strategy, slew) = determine_strategy(correction);
+        let (strategy, slew_params) = determine_strategy(correction);
         self.diagnostics.record(Event::ClockCorrection { track, correction, strategy });
 
         match strategy {
@@ -234,8 +334,8 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
                     task.cancel().await;
                 };
 
-                let mut updates =
-                    clock_updates_for_slew(&slew, zx::Time::get_monotonic(), &estimator);
+                let slew = Slew::new(slew_params, zx::Time::get_monotonic(), &estimator);
+                let mut updates = slew.clock_updates();
 
                 // The first update is guaranteed to be immediate.
                 let (_, update, reason) = updates.remove(0);
@@ -332,29 +432,29 @@ fn update_clock(clock: &Arc<zx::Clock>, track: &Track, update: zx::ClockUpdate) 
 /// Determines the strategy that should be used to apply the supplied correction and instructions
 /// for performing a slew. `Slew` will be set to default in the strategies that do not require
 /// slewing.
-fn determine_strategy(correction: zx::Duration) -> (ClockCorrectionStrategy, Slew) {
+fn determine_strategy(correction: zx::Duration) -> (ClockCorrectionStrategy, SlewParameters) {
     let correction_nanos = correction.into_nanos();
     let correction_abs = zx::Duration::from_nanos(correction_nanos.abs());
     let sign = if correction_nanos < 0 { -1 } else { 1 };
 
     if correction_abs < NOMINAL_RATE_MAX_ERROR {
-        let rate_adjust = NOMINAL_RATE_CORRECTION_PPM * sign;
+        let rate = NOMINAL_RATE_CORRECTION_PPM * sign;
         let duration = (correction_abs * MILLION) / NOMINAL_RATE_CORRECTION_PPM;
         (
             ClockCorrectionStrategy::NominalRateSlew,
-            Slew { rate_adjust: rate_adjust as i32, duration },
+            SlewParameters { slew_rate_adjust: rate as i32, duration },
         )
     } else if correction_abs < MAX_RATE_MAX_ERROR {
         // Round rate up to the next greater PPM such that duration will be slightly under
         // MAX_SLEW_DURATION rather that slightly over MAX_SLEW_DURATION.
-        let rate_adjust = ((correction_nanos * MILLION) / MAX_SLEW_DURATION.into_nanos()) + sign;
-        let duration = (correction * MILLION) / rate_adjust;
+        let rate = ((correction_nanos * MILLION) / MAX_SLEW_DURATION.into_nanos()) + sign;
+        let duration = (correction * MILLION) / rate;
         (
             ClockCorrectionStrategy::MaxDurationSlew,
-            Slew { rate_adjust: rate_adjust as i32, duration },
+            SlewParameters { slew_rate_adjust: rate as i32, duration },
         )
     } else {
-        (ClockCorrectionStrategy::Step, Slew::default())
+        (ClockCorrectionStrategy::Step, SlewParameters::default())
     }
 }
 
@@ -362,66 +462,6 @@ fn determine_strategy(correction: zx::Duration) -> (ClockCorrectionStrategy, Sle
 fn get_clock_offset(clock: &zx::Clock) -> zx::Duration {
     let monotonic_ref = zx::Time::get_monotonic();
     time_at_monotonic(&clock, monotonic_ref) - monotonic_ref
-}
-
-/// Returns a vector of (async::Time, zx::ClockUpdate, ClockUpdateReason) tuples describing the
-/// updates to make to a clock during the supplied slew, calculating error bounds using the
-/// supplied estimator. The first update is guaranteed to be requested immediately.
-fn clock_updates_for_slew<D: Diagnostics>(
-    slew: &Slew,
-    monotonic: zx::Time,
-    estimator: &Estimator<D>,
-) -> Vec<(fasync::Time, zx::ClockUpdate, ClockUpdateReason)> {
-    // Note: fuchsia_async time can be mocked independently so can't assume its equivalent to
-    // the supplied monotonic time.
-    let start_time = fasync::Time::now();
-    let finish_time = start_time + slew.duration;
-
-    // The initial error bound is the estimate error bound plus the entire correction.
-    let initial_error_bound =
-        estimator.error_bound(monotonic) + slew.correction().into_nanos().abs() as u64;
-    // The final error bound is the estimate error bound when we finish the slew.
-    let final_error_bound = estimator.error_bound(monotonic + slew.duration);
-
-    // For large slews we expect the reduction in error bound while applying the correction to
-    // exceed the growth in error bound due to oscillator error but there is no guarantee of
-    // this. If error bound will increase through the slew, just use the worst case throughout.
-    let begin_error_bound = cmp::max(initial_error_bound, final_error_bound);
-
-    // The final vector is composed of an initial update to start the slew...
-    let mut updates = vec![(
-        start_time,
-        zx::ClockUpdate::new().rate_adjust(slew.rate_adjust).error_bounds(begin_error_bound),
-        ClockUpdateReason::BeginSlew,
-    )];
-
-    // ... intermediate updates to reduce the error bound if it reduces by more than the
-    // threshold during the course of the slew ...
-    if initial_error_bound > final_error_bound + ERROR_BOUND_UPDATE {
-        let bound_change = (initial_error_bound - final_error_bound) as i64;
-        let error_update_interval = zx::Duration::from_nanos(
-            ((slew.duration.into_nanos() as i128 * ERROR_BOUND_UPDATE as i128)
-                / bound_change as i128) as i64,
-        );
-        let mut i: i64 = 1;
-        while start_time + error_update_interval * i < finish_time {
-            updates.push((
-                start_time + error_update_interval * i,
-                zx::ClockUpdate::new()
-                    .error_bounds(initial_error_bound - ERROR_BOUND_UPDATE * i as u64),
-                ClockUpdateReason::ReduceError,
-            ));
-            i += 1;
-        }
-    }
-
-    // ... and a final update to return the rate to normal.
-    updates.push((
-        finish_time,
-        zx::ClockUpdate::new().rate_adjust(0).error_bounds(final_error_bound),
-        ClockUpdateReason::EndSlew,
-    ));
-    updates
 }
 
 #[cfg(test)]
@@ -492,33 +532,39 @@ mod tests {
     #[fuchsia::test]
     fn determine_strategy_fn() {
         for sign in vec![-1, 1] {
-            let (strategy, slew) = determine_strategy((sign * 5).micros());
+            let (strategy, slew_params) = determine_strategy((sign * 5).micros());
             assert_eq!(strategy, ClockCorrectionStrategy::NominalRateSlew);
-            assert_eq!(slew, Slew { rate_adjust: (sign * 20) as i32, duration: 250.millis() });
-
-            let (strategy, slew) = determine_strategy((sign * 5).millis());
-            assert_eq!(strategy, ClockCorrectionStrategy::NominalRateSlew);
-            assert_eq!(slew, Slew { rate_adjust: (sign * 20) as i32, duration: 250.seconds() });
-            assert_eq!(slew.correction(), (sign * 5).millis());
-
-            let (strategy, slew) = determine_strategy((sign * 500).millis());
-            assert_eq!(strategy, ClockCorrectionStrategy::MaxDurationSlew);
             assert_eq!(
-                slew,
-                Slew { rate_adjust: (sign * 93) as i32, duration: 5376344086021.nanos() }
+                slew_params,
+                SlewParameters { slew_rate_adjust: (sign * 20) as i32, duration: 250.millis() }
             );
 
-            let (strategy, slew) = determine_strategy((sign * 2).seconds());
+            let (strategy, slew_params) = determine_strategy((sign * 5).millis());
+            assert_eq!(strategy, ClockCorrectionStrategy::NominalRateSlew);
+            assert_eq!(
+                slew_params,
+                SlewParameters { slew_rate_adjust: (sign * 20) as i32, duration: 250.seconds() }
+            );
+            assert_eq!(slew_params.correction(), (sign * 5).millis());
+
+            let (strategy, slew_params) = determine_strategy((sign * 500).millis());
+            assert_eq!(strategy, ClockCorrectionStrategy::MaxDurationSlew);
+            assert_eq!(
+                slew_params,
+                SlewParameters {
+                    slew_rate_adjust: (sign * 93) as i32,
+                    duration: 5376344086021.nanos()
+                }
+            );
+
+            let (strategy, slew_params) = determine_strategy((sign * 2).seconds());
             assert_eq!(strategy, ClockCorrectionStrategy::Step);
-            assert_eq!(slew, Slew::default());
+            assert_eq!(slew_params, SlewParameters::default());
         }
     }
 
     #[fuchsia::test]
-    fn clock_updates_for_slew_fn() {
-        let executor = fasync::Executor::new_with_fake_time().unwrap();
-        executor.set_fake_time(fasync::Time::from_nanos(0));
-
+    fn slew_new_fn() {
         // Manually create a minimal estimator.
         let monotonic_ref = zx::Time::get_monotonic();
         let diagnostics = Arc::new(FakeDiagnostics::new());
@@ -527,6 +573,24 @@ mod tests {
             Sample::new(monotonic_ref + OFFSET, monotonic_ref, STD_DEV),
             Arc::clone(&diagnostics),
         );
+
+        let slew_params = SlewParameters { slew_rate_adjust: -50, duration: 10.seconds() };
+        let error_bound_at_ref = estimator.error_bound(monotonic_ref);
+        let error_bound_at_end = estimator.error_bound(monotonic_ref + slew_params.duration);
+
+        let slew = Slew::new(slew_params.clone(), monotonic_ref, &estimator);
+        assert_eq!(slew.base_rate_adjust, 0);
+        assert_eq!(slew.slew_rate_adjust, slew_params.slew_rate_adjust);
+        assert_eq!(slew.total_rate_adjust(), slew.slew_rate_adjust + slew.base_rate_adjust);
+        assert_eq!(slew.duration, slew_params.duration);
+        assert_eq!(slew.start_error_bound, error_bound_at_ref + 500_000 /* slew correction */);
+        assert_eq!(slew.end_error_bound, error_bound_at_end);
+    }
+
+    #[fuchsia::test]
+    fn slew_clock_updates_fn() {
+        let executor = fasync::Executor::new_with_fake_time().unwrap();
+        executor.set_fake_time(fasync::Time::from_nanos(0));
 
         // Simple constructor lambdas to improve readability of the test logic.
         let full_update = |rate: i32, error_bound: u64| -> zx::ClockUpdate {
@@ -539,54 +603,61 @@ mod tests {
             |seconds: i64| -> fasync::Time { fasync::Time::from_nanos(seconds * NANOS_PER_SECOND) };
 
         // A short slew should contain no error bound updates.
-        let slew = Slew { rate_adjust: -50, duration: 10.seconds() };
-        let estimate_bound_at_ref = estimator.error_bound(monotonic_ref);
-        let bound_at_start = estimate_bound_at_ref + slew.correction().into_nanos().abs() as u64;
-        let bound_at_end = estimator.error_bound(monotonic_ref + slew.duration);
+        let slew = Slew {
+            base_rate_adjust: 5,
+            slew_rate_adjust: -20,
+            duration: 10.seconds(),
+            start_error_bound: 9_000_000,
+            end_error_bound: 1_000_000,
+        };
         assert_eq!(
-            clock_updates_for_slew(&slew, monotonic_ref, &estimator),
+            slew.clock_updates(),
             vec![
                 (
                     time_seconds(0),
-                    full_update(slew.rate_adjust, bound_at_start),
+                    full_update(slew.total_rate_adjust(), slew.start_error_bound),
                     ClockUpdateReason::BeginSlew
                 ),
                 (
                     time_seconds(slew.duration.into_seconds()),
-                    full_update(0, bound_at_end),
+                    full_update(slew.base_rate_adjust, slew.end_error_bound),
                     ClockUpdateReason::EndSlew
                 ),
             ]
         );
 
         // A larger slew should contain as many error bound reductions as needed.
-        let slew = Slew { rate_adjust: 100, duration: 1.hour() };
-        let bound_at_start = estimate_bound_at_ref + slew.correction().into_nanos().abs() as u64;
-        let bound_at_end = estimator.error_bound(monotonic_ref + slew.duration);
-        let update_interval_nanos = ((slew.duration.into_nanos() as i128
-            * ERROR_BOUND_UPDATE as i128)
-            / (bound_at_start - bound_at_end) as i128) as i64;
+        let slew = Slew {
+            base_rate_adjust: 3,
+            slew_rate_adjust: 80,
+            duration: 10.hour(),
+            start_error_bound: 800_000_000,
+            end_error_bound: 550_000_000,
+        };
+        let update_interval_nanos =
+            ((slew.duration.into_nanos() as i128 * ERROR_BOUND_UPDATE as i128)
+                / (slew.start_error_bound - slew.end_error_bound) as i128) as i64;
         assert_eq!(
-            clock_updates_for_slew(&slew, monotonic_ref, &estimator),
+            slew.clock_updates(),
             vec![
                 (
                     time_seconds(0),
-                    full_update(slew.rate_adjust, bound_at_start),
+                    full_update(slew.total_rate_adjust(), slew.start_error_bound),
                     ClockUpdateReason::BeginSlew
                 ),
                 (
                     fasync::Time::from_nanos(update_interval_nanos),
-                    error_update(bound_at_start - ERROR_BOUND_UPDATE),
+                    error_update(slew.start_error_bound - ERROR_BOUND_UPDATE),
                     ClockUpdateReason::ReduceError,
                 ),
                 (
                     fasync::Time::from_nanos(2 * update_interval_nanos),
-                    error_update(bound_at_start - 2 * ERROR_BOUND_UPDATE),
+                    error_update(slew.start_error_bound - 2 * ERROR_BOUND_UPDATE),
                     ClockUpdateReason::ReduceError,
                 ),
                 (
                     time_seconds(slew.duration.into_seconds()),
-                    full_update(0, bound_at_end),
+                    full_update(slew.base_rate_adjust, slew.end_error_bound),
                     ClockUpdateReason::EndSlew
                 ),
             ]
@@ -595,15 +666,24 @@ mod tests {
         // When the error reduction from applying the correction is smaller than the growth from the
         // oscillator uncertainty the error bound should be fixed at the final value with no
         // intermediate updates.
-        let slew = Slew { rate_adjust: 1, duration: 10.hours() };
-        let bound_at_end = estimator.error_bound(monotonic_ref + slew.duration);
+        let slew = Slew {
+            base_rate_adjust: 0,
+            slew_rate_adjust: -2,
+            duration: 10.hour(),
+            start_error_bound: 200_000_000,
+            end_error_bound: 800_000_000,
+        };
         assert_eq!(
-            clock_updates_for_slew(&slew, monotonic_ref, &estimator,),
+            slew.clock_updates(),
             vec![
-                (time_seconds(0), full_update(1, bound_at_end), ClockUpdateReason::BeginSlew),
+                (
+                    time_seconds(0),
+                    full_update(slew.total_rate_adjust(), slew.end_error_bound),
+                    ClockUpdateReason::BeginSlew
+                ),
                 (
                     time_seconds(slew.duration.into_seconds()),
-                    full_update(0, bound_at_end),
+                    full_update(slew.base_rate_adjust, slew.end_error_bound),
                     ClockUpdateReason::EndSlew
                 ),
             ]
