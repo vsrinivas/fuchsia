@@ -1,0 +1,29 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "--fidl"
+        ],
+        "binary": "bin/system_monitor_harvester"
+    },
+    "sandbox": {
+        "features": [
+            "build-info",
+            "hub"
+        ],
+        "services": [
+            "fuchsia.diagnostics.ArchiveAccessor",
+            "fuchsia.kernel.InfoResource",
+            "fuchsia.kernel.RootJob",
+            "fuchsia.kernel.RootJobForInspect",
+            "fuchsia.kernel.Stats",
+            "fuchsia.net.NameLookup",
+            "fuchsia.overnet.ServicePublisher",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.sysinfo.SysInfo",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}
