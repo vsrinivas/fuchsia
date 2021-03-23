@@ -1,0 +1,43 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    children: [
+        {
+            name: "driver_manager",
+            url: "fuchsia-pkg://fuchsia.com/driver-runner-integration-test#meta/driver-manager-component.cm",
+            startup: "eager",
+            environment: "#driver_manager-env",
+        },
+    ],
+    offer: [
+        {
+            protocol: [
+                "fuchsia.boot.Arguments",
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.fshost.Loader",
+                "fuchsia.kernel.RootJob",
+                "fuchsia.logger.LogSink",
+                "fuchsia.process.Launcher",
+                "fuchsia.process.Resolver",
+                "fuchsia.sys.Launcher",
+            ],
+            from: "parent",
+            to: [ "#driver_manager" ],
+        },
+        {
+            directory: "boot",
+            from: "parent",
+            to: [ "#driver_manager" ],
+        },
+    ],
+    environments: [
+        {
+            name: "driver_manager-env",
+            extends: "realm",
+
+            // 1 minute
+            __stop_timeout_ms: 60000,
+        },
+    ],
+}

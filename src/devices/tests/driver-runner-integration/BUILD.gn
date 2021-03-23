@@ -1,0 +1,63 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+import("//build/test.gni")
+import("//src/sys/build/components.gni")
+
+group("tests") {
+  testonly = true
+  deps = [ ":driver-runner-integration-test" ]
+}
+
+rustc_test("driver_runner_integration_test") {
+  testonly = true
+  source_root = "driver_runner_integration_test.rs"
+  sources = [ "driver_runner_integration_test.rs" ]
+  deps = [
+    "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
+    "//src/lib/fidl/rust/fidl",
+    "//src/lib/fuchsia-async",
+    "//src/lib/syslog/rust:syslog",
+    "//src/lib/zircon/rust:fuchsia-zircon",
+    "//src/sys/component_manager/testing:test_utils_lib",
+    "//src/sys/lib/component-events",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
+fuchsia_component("driver-runner-integration-test-component") {
+  testonly = true
+  manifest = "meta/driver-runner-integration-test.cmx"
+  deps = [
+    ":driver_runner_integration_test",
+    "//src/devices/bin/driver_host:driver_host",
+  ]
+}
+
+fuchsia_component("driver-runner-integration-root") {
+  manifest = "meta/driver-runner-integration-root.cml"
+}
+
+fuchsia_component("driver-manager-component") {
+  manifest = "meta/driver-runner-integration-driver-manager.cml"
+  deps = [ "//src/devices/bin/driver_manager:driver_manager" ]
+}
+
+fuchsia_test_package("driver-runner-integration-test") {
+  # TODO(fxb/72501): Ideally this test shouldn't produce error logs.
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [ ":driver-runner-integration-test-component" ]
+  deps = [
+    ":driver-manager-component",
+    ":driver-runner-integration-root",
+    "//src/devices/bin/driver_host2",
+    "//src/devices/misc/drivers/packaged:component",
+  ]
+}

@@ -8,10 +8,7 @@ import("//zircon/system/ulib/devmgr-integration-test/isolated_devmgr.gni")
 
 group("tests") {
   testonly = true
-  deps = [
-    ":driver-manager-tests",
-    ":driver-runner-integration-test",
-  ]
+  deps = [ ":driver-manager-tests" ]
 }
 
 # Common source files and dependencies between :coordinator and :test
@@ -271,23 +268,6 @@ fuchsia_test_package("driver-manager-tests") {
     ":driver-manager-test",
     ":driver-runner-test",
   ]
-}
-
-executable("driver_runner_integration_test") {
-  testonly = true
-  sources = [ "driver_runner_integration_test.cc" ]
-
-  deps = [
-    "//src/devices/misc/drivers/test",
-    "//src/devices/tests/sysdev",
-    "//zircon/public/lib/zxtest",
-    "//zircon/system/ulib/devmgr-integration-test",
-  ]
-}
-
-isolated_devmgr_unittest_package("driver-runner-integration-test") {
-  executable_path = "bin/driver_runner_integration_test"
-  deps = [ ":driver_runner_integration_test" ]
 }
 
 fuchsia_component("driver_manager_component") {

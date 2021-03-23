@@ -1,0 +1,19 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "binary": "bin/driver_runner_integration_test"
+    },
+    "sandbox": {
+        "features": [
+            "hub"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

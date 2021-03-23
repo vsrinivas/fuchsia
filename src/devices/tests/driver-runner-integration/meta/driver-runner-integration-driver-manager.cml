@@ -1,0 +1,20 @@
+{
+    include: [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+
+        // driver-manager-base.shard is where most of the capabilities and routing lives.
+        "src/devices/bin/driver_manager/meta/driver-manager-base.shard.cml",
+    ],
+    program: {
+        runner: "elf",
+        binary: "bin/driver_manager",
+        args: [
+            "--path-prefix",
+            "/pkg/",
+            "--use-default-loader",
+            "--driver-runner-root-driver-url",
+            "fuchsia-boot:///#meta/packaged_driver.cm",
+        ],
+    },
+}
