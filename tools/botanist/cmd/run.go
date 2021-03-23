@@ -299,6 +299,7 @@ func (r *RunCommand) runAgainstTarget(ctx context.Context, t target.Target, args
 			if addr := t.Address(); len(addr) != 0 {
 				sshAddr.IP = addr
 				subprocessEnv[constants.DeviceAddrEnvKey] = addr.String()
+				subprocessEnv[constants.IPv4AddrEnvKey] = addr.String()
 			}
 		}
 		if sshAddr.IP == nil {
