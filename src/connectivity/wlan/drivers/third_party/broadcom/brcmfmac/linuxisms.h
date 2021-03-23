@@ -166,7 +166,7 @@ LINUX_FUNCVI(netif_carrier_off)
 
 #define KBUILD_MODNAME "brcmfmac"
 
-#define IEEE80211_MAX_SSID_LEN (32)
+#define IEEE80211_MAX_SSID_LEN (32UL)
 
 enum {
     IFNAMSIZ = (16),

@@ -879,7 +879,7 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
   params_le->home_time = -1;
 
   if (request->ssid.len > IEEE80211_MAX_SSID_LEN) {
-    BRCMF_ERR("Scan request SSID too long(no longer than %d bytes)", IEEE80211_MAX_SSID_LEN);
+    BRCMF_ERR("Scan request SSID too long(no longer than %lu bytes)", IEEE80211_MAX_SSID_LEN);
     return ZX_ERR_INVALID_ARGS;
   }
   params_le->ssid_le.SSID_len = request->ssid.len;
@@ -912,7 +912,7 @@ static zx_status_t brcmf_escan_prep(struct brcmf_cfg80211_info* cfg,
       ptr = (char*)params_le + offset;
       for (i = 0; i < (int32_t)n_ssids; i++) {
         if (request->ssid_list[i].len > IEEE80211_MAX_SSID_LEN) {
-          BRCMF_ERR("SSID in scan request SSID list too long(no longer than %d bytes)",
+          BRCMF_ERR("SSID in scan request SSID list too long(no longer than %lu bytes)",
                     IEEE80211_MAX_SSID_LEN);
           return ZX_ERR_INVALID_ARGS;
         }
