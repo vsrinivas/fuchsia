@@ -211,7 +211,7 @@ pub struct EnvironmentBuilder<T: DeviceStorageFactory + Send + Sync + 'static> {
     event_subscriber_blueprints: Vec<event::subscriber::BlueprintHandle>,
     storage_factory: Arc<T>,
     generate_service: Option<GenerateService>,
-    handlers: HashMap<SettingType, GenerateHandler<T>>,
+    handlers: HashMap<SettingType, GenerateHandler>,
     resource_monitors: Vec<monitor_base::monitor::Generate>,
 }
 
@@ -271,7 +271,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
     pub fn handler(
         mut self,
         setting_type: SettingType,
-        generate_handler: GenerateHandler<T>,
+        generate_handler: GenerateHandler,
     ) -> EnvironmentBuilder<T> {
         self.handlers.insert(setting_type, generate_handler);
         self
@@ -522,7 +522,7 @@ impl<T: DeviceStorageFactory + Send + Sync + 'static> EnvironmentBuilder<T> {
         components: &HashSet<SettingType>,
         storage_factory: Arc<T>,
         controller_flags: &HashSet<ControllerFlag>,
-        factory_handle: &mut SettingHandlerFactoryImpl<T>,
+        factory_handle: &mut SettingHandlerFactoryImpl,
     ) {
         // Power
         register_handler!(
@@ -680,7 +680,7 @@ async fn create_environment<'a, T: DeviceStorageFactory + Send + Sync + 'static>
     resource_monitor_generators: Vec<monitor_base::monitor::Generate>,
     event_subscriber_blueprints: Vec<event::subscriber::BlueprintHandle>,
     service_context_handle: ServiceContextHandle,
-    handler_factory: Arc<Mutex<SettingHandlerFactoryImpl<T>>>,
+    handler_factory: Arc<Mutex<SettingHandlerFactoryImpl>>,
     policy_handler_factory: Arc<Mutex<PolicyHandlerFactoryImpl<T>>>,
     storage_factory: Arc<T>,
 ) -> Result<(), Error> {

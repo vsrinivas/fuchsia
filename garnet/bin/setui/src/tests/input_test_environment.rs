@@ -91,30 +91,28 @@ impl TestInputEnvironmentBuilder {
             // persist::controller::spawn from setting_handler.rs, with the innermost controller
             // create method replaced with our custom constructor from input controller.
             // TODO(fxbug.dev/63832): See if we can reduce this rightward drift.
-            let generate_handler: GenerateHandler<InMemoryStorageFactory> =
-                Box::new(move |context: Context<InMemoryStorageFactory>| {
-                    let config_clone = config.clone();
-                    Box::pin(async move {
-                        let setting_type = context.setting_type;
-                        ClientImpl::create(
-                            context,
-                            Box::new(move |proxy| {
-                                let config = config_clone.clone();
-                                Box::pin(async move {
-                                    let proxy = ClientProxy::new(proxy, setting_type).await;
-                                    let controller_result =
-                                        InputController::create_with_config(proxy, config.clone())
-                                            .await;
+            let generate_handler: GenerateHandler = Box::new(move |context: Context| {
+                let config = config.clone();
+                Box::pin(async move {
+                    let setting_type = context.setting_type;
+                    ClientImpl::create(
+                        context,
+                        Box::new(move |proxy| {
+                            let config = config.clone();
+                            Box::pin(async move {
+                                let proxy = ClientProxy::new(proxy, setting_type).await;
+                                let controller_result =
+                                    InputController::create_with_config(proxy, config.clone())
+                                        .await;
 
-                                    controller_result.and_then(|controller| {
-                                        Ok(Box::new(controller) as BoxedController)
-                                    })
-                                })
-                            }),
-                        )
-                        .await
-                    })
-                });
+                                controller_result
+                                    .map(|controller| Box::new(controller) as BoxedController)
+                            })
+                        }),
+                    )
+                    .await
+                })
+            });
 
             environment_builder = environment_builder.handler(SettingType::Input, generate_handler);
         }

@@ -7,7 +7,6 @@ use crate::audio::types::AudioStream;
 use crate::base::{SettingInfo, SettingType};
 use crate::display::types::SetDisplayInfo;
 use crate::do_not_disturb::types::DoNotDisturbInfo;
-use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::ControllerError;
 use crate::input::types::InputDevice;
 use crate::input::{ButtonType, VolumeGain};
@@ -23,7 +22,6 @@ use async_trait::async_trait;
 use futures::future::BoxFuture;
 use std::borrow::Cow;
 use std::collections::HashSet;
-use std::marker::PhantomData;
 use thiserror;
 
 #[cfg(test)]
@@ -31,8 +29,8 @@ use crate::service_context::ServiceContext;
 
 pub type ControllerGenerateResult = Result<(), anyhow::Error>;
 
-pub type GenerateHandler<T> =
-    Box<dyn Fn(Context<T>) -> BoxFuture<'static, ControllerGenerateResult> + Send + Sync>;
+pub type GenerateHandler =
+    Box<dyn Fn(Context) -> BoxFuture<'static, ControllerGenerateResult> + Send + Sync>;
 
 pub type Response = Result<Option<SettingInfo>, Error>;
 
@@ -293,47 +291,46 @@ pub trait SettingHandlerFactory {
     ) -> Result<Signature, SettingHandlerFactoryError>;
 }
 
-// TODO(fxbug.dev/72706) Remove generics.
-pub struct Environment<T: DeviceStorageFactory> {
+pub struct Environment {
     pub settings: HashSet<SettingType>,
     pub service_context_handle: ServiceContextHandle,
-    _phantom: PhantomData<T>,
 }
 
-impl<T: DeviceStorageFactory> Clone for Environment<T> {
-    fn clone(&self) -> Environment<T> {
+impl Clone for Environment {
+    fn clone(&self) -> Environment {
         Environment::new(self.settings.clone(), self.service_context_handle.clone())
     }
 }
-impl<T: DeviceStorageFactory> Environment<T> {
+
+impl Environment {
     pub fn new(
         settings: HashSet<SettingType>,
         service_context_handle: ServiceContextHandle,
-    ) -> Environment<T> {
-        Environment { settings, service_context_handle, _phantom: PhantomData }
+    ) -> Environment {
+        Environment { settings, service_context_handle }
     }
 }
 
 /// Context captures all details necessary for a handler to execute in a given
 /// settings service environment.
-pub struct Context<T: DeviceStorageFactory> {
+pub struct Context {
     pub setting_type: SettingType,
     pub messenger: Messenger,
     pub receptor: Receptor,
     pub notifier_signature: Signature,
-    pub environment: Environment<T>,
+    pub environment: Environment,
     pub id: u64,
 }
 
-impl<T: DeviceStorageFactory> Context<T> {
+impl Context {
     pub fn new(
         setting_type: SettingType,
         messenger: Messenger,
         receptor: Receptor,
         notifier_signature: Signature,
-        environment: Environment<T>,
+        environment: Environment,
         id: u64,
-    ) -> Context<T> {
+    ) -> Context {
         Context { setting_type, messenger, receptor, notifier_signature, environment, id }
     }
 }
@@ -341,8 +338,7 @@ impl<T: DeviceStorageFactory> Context<T> {
 /// ContextBuilder is a convenience builder to facilitate creating a Context
 /// (and associated environment).
 #[cfg(test)]
-// TODO(fxbug.dev/72706) Remove generics.
-pub struct ContextBuilder<T: DeviceStorageFactory> {
+pub struct ContextBuilder {
     setting_type: SettingType,
     settings: HashSet<SettingType>,
     service_context: Option<ServiceContextHandle>,
@@ -350,11 +346,10 @@ pub struct ContextBuilder<T: DeviceStorageFactory> {
     receptor: Receptor,
     notifier_signature: Signature,
     id: u64,
-    _phantom: PhantomData<T>,
 }
 
 #[cfg(test)]
-impl<T: DeviceStorageFactory> ContextBuilder<T> {
+impl ContextBuilder {
     pub fn new(
         setting_type: SettingType,
         messenger: Messenger,
@@ -370,7 +365,6 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
             receptor,
             notifier_signature,
             id,
-            _phantom: PhantomData,
         }
     }
 
@@ -391,7 +385,7 @@ impl<T: DeviceStorageFactory> ContextBuilder<T> {
     }
 
     /// Generates the Context.
-    pub fn build(self) -> Context<T> {
+    pub fn build(self) -> Context {
         let service_context = if self.service_context.is_none() {
             ServiceContext::create(None, None)
         } else {

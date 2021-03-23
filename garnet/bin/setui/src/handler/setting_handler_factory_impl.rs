@@ -5,7 +5,6 @@ use crate::base::SettingType;
 use crate::handler::base::{
     Context, Environment, GenerateHandler, SettingHandlerFactory, SettingHandlerFactoryError,
 };
-use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::{Command, Payload, State};
 use crate::message::base::{Audience, MessageEvent, MessengerType};
 use crate::service;
@@ -21,16 +20,16 @@ use std::sync::Arc;
 
 /// SettingHandlerFactoryImpl houses registered closures for generating setting
 /// handlers.
-pub struct SettingHandlerFactoryImpl<T: DeviceStorageFactory + Send + Sync> {
-    environment: Environment<T>,
-    generators: HashMap<SettingType, GenerateHandler<T>>,
+pub struct SettingHandlerFactoryImpl {
+    environment: Environment,
+    generators: HashMap<SettingType, GenerateHandler>,
 
     /// Atomic counter used to generate new IDs, which uniquely identify a context.
     context_id_counter: Arc<AtomicU64>,
 }
 
 #[async_trait]
-impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHandlerFactoryImpl<T> {
+impl SettingHandlerFactory for SettingHandlerFactoryImpl {
     async fn generate(
         &mut self,
         setting_type: SettingType,
@@ -104,12 +103,12 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactory for SettingHan
     }
 }
 
-impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactoryImpl<T> {
+impl SettingHandlerFactoryImpl {
     pub fn new(
         settings: HashSet<SettingType>,
         service_context_handle: ServiceContextHandle,
         context_id_counter: Arc<AtomicU64>,
-    ) -> SettingHandlerFactoryImpl<T> {
+    ) -> SettingHandlerFactoryImpl {
         SettingHandlerFactoryImpl {
             environment: Environment::new(settings, service_context_handle),
             generators: HashMap::new(),
@@ -117,7 +116,7 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactoryImpl<T> {
         }
     }
 
-    pub fn register(&mut self, setting_type: SettingType, generate_function: GenerateHandler<T>) {
+    pub fn register(&mut self, setting_type: SettingType, generate_function: GenerateHandler) {
         self.generators.insert(setting_type, generate_function);
     }
 }
@@ -126,7 +125,6 @@ impl<T: DeviceStorageFactory + Send + Sync> SettingHandlerFactoryImpl<T> {
 mod tests {
     use super::*;
     use crate::handler::base::Request;
-    use crate::handler::device_storage::testing::InMemoryStorageFactory;
     use crate::handler::setting_handler::controller::{Create, Handle};
     use crate::handler::setting_handler::{
         BoxedController, ClientImpl, ClientProxy, ControllerError, ControllerStateResult,
@@ -180,18 +178,17 @@ mod tests {
         );
 
         // Register generation of controller with factory_impl.
-        let generate_handler: GenerateHandler<InMemoryStorageFactory> =
-            Box::new(move |context: Context<InMemoryStorageFactory>| {
-                Box::pin(ClientImpl::create(
-                    context,
-                    Box::new(move |proxy| {
-                        Box::pin(async move {
-                            Ok(Box::new(TestController::create(proxy).await.unwrap())
-                                as BoxedController)
-                        })
-                    }),
-                ))
-            });
+        let generate_handler: GenerateHandler = Box::new(move |context| {
+            Box::pin(ClientImpl::create(
+                context,
+                Box::new(move |proxy| {
+                    Box::pin(async move {
+                        Ok(Box::new(TestController::create(proxy).await.unwrap())
+                            as BoxedController)
+                    })
+                }),
+            ))
+        });
         factory_impl.register(SettingType::Unknown, generate_handler);
 
         // Create a broker that only listens to replies.

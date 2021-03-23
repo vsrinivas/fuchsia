@@ -5,17 +5,15 @@ use {
     crate::accessibility::types::AccessibilityInfo,
     crate::agent::{restore_agent, Blueprint},
     crate::base::{get_all_setting_types, SettingInfo, SettingType, UnknownInfo},
-    crate::do_not_disturb::types::DoNotDisturbInfo,
     crate::handler::base::{ContextBuilder, Request},
     crate::handler::device_storage::testing::InMemoryStorageFactory,
     crate::handler::device_storage::DeviceStorageCompatible,
     crate::handler::setting_handler::persist::WriteResult,
     crate::handler::setting_handler::{
         controller, persist, persist::controller as data_controller,
-        persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, persist::Storage,
-        BoxedController, ClientImpl, ClientProxy, Command, ControllerError, ControllerStateResult,
-        Event, GenerateController, Handler, IntoHandlerResult, Payload, SettingHandlerResult,
-        State,
+        persist::ClientProxy as DataClientProxy, persist::Handler as DataHandler, BoxedController,
+        ClientImpl, ClientProxy, Command, ControllerError, ControllerStateResult, Event,
+        GenerateController, Handler, IntoHandlerResult, Payload, SettingHandlerResult, State,
     },
     crate::message::base::{Audience, MessageEvent, MessengerType},
     crate::service,
@@ -26,7 +24,6 @@ use {
     futures::StreamExt,
     std::collections::{HashMap, HashSet},
     std::convert::TryFrom,
-    std::marker::PhantomData,
     std::sync::Arc,
 };
 
@@ -70,15 +67,13 @@ macro_rules! gen_data_controller {
     ($name:ident, $succeed:expr) => {
         /// The DataController is a controller implementation with storage that
         /// defers to a Control type for how to behave.
-        struct $name<S: Storage> {
-            _storage: PhantomData<S>,
-        }
+        struct $name;
 
         #[async_trait]
-        impl<S: Storage> data_controller::Create for $name<S> {
+        impl data_controller::Create for $name {
             async fn create(_: DataClientProxy) -> Result<Self, ControllerError> {
                 if $succeed {
-                    Ok(Self { _storage: PhantomData })
+                    Ok($name)
                 } else {
                     Err(ControllerError::InitFailure("failure".into()))
                 }
@@ -86,7 +81,7 @@ macro_rules! gen_data_controller {
         }
 
         #[async_trait]
-        impl<S: Storage> controller::Handle for $name<S> {
+        impl controller::Handle for $name {
             async fn handle(&self, _: Request) -> Option<SettingHandlerResult> {
                 return None;
             }
@@ -120,9 +115,9 @@ async fn test_spawn() {
     // Exercises failed spawn of a simple controller.
     verify_handle!(Handler::<FailController>::spawn);
     // Exercises successful spawn of a data controller.
-    verify_handle!(DataHandler::<SucceedDataController<DoNotDisturbInfo>>::spawn);
+    verify_handle!(DataHandler::<SucceedDataController>::spawn);
     // Exercises failed spawn of a data controller.
-    verify_handle!(DataHandler::<FailDataController<DoNotDisturbInfo>>::spawn);
+    verify_handle!(DataHandler::<FailDataController>::spawn);
 }
 
 #[fuchsia_async::run_until_stalled(test)]
@@ -177,7 +172,7 @@ async fn test_write_notify() {
         }
     }
 
-    let context = ContextBuilder::<InMemoryStorageFactory>::new(
+    let context = ContextBuilder::new(
         SettingType::Accessibility,
         handler_messenger,
         handler_receptor,
@@ -315,7 +310,7 @@ async fn test_event_propagation() {
     let (handler_messenger, handler_receptor) =
         factory.create(MessengerType::Unbound).await.unwrap();
     let signature = handler_receptor.get_signature();
-    let context = ContextBuilder::<InMemoryStorageFactory>::new(
+    let context = ContextBuilder::new(
         setting_type,
         handler_messenger,
         handler_receptor,
@@ -393,7 +388,7 @@ async fn test_rebroadcast() {
 
     let signature = handler_receptor.get_signature();
 
-    let context = ContextBuilder::<InMemoryStorageFactory>::new(
+    let context = ContextBuilder::new(
         setting_type,
         handler_messenger,
         handler_receptor,
@@ -448,7 +443,7 @@ async fn verify_controller_state(state: State, n: u8) {
     let (handler_messenger, handler_receptor) =
         factory.create(MessengerType::Unbound).await.unwrap();
     let signature = handler_receptor.get_signature();
-    let context = ContextBuilder::<InMemoryStorageFactory>::new(
+    let context = ContextBuilder::new(
         setting_type,
         handler_messenger,
         handler_receptor,
@@ -549,7 +544,7 @@ async fn test_unimplemented_error() {
         let (handler_messenger, handler_receptor) =
             factory.create(MessengerType::Unbound).await.unwrap();
         let signature = handler_receptor.get_signature();
-        let context = ContextBuilder::<InMemoryStorageFactory>::new(
+        let context = ContextBuilder::new(
             setting_type,
             handler_messenger,
             handler_receptor,

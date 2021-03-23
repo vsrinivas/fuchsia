@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 use crate::handler::base::GenerateHandler;
 use crate::handler::base::Request;
-use crate::handler::device_storage::DeviceStorageFactory;
 use crate::handler::setting_handler::{reply, Command, Payload, SettingHandlerResult, State};
 use crate::service::TryFromWithClient;
 use anyhow::Error;
@@ -27,11 +26,11 @@ pub trait Service {
 }
 
 /// A helper function for creating a simple setting handler.
-pub fn create_setting_handler<T: DeviceStorageFactory + Send + Sync + 'static>(
+pub fn create_setting_handler(
     request_handler: Box<
         dyn Fn(Request) -> BoxFuture<'static, SettingHandlerResult> + Send + Sync + 'static,
     >,
-) -> GenerateHandler<T> {
+) -> GenerateHandler {
     let shared_handler = Arc::new(Mutex::new(request_handler));
     return Box::new(move |mut context| {
         let handler = shared_handler.clone();

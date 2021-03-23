@@ -188,7 +188,7 @@ pub struct ClientImpl {
 }
 
 impl ClientImpl {
-    fn new<S: StorageFactory + 'static>(context: &Context<S>) -> Self {
+    fn new(context: &Context) -> Self {
         Self {
             messenger: context.messenger.clone(),
             setting_type: context.setting_type,
@@ -210,8 +210,8 @@ impl ClientImpl {
         }
     }
 
-    pub async fn create<S: StorageFactory + 'static>(
-        mut context: Context<S>,
+    pub async fn create(
+        mut context: Context,
         generate_controller: GenerateController,
     ) -> ControllerGenerateResult {
         let client = Arc::new(Mutex::new(Self::new(&context)));
@@ -313,9 +313,7 @@ pub struct Handler<C: controller::Create + controller::Handle + Send + Sync + 's
 }
 
 impl<C: controller::Create + controller::Handle + Send + Sync + 'static> Handler<C> {
-    pub fn spawn<S: StorageFactory + 'static>(
-        context: Context<S>,
-    ) -> BoxFuture<'static, ControllerGenerateResult> {
+    pub fn spawn(context: Context) -> BoxFuture<'static, ControllerGenerateResult> {
         Box::pin(async move {
             ClientImpl::create(
                 context,
@@ -508,9 +506,7 @@ pub mod persist {
     }
 
     impl<C: controller::Create + super::controller::Handle + Send + Sync + 'static> Handler<C> {
-        pub fn spawn<F: StorageFactory + 'static>(
-            context: Context<F>,
-        ) -> BoxFuture<'static, ControllerGenerateResult> {
+        pub fn spawn(context: Context) -> BoxFuture<'static, ControllerGenerateResult> {
             Box::pin(async move {
                 let setting_type = context.setting_type;
 
