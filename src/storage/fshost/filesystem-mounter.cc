@@ -38,15 +38,16 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(FsManager::MountPoint
                                                            const mount_options_t& options,
                                                            zx::channel block_device_client,
                                                            uint32_t fs_flags) {
-  zx::channel client, server;
-  zx_status_t status = zx::channel::create(0, &client, &server);
-  if (status != ZX_OK) {
-    return zx::error(status);
+  zx::status create_endpoints = fidl::CreateEndpoints<fio::Node>();
+  if (create_endpoints.is_error()) {
+    return create_endpoints.take_error();
   }
+  auto [client_end, server_end] = std::move(create_endpoints.value());
 
-  size_t num_handles = 2;
-  zx_handle_t handles[2] = {server.release(), block_device_client.release()};
-  uint32_t ids[2] = {PA_DIRECTORY_REQUEST, FS_HANDLE_BLOCK_DEVICE_ID};
+  constexpr size_t num_handles = 2;
+  zx_handle_t handles[num_handles] = {server_end.TakeChannel().release(),
+                                      block_device_client.release()};
+  uint32_t ids[num_handles] = {PA_DIRECTORY_REQUEST, FS_HANDLE_BLOCK_DEVICE_ID};
 
   fbl::Vector<const char*> argv;
   argv.push_back(binary);
@@ -72,22 +73,19 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(FsManager::MountPoint
   }
   argv.push_back("mount");
   argv.push_back(nullptr);
-  status =
+  zx_status_t status =
       LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, num_handles, fs_flags);
   if (status != ZX_OK) {
     return zx::error(status);
   }
 
-  zx_signals_t observed = 0;
-  status =
-      client.wait_one(ZX_USER_SIGNAL_0 | ZX_CHANNEL_PEER_CLOSED, zx::time::infinite(), &observed);
-  if ((status != ZX_OK) || (observed & ZX_CHANNEL_PEER_CLOSED)) {
-    status = (status != ZX_OK) ? status : ZX_ERR_BAD_STATE;
-    return zx::error(status);
+  auto result = fio::Node::Call::Describe(client_end.borrow());
+  if (!result.ok()) {
+    return zx::error(result.status());
   }
 
   zx::channel root;
-  status = fs_root_handle(client.get(), root.reset_and_get_address());
+  status = fs_root_handle(client_end.channel().get(), root.reset_and_get_address());
   if (status != ZX_OK) {
     return zx::error(status);
   }
@@ -96,7 +94,7 @@ zx::status<zx::channel> FilesystemMounter::MountFilesystem(FsManager::MountPoint
     return zx::error(status);
   }
 
-  return zx::ok(std::move(client));
+  return zx::ok(client_end.TakeChannel());
 }
 
 zx_status_t FilesystemMounter::MountData(zx::channel block_device, const mount_options_t& options) {

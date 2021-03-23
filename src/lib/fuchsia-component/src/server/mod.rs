@@ -24,7 +24,7 @@ use {
         LoaderMarker, ServiceList,
     },
     fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, HandleBased as _, Peered, Signals},
+    fuchsia_zircon::{self as zx, HandleBased as _},
     futures::{
         stream::{FuturesUnordered, StreamExt},
         Stream,
@@ -1058,21 +1058,6 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
             }
             _ => {}
         }
-
-        // It is not an error if the other end of the channel is already
-        // closed: the client may call Directory::Open, send a channel chan,
-        // then write a request on their local end of chan. If the request
-        // does not expect a response (eg. Directory::Open in a subdirectory),
-        // the client may close chan immediately afterwards. We should keep
-        // our end of the channel until we have processed all incoming requests.
-        object
-            .channel()
-            .signal_peer(Signals::NONE, Signals::USER_0)
-            .or_else(|e| match e {
-                zx::Status::PEER_CLOSED => Ok(()),
-                e => Err(e),
-            })
-            .context("ServiceFs signal_peer failed")?;
 
         let info = if (flags & OPEN_FLAG_DESCRIBE) != 0 {
             Some(self.describe_node(position)?)

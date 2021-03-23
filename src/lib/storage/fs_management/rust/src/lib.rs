@@ -73,28 +73,27 @@ impl FSInstance {
         args: Vec<&CStr>,
         mount_point: &str,
     ) -> Result<Self, Error> {
-        let (client_chan, server_chan) = zx::Channel::create()?;
+        let (node, server_end) =
+            fidl::endpoints::create_endpoints::<fidl_fuchsia_io::NodeMarker>()?;
+        let mut node = NodeSynchronousProxy::new(node.into_channel());
 
         let actions = vec![
             // root handle is passed in as a PA_USER0 handle at argument 0
-            SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 0), server_chan.into()),
+            SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 0), server_end.into()),
             // device handle is passed in as a PA_USER0 handle at argument 1
             SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 1), block_device.into()),
         ];
 
         let process = launch_process(&args, actions)?;
 
-        let signals = client_chan
-            .wait_handle(zx::Signals::USER_0 | zx::Signals::CHANNEL_PEER_CLOSED, zx::Time::INFINITE)
-            .context("failed to wait on root handle when mounting")?;
-
-        if signals.contains(zx::Signals::CHANNEL_PEER_CLOSED) {
-            return Err(format_err!("failed to mount: CHANNEL_PEER_CLOSED"));
-        }
+        // Wait until the filesystem is ready to take incoming requests. We want
+        // mount errors to show before we bind to the namespace.
+        let _: fidl_fuchsia_io::NodeInfo =
+            node.describe(zx::Time::INFINITE).context("failed to mount")?;
 
         let namespace = Namespace::installed().context("failed to get installed namespace")?;
         namespace
-            .bind(mount_point, client_chan)
+            .bind(mount_point, node.into_channel())
             .context("failed to bind client channel into default namespace")?;
 
         Ok(Self { process, mount_point: mount_point.to_string() })

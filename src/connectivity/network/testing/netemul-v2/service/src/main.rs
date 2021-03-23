@@ -385,7 +385,6 @@ mod tests {
                 "unexpected counter value",
             );
             drop(realm);
-            // TODO(https://fxbug.dev/72453): remove expectation of USER_0 signal.
             assert_eq!(
                 fasync::OnSignals::new(
                     &counter
@@ -394,7 +393,7 @@ mod tests {
                     zx::Signals::CHANNEL_PEER_CLOSED,
                 )
                 .await,
-                Ok(zx::Signals::CHANNEL_PEER_CLOSED | zx::Signals::USER_0),
+                Ok(zx::Signals::CHANNEL_PEER_CLOSED),
                 "`CounterProxy` should be closed when `ManagedRealmProxy` is dropped",
             );
         })
@@ -441,7 +440,6 @@ mod tests {
             }
             drop(sandbox);
             for counter in counters {
-                // TODO(https://fxbug.dev/72453): remove expectation of USER_0 signal.
                 assert_eq!(
                     fasync::OnSignals::new(
                         &counter
@@ -450,7 +448,7 @@ mod tests {
                         zx::Signals::CHANNEL_PEER_CLOSED,
                     )
                     .await,
-                    Ok(zx::Signals::CHANNEL_PEER_CLOSED | zx::Signals::USER_0),
+                    Ok(zx::Signals::CHANNEL_PEER_CLOSED),
                     "`CounterProxy` should be closed when `SandboxProxy` is dropped",
                 );
             }

@@ -173,11 +173,8 @@ end will be connected to the root directory of the new filesystem), and
 (optionally) another to contact the underlying
 [block device](/docs/concepts/filesystems/block_devices.md).
 Once a filesystem has been initialized (reading initial state off the block
-device, finding the root vnode, etc) it flags a signal (`ZX_USER_SIGNAL0`) on
-the mount point channel. This informs the parent (mounting) system that the
-child filesystem is ready to be utilized. At this point, the channel passed to
-the filesystem on initialization may be used to send filesystem requests, such
-as “open”.
+device, finding the root vnode, etc) it starts servicing [`fuchsia.io/Node`]
+requests on the mount point channel.
 
 At this point, the parent (mounting) filesystem “pins” the connection to the
 remote filesystem on a Vnode. The VFS layers capable of path walking check for

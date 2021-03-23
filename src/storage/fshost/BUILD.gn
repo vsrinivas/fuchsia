@@ -359,6 +359,7 @@ test("fshost_integration_test") {
     "//src/lib/files",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",
+    "//src/lib/testing/predicates",
     "//src/storage/blobfs",
     "//src/storage/minfs",
     "//src/storage/testing:storage_driver_test_support",

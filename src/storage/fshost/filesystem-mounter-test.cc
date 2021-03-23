@@ -4,6 +4,9 @@
 
 #include "filesystem-mounter.h"
 
+#include <fuchsia/io/llcpp/fidl_test_base.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/llcpp/server.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
@@ -13,6 +16,7 @@
 #include "fs-manager.h"
 #include "fshost-fs-provider.h"
 #include "metrics.h"
+#include "src/lib/testing/predicates/status.h"
 #include "src/storage/blobfs/mount.h"
 #include "src/storage/fshost/block-watcher.h"
 
@@ -33,9 +37,8 @@ class FilesystemMounterHarness : public testing::Test {
     if (!watcher_) {
       watcher_.emplace(manager_, &config_);
       zx::channel dir_request, lifecycle_request;
-      EXPECT_EQ(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request),
-                                    zx::channel(), nullptr, *watcher_),
-                ZX_OK);
+      EXPECT_OK(manager_.Initialize(std::move(dir_request), std::move(lifecycle_request),
+                                    zx::channel(), nullptr, *watcher_));
     }
     return manager_;
   }
@@ -70,8 +73,21 @@ enum class FilesystemType {
 
 class TestMounter : public FilesystemMounter {
  public:
+  class FakeNodeImpl : public fuchsia_io::testing::Node_TestBase {
+    void NotImplemented_(const std::string& name, fidl::CompleterBase& completer) override {
+      ADD_FAILURE() << "Unexpected call to " << name;
+      completer.Close(ZX_ERR_NOT_SUPPORTED);
+    }
+
+    void Describe(DescribeCompleter::Sync& completer) override {
+      fidl::aligned<fuchsia_io::wire::DirectoryObject> dir;
+      completer.Reply(fuchsia_io::wire::NodeInfo::WithDirectory(fidl::unowned_ptr(&dir)));
+    }
+  };
+
   template <typename... Args>
-  explicit TestMounter(Args&&... args) : FilesystemMounter(std::forward<Args>(args)...) {}
+  explicit TestMounter(async_dispatcher_t* dispatcher, Args&&... args)
+      : FilesystemMounter(std::forward<Args>(args)...), dispatcher_(dispatcher) {}
 
   void ExpectFilesystem(FilesystemType fs) { expected_filesystem_ = fs; }
 
@@ -105,60 +121,67 @@ class TestMounter : public FilesystemMounter {
     EXPECT_EQ(ids[0], PA_DIRECTORY_REQUEST);
     EXPECT_EQ(ids[1], FS_HANDLE_BLOCK_DEVICE_ID);
 
-    zx::channel* server = nullptr;
-    switch (expected_filesystem_) {
-      case FilesystemType::kBlobfs:
-        server = &blobfs_server_;
-        break;
-      case FilesystemType::kMinfs:
-        server = &minfs_server_;
-        break;
-      case FilesystemType::kFactoryfs:
-        server = &factoryfs_server_;
-        break;
-      default:
-        ADD_FAILURE() << "Unexpected filesystem type";
+    fit::result result =
+        fidl::BindServer(dispatcher_, fidl::ServerEnd<fuchsia_io::Node>(zx::channel(hnd[0])),
+                         std::make_unique<FakeNodeImpl>());
+
+    EXPECT_TRUE(result.is_ok()) << zx_status_get_string(result.error());
+    if (result.is_error()) {
+      return result.error();
     }
 
-    server->reset(hnd[0]);
-    EXPECT_EQ(server->signal_peer(0, ZX_USER_SIGNAL_0), ZX_OK);
-    EXPECT_EQ(zx_handle_close(hnd[1]), ZX_OK);
+    // Close all other handles.
+    for (size_t i = 1; i < len; i++) {
+      EXPECT_OK(zx_handle_close(hnd[i]));
+    }
+
     return ZX_OK;
   }
 
  private:
   FilesystemType expected_filesystem_ = FilesystemType::kBlobfs;
-  zx::channel blobfs_server_;
-  zx::channel minfs_server_;
-  zx::channel factoryfs_server_;
+  async_dispatcher_t* const dispatcher_;
 };
 
-TEST_F(MounterTest, DurableMount) {
-  TestMounter mounter(manager(), &config_);
+class MounterTestWithDispatcher : public MounterTest {
+ public:
+  MounterTestWithDispatcher() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+
+ protected:
+  void SetUp() override { ASSERT_OK(loop_.StartThread("filesystem-mounter-test")); }
+
+  async_dispatcher_t* dispatcher() { return loop_.dispatcher(); }
+
+ private:
+  async::Loop loop_;
+};
+
+TEST_F(MounterTestWithDispatcher, DurableMount) {
+  TestMounter mounter(dispatcher(), manager(), &config_);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_EQ(mounter.MountDurable(zx::channel(), options), ZX_OK);
+  ASSERT_OK(mounter.MountDurable(zx::channel(), options));
   ASSERT_TRUE(mounter.DurableMounted());
 }
 
-TEST_F(MounterTest, FactoryMount) {
-  TestMounter mounter(manager(), &config_);
+TEST_F(MounterTestWithDispatcher, FactoryMount) {
+  TestMounter mounter(dispatcher(), manager(), &config_);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kFactoryfs);
-  ASSERT_EQ(mounter.MountFactoryFs(zx::channel(), options), ZX_OK);
+  ASSERT_OK(mounter.MountFactoryFs(zx::channel(), options));
 
   ASSERT_TRUE(mounter.FactoryMounted());
 }
 
-TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
+TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeData) {
   config_ = Config(Config::Options{{Config::kWaitForData, {}}});
-  TestMounter mounter(manager(), &config_);
+  TestMounter mounter(dispatcher(), manager(), &config_);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_EQ(mounter.MountBlob(zx::channel(), options), ZX_OK);
+  ASSERT_OK(mounter.MountBlob(zx::channel(), options));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_FALSE(mounter.DataMounted());
@@ -166,12 +189,12 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeData) {
   EXPECT_FALSE(mounter.PkgfsMounted());
 }
 
-TEST_F(MounterTest, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
-  TestMounter mounter(manager(), &config_);
+TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
+  TestMounter mounter(dispatcher(), manager(), &config_);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_EQ(mounter.MountBlob(zx::channel(), options), ZX_OK);
+  ASSERT_OK(mounter.MountBlob(zx::channel(), options));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_FALSE(mounter.DataMounted());
@@ -179,13 +202,13 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeDataUnlessExplicitlyRequested) {
   EXPECT_TRUE(mounter.PkgfsMounted());
 }
 
-TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
+TEST_F(MounterTestWithDispatcher, PkgfsWillNotMountBeforeBlob) {
   config_ = Config(Config::Options{{Config::kWaitForData, {}}});
-  TestMounter mounter(manager(), &config_);
+  TestMounter mounter(dispatcher(), manager(), &config_);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_EQ(mounter.MountData(zx::channel(), options), ZX_OK);
+  ASSERT_OK(mounter.MountData(zx::channel(), options));
 
   ASSERT_FALSE(mounter.BlobMounted());
   ASSERT_TRUE(mounter.DataMounted());
@@ -193,15 +216,15 @@ TEST_F(MounterTest, PkgfsWillNotMountBeforeBlob) {
   EXPECT_FALSE(mounter.PkgfsMounted());
 }
 
-TEST_F(MounterTest, PkgfsMountsWithBlobAndData) {
+TEST_F(MounterTestWithDispatcher, PkgfsMountsWithBlobAndData) {
   config_ = Config(Config::Options{{Config::kWaitForData, {}}});
-  TestMounter mounter(manager(), &config_);
+  TestMounter mounter(dispatcher(), manager(), &config_);
 
   mount_options_t options = default_mount_options;
   mounter.ExpectFilesystem(FilesystemType::kBlobfs);
-  ASSERT_EQ(mounter.MountBlob(zx::channel(), options), ZX_OK);
+  ASSERT_OK(mounter.MountBlob(zx::channel(), options));
   mounter.ExpectFilesystem(FilesystemType::kMinfs);
-  ASSERT_EQ(mounter.MountData(zx::channel(), options), ZX_OK);
+  ASSERT_OK(mounter.MountData(zx::channel(), options));
 
   ASSERT_TRUE(mounter.BlobMounted());
   ASSERT_TRUE(mounter.DataMounted());

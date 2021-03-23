@@ -89,15 +89,14 @@ zx::status<> InitNativeFs(const char* binary, zx::channel device, const init_opt
 
   if (options.wait_until_ready) {
     // Wait until the filesystem is ready to take incoming requests
-    zx_signals_t observed;
-    zx_signals_t signals = ZX_USER_SIGNAL_0  // the filesystem is initialized and serving requests
-                           | ZX_CHANNEL_PEER_CLOSED;  // filesystem closed the channel on error
-    status = outgoing_directory.client->wait_one(signals, zx::time::infinite(), &observed);
-    if (status != ZX_OK) {
-      return zx::error(status);
-    }
-    if (observed & ZX_CHANNEL_PEER_CLOSED) {
-      return zx::error(ZX_ERR_BAD_STATE);
+    auto result = fio::Node::Call::Describe(outgoing_directory.client);
+    switch (result.status()) {
+      case ZX_OK:
+        break;
+      case ZX_ERR_PEER_CLOSED:
+        return zx::error(ZX_ERR_BAD_STATE);
+      default:
+        return zx::error(result.status());
     }
   }
   cleanup.cancel();
