@@ -5,11 +5,13 @@
 source_set("magnifier") {
   public = [
     "magnifier.h",
+    "magnifier_2.h",
     "magnifier_util.h",
   ]
 
   sources = [
     "magnifier.cc",
+    "magnifier_2.cc",
     "magnifier_util.cc",
   ]
 
