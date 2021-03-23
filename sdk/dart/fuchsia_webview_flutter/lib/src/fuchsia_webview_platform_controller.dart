@@ -6,7 +6,6 @@
 
 import 'dart:async';
 import 'dart:convert' show utf8;
-import 'dart:developer';
 import 'dart:typed_data';
 
 import 'package:fidl/fidl.dart' as fidl;
