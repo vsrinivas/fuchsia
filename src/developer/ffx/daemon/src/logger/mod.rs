@@ -61,6 +61,11 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
 
             if get_next_results.is_empty() {
                 if let Some(err) = terminal_err {
+                    streamer
+                        .append_logs(vec![LogEntry::new(LogData::FfxEvent(
+                            EventType::TargetDisconnected,
+                        ))?])
+                        .await?;
                     return Err(anyhow!(err));
                 }
                 continue;
@@ -110,6 +115,11 @@ fn write_logs_to_file<T: GenericDiagnosticsStreamer + 'static + Send + ?Sized>(
 
             streamer.append_logs(log_data).await?;
             if let Some(err) = terminal_err {
+                streamer
+                    .append_logs(vec![LogEntry::new(LogData::FfxEvent(
+                        EventType::TargetDisconnected,
+                    ))?])
+                    .await?;
                 return Err(anyhow!(err));
             }
         }
@@ -432,6 +442,14 @@ mod test {
         }
     }
 
+    fn target_disconnected_entry() -> LogEntry {
+        LogEntry {
+            data: LogData::FfxEvent(EventType::TargetDisconnected),
+            timestamp: Timestamp::from(0),
+            version: 1,
+        }
+    }
+
     fn malformed_log(s: &str) -> LogEntry {
         LogEntry {
             data: LogData::MalformedTargetLog(s.to_string()),
@@ -502,6 +520,7 @@ mod test {
                 malformed_log("log2"),
                 malformed_log("log3"),
                 malformed_log("log4"),
+                target_disconnected_entry(),
             ],
         )
         .await;
@@ -542,6 +561,7 @@ mod test {
                 valid_log(log2),
                 valid_log(log3),
                 valid_log(log4),
+                target_disconnected_entry(),
             ],
         )
         .await;
@@ -566,7 +586,11 @@ mod test {
         let logger = Logger::new_with_streamer_and_config(t, streamer, true);
         run_logger_to_completion(logger).await;
 
-        verify_logged(log_buf.clone(), vec![logging_started_entry(), valid_log(log2)]).await;
+        verify_logged(
+            log_buf.clone(),
+            vec![logging_started_entry(), valid_log(log2), target_disconnected_entry()],
+        )
+        .await;
         Ok(())
     }
 
@@ -591,7 +615,12 @@ mod test {
 
         verify_logged(
             log_buf.clone(),
-            vec![logging_started_entry(), valid_log(log1), valid_log(log2)],
+            vec![
+                logging_started_entry(),
+                valid_log(log1),
+                valid_log(log2),
+                target_disconnected_entry(),
+            ],
         )
         .await;
         Ok(())
@@ -618,7 +647,12 @@ mod test {
 
         verify_logged(
             log_buf.clone(),
-            vec![logging_started_entry(), valid_log(log1), valid_log(log2)],
+            vec![
+                logging_started_entry(),
+                valid_log(log1),
+                valid_log(log2),
+                target_disconnected_entry(),
+            ],
         )
         .await;
         Ok(())
@@ -637,7 +671,8 @@ mod test {
         let logger = Logger::new_with_streamer_and_config(t, streamer, true);
         run_logger_to_completion(logger).await;
 
-        verify_logged(log_buf.clone(), vec![logging_started_entry()]).await;
+        verify_logged(log_buf.clone(), vec![logging_started_entry(), target_disconnected_entry()])
+            .await;
         Ok(())
     }
 }

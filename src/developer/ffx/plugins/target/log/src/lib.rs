@@ -8,6 +8,7 @@ use {
         io::{stdout, Write},
         prelude::*,
         sync::Arc,
+        task::sleep,
     },
     async_trait::async_trait,
     chrono::{DateTime, Local, TimeZone, Utc},
@@ -17,7 +18,7 @@ use {
     ffx_log_args::{DumpCommand, LogCommand, LogSubCommand, TimeFormat, WatchCommand},
     ffx_log_data::{EventType, LogData, LogEntry},
     ffx_log_utils::{run_logging_pipeline, OrderedBatchPipeline},
-    fidl::endpoints::create_proxy,
+    fidl::endpoints::{create_proxy, ServerEnd},
     fidl_fuchsia_developer_bridge::{
         DaemonDiagnosticsStreamParameters, DaemonProxy, DiagnosticsStreamError, StreamMode,
     },
@@ -26,7 +27,10 @@ use {
     },
     fidl_fuchsia_diagnostics::ComponentSelector,
     selectors::{match_moniker_against_component_selectors, parse_path_to_moniker},
-    std::{iter::Iterator, time::Duration},
+    std::{
+        iter::Iterator,
+        time::{Duration, SystemTime},
+    },
     termion::{color, style},
 };
 
@@ -40,6 +44,16 @@ Verify that the target is up with `ffx target list` and retry \
 in a few seconds.";
 const NANOS_IN_SECOND: i64 = 1_000_000_000;
 const TIMESTAMP_FORMAT: &str = "%Y-%m-%d %H:%M:%S.%3f";
+const RETRY_TIMEOUT_MILLIS: u64 = 1000;
+
+fn get_timestamp() -> Result<Timestamp> {
+    Ok(Timestamp::from(
+        SystemTime::now()
+            .duration_since(SystemTime::UNIX_EPOCH)
+            .context("system time before Unix epoch")?
+            .as_nanos() as i64,
+    ))
+}
 
 fn timestamp_to_partial_secs(ts: Timestamp) -> f64 {
     let u_ts: i64 = ts.into();
@@ -52,6 +66,14 @@ fn severity_to_color_str(s: Severity) -> String {
         Severity::Warn => color::Fg(color::Yellow).to_string(),
         _ => "".to_string(),
     }
+}
+fn format_ffx_event(msg: &str, timestamp: Option<Timestamp>) -> String {
+    let ts: i64 = timestamp.unwrap_or_else(|| get_timestamp().unwrap()).into();
+    let dt = Local
+        .timestamp(ts / NANOS_IN_SECOND, (ts % NANOS_IN_SECOND) as u32)
+        .format(TIMESTAMP_FORMAT)
+        .to_string();
+    format!("[{}][<ffx>]: {}", dt, msg)
 }
 
 struct LogFilterCriteria {
@@ -182,17 +204,16 @@ impl<'a> LogFormatter for DefaultLogFormatter<'_> {
                     }
                     LogEntry { data: LogData::FfxEvent(etype), timestamp, .. } => match etype {
                         EventType::LoggingStarted => {
-                            let ts: i64 = timestamp.into();
-                            let dt = Local
-                                .timestamp(ts / NANOS_IN_SECOND, (ts % NANOS_IN_SECOND) as u32)
-                                .format(TIMESTAMP_FORMAT)
-                                .to_string();
-                            let mut s = format!("[{}][<ffx daemon>]: logger started.", dt);
+                            let mut s = String::from("logger started.");
                             if self.has_previous_log {
                                 s.push_str(" Logs before this may have been dropped if they were not cached on the target.");
                             }
-                            s
+                            format_ffx_event(&s, Some(timestamp))
                         }
+                        EventType::TargetDisconnected => format_ffx_event(
+                            "Logger lost connection to target. Retrying...",
+                            Some(timestamp),
+                        ),
                     },
                 }
             }
@@ -307,21 +328,30 @@ pub async fn log(
         cmd.time.clone(),
         stdout(),
     );
-    let ffx: ffx_lib_args::Ffx = argh::from_env();
-    let target_str = ffx.target.unwrap_or(String::default());
-    log_cmd(daemon_proxy, rcs_proxy, &mut formatter, target_str, cmd).await
+    log_cmd(daemon_proxy, rcs_proxy, &mut formatter, cmd).await
+}
+
+async fn setup_daemon_stream(
+    daemon_proxy: &DaemonProxy,
+    target_str: &str,
+    server: ServerEnd<ArchiveIteratorMarker>,
+    stream_mode: StreamMode,
+    from_bound: Option<Duration>,
+) -> Result<(), DiagnosticsStreamError> {
+    let params = DaemonDiagnosticsStreamParameters {
+        stream_mode: Some(stream_mode),
+        min_target_timestamp_nanos: from_bound.map(|f| f.as_nanos() as u64),
+        ..DaemonDiagnosticsStreamParameters::EMPTY
+    };
+    daemon_proxy.stream_diagnostics(Some(&target_str), params, server).await.unwrap()
 }
 
 pub async fn log_cmd(
     daemon_proxy: DaemonProxy,
     rcs: RemoteControlProxy,
     log_formatter: &mut impl LogFormatter,
-    target_str: String,
     cmd: LogCommand,
 ) -> Result<()> {
-    let (proxy, server) =
-        create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
-
     let stream_mode = match cmd.cmd {
         LogSubCommand::Watch(WatchCommand { dump }) => {
             if dump {
@@ -340,6 +370,12 @@ pub async fn log_cmd(
         log_formatter.set_boot_timestamp(*ts as i64);
     }
 
+    let target_info = rcs.identify_host().await.unwrap().unwrap();
+    let nodename = target_info.nodename.context("missing nodename")?;
+    let target_boot_time_nanos = match target_info.boot_timestamp_nanos {
+        Some(t) => Duration::from_nanos(t),
+        None => Duration::new(0, 0),
+    };
     let (from_bound, to_bound) = match cmd.cmd {
         LogSubCommand::Dump(DumpCommand { from, from_monotonic, to, to_monotonic }) => {
             if !(from.is_none() || from_monotonic.is_none()) {
@@ -349,41 +385,36 @@ pub async fn log_cmd(
                 ffx_bail!("only one of --to or --to-monotonic may be provided at once.");
             }
 
-            let target_boot_time_nanos = match boot_ts_opt {
-                Some(t) => Duration::from_nanos(t),
-                None => {
-                    if from.is_some() || to.is_some() {
-                        return Err(anyhow!("target is missing a boot timestamp."));
-                    } else {
-                        Duration::new(0, 0)
-                    }
-                }
-            };
-
-            (
-                calculate_monotonic_time(target_boot_time_nanos, from, from_monotonic),
-                calculate_monotonic_time(target_boot_time_nanos, to, to_monotonic),
-            )
+            if target_info.boot_timestamp_nanos.is_none() && (from.is_some() || to.is_some()) {
+                println!(
+                    "{}target timestamp not available - from/to filters will not be applied.{}",
+                    color::Fg(color::Red),
+                    style::Reset
+                );
+                (None, None)
+            } else {
+                (
+                    calculate_monotonic_time(target_boot_time_nanos, from, from_monotonic),
+                    calculate_monotonic_time(target_boot_time_nanos, to, to_monotonic),
+                )
+            }
         }
         _ => (None, None),
     };
-    let params = DaemonDiagnosticsStreamParameters {
-        stream_mode: Some(stream_mode),
-        min_target_timestamp_nanos: from_bound.map(|f| f.as_nanos() as u64),
-        ..DaemonDiagnosticsStreamParameters::EMPTY
-    };
-    let _ =
-        daemon_proxy.stream_diagnostics(Some(&target_str), params, server).await?.map_err(|e| {
-            match e {
-                DiagnosticsStreamError::NoStreamForTarget => {
-                    anyhow!(ffx_error!("{}", NO_STREAM_ERROR))
-                }
-                _ => anyhow!("failure setting up diagnostics stream: {:?}", e),
+
+    let (mut proxy, server) =
+        create_proxy::<ArchiveIteratorMarker>().context("failed to create endpoints")?;
+    setup_daemon_stream(&daemon_proxy, &nodename, server, stream_mode, from_bound).await.map_err(
+        |e| match e {
+            DiagnosticsStreamError::NoStreamForTarget => {
+                anyhow!(ffx_error!("{}", NO_STREAM_ERROR))
             }
-        })?;
+            _ => anyhow!("failure setting up diagnostics stream: {:?}", e),
+        },
+    )?;
 
     let mut requests = OrderedBatchPipeline::new(PIPELINE_SIZE);
-    loop {
+    'request_loop: loop {
         let (get_next_results, terminal_err) = run_logging_pipeline(&mut requests, &proxy).await;
 
         for result in get_next_results.into_iter() {
@@ -405,9 +436,61 @@ pub async fn log_cmd(
                             return Ok(());
                         }
                     }
+                    (LogData::FfxEvent(EventType::TargetDisconnected), _) => {
+                        log_formatter.push_log(Ok(parsed)).await?;
+                        loop {
+                            let (new_proxy, server) = create_proxy::<ArchiveIteratorMarker>()
+                                .context("failed to create endpoints")?;
+                            match setup_daemon_stream(
+                                &daemon_proxy,
+                                &nodename,
+                                server,
+                                stream_mode,
+                                from_bound,
+                            )
+                            .await
+                            {
+                                Ok(()) => {
+                                    proxy = new_proxy;
+                                    continue 'request_loop;
+                                }
+                                Err(e) => {
+                                    match e {
+                                        DiagnosticsStreamError::NoMatchingTargets => {
+                                            println!(
+                                                "{}",
+                                                format_ffx_event(
+                                                    &format!("{} isn't up. Retrying...", &nodename),
+                                                    None
+                                                )
+                                            );
+                                        }
+                                        DiagnosticsStreamError::NoStreamForTarget => {
+                                            println!("{}" , format_ffx_event(&format!("{} is up, but the logger hasn't started yet. Retrying...", &nodename), None));
+                                        }
+                                        _ => {
+                                            println!(
+                                                "{}",
+                                                format_ffx_event(
+                                                    &format!(
+                                                        "Retry failed ({:?}). Trying again...",
+                                                        e
+                                                    ),
+                                                    None
+                                                )
+                                            );
+                                        }
+                                    }
+                                    sleep(Duration::from_millis(RETRY_TIMEOUT_MILLIS)).await;
+                                    continue;
+                                }
+                            }
+                        }
+                    }
                     _ => {}
                 }
-                log_formatter.push_log(Ok(parsed)).await?
+
+                log_formatter.push_log(Ok(parsed)).await?;
             }
         }
 
@@ -438,11 +521,11 @@ mod test {
     };
 
     const DEFAULT_TS_NANOS: u64 = 1615535969000000000;
-    const DEFAULT_TARGET_STR: &str = "target-target";
     const BOOT_TS: u64 = 98765432000000000;
     const FAKE_START_TIMESTAMP: i64 = 1614669138;
     // FAKE_START_TIMESTAMP - BOOT_TS
     const START_TIMESTAMP_FOR_DAEMON: u64 = 1515903706000000000;
+    const NODENAME: &str = "some-nodename";
 
     fn default_ts() -> Duration {
         Duration::from_nanos(DEFAULT_TS_NANOS)
@@ -492,6 +575,7 @@ mod test {
                 responder
                     .send(&mut Ok(IdentifyHostResponse {
                         boot_timestamp_nanos: Some(BOOT_TS),
+                        nodename: Some(NODENAME.to_string()),
                         ..IdentifyHostResponse::EMPTY
                     }))
                     .context("sending identify host response")
@@ -506,9 +590,8 @@ mod test {
         expected_responses: Arc<Vec<FakeArchiveIteratorResponse>>,
     ) -> DaemonProxy {
         setup_fake_daemon_proxy(move |req| match req {
-            DaemonRequest::StreamDiagnostics { target, parameters, iterator, responder } => {
+            DaemonRequest::StreamDiagnostics { target: _, parameters, iterator, responder } => {
                 assert_eq!(parameters, expected_parameters);
-                assert_eq!(target, Some(DEFAULT_TARGET_STR.to_string()));
                 setup_fake_archive_iterator(iterator, expected_responses.clone()).unwrap();
                 responder.send(&mut Ok(())).context("error sending response").expect("should send")
             }
@@ -564,7 +647,6 @@ mod test {
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
             &mut formatter,
-            String::from(DEFAULT_TARGET_STR),
             cmd,
         )
         .await
@@ -599,7 +681,6 @@ mod test {
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
             &mut formatter,
-            String::from(DEFAULT_TARGET_STR),
             cmd,
         )
         .await
@@ -635,7 +716,6 @@ mod test {
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
             &mut formatter,
-            String::from(DEFAULT_TARGET_STR),
             cmd,
         )
         .await
@@ -698,7 +778,6 @@ mod test {
             setup_fake_daemon_server(params, Arc::new(expected_responses)),
             setup_fake_rcs(),
             &mut formatter,
-            String::from(DEFAULT_TARGET_STR),
             cmd,
         )
         .await
@@ -1000,7 +1079,6 @@ mod test {
             setup_fake_daemon_server(params, Arc::new(vec![])),
             setup_fake_rcs(),
             &mut formatter,
-            String::from(DEFAULT_TARGET_STR),
             cmd,
         )
         .await
@@ -1029,7 +1107,6 @@ mod test {
             setup_fake_daemon_server(params, Arc::new(vec![])),
             setup_fake_rcs(),
             &mut formatter,
-            String::from(DEFAULT_TARGET_STR),
             cmd,
         )
         .await
@@ -1053,7 +1130,6 @@ mod test {
             setup_fake_daemon_server(DaemonDiagnosticsStreamParameters::EMPTY, Arc::new(vec![])),
             setup_fake_rcs(),
             &mut formatter,
-            String::from(DEFAULT_TARGET_STR),
             cmd,
         )
         .await
@@ -1079,7 +1155,6 @@ mod test {
             setup_fake_daemon_server(DaemonDiagnosticsStreamParameters::EMPTY, Arc::new(vec![])),
             setup_fake_rcs(),
             &mut formatter,
-            String::from(DEFAULT_TARGET_STR),
             cmd,
         )
         .await
