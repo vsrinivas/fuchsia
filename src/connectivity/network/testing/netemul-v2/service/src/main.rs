@@ -15,6 +15,7 @@ use {
     log::{debug, error, info},
     pin_utils::pin_mut,
     std::collections::HashSet,
+    std::sync::atomic::{AtomicU64, Ordering},
 };
 
 type Result<T = (), E = anyhow::Error> = std::result::Result<T, E>;
@@ -28,15 +29,13 @@ impl ManagedRealm {
     async fn create(
         server_end: ServerEnd<ManagedRealmMarker>,
         options: RealmOptions,
+        prefix: &str,
     ) -> Result<ManagedRealm> {
         use fuchsia_component_test::builder::{
             Capability, CapabilityRoute, ComponentSource, RealmBuilder, RouteEndpoint,
         };
 
         let RealmOptions { name, children, .. } = options;
-        // TODO(https://fxbug.dev/72169): use `name` as the moniker of the generated realm
-        // collection.
-        info!("creating new ManagedRealm with name '{:?}'", name);
         let mut exposed_services = HashSet::new();
         let mut builder = RealmBuilder::new().await.context("error creating new `RealmBuilder`")?;
         for ChildDef { url, name, exposes, uses, .. } in children.unwrap_or_default() {
@@ -102,7 +101,13 @@ impl ManagedRealm {
                 }
             }
         }
-        let realm = builder.build().create().await.context("error creating `RealmInstance`")?;
+        let name = format!("{}-{}", prefix, name.unwrap_or("realm".to_string()));
+        info!("creating new ManagedRealm with name '{}'", name);
+        let realm = builder
+            .build()
+            .create_with_name(name)
+            .await
+            .context("error creating `RealmInstance`")?;
         Ok(ManagedRealm { server_end, realm })
     }
 
@@ -111,6 +116,14 @@ impl ManagedRealm {
         let mut stream = server_end.into_stream().context("failed to acquire request stream")?;
         while let Some(request) = stream.try_next().await.context("FIDL error")? {
             match request {
+                ManagedRealmRequest::GetMoniker { responder } => {
+                    let moniker = format!(
+                        "{}\\:{}",
+                        fuchsia_component_test::DEFAULT_COLLECTION_NAME,
+                        realm.root.child_name()
+                    );
+                    let () = responder.send(&moniker).context("FIDL error")?;
+                }
                 ManagedRealmRequest::ConnectToService {
                     service_name,
                     child_name,
@@ -144,27 +157,37 @@ impl ManagedRealm {
     }
 }
 
-async fn handle_sandbox(stream: SandboxRequestStream) -> Result<(), fidl::Error> {
+async fn handle_sandbox(
+    stream: SandboxRequestStream,
+    sandbox_name: impl std::fmt::Display,
+) -> Result<(), fidl::Error> {
     let (tx, rx) = mpsc::channel(1);
-    let sandbox_fut = stream.try_for_each_concurrent(None, |request| async {
-        match request {
-            // TODO(https://fxbug.dev/72253): send the correct epitaph on failure.
-            SandboxRequest::CreateRealm { realm, options, control_handle: _ } => {
-                match ManagedRealm::create(realm, options)
-                    .await
-                    .context("failed to create ManagedRealm")
-                {
-                    Ok(realm) => {
-                        let () =
-                            tx.clone().send(realm).await.expect("receiver should not be closed");
+    let realm_index = AtomicU64::new(0);
+    let sandbox_fut = stream.try_for_each_concurrent(None, |request| {
+        let mut tx = tx.clone();
+        let sandbox_name = &sandbox_name;
+        let realm_index = &realm_index;
+        async move {
+            match request {
+                // TODO(https://fxbug.dev/72253): send the correct epitaph on failure.
+                SandboxRequest::CreateRealm { realm, options, control_handle: _ } => {
+                    let index = realm_index.fetch_add(1, Ordering::SeqCst);
+                    let prefix = format!("{}{}", sandbox_name, index);
+                    match ManagedRealm::create(realm, options, &prefix)
+                        .await
+                        .context("failed to create ManagedRealm")
+                    {
+                        Ok(realm) => tx.send(realm).await.expect("receiver should not be closed"),
+                        Err(err) => error!("error creating ManagedRealm: {:?}", err),
                     }
-                    Err(err) => error!("error creating ManagedRealm: {:?}", err),
                 }
+                SandboxRequest::GetNetworkContext { network_context: _, control_handle: _ } => {
+                    todo!()
+                }
+                SandboxRequest::GetSyncManager { sync_manager: _, control_handle: _ } => todo!(),
             }
-            SandboxRequest::GetNetworkContext { network_context: _, control_handle: _ } => todo!(),
-            SandboxRequest::GetSyncManager { sync_manager: _, control_handle: _ } => todo!(),
+            Ok(())
         }
-        Ok(())
     });
     let realms_fut = rx
         .for_each_concurrent(None, |realm| async {
@@ -190,9 +213,11 @@ async fn main() -> Result {
     let _: &mut ServiceFsDir<'_, _> = fs.dir("svc").add_fidl_service(|s: SandboxRequestStream| s);
     let _: &mut ServiceFs<_> = fs.take_and_serve_directory_handle()?;
 
+    let sandbox_index = AtomicU64::new(0);
     let () = fs
         .for_each_concurrent(None, |stream| async {
-            handle_sandbox(stream)
+            let index = sandbox_index.fetch_add(1, Ordering::SeqCst);
+            handle_sandbox(stream, index)
                 .await
                 .unwrap_or_else(|e| error!("error handling SandboxRequestStream: {:?}", e))
         })
@@ -208,11 +233,19 @@ mod tests {
         fidl_fuchsia_netemul_test::CounterMarker, fuchsia_zircon as zx,
     };
 
-    fn setup_sandbox_service() -> (fnetemul::SandboxProxy, impl futures::Future<Output = ()>) {
+    // We can't just use a counter for the sandbox identifier, as we do in `main`, because tests
+    // each run in separate processes, but use the same backing collection of components created
+    // through `RealmBuilder`. If we used a counter, it wouldn't be shared across processes, and
+    // would cause name collisions between the `RealmInstance` monikers.
+    fn setup_sandbox_service(
+        sandbox_name: &str,
+    ) -> (fnetemul::SandboxProxy, impl futures::Future<Output = ()> + '_) {
         let (sandbox_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<fnetemul::SandboxMarker>()
                 .expect("failed to create SandboxProxy");
-        (sandbox_proxy, async move { handle_sandbox(stream).await.expect("handle_sandbox error") })
+        (sandbox_proxy, async move {
+            handle_sandbox(stream, sandbox_name).await.expect("handle_sandbox error")
+        })
     }
 
     fn create_test_realm(
@@ -240,7 +273,7 @@ mod tests {
         S::Proxy::from_channel(proxy)
     }
 
-    async fn with_sandbox<F, Fut>(test: F)
+    async fn with_sandbox<F, Fut>(name: &str, test: F)
     where
         F: FnOnce(fnetemul::SandboxProxy) -> Fut,
         Fut: futures::Future<Output = ()>,
@@ -248,7 +281,7 @@ mod tests {
         let () = fuchsia_syslog::init().expect("cannot init logger");
         let () = fuchsia_syslog::set_severity(fuchsia_syslog::levels::DEBUG);
         info!("starting test...");
-        let (sandbox, fut) = setup_sandbox_service();
+        let (sandbox, fut) = setup_sandbox_service(name);
         let ((), ()) = futures::future::join(fut, test(sandbox)).await;
     }
 
@@ -259,11 +292,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn can_connect_to_single_service() {
-        with_sandbox(|sandbox| async move {
+        with_sandbox("can_connect_to_single_service", |sandbox| async move {
             let realm = create_test_realm(
                 &sandbox,
                 fnetemul::RealmOptions {
-                    name: Some("env".to_string()),
                     children: Some(vec![fnetemul::ChildDef {
                         url: Some(COUNTER_PACKAGE_URL.to_string()),
                         name: Some(COUNTER_COMPONENT_NAME.to_string()),
@@ -291,7 +323,7 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn multiple_realms() {
-        with_sandbox(|sandbox| async move {
+        with_sandbox("multiple_realms", |sandbox| async move {
             let realm_a = create_test_realm(
                 &sandbox,
                 fnetemul::RealmOptions {
@@ -358,11 +390,10 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn drop_realm_destroys_children() {
-        with_sandbox(|sandbox| async move {
+        with_sandbox("drop_realm_destroys_children", |sandbox| async move {
             let realm = create_test_realm(
                 &sandbox,
                 fnetemul::RealmOptions {
-                    name: Some("env".to_string()),
                     children: Some(vec![fnetemul::ChildDef {
                         url: Some(COUNTER_PACKAGE_URL.to_string()),
                         name: Some(COUNTER_COMPONENT_NAME.to_string()),
@@ -402,14 +433,14 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn drop_sandbox_destroys_realms() {
-        with_sandbox(|sandbox| async move {
+        with_sandbox("drop_sandbox_destroys_realms", |sandbox| async move {
             const REALMS_COUNT: usize = 10;
-            let realms = (0..REALMS_COUNT)
-                .map(|i| {
+            let realms = std::iter::repeat(())
+                .take(REALMS_COUNT)
+                .map(|()| {
                     create_test_realm(
                         &sandbox,
                         fnetemul::RealmOptions {
-                            name: Some(format!("realm-{}", i)),
                             children: Some(vec![fnetemul::ChildDef {
                                 url: Some(COUNTER_PACKAGE_URL.to_string()),
                                 name: Some(COUNTER_COMPONENT_NAME.to_string()),
@@ -463,6 +494,76 @@ mod tests {
                     .await,
                     Ok(zx::Signals::CHANNEL_PEER_CLOSED),
                     "`ManagedRealmProxy` should be closed when `SandboxProxy` is dropped",
+                );
+            }
+        })
+        .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn set_realm_name() {
+        with_sandbox("set_realm_name", |sandbox| async move {
+            let realm = create_test_realm(
+                &sandbox,
+                fnetemul::RealmOptions {
+                    name: Some("test-realm-name".to_string()),
+                    children: Some(vec![fnetemul::ChildDef {
+                        url: Some(COUNTER_PACKAGE_URL.to_string()),
+                        name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                        exposes: Some(vec![COUNTER_SERVICE_NAME.to_string()]),
+                        uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                            fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                        ])),
+                        ..fnetemul::ChildDef::EMPTY
+                    }]),
+                    ..fnetemul::RealmOptions::EMPTY
+                },
+            );
+            assert_eq!(
+                realm
+                    .get_moniker()
+                    .await
+                    .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
+                format!(
+                    "{}\\:set_realm_name0-test-realm-name",
+                    fuchsia_component_test::DEFAULT_COLLECTION_NAME,
+                ),
+            );
+        })
+        .await
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn auto_generated_realm_name() {
+        with_sandbox("auto_generated_realm_name", |sandbox| async move {
+            const REALMS_COUNT: usize = 10;
+            for i in 0..REALMS_COUNT {
+                let realm = create_test_realm(
+                    &sandbox,
+                    fnetemul::RealmOptions {
+                        name: None,
+                        children: Some(vec![fnetemul::ChildDef {
+                            url: Some(COUNTER_PACKAGE_URL.to_string()),
+                            name: Some(COUNTER_COMPONENT_NAME.to_string()),
+                            exposes: Some(vec![COUNTER_SERVICE_NAME.to_string()]),
+                            uses: Some(fnetemul::ChildUses::Capabilities(vec![
+                                fnetemul::Capability::LogSink(fnetemul::Empty {}),
+                            ])),
+                            ..fnetemul::ChildDef::EMPTY
+                        }]),
+                        ..fnetemul::RealmOptions::EMPTY
+                    },
+                );
+                assert_eq!(
+                    realm
+                        .get_moniker()
+                        .await
+                        .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
+                    format!(
+                        "{}\\:auto_generated_realm_name{}-realm",
+                        fuchsia_component_test::DEFAULT_COLLECTION_NAME,
+                        i,
+                    ),
                 );
             }
         })

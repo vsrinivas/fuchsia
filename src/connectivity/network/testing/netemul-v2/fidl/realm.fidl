@@ -55,7 +55,7 @@ union ChildUses {
 table ChildDef {
     /// The component URL of this child. Required.
     1: fuchsia.url.Url url;
-    /// The name of this child local to its parent topology. Required.
+    /// The name of this child local to its containing realm. Required.
     2: fuchsia.component.name name;
     /// Services that this child exposes to the realm. Defaults to empty.
     3: vector<string:MAX>:MAX exposes;
@@ -66,7 +66,7 @@ table ChildDef {
 
 /// Options used to create a [`ManagedRealm`].
 resource table RealmOptions {
-    /// Realm name. Defaults to a randomly-generated name.
+    /// Realm name. Defaults to an automatically-generated name.
     ///
     /// The realm name is used for attribution and debugging purposes. It is
     /// used to decorate logs that come from its constituent child components.
@@ -90,6 +90,11 @@ resource table RealmOptions {
 /// The lifetime of a `ManagedRealm` and all its children are tied to its
 /// channel. Upon closure, all children of the realm will be destroyed.
 protocol ManagedRealm {
+    /// Returns the relative moniker of the root of the managed realm.
+    ///
+    /// - response `moniker` the relative moniker of the root of the generated
+    ///     topology that contains this realm's child components.
+    GetMoniker() -> (string:fuchsia.component.MAX_MONIKER_LENGTH moniker);
     /// Connects to a service named `service_name` provided by a child in this
     /// realm.
     ///
