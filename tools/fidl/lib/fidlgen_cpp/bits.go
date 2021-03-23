@@ -5,12 +5,12 @@
 package fidlgen_cpp
 
 import (
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type Bits struct {
-	fidl.Attributes
-	fidl.Strictness
+	fidlgen.Attributes
+	fidlgen.Strictness
 	DeclName
 	Type     TypeName
 	Mask     string
@@ -25,12 +25,12 @@ func (Bits) Kind() declKind {
 var _ Kinded = (*Bits)(nil)
 
 type BitsMember struct {
-	fidl.Attributes
+	fidlgen.Attributes
 	Name  string
 	Value ConstantValue
 }
 
-func (c *compiler) compileBits(val fidl.Bits) Bits {
+func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	name := c.compileDeclName(val.Name)
 	r := Bits{
 		Attributes: val.Attributes,

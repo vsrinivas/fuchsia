@@ -7,13 +7,13 @@ package fidlgen_cpp
 import (
 	"fmt"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type Union struct {
-	fidl.Attributes
-	fidl.Strictness
-	fidl.Resourceness
+	fidlgen.Attributes
+	fidlgen.Strictness
+	fidlgen.Resourceness
 	DeclName
 	CodingTableType string
 	Members         []UnionMember
@@ -31,7 +31,7 @@ func (Union) Kind() declKind {
 var _ Kinded = (*Union)(nil)
 
 type UnionMember struct {
-	fidl.Attributes
+	fidlgen.Attributes
 	Ordinal           uint64
 	Type              Type
 	Name              string
@@ -42,14 +42,14 @@ type UnionMember struct {
 }
 
 func (um UnionMember) UpperCamelCaseName() string {
-	return fidl.ToUpperCamelCase(um.Name)
+	return fidlgen.ToUpperCamelCase(um.Name)
 }
 
 func (um UnionMember) NameAndType() (string, Type) {
 	return um.Name, um.Type
 }
 
-func (c *compiler) compileUnionMember(val fidl.UnionMember) UnionMember {
+func (c *compiler) compileUnionMember(val fidlgen.UnionMember) UnionMember {
 	n := changeIfReserved(val.Name)
 	return UnionMember{
 		Attributes:        val.Attributes,
@@ -57,13 +57,13 @@ func (c *compiler) compileUnionMember(val fidl.UnionMember) UnionMember {
 		Type:              c.compileType(val.Type),
 		Name:              n,
 		StorageName:       changeIfReserved(val.Name + "_"),
-		TagName:           fmt.Sprintf("k%s", fidl.ToUpperCamelCase(n)),
+		TagName:           fmt.Sprintf("k%s", fidlgen.ToUpperCamelCase(n)),
 		Offset:            val.Offset,
 		HandleInformation: c.fieldHandleInformation(&val.Type),
 	}
 }
 
-func (c *compiler) compileUnion(val fidl.Union) Union {
+func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	name := c.compileDeclName(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Union{

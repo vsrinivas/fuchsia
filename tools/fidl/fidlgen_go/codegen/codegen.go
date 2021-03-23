@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type Generator struct {
@@ -53,7 +53,7 @@ func (gen *Generator) generateFile(dataFn func() ([]byte, error), filename strin
 	}
 
 	// Write out file.
-	file, err := fidl.NewLazyWriter(filename)
+	file, err := fidlgen.NewLazyWriter(filename)
 	if err != nil {
 		return err
 	}

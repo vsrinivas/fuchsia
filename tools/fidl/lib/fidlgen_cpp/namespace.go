@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // Namespaced is implemented by types that have a C++ namespace.
@@ -91,20 +91,20 @@ func EndOfFile() string {
 // Predefined namespaces
 //
 
-func wireNamespace(library fidl.LibraryIdentifier) Namespace {
+func wireNamespace(library fidlgen.LibraryIdentifier) Namespace {
 	return unifiedNamespace(library).Append("wire")
 }
 
-func naturalNamespace(library fidl.LibraryIdentifier) Namespace {
+func naturalNamespace(library fidlgen.LibraryIdentifier) Namespace {
 	parts := libraryParts(library, changePartIfReserved)
 	return Namespace(parts)
 }
 
-func formatLibrary(library fidl.LibraryIdentifier, sep string, identifierTransform identifierTransform) string {
+func formatLibrary(library fidlgen.LibraryIdentifier, sep string, identifierTransform identifierTransform) string {
 	name := strings.Join(libraryParts(library, identifierTransform), sep)
-	return changeIfReserved(fidl.Identifier(name))
+	return changeIfReserved(fidlgen.Identifier(name))
 }
 
-func unifiedNamespace(library fidl.LibraryIdentifier) Namespace {
+func unifiedNamespace(library fidlgen.LibraryIdentifier) Namespace {
 	return Namespace([]string{formatLibrary(library, "_", keepPartIfReserved)})
 }

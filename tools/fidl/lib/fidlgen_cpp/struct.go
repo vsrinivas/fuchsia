@@ -9,12 +9,12 @@ import (
 	"sort"
 	"strings"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type Struct struct {
-	fidl.Attributes
-	fidl.Resourceness
+	fidlgen.Attributes
+	fidlgen.Resourceness
 	DeclName
 	CodingTableType string
 	Members         []StructMember
@@ -40,7 +40,7 @@ func (Struct) Kind() declKind {
 var _ Kinded = (*Struct)(nil)
 
 type StructMember struct {
-	fidl.Attributes
+	fidlgen.Attributes
 	Type              Type
 	Name              string
 	DefaultValue      ConstantValue
@@ -61,7 +61,7 @@ func (sm StructMember) NameAndType() (string, Type) {
 	return sm.Name, sm.Type
 }
 
-func (c *compiler) compileStructMember(val fidl.StructMember) StructMember {
+func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	t := c.compileType(val.Type)
 
 	defaultValue := ConstantValue{}
@@ -79,7 +79,7 @@ func (c *compiler) compileStructMember(val fidl.StructMember) StructMember {
 	}
 }
 
-func (c *compiler) compileStruct(val fidl.Struct) Struct {
+func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	name := c.compileDeclName(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Struct{
@@ -125,7 +125,7 @@ func (c *compiler) compileStruct(val fidl.Struct) Struct {
 
 	if len(r.Members) == 0 {
 		r.Members = []StructMember{
-			c.compileStructMember(fidl.EmptyStructMember("__reserved")),
+			c.compileStructMember(fidlgen.EmptyStructMember("__reserved")),
 		}
 	}
 

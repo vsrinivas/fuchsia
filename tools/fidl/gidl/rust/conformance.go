@@ -12,7 +12,7 @@ import (
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 var conformanceTmpl = template.Must(template.New("conformanceTmpls").Parse(`
@@ -173,7 +173,7 @@ type decodeFailureCase struct {
 }
 
 // GenerateConformanceTests generates Rust tests.
-func GenerateConformanceTests(gidl gidlir.All, fidl fidl.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
+func GenerateConformanceTests(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, schema)
 	if err != nil {
@@ -314,7 +314,7 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, schema gidlmi
 }
 
 func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
-	return fidl.ToSnakeCase(fmt.Sprintf("%s_%s", baseName, wireFormat))
+	return fidlgen.ToSnakeCase(fmt.Sprintf("%s_%s", baseName, wireFormat))
 }
 
 func wireFormatSupported(wireFormat gidlir.WireFormat) bool {

@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sort"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type statementKind int
@@ -59,7 +59,7 @@ type Statement struct {
 	id         MethodID
 	args       []Expression
 	body       *Block
-	targetType fidl.Name
+	targetType fidlgen.Name
 	variants   map[string]LocalWithBlock
 
 	deleted bool
@@ -72,7 +72,7 @@ type StatementFormatter interface {
 	CaseInvoke(id MethodID, expr Expression)
 	CaseGuard(cond Expression, body *Block)
 	CaseIterate(local, expr Expression, body *Block)
-	CaseSelectVariant(expr Expression, targetType fidl.Name, variants map[string]LocalWithBlock)
+	CaseSelectVariant(expr Expression, targetType fidlgen.Name, variants map[string]LocalWithBlock)
 	CaseDeclareMaxOrdinal(local Expression)
 	CaseSetMaxOrdinal(local, ordinal Expression)
 }
@@ -114,7 +114,7 @@ const (
 
 type MethodID struct {
 	Kind       MethodKind
-	TargetType fidl.Name
+	TargetType fidlgen.Name
 }
 
 type ByTargetTypeThenKind []MethodID
@@ -205,7 +205,7 @@ type LocalWithBlock struct {
 	Body  *Block
 }
 
-func (b *Block) emitSelectVariant(expr Expression, targetType fidl.Name, variants map[string]LocalWithBlock) {
+func (b *Block) emitSelectVariant(expr Expression, targetType fidlgen.Name, variants map[string]LocalWithBlock) {
 	b.stmts = append(b.stmts, Statement{
 		kind:       selectVariant,
 		args:       []Expression{expr},

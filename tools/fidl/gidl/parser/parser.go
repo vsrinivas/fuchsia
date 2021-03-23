@@ -12,7 +12,7 @@ import (
 	"text/scanner"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type Parser struct {
@@ -232,8 +232,8 @@ func toIrHandleDispositionEncodings(v []encodingData) []ir.HandleDispositionEnco
 			for _, handle := range e.Handles {
 				handleDispositions = append(handleDispositions, ir.HandleDisposition{
 					Handle: handle,
-					Type:   fidl.ObjectTypeNone,
-					Rights: fidl.HandleRightsSameRights,
+					Type:   fidlgen.ObjectTypeNone,
+					Rights: fidlgen.HandleRightsSameRights,
 				})
 			}
 			out = append(out, ir.HandleDispositionEncoding{
@@ -660,8 +660,8 @@ func (p *Parser) parseHandleRestrict(rightsConfiguration rightsConfiguration) (i
 	if err != nil {
 		return nil, err
 	}
-	objectType := fidl.ObjectTypeNone
-	rights := fidl.HandleRightsSameRights
+	objectType := fidlgen.ObjectTypeNone
+	rights := fidlgen.HandleRightsSameRights
 	for p.peekTokenKind(tComma) {
 		p.nextToken()
 
@@ -752,8 +752,8 @@ func (p *Parser) parseValue(rightsConfiguration rightsConfiguration) (interface{
 		}
 		return ir.HandleWithRights{
 			Handle: handle,
-			Type:   fidl.ObjectTypeNone,
-			Rights: fidl.HandleRightsSameRights,
+			Type:   fidlgen.ObjectTypeNone,
+			Rights: fidlgen.HandleRightsSameRights,
 		}, nil
 	default:
 		tok, err := p.peekToken()
@@ -1106,8 +1106,8 @@ func (p *Parser) parseHandleDispositionList(info handleInfo) ([]ir.HandleDisposi
 		if err != nil {
 			return err
 		}
-		objectType := fidl.ObjectTypeNone
-		rights := fidl.HandleRightsSameRights
+		objectType := fidlgen.ObjectTypeNone
+		rights := fidlgen.HandleRightsSameRights
 		for p.peekTokenKind(tComma) {
 			p.nextToken()
 
@@ -1126,7 +1126,7 @@ func (p *Parser) parseHandleDispositionList(info handleInfo) ([]ir.HandleDisposi
 				if err != nil {
 					return err
 				}
-				objectType = fidl.ObjectTypeFromHandleSubtype(fidl.HandleSubtype(valueTok.value))
+				objectType = fidlgen.ObjectTypeFromHandleSubtype(fidlgen.HandleSubtype(valueTok.value))
 			case "rights":
 				rights, err = p.parseHandleRights()
 				if err != nil {
@@ -1207,7 +1207,7 @@ func (p *Parser) parseHandleDefSection(rightsConfiguration rightsConfiguration) 
 	return res, nil
 }
 
-func (p *Parser) parseHandleRights() (fidl.HandleRights, error) {
+func (p *Parser) parseHandleRights() (fidlgen.HandleRights, error) {
 	tok, err := p.consumeToken(tText)
 	if err != nil {
 		return 0, err

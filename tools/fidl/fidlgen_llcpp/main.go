@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_llcpp/codegen"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
@@ -51,7 +51,7 @@ func (f flagsDef) valid() bool {
 	return *f.jsonPath != "" && *f.header != "" && *f.source != "" && *f.testBase != ""
 }
 
-func calcPrimaryHeader(fidl fidl.Root, headerPath string, includeStem string) (string, error) {
+func calcPrimaryHeader(fidl fidlgen.Root, headerPath string, includeStem string) (string, error) {
 	if *flags.includeBase != "" {
 		absoluteIncludeBase, err := filepath.Abs(*flags.includeBase)
 		if err != nil {
@@ -83,7 +83,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fidl, err := fidl.ReadJSONIr(*flags.jsonPath)
+	fidl, err := fidlgen.ReadJSONIr(*flags.jsonPath)
 	if err != nil {
 		log.Fatal(err)
 	}

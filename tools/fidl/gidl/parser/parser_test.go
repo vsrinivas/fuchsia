@@ -11,7 +11,7 @@ import (
 
 	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 func TestParseValues(t *testing.T) {
@@ -33,26 +33,26 @@ func TestParseValues(t *testing.T) {
 		{gidl: `null`, expectedValue: nil},
 		{gidl: `#0`, expectedValue: ir.HandleWithRights{
 			Handle: ir.Handle(0),
-			Type:   fidl.ObjectTypeNone,
-			Rights: fidl.HandleRightsSameRights,
+			Type:   fidlgen.ObjectTypeNone,
+			Rights: fidlgen.HandleRightsSameRights,
 		},
 		},
 		{gidl: `#123`, expectedValue: ir.HandleWithRights{
 			Handle: ir.Handle(123),
-			Type:   fidl.ObjectTypeNone,
-			Rights: fidl.HandleRightsSameRights,
+			Type:   fidlgen.ObjectTypeNone,
+			Rights: fidlgen.HandleRightsSameRights,
 		},
 		},
 		{gidl: `restrict(#123)`, expectedValue: ir.HandleWithRights{
 			Handle: ir.Handle(123),
-			Type:   fidl.ObjectTypeNone,
-			Rights: fidl.HandleRightsSameRights,
+			Type:   fidlgen.ObjectTypeNone,
+			Rights: fidlgen.HandleRightsSameRights,
 		},
 		},
 		{gidl: `restrict(#123, rights: read + write)`, expectedValue: ir.HandleWithRights{
 			Handle: ir.Handle(123),
-			Type:   fidl.ObjectTypeNone,
-			Rights: fidl.HandleRightsRead | fidl.HandleRightsWrite,
+			Type:   fidlgen.ObjectTypeNone,
+			Rights: fidlgen.HandleRightsRead | fidlgen.HandleRightsWrite,
 		},
 		},
 		{gidl: `SomeRecord {}`, expectedValue: ir.Record{
@@ -614,16 +614,16 @@ func TestParseHandleDefs(t *testing.T) {
 		{
 			gidl: `{ #0 = event() }`,
 			expectedValue: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
+				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
 			},
 		},
 		// several handles
 		{
 			gidl: `{ #0 = event(), #1 = event(), #2 = event() }`,
 			expectedValue: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
-				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
-				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
+				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
+				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
 			},
 		},
 		// handle rights
@@ -631,7 +631,7 @@ func TestParseHandleDefs(t *testing.T) {
 			gidl: `{ #0 = event(rights: execute) }`,
 			expectedValue: []ir.HandleDef{
 				{
-					Subtype: fidl.Event,
+					Subtype: fidlgen.Event,
 					Rights:  16,
 				},
 			},
@@ -641,7 +641,7 @@ func TestParseHandleDefs(t *testing.T) {
 			gidl: `{ #0 = event(rights: basic) }`,
 			expectedValue: []ir.HandleDef{
 				{
-					Subtype: fidl.Event,
+					Subtype: fidlgen.Event,
 					Rights:  49155,
 				},
 			},
@@ -651,7 +651,7 @@ func TestParseHandleDefs(t *testing.T) {
 			gidl: `{ #0 = event(rights: execute + write ) }`,
 			expectedValue: []ir.HandleDef{
 				{
-					Subtype: fidl.Event,
+					Subtype: fidlgen.Event,
 					Rights:  24,
 				},
 			},
@@ -661,7 +661,7 @@ func TestParseHandleDefs(t *testing.T) {
 			gidl: `{ #0 = event(rights: basic - transfer ) }`,
 			expectedValue: []ir.HandleDef{
 				{
-					Subtype: fidl.Event,
+					Subtype: fidlgen.Event,
 					Rights:  49153,
 				},
 			},
@@ -911,8 +911,8 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 		EncodeSuccess: []ir.EncodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: fidl.HandleRightsWrite},
-				{Subtype: fidl.Channel, Rights: fidl.HandleRightsSameRights},
+				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsWrite},
+				{Subtype: fidlgen.Channel, Rights: fidlgen.HandleRightsSameRights},
 			},
 			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
@@ -934,13 +934,13 @@ func TestParseEncodeSuccessCase(t *testing.T) {
 				HandleDispositions: []ir.HandleDisposition{
 					{
 						Handle: 0,
-						Type:   fidl.ObjectTypeEvent,
-						Rights: fidl.HandleRightsBasic | fidl.HandleRightsSignal,
+						Type:   fidlgen.ObjectTypeEvent,
+						Rights: fidlgen.HandleRightsBasic | fidlgen.HandleRightsSignal,
 					},
 					{
 						Handle: 1,
-						Type:   fidl.ObjectTypeNone,
-						Rights: fidl.HandleRightsSameRights,
+						Type:   fidlgen.ObjectTypeNone,
+						Rights: fidlgen.HandleRightsSameRights,
 					},
 				},
 			}},
@@ -975,8 +975,8 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 		DecodeSuccess: []ir.DecodeSuccess{{
 			Name: "OneStringOfMaxLengthFive-empty",
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: fidl.HandleRightsWrite},
-				{Subtype: fidl.Channel, Rights: fidl.HandleRightsSameRights},
+				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsWrite},
+				{Subtype: fidlgen.Channel, Rights: fidlgen.HandleRightsSameRights},
 			},
 			Value: ir.Record{
 				Name: "OneStringOfMaxLengthFive",
@@ -993,8 +993,8 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 						},
 						Value: ir.HandleWithRights{
 							Handle: ir.Handle(0),
-							Type:   fidl.ObjectTypeNone,
-							Rights: fidl.HandleRightsSameRights,
+							Type:   fidlgen.ObjectTypeNone,
+							Rights: fidlgen.HandleRightsSameRights,
 						},
 					},
 					{
@@ -1003,8 +1003,8 @@ func TestParseDecodeSuccessCase(t *testing.T) {
 						},
 						Value: ir.HandleWithRights{
 							Handle: ir.Handle(1),
-							Type:   fidl.ObjectTypeNone,
-							Rights: fidl.HandleRightsBasic | fidl.HandleRightsSignal,
+							Type:   fidlgen.ObjectTypeNone,
+							Rights: fidlgen.HandleRightsBasic | fidlgen.HandleRightsSignal,
 						},
 					},
 				},
@@ -1382,8 +1382,8 @@ func TestParseSucceedsHandles(t *testing.T) {
 						Key: ir.FieldKey{Name: "h"},
 						Value: ir.HandleWithRights{
 							Handle: ir.Handle(0),
-							Type:   fidl.ObjectTypeNone,
-							Rights: fidl.HandleRightsSameRights,
+							Type:   fidlgen.ObjectTypeNone,
+							Rights: fidlgen.HandleRightsSameRights,
 						},
 					},
 				},
@@ -1394,13 +1394,13 @@ func TestParseSucceedsHandles(t *testing.T) {
 				HandleDispositions: []ir.HandleDisposition{
 					{
 						Handle: 0,
-						Type:   fidl.ObjectTypeNone,
-						Rights: fidl.HandleRightsSameRights,
+						Type:   fidlgen.ObjectTypeNone,
+						Rights: fidlgen.HandleRightsSameRights,
 					},
 				},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
+				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
 			},
 			CheckHandleRights: false,
 		}},
@@ -1413,8 +1413,8 @@ func TestParseSucceedsHandles(t *testing.T) {
 						Key: ir.FieldKey{Name: "h"},
 						Value: ir.HandleWithRights{
 							Handle: ir.Handle(0),
-							Type:   fidl.ObjectTypeNone,
-							Rights: fidl.HandleRightsSameRights,
+							Type:   fidlgen.ObjectTypeNone,
+							Rights: fidlgen.HandleRightsSameRights,
 						},
 					},
 				},
@@ -1425,7 +1425,7 @@ func TestParseSucceedsHandles(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
+				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
 			},
 		}},
 	}
@@ -1462,8 +1462,8 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 						Key: ir.FieldKey{Name: "h"},
 						Value: ir.HandleWithRights{
 							Handle: ir.Handle(0),
-							Type:   fidl.ObjectTypeNone,
-							Rights: fidl.HandleRightsSameRights,
+							Type:   fidlgen.ObjectTypeNone,
+							Rights: fidlgen.HandleRightsSameRights,
 						},
 					},
 				},
@@ -1474,13 +1474,13 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 				HandleDispositions: []ir.HandleDisposition{
 					{
 						Handle: 0,
-						Type:   fidl.ObjectTypeNone,
-						Rights: fidl.HandleRightsSameRights,
+						Type:   fidlgen.ObjectTypeNone,
+						Rights: fidlgen.HandleRightsSameRights,
 					},
 				},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
+				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
 			},
 			CheckHandleRights: false,
 		}},
@@ -1493,8 +1493,8 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 						Key: ir.FieldKey{Name: "h"},
 						Value: ir.HandleWithRights{
 							Handle: ir.Handle(0),
-							Type:   fidl.ObjectTypeNone,
-							Rights: fidl.HandleRightsSameRights,
+							Type:   fidlgen.ObjectTypeNone,
+							Rights: fidlgen.HandleRightsSameRights,
 						},
 					},
 				},
@@ -1505,7 +1505,7 @@ func TestParseSucceedsHandlesDefinedAfter(t *testing.T) {
 				Handles:    []ir.Handle{0},
 			}},
 			HandleDefs: []ir.HandleDef{
-				{Subtype: fidl.Event, Rights: fidl.HandleRightsSameRights},
+				{Subtype: fidlgen.Event, Rights: fidlgen.HandleRightsSameRights},
 			},
 		}},
 	}

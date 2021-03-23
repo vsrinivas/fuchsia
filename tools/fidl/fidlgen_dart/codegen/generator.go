@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type FidlGenerator struct {
@@ -47,13 +47,13 @@ func writeFile(
 	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
 		return err
 	}
-	generated, err := fidl.NewLazyWriter(outputFilename)
+	generated, err := fidlgen.NewLazyWriter(outputFilename)
 	if err != nil {
 		return err
 	}
 	defer generated.Close()
 
-	generatedPipe, err := fidl.NewFormatter(dartfmt).FormatPipe(generated)
+	generatedPipe, err := fidlgen.NewFormatter(dartfmt).FormatPipe(generated)
 	if err != nil {
 		return err
 	}

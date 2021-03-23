@@ -15,7 +15,7 @@ import (
 
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // withGoFmt wraps a template that produces Go source code, and formats the
@@ -59,9 +59,9 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 	for i, d := range defs {
 		var subtype string
 		switch d.Subtype {
-		case fidl.Channel:
+		case fidlgen.Channel:
 			subtype = "zx.ObjectTypeChannel"
-		case fidl.Event:
+		case fidlgen.Event:
 			subtype = "zx.ObjectTypeEvent"
 		default:
 			panic(fmt.Sprintf("unsupported handle subtype: %s", d.Subtype))
@@ -148,9 +148,9 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		}
 	case gidlir.RawFloat:
 		switch decl.(*gidlmixer.FloatDecl).Subtype() {
-		case fidl.Float32:
+		case fidlgen.Float32:
 			return fmt.Sprintf("math.Float32frombits(%#b)", value)
-		case fidl.Float64:
+		case fidlgen.Float64:
 			return fmt.Sprintf("math.Float64frombits(%#b)", value)
 		}
 	case string:
@@ -164,11 +164,11 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		rawHandle := fmt.Sprintf("handles[%d]", value.Handle)
 		handleDecl := decl.(*gidlmixer.HandleDecl)
 		switch handleDecl.Subtype() {
-		case fidl.Handle:
+		case fidlgen.Handle:
 			return rawHandle
-		case fidl.Channel:
+		case fidlgen.Channel:
 			return fmt.Sprintf("zx.Channel(%s)", rawHandle)
-		case fidl.Event:
+		case fidlgen.Event:
 			return fmt.Sprintf("zx.Event(%s)", rawHandle)
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", handleDecl.Subtype()))
@@ -203,11 +203,11 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 		if field.Key.IsUnknown() {
 			tagValue = fmt.Sprintf("%d", field.Key.UnknownOrdinal)
 		} else {
-			fieldName := fidl.ToUpperCamelCase(field.Key.Name)
+			fieldName := fidlgen.ToUpperCamelCase(field.Key.Name)
 			tagValue = fmt.Sprintf("%s%s", fullName, fieldName)
 		}
 		parts := strings.Split(string(decl.Name()), "/")
-		unqualifiedName := fidl.ToLowerCamelCase(parts[len(parts)-1])
+		unqualifiedName := fidlgen.ToLowerCamelCase(parts[len(parts)-1])
 		fields = append(fields,
 			fmt.Sprintf("I_%sTag: %s", unqualifiedName, tagValue))
 	}
@@ -223,7 +223,7 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 			}
 			continue
 		}
-		fieldName := fidl.ToUpperCamelCase(field.Key.Name)
+		fieldName := fidlgen.ToUpperCamelCase(field.Key.Name)
 		fieldDecl, ok := decl.Field(field.Key.Name)
 		if !ok {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
@@ -285,11 +285,11 @@ func typeNameHelper(decl gidlmixer.Declaration, pointerPrefix string) string {
 		return fmt.Sprintf("%s[]%s", pointerPrefix, typeName(decl.Elem()))
 	case *gidlmixer.HandleDecl:
 		switch decl.Subtype() {
-		case fidl.Handle:
+		case fidlgen.Handle:
 			return "zx.Handle"
-		case fidl.Channel:
+		case fidlgen.Channel:
 			return "zx.Channel"
-		case fidl.Event:
+		case fidlgen.Event:
 			return "zx.Event"
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))
@@ -311,9 +311,9 @@ func identifierName(qualifiedName string) string {
 	lastPartsIndex := len(parts) - 1
 	for i, part := range parts {
 		if i == lastPartsIndex {
-			parts[i] = fidl.ToUpperCamelCase(part)
+			parts[i] = fidlgen.ToUpperCamelCase(part)
 		} else {
-			parts[i] = fidl.ToSnakeCase(part)
+			parts[i] = fidlgen.ToSnakeCase(part)
 		}
 	}
 	return strings.Join(parts, ".")

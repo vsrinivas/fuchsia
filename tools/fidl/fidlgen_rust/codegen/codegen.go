@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type Generator struct {
@@ -40,13 +40,13 @@ func (gen *Generator) GenerateImpl(wr io.Writer, tree Root) error {
 	return gen.tmpls.ExecuteTemplate(wr, "GenerateSourceFile", tree)
 }
 
-func (gen *Generator) GenerateFidl(ir fidl.Root, outputFilename, rustfmtPath, rustfmtConfigPath string) error {
+func (gen *Generator) GenerateFidl(ir fidlgen.Root, outputFilename, rustfmtPath, rustfmtConfigPath string) error {
 	tree := Compile(ir)
 	if err := os.MkdirAll(filepath.Dir(outputFilename), os.ModePerm); err != nil {
 		return err
 	}
 
-	generated, err := fidl.NewLazyWriter(outputFilename)
+	generated, err := fidlgen.NewLazyWriter(outputFilename)
 	if err != nil {
 		return err
 	}
@@ -55,7 +55,7 @@ func (gen *Generator) GenerateFidl(ir fidl.Root, outputFilename, rustfmtPath, ru
 	if rustfmtConfigPath != "" {
 		args = append(args, "--config-path", rustfmtConfigPath)
 	}
-	generatedPipe, err := fidl.NewFormatter(rustfmtPath, args...).FormatPipe(generated)
+	generatedPipe, err := fidlgen.NewFormatter(rustfmtPath, args...).FormatPipe(generated)
 	if err != nil {
 		return err
 	}

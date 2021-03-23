@@ -7,14 +7,14 @@ package fidlgen_cpp
 import (
 	"fmt"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type TableFrameItem *TableMember
 
 type Table struct {
-	fidl.Attributes
-	fidl.Resourceness
+	fidlgen.Attributes
+	fidlgen.Resourceness
 	DeclName
 	CodingTableType string
 	Members         []TableMember
@@ -36,7 +36,7 @@ func (Table) Kind() declKind {
 var _ Kinded = (*Table)(nil)
 
 type TableMember struct {
-	fidl.Attributes
+	fidlgen.Attributes
 	Type               Type
 	Name               string
 	DefaultValue       ConstantValue
@@ -55,7 +55,7 @@ func (tm TableMember) NameAndType() (string, Type) {
 	return tm.Name, tm.Type
 }
 
-func (c *compiler) compileTableMember(val fidl.TableMember, index int) TableMember {
+func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableMember {
 	t := c.compileType(val.Type)
 
 	defaultValue := ConstantValue{}
@@ -80,7 +80,7 @@ func (c *compiler) compileTableMember(val fidl.TableMember, index int) TableMemb
 	}
 }
 
-func (c *compiler) compileTable(val fidl.Table) Table {
+func (c *compiler) compileTable(val fidlgen.Table) Table {
 	name := c.compileDeclName(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Table{

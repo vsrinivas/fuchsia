@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 const (
@@ -36,7 +36,7 @@ type Type string
 
 // Const represents the idiomatic representation of a constant in golang.
 type Const struct {
-	fidl.Attributes
+	fidlgen.Attributes
 
 	// Name is the name of the constant.
 	Name string
@@ -58,7 +58,7 @@ type Const struct {
 //    ...
 // )
 type Bits struct {
-	fidl.Bits
+	fidlgen.Bits
 
 	// Name is the name of the bits type alias.
 	Name string
@@ -73,7 +73,7 @@ type Bits struct {
 
 // BitsMember represents a single bits variant. See Bits for more details.
 type BitsMember struct {
-	fidl.Attributes
+	fidlgen.Attributes
 
 	// Name is the name of the bits variant without any prefix.
 	Name string
@@ -93,7 +93,7 @@ type BitsMember struct {
 //    ...
 // )
 type Enum struct {
-	fidl.Enum
+	fidlgen.Enum
 
 	// Name is the name of the enum type alias.
 	Name string
@@ -108,7 +108,7 @@ type Enum struct {
 
 // EnumMember represents a single enum variant. See Enum for more details.
 type EnumMember struct {
-	fidl.EnumMember
+	fidlgen.EnumMember
 
 	// Name is the name of the enum variant without any prefix.
 	Name string
@@ -120,7 +120,7 @@ type EnumMember struct {
 
 // Struct represents a golang struct.
 type Struct struct {
-	fidl.Attributes
+	fidlgen.Attributes
 
 	// Name is the name of the golang struct.
 	Name string
@@ -216,7 +216,7 @@ func (t Tags) String() string {
 
 // StructMember represents the member of a golang struct.
 type StructMember struct {
-	fidl.Attributes
+	fidlgen.Attributes
 
 	// Name is the name of the golang struct member.
 	Name string
@@ -232,17 +232,17 @@ type StructMember struct {
 }
 
 type Union struct {
-	fidl.Attributes
+	fidlgen.Attributes
 	Name    string
 	TagName string
 	Members []UnionMember
 	Tags    Tags
-	fidl.Strictness
+	fidlgen.Strictness
 	UnknownDataType string
 }
 
 type UnionMember struct {
-	fidl.Attributes
+	fidlgen.Attributes
 	Ordinal     uint64
 	Name        string
 	PrivateName string
@@ -252,7 +252,7 @@ type UnionMember struct {
 
 // Table represents a FIDL table as a golang struct.
 type Table struct {
-	fidl.Attributes
+	fidlgen.Attributes
 	Name            string
 	Members         []TableMember
 	Tags            Tags
@@ -262,7 +262,7 @@ type Table struct {
 // TableMember represents a FIDL table member as two golang struct members, one
 // for the member itself, and one to indicate presence or absence.
 type TableMember struct {
-	fidl.Attributes
+	fidlgen.Attributes
 
 	// DataField is the exported name of the FIDL table member.
 	DataField string
@@ -301,7 +301,7 @@ type TableMember struct {
 
 // Protocol represents a FIDL protocol in terms of golang structures.
 type Protocol struct {
-	fidl.Attributes
+	fidlgen.Attributes
 
 	// Name is the Golang name of the protocol.
 	Name string
@@ -337,7 +337,7 @@ type Protocol struct {
 
 // Method represents a method of a FIDL protocol in terms of golang structures.
 type Method struct {
-	fidl.Attributes
+	fidlgen.Attributes
 
 	Ordinal     uint64
 	OrdinalName string
@@ -422,10 +422,10 @@ type Root struct {
 // compiler contains the state necessary for recursive compilation.
 type compiler struct {
 	// decls contains all top-level declarations for the FIDL source.
-	decls fidl.DeclInfoMap
+	decls fidlgen.DeclInfoMap
 
 	// library is the identifier for the current library.
-	library fidl.LibraryIdentifier
+	library fidlgen.LibraryIdentifier
 
 	// libraryDeps is a mapping of compiled library identifiers (go package paths)
 	// to aliases, which is used to resolve references to types outside of the current
@@ -441,7 +441,7 @@ type compiler struct {
 	// requestResponseStructs is a mapping from ECI to Structs for all request/response
 	// structs (which are currently equivalent to all the anonymous structs). This is
 	// used to lookup typeshape info when constructing the Methods and their Parameters
-	requestResponseStructs map[fidl.EncodedCompoundIdentifier]Struct
+	requestResponseStructs map[fidlgen.EncodedCompoundIdentifier]Struct
 }
 
 // Contains the full set of reserved golang keywords, in addition to a set of
@@ -495,32 +495,32 @@ var reservedWords = map[string]struct{}{
 	"true":  {},
 }
 
-var primitiveTypes = map[fidl.PrimitiveSubtype]string{
-	fidl.Bool:    "bool",
-	fidl.Int8:    "int8",
-	fidl.Int16:   "int16",
-	fidl.Int32:   "int32",
-	fidl.Int64:   "int64",
-	fidl.Uint8:   "uint8",
-	fidl.Uint16:  "uint16",
-	fidl.Uint32:  "uint32",
-	fidl.Uint64:  "uint64",
-	fidl.Float32: "float32",
-	fidl.Float64: "float64",
+var primitiveTypes = map[fidlgen.PrimitiveSubtype]string{
+	fidlgen.Bool:    "bool",
+	fidlgen.Int8:    "int8",
+	fidlgen.Int16:   "int16",
+	fidlgen.Int32:   "int32",
+	fidlgen.Int64:   "int64",
+	fidlgen.Uint8:   "uint8",
+	fidlgen.Uint16:  "uint16",
+	fidlgen.Uint32:  "uint32",
+	fidlgen.Uint64:  "uint64",
+	fidlgen.Float32: "float32",
+	fidlgen.Float64: "float64",
 }
 
-var handleTypes = map[fidl.HandleSubtype]string{
+var handleTypes = map[fidlgen.HandleSubtype]string{
 	// TODO(mknyszek): Add support here for process, thread, job, resource,
 	// interrupt, eventpair, fifo, guest, and time once these are actually
 	// supported in the Go runtime.
-	fidl.Handle:   "_zx.Handle",
-	fidl.Vmo:      "_zx.VMO",
-	fidl.Channel:  "_zx.Channel",
-	fidl.Event:    "_zx.Event",
-	fidl.Port:     "_zx.Port",
-	fidl.DebugLog: "_zx.Log",
-	fidl.Socket:   "_zx.Socket",
-	fidl.Vmar:     "_zx.VMAR",
+	fidlgen.Handle:   "_zx.Handle",
+	fidlgen.Vmo:      "_zx.VMO",
+	fidlgen.Channel:  "_zx.Channel",
+	fidlgen.Event:    "_zx.Event",
+	fidlgen.Port:     "_zx.Port",
+	fidlgen.DebugLog: "_zx.Log",
+	fidlgen.Socket:   "_zx.Socket",
+	fidlgen.Vmar:     "_zx.VMAR",
 }
 
 func isReservedWord(str string) bool {
@@ -528,7 +528,7 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
-func changeIfReserved(val fidl.Identifier, ext string) string {
+func changeIfReserved(val fidlgen.Identifier, ext string) string {
 	// TODO(mknyszek): Detect name collision within a scope as a result of transforming.
 	str := string(val) + ext
 	if isReservedWord(str) {
@@ -537,7 +537,7 @@ func changeIfReserved(val fidl.Identifier, ext string) string {
 	return str
 }
 
-func (c *compiler) inExternalLibrary(ci fidl.CompoundIdentifier) bool {
+func (c *compiler) inExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
 	if len(ci.Library) != len(c.library) {
 		return true
 	}
@@ -551,11 +551,11 @@ func (c *compiler) inExternalLibrary(ci fidl.CompoundIdentifier) bool {
 
 // Handle rights annotations are added to fields that contain handles
 // or arrays and vectors of handles (recursively).
-func (c *compiler) computeHandleRights(t fidl.Type) (fidl.HandleRights, bool) {
+func (c *compiler) computeHandleRights(t fidlgen.Type) (fidlgen.HandleRights, bool) {
 	switch t.Kind {
-	case fidl.HandleType:
+	case fidlgen.HandleType:
 		return t.HandleRights, true
-	case fidl.ArrayType, fidl.VectorType:
+	case fidlgen.ArrayType, fidlgen.VectorType:
 		return c.computeHandleRights(*t.ElementType)
 	}
 	return 0, false
@@ -563,16 +563,16 @@ func (c *compiler) computeHandleRights(t fidl.Type) (fidl.HandleRights, bool) {
 
 // Handle subtype annotations are added to fields that contain handles
 // or arrays and vectors of handles (recursively).
-func (c *compiler) computeHandleSubtype(t fidl.Type) (fidl.ObjectType, bool) {
+func (c *compiler) computeHandleSubtype(t fidlgen.Type) (fidlgen.ObjectType, bool) {
 	switch t.Kind {
-	case fidl.HandleType:
-		return fidl.ObjectType(t.ObjType), true
-	case fidl.RequestType:
+	case fidlgen.HandleType:
+		return fidlgen.ObjectType(t.ObjType), true
+	case fidlgen.RequestType:
 		// TODO(fxbug.dev/45998 & fxb/64629): Currently, fidlc does not emit an
 		// object type for request types. Internally, fidlc does not interpret
 		// request types as special channel handles.
-		return fidl.ObjectTypeChannel, true
-	case fidl.IdentifierType:
+		return fidlgen.ObjectTypeChannel, true
+	case fidlgen.IdentifierType:
 		// TODO(fxbug.dev/45998 & fxb/64629): Same issue as above, but for the
 		// reciprocal. Once we properly represent `client_end:P` and
 		// `server_end:P` as further constraints on a handle, we can solve this
@@ -581,32 +581,32 @@ func (c *compiler) computeHandleSubtype(t fidl.Type) (fidl.ObjectType, bool) {
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", t.Identifier))
 		}
-		if declInfo.Type == fidl.ProtocolDeclType {
-			return fidl.ObjectTypeChannel, true
+		if declInfo.Type == fidlgen.ProtocolDeclType {
+			return fidlgen.ObjectTypeChannel, true
 		}
-	case fidl.ArrayType, fidl.VectorType:
+	case fidlgen.ArrayType, fidlgen.VectorType:
 		return c.computeHandleSubtype(*t.ElementType)
 	}
-	return fidl.ObjectTypeNone, false
+	return fidlgen.ObjectTypeNone, false
 }
 
-func (_ *compiler) compileIdentifier(id fidl.Identifier, export bool, ext string) string {
+func (_ *compiler) compileIdentifier(id fidlgen.Identifier, export bool, ext string) string {
 	str := string(id)
 	if export {
-		str = fidl.ToUpperCamelCase(str)
+		str = fidlgen.ToUpperCamelCase(str)
 	} else {
-		str = fidl.ToLowerCamelCase(str)
+		str = fidlgen.ToLowerCamelCase(str)
 	}
-	return changeIfReserved(fidl.Identifier(str), ext)
+	return changeIfReserved(fidlgen.Identifier(str), ext)
 }
 
-func (c *compiler) compileCompoundIdentifier(eci fidl.EncodedCompoundIdentifier, export bool, ext string) string {
-	ci := fidl.ParseCompoundIdentifier(eci)
+func (c *compiler) compileCompoundIdentifier(eci fidlgen.EncodedCompoundIdentifier, export bool, ext string) string {
+	ci := fidlgen.ParseCompoundIdentifier(eci)
 	var name string
 	if export {
-		name = fidl.ToUpperCamelCase(string(ci.Name))
+		name = fidlgen.ToUpperCamelCase(string(ci.Name))
 	} else {
-		name = fidl.ToLowerCamelCase(string(ci.Name))
+		name = fidlgen.ToLowerCamelCase(string(ci.Name))
 	}
 	pkg := compileLibraryIdentifier(ci.Library)
 	var strs []string
@@ -615,42 +615,42 @@ func (c *compiler) compileCompoundIdentifier(eci fidl.EncodedCompoundIdentifier,
 		strs = append(strs, pkgAlias)
 		c.usedLibraryDeps[pkg] = pkgAlias
 	}
-	strs = append(strs, changeIfReserved(fidl.Identifier(name), ext))
+	strs = append(strs, changeIfReserved(fidlgen.Identifier(name), ext))
 	if ci.Member != "" {
 		strs[len(strs)-1] += c.compileIdentifier(ci.Member, true, "")
 	}
 	return strings.Join(strs, ".")
 }
 
-func (_ *compiler) compileLiteral(val fidl.Literal) string {
+func (_ *compiler) compileLiteral(val fidlgen.Literal) string {
 	switch val.Kind {
-	case fidl.NumericLiteral:
+	case fidlgen.NumericLiteral:
 		return val.Value
-	case fidl.TrueLiteral:
+	case fidlgen.TrueLiteral:
 		return "true"
-	case fidl.FalseLiteral:
+	case fidlgen.FalseLiteral:
 		return "false"
-	case fidl.StringLiteral:
+	case fidlgen.StringLiteral:
 		return strconv.Quote(val.Value)
 	default:
 		panic(fmt.Sprintf("unknown literal kind: %v", val.Kind))
 	}
 }
 
-func (c *compiler) compileConstant(val fidl.Constant) string {
+func (c *compiler) compileConstant(val fidlgen.Constant) string {
 	switch val.Kind {
-	case fidl.IdentifierConstant:
+	case fidlgen.IdentifierConstant:
 		return c.compileCompoundIdentifier(val.Identifier, true, "")
-	case fidl.LiteralConstant:
+	case fidlgen.LiteralConstant:
 		return c.compileLiteral(val.Literal)
-	case fidl.BinaryOperator:
+	case fidlgen.BinaryOperator:
 		return val.Value
 	default:
 		panic(fmt.Sprintf("unknown constant kind: %v", val.Kind))
 	}
 }
 
-func (c *compiler) compilePrimitiveSubtype(val fidl.PrimitiveSubtype) Type {
+func (c *compiler) compilePrimitiveSubtype(val fidlgen.PrimitiveSubtype) Type {
 	t, ok := primitiveTypes[val]
 	if !ok {
 		panic(fmt.Sprintf("unknown primitive type: %v", val))
@@ -658,13 +658,13 @@ func (c *compiler) compilePrimitiveSubtype(val fidl.PrimitiveSubtype) Type {
 	return Type(t)
 }
 
-func (c *compiler) compileType(val fidl.Type) (r Type, t StackOfBoundsTag) {
+func (c *compiler) compileType(val fidlgen.Type) (r Type, t StackOfBoundsTag) {
 	switch val.Kind {
-	case fidl.ArrayType:
+	case fidlgen.ArrayType:
 		e, et := c.compileType(*val.ElementType)
 		r = Type(fmt.Sprintf("[%d]%s", *val.ElementCount, e))
 		t = et
-	case fidl.StringType:
+	case fidlgen.StringType:
 		if val.ElementCount == nil {
 			t.reverseOfBounds = append(t.reverseOfBounds, math.MaxInt32)
 		} else {
@@ -675,14 +675,14 @@ func (c *compiler) compileType(val fidl.Type) (r Type, t StackOfBoundsTag) {
 		} else {
 			r = Type("string")
 		}
-	case fidl.HandleType:
+	case fidlgen.HandleType:
 		// Note here that we require the SyscallZx package.
 		c.usedLibraryDeps[SyscallZxPackage] = SyscallZxAlias
 		e, ok := handleTypes[val.HandleSubtype]
 		if !ok {
 			// Fall back onto a generic handle if we don't support that particular
 			// handle subtype.
-			e = handleTypes[fidl.Handle]
+			e = handleTypes[fidlgen.Handle]
 		}
 		var nullability int
 		if val.Nullable {
@@ -690,7 +690,7 @@ func (c *compiler) compileType(val fidl.Type) (r Type, t StackOfBoundsTag) {
 		}
 		t.reverseOfBounds = append(t.reverseOfBounds, nullability)
 		r = Type(e)
-	case fidl.RequestType:
+	case fidlgen.RequestType:
 		e := c.compileCompoundIdentifier(val.RequestSubtype, true, WithCtxSuffix+RequestSuffix)
 		var nullability int
 		if val.Nullable {
@@ -698,7 +698,7 @@ func (c *compiler) compileType(val fidl.Type) (r Type, t StackOfBoundsTag) {
 		}
 		t.reverseOfBounds = append(t.reverseOfBounds, nullability)
 		r = Type(e)
-	case fidl.VectorType:
+	case fidlgen.VectorType:
 		e, et := c.compileType(*val.ElementType)
 		if val.ElementCount == nil {
 			et.reverseOfBounds = append(et.reverseOfBounds, math.MaxInt32)
@@ -711,26 +711,26 @@ func (c *compiler) compileType(val fidl.Type) (r Type, t StackOfBoundsTag) {
 			r = Type(fmt.Sprintf("[]%s", e))
 		}
 		t = et
-	case fidl.PrimitiveType:
+	case fidlgen.PrimitiveType:
 		r = c.compilePrimitiveSubtype(val.PrimitiveSubtype)
-	case fidl.IdentifierType:
+	case fidlgen.IdentifierType:
 		e := c.compileCompoundIdentifier(val.Identifier, true, "")
 		declInfo, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
 		switch declInfo.Type {
-		case fidl.BitsDeclType:
+		case fidlgen.BitsDeclType:
 			fallthrough
-		case fidl.EnumDeclType:
+		case fidlgen.EnumDeclType:
 			r = Type(e)
-		case fidl.ProtocolDeclType:
+		case fidlgen.ProtocolDeclType:
 			r = Type(e + WithCtxSuffix + ProxySuffix)
-		case fidl.StructDeclType:
+		case fidlgen.StructDeclType:
 			fallthrough
-		case fidl.UnionDeclType:
+		case fidlgen.UnionDeclType:
 			fallthrough
-		case fidl.TableDeclType:
+		case fidlgen.TableDeclType:
 			if val.Nullable {
 				r = Type("*" + e)
 			} else {
@@ -745,7 +745,7 @@ func (c *compiler) compileType(val fidl.Type) (r Type, t StackOfBoundsTag) {
 	return
 }
 
-func (c *compiler) compileBitsMember(val fidl.BitsMember) BitsMember {
+func (c *compiler) compileBitsMember(val fidlgen.BitsMember) BitsMember {
 	return BitsMember{
 		Attributes: val.Attributes,
 		Name:       c.compileIdentifier(val.Name, true, ""),
@@ -753,7 +753,7 @@ func (c *compiler) compileBitsMember(val fidl.BitsMember) BitsMember {
 	}
 }
 
-func (c *compiler) compileBits(val fidl.Bits) Bits {
+func (c *compiler) compileBits(val fidlgen.Bits) Bits {
 	// all bits must implement fidl.Bits
 	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 
@@ -769,7 +769,7 @@ func (c *compiler) compileBits(val fidl.Bits) Bits {
 	return r
 }
 
-func (c *compiler) compileConst(val fidl.Const) Const {
+func (c *compiler) compileConst(val fidlgen.Const) Const {
 	// It's OK to ignore the tag because this type is guaranteed by the frontend
 	// to be either an enum, a primitive, or a string.
 	t, _ := c.compileType(val.Type)
@@ -781,7 +781,7 @@ func (c *compiler) compileConst(val fidl.Const) Const {
 	}
 }
 
-func (c *compiler) compileEnumMember(val fidl.EnumMember) EnumMember {
+func (c *compiler) compileEnumMember(val fidlgen.EnumMember) EnumMember {
 	return EnumMember{
 		EnumMember: val,
 		Name:       c.compileIdentifier(val.Name, true, ""),
@@ -789,7 +789,7 @@ func (c *compiler) compileEnumMember(val fidl.EnumMember) EnumMember {
 	}
 }
 
-func (c *compiler) compileEnum(val fidl.Enum) Enum {
+func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 	// all enums must implement fidl.Enum
 	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 
@@ -804,7 +804,7 @@ func (c *compiler) compileEnum(val fidl.Enum) Enum {
 	return r
 }
 
-func (c *compiler) compileStructMember(val fidl.StructMember) StructMember {
+func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 	tags := Tags{
 		FidlOffsetV1Tag: val.FieldShapeV1.Offset,
 	}
@@ -828,7 +828,7 @@ func (c *compiler) compileStructMember(val fidl.StructMember) StructMember {
 	}
 }
 
-func (c *compiler) compileStruct(val fidl.Struct) Struct {
+func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 	// required for fidl.CreateLazymarshaler which is called on all structs
 	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 
@@ -851,7 +851,7 @@ func (c *compiler) compileStruct(val fidl.Struct) Struct {
 	return r
 }
 
-func (c *compiler) compileUnion(val fidl.Union) Union {
+func (c *compiler) compileUnion(val fidlgen.Union) Union {
 	if val.IsFlexible() {
 		// fidl.UnknownData is needed only for flexible unions
 		c.usedLibraryDeps[BindingsPackage] = BindingsAlias
@@ -884,7 +884,7 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 		})
 	}
 	fidlTag := "x"
-	if val.Strictness == fidl.IsStrict {
+	if val.Strictness == fidlgen.IsStrict {
 		fidlTag += "!"
 	}
 	tags := Tags{
@@ -904,7 +904,7 @@ func (c *compiler) compileUnion(val fidl.Union) Union {
 	}
 }
 
-func (c *compiler) compileTable(val fidl.Table) Table {
+func (c *compiler) compileTable(val fidlgen.Table) Table {
 	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 
 	var members []TableMember
@@ -952,7 +952,7 @@ func (c *compiler) compileTable(val fidl.Table) Table {
 	}
 }
 
-func (c *compiler) compileMethod(protocolName fidl.EncodedCompoundIdentifier, val fidl.Method) Method {
+func (c *compiler) compileMethod(protocolName fidlgen.EncodedCompoundIdentifier, val fidlgen.Method) Method {
 	methodName := c.compileIdentifier(val.Name, true, "")
 	r := Method{
 		Attributes:      val.Attributes,
@@ -984,7 +984,7 @@ func (c *compiler) compileMethod(protocolName fidl.EncodedCompoundIdentifier, va
 	return r
 }
 
-func (c *compiler) compileProtocol(val fidl.Protocol) Protocol {
+func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	c.usedLibraryDeps[BindingsPackage] = BindingsAlias
 
 	var proxyType string
@@ -1010,12 +1010,12 @@ func (c *compiler) compileProtocol(val fidl.Protocol) Protocol {
 	return r
 }
 
-func compileLibraryIdentifier(lib fidl.LibraryIdentifier) string {
+func compileLibraryIdentifier(lib fidlgen.LibraryIdentifier) string {
 	return "fidl/" + joinLibraryIdentifier(lib, "/")
 }
 
-func joinLibraryIdentifier(lib fidl.LibraryIdentifier, sep string) string {
-	str := make([]string, len([]fidl.Identifier(lib)))
+func joinLibraryIdentifier(lib fidlgen.LibraryIdentifier, sep string) string {
+	str := make([]string, len([]fidlgen.Identifier(lib)))
 	for i, id := range lib {
 		str[i] = string(id)
 	}
@@ -1023,9 +1023,9 @@ func joinLibraryIdentifier(lib fidl.LibraryIdentifier, sep string) string {
 }
 
 // Compile translates parsed FIDL IR into golang backend IR for code generation.
-func Compile(fidlData fidl.Root) Root {
+func Compile(fidlData fidlgen.Root) Root {
 	fidlData = fidlData.ForBindings("go")
-	libraryName := fidl.ParseLibraryName(fidlData.Name)
+	libraryName := fidlgen.ParseLibraryName(fidlData.Name)
 	libraryPath := compileLibraryIdentifier(libraryName)
 
 	// Collect all libraries.
@@ -1035,10 +1035,10 @@ func Compile(fidlData fidl.Root) Root {
 		if v.Name == fidlData.Name {
 			continue
 		}
-		libComponents := fidl.ParseLibraryName(v.Name)
+		libComponents := fidlgen.ParseLibraryName(v.Name)
 		path := compileLibraryIdentifier(libComponents)
 		alias := changeIfReserved(
-			fidl.Identifier(fidl.ToLowerCamelCase(
+			fidlgen.Identifier(fidlgen.ToLowerCamelCase(
 				joinLibraryIdentifier(libComponents, ""),
 			)),
 			"",
@@ -1052,7 +1052,7 @@ func Compile(fidlData fidl.Root) Root {
 		library:                libraryName,
 		libraryDeps:            godeps,
 		usedLibraryDeps:        make(map[string]string),
-		requestResponseStructs: make(map[fidl.EncodedCompoundIdentifier]Struct),
+		requestResponseStructs: make(map[fidlgen.EncodedCompoundIdentifier]Struct),
 	}
 
 	// Compile fidlData into r.

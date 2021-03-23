@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 //
@@ -110,7 +110,7 @@ type unifiedMessagingDetails struct {
 // protocolInner contains information about a Protocol that should be
 // filled out by the compiler.
 type protocolInner struct {
-	fidl.Attributes
+	fidlgen.Attributes
 	// TODO(yifeit): This should be replaced by ProtocolMarker in hlMessagingDetails
 	// and wireMessagingDetails. In particular, the unified bindings do not declare
 	// protocol marker classes.
@@ -212,7 +212,7 @@ func (args argsWrapper) isResource() bool {
 // messageInner contains information about a Message that should be filled out
 // by the compiler.
 type messageInner struct {
-	fidl.TypeShape
+	fidlgen.TypeShape
 	CodingTable DeclName
 }
 
@@ -222,7 +222,7 @@ type messageInner struct {
 type message struct {
 	messageInner
 
-	fidl.Strictness
+	fidlgen.Strictness
 	IsResource       bool
 	ClientAllocation allocation
 	ServerAllocation allocation
@@ -238,10 +238,10 @@ const (
 	serverContext
 )
 
-type boundednessQuery func(methodContext, fidl.Strictness) boundedness
+type boundednessQuery func(methodContext, fidlgen.Strictness) boundedness
 
 func newMessage(inner messageInner, args []Parameter, boundednessQuery boundednessQuery) message {
-	strictness := fidl.Strictness(!inner.TypeShape.HasFlexibleEnvelope)
+	strictness := fidlgen.Strictness(!inner.TypeShape.HasFlexibleEnvelope)
 	return message{
 		messageInner: inner,
 		Strictness:   strictness,
@@ -268,7 +268,7 @@ type methodInner struct {
 	request      messageInner
 	response     messageInner
 
-	fidl.Attributes
+	fidlgen.Attributes
 	Name         string
 	Ordinal      uint64
 	HasRequest   bool
@@ -303,7 +303,7 @@ const (
 )
 
 // Compute boundedness based on client/server, request/response, and strictness.
-func (d messageDirection) queryBoundedness(c methodContext, s fidl.Strictness) boundedness {
+func (d messageDirection) queryBoundedness(c methodContext, s fidlgen.Strictness) boundedness {
 	switch d {
 	case messageDirectionRequest:
 		if c == clientContext {
@@ -326,12 +326,12 @@ func (d messageDirection) queryBoundedness(c methodContext, s fidl.Strictness) b
 func newMethod(inner methodInner) Method {
 	callbackType := ""
 	if inner.HasResponse {
-		callbackType = changeIfReserved(fidl.Identifier(inner.Name + "Callback"))
+		callbackType = changeIfReserved(fidlgen.Identifier(inner.Name + "Callback"))
 	}
 
 	m := Method{
 		methodInner:          inner,
-		NameInLowerSnakeCase: fidl.ToSnakeCase(inner.Name),
+		NameInLowerSnakeCase: fidlgen.ToSnakeCase(inner.Name),
 		OrdinalName:          fmt.Sprintf("k%s_%s_Ordinal", inner.protocolName.Natural.Name(), inner.Name),
 		Request: newMessage(inner.request,
 			inner.RequestArgs, messageDirectionRequest.queryBoundedness),
@@ -381,18 +381,18 @@ func (p Parameter) NameAndType() (string, Type) {
 	return p.Name, p.Type
 }
 
-func allEventsStrict(methods []Method) fidl.Strictness {
-	strictness := fidl.IsStrict
+func allEventsStrict(methods []Method) fidlgen.Strictness {
+	strictness := fidlgen.IsStrict
 	for _, m := range methods {
 		if !m.HasRequest && m.HasResponse && m.Response.IsFlexible() {
-			strictness = fidl.IsFlexible
+			strictness = fidlgen.IsFlexible
 			break
 		}
 	}
 	return strictness
 }
 
-func (c *compiler) compileProtocol(val fidl.Protocol) Protocol {
+func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 	protocolName := c.compileDeclName(val.Name)
 	codingTableName := codingTableName(val.Name)
 	codingTableBase := DeclName{
@@ -461,7 +461,7 @@ func (c *compiler) compileProtocol(val fidl.Protocol) Protocol {
 	return r
 }
 
-func (c *compiler) compileParameterArray(val []fidl.Parameter) []Parameter {
+func (c *compiler) compileParameterArray(val []fidlgen.Parameter) []Parameter {
 	var params []Parameter = []Parameter{}
 	for _, v := range val {
 		params = append(params, Parameter{

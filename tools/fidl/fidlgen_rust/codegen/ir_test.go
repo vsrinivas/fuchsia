@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	fidl_testing "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
@@ -33,30 +33,30 @@ func TestDerivesToString(t *testing.T) {
 func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 	type testCase struct {
 		name string
-		in   fidl.Struct
+		in   fidlgen.Struct
 		out  []PaddingMarker
 	}
 	testCases := []testCase{
 		{
 			name: "empty",
-			in:   fidl.Struct{},
+			in:   fidlgen.Struct{},
 			out:  nil,
 		},
 		{
 			name: "no padding 8-bytes",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 8,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 0,
 						},
 					},
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  4,
 							Padding: 0,
 						},
@@ -67,19 +67,19 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 		},
 		{
 			name: "no padding 4-bytes",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 4,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 0,
 						},
 					},
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  2,
 							Padding: 0,
 						},
@@ -90,19 +90,19 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 		},
 		{
 			name: "no padding 2-bytes",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 2,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 0,
 						},
 					},
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  1,
 							Padding: 0,
 						},
@@ -113,13 +113,13 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 		},
 		{
 			name: "no padding 1-byte",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 1,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 0,
 						},
@@ -130,19 +130,19 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 		},
 		{
 			name: "8-byte struct with 2 bytes of padding at end",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 8,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 0,
 						},
 					},
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  4,
 							Padding: 2,
 						},
@@ -159,19 +159,19 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 		},
 		{
 			name: "4-byte struct with 1 byte of padding at end",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 4,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 0,
 						},
 					},
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  2,
 							Padding: 1,
 						},
@@ -188,13 +188,13 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 		},
 		{
 			name: "2-byte struct with 1 byte padding at end",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 2,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 1,
 						},
@@ -211,25 +211,25 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 		},
 		{
 			name: "padding at end of 8-byte chunk, before next chunk",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 16,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 0,
 						},
 					},
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  4,
 							Padding: 2,
 						},
 					},
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  8,
 							Padding: 0,
 						},
@@ -246,19 +246,19 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 		},
 		{
 			name: "padding in middle of 4-byte block",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 4,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 1,
 						},
 					},
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  2,
 							Padding: 0,
 						},
@@ -275,19 +275,19 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 		},
 		{
 			name: "8 byte mask with non-zero offset",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 16,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 0,
 						},
 					},
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  8,
 							Padding: 4,
 						},
@@ -304,19 +304,19 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 		},
 		{
 			name: "4 byte mask with non-zero offset",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 12,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 0,
 						},
 					},
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  8,
 							Padding: 2,
 						},
@@ -333,19 +333,19 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 		},
 		{
 			name: "2 byte mask with non-zero offset",
-			in: fidl.Struct{
-				TypeShapeV1: fidl.TypeShape{
+			in: fidlgen.Struct{
+				TypeShapeV1: fidlgen.TypeShape{
 					InlineSize: 10,
 				},
-				Members: []fidl.StructMember{
+				Members: []fidlgen.StructMember{
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  0,
 							Padding: 0,
 						},
 					},
 					{
-						FieldShapeV1: fidl.FieldShape{
+						FieldShapeV1: fidlgen.FieldShape{
 							Offset:  8,
 							Padding: 1,
 						},
@@ -371,46 +371,46 @@ func TestBuildPaddingMarkersWithoutFlattening(t *testing.T) {
 }
 
 func TestBuildPaddingMarkersFlatteningStruct(t *testing.T) {
-	var innerStructIdentifier fidl.EncodedCompoundIdentifier = "abcd"
-	innerStruct := fidl.Struct{
-		TypeShapeV1: fidl.TypeShape{
+	var innerStructIdentifier fidlgen.EncodedCompoundIdentifier = "abcd"
+	innerStruct := fidlgen.Struct{
+		TypeShapeV1: fidlgen.TypeShape{
 			InlineSize: 4,
 		},
-		Members: []fidl.StructMember{
+		Members: []fidlgen.StructMember{
 			{
-				FieldShapeV1: fidl.FieldShape{
+				FieldShapeV1: fidlgen.FieldShape{
 					Offset:  0,
 					Padding: 3,
 				},
 			},
 		},
 	}
-	input := fidl.Struct{
-		TypeShapeV1: fidl.TypeShape{
+	input := fidlgen.Struct{
+		TypeShapeV1: fidlgen.TypeShape{
 			InlineSize: 8,
 		},
-		Members: []fidl.StructMember{
+		Members: []fidlgen.StructMember{
 			{
-				FieldShapeV1: fidl.FieldShape{
+				FieldShapeV1: fidlgen.FieldShape{
 					Offset:  0,
 					Padding: 4,
 				},
-				Type: fidl.Type{
-					Kind:       fidl.IdentifierType,
+				Type: fidlgen.Type{
+					Kind:       fidlgen.IdentifierType,
 					Identifier: innerStructIdentifier,
 				},
 			},
 		},
 	}
-	resourceness := fidl.IsValueType
+	resourceness := fidlgen.IsValueType
 	c := compiler{
-		decls: map[fidl.EncodedCompoundIdentifier]fidl.DeclInfo{
-			innerStructIdentifier: {Type: fidl.StructDeclType, Resourceness: &resourceness},
+		decls: map[fidlgen.EncodedCompoundIdentifier]fidlgen.DeclInfo{
+			innerStructIdentifier: {Type: fidlgen.StructDeclType, Resourceness: &resourceness},
 		},
-		structs: map[fidl.EncodedCompoundIdentifier]fidl.Struct{
+		structs: map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{
 			innerStructIdentifier: innerStruct,
 		},
-		library: fidl.LibraryIdentifier{""},
+		library: fidlgen.LibraryIdentifier{""},
 	}
 	out := c.buildPaddingMarkers(input, true)
 	expected := []PaddingMarker{
@@ -426,14 +426,14 @@ func TestBuildPaddingMarkersFlatteningStruct(t *testing.T) {
 }
 
 func TestBuildPaddingMarkersFlatteningArray(t *testing.T) {
-	var innerStructIdentifier fidl.EncodedCompoundIdentifier = "abcd"
-	innerStruct := fidl.Struct{
-		TypeShapeV1: fidl.TypeShape{
+	var innerStructIdentifier fidlgen.EncodedCompoundIdentifier = "abcd"
+	innerStruct := fidlgen.Struct{
+		TypeShapeV1: fidlgen.TypeShape{
 			InlineSize: 4,
 		},
-		Members: []fidl.StructMember{
+		Members: []fidlgen.StructMember{
 			{
-				FieldShapeV1: fidl.FieldShape{
+				FieldShapeV1: fidlgen.FieldShape{
 					Offset:  0,
 					Padding: 3,
 				},
@@ -441,36 +441,36 @@ func TestBuildPaddingMarkersFlatteningArray(t *testing.T) {
 		},
 	}
 	count := 3
-	input := fidl.Struct{
-		TypeShapeV1: fidl.TypeShape{
+	input := fidlgen.Struct{
+		TypeShapeV1: fidlgen.TypeShape{
 			InlineSize: 12,
 		},
-		Members: []fidl.StructMember{
+		Members: []fidlgen.StructMember{
 			{
-				FieldShapeV1: fidl.FieldShape{
+				FieldShapeV1: fidlgen.FieldShape{
 					Offset:  0,
 					Padding: 0,
 				},
-				Type: fidl.Type{
-					Kind:         fidl.ArrayType,
+				Type: fidlgen.Type{
+					Kind:         fidlgen.ArrayType,
 					ElementCount: &count,
-					ElementType: &fidl.Type{
-						Kind:       fidl.IdentifierType,
+					ElementType: &fidlgen.Type{
+						Kind:       fidlgen.IdentifierType,
 						Identifier: innerStructIdentifier,
 					},
 				},
 			},
 		},
 	}
-	resourceness := fidl.IsValueType
+	resourceness := fidlgen.IsValueType
 	c := compiler{
-		decls: map[fidl.EncodedCompoundIdentifier]fidl.DeclInfo{
-			innerStructIdentifier: {Type: fidl.StructDeclType, Resourceness: &resourceness},
+		decls: map[fidlgen.EncodedCompoundIdentifier]fidlgen.DeclInfo{
+			innerStructIdentifier: {Type: fidlgen.StructDeclType, Resourceness: &resourceness},
 		},
-		structs: map[fidl.EncodedCompoundIdentifier]fidl.Struct{
+		structs: map[fidlgen.EncodedCompoundIdentifier]fidlgen.Struct{
 			innerStructIdentifier: innerStruct,
 		},
-		library: fidl.LibraryIdentifier{""},
+		library: fidlgen.LibraryIdentifier{""},
 	}
 	out := c.buildPaddingMarkers(input, true)
 	expected := []PaddingMarker{

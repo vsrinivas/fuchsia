@@ -11,7 +11,7 @@ import (
 
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 func BuildValueAllocator(allocatorVar string, value interface{}, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
@@ -89,9 +89,9 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration) 
 		}
 	case gidlir.RawFloat:
 		switch decl.(*gidlmixer.FloatDecl).Subtype() {
-		case fidl.Float32:
+		case fidlgen.Float32:
 			return fmt.Sprintf("([] { uint32_t u = %#b; float f; memcpy(&f, &u, 4); return f; })()", value)
-		case fidl.Float64:
+		case fidlgen.Float64:
 			return fmt.Sprintf("([] { uint64_t u = %#b; double d; memcpy(&d, &u, 8); return d; })()", value)
 		}
 	case string:

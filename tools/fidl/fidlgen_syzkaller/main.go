@@ -14,7 +14,7 @@ import (
 	"path"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_syzkaller/codegen"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type flagsDef struct {
@@ -55,7 +55,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	root, err := fidl.ReadJSONIr(*flags.jsonPath)
+	root, err := fidlgen.ReadJSONIr(*flags.jsonPath)
 	if err != nil {
 		log.Fatalf("Failed to read JSON: %v", err)
 	}

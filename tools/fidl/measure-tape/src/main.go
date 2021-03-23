@@ -14,7 +14,7 @@ import (
 	"regexp"
 	"strings"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/hlcpp"
 	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/measurer"
 	"go.fuchsia.dev/fuchsia/tools/fidl/measure-tape/src/rust"
@@ -84,9 +84,9 @@ func main() {
 		os.Exit(1)
 	}
 
-	var roots []fidl.Root
+	var roots []fidlgen.Root
 	for _, filename := range jsonFiles {
-		root, err := fidl.ReadJSONIr(filename)
+		root, err := fidlgen.ReadJSONIr(filename)
 		if err != nil {
 			log.Fatal(err)
 		}

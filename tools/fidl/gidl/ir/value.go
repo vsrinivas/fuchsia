@@ -5,7 +5,7 @@
 package ir
 
 import (
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // Value represents any acceptable value used to represent a FIDL value.
@@ -33,8 +33,8 @@ type Handle int
 // A HandleWithRights is a Handle with rights information.
 type HandleWithRights struct {
 	Handle Handle
-	Type   fidl.ObjectType
-	Rights fidl.HandleRights
+	Type   fidlgen.ObjectType
+	Rights fidlgen.HandleRights
 }
 
 // Record represents a value for a struct, table, or union type.

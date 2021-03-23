@@ -11,7 +11,7 @@ import (
 
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 func buildHandleDefs(defs []gidlir.HandleDef) string {
@@ -22,9 +22,9 @@ func buildHandleDefs(defs []gidlir.HandleDef) string {
 	builder.WriteString("[\n")
 	for i, d := range defs {
 		switch d.Subtype {
-		case fidl.Channel:
+		case fidlgen.Channel:
 			builder.WriteString(fmt.Sprint("HandleSubtype.event,"))
-		case fidl.Event:
+		case fidlgen.Event:
 			builder.WriteString(fmt.Sprint("HandleSubtype.channel,"))
 		default:
 			panic(fmt.Sprintf("unknown handle subtype: %v", d.Subtype))
@@ -77,9 +77,9 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		}
 	case gidlir.RawFloat:
 		switch decl.(*gidlmixer.FloatDecl).Subtype() {
-		case fidl.Float32:
+		case fidlgen.Float32:
 			return fmt.Sprintf("Uint32List.fromList([%#x]).buffer.asByteData().getFloat32(0, Endian.host)", value)
-		case fidl.Float64:
+		case fidlgen.Float64:
 			return fmt.Sprintf("Uint64List.fromList([%#x]).buffer.asByteData().getFloat64(0, Endian.host)", value)
 		}
 	case string:
@@ -88,11 +88,11 @@ func visit(value interface{}, decl gidlmixer.Declaration) string {
 		rawHandle := buildHandleValue(value.Handle)
 		handleDecl := decl.(*gidlmixer.HandleDecl)
 		switch handleDecl.Subtype() {
-		case fidl.Handle:
+		case fidlgen.Handle:
 			return rawHandle
-		case fidl.Channel:
+		case fidlgen.Channel:
 			return fmt.Sprintf("Channel(%s)", rawHandle)
-		case fidl.Event:
+		case fidlgen.Event:
 			// Dart does not support events, so events are mapped to bare handles
 			return rawHandle
 		default:
@@ -137,13 +137,13 @@ func onRecord(value gidlir.Record, decl gidlmixer.RecordDeclaration) string {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
 		val := visit(field.Value, fieldDecl)
-		args = append(args, fmt.Sprintf("%s: %s", fidl.ToLowerCamelCase(field.Key.Name), val))
+		args = append(args, fmt.Sprintf("%s: %s", fidlgen.ToLowerCamelCase(field.Key.Name), val))
 	}
 	if len(unknownTableFields) > 0 {
 		args = append(args,
 			fmt.Sprintf("$unknownData: %s", buildUnknownTableData(unknownTableFields)))
 	}
-	return fmt.Sprintf("%s(%s)", fidl.ToUpperCamelCase(value.Name), strings.Join(args, ", "))
+	return fmt.Sprintf("%s(%s)", fidlgen.ToUpperCamelCase(value.Name), strings.Join(args, ", "))
 }
 
 func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
@@ -162,7 +162,7 @@ func onUnion(value gidlir.Record, decl *gidlmixer.UnionDecl) string {
 			panic(fmt.Sprintf("field %s not found", field.Key.Name))
 		}
 		val := visit(field.Value, fieldDecl)
-		return fmt.Sprintf("%s.with%s(%s)", value.Name, fidl.ToUpperCamelCase(field.Key.Name), val)
+		return fmt.Sprintf("%s.with%s(%s)", value.Name, fidlgen.ToUpperCamelCase(field.Key.Name), val)
 	}
 	// Not currently possible to construct a union in dart with an invalid value.
 	panic("unions must have a value set")
@@ -175,11 +175,11 @@ func onList(value []interface{}, decl gidlmixer.ListDeclaration) string {
 		elements = append(elements, visit(item, elemDecl))
 	}
 	if integerDecl, ok := elemDecl.(*gidlmixer.IntegerDecl); ok {
-		typeName := fidl.ToUpperCamelCase(string(integerDecl.Subtype()))
+		typeName := fidlgen.ToUpperCamelCase(string(integerDecl.Subtype()))
 		return fmt.Sprintf("%sList.fromList([%s])", typeName, strings.Join(elements, ", "))
 	}
 	if floatDecl, ok := elemDecl.(*gidlmixer.FloatDecl); ok {
-		typeName := fidl.ToUpperCamelCase(string(floatDecl.Subtype()))
+		typeName := fidlgen.ToUpperCamelCase(string(floatDecl.Subtype()))
 		return fmt.Sprintf("%sList.fromList([%s])", typeName, strings.Join(elements, ", "))
 	}
 	return fmt.Sprintf("[%s]", strings.Join(elements, ", "))

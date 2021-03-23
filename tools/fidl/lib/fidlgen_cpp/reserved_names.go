@@ -5,7 +5,7 @@
 package fidlgen_cpp
 
 import (
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 func isReservedWord(str string) bool {
@@ -13,7 +13,7 @@ func isReservedWord(str string) bool {
 	return ok
 }
 
-func changeIfReserved(i fidl.Identifier) string {
+func changeIfReserved(i fidlgen.Identifier) string {
 	str := string(i)
 	if isReservedWord(str) {
 		return str + "_"

@@ -5,14 +5,14 @@
 package fidlgen_cpp
 
 import (
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type Enum struct {
-	fidl.Attributes
-	fidl.Strictness
+	fidlgen.Attributes
+	fidlgen.Strictness
 	DeclName
-	Enum    fidl.Enum
+	Enum    fidlgen.Enum
 	Type    TypeName
 	Members []EnumMember
 }
@@ -28,12 +28,12 @@ func (e Enum) UnknownValueForTmpl() interface{} {
 }
 
 type EnumMember struct {
-	fidl.EnumMember
+	fidlgen.EnumMember
 	Name  string
 	Value ConstantValue
 }
 
-func (c *compiler) compileEnum(val fidl.Enum) Enum {
+func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
 	name := c.compileDeclName(val.Name)
 	r := Enum{
 		Attributes: val.Attributes,
@@ -48,8 +48,8 @@ func (c *compiler) compileEnum(val fidl.Enum) Enum {
 			Name:       changeIfReserved(v.Name),
 			// TODO(fxbug.dev/7660): When we expose types consistently in the IR, we
 			// will not need to plug this here.
-			Value: c.compileConstant(v.Value, nil, fidl.Type{
-				Kind:             fidl.PrimitiveType,
+			Value: c.compileConstant(v.Value, nil, fidlgen.Type{
+				Kind:             fidlgen.PrimitiveType,
 				PrimitiveSubtype: val.Type,
 			}),
 		})

@@ -11,7 +11,7 @@ import (
 
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 func BuildValueUnowned(value interface{}, decl gidlmixer.Declaration, handleRepr HandleRepr) (string, string) {
@@ -37,16 +37,16 @@ func (b *unownedBuilder) newVar() string {
 	return fmt.Sprintf("v%d", b.varidx)
 }
 
-func primitiveTypeName(subtype fidl.PrimitiveSubtype) string {
+func primitiveTypeName(subtype fidlgen.PrimitiveSubtype) string {
 	switch subtype {
-	case fidl.Bool:
+	case fidlgen.Bool:
 		return "bool"
-	case fidl.Uint8, fidl.Uint16, fidl.Uint32, fidl.Uint64,
-		fidl.Int8, fidl.Int16, fidl.Int32, fidl.Int64:
+	case fidlgen.Uint8, fidlgen.Uint16, fidlgen.Uint32, fidlgen.Uint64,
+		fidlgen.Int8, fidlgen.Int16, fidlgen.Int32, fidlgen.Int64:
 		return fmt.Sprintf("%s_t", subtype)
-	case fidl.Float32:
+	case fidlgen.Float32:
 		return "float"
-	case fidl.Float64:
+	case fidlgen.Float64:
 		return "double"
 	default:
 		panic(fmt.Sprintf("unexpected subtype %s", subtype))
@@ -68,21 +68,21 @@ func (b *unownedBuilder) visit(value interface{}, decl gidlmixer.Declaration) st
 		switch decl := decl.(type) {
 		case *gidlmixer.FloatDecl:
 			switch decl.Subtype() {
-			case fidl.Float32:
+			case fidlgen.Float32:
 				s := fmt.Sprintf("%g", value)
 				if strings.Contains(s, ".") {
 					return fmt.Sprintf("%sf", s)
 				}
 				return s
-			case fidl.Float64:
+			case fidlgen.Float64:
 				return fmt.Sprintf("%g", value)
 			}
 		}
 	case gidlir.RawFloat:
 		switch decl.(*gidlmixer.FloatDecl).Subtype() {
-		case fidl.Float32:
+		case fidlgen.Float32:
 			return fmt.Sprintf("([] { uint32_t u = %#b; float f; memcpy(&f, &u, 4); return f; })()", value)
-		case fidl.Float64:
+		case fidlgen.Float64:
 			return fmt.Sprintf("([] { uint64_t u = %#b; double d; memcpy(&d, &u, 8); return d; })()", value)
 		}
 	case string:

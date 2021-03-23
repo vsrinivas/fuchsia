@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"strings"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 //
@@ -27,7 +27,7 @@ func (cv ConstantValue) IsSet() bool {
 func (cv ConstantValue) String() string {
 	switch currentVariant {
 	case noVariant:
-		fidl.TemplateFatalf(
+		fidlgen.TemplateFatalf(
 			"Called ConstantValue.String() on %s/%s when currentVariant isn't set.\n",
 			cv.Natural, cv.Wire)
 	case naturalVariant:
@@ -38,10 +38,10 @@ func (cv ConstantValue) String() string {
 	panic("not reached")
 }
 
-func (c *compiler) compileConstant(val fidl.Constant, t *Type, typ fidl.Type) ConstantValue {
+func (c *compiler) compileConstant(val fidlgen.Constant, t *Type, typ fidlgen.Type) ConstantValue {
 	switch val.Kind {
-	case fidl.IdentifierConstant:
-		ci := fidl.ParseCompoundIdentifier(val.Identifier)
+	case fidlgen.IdentifierConstant:
+		ci := fidlgen.ParseCompoundIdentifier(val.Identifier)
 		if len(ci.Member) > 0 {
 			member := changeIfReserved(ci.Member)
 			ci.Member = ""
@@ -54,10 +54,10 @@ func (c *compiler) compileConstant(val fidl.Constant, t *Type, typ fidl.Type) Co
 			dn := c.compileDeclName(val.Identifier)
 			return ConstantValue{Natural: dn.Natural.String(), Wire: dn.Wire.String()}
 		}
-	case fidl.LiteralConstant:
+	case fidlgen.LiteralConstant:
 		lit := c.compileLiteral(val.Literal, typ)
 		return ConstantValue{Natural: lit, Wire: lit}
-	case fidl.BinaryOperator:
+	case fidlgen.BinaryOperator:
 		return ConstantValue{
 			Natural: fmt.Sprintf("static_cast<%s>(%s)", t.TypeName.Natural, val.Value),
 			Wire:    fmt.Sprintf("static_cast<%s>(%s)", t.TypeName.Wire, val.Value),
@@ -69,7 +69,7 @@ func (c *compiler) compileConstant(val fidl.Constant, t *Type, typ fidl.Type) Co
 }
 
 type Const struct {
-	fidl.Attributes
+	fidlgen.Attributes
 	DeclName
 	Extern    bool
 	Decorator string
@@ -83,12 +83,12 @@ func (Const) Kind() declKind {
 
 var _ Kinded = (*Const)(nil)
 
-func (c *compiler) compileConst(val fidl.Const) Const {
+func (c *compiler) compileConst(val fidlgen.Const) Const {
 	n := c.compileDeclName(val.Name)
 	v := Const{Attributes: val.Attributes,
 		DeclName: n,
 	}
-	if val.Type.Kind == fidl.StringType {
+	if val.Type.Kind == fidlgen.StringType {
 		v.Extern = true
 		v.Decorator = "const"
 		v.Type = Type{
@@ -106,11 +106,11 @@ func (c *compiler) compileConst(val fidl.Const) Const {
 	return v
 }
 
-func (c *compiler) compileLiteral(val fidl.Literal, typ fidl.Type) string {
+func (c *compiler) compileLiteral(val fidlgen.Literal, typ fidlgen.Type) string {
 	switch val.Kind {
-	case fidl.StringLiteral:
+	case fidlgen.StringLiteral:
 		return fmt.Sprintf("%q", val.Value)
-	case fidl.NumericLiteral:
+	case fidlgen.NumericLiteral:
 		if val.Value == "-9223372036854775808" || val.Value == "0x8000000000000000" {
 			// C++ only supports nonnegative literals and a value this large in absolute
 			// value cannot be represented as a nonnegative number in 64-bits.
@@ -124,7 +124,7 @@ func (c *compiler) compileLiteral(val fidl.Literal, typ fidl.Type) string {
 
 		// float32 literals must be marked as such.
 		if strings.ContainsRune(val.Value, '.') {
-			if typ.Kind == fidl.PrimitiveType && typ.PrimitiveSubtype == fidl.Float32 {
+			if typ.Kind == fidlgen.PrimitiveType && typ.PrimitiveSubtype == fidlgen.Float32 {
 				return fmt.Sprintf("%sf", val.Value)
 			} else {
 				return val.Value
@@ -135,11 +135,11 @@ func (c *compiler) compileLiteral(val fidl.Literal, typ fidl.Type) string {
 			return fmt.Sprintf("%su", val.Value)
 		}
 		return val.Value
-	case fidl.TrueLiteral:
+	case fidlgen.TrueLiteral:
 		return "true"
-	case fidl.FalseLiteral:
+	case fidlgen.FalseLiteral:
 		return "false"
-	case fidl.DefaultLiteral:
+	case fidlgen.DefaultLiteral:
 		return "default"
 	default:
 		panic(fmt.Sprintf("unknown literal kind: %v", val.Kind))

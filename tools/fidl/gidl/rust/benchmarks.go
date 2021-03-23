@@ -13,7 +13,7 @@ import (
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 var benchmarkTmpl = template.Must(template.New("benchmarkTmpls").Parse(`
@@ -238,7 +238,7 @@ type benchmark struct {
 }
 
 // GenerateBenchmarks generates Rust benchmarks.
-func GenerateBenchmarks(gidl gidlir.All, fidl fidl.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	var benchmarks []benchmark
 	nBenchmarks := 0
@@ -276,5 +276,5 @@ func GenerateBenchmarks(gidl gidlir.All, fidl fidl.Root, config gidlconfig.Gener
 }
 
 func benchmarkName(gidlName string) string {
-	return fidl.ToSnakeCase(strings.ReplaceAll(gidlName, "/", "_"))
+	return fidlgen.ToSnakeCase(strings.ReplaceAll(gidlName, "/", "_"))
 }

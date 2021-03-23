@@ -10,7 +10,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type variant string
@@ -318,7 +318,7 @@ func (tn TypeName) String() string {
 }
 
 // TypeNameForHandle returns the C++ name for a handle type
-func TypeNameForHandle(t fidl.HandleSubtype) TypeName {
+func TypeNameForHandle(t fidlgen.HandleSubtype) TypeName {
 	return CommonTypeName(TypeVariant(fmt.Sprintf("::zx::%s", t)))
 }
 

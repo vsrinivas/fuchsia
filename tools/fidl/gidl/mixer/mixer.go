@@ -9,15 +9,15 @@ import (
 	"math"
 
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // ValueVisitor is an API that walks GIDL values.
 type ValueVisitor interface {
 	OnBool(value bool)
-	OnInt64(value int64, typ fidl.PrimitiveSubtype)
-	OnUint64(value uint64, typ fidl.PrimitiveSubtype)
-	OnFloat64(value float64, typ fidl.PrimitiveSubtype)
+	OnInt64(value int64, typ fidlgen.PrimitiveSubtype)
+	OnUint64(value uint64, typ fidlgen.PrimitiveSubtype)
+	OnFloat64(value float64, typ fidlgen.PrimitiveSubtype)
 	OnString(value string, decl *StringDecl)
 	OnHandle(value gidlir.Handle, decl *HandleDecl)
 	OnBits(value interface{}, decl *BitsDecl)
@@ -148,7 +148,7 @@ type PrimitiveDeclaration interface {
 	Declaration
 
 	// Subtype returns the primitive subtype (bool, uint32, float64, etc.).
-	Subtype() fidl.PrimitiveSubtype
+	Subtype() fidlgen.PrimitiveSubtype
 }
 
 // Assert that wrappers conform to the PrimitiveDeclaration interface.
@@ -222,8 +222,8 @@ type BoolDecl struct {
 	NeverNullable
 }
 
-func (decl *BoolDecl) Subtype() fidl.PrimitiveSubtype {
-	return fidl.Bool
+func (decl *BoolDecl) Subtype() fidlgen.PrimitiveSubtype {
+	return fidlgen.Bool
 }
 
 func (decl *BoolDecl) conforms(value interface{}, _ context) error {
@@ -237,12 +237,12 @@ func (decl *BoolDecl) conforms(value interface{}, _ context) error {
 
 type IntegerDecl struct {
 	NeverNullable
-	subtype fidl.PrimitiveSubtype
+	subtype fidlgen.PrimitiveSubtype
 	lower   int64
 	upper   uint64
 }
 
-func (decl *IntegerDecl) Subtype() fidl.PrimitiveSubtype {
+func (decl *IntegerDecl) Subtype() fidlgen.PrimitiveSubtype {
 	return decl.subtype
 }
 
@@ -271,10 +271,10 @@ func (decl *IntegerDecl) conforms(value interface{}, _ context) error {
 
 type FloatDecl struct {
 	NeverNullable
-	subtype fidl.PrimitiveSubtype
+	subtype fidlgen.PrimitiveSubtype
 }
 
-func (decl *FloatDecl) Subtype() fidl.PrimitiveSubtype {
+func (decl *FloatDecl) Subtype() fidlgen.PrimitiveSubtype {
 	return decl.subtype
 }
 
@@ -291,7 +291,7 @@ func (decl *FloatDecl) conforms(value interface{}, _ context) error {
 		}
 		return nil
 	case gidlir.RawFloat:
-		if decl.subtype == fidl.Float32 && value > math.MaxUint32 {
+		if decl.subtype == fidlgen.Float32 && value > math.MaxUint32 {
 			return fmt.Errorf("raw_float out of range for float32: %v", value)
 		}
 		return nil
@@ -330,12 +330,12 @@ func (decl *StringDecl) conforms(value interface{}, _ context) error {
 }
 
 type HandleDecl struct {
-	subtype fidl.HandleSubtype
+	subtype fidlgen.HandleSubtype
 	// TODO(fxbug.dev/41920): Add a field for handle rights.
 	nullable bool
 }
 
-func (decl *HandleDecl) Subtype() fidl.HandleSubtype {
+func (decl *HandleDecl) Subtype() fidlgen.HandleSubtype {
 	return decl.subtype
 }
 
@@ -352,7 +352,7 @@ func (decl *HandleDecl) conforms(value interface{}, ctx context) error {
 			return fmt.Errorf("handle #%d out of range", value.Handle)
 		}
 		if !ctx.ignoreWrongHandleType {
-			if decl.subtype == fidl.Handle {
+			if decl.subtype == fidlgen.Handle {
 				// The declaration is an untyped handle. Any subtype conforms.
 				return nil
 			}
@@ -372,7 +372,7 @@ func (decl *HandleDecl) conforms(value interface{}, ctx context) error {
 type BitsDecl struct {
 	NeverNullable
 	Underlying IntegerDecl
-	bitsDecl   fidl.Bits
+	bitsDecl   fidlgen.Bits
 }
 
 func (decl *BitsDecl) Name() string {
@@ -391,7 +391,7 @@ func (decl *BitsDecl) conforms(value interface{}, ctx context) error {
 type EnumDecl struct {
 	NeverNullable
 	Underlying IntegerDecl
-	enumDecl   fidl.Enum
+	enumDecl   fidlgen.Enum
 }
 
 func (decl *EnumDecl) Name() string {
@@ -409,7 +409,7 @@ func (decl *EnumDecl) conforms(value interface{}, ctx context) error {
 
 // StructDecl describes a struct declaration.
 type StructDecl struct {
-	structDecl fidl.Struct
+	structDecl fidlgen.Struct
 	nullable   bool
 	schema     Schema
 }
@@ -497,7 +497,7 @@ func (decl *StructDecl) conforms(value interface{}, ctx context) error {
 // TableDecl describes a table declaration.
 type TableDecl struct {
 	NeverNullable
-	tableDecl fidl.Table
+	tableDecl fidlgen.Table
 	schema    Schema
 }
 
@@ -573,7 +573,7 @@ func (decl *TableDecl) conforms(value interface{}, ctx context) error {
 
 // UnionDecl describes a union declaration.
 type UnionDecl struct {
-	unionDecl fidl.Union
+	unionDecl fidlgen.Union
 	nullable  bool
 	schema    Schema
 }
@@ -649,7 +649,7 @@ func (decl *UnionDecl) conforms(value interface{}, ctx context) error {
 type ArrayDecl struct {
 	NeverNullable
 	// The array has type `typ`, and it contains `typ.ElementType` elements.
-	typ    fidl.Type
+	typ    fidlgen.Type
 	schema Schema
 }
 
@@ -686,7 +686,7 @@ func (decl *ArrayDecl) conforms(value interface{}, ctx context) error {
 
 type VectorDecl struct {
 	// The vector has type `typ`, and it contains `typ.ElementType` elements.
-	typ    fidl.Type
+	typ    fidlgen.Type
 	schema Schema
 }
 
@@ -746,7 +746,7 @@ type Schema struct {
 
 // BuildSchema builds a Schema from a FIDL library and handle definitions.
 // Note: The returned schema contains pointers into fidl.
-func BuildSchema(fidl fidl.Root) Schema {
+func BuildSchema(fidl fidlgen.Root) Schema {
 	total := len(fidl.Bits) + len(fidl.Enums) + len(fidl.Structs) + len(fidl.Tables) + len(fidl.Unions)
 	types := make(map[string]interface{}, total)
 	// These loops must use fidl.Structs[i], fidl.Tables[i], etc. rather than
@@ -849,23 +849,23 @@ func (s Schema) lookupDeclByQualifiedName(name string, nullable bool) (Declarati
 		return nil, false
 	}
 	switch typ := typ.(type) {
-	case *fidl.Bits:
+	case *fidlgen.Bits:
 		return &BitsDecl{
 			bitsDecl:   *typ,
 			Underlying: *lookupDeclByPrimitive(typ.Type.PrimitiveSubtype).(*IntegerDecl),
 		}, true
-	case *fidl.Enum:
+	case *fidlgen.Enum:
 		return &EnumDecl{
 			enumDecl:   *typ,
 			Underlying: *lookupDeclByPrimitive(typ.Type).(*IntegerDecl),
 		}, true
-	case *fidl.Struct:
+	case *fidlgen.Struct:
 		return &StructDecl{
 			structDecl: *typ,
 			nullable:   nullable,
 			schema:     s,
 		}, true
-	case *fidl.Table:
+	case *fidlgen.Table:
 		if nullable {
 			panic(fmt.Sprintf("nullable table %s is not allowed", typ.Name))
 		}
@@ -873,7 +873,7 @@ func (s Schema) lookupDeclByQualifiedName(name string, nullable bool) (Declarati
 			tableDecl: *typ,
 			schema:    s,
 		}, true
-	case *fidl.Union:
+	case *fidlgen.Union:
 		return &UnionDecl{
 			unionDecl: *typ,
 			nullable:  nullable,
@@ -884,54 +884,54 @@ func (s Schema) lookupDeclByQualifiedName(name string, nullable bool) (Declarati
 }
 
 // LookupDeclByPrimitive looks up a message declaration by primitive subtype.
-func lookupDeclByPrimitive(subtype fidl.PrimitiveSubtype) PrimitiveDeclaration {
+func lookupDeclByPrimitive(subtype fidlgen.PrimitiveSubtype) PrimitiveDeclaration {
 	switch subtype {
-	case fidl.Bool:
+	case fidlgen.Bool:
 		return &BoolDecl{}
-	case fidl.Int8:
+	case fidlgen.Int8:
 		return &IntegerDecl{subtype: subtype, lower: math.MinInt8, upper: math.MaxInt8}
-	case fidl.Int16:
+	case fidlgen.Int16:
 		return &IntegerDecl{subtype: subtype, lower: math.MinInt16, upper: math.MaxInt16}
-	case fidl.Int32:
+	case fidlgen.Int32:
 		return &IntegerDecl{subtype: subtype, lower: math.MinInt32, upper: math.MaxInt32}
-	case fidl.Int64:
+	case fidlgen.Int64:
 		return &IntegerDecl{subtype: subtype, lower: math.MinInt64, upper: math.MaxInt64}
-	case fidl.Uint8:
+	case fidlgen.Uint8:
 		return &IntegerDecl{subtype: subtype, lower: 0, upper: math.MaxUint8}
-	case fidl.Uint16:
+	case fidlgen.Uint16:
 		return &IntegerDecl{subtype: subtype, lower: 0, upper: math.MaxUint16}
-	case fidl.Uint32:
+	case fidlgen.Uint32:
 		return &IntegerDecl{subtype: subtype, lower: 0, upper: math.MaxUint32}
-	case fidl.Uint64:
+	case fidlgen.Uint64:
 		return &IntegerDecl{subtype: subtype, lower: 0, upper: math.MaxUint64}
-	case fidl.Float32:
+	case fidlgen.Float32:
 		return &FloatDecl{subtype: subtype}
-	case fidl.Float64:
+	case fidlgen.Float64:
 		return &FloatDecl{subtype: subtype}
 	default:
 		panic(fmt.Sprintf("unsupported primitive subtype: %s", subtype))
 	}
 }
 
-func (s Schema) lookupDeclByType(typ fidl.Type) (Declaration, bool) {
+func (s Schema) lookupDeclByType(typ fidlgen.Type) (Declaration, bool) {
 	switch typ.Kind {
-	case fidl.StringType:
+	case fidlgen.StringType:
 		return &StringDecl{
 			bound:    typ.ElementCount,
 			nullable: typ.Nullable,
 		}, true
-	case fidl.HandleType:
+	case fidlgen.HandleType:
 		return &HandleDecl{
 			subtype:  typ.HandleSubtype,
 			nullable: typ.Nullable,
 		}, true
-	case fidl.PrimitiveType:
+	case fidlgen.PrimitiveType:
 		return lookupDeclByPrimitive(typ.PrimitiveSubtype), true
-	case fidl.IdentifierType:
+	case fidlgen.IdentifierType:
 		return s.lookupDeclByQualifiedName(string(typ.Identifier), typ.Nullable)
-	case fidl.ArrayType:
+	case fidlgen.ArrayType:
 		return &ArrayDecl{schema: s, typ: typ}, true
-	case fidl.VectorType:
+	case fidlgen.VectorType:
 		return &VectorDecl{schema: s, typ: typ}, true
 	default:
 		// TODO(fxbug.dev/36441): HandleType, RequestType

@@ -5,7 +5,7 @@
 package fidlgen_cpp
 
 import (
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 //
@@ -14,7 +14,7 @@ import (
 //
 
 type Service struct {
-	fidl.Attributes
+	fidlgen.Attributes
 	DeclName
 	ServiceName string
 	Members     []ServiceMember
@@ -27,13 +27,13 @@ func (Service) Kind() declKind {
 var _ Kinded = (*Service)(nil)
 
 type ServiceMember struct {
-	fidl.Attributes
+	fidlgen.Attributes
 	ProtocolType DeclName
 	Name         string
 	MethodName   string
 }
 
-func (c *compiler) compileService(val fidl.Service) Service {
+func (c *compiler) compileService(val fidlgen.Service) Service {
 	s := Service{
 		Attributes:  val.Attributes,
 		DeclName:    c.compileDeclName(val.Name),
@@ -46,7 +46,7 @@ func (c *compiler) compileService(val fidl.Service) Service {
 	return s
 }
 
-func (c *compiler) compileServiceMember(val fidl.ServiceMember) ServiceMember {
+func (c *compiler) compileServiceMember(val fidlgen.ServiceMember) ServiceMember {
 	return ServiceMember{
 		Attributes:   val.Attributes,
 		ProtocolType: c.compileDeclName(val.Type.Identifier),

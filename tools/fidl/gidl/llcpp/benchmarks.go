@@ -15,7 +15,7 @@ import (
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	libllcpp "go.fuchsia.dev/fuchsia/tools/fidl/gidl/llcpp/lib"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 var benchmarkTmpl = template.Must(template.New("tmpl").Parse(`
@@ -123,7 +123,7 @@ type benchmarkTmplInput struct {
 }
 
 // Generate generates Low-Level C++ benchmarks.
-func GenerateBenchmarks(gidl gidlir.All, fidl fidl.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
+func GenerateBenchmarks(gidl gidlir.All, fidl fidlgen.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	schema := gidlmixer.BuildSchema(fidl)
 	tmplInput := benchmarkTmplInput{
 		FidlLibrary: libraryName(config.CppBenchmarksFidlLibrary),

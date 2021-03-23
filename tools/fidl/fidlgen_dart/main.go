@@ -12,7 +12,7 @@ import (
 	"path"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_dart/codegen"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type flagsDef struct {
@@ -61,7 +61,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	fidl, err := fidl.ReadJSONIr(*flags.jsonPath)
+	fidl, err := fidlgen.ReadJSONIr(*flags.jsonPath)
 	if err != nil {
 		log.Fatal(err)
 	}

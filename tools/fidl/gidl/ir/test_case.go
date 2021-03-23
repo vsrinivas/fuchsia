@@ -7,7 +7,7 @@ package ir
 import (
 	"strings"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type All struct {
@@ -82,17 +82,17 @@ func (list LanguageList) Includes(targetLanguage string) bool {
 }
 
 type HandleDef struct {
-	Subtype fidl.HandleSubtype
-	Rights  fidl.HandleRights
+	Subtype fidlgen.HandleSubtype
+	Rights  fidlgen.HandleRights
 }
 
-var supportedHandleSubtypes = map[fidl.HandleSubtype]struct{}{
-	fidl.Channel: {},
-	fidl.Event:   {},
+var supportedHandleSubtypes = map[fidlgen.HandleSubtype]struct{}{
+	fidlgen.Channel: {},
+	fidlgen.Event:   {},
 }
 
-func HandleSubtypeByName(s string) (fidl.HandleSubtype, bool) {
-	subtype := fidl.HandleSubtype(s)
+func HandleSubtypeByName(s string) (fidlgen.HandleSubtype, bool) {
+	subtype := fidlgen.HandleSubtype(s)
 	_, ok := supportedHandleSubtypes[subtype]
 	if ok {
 		return subtype, true
@@ -102,35 +102,35 @@ func HandleSubtypeByName(s string) (fidl.HandleSubtype, bool) {
 
 // handleRightsByName is initialized in two phases, constants here, and combined
 // rights in `init`.
-var handleRightsByName = map[string]fidl.HandleRights{
-	"none":        fidl.HandleRightsNone,
-	"same_rights": fidl.HandleRightsSameRights,
+var handleRightsByName = map[string]fidlgen.HandleRights{
+	"none":        fidlgen.HandleRightsNone,
+	"same_rights": fidlgen.HandleRightsSameRights,
 
-	"duplicate":      fidl.HandleRightsDuplicate,
-	"transfer":       fidl.HandleRightsTransfer,
-	"read":           fidl.HandleRightsRead,
-	"write":          fidl.HandleRightsWrite,
-	"execute":        fidl.HandleRightsExecute,
-	"map":            fidl.HandleRightsMap,
-	"get_property":   fidl.HandleRightsGetProperty,
-	"set_property":   fidl.HandleRightsSetProperty,
-	"enumerate":      fidl.HandleRightsEnumerate,
-	"destroy":        fidl.HandleRightsDestroy,
-	"set_policy":     fidl.HandleRightsSetPolicy,
-	"get_policy":     fidl.HandleRightsGetPolicy,
-	"signal":         fidl.HandleRightsSignal,
-	"signal_peer":    fidl.HandleRightsSignalPeer,
-	"wait":           fidl.HandleRightsWait,
-	"inspect":        fidl.HandleRightsInspect,
-	"manage_job":     fidl.HandleRightsManageJob,
-	"manage_process": fidl.HandleRightsManageProcess,
-	"manage_thread":  fidl.HandleRightsManageThread,
-	"apply_profile":  fidl.HandleRightsApplyProfile,
+	"duplicate":      fidlgen.HandleRightsDuplicate,
+	"transfer":       fidlgen.HandleRightsTransfer,
+	"read":           fidlgen.HandleRightsRead,
+	"write":          fidlgen.HandleRightsWrite,
+	"execute":        fidlgen.HandleRightsExecute,
+	"map":            fidlgen.HandleRightsMap,
+	"get_property":   fidlgen.HandleRightsGetProperty,
+	"set_property":   fidlgen.HandleRightsSetProperty,
+	"enumerate":      fidlgen.HandleRightsEnumerate,
+	"destroy":        fidlgen.HandleRightsDestroy,
+	"set_policy":     fidlgen.HandleRightsSetPolicy,
+	"get_policy":     fidlgen.HandleRightsGetPolicy,
+	"signal":         fidlgen.HandleRightsSignal,
+	"signal_peer":    fidlgen.HandleRightsSignalPeer,
+	"wait":           fidlgen.HandleRightsWait,
+	"inspect":        fidlgen.HandleRightsInspect,
+	"manage_job":     fidlgen.HandleRightsManageJob,
+	"manage_process": fidlgen.HandleRightsManageProcess,
+	"manage_thread":  fidlgen.HandleRightsManageThread,
+	"apply_profile":  fidlgen.HandleRightsApplyProfile,
 }
 
 func init() {
-	combinedHandleRights := func(rightsNames ...string) fidl.HandleRights {
-		var combinedRights fidl.HandleRights
+	combinedHandleRights := func(rightsNames ...string) fidlgen.HandleRights {
+		var combinedRights fidlgen.HandleRights
 		for _, rightsName := range rightsNames {
 			rights, ok := HandleRightsByName(rightsName)
 			if !ok {
@@ -147,15 +147,15 @@ func init() {
 
 }
 
-func HandleRightsByName(rightsName string) (fidl.HandleRights, bool) {
+func HandleRightsByName(rightsName string) (fidlgen.HandleRights, bool) {
 	rights, ok := handleRightsByName[rightsName]
 	return rights, ok
 }
 
 type HandleDisposition struct {
 	Handle Handle
-	Type   fidl.ObjectType
-	Rights fidl.HandleRights
+	Type   fidlgen.ObjectType
+	Rights fidlgen.HandleRights
 }
 
 type Encoding struct {

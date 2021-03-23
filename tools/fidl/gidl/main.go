@@ -26,7 +26,7 @@ import (
 	gidlreference "go.fuchsia.dev/fuchsia/tools/fidl/gidl/reference"
 	gidlrust "go.fuchsia.dev/fuchsia/tools/fidl/gidl/rust"
 	gidlwalker "go.fuchsia.dev/fuchsia/tools/fidl/gidl/walker"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 // Generator is a function that generates conformance tests for a particular
@@ -34,7 +34,7 @@ import (
 // added as a suffix to the name of the file before the extension
 // (e.g. my_file.go -> my_file_test_name.go).
 // The first file is the "main output file".
-type Generator func(gidlir.All, fidl.Root, gidlconfig.GeneratorConfig) ([]byte, error)
+type Generator func(gidlir.All, fidlgen.Root, gidlconfig.GeneratorConfig) ([]byte, error)
 
 var conformanceGenerators = map[string]Generator{
 	"c":             gidlc.GenerateConformanceTests,
@@ -141,12 +141,12 @@ func parseGidlIr(filename string) gidlir.All {
 	return result
 }
 
-func parseFidlJSONIr(filename string) fidl.Root {
+func parseFidlJSONIr(filename string) fidlgen.Root {
 	bytes, err := ioutil.ReadFile(filename)
 	if err != nil {
 		panic(err)
 	}
-	var result fidl.Root
+	var result fidlgen.Root
 	if err := json.Unmarshal(bytes, &result); err != nil {
 		panic(err)
 	}
@@ -190,7 +190,7 @@ func main() {
 	// TODO(fxbug.dev/7802): While transitioning "zx" from [Internal] to a normal
 	// library, tolerate but ignore a dependency on zx.
 	if len(ir.Libraries) == 1 && ir.Libraries[0].Name == "zx" {
-		ir.Libraries = make([]fidl.Library, 0)
+		ir.Libraries = make([]fidlgen.Library, 0)
 	}
 
 	if len(ir.Libraries) != 0 {

@@ -7,7 +7,7 @@ package fidlgen_cpp
 import (
 	"fmt"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type HandleInformation struct {
@@ -15,27 +15,27 @@ type HandleInformation struct {
 	Rights     string
 }
 
-func (c *compiler) fieldHandleInformation(val *fidl.Type) *HandleInformation {
+func (c *compiler) fieldHandleInformation(val *fidlgen.Type) *HandleInformation {
 	if val.ElementType != nil {
 		return c.fieldHandleInformation(val.ElementType)
 	}
-	if val.Kind == fidl.RequestType {
+	if val.Kind == fidlgen.RequestType {
 		// TODO(fxbug.dev/72222): Implement handle rights on server protocol endpoints.
 		return nil
 	}
-	if val.Kind == fidl.IdentifierType {
+	if val.Kind == fidlgen.IdentifierType {
 		declInfo, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
-		if declInfo.Type == fidl.ProtocolDeclType {
+		if declInfo.Type == fidlgen.ProtocolDeclType {
 			// TODO(fxbug.dev/72222): Implement handle rights on client protocol endpoints.
 			return nil
 		}
 		// Handle rights are only attached to handle fields or vector/arrays thereof.
 		return nil
 	}
-	if val.Kind == fidl.HandleType {
+	if val.Kind == fidlgen.HandleType {
 		subtype, ok := handleSubtypeConsts[val.HandleSubtype]
 		if !ok {
 			panic(fmt.Sprintf("unknown handle type for const: %v", val))
@@ -48,33 +48,33 @@ func (c *compiler) fieldHandleInformation(val *fidl.Type) *HandleInformation {
 	return nil
 }
 
-var handleSubtypeConsts = map[fidl.HandleSubtype]string{
-	fidl.Bti:          "BTI",
-	fidl.Channel:      "CHANNEL",
-	fidl.Clock:        "CLOCK",
-	fidl.DebugLog:     "LOG",
-	fidl.Event:        "EVENT",
-	fidl.Eventpair:    "EVENTPAIR",
-	fidl.Exception:    "EXCEPTION",
-	fidl.Fifo:         "FIFO",
-	fidl.Guest:        "GUEST",
-	fidl.Handle:       "NONE",
-	fidl.Interrupt:    "INTERRUPT",
-	fidl.Iommu:        "IOMMU",
-	fidl.Job:          "JOB",
-	fidl.Pager:        "PAGER",
-	fidl.PciDevice:    "PCI_DEVICE",
-	fidl.Pmt:          "PMT",
-	fidl.Port:         "PORT",
-	fidl.Process:      "PROCESS",
-	fidl.Profile:      "PROFILE",
-	fidl.Resource:     "RESOURCE",
-	fidl.Socket:       "SOCKET",
-	fidl.Stream:       "STREAM",
-	fidl.SuspendToken: "SUSPEND_TOKEN",
-	fidl.Thread:       "THREAD",
-	fidl.Time:         "TIMER",
-	fidl.Vcpu:         "VCPU",
-	fidl.Vmar:         "VMAR",
-	fidl.Vmo:          "VMO",
+var handleSubtypeConsts = map[fidlgen.HandleSubtype]string{
+	fidlgen.Bti:          "BTI",
+	fidlgen.Channel:      "CHANNEL",
+	fidlgen.Clock:        "CLOCK",
+	fidlgen.DebugLog:     "LOG",
+	fidlgen.Event:        "EVENT",
+	fidlgen.Eventpair:    "EVENTPAIR",
+	fidlgen.Exception:    "EXCEPTION",
+	fidlgen.Fifo:         "FIFO",
+	fidlgen.Guest:        "GUEST",
+	fidlgen.Handle:       "NONE",
+	fidlgen.Interrupt:    "INTERRUPT",
+	fidlgen.Iommu:        "IOMMU",
+	fidlgen.Job:          "JOB",
+	fidlgen.Pager:        "PAGER",
+	fidlgen.PciDevice:    "PCI_DEVICE",
+	fidlgen.Pmt:          "PMT",
+	fidlgen.Port:         "PORT",
+	fidlgen.Process:      "PROCESS",
+	fidlgen.Profile:      "PROFILE",
+	fidlgen.Resource:     "RESOURCE",
+	fidlgen.Socket:       "SOCKET",
+	fidlgen.Stream:       "STREAM",
+	fidlgen.SuspendToken: "SUSPEND_TOKEN",
+	fidlgen.Thread:       "THREAD",
+	fidlgen.Time:         "TIMER",
+	fidlgen.Vcpu:         "VCPU",
+	fidlgen.Vmar:         "VMAR",
+	fidlgen.Vmo:          "VMO",
 }

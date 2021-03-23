@@ -12,7 +12,6 @@ import (
 	"strings"
 	"text/template"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	fidlgen "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
@@ -87,7 +86,7 @@ type Config struct {
 }
 
 // GenerateFidl generates all files required for the C++ libfuzzer code.
-func (gen FidlGenerator) GenerateFidl(fidl fidl.Root, config *Config, clangFormatPath string) error {
+func (gen FidlGenerator) GenerateFidl(fidl fidlgen.Root, config *Config, clangFormatPath string) error {
 	tree := cpp.CompileLibFuzzer(fidl)
 	prepareTree(fidl.Name, config.IncludeStem, &tree)
 
@@ -107,7 +106,7 @@ func (gen FidlGenerator) GenerateFidl(fidl fidl.Root, config *Config, clangForma
 	return nil
 }
 
-func (gen FidlGenerator) GenerateFuzzer(fidl fidl.Root, tree cpp.Root, config *Config, clangFormatPath string) error {
+func (gen FidlGenerator) GenerateFuzzer(fidl fidlgen.Root, tree cpp.Root, config *Config, clangFormatPath string) error {
 	headerPath := config.OutputBase + ".h"
 	sourcePath := config.OutputBase + ".cc"
 
@@ -155,7 +154,7 @@ func (gen FidlGenerator) GenerateFuzzer(fidl fidl.Root, tree cpp.Root, config *C
 	return nil
 }
 
-func (gen FidlGenerator) GenerateDecoderEncoders(fidl fidl.Root, tree cpp.Root, config *Config, clangFormatPath string) error {
+func (gen FidlGenerator) GenerateDecoderEncoders(fidl fidlgen.Root, tree cpp.Root, config *Config, clangFormatPath string) error {
 	headerPath := config.OutputBase + "_decode_encode.h"
 	sourcePath := config.OutputBase + "_decode_encode.cc"
 
@@ -189,7 +188,7 @@ func (gen FidlGenerator) GenerateDecoderEncoders(fidl fidl.Root, tree cpp.Root, 
 	return gen.GenerateDecoderEncoderSource(sourceFormatterPipe, tree)
 }
 
-func prepareTree(name fidl.EncodedLibraryIdentifier, includeStem string, tree *cpp.Root) {
+func prepareTree(name fidlgen.EncodedLibraryIdentifier, includeStem string, tree *cpp.Root) {
 	pkgPath := strings.Replace(string(name), ".", "/", -1)
 	tree.PrimaryHeader = pkgPath + "/" + includeStem + ".h"
 	tree.IncludeStem = includeStem

@@ -15,7 +15,7 @@ import (
 
 	gidlconfig "go.fuchsia.dev/fuchsia/tools/fidl/gidl/config"
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type distributionEntry struct {
@@ -25,7 +25,7 @@ type distributionEntry struct {
 
 type testCase struct {
 	name        string
-	objectTypes []fidl.ObjectType
+	objectTypes []fidlgen.ObjectType
 	bytes       []byte
 }
 
@@ -51,10 +51,10 @@ func getHandleDispositionEncoding(encodings []gidlir.HandleDispositionEncoding) 
 	return gidlir.HandleDispositionEncoding{}, false
 }
 
-func getHandleObjectTypes(handles []gidlir.Handle, defs []gidlir.HandleDef) []fidl.ObjectType {
-	var objectTypes []fidl.ObjectType
+func getHandleObjectTypes(handles []gidlir.Handle, defs []gidlir.HandleDef) []fidlgen.ObjectType {
+	var objectTypes []fidlgen.ObjectType
 	for _, h := range handles {
-		objectTypes = append(objectTypes, fidl.ObjectTypeFromHandleSubtype(defs[h].Subtype))
+		objectTypes = append(objectTypes, fidlgen.ObjectTypeFromHandleSubtype(defs[h].Subtype))
 	}
 	return objectTypes
 }
@@ -141,7 +141,7 @@ func writeTestCase(hostDir string, packageDataDir string, tc testCase) (distribu
 	}, err
 }
 
-func GenerateConformanceTests(gidl gidlir.All, _ fidl.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
+func GenerateConformanceTests(gidl gidlir.All, _ fidlgen.Root, config gidlconfig.GeneratorConfig) ([]byte, error) {
 	if config.FuzzerCorpusHostDir == "" {
 		return nil, errors.New("Must specify --fuzzer-corpus-host-dir when generating fuzzer_corpus")
 	}

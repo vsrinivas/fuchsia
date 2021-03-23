@@ -8,7 +8,7 @@ import (
 	"fmt"
 	"sort"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 type declKind namespacedEnumMember
@@ -96,7 +96,7 @@ type Type struct {
 
 	IsResource bool
 
-	DeclarationName fidl.EncodedCompoundIdentifier
+	DeclarationName fidlgen.EncodedCompoundIdentifier
 
 	// Set iff IsArray || IsVector
 	ElementType *Type
@@ -152,8 +152,8 @@ type Root struct {
 	Headers         []string
 	FuzzerHeaders   []string
 	HandleTypes     []string
-	Library         fidl.LibraryIdentifier
-	LibraryReversed fidl.LibraryIdentifier
+	Library         fidlgen.LibraryIdentifier
+	LibraryReversed fidlgen.LibraryIdentifier
 	Decls           []Kinded
 }
 
@@ -171,22 +171,22 @@ func (r Result) ValueArity() int {
 	return len(r.ValueMembers)
 }
 
-var primitiveTypes = map[fidl.PrimitiveSubtype]string{
-	fidl.Bool:    "bool",
-	fidl.Int8:    "int8_t",
-	fidl.Int16:   "int16_t",
-	fidl.Int32:   "int32_t",
-	fidl.Int64:   "int64_t",
-	fidl.Uint8:   "uint8_t",
-	fidl.Uint16:  "uint16_t",
-	fidl.Uint32:  "uint32_t",
-	fidl.Uint64:  "uint64_t",
-	fidl.Float32: "float",
-	fidl.Float64: "double",
+var primitiveTypes = map[fidlgen.PrimitiveSubtype]string{
+	fidlgen.Bool:    "bool",
+	fidlgen.Int8:    "int8_t",
+	fidlgen.Int16:   "int16_t",
+	fidlgen.Int32:   "int32_t",
+	fidlgen.Int64:   "int64_t",
+	fidlgen.Uint8:   "uint8_t",
+	fidlgen.Uint16:  "uint16_t",
+	fidlgen.Uint32:  "uint32_t",
+	fidlgen.Uint64:  "uint64_t",
+	fidlgen.Float32: "float",
+	fidlgen.Float64: "double",
 }
 
 // TypeNameForPrimitive returns the C++ name of a FIDL primitive type.
-func TypeNameForPrimitive(val fidl.PrimitiveSubtype) TypeName {
+func TypeNameForPrimitive(val fidlgen.PrimitiveSubtype) TypeName {
 	if t, ok := primitiveTypes[val]; ok {
 		return PrimitiveTypeName(t)
 	}
@@ -200,7 +200,7 @@ const (
 	changePartIfReserved identifierTransform = true
 )
 
-func libraryParts(library fidl.LibraryIdentifier, identifierTransform identifierTransform) []string {
+func libraryParts(library fidlgen.LibraryIdentifier, identifierTransform identifierTransform) []string {
 	parts := []string{}
 	for _, part := range library {
 		if identifierTransform == changePartIfReserved {
@@ -212,31 +212,31 @@ func libraryParts(library fidl.LibraryIdentifier, identifierTransform identifier
 	return parts
 }
 
-func formatLibraryPrefix(library fidl.LibraryIdentifier) string {
+func formatLibraryPrefix(library fidlgen.LibraryIdentifier) string {
 	return formatLibrary(library, "_", keepPartIfReserved)
 }
 
-func formatLibraryPath(library fidl.LibraryIdentifier) string {
+func formatLibraryPath(library fidlgen.LibraryIdentifier) string {
 	return formatLibrary(library, "/", keepPartIfReserved)
 }
 
-type libraryNamespaceFunc func(fidl.LibraryIdentifier) Namespace
+type libraryNamespaceFunc func(fidlgen.LibraryIdentifier) Namespace
 
-func codingTableName(ident fidl.EncodedCompoundIdentifier) string {
-	ci := fidl.ParseCompoundIdentifier(ident)
+func codingTableName(ident fidlgen.EncodedCompoundIdentifier) string {
+	ci := fidlgen.ParseCompoundIdentifier(ident)
 	return formatLibrary(ci.Library, "_", keepPartIfReserved) + "_" + string(ci.Name) + string(ci.Member)
 }
 
 type compiler struct {
 	symbolPrefix    string
-	decls           fidl.DeclInfoMap
-	library         fidl.LibraryIdentifier
-	handleTypes     map[fidl.HandleSubtype]struct{}
-	resultForStruct map[fidl.EncodedCompoundIdentifier]*Result
-	resultForUnion  map[fidl.EncodedCompoundIdentifier]*Result
+	decls           fidlgen.DeclInfoMap
+	library         fidlgen.LibraryIdentifier
+	handleTypes     map[fidlgen.HandleSubtype]struct{}
+	resultForStruct map[fidlgen.EncodedCompoundIdentifier]*Result
+	resultForUnion  map[fidlgen.EncodedCompoundIdentifier]*Result
 }
 
-func (c *compiler) isInExternalLibrary(ci fidl.CompoundIdentifier) bool {
+func (c *compiler) isInExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
 	if len(ci.Library) != len(c.library) {
 		return true
 	}
@@ -248,9 +248,9 @@ func (c *compiler) isInExternalLibrary(ci fidl.CompoundIdentifier) bool {
 	return false
 }
 
-func (c *compiler) compileDeclName(eci fidl.EncodedCompoundIdentifier) DeclName {
-	ci := fidl.ParseCompoundIdentifier(eci)
-	if ci.Member != fidl.Identifier("") {
+func (c *compiler) compileDeclName(eci fidlgen.EncodedCompoundIdentifier) DeclName {
+	ci := fidlgen.ParseCompoundIdentifier(eci)
+	if ci.Member != fidlgen.Identifier("") {
 		panic(fmt.Sprintf("unexpected compound identifier with member: %v", eci))
 	}
 	name := changeIfReserved(ci.Name)
@@ -260,12 +260,12 @@ func (c *compiler) compileDeclName(eci fidl.EncodedCompoundIdentifier) DeclName 
 	}
 	declType := declInfo.Type
 	switch declType {
-	case fidl.ConstDeclType, fidl.BitsDeclType, fidl.EnumDeclType, fidl.StructDeclType, fidl.TableDeclType, fidl.UnionDeclType:
+	case fidlgen.ConstDeclType, fidlgen.BitsDeclType, fidlgen.EnumDeclType, fidlgen.StructDeclType, fidlgen.TableDeclType, fidlgen.UnionDeclType:
 		return DeclName{
 			Natural: NewDeclVariant(name, naturalNamespace(ci.Library)),
 			Wire:    NewDeclVariant(name, wireNamespace(ci.Library)),
 		}
-	case fidl.ProtocolDeclType, fidl.ServiceDeclType:
+	case fidlgen.ProtocolDeclType, fidlgen.ServiceDeclType:
 		return DeclName{
 			Natural: NewDeclVariant(name, naturalNamespace(ci.Library)),
 			Wire:    NewDeclVariant(name, unifiedNamespace(ci.Library)),
@@ -274,8 +274,8 @@ func (c *compiler) compileDeclName(eci fidl.EncodedCompoundIdentifier) DeclName 
 	panic("Unknown decl type: " + string(declType))
 }
 
-func (c *compiler) compileCodingTableType(eci fidl.EncodedCompoundIdentifier) string {
-	val := fidl.ParseCompoundIdentifier(eci)
+func (c *compiler) compileCodingTableType(eci fidlgen.EncodedCompoundIdentifier) string {
+	val := fidlgen.ParseCompoundIdentifier(eci)
 	if c.isInExternalLibrary(val) {
 		panic(fmt.Sprintf("can't create coding table type for external identifier: %v", val))
 	}
@@ -283,10 +283,10 @@ func (c *compiler) compileCodingTableType(eci fidl.EncodedCompoundIdentifier) st
 	return fmt.Sprintf("%s_%sTable", c.symbolPrefix, val.Name)
 }
 
-func (c *compiler) compileType(val fidl.Type) Type {
+func (c *compiler) compileType(val fidlgen.Type) Type {
 	r := Type{}
 	switch val.Kind {
-	case fidl.ArrayType:
+	case fidlgen.ArrayType:
 		t := c.compileType(*val.ElementType)
 		r.TypeName = t.TypeName.WithArrayTemplates("::std::array", "::fidl::Array", *val.ElementCount)
 		r.WirePointer = t.WirePointer
@@ -296,7 +296,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		r.IsResource = t.IsResource
 		r.ElementType = &t
 		r.ElementCount = *val.ElementCount
-	case fidl.VectorType:
+	case fidlgen.VectorType:
 		t := c.compileType(*val.ElementType)
 		r.TypeName = t.TypeName.WithTemplates(
 			map[bool]string{true: "::fidl::VectorPtr", false: "::std::vector"}[val.Nullable],
@@ -307,7 +307,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		r.Kind = TypeKinds.Vector
 		r.IsResource = t.IsResource
 		r.ElementType = &t
-	case fidl.StringType:
+	case fidlgen.StringType:
 		r.Wire = TypeVariant("::fidl::StringView")
 		r.WireFamily = FamilyKinds.String
 		if val.Nullable {
@@ -317,31 +317,31 @@ func (c *compiler) compileType(val fidl.Type) Type {
 		}
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.String
-	case fidl.HandleType:
+	case fidlgen.HandleType:
 		c.handleTypes[val.HandleSubtype] = struct{}{}
 		r.TypeName = TypeNameForHandle(val.HandleSubtype)
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Handle
 		r.IsResource = true
-	case fidl.RequestType:
+	case fidlgen.RequestType:
 		r.TypeName = c.compileDeclName(val.RequestSubtype).TypeName().WithTemplates("::fidl::InterfaceRequest", "::fidl::ServerEnd")
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Request
 		r.IsResource = true
-	case fidl.PrimitiveType:
+	case fidlgen.PrimitiveType:
 		r.TypeName = TypeNameForPrimitive(val.PrimitiveSubtype)
 		r.WireFamily = FamilyKinds.TrivialCopy
 		r.Kind = TypeKinds.Primitive
-	case fidl.IdentifierType:
+	case fidlgen.IdentifierType:
 		name := c.compileDeclName(val.Identifier).TypeName()
 		declInfo, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
 		declType := declInfo.Type
-		if declType == fidl.ProtocolDeclType {
+		if declType == fidlgen.ProtocolDeclType {
 			r.TypeName = name.WithTemplates("::fidl::InterfaceHandle", "::fidl::ClientEnd")
 			r.WireFamily = FamilyKinds.Reference
 			r.NeedsDtor = true
@@ -349,28 +349,28 @@ func (c *compiler) compileType(val fidl.Type) Type {
 			r.IsResource = true
 		} else {
 			switch declType {
-			case fidl.BitsDeclType:
+			case fidlgen.BitsDeclType:
 				r.Kind = TypeKinds.Bits
 				r.WireFamily = FamilyKinds.TrivialCopy
-			case fidl.EnumDeclType:
+			case fidlgen.EnumDeclType:
 				r.Kind = TypeKinds.Enum
 				r.WireFamily = FamilyKinds.TrivialCopy
-			case fidl.ConstDeclType:
+			case fidlgen.ConstDeclType:
 				r.Kind = TypeKinds.Const
 				r.WireFamily = FamilyKinds.Reference
-			case fidl.StructDeclType:
+			case fidlgen.StructDeclType:
 				r.Kind = TypeKinds.Struct
 				r.DeclarationName = val.Identifier
 				r.WireFamily = FamilyKinds.Reference
 				r.WirePointer = val.Nullable
 				r.IsResource = declInfo.IsResourceType()
-			case fidl.TableDeclType:
+			case fidlgen.TableDeclType:
 				r.Kind = TypeKinds.Table
 				r.DeclarationName = val.Identifier
 				r.WireFamily = FamilyKinds.Reference
 				r.WirePointer = val.Nullable
 				r.IsResource = declInfo.IsResourceType()
-			case fidl.UnionDeclType:
+			case fidlgen.UnionDeclType:
 				r.Kind = TypeKinds.Union
 				r.DeclarationName = val.Identifier
 				r.WireFamily = FamilyKinds.Reference
@@ -383,7 +383,7 @@ func (c *compiler) compileType(val fidl.Type) Type {
 				r.TypeName = name.MapNatural(func(n TypeVariant) TypeVariant {
 					return n.WithTemplate("::std::unique_ptr")
 				}).MapWire(func(n TypeVariant) TypeVariant {
-					if declType == fidl.UnionDeclType {
+					if declType == fidlgen.UnionDeclType {
 						return n
 					} else {
 						return n.WithTemplate("::fidl::tracking_ptr")
@@ -401,26 +401,26 @@ func (c *compiler) compileType(val fidl.Type) Type {
 	return r
 }
 
-func compile(r fidl.Root) Root {
+func compile(r fidlgen.Root) Root {
 	root := Root{}
-	library := make(fidl.LibraryIdentifier, 0)
-	rawLibrary := make(fidl.LibraryIdentifier, 0)
-	for _, identifier := range fidl.ParseLibraryName(r.Name) {
+	library := make(fidlgen.LibraryIdentifier, 0)
+	rawLibrary := make(fidlgen.LibraryIdentifier, 0)
+	for _, identifier := range fidlgen.ParseLibraryName(r.Name) {
 		safeName := changeIfReserved(identifier)
-		library = append(library, fidl.Identifier(safeName))
+		library = append(library, fidlgen.Identifier(safeName))
 		rawLibrary = append(rawLibrary, identifier)
 	}
 	c := compiler{
 		symbolPrefix:    formatLibraryPrefix(rawLibrary),
 		decls:           r.DeclsWithDependencies(),
-		library:         fidl.ParseLibraryName(r.Name),
-		handleTypes:     make(map[fidl.HandleSubtype]struct{}),
-		resultForStruct: make(map[fidl.EncodedCompoundIdentifier]*Result),
-		resultForUnion:  make(map[fidl.EncodedCompoundIdentifier]*Result),
+		library:         fidlgen.ParseLibraryName(r.Name),
+		handleTypes:     make(map[fidlgen.HandleSubtype]struct{}),
+		resultForStruct: make(map[fidlgen.EncodedCompoundIdentifier]*Result),
+		resultForUnion:  make(map[fidlgen.EncodedCompoundIdentifier]*Result),
 	}
 
 	root.Library = library
-	libraryReversed := make(fidl.LibraryIdentifier, len(library))
+	libraryReversed := make(fidlgen.LibraryIdentifier, len(library))
 	for i, j := 0, len(library)-1; i < len(library); i, j = i+1, j-1 {
 		libraryReversed[i] = library[j]
 	}
@@ -429,7 +429,7 @@ func compile(r fidl.Root) Root {
 	}
 	root.LibraryReversed = libraryReversed
 
-	decls := make(map[fidl.EncodedCompoundIdentifier]Kinded)
+	decls := make(map[fidlgen.EncodedCompoundIdentifier]Kinded)
 
 	for _, v := range r.Bits {
 		decls[v.Name] = c.compileBits(v)
@@ -481,7 +481,7 @@ func compile(r fidl.Root) Root {
 			// We don't need to include our own header.
 			continue
 		}
-		libraryIdent := fidl.ParseLibraryName(l.Name)
+		libraryIdent := fidlgen.ParseLibraryName(l.Name)
 		root.Headers = append(root.Headers, formatLibraryPath(libraryIdent))
 		root.FuzzerHeaders = append(root.FuzzerHeaders, formatLibraryPath(libraryIdent))
 	}
@@ -502,14 +502,14 @@ func compile(r fidl.Root) Root {
 	return root
 }
 
-func CompileHL(r fidl.Root) Root {
+func CompileHL(r fidlgen.Root) Root {
 	return compile(r.ForBindings("hlcpp"))
 }
 
-func CompileLL(r fidl.Root) Root {
+func CompileLL(r fidlgen.Root) Root {
 	return compile(r.ForBindings("llcpp"))
 }
 
-func CompileLibFuzzer(r fidl.Root) Root {
+func CompileLibFuzzer(r fidlgen.Root) Root {
 	return compile(r.ForBindings("libfuzzer"))
 }

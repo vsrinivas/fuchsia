@@ -10,7 +10,7 @@ import (
 	"os"
 
 	"go.fuchsia.dev/fuchsia/tools/fidl/fidlgen_libfuzzer/codegen"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 var jsonPath = flag.String("json", "",
@@ -36,7 +36,7 @@ func main() {
 		os.Exit(1)
 	}
 
-	ir, err := fidl.ReadJSONIr(*jsonPath)
+	ir, err := fidlgen.ReadJSONIr(*jsonPath)
 	if err != nil {
 		log.Fatal(err)
 	}

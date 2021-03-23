@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 	cpp "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen_cpp"
 )
 
@@ -100,7 +100,7 @@ func (gen *FidlGenerator) GenerateTestBase(wr io.Writer, tree cpp.Root) error {
 }
 
 func (gen *FidlGenerator) generateFile(filepath, clangFormatPath string, generate func(w io.Writer) error) error {
-	file, err := fidl.NewLazyWriter(filepath)
+	file, err := fidlgen.NewLazyWriter(filepath)
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (gen *FidlGenerator) generateFile(filepath, clangFormatPath string, generat
 }
 
 // GenerateFidl generates all files required for the C++ bindings.
-func (gen *FidlGenerator) GenerateFidl(fidl fidl.Root, config *Config, clangFormatPath string) error {
+func (gen *FidlGenerator) GenerateFidl(fidl fidlgen.Root, config *Config, clangFormatPath string) error {
 	tree := cpp.CompileHL(fidl)
 
 	relStem, err := filepath.Rel(config.IncludeBase, config.OutputBase)

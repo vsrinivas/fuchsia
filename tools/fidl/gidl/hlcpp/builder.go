@@ -13,11 +13,11 @@ import (
 
 	gidlir "go.fuchsia.dev/fuchsia/tools/fidl/gidl/ir"
 	gidlmixer "go.fuchsia.dev/fuchsia/tools/fidl/gidl/mixer"
-	fidl "go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
+	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
 func escapeStr(value string) string {
-	if fidl.PrintableASCII(value) {
+	if fidlgen.PrintableASCII(value) {
 		return strconv.Quote(value)
 	}
 	var (
@@ -39,20 +39,20 @@ func escapeStr(value string) string {
 
 func buildHandleDef(def gidlir.HandleDef) string {
 	switch def.Subtype {
-	case fidl.Channel:
+	case fidlgen.Channel:
 		return fmt.Sprintf("fidl::test::util::CreateChannel(%d)", def.Rights)
-	case fidl.Event:
+	case fidlgen.Event:
 		return fmt.Sprintf("fidl::test::util::CreateEvent(%d)", def.Rights)
 	default:
 		panic(fmt.Sprintf("unsupported handle subtype: %s", def.Subtype))
 	}
 }
 
-func handleType(subtype fidl.HandleSubtype) string {
+func handleType(subtype fidlgen.HandleSubtype) string {
 	switch subtype {
-	case fidl.Channel:
+	case fidlgen.Channel:
 		return "ZX_OBJ_TYPE_CHANNEL"
-	case fidl.Event:
+	case fidlgen.Event:
 		return "ZX_OBJ_TYPE_EVENT"
 	default:
 		panic(fmt.Sprintf("unsupported handle subtype: %s", subtype))
@@ -141,22 +141,22 @@ func (b *cppValueBuilder) visit(value interface{}, decl gidlmixer.Declaration) s
 		switch decl := decl.(type) {
 		case *gidlmixer.FloatDecl:
 			switch decl.Subtype() {
-			case fidl.Float32:
+			case fidlgen.Float32:
 				s := fmt.Sprintf("%g", value)
 				if strings.Contains(s, ".") {
 					return fmt.Sprintf("%sf", s)
 				} else {
 					return s
 				}
-			case fidl.Float64:
+			case fidlgen.Float64:
 				return fmt.Sprintf("%g", value)
 			}
 		}
 	case gidlir.RawFloat:
 		switch decl.(*gidlmixer.FloatDecl).Subtype() {
-		case fidl.Float32:
+		case fidlgen.Float32:
 			return fmt.Sprintf("([] { uint32_t u = %#b; float f; memcpy(&f, &u, 4); return f; })()", value)
-		case fidl.Float64:
+		case fidlgen.Float64:
 			return fmt.Sprintf("([] { uint64_t u = %#b; double d; memcpy(&d, &u, 8); return d; })()", value)
 		}
 	case string:
@@ -300,11 +300,11 @@ func typeName(decl gidlmixer.Declaration) string {
 		return fmt.Sprintf("std::vector<%s>", typeName(decl.Elem()))
 	case *gidlmixer.HandleDecl:
 		switch decl.Subtype() {
-		case fidl.Handle:
+		case fidlgen.Handle:
 			return "zx::handle"
-		case fidl.Channel:
+		case fidlgen.Channel:
 			return "zx::channel"
-		case fidl.Event:
+		case fidlgen.Event:
 			return "zx::event"
 		default:
 			panic(fmt.Sprintf("Handle subtype not supported %s", decl.Subtype()))
@@ -319,16 +319,16 @@ func declName(decl gidlmixer.NamedDeclaration) string {
 	return strings.Join(parts, "::")
 }
 
-func primitiveTypeName(subtype fidl.PrimitiveSubtype) string {
+func primitiveTypeName(subtype fidlgen.PrimitiveSubtype) string {
 	switch subtype {
-	case fidl.Bool:
+	case fidlgen.Bool:
 		return "bool"
-	case fidl.Uint8, fidl.Uint16, fidl.Uint32, fidl.Uint64,
-		fidl.Int8, fidl.Int16, fidl.Int32, fidl.Int64:
+	case fidlgen.Uint8, fidlgen.Uint16, fidlgen.Uint32, fidlgen.Uint64,
+		fidlgen.Int8, fidlgen.Int16, fidlgen.Int32, fidlgen.Int64:
 		return fmt.Sprintf("%s_t", subtype)
-	case fidl.Float32:
+	case fidlgen.Float32:
 		return "float"
-	case fidl.Float64:
+	case fidlgen.Float64:
 		return "double"
 	default:
 		panic(fmt.Sprintf("unexpected subtype %s", subtype))
