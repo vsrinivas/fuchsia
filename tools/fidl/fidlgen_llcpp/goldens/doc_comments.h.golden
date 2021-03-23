@@ -1386,7 +1386,6 @@ static_assert(
     std::is_standard_layout_v<::fidl_test_doccomments::wire::FlexibleUnion>);
 }  // namespace fidl
 namespace fidl_test_doccomments {
-namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
 class Interface::AsyncEventHandler : public Interface::EventHandlerInterface {
@@ -1476,5 +1475,4 @@ class Interface::WeakEventSender {
 };
 #endif
 
-namespace wire {}  // namespace wire
 }  // namespace fidl_test_doccomments

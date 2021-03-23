@@ -251,7 +251,5 @@ static_assert(offsetof(::fidl_test_struct::wire::BasicStruct, x) == 0);
 static_assert(offsetof(::fidl_test_struct::wire::BasicStruct, y) == 8);
 static_assert(sizeof(::fidl_test_struct::wire::BasicStruct) ==
               ::fidl_test_struct::wire::BasicStruct::PrimarySize);
+
 }  // namespace fidl
-namespace fidl_test_struct {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_struct

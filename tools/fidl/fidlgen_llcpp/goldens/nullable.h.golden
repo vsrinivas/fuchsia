@@ -1606,7 +1606,6 @@ static_assert(sizeof(::fidl_test_nullable::wire::Int32Wrapper) ==
               ::fidl_test_nullable::wire::Int32Wrapper::PrimarySize);
 }  // namespace fidl
 namespace fidl_test_nullable {
-namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
 class SimpleProtocol::AsyncEventHandler
@@ -1712,5 +1711,4 @@ class SimpleProtocol::WeakEventSender {
 };
 #endif
 
-namespace wire {}  // namespace wire
 }  // namespace fidl_test_nullable

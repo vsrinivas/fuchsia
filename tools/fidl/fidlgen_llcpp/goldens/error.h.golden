@@ -806,7 +806,6 @@ static_assert(sizeof(::fidl_test_error::Example::fooResponse) ==
 static_assert(offsetof(::fidl_test_error::Example::fooResponse, result) == 16);
 }  // namespace fidl
 namespace fidl_test_error {
-namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
 class Example::AsyncEventHandler : public Example::EventHandlerInterface {

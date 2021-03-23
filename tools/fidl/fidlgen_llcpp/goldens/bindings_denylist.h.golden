@@ -128,7 +128,5 @@ struct IsUnion<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>);
+
 }  // namespace fidl
-namespace fidl_test_bindingsdenylist {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_bindingsdenylist

@@ -4357,7 +4357,6 @@ static_assert(std::is_standard_layout_v<
               ::fidl_test_union::wire::XUnionContainingEmptyStruct>);
 }  // namespace fidl
 namespace fidl_test_union {
-namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
 class TestProtocol::AsyncEventHandler
@@ -4515,5 +4514,4 @@ class TestProtocol::WeakEventSender {
 };
 #endif
 
-namespace wire {}  // namespace wire
 }  // namespace fidl_test_union

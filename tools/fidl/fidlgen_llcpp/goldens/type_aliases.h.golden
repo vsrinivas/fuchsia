@@ -206,7 +206,5 @@ static_assert(
     sizeof(::fidl_test_typealiases::wire::ExampleOfUseOfAliases) ==
     ::fidl_test_typealiases::wire::ExampleOfUseOfAliases::PrimarySize);
 #endif  // __Fuchsia__
+
 }  // namespace fidl
-namespace fidl_test_typealiases {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_typealiases

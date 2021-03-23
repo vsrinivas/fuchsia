@@ -93,9 +93,9 @@ const fileHeaderTmpl = `
 {{- end }}
 
 {{- range .Decls }}
-{{ EnsureNamespace . }}
 
 {{- if Eq .Kind Kinds.Protocol }}
+{{ EnsureNamespace . }}
 {{ template "ClientDeclaration" . }}
 {{ "" }}
 {{ template "EventSenderDeclaration" . }}

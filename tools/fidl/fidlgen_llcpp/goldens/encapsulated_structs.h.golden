@@ -754,7 +754,5 @@ static_assert(
     sizeof(::fidl_test_encapsulatedstructs::wire::TopLevelStruct) ==
     ::fidl_test_encapsulatedstructs::wire::TopLevelStruct::PrimarySize);
 #endif  // __Fuchsia__
+
 }  // namespace fidl
-namespace fidl_test_encapsulatedstructs {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_encapsulatedstructs

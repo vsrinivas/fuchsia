@@ -7607,7 +7607,6 @@ static_assert(
              result) == 16);
 }  // namespace fidl
 namespace fidl_test_protocols {
-namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
 class Transitional::AsyncEventHandler
@@ -8221,8 +8220,6 @@ class WithAndWithoutRequestResponse::WeakEventSender {
       binding_;
 };
 #endif
-
-namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
 class WithErrorSyntax::AsyncEventHandler

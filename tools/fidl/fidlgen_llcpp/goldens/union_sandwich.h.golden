@@ -1010,7 +1010,5 @@ static_assert(
     sizeof(::fidl_test_unionsandwich::wire::SandwichUnionSize24Alignment8) ==
     ::fidl_test_unionsandwich::wire::SandwichUnionSize24Alignment8::
         PrimarySize);
+
 }  // namespace fidl
-namespace fidl_test_unionsandwich {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_unionsandwich

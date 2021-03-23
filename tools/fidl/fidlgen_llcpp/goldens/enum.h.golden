@@ -139,7 +139,5 @@ struct IsFidlType<::fidl_test_enum::wire::MyFlexibleEnumWithCustomUnknown>
 template <>
 struct IsFidlType<::fidl_test_enum::wire::MyFlexibleEnum>
     : public std::true_type {};
+
 }  // namespace fidl
-namespace fidl_test_enum {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_enum

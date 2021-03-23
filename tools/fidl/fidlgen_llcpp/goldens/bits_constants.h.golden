@@ -158,7 +158,5 @@ static_assert(
     std::is_standard_layout_v<::fidl_test_bitsconstants::wire::BitsType>);
 static_assert(sizeof(::fidl_test_bitsconstants::wire::BitsType) ==
               sizeof(uint32_t));
+
 }  // namespace fidl
-namespace fidl_test_bitsconstants {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_bitsconstants

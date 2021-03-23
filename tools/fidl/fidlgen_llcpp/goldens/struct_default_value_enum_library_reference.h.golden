@@ -150,7 +150,5 @@ static_assert(
 static_assert(
     sizeof(::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo) ==
     ::fidl_test_structdefaultvalueenumlibraryreference::wire::Foo::PrimarySize);
+
 }  // namespace fidl
-namespace fidl_test_structdefaultvalueenumlibraryreference {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_structdefaultvalueenumlibraryreference

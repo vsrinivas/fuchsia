@@ -152,7 +152,5 @@ static_assert(offsetof(::fidl_test_vectors::wire::ExampleUseOfVectors,
                        vector_of_vector_of_bool) == 16);
 static_assert(sizeof(::fidl_test_vectors::wire::ExampleUseOfVectors) ==
               ::fidl_test_vectors::wire::ExampleUseOfVectors::PrimarySize);
+
 }  // namespace fidl
-namespace fidl_test_vectors {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_vectors

@@ -146,7 +146,5 @@ static_assert(
 static_assert(offsetof(::fidl_test_transitivedependencies::wire::Baz, g) == 0);
 static_assert(sizeof(::fidl_test_transitivedependencies::wire::Baz) ==
               ::fidl_test_transitivedependencies::wire::Baz::PrimarySize);
+
 }  // namespace fidl
-namespace fidl_test_transitivedependencies {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_transitivedependencies

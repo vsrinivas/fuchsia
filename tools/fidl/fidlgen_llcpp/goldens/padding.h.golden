@@ -1819,7 +1819,5 @@ static_assert(offsetof(::fidl_test_padding::wire::Padding1ByteEnd, a) == 0);
 static_assert(offsetof(::fidl_test_padding::wire::Padding1ByteEnd, b) == 2);
 static_assert(sizeof(::fidl_test_padding::wire::Padding1ByteEnd) ==
               ::fidl_test_padding::wire::Padding1ByteEnd::PrimarySize);
+
 }  // namespace fidl
-namespace fidl_test_padding {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_padding

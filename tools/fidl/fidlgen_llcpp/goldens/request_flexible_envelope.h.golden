@@ -1383,7 +1383,6 @@ static_assert(offsetof(::fidl_test_requestflexibleenvelope::Protocol::
                        f) == 16);
 }  // namespace fidl
 namespace fidl_test_requestflexibleenvelope {
-namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
 class Protocol::AsyncEventHandler : public Protocol::EventHandlerInterface {

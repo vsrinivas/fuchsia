@@ -488,7 +488,5 @@ static_assert(offsetof(::fidl_test_handlesintypes::wire::HandlesInTypes,
 static_assert(sizeof(::fidl_test_handlesintypes::wire::HandlesInTypes) ==
               ::fidl_test_handlesintypes::wire::HandlesInTypes::PrimarySize);
 #endif  // __Fuchsia__
+
 }  // namespace fidl
-namespace fidl_test_handlesintypes {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_handlesintypes

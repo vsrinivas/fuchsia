@@ -1099,7 +1099,5 @@ struct IsFidlType<::fidl_test_table::wire::EmptyTable> : public std::true_type {
 template <>
 struct IsTable<::fidl_test_table::wire::EmptyTable> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::fidl_test_table::wire::EmptyTable>);
+
 }  // namespace fidl
-namespace fidl_test_table {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_table

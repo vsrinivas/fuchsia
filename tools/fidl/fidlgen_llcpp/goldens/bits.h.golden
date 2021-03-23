@@ -359,7 +359,5 @@ struct IsFidlType<::fidl_test_bits::wire::FlexibleBits>
     : public std::true_type {};
 static_assert(std::is_standard_layout_v<::fidl_test_bits::wire::FlexibleBits>);
 static_assert(sizeof(::fidl_test_bits::wire::FlexibleBits) == sizeof(uint64_t));
+
 }  // namespace fidl
-namespace fidl_test_bits {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_bits

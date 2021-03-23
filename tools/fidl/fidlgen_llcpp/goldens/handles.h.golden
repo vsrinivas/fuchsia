@@ -483,7 +483,6 @@ static_assert(sizeof(::fidl_test_handles::wire::Handles) ==
 #endif  // __Fuchsia__
 }  // namespace fidl
 namespace fidl_test_handles {
-namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
 class SomeProtocol::AsyncEventHandler

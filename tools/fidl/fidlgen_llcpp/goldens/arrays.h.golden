@@ -803,7 +803,5 @@ static_assert(
 static_assert(offsetof(::fidl_test_arrays::wire::StructLargeArray, a) == 0);
 static_assert(sizeof(::fidl_test_arrays::wire::StructLargeArray) ==
               ::fidl_test_arrays::wire::StructLargeArray::PrimarySize);
+
 }  // namespace fidl
-namespace fidl_test_arrays {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_arrays

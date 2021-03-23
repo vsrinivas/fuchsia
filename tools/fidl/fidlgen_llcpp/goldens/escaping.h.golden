@@ -149,7 +149,5 @@ static_assert(offsetof(::fidl_test_escaping::wire::DocCommentWithQuotes,
                        __reserved) == 0);
 static_assert(sizeof(::fidl_test_escaping::wire::DocCommentWithQuotes) ==
               ::fidl_test_escaping::wire::DocCommentWithQuotes::PrimarySize);
+
 }  // namespace fidl
-namespace fidl_test_escaping {
-namespace wire {}  // namespace wire
-}  // namespace fidl_test_escaping

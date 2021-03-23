@@ -1090,7 +1090,6 @@ static_assert(
              e) == 16);
 }  // namespace fidl
 namespace fidl_test_emptystruct {
-namespace wire {}  // namespace wire
 
 #ifdef __Fuchsia__
 class EmptyProtocol::AsyncEventHandler
