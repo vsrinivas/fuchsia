@@ -340,8 +340,12 @@ struct TableMember : public Object {
               SourceSpan name, std::unique_ptr<Constant> maybe_default_value,
               std::unique_ptr<raw::AttributeList> attributes)
       : ordinal(std::move(ordinal)),
-        maybe_used(std::make_unique<Used>(std::move(type), std::move(name),
-                                          std::move(maybe_default_value), std::move(attributes))) {}
+        maybe_used(std::make_unique<Used>(std::move(type), name, std::move(maybe_default_value),
+                                          std::move(attributes))) {}
+  TableMember(std::unique_ptr<raw::Ordinal64> ordinal, std::unique_ptr<TypeConstructor> type,
+              SourceSpan name, std::unique_ptr<raw::AttributeList> attributes)
+      : ordinal(std::move(ordinal)),
+        maybe_used(std::make_unique<Used>(std::move(type), name, nullptr, std::move(attributes))) {}
   TableMember(std::unique_ptr<raw::Ordinal64> ordinal, SourceSpan span)
       : ordinal(std::move(ordinal)), span(span) {}
 
@@ -847,6 +851,17 @@ class Library {
   void ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl);
   std::unique_ptr<TypeConstructor> ConsumeTypeConstructorNew(
       std::unique_ptr<raw::TypeConstructorNew>, const Name&);
+
+  // Here, T is expected to be an ordinal-carrying flat AST class (ie, Table or
+  // Union), while M is its "Member" sub-class.
+  template <typename T, typename M>
+  bool ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout>, const Name&);
+  bool ConsumeStructLayout(std::unique_ptr<raw::Layout>, const Name&);
+
+  // Here, T is expected to be an value-carrying flat AST class (ie, Bits or
+  // Enum), while M is its "Member" sub-class.
+  template <typename T, typename M>
+  bool ConsumeValueLayout(std::unique_ptr<raw::Layout>, const Name&);
   bool ConsumeLayout(std::unique_ptr<raw::Layout>, const Name&);
   bool IsOptionalConstraint(std::unique_ptr<TypeConstructor>&,
                             const std::unique_ptr<raw::Constant>&);

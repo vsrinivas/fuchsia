@@ -29,6 +29,7 @@ constexpr ErrorDef<std::string> ErrInvalidIdentifier("invalid identifier '{}'");
 constexpr ErrorDef<std::string> ErrInvalidLibraryNameComponent("Invalid library name component {}");
 constexpr ErrorDef<std::string> ErrDuplicateAttribute("duplicate attribute with name '{}'");
 
+// start new_syntax
 // TODO(fxbug.dev/65978): remove when new syntax fully implemented.
 constexpr ErrorDef ErrMisplacedSyntaxVersion(
     "syntax declaration must be at the top of the file, preceding the library declaration");
@@ -40,11 +41,15 @@ constexpr ErrorDef ErrLeadingComma("lists must not have leading commas");
 constexpr ErrorDef ErrTrailingComma("lists must not have trailing commas");
 constexpr ErrorDef ErrConsecutiveComma("lists entries must not be empty");
 constexpr ErrorDef ErrMissingComma("list entries must be separated using commas");
+constexpr ErrorDef ErrInvalidLayoutClass(
+    "layouts must be of the class: bits, enum, struct, table, or union.");
 constexpr ErrorDef ErrMissingConstraintBrackets(
     "lists of constraints must be enclosed in brackets");
 constexpr ErrorDef ErrUnnecessaryConstraintBrackets(
     "single constraints must not be enclosed in brackets");
-constexpr ErrorDef ErrEmptyTypeParametersList("no type parameters specified");
+constexpr ErrorDef ErrEmptyTypeParameterList("no type parameters specified");
+// end new_syntax
+
 constexpr ErrorDef ErrMissingOrdinalBeforeType("missing ordinal before type");
 constexpr ErrorDef ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef ErrOrdinalsMustStartAtOne("ordinals must start at 1");
@@ -110,6 +115,7 @@ constexpr ErrorDef<std::vector<std::string_view>> ErrUnknownLibrary(
 constexpr ErrorDef ErrProtocolComposedMultipleTimes("protocol composed multiple times");
 constexpr ErrorDef ErrDefaultsOnTablesNotSupported("Defaults on table members are not supported.");
 constexpr ErrorDef ErrDefaultsOnUnionsNotSupported("Defaults on union members are not supported.");
+constexpr ErrorDef ErrNullableOrdinaledMember("Table/union members cannot be nullable");
 constexpr ErrorDef ErrNullableTableMember("Table members cannot be nullable");
 constexpr ErrorDef ErrNullableUnionMember("Union members cannot be nullable");
 

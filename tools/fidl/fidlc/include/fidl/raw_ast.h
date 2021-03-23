@@ -761,25 +761,70 @@ class UnionDeclaration final : public SourceElement {
   const types::Resourceness resourceness;
 };
 
-class LayoutMember final : public SourceElement {
+class LayoutMember : public SourceElement {
  public:
-  LayoutMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal,
-               std::unique_ptr<Identifier> identifier,
-               std::unique_ptr<TypeConstructorNew> type_ctor)
-      : SourceElement(element),
+  enum Kind {
+    kOrdinaled,
+    kStruct,
+    kValue,
+  };
+
+  explicit LayoutMember(SourceElement const& element, Kind kind,
+                        std::unique_ptr<Identifier> identifier)
+      : SourceElement(element), kind(kind), identifier(std::move(identifier)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  const Kind kind;
+  std::unique_ptr<Identifier> identifier;
+};
+
+class OrdinaledLayoutMember final : public LayoutMember {
+ public:
+  explicit OrdinaledLayoutMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal,
+                                 std::unique_ptr<Identifier> identifier,
+                                 std::unique_ptr<TypeConstructorNew> type_ctor)
+      : LayoutMember(element, Kind::kOrdinaled, std::move(identifier)),
         ordinal(std::move(ordinal)),
-        identifier(std::move(identifier)),
         type_ctor(std::move(type_ctor)) {}
 
+  void Accept(TreeVisitor* visitor) const;
+
   std::unique_ptr<Ordinal64> ordinal;
-  std::unique_ptr<Identifier> identifier;
   std::unique_ptr<TypeConstructorNew> type_ctor;
 };
 
-// TODO(fxbug.dev/65978): Expand this cover enums, bits, tables.
+class ValueLayoutMember final : public LayoutMember {
+ public:
+  explicit ValueLayoutMember(SourceElement const& element, std::unique_ptr<Identifier> identifier,
+                             std::unique_ptr<Constant> value)
+      : LayoutMember(element, Kind::kValue, std::move(identifier)), value(std::move(value)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<Constant> value;
+};
+
+class StructLayoutMember final : public LayoutMember {
+ public:
+  explicit StructLayoutMember(SourceElement const& element, std::unique_ptr<Identifier> identifier,
+                              std::unique_ptr<TypeConstructorNew> type_ctor,
+                              std::unique_ptr<Constant> default_value)
+      : LayoutMember(element, Kind::kStruct, std::move(identifier)),
+        type_ctor(std::move(type_ctor)),
+        default_value(std::move(default_value)) {}
+
+  void Accept(TreeVisitor* visitor) const;
+
+  std::unique_ptr<TypeConstructorNew> type_ctor;
+  std::unique_ptr<Constant> default_value;
+};
+
 class Layout final : public SourceElement {
  public:
   enum Kind {
+    kBits,
+    kEnum,
     kStruct,
     kTable,
     kUnion,
@@ -788,17 +833,24 @@ class Layout final : public SourceElement {
   Layout(SourceElement const& element,
          // TODO(fxbug.dev/65978): Support layout attributes.
          Kind kind, std::vector<std::unique_ptr<LayoutMember>> members,
-         std::optional<types::Strictness> strictness, types::Resourceness resourceness)
+         std::optional<types::Strictness> strictness, types::Resourceness resourceness,
+         std::unique_ptr<TypeConstructorNew> subtype_ctor)
       : SourceElement(element),
         kind(kind),
         members(std::move(members)),
         strictness(strictness),
-        resourceness(resourceness) {}
+        resourceness(resourceness),
+        subtype_ctor(std::move(subtype_ctor)) {}
 
   Kind kind;
   std::vector<std::unique_ptr<raw::LayoutMember>> members;
   std::optional<types::Strictness> strictness;
   types::Resourceness resourceness;
+  // TODO(fxbug.dev/65978): Eventually we'll make [Struct/Ordinaled/Value]Layout
+  //  classes to inherit from the now-abstract Layout class, similar to what can
+  //  currently be seen on LayoutMember its children.  When that happens this
+  //  field will only exist on ValueLayout.
+  std::unique_ptr<TypeConstructorNew> subtype_ctor;
 };
 
 class LayoutReference : public SourceElement {
@@ -886,10 +938,10 @@ class AmbiguousTypeParameter final : public TypeParameter {
   std::unique_ptr<CompoundIdentifier> identifier;
 };
 
-class TypeParametersList final : public SourceElement {
+class TypeParameterList final : public SourceElement {
  public:
-  TypeParametersList(SourceElement const& element,
-                     std::vector<std::unique_ptr<raw::TypeParameter>> items)
+  TypeParameterList(SourceElement const& element,
+                    std::vector<std::unique_ptr<raw::TypeParameter>> items)
       : SourceElement(element), items(std::move(items)) {}
 
   void Accept(TreeVisitor* visitor) const;
@@ -911,7 +963,7 @@ class TypeConstraints final : public SourceElement {
 class TypeConstructorNew final : public SourceElement {
  public:
   TypeConstructorNew(SourceElement const& element, std::unique_ptr<LayoutReference> type_ref,
-                     std::unique_ptr<TypeParametersList> parameters,
+                     std::unique_ptr<TypeParameterList> parameters,
                      std::unique_ptr<TypeConstraints> constraints)
       : SourceElement(element),
         type_ref(std::move(type_ref)),
@@ -919,7 +971,7 @@ class TypeConstructorNew final : public SourceElement {
         constraints(std::move(constraints)) {}
 
   std::unique_ptr<LayoutReference> type_ref;
-  std::unique_ptr<TypeParametersList> parameters;
+  std::unique_ptr<TypeParameterList> parameters;
   std::unique_ptr<TypeConstraints> constraints;
 };
 

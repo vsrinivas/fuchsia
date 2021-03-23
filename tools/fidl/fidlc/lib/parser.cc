@@ -1800,7 +1800,7 @@ std::unique_ptr<raw::TypeParameter> Parser::ParseTypeParameter() {
   }
 }
 
-std::unique_ptr<raw::TypeParametersList> Parser::MaybeParseTypeParametersList() {
+std::unique_ptr<raw::TypeParameterList> Parser::MaybeParseTypeParameterList() {
   if (!MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     return nullptr;
   }
@@ -1817,11 +1817,11 @@ std::unique_ptr<raw::TypeParametersList> Parser::MaybeParseTypeParametersList() 
 
   ConsumeTokenOrRecover(OfKind(Token::Kind::kRightAngle));
   if (items_seen == 0) {
-    Fail(ErrEmptyTypeParametersList);
+    Fail(ErrEmptyTypeParameterList);
   }
   RecoverAllErrors();
 
-  return std::make_unique<raw::TypeParametersList>(scope.GetSourceElement(), std::move(items));
+  return std::make_unique<raw::TypeParameterList>(scope.GetSourceElement(), std::move(items));
 }
 
 std::unique_ptr<raw::TypeConstraints> Parser::MaybeParseConstraints() {
@@ -1865,13 +1865,13 @@ std::unique_ptr<raw::TypeConstraints> Parser::MaybeParseConstraints() {
   return std::make_unique<raw::TypeConstraints>(scope.GetSourceElement(), std::move(items));
 }
 
-std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::Layout::Kind kind) {
+std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::Kind kind) {
   ASTScope scope(this);
 
   // TODO(fxbug.dev/65978): Parse attributes.
 
   std::unique_ptr<raw::Ordinal64> ordinal = nullptr;
-  if (kind == raw::Layout::Kind::kTable || kind == raw::Layout::Kind::kUnion) {
+  if (kind == raw::LayoutMember::Kind::kOrdinaled) {
     ordinal = ParseOrdinal64();
     if (!Ok())
       return Fail();
@@ -1881,48 +1881,90 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::Layout::Kind k
   if (!Ok())
     return Fail();
 
-  auto layout = ParseTypeConstructorNew();
-  if (!Ok())
-    return Fail();
+  std::unique_ptr<raw::TypeConstructorNew> layout = nullptr;
+  if (kind != raw::LayoutMember::Kind::kValue) {
+    layout = ParseTypeConstructorNew();
+    if (!Ok())
+      return Fail();
+  }
 
-  // TODO(fxbug.dev/65978): Parse default values.
+  // An equal sign followed by a constant (aka, a default value) is optional for
+  // a struct member, but required for a value member.
+  std::unique_ptr<raw::Constant> value = nullptr;
+  if (kind == raw::LayoutMember::Kind::kStruct && MaybeConsumeToken(OfKind(Token::Kind::kEqual))) {
+    if (!Ok())
+      return Fail();
+    value = ParseConstant();
+    if (!Ok())
+      return Fail();
+  } else if (kind == raw::LayoutMember::Kind::kValue) {
+    ConsumeToken(OfKind(Token::Kind::kEqual));
+    if (!Ok())
+      return Fail();
 
-  return std::make_unique<raw::LayoutMember>(scope.GetSourceElement(), std::move(ordinal),
-                                             std::move(identifier), std::move(layout));
+    value = ParseConstant();
+    if (!Ok())
+      return Fail();
+  }
+
+  switch (kind) {
+    case raw::LayoutMember::kOrdinaled: {
+      return std::make_unique<raw::OrdinaledLayoutMember>(
+          scope.GetSourceElement(), std::move(ordinal), std::move(identifier), std::move(layout));
+    }
+    case raw::LayoutMember::kStruct: {
+      return std::make_unique<raw::StructLayoutMember>(
+          scope.GetSourceElement(), std::move(identifier), std::move(layout), std::move(value));
+    }
+    case raw::LayoutMember::kValue: {
+      return std::make_unique<raw::ValueLayoutMember>(scope.GetSourceElement(),
+                                                      std::move(identifier), std::move(value));
+    }
+  }
 }
 
 std::unique_ptr<raw::Layout> Parser::ParseLayout(
     ASTScope& scope, std::unique_ptr<raw::CompoundIdentifier> identifier,
     const Modifiers& modifiers) {
-  // TODO(fxbug.dev/65978): Introduce a ParseLayoutConfig struct to configure
-  // how layout parse should be done e.g. has an ordinal? default value
-  // allowed?.
   raw::Layout::Kind kind;
+  raw::LayoutMember::Kind member_kind;
 
   if (identifier->components.size() != 1) {
-    // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
-    // union, table, bits, and enum layouts exist.
-    return Fail();
+    return Fail(ErrInvalidLayoutClass);
   }
 
   // TODO(fxbug.dev/65978): Once fully transitioned, we will be able to
   // remove token subkinds for struct, union, table, bits, and enum. Or
   // maybe we want to have a 'recognize token subkind' on an identifier
   // instead of doing string comparison directly.
-  if (identifier->components[0]->span().data() == "struct") {
+  std::unique_ptr<raw::TypeConstructorNew> subtype_ctor;
+  if (identifier->components[0]->span().data() == "bits") {
+    ValidateModifiers<types::Strictness>(modifiers, identifier->components[0]->start_);
+    kind = raw::Layout::Kind::kBits;
+    member_kind = raw::LayoutMember::Kind::kValue;
+    // TODO(fxbug.dev/70528): Change once this RFC lands.
+    // subtype_ctor = MaybeParseLayoutSubtype();
+  } else if (identifier->components[0]->span().data() == "enum") {
+    ValidateModifiers<types::Strictness>(modifiers, identifier->components[0]->start_);
+    kind = raw::Layout::Kind::kEnum;
+    member_kind = raw::LayoutMember::Kind::kValue;
+    // TODO(fxbug.dev/70528): Change once this RFC lands.
+    // subtype_ctor = MaybeParseLayoutSubtype();
+  } else if (identifier->components[0]->span().data() == "struct") {
     ValidateModifiers<types::Resourceness>(modifiers, identifier->components[0]->start_);
     kind = raw::Layout::Kind::kStruct;
+    member_kind = raw::LayoutMember::Kind::kStruct;
   } else if (identifier->components[0]->span().data() == "table") {
     ValidateModifiers<types::Resourceness>(modifiers, identifier->components[0]->start_);
     kind = raw::Layout::Kind::kTable;
+    member_kind = raw::LayoutMember::Kind::kOrdinaled;
   } else if (identifier->components[0]->span().data() == "union") {
     ValidateModifiers<types::Strictness, types::Resourceness>(modifiers,
                                                               identifier->components[0]->start_);
     kind = raw::Layout::Kind::kUnion;
+    member_kind = raw::LayoutMember::Kind::kOrdinaled;
   } else {
-    // TODO(fxbug.dev/65978): Improve error messaging here, only struct,
-    // union, table, bits, and enum layouts exist.
-    return Fail();
+    return Fail(ErrInvalidLayoutClass);
   }
 
   ConsumeToken(OfKind(Token::Kind::kLeftCurly));
@@ -1935,7 +1977,7 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
       ConsumeToken(OfKind(Token::Kind::kRightCurly));
       return Done;
     }
-    add(&members, [&] { return ParseLayoutMember(kind); });
+    add(&members, [&] { return ParseLayoutMember(member_kind); });
     return More;
   };
 
@@ -1956,7 +1998,7 @@ std::unique_ptr<raw::Layout> Parser::ParseLayout(
 
   return std::make_unique<raw::Layout>(
       scope.GetSourceElement(), kind, std::move(members), modifiers.strictness,
-      modifiers.resourceness.value_or(types::Resourceness::kValue));
+      modifiers.resourceness.value_or(types::Resourceness::kValue), std::move(subtype_ctor));
 }
 
 std::unique_ptr<raw::LayoutReference> Parser::ParseLayoutReference() {
@@ -1974,6 +2016,7 @@ std::unique_ptr<raw::LayoutReference> Parser::ParseLayoutReference() {
     }
     case Token::Kind::kColon:
     case Token::Kind::kComma:
+    case Token::Kind::kEqual:
     case Token::Kind::kLeftAngle:
     case Token::Kind::kRightAngle:
     case Token::Kind::kSemicolon: {
@@ -1990,8 +2033,8 @@ std::unique_ptr<raw::LayoutReference> Parser::ParseLayoutReference() {
     }
     default: {
       return Fail();
-    };
-  }
+    }
+  };
 }
 
 // [ name | { ... } ][ < ... > ][ : ... ]
@@ -2001,7 +2044,7 @@ std::unique_ptr<raw::TypeConstructorNew> Parser::ParseTypeConstructorNew() {
   if (!Ok())
     return Fail();
 
-  auto parameters = MaybeParseTypeParametersList();
+  auto parameters = MaybeParseTypeParameterList();
   if (!Ok())
     return Fail();
 

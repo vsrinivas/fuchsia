@@ -179,36 +179,119 @@ deprecated_syntax;
   ASSERT_ERR(errors[0], fidl::ErrMisplacedSyntaxVersion);
 }
 
+TEST(NewSyntaxTests, TypeDeclOfBitsLayout) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+type TypeDecl = bits {
+    FOO = 1;
+    BAR = 2;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupBits("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 2);
+}
+
+TEST(NewSyntaxTests, TypeDeclOfBitsLayoutWithStrictnesss) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+type t1 = bits {
+    FOO = 1;
+};
+type t2 = flexible bits {
+    FOO = 1;
+};
+type t3 = strict bits {
+    FOO = 1;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_COMPILED(library);
+
+  auto type_decl = library.LookupBits("t1");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->strictness, fidl::types::Strictness::kFlexible);
+
+  type_decl = library.LookupBits("t2");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->strictness, fidl::types::Strictness::kFlexible);
+
+  type_decl = library.LookupBits("t3");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->strictness, fidl::types::Strictness::kStrict);
+}
+
+TEST(NewSyntaxTests, TypeDeclOfEnumLayout) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+type TypeDecl = enum {
+    FOO = 1;
+    BAR = 2;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupEnum("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 2);
+}
+
+TEST(NewSyntaxTests, TypeDeclOfEnumLayoutWithStrictnesss) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+type t1 = enum {
+    FOO = 1;
+};
+type t2 = flexible enum {
+    FOO = 1;
+};
+type t3 = strict enum {
+    FOO = 1;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  ASSERT_COMPILED(library);
+
+  auto type_decl = library.LookupEnum("t1");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->strictness, fidl::types::Strictness::kFlexible);
+
+  type_decl = library.LookupEnum("t2");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->strictness, fidl::types::Strictness::kFlexible);
+
+  type_decl = library.LookupEnum("t3");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->strictness, fidl::types::Strictness::kStrict);
+}
+
 TEST(NewSyntaxTests, TypeDeclOfStructLayout) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = struct {
-    field1 uint16;
+    field1 uint16 = 5;
     field2 uint16;
 };
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
-  ASSERT_NOT_NULL(type_decl);
-  EXPECT_EQ(type_decl->members.size(), 2);
-}
-
-TEST(NewSyntaxTests, TypeDeclOfUnionLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library(R"FIDL(
-library example;
-type TypeDecl = union {
-    1: variant1 uint16;
-    2: variant2 uint16;
-};
-)FIDL",
-                      std::move(experimental_flags));
-  ASSERT_COMPILED(library);
-  auto type_decl = library.LookupUnion("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
   EXPECT_EQ(type_decl->members.size(), 2);
 }
@@ -284,6 +367,23 @@ type t2 = resource table {
   type_decl = library.LookupTable("t2");
   ASSERT_NOT_NULL(type_decl);
   EXPECT_EQ(type_decl->resourceness, fidl::types::Resourceness::kResource);
+}
+
+TEST(NewSyntaxTests, TypeDeclOfUnionLayout) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+type TypeDecl = union {
+    1: variant1 uint16;
+    2: variant2 uint16;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_COMPILED(library);
+  auto type_decl = library.LookupUnion("TypeDecl");
+  ASSERT_NOT_NULL(type_decl);
+  EXPECT_EQ(type_decl->members.size(), 2);
 }
 
 TEST(NewSyntaxTests, TypeDeclOfUnionLayoutWithResourceness) {
@@ -416,26 +516,50 @@ type t2 = strict t1;
   ASSERT_ERR(errors[0], fidl::ErrCannotSpecifyModifier);
 }
 
-TEST(NewSyntaxTests, TypeDeclOfStructLayoutWithAnonymousStruct) {
+TEST(NewSyntaxTests, TypeDeclOfAnonymousLayouts) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library example;
 type TypeDecl = struct {
-    field1 struct {
-      data vector<uint8>;
+    f0 bits {
+      FOO = 1;
     };
-    field2 uint16;
+    f1 enum {
+      BAR = 1;
+    };
+    f2 struct {
+      i0 vector<uint8>;
+      i1 string = "foo";
+    };
+    f3 table {
+      1: i0 bool;
+    };
+    f4 union {
+      1: i0 bool;
+    };
 };
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupStruct("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
-  EXPECT_EQ(type_decl->members.size(), 2);
-  auto type_decl_field1 = library.LookupStruct("TypeDeclField1");
-  ASSERT_NOT_NULL(type_decl_field1);
-  EXPECT_EQ(type_decl_field1->members.size(), 1);
+  EXPECT_EQ(type_decl->members.size(), 5);
+  auto type_decl_f0 = library.LookupBits("TypeDeclF0");
+  ASSERT_NOT_NULL(type_decl_f0);
+  EXPECT_EQ(type_decl_f0->members.size(), 1);
+  auto type_decl_f1 = library.LookupEnum("TypeDeclF1");
+  ASSERT_NOT_NULL(type_decl_f1);
+  EXPECT_EQ(type_decl_f1->members.size(), 1);
+  auto type_decl_f2 = library.LookupStruct("TypeDeclF2");
+  ASSERT_NOT_NULL(type_decl_f2);
+  EXPECT_EQ(type_decl_f2->members.size(), 2);
+  auto type_decl_f3 = library.LookupTable("TypeDeclF3");
+  ASSERT_NOT_NULL(type_decl_f3);
+  EXPECT_EQ(type_decl_f3->members.size(), 1);
+  auto type_decl_f4 = library.LookupUnion("TypeDeclF4");
+  ASSERT_NOT_NULL(type_decl_f4);
+  EXPECT_EQ(type_decl_f4->members.size(), 1);
 }
 
 TEST(NewSyntaxTests, TypeDeclOfNewTypeErrors) {

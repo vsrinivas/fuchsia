@@ -1965,9 +1965,44 @@ void Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
                                        union_declaration->resourceness));
 }
 
-bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& context) {
-  std::vector<std::unique_ptr<TypeConstructor>> type_ctors;
-  for (auto& member : layout->members) {
+// TODO(fxbug.dev/71536): these conversion methods may need to be refactored
+//  once the new flat AST lands, and such coercion  is no longer needed.
+template <typename T, typename M>
+bool Library::ConsumeValueLayout(std::unique_ptr<raw::Layout> layout, const Name& context) {
+  std::vector<M> members;
+  size_t index = 0;
+  for (auto& mem : layout->members) {
+    auto member = static_cast<raw::ValueLayoutMember*>(mem.get());
+    auto span = member->identifier->span();
+    std::unique_ptr<Constant> value;
+    if (!ConsumeConstant(std::move(member->value), &value))
+      return false;
+
+    members.emplace_back(span, std::move(value), /*attributes=*/nullptr);
+    index++;
+  }
+
+  std::unique_ptr<TypeConstructor> subtype_ctor;
+  if (layout->subtype_ctor != nullptr) {
+    subtype_ctor = ConsumeTypeConstructorNew(std::move(layout->subtype_ctor), context);
+    if (subtype_ctor == nullptr) {
+      return false;
+    }
+  } else {
+    subtype_ctor = TypeConstructor::CreateSizeType();
+  }
+
+  RegisterDecl(std::make_unique<T>(
+      /*attributes=*/nullptr, context, std::move(subtype_ctor), std::move(members),
+      layout->strictness.value_or(types::Strictness::kFlexible)));
+  return true;
+}
+
+template <typename T, typename M>
+bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const Name& context) {
+  std::vector<M> members;
+  for (auto& mem : layout->members) {
+    auto member = static_cast<raw::OrdinaledLayoutMember*>(mem.get());
     auto name_of_anonymous_layout = Name::CreateDerived(
         this, member->span(),
         std::string(context.decl_name()) +
@@ -1977,68 +2012,72 @@ bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& con
     if (type_ctor == nullptr) {
       return false;
     }
-    type_ctors.emplace_back(std::move(type_ctor));
+    if (type_ctor->nullability != types::Nullability::kNonnullable) {
+      // TODO(fxbug.dev/65978): This error message could be more specific.  We
+      //  may want to just pass the specific error message as a template arg, or
+      //  otherwise handle this sort of validation when compiling.
+      Fail(ErrNullableOrdinaledMember, member->span());
+      return false;
+    }
+
+    members.emplace_back(std::move(member->ordinal), std::move(type_ctor),
+                         member->identifier->span(), /*attributes=*/nullptr);
   }
 
-  // TODO(fxbug.dev/65978): add support for bits, enum, table.
-  switch (layout->kind) {
-    case raw::Layout::Kind::kStruct: {
-      std::vector<Struct::Member> members;
-      size_t index = 0;
-      for (auto& member : layout->members) {
-        members.emplace_back(std::move(type_ctors[index]), member->identifier->span(),
-                             /*maybe_default_value=*/nullptr, /*attributes=*/nullptr);
-        index++;
-      }
+  RegisterDecl(std::make_unique<T>(
+      /*attributes=*/nullptr, context, std::move(members),
+      layout->strictness.value_or(types::Strictness::kFlexible), layout->resourceness));
+  return true;
+}
 
-      RegisterDecl(std::make_unique<Struct>(/*attributes=*/nullptr, context, std::move(members),
-                                            layout->resourceness));
-      break;
+bool Library::ConsumeStructLayout(std::unique_ptr<raw::Layout> layout, const Name& context) {
+  std::vector<Struct::Member> members;
+  for (auto& mem : layout->members) {
+    auto member = static_cast<raw::StructLayoutMember*>(mem.get());
+    auto name_of_anonymous_layout = Name::CreateDerived(
+        this, member->span(),
+        std::string(context.decl_name()) +
+            utils::to_upper_camel_case(std::string(member->identifier->span().data())));
+
+    auto type_ctor =
+        ConsumeTypeConstructorNew(std::move(member->type_ctor), name_of_anonymous_layout);
+    if (type_ctor == nullptr) {
+      return false;
+    }
+
+    std::unique_ptr<Constant> default_value;
+    if (member->default_value != nullptr) {
+      ConsumeConstant(std::move(member->default_value), &default_value);
+    }
+
+    members.emplace_back(std::move(type_ctor), member->identifier->span(), std::move(default_value),
+                         /*attributes=*/nullptr);
+  }
+
+  RegisterDecl(std::make_unique<Struct>(/*attributes=*/nullptr, context, std::move(members),
+                                        layout->resourceness));
+  return true;
+}
+
+bool Library::ConsumeLayout(std::unique_ptr<raw::Layout> layout, const Name& context) {
+  switch (layout->kind) {
+    case raw::Layout::Kind::kBits: {
+      return ConsumeValueLayout<Bits, Bits::Member>(std::move(layout), context);
+    }
+    case raw::Layout::Kind::kEnum: {
+      return ConsumeValueLayout<Enum, Enum::Member>(std::move(layout), context);
+    }
+    case raw::Layout::Kind::kStruct: {
+      return ConsumeStructLayout(std::move(layout), context);
     }
     case raw::Layout::Kind::kTable: {
-      std::vector<Table::Member> members;
-      size_t index = 0;
-      for (auto& member : layout->members) {
-        if (type_ctors[index]->nullability != types::Nullability::kNonnullable) {
-          Fail(ErrNullableTableMember, member->span());
-          return false;
-        }
-        members.emplace_back(std::move(member->ordinal), std::move(type_ctors[index]),
-                             member->identifier->span(),
-                             /*maybe_default_value=*/nullptr,
-                             /*attributes=*/nullptr);
-        index++;
-      }
-
-      RegisterDecl(std::make_unique<Table>(
-          /*attributes=*/nullptr, context, std::move(members), types::Strictness::kFlexible,
-          layout->resourceness));
-      break;
+      return ConsumeOrdinaledLayout<Table, Table::Member>(std::move(layout), context);
     }
     case raw::Layout::Kind::kUnion: {
-      std::vector<Union::Member> members;
-      size_t index = 0;
-      for (auto& member : layout->members) {
-        if (type_ctors[index]->nullability != types::Nullability::kNonnullable) {
-          Fail(ErrNullableUnionMember, member->span());
-          return false;
-        }
-        members.emplace_back(std::move(member->ordinal), std::move(type_ctors[index]),
-                             member->identifier->span(),
-                             /*attributes=*/nullptr);
-        index++;
-      }
-
-      RegisterDecl(std::make_unique<Union>(
-          /*attributes=*/nullptr, context, std::move(members),
-          layout->strictness.value_or(types::Strictness::kFlexible), layout->resourceness));
-      break;
-    }
-    default: {
-      assert(false && "not handled yet");
+      return ConsumeOrdinaledLayout<Union, Union::Member>(std::move(layout), context);
     }
   }
-
+  assert(false && "layouts must be of type bits, enum, struct, table, or union");
   return true;
 }
 
