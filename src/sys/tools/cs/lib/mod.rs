@@ -32,16 +32,17 @@ impl ComponentType {
     }
 }
 
+#[derive(Copy, Debug, Eq, PartialEq, Clone)]
+pub enum Subcommand {
+    List,
+    Show,
+    Select,
+}
+
 pub const CS_TREE_HELP: &str = "component_type format: 'cmx' / 'cml'.
 Default option is displaying both cmx and cml components if no argument is entered.";
 
-#[derive(Copy, Debug, Eq, PartialEq, Clone)]
-pub enum IncludeDetails {
-    Yes,
-    No,
-}
-
-pub const COMPONENT_SHOW_HELP: &str = "Filter format: component_name / url / partial url.
+pub const CS_INFO_HELP: &str = "Filter format: component_name / url / partial url.
 
 Example:
 'appmgr', 'appmgr.cm', 'fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm'

@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Result},
-    cs::{io::Directory, v2::V2Component, ComponentType, IncludeDetails},
+    cs::{io::Directory, v2::V2Component, ComponentType, Subcommand},
     ffx_component::COMPONENT_LIST_HELP,
     ffx_component_list_args::ComponentListCommand,
     ffx_core::{ffx_error, ffx_plugin},
@@ -30,7 +30,7 @@ async fn list_impl(
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
-    let component = V2Component::explore(hub_dir, IncludeDetails::No).await;
+    let component = V2Component::explore(hub_dir, Subcommand::List).await;
     if let Some(component_type) = component_type {
         let component_type = ComponentType::from_string(&component_type).map_err(|e| {
             ffx_error!(

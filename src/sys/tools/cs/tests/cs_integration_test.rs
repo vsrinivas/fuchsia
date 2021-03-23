@@ -7,7 +7,7 @@ use {
     cs::{
         io::Directory,
         v2::{Details, ElfRuntime, Execution, V2Component},
-        IncludeDetails,
+        Subcommand,
     },
     test_utils_lib::opaque_test::*,
 };
@@ -59,7 +59,7 @@ fn validate_v2_components(actual_v2_component: &V2Component, expected_v2_compone
         validate_v2_components(actual_child, &expected_v2_component.children[index]);
     }
 
-    validate_executions(&actual_details.execution, &expected_details.execution);
+    validate_executions(&actual_v2_component.execution, &expected_v2_component.execution);
 
     assert_eq!(
         actual_v2_component.appmgr_root_v1_realm,
@@ -86,7 +86,7 @@ async fn empty_component() {
     let hub_v2_path = test.get_hub_v2_path();
     let root_dir = Directory::from_namespace(hub_v2_path)
         .expect("from_namespace() failed: could not open hub v2!");
-    let actual_root_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
+    let actual_root_component = V2Component::explore(root_dir, Subcommand::Show).await;
 
     let expected_root_component = V2Component {
         name: ".".to_string(),
@@ -96,15 +96,15 @@ async fn empty_component() {
             url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/empty.cm".to_string(),
             id: 0,
             component_type: "static".to_string(),
-            execution: Some(Execution {
-                elf_runtime: None,
-                merkle_root: Some(
-                    "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string(),
-                ),
-                incoming_capabilities: vec!["pkg".to_string()],
-                outgoing_capabilities: None,
-                exposed_capabilities: vec![],
-            }),
+        }),
+        execution: Some(Execution {
+            elf_runtime: None,
+            merkle_root: Some(
+                "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string(),
+            ),
+            incoming_capabilities: vec!["pkg".to_string()],
+            outgoing_capabilities: None,
+            exposed_capabilities: vec![],
         }),
     };
 
@@ -136,7 +136,7 @@ async fn tree() {
     let hub_v2_path = test.get_hub_v2_path();
     let root_dir = Directory::from_namespace(hub_v2_path)
         .expect("from_namespace() failed: could not open hub v2!");
-    let actual_root_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
+    let actual_root_component = V2Component::explore(root_dir, Subcommand::Show).await;
 
     let expected_root_component = V2Component {
         name: ".".to_string(),
@@ -152,24 +152,26 @@ async fn tree() {
                     details: Some(Details{url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/baz.cm".to_string(),
                     id: 0,
                     component_type: "static".to_string(),
+                    }),
                     execution: Some(Execution {
                         elf_runtime: None,
                         merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                         incoming_capabilities: vec!["pkg".to_string()],
                         outgoing_capabilities: None,
                         exposed_capabilities: vec![],
-                    })})
+                    }),
                 }],
                 details: Some(Details {url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/bar.cm".to_string(),
                 id: 0,
                 component_type: "static".to_string(),
+                }),
                 execution: Some(Execution {
                     elf_runtime: None,
                     merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                     incoming_capabilities: vec!["pkg".to_string()],
                     outgoing_capabilities: None,
                     exposed_capabilities: vec![],
-                })})
+                }),
             },
             V2Component {
                 name: "foo".to_string(),
@@ -185,24 +187,26 @@ async fn tree() {
                             details: Some(Details {url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/baz.cm".to_string(),
                             id: 0,
                             component_type: "static".to_string(),
+                            }),
                             execution: Some(Execution {
                                 elf_runtime: None,
                                 merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                                 incoming_capabilities: vec!["pkg".to_string()],
                                 outgoing_capabilities: None,
                                 exposed_capabilities: vec![],
-                            })}),
+                            }),
                         }],
                         details: Some(Details {url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/bar.cm".to_string(),
                         id: 0,
                         component_type: "static".to_string(),
+                        }),
                         execution: Some(Execution {
                             elf_runtime: None,
                             merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                             incoming_capabilities: vec!["pkg".to_string()],
                             outgoing_capabilities: None,
                             exposed_capabilities: vec![],
-                        })}),
+                        }),
                     },
                     V2Component {
                         name: "baz".to_string(),
@@ -211,37 +215,40 @@ async fn tree() {
                         details: Some(Details {url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/baz.cm".to_string(),
                         id: 0,
                         component_type: "static".to_string(),
+                        }),
                         execution: Some(Execution {
                             elf_runtime: None,
                             merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                             incoming_capabilities: vec!["pkg".to_string()],
                             outgoing_capabilities: None,
                             exposed_capabilities: vec![],
-                        })}),
+                        }),
                     },
                 ],
                 details: Some(Details{url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/foo.cm".to_string(),
                 id: 0,
                 component_type: "static".to_string(),
+                }),
                 execution: Some(Execution {
                     elf_runtime: None,
                     merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
                     incoming_capabilities: vec!["pkg".to_string()],
                     outgoing_capabilities: None,
                     exposed_capabilities: vec![],
-                })}),
+                }),
             },
         ],
         details: Some(Details{url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/root.cm".to_string(),
         id: 0,
         component_type: "static".to_string(),
+        }),
         execution: Some(Execution {
             elf_runtime: None,
             merkle_root: Some("284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string()),
             incoming_capabilities: vec!["pkg".to_string()],
             outgoing_capabilities: None,
             exposed_capabilities: vec![],
-        })}),
+        }),
     };
 
     validate_v2_components(&actual_root_component, &expected_root_component);
@@ -272,7 +279,7 @@ async fn echo_realm() {
     let hub_v2_path = test.get_hub_v2_path();
     let root_dir = Directory::from_namespace(hub_v2_path)
         .expect("from_namespace() failed: could not open hub v2!");
-    let actual_root_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
+    let actual_root_component = V2Component::explore(root_dir, Subcommand::Show).await;
 
     let expected_root_component = V2Component {
         name: ".".to_string(),
@@ -286,27 +293,27 @@ async fn echo_realm() {
                     url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/echo_server.cm".to_string(),
                     id: 0,
                     component_type: "static".to_string(),
-                    execution: Some(Execution {
-                        elf_runtime: Some(ElfRuntime {
-                            job_id: 42,     // This number is irrelevant
-                            process_id: 42, // This number is irrelevant
-                        }),
-                        merkle_root: Some(
-                            "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93"
-                                .to_string(),
-                        ),
-                        incoming_capabilities: vec![
-                            "fuchsia.logger.LogSink".to_string(),
-                            "pkg".to_string(),
-                        ],
-                        outgoing_capabilities: Some(vec![
-                            "fidl.examples.routing.echo.Echo".to_string()
-                        ]),
-                        exposed_capabilities: vec![
-                            "fidl.examples.routing.echo.Echo".to_string(),
-                            "hub".to_string(),
-                        ],
+                }),
+                execution: Some(Execution {
+                    elf_runtime: Some(ElfRuntime {
+                        job_id: 42,     // This number is irrelevant
+                        process_id: 42, // This number is irrelevant
                     }),
+                    merkle_root: Some(
+                        "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93"
+                            .to_string(),
+                    ),
+                    incoming_capabilities: vec![
+                        "fuchsia.logger.LogSink".to_string(),
+                        "pkg".to_string(),
+                    ],
+                    outgoing_capabilities: Some(
+                        vec!["fidl.examples.routing.echo.Echo".to_string()],
+                    ),
+                    exposed_capabilities: vec![
+                        "fidl.examples.routing.echo.Echo".to_string(),
+                        "hub".to_string(),
+                    ],
                 }),
             },
             V2Component {
@@ -317,23 +324,23 @@ async fn echo_realm() {
                     url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/indef_echo_client.cm".to_string(),
                     id: 0,
                     component_type: "static".to_string(),
-                    execution: Some(Execution {
-                        elf_runtime: Some(ElfRuntime {
-                            job_id: 42,     // This number is irrelevant
-                            process_id: 42, // This number is irrelevant
-                        }),
-                        merkle_root: Some(
-                            "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93"
-                                .to_string(),
-                        ),
-                        incoming_capabilities: vec![
-                            "fidl.examples.routing.echo.Echo".to_string(),
-                            "fuchsia.logger.LogSink".to_string(),
-                            "pkg".to_string(),
-                        ],
-                        outgoing_capabilities: None,
-                        exposed_capabilities: vec![],
+                }),
+                execution: Some(Execution {
+                    elf_runtime: Some(ElfRuntime {
+                        job_id: 42,     // This number is irrelevant
+                        process_id: 42, // This number is irrelevant
                     }),
+                    merkle_root: Some(
+                        "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93"
+                            .to_string(),
+                    ),
+                    incoming_capabilities: vec![
+                        "fidl.examples.routing.echo.Echo".to_string(),
+                        "fuchsia.logger.LogSink".to_string(),
+                        "pkg".to_string(),
+                    ],
+                    outgoing_capabilities: None,
+                    exposed_capabilities: vec![],
                 }),
             },
         ],
@@ -341,15 +348,15 @@ async fn echo_realm() {
             url: "fuchsia-pkg://fuchsia.com/cs-tests#meta/echo_realm.cm".to_string(),
             id: 0,
             component_type: "static".to_string(),
-            execution: Some(Execution {
-                elf_runtime: None,
-                merkle_root: Some(
-                    "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string(),
-                ),
-                incoming_capabilities: vec!["pkg".to_string()],
-                outgoing_capabilities: None,
-                exposed_capabilities: vec![],
-            }),
+        }),
+        execution: Some(Execution {
+            elf_runtime: None,
+            merkle_root: Some(
+                "284714fdf0a8125949946c2609be45d67899cbf104d7b9a020b51b8da540ec93".to_string(),
+            ),
+            incoming_capabilities: vec!["pkg".to_string()],
+            outgoing_capabilities: None,
+            exposed_capabilities: vec![],
         }),
     };
 

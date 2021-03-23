@@ -4,9 +4,7 @@
 
 use {
     crate::io::Directory,
-    crate::{
-        get_capabilities, get_capabilities_timeout, ComponentType, IncludeDetails, WIDTH_CS_TREE,
-    },
+    crate::{get_capabilities, get_capabilities_timeout, ComponentType, Subcommand, WIDTH_CS_TREE},
     futures::future::{join_all, BoxFuture, FutureExt},
     std::sync::Arc,
 };
@@ -35,7 +33,7 @@ async fn open_id_directories(id_dir: Directory) -> Vec<Directory> {
 
 fn visit_child_realms(
     child_realms_dir: Directory,
-    include_details: IncludeDetails,
+    subcommand: Subcommand,
 ) -> BoxFuture<'static, Vec<V1Realm>> {
     async move {
         let mut realm_names = child_realms_dir.entries().await;
@@ -56,7 +54,7 @@ fn visit_child_realms(
                     open_id_directories(id_dir)
                         .await
                         .drain(..)
-                        .map(|d| V1Realm::create(d, include_details.clone())),
+                        .map(|d| V1Realm::create(d, subcommand.clone())),
                 )
                 .await
             }
@@ -73,7 +71,7 @@ fn visit_child_realms(
 /// Each component visited is added to the |child_components| vector.
 fn visit_child_components(
     child_components_dir: Directory,
-    include_details: IncludeDetails,
+    subcommand: Subcommand,
 ) -> BoxFuture<'static, Vec<V1Component>> {
     async move {
         let mut component_names = child_components_dir.entries().await;
@@ -90,7 +88,7 @@ fn visit_child_components(
                     open_id_directories(id_dir)
                         .await
                         .drain(..)
-                        .map(|d| V1Component::create(d, include_details.clone())),
+                        .map(|d| V1Component::create(d, subcommand.clone())),
                 )
                 .await
             }
@@ -112,15 +110,15 @@ pub struct V1Realm {
 }
 
 impl V1Realm {
-    pub async fn create(realm_dir: Directory, include_details: IncludeDetails) -> V1Realm {
+    pub async fn create(realm_dir: Directory, subcommand: Subcommand) -> V1Realm {
         let child_realms_dir = realm_dir.open_dir("r").expect("open_dir(`r`) failed!");
         let child_components_dir = realm_dir.open_dir("c").expect("open_dir(`c`) failed!");
 
         let (name, job_id, child_realms, child_components) = futures::join!(
             realm_dir.read_file("name"),
             realm_dir.read_file("job-id"),
-            visit_child_realms(child_realms_dir, include_details.clone()),
-            visit_child_components(child_components_dir, include_details.clone()),
+            visit_child_realms(child_realms_dir, subcommand.clone()),
+            visit_child_components(child_components_dir, subcommand.clone()),
         );
 
         let name = name.expect("read_file(`name`) failed!");
@@ -196,17 +194,17 @@ pub struct Details {
 }
 
 impl V1Component {
-    async fn create(component_dir: Directory, include_details: IncludeDetails) -> V1Component {
+    async fn create(component_dir: Directory, subcommand: Subcommand) -> V1Component {
         let name = component_dir.read_file("name").await.expect("read_file(`name`) failed!");
 
         let child_components = if component_dir.exists("c").await {
             let child_components_dir = component_dir.open_dir("c").expect("open_dir(`c`) failed!");
-            visit_child_components(child_components_dir, include_details.clone()).await
+            visit_child_components(child_components_dir, subcommand.clone()).await
         } else {
             vec![]
         };
 
-        let details = if include_details == IncludeDetails::Yes {
+        let details = if subcommand == Subcommand::Show {
             let (job_id, url) =
                 futures::join!(component_dir.read_file("job-id"), component_dir.read_file("url"),);
 
@@ -364,7 +362,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root v1 hub directory!");
-        let v1_component = V1Component::create(root_dir, IncludeDetails::No).await;
+        let v1_component = V1Component::create(root_dir, Subcommand::List).await;
 
         assert_eq!(v1_component.details, None);
         assert_eq!(v1_component.name, "cobalt.cmx");
@@ -410,13 +408,13 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root v1 hub directory!");
-        let v1_component = V1Component::create(root_dir, IncludeDetails::No).await;
+        let v1_component = V1Component::create(root_dir, Subcommand::List).await;
 
         let child_dir = Directory::from_namespace(child_dir_name)
             .expect("from_namespace() failed: failed to open child_dir v1 hub directory!");
         assert_eq!(
             v1_component.child_components,
-            vec![V1Component::create(child_dir, IncludeDetails::No).await]
+            vec![V1Component::create(child_dir, Subcommand::List).await]
         );
     }
 
@@ -443,7 +441,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root v1 hub directory!");
-        let v1_component = V1Component::create(root_dir, IncludeDetails::Yes).await;
+        let v1_component = V1Component::create(root_dir, Subcommand::Show).await;
 
         assert_eq!(
             v1_component.details,
@@ -481,7 +479,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root v1 hub directory!");
-        let v1_component = V1Component::create(root_dir, IncludeDetails::Yes).await;
+        let v1_component = V1Component::create(root_dir, Subcommand::Show).await;
 
         assert_eq!(v1_component.details.unwrap().process_id, None);
     }
@@ -515,7 +513,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root v1 hub directory!");
-        let v1_component = V1Component::create(root_dir, IncludeDetails::Yes).await;
+        let v1_component = V1Component::create(root_dir, Subcommand::Show).await;
 
         assert_eq!(
             v1_component.details.unwrap().merkle_root,
@@ -549,7 +547,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root v1 hub directory!");
-        let v1_component = V1Component::create(root_dir, IncludeDetails::Yes).await;
+        let v1_component = V1Component::create(root_dir, Subcommand::Show).await;
 
         assert_eq!(
             v1_component.details,
@@ -604,13 +602,13 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root v1 hub directory!");
-        let v1_component = V1Component::create(root_dir, IncludeDetails::Yes).await;
+        let v1_component = V1Component::create(root_dir, Subcommand::Show).await;
 
         let child_dir = Directory::from_namespace(child_dir_name)
             .expect("from_namespace() failed: failed to open child_dir v1 hub directory!");
         assert_eq!(
             v1_component.child_components,
-            vec![V1Component::create(child_dir, IncludeDetails::Yes).await]
+            vec![V1Component::create(child_dir, Subcommand::Show).await]
         );
     }
 }

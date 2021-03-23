@@ -4,7 +4,7 @@
 
 use {
     anyhow::{Context, Result},
-    cs::{io::Directory, v2::V2Component, IncludeDetails},
+    cs::{io::Directory, v2::V2Component, Subcommand},
     ffx_component::COMPONENT_SHOW_HELP,
     ffx_component_show_args::ComponentShowCommand,
     ffx_core::{ffx_error, ffx_plugin},
@@ -26,7 +26,7 @@ async fn show_impl(rcs_proxy: rc::RemoteControlProxy, filter: &str) -> Result<()
         .map_err(|i| Status::ok(i).unwrap_err())
         .context("opening hub")?;
     let hub_dir = Directory::from_proxy(root);
-    let component = V2Component::explore(hub_dir, IncludeDetails::Yes).await;
+    let component = V2Component::explore(hub_dir, Subcommand::Show).await;
     component
         .print_details(&filter)
         .map_err(|e| ffx_error!("Invalid filter '{}': {}\n{}", filter, e, COMPONENT_SHOW_HELP))?;

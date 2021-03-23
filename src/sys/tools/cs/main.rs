@@ -11,10 +11,7 @@ mod log_stats;
 
 use {
     anyhow::{format_err, Error},
-    cs::{
-        io::Directory, v2::V2Component, ComponentType, IncludeDetails, COMPONENT_SHOW_HELP,
-        CS_TREE_HELP,
-    },
+    cs::{io::Directory, v2::V2Component, ComponentType, Subcommand, CS_INFO_HELP, CS_TREE_HELP},
     freq::BlobFrequencies,
     fuchsia_async as fasync,
     log_stats::{LogSeverity, LogStats},
@@ -45,6 +42,14 @@ enum Opt {
         /// Print information for any component whose URL/name matches this substring.
         #[structopt(short = "f", long = "filter", default_value = "")]
         filter: String,
+    },
+
+    /// Output all components that expose a capability.
+    #[structopt(name = "select")]
+    Select {
+        /// The capability to search for.
+        #[structopt(short = "c", long = "capability", default_value = "")]
+        capability: String,
     },
 
     /// Display per-component statistics for syslogs.
@@ -86,15 +91,21 @@ async fn main() -> Result<(), Error> {
         }
         Opt::Info { filter } => {
             if let Some(hub_dir) = validate_hub_directory() {
-                let component = V2Component::explore(hub_dir, IncludeDetails::Yes).await;
+                let component = V2Component::explore(hub_dir, Subcommand::Show).await;
                 component.print_details(&filter).map_err(|e| {
-                    format_err!("Invalid filter '{}': {}\n{}", filter, e, COMPONENT_SHOW_HELP)
+                    format_err!("Invalid filter '{}': {}\n{}", filter, e, CS_INFO_HELP)
                 })?
+            }
+        }
+        Opt::Select { capability } => {
+            if let Some(hub_dir) = validate_hub_directory() {
+                let component = V2Component::explore(hub_dir, Subcommand::Select).await;
+                component.print_components_exposing_capability(&capability);
             }
         }
         Opt::Tree { component_type, verbose } => {
             if let Some(hub_dir) = validate_hub_directory() {
-                let component = V2Component::explore(hub_dir, IncludeDetails::No).await;
+                let component = V2Component::explore(hub_dir, Subcommand::List).await;
                 if let Some(component_type) = component_type {
                     let component_type =
                         ComponentType::from_string(&component_type).map_err(|e| {

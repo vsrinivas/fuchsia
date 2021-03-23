@@ -5,9 +5,7 @@
 use {
     crate::io::Directory,
     crate::v1::V1Realm,
-    crate::{
-        get_capabilities, get_capabilities_timeout, ComponentType, IncludeDetails, WIDTH_CS_TREE,
-    },
+    crate::{get_capabilities, get_capabilities_timeout, ComponentType, Subcommand, WIDTH_CS_TREE},
     anyhow::{format_err, Error},
     futures::future::{join_all, BoxFuture, FutureExt},
 };
@@ -17,7 +15,7 @@ static SPACER: &str = "  ";
 fn explore(
     name: String,
     hub_dir: Directory,
-    include_details: IncludeDetails,
+    subcommand: Subcommand,
 ) -> BoxFuture<'static, V2Component> {
     async move {
         // Recurse on the children
@@ -27,7 +25,7 @@ fn explore(
             let child_dir = children_dir
                 .open_dir(&child_name)
                 .expect(format!("open_dir(`{}`) failed!", child_name).as_str());
-            let future_child = explore(child_name, child_dir, include_details.clone());
+            let future_child = explore(child_name, child_dir, subcommand.clone());
             future_children.push(future_child);
         }
         let children = join_all(future_children).await;
@@ -37,13 +35,13 @@ fn explore(
             let v1_hub_dir = hub_dir
                 .open_dir("exec/out/hub")
                 .expect("open_dir() failed: failed to open appmgr hub (`exec/out/hub`)!");
-            Some(V1Realm::create(v1_hub_dir, include_details.clone()).await)
+            Some(V1Realm::create(v1_hub_dir, subcommand.clone()).await)
         } else {
             None
         };
 
-        // Get details if include_details is true
-        let details = if include_details == IncludeDetails::Yes {
+        // Get details if subcommand is ffx component show
+        let details = if subcommand == Subcommand::Show {
             let (url, id, component_type) = futures::join!(
                 hub_dir.read_file("url"),
                 hub_dir.read_file("id"),
@@ -57,20 +55,22 @@ fn explore(
 
             let component_type = component_type.expect("read_file(`component_type`) failed!");
 
-            // Get the execution state
-            let execution = if hub_dir.exists("exec").await {
-                let exec_dir = hub_dir.open_dir("exec").expect("open_dir(`exec`) failed!");
-                Some(Execution::new(exec_dir).await)
-            } else {
-                None
-            };
-
-            Some(Details { url, id, component_type, execution })
+            Some(Details { url, id, component_type })
         } else {
             None
         };
 
-        V2Component { name, children, appmgr_root_v1_realm, details }
+        // Get the execution state
+        let execution = if (subcommand == Subcommand::Show || subcommand == Subcommand::Select)
+            && hub_dir.exists("exec").await
+        {
+            let exec_dir = hub_dir.open_dir("exec").expect("open_dir(`exec`) failed!");
+            Some(Execution::new(exec_dir).await)
+        } else {
+            None
+        };
+
+        V2Component { name, children, appmgr_root_v1_realm, details, execution }
     }
     .boxed()
 }
@@ -195,6 +195,7 @@ pub struct V2Component {
     pub children: Vec<Self>,
     pub appmgr_root_v1_realm: Option<V1Realm>,
     pub details: Option<Details>,
+    pub execution: Option<Execution>,
 }
 
 #[derive(Debug, Eq, PartialEq)]
@@ -202,13 +203,12 @@ pub struct Details {
     pub url: String,
     pub id: u32,
     pub component_type: String,
-    pub execution: Option<Execution>,
 }
 
 impl V2Component {
-    pub async fn explore(hub_dir: Directory, include_details: IncludeDetails) -> Self {
+    pub async fn explore(hub_dir: Directory, subcommand: Subcommand) -> Self {
         // '.' is representation of the root.
-        explore(".".to_string(), hub_dir, include_details.clone()).await
+        explore(".".to_string(), hub_dir, subcommand.clone()).await
     }
 
     pub fn print_tree(&self, component_type: ComponentType, verbose: bool) {
@@ -257,7 +257,7 @@ impl V2Component {
                 println!("URL: {}", details.url);
                 println!("Type: v2 {} component", details.component_type);
 
-                if let Some(execution) = &details.execution {
+                if let Some(execution) = &self.execution {
                     execution.print_details();
                 }
 
@@ -277,6 +277,40 @@ impl V2Component {
             }
         } else {
             eprintln!("Error! `V2Component` doesn't have `Details`!");
+        }
+
+        did_print
+    }
+
+    pub fn print_components_exposing_capability(&self, capability: &str) -> bool {
+        if !self.print_components_exposing_capability_recursive("", &capability) {
+            println!("No components exposing this capability.");
+            return false;
+        };
+        true
+    }
+
+    fn print_components_exposing_capability_recursive(
+        &self,
+        moniker_prefix: &str,
+        capability: &str,
+    ) -> bool {
+        let mut did_print = false;
+        if let Some(execution) = &self.execution {
+            let moniker = format!("{}{}", moniker_prefix, self.name);
+
+            // Print if the capability is exposed by this component
+            if execution.exposed_capabilities.contains(&capability.to_string()) {
+                println!("{}", moniker);
+                did_print = true;
+            }
+
+            // Recurse on children
+            let moniker_prefix = format!("{}/", moniker);
+            for child in &self.children {
+                did_print |= child
+                    .print_components_exposing_capability_recursive(&moniker_prefix, &capability);
+            }
         }
 
         did_print
@@ -557,7 +591,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root hub directory!");
-        let v2_component = V2Component::explore(root_dir, IncludeDetails::No).await;
+        let v2_component = V2Component::explore(root_dir, Subcommand::List).await;
 
         assert!(v2_component.appmgr_root_v1_realm.is_none());
         assert_eq!(v2_component.children, vec![]);
@@ -594,7 +628,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root hub directory!");
-        let v2_component = V2Component::explore(root_dir, IncludeDetails::No).await;
+        let v2_component = V2Component::explore(root_dir, Subcommand::List).await;
 
         assert_eq!(
             v2_component.children,
@@ -603,6 +637,7 @@ mod tests {
                 children: vec![],
                 appmgr_root_v1_realm: None,
                 details: None,
+                execution: None,
             }],
         );
     }
@@ -669,7 +704,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root hub directory!");
-        let v2_component = V2Component::explore(root_dir, IncludeDetails::No).await;
+        let v2_component = V2Component::explore(root_dir, Subcommand::List).await;
 
         let v1_hub_dir = Directory::from_namespace(appmgr.join("exec/out/hub"))
             .expect("from_namespace() failed: failed to create directory!");
@@ -680,8 +715,9 @@ mod tests {
             vec![V2Component {
                 name: "appmgr".to_string(),
                 children: vec![],
-                appmgr_root_v1_realm: Some(V1Realm::create(v1_hub_dir, IncludeDetails::No).await),
+                appmgr_root_v1_realm: Some(V1Realm::create(v1_hub_dir, Subcommand::List).await),
                 details: None,
+                execution: None,
             }],
         );
 
@@ -690,7 +726,7 @@ mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn explore_with_details_loads_component_type_and_id_and_name_and_url() {
+    async fn explore_with_subcommand_show_loads_component_type_and_id_and_name_and_url() {
         let test_dir = TempDir::new_in("/tmp").unwrap();
         let root = test_dir.path();
 
@@ -710,24 +746,24 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root hub directory!");
-        let v2_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
+        let v2_component = V2Component::explore(root_dir, Subcommand::Show).await;
 
         assert_eq!(v2_component.name, ".");
         assert_eq!(v2_component.children, vec![]);
         assert!(v2_component.appmgr_root_v1_realm.is_none());
+        assert!(v2_component.execution.is_none());
         assert_eq!(
             v2_component.details,
             Some(Details {
                 url: "fuchsia-boot:///#meta/root.cm".to_string(),
                 id: 0,
                 component_type: "static".to_string(),
-                execution: None,
             })
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn explore_with_details_appmgr_explores_v1_realm() {
+    async fn explore_with_subcommand_show_appmgr_explores_v1_realm() {
         let test_dir = TempDir::new_in("/tmp").unwrap();
         let root = test_dir.path();
 
@@ -788,7 +824,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root hub directory!");
-        let v2_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
+        let v2_component = V2Component::explore(root_dir, Subcommand::Show).await;
 
         let v1_hub_dir = Directory::from_namespace(appmgr.join("exec/out/hub"))
             .expect("from_namespace() failed: failed to open appmgr v1 hub directory!");
@@ -799,36 +835,36 @@ mod tests {
             vec![V2Component {
                 name: "appmgr".to_string(),
                 children: vec![],
-                appmgr_root_v1_realm: Some(V1Realm::create(v1_hub_dir, IncludeDetails::Yes).await),
+                appmgr_root_v1_realm: Some(V1Realm::create(v1_hub_dir, Subcommand::Show).await),
                 details: Some(Details {
                     url: "fuchsia-pkg://fuchsia.com/appmgr#meta/appmgr.cm".to_string(),
                     id: 0,
                     component_type: "static".to_string(),
-                    execution: Some(Execution {
-                        elf_runtime: None,
-                        merkle_root: None,
-                        incoming_capabilities: vec![],
-                        outgoing_capabilities: Some(vec!["hub".to_string()]),
-                        exposed_capabilities: vec![],
-                    }),
-                })
+                }),
+                execution: Some(Execution {
+                    elf_runtime: None,
+                    merkle_root: None,
+                    incoming_capabilities: vec![],
+                    outgoing_capabilities: Some(vec!["hub".to_string()]),
+                    exposed_capabilities: vec![],
+                }),
             }],
         );
 
         assert_eq!(v2_component.name, ".");
+        assert!(v2_component.execution.is_none());
         assert_eq!(
             v2_component.details,
             Some(Details {
                 url: "fuchsia-boot:///#meta/root.cm".to_string(),
                 id: 0,
                 component_type: "static".to_string(),
-                execution: None,
             })
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn explore_with_details_loads_children() {
+    async fn explore_with_subcommand_show_loads_children() {
         let test_dir = TempDir::new_in("/tmp").unwrap();
         let root = test_dir.path();
 
@@ -866,7 +902,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root hub directory!");
-        let v2_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
+        let v2_component = V2Component::explore(root_dir, Subcommand::Show).await;
 
         assert_eq!(
             v2_component.children,
@@ -878,14 +914,14 @@ mod tests {
                     url: "fuchsia-boot:///#meta/bootstrap.cm".to_string(),
                     id: 0,
                     component_type: "static".to_string(),
-                    execution: None,
-                })
+                }),
+                execution: None,
             }],
         );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn explore_with_details_loads_execution() {
+    async fn explore_without_subcommand_select_does_not_load_execution() {
         let test_dir = TempDir::new_in("/tmp").unwrap();
         let root = test_dir.path();
 
@@ -926,12 +962,167 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root hub directory!");
-        let v2_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
+        let v2_component = V2Component::explore(root_dir, Subcommand::List).await;
+
+        assert!(v2_component.execution.is_none());
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn explore_with_subcommand_select_load_execution() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        // |- component_type
+        // |- exec
+        //    |- expose
+        //    |- in
+        //    |- runtime
+        //       |- elf
+        //          |- job-id
+        //          |- process-id
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("runtime")).unwrap();
+        fs::create_dir(exec.join("runtime/elf")).unwrap();
+        File::create(exec.join("runtime/elf/job_id"))
+            .unwrap()
+            .write_all("12345".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_id"))
+            .unwrap()
+            .write_all("67890".as_bytes())
+            .unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
+        let v2_component = V2Component::explore(root_dir, Subcommand::Select).await;
 
         assert_eq!(
-            v2_component.details.unwrap().execution.unwrap().elf_runtime.unwrap(),
+            v2_component.execution.unwrap().elf_runtime.unwrap(),
             ElfRuntime { job_id: 12345, process_id: 67890 }
         );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn print_components_exposing_capability_finds_components() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        // |- component_type
+        // |- exec
+        //    |- expose
+        //       |- diagnostics
+        //       |- fuchsia.diagnostics.internal.LogStatsController
+        //    |- in
+        //    |- runtime
+        //       |- elf
+        //          |- job-id
+        //          |- process-id
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        File::create(exec.join("expose/diagnostics")).unwrap();
+        File::create(exec.join("expose/fuchsia.diagnostics.internal.LogStatsController")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("runtime")).unwrap();
+        fs::create_dir(exec.join("runtime/elf")).unwrap();
+        File::create(exec.join("runtime/elf/job_id"))
+            .unwrap()
+            .write_all("12345".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_id"))
+            .unwrap()
+            .write_all("67890".as_bytes())
+            .unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
+        let v2_component = V2Component::explore(root_dir, Subcommand::Select).await;
+
+        assert_eq!(v2_component.print_components_exposing_capability("diagnostics"), true);
+        assert_eq!(
+            v2_component.print_components_exposing_capability(
+                "fuchsia.diagnostics.internal.LogStatsController"
+            ),
+            true
+        );
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn print_components_exposing_capability_does_not_find_components() {
+        let test_dir = TempDir::new_in("/tmp").unwrap();
+        let root = test_dir.path();
+
+        // Create the following structure
+        // <root>
+        // |- children
+        // |- component_type
+        // |- exec
+        //    |- expose
+        //       |- diagnostics
+        //       |- fuchsia.diagnostics.internal.LogStatsController
+        //    |- in
+        //    |- runtime
+        //       |- elf
+        //          |- job-id
+        //          |- process-id
+        // |- id
+        // |- url
+        fs::create_dir(root.join("children")).unwrap();
+        File::create(root.join("component_type")).unwrap().write_all("static".as_bytes()).unwrap();
+        let exec = root.join("exec");
+        fs::create_dir(&exec).unwrap();
+        fs::create_dir(exec.join("expose")).unwrap();
+        File::create(exec.join("expose/diagnostics")).unwrap();
+        File::create(exec.join("expose/fuchsia.diagnostics.internal.LogStatsController")).unwrap();
+        fs::create_dir(exec.join("in")).unwrap();
+        fs::create_dir(exec.join("runtime")).unwrap();
+        fs::create_dir(exec.join("runtime/elf")).unwrap();
+        File::create(exec.join("runtime/elf/job_id"))
+            .unwrap()
+            .write_all("12345".as_bytes())
+            .unwrap();
+        File::create(exec.join("runtime/elf/process_id"))
+            .unwrap()
+            .write_all("67890".as_bytes())
+            .unwrap();
+        File::create(root.join("id")).unwrap().write_all("0".as_bytes()).unwrap();
+        File::create(root.join("url"))
+            .unwrap()
+            .write_all("fuchsia-boot:///#meta/root.cm".as_bytes())
+            .unwrap();
+
+        let root_dir = Directory::from_namespace(root.to_path_buf())
+            .expect("from_namespace() failed: failed to open root hub directory!");
+        let v2_component = V2Component::explore(root_dir, Subcommand::Select).await;
+
+        assert_eq!(v2_component.print_components_exposing_capability("asdfgh"), false);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -991,7 +1182,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root hub directory!");
-        let v2_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
+        let v2_component = V2Component::explore(root_dir, Subcommand::Show).await;
 
         assert!(v2_component.print_details("bootstrap").is_ok());
         assert!(v2_component.print_details("archivist").is_ok());
@@ -1095,7 +1286,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root hub directory!");
-        let v2_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
+        let v2_component = V2Component::explore(root_dir, Subcommand::Show).await;
 
         assert!(v2_component.print_details("core").is_ok());
         assert!(v2_component.print_details("appmgr").is_ok());
@@ -1141,7 +1332,7 @@ mod tests {
 
         let root_dir = Directory::from_namespace(root.to_path_buf())
             .expect("from_namespace() failed: failed to open root hub directory!");
-        let v2_component = V2Component::explore(root_dir, IncludeDetails::Yes).await;
+        let v2_component = V2Component::explore(root_dir, Subcommand::Show).await;
 
         assert!(v2_component.print_details("asdfgh").is_err());
     }
