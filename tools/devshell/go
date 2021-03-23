@@ -12,13 +12,12 @@
 ##
 ## Run `fx go help` to see all subcommands and flags.
 
-set -eu -o pipefail
+set -euo pipefail
 
-source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh
 
 function main {
   export GOROOT="${PREBUILT_GO_DIR}"
-  export GOPROXY=off
   exec "${PREBUILT_GO_DIR}/bin/go" "$@"
 }
 

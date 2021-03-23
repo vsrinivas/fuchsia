@@ -47,9 +47,9 @@ Cargo.lock
 Cargo.toml
 !/third_party/rust_crates/**/Cargo.toml
 go.mod
-!/third_party/golibs/**/go/.mod
+!/third_party/golibs/**/go.mod
 go.sum
-!/third_party/golibs/**/go/.sum
+!/third_party/golibs/**/go.sum
 CMakeLists.txt
 compile_commands.json
 cmake-build-debug/

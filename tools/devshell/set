@@ -196,7 +196,7 @@ function main {
         ln -s "$FUCHSIA_DIR"/third_party/golibs/$target .
       done
       ln -s "$FUCHSIA_DIR"/tools .
-      fx-command-run go build -o "$exe_path" ./tools/build/fx-set/cmd
+      fx-command-run GOPROXY=off go build -o "$exe_path" ./tools/build/fx-set/cmd
       popd > /dev/null
 
       if [ -t 1 ]; then

@@ -12,16 +12,27 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-for file in go.mod go.sum; do
-  destination=$FUCHSIA_DIR/$file
-  [ -f "$destination" ] || ln -s "$FUCHSIA_DIR"/third_party/golibs/$file "$destination"
-done
+source ../../tools/devshell/lib/vars.sh
+
+# Create various symlinks needed for the `go list` call below.
+fx-command-run setup-go
+
+function cleanup() {
+  rm "$COBALT_DST"
+  find "$TMP" -maxdepth 1 -mindepth 1 -exec mv {} . \;
+}
+trap cleanup EXIT
 
 # Escape third_party/go.mod.
-ln -s "$FUCHSIA_DIR"/third_party/cobalt "$FUCHSIA_DIR"/cobalt
-trap 'rm $FUCHSIA_DIR/cobalt' EXIT
+readonly COBALT_DST=$FUCHSIA_DIR/cobalt
+ln -s "$FUCHSIA_DIR"/third_party/cobalt "$COBALT_DST"
 
-GOROOTBIN=$FUCHSIA_DIR/prebuilt/third_party/go/linux-x64/bin
+# Move jiri-managed repositories out of the module.
+TMP=$(mktemp -d)
+readonly ignored=$(git check-ignore ./*)
+echo "$ignored" | xargs --no-run-if-empty -I % mv % "$TMP"/%
+
+GOROOTBIN=$(fx-command-run go env GOROOT)/bin
 GO=$GOROOTBIN/go
 GOFMT=$GOROOTBIN/gofmt
 
@@ -44,8 +55,6 @@ for dir in $FUCHSIA_DIR $FUCHSIA_DIR/cobalt; do
     sort | uniq)
 done
 
-rm "$FUCHSIA_DIR"/cobalt
-
 IMPORTS_STR=$(
   IFS=$'\n'
   echo "${IMPORTS[*]}"
@@ -58,14 +67,6 @@ printf '// Copyright 2021 The Fuchsia Authors. All rights reserved.
 package imports
 
 import (\n%s\n)' "$IMPORTS_STR" | $GOFMT -s >imports.go
-
-# Move jiri-managed repositories out of the module.
-TMP=$(mktemp -d)
-git check-ignore ./* | xargs -I % mv % "$TMP"/%
-function cleanup() {
-  mv "$TMP"/* .
-}
-trap cleanup EXIT
 
 $GO get -u gvisor.dev/gvisor@go
 $GO get -u
