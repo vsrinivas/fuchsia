@@ -76,13 +76,13 @@ This example shows a bind rule where `{}` represents an area that should be
 replaced with your information:
 
 
-```c++
-ZIRCON_DRIVER_BEGIN({driver_name}, {bind_function}, "zircon", "0.1", {number_of_rules})
-    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB_FUNCTION),
-    BI_ABORT_IF(NE, BIND_USB_CLASS, {usb_class}),
-    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, {usb_sub_class}),
-    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, {usb_protocol}),
-ZIRCON_DRIVER_END({driver_name})
+```
+using fuchsia.usb;
+
+fuchsia.BIND_PROTOCOL == fuchsia.usb.BIND_PROTOCOL.FUNCTION;
+fuchsia.BIND_USB_CLASS == {usb_class}
+fuchsia.BIND_USB_SUBCLASS == {usb_subclass}
+fuchsia.BIND_USB_PROTOCOL == {usb_protocol}
 ```
 
 ## Writing the usb-virtual-bus test

@@ -196,17 +196,13 @@ We're going to use the USB XHCI driver for this set of code samples; you can fin
 [here: `//src/devices/usb/drivers/xhci/usb-xhci.cpp`](/src/devices/usb/drivers/xhci/usb-xhci.cc).
 
 Recall that in [simple, C-based drivers](/docs/development/drivers/developer_guide/simple.md),
-the drivers had binding instructions (usually at the bottom of the source file), like this:
+the drivers had a driver declaration (usually at the bottom of the source file), like this:
 
 ```c
-ZIRCON_DRIVER_BEGIN(driver_name, driver_ops, "zircon", "0.1", ...)
-    // binding instructions
-    ...
-ZIRCON_DRIVER_END(driver_name)
+ZIRCON_DRIVER(driver_name, driver_ops, "zircon", "0.1");
 ```
 
-The binding instructions bind to a `zx_driver_ops_t` structure as the second
-parameter to the **ZIRCON_DRIVER_BEGIN()** macro.
+The second parameter to the **ZIRCON_DRIVER()** macro is a `zx_driver_ops_t` structure.
 In the C++ version we use a lambda function to help with initialization:
 
 ```c++
@@ -221,10 +217,7 @@ static zx_driver_ops_t driver_ops = [](){
 
 } // namespace usb_xhci
 
-ZIRCON_DRIVER_BEGIN(usb_xhci, usb_xhci::driver_ops, "zircon", "0.1", 9)
-    // binding instructions
-    ...
-ZIRCON_DRIVER_END(usb_xhci)
+ZIRCON_DRIVER(usb_xhci, usb_xhci::driver_ops, "zircon", "0.1");
 ```
 
 This executes the **driver_ops()** lambda, which returns an initialized `zx_driver_ops_t` structure.

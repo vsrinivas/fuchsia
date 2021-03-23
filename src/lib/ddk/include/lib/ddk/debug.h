@@ -103,9 +103,8 @@ void driver_logvf_internal(const zx_driver_t* drv, fx_log_severity_t flag, const
 //
 // By default drivers have ERROR, WARN, and INFO debug levels enabled.
 // The kernel commandline option driver.NAME.log may be used to override
-// this.  NAME is specified via ZIRCON_DRIVER_BEGIN/ZIRCON_DRIVER_END
-// macros on each driver's definition.  The levels are the strings "error",
-// "warning", "info", "debug", or "trace".
+// this. NAME is specified via the ZIRCON_DRIVER macro that declares the driver.
+// The levels are the strings "error", "warning", "info", "debug", or "trace".
 //
 // Example driver.floppydisk.log=trace
 //
