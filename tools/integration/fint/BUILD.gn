@@ -24,11 +24,7 @@ go_library("proto_lib") {
     "set_artifacts.pb.go",
     "static.pb.go",
   ]
-  deps = [
-    # TODO(https://fxbug.dev/70570): Remove this when we're on protoc 3.14.0 or higher.
-    "//third_party/golibs:github.com/golang/protobuf",
-    "//third_party/golibs:google.golang.org/protobuf",
-  ]
+  deps = [ "//third_party/golibs:google.golang.org/protobuf" ]
   non_go_deps = [
     ":context",
     ":set_artifacts",

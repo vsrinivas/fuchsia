@@ -17,12 +17,16 @@ for file in go.mod go.sum; do
   [ -f "$destination" ] || ln -s "$FUCHSIA_DIR"/third_party/golibs/$file "$destination"
 done
 
+# Escape third_party/go.mod.
+ln -s "$FUCHSIA_DIR"/third_party/cobalt "$FUCHSIA_DIR"/cobalt
+trap 'rm $FUCHSIA_DIR/cobalt' EXIT
+
 GOROOTBIN=$FUCHSIA_DIR/prebuilt/third_party/go/linux-x64/bin
 GO=$GOROOTBIN/go
 GOFMT=$GOROOTBIN/gofmt
 
 IMPORTS=()
-for dir in $FUCHSIA_DIR $FUCHSIA_DIR/third_party/cobalt; do
+for dir in $FUCHSIA_DIR $FUCHSIA_DIR/cobalt; do
   while IFS='' read -r line; do IMPORTS+=("$line"); done < <(cd "$dir" && git ls-files -- \
     '*.go' ':!third_party/golibs/vendor' |
     xargs dirname |
@@ -40,6 +44,8 @@ for dir in $FUCHSIA_DIR $FUCHSIA_DIR/third_party/cobalt; do
     sort | uniq)
 done
 
+rm "$FUCHSIA_DIR"/cobalt
+
 IMPORTS_STR=$(
   IFS=$'\n'
   echo "${IMPORTS[*]}"
@@ -55,7 +61,7 @@ import (\n%s\n)' "$IMPORTS_STR" | $GOFMT -s >imports.go
 
 # Move jiri-managed repositories out of the module.
 TMP=$(mktemp -d)
-git check-ignore * | xargs -I % mv % "$TMP"/%
+git check-ignore ./* | xargs -I % mv % "$TMP"/%
 function cleanup() {
   mv "$TMP"/* .
 }

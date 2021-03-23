@@ -232,7 +232,7 @@ google.golang.org/appengine/internal/modules
 google.golang.org/appengine/internal/remote_api
 google.golang.org/appengine/internal/urlfetch
 google.golang.org/appengine/urlfetch
-# google.golang.org/genproto v0.0.0-20210318145829-90b20ab00860
+# google.golang.org/genproto v0.0.0-20210322173543-5f0e89347f5a
 ## explicit
 google.golang.org/genproto/googleapis/api/annotations
 google.golang.org/genproto/googleapis/iam/v1
@@ -285,7 +285,10 @@ google.golang.org/grpc/serviceconfig
 google.golang.org/grpc/stats
 google.golang.org/grpc/status
 google.golang.org/grpc/tap
-# google.golang.org/protobuf v1.26.0 => google.golang.org/protobuf v1.25.0
+# google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
+## explicit
+google.golang.org/grpc/cmd/protoc-gen-go-grpc
+# google.golang.org/protobuf v1.26.0
 ## explicit
 google.golang.org/protobuf/cmd/protoc-gen-go
 google.golang.org/protobuf/cmd/protoc-gen-go/internal_gengo
@@ -302,14 +305,13 @@ google.golang.org/protobuf/internal/encoding/messageset
 google.golang.org/protobuf/internal/encoding/tag
 google.golang.org/protobuf/internal/encoding/text
 google.golang.org/protobuf/internal/errors
-google.golang.org/protobuf/internal/fieldsort
 google.golang.org/protobuf/internal/filedesc
 google.golang.org/protobuf/internal/filetype
 google.golang.org/protobuf/internal/flags
 google.golang.org/protobuf/internal/genid
 google.golang.org/protobuf/internal/impl
-google.golang.org/protobuf/internal/mapsort
 google.golang.org/protobuf/internal/msgfmt
+google.golang.org/protobuf/internal/order
 google.golang.org/protobuf/internal/pragma
 google.golang.org/protobuf/internal/set
 google.golang.org/protobuf/internal/strs
@@ -369,4 +371,3 @@ gvisor.dev/gvisor/pkg/tcpip/transport/tcpconntrack
 gvisor.dev/gvisor/pkg/tcpip/transport/udp
 gvisor.dev/gvisor/pkg/waiter
 # github.com/flynn/go-tuf => fuchsia.googlesource.com/third_party/go-tuf.git v0.0.0-20200826175457-a90d70916791
-# google.golang.org/protobuf => google.golang.org/protobuf v1.25.0

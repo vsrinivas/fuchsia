@@ -30,9 +30,10 @@ syntax = "proto3";
 
 package codecoverage;
 
+option go_package = "go.fuchsia.dev/fuchsia/tools/debug/covargs/api/third_party/codecoverage";
+
 // This proto defines a compressed format for code coverage info by merging as
 // much info as possible.
-
 
 // Represents the code coverage for multiple full lines in the file.
 message LineRange {
@@ -66,7 +67,6 @@ message LineRange {
   int64 count = 3;
 }
 
-
 // Represents column range within the same line.
 message ColumnRange {
   // The first column of the code block. Inclusive.
@@ -77,7 +77,6 @@ message ColumnRange {
   int32 last = 2;
 }
 
-
 // Represents multiple column ranges of a line.
 message ColumnRanges {
   // The line number of the code block.
@@ -86,7 +85,6 @@ message ColumnRanges {
   // The column ranges within the line.
   repeated ColumnRange ranges = 2;
 }
-
 
 // Represents the code coverage of code branches at a line.
 message Branch {
@@ -100,7 +98,6 @@ message Branch {
   int32 covered = 3;
 }
 
-
 // Represents a code coverage metric of a file or a directory.
 message Metric {
   // The name of the metric, e.g. "line", "function", "region", etc.
@@ -112,7 +109,6 @@ message Metric {
   // The number of covered ones.
   int32 covered = 3;
 }
-
 
 // Represents the code coverage info of a single source file.
 message File {
@@ -145,7 +141,6 @@ message File {
   int64 timestamp = 8;
 }
 
-
 // Represents the summary metrics for a given file or a directory.
 message CoverageSummary {
   // The name of the file, directory, or crbug component.
@@ -160,7 +155,6 @@ message CoverageSummary {
   // The metrics for the file or directory.
   repeated Metric summaries = 3;
 }
-
 
 // Represents the summary metrics for:
 // * A single directory and its immediate children.
@@ -183,7 +177,6 @@ message GroupCoverageSummary {
   repeated Metric summaries = 6;
 }
 
-
 // Represents a commit in a Gitiles repository.
 message GitilesCommit {
   // Hostname of the Gitiles server, e.g. chromium.googlesource.com.
@@ -201,7 +194,6 @@ message GitilesCommit {
   int32 commit_position = 4;
 }
 
-
 // Represents a patch of a CL in a Gerrit project.
 message GerritPatch {
   // Hostname of the Gerrit server, e.g. chromium-review.googlesource.com.
@@ -218,7 +210,6 @@ message GerritPatch {
   string project = 4;
 }
 
-
 // Represents a configuration category that is related to the coverage data.
 enum ConfigCategory {
   // Related to produce the test binary and data.
@@ -234,7 +225,6 @@ enum ConfigCategory {
   COVERAGE_TOOL = 3;
 }
 
-
 // Represents a config setting.
 message ConfigSetting {
   // The category of the setting.
@@ -246,7 +236,6 @@ message ConfigSetting {
   // Value for the key, e.g. "Linux Builder".
   string value = 3;
 }
-
 
 // Represents a code coverage report.
 message CoverageReport {

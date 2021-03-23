@@ -5,9 +5,6 @@ go 1.16
 // We forked this one.
 replace github.com/flynn/go-tuf => fuchsia.googlesource.com/third_party/go-tuf.git v0.0.0-20200826175457-a90d70916791
 
-// https://github.com/protocolbuffers/protobuf-go/commit/8b366e8 is in v1.26.0 and cobalt protos are incompatible.
-replace google.golang.org/protobuf => google.golang.org/protobuf v1.25.0
-
 require (
 	cloud.google.com/go/storage v1.14.0
 	github.com/creack/pty v1.1.11
@@ -35,8 +32,9 @@ require (
 	golang.org/x/time v0.0.0-20210220033141-f8bda1e9f3ba // indirect
 	gonum.org/v1/gonum v0.9.0
 	google.golang.org/api v0.42.0 // indirect
-	google.golang.org/genproto v0.0.0-20210318145829-90b20ab00860 // indirect
+	google.golang.org/genproto v0.0.0-20210322173543-5f0e89347f5a // indirect
 	google.golang.org/grpc v1.36.0
+	google.golang.org/grpc/cmd/protoc-gen-go-grpc v1.1.0
 	google.golang.org/protobuf v1.26.0
 	gopkg.in/yaml.v2 v2.4.0
 	gvisor.dev/gvisor v0.0.0-20210322211820-0db21bb9e382
