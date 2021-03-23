@@ -41,7 +41,8 @@ std::unique_ptr<TargetImpl> TargetImpl::Clone(System* system) {
   return result;
 }
 
-void TargetImpl::ProcessCreatedInJob(uint64_t koid, const std::string& process_name) {
+void TargetImpl::ProcessCreatedInJob(uint64_t koid, const std::string& process_name,
+                                     uint64_t timestamp) {
   FX_DCHECK(state_ == State::kNone);
   FX_DCHECK(!process_.get());  // Shouldn't have a process.
 
@@ -49,10 +50,11 @@ void TargetImpl::ProcessCreatedInJob(uint64_t koid, const std::string& process_n
   process_ = CreateProcessImpl(koid, process_name, Process::StartType::kAttach);
 
   for (auto& observer : session()->process_observers())
-    observer.DidCreateProcess(process_.get(), true);
+    observer.DidCreateProcess(process_.get(), true, timestamp);
 }
 
-void TargetImpl::ProcessCreatedAsComponent(uint64_t koid, const std::string& process_name) {
+void TargetImpl::ProcessCreatedAsComponent(uint64_t koid, const std::string& process_name,
+                                           uint64_t timestamp) {
   FX_DCHECK(state_ == State::kNone);
   FX_DCHECK(!process_.get());
 
@@ -60,13 +62,15 @@ void TargetImpl::ProcessCreatedAsComponent(uint64_t koid, const std::string& pro
   process_ = CreateProcessImpl(koid, process_name, Process::StartType::kComponent);
 
   for (auto& observer : session()->process_observers())
-    observer.DidCreateProcess(process_.get(), false);
+    observer.DidCreateProcess(process_.get(), false, timestamp);
 }
 
 void TargetImpl::CreateProcessForTesting(uint64_t koid, const std::string& process_name) {
   FX_DCHECK(state_ == State::kNone);
   state_ = State::kStarting;
-  OnLaunchOrAttachReply(Callback(), Err(), koid, 0, process_name);
+  uint64_t cur_mock_timestamp = mock_timestamp_;
+  mock_timestamp_ += 1000;
+  OnLaunchOrAttachReply(Callback(), Err(), koid, 0, process_name, cur_mock_timestamp);
 }
 
 void TargetImpl::ImplicitlyDetach() {
@@ -107,11 +111,14 @@ void TargetImpl::Launch(Callback callback) {
   debug_ipc::LaunchRequest request;
   request.inferior_type = debug_ipc::InferiorType::kBinary;
   request.argv = args_;
+  uint64_t cur_mock_timestamp = mock_timestamp_;
+  mock_timestamp_ += 1000;
   session()->remote_api()->Launch(
-      request, [callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr()](
-                   const Err& err, debug_ipc::LaunchReply reply) mutable {
+      request, [callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr(),
+                cur_mock_timestamp](const Err& err, debug_ipc::LaunchReply reply) mutable {
         TargetImpl::OnLaunchOrAttachReplyThunk(weak_target, std::move(callback), err,
-                                               reply.process_id, reply.status, reply.process_name);
+                                               reply.process_id, reply.status, reply.process_name,
+                                               cur_mock_timestamp);
       });
 }
 
@@ -154,12 +161,13 @@ void TargetImpl::Attach(uint64_t koid, Callback callback) {
 
   debug_ipc::AttachRequest request;
   request.koid = koid;
+  uint64_t cur_mock_timestamp = mock_timestamp_;
+  mock_timestamp_ += 1000;
   session()->remote_api()->Attach(
-      request,
-      [koid, callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr()](
-          const Err& err, debug_ipc::AttachReply reply) mutable {
+      request, [koid, callback = std::move(callback), weak_target = impl_weak_factory_.GetWeakPtr(),
+                cur_mock_timestamp](const Err& err, debug_ipc::AttachReply reply) mutable {
         OnLaunchOrAttachReplyThunk(std::move(weak_target), std::move(callback), err, koid,
-                                   reply.status, reply.name);
+                                   reply.status, reply.name, cur_mock_timestamp);
       });
 }
 
@@ -202,9 +210,9 @@ void TargetImpl::OnProcessExiting(int return_code) {
 void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target, Callback callback,
                                             const Err& err, uint64_t koid,
                                             debug_ipc::zx_status_t status,
-                                            const std::string& process_name) {
+                                            const std::string& process_name, uint64_t timestamp) {
   if (target) {
-    target->OnLaunchOrAttachReply(std::move(callback), err, koid, status, process_name);
+    target->OnLaunchOrAttachReply(std::move(callback), err, koid, status, process_name, timestamp);
   } else {
     // The reply that the process was launched came after the local objects were destroyed.
     if (err.has_error()) {
@@ -221,7 +229,7 @@ void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target, Cal
 
 void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err, uint64_t koid,
                                        debug_ipc::zx_status_t status,
-                                       const std::string& process_name) {
+                                       const std::string& process_name, uint64_t timestamp) {
   FX_DCHECK(state_ == State::kAttaching || state_ == State::kStarting);
   FX_DCHECK(!process_.get());  // Shouldn't have a process.
 
@@ -245,7 +253,7 @@ void TargetImpl::OnLaunchOrAttachReply(Callback callback, const Err& err, uint64
 
   if (state_ == State::kRunning) {
     for (auto& observer : session()->process_observers())
-      observer.DidCreateProcess(process_.get(), false);
+      observer.DidCreateProcess(process_.get(), false, timestamp);
   }
 }
 

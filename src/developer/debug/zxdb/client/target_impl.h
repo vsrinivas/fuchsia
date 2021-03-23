@@ -33,11 +33,12 @@ class TargetImpl : public Target {
 
   // Notification that a new process was created from a job filter. The process will not have
   // started running yet.
-  void ProcessCreatedInJob(uint64_t koid, const std::string& process_name);
+  void ProcessCreatedInJob(uint64_t koid, const std::string& process_name, uint64_t timestamp);
 
   // Notification that a new process was created as a new component. We need the distinction because
   // they look identical as a process caught by a job filter.
-  void ProcessCreatedAsComponent(uint64_t koid, const std::string& process_name);
+  void ProcessCreatedAsComponent(uint64_t koid, const std::string& process_name,
+                                 uint64_t timestamp);
 
   // Tests can use this to create a target for mocking purposes without making any IPC. To destroy
   // call ImplicitlyDetach().
@@ -66,9 +67,10 @@ class TargetImpl : public Target {
   static void OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target, Callback callback,
                                          const Err& err, uint64_t koid,
                                          debug_ipc::zx_status_t status,
-                                         const std::string& process_name);
+                                         const std::string& process_name, uint64_t timestamp);
   void OnLaunchOrAttachReply(Callback callback, const Err& err, uint64_t koid,
-                             debug_ipc::zx_status_t status, const std::string& process_name);
+                             debug_ipc::zx_status_t status, const std::string& process_name,
+                             uint64_t timestamp);
 
   // Different status returned by the agent can mean different things.
   // ZX_ERR_IO = Process doesn't exist.
@@ -95,6 +97,8 @@ class TargetImpl : public Target {
   TargetSymbols symbols_;
 
   fxl::WeakPtrFactory<TargetImpl> impl_weak_factory_;
+
+  uint64_t mock_timestamp_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TargetImpl);
 };

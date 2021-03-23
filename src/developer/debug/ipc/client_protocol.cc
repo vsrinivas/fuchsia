@@ -634,6 +634,8 @@ bool ReadNotifyProcessExiting(MessageReader* reader, NotifyProcessExiting* proce
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
+  if (!reader->ReadUint64(&process->timestamp))
+    return false;
   if (!reader->ReadUint64(&process->process_koid))
     return false;
   if (!reader->ReadInt64(&process->return_code))
@@ -644,6 +646,8 @@ bool ReadNotifyProcessExiting(MessageReader* reader, NotifyProcessExiting* proce
 bool ReadNotifyProcessStarting(MessageReader* reader, NotifyProcessStarting* process) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
+    return false;
+  if (!reader->ReadUint64(&process->timestamp))
     return false;
 
   uint32_t type = UINT32_MAX;
@@ -666,12 +670,16 @@ bool ReadNotifyThread(MessageReader* reader, NotifyThread* notify) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
+  if (!reader->ReadUint64(&notify->timestamp))
+    return false;
   return Deserialize(reader, &notify->record);
 }
 
 bool ReadNotifyException(MessageReader* reader, NotifyException* notify) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
+    return false;
+  if (!reader->ReadUint64(&notify->timestamp))
     return false;
   if (!Deserialize(reader, &notify->thread))
     return false;
@@ -691,6 +699,8 @@ bool ReadNotifyModules(MessageReader* reader, NotifyModules* notify) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
     return false;
+  if (!reader->ReadUint64(&notify->timestamp))
+    return false;
   if (!reader->ReadUint64(&notify->process_koid))
     return false;
 
@@ -702,6 +712,8 @@ bool ReadNotifyModules(MessageReader* reader, NotifyModules* notify) {
 bool ReadNotifyIO(MessageReader* reader, NotifyIO* notify) {
   MsgHeader header;
   if (!reader->ReadHeader(&header))
+    return false;
+  if (!reader->ReadUint64(&notify->timestamp))
     return false;
 
   if (!reader->ReadUint64(&notify->process_koid))

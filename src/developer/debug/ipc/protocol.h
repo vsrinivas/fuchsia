@@ -409,9 +409,15 @@ struct ConfigAgentReply {
 
 // Notifications ---------------------------------------------------------------
 
+// This is so that it's obvious if the timestamp wasn't properly set (that number should be at
+// least 30,000 years) but it's not the max so that if things add to it then time keeps moving
+// forward.
+const uint64_t TIMESTAMP_DEFAULT = 0x0fffffffffffffff;
+
 // Notify that a new process was created in debugged job.
 
 struct NotifyProcessStarting {
+  uint64_t timestamp = TIMESTAMP_DEFAULT;
   enum class Type : uint32_t {
     kNormal,  // Normal process startup.
     kLimbo,   // Process entered the limbo. See debug_agent/limbo_provider.h.
@@ -435,17 +441,20 @@ struct NotifyProcessStarting {
 // Data for process destroyed messages (process created messages are in
 // response to launch commands so is just the reply to that message).
 struct NotifyProcessExiting {
+  uint64_t timestamp = TIMESTAMP_DEFAULT;
   uint64_t process_koid = 0;
   int64_t return_code = 0;
 };
 
 // Data for thread created and destroyed messages.
 struct NotifyThread {
+  uint64_t timestamp = TIMESTAMP_DEFAULT;
   ThreadRecord record;
 };
 
 // Data passed for exceptions.
 struct NotifyException {
+  uint64_t timestamp = TIMESTAMP_DEFAULT;
   // Holds the state and a minimal stack (up to 2 frames) of the thread at the
   // moment of notification.
   ThreadRecord thread;
@@ -472,6 +481,7 @@ struct NotifyException {
 // Indicates the loaded modules may have changed. The entire list of current
 // modules is sent every time.
 struct NotifyModules {
+  uint64_t timestamp = TIMESTAMP_DEFAULT;
   uint64_t process_koid = 0;
   std::vector<Module> modules;
 
@@ -482,6 +492,7 @@ struct NotifyModules {
 };
 
 struct NotifyIO {
+  uint64_t timestamp = TIMESTAMP_DEFAULT;
   static constexpr size_t kMaxDataSize = 64 * 1024;  // 64k.
 
   enum class Type : uint32_t {

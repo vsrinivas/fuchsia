@@ -585,12 +585,14 @@ void WriteReply(const ConfigAgentReply& reply, uint32_t transaction_id, MessageW
 
 void WriteNotifyProcessExiting(const NotifyProcessExiting& notify, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyProcessExiting, 0);
+  writer->WriteUint64(notify.timestamp);
   writer->WriteUint64(notify.process_koid);
   writer->WriteInt64(notify.return_code);
 }
 
 void WriteNotifyProcessStarting(const NotifyProcessStarting& notify, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyProcessStarting, 0);
+  writer->WriteUint64(notify.timestamp);
   writer->WriteUint32(static_cast<uint32_t>(notify.type));
   writer->WriteUint64(notify.koid);
   writer->WriteUint32(notify.component_id);
@@ -599,11 +601,13 @@ void WriteNotifyProcessStarting(const NotifyProcessStarting& notify, MessageWrit
 
 void WriteNotifyThread(MsgHeader::Type type, const NotifyThread& notify, MessageWriter* writer) {
   writer->WriteHeader(type, 0);
+  writer->WriteUint64(notify.timestamp);
   Serialize(notify.record, writer);
 }
 
 void WriteNotifyException(const NotifyException& notify, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyException, 0);
+  writer->WriteUint64(notify.timestamp);
   Serialize(notify.thread, writer);
   writer->WriteUint32(static_cast<uint32_t>(notify.type));
   writer->WriteBytes(&notify.exception, sizeof(notify.exception));
@@ -613,6 +617,7 @@ void WriteNotifyException(const NotifyException& notify, MessageWriter* writer) 
 
 void WriteNotifyModules(const NotifyModules& notify, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyModules, 0);
+  writer->WriteUint64(notify.timestamp);
   writer->WriteUint64(notify.process_koid);
   Serialize(notify.modules, writer);
   Serialize(notify.stopped_thread_koids, writer);
@@ -620,6 +625,7 @@ void WriteNotifyModules(const NotifyModules& notify, MessageWriter* writer) {
 
 void WriteNotifyIO(const NotifyIO& notify, MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kNotifyIO, 0);
+  writer->WriteUint64(notify.timestamp);
   writer->WriteUint64(notify.process_koid);
   writer->WriteUint32(static_cast<uint32_t>(notify.type));
   writer->WriteString(notify.data);

@@ -137,7 +137,8 @@ void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::Thread* thread,
   breakpoint->SetSettings(settings);
 }
 
-void InterceptingProcessObserver::DidCreateProcess(zxdb::Process* process, bool autoattached) {
+void InterceptingProcessObserver::DidCreateProcess(zxdb::Process* process, bool autoattached,
+                                                   uint64_t timestamp) {
   workflow_->syscall_decoder_dispatcher()->AddLaunchedProcess(process->GetKoid());
   workflow_->SetBreakpoints(process);
 }
@@ -267,20 +268,19 @@ void InterceptionWorkflow::AuthenticateServer(zxdb::SymbolServer* server) {
 
   // Do the authentication.
   ++remaining_authentications_;
-  server->Authenticate(
-      key, [this](const zxdb::Err& err) {
-        if (err.has_error()) {
-          FX_LOGS(ERROR) << "Server authentication failed: " << err.msg();
-          server_authentication_error_ = true;
-        }
-        if (--remaining_authentications_ == 0) {
-          if (server_authentication_error_) {
-            Shutdown();
-          } else {
-            FX_LOGS(INFO) << "Authentication successful";
-          }
-        }
-      });
+  server->Authenticate(key, [this](const zxdb::Err& err) {
+    if (err.has_error()) {
+      FX_LOGS(ERROR) << "Server authentication failed: " << err.msg();
+      server_authentication_error_ = true;
+    }
+    if (--remaining_authentications_ == 0) {
+      if (server_authentication_error_) {
+        Shutdown();
+      } else {
+        FX_LOGS(INFO) << "Authentication successful";
+      }
+    }
+  });
 }
 
 void InterceptionWorkflow::Connect(const std::string& host, uint16_t port,

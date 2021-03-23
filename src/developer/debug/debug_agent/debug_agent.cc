@@ -10,6 +10,8 @@
 #include <lib/fit/defer.h>
 #include <lib/sys/cpp/termination_reason.h>
 #include <lib/syslog/cpp/macros.h>
+#include <lib/zx/clock.h>
+#include <lib/zx/time.h>
 #include <zircon/features.h>
 #include <zircon/status.h>
 #include <zircon/syscalls/debug.h>
@@ -385,6 +387,7 @@ void DebugAgent::OnProcessStatus(const debug_ipc::ProcessStatusRequest& request,
     debug_ipc::NotifyProcessStarting notify = {};
     notify.koid = process->koid();
     notify.name = process->process_handle().GetName();
+    notify.timestamp = zx::clock::get_monotonic().get();
 
     debug_ipc::MessageWriter writer;
     debug_ipc::WriteNotifyProcessStarting(notify, &writer);
@@ -879,6 +882,8 @@ void DebugAgent::OnProcessStart(const std::string& filter,
   notify.koid = process_koid;
   notify.name = description.process_name;
   notify.component_id = description.component_id;
+  notify.timestamp = zx::clock::get_monotonic().get();
+
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyProcessStarting(notify, &writer);
   stream()->Write(writer.MessageComplete());
@@ -943,6 +948,7 @@ void DebugAgent::OnProcessEnteredLimbo(const LimboProvider::Record& record) {
   process_starting.type = debug_ipc::NotifyProcessStarting::Type::kLimbo;
   process_starting.koid = process_koid;
   process_starting.name = std::move(process_name);
+  process_starting.timestamp = zx::clock::get_monotonic().get();
 
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteNotifyProcessStarting(std::move(process_starting), &writer);

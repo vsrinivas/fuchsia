@@ -652,14 +652,14 @@ void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& no
     found_target = system_.CreateNewTargetImpl(nullptr);
 
   if (notify.component_id == 0) {
-    found_target->ProcessCreatedInJob(notify.koid, notify.name);
+    found_target->ProcessCreatedInJob(notify.koid, notify.name, notify.timestamp);
     return;
   }
 
   // We should be expecting this component.
   auto it = expected_components_.find(notify.component_id);
   FX_DCHECK(it != expected_components_.end());
-  found_target->ProcessCreatedAsComponent(notify.koid, notify.name);
+  found_target->ProcessCreatedAsComponent(notify.koid, notify.name, notify.timestamp);
 
   // Now that the target is created, we can resume the process and make the first thread to execute.
   found_target->process()->Continue(false);

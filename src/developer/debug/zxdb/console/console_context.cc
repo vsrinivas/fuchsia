@@ -658,7 +658,8 @@ void ConsoleContext::WillDestroyTarget(Target* target) {
   }
 }
 
-void ConsoleContext::DidCreateProcess(Process* process, bool autoattached_to_new_process) {
+void ConsoleContext::DidCreateProcess(Process* process, bool autoattached_to_new_process,
+                                      uint64_t timestamp) {
   TargetRecord* record = GetTargetRecord(process->GetTarget());
   if (!record) {
     FX_NOTREACHED();
