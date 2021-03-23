@@ -4,20 +4,50 @@
 
 use {
     anyhow::{Context, Result},
+    cs::{io::Directory, v2::V2Component, Subcommand},
     ffx_component::SELECTOR_FORMAT_HELP,
+    ffx_component_select_args::{
+        CapabilityStruct, ComponentSelectCommand, MonikerStruct, SubcommandEnum,
+    },
     ffx_core::{ffx_error, ffx_plugin},
-    ffx_select_args::SelectCommand,
-    fidl_fuchsia_developer_remotecontrol as rc, selectors,
+    fidl_fuchsia_developer_remotecontrol as rc, fidl_fuchsia_io as fio,
+    fuchsia_zircon_status::Status,
+    selectors,
     std::io::{stdout, Write},
 };
 
 #[ffx_plugin()]
-pub async fn select_cmd(remote_proxy: rc::RemoteControlProxy, cmd: SelectCommand) -> Result<()> {
+pub async fn select_cmd(
+    remote_proxy: rc::RemoteControlProxy,
+    cmd: ComponentSelectCommand,
+) -> Result<()> {
     let writer = Box::new(stdout());
-    select(remote_proxy, writer, &cmd.selector).await
+    match &cmd.nested {
+        SubcommandEnum::Capability(CapabilityStruct { capability: c }) => {
+            select_capability(remote_proxy, c).await
+        }
+        SubcommandEnum::Moniker(MonikerStruct { moniker: m }) => {
+            select_moniker(remote_proxy, writer, m).await
+        }
+    }
 }
 
-async fn select<W: Write>(
+// TODO (72749): Allow reverse lookup for incoming/outgoing capabilities.
+async fn select_capability(remote_proxy: rc::RemoteControlProxy, capability: &str) -> Result<()> {
+    let (root, dir_server) = fidl::endpoints::create_proxy::<fio::DirectoryMarker>()
+        .context("creating hub root proxy")?;
+    remote_proxy
+        .open_hub(dir_server)
+        .await?
+        .map_err(|i| Status::ok(i).unwrap_err())
+        .context("opening hub")?;
+    let hub_dir = Directory::from_proxy(root);
+    let component = V2Component::explore(hub_dir, Subcommand::Select).await;
+    component.print_components_exposing_capability(&capability);
+    Ok(())
+}
+
+async fn select_moniker<W: Write>(
     remote_proxy: rc::RemoteControlProxy,
     mut write: W,
     selector: &str,
@@ -118,7 +148,7 @@ core/test
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
         let remote_proxy = setup_fake_remote_server();
-        let response = select(remote_proxy, writer, "a:b:").await;
+        let response = select_moniker(remote_proxy, writer, "a:b:").await;
         let e = response.unwrap_err();
         assert!(e.to_string().contains(SELECTOR_FORMAT_HELP));
         Ok(())
@@ -129,8 +159,9 @@ core/test
         let mut output = String::new();
         let writer = unsafe { BufWriter::new(output.as_mut_vec()) };
         let remote_proxy = setup_fake_remote_server();
-        let _response =
-            select(remote_proxy, writer, "a:valid:selector").await.expect("select should not fail");
+        let _response = select_moniker(remote_proxy, writer, "a:valid:selector")
+            .await
+            .expect("select should not fail");
         assert_eq!(output, DEFAULT_MATCH_STR);
         Ok(())
     }

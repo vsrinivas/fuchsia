@@ -174,13 +174,16 @@ in [component selector documentation](/docs/development/tools/ffx/commands/compo
 
 ### Inspecting the component topology
 
-You can use the `component select` command to inspect services in the
-[component topology](/docs/concepts/components/v2/topology.md).
+You can use the `component select` command to
+* inspect services in the
+[component topology](/docs/concepts/components/v2/topology.md)
+* search for components that expose a service.
+
 For example, the following command will display all services offered by
 [v1 components](/docs/glossary.md#components-v1):
 
 ```sh
-$ fx ffx component select 'core/appmgr:out:*'`
+$ fx ffx component select moniker 'core/appmgr:out:*'`
 
 core/appmgr
 |
@@ -208,6 +211,24 @@ core/appmgr
 
 Note: this command can be slow (~10-15s), especially for selectors that match a
 large number of services.
+
+The following command will display all components that expose `diagnostics`:
+
+```sh
+$ fx ffx component select capability diagnostics
+
+./bootstrap/archivist
+./bootstrap/driver_manager
+./bootstrap/fshost
+./bootstrap/power_manager
+./core/appmgr
+./core/detect
+./core/last_reboot
+./core/log-stats
+./core/pkg-cache
+./core/sampler
+./core/system-update-committer
+```
 
 ### Verifying a service is up
 

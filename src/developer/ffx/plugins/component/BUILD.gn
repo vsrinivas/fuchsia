@@ -11,7 +11,7 @@ ffx_plugin("ffx_component") {
     "knock:ffx_knock",
     "list:ffx_component_list",
     "run:ffx_component_run",
-    "select:ffx_select",
+    "select:ffx_component_select",
     "show:ffx_component_show",
     "//src/sys/run_test_suite/ffx:ffx_test",
   ]
@@ -27,7 +27,7 @@ group("tests") {
     "knock:ffx_knock_tests",
     "list:ffx_component_list_tests",
     "run:ffx_component_run_tests",
-    "select:ffx_select_tests",
+    "select:ffx_component_select_tests",
     "show:ffx_component_show_tests",
   ]
 }
