@@ -787,11 +787,17 @@ class OrdinaledLayoutMember final : public LayoutMember {
       : LayoutMember(element, Kind::kOrdinaled, std::move(identifier)),
         ordinal(std::move(ordinal)),
         type_ctor(std::move(type_ctor)) {}
+  explicit OrdinaledLayoutMember(SourceElement const& element, std::unique_ptr<Ordinal64> ordinal)
+      : LayoutMember(element, Kind::kOrdinaled, nullptr),
+        ordinal(std::move(ordinal)),
+        type_ctor(nullptr),
+        reserved(true) {}
 
   void Accept(TreeVisitor* visitor) const;
 
   std::unique_ptr<Ordinal64> ordinal;
   std::unique_ptr<TypeConstructorNew> type_ctor;
+  const bool reserved = false;
 };
 
 class ValueLayoutMember final : public LayoutMember {

@@ -2003,6 +2003,11 @@ bool Library::ConsumeOrdinaledLayout(std::unique_ptr<raw::Layout> layout, const 
   std::vector<M> members;
   for (auto& mem : layout->members) {
     auto member = static_cast<raw::OrdinaledLayoutMember*>(mem.get());
+    if (member->reserved) {
+      members.emplace_back(std::move(member->ordinal), member->span());
+      continue;
+    }
+
     auto name_of_anonymous_layout = Name::CreateDerived(
         this, member->span(),
         std::string(context.decl_name()) +

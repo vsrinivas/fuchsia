@@ -1875,6 +1875,13 @@ std::unique_ptr<raw::LayoutMember> Parser::ParseLayoutMember(raw::LayoutMember::
     ordinal = ParseOrdinal64();
     if (!Ok())
       return Fail();
+
+    if (MaybeConsumeToken(IdentifierOfSubkind(Token::Subkind::kReserved))) {
+      if (!Ok())
+        return Fail();
+      return std::make_unique<raw::OrdinaledLayoutMember>(scope.GetSourceElement(),
+                                                          std::move(ordinal));
+    }
   }
 
   auto identifier = ParseIdentifier();

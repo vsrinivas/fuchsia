@@ -331,14 +331,15 @@ TEST(NewSyntaxTests, TypeDeclOfTableLayout) {
 library example;
 type TypeDecl = table {
     1: field1 uint16;
-    2: field2 uint16;
+    2: reserved;
+    3: field2 uint16;
 };
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupTable("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
-  EXPECT_EQ(type_decl->members.size(), 2);
+  EXPECT_EQ(type_decl->members.size(), 3);
 }
 
 TEST(NewSyntaxTests, TypeDeclOfTableLayoutWithResourceness) {
@@ -376,14 +377,15 @@ TEST(NewSyntaxTests, TypeDeclOfUnionLayout) {
 library example;
 type TypeDecl = union {
     1: variant1 uint16;
-    2: variant2 uint16;
+    2: reserved;
+    3: variant2 uint16;
 };
 )FIDL",
                       std::move(experimental_flags));
   ASSERT_COMPILED(library);
   auto type_decl = library.LookupUnion("TypeDecl");
   ASSERT_NOT_NULL(type_decl);
-  EXPECT_EQ(type_decl->members.size(), 2);
+  EXPECT_EQ(type_decl->members.size(), 3);
 }
 
 TEST(NewSyntaxTests, TypeDeclOfUnionLayoutWithResourceness) {
