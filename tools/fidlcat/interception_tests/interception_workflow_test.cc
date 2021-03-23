@@ -506,10 +506,8 @@ TEST_F(InterceptionWorkflowTestX64, ValuesOK) {
     }
   }
 
-  // TODO(fxbug.dev/62955) put back this string within expected when 62955 will be fixed.
-  // "__libc_extensions_init",
-
-  std::set<std::string> expected = {"processargs_extract_handles",
+  std::set<std::string> expected = {"__libc_extensions_init",
+                                    "processargs_extract_handles",
                                     "zx_bti_create",
                                     "zx_bti_pin",
                                     "zx_bti_release_quarantine",

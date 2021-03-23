@@ -2620,8 +2620,6 @@ void SyscallDecoderDispatcher::Populate() {
     extract_handles->set_inputs_decoded_action(&SyscallDecoderDispatcher::ExtractHandleInfos);
   }
 
-// TODO(fxbug.dev/62955) put back when 62955 will be fixed.
-#if 0
   {
     Syscall* libc_extensions_init =
         AddFunction("__libc_extensions_init", SyscallReturnType::kNoReturn);
@@ -2648,7 +2646,6 @@ void SyscallDecoderDispatcher::Populate() {
                                             80);
     libc_extensions_init->set_inputs_decoded_action(&SyscallDecoderDispatcher::LibcExtensionsInit);
   }
-#endif
 
   {
     Syscall* zx_clock_get = Add("zx_clock_get", SyscallReturnType::kStatus);
