@@ -44,9 +44,6 @@ In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-<!-- TODO(fxbug.dev/72346): We currently ignore unknown options, but _should_
-return an error. -->
-
 **ZX_ERR_INVALID_ARGS**  *options* contained a value not understood by the kernel
 
 **ZX_ERR_WRONG_TYPE**  *resource* was not of the kind **ZX_RSRC_KIND_ROOT**.

@@ -183,6 +183,12 @@ zx_status_t sys_debuglog_create(zx_handle_t rsrc, uint32_t options, user_out_han
       return status;
   }
 
+  // Ensure only valid options were given provided. The only valid flag is currently
+  // ZX_LOG_FLAGS_READABLE.
+  if ((options & ZX_LOG_FLAG_READABLE) != options) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // create a Log dispatcher
   KernelHandle<LogDispatcher> handle;
   zx_rights_t rights;

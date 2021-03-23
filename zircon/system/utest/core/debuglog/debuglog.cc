@@ -4,8 +4,9 @@
 
 // Tests for the debuglog.
 
-#include <zxtest/zxtest.h>
 #include <zircon/syscalls/log.h>
+
+#include <zxtest/zxtest.h>
 
 // This is provided by utest/core/main.c
 extern "C" __WEAK zx_handle_t get_root_resource();
@@ -34,6 +35,18 @@ TEST(DebugLogTest, WriteRead) {
   ASSERT_EQ(0, memcmp(buf + read_len, empty, sizeof(empty)));
 
   ASSERT_OK(zx_handle_close(log_handle));
+}
+
+TEST(DebugLogTest, InvalidOptions) {
+  zx_handle_t log_handle = 0;
+
+  // Ensure giving invalid options returns an error.
+  EXPECT_EQ(zx_debuglog_create(get_root_resource(), 1, &log_handle), ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(log_handle, 0);
+
+  EXPECT_EQ(zx_debuglog_create(get_root_resource(), 1 | ZX_LOG_FLAG_READABLE, &log_handle),
+            ZX_ERR_INVALID_ARGS);
+  EXPECT_EQ(log_handle, 0);
 }
 
 }  // namespace
