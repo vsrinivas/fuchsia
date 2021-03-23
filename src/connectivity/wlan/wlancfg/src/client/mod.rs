@@ -477,7 +477,7 @@ mod tests {
         super::*,
         crate::{
             access_point::state_machine as ap_fsm,
-            config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_LEN},
+            config_management::{Credential, NetworkConfig, SecurityType, WPA_PSK_BYTE_LEN},
             util::{logger::set_logger_for_test, testing::cobalt::create_mock_cobalt_sender},
         },
         async_trait::async_trait,
@@ -688,7 +688,7 @@ mod tests {
             .await
             .expect("error saving network");
         saved_networks
-            .store(network_id_psk, Credential::Psk(vec![64; WPA_PSK_LEN].to_vec()))
+            .store(network_id_psk, Credential::Psk(vec![64; WPA_PSK_BYTE_LEN].to_vec()))
             .await
             .expect("error saving network foobar-psk");
 
@@ -988,7 +988,7 @@ mod tests {
                 req, ..
             }))) => {
                 assert_eq!(b"foobar-psk", &req.ssid[..]);
-                assert_eq!(fidl_sme::Credential::Psk([64; WPA_PSK_LEN].to_vec()), req.credential);
+                assert_eq!(fidl_sme::Credential::Psk([64; WPA_PSK_BYTE_LEN].to_vec()), req.credential);
                 // TODO(hahnr): Send connection response.
             }
         );

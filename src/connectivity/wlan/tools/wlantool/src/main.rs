@@ -24,7 +24,7 @@ use std::str::FromStr;
 use structopt::StructOpt;
 use wlan_common::{
     channel::{Cbw, Channel, Phy},
-    ie::SSID_MAX_LEN,
+    ie::SSID_MAX_BYTE_LEN,
     RadioConfig, StationMode,
 };
 use wlan_rsn::psk;
@@ -227,11 +227,12 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
 
 async fn do_client_connect(cmd: opts::ClientConnectCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     let opts::ClientConnectCmd { iface_id, ssid, password, psk, phy, cbw, scan_type } = cmd;
-    if ssid.len() > SSID_MAX_LEN {
+    let ssid_byte_len = ssid.as_bytes().len();
+    if ssid_byte_len > SSID_MAX_BYTE_LEN {
         return Err(format_err!(
             "SSID is too long ({} bytes). Max is {}",
-            ssid.len(),
-            SSID_MAX_LEN
+            ssid_byte_len,
+            SSID_MAX_BYTE_LEN
         ));
     }
     let credential = match make_credential(password, psk) {

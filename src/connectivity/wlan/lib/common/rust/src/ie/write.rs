@@ -46,9 +46,9 @@ macro_rules! write_ie {
 
 pub fn write_ssid<B: Appendable>(buf: &mut B, ssid: &[u8]) -> Result<(), FrameWriteError> {
     validate!(
-        ssid.len() <= SSID_MAX_LEN,
+        ssid.len() <= SSID_MAX_BYTE_LEN,
         "SSID is too long (max: {} bytes, got: {})",
-        SSID_MAX_LEN,
+        SSID_MAX_BYTE_LEN,
         ssid.len()
     );
     write_ie!(buf, Id::SSID, ssid)

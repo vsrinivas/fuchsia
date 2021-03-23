@@ -22,7 +22,7 @@ macro_rules! validate {
 }
 
 pub fn parse_ssid<B: ByteSlice>(raw_body: B) -> FrameParseResult<B> {
-    validate!(raw_body.len() <= SSID_MAX_LEN, "SSID is too long");
+    validate!(raw_body.len() <= SSID_MAX_BYTE_LEN, "SSID is too long");
     Ok(raw_body)
 }
 
