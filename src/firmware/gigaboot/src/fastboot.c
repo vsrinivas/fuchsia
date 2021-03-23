@@ -4,11 +4,13 @@
 
 #include <abr.h>
 #include <bootbyte.h>
+#include <bootimg.h>
 #include <diskio.h>
 #include <fastboot.h>
 #include <inet6.h>
 #include <inttypes.h>
 #include <lib/abr/data.h>
+#include <netifc.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -23,7 +25,7 @@
 #define FB_PROTOCOL_VERSION 4
 #define INIT_PKT_SIZE (FB_HDR_SIZE + 4)
 #define INITIAL_SEQ_NUM 0x55aa
-#define NUM_COMMANDS 6
+#define NUM_COMMANDS 7
 #define NUM_VARIABLES 14
 #define PAGE_SIZE 4096
 #define PARTITION_OFFSET 0
@@ -103,6 +105,7 @@ void fb_erase(char *cmd);
 void fb_download(char *cmd);
 void fb_getvar(char *cmd);
 void fb_set_active(char *cmd);
+void fb_boot(char *cmd);
 
 // Fastboot variable functions. These functions retreive a variable and return
 // the value as a null terminated string. They are responsible for sending
@@ -125,6 +128,8 @@ static fb_cmd_phase cmd_phase;
 static uint8_t curr_var_idx;
 static uint8_t curr_var_arg_idx;
 static const char *slot_suffix_list[] = {"a", "b", NULL};
+static fb_bootimg_t boot_img;
+static int fb_boot_now = 0;
 
 // cmdlist maps a command name to the function that handles that command.
 static fb_cmd_t cmdlist[NUM_COMMANDS] = {
@@ -152,6 +157,10 @@ static fb_cmd_t cmdlist[NUM_COMMANDS] = {
     {
         .name = "set_active",
         .func = fb_set_active,
+    },
+    {
+        .name = "boot",
+        .func = fb_boot,
     }};
 
 // varlist contains all variables this bootloader supports.
@@ -216,6 +225,18 @@ static fb_var_t varlist[NUM_VARIABLES] = {
         .value = "0.4",
     },
 };
+
+int fb_poll(fb_bootimg_t *img) {
+  // If a previous fastboot boot failed, prevent retries by clearing fb_boot_now.
+  fb_boot_now = 0;
+
+  // Continue processing fastboot packets.
+  netifc_poll();
+  if (fb_boot_now) {
+    memcpy((void *) img, (void *) &boot_img, sizeof(fb_bootimg_t));
+  }
+  return fb_boot_now;
+}
 
 // fb_recv runs every time a UDP packet destined for the fastboot port is
 // received.
@@ -659,6 +680,29 @@ void fb_getvar(char *cmd) {
   if (!found) {
     fb_send_fail("no such variable");
   }
+}
+
+// boots the previously downloaded image in memory.
+void fb_boot(char *cmd) {
+  uint32_t bootimg_hdr_version = validate_bootimg(curr_img.data);
+  if (bootimg_hdr_version == (uint32_t)(-1)) {
+    fb_send_fail("invalid boot image magic");
+    return;
+  }
+  uint32_t kernel_size = get_kernel_size(curr_img.data, bootimg_hdr_version);
+  if (kernel_size == (uint32_t)(-1)) {
+    fb_send_fail("failed to get kernel size from bootimg");
+    return;
+  }
+  uint32_t page_size = get_page_size(curr_img.data, bootimg_hdr_version);
+  if (page_size == (uint32_t)(-1)) {
+    fb_send_fail("failed to get page size from bootimg");
+    return;
+  }
+  fb_boot_now = 1;
+  boot_img.kernel_size = kernel_size;
+  boot_img.kernel_start = curr_img.data + page_size;
+  fb_send_okay("");
 }
 
 // get_max_download_size puts the size of the largest contiguous section of

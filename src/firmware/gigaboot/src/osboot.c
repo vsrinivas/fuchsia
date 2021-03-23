@@ -6,6 +6,7 @@
 
 #include <cmdline.h>
 #include <device_id.h>
+#include <fastboot.h>
 #include <framebuffer.h>
 #include <inet6.h>
 #include <inttypes.h>
@@ -195,10 +196,13 @@ void do_select_fb(void) {
   }
 }
 
-void do_fastboot(void) {
+void do_fastboot(efi_handle img, efi_system_table *sys) {
   printf("entering fastboot mode\n");
+  fb_bootimg_t bootimg;
   while (true) {
-    netifc_poll();
+    if (fb_poll(&bootimg)) {
+      zbi_boot(img, sys, bootimg.kernel_start, bootimg.kernel_size);
+    }
   }
 }
 
@@ -719,7 +723,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
         do_netboot();
         break;
       case 'f':
-        do_fastboot();
+        do_fastboot(img, sys);
         break;
       case '1':
       case 'm':
@@ -733,7 +737,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
         print_cmdline();
 
         if (ktype == IMAGE_COMBO) {
-          zedboot(img, sys, kernel, ksz);
+          zbi_boot(img, sys, kernel, ksz);
         } else {
           size_t rsz = 0;
           void* ramdisk = NULL;
@@ -762,7 +766,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
         print_cmdline();
 
         if (ktype_b == IMAGE_COMBO) {
-          zedboot(img, sys, kernel_b, ksz_b);
+          zbi_boot(img, sys, kernel_b, ksz_b);
         } else {
           size_t rsz = 0;
           void* ramdisk = NULL;
@@ -791,7 +795,7 @@ efi_status efi_main(efi_handle img, efi_system_table* sys) {
         print_cmdline();
 
         if (zedboot_ktype == IMAGE_COMBO) {
-          zedboot(img, sys, zedboot_kernel, zedboot_size);
+          zbi_boot(img, sys, zedboot_kernel, zedboot_size);
         } else {
           printf("%s, wrong image type\n", GUID_ZIRCON_R_NAME);
         }

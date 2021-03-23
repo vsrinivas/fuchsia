@@ -12,6 +12,7 @@ source_set("src") {
   sources = [
     "abr.c",
     "avb.c",
+    "bootimg.c",
     "cmdline.c",
     "compression.c",
     "device_id.c",

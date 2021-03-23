@@ -353,7 +353,7 @@ fail:
 
 static char cmdline[CMDLINE_MAX];
 
-int zedboot(efi_handle img, efi_system_table* sys, void* image, size_t sz) {
+int zbi_boot(efi_handle img, efi_system_table* sys, void* image, size_t sz) {
   size_t flen, klen;
   if (header_check(image, sz, NULL, &flen, &klen)) {
     return -1;

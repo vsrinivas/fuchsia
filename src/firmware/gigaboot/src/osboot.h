@@ -37,7 +37,7 @@ uint32_t get_zx_pixel_format(efi_graphics_output_protocol* gop);
 int boot_deprecated(efi_handle img, efi_system_table* sys, void* image, size_t sz, void* ramdisk,
                     size_t rsz, void* cmdline, size_t csz);
 
-int zedboot(efi_handle img, efi_system_table* sys, void* image, size_t sz);
+int zbi_boot(efi_handle img, efi_system_table* sys, void* image, size_t sz);
 
 #define IMAGE_INVALID 0
 #define IMAGE_EMPTY 1
