@@ -14,8 +14,10 @@ use {
     std::time::{Duration, Instant},
 };
 
-// Each health verification should time out after 1 hour.
-const VERIFY_TIMEOUT: Duration = Duration::from_secs(60 * 60);
+// Each health verification should time out after 1 minute. This value should be at least 100X
+// larger than the expected verification duration. When adding a new health verification, consider
+// logging verification durations locally to validate this constant is still apropos.
+const VERIFY_TIMEOUT: Duration = Duration::from_secs(60);
 
 /// Do the health verification and handle associated errors. This is NOT to be confused with
 /// verified execution; health verification is a different process we use to determine if we should
