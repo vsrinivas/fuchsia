@@ -207,8 +207,6 @@ config("fidl-llcpp-deprecated-raw-channels") {
     "//src/modular/lib/fidl:environment",
     "//src/power/shutdown-shim:shutdown-shim",
     "//src/recovery/factory_reset:factory_reset_unittests",
-    "//src/security/tee/tee-client-api:tee-client-api",
-    "//src/security/tee/tee-client-api:tee-client-api-static",
     "//src/security/zxcrypt:zxcrypt-fdio",
     "//src/security/zxcrypt/tests:zxcrypt",
     "//src/storage/bin/blobfs:blobfs",
