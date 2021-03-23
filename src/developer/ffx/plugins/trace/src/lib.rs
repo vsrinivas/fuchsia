@@ -40,7 +40,7 @@ impl<'a> LineWaiter<'a> for Stdin {
     }
 }
 
-#[ffx_plugin("tracing", ControllerProxy = "core/appmgr:out:fuchsia.tracing.controller.Controller")]
+#[ffx_plugin(ControllerProxy = "core/appmgr:out:fuchsia.tracing.controller.Controller")]
 pub async fn trace(controller_proxy: ControllerProxy, cmd: TraceCommand) -> Result<()> {
     match cmd.sub_cmd {
         TraceSubCommand::ListProviders(_sub_cmd) => {
