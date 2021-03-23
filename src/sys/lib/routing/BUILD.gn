@@ -17,11 +17,14 @@ rustc_library("routing") {
   ]
 
   deps = [
+    "//src/lib/from-enum",
+    "//src/sys/lib/cm_rust",
     "//src/sys/lib/moniker",
     "//third_party/rust_crates:thiserror",
   ]
 
   sources = [
+    "src/capability_source.rs",
     "src/component_instance.rs",
     "src/error.rs",
     "src/lib.rs",
