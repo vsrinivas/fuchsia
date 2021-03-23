@@ -43,16 +43,24 @@ declare_args() {
 # and compare during development.
 #
 # Variables:
-#    sources: list of source .comp shader files.
-#    inputs: list of other input files (headers included by the main shaders).
-#    outputs: list of output file templates.
-#    include_dirs: list of additional include directories passed to the
-#      pre-processor.
+#    sources      : list of source .comp shader files.
+#    inputs       : list of other input files (headers included by the main shaders).
+#    outputs      : list of output file templates.
+#    include_dirs : list of additional include directories passed to the pre-processor.
+#    defines      : list of defines.
+#
+# Additional variables whose defaults are determined by declare_args():
+#    gen_debug_shaders : generate debug shaders
+#    skip_spirv_opt    : skip the `spirv-opt` pass
 #
 template("graphics_compute_generate_debug_glsl_shader_foreach") {
   _include_dirs = []
   if (defined(invoker.include_dirs)) {
     _include_dirs += invoker.include_dirs
+  }
+  _defines = []
+  if (defined(invoker.defines)) {
+    _defines += invoker.defines
   }
 
   # Locate glslangValidator host executable. This is similar to what
@@ -71,6 +79,7 @@ template("graphics_compute_generate_debug_glsl_shader_foreach") {
                              "outputs",
                              "public_deps",
                              "sources",
+                             "defines",
                            ])
     if (!defined(inputs)) {
       inputs = []
@@ -97,6 +106,9 @@ template("graphics_compute_generate_debug_glsl_shader_foreach") {
     foreach(include_dir, _include_dirs) {
       args += [ "-I" + rebase_path(include_dir, root_build_dir) ]
     }
+    foreach(_define, _defines) {
+      args += [ "-D" + _define ]
+    }
     if (!defined(deps)) {
       deps = []
     }
@@ -110,15 +122,19 @@ template("graphics_compute_generate_debug_glsl_shader_foreach") {
 #       after calling graphics_compute_compile_glsl_shader_foreach("<name>").
 #
 # Variables:
-#    sources: list of source .comp shader files.
-#    inputs: list of other input files (headers included by the main shaders).
-#    output_dir: output directory.
-#    include_dirs: list of additional include directories passed to the
-#      pre-processor.
+#    sources      : list of source .comp shader files.
+#    inputs       : list of other input files (headers included by the main shaders).
+#    output_dir   : output directory.
+#    include_dirs : list of additional include directories passed to the pre-processor.
+#    defines      : list of defines.
 #
 template("graphics_compute_compile_glsl_shader_foreach") {
   _output_dir = invoker.output_dir
-  if (graphics_compute_generate_debug_shaders) {
+  _gen_debug_shaders = graphics_compute_generate_debug_shaders
+  if (defined(invoker.gen_debug_shaders)) {
+    _gen_debug_shaders = invoker.gen_debug_shaders
+  }
+  if (_gen_debug_shaders) {
     _gen_debug_target_name = "gen_debug_${target_name}"
     graphics_compute_generate_debug_glsl_shader_foreach(
         _gen_debug_target_name) {
@@ -129,6 +145,7 @@ template("graphics_compute_compile_glsl_shader_foreach") {
                                "inputs",
                                "public_deps",
                                "sources",
+                               "defines",
                              ])
       outputs = [ "${_output_dir}/debug/{{source_name_part}}.glsl" ]
     }
@@ -155,14 +172,19 @@ template("graphics_compute_compile_glsl_shader_foreach") {
       "{{source}}",
     ]
     if (defined(invoker.include_dirs)) {
-      foreach(include_dir, invoker.include_dirs) {
-        args += [ "-I" + rebase_path(include_dir, root_build_dir) ]
+      foreach(_include_dir, invoker.include_dirs) {
+        args += [ "-I" + rebase_path(_include_dir, root_build_dir) ]
+      }
+    }
+    if (defined(invoker.defines)) {
+      foreach(_define, invoker.defines) {
+        args += [ "-D" + _define ]
       }
     }
     if (defined(invoker.args)) {
       args += invoker.args
     }
-    if (graphics_compute_generate_debug_shaders) {
+    if (_gen_debug_shaders) {
       # Force debug shader generation.
       if (!defined(deps)) {
         deps = []
@@ -198,7 +220,11 @@ template("graphics_compute_compile_glsl_shader_foreach") {
   #
   compiled_action_foreach(target_name) {
     tool = "//third_party/glslang:spirv-remap"
-    if (graphics_compute_skip_spirv_opt) {
+    _skip_spirv_opt = graphics_compute_skip_spirv_opt
+    if (defined(invoker.skip_spirv_opt)) {
+      _skip_spirv_opt = invoker.skip_spirv_opt
+    }
+    if (_skip_spirv_opt) {
       sources = get_target_outputs(":${_gen_spv_target_name}")
       public_deps = [ ":${_gen_spv_target_name}" ]
     } else {
