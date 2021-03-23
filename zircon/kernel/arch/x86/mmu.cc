@@ -667,11 +667,11 @@ zx_status_t X86ArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
 }
 
 zx_status_t X86ArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
-                                 size_t* mapped) {
+                                 ExistingEntryAction existing_action, size_t* mapped) {
   if (!IsValidVaddr(vaddr))
     return ZX_ERR_INVALID_ARGS;
 
-  return pt_->MapPages(vaddr, phys, count, mmu_flags, mapped);
+  return pt_->MapPages(vaddr, phys, count, mmu_flags, existing_action, mapped);
 }
 
 zx_status_t X86ArchVmAspace::Protect(vaddr_t vaddr, size_t count, uint mmu_flags) {

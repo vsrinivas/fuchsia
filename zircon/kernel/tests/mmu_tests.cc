@@ -236,7 +236,8 @@ static bool test_mapping_oom() {
     const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
 
     size_t mapped;
-    err = aspace.Map(kMappingStart, mapping_paddrs, kMappingPageCount, arch_rw_flags, &mapped);
+    err = aspace.Map(kMappingStart, mapping_paddrs, kMappingPageCount, arch_rw_flags,
+                     ArchVmAspace::ExistingEntryAction::Error, &mapped);
     if (err == ZX_OK) {
       map_success = true;
       size_t unmapped;
@@ -259,10 +260,108 @@ static bool test_mapping_oom() {
   END_TEST;
 }
 
+static bool test_skip_existing_mapping() {
+  BEGIN_TEST;
+
+  constexpr vaddr_t kMapBase = 1UL << 20;
+  constexpr paddr_t kPhysBase = 0;
+  constexpr size_t kNumPages = 8;
+  constexpr size_t kMidPage = kNumPages / 2;
+
+  constexpr vaddr_t kAspaceBase = 1UL << 20;
+  constexpr size_t kAspaceSize = (1UL << 47) - kAspaceBase - (1UL << 20);
+  ArchVmAspace aspace(kAspaceBase, kAspaceSize, 0);
+  zx_status_t err = aspace.Init();
+  EXPECT_EQ(err, ZX_OK);
+
+  const uint arch_rw_flags = ARCH_MMU_FLAG_PERM_READ | ARCH_MMU_FLAG_PERM_WRITE;
+
+  paddr_t page_addresses[kNumPages];
+  for (size_t i = 0; i < kNumPages; i++) {
+    page_addresses[i] = kPhysBase + (PAGE_SIZE * i);
+  }
+
+  size_t mapped;
+
+  // Map in the middle page by itself first, using the final settings.
+  err = aspace.Map(kMapBase + kMidPage * PAGE_SIZE, &page_addresses[kMidPage], 1, arch_rw_flags,
+                   ArchVmAspace::ExistingEntryAction::Error, &mapped);
+  EXPECT_EQ(err, ZX_OK);
+
+  // Now map in all the pages.
+  err = aspace.Map(kMapBase, page_addresses, kNumPages, arch_rw_flags,
+                   ArchVmAspace::ExistingEntryAction::Skip, &mapped);
+  EXPECT_EQ(err, ZX_OK);
+
+  // Validate all the pages.
+  for (size_t i = 0; i < kNumPages; i++) {
+    paddr_t paddr;
+    uint flags;
+    err = aspace.Query(kMapBase + i * PAGE_SIZE, &paddr, &flags);
+    EXPECT_EQ(err, ZX_OK);
+    EXPECT_EQ(paddr, page_addresses[i]);
+    EXPECT_EQ(flags, arch_rw_flags);
+  }
+  err = aspace.Unmap(kMapBase, kNumPages, &mapped);
+  EXPECT_EQ(err, ZX_OK);
+
+  // Now try mapping in the midle page with different permissions.
+  err = aspace.Map(kMapBase + kMidPage * PAGE_SIZE, &page_addresses[kMidPage], 1,
+                   ARCH_MMU_FLAG_PERM_READ, ArchVmAspace::ExistingEntryAction::Error, &mapped);
+  EXPECT_EQ(err, ZX_OK);
+  err = aspace.Map(kMapBase, page_addresses, kNumPages, arch_rw_flags,
+                   ArchVmAspace::ExistingEntryAction::Skip, &mapped);
+  EXPECT_EQ(err, ZX_OK);
+  for (size_t i = 0; i < kNumPages; i++) {
+    paddr_t paddr;
+    uint flags;
+    err = aspace.Query(kMapBase + i * PAGE_SIZE, &paddr, &flags);
+    EXPECT_EQ(err, ZX_OK);
+    EXPECT_EQ(paddr, page_addresses[i]);
+    if (i == kMidPage) {
+      EXPECT_EQ(flags, ARCH_MMU_FLAG_PERM_READ);
+    } else {
+      EXPECT_EQ(flags, arch_rw_flags);
+    }
+  }
+  err = aspace.Unmap(kMapBase, kNumPages, &mapped);
+  EXPECT_EQ(err, ZX_OK);
+
+  // Now map the middle page using a completely different physical address.
+  paddr_t other_paddr = PAGE_SIZE * 42;
+  err = aspace.Map(kMapBase + kMidPage * PAGE_SIZE, &other_paddr, 1, ARCH_MMU_FLAG_PERM_READ,
+                   ArchVmAspace::ExistingEntryAction::Error, &mapped);
+  EXPECT_EQ(err, ZX_OK);
+  err = aspace.Map(kMapBase, page_addresses, kNumPages, arch_rw_flags,
+                   ArchVmAspace::ExistingEntryAction::Skip, &mapped);
+  EXPECT_EQ(err, ZX_OK);
+  for (size_t i = 0; i < kNumPages; i++) {
+    paddr_t paddr;
+    uint flags;
+    err = aspace.Query(kMapBase + i * PAGE_SIZE, &paddr, &flags);
+    EXPECT_EQ(err, ZX_OK);
+    if (i == kMidPage) {
+      EXPECT_EQ(flags, ARCH_MMU_FLAG_PERM_READ);
+      EXPECT_EQ(paddr, other_paddr);
+    } else {
+      EXPECT_EQ(flags, arch_rw_flags);
+      EXPECT_EQ(paddr, page_addresses[i]);
+    }
+  }
+  err = aspace.Unmap(kMapBase, kNumPages, &mapped);
+  EXPECT_EQ(err, ZX_OK);
+
+  err = aspace.Destroy();
+  EXPECT_EQ(err, ZX_OK);
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(mmu_tests)
 UNITTEST("create large unaligned region and ensure it can be unmapped", test_large_unaligned_region)
 UNITTEST("create large unaligned region without mapping and ensure it can be unmapped",
          test_large_unaligned_region_without_map)
 UNITTEST("creating large vm region, and change permissions", test_large_region_protect)
 UNITTEST("trigger oom failures when creating a mapping", test_mapping_oom)
+UNITTEST("skip existing entry when mapping multiple pages", test_skip_existing_mapping)
 UNITTEST_END_TESTCASE(mmu_tests, "mmu", "mmu tests")

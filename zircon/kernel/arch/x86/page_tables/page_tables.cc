@@ -672,11 +672,13 @@ bool X86PageTableBase::RemoveMappingL0(volatile pt_entry_t* table,
  * completed.  Must be non-null.
  *
  * @return ZX_OK if successful
- * @return ZX_ERR_ALREADY_EXISTS if the range overlaps an existing mapping
+ * @return ZX_ERR_ALREADY_EXISTS if the range overlaps an existing mapping and existing_action is
+ * set to Error
  * @return ZX_ERR_NO_MEMORY if intermediate page tables could not be allocated
  */
 zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_flags,
-                                         PageTableLevel level, const MappingCursor& start_cursor,
+                                         PageTableLevel level, ExistingEntryAction existing_action,
+                                         const MappingCursor& start_cursor,
                                          MappingCursor* new_cursor, ConsistencyManager* cm) {
   DEBUG_ASSERT(table);
   DEBUG_ASSERT(check_vaddr(start_cursor.vaddr()));
@@ -686,7 +688,7 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
   *new_cursor = start_cursor;
 
   if (level == PageTableLevel::PT_L) {
-    return AddMappingL0(table, mmu_flags, start_cursor, new_cursor, cm);
+    return AddMappingL0(table, mmu_flags, existing_action, start_cursor, new_cursor, cm);
   }
 
   auto abort = fbl::MakeAutoCall([&]() {
@@ -713,9 +715,15 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
     volatile pt_entry_t* e = table + index;
     DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != vm_page_state::FREE);
     pt_entry_t pt_val = *e;
+
     // See if there's a large page in our way
     if (IS_PAGE_PRESENT(pt_val) && IS_LARGE_PAGE(pt_val)) {
-      return ZX_ERR_ALREADY_EXISTS;
+      if (existing_action == ExistingEntryAction::Error) {
+        return ZX_ERR_ALREADY_EXISTS;
+      }
+      new_cursor->ConsumePAddr(ps);
+      DEBUG_ASSERT(new_cursor->size() <= start_cursor.size());
+      continue;
     }
 
     // Check if this is a candidate for a new large page
@@ -752,7 +760,7 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
 
       MappingCursor cursor;
       ret = AddMapping(get_next_table_from_entry(pt_val), mmu_flags, lower_level(level),
-                       *new_cursor, &cursor, cm);
+                       existing_action, *new_cursor, &cursor, cm);
       *new_cursor = cursor;
       DEBUG_ASSERT(new_cursor->size() <= start_cursor.size());
       if (ret != ZX_OK) {
@@ -766,6 +774,7 @@ zx_status_t X86PageTableBase::AddMapping(volatile pt_entry_t* table, uint mmu_fl
 
 // Base case of AddMapping for smallest page size.
 zx_status_t X86PageTableBase::AddMappingL0(volatile pt_entry_t* table, uint mmu_flags,
+                                           ExistingEntryAction existing_action,
                                            const MappingCursor& start_cursor,
                                            MappingCursor* new_cursor, ConsistencyManager* cm) {
   DEBUG_ASSERT(IS_PAGE_ALIGNED(start_cursor.size()));
@@ -779,12 +788,13 @@ zx_status_t X86PageTableBase::AddMappingL0(volatile pt_entry_t* table, uint mmu_
     volatile pt_entry_t* e = table + index;
     DEBUG_ASSERT(paddr_to_vm_page(X86_VIRT_TO_PHYS(e))->state() != vm_page_state::FREE);
     if (IS_PAGE_PRESENT(*e)) {
-      return ZX_ERR_ALREADY_EXISTS;
+      if (existing_action == ExistingEntryAction::Error) {
+        return ZX_ERR_ALREADY_EXISTS;
+      }
+    } else {
+      UpdateEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e, new_cursor->paddr(), term_flags,
+                  /*was_terminal=*/false);
     }
-
-    UpdateEntry(cm, PageTableLevel::PT_L, new_cursor->vaddr(), e, new_cursor->paddr(), term_flags,
-                /*was_terminal=*/false);
-
     new_cursor->ConsumePAddr(PAGE_SIZE);
     DEBUG_ASSERT(new_cursor->size() <= start_cursor.size());
   }
@@ -1139,7 +1149,7 @@ zx_status_t X86PageTableBase::UnmapPages(vaddr_t vaddr, const size_t count, size
 }
 
 zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
-                                       size_t* mapped) {
+                                       ExistingEntryAction existing_action, size_t* mapped) {
   canary_.Assert();
 
   LTRACEF("aspace %p, vaddr %#" PRIxPTR " count %#zx mmu_flags 0x%x\n", this, vaddr, count,
@@ -1166,7 +1176,7 @@ zx_status_t X86PageTableBase::MapPages(vaddr_t vaddr, paddr_t* phys, size_t coun
     MappingCursor start(/*paddrs=*/phys, /*paddr_count=*/count, /*page_size=*/PAGE_SIZE,
                         /*vaddr=*/vaddr, /*size=*/count * PAGE_SIZE);
     MappingCursor result;
-    zx_status_t status = AddMapping(virt_, mmu_flags, top, start, &result, &cm);
+    zx_status_t status = AddMapping(virt_, mmu_flags, top, existing_action, start, &result, &cm);
     cm.Finish();
     if (status != ZX_OK) {
       dprintf(SPEW, "Add mapping failed with err=%d\n", status);
@@ -1205,7 +1215,8 @@ zx_status_t X86PageTableBase::MapPagesContiguous(vaddr_t vaddr, paddr_t paddr, c
   {
     Guard<Mutex> a{&lock_};
     DEBUG_ASSERT(virt_);
-    zx_status_t status = AddMapping(virt_, mmu_flags, top_level(), start, &result, &cm);
+    zx_status_t status =
+        AddMapping(virt_, mmu_flags, top_level(), ExistingEntryAction::Error, start, &result, &cm);
     cm.Finish();
     if (status != ZX_OK) {
       dprintf(SPEW, "Add mapping failed with err=%d\n", status);

@@ -84,7 +84,10 @@ class X86PageTableBase {
   }
   void* ctx() const { return ctx_; }
 
-  zx_status_t MapPages(vaddr_t vaddr, paddr_t* phys, size_t count, uint flags, size_t* mapped);
+  using ExistingEntryAction = ArchVmAspaceInterface::ExistingEntryAction;
+
+  zx_status_t MapPages(vaddr_t vaddr, paddr_t* phys, size_t count, uint flags,
+                       ExistingEntryAction existing_action, size_t* mapped);
   zx_status_t MapPagesContiguous(vaddr_t vaddr, paddr_t paddr, const size_t count, uint flags,
                                  size_t* mapped);
   zx_status_t UnmapPages(vaddr_t vaddr, const size_t count, size_t* unmapped);
@@ -155,11 +158,11 @@ class X86PageTableBase {
   class ConsistencyManager;
 
   zx_status_t AddMapping(volatile pt_entry_t* table, uint mmu_flags, PageTableLevel level,
-                         const MappingCursor& start_cursor, MappingCursor* new_cursor,
-                         ConsistencyManager* cm) TA_REQ(lock_);
+                         ExistingEntryAction existing_action, const MappingCursor& start_cursor,
+                         MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
   zx_status_t AddMappingL0(volatile pt_entry_t* table, uint mmu_flags,
-                           const MappingCursor& start_cursor, MappingCursor* new_cursor,
-                           ConsistencyManager* cm) TA_REQ(lock_);
+                           ExistingEntryAction existing_action, const MappingCursor& start_cursor,
+                           MappingCursor* new_cursor, ConsistencyManager* cm) TA_REQ(lock_);
 
   bool RemoveMapping(volatile pt_entry_t* table, PageTableLevel level,
                      const MappingCursor& start_cursor, MappingCursor* new_cursor,

@@ -589,7 +589,8 @@ zx_status_t VmMappingCoalescer::Flush() {
   uint flags = mapping_->arch_mmu_flags_locked();
   if (flags & ARCH_MMU_FLAG_PERM_RWX_MASK) {
     size_t mapped;
-    zx_status_t ret = mapping_->aspace()->arch_aspace().Map(base_, phys_, count_, flags, &mapped);
+    zx_status_t ret = mapping_->aspace()->arch_aspace().Map(
+        base_, phys_, count_, flags, ArchVmAspace::ExistingEntryAction::Error, &mapped);
     if (ret != ZX_OK) {
       TRACEF("error %d mapping %zu pages starting at va %#" PRIxPTR "\n", ret, count_, base_);
       aborted_ = true;

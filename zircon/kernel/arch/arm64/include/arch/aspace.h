@@ -29,7 +29,7 @@ class ArmArchVmAspace final : public ArchVmAspaceInterface {
 
   // main methods
   zx_status_t Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
-                  size_t* mapped) override;
+                  ExistingEntryAction existing_action, size_t* mapped) override;
   zx_status_t MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t count, uint mmu_flags,
                             size_t* mapped) override;
 

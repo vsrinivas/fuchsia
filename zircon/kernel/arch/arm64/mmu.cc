@@ -1135,7 +1135,7 @@ zx_status_t ArmArchVmAspace::MapContiguous(vaddr_t vaddr, paddr_t paddr, size_t 
 }
 
 zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uint mmu_flags,
-                                 size_t* mapped) {
+                                 ExistingEntryAction existing_action, size_t* mapped) {
   canary_.Assert();
   LTRACEF("vaddr %#" PRIxPTR " count %zu flags %#x\n", vaddr, count, mmu_flags);
 
@@ -1198,7 +1198,10 @@ zx_status_t ArmArchVmAspace::Map(vaddr_t vaddr, paddr_t* phys, size_t count, uin
       ret = MapPages(v, paddr, PAGE_SIZE, attrs, vaddr_base, top_size_shift, top_index_shift,
                      page_size_shift, cm);
       if (ret < 0) {
-        return static_cast<zx_status_t>(ret);
+        zx_status_t status = static_cast<zx_status_t>(ret);
+        if (status != ZX_ERR_ALREADY_EXISTS || existing_action == ExistingEntryAction::Error) {
+          return status;
+        }
       }
 
       v += PAGE_SIZE;

@@ -917,7 +917,8 @@ static bool arch_noncontiguous_map() {
     // Attempt to map a set of vm_page_t
     size_t mapped;
     vaddr_t base = USER_ASPACE_BASE + 10 * PAGE_SIZE;
-    status = aspace.Map(base, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
+    status = aspace.Map(base, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ,
+                        ArchVmAspace::ExistingEntryAction::Error, &mapped);
     ASSERT_EQ(ZX_OK, status, "failed first map\n");
     EXPECT_EQ(ktl::size(phys), mapped, "weird first map\n");
     for (size_t i = 0; i < ktl::size(phys); ++i) {
@@ -930,15 +931,16 @@ static bool arch_noncontiguous_map() {
     }
 
     // Attempt to map again, should fail
-    status = aspace.Map(base, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
+    status = aspace.Map(base, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ,
+                        ArchVmAspace::ExistingEntryAction::Error, &mapped);
     EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, status, "double map\n");
 
     // Attempt to map partially ovelapping, should fail
-    status =
-        aspace.Map(base + 2 * PAGE_SIZE, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
+    status = aspace.Map(base + 2 * PAGE_SIZE, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ,
+                        ArchVmAspace::ExistingEntryAction::Error, &mapped);
     EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, status, "double map\n");
-    status =
-        aspace.Map(base - 2 * PAGE_SIZE, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ, &mapped);
+    status = aspace.Map(base - 2 * PAGE_SIZE, phys, ktl::size(phys), ARCH_MMU_FLAG_PERM_READ,
+                        ArchVmAspace::ExistingEntryAction::Error, &mapped);
     EXPECT_EQ(ZX_ERR_ALREADY_EXISTS, status, "double map\n");
 
     // No entries should have been created by the partial failures
