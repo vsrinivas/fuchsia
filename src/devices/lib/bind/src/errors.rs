@@ -509,6 +509,9 @@ impl From<BytecodeError> for UserError {
                 None,
                 false,
             ),
+            BytecodeError::InvalidJumpLocation => {
+                UserError::new("E814", "Jump offset did not land on a jumping pad", None, false)
+            }
         }
     }
 }

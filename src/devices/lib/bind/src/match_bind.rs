@@ -13,6 +13,7 @@ use std::collections::HashMap;
 
 #[derive(PartialEq)]
 enum Condition {
+    Unconditional,
     Equal,
     Inequal,
 }
@@ -56,7 +57,12 @@ impl DeviceMatcher {
                 RawOp::Abort => {
                     return Ok(false);
                 }
-                _ => {}
+                RawOp::UnconditionalJump => self.evaluate_jump_inst(Condition::Unconditional)?,
+                RawOp::JumpIfEqual => self.evaluate_jump_inst(Condition::Equal)?,
+                RawOp::JumpIfNotEqual => self.evaluate_jump_inst(Condition::Inequal)?,
+                RawOp::JumpLandPad => {
+                    // No-op.
+                }
             };
         }
 
@@ -74,6 +80,25 @@ impl DeviceMatcher {
         };
 
         Ok(self.read_and_evaluate_values(condition)?)
+    }
+
+    fn evaluate_jump_inst(&mut self, condition: Condition) -> Result<(), BytecodeError> {
+        let offset = next_u32(&mut self.iter)?;
+        if condition != Condition::Unconditional && !self.read_and_evaluate_values(condition)? {
+            return Ok(());
+        }
+
+        // Skip through the bytes by the amount in the offset.
+        for _ in 0..offset {
+            next_u8(&mut self.iter)?;
+        }
+
+        // Verify that the next instruction is a jump pad.
+        if next_u8(&mut self.iter)? != RawOp::JumpLandPad as u8 {
+            return Err(BytecodeError::InvalidJumpLocation);
+        }
+
+        Ok(())
     }
 
     // Read in two values and evaluate them based on the given condition.
@@ -139,6 +164,9 @@ fn compare_symbols(
     Ok(match condition {
         Condition::Equal => lhs == rhs,
         Condition::Inequal => lhs != rhs,
+        Condition::Unconditional => {
+            panic!("This function shouldn't be called for Unconditional.")
+        }
     })
 }
 
@@ -154,6 +182,18 @@ pub fn match_bytecode(
 mod test {
     use super::*;
 
+    // Constants representing the number of bytes in an operand and value.
+    const OP_BYTES: u32 = 1;
+    const VALUE_BYTES: u32 = 5;
+    const OFFSET_BYTES: u32 = 4;
+
+    // Constants representing the number of bytes in each instruction.
+    const ABORT_BYTES: u32 = OP_BYTES;
+    const COND_INST_BYTES: u32 = OP_BYTES + VALUE_BYTES + VALUE_BYTES;
+    const UNCOND_JMP_BYTES: u32 = OP_BYTES + OFFSET_BYTES;
+    const COND_JMP_BYTES: u32 = OP_BYTES + OFFSET_BYTES + VALUE_BYTES + VALUE_BYTES;
+    const JMP_PAD_BYTES: u32 = OP_BYTES;
+
     struct EncodedValue {
         value_type: RawValueType,
         value: u32,
@@ -164,28 +204,61 @@ mod test {
         bytecode.extend_from_slice(&encoded_val.value.to_le_bytes());
     }
 
-    fn append_uncond_abort(bytecode: &mut Vec<u8>) {
+    fn append_abort(bytecode: &mut Vec<u8>) {
         bytecode.push(0x30);
     }
 
     fn append_equal_cond(
         bytecode: &mut Vec<u8>,
-        property_id: EncodedValue,
+        property_key: EncodedValue,
         property_value: EncodedValue,
     ) {
         bytecode.push(0x01);
-        append_encoded_value(bytecode, property_id);
+        append_encoded_value(bytecode, property_key);
         append_encoded_value(bytecode, property_value);
     }
 
     fn append_inequal_cond(
         bytecode: &mut Vec<u8>,
-        property_id: EncodedValue,
+        property_key: EncodedValue,
         property_value: EncodedValue,
     ) {
         bytecode.push(0x02);
-        append_encoded_value(bytecode, property_id);
+        append_encoded_value(bytecode, property_key);
         append_encoded_value(bytecode, property_value);
+    }
+
+    fn append_unconditional_jump(bytecode: &mut Vec<u8>, offset: u32) {
+        bytecode.push(0x10);
+        bytecode.extend_from_slice(&offset.to_le_bytes());
+    }
+
+    fn append_jump_if_equal(
+        bytecode: &mut Vec<u8>,
+        offset: u32,
+        property_key: EncodedValue,
+        property_value: EncodedValue,
+    ) {
+        bytecode.push(0x11);
+        bytecode.extend_from_slice(&offset.to_le_bytes());
+        append_encoded_value(bytecode, property_key);
+        append_encoded_value(bytecode, property_value);
+    }
+
+    fn append_jump_if_not_equal(
+        bytecode: &mut Vec<u8>,
+        offset: u32,
+        property_key: EncodedValue,
+        property_value: EncodedValue,
+    ) {
+        bytecode.push(0x12);
+        bytecode.extend_from_slice(&offset.to_le_bytes());
+        append_encoded_value(bytecode, property_key);
+        append_encoded_value(bytecode, property_value);
+    }
+
+    fn append_jump_pad(bytecode: &mut Vec<u8>) {
+        bytecode.push(0x20);
     }
 
     fn verify_match_result(
@@ -406,7 +479,7 @@ mod test {
     #[test]
     fn unconditional_abort() {
         let mut instructions: Vec<u8> = vec![];
-        append_uncond_abort(&mut instructions);
+        append_abort(&mut instructions);
         verify_match_result(
             Ok(false),
             DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
@@ -659,6 +732,228 @@ mod test {
 
         verify_match_result(
             Ok(false),
+            DecodedProgram { symbol_table: symbol_table, instructions: instructions },
+            device_properties,
+        );
+    }
+
+    #[test]
+    fn unconditional_jump() {
+        let mut instructions: Vec<u8> = vec![];
+        append_unconditional_jump(&mut instructions, ABORT_BYTES + COND_INST_BYTES);
+        append_abort(&mut instructions);
+        append_equal_cond(
+            &mut instructions,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 2000 },
+        );
+        append_jump_pad(&mut instructions);
+
+        verify_match_result(
+            Ok(true),
+            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            HashMap::new(),
+        );
+    }
+
+    #[test]
+    fn jump_if_equal() {
+        let mut symbol_table: HashMap<u32, String> = HashMap::new();
+        symbol_table.insert(1, "whimbrel".to_string());
+
+        let mut instructions: Vec<u8> = vec![];
+        append_jump_if_equal(
+            &mut instructions,
+            ABORT_BYTES * 2,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 1 },
+        );
+        append_abort(&mut instructions);
+        append_abort(&mut instructions);
+        append_jump_pad(&mut instructions);
+
+        let mut device_properties: DeviceProperties = HashMap::new();
+        device_properties
+            .insert(PropertyKey::NumberKey(10), Symbol::StringValue("whimbrel".to_string()));
+        verify_match_result(
+            Ok(true),
+            DecodedProgram {
+                symbol_table: symbol_table.clone(),
+                instructions: instructions.clone(),
+            },
+            device_properties,
+        );
+
+        let mut device_properties: DeviceProperties = HashMap::new();
+        device_properties
+            .insert(PropertyKey::NumberKey(10), Symbol::StringValue("godwit".to_string()));
+        verify_match_result(
+            Ok(false),
+            DecodedProgram { symbol_table: symbol_table.clone(), instructions: instructions },
+            device_properties,
+        );
+    }
+
+    #[test]
+    fn jump_if_not_equal() {
+        let mut instructions: Vec<u8> = vec![];
+        append_jump_if_not_equal(
+            &mut instructions,
+            ABORT_BYTES * 2,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 2000 },
+        );
+        append_abort(&mut instructions);
+        append_abort(&mut instructions);
+        append_jump_pad(&mut instructions);
+
+        let mut device_properties: DeviceProperties = HashMap::new();
+        device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(2000));
+        verify_match_result(
+            Ok(false),
+            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions.clone() },
+            device_properties,
+        );
+
+        let mut device_properties: DeviceProperties = HashMap::new();
+        device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(20));
+        verify_match_result(
+            Ok(true),
+            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            device_properties,
+        );
+    }
+
+    #[test]
+    fn no_jump_pad() {
+        let mut device_properties: DeviceProperties = HashMap::new();
+        device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(2000));
+
+        let mut instructions: Vec<u8> = vec![];
+        append_jump_if_equal(
+            &mut instructions,
+            ABORT_BYTES,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 2000 },
+        );
+        append_abort(&mut instructions);
+        append_abort(&mut instructions);
+        verify_match_result(
+            Err(BytecodeError::InvalidJumpLocation),
+            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            device_properties,
+        );
+    }
+
+    #[test]
+    fn jump_out_of_bounds() {
+        let mut device_properties: DeviceProperties = HashMap::new();
+        device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(2000));
+
+        let mut instructions: Vec<u8> = vec![];
+        append_jump_if_equal(
+            &mut instructions,
+            ABORT_BYTES + JMP_PAD_BYTES + 1,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 2000 },
+        );
+        append_abort(&mut instructions);
+        append_jump_pad(&mut instructions);
+        verify_match_result(
+            Err(BytecodeError::UnexpectedEnd),
+            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            device_properties,
+        );
+    }
+
+    #[test]
+    fn nested_jump_instructions() {
+        let mut instructions: Vec<u8> = vec![];
+        append_jump_if_equal(
+            &mut instructions,
+            ABORT_BYTES * 2 + UNCOND_JMP_BYTES + JMP_PAD_BYTES,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 10 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 2000 },
+        );
+        append_unconditional_jump(&mut instructions, ABORT_BYTES);
+        append_abort(&mut instructions);
+        append_jump_pad(&mut instructions);
+        append_abort(&mut instructions);
+        append_jump_pad(&mut instructions);
+
+        let mut device_properties: DeviceProperties = HashMap::new();
+        device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(2000));
+        verify_match_result(
+            Ok(true),
+            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions.clone() },
+            device_properties,
+        );
+
+        let mut device_properties: DeviceProperties = HashMap::new();
+        device_properties.insert(PropertyKey::NumberKey(10), Symbol::NumberValue(200));
+        device_properties.insert(
+            PropertyKey::StringKey("kingfisher".to_string()),
+            Symbol::StringValue("kookaburra".to_string()),
+        );
+        verify_match_result(
+            Ok(false),
+            DecodedProgram { symbol_table: HashMap::new(), instructions: instructions },
+            device_properties,
+        );
+    }
+
+    #[test]
+    fn complex_mix_of_bind_rules() {
+        let mut symbol_table: HashMap<u32, String> = HashMap::new();
+        symbol_table.insert(1, "kingfisher".to_string());
+        symbol_table.insert(2, "kookaburra".to_string());
+
+        let mut instructions: Vec<u8> = vec![];
+        append_jump_if_equal(
+            &mut instructions,
+            COND_INST_BYTES + ABORT_BYTES,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 5 },
+            EncodedValue { value_type: RawValueType::BoolValue, value: 1 },
+        );
+        append_equal_cond(
+            &mut instructions,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 2 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 2000 },
+        );
+        append_abort(&mut instructions);
+        append_jump_pad(&mut instructions);
+        append_unconditional_jump(&mut instructions, COND_JMP_BYTES + ABORT_BYTES);
+        append_jump_if_not_equal(
+            &mut instructions,
+            ABORT_BYTES + JMP_PAD_BYTES + COND_INST_BYTES,
+            EncodedValue { value_type: RawValueType::StringValue, value: 1 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 2 },
+        );
+        append_abort(&mut instructions);
+        append_jump_pad(&mut instructions);
+        append_inequal_cond(
+            &mut instructions,
+            EncodedValue { value_type: RawValueType::NumberValue, value: 1 },
+            EncodedValue { value_type: RawValueType::NumberValue, value: 50 },
+        );
+        append_jump_pad(&mut instructions);
+        append_equal_cond(
+            &mut instructions,
+            EncodedValue { value_type: RawValueType::StringValue, value: 1 },
+            EncodedValue { value_type: RawValueType::StringValue, value: 2 },
+        );
+
+        let mut device_properties: DeviceProperties = HashMap::new();
+        device_properties.insert(
+            PropertyKey::StringKey("kingfisher".to_string()),
+            Symbol::StringValue("kookaburra".to_string()),
+        );
+        device_properties.insert(PropertyKey::NumberKey(1), Symbol::NumberValue(9));
+        device_properties.insert(PropertyKey::NumberKey(2), Symbol::NumberValue(100));
+        device_properties.insert(PropertyKey::NumberKey(5), Symbol::BoolValue(true));
+
+        verify_match_result(
+            Ok(true),
             DecodedProgram { symbol_table: symbol_table, instructions: instructions },
             device_properties,
         );

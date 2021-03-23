@@ -32,8 +32,6 @@ pub enum RawOp {
     JumpIfNotEqual = 0x12,
     JumpLandPad = 0x20,
     Abort = 0x30,
-    DebugStart = 0x40,
-    DebugTerminate = 0x41,
 }
 
 #[derive(Clone, FromPrimitive)]
