@@ -1,6 +1,7 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use diagnostics_reader::{ArchiveReader, Lifecycle};
 use fidl_fuchsia_diagnostics_persist::DataPersistenceMarker;
 use fidl_fuchsia_sys::ComponentControllerEvent;
 use fuchsia_async::{self as fasync, futures::StreamExt};
@@ -63,10 +64,23 @@ async fn setup() -> (App, App) {
 
 /// Runs the elephant persistor and a test component that can have its inspect properties
 /// manipulated by the test via fidl. then just trigger persistence on elephant.
-#[ignore = "TODO(https://fxbug.dev/72626): Deflake and re-enable"]
 #[fasync::run_singlethreaded(test)]
 async fn event_count_sampler_test() {
     let (elephant_app, _example_app) = setup().await;
+
+    loop {
+        let results = ArchiveReader::new()
+            .snapshot::<Lifecycle>()
+            .await
+            .unwrap()
+            .into_iter()
+            .filter(|e| e.moniker.starts_with("test_component"))
+            .collect::<Vec<_>>();
+
+        if !results.is_empty() {
+            break;
+        }
+    }
 
     let elephant_service = elephant_app
         .connect_to_named_service::<DataPersistenceMarker>(TEST_ELEPHANT_SERVICE_NAME)
@@ -101,6 +115,12 @@ async fn event_count_sampler_test() {
                 })
             })
             .collect::<Vec<String>>();
+
+        // Just because the file was present doesn't mean we persisted. Creation and
+        // writing isn't atomic, and we sometimes flake as we race between the creation and write.
+        if string_result_array.is_empty() {
+            continue;
+        }
 
         string_result_array.sort();
 
