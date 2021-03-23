@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1499
+From //build/config/BUILDCONFIG.gn:1518
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -675,7 +675,7 @@ the option only takes effect when `optimize` is set to `"size"`.
 
 **Current value (from the default):** `false`
 
-From //build/config/compiler.gni:41
+From //build/config/compiler.gni:43
 
 ### clang_prefix
 The default clang toolchain provided by the prebuilt. This variable is
@@ -859,7 +859,7 @@ From //src/virtualization/packages/debian_guest/BUILD.gn:9
 
 **Current value (from the default):** `"debug"`
 
-From //build/config/compiler.gni:53
+From //build/config/compiler.gni:55
 
 ### dev_bootfs_labels
 List of labels for objects to include in the ZBI.
@@ -925,7 +925,7 @@ Explicitly specify DWARF version used.
 
 **Current value (from the default):** `4`
 
-From //build/config/compiler.gni:67
+From //build/config/compiler.gni:69
 
 ### enable_api_diff
 Detect dart API changes
@@ -1073,7 +1073,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1278
+From //build/config/BUILDCONFIG.gn:1286
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1708,6 +1708,9 @@ Each element of the list is one variant, which is a scope defining:
 }, {
   configs = ["//build/config/lto:thinlto"]
   tags = ["lto"]
+}, {
+  configs = ["//build/config/profile:coverage"]
+  tags = ["instrumented", "profile"]
 }, {
   configs = ["//build/config/profile"]
   tags = ["instrumented", "profile"]
@@ -2614,10 +2617,11 @@ From [//third_party/openthread/etc/gn/openthread.gni:190](https://fuchsia.google
 * `speed`: optimized purely for speed
 * `sanitizer`: optimized for sanitizers (ASan, etc.)
 * `profile`: optimized for coverage/profile data collection
+* `coverage`: optimized for coverage data collection
 
 **Current value (from the default):** `"speed"`
 
-From //build/config/compiler.gni:22
+From //build/config/compiler.gni:23
 
 ### output_breakpad_syms
 Sets if we should output breakpad symbols for Fuchsia binaries.
@@ -3064,7 +3068,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1489
+From //build/config/BUILDCONFIG.gn:1508
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3073,7 +3077,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1494
+From //build/config/BUILDCONFIG.gn:1513
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3097,6 +3101,12 @@ a list that can be spliced into [`select_variant`](#select_variant).
   variant = "asan-ubsan"
 }]
 }, {
+  name = "host_coverage"
+  select_variant = [{
+  host = true
+  variant = "coverage"
+}]
+}, {
   name = "host_profile"
   select_variant = [{
   host = true
@@ -3105,7 +3115,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1324
+From //build/config/BUILDCONFIG.gn:1332
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3402,7 +3412,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1308
+From //build/config/BUILDCONFIG.gn:1316
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3555,7 +3565,7 @@ git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 
 **Current value (from the default):** `true`
 
-From //src/media/lib/ffmpeg/BUILD.gn:36
+From //src/media/lib/ffmpeg/BUILD.gn:37
 
 ### use_swiftshader_vulkan_icd_on_host
 
