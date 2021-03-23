@@ -9,16 +9,31 @@ dart_library("ermine_ui") {
   package_name = "ermine_ui"
   sources = [
     "ermine_ui.dart",
+    "ui_components/alert/alert.dart",
+    "ui_components/alert/layout.dart",
+    "ui_components/button/bordered_button.dart",
+    "ui_components/button/button.dart",
+    "ui_components/button/filled_button.dart",
+    "ui_components/button/layout.dart",
+    "ui_components/button/text_only_button.dart",
     "ui_components/loading_indicator/layout.dart",
     "ui_components/loading_indicator/loading_indicator.dart",
     "visual_languages/colors.dart",
+    "visual_languages/icons.dart",
+    "visual_languages/text_styles.dart",
   ]
   deps = [ "//third_party/dart-pkg/git/flutter/packages/flutter" ]
 }
 
 # fx test ermine_ui_unittests
 flutter_test("ermine_ui_unittests") {
-  sources = [ "loading_indicator_test.dart" ]
+  sources = [
+    "alert_test.dart",
+    "bordered_button_test.dart",
+    "filled_button_test.dart",
+    "loading_indicator_test.dart",
+    "text_only_button_test.dart",
+  ]
 
   deps = [
     ":ermine_ui",

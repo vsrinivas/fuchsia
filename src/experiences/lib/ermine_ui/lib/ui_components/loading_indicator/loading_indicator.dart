@@ -6,6 +6,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../../visual_languages/colors.dart';
+import '../../visual_languages/text_styles.dart';
 import 'layout.dart';
 
 /// A placeholder UI showing that a process such as loading is happening now.
@@ -19,6 +20,7 @@ class LoadingIndicator extends StatefulWidget {
   /// Otherwise, it is set to [kDefaultSpeed] by default.
   final int speedMs;
 
+  // TODO(fxb/72867): Add factories providing different sizes.
   const LoadingIndicator(
       {this.description = '', this.speedMs = kDefaultSpeed, Key key})
       : super(key: key);
@@ -76,7 +78,7 @@ class LoadingIndicatorState extends State<LoadingIndicator> {
           children: [
             _buildCircularDots(),
             SizedBox(height: 16.0),
-            Text(widget.description),
+            Text(widget.description, style: ErmineTextStyles.bodyText1),
           ],
         );
 

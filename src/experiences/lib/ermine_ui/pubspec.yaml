@@ -5,3 +5,7 @@ name: ermine_ui
 description: The library for visual languages and UI components commonly used across Ermine.
 
 flutter:
+  fonts:
+    - family: MaterialIcons
+      fonts:
+        - asset: fonts/MaterialIcons-Regular.otf
