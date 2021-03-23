@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod error;
+pub use error::OpenResourceError;
 pub use error::RoutingError;
 
 #[macro_use]
@@ -345,7 +346,7 @@ pub async fn open_capability_at_source(
             .ok_or_else(|| ModelError::path_is_not_utf8(namespace_path.clone()))?;
         let server_chan = channel::take_channel(server_chan);
         io_util::connect_in_namespace(namespace_path, server_chan, flags).map_err(|e| {
-            RoutingError::open_component_manager_namespace_failed(namespace_path, e).into()
+            OpenResourceError::open_component_manager_namespace_failed(namespace_path, e).into()
         })
     }
 }
@@ -647,7 +648,7 @@ pub async fn route_and_open_storage_capability(
                 Some(r) => ExtendedMoniker::ComponentInstance(r.abs_moniker.clone()),
                 None => ExtendedMoniker::ComponentManager,
             };
-            ModelError::from(RoutingError::open_storage_failed(
+            ModelError::from(OpenResourceError::open_storage_failed(
                 &moniker,
                 &relative_moniker_2,
                 "",

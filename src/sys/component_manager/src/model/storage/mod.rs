@@ -404,7 +404,7 @@ mod tests {
         crate::model::{
             component::BindReason,
             rights,
-            routing::RoutingError,
+            routing::error::OpenResourceError,
             testing::routing_test_helpers::{RoutingTest, RoutingTestBuilder},
             testing::test_helpers::{self, component_decl_with_test_runner, ComponentDeclBuilder},
         },
@@ -624,7 +624,9 @@ mod tests {
         .await;
         assert_matches!(
             res,
-            Err(ModelError::RoutingError { err: RoutingError::OpenOutgoingFailed { .. } })
+            Err(ModelError::OpenResourceError {
+                err: OpenResourceError::OpenOutgoingFailed { .. }
+            })
         );
     }
 

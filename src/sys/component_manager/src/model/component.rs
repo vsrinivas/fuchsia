@@ -20,7 +20,7 @@ use {
             hooks::{Event, EventPayload, Hooks},
             namespace::IncomingNamespace,
             resolver::ResolvedComponent,
-            routing::{self, RoutingError},
+            routing::{self, OpenResourceError, RoutingError},
             runner::{NullRunner, RemoteRunner, Runner},
         },
     },
@@ -545,7 +545,7 @@ impl ComponentInstance {
         let server_chan = channel::take_channel(server_chan);
         let server_end = ServerEnd::new(server_chan);
         out_dir.open(flags, open_mode, path, server_end).map_err(|e| {
-            ModelError::from(RoutingError::open_outgoing_failed(&self.abs_moniker, path, e))
+            ModelError::from(OpenResourceError::open_outgoing_failed(&self.abs_moniker, path, e))
         })?;
         Ok(())
     }

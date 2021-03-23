@@ -4,8 +4,13 @@
 
 use {
     crate::model::{
-        component_id_index::ComponentIdIndexError, events::error::EventsError, policy::PolicyError,
-        resolver::ResolverError, rights::RightsError, routing::RoutingError, runner::RunnerError,
+        component_id_index::ComponentIdIndexError,
+        events::error::EventsError,
+        policy::PolicyError,
+        resolver::ResolverError,
+        rights::RightsError,
+        routing::{OpenResourceError, RoutingError},
+        runner::RunnerError,
         storage::StorageError,
     },
     ::routing::error::ComponentInstanceError,
@@ -70,6 +75,11 @@ pub enum ModelError {
     RoutingError {
         #[from]
         err: RoutingError,
+    },
+    #[error("Failed to open resource: {}", err)]
+    OpenResourceError {
+        #[from]
+        err: OpenResourceError,
     },
     #[error("Runner error: {}", err)]
     RunnerError {
