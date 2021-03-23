@@ -18,7 +18,7 @@ pub const DEFAULT_CONFIG_FILE_PATH: &str = "/config/data/a2dp.config";
 pub(crate) const DEFAULT_DOMAIN: &str = "Bluetooth";
 pub(crate) const DEFAULT_INITIATOR_DELAY: zx::Duration = zx::Duration::from_millis(500);
 
-#[derive(FromArgs)]
+#[derive(FromArgs, Default)]
 #[argh(description = "Bluetooth Advanced Audio Distribution Profile")]
 pub struct A2dpConfigurationArgs {
     /// published media session domain (optional, defaults to 'Bluetooth')
@@ -145,10 +145,18 @@ pub enum ConfigurationError {
 impl A2dpConfiguration {
     /// Loads configuration using the default method
     /// The configuration file is used if it exists, with runtime arguments overriding them if
-    /// present.  Returns Error if there is either syntax or configuration errors.
+    /// present.
+    /// Returns Error if there is either syntax or configuration errors.
     pub fn load_default() -> Result<Self, Error> {
-        let configured = Self::from_config(DEFAULT_CONFIG_FILE_PATH).unwrap_or(Default::default());
         let args: A2dpConfigurationArgs = argh::from_env();
+        Self::load_default_with_args(args)
+    }
+
+    /// Loads configuration using the default method
+    /// The configuration file is used if it exists, with runtime `args` overriding them if
+    /// present.  Returns Error if there is either syntax or configuration errors.
+    fn load_default_with_args(args: A2dpConfigurationArgs) -> Result<Self, Error> {
+        let configured = Self::from_config(DEFAULT_CONFIG_FILE_PATH).unwrap_or(Default::default());
         let merged = configured.merge(args)?;
         let problems = merged.errors();
         if !problems.is_empty() {
@@ -219,7 +227,8 @@ mod tests {
 
     #[test]
     fn success_using_provided_config_file() {
-        A2dpConfiguration::load_default().expect("provided config is not Ok()");
+        let args = A2dpConfigurationArgs::default();
+        A2dpConfiguration::load_default_with_args(args).expect("provided config is not Ok()");
     }
 
     #[test]
