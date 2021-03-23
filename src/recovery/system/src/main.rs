@@ -705,6 +705,10 @@ async fn get_topo_path(channel: fidl::AsyncChannel) -> Option<String> {
     }
 }
 async fn check_blobfs_health() {
+    println!("In diagnostics section, sleeping for 5 seconds");
+    let five_seconds = std::time::Duration::from_secs(5);
+    std::thread::sleep(five_seconds);
+    println!("Sleep complete: running diagnostics");
     // lsblk
     match fs::read_dir(DEV_BLOCK) {
         Ok(rd) => {
