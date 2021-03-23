@@ -94,7 +94,7 @@ All records include a header word that contains the following basic
 information:
 
 - **Record type**: A 4-bit field that identifies the type of the record
-  and the information it contains. See [Record Types](#record-types).
+  and the information it contains. See [Record Types](#record_types).
 - **Record size**: Typically, a 12-bit field that indicates the number of words
   (multiples of 8 byte units) within the record _including the record
   header itself_.  The maximum possible size of a record is 4095 words
@@ -813,7 +813,7 @@ _header word_
 - `[0 .. 3]`: record type (7)
 - `[4 .. 15]`: record size (inclusive of this word) as a multiple of 8 bytes
 - `[16 .. 23]`: kernel object type (one of the ZX_OBJ_TYPE_XXX constants from
-  [zircon/syscalls/object.h](/zircon/system/public/zircon/syscalls/object.h)
+  [zircon/syscalls/types.h](/zircon/system/public/zircon/syscalls/types.h)
 - `[24 .. 39]`: name (string ref)
 - `[40 .. 43]`: number of arguments
 - `[44 .. 63]`: reserved (must be zero)
