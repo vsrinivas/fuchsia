@@ -10,7 +10,6 @@
 #include <mutex>
 #include <vector>
 
-#include "fake-libfuzzer.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "traced-instruction.h"
 

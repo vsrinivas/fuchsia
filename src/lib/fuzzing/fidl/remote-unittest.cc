@@ -12,9 +12,6 @@
 
 #include <thread>
 
-#include "libfuzzer.h"
-#include "sanitizer-cov.h"
-#include "test/fake-libfuzzer.h"
 #include "test/fake-proxy.h"
 
 namespace fuzzing {

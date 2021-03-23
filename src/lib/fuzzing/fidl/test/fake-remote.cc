@@ -6,9 +6,6 @@
 
 #include <lib/syslog/cpp/macros.h>
 
-#include "fake-libfuzzer.h"
-#include "sanitizer-cov.h"
-
 namespace fuzzing {
 
 FakeSanitizerCovProxy *FakeSanitizerCovProxy::GetInstance() {
@@ -89,10 +86,6 @@ void FakeSanitizerCovProxy::ResetImpl() {
 
 #define SANITIZER_COV_PROXY FakeSanitizerCovProxy
 #define GET_CALLER_PC() GetRemotePC()
-
-// Generates an implmentation of the __sanitizer_cov_* interface that logs calls and uses fake PCs
-// instead of real ones.
-#include "sanitizer-cov.inc"
 
 #undef SANITIZER_COV_PROXY
 #undef GET_CALLER_PC

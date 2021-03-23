@@ -8,9 +8,6 @@
 #include <lib/zx/object.h>
 #include <zircon/status.h>
 
-#include "libfuzzer.h"
-#include "sanitizer-cov.h"
-
 namespace fuzzing {
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

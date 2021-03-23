@@ -9,7 +9,6 @@
 #include <deque>
 #include <thread>
 
-#include "sanitizer-cov.h"
 #include "test/fake-remote.h"
 
 namespace fuzzing {

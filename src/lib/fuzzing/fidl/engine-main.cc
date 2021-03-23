@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include "engine.h"
-#include "libfuzzer.h"
 
 extern "C" {
 
