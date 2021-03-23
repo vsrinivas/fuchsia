@@ -1,0 +1,245 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use {
+    anyhow::{bail, Context, Result},
+    fidl::endpoints::{create_proxy, DiscoverableService},
+    fidl_fuchsia_io as fio, fidl_fuchsia_sys2 as fsys,
+    fuchsia_component::client::connect_to_protocol_at_dir_root,
+    fuchsia_zircon::Status,
+    futures::future::BoxFuture,
+    io_util::{directory::*, node::OpenError},
+    log::debug,
+    rand::{prelude::SliceRandom, rngs::SmallRng, Rng},
+    std::path::Path,
+};
+
+const COLLECTION_NAME: &'static str = "children";
+const TREE_COMPONENT_URL: &'static str =
+    "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/dynamic_child_component.cm";
+
+const HUB_RIGHTS: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
+
+/// Used for traversal of the hub
+pub struct Hub {
+    pub name: String,
+    dir: Directory,
+}
+
+impl Hub {
+    pub fn from_namespace() -> Result<Self, Status> {
+        let dir = Directory::from_namespace("/hub", HUB_RIGHTS)?;
+        let name = "<root>".to_string();
+        Ok(Self { name, dir })
+    }
+
+    /// Connect to a given protocol from the component's exposed directory.
+    /// The component must have been resolved by this point.
+    pub async fn connect_to_exposed_protocol<S: DiscoverableService>(&self) -> Result<S::Proxy> {
+        let in_dir = self
+            .dir
+            .open_directory("resolved/expose", HUB_RIGHTS)
+            .await
+            .context("Could not open resolved/expose directory")?;
+        connect_to_protocol_at_dir_root::<S>(&in_dir.proxy)
+            .context("Could not open protocol from resolved/expose")
+    }
+
+    /// Get names of all children
+    pub async fn children(&self) -> Result<Vec<String>> {
+        let children_dir = self
+            .dir
+            .open_directory("children", HUB_RIGHTS)
+            .await
+            .context("Could not open children directory")?;
+        children_dir.entries().await.context("Could not get filenames in children dir")
+    }
+
+    /// Open the hub of a given child
+    pub async fn child_hub(&self, child_name: impl ToString) -> Result<Self> {
+        let child_name = child_name.to_string();
+        let child_dir_path = format!("children/{}", child_name);
+        let child_dir = self
+            .dir
+            .open_directory(&child_dir_path, HUB_RIGHTS)
+            .await
+            .context("Could not open children directory")?;
+        Ok(Hub { name: child_name, dir: child_dir })
+    }
+
+    /// Create a child of this component. `rng` is used to generate a random name for the child
+    /// component.
+    pub async fn add_child(&self, rng: &mut SmallRng) -> Result<()> {
+        let name = format!("C{}", rng.gen::<u64>());
+        let parent_realm_svc = self.connect_to_exposed_protocol::<fsys::RealmMarker>().await?;
+
+        let decl = fsys::ChildDecl {
+            name: Some(name.clone()),
+            url: Some(TREE_COMPONENT_URL.to_string()),
+            startup: Some(fsys::StartupMode::Lazy),
+            ..fsys::ChildDecl::EMPTY
+        };
+
+        let mut coll_ref = fsys::CollectionRef { name: COLLECTION_NAME.to_string() };
+
+        let result = parent_realm_svc
+            .create_child(&mut coll_ref, decl)
+            .await
+            .context("Could not send FIDL request to create child component")?;
+
+        if let Err(e) = result {
+            bail!("Could not create child component: {:?}", e)
+        }
+
+        let mut child_ref =
+            fsys::ChildRef { name: name.clone(), collection: Some(COLLECTION_NAME.to_string()) };
+
+        let (_proxy, server_end) = create_proxy::<fio::DirectoryMarker>().unwrap();
+
+        let result = parent_realm_svc
+            .bind_child(&mut child_ref, server_end)
+            .await
+            .context("Could not send FIDL request to bind to child component")?;
+
+        if let Err(e) = result {
+            bail!("Could not bind to child component: {:?}", e);
+        }
+
+        Ok(())
+    }
+
+    /// Delete the given child component.
+    pub async fn delete_child(&self, child_name: impl ToString) -> Result<()> {
+        let mut child_ref = fsys::ChildRef {
+            name: child_name.to_string(),
+            collection: Some(COLLECTION_NAME.to_string()),
+        };
+
+        let realm_svc = self
+            .connect_to_exposed_protocol::<fsys::RealmMarker>()
+            .await
+            .context("Could not connect to Realm protocol")?;
+        let result = realm_svc
+            .destroy_child(&mut child_ref)
+            .await
+            .context("Could not send FIDL request to destroy child")?;
+
+        if let Err(e) = result {
+            bail!("Could not destroy child component: {:?}", e);
+        }
+
+        Ok(())
+    }
+
+    /// Traverse the topology and at a random position, perform a random mutation to the tree.
+    pub fn traverse_and_mutate<'a>(&'a self, rng: &'a mut SmallRng) -> BoxFuture<'a, Result<()>> {
+        Box::pin(async move {
+            let child_names = self.children().await?;
+
+            if child_names.is_empty() {
+                // This component does not have children.
+                // Traversal is not possible
+                // Deletion is not possible
+                // Create a child
+                self.add_child(rng).await.context("Could not create first child")?;
+                return Ok(());
+            } else if rng.gen_bool(0.85) {
+                // Bias towards traversal. This encourages deeper trees.
+                // Pick a random child and traverse
+                let child_name = child_names.choose(rng).unwrap();
+                let child = self
+                    .child_hub(child_name)
+                    .await
+                    .context("Could not open child hub for traversal")?;
+                child.traverse_and_mutate(rng).await
+            } else if rng.gen_bool(0.5) {
+                // Pick a random child and delete it
+                let child_name = child_names.choose(rng).unwrap();
+
+                // Remove collection name ("children:") from child name
+                let child_name = child_name[9..].to_string();
+
+                self.delete_child(child_name).await.context("Could not delete random child")
+            } else {
+                // Create a child at the current depth
+                self.add_child(rng).await.context("Could not create additional children")
+            }
+        })
+    }
+}
+
+// A convenience wrapper over a FIDL DirectoryProxy.
+// Functions of this struct do not tolerate FIDL errors and will panic when they encounter them.
+struct Directory {
+    pub proxy: fio::DirectoryProxy,
+}
+
+impl Directory {
+    // Opens a path in the namespace as a Directory.
+    pub fn from_namespace(path: impl AsRef<Path>, flags: u32) -> Result<Directory, Status> {
+        let path = path.as_ref().to_str().unwrap();
+        match io_util::directory::open_in_namespace(path, flags) {
+            Ok(proxy) => Ok(Directory { proxy }),
+            Err(OpenError::OpenError(s)) => {
+                debug!("from_namespace {} failed: {}", path, s);
+                Err(s)
+            }
+            Err(OpenError::SendOpenRequest(e)) => {
+                if e.is_closed() {
+                    Err(Status::PEER_CLOSED)
+                } else {
+                    panic!("Unexpected FIDL error during open: {}", e);
+                }
+            }
+            Err(OpenError::OnOpenEventStreamClosed) => Err(Status::PEER_CLOSED),
+            Err(OpenError::Namespace(s)) => Err(s),
+            Err(e) => panic!("Unexpected error during open: {}", e),
+        }
+    }
+
+    // Open a directory in the parent dir with the given `filename`.
+    pub async fn open_directory(&self, filename: &str, flags: u32) -> Result<Directory, Status> {
+        match io_util::directory::open_directory(&self.proxy, filename, flags).await {
+            Ok(proxy) => Ok(Directory { proxy }),
+            Err(OpenError::OpenError(s)) => {
+                debug!("open_directory({},{}) failed: {}", filename, flags, s);
+                Err(s)
+            }
+            Err(OpenError::SendOpenRequest(e)) => {
+                if e.is_closed() {
+                    Err(Status::PEER_CLOSED)
+                } else {
+                    panic!("Unexpected FIDL error during open: {}", e);
+                }
+            }
+            Err(OpenError::OnOpenEventStreamClosed) => Err(Status::PEER_CLOSED),
+            Err(e) => panic!("Unexpected error during open: {}", e),
+        }
+    }
+
+    // Return a list of filenames in the directory
+    pub async fn entries(&self) -> Result<Vec<String>, Status> {
+        match files_async::readdir(&self.proxy).await {
+            Ok(entries) => Ok(entries.iter().map(|entry| entry.name.clone()).collect()),
+            Err(files_async::Error::Fidl(_, e)) => {
+                if e.is_closed() {
+                    Err(Status::PEER_CLOSED)
+                } else {
+                    panic!("Unexpected FIDL error reading dirents: {}", e);
+                }
+            }
+            Err(files_async::Error::ReadDirents(s)) => Err(s),
+            Err(e) => {
+                panic!("Unexpected error reading dirents: {}", e);
+            }
+        }
+    }
+}
+
+impl Clone for Directory {
+    fn clone(&self) -> Self {
+        let new_proxy = clone_no_describe(&self.proxy, Some(fio::CLONE_FLAG_SAME_RIGHTS)).unwrap();
+        Self { proxy: new_proxy }
+    }
+}

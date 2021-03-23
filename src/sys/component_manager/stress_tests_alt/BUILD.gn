@@ -13,12 +13,16 @@ rustc_test("dynamic_child_stressor_bin") {
   name = "dynamic_child_stressor"
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/lib/rust/io_util",
     "//sdk/fidl/fuchsia.io:fuchsia.io-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/lib/fidl/rust/fidl",
     "//src/lib/fuchsia-async",
     "//src/lib/fuchsia-component",
+    "//src/lib/zircon/rust:fuchsia-zircon",
     "//src/sys/lib/stress-test",
+    "//third_party/rust_crates:anyhow",
     "//third_party/rust_crates:argh",
     "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:futures",
@@ -27,8 +31,8 @@ rustc_test("dynamic_child_stressor_bin") {
   ]
 
   sources = [
-    "src/component.rs",
     "src/environment.rs",
+    "src/hub.rs",
     "src/lib.rs",
     "src/tree_actor.rs",
   ]

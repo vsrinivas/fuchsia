@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::component::Component,
     crate::tree_actor::TreeActor,
     async_trait::async_trait,
     fidl_fuchsia_sys2 as fsys,
     fuchsia_component::client::connect_to_service,
     futures::lock::Mutex,
-    rand::{rngs::SmallRng, SeedableRng},
+    rand::{rngs::SmallRng, Rng, SeedableRng},
     std::sync::Arc,
     stress_test::{actor::ActorRunner, environment::Environment, random_seed},
 };
@@ -17,7 +16,7 @@ use {
 #[derive(Debug)]
 pub struct TreeStressorEnvironment {
     test_realm_svc: fsys::RealmProxy,
-    tree_actor: Arc<Mutex<TreeActor>>,
+    tree_actors: Vec<Arc<Mutex<TreeActor>>>,
     time_limit_secs: Option<u64>,
     num_operations: Option<u64>,
     seed: u128,
@@ -32,13 +31,20 @@ impl TreeStressorEnvironment {
         let test_realm_svc = connect_to_service::<fsys::RealmMarker>()
             .expect("Could not connect to Realm service in test namespace");
 
-        let tree_root = Component::new(&test_realm_svc, "test_tree_root").await;
-
         let seed = random_seed();
-        let rng = SmallRng::from_seed(seed.to_le_bytes());
-        let tree_actor = Arc::new(Mutex::new(TreeActor::new(tree_root, rng, component_limit)));
+        let mut rng = SmallRng::from_seed(seed.to_le_bytes());
 
-        Self { num_operations, time_limit_secs, test_realm_svc, tree_actor, seed }
+        let mut tree_actors = vec![];
+
+        // Create 10 tree actors that work from the same root component
+        for _ in 0..10 {
+            let actor_seed = rng.gen::<u128>();
+            let actor_rng = SmallRng::from_seed(actor_seed.to_le_bytes());
+            let tree_actor = Arc::new(Mutex::new(TreeActor::new(actor_rng, component_limit)));
+            tree_actors.push(tree_actor);
+        }
+
+        Self { num_operations, time_limit_secs, test_realm_svc, tree_actors, seed }
     }
 }
 
@@ -53,7 +59,12 @@ impl Environment for TreeStressorEnvironment {
     }
 
     fn actor_runners(&mut self) -> Vec<ActorRunner> {
-        vec![ActorRunner::new("tree_actor", 0, self.tree_actor.clone())]
+        let mut runners = vec![];
+        for (index, actor) in self.tree_actors.iter().enumerate() {
+            let name = format!("tree_actor_{}", index);
+            runners.push(ActorRunner::new(name, 0, actor.clone()))
+        }
+        runners
     }
 
     async fn reset(&mut self) {
