@@ -25,6 +25,8 @@ toc:
   path: /docs/concepts/testing/fuzz_testing.md
 - title: "Entropy quality tests"
   path:  /docs/concepts/testing/entropy_quality_tests.md
+- title: "Test coverage"
+  path:  /docs/concepts/testing/coverage.md
 - title: "Policy"
   section:
   - title: "Testability rubrics"
