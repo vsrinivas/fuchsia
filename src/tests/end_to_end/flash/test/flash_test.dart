@@ -6,39 +6,43 @@ import 'dart:io';
 import 'package:sl4f/sl4f.dart' as sl4f;
 import 'package:test/test.dart';
 
+bool _isNullOrEmpty(String str) => str == null || str.isEmpty;
+
 void main() {
-  final sl4fDriver = sl4f.Sl4f.fromEnvironment();
-  sl4f.Device deviceController;
-
-  setUp(() async {
-    await sl4fDriver.startServer();
-  });
-
-  tearDown(() async {
-    await sl4fDriver.stopServer();
-    sl4fDriver.close();
-  });
-
   test('test flashing', () async {
     // Get env info necessary to run test.
     String fbSernum = Platform.environment['FUCHSIA_FASTBOOT_SERNUM'];
-    if (fbSernum.isEmpty) {
+    if (_isNullOrEmpty(fbSernum)) {
       fail('FUCHSIA_FASTBOOT_SERNUM environment variable was empty.');
     }
     String nodename = Platform.environment['FUCHSIA_NODENAME'];
-    if (nodename.isEmpty) {
+    if (_isNullOrEmpty(nodename)) {
       fail('FUCHSIA_NODENAME environment variable was empty.');
+    }
+    String ipv4 = Platform.environment['FUCHSIA_DEVICE_ADDR'];
+    if (_isNullOrEmpty(ipv4)) {
+      fail('FUCHSIA_DEVICE_ADDR environment variable was empty');
+    }
+    String pkey = Platform.environment['FUCHSIA_SSH_KEY'];
+    if (_isNullOrEmpty(pkey)) {
+      fail('FUCHSIA_SSH_KEY environment variable was empty');
+    }
+
+    // Generate a public key from the private key.
+    if (!await generatePublicKey(pkey, './pubkey')) {
+      fail('ssh-keygen failed to generate public key from private key');
     }
 
     // Get the device into fastboot.
-    await sl4fDriver.ssh.run('dm reboot-bootloader');
-    await sl4fDriver.stopServer();
+    sl4f.Sl4f client = sl4f.Sl4f.fromEnvironment();
+    await client.ssh.run('dm reboot-bootloader');
 
     // Wait 30 seconds for the device to enter fastboot.
     sleep(Duration(seconds: 30));
 
     // Run flash.sh.
-    var process = Process.runSync('./flash.sh', ['-s', fbSernum]);
+    var process =
+        Process.runSync('./flash.sh', ['--ssh-key=./pubkey', '-s', fbSernum]);
     stdout.write(process.stdout);
     stderr.write(process.stderr);
     expect(process.exitCode, equals(0),
@@ -47,12 +51,23 @@ void main() {
     // Wait 45 seconds for the device to enter fuchsia after flashing.
     sleep(Duration(seconds: 45));
 
-    // Start sl4f.
-    await sl4fDriver.startServer();
-    deviceController = sl4f.Device(sl4fDriver);
-
-    // Verify that the device came back by checking the nodename.
+    // Verify that the device came back by checking the nodename over sl4f.
+    client = sl4f.Sl4f.fromEnvironment();
+    await client.startServer();
+    sl4f.Device deviceController = sl4f.Device(client);
     expect(await deviceController.getDeviceName(), equals(nodename),
         reason: 'could not get nodename via sl4f');
-  }, timeout: Timeout(Duration(minutes: 2)));
+    await client.stopServer();
+    client.close();
+  }, timeout: Timeout(Duration(minutes: 5)));
+}
+
+Future<bool> generatePublicKey(
+    final String pkeyPath, final String pubkeyPath) async {
+  var keyGenProcess = Process.runSync('ssh-keygen', ['-y', '-f', pkeyPath]);
+  if (keyGenProcess.exitCode != 0) {
+    return false;
+  }
+  await File(pubkeyPath).writeAsString(keyGenProcess.stdout);
+  return true;
 }
