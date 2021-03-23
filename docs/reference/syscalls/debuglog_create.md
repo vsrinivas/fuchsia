@@ -4,7 +4,7 @@
 
 <!-- Updated by update-docs-from-fidl, do not edit. -->
 
-TODO(fxbug.dev/32938)
+Create an object allowing access to the kernel debuglog.
 
 ## SYNOPSIS
 
@@ -20,7 +20,14 @@ zx_status_t zx_debuglog_create(zx_handle_t resource,
 
 ## DESCRIPTION
 
-TODO(fxbug.dev/32938)
+`zx_debuglog_create()` creates an object allowing access to the kernel
+debuglog using the `zx_debuglog_read()` and `zx_debuglog_write()` syscalls.
+
+If *options* is set to `0`, the returned handle will have the
+**ZX_RIGHT_WRITE** right, giving write-only access to the kernel debuglog. If
+*options* is set to **ZX_LOG_FLAG_READABLE**, the returned handle will
+additionally have **ZX_RIGHT_READ**, giving read/write access to the kernel
+debuglog.
 
 ## RIGHTS
 
@@ -30,13 +37,23 @@ TODO(fxbug.dev/32938)
 
 ## RETURN VALUE
 
-TODO(fxbug.dev/32938)
+`zx_debuglog_create()` returns **ZX_OK** on success, returning a handle to the
+created object in *out*.
+
+In the event of failure, a negative error value is returned.
 
 ## ERRORS
 
-TODO(fxbug.dev/32938)
+<!-- TODO(fxbug.dev/72346): We currently ignore unknown options, but _should_
+return an error. -->
+
+**ZX_ERR_INVALID_ARGS**  *options* contained a value not understood by the kernel
+
+**ZX_ERR_WRONG_TYPE**  *resource* was not of the kind **ZX_RSRC_KIND_ROOT**.
+
+**ZX_ERR_NO_MEMORY**  Failure due to lack of memory.
 
 ## SEE ALSO
 
-
-TODO(fxbug.dev/32938)
+ - [`zx_debuglog_read()`]
+ - [`zx_debuglog_write()`]

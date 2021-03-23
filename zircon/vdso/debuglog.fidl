@@ -7,13 +7,19 @@ library zx;
 [Transport = "Syscall"]
 protocol debuglog {
     // TODO(fxbug.dev/32803): handle == ZX_HANDLE_INVALID accepted.
+    /// Create an object allowing access to the kernel debuglog.
+    ///
     /// Rights: resource must have resource kind ZX_RSRC_KIND_ROOT.
     debuglog_create(handle:RESOURCE resource, uint32 options)
         -> (status status, handle:LOG out);
 
+    /// Write a message to the kernel debuglog.
+    ///
     /// Rights: handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_WRITE.
     debuglog_write(handle:LOG handle, uint32 options, vector_void buffer) -> (status status);
 
+    /// Read a single log record from the kernel debuglog.
+    ///
     /// Rights: handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_READ.
     debuglog_read(handle:LOG handle, uint32 options) -> (status status, vector_void buffer);
 };

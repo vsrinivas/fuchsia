@@ -12875,6 +12875,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "Create", "an", "object", "allowing", "access", "to", "the", "kernel", "debuglog", "."
       ],
       "requirements": [
         "resource", "must", "have", "resource", "kind", "ZX_RSRC_KIND_ROOT", "."
@@ -12910,6 +12911,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "Write", "a", "message", "to", "the", "kernel", "debuglog", "."
       ],
       "requirements": [
         "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_LOG", "and", "have", "ZX_RIGHT_WRITE", "."
@@ -12953,6 +12955,7 @@ TEXT runtime·vdsoCall_zx_vmo_create_physical(SB),NOSPLIT,$8-36
         "*"
       ],
       "top_description": [
+        "Read", "a", "single", "log", "record", "from", "the", "kernel", "debuglog", "."
       ],
       "requirements": [
         "handle", "must", "be", "of", "type", "ZX_OBJ_TYPE_LOG", "and", "have", "ZX_RIGHT_READ", "."
