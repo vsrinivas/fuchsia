@@ -26,7 +26,7 @@ class Interrupts {
   Interrupts(Controller* controller);
   ~Interrupts();
 
-  zx_status_t Init(bool start_thread = true);
+  zx_status_t Init();
   void FinishInit();
   void Resume();
   void Destroy();

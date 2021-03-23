@@ -14,11 +14,9 @@
 
 namespace {
 
-// Test that interrupt initialization works with both MSI and Legacy interrupt
-// modes, regardless of whether the IRQ worker thread is started.
+// Test interrupt initialization with both MSI and Legacy interrupt modes.
 TEST(IntelI915Display, InterruptInit) {
   constexpr uint32_t kMinimumRegCount = 0xd0000 / sizeof(uint32_t);
-  bool kStartThread = false;
   i915::Controller controller(nullptr);
   std::vector<uint32_t> regs(kMinimumRegCount);
   mmio_buffer_t buffer{.vaddr = FakeMmioPtr(regs.data()),
@@ -31,15 +29,15 @@ TEST(IntelI915Display, InterruptInit) {
   pci::FakePciProtocol pci{};
   controller.SetPciForTesting(pci.get_protocol());
 
-  EXPECT_EQ(ZX_ERR_INTERNAL, controller.interrupts()->Init(kStartThread));
+  EXPECT_EQ(ZX_ERR_INTERNAL, controller.interrupts()->Init());
 
   pci.AddLegacyInterrupt();
-  EXPECT_EQ(ZX_OK, controller.interrupts()->Init(kStartThread));
+  EXPECT_EQ(ZX_OK, controller.interrupts()->Init());
   EXPECT_EQ(1, pci.GetIrqCount());
   EXPECT_EQ(PCI_IRQ_MODE_LEGACY, pci.GetIrqMode());
 
   pci.AddMsiInterrupt();
-  EXPECT_EQ(ZX_OK, controller.interrupts()->Init(kStartThread));
+  EXPECT_EQ(ZX_OK, controller.interrupts()->Init());
   EXPECT_EQ(1, pci.GetIrqCount());
   EXPECT_EQ(PCI_IRQ_MODE_MSI, pci.GetIrqMode());
 

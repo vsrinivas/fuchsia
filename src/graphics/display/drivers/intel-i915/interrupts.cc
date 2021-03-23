@@ -158,7 +158,11 @@ zx_status_t Interrupts::SetInterruptCallback(const zx_intel_gpu_core_interrupt_t
   return ZX_OK;
 }
 
-zx_status_t Interrupts::Init(bool start_thread) {
+zx_status_t Interrupts::Init() {
+  if (irq_) {
+    Destroy();
+  }
+
   ddk::MmioBuffer* mmio_space = controller_->mmio_space();
 
   // Disable interrupts here, re-enable them in ::FinishInit()
@@ -180,13 +184,15 @@ zx_status_t Interrupts::Init(bool start_thread) {
     return status;
   }
 
-  if (start_thread) {
-    status = thrd_create_with_name(&*irq_thread_, irq_handler, this, "i915-irq-thread");
+  {
+    thrd_t thread;
+    status = thrd_create_with_name(&thread, irq_handler, this, "i915-irq-thread");
     if (status != ZX_OK) {
       zxlogf(ERROR, "Failed to create irq thread");
       irq_.reset();
       return status;
     }
+    irq_thread_ = thread;
   }
 
   Resume();
