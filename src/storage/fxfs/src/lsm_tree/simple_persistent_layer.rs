@@ -4,7 +4,9 @@
 
 use {
     crate::{
-        lsm_tree::types::{BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, Value},
+        lsm_tree::types::{
+            BoxedLayerIterator, Item, ItemRef, Key, Layer, LayerIterator, LayerWriter, Value,
+        },
         object_handle::ObjectHandle,
     },
     anyhow::{bail, Error},
@@ -164,18 +166,18 @@ impl<K: Key, V: Value> Layer<K, V> for SimplePersistentLayer {
 
 // -- Writer support --
 
-pub struct SimplePersistentLayerWriter<'handle> {
+pub struct SimplePersistentLayerWriter<'a> {
     block_size: u32,
     buf: Vec<u8>,
-    object_handle: &'handle mut dyn ObjectHandle,
+    object_handle: &'a dyn ObjectHandle,
     item_count: u16,
     offset: u64,
 }
 
-impl<'handle> SimplePersistentLayerWriter<'handle> {
+impl<'a> SimplePersistentLayerWriter<'a> {
     /// Creates a new writer that will serialize items to the object accessible via |object_handle|
     /// (which provdes a write interface to the object).
-    pub fn new(object_handle: &'handle mut dyn ObjectHandle, block_size: u32) -> Self {
+    pub fn new(object_handle: &'a dyn ObjectHandle, block_size: u32) -> Self {
         SimplePersistentLayerWriter {
             block_size,
             buf: vec![0; 2],
@@ -185,25 +187,7 @@ impl<'handle> SimplePersistentLayerWriter<'handle> {
         }
     }
 
-    pub async fn write<K: Serialize, V: Serialize>(
-        &mut self,
-        item: ItemRef<'_, K, V>,
-    ) -> Result<(), Error> {
-        // Note the length before we write this item.
-        let len = self.buf.len();
-        bincode::serialize_into(&mut self.buf, &item)?;
-
-        // If writing the item took us over a block, flush the bytes in the buffer prior to this
-        // item.
-        if self.buf.len() > self.block_size as usize - 1 || self.item_count == 65535 {
-            self.flush(len).await?;
-        }
-
-        self.item_count += 1;
-        Ok(())
-    }
-
-    async fn flush(&mut self, len: usize) -> Result<(), Error> {
+    async fn flush_some(&mut self, len: usize) -> Result<(), Error> {
         if self.item_count == 0 {
             return Ok(());
         }
@@ -215,9 +199,30 @@ impl<'handle> SimplePersistentLayerWriter<'handle> {
         self.offset += self.block_size as u64;
         Ok(())
     }
+}
 
-    pub async fn close(&mut self) -> Result<(), Error> {
-        self.flush(self.buf.len()).await
+#[async_trait]
+impl LayerWriter for SimplePersistentLayerWriter<'_> {
+    async fn write<K: Send + Serialize + Sync, V: Send + Serialize + Sync>(
+        &mut self,
+        item: ItemRef<'_, K, V>,
+    ) -> Result<(), Error> {
+        // Note the length before we write this item.
+        let len = self.buf.len();
+        bincode::serialize_into(&mut self.buf, &item)?;
+
+        // If writing the item took us over a block, flush the bytes in the buffer prior to this
+        // item.
+        if self.buf.len() > self.block_size as usize - 1 || self.item_count == 65535 {
+            self.flush_some(len).await?;
+        }
+
+        self.item_count += 1;
+        Ok(())
+    }
+
+    async fn flush(&mut self) -> Result<(), Error> {
+        self.flush_some(self.buf.len()).await
     }
 }
 
@@ -234,7 +239,7 @@ mod tests {
     use {
         super::{SimplePersistentLayer, SimplePersistentLayerWriter},
         crate::{
-            lsm_tree::types::{Item, ItemRef, Layer},
+            lsm_tree::types::{Item, ItemRef, Layer, LayerWriter},
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
@@ -255,7 +260,7 @@ mod tests {
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
-            writer.close().await.expect("close failed");
+            writer.flush().await.expect("flush failed");
         }
         let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
         let mut iterator = layer.seek(Bound::Unbounded).await.expect("seek failed");
@@ -278,7 +283,7 @@ mod tests {
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
-            writer.close().await.expect("close failed");
+            writer.flush().await.expect("flush failed");
         }
         let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
         for i in 0..ITEM_COUNT {
@@ -309,7 +314,7 @@ mod tests {
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
-            writer.close().await.expect("close failed");
+            writer.flush().await.expect("flush failed");
         }
         let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
         let mut iterator = layer.seek(Bound::Unbounded).await.expect("failed to seek");
@@ -329,7 +334,7 @@ mod tests {
         let mut handle = FakeObjectHandle::new(Arc::new(Mutex::new(FakeObject::new())));
         {
             let mut writer = SimplePersistentLayerWriter::new(&mut handle, BLOCK_SIZE);
-            writer.close().await.expect("close failed");
+            writer.flush().await.expect("flush failed");
         }
 
         let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);
@@ -352,7 +357,7 @@ mod tests {
             for i in 0..ITEM_COUNT {
                 writer.write(Item::new(i, i).as_item_ref()).await.expect("write failed");
             }
-            writer.close().await.expect("close failed");
+            writer.flush().await.expect("flush failed");
         }
 
         let layer = SimplePersistentLayer::new(handle, BLOCK_SIZE);

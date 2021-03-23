@@ -197,7 +197,10 @@ mod tests {
     use {
         super::merge,
         crate::{
-            lsm_tree::{types::Item, LSMTree},
+            lsm_tree::{
+                types::{Item, LayerIterator},
+                LSMTree,
+            },
             object_store::record::{ExtentKey, ObjectKey, ObjectValue},
         },
         anyhow::Error,
@@ -224,8 +227,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..512))
@@ -260,8 +262,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..512))
@@ -298,8 +299,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..512))
@@ -336,8 +336,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..1024))
@@ -380,8 +379,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..2048))
@@ -412,8 +410,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..512))
@@ -450,8 +447,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..512))
@@ -488,8 +484,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..1024))
@@ -532,8 +527,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..2048))
@@ -573,8 +567,7 @@ mod tests {
         tree.seal();
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..1536))
@@ -614,8 +607,7 @@ mod tests {
         tree.seal();
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..1536))
@@ -646,8 +638,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..1536))
@@ -677,8 +668,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..1536))
@@ -713,8 +703,7 @@ mod tests {
         tree.seal();
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..1536))
@@ -749,8 +738,7 @@ mod tests {
         tree.seal();
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..1536))
@@ -793,8 +781,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..512))
@@ -840,8 +827,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..512))
@@ -882,8 +868,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..512))
@@ -931,8 +916,7 @@ mod tests {
         .await;
 
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(std::ops::Bound::Unbounded).await?;
+        let mut iter = layer_set.seek(std::ops::Bound::Unbounded).await?;
         assert_eq!(
             iter.get().unwrap().key,
             &ObjectKey::extent(object_id, ExtentKey::new(attr_id, 0..2048))

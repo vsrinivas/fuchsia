@@ -165,6 +165,7 @@ struct MergeIteratorRef<'a, K, V> {
 }
 
 unsafe impl<K, V> Send for MergeIteratorRef<'_, K, V> {}
+unsafe impl<K, V> Sync for MergeIteratorRef<'_, K, V> {}
 
 impl<'a, K, V> MergeIteratorRef<'a, K, V> {
     fn new(m: &mut MergeIterator<'a, K, V>) -> Self {

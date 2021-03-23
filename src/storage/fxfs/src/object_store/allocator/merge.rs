@@ -142,13 +142,13 @@ mod tests {
     use {
         crate::{
             lsm_tree::{
-                types::{Item, ItemRef},
+                types::{Item, ItemRef, LayerIterator},
                 LSMTree,
             },
             object_store::allocator::{merge::merge, AllocatorKey, AllocatorValue},
         },
         fuchsia_async as fasync,
-        std::ops::Range,
+        std::ops::{Bound, Range},
     };
 
     async fn test_merge(
@@ -169,9 +169,8 @@ mod tests {
         ))
         .await;
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.get_iterator();
+        let mut iter = layer_set.seek(Bound::Unbounded).await.expect("seek failed");
         for e in expected {
-            iter.advance().await.expect("advance failed");
             let ItemRef { key, value } = iter.get().expect("get failed");
             assert_eq!(
                 (key, value),
@@ -180,8 +179,8 @@ mod tests {
                     &AllocatorValue { delta: e.1.clone() }
                 )
             );
+            iter.advance().await.expect("advance failed");
         }
-        iter.advance().await.expect("advance failed");
         assert!(iter.get().is_none());
     }
 

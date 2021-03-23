@@ -6,7 +6,7 @@ mod merge;
 
 use {
     crate::{
-        lsm_tree::types::{Item, OrdLowerBound},
+        lsm_tree::types::{BoxedLayerIterator, Item, ItemRef, LayerIterator, OrdLowerBound},
         object_store::transaction::Transaction,
     },
     anyhow::Error,
@@ -77,3 +77,136 @@ pub struct AllocatorValue {
 }
 
 pub type AllocatorItem = Item<AllocatorKey, AllocatorValue>;
+
+// The merger is unable to merge extents that exist like the following:
+//
+//     |----- +1 -----|
+//                    |----- -1 -----|
+//                    |----- +2 -----|
+//
+// It cannot coalesce them because it has to emit the +1 record so that it can move on and merge the
+// -1 and +2 records. To address this, we add another stage that applies after merging which
+// coalesces records after they have been emitted.  This is a bit simpler than merging because the
+// records cannot overlap, so it's just a question of merging adjacent records if they happen to
+// have the same delta.
+
+struct CoalescingIterator<'a> {
+    iter: BoxedLayerIterator<'a, AllocatorKey, AllocatorValue>,
+    item: Option<AllocatorItem>,
+}
+
+impl<'a> CoalescingIterator<'a> {
+    async fn new(
+        iter: BoxedLayerIterator<'a, AllocatorKey, AllocatorValue>,
+    ) -> Result<CoalescingIterator<'a>, Error> {
+        let mut iter = Self { iter, item: None };
+        iter.advance().await?;
+        Ok(iter)
+    }
+}
+
+#[async_trait]
+impl LayerIterator<AllocatorKey, AllocatorValue> for CoalescingIterator<'_> {
+    async fn advance(&mut self) -> Result<(), Error> {
+        self.item = self.iter.get().map(|x| x.cloned());
+        if self.item.is_none() {
+            return Ok(());
+        }
+        let left = self.item.as_mut().unwrap();
+        loop {
+            self.iter.advance().await?;
+            match self.iter.get() {
+                None => return Ok(()),
+                Some(right) => {
+                    // The two records cannot overlap.
+                    assert!(left.key.device_range.end <= right.key.device_range.start);
+                    // We can only coalesce the records if they are touching and have the same
+                    // delta.
+                    if left.key.device_range.end < right.key.device_range.start
+                        || left.value.delta != right.value.delta
+                    {
+                        return Ok(());
+                    }
+                    left.key.device_range.end = right.key.device_range.end;
+                }
+            }
+        }
+    }
+
+    fn get(&self) -> Option<ItemRef<'_, AllocatorKey, AllocatorValue>> {
+        self.item.as_ref().map(|x| x.as_item_ref())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use {
+        crate::{
+            lsm_tree::{
+                skip_list_layer::SkipListLayer,
+                types::{Item, ItemRef, Layer, LayerIterator, MutableLayer},
+                LSMTree,
+            },
+            object_store::allocator::{
+                merge::merge, AllocatorKey, AllocatorValue, CoalescingIterator,
+            },
+        },
+        fuchsia_async as fasync,
+        std::ops::Bound,
+    };
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_coalescing_iterator() {
+        let skip_list = SkipListLayer::new(100);
+        let items = [
+            Item::new(AllocatorKey { device_range: 0..100 }, AllocatorValue { delta: 1 }),
+            Item::new(AllocatorKey { device_range: 100..200 }, AllocatorValue { delta: 1 }),
+        ];
+        skip_list.insert(items[1].clone()).await;
+        skip_list.insert(items[0].clone()).await;
+        let mut iter =
+            CoalescingIterator::new(skip_list.seek(Bound::Unbounded).await.expect("seek failed"))
+                .await
+                .expect("new failed");
+        let ItemRef { key, value } = iter.get().expect("get failed");
+        assert_eq!(
+            (key, value),
+            (&AllocatorKey { device_range: 0..200 }, &AllocatorValue { delta: 1 })
+        );
+        iter.advance().await.expect("advance failed");
+        assert!(iter.get().is_none());
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_merge_and_coalesce_across_three_layers() {
+        let lsm_tree = LSMTree::new(merge);
+        lsm_tree
+            .insert(Item::new(AllocatorKey { device_range: 100..200 }, AllocatorValue { delta: 2 }))
+            .await;
+        lsm_tree.seal();
+        lsm_tree
+            .insert(Item::new(
+                AllocatorKey { device_range: 100..200 },
+                AllocatorValue { delta: -1 },
+            ))
+            .await;
+        lsm_tree.seal();
+        lsm_tree
+            .insert(Item::new(AllocatorKey { device_range: 0..100 }, AllocatorValue { delta: 1 }))
+            .await;
+
+        let layer_set = lsm_tree.layer_set();
+        let mut iter = CoalescingIterator::new(Box::new(
+            layer_set.seek(Bound::Unbounded).await.expect("seek failed"),
+        ))
+        .await
+        .expect("new failed");
+        let ItemRef { key, value } = iter.get().expect("get failed");
+        assert_eq!(
+            (key, value),
+            (&AllocatorKey { device_range: 0..200 }, &AllocatorValue { delta: 1 })
+        );
+        iter.advance().await.expect("advance failed");
+        assert!(iter.get().is_none());
+    }
+}

@@ -10,12 +10,16 @@ pub mod types;
 use {
     crate::object_handle::ObjectHandle,
     anyhow::Error,
+    async_trait::async_trait,
     simple_persistent_layer::SimplePersistentLayerWriter,
     std::{
         ops::Bound,
         sync::{Arc, RwLock},
     },
-    types::{IntoLayerRefs, Item, ItemRef, Key, Layer, MutableLayer, OrdLowerBound, Value},
+    types::{
+        IntoLayerRefs, Item, ItemRef, Key, Layer, LayerIterator, LayerWriter, MutableLayer,
+        OrdLowerBound, Value,
+    },
 };
 
 const SKIP_LIST_LAYER_ITEMS: usize = 512;
@@ -80,46 +84,66 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
         data.mutable_layer = skip_list_layer::SkipListLayer::new(SKIP_LIST_LAYER_ITEMS);
     }
 
+    pub fn new_writer(object_handle: &dyn ObjectHandle) -> impl LayerWriter + '_ {
+        SimplePersistentLayerWriter::new(object_handle, SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE)
+    }
+
     // TODO(csuter): This should run as a different task.
     // TODO(csuter): We should provide a way for the caller to skip compactions if there's nothing
     // to compact.
-    /// Compacts all the immutable layers and writes the result into the provided object.
-    pub async fn compact(
+    /// Writes the items yielded by the iterator into the supplied object and then switches the tree
+    /// to use the new layer.
+    pub async fn compact_with_iterator(
         &self,
+        mut iterator: impl LayerIterator<K, V>,
         mut object_handle: impl ObjectHandle + 'static,
     ) -> Result<(), Error> {
-        let layers = self.data.read().unwrap().layers.clone();
         {
             let mut writer = SimplePersistentLayerWriter::new(
                 &mut object_handle,
                 SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE,
             );
-            let mut merger = merge::Merger::new(&layers.into_layer_refs(), self.merge_fn);
-            merger.advance().await?;
-            while let Some(item_ref) = merger.get() {
+            while let Some(item_ref) = iterator.get() {
                 log::debug!("compact: writing {:?}", item_ref);
                 writer.write(item_ref).await?;
-                merger.advance().await?;
+                iterator.advance().await?;
             }
-            writer.close().await?;
+            writer.flush().await?;
         }
-        {
-            let mut data = self.data.write().unwrap();
-            data.layers = vec![simple_persistent_layer::SimplePersistentLayer::new(
-                object_handle,
-                SIMPLE_PERSISTENT_LAYER_BLOCK_SIZE,
-            )];
-        }
+
+        self.set_layers(Box::new([object_handle]));
         Ok(())
     }
 
+    /// Compacts all the immutable layers.
+    pub async fn compact(&self, object_handle: impl ObjectHandle + 'static) -> Result<(), Error> {
+        let layer_set = self.immutable_layer_set();
+        let iter = layer_set.seek(Bound::Unbounded).await?;
+        self.compact_with_iterator(iter, object_handle).await
+    }
+
     /// Returns a clone of the current set of layers (including the mutable layer), after which one
-    /// can get an iterator.
+    /// can get an iterator, although care should be taken because writes will blocked to the
+    /// mutable layer until the iterator is dropped.
     pub fn layer_set(&self) -> LayerSet<K, V> {
         let mut layers = Vec::new();
         {
             let data = self.data.read().unwrap();
             layers.push(data.mutable_layer.clone().as_layer().into());
+            for layer in &data.layers {
+                layers.push(layer.clone().into());
+            }
+        }
+        LayerSet { layers, merge_fn: self.merge_fn }
+    }
+
+    /// Returns the current set of immutable layers after which one can get an iterator (for e.g.
+    /// compacting).  Since these layers are immutable, getting an iterator should not block
+    /// anything else.
+    pub fn immutable_layer_set(&self) -> LayerSet<K, V> {
+        let mut layers = Vec::new();
+        {
+            let data = self.data.read().unwrap();
             for layer in &data.layers {
                 layers.push(layer.clone().into());
             }
@@ -152,8 +176,7 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
         V: Clone,
     {
         let layer_set = self.layer_set();
-        let mut iter = layer_set.get_iterator();
-        iter.seek(Bound::Included(search_key)).await?;
+        let iter = layer_set.seek(Bound::Included(search_key)).await?;
         Ok(match iter.get() {
             Some(ItemRef { key, value }) if key == search_key => {
                 Some(Item { key: key.clone(), value: value.clone() })
@@ -190,36 +213,36 @@ impl<
         V: std::fmt::Debug + Unpin + 'static,
     > LayerSet<K, V>
 {
-    pub fn get_iterator(&self) -> LSMTreeIter<'_, K, V> {
-        LSMTreeIter(merge::Merger::new(&self.layers.as_slice().into_layer_refs(), self.merge_fn))
-    }
-
     pub fn add_layer(&mut self, layer: Arc<dyn Layer<K, V>>) {
         self.layers.push(layer);
+    }
+
+    pub async fn seek<'a>(&'a self, bound: Bound<&K>) -> Result<LSMTreeIter<'a, K, V>, Error> {
+        let mut iter = LSMTreeIter(merge::Merger::new(
+            &self.layers.as_slice().into_layer_refs(),
+            self.merge_fn,
+        ));
+        iter.0.seek(bound).await?;
+        Ok(iter)
     }
 }
 
 pub struct LSMTreeIter<'a, K, V>(merge::Merger<'a, K, V>);
 
-impl<
-        K: std::fmt::Debug + OrdLowerBound + Unpin + 'static,
-        V: std::fmt::Debug + Unpin + 'static,
-    > LSMTreeIter<'_, K, V>
-{
-    pub fn get(&self) -> Option<ItemRef<'_, K, V>> {
-        self.0.get()
-    }
-
-    pub async fn advance(&mut self) -> Result<(), Error> {
-        self.0.advance().await
-    }
-
+impl<'a, K: Key + OrdLowerBound, V: Value> LSMTreeIter<'a, K, V> {
     pub async fn advance_with_hint(&mut self, hint: &K) -> Result<(), Error> {
         self.0.advance_with_hint(hint).await
     }
+}
 
-    pub async fn seek(&mut self, bound: Bound<&K>) -> Result<(), Error> {
-        self.0.seek(bound).await
+#[async_trait]
+impl<'a, K: Key + OrdLowerBound, V: Value> LayerIterator<K, V> for LSMTreeIter<'a, K, V> {
+    fn get(&self) -> Option<ItemRef<'_, K, V>> {
+        self.0.get()
+    }
+
+    async fn advance(&mut self) -> Result<(), Error> {
+        self.0.advance().await
     }
 }
 
@@ -230,12 +253,15 @@ mod tests {
         crate::{
             lsm_tree::{
                 merge::{MergeIterator, MergeResult},
-                types::{Item, ItemRef, OrdLowerBound},
+                types::{Item, ItemRef, LayerIterator, OrdLowerBound},
             },
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
         fuchsia_async as fasync,
-        std::sync::{Arc, Mutex},
+        std::{
+            ops::Bound,
+            sync::{Arc, Mutex},
+        },
     };
 
     #[derive(Clone, Eq, PartialEq, Debug, serde::Serialize, serde::Deserialize)]
@@ -273,8 +299,7 @@ mod tests {
         tree.insert(items[0].clone()).await;
         tree.insert(items[1].clone()).await;
         let layers = tree.layer_set();
-        let mut iter = layers.get_iterator();
-        iter.advance().await.expect("advance failed");
+        let mut iter = layers.seek(Bound::Unbounded).await.expect("seek failed");
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.expect("advance failed");
@@ -306,13 +331,12 @@ mod tests {
         let tree = LSMTree::open(emit_left_merge_fn, [handle].into());
 
         let layers = tree.layer_set();
-        let mut iter = layers.get_iterator();
+        let mut iter = layers.seek(Bound::Unbounded).await.expect("seek failed");
         for i in 1..5 {
-            iter.advance().await.expect("advance failed");
             let ItemRef { key, value } = iter.get().expect("missing item");
             assert_eq!((key, value), (&TestKey(i..i), &i));
+            iter.advance().await.expect("advance failed");
         }
-        iter.advance().await.expect("advance failed");
         assert!(iter.get().is_none());
     }
 
