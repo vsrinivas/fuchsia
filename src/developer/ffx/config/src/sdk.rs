@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use anyhow::{anyhow, Result};
+use log::warn;
 use serde::Deserialize;
 use serde_json::Value;
 use std::collections::HashMap;
@@ -161,25 +162,38 @@ impl Sdk {
                         .and(x.get("type").filter(|t| *t == "host_tool"))
                         .is_some()
                 })
-                .next()
-                .ok_or(anyhow!("Tool '{}' not found", name))?
-                .get("files")
-                .ok_or(anyhow!(
-                    "No executable provided for tool '{}' (no file list present)",
-                    name
-                ))?
-                .as_array()
-                .ok_or(anyhow!(
-                    "Malformed manifest for tool '{}': file list wasn't an array",
-                    name
-                ))?
-                .get(0)
-                .ok_or(anyhow!("No executable provided for tool '{}' (file list was empty)", name))?
-                .as_str()
-                .ok_or(anyhow!(
-                    "Malformed manifest for tool '{}': file name wasn't a string",
-                    name
-                ))?,
+                .map(|x| -> Result<_> {
+                    let arr = x
+                        .get("files")
+                        .ok_or(anyhow!(
+                            "No executable provided for tool '{}' (no file list present)",
+                            name
+                        ))?
+                        .as_array()
+                        .ok_or(anyhow!(
+                            "Malformed manifest for tool '{}': file list wasn't an array",
+                            name
+                        ))?;
+
+                    if arr.len() > 1 {
+                        warn!("Tool '{}' provides multiple files in manifest", name);
+                    }
+
+                    arr.get(0)
+                        .ok_or(anyhow!(
+                            "No executable provided for tool '{}' (file list was empty)",
+                            name
+                        ))?
+                        .as_str()
+                        .ok_or(anyhow!(
+                            "Malformed manifest for tool '{}': file name wasn't a string",
+                            name
+                        ))
+                })
+                .collect::<Result<Vec<_>>>()?
+                .into_iter()
+                .min_by_key(|x| x.len()) // Shortest path is the one with no arch specifier, i.e. the default arch, i.e. the current arch (we hope.)
+                .ok_or(anyhow!("Tool '{}' not found", name))?,
         )
     }
 
@@ -264,6 +278,60 @@ mod test {
           "id": "sdk://tools/x64/zxdb",
           "meta": "tools/x64/zxdb-meta.json",
           "type": "host_tool"
+        },
+        {
+          "category": "partner",
+          "deps": [],
+          "files": [
+            {
+              "destination": "tools/arm64/symbol-index",
+              "source": "/fuchsia/out/default/host_arm64/symbol-index"
+            },
+            {
+              "destination": "tools/arm64/symbol-index-meta.json",
+              "source": "/fuchsia/out/default/host_arm64/gen/tools/symbol-index/symbol_index_sdk.meta.json"
+            }
+          ],
+          "gn-label": "//tools/symbol-index:symbol_index_sdk(//build/toolchain:host_arm64)",
+          "id": "sdk://tools/arm64/symbol-index",
+          "meta": "tools/arm64/symbol-index-meta.json",
+          "type": "host_tool"
+        },
+        {
+          "category": "partner",
+          "deps": [],
+          "files": [
+            {
+              "destination": "tools/symbol-index",
+              "source": "/fuchsia/out/default/host_x64/symbol-index"
+            },
+            {
+              "destination": "tools/symbol-index-meta.json",
+              "source": "/fuchsia/out/default/host_x64/gen/tools/symbol-index/symbol_index_sdk_legacy.meta.json"
+            }
+          ],
+          "gn-label": "//tools/symbol-index:symbol_index_sdk_legacy(//build/toolchain:host_x64)",
+          "id": "sdk://tools/symbol-index",
+          "meta": "tools/symbol-index-meta.json",
+          "type": "host_tool"
+        },
+        {
+          "category": "partner",
+          "deps": [],
+          "files": [
+            {
+              "destination": "tools/x64/symbol-index",
+              "source": "/fuchsia/out/default/host_x64/symbol-index"
+            },
+            {
+              "destination": "tools/x64/symbol-index-meta.json",
+              "source": "/fuchsia/out/default/host_x64/gen/tools/symbol-index/symbol_index_sdk.meta.json"
+            }
+          ],
+          "gn-label": "//tools/symbol-index:symbol_index_sdk(//build/toolchain:host_x64)",
+          "id": "sdk://tools/x64/symbol-index",
+          "meta": "tools/x64/symbol-index-meta.json",
+          "type": "host_tool"
         }
       ],
       "ids": []
@@ -288,6 +356,45 @@ mod test {
                 "tools/x64/zxdb"
               ],
               "name": "zxdb",
+              "root": "tools",
+              "type": "host_tool"
+            }"#;
+
+            Ok(std::io::BufReader::new(META.as_bytes()))
+        } else if name
+            == "/fuchsia/out/default/host_x64/gen/tools/symbol-index/symbol_index_sdk.meta.json"
+        {
+            const META: &str = r#"{
+              "files": [
+                "tools/x64/symbol-index"
+              ],
+              "name": "symbol-index",
+              "root": "tools",
+              "type": "host_tool"
+            }"#;
+
+            Ok(std::io::BufReader::new(META.as_bytes()))
+        } else if name
+            == "/fuchsia/out/default/host_x64/gen/tools/symbol-index/symbol_index_sdk_legacy.meta.json"
+        {
+            const META: &str = r#"{
+              "files": [
+                "tools/x64/symbol-index"
+              ],
+              "name": "symbol-index",
+              "root": "tools",
+              "type": "host_tool"
+            }"#;
+
+            Ok(std::io::BufReader::new(META.as_bytes()))
+        } else if name
+            == "/fuchsia/out/default/host_arm64/gen/tools/symbol-index/symbol_index_sdk.meta.json"
+        {
+            const META: &str = r#"{
+              "files": [
+                "tools/arm64/symbol-index"
+              ],
+              "name": "symbol-index",
               "root": "tools",
               "type": "host_tool"
             }"#;
@@ -359,7 +466,7 @@ mod test {
         assert!(atoms.ids.is_empty());
 
         let atoms = atoms.atoms;
-        assert_eq!(2, atoms.len());
+        assert_eq!(5, atoms.len());
         assert_eq!("partner", atoms[0].category);
         assert!(atoms[0].deps.is_empty());
         assert_eq!("//sdk/devices:generic-arm64(//build/toolchain/fuchsia:x64)", atoms[0].gn_label);
@@ -386,7 +493,7 @@ mod test {
         let sdk = atoms.to_sdk(get_core_manifest_meta).unwrap();
         assert_eq!(SdkVersion::Unknown, sdk.version);
 
-        assert_eq!(2, sdk.metas.len());
+        assert_eq!(5, sdk.metas.len());
         assert_eq!(
             "A generic arm64 device",
             sdk.metas[0].get("description").unwrap().as_str().unwrap()
@@ -403,6 +510,21 @@ mod test {
         let zxdb = atoms.to_sdk(get_core_manifest_meta).unwrap().get_host_tool("zxdb").unwrap();
 
         assert_eq!(std::path::PathBuf::from("/fuchsia/out/default/host_x64/zxdb"), zxdb);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_core_manifest_host_tool_multi_arch() {
+        let atoms =
+            Sdk::atoms_from_core_manifest(std::io::BufReader::new(CORE_MANIFEST.as_bytes()))
+                .unwrap();
+
+        let symbol_index =
+            atoms.to_sdk(get_core_manifest_meta).unwrap().get_host_tool("symbol-index").unwrap();
+
+        assert_eq!(
+            std::path::PathBuf::from("/fuchsia/out/default/host_x64/symbol-index"),
+            symbol_index
+        );
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
