@@ -122,6 +122,10 @@ of the VMO but **ZX_VM_ALLOW_FAULTS** is not set.
 There is no good way for userspace to handle this (unlikely) error.
 In a future build this error will no longer occur.
 
+**ZX_ERR_NO_MEMORY**  **ZX_VM_SPECIFIC** has been specified,
+**ZX_VM_SPECIFIC_OVERWRITE** has not been specified,
+and the requested range overlaps with another mapping.
+
 ## NOTES
 
 The VMO that backs a memory mapping can be resized to a smaller size. This can cause the
