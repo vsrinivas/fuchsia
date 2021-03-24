@@ -46,9 +46,6 @@ pub enum ReaderError {
     #[error("Failed to get consistent snapshot")]
     InconsistentSnapshot,
 
-    #[error("Failed to read snapshot from vmo")]
-    ReadSnapshotFromVmo,
-
     #[error("Header missing or is locked")]
     MissingHeaderOrLocked,
 

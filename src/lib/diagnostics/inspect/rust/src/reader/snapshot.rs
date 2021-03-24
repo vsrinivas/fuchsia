@@ -87,12 +87,18 @@ impl Snapshot {
     where
         F: FnMut() -> (),
     {
-        for _ in 0..SNAPSHOT_TRIES {
-            if let Ok(ret) = Snapshot::try_once_with_callback(&vmo, &mut read_callback) {
-                return Ok(ret);
-            }
+        let mut i = 0;
+        loop {
+            match Snapshot::try_once_with_callback(&vmo, &mut read_callback) {
+                Ok(snapshot) => return Ok(snapshot),
+                Err(e) => {
+                    if i >= SNAPSHOT_TRIES {
+                        return Err(e);
+                    }
+                }
+            };
+            i += 1;
         }
-        Err(ReaderError::ReadSnapshotFromVmo)
     }
 
     // Used for snapshot tests.
