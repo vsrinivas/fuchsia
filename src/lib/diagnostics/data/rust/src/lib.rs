@@ -19,11 +19,13 @@ use std::{
     hash::Hash,
     ops::{Deref, DerefMut},
     str::FromStr,
+    time::Duration,
 };
 
 pub use diagnostics_hierarchy::{assert_data_tree, tree_assertion, DiagnosticsHierarchy, Property};
 
 const SCHEMA_VERSION: u64 = 1;
+const MICROS_IN_SEC: u128 = 1000000;
 
 /// The source of diagnostics data
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq, Eq)]
@@ -220,6 +222,12 @@ impl From<i64> for Timestamp {
 impl Into<i64> for Timestamp {
     fn into(self) -> i64 {
         self.0
+    }
+}
+
+impl Into<Duration> for Timestamp {
+    fn into(self) -> Duration {
+        Duration::from_nanos(self.0 as u64)
     }
 }
 
@@ -568,6 +576,68 @@ impl Data<Logs> {
             })
             .flatten()
     }
+
+    /// Returns the pid associated with the message, if one exists.
+    pub fn pid(&self) -> Option<u64> {
+        self.payload.as_ref().and_then(|p| {
+            p.properties
+                .iter()
+                .filter_map(|property| match property {
+                    LogsProperty::Uint(LogsField::ProcessId, pid) => Some(*pid),
+                    _ => None,
+                })
+                .next()
+        })
+    }
+
+    /// Returns the tid associated with the message, if one exists.
+    pub fn tid(&self) -> Option<u64> {
+        self.payload.as_ref().and_then(|p| {
+            p.properties
+                .iter()
+                .filter_map(|property| match property {
+                    LogsProperty::Uint(LogsField::ThreadId, tid) => Some(*tid),
+                    _ => None,
+                })
+                .next()
+        })
+    }
+}
+
+impl fmt::Display for Data<Logs> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // Multiple tags are supported for the `LogMessage` format and are represented
+        // as multiple instances of LogsField::Tag arguments.
+        let tags = self
+            .payload
+            .as_ref()
+            .map(|p| {
+                p.properties
+                    .iter()
+                    .filter_map(|property| match property {
+                        LogsProperty::String(LogsField::Tag, tag) => Some(tag.as_str()),
+                        _ => None,
+                    })
+                    .collect::<Vec<_>>()
+            })
+            .unwrap_or(vec![]);
+        let time: Duration = self.metadata.timestamp.into();
+        write!(
+            f,
+            "[{:05}.{:06}][{}][{}][{}]",
+            time.as_secs(),
+            time.as_micros() % MICROS_IN_SEC,
+            self.pid().map(|s| s.to_string()).unwrap_or("".to_string()),
+            self.tid().map(|s| s.to_string()).unwrap_or("".to_string()),
+            self.moniker,
+        )?;
+
+        if !tags.is_empty() {
+            write!(f, "[{}]", tags.join(","))?;
+        }
+
+        write!(f, " {}: {}", self.metadata.severity, self.msg().unwrap_or(""))
+    }
 }
 
 /// An enum containing well known argument names passed through logs, as well
@@ -860,5 +930,58 @@ mod tests {
         });
 
         pretty_assertions::assert_eq!(result_json, expected_json, "golden diff failed.");
+    }
+
+    #[test]
+    fn display_for_logs() {
+        let hierarchy = DiagnosticsHierarchy::new(
+            "root",
+            vec![
+                Property::Uint(LogsField::ProcessId, 123),
+                Property::Uint(LogsField::ThreadId, 456),
+                Property::String(LogsField::Tag, "foo".to_string()),
+                Property::String(LogsField::Tag, "bar".to_string()),
+                Property::String(LogsField::Msg, "some message".to_string()),
+            ],
+            vec![],
+        );
+        let data = LogsData::for_logs(
+            String::from("moniker"),
+            Some(hierarchy),
+            Timestamp::from(12345678000i64),
+            String::from("fake-url"),
+            Severity::Info,
+            1,
+            vec![],
+        );
+
+        assert_eq!(
+            "[00012.345678][123][456][moniker][foo,bar] INFO: some message",
+            format!("{}", data)
+        )
+    }
+
+    #[test]
+    fn display_for_logs_no_tags() {
+        let hierarchy = DiagnosticsHierarchy::new(
+            "root",
+            vec![
+                Property::Uint(LogsField::ProcessId, 123),
+                Property::Uint(LogsField::ThreadId, 456),
+                Property::String(LogsField::Msg, "some message".to_string()),
+            ],
+            vec![],
+        );
+        let data = LogsData::for_logs(
+            String::from("moniker"),
+            Some(hierarchy),
+            Timestamp::from(12345678000i64),
+            String::from("fake-url"),
+            Severity::Info,
+            1,
+            vec![],
+        );
+
+        assert_eq!("[00012.345678][123][456][moniker] INFO: some message", format!("{}", data))
     }
 }

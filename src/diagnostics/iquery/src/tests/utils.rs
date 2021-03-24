@@ -126,48 +126,31 @@ async fn wait_for_out_ready(app: &App) -> Result<(), anyhow::Error> {
 /// - `"start_timestamp_nanos": 7762005786231` by `"start_timestamp_nanos": TIMESTAMP`
 /// - instance ids by INSTANCE_ID
 /// - process IDs and thread IDs
-/// log-test/basic_component.cmx:82348 is replaced with log-test/basic_component.cmx:PID
-/// "moniker": "log-test/basic_component.cmx:23948134",
-// "payload": {
-///    "root": {
-///      "message": "Is great to have! ",
-///      "pid": "93724",
-///      "tag": "iquery_basic_component",
-///      "tid": "23452"
-///    }
-///  },
-/// gets replaced with
-/// "moniker": "log-test/basic_component.cmx:INSTANCE_ID",
-/// "payload": {
-///    "root": {
-///      "message": "Is great to have! ",
-///      "pid": "PID",
-///      "tag": "iquery_basic_component",
-///      "tid": "TID"
-///    }
-///  },
 /// - instance IDs in monikers
 /// - timestamps in log strings
-/// - process IDs in log strings
+/// - process and thread IDs in log strings
 fn cleanup_variable_strings(string: impl Into<String>) -> String {
     // Replace start_timestamp_nanos in fuchsia.inspect.Health entries and
     // timestamp in metadatas.
     let mut string: String = string.into();
-    let re = Regex::new(&format!("(\\[\\d+\\])(\\[.*\\.cmx)\\](.*)")).unwrap();
-    let replacement = format!("[TIMESTAMP]${{2}}]${{3}}");
-    string = re.replace_all(&string, replacement.as_str()).to_string();
-    // Moniker requires very special treatment. It's part-constant and part numeric
-    for value in &["timestamp", "start_timestamp_nanos", "pid", "tid", "moniker"] {
-        let re = Regex::new(&format!("\"{}\": \"(.*:)(\\d+)", value)).unwrap();
-        let replacement = format!("\"{}\": \"${{1}}INSTANCE_ID", value);
+
+    // Moniker in log metadatas requires special treatement to remove instance ids.
+    let re = Regex::new("\"moniker\": \"(.+:)(\\d+)").unwrap();
+    let replacement = "\"moniker\": \"${1}INSTANCE_ID";
+    string = re.replace_all(&string, replacement).to_string();
+
+    // Timestamp, pid, instance id and tid in log text.
+    let re = Regex::new(r#"\[\d+\.\d+\]\[\d+\]\[\d+\]\[(.+)\]"#).unwrap();
+    string = re.replace_all(&string, "[TIMESTAMP][PID][TID][${1}]").to_string();
+
+    // Make PID and TID constant in JSON outputs.
+    for value in &["pid", "tid"] {
+        let re = Regex::new(&format!("\"{}\": \\d+", value)).unwrap();
+        let replacement = format!("\"{}\": \"{}\"", value, value.to_string().to_uppercase());
         string = re.replace_all(&string, replacement.as_str()).to_string();
+    }
 
-        if (*value == "pid") || (*value == "tid") {
-            let re = Regex::new(&format!("\"{}\": \\d+", value)).unwrap();
-            let replacement = format!("\"{}\": \"{}\"", value, value.to_string().to_uppercase());
-            string = re.replace_all(&string, replacement.as_str()).to_string();
-        }
-
+    for value in &["timestamp", "start_timestamp_nanos"] {
         let re = Regex::new(&format!("\"{}\": \\d+", value)).unwrap();
         let replacement = format!("\"{}\": \"TIMESTAMP\"", value);
         string = re.replace_all(&string, replacement.as_str()).to_string();

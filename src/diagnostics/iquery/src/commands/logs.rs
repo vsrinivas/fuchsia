@@ -27,18 +27,7 @@ pub struct LogsCommand {
 
 impl ToText for Vec<LogsData> {
     fn to_text(self) -> String {
-        self.into_iter()
-            .map(|log| {
-                let msg = log.msg().unwrap_or("");
-                let moniker = log.moniker.clone();
-                // TODO(fxbug.dev/70709): use LogsData Display representation
-                format!(
-                    "[{}][{}] {}: {}",
-                    log.metadata.timestamp, moniker, log.metadata.severity, msg
-                )
-            })
-            .collect::<Vec<_>>()
-            .join("\n")
+        self.into_iter().map(|log| format!("{}", log)).collect::<Vec<_>>().join("\n")
     }
 }
 

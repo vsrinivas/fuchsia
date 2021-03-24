@@ -43,8 +43,8 @@ fn is_debug_data_warning(log: impl AsRef<str>) -> bool {
 }
 
 fn sanitize_log_for_comparison(log: impl AsRef<str>) -> String {
-    let log_timestamp_re = Regex::new(r"^\[\d+\]").unwrap();
-    log_timestamp_re.replace_all(log.as_ref(), "[TIMESTAMP]").to_string()
+    let log_timestamp_re = Regex::new(r"^\[\d+.\d+\]\[\d+\]\[\d+\]").unwrap();
+    log_timestamp_re.replace_all(log.as_ref(), "[TIMESTAMP][PID][TID]").to_string()
 }
 
 fn new_test_params(test_url: &str, harness: HarnessProxy) -> TestParams {
@@ -644,9 +644,9 @@ async fn test_logging_component() {
             .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][test_root] DEBUG: my debug message 
-[TIMESTAMP][test_root] INFO: my info message 
-[TIMESTAMP][test_root] WARN: my warn message 
+[TIMESTAMP][PID][TID][<root>][logging_test] DEBUG: my debug message 
+[TIMESTAMP][PID][TID][<root>][logging_test] INFO: my info message 
+[TIMESTAMP][PID][TID][<root>][logging_test] WARN: my warn message 
 [PASSED]	log_and_exit
 ";
     assert_output!(output, expected_output);
@@ -674,8 +674,8 @@ async fn test_logging_component_min_severity() {
         .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][test_root] INFO: my info message 
-[TIMESTAMP][test_root] WARN: my warn message 
+[TIMESTAMP][PID][TID][<root>][logging_test] INFO: my info message 
+[TIMESTAMP][PID][TID][<root>][logging_test] WARN: my warn message 
 [PASSED]	log_and_exit
 ";
     assert_output!(output, expected_output);
@@ -703,7 +703,7 @@ async fn test_logging_ansi() {
         .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_ansi_test
-[TIMESTAMP][test_root] INFO: \u{1b}[31mred log\u{1b}[0m
+[TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: \u{1b}[31mred log\u{1b}[0m
 [PASSED]	log_ansi_test
 [RUNNING]	stdout_ansi_test
 \u{1b}[31mred stdout\u{1b}[0m
@@ -740,7 +740,7 @@ async fn test_logging_filter_ansi() {
     let _ = diagnostics::collect_logs(log_stream, &mut ansi_filter, log_opts).await.unwrap();
 
     let expected_output = "[RUNNING]	log_ansi_test
-[TIMESTAMP][test_root] INFO: red log
+[TIMESTAMP][PID][TID][<root>][log_ansi_test] INFO: red log
 [PASSED]	log_ansi_test
 [RUNNING]	stdout_ansi_test
 red stdout
@@ -785,9 +785,9 @@ async fn test_max_severity(max_severity: Severity) {
         .expect("Running test should not fail");
 
     let expected_output = "[RUNNING]	log_and_exit
-[TIMESTAMP][test_root] INFO: my info message 
-[TIMESTAMP][test_root] WARN: my warn message 
-[TIMESTAMP][test_root] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message 
+[TIMESTAMP][PID][TID][<root>][error_logging_test] INFO: my info message 
+[TIMESTAMP][PID][TID][<root>][error_logging_test] WARN: my warn message 
+[TIMESTAMP][PID][TID][<root>][error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message 
 [PASSED]	log_and_exit
 ";
 
@@ -809,8 +809,8 @@ async fn test_max_severity(max_severity: Severity) {
             assert_eq!(
                 logs,
                 vec![
-                    "[TIMESTAMP][test_root] WARN: my warn message ".to_owned(),
-                    "[TIMESTAMP][test_root] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message ".to_owned(),
+                    "[TIMESTAMP][PID][TID][<root>][error_logging_test] WARN: my warn message ".to_owned(),
+                    "[TIMESTAMP][PID][TID][<root>][error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message ".to_owned(),
                 ]
             );
         }
@@ -822,7 +822,7 @@ async fn test_max_severity(max_severity: Severity) {
             assert_eq!(
                 restricted_logs.into_iter().map(sanitize_log_for_comparison).collect::<Vec<_>>(),
                 vec![
-                    "[TIMESTAMP][test_root] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message ".to_owned(),
+                    "[TIMESTAMP][PID][TID][<root>][error_logging_test] ERROR: [src/sys/run_test_suite/tests/error_logging_test.rs(13)] my error message ".to_owned(),
                 ]
             );
         }
