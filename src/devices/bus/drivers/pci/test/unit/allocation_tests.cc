@@ -30,10 +30,10 @@ TEST(PciAllocationTest, BalancedAllocation) {
   {
     auto alloc1 = root_alloc.Allocate(std::nullopt, ZX_PAGE_SIZE);
     EXPECT_TRUE(alloc1.is_ok());
-    EXPECT_EQ(1, fake_impl->allocation_cnt());
+    EXPECT_EQ(1, fake_impl->allocation_eps().size());
     auto alloc2 = root_alloc.Allocate(1024, ZX_PAGE_SIZE);
     EXPECT_TRUE(alloc2.is_ok());
-    EXPECT_EQ(2, fake_impl->allocation_cnt());
+    EXPECT_EQ(2, fake_impl->allocation_eps().size());
   }
 
   // TODO(fxbug.dev/32978): Rework this with the new eventpair model of GetAddressSpace
@@ -51,7 +51,7 @@ TEST(PciAllocationTest, VmoCreationFailure) {
   PciAllocator* root_ptr = &root;
   auto alloc = root_ptr->Allocate(std::nullopt, ZX_PAGE_SIZE);
   EXPECT_TRUE(alloc.is_ok());
-  EXPECT_NE(ZX_OK, alloc->CreateVmObject(&vmo));
+  EXPECT_OK(alloc->CreateVmObject(&vmo));
 }
 
 }  // namespace pci

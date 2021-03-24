@@ -7,9 +7,11 @@
 #include <assert.h>
 #include <fuchsia/hardware/pciroot/cpp/banjo.h>
 #include <lib/fake-bti/bti.h>
+#include <lib/fake-resource/resource.h>
 #include <lib/zx/bti.h>
 #include <lib/zx/interrupt.h>
 #include <zircon/errors.h>
+#include <zircon/syscalls/resource.h>
 
 #include <vector>
 
@@ -33,12 +35,10 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
             .end_bus_num = bus_end,
             .ecam_vmo = ecam_.vmo()->get(),
         } {
+    ZX_ASSERT(fake_root_resource_create(resource_.reset_and_get_address()) == ZX_OK);
     ZX_ASSERT(fake_bti_create(bti_.reset_and_get_address()) == ZX_OK);
     sysmem_.reset(0x5359534D);  // SYSM
   }
-
-  auto& legacy_irqs() { return legacy_irqs_; }
-  auto& routing_entries() { return routing_entries_; }
 
   // Allow move.
   FakePciroot(FakePciroot&&) = default;
@@ -58,8 +58,11 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   FakeEcam& ecam() { return ecam_; }
   uint8_t bus_start() { return info_.start_bus_num; }
   uint8_t bus_end() { return info_.end_bus_num; }
-  int32_t allocation_cnt() { return allocation_cnt_; }
   zx::bti& bti() { return bti_; }
+  zx::resource& resource() { return resource_; }
+  auto& legacy_irqs() { return legacy_irqs_; }
+  auto& routing_entries() { return routing_entries_; }
+  auto& allocation_eps() { return allocation_eps_; }
 
   // Protocol methods.
   zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
@@ -128,7 +131,20 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   zx_status_t PcirootGetAddressSpace(zx_paddr_t in_base, size_t size, pci_address_space_t type,
                                      bool low, uint64_t* out_base, zx::resource* resource,
                                      zx::eventpair* eventpair) {
-    allocation_cnt_++;
+    zx_rsrc_kind_t kind =
+        (type == PCI_ADDRESS_SPACE_MEMORY) ? ZX_RSRC_KIND_MMIO : ZX_RSRC_KIND_IOPORT;
+    if (in_base) {
+      *out_base = in_base;
+    } else {
+      if (type == PCI_ADDRESS_SPACE_MEMORY) {
+      }
+      *out_base = (type == PCI_ADDRESS_SPACE_MEMORY) ? 0x1000 : 0x10;
+    }
+
+    ZX_ASSERT(zx::resource::create(resource_, kind, *out_base, size, "fake", 5, resource) == ZX_OK);
+    zx::eventpair local_ep;
+    zx::eventpair::create(0, &local_ep, eventpair);
+    allocation_eps_.push_back(std::move(local_ep));
     return ZX_OK;
   }
 
@@ -136,11 +152,12 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   pciroot_protocol_t proto_;
   FakeEcam ecam_;
   pci_platform_info_t info_;
+  std::vector<zx::eventpair> allocation_eps_;
   zx::bti bti_;
+  zx::resource resource_;
   zx::channel sysmem_;
   std::vector<pci_legacy_irq_t> legacy_irqs_;
   std::vector<pci_irq_routing_entry_t> routing_entries_;
-  int32_t allocation_cnt_ = 0;
 };
 
 #endif  // SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_PCIROOT_H_
