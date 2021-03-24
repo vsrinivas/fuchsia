@@ -270,7 +270,7 @@ bool VkReadbackTest::InitImage() {
   for (; memory_type < VK_MAX_MEMORY_TYPES; memory_type++) {
     if ((memory_reqs.memoryTypeBits & (1 << memory_type)) &&
         (memory_props.memoryTypes[memory_type].propertyFlags &
-         vk::MemoryPropertyFlagBits::eHostVisible)) {
+         vk::MemoryPropertyFlagBits::eHostCoherent)) {
       break;
     }
   }
