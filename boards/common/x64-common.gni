@@ -23,7 +23,6 @@ _bootfs_deps =
       "//src/devices/bus/drivers/pci:bus-pci.proxy",
       "//src/devices/i2c/drivers/intel-i2c",
       "//src/devices/rtc/drivers/intel-rtc",
-      "//src/devices/serial/drivers/intel-serialio",
       "//src/devices/serial/drivers/uart16550",
       "//src/devices/usb/drivers/xhci-rewrite:xhci",
       "//src/graphics/display/drivers/intel-i915",

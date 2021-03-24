@@ -242,7 +242,6 @@ library_headers("ddk-deprecated-binding-headers") {
     "//src/devices/securemem/drivers/aml-securemem:*",
     "//src/devices/serial/drivers/aml-uart:*",
     "//src/devices/serial/drivers/ftdi:*",
-    "//src/devices/serial/drivers/intel-serialio:*",
     "//src/devices/serial/drivers/uart16550:*",
     "//src/devices/serial/drivers/usb-cdc-acm:*",
     "//src/devices/serial/drivers/usb-cdc-acm:fake-usb-cdc-acm",

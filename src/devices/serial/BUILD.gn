@@ -8,7 +8,6 @@ group("drivers") {
     "drivers/aml-uart",
     "drivers/ftdi:ftdi",
     "drivers/ftdi:ftdi-fake-usb",
-    "drivers/intel-serialio",
     "drivers/serial",
     "drivers/serial-async",
     "drivers/uart16550",
