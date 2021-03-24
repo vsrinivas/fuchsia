@@ -508,15 +508,23 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
     }
   }
 
-  const char* cwd = getenv("PWD");
-  cwd = (cwd == nullptr) ? "/" : cwd;
+  {
+    const char* cwd = getenv("PWD");
+    fdio_internal::update_cwd_path(cwd ? cwd : "/");
+  }
 
-  fdio_internal::update_cwd_path(cwd);
+  fdio_ptr null_io = nullptr;
+  auto get_null = [&null_io]() {
+    if (null_io == nullptr) {
+      zx::status null = fdio_internal::zxio::create();
+      ZX_ASSERT_MSG(null.is_ok(), "%s", null.status_string());
+      null_io = std::move(null.value());
+    }
+    return null_io;
+  };
 
   if (use_for_stdio == nullptr) {
-    zx::status null = fdio_internal::zxio::create();
-    ZX_ASSERT_MSG(null.is_ok(), "%s", null.status_string());
-    use_for_stdio = null.value();
+    use_for_stdio = get_null();
   }
 
   // configure stdin/out/err if not init'd
@@ -527,19 +535,15 @@ extern "C" __EXPORT void __libc_extensions_init(uint32_t handle_count, zx_handle
   zx::status root = fdio_ns_open_root(fdio_root_ns);
   if (root.is_ok()) {
     ZX_ASSERT(fdio_root_handle.try_set(root.value()));
-    zx::status io = fdio_internal::open(fdio_cwd_path, O_RDONLY | O_DIRECTORY, 0);
-    if (io.is_ok()) {
-      ZX_ASSERT(fdio_cwd_handle.try_set(io.value()));
+    zx::status cwd = fdio_internal::open(fdio_cwd_path, O_RDONLY | O_DIRECTORY, 0);
+    if (cwd.is_ok()) {
+      ZX_ASSERT(fdio_cwd_handle.try_set(cwd.value()));
     } else {
-      zx::status null = fdio_internal::zxio::create();
-      ZX_ASSERT_MSG(null.is_ok(), "%s", null.status_string());
-      ZX_ASSERT(fdio_cwd_handle.try_set(null.value()));
+      ZX_ASSERT(fdio_cwd_handle.try_set(get_null()));
     }
   } else {
-    zx::status null = fdio_internal::zxio::create();
-    ZX_ASSERT_MSG(null.is_ok(), "%s", null.status_string());
-    ZX_ASSERT(fdio_root_handle.try_set(null.value()));
-    ZX_ASSERT(fdio_cwd_handle.try_set(null.value()));
+    ZX_ASSERT(fdio_root_handle.try_set(get_null()));
+    ZX_ASSERT(fdio_cwd_handle.try_set(get_null()));
   }
 }
 

@@ -67,6 +67,8 @@ struct local_connection : public base {
     return ZX_OK;
   }
 
+  zx_status_t clone(zx_handle_t* out_handle) override { return ZX_ERR_NOT_SUPPORTED; }
+
   // Expects a canonical path (no ..) with no leading
   // slash and no trailing slash
   zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode) override {

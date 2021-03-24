@@ -153,7 +153,7 @@ struct fdio : protected fbl::RefCounted<fdio>, protected fbl::Recyclable<fdio> {
   static zx::status<fdio_ptr> create_with_on_open(fidl::ClientEnd<fuchsia_io::Node> node);
 
   virtual zx::status<fdio_ptr> open(const char* path, uint32_t flags, uint32_t mode);
-  virtual zx_status_t clone(zx_handle_t* out_handle);
+  virtual zx_status_t clone(zx_handle_t* out_handle) = 0;
 
   // |unwrap| releases the underlying handle if applicable.  The caller must ensure there are no
   // concurrent operations on |io|.

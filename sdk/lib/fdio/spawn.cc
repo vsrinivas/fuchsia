@@ -473,7 +473,7 @@ static zx_status_t send_handles(fprocess::Launcher::SyncClient* launcher, size_t
   status = launcher->AddHandles(fidl::VectorView(fidl::unowned_ptr(handle_infos), h)).status();
 
   if (status != ZX_OK)
-    report_error(err_msg, "failed send handles: %d", status);
+    report_error(err_msg, "failed to send handles: %d", status);
 
   return status;
 
