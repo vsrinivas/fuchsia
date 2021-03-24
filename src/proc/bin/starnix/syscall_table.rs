@@ -71,6 +71,7 @@ pub fn dispatch_syscall(
         SYS_BRK => sys_brk[1],
         SYS_WRITEV => sys_writev[3],
         SYS_ACCESS => sys_access[2],
+        SYS_GETPID => sys_getpid[0],
         SYS_EXIT => sys_exit[1],
         SYS_UNAME => sys_uname[1],
         SYS_READLINK => sys_readlink[3],
@@ -78,7 +79,9 @@ pub fn dispatch_syscall(
         SYS_GETGID => sys_getgid[0],
         SYS_GETEUID => sys_geteuid[0],
         SYS_GETEGID => sys_getegid[0],
+        SYS_SCHED_GETSCHEDULER => sys_sched_getscheduler[1],
         SYS_ARCH_PRCTL => sys_arch_prctl[2],
         SYS_EXIT_GROUP => sys_exit_group[1],
+        SYS_GETRANDOM => sys_getrandom[3],
     }
 }

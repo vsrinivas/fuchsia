@@ -43,19 +43,18 @@ pub fn sys_fstat(
     return Ok(SUCCESS);
 }
 
-pub fn sys_mprotect(
-    _ctx: &ThreadContext,
-    _addr: UserAddress,
-    _length: usize,
-    _prot: i32,
-) -> Result<SyscallResult, Errno> {
-    // TODO: Actually do the mprotect.
-    Ok(SUCCESS)
-}
-
-pub fn sys_brk(ctx: &ThreadContext, addr: UserAddress) -> Result<SyscallResult, Errno> {
-    // info!("brk: addr={}", addr);
-    Ok(ctx.process.mm.set_program_break(addr).map_err(Errno::from)?.into())
+fn mmap_prot_to_vm_opt(prot: i32) -> zx::VmarFlags {
+    let mut flags = zx::VmarFlags::empty();
+    if prot & PROT_READ != 0 {
+        flags |= zx::VmarFlags::PERM_READ;
+    }
+    if prot & PROT_WRITE != 0 {
+        flags |= zx::VmarFlags::PERM_WRITE;
+    }
+    if prot & PROT_EXEC != 0 {
+        flags |= zx::VmarFlags::PERM_EXECUTE;
+    }
+    flags
 }
 
 pub fn sys_mmap(
@@ -92,19 +91,13 @@ pub fn sys_mmap(
     if length == 0 {
         return Err(EINVAL);
     }
+    if fd != -1 {
+        return Err(EINVAL);
+    }
 
-    let mut zx_flags = zx::VmarFlags::ALLOW_FAULTS;
+    let mut zx_flags = mmap_prot_to_vm_opt(prot) | zx::VmarFlags::ALLOW_FAULTS;
     if addr.ptr() != 0 {
         zx_flags |= zx::VmarFlags::SPECIFIC;
-    }
-    if prot & PROT_READ != 0 {
-        zx_flags |= zx::VmarFlags::PERM_READ;
-    }
-    if prot & PROT_WRITE != 0 {
-        zx_flags |= zx::VmarFlags::PERM_WRITE;
-    }
-    if prot & PROT_EXEC != 0 {
-        zx_flags |= zx::VmarFlags::PERM_EXECUTE;
     }
 
     let vmo = zx::Vmo::create(length as u64).map_err(|s| match s {
@@ -125,6 +118,29 @@ pub fn sys_mmap(
         },
     )?;
     Ok(addr.into())
+}
+
+pub fn sys_mprotect(
+    ctx: &ThreadContext,
+    addr: UserAddress,
+    length: usize,
+    prot: i32,
+) -> Result<SyscallResult, Errno> {
+    // This is safe because the vmar belongs to a different process.
+    unsafe { ctx.process.mm.root_vmar.protect(addr.ptr(), length, mmap_prot_to_vm_opt(prot)) }
+        .map_err(|s| match s {
+            zx::Status::INVALID_ARGS => EINVAL,
+            // TODO: This should still succeed and change protection on whatever is mapped.
+            zx::Status::NOT_FOUND => EINVAL,
+            zx::Status::ACCESS_DENIED => EACCES,
+            _ => EINVAL, // impossible!
+        })?;
+    Ok(SUCCESS)
+}
+
+pub fn sys_brk(ctx: &ThreadContext, addr: UserAddress) -> Result<SyscallResult, Errno> {
+    // info!("brk: addr={}", addr);
+    Ok(ctx.process.mm.set_program_break(addr).map_err(Errno::from)?.into())
 }
 
 pub fn sys_writev(
@@ -162,6 +178,13 @@ pub fn sys_access(
 ) -> Result<SyscallResult, Errno> {
     info!("access: path={} mode={}", path, mode);
     Err(ENOSYS)
+}
+
+pub fn sys_getpid(_ctx: &ThreadContext) -> Result<SyscallResult, Errno> {
+    // This is set to 1 because Bionic skips referencing /dev if getpid() == 1, under the
+    // assumption that anything running after init will have access to /dev.
+    // TODO(tbodt): actual PID field
+    Ok(1.into())
 }
 
 pub fn sys_exit(ctx: &ThreadContext, error_code: i32) -> Result<SyscallResult, Errno> {
@@ -241,11 +264,27 @@ pub fn sys_arch_prctl(
     }
 }
 
+pub fn sys_sched_getscheduler(_ctx: &ThreadContext, _pid: i32) -> Result<SyscallResult, Errno> {
+    Ok(SCHED_OTHER.into())
+}
+
 pub fn sys_exit_group(ctx: &ThreadContext, error_code: i32) -> Result<SyscallResult, Errno> {
     info!("exit_group: error_code={}", error_code);
     // TODO: Set the error_code on the process.
     ctx.process.handle.kill().map_err(Errno::from)?;
     Ok(SUCCESS)
+}
+
+pub fn sys_getrandom(
+    ctx: &ThreadContext,
+    buf_addr: UserAddress,
+    size: usize,
+    _flags: i32,
+) -> Result<SyscallResult, Errno> {
+    let mut buf = vec![0; size];
+    let size = zx::cprng_draw(&mut buf)?;
+    ctx.process.write_memory(buf_addr, &buf[0..size])?;
+    Ok(size.into())
 }
 
 pub fn sys_unknown(

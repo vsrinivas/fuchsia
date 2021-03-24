@@ -206,6 +206,12 @@ impl From<u32> for SyscallResult {
     }
 }
 
+impl From<i32> for SyscallResult {
+    fn from(value: i32) -> Self {
+        SyscallResult(value as u64)
+    }
+}
+
 impl From<u64> for SyscallResult {
     fn from(value: u64) -> Self {
         SyscallResult(value)
@@ -227,6 +233,7 @@ pub const SYS_MPROTECT: syscall_number_t = 10;
 pub const SYS_BRK: syscall_number_t = 12;
 pub const SYS_WRITEV: syscall_number_t = 20;
 pub const SYS_ACCESS: syscall_number_t = 21;
+pub const SYS_GETPID: syscall_number_t = 39;
 pub const SYS_EXIT: syscall_number_t = 60;
 pub const SYS_UNAME: syscall_number_t = 63;
 pub const SYS_READLINK: syscall_number_t = 89;
@@ -234,8 +241,10 @@ pub const SYS_GETUID: syscall_number_t = 102;
 pub const SYS_GETGID: syscall_number_t = 104;
 pub const SYS_GETEUID: syscall_number_t = 107;
 pub const SYS_GETEGID: syscall_number_t = 108;
+pub const SYS_SCHED_GETSCHEDULER: syscall_number_t = 145;
 pub const SYS_ARCH_PRCTL: syscall_number_t = 158;
 pub const SYS_EXIT_GROUP: syscall_number_t = 231;
+pub const SYS_GETRANDOM: syscall_number_t = 318;
 
 pub const ARCH_SET_GS: i32 = 0x1001;
 pub const ARCH_SET_FS: i32 = 0x1002;
@@ -306,3 +315,5 @@ pub const MAP_SHARED: i32 = 0x1;
 pub const MAP_PRIVATE: i32 = 0x2;
 pub const MAP_FIXED: i32 = 0x10;
 pub const MAP_ANONYMOUS: i32 = 0x20;
+
+pub const SCHED_OTHER: i32 = 0;
