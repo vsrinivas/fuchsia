@@ -8,7 +8,10 @@ import("//src/sys/build/components.gni")
 
 group("tests") {
   testonly = true
-  deps = [ ":driver-runner-integration-test" ]
+  deps = [
+    ":driver-runner-integration-test",
+    "//src/sys/component_manager:component-manager",
+  ]
 }
 
 rustc_test("driver_runner_integration_test") {
@@ -31,10 +34,7 @@ rustc_test("driver_runner_integration_test") {
 fuchsia_component("driver-runner-integration-test-component") {
   testonly = true
   manifest = "meta/driver-runner-integration-test.cmx"
-  deps = [
-    ":driver_runner_integration_test",
-    "//src/devices/bin/driver_host:driver_host",
-  ]
+  deps = [ ":driver_runner_integration_test" ]
 }
 
 fuchsia_component("driver-runner-integration-root") {
