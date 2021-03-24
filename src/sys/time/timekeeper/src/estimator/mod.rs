@@ -11,13 +11,11 @@ use {
         time_source::Sample,
     },
     chrono::prelude::*,
-    fuchsia_zircon as zx,
     kalman_filter::KalmanFilter,
     log::{info, warn},
     std::sync::Arc,
+    time_util::Transform,
 };
-
-pub use kalman_filter::error_bound_increase;
 
 /// The standard deviation of the system oscillator frequency error in parts per million, used to
 /// control the growth in error bound and bound the allowed frequency estimates.
@@ -70,21 +68,20 @@ impl<D: Diagnostics> Estimator<D> {
         );
     }
 
-    /// Returns the estimated utc at the supplied monotonic time.
-    pub fn estimate(&self, monotonic: zx::Time) -> zx::Time {
-        self.filter.estimate(monotonic)
-    }
-
-    /// Returns a confidence bound on the estimate error at the specified monotonic time,
-    /// in nanoseconds.
-    pub fn error_bound(&self, monotonic: zx::Time) -> u64 {
-        self.filter.error_bound(monotonic)
+    /// Returns a `Transform` describing the estimated synthetic time and error as a function
+    /// of the monotonic time.
+    pub fn transform(&self) -> Transform {
+        self.filter.transform()
     }
 }
 
 #[cfg(test)]
 mod test {
-    use {super::*, crate::diagnostics::FakeDiagnostics, zx::DurationNum};
+    use {
+        super::*,
+        crate::diagnostics::FakeDiagnostics,
+        fuchsia_zircon::{self as zx, DurationNum},
+    };
 
     const TIME_1: zx::Time = zx::Time::from_nanos(10_000_000_000);
     const TIME_2: zx::Time = zx::Time::from_nanos(20_000_000_000);
@@ -112,14 +109,15 @@ mod test {
             Arc::clone(&diagnostics),
         );
         diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);
-        assert_eq!(estimator.estimate(TIME_1), TIME_1 + OFFSET_1);
-        assert_eq!(estimator.estimate(TIME_2), TIME_2 + OFFSET_1);
-        assert_eq!(estimator.error_bound(TIME_1), 2 * SQRT_COV_1);
+        let transform = estimator.transform();
+        assert_eq!(transform.synthetic(TIME_1), TIME_1 + OFFSET_1);
+        assert_eq!(transform.synthetic(TIME_2), TIME_2 + OFFSET_1);
+        assert_eq!(transform.error_bound(TIME_1), 2 * SQRT_COV_1);
         // Earlier time should return same error bound.
-        assert_eq!(estimator.error_bound(TIME_1 - 1.second()), 2 * SQRT_COV_1);
+        assert_eq!(transform.error_bound(TIME_1 - 1.second()), 2 * SQRT_COV_1);
         // Later time should have a higher bound.
         assert_eq!(
-            estimator.error_bound(TIME_1 + 1.second()),
+            transform.error_bound(TIME_1 + 1.second()),
             2 * SQRT_COV_1 + 2000 * OSCILLATOR_ERROR_STD_DEV_PPM
         );
     }
@@ -137,7 +135,7 @@ mod test {
         // Expected offset is biased slightly towards the second estimate.
         let expected_offset = 88_8002_580_002.nanos();
         let expected_sqrt_cov = 15_556_529u64;
-        assert_eq!(estimator.estimate(TIME_3), TIME_3 + expected_offset);
+        assert_eq!(estimator.transform().synthetic(TIME_3), TIME_3 + expected_offset);
 
         diagnostics.assert_events(&[
             create_estimate_event(OFFSET_1, SQRT_COV_1),
@@ -153,9 +151,9 @@ mod test {
             Sample::new(TIME_2 + OFFSET_1, TIME_2, STD_DEV_1),
             Arc::clone(&diagnostics),
         );
-        assert_eq!(estimator.filter.offset(), OFFSET_1);
+        assert_eq!(estimator.transform().synthetic(TIME_3), TIME_3 + OFFSET_1);
         estimator.update(Sample::new(TIME_1 + OFFSET_2, TIME_1, STD_DEV_1));
-        assert_eq!(estimator.filter.offset(), OFFSET_1);
+        assert_eq!(estimator.transform().synthetic(TIME_3), TIME_3 + OFFSET_1);
         // Ignored event should not be logged.
         diagnostics.assert_events(&[create_estimate_event(OFFSET_1, SQRT_COV_1)]);
     }

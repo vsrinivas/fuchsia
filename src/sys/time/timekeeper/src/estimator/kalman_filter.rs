@@ -7,7 +7,7 @@ use {
     anyhow::{anyhow, Error},
     fuchsia_zircon as zx,
     lazy_static::lazy_static,
-    std::cmp,
+    time_util::Transform,
 };
 
 /// One million for PPM calculations
@@ -28,7 +28,7 @@ const MIN_COVARIANCE: f64 = 1e12;
 
 /// The factor to apply to standard deviations when producing an error bound. The current setting of
 /// two sigma approximately corresponds to a 95% confidence interval.
-const ERROR_BOUND_FACTOR: u64 = 2;
+const ERROR_BOUND_FACTOR: u32 = 2;
 
 /// Converts a zx::Duration to a floating point number of nanoseconds.
 fn duration_to_f64(duration: zx::Duration) -> f64 {
@@ -125,26 +125,18 @@ impl KalmanFilter {
         Ok(())
     }
 
-    /// Returns the estimated utc at the supplied monotonic time.
-    pub fn estimate(&self, monotonic: zx::Time) -> zx::Time {
-        // TODO(jsankey): Accommodate an oscillator frequency error when implementing the frequency
-        // correction algorithm.
-        let utc_at_last_update = self.reference_utc + f64_to_duration(self.estimate_0);
-        utc_at_last_update + (monotonic - self.monotonic)
-    }
-
-    /// Returns a confidence bound on the estimate error at the specified monotonic time,
-    /// in nanoseconds.
-    pub fn error_bound(&self, monotonic: zx::Time) -> u64 {
-        // From central limit theorem assume the error tends to follow a normal distribution
-        // with a standard deviation of sqrt(covariance) after many independent inputs. Error bound
-        // at the time of the last update is therefore proportional to sqrt(covariance).
-        // ERROR_BOUND_FACTOR defines the confidence bound we intend to deliver, with
-        // ERROR_BOUND_FACTOR=2 mapping to 95% confidence.
-        let bound_at_update = ERROR_BOUND_FACTOR * self.covariance_00.sqrt() as u64;
-        // The error bound will grow the further we get from this time of last update.
-        let time_since_update = cmp::max(zx::Duration::from_nanos(0), monotonic - self.monotonic);
-        bound_at_update + error_bound_increase(time_since_update)
+    /// Returns a `Transform` describing the estimated synthetic time and error as a function
+    /// of the monotonic time.
+    pub fn transform(&self) -> Transform {
+        Transform {
+            monotonic_offset: self.monotonic.into_nanos(),
+            synthetic_offset: (self.reference_utc + f64_to_duration(self.estimate_0)).into_nanos(),
+            // TODO(jsankey): Accommodate an oscillator frequency error when implementing the
+            // frequency correction algorithm.
+            rate_adjust_ppm: 0,
+            error_bound_at_offset: ERROR_BOUND_FACTOR as u64 * self.covariance_00.sqrt() as u64,
+            error_bound_growth_ppm: ERROR_BOUND_FACTOR * OSCILLATOR_ERROR_STD_DEV_PPM as u32,
+        }
     }
 
     /// Returns the last updated monotonic to UTC offset.
@@ -156,11 +148,6 @@ impl KalmanFilter {
     pub fn sqrt_covariance(&self) -> zx::Duration {
         f64_to_duration(self.covariance_00.sqrt())
     }
-}
-
-/// Returns the increase in estimate error over a given duration, in nanoseconds.
-pub fn error_bound_increase(duration: zx::Duration) -> u64 {
-    ERROR_BOUND_FACTOR * (duration.into_nanos() as u64 * OSCILLATOR_ERROR_STD_DEV_PPM) / MILLION
 }
 
 #[cfg(test)]
@@ -178,14 +165,25 @@ mod test {
     #[fuchsia::test]
     fn initialize() {
         let filter = KalmanFilter::new(Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1));
-        assert_eq!(filter.estimate(TIME_1), TIME_1 + OFFSET_1);
-        assert_eq!(filter.estimate(TIME_2), TIME_2 + OFFSET_1);
-        assert_eq!(filter.error_bound(TIME_1), 2 * SQRT_COV_1);
+        let transform = filter.transform();
+        assert_eq!(
+            transform,
+            Transform {
+                monotonic_offset: TIME_1.into_nanos(),
+                synthetic_offset: (TIME_1 + OFFSET_1).into_nanos(),
+                rate_adjust_ppm: 0,
+                error_bound_at_offset: 2 * SQRT_COV_1,
+                error_bound_growth_ppm: 2 * OSCILLATOR_ERROR_STD_DEV_PPM as u32,
+            }
+        );
+        assert_eq!(transform.synthetic(TIME_1), TIME_1 + OFFSET_1);
+        assert_eq!(transform.synthetic(TIME_2), TIME_2 + OFFSET_1);
+        assert_eq!(transform.error_bound(TIME_1), 2 * SQRT_COV_1);
         // Earlier time should return same error bound.
-        assert_eq!(filter.error_bound(TIME_1 - 1.second()), 2 * SQRT_COV_1);
+        assert_eq!(transform.error_bound(TIME_1 - 1.second()), 2 * SQRT_COV_1);
         // Later time should have a higher bound.
         assert_eq!(
-            filter.error_bound(TIME_1 + 1.second()),
+            transform.error_bound(TIME_1 + 1.second()),
             2 * SQRT_COV_1 + 2000 * OSCILLATOR_ERROR_STD_DEV_PPM
         );
         assert_eq!(filter.offset(), OFFSET_1);
@@ -240,11 +238,5 @@ mod test {
         assert_near!(filter.estimate_0, 0.0, 1.0);
         assert!(filter.update(Sample::new(TIME_1 + OFFSET_1, TIME_1, STD_DEV_1)).is_err());
         assert_near!(filter.estimate_0, 0.0, 1.0);
-    }
-
-    #[fuchsia::test]
-    fn error_bound_increase_fn() {
-        assert_eq!(error_bound_increase(1.minute()), 1800000);
-        assert_eq!(error_bound_increase(1.hour()), 108000000);
     }
 }

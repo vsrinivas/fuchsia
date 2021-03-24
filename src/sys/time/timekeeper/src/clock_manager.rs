@@ -8,7 +8,7 @@ use {
         enums::{
             ClockCorrectionStrategy, ClockUpdateReason, StartClockSource, Track, WriteRtcOutcome,
         },
-        estimator::{error_bound_increase, Estimator},
+        estimator::Estimator,
         rtc::Rtc,
         time_source::TimeSource,
         time_source_manager::{KernelMonotonicProvider, TimeSourceManager},
@@ -21,7 +21,7 @@ use {
         fmt::{self, Debug},
         sync::Arc,
     },
-    time_util::time_at_monotonic,
+    time_util::Transform,
 };
 
 /// One million for PPM calculations
@@ -98,21 +98,20 @@ struct Slew {
 
 impl Slew {
     /// Returns a fully defined slew to achieve the supplied parameters, calculating error bounds
-    /// using the supplied estimator assuming the slew starts at the supplied monotonic time.
-    fn new<D: Diagnostics>(
-        parameters: SlewParameters,
-        start_time: zx::Time,
-        estimator: &Estimator<D>,
-    ) -> Self {
+    /// using the supplied transform assuming the slew starts at the supplied monotonic time.
+    fn new(parameters: SlewParameters, start_time: zx::Time, final_transform: &Transform) -> Self {
+        // TODO(jsankey): This is currently an intermediate step to simplify review, in the final
+        // state we'll accept two different transforms and calculate the transition between them,
+        // removing the need for SlewParameters.
         let absolute_slew_correction_nanos = parameters.correction().into_nanos().abs() as u64;
         Slew {
-            // TODO(jsankey): Set from the estimator once it might vary the frequency.
-            base_rate_adjust: 0,
+            base_rate_adjust: final_transform.rate_adjust_ppm,
             slew_rate_adjust: parameters.slew_rate_adjust,
             duration: parameters.duration,
             // The initial error bound is the estimate error bound plus the entire correction.
-            start_error_bound: estimator.error_bound(start_time) + absolute_slew_correction_nanos,
-            end_error_bound: estimator.error_bound(start_time + parameters.duration),
+            start_error_bound: final_transform.error_bound(start_time)
+                + absolute_slew_correction_nanos,
+            end_error_bound: final_transform.error_bound(start_time + parameters.duration),
         }
     }
 
@@ -269,20 +268,19 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
             // Note: Both branches of the match led to a populated estimator so safe to unwrap.
             let estimator: &mut Estimator<D> = &mut self.estimator.as_mut().unwrap();
 
-            // Determine the intended (UTC - monotonic offset) and start or correct the clock.
-            let reference_mono = zx::Time::get_monotonic();
-            let estimate_utc = estimator.estimate(reference_mono);
-            let estimate_offset = estimate_utc - reference_mono;
+            // Determine the intended monotonic->UTC transform and start or correct the clock.
+            let estimate_transform = estimator.transform();
             if !clock_started {
-                self.start_clock(estimate_offset);
+                self.start_clock(&estimate_transform);
                 clock_started = true;
             } else {
-                self.apply_clock_correction(estimate_offset).await;
+                self.apply_clock_correction(&estimate_transform).await;
             }
 
             // Update the RTC clock if we have one.
             // Note this only applies to primary so we don't include the track in our log messages.
             if let Some(ref rtc) = self.rtc {
+                let estimate_utc = estimate_transform.synthetic(zx::Time::get_monotonic());
                 let utc_chrono = Utc.timestamp_nanos(estimate_utc.into_nanos());
                 let outcome = match rtc.set(estimate_utc).await {
                     Err(err) => {
@@ -299,42 +297,42 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
         }
     }
 
-    /// Starts the clock at the requested offset between utc and monotonic time, taking error bound
-    /// from the estimator and recording diagnostic events.
-    fn start_clock(&mut self, new_offset: zx::Duration) {
+    /// Starts the clock on the requested monotonic->utc transform, recording diagnostic events.
+    fn start_clock(&mut self, estimate_transform: &Transform) {
         let mono = zx::Time::get_monotonic();
-        let utc = mono + new_offset;
-        let utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
-        let error_bound =
-            self.estimator.as_ref().expect("Estimator not initialized").error_bound(mono);
-        self.update_clock(zx::ClockUpdate::new().value(utc).error_bounds(error_bound));
+        let clock_update = estimate_transform.jump_to(mono);
+        self.update_clock(clock_update);
+
         self.diagnostics.record(Event::StartClock {
             track: self.track,
             source: StartClockSource::External(self.time_source_manager.role()),
         });
+
+        let utc_chrono = Utc.timestamp_nanos(estimate_transform.synthetic(mono).into_nanos());
         info!("started {:?} clock from external source at {}", self.track, utc_chrono);
-        self.set_delayed_update_task(vec![]);
+        self.set_delayed_update_task(vec![], estimate_transform);
     }
 
-    /// Applies a correction to the clock to reach the requested offset between utc and monotonic
-    /// time, taking error bound from the estimator, selecting and applying the most appropriate
-    /// strategy, and recording diagnostic events.
-    async fn apply_clock_correction(&mut self, new_offset: zx::Duration) {
-        let correction = new_offset - get_clock_offset(&self.clock);
+    /// Applies a correction to the clock to reach the requested monotonic->utc transform, selecting
+    /// and applying the most appropriate strategy and recording diagnostic events.
+    async fn apply_clock_correction(&mut self, estimate_transform: &Transform) {
         let track = self.track;
-        let estimator = self.estimator.as_ref().expect("Estimator not initialized");
 
+        // Any pending clock updates will be superseded by the handling of this one.
+        if let Some(task) = self.delayed_updates.take() {
+            task.cancel().await;
+        };
+
+        let mono = zx::Time::get_monotonic();
+        let current_transform = Transform::from(self.clock.as_ref());
+
+        let correction = estimate_transform.difference(&current_transform, mono);
         let (strategy, slew_params) = determine_strategy(correction);
         self.diagnostics.record(Event::ClockCorrection { track, correction, strategy });
 
         match strategy {
             ClockCorrectionStrategy::NominalRateSlew | ClockCorrectionStrategy::MaxDurationSlew => {
-                // Any pending clock updates will be superseded by the handling of this one.
-                if let Some(task) = self.delayed_updates.take() {
-                    task.cancel().await;
-                };
-
-                let slew = Slew::new(slew_params, zx::Time::get_monotonic(), &estimator);
+                let slew = Slew::new(slew_params, mono, estimate_transform);
                 let mut updates = slew.clock_updates();
 
                 // The first update is guaranteed to be immediate.
@@ -345,37 +343,35 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
 
                 // Create a task to asynchronously apply all the remaining updates and then increase
                 // error bound over time.
-                self.set_delayed_update_task(updates);
+                self.set_delayed_update_task(updates, estimate_transform);
             }
             ClockCorrectionStrategy::Step => {
-                // Any pending clock updates should be superseded by this time step.
-                if let Some(task) = self.delayed_updates.take() {
-                    task.cancel().await;
-                };
-
-                let mono = zx::Time::get_monotonic();
-                let utc = mono + new_offset;
-                let error_bound = estimator.error_bound(mono);
-                self.update_clock(
-                    zx::ClockUpdate::new().value(utc).error_bounds(error_bound).rate_adjust(0),
-                );
+                let clock_update = estimate_transform.jump_to(mono);
+                self.update_clock(clock_update);
                 self.record_clock_update(ClockUpdateReason::TimeStep);
-                let utc_chrono = Utc.timestamp_nanos(utc.into_nanos());
+
+                let utc_chrono =
+                    Utc.timestamp_nanos(estimate_transform.synthetic(mono).into_nanos());
                 info!("stepped {:?} clock to {}", self.track, utc_chrono);
-                self.set_delayed_update_task(vec![]);
+
+                // Create a task to asynchronously increase error bound over time.
+                self.set_delayed_update_task(vec![], estimate_transform);
             }
         }
     }
 
     /// Sets a task that asynchronously applies the supplied scheduled clock updates and then
-    /// periodically applies an increase in the error bound indefinitely.
+    /// periodically applies an increase in the error bound indefinitely based on supplied estimate
+    /// transform.
     fn set_delayed_update_task(
         &mut self,
         scheduled_updates: Vec<(fasync::Time, zx::ClockUpdate, ClockUpdateReason)>,
+        estimate_transform: &Transform,
     ) {
         let clock = Arc::clone(&self.clock);
         let diagnostics = Arc::clone(&self.diagnostics);
         let track = self.track;
+        let transform = estimate_transform.clone();
 
         let async_now = fasync::Time::now();
         // The first periodic step in error bound occurs a fixed duration after the last
@@ -384,9 +380,7 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
             scheduled_updates.last().map(|tup| tup.0).unwrap_or(async_now) + ERROR_REFRESH_INTERVAL;
         // Updates are supplied in fuchsia_async time for ease of scheduling and unit testing, but
         // we need to calculate a corresponding monotonic time to read the absolute error bound.
-        let step_mono_time = zx::Time::get_monotonic() + (step_async_time - async_now);
-        let mut step_error_bound =
-            self.estimator.as_ref().expect("Estimator not initialized").error_bound(step_mono_time);
+        let mut step_mono_time = zx::Time::get_monotonic() + (step_async_time - async_now);
 
         self.delayed_updates = Some(fasync::Task::spawn(async move {
             for (update_time, update, reason) in scheduled_updates.into_iter() {
@@ -398,12 +392,13 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
 
             loop {
                 fasync::Timer::new(step_async_time).await;
+                let step_error_bound = transform.error_bound(step_mono_time);
                 info!("increasing {:?} error bound to {:?}ns", track, step_error_bound);
                 update_clock(&clock, &track, zx::ClockUpdate::new().error_bounds(step_error_bound));
                 diagnostics
                     .record(Event::UpdateClock { track, reason: ClockUpdateReason::IncreaseError });
                 step_async_time += ERROR_REFRESH_INTERVAL;
-                step_error_bound += error_bound_increase(ERROR_REFRESH_INTERVAL);
+                step_mono_time += ERROR_REFRESH_INTERVAL;
             }
         }));
     }
@@ -458,12 +453,6 @@ fn determine_strategy(correction: zx::Duration) -> (ClockCorrectionStrategy, Sle
     }
 }
 
-/// Returns the offset between UTC and monotonic times in the supplied clock.
-fn get_clock_offset(clock: &zx::Clock) -> zx::Duration {
-    let monotonic_ref = zx::Time::get_monotonic();
-    time_at_monotonic(&clock, monotonic_ref) - monotonic_ref
-}
-
 #[cfg(test)]
 mod tests {
     use {
@@ -491,6 +480,7 @@ mod tests {
     const OFFSET_2: zx::Duration = zx::Duration::from_seconds(2222_000);
     const STD_DEV: zx::Duration = zx::Duration::from_millis(88);
     const BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(222222 * NANOS_PER_SECOND);
+    const ERROR_GROWTH_PPM: u32 = 30;
 
     lazy_static! {
         static ref TEST_TRACK: Track = Track::from(TEST_ROLE);
@@ -529,6 +519,21 @@ mod tests {
         ClockManager::new(clock, time_source_manager, rtc, diagnostics, *TEST_TRACK)
     }
 
+    /// Creates a new transform.
+    fn create_transform(
+        monotonic: zx::Time,
+        synthetic: zx::Time,
+        std_dev: zx::Duration,
+    ) -> Transform {
+        Transform {
+            monotonic_offset: monotonic.into_nanos(),
+            synthetic_offset: synthetic.into_nanos(),
+            rate_adjust_ppm: 0,
+            error_bound_at_offset: 2 * std_dev.into_nanos() as u64,
+            error_bound_growth_ppm: ERROR_GROWTH_PPM,
+        }
+    }
+
     #[fuchsia::test]
     fn determine_strategy_fn() {
         for sign in vec![-1, 1] {
@@ -565,20 +570,15 @@ mod tests {
 
     #[fuchsia::test]
     fn slew_new_fn() {
-        // Manually create a minimal estimator.
+        // Manually create a transform defining the error bounds.
         let monotonic_ref = zx::Time::get_monotonic();
-        let diagnostics = Arc::new(FakeDiagnostics::new());
-        let estimator = Estimator::new(
-            *TEST_TRACK,
-            Sample::new(monotonic_ref + OFFSET, monotonic_ref, STD_DEV),
-            Arc::clone(&diagnostics),
-        );
+        let transform = create_transform(monotonic_ref, monotonic_ref + OFFSET, STD_DEV);
 
         let slew_params = SlewParameters { slew_rate_adjust: -50, duration: 10.seconds() };
-        let error_bound_at_ref = estimator.error_bound(monotonic_ref);
-        let error_bound_at_end = estimator.error_bound(monotonic_ref + slew_params.duration);
+        let error_bound_at_ref = transform.error_bound(monotonic_ref);
+        let error_bound_at_end = transform.error_bound(monotonic_ref + slew_params.duration);
 
-        let slew = Slew::new(slew_params.clone(), monotonic_ref, &estimator);
+        let slew = Slew::new(slew_params.clone(), monotonic_ref, &transform);
         assert_eq!(slew.base_rate_adjust, 0);
         assert_eq!(slew.slew_rate_adjust, slew_params.slew_rate_adjust);
         assert_eq!(slew.total_rate_adjust(), slew.slew_rate_adjust + slew.base_rate_adjust);

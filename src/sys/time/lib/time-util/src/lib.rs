@@ -9,7 +9,7 @@ const MILLION: u64 = 1_000_000;
 
 /// A transformation from monotonic time to synthetic time, including an error bound on this
 /// synthetic time.
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Transform {
     /// An offset on the monotonic timeline in nanoseconds.
     pub monotonic_offset: i64,
