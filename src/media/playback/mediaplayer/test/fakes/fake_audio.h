@@ -39,10 +39,6 @@ class FakeAudio : public fuchsia::media::Audio {
     FX_NOTIMPLEMENTED();
   }
 
-  void SetSystemGain(float gain_db) override { FX_NOTIMPLEMENTED(); }
-
-  void SetSystemMute(bool muted) override { FX_NOTIMPLEMENTED(); }
-
  private:
   fidl::BindingSet<fuchsia::media::Audio> bindings_;
   FakeAudioRenderer fake_audio_renderer_;

@@ -30,7 +30,6 @@
 namespace media::audio {
 
 class BaseCapturer;
-class SystemGainMuteProvider;
 
 class AudioDeviceManager : public fuchsia::media::AudioDeviceEnumerator, public DeviceRegistry {
  public:
