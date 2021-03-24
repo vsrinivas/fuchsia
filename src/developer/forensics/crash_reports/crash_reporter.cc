@@ -238,6 +238,9 @@ void CrashReporter::File(fuchsia::feedback::CrashReport report, const bool is_ho
                       CrashReporterError{cobalt::CrashState::kDropped, "failed MakeReport()"});
                 }
 
+                FX_LOGST(INFO, tags_->Get(report_id))
+                    << ((is_hourly_snapshot) ? "Generated hourly snapshot" : "Generated report");
+
                 if (!queue_.Add(std::move(final_report.value()))) {
                   return ::fit::error(
                       CrashReporterError{cobalt::CrashState::kDropped, "failed Queue::Add()"});
