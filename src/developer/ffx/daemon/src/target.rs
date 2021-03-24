@@ -284,6 +284,12 @@ pub struct TargetState {
     pub connection_state: ConnectionState,
 }
 
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct BuildConfig {
+    pub product_config: String,
+    pub board_config: String,
+}
+
 struct TargetInner {
     // id is the locally created "primary identifier" for this target.
     id: u64,
@@ -299,6 +305,7 @@ struct TargetInner {
     ssh_port: Mutex<Option<u16>>,
     // used for Fastboot
     serial: RwLock<Option<String>>,
+    build_config: RwLock<Option<BuildConfig>>,
     boot_timestamp_nanos: RwLock<Option<u64>>,
     diagnostics_info: Arc<DiagnosticsStreamer<'static>>,
 }
@@ -336,6 +343,7 @@ impl TargetInner {
             ssh_port: Mutex::new(None),
             serial: RwLock::new(None),
             boot_timestamp_nanos: RwLock::new(None),
+            build_config: Default::default(),
             diagnostics_info: Arc::new(DiagnosticsStreamer::default()),
         }
     }
@@ -713,6 +721,10 @@ impl Target {
         self.inner.last_response.read().await.clone()
     }
 
+    pub async fn build_config(&self) -> Option<BuildConfig> {
+        self.inner.build_config.read().await.clone()
+    }
+
     pub async fn addrs(&self) -> Vec<TargetAddr> {
         let mut addrs = self.inner.addrs.read().await.iter().cloned().collect::<Vec<_>>();
         addrs.sort_by(|a, b| b.timestamp.cmp(&a.timestamp));
@@ -842,6 +854,15 @@ impl Target {
         if let Some(ids) = identify.ids {
             target.merge_ids(ids.iter()).await;
         }
+        *target.inner.build_config.write().await =
+            if identify.board_config.is_some() || identify.product_config.is_some() {
+                let p = identify.product_config.unwrap_or("<unknown>".to_string());
+                let b = identify.board_config.unwrap_or("<unknown>".to_string());
+                Some(BuildConfig { product_config: p, board_config: b })
+            } else {
+                None
+            };
+
         if let Some(t) = identify.boot_timestamp_nanos {
             target.inner.boot_timestamp_nanos.write().await.replace(t);
         }
@@ -909,8 +930,16 @@ impl EventSynthesizer<DaemonEvent> for Target {
 #[async_trait]
 impl ToFidlTarget for Target {
     async fn to_fidl_target(self) -> bridge::Target {
-        let (addrs, last_response, rcs_state) =
-            futures::join!(self.addrs(), self.last_response(), self.rcs_state());
+        let (addrs, last_response, rcs_state, build_config) = futures::join!(
+            self.addrs(),
+            self.last_response(),
+            self.rcs_state(),
+            self.build_config()
+        );
+
+        let (product_config, board_config) = build_config
+            .map(|b| (Some(b.product_config), Some(b.board_config)))
+            .unwrap_or((None, None));
 
         bridge::Target {
             nodename: self.nodename().await,
@@ -928,8 +957,9 @@ impl ToFidlTarget for Target {
                     dur => dur,
                 } as u64,
             ),
+            product_config,
+            board_config,
             rcs_state: Some(rcs_state),
-
             // TODO(awdavies): Gather more information here when possible.
             target_type: Some(bridge::TargetType::Unknown),
             target_state: Some(bridge::TargetState::Unknown),
@@ -1380,6 +1410,9 @@ impl TargetCollection {
         }
 
         if let Some(to_update) = to_update {
+            if let Some(config) = new_target.build_config().await {
+                to_update.inner.build_config.write().await.replace(config);
+            }
             futures::join!(
                 to_update.update_last_response(new_target.last_response().await),
                 to_update.addrs_extend(new_target.addrs().await),
@@ -1565,6 +1598,9 @@ mod test {
         std::net::{Ipv4Addr, Ipv6Addr},
     };
 
+    const DEFAULT_PRODUCT_CONFIG: &str = "core";
+    const DEFAULT_BOARD_CONFIG: &str = "x64";
+
     async fn clone_target(t: &Target) -> Target {
         let inner = Arc::new(TargetInner::clone(&t.inner));
         Target::from_inner(inner)
@@ -1585,6 +1621,7 @@ mod test {
                     block_on(self.boot_timestamp_nanos.read()).clone(),
                 ),
                 diagnostics_info: self.diagnostics_info.clone(),
+                build_config: RwLock::new(block_on(self.build_config.read()).clone()),
             }
         }
     }
@@ -1604,6 +1641,7 @@ mod test {
                     == *block_on(o.inner.last_response.read())
                 && block_on(self.addrs()) == block_on(o.addrs())
                 && *block_on(self.inner.state.lock()) == *block_on(o.inner.state.lock())
+                && block_on(self.build_config()) == block_on(o.build_config())
         }
     }
     #[fuchsia_async::run_singlethreaded(test)]
@@ -1738,6 +1776,8 @@ mod test {
                                 .send(&mut Ok(rcs::IdentifyHostResponse {
                                     nodename,
                                     addresses: Some(result),
+                                    product_config: Some(DEFAULT_PRODUCT_CONFIG.to_owned()),
+                                    board_config: Some(DEFAULT_BOARD_CONFIG.to_owned()),
                                     ..rcs::IdentifyHostResponse::EMPTY
                                 }))
                                 .context("sending testing response")
@@ -1799,6 +1839,13 @@ mod test {
                 assert_eq!(t.nodename().await.unwrap(), "foo".to_string());
                 assert_eq!(t.rcs().await.unwrap().overnet_id.id, 1234u64);
                 assert_eq!(t.addrs().await.len(), 1);
+                assert_eq!(
+                    t.build_config().await.unwrap(),
+                    BuildConfig {
+                        product_config: DEFAULT_PRODUCT_CONFIG.to_string(),
+                        board_config: DEFAULT_BOARD_CONFIG.to_string()
+                    }
+                );
             }
             Err(_) => assert!(false),
         }
@@ -1907,6 +1954,10 @@ mod test {
         let a2 = IpAddr::V6(Ipv6Addr::new(
             0xfe80, 0xcafe, 0xf00d, 0xf000, 0xb412, 0xb455, 0x1337, 0xfeed,
         ));
+        *t.inner.build_config.write().await = Some(BuildConfig {
+            board_config: DEFAULT_BOARD_CONFIG.to_owned(),
+            product_config: DEFAULT_PRODUCT_CONFIG.to_owned(),
+        });
         t.addrs_insert((a1, 1).into()).await;
         t.addrs_insert((a2, 1).into()).await;
 
@@ -1921,6 +1972,8 @@ mod test {
             let address = TargetAddr::from(address);
             assert!(addrs.iter().any(|&a| a == address));
         }
+        assert_eq!(t_conv.board_config.unwrap(), DEFAULT_BOARD_CONFIG.to_owned(),);
+        assert_eq!(t_conv.product_config.unwrap(), DEFAULT_PRODUCT_CONFIG.to_owned(),);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

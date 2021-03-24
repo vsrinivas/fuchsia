@@ -272,6 +272,16 @@ impl TryFrom<bridge::Target> for StringifiedTarget {
     type Error = StringifyError;
 
     fn try_from(target: bridge::Target) -> Result<Self, Self::Error> {
+        let target_type = match (target.board_config.as_ref(), target.product_config.as_ref()) {
+            (None, None) => StringifiedTarget::from_target_type(
+                target.target_type.ok_or(StringifyError::MissingTargetType)?,
+            ),
+            (board, product) => format!(
+                "{}.{}",
+                product.unwrap_or(&"<unknown>".to_string()),
+                board.unwrap_or(&"<unknown>".to_string())
+            ),
+        };
         Ok(Self {
             nodename: target.nodename.unwrap_or("<unknown>".to_string()),
             addresses: StringifiedTarget::from_addresses(
@@ -281,9 +291,7 @@ impl TryFrom<bridge::Target> for StringifiedTarget {
             rcs_state: StringifiedTarget::from_rcs_state(
                 target.rcs_state.ok_or(StringifyError::MissingRcsState)?,
             ),
-            target_type: StringifiedTarget::from_target_type(
-                target.target_type.ok_or(StringifyError::MissingTargetType)?,
-            ),
+            target_type,
             target_state: StringifiedTarget::from_target_state(
                 target.target_state.ok_or(StringifyError::MissingTargetState)?,
             ),
@@ -581,5 +589,45 @@ mod test {
         let lines = formatter.lines(None);
         assert_eq!(lines[0], "101:101:101:101:101:101:101:101");
         assert_eq!(lines[1], "101:101:101:101:101:101:101:101");
+    }
+
+    #[test]
+    fn test_build_config_full() {
+        let b = String::from("board");
+        let p = String::from("default");
+        let mut t = make_valid_target();
+        t.board_config = Some(b);
+        t.product_config = Some(p);
+        let formatter = TabularTargetFormatter::try_from(vec![t]).unwrap();
+        let lines = formatter.lines(None);
+        assert_eq!(&lines[0],
+                   "NAME            TYPE             STATE      ADDRS/IP                                           AGE     RCS");
+        assert_eq!(&lines[1], "fooberdoober    default.board    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N");
+    }
+
+    #[test]
+    fn test_build_config_product_missing() {
+        let b = String::from("x64");
+        let mut t = make_valid_target();
+        t.board_config = Some(b);
+        t.product_config = None;
+        let formatter = TabularTargetFormatter::try_from(vec![t]).unwrap();
+        let lines = formatter.lines(None);
+        assert_eq!(&lines[0],
+                   "NAME            TYPE             STATE      ADDRS/IP                                           AGE     RCS");
+        assert_eq!(&lines[1], "fooberdoober    <unknown>.x64    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N");
+    }
+
+    #[test]
+    fn test_build_config_board_missing() {
+        let p = String::from("foo");
+        let mut t = make_valid_target();
+        t.board_config = None;
+        t.product_config = Some(p);
+        let formatter = TabularTargetFormatter::try_from(vec![t]).unwrap();
+        let lines = formatter.lines(None);
+        assert_eq!(&lines[0],
+                   "NAME            TYPE             STATE      ADDRS/IP                                           AGE     RCS");
+        assert_eq!(&lines[1], "fooberdoober    foo.<unknown>    Unknown    [101:101:101:101:101:101:101:101, 122.24.25.25]    1m2s    N");
     }
 }
