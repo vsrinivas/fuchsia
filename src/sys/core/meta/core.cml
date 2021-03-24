@@ -506,6 +506,12 @@
             subdir: "log-stats",
         },
         {
+            directory: "config-data",
+            from: "parent",
+            to: [ "#system-update-committer" ],
+            subdir: "system-update-committer",
+        },
+        {
             protocol: [
                 "fuchsia.device.Controller",
                 "fuchsia.hardware.temperature.Device",
