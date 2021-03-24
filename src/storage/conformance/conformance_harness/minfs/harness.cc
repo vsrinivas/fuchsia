@@ -70,6 +70,7 @@ class MinfsHarness : public fuchsia::io::test::Io1Harness {
     config.set_no_admin(false);
     config.set_no_rename(false);
     config.set_no_link(false);
+    config.set_no_set_attr(false);
 
     // Minfs doesn't support vmo files or remote directories.
     config.set_no_vmofile(true);

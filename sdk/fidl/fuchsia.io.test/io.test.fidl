@@ -63,6 +63,9 @@ table Io1Config {
 
     /// The Link and Unlink methods are not supported.
     9: bool no_link;
+
+    /// The SetAttr method is not supported.
+    10: bool no_set_attr;
 };
 
 resource table Directory {

@@ -61,6 +61,7 @@ class UlibfsHarness : public fuchsia::io::test::Io1Harness {
     config.set_no_get_buffer(true);
     config.set_no_rename(true);
     config.set_no_link(true);
+    config.set_no_set_attr(true);
 
     callback(std::move(config));
   }

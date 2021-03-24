@@ -227,7 +227,8 @@ protocol Node {
     /// Updates information about the node.
     /// `flags` may be any of `NODE_ATTRIBUTE_FLAG_*`.
     ///
-    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`.
+    /// This method requires following rights: `OPEN_RIGHT_WRITABLE`, otherwise returns
+    /// `ZX_ERR_BAD_HANDLE`.
     SetAttr(uint32 flags, NodeAttributes attributes) -> (zx.status s);
 
     /// Acquires the `Directory.Open` rights and flags used to access this file.

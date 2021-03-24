@@ -15,6 +15,16 @@ use {
 
 const TEST_FILE: &str = "testing.txt";
 
+const EMPTY_NODE_ATTRS: io::NodeAttributes = io::NodeAttributes {
+    mode: 0,
+    id: 0,
+    content_size: 0,
+    storage_size: 0,
+    link_count: 0,
+    creation_time: 0,
+    modification_time: 0,
+};
+
 /// Listens for the `OnOpen` event and returns its [Status].
 async fn get_open_status(node_proxy: &io::NodeProxy) -> Status {
     let mut events = node_proxy.take_event_stream();
@@ -974,5 +984,133 @@ async fn clone_directory_with_additional_rights() {
             let status = get_open_status(&proxy).await;
             assert_eq!(status, Status::ACCESS_DENIED);
         }
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn set_attr_file_with_sufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_set_attr.unwrap_or_default() {
+        return;
+    }
+
+    for dir_flags in harness.writable_flag_combos() {
+        let root = root_directory(vec![file("file", vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let file = open_file_with_flags(&test_dir, dir_flags, "file").await;
+
+        let (status, old_attr) = file.get_attr().await.expect("get_attr failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        // Set CREATION_TIME flag, but not MODIFICATION_TIME.
+        let status = file
+            .set_attr(
+                io::NODE_ATTRIBUTE_FLAG_CREATION_TIME,
+                &mut io::NodeAttributes {
+                    creation_time: 111,
+                    modification_time: 222,
+                    ..EMPTY_NODE_ATTRS
+                },
+            )
+            .await
+            .expect("set_attr failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        let (status, new_attr) = file.get_attr().await.expect("get_attr failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+        // Check that only creation_time was updated.
+        let expected = io::NodeAttributes { creation_time: 111, ..old_attr };
+        assert_eq!(new_attr, expected);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn set_attr_file_with_insufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_set_attr.unwrap_or_default() {
+        return;
+    }
+
+    for dir_flags in harness.non_writable_flag_combos() {
+        let root = root_directory(vec![file("file", vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let file = open_file_with_flags(&test_dir, dir_flags, "file").await;
+
+        let status = file
+            .set_attr(
+                io::NODE_ATTRIBUTE_FLAG_CREATION_TIME,
+                &mut io::NodeAttributes {
+                    creation_time: 111,
+                    modification_time: 222,
+                    ..EMPTY_NODE_ATTRS
+                },
+            )
+            .await
+            .expect("set_attr failed");
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn set_attr_directory_with_sufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_set_attr.unwrap_or_default() {
+        return;
+    }
+
+    for dir_flags in harness.writable_flag_combos() {
+        let root = root_directory(vec![directory("dir", vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let dir = open_dir_with_flags(&test_dir, dir_flags, "dir").await;
+
+        let (status, old_attr) = dir.get_attr().await.expect("get_attr failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        // Set CREATION_TIME flag, but not MODIFICATION_TIME.
+        let status = dir
+            .set_attr(
+                io::NODE_ATTRIBUTE_FLAG_CREATION_TIME,
+                &mut io::NodeAttributes {
+                    creation_time: 111,
+                    modification_time: 222,
+                    ..EMPTY_NODE_ATTRS
+                },
+            )
+            .await
+            .expect("set_attr failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+
+        let (status, new_attr) = dir.get_attr().await.expect("get_attr failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+        // Check that only creation_time was updated.
+        let expected = io::NodeAttributes { creation_time: 111, ..old_attr };
+        assert_eq!(new_attr, expected);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn set_attr_directory_with_insufficient_rights() {
+    let harness = TestHarness::new().await;
+    if harness.config.no_set_attr.unwrap_or_default() {
+        return;
+    }
+
+    for dir_flags in harness.non_writable_flag_combos() {
+        let root = root_directory(vec![directory("dir", vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let dir = open_dir_with_flags(&test_dir, dir_flags, "dir").await;
+
+        let status = dir
+            .set_attr(
+                io::NODE_ATTRIBUTE_FLAG_CREATION_TIME,
+                &mut io::NodeAttributes {
+                    creation_time: 111,
+                    modification_time: 222,
+                    ..EMPTY_NODE_ATTRS
+                },
+            )
+            .await
+            .expect("set_attr failed");
+        assert_eq!(Status::from_raw(status), Status::BAD_HANDLE);
     }
 }

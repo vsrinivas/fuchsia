@@ -99,6 +99,8 @@ async fn run(mut stream: Io1HarnessRequestStream) -> Result<(), Error> {
                     // TODO(fxbug.dev/33880): Remote directories are supported by the vfs, just
                     // haven't been implemented in this harness yet.
                     no_remote_dir: Some(true),
+                    // TODO(fxbug.dev/72801): SetAttr doesn't seem to work, but should?
+                    no_set_attr: Some(true),
                     // Admin and exec bits aren't supported:
                     no_exec: Some(true),
                     no_admin: Some(true),
