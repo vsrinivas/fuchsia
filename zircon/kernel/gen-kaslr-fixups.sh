@@ -145,6 +145,14 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
     type = $3;
     if (!(type in fixup_types)) {
         bad = "reloc type " type
+        # As a special case, ignore known GOT cases the compiler generates in
+        # the sancov.module_ctor_trace_pc_guard function.
+        if ($0 ~ /__(start|stop)___sancov_guards/) {
+           if (type == "R_X86_64_GOTPCRELX") {
+               # On x86 it got relaxed away so there is no fixup to do here.
+               next
+           }
+        }
     } else if (secname == ".text.bootstrap16") {
         # This section is a special case with some movabs instructions
         # that can be fixed up safely but their immediates are not aligned.
