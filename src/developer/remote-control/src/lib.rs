@@ -3,61 +3,40 @@
 // found in the LICENSE file.
 
 use {
-    anyhow::{format_err, Context as _, Error},
-    fidl_fuchsia_developer_remotecontrol as rcs, fidl_fuchsia_device as fdevice,
+    crate::host_identifier::HostIdentifier,
+    anyhow::{Context as _, Result},
+    fidl_fuchsia_developer_remotecontrol as rcs,
     fidl_fuchsia_diagnostics::Selector,
-    fidl_fuchsia_hwinfo as hwinfo, fidl_fuchsia_io as io, fidl_fuchsia_net as fnet,
-    fidl_fuchsia_net_stack as fnetstack, fuchsia_zircon as zx,
+    fidl_fuchsia_io as io, fuchsia_zircon as zx,
     futures::prelude::*,
     std::cell::RefCell,
     std::rc::Rc,
     tracing::*,
 };
 
+mod host_identifier;
 mod service_discovery;
 
 const HUB_ROOT: &str = "/discovery_root";
 
 pub struct RemoteControlService {
-    netstack_proxy: fnetstack::StackProxy,
-    name_provider_proxy: fdevice::NameProviderProxy,
-    hwinfo_proxy: hwinfo::DeviceProxy,
-    boot_timestamp_nanos: u64,
     ids: RefCell<Vec<u64>>,
+    id_allocator: fn() -> Result<HostIdentifier>,
 }
 
 impl RemoteControlService {
-    pub fn new() -> Result<Self, Error> {
-        let (netstack_proxy, name_provider_proxy, hwinfo_proxy) = Self::construct_proxies()?;
-        let boot_timestamp =
-            fuchsia_runtime::utc_time().into_nanos() - zx::Time::get_monotonic().into_nanos();
-        return Ok(Self::new_with_proxies_and_boot_time(
-            netstack_proxy,
-            name_provider_proxy,
-            hwinfo_proxy,
-            boot_timestamp as u64,
-        ));
+    pub fn new() -> Result<Self> {
+        return Ok(Self::new_with_allocator(|| HostIdentifier::new()));
     }
 
-    pub fn new_with_proxies_and_boot_time(
-        netstack_proxy: fnetstack::StackProxy,
-        name_provider_proxy: fdevice::NameProviderProxy,
-        hwinfo_proxy: hwinfo::DeviceProxy,
-        boot_timestamp_nanos: u64,
-    ) -> Self {
-        return Self {
-            netstack_proxy,
-            name_provider_proxy,
-            hwinfo_proxy,
-            boot_timestamp_nanos,
-            ids: RefCell::new(vec![]),
-        };
+    pub(crate) fn new_with_allocator(id_allocator: fn() -> Result<HostIdentifier>) -> Self {
+        return Self { id_allocator, ids: Default::default() };
     }
 
     pub async fn serve_stream(
         self: Rc<Self>,
         mut stream: rcs::RemoteControlRequestStream,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         while let Some(request) = stream.try_next().await.context("next RemoteControl request")? {
             match request {
                 rcs::RemoteControlRequest::AddId { id, responder } => {
@@ -89,25 +68,11 @@ impl RemoteControlService {
         Ok(())
     }
 
-    fn construct_proxies(
-    ) -> Result<(fnetstack::StackProxy, fdevice::NameProviderProxy, hwinfo::DeviceProxy), Error>
-    {
-        let netstack_proxy =
-            fuchsia_component::client::connect_to_service::<fnetstack::StackMarker>()
-                .map_err(|s| format_err!("Failed to connect to NetStack service: {}", s))?;
-        let name_provider_proxy =
-            fuchsia_component::client::connect_to_service::<fdevice::NameProviderMarker>()
-                .map_err(|s| format_err!("Failed to connect to NameProviderService: {}", s))?;
-        let hwinfo_proxy = fuchsia_component::client::connect_to_service::<hwinfo::DeviceMarker>()
-            .map_err(|s| format_err!("Failed to connect to DeviceProxyy: {}", s))?;
-        return Ok((netstack_proxy, name_provider_proxy, hwinfo_proxy));
-    }
-
     async fn connect_with_matcher(
         self: &Rc<Self>,
         selector: &Selector,
         service_chan: zx::Channel,
-        matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>, Error>>,
+        matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>>>,
     ) -> Result<rcs::ServiceMatch, rcs::ConnectError> {
         let paths = matcher_fut.await.map_err(|err| {
             warn!(?selector, %err, "error looking for matching services for selector");
@@ -151,7 +116,7 @@ impl RemoteControlService {
     async fn select_with_matcher(
         self: &Rc<Self>,
         selector: &Selector,
-        matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>, Error>>,
+        matcher_fut: impl Future<Output = Result<Vec<service_discovery::PathEntry>>>,
     ) -> Result<Vec<rcs::ServiceMatch>, rcs::SelectError> {
         let paths = matcher_fut.await.map_err(|err| {
             warn!(?selector, %err, "error looking for matching services for selector");
@@ -175,68 +140,25 @@ impl RemoteControlService {
     pub async fn identify_host(
         self: &Rc<Self>,
         responder: rcs::RemoteControlIdentifyHostResponder,
-    ) -> Result<(), Error> {
-        let mut ilist = match self.netstack_proxy.list_interfaces().await {
-            Ok(l) => l,
-            Err(err) => {
-                error!(%err, "Getting interface list failed");
-                responder
-                    .send(&mut Err(rcs::IdentifyHostError::ListInterfacesFailed))
-                    .context("sending IdentifyHost error response")?;
-                return Ok(());
-            }
-        };
-
-        let serial_number = match self.hwinfo_proxy.get_info().await {
-            Ok(info) => info.serial_number,
+    ) -> Result<()> {
+        let identifier = match (self.id_allocator)() {
+            Ok(i) => i,
             Err(e) => {
-                error!(%e, "DeviceProxy internal err");
-                // This will fail on most targets (including the emulator), so
-                // no need to propagate this to the client via the responder.
-                None
-            }
-        };
-
-        let result = ilist
-            .iter_mut()
-            .flat_map(|int| int.properties.addresses.drain(..))
-            .collect::<Vec<fnet::Subnet>>();
-
-        let nodename = match self.name_provider_proxy.get_device_name().await {
-            Ok(result) => match result {
-                Ok(name) => name,
-                Err(err) => {
-                    error!(%err, "NameProvider internal error");
-                    responder
-                        .send(&mut Err(rcs::IdentifyHostError::GetDeviceNameFailed))
-                        .context("sending GetDeviceName error response")?;
-                    return Ok(());
-                }
-            },
-            Err(err) => {
-                error!(%err, "Getting nodename failed");
-                responder
-                    .send(&mut Err(rcs::IdentifyHostError::GetDeviceNameFailed))
-                    .context("sending GetDeviceName error response")?;
-                return Ok(());
+                error!(%e, "Allocating host identifier");
+                return responder
+                    .send(&mut Err(rcs::IdentifyHostError::ProxyConnectionFailed))
+                    .context("responding to client");
             }
         };
 
         // TODO(raggi): limit size to stay under message size limit.
         let ids = self.ids.borrow().clone();
-
-        responder
-            .send(&mut Ok(rcs::IdentifyHostResponse {
-                nodename: Some(nodename),
-                addresses: Some(result),
-                boot_timestamp_nanos: Some(self.boot_timestamp_nanos),
-                serial_number,
-                ids: Some(ids),
-                ..rcs::IdentifyHostResponse::EMPTY
-            }))
-            .context("sending IdentifyHost response")?;
-
-        return Ok(());
+        let mut target_identity = identifier.identify().await.map(move |mut i| {
+            i.ids = Some(ids);
+            i
+        });
+        responder.send(&mut target_identity).context("responding to client")?;
+        Ok(())
     }
 }
 
@@ -244,10 +166,13 @@ impl RemoteControlService {
 mod tests {
     use {
         super::*,
-        fidl_fuchsia_developer_remotecontrol as rcs,
+        fidl_fuchsia_buildinfo as buildinfo, fidl_fuchsia_developer_remotecontrol as rcs,
+        fidl_fuchsia_device as fdevice,
         fidl_fuchsia_hardware_ethernet::{Features, MacAddress},
+        fidl_fuchsia_hwinfo as hwinfo,
         fidl_fuchsia_io::NodeMarker,
-        fidl_fuchsia_net as fnet, fuchsia_async as fasync, fuchsia_zircon as zx,
+        fidl_fuchsia_net as fnet, fidl_fuchsia_net_stack as fnetstack, fuchsia_async as fasync,
+        fuchsia_zircon as zx,
         selectors::parse_selector,
         service_discovery::PathEntry,
         std::path::PathBuf,
@@ -256,20 +181,43 @@ mod tests {
     const NODENAME: &'static str = "thumb-set-human-shred";
     const BOOT_TIME: u64 = 123456789000000000;
     const SERIAL: &'static str = "test_serial";
+    const BOARD_CONFIG: &'static str = "test_board_name";
+    const PRODUCT_CONFIG: &'static str = "core";
 
     const IPV4_ADDR: [u8; 4] = [127, 0, 0, 1];
     const IPV6_ADDR: [u8; 16] = [127, 1, 2, 3, 4, 5, 6, 7, 8, 9, 1, 2, 3, 4, 5, 6];
 
-    fn setup_fake_hwinfo_service() -> hwinfo::DeviceProxy {
+    fn setup_fake_device_service() -> hwinfo::DeviceProxy {
         let (proxy, mut stream) =
             fidl::endpoints::create_proxy_and_stream::<hwinfo::DeviceMarker>().unwrap();
         fasync::Task::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(hwinfo::DeviceRequest::GetInfo { responder }) => {
+                    hwinfo::DeviceRequest::GetInfo { responder } => {
                         let _ = responder.send(hwinfo::DeviceInfo {
                             serial_number: Some(String::from(SERIAL)),
                             ..hwinfo::DeviceInfo::EMPTY
+                        });
+                    }
+                }
+            }
+        })
+        .detach();
+
+        proxy
+    }
+
+    fn setup_fake_build_info_service() -> buildinfo::ProviderProxy {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<buildinfo::ProviderMarker>().unwrap();
+        fasync::Task::spawn(async move {
+            while let Ok(Some(req)) = stream.try_next().await {
+                match req {
+                    buildinfo::ProviderRequest::GetBuildInfo { responder } => {
+                        let _ = responder.send(buildinfo::BuildInfo {
+                            board_config: Some(String::from(BOARD_CONFIG)),
+                            product_config: Some(String::from(PRODUCT_CONFIG)),
+                            ..buildinfo::BuildInfo::EMPTY
                         });
                     }
                     _ => panic!("invalid request"),
@@ -286,12 +234,11 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fdevice::NameProviderMarker>().unwrap();
 
         fasync::Task::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(fdevice::NameProviderRequest::GetDeviceName { responder }) => {
+                    fdevice::NameProviderRequest::GetDeviceName { responder } => {
                         let _ = responder.send(&mut Ok(String::from(NODENAME)));
                     }
-                    _ => assert!(false),
                 }
             }
         })
@@ -305,9 +252,9 @@ mod tests {
             fidl::endpoints::create_proxy_and_stream::<fnetstack::StackMarker>().unwrap();
 
         fasync::Task::spawn(async move {
-            while let Ok(req) = stream.try_next().await {
+            while let Ok(Some(req)) = stream.try_next().await {
                 match req {
-                    Some(fnetstack::StackRequest::ListInterfaces { responder }) => {
+                    fnetstack::StackRequest::ListInterfaces { responder } => {
                         let mut resp = vec![fnetstack::InterfaceInfo {
                             id: 1,
                             properties: fnetstack::InterfaceProperties {
@@ -347,12 +294,15 @@ mod tests {
     }
 
     fn make_rcs() -> Rc<RemoteControlService> {
-        Rc::new(RemoteControlService::new_with_proxies_and_boot_time(
-            setup_fake_netstack_service(),
-            setup_fake_name_provider_service(),
-            setup_fake_hwinfo_service(),
-            BOOT_TIME,
-        ))
+        Rc::new(RemoteControlService::new_with_allocator(|| {
+            Ok(HostIdentifier {
+                netstack_proxy: setup_fake_netstack_service(),
+                name_provider_proxy: setup_fake_name_provider_service(),
+                device_info_proxy: setup_fake_device_service(),
+                build_info_proxy: setup_fake_build_info_service(),
+                boot_timestamp_nanos: BOOT_TIME,
+            })
+        }))
     }
 
     fn setup_rcs_proxy() -> rcs::RemoteControlProxy {
@@ -369,12 +319,14 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_identify_host() -> Result<(), Error> {
+    async fn test_identify_host() -> Result<()> {
         let rcs_proxy = setup_rcs_proxy();
 
         let resp = rcs_proxy.identify_host().await.unwrap().unwrap();
 
         assert_eq!(resp.serial_number.unwrap(), SERIAL);
+        assert_eq!(resp.board_config.unwrap(), BOARD_CONFIG);
+        assert_eq!(resp.product_config.unwrap(), PRODUCT_CONFIG);
         assert_eq!(resp.nodename.unwrap(), NODENAME);
 
         let addrs = resp.addresses.unwrap();
@@ -394,7 +346,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_ids_in_host_identify() -> Result<(), Error> {
+    async fn test_ids_in_host_identify() -> Result<()> {
         let rcs_proxy = setup_rcs_proxy();
 
         let ident = rcs_proxy.identify_host().await.unwrap().unwrap();
@@ -416,11 +368,11 @@ mod tests {
         parse_selector("*:*:*").unwrap()
     }
 
-    async fn no_paths_matcher() -> Result<Vec<PathEntry>, Error> {
+    async fn no_paths_matcher() -> Result<Vec<PathEntry>> {
         Ok(vec![])
     }
 
-    async fn two_paths_matcher() -> Result<Vec<PathEntry>, Error> {
+    async fn two_paths_matcher() -> Result<Vec<PathEntry>> {
         Ok(vec![
             PathEntry {
                 hub_path: PathBuf::from("/"),
@@ -437,7 +389,7 @@ mod tests {
         ])
     }
 
-    async fn single_path_matcher() -> Result<Vec<PathEntry>, Error> {
+    async fn single_path_matcher() -> Result<Vec<PathEntry>> {
         Ok(vec![PathEntry {
             hub_path: PathBuf::from("/tmp"),
             moniker: PathBuf::from("/tmp"),
@@ -447,7 +399,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_connect_no_matches() -> Result<(), Error> {
+    async fn test_connect_no_matches() -> Result<()> {
         let service = make_rcs();
         let (_, server_end) = zx::Channel::create().unwrap();
 
@@ -461,7 +413,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_connect_multiple_matches() -> Result<(), Error> {
+    async fn test_connect_multiple_matches() -> Result<()> {
         let service = make_rcs();
         let (_, server_end) = zx::Channel::create().unwrap();
 
@@ -475,7 +427,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_connect_single_match() -> Result<(), Error> {
+    async fn test_connect_single_match() -> Result<()> {
         let service = make_rcs();
         let (client_end, server_end) = fidl::endpoints::create_endpoints::<NodeMarker>().unwrap();
 
@@ -494,7 +446,7 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_select_multiple_matches() -> Result<(), Error> {
+    async fn test_select_multiple_matches() -> Result<()> {
         let service = make_rcs();
 
         let result =

@@ -36,6 +36,7 @@ rustc_library("lib") {
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
+    "//sdk/fidl/fuchsia.buildinfo:fuchsia.buildinfo-rustc",
     "//sdk/fidl/fuchsia.developer.remotecontrol:fuchsia.developer.remotecontrol-rustc",
     "//sdk/fidl/fuchsia.device:fuchsia.device-rustc",
     "//sdk/fidl/fuchsia.diagnostics:fuchsia.diagnostics-rustc",
@@ -66,6 +67,7 @@ rustc_library("lib") {
   ]
 
   sources = [
+    "src/host_identifier.rs",
     "src/lib.rs",
     "src/service_discovery.rs",
   ]
