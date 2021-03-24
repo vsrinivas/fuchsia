@@ -150,7 +150,7 @@
 
 /* beacon loss timeout defaults */
 #define BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_ON  2
-#define BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_OFF 4
+#define BRCMF_DEFAULT_BCN_TIMEOUT_ROAM_OFF 8
 
 // clang-format on
 
