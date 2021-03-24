@@ -16,41 +16,63 @@
 
 namespace static_pie {
 
-void ApplyRelaRelocs(Program program, fbl::Span<const Elf64RelaEntry> table, uint64_t base) {
+// Apply a fixup function to the word at `addr`.
+//
+// We assume that callers only want to convert LinkTimeAddr's in the
+// program to RunTimeAddr's: hence, `fixup` is given a LinkTimeAddr and
+// should return a RunTimeAddr.
+template <typename F>
+void ApplyFixup(const Program& program, LinkTimeAddr addr, F&& fixup) {
+  LinkTimeAddr orig_word = LinkTimeAddr(program.ReadWord(addr));
+  RunTimeAddr fixed_word = fixup(orig_word);
+  program.WriteWord(addr, fixed_word.value());
+}
+
+void ApplyRelaRelocs(const Program& program, fbl::Span<const Elf64RelaEntry> table) {
   // We require that all entries in the table are `R_RELATIVE` entries.
   for (const Elf64RelaEntry& entry : table) {
     ZX_DEBUG_ASSERT(entry.info.type() == ElfRelocType::kRelative);
 
-    // Patch in the relocation: set the memory value to `base + addend`.
-    program.WriteWord(entry.offset, base + entry.addend);
+    // `entry.addend` contains a link-time address. We simply convert it
+    // to a run-time address and write it into the program.
+    ApplyFixup(program, entry.offset, [&](LinkTimeAddr /*ignored*/) {
+      return program.ToRunTimeAddr(LinkTimeAddr{entry.addend});
+    });
   }
 }
 
-void ApplyRelRelocs(Program program, fbl::Span<const Elf64RelEntry> table, uint64_t base) {
+void ApplyRelRelocs(const Program& program, fbl::Span<const Elf64RelEntry> table) {
   // We require that all entries in the table are `R_RELATIVE` entries.
   for (const Elf64RelEntry& entry : table) {
     ZX_DEBUG_ASSERT(entry.info.type() == ElfRelocType::kRelative);
 
-    // Patch in the relocation: add `base` to memory value.
-    program.WriteWord(entry.offset, program.ReadWord(entry.offset) + base);
+    // `entry.offset` points to a link-time address. We convert it to
+    // a run-time address.
+    ApplyFixup(program, entry.offset,
+               [&](LinkTimeAddr addr) { return program.ToRunTimeAddr(addr); });
   }
 }
 
-void ApplyRelrRelocs(Program program, fbl::Span<const uint64_t> table, uint64_t base) {
-  uint64_t address = 0;
+void ApplyRelrRelocs(const Program& program, fbl::Span<const uint64_t> table) {
+  LinkTimeAddr address = LinkTimeAddr(0);
+
   for (uint64_t value : table) {
     // If the value is an address (low bit is 0), simply patch it in.
     if ((value & 1) == 0) {
       ZX_DEBUG_ASSERT(value != 0);
-      program.WriteWord(value, program.ReadWord(value) + base);
-      address = value + sizeof(uint64_t);
+      address = LinkTimeAddr(value);
+
+      ApplyFixup(program, address,
+                 [&](LinkTimeAddr input) { return program.ToRunTimeAddr(input); });
+      address += sizeof(uint64_t);
+
       continue;
     }
 
     // Otherwise, the value is a bitmap, indicating which of the next 63 words
     // should be updated.
     uint64_t bitmap = value >> 1;
-    uint64_t bitmap_address = address;
+    LinkTimeAddr bitmap_address = address;
     while (bitmap != 0) {
       // Skip over `skip` words that need not be patched.
       uint64_t skip = __builtin_ctzll(bitmap);
@@ -58,7 +80,8 @@ void ApplyRelrRelocs(Program program, fbl::Span<const uint64_t> table, uint64_t 
       bitmap >>= (skip + 1);
 
       // Patch this word.
-      program.WriteWord(bitmap_address, program.ReadWord(bitmap_address) + base);
+      ApplyFixup(program, bitmap_address,
+                 [&](LinkTimeAddr input) { return program.ToRunTimeAddr(input); });
       bitmap_address += sizeof(uint64_t);
     }
 
@@ -68,11 +91,11 @@ void ApplyRelrRelocs(Program program, fbl::Span<const uint64_t> table, uint64_t 
   }
 }
 
-void ApplyDynamicRelocs(Program program, fbl::Span<const Elf64DynamicEntry> table, uint64_t base) {
+void ApplyDynamicRelocs(Program& program, fbl::Span<const Elf64DynamicEntry> table) {
   // Locations and sizes of the rel, rela, and relr tables.
   struct RelocationTable {
-    uint64_t start = 0;     // Address of the table.
-    size_t size_bytes = 0;  // Size of the table, in bytes.
+    LinkTimeAddr start = LinkTimeAddr(0);  // Address of the table.
+    size_t size_bytes = 0;                 // Size of the table, in bytes.
 
     // Number of R_RELATIVE entries in the table.
     //
@@ -88,7 +111,7 @@ void ApplyDynamicRelocs(Program program, fbl::Span<const Elf64DynamicEntry> tabl
     switch (table[i].tag) {
       // Rela table.
       case DynamicArrayTag::kRela:
-        rela_table.start = table[i].value;
+        rela_table.start = LinkTimeAddr(table[i].value);
         break;
       case DynamicArrayTag::kRelaSize:
         rela_table.size_bytes = table[i].value;
@@ -102,7 +125,7 @@ void ApplyDynamicRelocs(Program program, fbl::Span<const Elf64DynamicEntry> tabl
 
       // Rel table.
       case DynamicArrayTag::kRel:
-        rel_table.start = table[i].value;
+        rel_table.start = LinkTimeAddr(table[i].value);
         break;
       case DynamicArrayTag::kRelSize:
         rel_table.size_bytes = table[i].value;
@@ -116,7 +139,7 @@ void ApplyDynamicRelocs(Program program, fbl::Span<const Elf64DynamicEntry> tabl
 
       // Relr table.
       case DynamicArrayTag::kRelr:
-        relr_table.start = table[i].value;
+        relr_table.start = LinkTimeAddr(table[i].value);
         break;
       case DynamicArrayTag::kRelrSize:
         relr_table.size_bytes = table[i].value;
@@ -134,19 +157,19 @@ void ApplyDynamicRelocs(Program program, fbl::Span<const Elf64DynamicEntry> tabl
   {
     fbl::Span<const uint64_t> table =
         program.MapRegion<const uint64_t>(relr_table.start, relr_table.size_bytes);
-    ApplyRelrRelocs(program, table, base);
+    ApplyRelrRelocs(program, table);
   }
   {
     fbl::Span<const Elf64RelaEntry> table =
         program.MapRegion<const Elf64RelaEntry>(rela_table.start, rela_table.size_bytes);
     // Only the first `num_relative_relocs` will be R_RELATIVE entries.
-    ApplyRelaRelocs(program, table.subspan(0, rela_table.num_relative_relocs), base);
+    ApplyRelaRelocs(program, table.subspan(0, rela_table.num_relative_relocs));
   }
   {
     fbl::Span<const Elf64RelEntry> table =
         program.MapRegion<const Elf64RelEntry>(rel_table.start, rel_table.size_bytes);
     // Only the first `num_relative_relocs` will be R_RELATIVE entries.
-    ApplyRelRelocs(program, table.subspan(0, rel_table.num_relative_relocs), base);
+    ApplyRelRelocs(program, table.subspan(0, rel_table.num_relative_relocs));
   }
 }
 

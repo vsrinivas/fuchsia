@@ -55,7 +55,11 @@ extern "C" __LOCAL const char _end[];               // End of the image, includi
 inline void ApplyRelocations() {
 #if defined(ZX_STATIC_PIE)
   // If we are position-independent, apply any simple fixups required.
-  static_pie::ApplyDynamicRelocationsToSelf(reinterpret_cast<uintptr_t>(PHYS_LOAD_ADDRESS));
+  static_pie::ApplyDynamicRelocationsToSelf(
+      // Assume we were linked at address 0.
+      /*link_address=*/0,
+      // Relocate to PHYS_LOAD_ADDRESS.
+      /*load_address=*/reinterpret_cast<uintptr_t>(PHYS_LOAD_ADDRESS));
 #endif
 }
 

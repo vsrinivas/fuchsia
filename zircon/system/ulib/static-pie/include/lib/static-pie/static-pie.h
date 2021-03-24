@@ -11,9 +11,15 @@
 namespace static_pie {
 
 // Apply relocations specified in the running executable's `.dynamic`
-// table to the currently running binary, assuming that we have been
-// loaded in at `load_address`.
-extern "C" void ApplyDynamicRelocationsToSelf(uintptr_t load_address);
+// table to the currently running binary.
+//
+// `load_address` should contain the address that the executable's first LOAD
+// segment was loaded.
+//
+// `link_address` should contain the address that the executable's first LOAD
+// segment was linked at. For position-independent binaries, this will often
+// be 0.
+extern "C" void ApplyDynamicRelocationsToSelf(uintptr_t link_address, uintptr_t load_address);
 
 }  // namespace static_pie
 

@@ -7,6 +7,7 @@
 
 #include <lib/static-pie/static-pie.h>
 
+#include <fbl/hard_int.h>
 #include <fbl/span.h>
 
 #include "elf-types.h"
@@ -17,28 +18,36 @@ namespace static_pie {
 // Represents an ELF program mapped into memory at some offset.
 class Program {
  public:
-  explicit Program(fbl::Span<std::byte> program) : base_(program.data()) {
+  explicit Program(fbl::Span<std::byte> program, LinkTimeAddr link_addr, RunTimeAddr load_addr)
+      : base_(program.data()), link_addr_(link_addr), load_addr_(load_addr) {
     ZX_DEBUG_ASSERT(IsAlignedFor<uint64_t>(base_));
   }
 
   // Read a 64-bit word at the given offset in the program.
-  uint64_t ReadWord(uint64_t address) const {
-    ZX_DEBUG_ASSERT(IsAlignedFor<uint64_t>(base_ + address));
-    return *reinterpret_cast<uint64_t*>(base_ + address);
+  uint64_t ReadWord(LinkTimeAddr address) const {
+    ZX_DEBUG_ASSERT(IsAlignedFor<uint64_t>(base_ + (address - link_addr_)));
+    return *reinterpret_cast<uint64_t*>(base_ + (address - link_addr_));
   }
 
   // Write a 64-bit word to the given offset in the program.
-  void WriteWord(uint64_t address, uint64_t value) const {
-    ZX_DEBUG_ASSERT(IsAlignedFor<uint64_t>(base_ + address));
-    *reinterpret_cast<uint64_t*>(base_ + address) = value;
+  void WriteWord(LinkTimeAddr address, uint64_t value) const {
+    ZX_DEBUG_ASSERT(IsAlignedFor<uint64_t>(base_ + (address - link_addr_)));
+    *reinterpret_cast<uint64_t*>(base_ + (address - link_addr_)) = value;
   }
 
   // Return an fbl::Span<T> to the given region of memory.
   template <typename T>
-  fbl::Span<T> MapRegion(uint64_t address, size_t size) {
-    ZX_DEBUG_ASSERT(IsAlignedFor<T>(base_ + address));
-    return fbl::Span<T>(reinterpret_cast<T*>(base_ + address), size / sizeof(T));
+  fbl::Span<T> MapRegion(LinkTimeAddr address, size_t size) {
+    ZX_DEBUG_ASSERT(IsAlignedFor<T>(base_ + (address - link_addr_)));
+    return fbl::Span<T>(reinterpret_cast<T*>(base_ + (address - link_addr_)), size / sizeof(T));
   }
+
+  // Link and load address of this program.
+  LinkTimeAddr link_addr() const { return link_addr_; }
+  RunTimeAddr load_addr() const { return load_addr_; }
+
+  // Convert address types.
+  RunTimeAddr ToRunTimeAddr(LinkTimeAddr addr) const { return load_addr_ + (addr - link_addr_); }
 
  private:
   // Return true if the pointer `addr` is correctly aligned for type `T`.
@@ -48,15 +57,17 @@ class Program {
   }
 
   std::byte* base_;
+  LinkTimeAddr link_addr_;
+  RunTimeAddr load_addr_;
 };
 
 // Apply relocations in the given Rel/Rela/Relr table.
-void ApplyRelaRelocs(Program program, fbl::Span<const Elf64RelaEntry> table, uint64_t base);
-void ApplyRelRelocs(Program program, fbl::Span<const Elf64RelEntry> table, uint64_t base);
-void ApplyRelrRelocs(Program program, fbl::Span<const uint64_t> table, uint64_t base);
+void ApplyRelaRelocs(const Program& program, fbl::Span<const Elf64RelaEntry> table);
+void ApplyRelRelocs(const Program& program, fbl::Span<const Elf64RelEntry> table);
+void ApplyRelrRelocs(const Program& program, fbl::Span<const uint64_t> table);
 
 // Apply the relocations specified in the given ".dynamic" table.
-void ApplyDynamicRelocs(Program program, fbl::Span<const Elf64DynamicEntry> table, uint64_t base);
+void ApplyDynamicRelocs(Program& program, fbl::Span<const Elf64DynamicEntry> table);
 
 }  // namespace static_pie
 

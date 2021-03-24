@@ -7,9 +7,22 @@
 
 #include <cstdint>
 
+#include <fbl/hard_int.h>
 #include <hwreg/bitfields.h>
 
 namespace static_pie {
+
+// Link-time and run-time addresses.
+//
+// Position-independent ELF files will typically be linked at a different
+// address to where they end up being loaded. For example, a function
+// `foo` may be linked at address `0x1234` but actually loaded high
+// up in memory at `0xabc01234`.
+//
+// The type `LinkTimeAddr` refers to the address used at link-time, while
+// `RunTimeAddr` refers to an address used at run-time.
+DEFINE_HARD_INT(LinkTimeAddr, uint64_t)
+DEFINE_HARD_INT(RunTimeAddr, uint64_t)
 
 // Relocation types.
 //
@@ -75,7 +88,7 @@ struct Elf64RelEntry {
   // For position-independent executables, the virtual addresses of the
   // first PT_LOAD segment will typically be (but are not guaranteed to
   // be) 0 prior to relocation.
-  uint64_t offset;
+  LinkTimeAddr offset;
 
   // Relocation to apply.
   Elf64RelInfo info;
@@ -86,9 +99,9 @@ struct Elf64RelEntry {
 // c.f. "Relocation Sections", Chapter 12, _Linker and Libraries Guide_,
 // Oracle, November 2011.
 struct Elf64RelaEntry {
-  uint64_t offset;    // Offset to patch, relative to the beginning of the storage unit.
-  Elf64RelInfo info;  // Relocation details.
-  uint64_t addend;    // Relocation value. The interpretation of this is relocation-specific.
+  LinkTimeAddr offset;  // Address to patch.
+  Elf64RelInfo info;    // Relocation details.
+  uint64_t addend;      // Relocation value. The interpretation of this is relocation-specific.
 };
 
 // An entry in the ".dynamic" table.
@@ -99,6 +112,31 @@ struct Elf64DynamicEntry {
   DynamicArrayTag tag;
   uint64_t value;
 };
+
+// Arithmetic on address types.
+//
+// For an input strong type S we define the following operators:
+//
+//   uint64_t = S - S
+//   S = S + uint64_t
+//   S = uint64_t + S
+//   S += uint64_t
+//
+#define DEFINE_OPERATORS(target_type)                                                          \
+  constexpr uint64_t operator-(target_type a, target_type b) { return a.value() - b.value(); } \
+  constexpr target_type operator+(target_type a, uint64_t val) {                               \
+    return (target_type){a.value() + val};                                                     \
+  }                                                                                            \
+  constexpr target_type operator+(uint64_t val, target_type a) {                               \
+    return (target_type){a.value() + val};                                                     \
+  }                                                                                            \
+  constexpr target_type& operator+=(target_type& a, uint64_t val) {                            \
+    a = (target_type){a.value() + val};                                                        \
+    return a;                                                                                  \
+  }
+DEFINE_OPERATORS(RunTimeAddr)
+DEFINE_OPERATORS(LinkTimeAddr)
+#undef DEFINE_OPERATORS
 
 }  // namespace static_pie
 
