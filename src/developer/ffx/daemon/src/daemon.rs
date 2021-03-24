@@ -11,8 +11,8 @@ use {
     crate::mdns::MdnsTargetFinder,
     crate::onet::create_ascendd,
     crate::target::{
-        ConnectionState, RcsConnection, SshAddrFetcher, Target, TargetCollection, TargetEvent,
-        ToFidlTarget,
+        ConnectionState, RcsConnection, SshAddrFetcher, Target, TargetAddrEntry, TargetCollection,
+        TargetEvent, ToFidlTarget,
     },
     anyhow::{anyhow, Context, Result},
     ascendd::Ascendd,
@@ -33,9 +33,7 @@ use {
     fuchsia_async::{Task, TimeoutExt, Timer},
     futures::prelude::*,
     hoist::{hoist, OvernetInstance},
-    std::collections::BTreeSet,
     std::convert::TryInto,
-    std::iter::FromIterator,
     std::sync::{Arc, Weak},
     std::time::Duration,
 };
@@ -495,11 +493,12 @@ impl Daemon {
                     TargetAddrInfo::IpPort(ref ipp) => Some(ipp.port),
                     _ => None,
                 };
-                let target = Target::new_with_addrs(
-                    Option::<String>::None,
-                    BTreeSet::from_iter(Some(ip.clone().into()).into_iter()),
-                );
+                let tae: TargetAddrEntry = (ip.into(), Utc::now(), true).into();
+
+                let target =
+                    Target::new_with_addr_entries(Option::<String>::None, Some(tae).into_iter());
                 target.set_ssh_port(ssh_port).await;
+
                 self.target_collection
                     .merge_insert(target)
                     .then(|target| async move {
@@ -641,6 +640,8 @@ mod test {
         fidl_fuchsia_net::Subnet,
         fidl_fuchsia_overnet_protocol::NodeId,
         fuchsia_async::Task,
+        std::collections::BTreeSet,
+        std::iter::FromIterator,
         std::net::SocketAddr,
     };
 
@@ -1080,7 +1081,7 @@ mod test {
     async fn test_add_target() {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
-        let _ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
+        let ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
 
         let mut info = bridge::TargetAddrInfo::Ip(bridge::TargetIp {
             ip: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
@@ -1096,6 +1097,30 @@ mod test {
         assert!(target.nodename.is_none());
         assert_eq!(target.addresses.as_ref().unwrap().len(), 1);
         assert_eq!(target.addresses.unwrap()[0], info);
+
+        let addrs = ctrl.tc.targets().await.iter().next().unwrap().manual_addrs().await;
+        assert_eq!(addrs[0], TargetAddr::from(info));
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_add_target_with_port() {
+        let (daemon_proxy, stream) =
+            fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
+        let ctrl = spawn_daemon_server_with_target_ctrl(stream).await;
+
+        let mut info = bridge::TargetAddrInfo::IpPort(bridge::TargetIpPort {
+            ip: fidl_net::IpAddress::Ipv6(fidl_net::Ipv6Address {
+                addr: [254, 127, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+            }),
+            scope_id: 0,
+            port: 8022,
+        });
+        daemon_proxy.add_target(&mut info).await.unwrap().unwrap();
+
+        let addrs = ctrl.tc.targets().await.iter().next().unwrap().manual_addrs().await;
+        assert_eq!(addrs[0], TargetAddr::from(info));
+        let port = ctrl.tc.targets().await.iter().next().unwrap().ssh_port().await;
+        assert_eq!(port, Some(8022));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]

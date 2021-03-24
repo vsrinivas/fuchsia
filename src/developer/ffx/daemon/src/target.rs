@@ -77,6 +77,8 @@ impl SshFormatter for TargetAddr {
 /// -- The first local IPv6 address with a scope id.
 /// -- The last local IPv4 address.
 /// -- Any other address.
+///
+/// DEPRECATED: Please use `Target.ssh_address` or `ssh_address_from()` instead.
 pub trait SshAddrFetcher {
     fn to_ssh_addr(self) -> Option<TargetAddr>;
 }
@@ -243,6 +245,8 @@ impl ConnectionState {
 pub(crate) struct TargetAddrEntry {
     addr: TargetAddr,
     timestamp: DateTime<Utc>,
+    // If the target entry was added manually
+    manual: bool,
 }
 
 impl PartialEq for TargetAddrEntry {
@@ -256,13 +260,20 @@ impl Eq for TargetAddrEntry {}
 impl From<(TargetAddr, DateTime<Utc>)> for TargetAddrEntry {
     fn from(t: (TargetAddr, DateTime<Utc>)) -> Self {
         let (addr, timestamp) = t;
-        Self { addr, timestamp }
+        Self { addr, timestamp, manual: false }
+    }
+}
+
+impl From<(TargetAddr, DateTime<Utc>, bool)> for TargetAddrEntry {
+    fn from(t: (TargetAddr, DateTime<Utc>, bool)) -> Self {
+        let (addr, timestamp, manual) = t;
+        Self { addr, timestamp, manual }
     }
 }
 
 impl From<TargetAddr> for TargetAddrEntry {
     fn from(addr: TargetAddr) -> Self {
-        Self { addr, timestamp: Utc::now() }
+        Self { addr, timestamp: Utc::now(), manual: false }
     }
 }
 
@@ -276,6 +287,51 @@ impl PartialOrd for TargetAddrEntry {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
+}
+
+/// Given an iterator of TargetAddrEntry, return the TargetAddr from the entry
+/// that should be attempted for SSH connections next.
+///
+/// The sort algorithm for SSH address priority is in order of:
+/// - Manual addresses first
+///   - By recency of observation
+/// - Other addresses
+///   - By link-local first
+///   - By most recently observed
+///
+/// The host-pipe connection mechanism will requests addresses from this function
+/// on each connection attempt.
+fn ssh_address_from<'a, I>(iter: I) -> Option<TargetAddr>
+where
+    I: Iterator<Item = &'a TargetAddrEntry>,
+{
+    use itertools::Itertools;
+
+    // Order e1 & e2 by most recent timestamp
+    let recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| e2.timestamp.cmp(&e1.timestamp);
+
+    // Order by link-local first, then by recency
+    let link_local_recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| match (
+        e1.addr.ip.is_link_local_addr(),
+        e2.addr.ip.is_link_local_addr(),
+    ) {
+        (true, true) | (false, false) => recency(e1, e2),
+        (true, false) => Ordering::Less,
+        (false, true) => Ordering::Greater,
+    };
+
+    let manual_link_local_recency = |e1: &TargetAddrEntry, e2: &TargetAddrEntry| {
+        match (e1.manual, e2.manual) {
+            // Note: for manually added addresses, they are ordered strictly
+            // by recency, not link-local first.
+            (true, true) => recency(e1, e2),
+            (true, false) => Ordering::Less,
+            (false, true) => Ordering::Greater,
+            (false, false) => link_local_recency(e1, e2),
+        }
+    };
+
+    iter.sorted_by(|e1, e2| manual_link_local_recency(e1, e2)).next().map(|e| e.addr.clone())
 }
 
 #[derive(Debug, Default, Clone)]
@@ -362,6 +418,13 @@ impl TargetInner {
         }
     }
 
+    pub fn new_with_addr_entries(
+        nodename: Option<String>,
+        entries: BTreeSet<TargetAddrEntry>,
+    ) -> Self {
+        Self { addrs: RwLock::new(entries), ..Self::new(nodename) }
+    }
+
     pub fn new_with_serial(nodename: Option<String>, serial: &str) -> Self {
         Self { serial: RwLock::new(Some(serial.to_string())), ..Self::new(nodename) }
     }
@@ -385,6 +448,10 @@ impl TargetInner {
             }
         }
         false
+    }
+
+    pub async fn ssh_address(&self) -> Option<SocketAddr> {
+        ssh_address_from(self.addrs.read().await.iter()).map(Into::into)
     }
 
     /// Dependency injection constructor so we can insert a fake time for
@@ -560,6 +627,19 @@ impl Target {
         Self::from_inner(inner)
     }
 
+    pub(crate) fn new_with_addr_entries<S, I>(nodename: Option<S>, entries: I) -> Self
+    where
+        S: Into<String>,
+        I: Iterator<Item = TargetAddrEntry>,
+    {
+        use std::iter::FromIterator;
+        let inner = Arc::new(TargetInner::new_with_addr_entries(
+            nodename.map(Into::into),
+            BTreeSet::from_iter(entries),
+        ));
+        Self::from_inner(inner)
+    }
+
     pub fn new_with_serial<S>(nodename: Option<S>, serial: &str) -> Self
     where
         S: Into<String>,
@@ -610,6 +690,10 @@ impl Target {
         for id in new_ids {
             my_ids.insert(*id);
         }
+    }
+
+    pub async fn ssh_address(&self) -> Option<SocketAddr> {
+        self.inner.ssh_address().await
     }
 
     /// Dependency injection constructor so we can insert a fake time for
@@ -757,6 +841,17 @@ impl Target {
         } else {
             self.inner.ssh_port.lock().await.take();
         }
+    }
+
+    #[cfg(test)]
+    pub(crate) async fn manual_addrs(&self) -> Vec<TargetAddr> {
+        self.inner
+            .addrs
+            .read()
+            .await
+            .iter()
+            .filter_map(|entry| if entry.manual { Some(entry.addr.clone()) } else { None })
+            .collect()
     }
 
     #[cfg(test)]
@@ -2333,6 +2428,22 @@ mod test {
         assert_eq!((&t.addrs().await).to_ssh_addr().unwrap(), TargetAddr::from(expected));
     }
 
+    #[test]
+    fn test_target_addr_entry_from_with_manual() {
+        let ta = TargetAddrEntry::from((
+            TargetAddr::from(("127.0.0.1".parse::<IpAddr>().unwrap(), 0)),
+            Utc::now(),
+            true,
+        ));
+        assert_eq!(ta.manual, true);
+        let ta = TargetAddrEntry::from((
+            TargetAddr::from(("127.0.0.1".parse::<IpAddr>().unwrap(), 0)),
+            Utc::now(),
+            false,
+        ));
+        assert_eq!(ta.manual, false);
+    }
+
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_addresses_prefer_local_vs_v6() {
         let t = Target::new("hi-hi-hi");
@@ -2622,5 +2733,66 @@ mod test {
             (IpAddr::from([0xfe80, 0x0, 0x0, 0x0, 0xdead, 0xbeef, 0xbeef, 0xbeef]), 3).into();
         let tq = TargetQuery::from("fe80::dead:beef:beef:beef");
         assert!(tq.match_info(&TargetInfo { addresses: vec![addr], ..Default::default() }))
+    }
+
+    #[test]
+    fn test_target_ssh_address_priority() {
+        let start = std::time::SystemTime::now();
+        use std::iter::FromIterator;
+
+        // An empty set returns nothing.
+        let addrs = BTreeSet::<TargetAddrEntry>::new();
+        assert_eq!(ssh_address_from(addrs.iter()), None);
+
+        // Given two addresses, from the exact same time, neither manual, prefer any link-local address.
+        let addrs = BTreeSet::from_iter(vec![
+            (("2000::1".parse().unwrap(), 0).into(), start.into(), false).into(),
+            (("fe80::1".parse().unwrap(), 2).into(), start.into(), false).into(),
+        ]);
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("fe80::1".parse().unwrap(), 2).into()));
+
+        // Given two addresses, one link local the other not, prefer the link local even if older.
+        let addrs = BTreeSet::from_iter(vec![
+            (("2000::1".parse().unwrap(), 0).into(), start.into(), false).into(),
+            (
+                ("fe80::1".parse().unwrap(), 2).into(),
+                (start - Duration::from_secs(1)).into(),
+                false,
+            )
+                .into(),
+        ]);
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("fe80::1".parse().unwrap(), 2).into()));
+
+        // Given two addresses, both link-local, pick the one most recent.
+        let addrs = BTreeSet::from_iter(vec![
+            (("fe80::2".parse().unwrap(), 1).into(), start.into(), false).into(),
+            (
+                ("fe80::1".parse().unwrap(), 2).into(),
+                (start - Duration::from_secs(1)).into(),
+                false,
+            )
+                .into(),
+        ]);
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("fe80::2".parse().unwrap(), 1).into()));
+
+        // Given two addresses, one manual, old and non-local, prefer the manual entry.
+        let addrs = BTreeSet::from_iter(vec![
+            (("fe80::2".parse().unwrap(), 1).into(), start.into(), false).into(),
+            (("2000::1".parse().unwrap(), 0).into(), (start - Duration::from_secs(1)).into(), true)
+                .into(),
+        ]);
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("2000::1".parse().unwrap(), 0).into()));
+
+        // Given two addresses, neither local, neither manual, prefer the most recent.
+        let addrs = BTreeSet::from_iter(vec![
+            (("2000::1".parse().unwrap(), 0).into(), start.into(), false).into(),
+            (
+                ("2000::2".parse().unwrap(), 0).into(),
+                (start + Duration::from_secs(1)).into(),
+                false,
+            )
+                .into(),
+        ]);
+        assert_eq!(ssh_address_from(addrs.iter()), Some(("2000::2".parse().unwrap(), 0).into()));
     }
 }
