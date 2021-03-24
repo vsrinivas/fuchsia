@@ -66,9 +66,7 @@ Note: Command will differ depending on the type of machines you use.
 
 * {Corp}
 
-  ```posix-terminal
-  fx vdl start -N -u /usr/bin/shortleash-upscript
-  ```
+  To use FEMU on a corp machine, see [go/fuchsia-emulator-corp](https://go/fuchsia-emulator-corp).
 
 * {Non-Corp}
 
@@ -76,7 +74,7 @@ Note: Command will differ depending on the type of machines you use.
 
   ```posix-terminal
   fx vdl start -N -u {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/scripts/start-unsecure-internet.sh
-  ``` 
+  ```
 
 {% dynamic else %}
 
@@ -89,7 +87,7 @@ fx vdl start -N -u {{ '<var>' }}FUCHSIA_ROOT{{ '</var>' }}/scripts/start-unsecur
 
 
 Once you run the command, a separate window opens with the title "Fuchsia Emulator". After
-the Fuchsia emulator launches successfully, the terminal starts with the SSH console. You 
+the Fuchsia emulator launches successfully, the terminal starts with the SSH console. You
 can run shell commands in this window, just like you would on a Fuchsia device.
 
 ### macOS {#mac-start-femu}
@@ -98,7 +96,7 @@ On macOS, Fuchsia device discovery does not work. However, you can still use `fx
 
 
 ```posix-terminal
-fx vdl start --host-gpu
+fx vdl start
 ```
 
 From the output, take note of the instruction on running `fx set-device`, you will need it for the steps below.
@@ -118,11 +116,11 @@ fx set-device 127.0.0.1:{{ '<var>' }}SSH_PORT{{ '</var>' }}
 
 ### Input options
 
-By default FEMU uses a mouse pointer for input. You can add the argument `--pointing-device touch`
-for touch input instead.
+By default FEMU uses multi-touch input. You can add the argument `--pointing-device mouse`
+for mouse cursor input instead.
 
 ```posix-terminal
-fx vdl start --pointing-device touch
+fx vdl start --pointing-device mouse
 ```
 
 ### Run FEMU without GUI support
