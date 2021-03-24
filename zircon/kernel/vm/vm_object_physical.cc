@@ -165,26 +165,30 @@ void VmObjectPhysical::Dump(uint depth, bool verbose) {
          ref_count_debug());
 }
 
-// get the physical address of a page at offset
-zx_status_t VmObjectPhysical::GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
-                                            PageRequest* page_request, vm_page_t** _page,
-                                            paddr_t* _pa) {
+// get the physical address of pages starting at offset
+zx_status_t VmObjectPhysical::LookupPagesLocked(uint64_t offset, uint pf_flags,
+                                                uint64_t max_out_pages, list_node* alloc_list,
+                                                PageRequest* page_request, LookupInfo* out) {
   canary_.Assert();
 
-  if (_page) {
-    *_page = nullptr;
-  }
+  DEBUG_ASSERT(out);
+  DEBUG_ASSERT(max_out_pages > 0);
 
   if (offset >= size_) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-
-  uint64_t pa = base_ + ROUNDDOWN(offset, PAGE_SIZE);
+  offset = ROUNDDOWN(offset, PAGE_SIZE);
+  const uint64_t pa = base_ + offset;
   if (pa > UINTPTR_MAX) {
     return ZX_ERR_OUT_OF_RANGE;
   }
-
-  *_pa = (paddr_t)pa;
+  const uint64_t pages = ktl::min((size_ - offset) / PAGE_SIZE, max_out_pages);
+  DEBUG_ASSERT(pages > 0);
+  out->writable = true;
+  out->num_pages = 0;
+  for (uint32_t i = 0; i < pages; i++) {
+    out->add_page(pa + (static_cast<uint64_t>(i) * PAGE_SIZE));
+  }
 
   return ZX_OK;
 }

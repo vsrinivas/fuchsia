@@ -1878,6 +1878,96 @@ static bool vmo_discardable_counts_test() {
   END_TEST;
 }
 
+static bool vmo_lookup_pages_test() {
+  BEGIN_TEST;
+  AutoVmScannerDisable scanner_disable;
+
+  fbl::RefPtr<VmObjectPaged> vmo;
+  // This test assumes does some division and then offsetting of kMaxPages and as a consequence
+  // assumes that kMaxPages is at least 8. This is not a static assert as we don't want to preclude
+  // testing and running the kernel with lower max pages.
+  ASSERT_GE(VmObject::LookupInfo::kMaxPages, 8ul);
+  constexpr uint64_t kSize = VmObject::LookupInfo::kMaxPages * 2 * PAGE_SIZE;
+  zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0, kSize, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  // Commit half the range so we can do some contiguous lookups.
+  EXPECT_OK(vmo->CommitRange(0, kSize / 4));
+
+  VmObject::LookupInfo info;
+
+  {
+    Guard<Mutex> guard_{vmo->lock()};
+    // Lookup the exact range we committed.
+    EXPECT_OK(
+        vmo->LookupPagesLocked(0, 0, VmObject::LookupInfo::kMaxPages / 2, nullptr, nullptr, &info));
+    EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 2);
+    EXPECT_TRUE(info.writable);
+
+    // Attempt to lookup more, should see the truncated actual committed range.
+    EXPECT_OK(
+        vmo->LookupPagesLocked(0, 0, VmObject::LookupInfo::kMaxPages, nullptr, nullptr, &info));
+    EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 2);
+    EXPECT_TRUE(info.writable);
+
+    // Perform a lookup so that there's only a single committed page visible.
+    EXPECT_OK(vmo->LookupPagesLocked(kSize / 4 - PAGE_SIZE, 0, VmObject::LookupInfo::kMaxPages,
+                                     nullptr, nullptr, &info));
+    EXPECT_EQ(info.num_pages, 1ul);
+    EXPECT_TRUE(info.writable);
+
+    // Writing shouldn't commit later pages once the first has been satisfied.
+    EXPECT_OK(vmo->LookupPagesLocked(kSize / 4 - PAGE_SIZE,
+                                     VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT,
+                                     VmObject::LookupInfo::kMaxPages / 2, nullptr, nullptr, &info));
+    EXPECT_EQ(info.num_pages, 1ul);
+    EXPECT_TRUE(info.writable);
+
+    // If there is no page then writing without a fault should fail.
+    EXPECT_EQ(ZX_ERR_NOT_FOUND,
+              vmo->LookupPagesLocked(kSize / 4, VMM_PF_FLAG_WRITE, VmObject::LookupInfo::kMaxPages,
+                                     nullptr, nullptr, &info));
+
+    // Then should be able to fault it in.
+    EXPECT_OK(vmo->LookupPagesLocked(kSize / 4, VMM_PF_FLAG_WRITE | VMM_PF_FLAG_SW_FAULT,
+                                     VmObject::LookupInfo::kMaxPages, nullptr, nullptr, &info));
+    EXPECT_EQ(info.num_pages, 1ul);
+    EXPECT_TRUE(info.writable);
+  }
+  // Create a hierarchy now to do some more interesting read lookups.
+  fbl::RefPtr<VmObject> child1;
+  ASSERT_OK(
+      vmo->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, kSize, false, &child1));
+  EXPECT_OK(child1->CommitRange(kSize / 8, PAGE_SIZE));
+  fbl::RefPtr<VmObject> child2;
+  ASSERT_OK(child1->CreateClone(Resizability::NonResizable, CloneType::Snapshot, 0, kSize, false,
+                                &child2));
+
+  {
+    Guard<Mutex> guard{child2->lock()};
+
+    // Should be able to get runs of pages up to the intermediate page in child1.
+    EXPECT_OK(
+        child2->LookupPagesLocked(0, 0, VmObject::LookupInfo::kMaxPages, nullptr, nullptr, &info));
+    EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 4);
+    EXPECT_FALSE(info.writable);
+
+    // The single page in child1
+    EXPECT_OK(child2->LookupPagesLocked(kSize / 8, 0, VmObject::LookupInfo::kMaxPages, nullptr,
+                                        nullptr, &info));
+    EXPECT_EQ(info.num_pages, 1ul);
+    EXPECT_FALSE(info.writable);
+
+    // Then the remainder of the run.
+    EXPECT_OK(child2->LookupPagesLocked(kSize / 8 + PAGE_SIZE, 0, VmObject::LookupInfo::kMaxPages,
+                                        nullptr, nullptr, &info));
+    EXPECT_EQ(info.num_pages, VmObject::LookupInfo::kMaxPages / 4);
+    EXPECT_FALSE(info.writable);
+  }
+
+  END_TEST;
+}
+
 UNITTEST_START_TESTCASE(vmo_tests)
 VM_UNITTEST(vmo_create_test)
 VM_UNITTEST(vmo_create_maximum_size)
@@ -1915,6 +2005,7 @@ VM_UNITTEST(vmo_discardable_states_test)
 VM_UNITTEST(vmo_discard_test)
 VM_UNITTEST(vmo_discard_failure_test)
 VM_UNITTEST(vmo_discardable_counts_test)
+VM_UNITTEST(vmo_lookup_pages_test)
 UNITTEST_END_TESTCASE(vmo_tests, "vmo", "VmObject tests")
 
 }  // namespace vm_unittest

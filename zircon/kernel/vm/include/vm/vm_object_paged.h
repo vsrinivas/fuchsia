@@ -154,11 +154,11 @@ class VmObjectPaged final : public VmObject {
     DumpLocked(depth, verbose);
   }
 
-  zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* alloc_list,
-                            PageRequest* page_request, vm_page_t** out_page,
-                            paddr_t* out_paddr) override TA_REQ(lock_) {
-    return cow_pages_locked()->GetPageLocked(offset, pf_flags, alloc_list, page_request, out_page,
-                                             out_paddr);
+  zx_status_t LookupPagesLocked(uint64_t offset, uint pf_flags, uint64_t max_out_pages,
+                                list_node* alloc_list, PageRequest* page_request,
+                                LookupInfo* out) override TA_REQ(lock_) {
+    return cow_pages_locked()->LookupPagesLocked(offset, pf_flags, max_out_pages, alloc_list,
+                                                 page_request, out);
   }
 
   zx_status_t CreateClone(Resizability resizable, CloneType type, uint64_t offset, uint64_t size,

@@ -1444,7 +1444,8 @@ zx_status_t VmCowPages::CloneCowPageAsZeroLocked(uint64_t offset, list_node_t* f
 }
 
 VmPageOrMarker* VmCowPages::FindInitialPageContentLocked(uint64_t offset, VmCowPages** owner_out,
-                                                         uint64_t* owner_offset_out) {
+                                                         uint64_t* owner_offset_out,
+                                                         uint64_t* owner_length) {
   // Search up the clone chain for any committed pages. cur_offset is the offset
   // into cur we care about. The loop terminates either when that offset contains
   // a committed page or when that offset can't reach into the parent.
@@ -1465,6 +1466,18 @@ VmPageOrMarker* VmCowPages::FindInitialPageContentLocked(uint64_t offset, VmCowP
       // The offset is off the end of the parent, so cur is the VmObjectPaged
       // which will provide the page.
       break;
+    }
+    if (owner_length) {
+      // Before we walk up, need to check to see if there's any forked pages that require us to
+      // restrict the owner length. Additionally need to restrict the owner length to the actual
+      // parent limit.
+      *owner_length = ktl::min(*owner_length, cur->parent_limit_ - cur_offset);
+      cur->page_list_.ForEveryPageInRange(
+          [owner_length, cur_offset](const VmPageOrMarker*, uint64_t off) {
+            *owner_length = off - cur_offset;
+            return ZX_ERR_STOP;
+          },
+          cur_offset, cur_offset + *owner_length);
     }
 
     cur = parent;
@@ -1535,11 +1548,13 @@ void VmCowPages::UpdateOnAccessLocked(vm_page_t* page, uint64_t offset) {
 // this function may allocate from.  This function will need at most one entry,
 // and will not fail if |alloc_list| is a non-empty list, faulting in was requested,
 // and offset is in range.
-zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node* alloc_list,
-                                      PageRequest* page_request, vm_page_t** const page_out,
-                                      paddr_t* const pa_out) {
+zx_status_t VmCowPages::LookupPagesLocked(uint64_t offset, uint pf_flags, uint64_t max_out_pages,
+                                          list_node* alloc_list, PageRequest* page_request,
+                                          LookupInfo* out) {
   canary_.Assert();
   DEBUG_ASSERT(!is_hidden_locked());
+  DEBUG_ASSERT(out);
+  DEBUG_ASSERT(max_out_pages > 0);
 
   if (offset >= size_) {
     return ZX_ERR_OUT_OF_RANGE;
@@ -1552,36 +1567,84 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
 
   offset = ROUNDDOWN(offset, PAGE_SIZE);
 
+  // Trim the number of output pages to the size of this VMO. This ensures any range calculation
+  // can never overflow.
+  max_out_pages = ktl::min(static_cast<uint64_t>(max_out_pages), ((size_ - offset) / PAGE_SIZE));
+
   if (is_slice_locked()) {
     uint64_t parent_offset;
     VmCowPages* parent = PagedParentOfSliceLocked(&parent_offset);
     AssertHeld(parent->lock_);
-    return parent->GetPageLocked(offset + parent_offset, pf_flags, alloc_list, page_request,
-                                 page_out, pa_out);
+    return parent->LookupPagesLocked(offset + parent_offset, pf_flags, max_out_pages, alloc_list,
+                                     page_request, out);
   }
 
+  // Ensure we're adding pages to an empty list so we don't risk overflowing it.
+  out->num_pages = 0;
+
+  // Helper to find contiguous runs of pages in a page list and add them to the output pages.
+  auto collect_pages = [out](VmCowPages* cow, uint64_t offset, uint64_t max_len) {
+    DEBUG_ASSERT(max_len > 0);
+
+    AssertHeld(cow->lock_);
+    cow->page_list_.ForEveryPageAndGapInRange(
+        [out, cow](const VmPageOrMarker* page, uint64_t off) {
+          if (page->IsMarker()) {
+            // Never pre-map in zero pages.
+            return ZX_ERR_STOP;
+          }
+          vm_page_t* p = page->Page();
+          AssertHeld(cow->lock_);
+          cow->UpdateOnAccessLocked(p, off);
+          out->add_page(p->paddr());
+          return ZX_ERR_NEXT;
+        },
+        [](uint64_t start, uint64_t end) {
+          // This is a gap, and we never want to  pre-map in zero pages.
+          return ZX_ERR_STOP;
+        },
+        offset, CheckedAdd(offset, max_len));
+  };
+
+  // We perform an exact Lookup and not something more fancy as a trade off between three scenarios
+  //  * Page is in this page list and max_out_pages == 1
+  //  * Page is not in this page list
+  //  * Page is in this page list and max_out_pages > 1
+  // In the first two cases an exact Lookup is the most optimal choice, and in the third scenario
+  // although we have to re-walk the page_list_ 'needlessly', we should somewhat amortize it by the
+  // fact we return multiple pages.
   VmPageOrMarker* page_or_mark = page_list_.Lookup(offset);
-  vm_page* p = nullptr;
-  VmCowPages* page_owner;
-  uint64_t owner_offset;
   if (page_or_mark && page_or_mark->IsPage()) {
     // This is the common case where we have the page and don't need to do anything more, so
-    // return it straight away.
+    // return it straight away, collecting any additional pages if possible.
     vm_page_t* p = page_or_mark->Page();
     UpdateOnAccessLocked(p, offset);
-    if (page_out) {
-      *page_out = p;
-    }
-    if (pa_out) {
-      *pa_out = p->paddr();
+    out->writable = true;
+    out->add_page(p->paddr());
+    if (max_out_pages > 1) {
+      collect_pages(this, offset + PAGE_SIZE, (max_out_pages - 1) * PAGE_SIZE);
     }
     return ZX_OK;
   }
 
+  // The only time we will say something is writable when the fault is a read is if the page is
+  // already in this VMO. That scenario is the above if block, and so if we get here then writable
+  // mirrors the fault flag.
+  const bool writing = (pf_flags & VMM_PF_FLAG_WRITE) != 0;
+  out->writable = writing;
+
+  // If we are reading we track the visible length of pages in the owner. We don't bother tracking
+  // this for writing, since when writing we will fork the page into ourselves anyway.
+  uint64_t visible_length = writing ? PAGE_SIZE : PAGE_SIZE * max_out_pages;
   // Get content from parent if available, otherwise accept we are the owner of the yet to exist
   // page.
+  VmCowPages* page_owner;
+  uint64_t owner_offset;
   if ((!page_or_mark || page_or_mark->IsEmpty()) && parent_) {
-    page_or_mark = FindInitialPageContentLocked(offset, &page_owner, &owner_offset);
+    // Pass nullptr if visible_length is PAGE_SIZE to allow the lookup to short-circuit the length
+    // calculation, as the calculation involves additional page lookups at every level.
+    page_or_mark = FindInitialPageContentLocked(
+        offset, &page_owner, &owner_offset, visible_length > PAGE_SIZE ? &visible_length : nullptr);
   } else {
     page_owner = this;
     owner_offset = offset;
@@ -1597,6 +1660,7 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
   // We need to turn this potential page or marker into a real vm_page_t. This means failing cases
   // that we cannot handle, determining whether we can substitute the zero_page and potentially
   // consulting a page_source.
+  vm_page_t* p = nullptr;
   if (page_or_mark && page_or_mark->IsPage()) {
     p = page_or_mark->Page();
   } else {
@@ -1638,13 +1702,12 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
   AssertHeld(page_owner->lock_);
   page_owner->UpdateOnAccessLocked(p, owner_offset);
 
-  if ((pf_flags & VMM_PF_FLAG_WRITE) == 0) {
-    // If we're read-only faulting, return the page so they can map or read from it directly.
-    if (page_out) {
-      *page_out = p;
-    }
-    if (pa_out) {
-      *pa_out = p->paddr();
+  if (!writing) {
+    // If we're read-only faulting, return the page so they can map or read from it directly,
+    // grabbing any additional pages if visible.
+    out->add_page(p->paddr());
+    if (visible_length > PAGE_SIZE) {
+      collect_pages(page_owner, owner_offset + PAGE_SIZE, visible_length - PAGE_SIZE);
     }
     LTRACEF("read only faulting in page %p, pa %#" PRIxPTR " from parent\n", p, p->paddr());
     return ZX_OK;
@@ -1703,12 +1766,7 @@ zx_status_t VmCowPages::GetPageLocked(uint64_t offset, uint pf_flags, list_node*
 
   LTRACEF("faulted in page %p, pa %#" PRIxPTR "\n", res_page, res_page->paddr());
 
-  if (page_out) {
-    *page_out = res_page;
-  }
-  if (pa_out) {
-    *pa_out = res_page->paddr();
-  }
+  out->add_page(res_page->paddr());
 
   // If we made it here, we committed a new page in this VMO.
   IncrementHierarchyGenerationCountLocked();
@@ -1780,13 +1838,14 @@ zx_status_t VmCowPages::CommitRangeLocked(uint64_t offset, uint64_t len, uint64_
   const uint64_t start_offset = offset;
   const uint64_t end = offset + len;
   bool have_page_request = false;
+  LookupInfo lookup_info;
   while (offset < end) {
     // Don't commit if we already have this page
     VmPageOrMarker* p = page_list_.Lookup(offset);
     if (!p || !p->IsPage()) {
       // Check if our parent has the page
       const uint flags = VMM_PF_FLAG_SW_FAULT | VMM_PF_FLAG_WRITE;
-      zx_status_t res = GetPageLocked(offset, flags, &page_list, page_request, nullptr, nullptr);
+      zx_status_t res = LookupPagesLocked(offset, flags, 1, &page_list, page_request, &lookup_info);
       if (unlikely(res == ZX_ERR_SHOULD_WAIT)) {
         // We can end up here in two cases:
         // 1. We were in batch mode but had to terminate the batch early.
@@ -2006,7 +2065,7 @@ bool VmCowPages::PageWouldReadZeroLocked(uint64_t page_offset) {
   if (!slot || !slot->IsPage()) {
     VmCowPages* page_owner;
     uint64_t owner_offset;
-    if (!FindInitialPageContentLocked(page_offset, &page_owner, &owner_offset)) {
+    if (!FindInitialPageContentLocked(page_offset, &page_owner, &owner_offset, nullptr)) {
       // Parent doesn't have a page either, so would also read as zero, assuming no page source.
       return GetRootPageSourceLocked() == nullptr;
     }
@@ -2112,7 +2171,7 @@ zx_status_t VmCowPages::ZeroPagesLocked(uint64_t page_start_base, uint64_t page_
       if (!initial_content_.inited) {
         DEBUG_ASSERT(can_see_parent);
         VmPageOrMarker* page_or_marker = FindInitialPageContentLocked(
-            offset, &initial_content_.page_owner, &initial_content_.owner_offset);
+            offset, &initial_content_.page_owner, &initial_content_.owner_offset, nullptr);
         // We only care about the parent having a 'true' vm_page for content. If the parent has a
         // marker then it's as if the parent has no content since that's a zero page anyway, which
         // is what we are trying to achieve.

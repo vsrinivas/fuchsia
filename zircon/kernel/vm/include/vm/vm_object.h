@@ -441,16 +441,64 @@ class VmObject : public VmHierarchyBase,
   //
   // TODO: Currently the caller can also pass null if it knows that the vm object has no
   // page source. This will no longer be the case once page allocations can be delayed.
-  zx_status_t GetPage(uint64_t offset, uint pf_flags, list_node* free_list,
+  zx_status_t GetPage(uint64_t offset, uint pf_flags, list_node* alloc_list,
                       PageRequest* page_request, vm_page_t** page, paddr_t* pa) {
     Guard<Mutex> guard{&lock_};
-    return GetPageLocked(offset, pf_flags, free_list, page_request, page, pa);
+    return GetPageLocked(offset, pf_flags, alloc_list, page_request, page, pa);
   }
 
   // See VmObject::GetPage
-  virtual zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* free_list,
-                                    PageRequest* page_request, vm_page_t** page, paddr_t* pa)
+  zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* alloc_list,
+                            PageRequest* page_request, vm_page_t** page, paddr_t* pa)
       TA_REQ(lock_) {
+    __UNINITIALIZED LookupInfo lookup;
+    zx_status_t status = LookupPagesLocked(offset, pf_flags, 1, alloc_list, page_request, &lookup);
+    if (status == ZX_OK) {
+      DEBUG_ASSERT(lookup.num_pages == 1);
+      if (unlikely(page)) {
+        // This reverse lookup isn't very expensive, and page_out is very rarely requested anyway.
+        *page = paddr_to_vm_page(lookup.paddrs[0]);
+      }
+      if (pa) {
+        *pa = lookup.paddrs[0];
+      }
+    }
+    return status;
+  }
+
+  // Output struct for LookupPagesLocked to return a run of pages.
+  struct LookupInfo {
+    // Helper to add a paddr to the next slot in the array.
+    void add_page(paddr_t paddr) {
+      ASSERT(num_pages < kMaxPages);
+      paddrs[num_pages] = paddr;
+      num_pages++;
+    }
+    // This value is chosen conservatively as this structure is allocated directly on the stack, and
+    // larger values have diminishing returns for the benefit they provide.
+    static constexpr uint64_t kMaxPages = 16;
+    paddr_t paddrs[kMaxPages];
+    uint64_t num_pages = 0;
+    // If true the pages returned may be written to, even if the write flag was not specified in
+    // the lookup.
+    bool writable;
+  };
+  // See GetPage for a description of the core functionality.
+  // Beyond GetPage this allows for retrieving information about multiple pages, storing them in a
+  // |LookupInfo| output struct. The |max_out_pages| is required to be strictly greater than 0, but
+  // not greater than LookupInfo::kMaxPages.
+  // Collecting additional pages essentially treat the VMO as immutable, and will not perform write
+  // forking or perform any kinds of allocations. This ensures the VMO behaves functionally
+  // identically regardless of how many extra pages are ever asked for. Further returning additional
+  // pages is strictly optional and the caller may not infer anything based on absence of these
+  // pages.
+  // For any additional pages that are returned, it is guaranteed that GetPage would have returned
+  // exactly the same page.
+  // The additional lookups treating the VMO immutable makes this suitable for performing optimistic
+  // lookups without impacting memory usage.
+  virtual zx_status_t LookupPagesLocked(uint64_t offset, uint pf_flags, uint64_t max_out_pages,
+                                        list_node* alloc_list, PageRequest* page_request,
+                                        LookupInfo* out) TA_REQ(lock_) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

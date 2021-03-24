@@ -14,6 +14,7 @@
 
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
+#include <ktl/algorithm.h>
 #include <ktl/iterator.h>
 #include <ktl/move.h>
 #include <vm/fault.h>
@@ -651,12 +652,15 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
   // mapping it in
   size_t o;
   VmMappingCoalescer coalescer(this, base_ + offset);
-  for (o = offset; o < offset + len; o += PAGE_SIZE) {
+  __UNINITIALIZED VmObject::LookupInfo pages;
+  for (o = offset; o < offset + len;) {
     uint64_t vmo_offset = object_offset_ + o;
 
     zx_status_t status;
-    paddr_t pa;
-    status = object_->GetPageLocked(vmo_offset, pf_flags, nullptr, nullptr, nullptr, &pa);
+    status = object_->LookupPagesLocked(
+        vmo_offset, pf_flags,
+        ktl::min((offset + len - o) / PAGE_SIZE, VmObject::LookupInfo::kMaxPages), nullptr, nullptr,
+        &pages);
     if (status != ZX_OK) {
       // no page to map
       if (commit) {
@@ -666,14 +670,18 @@ zx_status_t VmMapping::MapRangeLocked(size_t offset, size_t len, bool commit) {
       }
 
       // skip ahead
+      o += PAGE_SIZE;
       continue;
     }
+    DEBUG_ASSERT(pages.num_pages > 0);
 
     vaddr_t va = base_ + o;
-    LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", pa, va);
-    status = coalescer.Append(va, pa);
-    if (status != ZX_OK) {
-      return status;
+    for (uint32_t i = 0; i < pages.num_pages; i++, va += PAGE_SIZE, o += PAGE_SIZE) {
+      LTRACEF_LEVEL(2, "mapping pa %#" PRIxPTR " to va %#" PRIxPTR "\n", pages.paddrs[i], va);
+      status = coalescer.Append(va, pages.paddrs[i]);
+      if (status != ZX_OK) {
+        return status;
+      }
     }
   }
   return coalescer.Flush();
@@ -796,24 +804,32 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
     currently_faulting_ = false;
   });
 
-  // fault in or grab an existing page
-  paddr_t new_pa;
-  vm_page_t* page;
-  zx_status_t status =
-      object_->GetPageLocked(vmo_offset, pf_flags, nullptr, page_request, &page, &new_pa);
+  // Determine how far to the end of the page table so we do not cause extra allocations.
+  const uint64_t next_pt_base = ArchVmAspace::NextUserPageTableOffset(va);
+  // Find the minimum between the size of this mapping and the end of the page table.
+  const uint64_t max_map = ktl::min(next_pt_base, base_ + size_);
+  // Convert this into a number of pages, limited by the max lookup window.
+  const uint64_t max_pages = ktl::min((max_map - va) / PAGE_SIZE, VmObject::LookupInfo::kMaxPages);
+  DEBUG_ASSERT(max_pages > 0);
+
+  // fault in or grab existing pages.
+  __UNINITIALIZED VmObject::LookupInfo lookup_info;
+  zx_status_t status = object_->LookupPagesLocked(vmo_offset, pf_flags, max_pages, nullptr,
+                                                  page_request, &lookup_info);
   if (status != ZX_OK) {
     // TODO(cpu): This trace was originally TRACEF() always on, but it fires if the
     // VMO was resized, rather than just when the system is running out of memory.
-    LTRACEF("ERROR: failed to fault in or grab existing page\n");
+    LTRACEF("ERROR: failed to fault in or grab existing page: %d\n", (int)status);
     LTRACEF("%p vmo_offset %#" PRIx64 ", pf_flags %#x\n", this, vmo_offset, pf_flags);
     return status;
   }
+  DEBUG_ASSERT(lookup_info.num_pages > 0);
 
-  // if we read faulted, make sure we map or modify the page without any write permissions
-  // this ensures we will fault again if a write is attempted so we can potentially
-  // replace this page with a copy or a new one
+  // if we read faulted, and lookup didn't say that this is always writable, then we map or modify
+  // the page without any write permissions. This ensures we will fault again if a write is
+  // attempted so we can potentially replace this page with a copy or a new one.
   uint mmu_flags = arch_mmu_flags_;
-  if (!(pf_flags & VMM_PF_FLAG_WRITE)) {
+  if (!(pf_flags & VMM_PF_FLAG_WRITE) && !lookup_info.writable) {
     // we read faulted, so only map with read permissions
     mmu_flags &= ~ARCH_MMU_FLAG_PERM_WRITE;
   }
@@ -825,7 +841,7 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
   zx_status_t err = aspace_->arch_aspace().Query(va, &pa, &page_flags);
   if (err >= 0) {
     LTRACEF("queried va, page at pa %#" PRIxPTR ", flags %#x is already there\n", pa, page_flags);
-    if (pa == new_pa) {
+    if (pa == lookup_info.paddrs[0]) {
       // Faulting on a mapping that is the correct page could happen for a few reasons
       //  1. Permission are incorrect and this fault is a write fault for a read only mapping.
       //  2. Fault was caused by (1), but we were racing with another fault and the mapping is
@@ -853,10 +869,11 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
       // some other page is mapped there already
       LTRACEF("thread %s faulted on va %#" PRIxPTR ", different page was present\n",
               Thread::Current::Get()->name(), va);
-      LTRACEF("old pa %#" PRIxPTR " new pa %#" PRIxPTR "\n", pa, new_pa);
 
       // assert that we're not accidentally mapping the zero page writable
-      DEBUG_ASSERT((new_pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
+      DEBUG_ASSERT(!(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) ||
+                   ktl::all_of(&lookup_info.paddrs[0], &lookup_info.paddrs[lookup_info.num_pages],
+                               [](paddr_t p) { return p != vm_get_zero_page_paddr(); }));
 
       // unmap the old one and put the new one in place
       status = aspace_->arch_aspace().Unmap(va, 1, nullptr);
@@ -866,30 +883,34 @@ zx_status_t VmMapping::PageFault(vaddr_t va, const uint pf_flags, PageRequest* p
       }
 
       size_t mapped;
-      status = aspace_->arch_aspace().MapContiguous(va, new_pa, 1, mmu_flags, &mapped);
+      status =
+          aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages,
+                                     mmu_flags, ArchVmAspace::ExistingEntryAction::Skip, &mapped);
       if (status != ZX_OK) {
         TRACEF("failed to map replacement page\n");
         return ZX_ERR_NO_MEMORY;
       }
-      DEBUG_ASSERT(mapped == 1);
+      DEBUG_ASSERT(mapped >= 1);
 
       return ZX_OK;
     }
   } else {
     // nothing was mapped there before, map it now
-    LTRACEF("mapping pa %#" PRIxPTR " to va %#" PRIxPTR " is zero page %d\n", new_pa, va,
-            (new_pa == vm_get_zero_page_paddr()));
 
     // assert that we're not accidentally mapping the zero page writable
-    DEBUG_ASSERT((new_pa != vm_get_zero_page_paddr()) || !(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE));
+    DEBUG_ASSERT(!(mmu_flags & ARCH_MMU_FLAG_PERM_WRITE) ||
+                 ktl::all_of(&lookup_info.paddrs[0], &lookup_info.paddrs[lookup_info.num_pages],
+                             [](paddr_t p) { return p != vm_get_zero_page_paddr(); }));
 
     size_t mapped;
-    status = aspace_->arch_aspace().MapContiguous(va, new_pa, 1, mmu_flags, &mapped);
+    status =
+        aspace_->arch_aspace().Map(va, lookup_info.paddrs, lookup_info.num_pages, mmu_flags,
+                                   ArchVmAspace::ExistingEntryAction::Skip, &mapped);
     if (status != ZX_OK) {
       TRACEF("failed to map page\n");
       return ZX_ERR_NO_MEMORY;
     }
-    DEBUG_ASSERT(mapped == 1);
+    DEBUG_ASSERT(mapped >= 1);
   }
 
   return ZX_OK;

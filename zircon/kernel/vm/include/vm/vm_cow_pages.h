@@ -117,14 +117,16 @@ class VmCowPages final
   zx_status_t FailPageRequestsLocked(uint64_t offset, uint64_t len, zx_status_t error_status)
       TA_REQ(lock_);
 
-  // See VmObject::GetPageLocked
+  using LookupInfo = VmObject::LookupInfo;
+  // See VmObject::GetPage
   // The pages returned from this are assumed to be used in the following ways.
   //  * Our VmObjectPaged backlink, or any of childrens backlinks, are allowed to have readable
   //    mappings, and will be informed to unmap via the backlinks when needed.
   //  * Our VmObjectPaged backlink and our *slice* children are allowed to have writable mappings,
   //    and will be informed to either unmap or remove writability when needed.
-  zx_status_t GetPageLocked(uint64_t offset, uint pf_flags, list_node* alloc_list,
-                            PageRequest* page_request, vm_page_t**, paddr_t*) TA_REQ(lock_);
+  zx_status_t LookupPagesLocked(uint64_t offset, uint pf_flags, uint64_t max_out_pages,
+                                list_node* alloc_list, PageRequest* page_request, LookupInfo* out)
+      TA_REQ(lock_);
 
   // Adds an allocated page to this cow pages at the specified offset, can be optionally zeroed and
   // any mappings invalidated. If an error is returned the caller retains ownership of |page|.
@@ -320,11 +322,16 @@ class VmCowPages final
   // no initial content (i.e. whether it is zero or something else) is left up to the caller.
   //
   // If an ancestor has a committed page which corresponds to |offset|, returns that page
-  // as well as the VmObjectPaged and offset which own the page. If no ancestor has a committed
-  // page for the offset, returns null as well as the VmObjectPaged/offset which need to be queried
+  // as well as the VmCowPages and offset which own the page. If no ancestor has a committed
+  // page for the offset, returns null as well as the VmCowPages/offset which need to be queried
   // to populate the page.
+  //
+  // If the passed |owner_length| is not null, then the visible range of the owner is calculated and
+  // stored back into |owner_length| on the walk up. The |owner_length| represents the size of the
+  // range in the owner for which no other VMO in the chain had forked a page.
   VmPageOrMarker* FindInitialPageContentLocked(uint64_t offset, VmCowPages** owner_out,
-                                               uint64_t* owner_offset_out) TA_REQ(lock_);
+                                               uint64_t* owner_offset_out, uint64_t* owner_length)
+      TA_REQ(lock_);
 
   // GetPageLocked helper function that 'forks' the page at |offset| of the current vmo. If
   // this function successfully inserts a page into |offset| of the current vmo, it returns

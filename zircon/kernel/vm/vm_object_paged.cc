@@ -142,8 +142,7 @@ void VmObjectPaged::HarvestAccessedBits() {
     // write to prevent any committing or copy-on-write behavior. This will just cause the page to
     // be looked up, and its location in any pager_backed queues updated.
     __UNUSED vm_page_t* out;
-    __UNUSED zx_status_t result =
-        cow_pages_locked()->GetPageLocked(offset, 0, nullptr, nullptr, &out, nullptr);
+    __UNUSED zx_status_t result = GetPageLocked(offset, 0, nullptr, nullptr, &out, nullptr);
     // We are in this callback because there is a physical page mapped into the hardware page table
     // attributed to this vmo. If we cannot find it, or it isn't the page we expect, then something
     // has gone horribly wrong.
@@ -972,6 +971,7 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
   // Track our two offsets.
   uint64_t src_offset = offset;
   size_t dest_offset = 0;
+  __UNINITIALIZED LookupInfo pages;
   // Record the current generation count, we can use this to attempt to avoid re-performing checks
   // whilst copying.
   uint64_t gen_count = GetHierarchyGenerationCountLocked();
@@ -980,14 +980,14 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
   // reinitialize itself if needed.
   PageRequest page_request;
   while (len > 0) {
-    const size_t page_offset = src_offset % PAGE_SIZE;
-    const size_t tocopy = ktl::min(PAGE_SIZE - page_offset, len);
+    const size_t first_page_offset = ROUNDDOWN(src_offset, PAGE_SIZE);
+    const size_t last_page_offset = ROUNDDOWN(src_offset + len - 1, PAGE_SIZE);
+    const size_t max_pages = (last_page_offset - first_page_offset) / PAGE_SIZE + 1;
 
-    // fault in the page
-    paddr_t pa;
-    zx_status_t status =
-        GetPageLocked(src_offset, VMM_PF_FLAG_SW_FAULT | (write ? VMM_PF_FLAG_WRITE : 0), nullptr,
-                      &page_request, nullptr, &pa);
+    // fault in the page(s)
+    zx_status_t status = LookupPagesLocked(
+        first_page_offset, VMM_PF_FLAG_SW_FAULT | (write ? VMM_PF_FLAG_WRITE : 0),
+        ktl::min(max_pages, LookupInfo::kMaxPages), nullptr, &page_request, &pages);
     if (status == ZX_ERR_SHOULD_WAIT) {
       // Must block on asynchronous page requests whilst not holding the lock.
       guard->CallUnlocked([&status, &page_request]() { status = page_request.Wait(); });
@@ -1007,36 +1007,44 @@ zx_status_t VmObjectPaged::ReadWriteInternalLocked(uint64_t offset, size_t len, 
     if (status != ZX_OK) {
       return status;
     }
-    // Compute the kernel mapping of this page.
-    char* page_ptr = reinterpret_cast<char*>(paddr_to_physmap(pa));
+    DEBUG_ASSERT(pages.num_pages > 0);
+    for (uint32_t i = 0; i < pages.num_pages; i++) {
+      DEBUG_ASSERT(len > 0);
+      const size_t page_offset = src_offset % PAGE_SIZE;
+      const size_t tocopy = ktl::min(PAGE_SIZE - page_offset, len);
+      paddr_t pa = pages.paddrs[i];
 
-    // Call the copy routine. If the copy was successful then ZX_OK is returned, otherwise
-    // ZX_ERR_SHOULD_WAIT may be returned to indicate the copy failed but we can retry it. if we
-    // can retry, but our generation count hasn't changed, then we know that this VMO is unchanged
-    // and we don't need to re-perform checks or lookup the page again.
-    do {
-      status = copyfunc(page_ptr + page_offset, dest_offset, tocopy, guard);
-    } while (
-        unlikely(status == ZX_ERR_SHOULD_WAIT && gen_count == GetHierarchyGenerationCountLocked()));
+      // Compute the kernel mapping of this page.
+      char* page_ptr = reinterpret_cast<char*>(paddr_to_physmap(pa));
 
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      // The generation count changed so we must recheck properties. If all is good we cannot simply
-      // retry the copy. As the underlying page could have changed, so we retry the loop from the
-      // top, stashing the new generation count.
-      gen_count = GetHierarchyGenerationCountLocked();
-      status = check();
-      if (status == ZX_OK) {
-        continue;
+      // Call the copy routine. If the copy was successful then ZX_OK is returned, otherwise
+      // ZX_ERR_SHOULD_WAIT may be returned to indicate the copy failed but we can retry it. If we
+      // can retry, but our generation count hasn't changed, then we know that this VMO is unchanged
+      // and we don't need to re-perform checks or lookup the page again.
+      do {
+        status = copyfunc(page_ptr + page_offset, dest_offset, tocopy, guard);
+      } while (unlikely(status == ZX_ERR_SHOULD_WAIT &&
+                        gen_count == GetHierarchyGenerationCountLocked()));
+
+      if (status == ZX_ERR_SHOULD_WAIT) {
+        // The generation count changed so we must recheck properties. If all is good we cannot
+        // simply retry the copy. As the underlying page could have changed, so we retry the loop
+        // from the top, stashing the new generation count.
+        gen_count = GetHierarchyGenerationCountLocked();
+        status = check();
+        if (status == ZX_OK) {
+          break;
+        }
       }
-    }
-    if (status != ZX_OK) {
-      return status;
-    }
+      if (status != ZX_OK) {
+        return status;
+      }
 
-    // Advance the copy location.
-    src_offset += tocopy;
-    dest_offset += tocopy;
-    len -= tocopy;
+      // Advance the copy location.
+      src_offset += tocopy;
+      dest_offset += tocopy;
+      len -= tocopy;
+    }
   }
 
   return ZX_OK;
