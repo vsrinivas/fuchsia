@@ -26,7 +26,7 @@ Diagram legend:
 
 *Gray*: Components.
 *Blue*: Component namespace that shows the out/diagnostics directory contents.
-*Purple*: Contents of the `out/diagnostics/&ast;` inspect files.
+*Purple*: Contents of the `out/diagnostics/*` inspect files.
 
 Components can expose inspect data in the following ways:
 
