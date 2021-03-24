@@ -6,6 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/blobfs/c/fidl.h>
+#include <fuchsia/fs/llcpp/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
@@ -18,6 +19,7 @@
 #include <lib/fidl-utils/bind.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/service/cpp/reader.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/zx/vmo.h>
 #include <sys/mman.h>
 #include <sys/stat.h>
@@ -454,35 +456,34 @@ TEST(SmallDiskTest, FvmDiskTooSmall) {
 }
 
 void QueryInfo(fs_test::TestFilesystem& fs, size_t expected_nodes, size_t expected_bytes) {
-  fbl::unique_fd fd(open(fs.mount_path().c_str(), O_RDONLY | O_DIRECTORY));
-  ASSERT_TRUE(fd);
+  auto svc = fs.GetSvcDirectory();
+  auto client_end = service::ConnectAt<fuchsia_fs::Query>(svc);
+  ASSERT_TRUE(client_end.is_ok());
+  const auto& query_result = fuchsia_fs::Query::Call::GetInfo(
+      client_end->borrow(), fuchsia_fs::wire::FilesystemInfoQuery::kMask);
+  ASSERT_TRUE(query_result.ok());
 
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  auto query_result = fio::DirectoryAdmin::Call::QueryFilesystem(
-      fidl::UnownedClientEnd<fio::DirectoryAdmin>(caller.channel()));
-  ASSERT_EQ(query_result.status(), ZX_OK);
-  ASSERT_EQ(query_result.value().s, ZX_OK);
-  ASSERT_NE(query_result.value().info, nullptr);
-  const fio::wire::FilesystemInfo& info = *query_result.value().info;
+  const fuchsia_fs::wire::FilesystemInfo& info = query_result.value().result.response().info;
 
   constexpr std::string_view kFsName = "blobfs";
-  const char* name = reinterpret_cast<const char*>(info.name.data());
+  const char* name = reinterpret_cast<const char*>(info.name().data());
   ASSERT_EQ(name, kFsName) << "Unexpected filesystem mounted";
-  EXPECT_EQ(info.block_size, kBlobfsBlockSize);
-  EXPECT_EQ(info.max_filename_size, 64U);
-  EXPECT_EQ(info.fs_type, VFS_TYPE_BLOBFS);
-  EXPECT_NE(info.fs_id, 0ul);
+  EXPECT_EQ(info.block_size(), kBlobfsBlockSize);
+  EXPECT_EQ(info.max_node_name_size(), 64U);
+  static_assert(VFS_TYPE_BLOBFS == (unsigned long)fuchsia_fs::wire::FsType::BLOBFS);
+  EXPECT_EQ(info.fs_type(), fuchsia_fs::wire::FsType::BLOBFS);
+  EXPECT_NE(info.fs_id(), 0ul);
 
   // Check that used_bytes are within a reasonable range
-  EXPECT_GE(info.used_bytes, expected_bytes);
-  EXPECT_LE(info.used_bytes, info.total_bytes);
+  EXPECT_GE(info.used_bytes(), expected_bytes);
+  EXPECT_LE(info.used_bytes(), info.total_bytes());
 
   // Check that total_bytes are a multiple of slice_size
   const uint64_t slice_size = fs.options().fvm_slice_size;
-  EXPECT_GE(info.total_bytes, slice_size);
-  EXPECT_EQ(info.total_bytes % slice_size, 0ul);
-  EXPECT_EQ(info.total_nodes, slice_size / kBlobfsInodeSize);
-  EXPECT_EQ(info.used_nodes, expected_nodes);
+  EXPECT_GE(info.total_bytes(), slice_size);
+  EXPECT_EQ(info.total_bytes() % slice_size, 0ul);
+  EXPECT_EQ(info.total_nodes(), slice_size / kBlobfsInodeSize);
+  EXPECT_EQ(info.used_nodes(), expected_nodes);
 }
 
 TEST_F(BlobfsWithFvmTest, QueryInfo) {
