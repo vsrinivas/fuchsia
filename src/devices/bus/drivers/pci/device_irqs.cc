@@ -89,8 +89,7 @@ zx_status_t Device::DisableInterrupts() {
   zx_status_t st = ZX_OK;
   switch (irqs_.mode) {
     case PCI_IRQ_MODE_DISABLED:
-      zxlogf(TRACE, "[%s] disabling interrupts when interrupts are already disabled", cfg_->addr());
-      break;
+      return ZX_OK;
     case PCI_IRQ_MODE_LEGACY:
       st = DisableLegacy();
       break;

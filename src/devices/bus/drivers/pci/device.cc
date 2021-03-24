@@ -121,12 +121,10 @@ Device::~Device() {
   ZX_DEBUG_ASSERT(!plugged_in_);
 
   // Make certain that all bus access (MMIO, PIO, Bus mastering) has been
-  // disabled.  Also, explicitly disable legacy IRQs.
-  // TODO(cja/fxbug.dev/32979)): Only use the PCIe int disable if PCIe
-  ModifyCmd(PCI_CFG_COMMAND_IO_EN | PCI_CFG_COMMAND_MEM_EN, PCIE_CFG_COMMAND_INT_DISABLE);
-
-  caps_.list.clear();
-  caps_.ext_list.clear();
+  // disabled and disable IRQs.
+  DisableInterrupts();
+  EnableBusMaster(false);
+  ModifyCmd(/*clr_bits=*/PCI_CFG_COMMAND_IO_EN | PCI_CFG_COMMAND_MEM_EN, /*set_bits=*/0);
   // TODO(cja/fxbug.dev/32979): Remove this after porting is finished.
   zxlogf(TRACE, "%s [%s] dtor finished", is_bridge() ? "bridge" : "device", cfg_->addr());
 }
