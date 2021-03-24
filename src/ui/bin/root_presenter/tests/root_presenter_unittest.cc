@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ui/focus/cpp/fidl.h>
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/gtest/real_loop_fixture.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/reader.h>
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/ui/scenic/cpp/commands.h>
 #include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 #include <zircon/status.h>
@@ -24,12 +26,25 @@
 namespace root_presenter {
 namespace {
 
-class RootPresenterTest : public gtest::RealLoopFixture {
+zx_koid_t ExtractKoid(const fuchsia::ui::views::ViewRef& view_ref) {
+  zx_info_handle_basic_t info{};
+  if (view_ref.reference.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) !=
+      ZX_OK) {
+    return ZX_KOID_INVALID;  // no info
+  }
+
+  return info.koid;
+}
+
+class RootPresenterTest : public gtest::RealLoopFixture,
+                          public fuchsia::ui::focus::FocusChainListener {
  public:
+  RootPresenterTest() : focus_listener_(this) {}
+
   void SetUp() final {
     real_component_context_ = sys::ComponentContext::CreateAndServeOutgoingDirectory();
 
-    // Proxy real Scenic through the fake component_context.
+    // Proxy real APIs through the fake component_context.
     context_provider_.service_directory_provider()->AddService<fuchsia::ui::scenic::Scenic>(
         [this](fidl::InterfaceRequest<fuchsia::ui::scenic::Scenic> request) {
           real_component_context_->svc()->Connect(std::move(request));
@@ -54,6 +69,30 @@ class RootPresenterTest : public gtest::RealLoopFixture {
     view_token_ = std::move(view_token);
 
     RunLoopUntil([this]() { return root_presenter()->is_presentation_initialized(); });
+  }
+
+  void SetUpFocusChainListener(
+      fit::function<void(fuchsia::ui::focus::FocusChain focus_chain)> callback) {
+    focus_callback_ = std::move(callback);
+
+    fuchsia::ui::focus::FocusChainListenerRegistryPtr focus_chain_listener_registry;
+    real_component_context_->svc()->Connect(focus_chain_listener_registry.NewRequest());
+    focus_chain_listener_registry.set_error_handler([](zx_status_t status) {
+      FX_LOGS(ERROR) << "FocusChainListenerRegistry connection failed with status: "
+                     << zx_status_get_string(status);
+      FAIL();
+    });
+    focus_chain_listener_registry->Register(focus_listener_.NewBinding());
+
+    RunLoopUntil([this] { return focus_set_up_; });
+  }
+
+  // |fuchsia.ui.focus.FocusChainListener|
+  void OnFocusChange(fuchsia::ui::focus::FocusChain focus_chain,
+                     OnFocusChangeCallback callback) override {
+    focus_set_up_ = true;
+    focus_callback_(std::move(focus_chain));
+    callback();
   }
 
   fuchsia::ui::input::DeviceDescriptor TouchscreenDescriptorTemplate() {
@@ -118,6 +157,10 @@ class RootPresenterTest : public gtest::RealLoopFixture {
  private:
   std::unique_ptr<sys::ComponentContext> real_component_context_;
   std::unique_ptr<App> root_presenter_;
+
+  fidl::Binding<fuchsia::ui::focus::FocusChainListener> focus_listener_;
+  fit::function<void(fuchsia::ui::focus::FocusChain focus_chain)> focus_callback_;
+  bool focus_set_up_ = false;
 
   fuchsia::ui::views::ViewToken view_token_;
 };
@@ -510,6 +553,82 @@ TEST_F(RootPresenterTest, InjectorStartupTest) {
   RunLoopUntilIdle();
   EXPECT_EQ(injector_registry_->num_registered(), 3u);
   EXPECT_EQ(injector_registry_->num_events_received(), 4u);
+}
+
+// Tests that focus is requested for the client after the client view is connected.
+TEST_F(RootPresenterTest, FocusOnStartup) {
+  // Set up presentation.
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+  const zx_koid_t child_view_koid = ExtractKoid(view_ref);
+  fuchsia::ui::views::ViewRef clone;
+  fidl::Clone(view_ref, &clone);
+  root_presenter()->PresentOrReplaceView2(std::move(view_holder_token), std::move(clone), nullptr);
+  RunLoopUntil([this]() { return root_presenter()->is_presentation_initialized(); });
+
+  // Connect to focus chain registry after Scenic has been set up.
+  zx_koid_t focused_view_koid = ZX_KOID_INVALID;
+  SetUpFocusChainListener([&focused_view_koid](fuchsia::ui::focus::FocusChain focus_chain) {
+    if (!focus_chain.focus_chain().empty()) {
+      focused_view_koid = ExtractKoid(focus_chain.focus_chain().back());
+    }
+  });
+
+  // Create and connect child view.
+  fuchsia::ui::scenic::ScenicPtr scenic;
+  context_provider_.context()->svc()->Connect(scenic.NewRequest());
+  scenic::Session session(scenic.get());
+  session.Enqueue({scenic::NewCommand(scenic::NewCreateViewCmd(
+      /*view_id*/ 1, std::move(view_token), std::move(control_ref), std::move(view_ref), ""))});
+  session.Present(0, [](auto) {});
+
+  // Expect focus to change to the child view.
+  RunLoopUntil(
+      [&focused_view_koid, child_view_koid]() { return focused_view_koid == child_view_koid; });
+  EXPECT_EQ(focused_view_koid, child_view_koid);
+}
+
+// Tests that we can handle both an automatic focus request on startup and a simultaneous one
+// from a11y.
+TEST_F(RootPresenterTest, FocusCollision) {
+  // Set up presentation.
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  auto [control_ref, view_ref] = scenic::ViewRefPair::New();
+  const zx_koid_t child_view_koid = ExtractKoid(view_ref);
+  fuchsia::ui::views::ViewRef clone;
+  fidl::Clone(view_ref, &clone);
+  root_presenter()->PresentOrReplaceView2(std::move(view_holder_token), std::move(clone), nullptr);
+  RunLoopUntil([this]() { return root_presenter()->is_presentation_initialized(); });
+
+  // Register a separate focuser.
+  fuchsia::ui::views::FocuserPtr focuser;
+  root_presenter()->RegisterFocuser(focuser.NewRequest());
+  // Use a bogus ViewRef since we don't care if focus actually changes.
+  auto [_, bogus_view_ref] = scenic::ViewRefPair::New();
+  bool focus_callback_fired = false;
+  focuser->RequestFocus(std::move(bogus_view_ref),
+                        [&focus_callback_fired](auto) { focus_callback_fired = true; });
+
+  // Connect to focus chain registry after Scenic has been set up.
+  zx_koid_t focused_view_koid = ZX_KOID_INVALID;
+  SetUpFocusChainListener([&focused_view_koid](fuchsia::ui::focus::FocusChain focus_chain) {
+    if (!focus_chain.focus_chain().empty()) {
+      focused_view_koid = ExtractKoid(focus_chain.focus_chain().back());
+    }
+  });
+
+  // Create and connect child view.
+  fuchsia::ui::scenic::ScenicPtr scenic;
+  context_provider_.context()->svc()->Connect(scenic.NewRequest());
+  scenic::Session session(scenic.get());
+  session.Enqueue({scenic::NewCommand(scenic::NewCreateViewCmd(
+      /*view_id*/ 1, std::move(view_token), std::move(control_ref), std::move(view_ref), ""))});
+  session.Present(0, [](auto) {});
+
+  // Expect both focus requests to be handled.
+  RunLoopUntil([&focus_callback_fired, &focused_view_koid, child_view_koid]() {
+    return focused_view_koid == child_view_koid && focus_callback_fired;
+  });
 }
 
 }  // namespace

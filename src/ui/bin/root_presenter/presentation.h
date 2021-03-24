@@ -48,9 +48,11 @@ class Presentation : fuchsia::ui::policy::Presentation,
                fuchsia::ui::scenic::Scenic* scenic, scenic::Session* session,
                scenic::ResourceId compositor_id,
                fuchsia::ui::views::ViewHolderToken view_holder_token,
+               fuchsia::ui::views::ViewRef client_view_ref,
                fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request,
                SafePresenter* safe_presenter, int32_t display_startup_rotation_adjustment,
-               std::function<void()> on_client_death);
+               fit::function<void()> on_client_death,
+               fit::function<void(fuchsia::ui::views::ViewRef)> request_focus);
   ~Presentation() override;
 
   void RegisterWithMagnifier(fuchsia::accessibility::Magnifier* magnifier);
@@ -133,6 +135,7 @@ class Presentation : fuchsia::ui::policy::Presentation,
   // - It's used to set scale, rotation and translation for all child views.
   // - It's kept in sync with the client view for their ViewProperties.
   // - It is used as the target for fuchsia::ui::pointerinjector to make transforms simpler.
+  fuchsia::ui::scenic::SessionPtr a11y_session_ptr_;
   scenic::Session a11y_session_;
   std::optional<scenic::View> a11y_view_;
   std::optional<scenic::ViewHolder> a11y_view_holder_;
@@ -159,7 +162,7 @@ class Presentation : fuchsia::ui::policy::Presentation,
   //
   // Used when the native display orientation is reported incorrectly.
   // TODO(fxbug.dev/24074) - Make this less of a hack.
-  int32_t display_startup_rotation_adjustment_;
+  const int32_t display_startup_rotation_adjustment_;
 
   // Current ClipSpaceTransform. Used to set up a matching input Viewport.
   float clip_scale_ = 1;
