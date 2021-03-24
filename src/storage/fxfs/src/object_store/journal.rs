@@ -34,12 +34,12 @@ type Checksum = u64;
 // the preceding block, since the check-sum of the preceding block is an input to the check-sum of
 // every block.
 #[derive(Clone, Debug, Default, Deserialize, Eq, PartialEq, Serialize)]
-struct JournalCheckpoint {
-    file_offset: u64,
+pub struct JournalCheckpoint {
+    pub file_offset: u64,
 
     // Starting check-sum for block that contains file_offset i.e. the checksum for the previous
     // block.
-    checksum: Checksum,
+    pub checksum: Checksum,
 }
 
 impl JournalCheckpoint {

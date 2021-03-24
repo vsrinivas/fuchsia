@@ -16,12 +16,14 @@ fxfs_deps = [
   "//third_party/rust_crates:num",
   "//third_party/rust_crates:rand",
   "//third_party/rust_crates:serde",
+  "//third_party/rust_crates:thiserror",
 ]
 
 fxfs_sources = [
   "src/device.rs",
   "src/device/buffer.rs",
   "src/device/buffer_allocator.rs",
+  "src/errors.rs",
   "src/lib.rs",
   "src/lsm_tree.rs",
   "src/lsm_tree/merge.rs",
@@ -32,6 +34,9 @@ fxfs_sources = [
   "src/object_store.rs",
   "src/object_store/allocator.rs",
   "src/object_store/allocator/merge.rs",
+  "src/object_store/constants.rs",
+  "src/object_store/device.rs",
+  "src/object_store/filesystem.rs",
   "src/object_store/journal.rs",
   "src/object_store/journal/reader.rs",
   "src/object_store/journal/writer.rs",
@@ -39,6 +44,7 @@ fxfs_sources = [
   "src/object_store/record.rs",
   "src/object_store/transaction.rs",
   "src/testing.rs",
+  "src/testing/fake_device.rs",
   "src/testing/fake_object.rs",
 ]
 

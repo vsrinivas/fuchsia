@@ -7,17 +7,18 @@ mod merge;
 use {
     crate::{
         lsm_tree::types::{BoxedLayerIterator, Item, ItemRef, LayerIterator, OrdLowerBound},
-        object_store::transaction::Transaction,
+        object_store::{filesystem::ApplyMutations, transaction::Transaction},
     },
     anyhow::Error,
     async_trait::async_trait,
     serde::{Deserialize, Serialize},
+    std::sync::Arc,
 };
 
 /// Allocators must implement this.  An allocator is responsible for allocating ranges on behalf of
 /// an object-store.
 #[async_trait]
-pub trait Allocator: Send + Sync {
+pub trait Allocator: ApplyMutations + Send + Sync {
     /// Returns the object ID for the allocator.
     fn object_id(&self) -> u64;
 
@@ -42,6 +43,9 @@ pub trait Allocator: Send + Sync {
         device_range: std::ops::Range<u64>,
         file_offset: u64,
     );
+
+    /// Cast to super-trait.
+    fn as_apply_mutations(self: Arc<Self>) -> Arc<dyn ApplyMutations>;
 }
 
 // Our allocator implementation tracks extents with a reference count.  At time of writing, these

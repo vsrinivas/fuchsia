@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 pub mod device;
+pub mod errors;
 pub mod lsm_tree;
 pub mod object_handle;
 pub mod object_store;

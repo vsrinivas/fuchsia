@@ -2,5 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-pub mod fake_device;
-pub mod fake_object;
+use thiserror::Error;
+
+#[derive(Error, Debug)]
+pub enum FxfsError {
+    #[error("Not found")]
+    NotFound,
+}

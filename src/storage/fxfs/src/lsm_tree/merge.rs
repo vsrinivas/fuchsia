@@ -369,7 +369,7 @@ impl<
     /// be set accordingly i.e. if your keys are range based and you want to search for a key that
     /// covers, say, 100..200, the hint should be ?..101 so that you find a key that is, say,
     /// 50..101.  Calling advance after calling advance_with_hint is undefined.
-    async fn advance_with_hint(&mut self, hint: &K) -> Result<(), Error> {
+    pub async fn advance_with_hint(&mut self, hint: &K) -> Result<(), Error> {
         // Push the iterator for the current item (if we have one) onto the heap.
         if let Some(iterator) = self.item.take_iterator() {
             iterator.advance().await?;
