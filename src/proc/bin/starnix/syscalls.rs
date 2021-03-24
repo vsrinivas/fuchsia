@@ -249,18 +249,10 @@ pub fn sys_exit_group(ctx: &ThreadContext, error_code: i32) -> Result<SyscallRes
 }
 
 pub fn sys_unknown(
-    ctx: &ThreadContext,
+    _ctx: &ThreadContext,
     syscall_number: syscall_number_t,
 ) -> Result<SyscallResult, Errno> {
     info!("UNKNOWN syscall: {}", syscall_number);
-    info!("rip={:#x}", ctx.registers.rip);
-    info!("rax={:#x}", ctx.registers.rax);
-    info!("rdi={:#x}", ctx.registers.rdi);
-    info!("rsi={:#x}", ctx.registers.rsi);
-    info!("rdx={:#x}", ctx.registers.rdx);
-    info!("r10={:#x}", ctx.registers.r10);
-    info!("r8={:#x}", ctx.registers.r8);
-    info!("r9={:#x}", ctx.registers.r9);
     // TODO: We should send SIGSYS once we have signals.
     Err(ENOSYS)
 }

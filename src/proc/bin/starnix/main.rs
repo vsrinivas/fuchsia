@@ -75,12 +75,16 @@ async fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
         ctx.registers = ctx.handle.read_state_general_regs()?;
         let regs = &ctx.registers;
         let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
+        // TODO(tbodt): Print the name of the syscall instead of its number (using a proc macro or
+        // something)
+        info!(target: "strace", "{}({:#x}, {:#x}, {:#x}, {:#x}, {:#x}, {:#x})", syscall_number, args.0, args.1, args.2, args.3, args.4, args.5);
         match dispatch_syscall(&mut ctx, syscall_number, args) {
             Ok(rv) => {
+                info!(target: "strace", "-> {:#x}", rv.value());
                 ctx.registers.rax = rv.value();
             }
             Err(errno) => {
-                info!("syscall {} failed with {}", syscall_number, errno);
+                info!(target: "strace", "!-> {}", errno);
                 ctx.registers.rax = (-errno.value()) as u64;
             }
         }
