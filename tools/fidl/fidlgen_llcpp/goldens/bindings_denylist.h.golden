@@ -31,11 +31,13 @@
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/fidl/txn_header.h>
+#include <lib/zx/channel.h>
 
 #endif  // __Fuchsia__
 #include <zircon/fidl.h>
 
 namespace fidl_test_bindingsdenylist {
+class OnlyLibfuzzerAndDeps;
 namespace wire {
 class OnlyLlcpp;
 
@@ -114,11 +116,553 @@ class OnlyLlcpp {
   ::fidl::Envelope<void> envelope_;
 };
 
+}  // namespace wire
+extern "C" const fidl_type_t
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
+
+extern "C" const fidl_type_t
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
+
+class OnlyLibfuzzerAndDeps final {
+  OnlyLibfuzzerAndDeps() = delete;
+
+ public:
+  struct LibfuzzerNeedsNonemptyProtocolResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    LibfuzzerNeedsNonemptyProtocolResponse() { _InitHeader(); }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+
+    class UnownedEncodedMessage final {
+     public:
+      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size)
+          : message_(_bytes, _byte_size,
+                     sizeof(LibfuzzerNeedsNonemptyProtocolResponse), nullptr, 0,
+                     0) {
+        FIDL_ALIGNDECL LibfuzzerNeedsNonemptyProtocolResponse _response{};
+        message_.Encode<LibfuzzerNeedsNonemptyProtocolResponse>(&_response);
+      }
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                            LibfuzzerNeedsNonemptyProtocolResponse* response)
+          : message_(bytes, byte_size,
+                     sizeof(LibfuzzerNeedsNonemptyProtocolResponse), nullptr, 0,
+                     0) {
+        message_.Encode<LibfuzzerNeedsNonemptyProtocolResponse>(response);
+      }
+      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+      zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+#ifdef __Fuchsia__
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
+#endif
+
+     private:
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedEncodedMessage final {
+     public:
+      explicit OwnedEncodedMessage() : message_(bytes_.data(), bytes_.size()) {}
+      explicit OwnedEncodedMessage(
+          LibfuzzerNeedsNonemptyProtocolResponse* response)
+          : message_(bytes_.data(), bytes_.size(), response) {}
+      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+      zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+#ifdef __Fuchsia__
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
+#endif
+
+     private:
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
+      UnownedEncodedMessage message_;
+    };
+
+   public:
+    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                     zx_handle_info_t* handles = nullptr,
+                     uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                              handle_actual) {
+        Decode<LibfuzzerNeedsNonemptyProtocolResponse>();
+      }
+      DecodedMessage(fidl_incoming_msg_t* msg)
+          : ::fidl::internal::IncomingMessage(msg) {
+        Decode<LibfuzzerNeedsNonemptyProtocolResponse>();
+      }
+      DecodedMessage(const DecodedMessage&) = delete;
+      DecodedMessage(DecodedMessage&&) = delete;
+      DecodedMessage* operator=(const DecodedMessage&) = delete;
+      DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+      LibfuzzerNeedsNonemptyProtocolResponse* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<LibfuzzerNeedsNonemptyProtocolResponse*>(
+            bytes());
+      }
+
+      // Release the ownership of the decoded message. That means that the
+      // handles won't be closed When the object is destroyed. After calling
+      // this method, the DecodedMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
+    };
+
+   private:
+    void _InitHeader();
+  };
+  struct LibfuzzerNeedsNonemptyProtocolRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    explicit LibfuzzerNeedsNonemptyProtocolRequest(zx_txid_t _txid) {
+      _InitHeader(_txid);
+    }
+
+    static constexpr const fidl_type_t* Type =
+        &::fidl::_llcpp_coding_AnyZeroArgMessageTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 16;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 16;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool HasPointer = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+
+    class UnownedEncodedMessage final {
+     public:
+      UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size,
+                            zx_txid_t _txid)
+          : message_(_bytes, _byte_size,
+                     sizeof(LibfuzzerNeedsNonemptyProtocolRequest), nullptr, 0,
+                     0) {
+        FIDL_ALIGNDECL LibfuzzerNeedsNonemptyProtocolRequest _request(_txid);
+        message_.Encode<LibfuzzerNeedsNonemptyProtocolRequest>(&_request);
+      }
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
+                            LibfuzzerNeedsNonemptyProtocolRequest* request)
+          : message_(bytes, byte_size,
+                     sizeof(LibfuzzerNeedsNonemptyProtocolRequest), nullptr, 0,
+                     0) {
+        message_.Encode<LibfuzzerNeedsNonemptyProtocolRequest>(request);
+      }
+      UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
+      UnownedEncodedMessage* operator=(const UnownedEncodedMessage&) = delete;
+      UnownedEncodedMessage* operator=(UnownedEncodedMessage&&) = delete;
+
+      zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
+      bool ok() const { return message_.status() == ZX_OK; }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() { return message_; }
+
+#ifdef __Fuchsia__
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
+#endif
+
+     private:
+      ::fidl::OutgoingMessage message_;
+    };
+
+    class OwnedEncodedMessage final {
+     public:
+      explicit OwnedEncodedMessage(zx_txid_t _txid)
+          : message_(bytes_.data(), bytes_.size(), _txid) {}
+      explicit OwnedEncodedMessage(
+          LibfuzzerNeedsNonemptyProtocolRequest* request)
+          : message_(bytes_.data(), bytes_.size(), request) {}
+      OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
+      OwnedEncodedMessage* operator=(const OwnedEncodedMessage&) = delete;
+      OwnedEncodedMessage* operator=(OwnedEncodedMessage&&) = delete;
+
+      zx_status_t status() const { return message_.status(); }
+#ifdef __Fuchsia__
+      const char* status_string() const { return message_.status_string(); }
+#endif
+      bool ok() const { return message_.ok(); }
+      const char* error() const { return message_.error(); }
+
+      ::fidl::OutgoingMessage& GetOutgoingMessage() {
+        return message_.GetOutgoingMessage();
+      }
+
+#ifdef __Fuchsia__
+      template <typename ChannelLike>
+      void Write(ChannelLike&& client) {
+        message_.Write(std::forward<ChannelLike>(client));
+      }
+#endif
+
+     private:
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
+      UnownedEncodedMessage message_;
+    };
+
+   public:
+    class DecodedMessage final : public ::fidl::internal::IncomingMessage {
+     public:
+      DecodedMessage(uint8_t* bytes, uint32_t byte_actual,
+                     zx_handle_info_t* handles = nullptr,
+                     uint32_t handle_actual = 0)
+          : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
+                                              handle_actual) {
+        Decode<LibfuzzerNeedsNonemptyProtocolRequest>();
+      }
+      DecodedMessage(fidl_incoming_msg_t* msg)
+          : ::fidl::internal::IncomingMessage(msg) {
+        Decode<LibfuzzerNeedsNonemptyProtocolRequest>();
+      }
+      DecodedMessage(const DecodedMessage&) = delete;
+      DecodedMessage(DecodedMessage&&) = delete;
+      DecodedMessage* operator=(const DecodedMessage&) = delete;
+      DecodedMessage* operator=(DecodedMessage&&) = delete;
+
+      LibfuzzerNeedsNonemptyProtocolRequest* PrimaryObject() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<LibfuzzerNeedsNonemptyProtocolRequest*>(
+            bytes());
+      }
+
+      // Release the ownership of the decoded message. That means that the
+      // handles won't be closed When the object is destroyed. After calling
+      // this method, the DecodedMessage object should not be used anymore.
+      void ReleasePrimaryObject() { ResetBytes(); }
+    };
+
+   private:
+    void _InitHeader(zx_txid_t _txid);
+  };
+
+  class EventHandlerInterface {
+   public:
+    EventHandlerInterface() = default;
+    virtual ~EventHandlerInterface() = default;
+  };
+
+#ifdef __Fuchsia__
+  // Collection of return types of FIDL calls in this protocol.
+  class ResultOf final {
+    ResultOf() = delete;
+
+   public:
+    class LibfuzzerNeedsNonemptyProtocol final : public ::fidl::Result {
+     public:
+      explicit LibfuzzerNeedsNonemptyProtocol(
+          ::fidl::UnownedClientEnd<
+              ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+              _client);
+      LibfuzzerNeedsNonemptyProtocol(
+          ::fidl::UnownedClientEnd<
+              ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+              _client,
+          zx_time_t _deadline);
+      explicit LibfuzzerNeedsNonemptyProtocol(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      LibfuzzerNeedsNonemptyProtocol(LibfuzzerNeedsNonemptyProtocol&&) = delete;
+      LibfuzzerNeedsNonemptyProtocol(const LibfuzzerNeedsNonemptyProtocol&) =
+          delete;
+      LibfuzzerNeedsNonemptyProtocol* operator=(
+          LibfuzzerNeedsNonemptyProtocol&&) = delete;
+      LibfuzzerNeedsNonemptyProtocol* operator=(
+          const LibfuzzerNeedsNonemptyProtocol&) = delete;
+      ~LibfuzzerNeedsNonemptyProtocol() = default;
+
+      LibfuzzerNeedsNonemptyProtocolResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<LibfuzzerNeedsNonemptyProtocolResponse*>(
+            bytes_.data());
+      }
+      const LibfuzzerNeedsNonemptyProtocolResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const LibfuzzerNeedsNonemptyProtocolResponse*>(
+            bytes_.data());
+      }
+
+      LibfuzzerNeedsNonemptyProtocolResponse& value() { return *Unwrap(); }
+      const LibfuzzerNeedsNonemptyProtocolResponse& value() const {
+        return *Unwrap();
+      }
+
+      LibfuzzerNeedsNonemptyProtocolResponse* operator->() { return &value(); }
+      const LibfuzzerNeedsNonemptyProtocolResponse* operator->() const {
+        return &value();
+      }
+
+      LibfuzzerNeedsNonemptyProtocolResponse& operator*() { return value(); }
+      const LibfuzzerNeedsNonemptyProtocolResponse& operator*() const {
+        return value();
+      }
+
+     private:
+      ::fidl::internal::InlineMessageBuffer<16> bytes_;
+    };
+  };
+
+  // Collection of return types of FIDL calls in this protocol,
+  // when the caller-allocate flavor or in-place call is used.
+  class UnownedResultOf final {
+    UnownedResultOf() = delete;
+
+   public:
+    class LibfuzzerNeedsNonemptyProtocol final : public ::fidl::Result {
+     public:
+      explicit LibfuzzerNeedsNonemptyProtocol(
+          ::fidl::UnownedClientEnd<
+              ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+              _client,
+          uint8_t* _response_bytes, uint32_t _response_byte_capacity);
+      explicit LibfuzzerNeedsNonemptyProtocol(const ::fidl::Result& result)
+          : ::fidl::Result(result) {}
+      LibfuzzerNeedsNonemptyProtocol(LibfuzzerNeedsNonemptyProtocol&&) = delete;
+      LibfuzzerNeedsNonemptyProtocol(const LibfuzzerNeedsNonemptyProtocol&) =
+          delete;
+      LibfuzzerNeedsNonemptyProtocol* operator=(
+          LibfuzzerNeedsNonemptyProtocol&&) = delete;
+      LibfuzzerNeedsNonemptyProtocol* operator=(
+          const LibfuzzerNeedsNonemptyProtocol&) = delete;
+      ~LibfuzzerNeedsNonemptyProtocol() = default;
+
+      LibfuzzerNeedsNonemptyProtocolResponse* Unwrap() {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<LibfuzzerNeedsNonemptyProtocolResponse*>(
+            bytes_);
+      }
+      const LibfuzzerNeedsNonemptyProtocolResponse* Unwrap() const {
+        ZX_DEBUG_ASSERT(ok());
+        return reinterpret_cast<const LibfuzzerNeedsNonemptyProtocolResponse*>(
+            bytes_);
+      }
+
+      LibfuzzerNeedsNonemptyProtocolResponse& value() { return *Unwrap(); }
+      const LibfuzzerNeedsNonemptyProtocolResponse& value() const {
+        return *Unwrap();
+      }
+
+      LibfuzzerNeedsNonemptyProtocolResponse* operator->() { return &value(); }
+      const LibfuzzerNeedsNonemptyProtocolResponse* operator->() const {
+        return &value();
+      }
+
+      LibfuzzerNeedsNonemptyProtocolResponse& operator*() { return value(); }
+      const LibfuzzerNeedsNonemptyProtocolResponse& operator*() const {
+        return value();
+      }
+
+     private:
+      uint8_t* bytes_;
+    };
+  };
+
+  // Methods to make a sync FIDL call directly on an unowned channel or a
+  // const reference to a
+  // |fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>|,
+  // avoiding setting up a client.
+  class Call final {
+    Call() = delete;
+
+   public:
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    static ResultOf::LibfuzzerNeedsNonemptyProtocol
+    LibfuzzerNeedsNonemptyProtocol(
+        ::fidl::UnownedClientEnd<
+            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+            _client_end) {
+      return ResultOf::LibfuzzerNeedsNonemptyProtocol(_client_end);
+    }
+  };
+
+  class SyncClient final {
+   public:
+    SyncClient() = default;
+
+    explicit SyncClient(::fidl::ClientEnd<OnlyLibfuzzerAndDeps> client_end)
+        : client_end_(std::move(client_end)) {}
+
+    ~SyncClient() = default;
+    SyncClient(SyncClient&&) = default;
+    SyncClient& operator=(SyncClient&&) = default;
+
+    const ::fidl::ClientEnd<OnlyLibfuzzerAndDeps>& client_end() const {
+      return client_end_;
+    }
+    ::fidl::ClientEnd<OnlyLibfuzzerAndDeps>& client_end() {
+      return client_end_;
+    }
+
+    const ::zx::channel& channel() const { return client_end_.channel(); }
+    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+    // Allocates 32 bytes of message buffer on the stack. No heap allocation
+    // necessary.
+    ResultOf::LibfuzzerNeedsNonemptyProtocol LibfuzzerNeedsNonemptyProtocol() {
+      return ResultOf::LibfuzzerNeedsNonemptyProtocol(this->client_end());
+    }
+
+   private:
+    ::fidl::ClientEnd<OnlyLibfuzzerAndDeps> client_end_;
+  };
+
+#ifdef __Fuchsia__
+  class AsyncEventHandler;
+  class LibfuzzerNeedsNonemptyProtocolResponseContext;
+  class ClientImpl;
+#endif
+
+  // Pure-virtual interface to be implemented by a server.
+  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+  // and |fidl::ServerEnd<SomeProtocol>|).
+  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+
+    // The marker protocol type within which this |Interface| class is defined.
+    using _EnclosingProtocol = OnlyLibfuzzerAndDeps;
+
+    class LibfuzzerNeedsNonemptyProtocolCompleterBase
+        : public ::fidl::CompleterBase {
+     public:
+      // In the following methods, the return value indicates internal errors
+      // during the reply, such as encoding or writing to the transport. Note
+      // that any error will automatically lead to the destruction of the
+      // binding, after which the |on_unbound| callback will be triggered with a
+      // detailed reason.
+      //
+      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+      //
+      // Because the reply status is identical to the unbinding status, it can
+      // be safely ignored.
+      ::fidl::Result Reply();
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using LibfuzzerNeedsNonemptyProtocolCompleter =
+        ::fidl::Completer<LibfuzzerNeedsNonemptyProtocolCompleterBase>;
+
+    virtual void LibfuzzerNeedsNonemptyProtocol(
+        LibfuzzerNeedsNonemptyProtocolCompleter::Sync& _completer) = 0;
+
+   private:
+    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn) final;
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the
+  // server implementation. If there is no matching handler, it returns false,
+  // leaving the message and transaction intact. In all other cases, it consumes
+  // the message and returns true. It is possible to chain multiple TryDispatch
+  // functions in this manner.
+  static ::fidl::DispatchResult TryDispatch(Interface* impl,
+                                            fidl_incoming_msg_t* msg,
+                                            ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the
+  // protocol. If there is no matching handler, it closes all the handles in
+  // |msg| and closes the channel with a |ZX_ERR_NOT_SUPPORTED| epitaph, before
+  // returning false. The message should then be discarded.
+  static ::fidl::DispatchResult Dispatch(Interface* impl,
+                                         fidl_incoming_msg_t* msg,
+                                         ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|.
+  // Only used with |fidl::BindServer| to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static ::fidl::DispatchResult TypeErasedDispatch(void* impl,
+                                                   fidl_incoming_msg_t* msg,
+                                                   ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+#endif
+
+  class EventSender;
+  class WeakEventSender;
+};
+namespace wire {
+
 constexpr uint32_t AllBindings = 0u;
 
 }  // namespace wire
 }  // namespace fidl_test_bindingsdenylist
 namespace fidl {
+
+template <>
+struct IsFidlType<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                      LibfuzzerNeedsNonemptyProtocolRequest>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                         LibfuzzerNeedsNonemptyProtocolRequest>
+    : public std::true_type {};
+static_assert(sizeof(::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                         LibfuzzerNeedsNonemptyProtocolRequest) ==
+              ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                  LibfuzzerNeedsNonemptyProtocolRequest::PrimarySize);
+
+template <>
+struct IsFidlType<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                      LibfuzzerNeedsNonemptyProtocolResponse>
+    : public std::true_type {};
+template <>
+struct IsFidlMessage<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                         LibfuzzerNeedsNonemptyProtocolResponse>
+    : public std::true_type {};
+static_assert(sizeof(::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                         LibfuzzerNeedsNonemptyProtocolResponse) ==
+              ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                  LibfuzzerNeedsNonemptyProtocolResponse::PrimarySize);
 
 template <>
 struct IsFidlType<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
@@ -128,5 +672,113 @@ struct IsUnion<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>
     : public std::true_type {};
 static_assert(
     std::is_standard_layout_v<::fidl_test_bindingsdenylist::wire::OnlyLlcpp>);
-
 }  // namespace fidl
+namespace fidl_test_bindingsdenylist {
+
+#ifdef __Fuchsia__
+class OnlyLibfuzzerAndDeps::AsyncEventHandler
+    : public OnlyLibfuzzerAndDeps::EventHandlerInterface {
+ public:
+  AsyncEventHandler() = default;
+
+  virtual void Unbound(::fidl::UnbindInfo info) {}
+};
+
+class OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocolResponseContext
+    : public ::fidl::internal::ResponseContext {
+ public:
+  LibfuzzerNeedsNonemptyProtocolResponseContext();
+
+  virtual void OnReply(
+      OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocolResponse*
+          message) = 0;
+
+ private:
+  void OnReply(uint8_t* reply) override;
+};
+
+class OnlyLibfuzzerAndDeps::ClientImpl final
+    : private ::fidl::internal::ClientBase {
+ public:
+  // Asynchronous variant of
+  // |OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol()|. Allocates 16 bytes
+  // of request buffer on the stack. The callback is stored on the heap.
+  ::fidl::Result LibfuzzerNeedsNonemptyProtocol(
+      ::fit::callback<void(LibfuzzerNeedsNonemptyProtocolResponse* response)>
+          _cb);
+
+  // Asynchronous variant of
+  // |OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol()|. Caller provides
+  // the backing storage for FIDL message via request buffer. Ownership of
+  // |_context| is given unsafely to the binding until |OnError| or |OnReply|
+  // are called on it.
+  ::fidl::Result LibfuzzerNeedsNonemptyProtocol(
+      LibfuzzerNeedsNonemptyProtocolResponseContext* _context);
+
+  // Synchronous variant of
+  // |OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol()|. Allocates 32 bytes
+  // of message buffer on the stack. No heap allocation necessary.
+  ResultOf::LibfuzzerNeedsNonemptyProtocol
+  LibfuzzerNeedsNonemptyProtocol_Sync();
+
+  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+
+ private:
+  friend class ::fidl::Client<OnlyLibfuzzerAndDeps>;
+  friend class ::fidl::internal::ControlBlock<OnlyLibfuzzerAndDeps>;
+
+  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+      : event_handler_(std::move(event_handler)) {}
+
+  std::optional<::fidl::UnbindInfo> DispatchEvent(
+      fidl_incoming_msg_t* msg) override;
+
+  std::shared_ptr<AsyncEventHandler> event_handler_;
+};
+#endif
+
+#ifdef __Fuchsia__
+// |EventSender| owns a server endpoint of a channel speaking
+// the OnlyLibfuzzerAndDeps protocol, and can send events in that protocol.
+class OnlyLibfuzzerAndDeps::EventSender {
+ public:
+  // Constructs an event sender with an invalid channel.
+  EventSender() = default;
+
+  explicit EventSender(
+      ::fidl::ServerEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+          server_end)
+      : server_end_(std::move(server_end)) {}
+
+  // The underlying server channel endpoint, which may be replaced at run-time.
+  const ::fidl::ServerEnd<OnlyLibfuzzerAndDeps>& server_end() const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<OnlyLibfuzzerAndDeps>& server_end() { return server_end_; }
+
+  const ::zx::channel& channel() const { return server_end_.channel(); }
+  ::zx::channel& channel() { return server_end_.channel(); }
+
+  // Whether the underlying channel is valid.
+  bool is_valid() const { return server_end_.is_valid(); }
+
+ private:
+  ::fidl::ServerEnd<OnlyLibfuzzerAndDeps> server_end_;
+};
+
+class OnlyLibfuzzerAndDeps::WeakEventSender {
+ public:
+ private:
+  friend class ::fidl::ServerBindingRef<OnlyLibfuzzerAndDeps>;
+
+  explicit WeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<OnlyLibfuzzerAndDeps>>
+          binding)
+      : binding_(std::move(binding)) {}
+
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<OnlyLibfuzzerAndDeps>>
+      binding_;
+};
+#endif
+
+}  // namespace fidl_test_bindingsdenylist

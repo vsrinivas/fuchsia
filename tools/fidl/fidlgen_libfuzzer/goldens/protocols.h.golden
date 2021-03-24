@@ -64,9 +64,9 @@ struct Allocate<WithErrorSyntax_ResponseAsStruct_Response> {
   WithErrorSyntax_ResponseAsStruct_Response operator()(FuzzInput* src,
                                                        size_t* size) {
     ZX_ASSERT(*size >= MinSize<WithErrorSyntax_ResponseAsStruct_Response>());
+    WithErrorSyntax_ResponseAsStruct_Response out;
     const size_t slack_per_member =
         (*size - MinSize<WithErrorSyntax_ResponseAsStruct_Response>()) / 3;
-    WithErrorSyntax_ResponseAsStruct_Response out;
     size_t out_size;
     out_size = MinSize<int64_t>() + slack_per_member;
     out.a = Allocate<int64_t>{}(src, &out_size);
@@ -126,9 +126,9 @@ struct Allocate<WithErrorSyntax_ErrorAsPrimitive_Response> {
   WithErrorSyntax_ErrorAsPrimitive_Response operator()(FuzzInput* src,
                                                        size_t* size) {
     ZX_ASSERT(*size >= MinSize<WithErrorSyntax_ErrorAsPrimitive_Response>());
+    WithErrorSyntax_ErrorAsPrimitive_Response out;
     const size_t slack_per_member =
         (*size - MinSize<WithErrorSyntax_ErrorAsPrimitive_Response>()) / 1;
-    WithErrorSyntax_ErrorAsPrimitive_Response out;
     size_t out_size;
     out_size = MinSize<uint8_t>() + slack_per_member;
     out.__reserved = Allocate<uint8_t>{}(src, &out_size);
@@ -184,9 +184,9 @@ struct Allocate<WithErrorSyntax_ErrorAsEnum_Response> {
   WithErrorSyntax_ErrorAsEnum_Response operator()(FuzzInput* src,
                                                   size_t* size) {
     ZX_ASSERT(*size >= MinSize<WithErrorSyntax_ErrorAsEnum_Response>());
+    WithErrorSyntax_ErrorAsEnum_Response out;
     const size_t slack_per_member =
         (*size - MinSize<WithErrorSyntax_ErrorAsEnum_Response>()) / 1;
-    WithErrorSyntax_ErrorAsEnum_Response out;
     size_t out_size;
     out_size = MinSize<uint8_t>() + slack_per_member;
     out.__reserved = Allocate<uint8_t>{}(src, &out_size);

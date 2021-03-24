@@ -66,6 +66,9 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
   },
   {
@@ -125,6 +128,7 @@ fidl_testdata_info = [
     build_denylist = [
       # TODO(fxbug.dev/62523): Make protocol named "Interface" compile.
       "fidlgen_llcpp",
+      "fidlgen_libfuzzer",
     ]
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
@@ -137,6 +141,9 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
   },
   {
@@ -161,6 +168,9 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
   },
   {
@@ -177,6 +187,9 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
   },
   {
@@ -216,6 +229,9 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
   },
   {
@@ -225,6 +241,9 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
   },
   {
@@ -249,6 +268,9 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
   },
   {
@@ -257,10 +279,16 @@ fidl_testdata_info = [
     build_denylist = [
       # TODO(fxbug.dev/62532): Fix many issues.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
   },
   {
@@ -269,6 +297,9 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
   },
   {
@@ -285,6 +316,9 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
   },
   {
@@ -333,6 +367,9 @@ fidl_testdata_info = [
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.
       "fidlgen_llcpp",
+
+      # TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+      "fidlgen_libfuzzer",
     ]
   },
   {
@@ -349,6 +386,7 @@ fidl_testdata_info = [
     build_denylist = [
       # TODO(fxbug.dev/55889): Escape "union" keyword.
       "fidlgen_llcpp",
+      "fidlgen_libfuzzer",
     ]
     host_build_denylist = [
       # TODO(fxbug.dev/62573): Add ifdefs so that protocols compile on host.

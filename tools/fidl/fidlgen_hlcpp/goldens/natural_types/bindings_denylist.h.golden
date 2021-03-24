@@ -11,7 +11,59 @@ namespace fidl {
 namespace test {
 namespace bindingsdenylist {
 #ifdef __Fuchsia__
+class OnlyLibfuzzerAndDeps;
+using OnlyLibfuzzerAndDepsHandle =
+    ::fidl::InterfaceHandle<OnlyLibfuzzerAndDeps>;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
 class OnlyHlcpp;
+#endif  // __Fuchsia__
+
+#ifdef __Fuchsia__
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable;
+
+}  // namespace _internal
+class OnlyLibfuzzerAndDeps_RequestEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(
+      ::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &::fidl::test::bindingsdenylist::_internal::
+            fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolRequestTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+
+    return _encoder->GetMessage();
+  }
+};
+namespace _internal {
+extern "C" const fidl_type_t
+    fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable;
+
+}  // namespace _internal
+class OnlyLibfuzzerAndDeps_ResponseEncoder {
+ public:
+  static ::fidl::HLCPPOutgoingMessage LibfuzzerNeedsNonemptyProtocol(
+      ::fidl::Encoder* _encoder) {
+    fidl_trace(WillHLCPPEncode);
+    _encoder->Alloc(16 - sizeof(fidl_message_header_t));
+
+    fidl_trace(
+        DidHLCPPEncode,
+        &::fidl::test::bindingsdenylist::_internal::
+            fidl_test_bindingsdenylist_OnlyLibfuzzerAndDepsLibfuzzerNeedsNonemptyProtocolResponseTable,
+        _encoder->GetPtr<const char>(0), _encoder->CurrentLength(),
+        _encoder->CurrentHandleCount());
+    return _encoder->GetMessage();
+  }
+};
 #endif  // __Fuchsia__
 
 constexpr uint32_t AllBindings = 0u;

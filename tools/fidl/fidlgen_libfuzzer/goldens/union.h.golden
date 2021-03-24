@@ -89,9 +89,9 @@ template <>
 struct Allocate<StructWithNullableXUnion> {
   StructWithNullableXUnion operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<StructWithNullableXUnion>());
+    StructWithNullableXUnion out;
     const size_t slack_per_member =
         (*size - MinSize<StructWithNullableXUnion>()) / 1;
-    StructWithNullableXUnion out;
     size_t out_size;
     out_size =
         MinSize<::std::unique_ptr<::fidl::test::union_::OlderSimpleUnion>>() +
@@ -282,8 +282,8 @@ template <>
 struct Allocate<Pizza> {
   Pizza operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<Pizza>());
-    const size_t slack_per_member = (*size - MinSize<Pizza>()) / 1;
     Pizza out;
+    const size_t slack_per_member = (*size - MinSize<Pizza>()) / 1;
     size_t out_size;
     out_size = MinSize<::std::vector<::std::string>>() + slack_per_member;
     out.toppings = Allocate<::std::vector<::std::string>>{}(src, &out_size);
@@ -298,8 +298,8 @@ template <>
 struct Allocate<Pasta> {
   Pasta operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<Pasta>());
-    const size_t slack_per_member = (*size - MinSize<Pasta>()) / 1;
     Pasta out;
+    const size_t slack_per_member = (*size - MinSize<Pasta>()) / 1;
     size_t out_size;
     out_size = MinSize<::std::string>() + slack_per_member;
     out.sauce = Allocate<::std::string>{}(src, &out_size);
@@ -485,9 +485,9 @@ template <>
 struct Allocate<NullableUnionStruct> {
   NullableUnionStruct operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<NullableUnionStruct>());
+    NullableUnionStruct out;
     const size_t slack_per_member =
         (*size - MinSize<NullableUnionStruct>()) / 1;
-    NullableUnionStruct out;
     size_t out_size;
     out_size = MinSize<::std::unique_ptr<::fidl::test::union_::Union>>() +
                slack_per_member;
@@ -775,8 +775,8 @@ template <>
 struct Allocate<Empty> {
   Empty operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<Empty>());
-    const size_t slack_per_member = (*size - MinSize<Empty>()) / 1;
     Empty out;
+    const size_t slack_per_member = (*size - MinSize<Empty>()) / 1;
     size_t out_size;
     out_size = MinSize<uint8_t>() + slack_per_member;
     out.__reserved = Allocate<uint8_t>{}(src, &out_size);

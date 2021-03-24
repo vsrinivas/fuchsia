@@ -120,26 +120,26 @@
   "experimental_resource_declarations": [],
   "interface_declarations": [
     {
-      "name": "fidl.test.bindingsdenylist/OnlyLibfuzzer",
+      "name": "fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
-        "line": 36,
+        "line": 38,
         "column": 10,
-        "length": 13
+        "length": 20
       },
       "maybe_attributes": [
         {
           "name": "BindingsDenylist",
-          "value": "hlcpp, dart, go, llcpp, rust, syzkaller"
+          "value": "dart, go, rust, syzkaller"
         }
       ],
       "methods": [
         {
-          "ordinal": 6837315459284345174,
+          "ordinal": 2054945783954685224,
           "name": "LibfuzzerNeedsNonemptyProtocol",
           "location": {
             "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
-            "line": 37,
+            "line": 39,
             "column": 5,
             "length": 30
           },
@@ -175,7 +175,7 @@
       "name": "fidl.test.bindingsdenylist/OnlyHlcpp",
       "location": {
         "filename": "../../tools/fidl/fidlc/testdata/bindings_denylist.test.fidl",
-        "line": 41,
+        "line": 43,
         "column": 9,
         "length": 9
       },
@@ -293,7 +293,7 @@
   ],
   "type_alias_declarations": [],
   "declaration_order": [
-    "fidl.test.bindingsdenylist/OnlyLibfuzzer",
+    "fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps",
     "fidl.test.bindingsdenylist/OnlySyzkaller",
     "fidl.test.bindingsdenylist/OnlyRust",
     "fidl.test.bindingsdenylist/OnlyLlcpp",
@@ -306,7 +306,7 @@
     "fidl.test.bindingsdenylist/OnlySyzkaller": "bits",
     "fidl.test.bindingsdenylist/AllBindings": "const",
     "fidl.test.bindingsdenylist/OnlyDart": "enum",
-    "fidl.test.bindingsdenylist/OnlyLibfuzzer": "interface",
+    "fidl.test.bindingsdenylist/OnlyLibfuzzerAndDeps": "interface",
     "fidl.test.bindingsdenylist/OnlyHlcpp": "service",
     "fidl.test.bindingsdenylist/SomeLongAnonymousPrefix0": "struct",
     "fidl.test.bindingsdenylist/SomeLongAnonymousPrefix1": "struct",

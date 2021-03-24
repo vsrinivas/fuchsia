@@ -3,3 +3,21 @@
 #pragma once
 
 #include <fidl/test/bindingsdenylist/cpp/fidl.h>
+namespace fidl {
+namespace test {
+namespace bindingsdenylist {
+namespace testing {
+class OnlyLibfuzzerAndDeps_TestBase
+    : public ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps {
+ public:
+  virtual ~OnlyLibfuzzerAndDeps_TestBase() {}
+  virtual void NotImplemented_(const std::string& name) = 0;
+  void LibfuzzerNeedsNonemptyProtocol(
+      LibfuzzerNeedsNonemptyProtocolCallback callback) override {
+    NotImplemented_("LibfuzzerNeedsNonemptyProtocol");
+  }
+};
+}  // namespace testing
+}  // namespace bindingsdenylist
+}  // namespace test
+}  // namespace fidl

@@ -67,6 +67,14 @@ golden_test("fidlgen_libfuzzer_golden_tests") {
           golden = "${info.name}.cc.golden"
           generated = "$gen_dir/$include_path/libfuzzer.cc"
         },
+        {
+          golden = "${info.name}_decode_encode.h.golden"
+          generated = "$gen_dir/$include_path/libfuzzer_decode_encode.h"
+        },
+        {
+          golden = "${info.name}_decode_encode.cc.golden"
+          generated = "$gen_dir/$include_path/libfuzzer_decode_encode.cc"
+        },
       ]
     }
   }

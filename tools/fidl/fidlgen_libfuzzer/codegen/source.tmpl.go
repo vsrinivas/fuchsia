@@ -55,7 +55,7 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   xprintf("Starting fuzzer with %zu bytes of data\n", size_);
 
   // Hardcode mutually-exclusive if blocks that selects exactly one protocol.
-  zx_status_t status_;
+  [[maybe_unused]] zx_status_t status_;
 {{- range $protocolIdx, $protocol := $protocols }}{{ if len $protocol.Methods }}
   if (protocol_selection_ == {{ $protocolIdx }}) {
 #if !defined(PROTOCOL_{{ $protocol.FuzzingName }})

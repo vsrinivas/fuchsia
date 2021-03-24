@@ -33,7 +33,8 @@ func NewFidlGenerator() *FidlGenerator {
 			}
 			return s2
 		},
-		"Protocols": protocols,
+		"Protocols":            protocols,
+		"CountDecoderEncoders": countDecoderEncoders,
 	})
 
 	template.Must(tmpls.Parse(tmplBits))
@@ -99,6 +100,7 @@ func (gen FidlGenerator) GenerateFidl(fidl fidlgen.Root, config *Config, clangFo
 		return err
 	}
 
+	prepareTreeForDecoderEncoders(fidl.Name, config.IncludeStem, &tree)
 	if err := gen.GenerateDecoderEncoders(fidl, tree, config, clangFormatPath); err != nil {
 		return err
 	}
@@ -195,6 +197,13 @@ func prepareTree(name fidlgen.EncodedLibraryIdentifier, includeStem string, tree
 	tree.Headers = []string{pkgPath}
 }
 
+func prepareTreeForDecoderEncoders(name fidlgen.EncodedLibraryIdentifier, includeStem string, tree *cpp.Root) {
+	pkgPath := strings.Replace(string(name), ".", "/", -1)
+	tree.PrimaryHeader = pkgPath + "/" + includeStem + "_decode_encode.h"
+	tree.IncludeStem = includeStem
+	tree.Headers = []string{pkgPath}
+}
+
 func protocols(decls []cpp.Kinded) []cpp.Protocol {
 	protocols := make([]cpp.Protocol, 0, len(decls))
 	for _, decl := range decls {
@@ -203,4 +212,27 @@ func protocols(decls []cpp.Kinded) []cpp.Protocol {
 		}
 	}
 	return protocols
+}
+
+// countDecoderEncoders duplicates template logic that inlines protocol, struct, and table
+// decode/encode callbacks to get a count of total callbacks.
+func countDecoderEncoders(decls []cpp.Kinded) int {
+	count := 0
+	for _, decl := range decls {
+		if p, ok := decl.(cpp.Protocol); ok {
+			for _, method := range p.Methods {
+				if method.HasRequest {
+					count++
+				}
+				if method.HasResponse {
+					count++
+				}
+			}
+		} else if _, ok := decl.(cpp.Struct); ok {
+			count++
+		} else if _, ok := decl.(cpp.Table); ok {
+			count++
+		}
+	}
+	return count
 }

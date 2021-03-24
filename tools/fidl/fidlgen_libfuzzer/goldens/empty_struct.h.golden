@@ -23,8 +23,8 @@ template <>
 struct Allocate<Empty> {
   Empty operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<Empty>());
-    const size_t slack_per_member = (*size - MinSize<Empty>()) / 1;
     Empty out;
+    const size_t slack_per_member = (*size - MinSize<Empty>()) / 1;
     size_t out_size;
     out_size = MinSize<uint8_t>() + slack_per_member;
     out.__reserved = Allocate<uint8_t>{}(src, &out_size);

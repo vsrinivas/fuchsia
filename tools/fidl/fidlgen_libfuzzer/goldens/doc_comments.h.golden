@@ -31,8 +31,8 @@ template <>
 struct Allocate<Table> {
   Table operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<Table>());
-    const size_t slack_per_member = (*size - MinSize<Table>()) / 1;
     Table out;
+    const size_t slack_per_member = (*size - MinSize<Table>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.set_Field(Allocate<int32_t>{}(src, &out_size));
@@ -47,8 +47,8 @@ template <>
 struct Allocate<Struct> {
   Struct operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<Struct>());
-    const size_t slack_per_member = (*size - MinSize<Struct>()) / 1;
     Struct out;
+    const size_t slack_per_member = (*size - MinSize<Struct>()) / 1;
     size_t out_size;
     out_size = MinSize<int32_t>() + slack_per_member;
     out.Field = Allocate<int32_t>{}(src, &out_size);

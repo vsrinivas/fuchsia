@@ -24,9 +24,9 @@ template <>
 struct Allocate<Example_foo_Response> {
   Example_foo_Response operator()(FuzzInput* src, size_t* size) {
     ZX_ASSERT(*size >= MinSize<Example_foo_Response>());
+    Example_foo_Response out;
     const size_t slack_per_member =
         (*size - MinSize<Example_foo_Response>()) / 1;
-    Example_foo_Response out;
     size_t out_size;
     out_size = MinSize<int64_t>() + slack_per_member;
     out.y = Allocate<int64_t>{}(src, &out_size);

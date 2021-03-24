@@ -32,8 +32,10 @@ union OnlyLlcpp {
     1: uint32 x;
 };
 
-[BindingsDenylist = "hlcpp, dart, go, llcpp, rust, syzkaller"]
-protocol OnlyLibfuzzer {
+// TODO(fxbug.dev/72247): Libfuzzer depends on hlcpp and llcpp. A decision needs to be made on how
+// to manage these dependencies. For now, this test does not denylist the dependencies.
+[BindingsDenylist = "dart, go, rust, syzkaller"]
+protocol OnlyLibfuzzerAndDeps {
     LibfuzzerNeedsNonemptyProtocol() -> ();
 };
 

@@ -102,7 +102,8 @@ resource struct TestFlexibleResourceXUnionInStruct {
 };
 
 // TODO(fxbug.dev/36441): Allow bindings to compile on host with handles.
-[BindingsDenylist = "llcpp"]
+// TODO(fxbug.dev/72247): Encode libfuzzer dependency on HLCPP and LLCPP.
+[BindingsDenylist = "llcpp, libfuzzer"]
 resource struct FidlvizDemo {
     uint8 f1;
     int8 f2;

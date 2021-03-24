@@ -46,21 +46,23 @@ extern "C" int LLVMFuzzerTestOneInput(const uint8_t* data_, size_t size_) {
   xprintf("Starting fuzzer with %zu bytes of data\n", size_);
 
   // Hardcode mutually-exclusive if blocks that selects exactly one protocol.
-  zx_status_t status_;
+  [[maybe_unused]] zx_status_t status_;
   if (protocol_selection_ == 0) {
-#if !defined(PROTOCOL_fidl_test_bindingsdenylist_OnlyLibfuzzer)
+#if !defined(PROTOCOL_fidl_test_bindingsdenylist_OnlyLibfuzzerAndDeps)
     // Selected protocol from FIDL file that is not part of this fuzzer.
     xprintf(
         "Early exit: Chose disabled protocol: "
-        "fidl_test_bindingsdenylist_OnlyLibfuzzer\n");
+        "fidl_test_bindingsdenylist_OnlyLibfuzzerAndDeps\n");
     return 0;
 #else
 
-    ::fidl::InterfacePtr< ::fidl::test::bindingsdenylist::OnlyLibfuzzer>
+    ::fidl::InterfacePtr< ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps>
         protocol_;
 
-    xprintf("Starting fidl_test_bindingsdenylist_OnlyLibfuzzer service\n");
-    ::fidl::fuzzing::Fuzzer< ::fidl::test::bindingsdenylist::OnlyLibfuzzer>
+    xprintf(
+        "Starting fidl_test_bindingsdenylist_OnlyLibfuzzerAndDeps service\n");
+    ::fidl::fuzzing::Fuzzer<
+        ::fidl::test::bindingsdenylist::OnlyLibfuzzerAndDeps>
         fuzzer_(loop_->dispatcher());
     if ((status_ = fuzzer_.Init()) != ZX_OK) {
       xprintf("Early exit: fuzzer.Init returned bad status: %d\n", status_);
