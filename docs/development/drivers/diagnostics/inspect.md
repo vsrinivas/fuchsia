@@ -85,7 +85,7 @@ with Inspect included, see the following [example test driver][example_test_driv
    private:
        inspect::Inspector inspect_;
   }
-   ```
+  ```
 
   Use this to create properties and children to build the inspect tree:
 
