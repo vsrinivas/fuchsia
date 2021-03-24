@@ -6,44 +6,50 @@ run, and tested in the system.
 ## Building
 
 If these components are not present in your build, they can be added by
-appending `--with //examples` to your `fx set` command. Eg:
+appending `--with //examples` to your `fx set` command:
 
 ```bash
-$ fx set core.x64 --with //examples --with //examples:tests --with //src/sys/run_test_suite
+$ fx set core.x64 --with //examples --with //examples:tests
 $ fx build
 ```
 
-(Disclaimer: if these build rules become out-of-date, please check the
-[Build documentation](docs/development/workflows) and update this README!)
+If you do not already have one running, start a package server so the example
+components can be resolved from your device:
+
+```bash
+$ fx serve
+```
 
 ## Running
 
-Use the `locate` tool to find the fuchsia-pkg URLs of these components:
+To run one of the example components defined here, provide the full component
+URL to `run`:
 
-```bash
-$ fx shell locate hello_world
-```
+-  **C++**
 
-Pick the URL of a component, and provide it to `run`:
+    ```bash
+    $ fx shell run 'fuchsia-pkg://fuchsia.com/hello-world-cpp#meta/hello-world-cpp.cmx'
+    ```
 
-```bash
-$ fx shell run 'fuchsia-pkg://fuchsia.com/hello_world_rust#meta/hello_world_rust.cm'
-```
+-  **Rust**
 
-Make sure you have `fx serve` running in another terminal so your component can
-be installed!
+    ```bash
+    $ fx shell run 'fuchsia-pkg://fuchsia.com/hello-world-rust#meta/hello-world-rust.cmx'
+    ```
 
 ## Testing
 
-To run one of the test components defined here, use `fx run-test` with the
-package name:
+To run one of the test components defined here, provide the package name to
+`fx test`:
 
-```bash
-$ fx run-test hello_world_rust_tests
-```
+-  **C++**
 
-To run the tests as a Components Framework v2 component, use `fx shell run-test-suite`:
+    ```bash
+    $ fx test hello-world-cpp-unittests
+    ```
 
-```bash
-fx shell run-test-suite 'fuchsia-pkg://fuchsia.com/hello_world_rust_tests#meta/hello_world_rust_bin_test.cm'
-```
+-  **Rust**
+
+    ```bash
+    $ fx test hello-world-rust-tests
+    ```
