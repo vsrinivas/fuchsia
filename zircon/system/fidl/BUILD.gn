@@ -50,5 +50,8 @@ fidl_c_header("fuchsia-mem") {
 }
 
 fidl_c_header("zx") {
-  sources = [ "//zircon/vdso/zx_common.fidl" ]
+  sources = [
+    "//zircon/vdso/rights.fidl",
+    "//zircon/vdso/zx_common.fidl",
+  ]
 }

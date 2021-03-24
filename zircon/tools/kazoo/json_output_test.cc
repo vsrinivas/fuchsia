@@ -850,7 +850,7 @@ TEST(JsonOutput, RightsSpecs) {
             R"({
   "syscalls": [
     {
-      "name": "rights_do_thing",
+      "name": "rightstest_do_thing",
       "attributes": [
         "*"
       ],
@@ -887,7 +887,7 @@ TEST(JsonOutput, RightsSpecs) {
       "return_type": "zx_status_t"
     },
     {
-      "name": "rights_no_short_desc",
+      "name": "rightstest_no_short_desc",
       "attributes": [
         "*"
       ],
