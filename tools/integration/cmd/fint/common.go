@@ -8,10 +8,14 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 
 	"github.com/google/subcommands"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+
 	"go.fuchsia.dev/fuchsia/tools/integration/fint"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
@@ -93,4 +97,14 @@ func defaultContextSpec() (*fintpb.Context, error) {
 		CheckoutDir: checkoutDir,
 		BuildDir:    filepath.Join(checkoutDir, "out", "default"),
 	}, nil
+}
+
+func writeJSONPB(pb proto.Message, path string) error {
+	b, err := protojson.MarshalOptions{
+		UseProtoNames: true,
+	}.Marshal(pb)
+	if err != nil {
+		return err
+	}
+	return ioutil.WriteFile(path, b, 0o644)
 }

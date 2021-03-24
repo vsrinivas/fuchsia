@@ -17,15 +17,15 @@ type Image struct {
 
 	// PaveArgs is the list of associated arguments to pass to the bootserver
 	// when paving.
-	PaveArgs []string `json:"bootserver_pave"`
+	PaveArgs []string `json:"bootserver_pave,omitempty"`
 
 	// PaveZedbootArgs is the list of associated arguments to pass to the bootserver
 	// when paving zedboot
-	PaveZedbootArgs []string `json:"bootserver_pave_zedboot"`
+	PaveZedbootArgs []string `json:"bootserver_pave_zedboot,omitempty"`
 
 	// NetbootArgs is the list of associated arguments to pass to the bootserver
 	// when netbooting.
-	NetbootArgs []string `json:"bootserver_netboot"`
+	NetbootArgs []string `json:"bootserver_netboot,omitempty"`
 }
 
 // ImageManifest is a JSON list of images produced by the Fuchsia build.

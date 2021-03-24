@@ -7,9 +7,20 @@ package main
 import (
 	"context"
 	"flag"
+	"fmt"
+	"path/filepath"
 
 	"github.com/google/subcommands"
+
 	"go.fuchsia.dev/fuchsia/tools/integration/fint"
+)
+
+const (
+	// buildArtifactsManifest is the name of the file (in
+	// `contextSpec.ArtifactDir`) that will expose metadata produced by this
+	// command to the caller. See setArtifactsManifest documentation for an
+	// explanation of why we use JSON instead of textproto for this file.
+	buildArtifactsManifest = "build_artifacts.json"
 )
 
 type BuildCommand struct {
@@ -36,6 +47,16 @@ func (c *BuildCommand) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interf
 			return err
 		}
 
-		return fint.Build(ctx, staticSpec, contextSpec)
+		artifacts, buildErr := fint.Build(ctx, staticSpec, contextSpec)
+		if contextSpec.ArtifactDir != "" {
+			path := filepath.Join(contextSpec.ArtifactDir, buildArtifactsManifest)
+			if err := writeJSONPB(artifacts, path); err != nil {
+				if buildErr != nil {
+					return fmt.Errorf("%s (original error: %w)", err, buildErr)
+				}
+				return err
+			}
+		}
+		return buildErr
 	})
 }

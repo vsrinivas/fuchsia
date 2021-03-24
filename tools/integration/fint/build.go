@@ -6,6 +6,7 @@ package fint
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"os"
 	"sort"
@@ -14,6 +15,7 @@ import (
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
 	"go.fuchsia.dev/fuchsia/tools/lib/hostplatform"
 	"go.fuchsia.dev/fuchsia/tools/lib/runner"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 var (
@@ -38,31 +40,41 @@ type buildModules interface {
 
 // Build runs `ninja` given a static and context spec. It's intended to be
 // consumed as a library function.
-func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.Context) error {
+func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.Context) (*fintpb.BuildArtifacts, error) {
 	platform, err := hostplatform.Name()
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	modules, err := build.NewModules(contextSpec.BuildDir)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	runner := &runner.SubprocessRunner{}
-	targets, err := constructNinjaTargets(modules, staticSpec, platform)
+	targets, artifacts, err := constructNinjaTargets(modules, staticSpec, platform)
 	if err != nil {
-		return err
+		return nil, err
 	}
 
 	ninjaPath := thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja")
 	cmd := []string{ninjaPath, "-C", contextSpec.BuildDir}
 	cmd = append(cmd, targets...)
-	return runner.Run(ctx, cmd, os.Stdout, os.Stderr)
+	if err := runner.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
+		// TODO(https://fxbug.dev/67861): Capture and emit the Ninja error
+		// message in the artifacts.
+		return nil, err
+	}
+	return artifacts, nil
 }
 
-func constructNinjaTargets(modules buildModules, staticSpec *fintpb.Static, platform string) ([]string, error) {
+func constructNinjaTargets(
+	modules buildModules,
+	staticSpec *fintpb.Static,
+	platform string,
+) ([]string, *fintpb.BuildArtifacts, error) {
 	var targets []string
+	var artifacts fintpb.BuildArtifacts
 
 	if staticSpec.IncludeImages {
 		targets = append(targets, extraTargetsForImages...)
@@ -70,6 +82,11 @@ func constructNinjaTargets(modules buildModules, staticSpec *fintpb.Static, plat
 		for _, image := range modules.Images() {
 			if isTestingImage(image, staticSpec.Pave) {
 				targets = append(targets, image.Path)
+				imageStruct, err := toStructPB(image)
+				if err != nil {
+					return nil, nil, err
+				}
+				artifacts.BuiltImages = append(artifacts.BuiltImages, imageStruct)
 			}
 		}
 
@@ -81,8 +98,13 @@ func constructNinjaTargets(modules buildModules, staticSpec *fintpb.Static, plat
 				"packages", // Package metadata, blobs, and tools.
 			}
 			for _, archive := range modules.Archives() {
-				if contains(archivesToBuild, archive.Name) {
+				if contains(archivesToBuild, archive.Name) && archive.Type == "tgz" {
 					targets = append(targets, archive.Path)
+					archiveStruct, err := toStructPB(archive)
+					if err != nil {
+						return nil, nil, err
+					}
+					artifacts.BuiltArchives = append(artifacts.BuiltArchives, archiveStruct)
 				}
 			}
 		} else {
@@ -122,7 +144,7 @@ func constructNinjaTargets(modules buildModules, staticSpec *fintpb.Static, plat
 		for _, toolName := range staticSpec.Tools {
 			tool, ok := availableTools[toolName]
 			if !ok {
-				return nil, fmt.Errorf("tool %q with platform %q does not exist", toolName, platform)
+				return nil, nil, fmt.Errorf("tool %q with platform %q does not exist", toolName, platform)
 			}
 			targets = append(targets, tool.Path)
 		}
@@ -131,7 +153,7 @@ func constructNinjaTargets(modules buildModules, staticSpec *fintpb.Static, plat
 	targets = append(targets, staticSpec.NinjaTargets...)
 
 	sort.Strings(targets)
-	return targets, nil
+	return targets, &artifacts, nil
 }
 
 // isTestingImage determines whether an image is necessary for testing Fuchsia.
@@ -164,4 +186,19 @@ func isTestingImage(image build.Image, pave bool) bool {
 	default:
 		return false
 	}
+}
+
+// toStructPB converts a Go struct to a Struct protobuf. Unfortunately, short of
+// using some complicated `reflect` logic, the only way to do this conversion is
+// by using JSON as an intermediate format.
+func toStructPB(s interface{}) (*structpb.Struct, error) {
+	j, err := json.Marshal(s)
+	if err != nil {
+		return nil, err
+	}
+	var m map[string]interface{}
+	if err := json.Unmarshal(j, &m); err != nil {
+		return nil, err
+	}
+	return structpb.NewStruct(m)
 }

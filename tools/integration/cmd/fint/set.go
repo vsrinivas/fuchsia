@@ -11,13 +11,12 @@ import (
 	"path/filepath"
 
 	"github.com/google/subcommands"
+
 	"go.fuchsia.dev/fuchsia/tools/integration/fint"
-	"go.fuchsia.dev/fuchsia/tools/lib/osmisc"
-	"google.golang.org/protobuf/encoding/protojson"
 )
 
 const (
-	// artifactsManifest is the name of the file (in `contextSpec.ArtifactsDir`)
+	// setArtifactsManifest is the name of the file (in `contextSpec.ArtifactDir`)
 	// that will expose manifest files and other metadata produced by this
 	// command to the caller. We use JSON instead of textproto for this message
 	// because it passes data from fint back to the caller, but the source of
@@ -27,7 +26,7 @@ const (
 	// changes every time we want to start setting a new field: one to add the
 	// field, then another to set the field, which can only be landed after the
 	// updated proto definition has been propagated to all consumers.
-	artifactsManifest = "set_artifacts.json"
+	setArtifactsManifest = "set_artifacts.json"
 )
 
 type SetCommand struct {
@@ -53,22 +52,15 @@ func (c *SetCommand) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interfac
 		}
 
 		artifacts, setErr := fint.Set(ctx, staticSpec, contextSpec)
-
 		if contextSpec.ArtifactDir != "" {
-			b, err := protojson.Marshal(artifacts)
-			if err != nil {
-				return fmt.Errorf("failed to marshal artifacts: %w", err)
-			}
-			f, err := osmisc.CreateFile(filepath.Join(contextSpec.ArtifactDir, artifactsManifest))
-			if err != nil {
-				return fmt.Errorf("failed to create artifacts file: %w", err)
-			}
-			defer f.Close()
-			if _, err := f.Write(b); err != nil {
-				return fmt.Errorf("failed to write artifacts file: %w", err)
+			path := filepath.Join(contextSpec.ArtifactDir, setArtifactsManifest)
+			if err := writeJSONPB(artifacts, path); err != nil {
+				if setErr != nil {
+					return fmt.Errorf("%s (original error: %w)", err, setErr)
+				}
+				return err
 			}
 		}
-
 		return setErr
 	})
 }

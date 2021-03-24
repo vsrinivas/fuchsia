@@ -12,6 +12,8 @@ import (
 	"github.com/google/go-cmp/cmp"
 	"go.fuchsia.dev/fuchsia/tools/build"
 	fintpb "go.fuchsia.dev/fuchsia/tools/integration/fint/proto"
+	"google.golang.org/protobuf/testing/protocmp"
+	"google.golang.org/protobuf/types/known/structpb"
 )
 
 type fakeBuildModules struct {
@@ -34,11 +36,12 @@ func (m fakeBuildModules) ZBITests() []build.ZBITest                     { retur
 
 func TestConstructNinjaTargets(t *testing.T) {
 	testCases := []struct {
-		name            string
-		staticSpec      *fintpb.Static
-		modules         fakeBuildModules
-		expectedTargets []string
-		expectErr       bool
+		name              string
+		staticSpec        *fintpb.Static
+		modules           fakeBuildModules
+		expectedTargets   []string
+		expectedArtifacts *fintpb.BuildArtifacts
+		expectErr         bool
 	}{
 		{
 			name:            "empty spec produces no ninja targets",
@@ -64,6 +67,11 @@ func TestConstructNinjaTargets(t *testing.T) {
 				},
 			},
 			expectedTargets: append(extraTargetsForImages, "qemu_image_path", "build/images:updates"),
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltImages: []*structpb.Struct{
+					mustStructPB(t, build.Image{Name: qemuImageNames[0], Path: "qemu_image_path"}),
+				},
+			},
 		},
 		{
 			name: "images and archives included",
@@ -73,13 +81,19 @@ func TestConstructNinjaTargets(t *testing.T) {
 			},
 			modules: fakeBuildModules{
 				archives: []build.Archive{
-					{Name: "packages", Path: "p.tar.gz"},
-					{Name: "archive", Path: "b.tar"},
-					{Name: "archive", Path: "b.tgz"},
-					{Name: "other", Path: "other.tgz"},
+					{Name: "packages", Path: "p.tar.gz", Type: "tgz"},
+					{Name: "archive", Path: "b.tar", Type: "tar"},
+					{Name: "archive", Path: "b.tgz", Type: "tgz"},
+					{Name: "other", Path: "other.tgz", Type: "tgz"},
 				},
 			},
-			expectedTargets: append(extraTargetsForImages, "p.tar.gz", "b.tar", "b.tgz"),
+			expectedTargets: append(extraTargetsForImages, "p.tar.gz", "b.tgz"),
+			expectedArtifacts: &fintpb.BuildArtifacts{
+				BuiltArchives: []*structpb.Struct{
+					mustStructPB(t, build.Archive{Name: "packages", Path: "p.tar.gz", Type: "tgz"}),
+					mustStructPB(t, build.Archive{Name: "archive", Path: "b.tgz", Type: "tgz"}),
+				},
+			},
 		},
 		{
 			name: "host tests included",
@@ -168,8 +182,13 @@ func TestConstructNinjaTargets(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
+			// Normalize expected data so tests are less painful to write.
 			sort.Strings(tc.expectedTargets)
-			got, err := constructNinjaTargets(tc.modules, tc.staticSpec, "linux-x64")
+			if tc.expectedArtifacts == nil {
+				tc.expectedArtifacts = &fintpb.BuildArtifacts{}
+			}
+
+			targets, artifacts, err := constructNinjaTargets(tc.modules, tc.staticSpec, "linux-x64")
 			if err != nil {
 				if tc.expectErr {
 					return
@@ -178,8 +197,11 @@ func TestConstructNinjaTargets(t *testing.T) {
 			} else if tc.expectErr {
 				t.Fatalf("Expected an error, but got nil")
 			}
-			if diff := cmp.Diff(tc.expectedTargets, got); diff != "" {
-				t.Fatalf("Got wrong targets (-want +got):\n%s", diff)
+			if diff := cmp.Diff(tc.expectedTargets, targets); diff != "" {
+				t.Errorf("Got wrong targets (-want +got):\n%s", diff)
+			}
+			if diff := cmp.Diff(tc.expectedArtifacts, artifacts, protocmp.Transform()); diff != "" {
+				t.Errorf("Got wrong artifacts (-want +got):\n%s", diff)
 			}
 		})
 	}
@@ -198,4 +220,14 @@ func makeTools(supportedOSes map[string][]string) build.Tools {
 		}
 	}
 	return res
+}
+
+// mustStructPB converts a Go struct to a protobuf Struct, failing the test in
+// case of failure.
+func mustStructPB(t *testing.T, s interface{}) *structpb.Struct {
+	ret, err := toStructPB(s)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return ret
 }

@@ -43,6 +43,7 @@ import (
 	_ "google.golang.org/protobuf/testing/protocmp"
 	_ "google.golang.org/protobuf/types/descriptorpb"
 	_ "google.golang.org/protobuf/types/known/durationpb"
+	_ "google.golang.org/protobuf/types/known/structpb"
 	_ "google.golang.org/protobuf/types/known/timestamppb"
 	_ "gopkg.in/yaml.v2"
 	_ "gvisor.dev/gvisor/pkg/log"

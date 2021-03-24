@@ -11,6 +11,7 @@ import (
 	"syscall"
 
 	"github.com/google/subcommands"
+
 	"go.fuchsia.dev/fuchsia/tools/lib/color"
 	"go.fuchsia.dev/fuchsia/tools/lib/command"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"

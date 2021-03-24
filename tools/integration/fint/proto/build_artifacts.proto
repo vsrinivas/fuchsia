@@ -1,0 +1,29 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+package fint;
+
+option go_package = "go.fuchsia.dev/fuchsia/tools/integration/fint/proto";
+
+import "google/protobuf/struct.proto";
+
+// BuildArtifacts contains information about the targets built by `fint build`.
+message BuildArtifacts {
+  // A brief error log populated in case of a recognized failure mode (e.g. a
+  // Ninja compilation failure).
+  string failure_summary = 1;
+
+  // All targets that were passed to Ninja.
+  repeated string built_targets = 2;
+
+  // Names of images produced by the build. We use a struct to avoid needing to
+  // maintain a copy of the images.json schema here.
+  repeated google.protobuf.Struct built_images = 3;
+
+  // Names of archives produced by the build. We use a struct to avoid needing to
+  // maintain a copy of the images.json schema here.
+  repeated google.protobuf.Struct built_archives = 4;
+}
