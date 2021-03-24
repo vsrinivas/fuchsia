@@ -30,7 +30,7 @@ struct Type : public Object {
   explicit Type(const Name& name, Kind kind, types::Nullability nullability)
       : name(name), kind(kind), nullability(nullability) {}
 
-  const Name& name;
+  const Name name;
   const Kind kind;
   const types::Nullability nullability;
 

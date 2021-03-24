@@ -919,6 +919,7 @@ class Library {
   bool VerifyTypeCategory(TypeConstructor* type, AllowedCategories category);
 
   ConstantValue::Kind ConstantValuePrimitiveKind(const types::PrimitiveSubtype primitive_subtype);
+  bool ResolveHandleRightsConstant(TypeConstructor* type_ctor);
   bool ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_t* out_obj_type,
                                       types::HandleSubtype* out_subtype);
   bool ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size);
@@ -984,14 +985,6 @@ class Library {
   // TODO(fxbug.dev/7724): Remove when canonicalizing types.
   const Name kSizeTypeName = Name::CreateIntrinsic("uint32");
   const PrimitiveType kSizeType = PrimitiveType(kSizeTypeName, types::PrimitiveSubtype::kUint32);
-
-  const Name kRightsTypeName = Name::CreateIntrinsic("uint32");
-  const PrimitiveType kRightsType =
-      PrimitiveType(kRightsTypeName, types::PrimitiveSubtype::kUint32);
-
-  const Name kHandleSubtypeTypeName = Name::CreateIntrinsic("uint32");
-  const PrimitiveType kHandleSubtypeType =
-      PrimitiveType(kHandleSubtypeTypeName, types::PrimitiveSubtype::kUint32);
 
   std::unique_ptr<raw::AttributeList> attributes_;
 

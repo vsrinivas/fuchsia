@@ -176,16 +176,21 @@ enum obj_type : uint32 {
     VMO = 3;
 };
 
+bits rights : uint32 {
+  TRANSFER = 1;
+};
+
 resource_definition handle : uint32 {
     properties {
         obj_type subtype;
+        rights rights;
     };
 };
 
 resource struct Handles {
     handle plain_handle;
     handle:VMO subtype_handle;
-    handle:<VMO, 1> rights_handle;
+    handle:<VMO, rights.TRANSFER> rights_handle;
 };
 )FIDL",
                       std::move(experimental_flags));

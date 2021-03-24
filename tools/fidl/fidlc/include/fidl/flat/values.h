@@ -297,6 +297,9 @@ struct Constant {
   }
 
   const ConstantValue& Value() const {
+    if (!IsResolved()) {
+      std::cout << span.data() << std::endl;
+    }
     assert(IsResolved() && "Accessing the value of an unresolved Constant!");
     return *value_;
   }

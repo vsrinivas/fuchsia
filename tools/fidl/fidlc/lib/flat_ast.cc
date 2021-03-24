@@ -4075,7 +4075,7 @@ bool Library::CompileTypeConstructorAllowing(TypeConstructor* type_ctor,
   std::optional<uint32_t> obj_type = type_ctor->handle_obj_type_resolved;
 
   if (type_ctor->handle_rights)
-    if (!ResolveConstant(type_ctor->handle_rights.get(), &kRightsType))
+    if (!ResolveHandleRightsConstant(type_ctor))
       return Fail(ErrCouldNotResolveHandleRights);
 
   if (!typespace_->Create(type_ctor->name, maybe_arg_type, obj_type, handle_subtype,
@@ -4116,6 +4116,34 @@ bool Library::VerifyTypeCategory(TypeConstructor* type_ctor, AllowedCategories c
   return true;
 }
 
+bool Library::ResolveHandleRightsConstant(TypeConstructor* type_ctor) {
+  Decl* handle_decl = LookupDeclByName(type_ctor->name);
+  if (!handle_decl || handle_decl->kind != Decl::Kind::kResource) {
+    return Fail(ErrHandleSubtypeNotResource, type_ctor->name.span(), type_ctor->name);
+  }
+
+  auto* resource = static_cast<Resource*>(handle_decl);
+  if (!resource->subtype_ctor || resource->subtype_ctor->name.full_name() != "uint32") {
+    return Fail(ErrResourceMustBeUint32Derived, type_ctor->name.span(), resource->name);
+  }
+
+  auto rights_property = resource->LookupProperty("rights");
+  if (!rights_property) {
+    return Fail(ErrResourceMissingRightsProperty, type_ctor->name.span(), resource->name);
+  }
+
+  Decl* rights_decl = LookupDeclByName(rights_property->type_ctor->name);
+  if (!rights_decl || rights_decl->kind != Decl::Kind::kBits) {
+    return Fail(ErrResourceRightsPropertyMustReferToBits, type_ctor->name.span(), resource->name);
+  }
+
+  const Type* rights_type = rights_property->type_ctor.get()->type;
+  if (!ResolveConstant(type_ctor->handle_rights.get(), rights_type)) {
+    return false;
+  }
+  return true;
+}
+
 bool Library::ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_t* out_obj_type,
                                              types::HandleSubtype* out_subtype) {
   assert(type_ctor->handle_subtype_identifier);
@@ -4146,10 +4174,11 @@ bool Library::ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_
     return Fail(ErrResourceSubtypePropertyMustReferToEnum, type_ctor->name.span(), resource->name);
   }
 
+  const Type* subtype_type = subtype_property->type_ctor.get()->type;
   auto* subtype_enum = static_cast<Enum*>(subtype_decl);
   for (const auto& member : subtype_enum->members) {
     if (member.name.data() == type_ctor->handle_subtype_identifier->span()->data()) {
-      if (!ResolveConstant(member.value.get(), &kHandleSubtypeType)) {
+      if (!ResolveConstant(member.value.get(), subtype_type)) {
         return false;
       }
       const flat::ConstantValue& value = member.value->Value();

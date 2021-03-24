@@ -28,15 +28,16 @@ enum obj_type : uint32 {
     PORT = 6;
 };
 
-resource_definition handle : uint32 {
-    properties {
-        obj_type subtype;
-    };
-};
-
 bits rights : uint32 {
     DUPLICATE = 0x00000001;
     TRANSFER = 0x00000002;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+        rights rights;
+    };
 };
 )FIDL";
   TestLibrary zx_lib("zx.fidl", zx, &shared, flags);

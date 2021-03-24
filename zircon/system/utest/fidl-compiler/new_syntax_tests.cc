@@ -44,9 +44,14 @@ enum obj_type : uint32 {
     PORT = 6;
 };
 
+bits rights : uint32 {
+  SOME_RIGHT = 1;
+};
+
 resource_definition handle : uint32 {
     properties {
         obj_type subtype;
+        rights rights;
     };
 };
 )FIDL";
@@ -669,8 +674,8 @@ type t1 = resource struct {
   h1 zx.handle:optional;
   h2 zx.handle:VMO;
   h3 zx.handle:[VMO,optional];
-  h4 zx.handle:[VMO,zx.READ];
-  h5 zx.handle:[VMO,zx.READ,optional];
+  h4 zx.handle:[VMO,zx.rights.SOME_RIGHT];
+  h5 zx.handle:[VMO,zx.rights.SOME_RIGHT,optional];
   u7 union { 1: b bool; };
   u8 union { 1: b bool; }:optional;
   v9 vector<bool>;
@@ -967,8 +972,8 @@ type TypeDecl = resource struct {
   h1 zx.handle:VMO;
   h2 zx.handle:optional;
   h3 zx.handle:[VMO,optional];
-  h4 zx.handle:[VMO,zx.READ];
-  h5 zx.handle:[VMO,zx.READ,optional];
+  h4 zx.handle:[VMO,zx.rights.SOME_RIGHT];
+  h5 zx.handle:[VMO,zx.rights.SOME_RIGHT,optional];
 };
 )FIDL",
                               shared, std::move(experimental_flags));

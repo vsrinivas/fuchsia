@@ -41,6 +41,7 @@ enum obj_type : uint32 {
 resource_definition handle : uint32 {
     properties {
         obj_type subtype;
+        zx.rights rights;
     };
 };
 

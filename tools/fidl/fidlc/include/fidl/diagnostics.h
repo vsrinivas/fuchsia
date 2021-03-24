@@ -303,8 +303,12 @@ constexpr ErrorDef<flat::Name> ErrHandleSubtypeNotResource(
 constexpr ErrorDef<flat::Name> ErrResourceMustBeUint32Derived("resource {} must be uint32");
 constexpr ErrorDef<flat::Name> ErrResourceMissingSubtypeProperty(
     "resource {} expected to have the subtype property, but it was missing");
+constexpr ErrorDef<flat::Name> ErrResourceMissingRightsProperty(
+    "resource {} expected to have the rights property, but it was missing");
 constexpr ErrorDef<flat::Name> ErrResourceSubtypePropertyMustReferToEnum(
-    "resource {} expected to refer to enum for subtype");
+    "the subtype property must be an enum, but wasn't in resource {}");
+constexpr ErrorDef<flat::Name> ErrResourceRightsPropertyMustReferToBits(
+    "the rights property must be a bits, but wasn't in resource {}");
 
 constexpr ErrorDef<std::vector<std::string_view>, std::vector<std::string_view>,
                    std::vector<std::string_view>>

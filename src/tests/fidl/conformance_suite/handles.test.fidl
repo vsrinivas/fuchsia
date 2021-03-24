@@ -4,8 +4,6 @@
 
 library conformance;
 
-using zx;
-
 // TODO(fxbug.dev/36441): Allow bindings to compile on host with handles.
 
 resource struct SingleHandle {
@@ -41,9 +39,21 @@ enum obj_type : uint32 {
     EVENT = 5;
 };
 
+bits rights : uint32 {
+    DUPLICATE = 0x00000001;
+    TRANSFER = 0x00000002;
+    WAIT = 0x00004000;
+    INSPECT = 0x00008000;
+    SIGNAL = 0x00001000;
+};
+
+const rights RIGHTS_BASIC = rights.TRANSFER | rights.DUPLICATE | rights.WAIT | rights.INSPECT;
+const rights DEFAULT_EVENT_RIGHTS = RIGHTS_BASIC | rights.SIGNAL;
+
 resource_definition handle : uint32 {
     properties {
         obj_type subtype;
+        rights rights;
     };
 };
 
@@ -62,23 +72,23 @@ resource struct ReservedFieldTableStruct {
 };
 
 resource struct EventWithDefaultRights {
-    handle:<EVENT, zx.DEFAULT_EVENT_RIGHTS> h;
+    handle:<EVENT, DEFAULT_EVENT_RIGHTS> h;
 };
 
 resource struct EventWithReducedRights {
-    handle:<EVENT, zx.RIGHTS_BASIC> h;
+    handle:<EVENT, RIGHTS_BASIC> h;
 };
 
 resource struct ArrayOfVectorOfEventInStructWithReducedRights {
-    array<vector<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
+    array<vector<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource struct VectorOfArrayOfEventInStructWithReducedRights {
-    vector<array<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
+    vector<array<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource table ArrayOfVectorOfEventInTableWithReducedRights {
-    1: array<vector<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
+    1: array<vector<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource struct ArrayOfVectorOfEventInTableWithReducedRightsStruct {
@@ -86,7 +96,7 @@ resource struct ArrayOfVectorOfEventInTableWithReducedRightsStruct {
 };
 
 resource table VectorOfArrayOfEventInTableWithReducedRights {
-    1: vector<array<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
+    1: vector<array<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource struct VectorOfArrayOfEventInTableWithReducedRightsStruct {
@@ -94,7 +104,7 @@ resource struct VectorOfArrayOfEventInTableWithReducedRightsStruct {
 };
 
 resource union ArrayOfVectorOfEventInUnionWithReducedRights {
-    1: array<vector<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
+    1: array<vector<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource struct ArrayOfVectorOfEventInUnionWithReducedRightsStruct {
@@ -102,7 +112,7 @@ resource struct ArrayOfVectorOfEventInUnionWithReducedRightsStruct {
 };
 
 resource union VectorOfArrayOfEventInUnionWithReducedRights {
-    1: vector<array<handle:<EVENT, zx.RIGHTS_BASIC>>:1>:1 h;
+    1: vector<array<handle:<EVENT, RIGHTS_BASIC>>:1>:1 h;
 };
 
 resource struct VectorOfArrayOfEventInUnionWithReducedRightsStruct {

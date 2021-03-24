@@ -366,14 +366,19 @@ enum obj_type : uint32 {
     VMO = 3;
 };
 
+bits rights {
+  SOME_RIGHT = 1;
+};
+
 resource_definition handle : uint32 {
     properties {
         obj_type subtype;
+        rights rights;
     };
 };
 
 resource struct MyStruct {
-    handle:<VMO, 1> h;
+    handle:<VMO, rights.SOME_RIGHT> h;
 };
 
 )FIDL",
