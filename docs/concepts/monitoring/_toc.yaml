@@ -6,7 +6,5 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Overview"
-  path: /docs/development/monitor/fidlcat
-- title: "Guide"
-  path: /docs/development/monitor/fidlcat/fidlcat_usage.md
+- title: "Fuchsia DevTools"
+  path: /docs/concepts/monitoring/fuchsia-devtools.md

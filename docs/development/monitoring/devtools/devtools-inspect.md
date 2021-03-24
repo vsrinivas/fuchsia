@@ -31,7 +31,7 @@ see [Fuchsia component inspection](/docs/development/diagnostics/inspect).
     documentation for your device or the emulator.
 *   Fuchsia DevTools running and connected to your device, including a
     running package server.
-    *   For more information, see [Launch Fuchsia DevTools](/docs/development/testing/tools/devtools/launch-devtools.md).
+    *   For more information, see [Launch Fuchsia DevTools](/docs/development/monitoring/devtools/launch-devtools.md).
 
 ## Check the value of a component property
 

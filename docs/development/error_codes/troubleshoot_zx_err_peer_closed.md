@@ -49,7 +49,7 @@ can use `fidlcat` to help you diagnose the missing protocol.
 For more information, see:
 
 * [Building components](/docs/development/components/build.md) for more information on `.cmx` files.
-* [Fidlcat: Monitor and debug your fidl calls](/docs/development/monitor/fidlcat/README.md) for more
+* [Fidlcat: Monitor and debug your fidl calls](/docs/development/monitoring/fidlcat/README.md) for more
   information on `fidlcat`.
 * [Component Realms](/docs/concepts/components/v2/realms.md) for more information on realms.
 

@@ -47,16 +47,16 @@ Fuchsia DevTools provides the following information:
 
 ## Launch Fuchsia DevTools
 
-Get started using [Fuchsia DevTools](/docs/development/testing/tools/devtools/launch-devtools.md).
+Get started using [Fuchsia DevTools](/docs/development/monitoring/devtools/launch-devtools.md).
 
 ## Use Fuchsia DevTools
 
 You can use Fuchsia DevTools to do the following:
 
 <ul>
-  <li><a href="/docs/development/tools/devtools/devtools-cpu.md">Examine CPU Usage</a></li>
-  <li><a href="/docs/development/tools/devtools/devtools-memory.md">Examine memory usage</a></li>
-  <li><a href="/docs/development/tools/devtools/devtools-logging.md">Search and filter log messages from a device</a></li>
-  <li><a href="/docs/development/tools/devtools/devtools-inspect.md">Inspect component properties for debugging</a></li>
-  <li><a href="/docs/development/tools/devtools/devtools-check-package.md">Check if an updated package exists on your device</a></li>
+  <li><a href="/docs/development/monitoring/devtools/devtools-cpu.md">Examine CPU Usage</a></li>
+  <li><a href="/docs/development/monitoring/devtools/devtools-memory.md">Examine memory usage</a></li>
+  <li><a href="/docs/development/monitoring/devtools/devtools-logging.md">Search and filter log messages from a device</a></li>
+  <li><a href="/docs/development/monitoring/devtools/devtools-inspect.md">Inspect component properties for debugging</a></li>
+  <li><a href="/docs/development/monitoring/devtools/devtools-check-package.md">Check if an updated package exists on your device</a></li>
 </ul>

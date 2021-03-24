@@ -6,6 +6,7 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Use fidlcat"
-  section:
-  - include: /docs/development/monitor/fidlcat/_toc.yaml
+- title: "Overview"
+  path: /docs/development/monitoring/fidlcat
+- title: "Guide"
+  path: /docs/development/monitoring/fidlcat/fidlcat_usage.md

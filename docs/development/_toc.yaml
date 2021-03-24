@@ -66,9 +66,9 @@ toc:
 - title: "Debug"
   section:
   - include: /docs/development/debugging/_toc.yaml
-- title: "Monitor"
+- title: "Monitoring"
   section:
-  - include: /docs/development/monitor/_toc.yaml
+  - include: /docs/development/monitoring/_toc.yaml
 - title: "Trace"
   section:
   - include: /docs/development/tracing/_toc.yaml

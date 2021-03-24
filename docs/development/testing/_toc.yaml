@@ -40,6 +40,3 @@ toc:
   path: /docs/development/testing/stress_tests.md
 - title: "Rust stress test library"
   path: /docs/development/testing/rust_stress_test_library.md
-- title: "Tools"
-  section:
-  - include: /docs/development/testing/tools/_toc.yaml

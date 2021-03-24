@@ -51,7 +51,7 @@ toc:
   - include: /docs/concepts/graphics/_toc.yaml
 - title: "Internationalization"
   section:
-  - include: /docs/concepts/internationalization/_toc.yaml 
+  - include: /docs/concepts/internationalization/_toc.yaml
 - title: "Kernel"
   section:
   - include: /docs/concepts/kernel/_toc.yaml
@@ -61,6 +61,9 @@ toc:
 - title: "Modular"
   section:
   - include: /docs/concepts/modular/_toc.yaml
+- title: "Monitoring"
+  section:
+  - include: /docs/concepts/monitoring/_toc.yaml
 - title: "Networking"
   section:
   - include: /docs/concepts/networking/_toc.yaml

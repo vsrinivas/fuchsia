@@ -1,9 +1,9 @@
 # Launch Fuchsia DevTools
 
-With [Fuchsia DevTools](/docs/concepts/testing/tools/fuchsia-devtools.md), you can:
+With [Fuchsia DevTools](/docs/concepts/monitoring/fuchsia-devtools.md), you can:
 
 * View CPU and memory usage on your device.
-* [Focus on relevant log messages](/docs/development/testing/tools/devtools/devtools-logging.md) with keyword filtering
+* [Focus on relevant log messages](/docs/development/monitoring/devtools/devtools-logging.md) with keyword filtering
   and scoping logs by process, severity, or time frame
 * Observe package updates on your device as you rebuild and restart components
 * Monitor a component by watching for changes in its Inspect tree
@@ -77,18 +77,18 @@ FDT_DEVICE="step-atom-yard-juicy" fx fdt
 You can use Fuchsia DevTools to do the following:
 
 <p>
-<a href="/docs/development/testing/tools/devtools/devtools-cpu.md">Examine CPU Usage</a>
+<a href="/docs/development/monitoring/devtools/devtools-cpu.md">Examine CPU Usage</a>
 </p>
 <p>
-<a href="/docs/development/testing/tools/devtools//devtools-memory.md">Examine memory usage</a>
+<a href="/docs/development/monitoring/devtools//devtools-memory.md">Examine memory usage</a>
 </p>
 <p>
-<a href="/docs/development/testing/tools/devtools/devtools-logging.md">Search and filter log messages from a device</a>
+<a href="/docs/development/monitoring/devtools/devtools-logging.md">Search and filter log messages from a device</a>
 </p>
 <p>
-<a href="{/docs/development/testing/tools/devtools/devtools-inspect.md">Inspect component properties for debugging</a>
+<a href="{/docs/development/monitoring/devtools/devtools-inspect.md">Inspect component properties for debugging</a>
 </p>
 <p>
-<a href="/docs/development/testing/tools/devtools/devtools-check-package.md">Check if an updated package exists on your device</a>
+<a href="/docs/development/monitoring/devtools/devtools-check-package.md">Check if an updated package exists on your device</a>
 </p>
 

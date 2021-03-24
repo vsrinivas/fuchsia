@@ -2,14 +2,14 @@
 
 ## Launching fidlcat
 
-For information about launching fidlcat: [fidlcat](/docs/development/monitor/fidlcat).
+For information about launching fidlcat: [fidlcat](/docs/development/monitoring/fidlcat).
 
 {% dynamic if request.tld != "dev" %}
 
 >> #  Notice
 >>
 >> This file only renders correctly from fuchsia.dev. Please navigate to
->> https://fuchsia.dev/fuchsia-src/development/monitor/fidlcat/fidlcat_usage.md to see the examples correctly!
+>> https://fuchsia.dev/fuchsia-src/development/monitoring/fidlcat/fidlcat_usage.md to see the examples correctly!
 
 {% dynamic endif %}
 

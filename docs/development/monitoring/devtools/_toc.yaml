@@ -7,14 +7,14 @@
 # team as reviewer.
 toc:
 - title: "Launch Fuchsia DevTools"
-  path: /docs/development/testing/tools/devtools/launch-devtools.md
+  path: /docs/development/monitoring/devtools/launch-devtools.md
 - title: "Examine CPU usage"
-  path: /docs/development/testing/tools/devtools/devtools-cpu.md
+  path: /docs/development/monitoring/devtools/devtools-cpu.md
 - title: "Examine memory usage"
-  path: /docs/development/testing/tools/devtools/devtools-memory.md
+  path: /docs/development/monitoring/devtools/devtools-memory.md
 - title: "Search and filter log messages from a device"
-  path: /docs/development/testing/tools/devtools/devtools-logging.md
+  path: /docs/development/monitoring/devtools/devtools-logging.md
 - title: "Inspect component properties for debugging"
-  path: /docs/development/testing/tools/devtools/devtools-inspect.md
+  path: /docs/development/monitoring/devtools/devtools-inspect.md
 - title: "Check if an updated package exists on your device"
-  path: /docs/development/testing/tools/devtools/devtools-check-package.md
+  path: /docs/development/monitoring/devtools/devtools-check-package.md

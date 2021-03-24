@@ -91,4 +91,4 @@ void my_function() {
 
 Fuchsia has a tool for viewing FIDL messages as they are sent and received. See
 details at
-[the doc page for fidl inspection](/docs/development/monitor/fidlcat/README.md).
+[the doc page for fidl inspection](/docs/development/monitoring/fidlcat/README.md).
