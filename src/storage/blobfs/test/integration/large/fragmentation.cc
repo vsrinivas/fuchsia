@@ -50,9 +50,9 @@ TEST_P(FragmentationTest, Fragmentation) {
     ASSERT_TRUE(fd) << "Failed to create blob";
     if (capture_large_blob_storage_space_usage && !do_small_blob) {
       // Record how much space was used by blobfs before writing a large blob.
-      auto fs_info = fs().GetFsInfo();
-      ASSERT_TRUE(fs_info.is_ok());
-      large_blob_storage_space_usage = fs_info->used_bytes;
+      auto used_bytes = fs().GetFsInfoUsedBytes();
+      ASSERT_TRUE(used_bytes.is_ok());
+      large_blob_storage_space_usage = used_bytes.value();
     }
     ASSERT_EQ(0, ftruncate(fd.get(), info->size_data));
     if (StreamAll(write, fd.get(), info->data.get(), info->size_data) < 0) {
@@ -62,9 +62,9 @@ TEST_P(FragmentationTest, Fragmentation) {
     if (capture_large_blob_storage_space_usage && !do_small_blob) {
       // Determine how much space was required to store the large by blob by comparing blobfs'
       // space usage before and after writing the blob.
-      auto fs_info = fs().GetFsInfo();
-      ASSERT_TRUE(fs_info.is_ok());
-      large_blob_storage_space_usage = fs_info->used_bytes - large_blob_storage_space_usage;
+      auto used_bytes = fs().GetFsInfoUsedBytes();
+      ASSERT_TRUE(used_bytes.is_ok());
+      large_blob_storage_space_usage = used_bytes.value() - large_blob_storage_space_usage;
       capture_large_blob_storage_space_usage = false;
     }
     if (do_small_blob) {
@@ -101,9 +101,10 @@ TEST_P(FragmentationTest, Fragmentation) {
   ASSERT_GT(kSmallSize * (small_blobs.size() - 1), kLargeSize);
 
   // Validate that we have enough space (before we try allocating)...
-  auto fs_info_or = fs().GetFsInfo();
-  ASSERT_TRUE(fs_info_or.is_ok());
-  ASSERT_GE(fs_info_or->total_bytes - fs_info_or->used_bytes, large_blob_storage_space_usage);
+  auto total_bytes = fs().GetFsInfoTotalBytes();
+  auto used_bytes = fs().GetFsInfoUsedBytes();
+  ASSERT_TRUE(total_bytes.is_ok() && used_bytes.is_ok());
+  ASSERT_GE(total_bytes.value() - used_bytes.value(), large_blob_storage_space_usage);
 
   fd.reset(open(info->path, O_CREAT | O_RDWR));
   // Now that blobfs supports extents, verify that we can still allocate a large

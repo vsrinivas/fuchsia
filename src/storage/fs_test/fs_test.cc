@@ -7,6 +7,7 @@
 #include <errno.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/fs/cpp/fidl.h>
+#include <fuchsia/fs/llcpp/fidl.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/cpp/caller.h>
@@ -14,6 +15,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/memfs/memfs.h>
+#include <lib/service/llcpp/service.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/channel.h>
 #include <stdlib.h>
@@ -725,22 +727,53 @@ zx::status<> TestFilesystem::Fsck() { return filesystem_->Fsck(); }
 
 zx::status<std::string> TestFilesystem::DevicePath() const { return filesystem_->DevicePath(); }
 
-zx::status<fuchsia_io::wire::FilesystemInfo> TestFilesystem::GetFsInfo() {
-  fbl::unique_fd fd(open(mount_path().c_str(), O_RDONLY | O_DIRECTORY));
-  if (!fd) {
-    return zx::error(ZX_ERR_BAD_STATE);
+fidl::ClientEnd<fuchsia_io::Directory> TestFilesystem::GetSvcDirectory() const {
+  // Get the svc directory for the test filesystem to connect to fuchsia.fs.Query.
+  fidl::UnownedClientEnd<fuchsia_io::Directory> fs_outgoing(GetOutgoingDirectory());
+  zx::channel client, server;
+  zx_status_t status = zx::channel::create(0, &client, &server);
+  if (status != ZX_OK) {
+    std::cout << "warning: failed to create svc handles" << status;
+    return zx::channel();
   }
+  if (!fuchsia_io::Directory::Call::Open(fs_outgoing,
+                                         fuchsia_io::wire::OPEN_FLAG_DIRECTORY |
+                                             fuchsia_io::wire::OPEN_RIGHT_READABLE |
+                                             fuchsia_io::wire::OPEN_RIGHT_WRITABLE,
+                                         0, "svc", std::move(server))
+           .ok()) {
+    std::cout << "warning: Open failed";
+    return zx::channel();
+  }
+  return fidl::ClientEnd<fuchsia_io::Directory>(std::move(client));
+}
 
-  fdio_cpp::FdioCaller caller(std::move(fd));
-  auto result = fuchsia_io::DirectoryAdmin::Call::QueryFilesystem(
-      zx::unowned_channel(caller.borrow_channel()));
-  if (result.status() != ZX_OK) {
-    return zx::error(result.status());
-  }
-  if (result.value().s != ZX_OK) {
-    return zx::error(result.value().s);
-  }
-  return zx::ok(*result->info);
+zx::status<uint64_t> TestFilesystem::GetFsInfoTotalBytes() const {
+  auto svc = GetSvcDirectory();
+  auto client_end = service::ConnectAt<fuchsia_fs::Query>(svc);
+  if (client_end.is_error())
+    return client_end.take_error();
+  auto result =
+      fuchsia_fs::Query::Call::GetInfo(*client_end, fuchsia_fs::wire::FilesystemInfoQuery::kMask);
+  if (!result.ok())
+    return zx::error(result.status());  // Transport error.
+  if (result->result.is_err())
+    return zx::error(result->result.err());  // Domain specific error.
+  return zx::ok(result->result.response().info.total_bytes());
+}
+
+zx::status<uint64_t> TestFilesystem::GetFsInfoUsedBytes() const {
+  auto svc = GetSvcDirectory();
+  auto client_end = service::ConnectAt<fuchsia_fs::Query>(svc);
+  if (client_end.is_error())
+    return client_end.take_error();
+  auto result =
+      fuchsia_fs::Query::Call::GetInfo(*client_end, fuchsia_fs::wire::FilesystemInfoQuery::kMask);
+  if (!result.ok())
+    return zx::error(result.status());  // Transport error.
+  if (result->result.is_err())
+    return zx::error(result->result.err());  // Domain specific error.
+  return zx::ok(result->result.response().info.used_bytes());
 }
 
 }  // namespace fs_test

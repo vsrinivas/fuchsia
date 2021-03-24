@@ -34,6 +34,7 @@ static_library("fs_test") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/block-client",
     "//zircon/system/ulib/fdio-caller",
+    "//zircon/system/ulib/service:service-llcpp",
   ]
   public_deps = [
     # fs_test.h:
