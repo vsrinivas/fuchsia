@@ -113,11 +113,16 @@ func convertDecodeFailures(gtcs []gidlir.DecodeFailure) (tcs []testCase) {
 
 func getData(tc testCase) []byte {
 	var buf bytes.Buffer
-	binary.Write(&buf, binary.LittleEndian, uint64(len(tc.objectTypes)))
+
+	// Put handle and message data at head of fuzzer input.
 	for _, objectType := range tc.objectTypes {
 		binary.Write(&buf, binary.LittleEndian, uint32(objectType))
 	}
 	buf.Write(tc.bytes)
+
+	// Put length-encoding at the tail of fuzzer input.
+	binary.Write(&buf, binary.LittleEndian, uint64(len(tc.objectTypes)))
+
 	return buf.Bytes()
 }
 
