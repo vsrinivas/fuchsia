@@ -188,6 +188,12 @@ pub struct StartCommand {
     /// are specified). If not specified, a temporary path will be used.
     #[argh(option)]
     pub amber_unpack_root: Option<String>,
+
+    /// environment variables for emulator. The argument can be repeated for multiple times
+    /// to add multiplee arguments. If not specified, only the default environment variables
+    /// (DISPLAY) will be set to run the emulator.
+    #[argh(option)]
+    pub envs: Vec<String>,
 }
 
 fn default_window_height() -> usize {

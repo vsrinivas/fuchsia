@@ -333,8 +333,8 @@ impl VDLFiles {
             invoker = "fvdl-sdk";
         }
 
-        let status = Command::new(&vdl)
-            .arg("--action=start")
+        let mut cmd = Command::new(&vdl);
+        cmd.arg("--action=start")
             .arg("--emulator_binary_path")
             .arg(&aemu)
             .arg("--pm_tool")
@@ -381,8 +381,11 @@ impl VDLFiles {
             .arg(format!("--enable_emu_controller={}", enable_emu_controller))
             .arg(format!("--hidpi_scaling={}", vdl_args.enable_hidpi_scaling))
             .arg(format!("--image_cache_path={}", vdl_args.cache_root.display()))
-            .arg(format!("--kernel_args={}", vdl_args.extra_kerel_args))
-            .status()?;
+            .arg(format!("--kernel_args={}", vdl_args.extra_kerel_args));
+        for i in 0..start_command.envs.len() {
+            cmd.arg("--envs").arg(&start_command.envs[i]);
+        }
+        let status = cmd.status()?;
         if !status.success() {
             let persistent_emu_log = read_env_path("FUCHSIA_OUT_DIR")
                 .unwrap_or(env::current_dir()?)
@@ -578,6 +581,7 @@ mod tests {
             kernel_args: None,
             nopackageserver: false,
             package_server_log: None,
+            envs: vec!["A=1".to_string(), "B=2".to_string(), "C=3".to_string()],
         }
     }
 

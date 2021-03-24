@@ -544,6 +544,7 @@ mod tests {
             emulator_log: None,
             package_server_log: Some("/a/b/c/server.log".to_string()),
             amber_unpack_root: None,
+            envs: Vec::new(),
             port_map: None,
             vdl_output: None,
             nointeractive: false,
