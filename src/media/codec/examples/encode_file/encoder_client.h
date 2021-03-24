@@ -69,7 +69,6 @@ class EncoderClient {
       fuchsia::sysmem::BufferCollectionPtr& buffer_collection,
       fuchsia::sysmem::BufferCollectionTokenHandle codec_sysmem_token, bool is_output,
       uint64_t new_buffer_lifetime_ordinal, uint64_t buffer_constraints_version_ordinal,
-      uint32_t packet_count_for_server, uint32_t packet_count_for_client,
       ConfigurePortBufferCollectionCallback callback);
 
   void OnInputBuffersReady(BufferCollectionResult result);

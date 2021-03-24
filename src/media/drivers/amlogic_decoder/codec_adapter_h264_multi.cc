@@ -422,18 +422,11 @@ CodecAdapterH264Multi::CoreCodecBuildNewOutputConstraints(
     bool buffer_constraints_action_required) {
   // This decoder produces NV12.
 
-  // Fairly arbitrary.  The client should set a higher value if the client needs
-  // to camp on more frames than this.
-  constexpr uint32_t kDefaultPacketCountForClient = 1;
-
-  uint32_t per_packet_buffer_bytes = min_stride_ * height_ * 3 / 2;
-
   auto config = std::make_unique<fuchsia::media::StreamOutputConstraints>();
 
   config->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
 
   auto* constraints = config->mutable_buffer_constraints();
-  auto* default_settings = constraints->mutable_default_settings();
 
   // For the moment, we always require buffer reallocation for any output constraints change.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
@@ -441,43 +434,12 @@ CodecAdapterH264Multi::CoreCodecBuildNewOutputConstraints(
   constraints->set_buffer_constraints_version_ordinal(
       new_output_buffer_constraints_version_ordinal);
 
-  // 0 is intentionally invalid - the client must fill out this field.
-  default_settings->set_buffer_lifetime_ordinal(0);
-  default_settings->set_buffer_constraints_version_ordinal(
-      new_output_buffer_constraints_version_ordinal);
-  default_settings->set_packet_count_for_server(min_buffer_count_[kOutputPort]);
-  default_settings->set_packet_count_for_client(kDefaultPacketCountForClient);
-  // Packed NV12 (no extra padding, min UV offset, min stride).
-  default_settings->set_per_packet_buffer_bytes(per_packet_buffer_bytes);
-  default_settings->set_single_buffer_mode(false);
-
-  // For the moment, let's tell the client to allocate this exact size, though sysmem constraints
-  // will override.
-  constraints->set_per_packet_buffer_bytes_min(per_packet_buffer_bytes);
-  constraints->set_per_packet_buffer_bytes_recommended(per_packet_buffer_bytes);
-  constraints->set_per_packet_buffer_bytes_max(per_packet_buffer_bytes);
-
-  // The hardware only needs min_buffer_count_ buffers - more aren't better. The sysmem constrain
-  // will override this anyway.
-  constraints->set_packet_count_for_server_min(min_buffer_count_[kOutputPort]);
-  constraints->set_packet_count_for_server_recommended(min_buffer_count_[kOutputPort]);
-  constraints->set_packet_count_for_server_recommended_max(min_buffer_count_[kOutputPort]);
-  constraints->set_packet_count_for_server_max(min_buffer_count_[kOutputPort]);
-  constraints->set_packet_count_for_client_min(0);
   // Ensure that if the client allocates its max + the server max that it won't go over the hardware
   // limit (max_buffer_count).
   if (max_buffer_count_[kOutputPort] <= min_buffer_count_[kOutputPort]) {
     events_->onCoreCodecFailCodec("Impossible for client to satisfy buffer counts");
     return nullptr;
   }
-  constraints->set_packet_count_for_client_max(
-      (max_buffer_count_[kOutputPort] - min_buffer_count_[kOutputPort]) / 2);
-
-  // False because it's not required and not encouraged for a video decoder
-  // output to allow single buffer mode.
-  constraints->set_single_buffer_mode_allowed(false);
-
-  constraints->set_is_physically_contiguous_required(true);
 
   return config;
 }
@@ -488,13 +450,6 @@ CodecAdapterH264Multi::CoreCodecGetBufferCollectionConstraints(
     const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
   fuchsia::sysmem::BufferCollectionConstraints result;
 
-  // For now, we didn't report support for single_buffer_mode, and CodecImpl
-  // will have failed the codec already by this point if the client tried to
-  // use single_buffer_mode.
-  //
-  // TODO(dustingreen): Support single_buffer_mode on input (only).
-  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() ||
-                  !partial_settings.single_buffer_mode());
   // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to
   // have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());
