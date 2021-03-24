@@ -18,6 +18,14 @@
     }                                             \
   }
 
+#define ASSERT_ERRORED(library, error)            \
+  {                                               \
+    TestLibrary& library_ref = (library);         \
+    EXPECT_FALSE(library_ref.Compile());          \
+    EXPECT_EQ(library_ref.errors().size(), 1u);   \
+    ASSERT_ERR(library_ref.errors()[0], (error)); \
+  }
+
 #define ASSERT_ERR(actual_err, err_def, ...) \
   ASSERT_STR_EQ(actual_err->err.msg.data(), err_def.msg.data(), ##__VA_ARGS__)
 

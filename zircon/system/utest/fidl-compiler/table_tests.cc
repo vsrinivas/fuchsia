@@ -13,51 +13,42 @@
 
 namespace {
 
-static bool Compiles(const std::string& source_code) {
-  auto library = TestLibrary("test.fidl", source_code);
-  return library.Compile();
-}
-
-TEST(TableTests, compiling) {
-  // Populated fields.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(TableTests, PopulatedFields) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
     1: int64 x;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  // Reserved fields.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(TableTests, ReservedFields) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
     1: reserved;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  // Reserved and populated fields.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(TableTests, ReservedAndPopulatedFields) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
     1: reserved;
     2: int64 x;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  EXPECT_TRUE(Compiles(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    1: int64 x;
-    2: reserved;
-};
-)FIDL"));
-
-  // Many reserved fields.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(TableTests, ManyReservedFields) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -65,10 +56,12 @@ table Foo {
     2: reserved;
     3: reserved;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  // Out of order fields.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(TableTests, OutOfOrderFields) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -76,53 +69,33 @@ table Foo {
     1: reserved;
     2: reserved;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  // Duplicate ordinals.
-  EXPECT_FALSE(Compiles(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    1: reserved;
-    1: reserved;
-};
-)FIDL"));
-
-  // Missing ordinals.
-  EXPECT_FALSE(Compiles(R"FIDL(
-library fidl.test.tables;
-
-table Foo {
-    1: reserved;
-    3: reserved;
-};
-)FIDL"));
-
-  // Empty tables are allowed.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(TableTests, EmptyTables) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  {
-    // Ordinals required.
-    auto library = TestLibrary(R"FIDL(
+TEST(TableTests, OrdinalsRequired) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
     int64 x;
 };
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    EXPECT_EQ(library.errors().size(), 1u);
-    ASSERT_ERR(library.errors().at(0), fidl::ErrExpectedOrdinalOrCloseBrace);
-  }
+  ASSERT_ERRORED(library, fidl::ErrExpectedOrdinalOrCloseBrace);
+}
 
-  {
-    // Duplicate field names are invalid.
-    auto library = TestLibrary(R"FIDL(
+TEST(TableTests, DuplicateFieldNames) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Duplicates {
@@ -130,14 +103,11 @@ table Duplicates {
     2: uint32 field;
 };
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    EXPECT_EQ(library.errors().size(), 1u);
-    ASSERT_ERR(library.errors().at(0), fidl::ErrDuplicateTableFieldName);
-  }
+  ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldName);
+}
 
-  {
-    // Duplicate ordinals are invalid.
-    auto library = TestLibrary(R"FIDL(
+TEST(TableTests, DuplicateOrdinals) {
+  auto library = TestLibrary(R"FIDL(
 library fidl.test.tables;
 
 table Duplicates {
@@ -145,13 +115,11 @@ table Duplicates {
     1: uint32 bar;
 };
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    EXPECT_EQ(library.errors().size(), 1u);
-    ASSERT_ERR(library.errors().at(0), fidl::ErrDuplicateTableFieldOrdinal);
-  }
+  ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldOrdinal);
+}
 
-  // Attributes on fields.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(TableTests, AttributesOnFields) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -160,10 +128,12 @@ table Foo {
     [BarAttr]
     2: bool bar;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  // Attributes on tables.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(TableTests, AttributesOnTables) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 [FooAttr="bar"]
@@ -171,20 +141,24 @@ table Foo {
     1: int64 x;
     2: bool please;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  // Attributes on reserved.
-  EXPECT_FALSE(Compiles(R"FIDL(
+TEST(TableTests, AttribtuesOnReserved) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
     [Foo]
     1: reserved;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_ERRORED(library, fidl::ErrCannotAttachAttributesToReservedOrdinals);
+}
 
-  // Keywords as field names.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(TableTests, KeywordsAsFieldNames) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 struct struct {
@@ -197,11 +171,12 @@ table Foo {
     3: uint32 uint32;
     4: struct member;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  {
-    // Optional tables in structs are invalid.
-    auto library = TestLibrary(R"FIDL(
+TEST(TableTests, OptionalTablesInStructs) {
+  auto library = TestLibrary(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -212,14 +187,12 @@ struct OptionalTableContainer {
     Foo? foo;
 };
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    EXPECT_EQ(library.errors().size(), 1u);
-    ASSERT_ERR(library.errors().at(0), fidl::ErrCannotBeNullable);
-  }
+  ASSERT_ERRORED(library, fidl::ErrCannotBeNullable);
+}
 
-  {
-    // Optional tables in (static) unions are invalid.
-    auto library = TestLibrary(R"FIDL(
+TEST(TableTests, OptionalTablesInUnions) {
+  // Optional tables in (static) unions are invalid.
+  auto library = TestLibrary(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -230,13 +203,11 @@ union OptionalTableContainer {
     1: Foo? foo;
 };
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    EXPECT_EQ(library.errors().size(), 1u);
-    ASSERT_ERR(library.errors().at(0), fidl::ErrNullableUnionMember);
-  }
+  ASSERT_ERRORED(library, fidl::ErrNullableUnionMember);
+}
 
-  // Tables in tables are valid.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(TableTests, TablesInTables) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -247,10 +218,12 @@ table Bar {
     1: Foo foo;
 };
 
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  // Tables in unions are valid.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(TableTests, TablesInUnions) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -261,24 +234,22 @@ flexible union OptionalTableContainer {
     1: Foo foo;
 };
 
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  {
-    // Optional fields in tables are invalid.
-    auto library = TestLibrary(R"FIDL(
+TEST(TableTests, OptionalTableFields) {
+  auto library = TestLibrary(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
     1: int64? t;
 };
 )FIDL");
-    EXPECT_FALSE(library.Compile());
-    EXPECT_EQ(library.errors().size(), 1u);
-    ASSERT_ERR(library.errors().at(0), fidl::ErrNullableTableMember);
-  }
+  ASSERT_ERRORED(library, fidl::ErrNullableTableMember);
 }
 
-TEST(TableTests, default_not_allowed) {
+TEST(TableTests, DefaultNotAllowed) {
   auto library = TestLibrary(R"FIDL(
 library fidl.test.tables;
 
@@ -287,12 +258,10 @@ table Foo {
 };
 
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrDefaultsOnTablesNotSupported);
+  ASSERT_ERRORED(library, fidl::ErrDefaultsOnTablesNotSupported);
 }
 
-TEST(TableTests, must_be_dense) {
+TEST(TableTests, MustBeDense) {
   auto library = TestLibrary(R"FIDL(
 library example;
 
@@ -302,9 +271,7 @@ table Example {
 };
 
 )FIDL");
-  EXPECT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrNonDenseOrdinal);
+  ASSERT_ERRORED(library, fidl::ErrNonDenseOrdinal);
   ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
 }
 

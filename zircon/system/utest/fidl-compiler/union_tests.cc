@@ -14,15 +14,8 @@
 
 namespace {
 
-static bool Compiles(const std::string& source_code,
-                     std::vector<std::unique_ptr<fidl::Diagnostic>>* out_errors = nullptr) {
-  auto library = TestLibrary("test.fidl", source_code);
-  return library.Compile();
-}
-
-TEST(UnionTests, compiling) {
-  // Keywords as field names.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(UnionTests, KeywordsAsFieldNames) {
+  TestLibrary library(R"FIDL(
 library test;
 
 struct struct {
@@ -35,20 +28,24 @@ union Foo {
     3: uint32 uint32;
     4: struct member;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  // Recursion is allowed.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(UnionTests, RecursiveUnion) {
+  TestLibrary library(R"FIDL(
 library test;
 
 union Value {
   1: bool bool_value;
   2: vector<Value?> list_value;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  // Mutual recursion is allowed.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(UnionTests, MutuallyRecursive) {
+  TestLibrary library(R"FIDL(
 library test;
 
 union Foo {
@@ -58,28 +55,33 @@ union Foo {
 struct Bar {
   Foo? foo;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  // Specifying flexible is allowed.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(UnionTests, FlexibleUnion) {
+  TestLibrary library(R"FIDL(
 library test;
 
 flexible union Foo {
   1: string bar;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
+}
 
-  // Specifying strict is allowed.
-  EXPECT_TRUE(Compiles(R"FIDL(
+TEST(UnionTests, StrictUnion) {
+  TestLibrary library(R"FIDL(
 library test;
 
 strict union Foo {
   1: string bar;
 };
-)FIDL"));
+)FIDL");
+  ASSERT_COMPILED(library);
 }
 
-TEST(UnionTests, must_have_explicit_ordinals) {
+TEST(UnionTests, MustHaveExplicitOrdinals) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -95,7 +97,7 @@ union Foo {
   ASSERT_ERR(library.errors().at(1), fidl::ErrMissingOrdinalBeforeType);
 }
 
-TEST(UnionTests, explicit_ordinals) {
+TEST(UnionTests, ExplicitOrdinals) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -118,7 +120,7 @@ union Foo {
   EXPECT_EQ(member1.ordinal->value, 2);
 }
 
-TEST(UnionTests, explicit_ordinals_with_reserved) {
+TEST(UnionTests, OrdinalsWithReserved) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -153,7 +155,7 @@ union Foo {
   EXPECT_EQ(member4.ordinal->value, 5);
 }
 
-TEST(UnionTests, explicit_ordinals_out_of_order) {
+TEST(UnionTests, OrdinalsOutOfOrder) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -188,7 +190,7 @@ union Foo {
   EXPECT_EQ(member4.ordinal->value, 4);
 }
 
-TEST(UnionTests, ordinal_out_of_bounds) {
+TEST(UnionTests, OrdinalOutOfBounds) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -196,12 +198,10 @@ union Foo {
   -1: uint32 foo;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrOrdinalOutOfBound);
+  ASSERT_ERRORED(library, fidl::ErrOrdinalOutOfBound);
 }
 
-TEST(UnionTests, ordinals_must_be_unique) {
+TEST(UnionTests, OrdinalsMustBeUnique) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -210,12 +210,10 @@ union Foo {
   1: uint64 x;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrDuplicateUnionMemberOrdinal);
+  ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberOrdinal);
 }
 
-TEST(UnionTests, member_names_must_be_unique) {
+TEST(UnionTests, MemberNamesMustBeUnique) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -224,27 +222,10 @@ union Duplicates {
     2: int32 s;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrDuplicateUnionMemberName);
+  ASSERT_ERRORED(library, fidl::ErrDuplicateUnionMemberName);
 }
 
-TEST(UnionTests, cannot_mix_explicit_and_hashed_ordinals) {
-  TestLibrary library(R"FIDL(
-library test;
-
-union Foo {
-    1: int64 foo;
-    vector<uint32>:10 bar;
-};
-
-)FIDL");
-  ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrMissingOrdinalBeforeType);
-}
-
-TEST(UnionTests, cannot_start_at_zero) {
+TEST(UnionTests, CannotStartAtZero) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -253,12 +234,10 @@ union Foo {
   1: uint64 bar;
 };
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrOrdinalsMustStartAtOne);
+  ASSERT_ERRORED(library, fidl::ErrOrdinalsMustStartAtOne);
 }
 
-TEST(UnionTests, default_not_allowed) {
+TEST(UnionTests, DefaultNotAllowed) {
   TestLibrary library(R"FIDL(
 library test;
 
@@ -267,12 +246,10 @@ union Foo {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrDefaultsOnUnionsNotSupported);
+  ASSERT_ERRORED(library, fidl::ErrDefaultsOnUnionsNotSupported);
 }
 
-TEST(UnionTests, must_be_dense) {
+TEST(UnionTests, MustBeDense) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -282,13 +259,11 @@ union Example {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrNonDenseOrdinal);
+  ASSERT_ERRORED(library, fidl::ErrNonDenseOrdinal);
   ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
 }
 
-TEST(UnionTests, must_have_at_least_one_non_reserved) {
+TEST(UnionTests, MustHaveNonReservedMember) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -298,12 +273,10 @@ union Foo {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  ASSERT_EQ(library.errors().size(), 1u);
-  ASSERT_ERR(library.errors().at(0), fidl::ErrMustHaveNonReservedMember);
+  ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
 }
 
-TEST(UnionTests, no_nullable_members_in_unions) {
+TEST(UnionTests, NoNullableMembers) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -312,13 +285,10 @@ union Foo {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrNullableUnionMember);
+  ASSERT_ERRORED(library, fidl::ErrNullableUnionMember);
 }
 
-TEST(UnionTests, no_directly_recursive_unions) {
+TEST(UnionTests, NoDirectlyRecursiveUnions) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -327,26 +297,20 @@ union Value {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrIncludeCycle);
+  ASSERT_ERRORED(library, fidl::ErrIncludeCycle);
 }
 
-TEST(UnionTests, invalid_empty_unions) {
+TEST(UnionTests, InvalidEmptyUnion) {
   TestLibrary library(R"FIDL(
 library example;
 
 union Foo {};
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrMustHaveNonReservedMember);
+  ASSERT_ERRORED(library, fidl::ErrMustHaveNonReservedMember);
 }
 
-TEST(UnionTests, error_syntax_explicit_ordinals) {
+TEST(UnionTests, ErrorSyntaxExplicitOrdinals) {
   TestLibrary error_library(R"FIDL(
 library example;
 protocol Example {
@@ -360,7 +324,7 @@ protocol Example {
   ASSERT_EQ(error_union->members.back().ordinal->value, 2);
 }
 
-TEST(UnionTests, no_selector) {
+TEST(UnionTests, NoSelector) {
   TestLibrary library(R"FIDL(
 library example;
 
@@ -369,16 +333,13 @@ union Foo {
 };
 
 )FIDL");
-  ASSERT_FALSE(library.Compile());
-  const auto& errors = library.errors();
-  ASSERT_EQ(errors.size(), 1);
-  ASSERT_ERR(errors[0], fidl::ErrInvalidAttributePlacement);
-  ASSERT_SUBSTR(errors[0]->msg.c_str(), "Selector");
+  ASSERT_ERRORED(library, fidl::ErrInvalidAttributePlacement);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "Selector");
 }
 
-TEST(UnionTests, deprecated_xunion_error) {
+TEST(UnionTests, DeprecatedXUnionError) {
   {
-    TestLibrary xunion_library(R"FIDL(
+    TestLibrary library(R"FIDL(
   library test;
 
   xunion Foo {
@@ -386,14 +347,11 @@ TEST(UnionTests, deprecated_xunion_error) {
   };
 
   )FIDL");
-    ASSERT_FALSE(xunion_library.Compile());
-    const auto& errors = xunion_library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_ERR(errors[0], fidl::ErrXunionDeprecated);
+    ASSERT_ERRORED(library, fidl::ErrXunionDeprecated);
   }
 
   {
-    TestLibrary flexible_xunion_library(R"FIDL(
+    TestLibrary library(R"FIDL(
   library test;
 
   flexible xunion FlexibleFoo {
@@ -401,14 +359,11 @@ TEST(UnionTests, deprecated_xunion_error) {
   };
 
   )FIDL");
-    ASSERT_FALSE(flexible_xunion_library.Compile());
-    const auto& errors = flexible_xunion_library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_ERR(errors[0], fidl::ErrXunionDeprecated);
+    ASSERT_ERRORED(library, fidl::ErrXunionDeprecated);
   }
 
   {
-    TestLibrary strict_xunion_library(R"FIDL(
+    TestLibrary library(R"FIDL(
   library test;
 
   strict xunion StrictFoo {
@@ -416,10 +371,7 @@ TEST(UnionTests, deprecated_xunion_error) {
   };
 
   )FIDL");
-    ASSERT_FALSE(strict_xunion_library.Compile());
-    const auto& errors = strict_xunion_library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_ERR(errors[0], fidl::ErrStrictXunionDeprecated);
+    ASSERT_ERRORED(library, fidl::ErrStrictXunionDeprecated);
   }
 }
 
