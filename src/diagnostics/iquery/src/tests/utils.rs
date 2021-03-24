@@ -153,8 +153,8 @@ fn cleanup_variable_strings(string: impl Into<String>) -> String {
     // Replace start_timestamp_nanos in fuchsia.inspect.Health entries and
     // timestamp in metadatas.
     let mut string: String = string.into();
-    let re = Regex::new(&format!("(\\[\\d+\\])(\\[.*\\.cmx:)\\d+\\](.*)")).unwrap();
-    let replacement = format!("[TIMESTAMP]${{2}}PID]${{3}}");
+    let re = Regex::new(&format!("(\\[\\d+\\])(\\[.*\\.cmx)\\](.*)")).unwrap();
+    let replacement = format!("[TIMESTAMP]${{2}}]${{3}}");
     string = re.replace_all(&string, replacement.as_str()).to_string();
     // Moniker requires very special treatment. It's part-constant and part numeric
     for value in &["timestamp", "start_timestamp_nanos", "pid", "tid", "moniker"] {

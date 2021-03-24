@@ -8,7 +8,7 @@
       "severity": "INFO",
       "size_bytes": 74
     },
-    "moniker": "log-test/basic_component.cmx:INSTANCE_ID",
+    "moniker": "log-test/basic_component.cmx",
     "payload": {
       "root": {
         "message": "Is great to have! ",

@@ -544,7 +544,7 @@ mod tests {
                 severity: LegacySeverity::Info.for_listener(),
                 dropped_logs: 0,
                 msg: String::from("hi"),
-                tags: vec!["UNKNOWN:0".to_owned()],
+                tags: vec!["UNKNOWN".to_owned()],
             },
             LogMessage {
                 pid: zx::sys::ZX_KOID_INVALID,
@@ -553,7 +553,7 @@ mod tests {
                 severity: LegacySeverity::Error.for_listener(),
                 dropped_logs: 0,
                 msg: String::from(""),
-                tags: vec!["UNKNOWN:0".to_owned()],
+                tags: vec!["UNKNOWN".to_owned()],
             },
             LogMessage {
                 pid: 0x1d1,

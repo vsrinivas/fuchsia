@@ -208,7 +208,7 @@ mod tests {
                 directory: Some(_),
             }) => {
                 assert_eq!(
-                    observed_identity.to_string(),
+                    observed_identity.rendered_moniker,
                     format!(
                         "{}/{}:{}",
                         identity.realm_path.join("/"),

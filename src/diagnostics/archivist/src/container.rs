@@ -95,7 +95,7 @@ impl TryFrom<SourceIdentity> for ComponentIdentity {
 
 impl std::fmt::Display for ComponentIdentity {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.rendered_moniker)
+        write!(f, "{}", &self.relative_moniker.join("/"))
     }
 }
 

@@ -276,7 +276,7 @@ mod tests {
         let message = test_message();
         let mut filter = MessageFilter::default();
 
-        filter.tags = vec!["specious-at-best.cmx:0".to_string()].into_iter().collect();
+        filter.tags = vec!["specious-at-best.cmx".to_string()].into_iter().collect();
         assert_eq!(
             filter.should_send(&message),
             true,

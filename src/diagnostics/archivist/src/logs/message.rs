@@ -875,7 +875,7 @@ mod tests {
             &*TEST_IDENTITY,
             LogsHierarchy::new("root", vec![], vec![]),
         );
-        assert_eq!(&test_message.moniker, &TEST_IDENTITY.rendered_moniker);
+        assert_eq!(&test_message.moniker, &TEST_IDENTITY.relative_moniker.join("/"));
         assert_eq!(&test_message.metadata.component_url, &TEST_IDENTITY.url);
     }
 
