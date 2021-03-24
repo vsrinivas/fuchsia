@@ -10,7 +10,7 @@ use {
     fuchsia_zircon::Status,
     futures::StreamExt,
     io_conformance_util::io1_request_logger_factory::Io1RequestLoggerFactory,
-    io_conformance_util::test_harness::TestHarness,
+    io_conformance_util::{flags::build_flag_combinations, test_harness::TestHarness},
 };
 
 const TEST_FILE: &str = "testing.txt";
@@ -31,6 +31,11 @@ async fn assert_on_open_not_received(node_proxy: &io::NodeProxy) {
     assert!(event.is_none(), "Unexpected OnOpen event received");
 }
 
+/// Converts a generic `NodeProxy` to either a file or directory proxy.
+fn convert_node_proxy<T: ServiceMarker>(proxy: io::NodeProxy) -> T::Proxy {
+    T::Proxy::from_channel(proxy.into_channel().expect("Cannot convert node proxy to channel"))
+}
+
 /// Helper function to open the desired node in the root folder. Only use this
 /// if testing something other than the open call directly.
 async fn open_node<T: ServiceMarker>(
@@ -44,7 +49,17 @@ async fn open_node<T: ServiceMarker>(
     dir.open(flags, mode, path, node_server).expect("Cannot open node");
 
     assert_eq!(get_open_status(&node_proxy).await, Status::OK);
-    T::Proxy::from_channel(node_proxy.into_channel().expect("Cannot convert node proxy to channel"))
+    convert_node_proxy::<T>(node_proxy)
+}
+
+/// Helper function to open a file with the given flags. Only use this if testing something other
+/// than the open call directly.
+async fn open_file_with_flags(
+    parent_dir: &io::DirectoryProxy,
+    flags: u32,
+    path: &str,
+) -> io::FileProxy {
+    open_node::<io::FileMarker>(&parent_dir, flags, io::MODE_TYPE_FILE, path).await
 }
 
 /// Helper function to open a sub-directory with the given flags. Only use this if testing
@@ -814,5 +829,150 @@ async fn link_with_insufficient_rights() {
 
         // Check src/old.txt still exists.
         assert_eq!(read_file(&test_dir, "src/old.txt").await, contents);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn clone_file_with_same_or_fewer_rights() {
+    let harness = TestHarness::new().await;
+
+    for file_flags in harness.all_flag_combos() {
+        let root = root_directory(vec![file(TEST_FILE, vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let file = open_file_with_flags(&test_dir, file_flags, TEST_FILE).await;
+
+        // Clone using every subset of flags.
+        for clone_flags in build_flag_combinations(0, file_flags) {
+            let (proxy, server) = create_proxy::<io::NodeMarker>().expect("create_proxy failed");
+            file.clone(clone_flags | io::OPEN_FLAG_DESCRIBE, server).expect("clone failed");
+            let status = get_open_status(&proxy).await;
+            assert_eq!(status, Status::OK);
+
+            // Check flags of cloned connection are correct.
+            let proxy = convert_node_proxy::<io::FileMarker>(proxy);
+            // TODO(fxbug.dev/33880): Add support for NodeGetFlags to rustvfs and then switch to
+            // using that here instead of GetFlags.
+            let (status, flags) = proxy.get_flags().await.expect("get_flags failed");
+            assert_eq!(Status::from_raw(status), Status::OK);
+            assert_eq!(flags, clone_flags);
+        }
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn clone_file_with_same_rights_flag() {
+    let harness = TestHarness::new().await;
+
+    for file_flags in harness.all_flag_combos() {
+        let root = root_directory(vec![file(TEST_FILE, vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let file = open_file_with_flags(&test_dir, file_flags, TEST_FILE).await;
+
+        // Clone using CLONE_FLAG_SAME_RIGHTS.
+        let (proxy, server) = create_proxy::<io::NodeMarker>().expect("create_proxy failed");
+        file.clone(io::CLONE_FLAG_SAME_RIGHTS | io::OPEN_FLAG_DESCRIBE, server)
+            .expect("clone failed");
+        let status = get_open_status(&proxy).await;
+        assert_eq!(status, Status::OK);
+
+        // Check flags of cloned connection are correct.
+        let proxy = convert_node_proxy::<io::FileMarker>(proxy);
+        // TODO(fxbug.dev/33880): Add support for NodeGetFlags to rustvfs and then switch to using
+        // that here instead of GetFlags.
+        let (status, flags) = proxy.get_flags().await.expect("get_flags failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(flags, file_flags);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn clone_file_with_additional_rights() {
+    let harness = TestHarness::new().await;
+
+    for file_flags in harness.all_flag_combos() {
+        let root = root_directory(vec![file(TEST_FILE, vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let file = open_file_with_flags(&test_dir, file_flags, TEST_FILE).await;
+
+        // Clone using every superset of flags, should fail.
+        for clone_flags in build_flag_combinations(file_flags, harness.all_rights) {
+            if clone_flags == file_flags {
+                continue;
+            }
+            let (proxy, server) = create_proxy::<io::NodeMarker>().expect("create_proxy failed");
+            file.clone(clone_flags | io::OPEN_FLAG_DESCRIBE, server).expect("clone failed");
+            let status = get_open_status(&proxy).await;
+            assert_eq!(status, Status::ACCESS_DENIED);
+        }
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn clone_directory_with_same_or_fewer_rights() {
+    let harness = TestHarness::new().await;
+
+    for dir_flags in harness.all_flag_combos() {
+        let root = root_directory(vec![directory("dir", vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let dir = open_dir_with_flags(&test_dir, dir_flags, "dir").await;
+
+        // Clone using every subset of flags.
+        for clone_flags in build_flag_combinations(0, dir_flags) {
+            let (proxy, server) = create_proxy::<io::NodeMarker>().expect("create_proxy failed");
+            dir.clone(clone_flags | io::OPEN_FLAG_DESCRIBE, server).expect("clone failed");
+            let status = get_open_status(&proxy).await;
+            assert_eq!(status, Status::OK);
+
+            // Check flags of cloned connection are correct.
+            let (status, flags) = proxy.node_get_flags().await.expect("node_get_flags failed");
+            assert_eq!(Status::from_raw(status), Status::OK);
+            assert_eq!(flags, clone_flags);
+        }
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn clone_directory_with_same_rights_flag() {
+    let harness = TestHarness::new().await;
+
+    for dir_flags in harness.all_flag_combos() {
+        let root = root_directory(vec![directory("dir", vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let dir = open_dir_with_flags(&test_dir, dir_flags, "dir").await;
+
+        // Clone using CLONE_FLAG_SAME_RIGHTS.
+        let (proxy, server) = create_proxy::<io::NodeMarker>().expect("create_proxy failed");
+        dir.clone(io::CLONE_FLAG_SAME_RIGHTS | io::OPEN_FLAG_DESCRIBE, server)
+            .expect("clone failed");
+        let status = get_open_status(&proxy).await;
+        assert_eq!(status, Status::OK);
+
+        // Check flags of cloned connection are correct.
+        let proxy = convert_node_proxy::<io::FileMarker>(proxy);
+        let (status, flags) = proxy.node_get_flags().await.expect("node_get_flags failed");
+        assert_eq!(Status::from_raw(status), Status::OK);
+        assert_eq!(flags, dir_flags);
+    }
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn clone_directory_with_additional_rights() {
+    let harness = TestHarness::new().await;
+
+    for dir_flags in harness.all_flag_combos() {
+        let root = root_directory(vec![directory("dir", vec![])]);
+        let test_dir = harness.get_directory(root, harness.all_rights);
+        let dir = open_dir_with_flags(&test_dir, dir_flags, "dir").await;
+
+        // Clone using every superset of flags, should fail.
+        for clone_flags in build_flag_combinations(dir_flags, harness.all_rights) {
+            if clone_flags == dir_flags {
+                continue;
+            }
+            let (proxy, server) = create_proxy::<io::NodeMarker>().expect("create_proxy failed");
+            dir.clone(clone_flags | io::OPEN_FLAG_DESCRIBE, server).expect("clone failed");
+            let status = get_open_status(&proxy).await;
+            assert_eq!(status, Status::ACCESS_DENIED);
+        }
     }
 }

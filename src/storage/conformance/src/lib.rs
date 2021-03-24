@@ -17,4 +17,5 @@ pub mod io1_request_logger_factory;
 /// Test harness helper struct.
 pub mod test_harness;
 
-mod flags;
+/// Utility functions for getting combinations of flags.
+pub mod flags;
