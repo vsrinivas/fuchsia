@@ -27,8 +27,11 @@ After all these resources have been enumerated, call `CompositeDeviceAdd` to
 [expose them][cda] as a unit. The device manager will look for drivers that can
 bind to this composite device and load the appropriate display driver.
 
+[This change][vim3-cl] is a complete example of board driver modifications for the VIM3.
+
 <!-- xrefs -->
 [bti]: /docs/reference/kernel_objects/bus_transaction_initiator.md
 [sysmem]: https://fuchsia.dev/reference/fidl/fuchsia.sysmem
 [cda]: https://fuchsia.googlesource.com/fuchsia/+/a7e9836345caf947df79d72882ac864eceae7eb8/src/devices/board/drivers/vim2/vim-display.cc#126
 [vim-display]: /src/devices/board/drivers/vim2/vim-display.cc
+[vim3-cl]: https://fxrev.dev/479034
