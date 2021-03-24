@@ -689,12 +689,25 @@ std::unique_ptr<raw::ConstDeclaration> Parser::ParseConstDeclaration(
 
   ValidateModifiers</* none */>(modifiers, decl_token.value());
 
-  auto type_ctor = ParseTypeConstructor();
-  if (!Ok())
-    return Fail();
-  auto identifier = ParseIdentifier();
-  if (!Ok())
-    return Fail();
+  // TODO(fxbug.dev/70247): remove branching
+  std::unique_ptr<raw::TypeConstructor> type_ctor;
+  std::unique_ptr<raw::Identifier> identifier;
+  if (syntax_ == utils::Syntax::kNew) {
+    identifier = ParseIdentifier();
+    if (!Ok())
+      return Fail();
+    type_ctor = ParseTypeConstructor();
+    if (!Ok())
+      return Fail();
+  } else {
+    type_ctor = ParseTypeConstructor();
+    if (!Ok())
+      return Fail();
+    identifier = ParseIdentifier();
+    if (!Ok())
+      return Fail();
+  }
+
   ConsumeToken(OfKind(Token::Kind::kEqual));
   if (!Ok())
     return Fail();
@@ -2105,6 +2118,13 @@ std::unique_ptr<raw::File> Parser::ParseFileNewSyntax(
       case CASE_IDENTIFIER(Token::Subkind::kAlias): {
         done_with_library_imports = true;
         add(&alias_list, [&] { return ParseAliasDeclarationNew(std::move(attributes)); });
+        return More;
+      }
+
+      case CASE_IDENTIFIER(Token::Subkind::kConst): {
+        done_with_library_imports = true;
+        add(&const_declaration_list,
+            [&] { return ParseConstDeclaration(std::move(attributes), scope, Modifiers()); });
         return More;
       }
 

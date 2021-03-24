@@ -764,6 +764,51 @@ using foo = uint8;
   ASSERT_ERR(errors[0], fidl::ErrOldUsingSyntaxDeprecated);
 }
 
+// TODO(fxbug.dev/72671): this should be covered by an existing old syntax test
+TEST(NewSyntaxTests, ConstParsing) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+const MY_NUMBER uint32 = 11259375;
+const MY_STRING string:10 = "ten";
+const MY_VAR uint32 = MY_NUMBER;
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_COMPILED(library);
+
+  {
+    auto decl = library.LookupConstant("MY_NUMBER");
+    ASSERT_NOT_NULL(decl);
+    ASSERT_EQ(decl->value->kind, fidl::flat::Constant::Kind::kLiteral);
+    ASSERT_EQ(decl->value->Value().kind, fidl::flat::ConstantValue::Kind::kUint32);
+    auto val = static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(decl->value->Value());
+    EXPECT_EQ(11259375, static_cast<uint32_t>(val));
+  }
+
+  {
+    auto decl = library.LookupConstant("MY_STRING");
+    ASSERT_NOT_NULL(decl);
+    ASSERT_EQ(decl->value->kind, fidl::flat::Constant::Kind::kLiteral);
+    ASSERT_EQ(decl->value->Value().kind, fidl::flat::ConstantValue::Kind::kString);
+    auto val = static_cast<const fidl::flat::StringConstantValue&>(decl->value->Value());
+    std::cout << val.value << std::endl;
+    EXPECT_EQ(val.value, "\"ten\"");
+  }
+
+  {
+    auto decl = library.LookupConstant("MY_VAR");
+    ASSERT_NOT_NULL(decl);
+    ASSERT_EQ(decl->value->kind, fidl::flat::Constant::Kind::kIdentifier);
+    ASSERT_EQ(decl->value->Value().kind, fidl::flat::ConstantValue::Kind::kUint32);
+    auto val = static_cast<const fidl::flat::NumericConstantValue<uint32_t>&>(decl->value->Value());
+    EXPECT_EQ(11259375, static_cast<uint32_t>(val));
+  }
+}
+
+
 TEST(NewSyntaxTests, ConstraintsOnVectors) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
@@ -967,7 +1012,6 @@ type TypeDecl = resource struct {
 // TODO(fxbug.dev/71536): once the new flat AST is in, we should add a test for
 //  partial constraints being respected.
 // TODO(fxbug.dev/68667): Add tests for constraint errors.
-
 // Ensure that we don't accidentally enable the new syntax when the new syntax
 // flag is not enabled.
 TEST(NewSyntaxTests, TypedChannelNewInOld) {
