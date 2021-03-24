@@ -1848,9 +1848,7 @@ TEST_F(VulkanExtensionTest, ImportAliasing) {
 
   vulkan_context().queue().waitIdle();
 
-  // TODO(fxbug.dev/72893) - enable unconditionally
-  if (dst_is_coherent)
-    CheckLinearImage(dst_memory.get(), dst_is_coherent, kDefaultWidth, kDstHeight, kPattern);
+  CheckLinearImage(dst_memory.get(), dst_is_coherent, kDefaultWidth, kDstHeight, kPattern);
 }
 
 }  // namespace
