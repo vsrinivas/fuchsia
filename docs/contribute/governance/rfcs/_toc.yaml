@@ -61,6 +61,8 @@ toc:
   path: /docs/contribute/governance/rfcs/0071_ota_backstop.md
 - title: "RFC-0072 - Standalone Image Assembly Tool"
   path: /docs/contribute/governance/rfcs/0072_standalone_image_assembly_tool.md
+- title: "RFC-0073 - Raising x86-64 platform requirement to x86-64-v2"
+  path: /docs/contribute/governance/rfcs/0073_x86_64_platform_requirement.md
 - title: "RFC-0074 - Expose Process Start Time"
   path: /docs/contribute/governance/rfcs/0074_expose_process_start_time.md
 - title: "RFC-0075 - Deprecate Zedboot-based paving for provisioning devices"

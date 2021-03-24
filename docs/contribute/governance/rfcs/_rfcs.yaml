@@ -314,6 +314,19 @@
   submitted: '2021-01-29'
   reviewed: '2021-03-05'
 
+- name: 'RFC-0073'
+  title: 'Raising x86-64 platform requirement to x86-64-v2'
+  short_description: 'Raise the minimum x86-64 platform from v1 + extensions to v2'
+  authors: ['venkateshs@chromium.org']
+  file: '0073_x86_64_platform_requirement.md'
+  area: ['Zircon']
+  issue: []
+  gerrit_change_id: ['484898']
+  status: 'Socialization'
+  reviewers: ['travisg@google.com', 'mcgrathr@google.com', 'kostyak@google.com']
+  submitted: ''
+  reviewed: ''
+
 - name: 'RFC-0074'
   title: 'Expose Process Start Time'
   short_description: 'Make process start time queryable from userspace.'
