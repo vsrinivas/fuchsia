@@ -31,7 +31,7 @@ fidl::VectorView<fuchsia_shell::wire::NodeDefinition> AstBuilder::DefsAsVectorVi
 
   nodes_.clear();
 
-  return std::move(result);
+  return result;
 }
 
 fidl::VectorView<fuchsia_shell::wire::Node> AstBuilder::NodesAsVectorView() {
@@ -50,7 +50,7 @@ fidl::VectorView<fuchsia_shell::wire::Node> AstBuilder::NodesAsVectorView() {
 
   nodes_.clear();
 
-  return std::move(raw_nodes);
+  return raw_nodes;
 }
 
 void AstBuilder::SetRoot(NodeId node_id) {
