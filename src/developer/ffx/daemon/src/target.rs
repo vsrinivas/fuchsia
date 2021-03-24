@@ -1322,6 +1322,7 @@ impl TargetCollection {
         let new_nodename = new_target.nodename().await;
         let new_ips =
             new_target.addrs().await.iter().map(|addr| addr.ip.clone()).collect::<Vec<IpAddr>>();
+        let new_port = new_target.ssh_port().await;
 
         let mut inner = self.inner.write().await;
 
@@ -1362,7 +1363,15 @@ impl TargetCollection {
             for (_, named_target) in inner.named.iter() {
                 if named_target.has_id(new_ids.iter()).await
                     || new_nodename == named_target.nodename().await
-                    || named_target.addrs().await.iter().any(|addr| new_ips.contains(&addr.ip))
+                    || (
+                        // Only match IP addresses IF the ssh port is the same (including un-set).
+                        named_target.ssh_port().await == new_port
+                            && named_target
+                                .addrs()
+                                .await
+                                .iter()
+                                .any(|addr| new_ips.contains(&addr.ip))
+                    )
                 {
                     to_update.replace(named_target);
                     break;
@@ -2328,6 +2337,39 @@ mod test {
         assert_eq!(addr, TargetAddr { ip, scope_id: 0xbadf00d });
         assert_eq!(addr.ip, ip);
         assert_eq!(addr.scope_id, 0xbadf00d);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_target_does_not_merge_different_ports() {
+        let ip = "::1".parse().unwrap();
+
+        let mut addr_set = BTreeSet::new();
+        addr_set.replace(TargetAddr { ip, scope_id: 0 });
+        let t1 = Target::new_with_addrs(Some("t1"), addr_set.clone());
+        t1.set_ssh_port(Some(8022)).await;
+        let t2 = Target::new_with_addrs(Some("t2"), addr_set.clone());
+        t2.set_ssh_port(Some(8023)).await;
+
+        let tc = TargetCollection::new();
+        tc.merge_insert(t1).await;
+        tc.merge_insert(t2).await;
+
+        let mut targets = tc.targets().await.into_iter().collect::<Vec<Target>>();
+
+        assert_eq!(targets.len(), 2);
+
+        targets.sort_by(|a, b| block_on(a.ssh_port()).cmp(&block_on(b.ssh_port())));
+        let mut iter = targets.into_iter();
+        let found1 = iter.next().expect("must have target one");
+        let found2 = iter.next().expect("must have target two");
+
+        assert_eq!(found1.addrs().await.into_iter().next().unwrap().ip, ip);
+        assert_eq!(found1.ssh_port().await, Some(8022));
+        assert_eq!(found1.nodename().await, Some("t1".to_string()));
+
+        assert_eq!(found2.addrs().await.into_iter().next().unwrap().ip, ip);
+        assert_eq!(found2.ssh_port().await, Some(8023));
+        assert_eq!(found2.nodename().await, Some("t2".to_string()));
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
