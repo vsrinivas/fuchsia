@@ -40,6 +40,7 @@ impl IsLocalAddr for Ipv4Addr {
         // TODO(fxbug.dev/58517): add the various RFC reserved addresses and ranges too
         match self.octets() {
             [10, _, _, _] => true,
+            [127, _, _, 1] => true,
             [172, 16..=31, _, _] => true,
             [192, 168, _, _] => true,
             [169, 254, 1..=254, _] => true,
@@ -55,6 +56,11 @@ impl IsLocalAddr for Ipv4Addr {
 impl IsLocalAddr for Ipv6Addr {
     fn is_local_addr(&self) -> bool {
         let segments = self.segments();
+
+        // localhost
+        if segments[..7].iter().all(|n| *n == 0) && segments[7] == 1 {
+            return true;
+        }
 
         // ULA
         if segments[0] & 0xfe00 == 0xfc00 {
@@ -281,8 +287,10 @@ mod tests {
     #[test]
     fn test_is_local_addr() {
         let local_addresses = vec![
+            IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1)),
             IpAddr::V4(Ipv4Addr::new(192, 168, 0, 1)),
             IpAddr::V6(Ipv6Addr::new(0xfe80, 0, 0, 0, 1, 6, 7, 8)),
+            IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 1)),
         ];
         let not_local_addresses = vec![
             IpAddr::V4(Ipv4Addr::new(8, 8, 8, 8)),
