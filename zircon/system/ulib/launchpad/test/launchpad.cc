@@ -113,7 +113,7 @@ void RunOneArgumentSizeTest(size_t size) {
 }
 
 TEST(LaunchPadTest, ArgumentSize) {
-  for (size_t size = 0; size < 2 * PAGE_SIZE; size += 1024) {
+  for (size_t size = 0; size < 2 * zx_system_get_page_size(); size += 1024) {
     ASSERT_NO_FAILURES(RunOneArgumentSizeTest(size), "argument size is %-29zu", size);
   }
 }

@@ -472,7 +472,8 @@ static zx_status_t reserve_low_address_space(launchpad_t* lp) {
   }
 
   uintptr_t addr;
-  size_t reserve_size = (((info.base + info.len) / 2) + PAGE_SIZE - 1) & -PAGE_SIZE;
+  const size_t kPageSize = zx_system_get_page_size();
+  size_t reserve_size = (((info.base + info.len) / 2) + kPageSize - 1) & -kPageSize;
   status = zx_vmar_allocate(lp_vmar(lp), ZX_VM_SPECIFIC, 0, reserve_size - info.base,
                             &lp->reserve_vmar, &addr);
   if (status != ZX_OK) {
@@ -874,13 +875,14 @@ static zx_status_t send_loader_message(launchpad_t* lp, zx_handle_t first_thread
 __EXPORT
 size_t launchpad_set_stack_size(launchpad_t* lp, size_t new_size) {
   size_t old_size = lp->stack_size;
-  if (new_size >= (SIZE_MAX & -PAGE_SIZE)) {
+  const size_t kPageSize = zx_system_get_page_size();
+  if (new_size >= (SIZE_MAX & -kPageSize)) {
     // Ridiculously large size won't actually work at allocation time,
     // but at least page rounding won't wrap it around to zero.
-    new_size = SIZE_MAX & -PAGE_SIZE;
+    new_size = SIZE_MAX & -kPageSize;
   } else if (new_size > 0) {
     // Round up to page size.
-    new_size = (new_size + PAGE_SIZE - 1) & -PAGE_SIZE;
+    new_size = (new_size + kPageSize - 1) & -kPageSize;
   }
   if (lp->error == ZX_OK) {
     lp->stack_size = new_size;
@@ -951,6 +953,7 @@ static zx_status_t prepare_start(launchpad_t* lp, launchpad_start_data_t* result
   if (allocate_stack)
     *next_handle = PA_VMO_STACK;
 
+  const size_t kPageSize = zx_system_get_page_size();
   // Figure out how big an initial thread to allocate.
   char stack_vmo_name[ZX_MAX_NAME_LEN];
   size_t stack_size;
@@ -966,7 +969,7 @@ static zx_status_t prepare_start(launchpad_t* lp, launchpad_start_data_t* result
     // its own stack in __libc_start_main), but leave a little space so
     // for small bootstrap message sizes the stack needs only one page.
     stack_size += PTHREAD_STACK_MIN;
-    stack_size = (stack_size + PAGE_SIZE - 1) & -PAGE_SIZE;
+    stack_size = (stack_size + kPageSize - 1) & -kPageSize;
 
     snprintf(stack_vmo_name, sizeof(stack_vmo_name), "stack: msg of %#zx", size);
   } else {
@@ -1005,7 +1008,7 @@ static zx_status_t prepare_start(launchpad_t* lp, launchpad_start_data_t* result
       goto cleanup;
     }
 
-    ZX_DEBUG_ASSERT(stack_size % PAGE_SIZE == 0);
+    ZX_DEBUG_ASSERT(stack_size % kPageSize == 0);
     sp = compute_initial_stack_pointer(stack_base, stack_size);
     // Pass the stack VMO to the process.  Our protocol with the
     // new process is that we warrant that this is the VMO from
