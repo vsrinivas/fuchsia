@@ -5,9 +5,10 @@
 import("//build/host.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
+import("//build/sdk/sdk_host_tool.gni")
 import("//build/testing/environments.gni")
 
-if (host_toolchain == current_toolchain) {
+if (is_host) {
   rustc_binary("bin") {
     name = "bindc"
     edition = "2018"
@@ -29,11 +30,17 @@ if (host_toolchain == current_toolchain) {
       "src/templates/fidl.template",
     ]
   }
-}
 
-install_host_tools("host") {
-  deps = [ ":bin($host_toolchain)" ]
-  outputs = [ "bindc" ]
+  install_host_tools("host") {
+    deps = [ ":bin" ]
+    outputs = [ "bindc" ]
+  }
+
+  sdk_host_tool("bindc_sdk") {
+    category = "partner"
+    output_name = "bindc"
+    deps = [ ":bin" ]
+  }
 }
 
 group("tests") {

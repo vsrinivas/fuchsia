@@ -1,0 +1,59 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "id": "http://fuchsia.com/schemas/sdk/bind_library.json",
+  "description": "A BIND library",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "common.json#/definitions/sdk_element"
+    },
+    {
+      "properties": {
+        "type": {
+          "allOf": [
+            {
+              "$ref": "common.json#/definitions/type"
+            },
+            {
+              "enum": [
+                "bind_library"
+              ]
+            }
+          ]
+        },
+        "name": {
+          "description": "Name of the library",
+          "$ref": "common.json#/definitions/bind_library_name"
+        },
+        "root": {
+          "description": "The root of the element in the SDK",
+          "$ref": "common.json#/definitions/file"
+        },
+        "sources": {
+          "description": "List of library sources",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "common.json#/definitions/file"
+          }
+        },
+        "deps": {
+          "description": "List of libraries this library depends on",
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/definitions/bind_library_name"
+          }
+        }
+      },
+      "required": [
+        "deps",
+        "root",
+        "sources",
+
+        "name",
+        "type"
+      ],
+      "additionalProperties": false
+    }
+  ]
+}
