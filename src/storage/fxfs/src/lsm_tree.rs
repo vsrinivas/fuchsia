@@ -10,7 +10,6 @@ pub mod types;
 use {
     crate::object_handle::ObjectHandle,
     anyhow::Error,
-    async_trait::async_trait,
     simple_persistent_layer::SimplePersistentLayerWriter,
     std::{
         ops::Bound,
@@ -118,7 +117,8 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
     /// Compacts all the immutable layers.
     pub async fn compact(&self, object_handle: impl ObjectHandle + 'static) -> Result<(), Error> {
         let layer_set = self.immutable_layer_set();
-        let iter = layer_set.seek(Bound::Unbounded).await?;
+        let mut merger = layer_set.merger();
+        let iter = merger.seek(Bound::Unbounded).await?;
         self.compact_with_iterator(iter, object_handle).await
     }
 
@@ -176,7 +176,8 @@ impl<'tree, K: Key + OrdLowerBound, V: Value> LSMTree<K, V> {
         V: Clone,
     {
         let layer_set = self.layer_set();
-        let iter = layer_set.seek(Bound::Included(search_key)).await?;
+        let mut merger = layer_set.merger();
+        let iter = merger.seek(Bound::Included(search_key)).await?;
         Ok(match iter.get() {
             Some(ItemRef { key, value }) if key == search_key => {
                 Some(Item { key: key.clone(), value: value.clone() })
@@ -209,7 +210,7 @@ pub struct LayerSet<K, V> {
 }
 
 impl<
-        K: std::fmt::Debug + OrdLowerBound + Unpin + 'static,
+        K: std::fmt::Debug + Ord + OrdLowerBound + Unpin + 'static,
         V: std::fmt::Debug + Unpin + 'static,
     > LayerSet<K, V>
 {
@@ -217,31 +218,8 @@ impl<
         self.layers.push(layer);
     }
 
-    pub async fn seek<'a>(&'a self, bound: Bound<&K>) -> Result<LSMTreeIter<'a, K, V>, Error> {
-        let iter = LSMTreeIter(
-            merge::Merger::new(&self.layers.as_slice().into_layer_refs(), self.merge_fn, bound)
-                .await?,
-        );
-        Ok(iter)
-    }
-}
-
-pub struct LSMTreeIter<'a, K, V>(merge::Merger<'a, K, V>);
-
-impl<'a, K: Key + OrdLowerBound, V: Value> LSMTreeIter<'a, K, V> {
-    pub async fn advance_with_hint(&mut self, hint: &K) -> Result<(), Error> {
-        self.0.advance_with_hint(hint).await
-    }
-}
-
-#[async_trait]
-impl<'a, K: Key + OrdLowerBound, V: Value> LayerIterator<K, V> for LSMTreeIter<'a, K, V> {
-    fn get(&self) -> Option<ItemRef<'_, K, V>> {
-        self.0.get()
-    }
-
-    async fn advance(&mut self) -> Result<(), Error> {
-        self.0.advance().await
+    pub fn merger(&self) -> merge::Merger<'_, K, V> {
+        merge::Merger::new(&self.layers.as_slice().into_layer_refs(), self.merge_fn)
     }
 }
 
@@ -251,7 +229,7 @@ mod tests {
         super::LSMTree,
         crate::{
             lsm_tree::{
-                merge::{MergeIterator, MergeResult},
+                merge::{MergeLayerIterator, MergeResult},
                 types::{Item, ItemRef, LayerIterator, OrdLowerBound},
             },
             testing::fake_object::{FakeObject, FakeObjectHandle},
@@ -285,8 +263,8 @@ mod tests {
     }
 
     fn emit_left_merge_fn(
-        _left: &MergeIterator<'_, TestKey, u64>,
-        _right: &MergeIterator<'_, TestKey, u64>,
+        _left: &MergeLayerIterator<'_, TestKey, u64>,
+        _right: &MergeLayerIterator<'_, TestKey, u64>,
     ) -> MergeResult<TestKey, u64> {
         MergeResult::EmitLeft
     }
@@ -298,7 +276,8 @@ mod tests {
         tree.insert(items[0].clone()).await;
         tree.insert(items[1].clone()).await;
         let layers = tree.layer_set();
-        let mut iter = layers.seek(Bound::Unbounded).await.expect("seek failed");
+        let mut merger = layers.merger();
+        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
         let ItemRef { key, value } = iter.get().expect("missing item");
         assert_eq!((key, value), (&items[0].key, &items[0].value));
         iter.advance().await.expect("advance failed");
@@ -330,7 +309,8 @@ mod tests {
         let tree = LSMTree::open(emit_left_merge_fn, [handle].into());
 
         let layers = tree.layer_set();
-        let mut iter = layers.seek(Bound::Unbounded).await.expect("seek failed");
+        let mut merger = layers.merger();
+        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
         for i in 1..5 {
             let ItemRef { key, value } = iter.get().expect("missing item");
             assert_eq!((key, value), (&TestKey(i..i), &i));

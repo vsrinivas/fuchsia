@@ -555,7 +555,7 @@ mod tests {
         crate::lsm_tree::{
             merge::{
                 ItemOp::{Discard, Replace},
-                MergeIterator, MergeResult,
+                MergeLayerIterator, MergeResult,
             },
             types::{
                 Item, ItemRef, Layer, LayerIterator, LayerIteratorMut, MutableLayer, OrdLowerBound,
@@ -787,8 +787,8 @@ mod tests {
     }
 
     fn merge(
-        left: &'_ MergeIterator<'_, TestKey, i32>,
-        right: &'_ MergeIterator<'_, TestKey, i32>,
+        left: &'_ MergeLayerIterator<'_, TestKey, i32>,
+        right: &'_ MergeLayerIterator<'_, TestKey, i32>,
     ) -> MergeResult<TestKey, i32> {
         MergeResult::Other {
             emit: None,

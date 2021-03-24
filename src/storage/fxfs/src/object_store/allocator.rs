@@ -196,8 +196,9 @@ mod tests {
             .await;
 
         let layer_set = lsm_tree.layer_set();
+        let mut merger = layer_set.merger();
         let mut iter = CoalescingIterator::new(Box::new(
-            layer_set.seek(Bound::Unbounded).await.expect("seek failed"),
+            merger.seek(Bound::Unbounded).await.expect("seek failed"),
         ))
         .await
         .expect("new failed");

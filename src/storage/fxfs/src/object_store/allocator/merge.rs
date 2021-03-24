@@ -6,7 +6,7 @@ use crate::{
     lsm_tree::{
         merge::{
             ItemOp::{Discard, Keep, Replace},
-            MergeIterator, MergeResult,
+            MergeLayerIterator, MergeResult,
         },
         types::Item,
     },
@@ -14,8 +14,8 @@ use crate::{
 };
 
 pub fn merge(
-    left: &MergeIterator<'_, AllocatorKey, AllocatorValue>,
-    right: &MergeIterator<'_, AllocatorKey, AllocatorValue>,
+    left: &MergeLayerIterator<'_, AllocatorKey, AllocatorValue>,
+    right: &MergeLayerIterator<'_, AllocatorKey, AllocatorValue>,
 ) -> MergeResult<AllocatorKey, AllocatorValue> {
     // Wherever Replace is used below, it must not extend the *end* of the range for whichever item
     // is returned i.e. if replacing the left item, replacement.end <= left.end because otherwise we
@@ -169,7 +169,8 @@ mod tests {
         ))
         .await;
         let layer_set = tree.layer_set();
-        let mut iter = layer_set.seek(Bound::Unbounded).await.expect("seek failed");
+        let mut merger = layer_set.merger();
+        let mut iter = merger.seek(Bound::Unbounded).await.expect("seek failed");
         for e in expected {
             let ItemRef { key, value } = iter.get().expect("get failed");
             assert_eq!(
