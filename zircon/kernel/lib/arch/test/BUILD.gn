@@ -21,6 +21,7 @@ if (is_host) {
       "fake-msr-tests.cc",
       "lbr-tests.cc",
       "nop-tests.cc",
+      "speculation-tests.cc",
     ]
     deps = [
       "//src/lib/fxl/test:gtest_main",

@@ -5,6 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/arch/nop.h>
+#include <lib/arch/x86/boot-cpuid.h>
+#include <lib/arch/x86/bug.h>
 #include <lib/boot-options/boot-options.h>
 #include <lib/console.h>
 #include <lib/unittest/unittest.h>
@@ -19,6 +21,7 @@
 #include <arch/x86/feature.h>
 #include <arch/x86/hwp.h>
 #include <arch/x86/platform_access.h>
+#include <hwreg/x86msr.h>
 #include <kernel/cpu.h>
 #include <ktl/array.h>
 #include <ktl/unique_ptr.h>
@@ -344,38 +347,6 @@ static bool test_x64_l1tf_enumeration() {
   END_TEST;
 }
 
-static bool test_x64_spectre_v2_enumeration() {
-  BEGIN_TEST;
-
-  fbl::AllocChecker ac;
-  {
-    // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
-    FakeMsrAccess fake_msrs;
-    EXPECT_FALSE(x86_intel_cpu_has_enhanced_ibrs(&cpu_id::kCpuIdXeon2690v4, &fake_msrs));
-  }
-  {
-    // Test an Intel Xeon E5-2690 V4 w/ new microcode (ARCH_CAPABILITIES available)
-    auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac, cpu_id::kTestDataXeon2690v4);
-    ASSERT_TRUE(ac.check(), "");
-    data->leaf7.reg[cpu_id::Features::ARCH_CAPABILITIES.reg] |=
-        (1 << cpu_id::Features::ARCH_CAPABILITIES.bit);
-    data->leaf7.reg[cpu_id::Features::SSBD.reg] |= (1 << cpu_id::Features::SSBD.bit);
-    cpu_id::FakeCpuId cpu(*data.get());
-    FakeMsrAccess fake_msrs = {};
-    fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
-    EXPECT_FALSE(x86_intel_cpu_has_enhanced_ibrs(&cpu_id::kCpuIdXeon2690v4, &fake_msrs));
-  }
-  {
-    // Use Goldmont CPUID but set IBRS_ALL.
-    FakeMsrAccess fake_msrs = {};
-    // IBRS_ALL | SKIP_L1DFL_VMENTRY | (PSCHANGE)
-    fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x6a};
-    EXPECT_TRUE(x86_intel_cpu_has_enhanced_ibrs(&cpu_id::kCpuIdCeleronJ3455, &fake_msrs));
-  }
-
-  END_TEST;
-}
-
 static uint32_t intel_make_microcode_checksum(uint32_t* patch, size_t bytes) {
   size_t dwords = bytes / sizeof(uint32_t);
   uint32_t sum = 0;
@@ -542,7 +513,11 @@ static bool test_spectre_v2_mitigations() {
   // Test that retpoline thunks are correctly patched.
   unsigned char check_buffer[16] = {};
   memcpy(check_buffer, &__x86_indirect_thunk_r11, sizeof(check_buffer));
-  if (x86_get_disable_spec_mitigations() == true || x86_cpu_has_enhanced_ibrs()) {
+
+  const bool mitigated_by_ibrs =
+      arch::GetPreferredSpectreV2Mitigation(arch::BootCpuidIo{}, hwreg::X86MsrIo{}) ==
+      arch::SpectreV2Mitigation::kIbrs;
+  if (x86_get_disable_spec_mitigations() || mitigated_by_ibrs) {
     // If speculative execution mitigations are disabled or Enhanced IBRS is enabled, we expect the
     // retpoline thunk to be:
     // __x86_indirect_thunk:
@@ -638,7 +613,6 @@ UNITTEST("test k hwp commands", test_x64_hwp_k_commands)
 UNITTEST("test uarch_config is correctly selected", test_x64_cpu_uarch_config_selection)
 UNITTEST("test enumeration of x64 Meltdown vulnerability", test_x64_meltdown_enumeration)
 UNITTEST("test enumeration of x64 L1TF vulnerability", test_x64_l1tf_enumeration)
-UNITTEST("test enumeration of x64 Spectre V2 flags", test_x64_spectre_v2_enumeration)
 UNITTEST("test Intel x86 microcode patch loader match and load logic", test_x64_intel_ucode_loader)
 UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode_patch_loader)
 UNITTEST("test pkg power limit change", test_x64_power_limits)

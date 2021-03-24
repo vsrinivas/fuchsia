@@ -11,6 +11,8 @@
 #include <assert.h>
 #include <debug.h>
 #include <lib/arch/intrin.h>
+#include <lib/arch/x86/boot-cpuid.h>
+#include <lib/arch/x86/speculation.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
@@ -21,6 +23,7 @@
 #include <arch/x86/mp.h>
 #include <arch/x86/platform_access.h>
 #include <arch/x86/registers.h>
+#include <hwreg/x86msr.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
 
@@ -114,8 +117,7 @@ static void x86_context_switch_spec_mitigations(Thread* oldthread, Thread* newth
         (oldthread->aspace() != newthread->aspace())) ||
        ((!oldthread->aspace() && newthread->aspace()) &&
         (percpu->last_user_aspace != newthread->aspace())))) {
-    MsrAccess msr;
-    x86_cpu_ibpb(&msr);
+    arch::IssueIbpb(arch::BootCpuidIo{}, hwreg::X86MsrIo{});
   }
   if (oldthread->aspace() && !newthread->aspace()) {
     percpu->last_user_aspace = oldthread->aspace();

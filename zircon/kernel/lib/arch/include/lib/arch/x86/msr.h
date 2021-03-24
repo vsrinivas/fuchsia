@@ -55,6 +55,7 @@ enum class X86Msr : uint32_t {
   IA32_KERNEL_GS_BASE = 0xc000'0102,  // %gs.base value after `swapgs`.
 
   IA32_SPEC_CTRL = 0x0000'0048,  // Speculation control.
+  IA32_PRED_CMD = 0x0000'0049,   // Prediction commands.
 
   IA32_ARCH_CAPABILITIES = 0x0000'010a,  // Enumeration of architectural features.
 

@@ -5,6 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <bits.h>
+#include <lib/arch/x86/boot-cpuid.h>
+#include <lib/arch/x86/speculation.h>
 #include <lib/ktrace.h>
 #include <zircon/syscalls/hypervisor.h>
 
@@ -15,6 +17,7 @@
 #include <arch/x86/platform_access.h>
 #include <arch/x86/pv.h>
 #include <fbl/auto_call.h>
+#include <hwreg/x86msr.h>
 #include <hypervisor/cpu.h>
 #include <hypervisor/ktrace.h>
 #include <kernel/percpu.h>
@@ -1012,10 +1015,9 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
       // built with a retpoline or has Enhanced IBRS enabled. We currently execute an
       // IBPB on context-switch to a new aspace. The IBPB is currently only here to
       // protect hypervisor user threads.
-      MsrAccess msr;
       x86_ras_fill();
       if (x86_cpu_has_ibpb()) {
-        x86_cpu_ibpb(&msr);
+        arch::IssueIbpb(arch::BootCpuidIo{}, hwreg::X86MsrIo{});
       }
     }
 

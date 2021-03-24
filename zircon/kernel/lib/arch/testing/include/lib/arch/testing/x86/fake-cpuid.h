@@ -86,6 +86,7 @@ class FakeCpuidIo {
   // previously populated data.
   FakeCpuidIo& Populate(uint32_t leaf, uint32_t subleaf, uint32_t eax, uint32_t ebx, uint32_t ecx,
                         uint32_t edx);
+  FakeCpuidIo& Populate(uint32_t leaf, uint32_t subleaf, CpuidIo::Register reg, uint32_t value);
 
  private:
   // An intrusive data structure wrapping a CpuidIo object, required be stored

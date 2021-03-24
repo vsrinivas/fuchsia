@@ -8,7 +8,9 @@
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_SPECULATION_H_
 
 #include <lib/arch/x86/cpuid.h>
+#include <lib/arch/x86/feature.h>
 #include <lib/arch/x86/msr.h>
+#include <zircon/assert.h>
 
 namespace arch {
 
@@ -64,6 +66,112 @@ struct AmdVirtualSpeculationControlMsr
            cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>().virt_ssbd();
   }
 };
+
+// [intel/vol4]: Table 2-2.  IA-32 Architectural MSRs (Contd.).
+// [amd/ibc]: PRESENCE.
+//
+// IA32_PRED_CMD.
+//
+// Prediction command control (write-only).
+struct PredictionCommandMsr : public X86MsrBase<PredictionCommandMsr, X86Msr::IA32_PRED_CMD> {
+  // Bits [63:1] are reserved.
+  DEF_BIT(0, ibpb);
+
+  // This MSR is supported if any of its corresponding features are in turn
+  // supported.
+  template <typename CpuidIoProvider>
+  static bool IsSupported(CpuidIoProvider&& cpuid) {
+    return HasIbpb(cpuid);
+  }
+};
+
+// Whether the Indirect Branch Prediction Barrier (IBPB) is supported.
+//
+// https://software.intel.com/security-software-guidance/deep-dives/deep-dive-indirect-branch-predictor-barrier.
+template <typename CpuidIoProvider>
+inline bool HasIbpb(CpuidIoProvider&& cpuid) {
+  // The Intel way.
+  if (CpuidSupports<CpuidExtendedFeatureFlagsD>(cpuid) &&
+      cpuid.template Read<CpuidExtendedFeatureFlagsD>().ibrs_ibpb()) {
+    return true;
+  }
+
+  // [amd/ibc]: PRESENCE.
+  // The AMD way.
+  return CpuidSupports<CpuidExtendedAmdFeatureFlagsB>(cpuid) &&
+         cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>().ibpb();
+}
+
+// Issues an IBPB (Indirect Branch Prediction Barrier), which requires the
+// feature to be supported.
+template <typename CpuidIoProvider, typename MsrIoProvider>
+inline void IssueIbpb(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
+  ZX_DEBUG_ASSERT(arch::PredictionCommandMsr::IsSupported(cpuid));
+  arch::PredictionCommandMsr::Get().FromValue(0).set_ibpb(1).WriteTo(&msr);
+}
+
+// Whether Indirect Branch Restricted Speculation (IBRS) is supported. The
+// "always on" mode refers to an optimization in which IBRS need only be
+// enabled once; IBRS in this mode are also referred to as "enhanced".
+//
+// https://software.intel.com/security-software-guidance/deep-dives/deep-dive-indirect-branch-restricted-speculation.
+template <typename CpuidIoProvider, typename MsrIoProvider>
+inline bool HasIbrs(CpuidIoProvider&& cpuid, MsrIoProvider&& msr, bool always_on_mode) {
+  // The Intel way.
+  const bool intel_always_on = ArchCapabilitiesMsr::IsSupported(cpuid) &&
+                               ArchCapabilitiesMsr::Get().ReadFrom(&msr).ibrs_all();
+  const bool intel_present = cpuid.template Read<CpuidExtendedFeatureFlagsD>().ibrs_ibpb();
+  if (intel_present && (!always_on_mode || intel_always_on)) {
+    return true;
+  }
+
+  // The AMD way.
+  if (CpuidSupports<CpuidExtendedAmdFeatureFlagsB>(cpuid)) {
+    const auto features = cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>();
+    if (features.ibrs() && (!always_on_mode || features.ibrs_always_on())) {
+      return true;
+    }
+  }
+
+  return false;
+}
+
+// Enables IBRS, which requires the feature to be supported.
+template <typename CpuidIoProvider, typename MsrIoProvider>
+inline void EnableIbrs(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
+  ZX_DEBUG_ASSERT(SpeculationControlMsr::IsSupported(cpuid));
+  SpeculationControlMsr::Get().ReadFrom(&msr).set_ibrs(1).WriteTo(&msr);
+}
+
+// Whether Single Thread Indirect Branch Predictors (STIBP) are supported. The
+// "always on" mode refers to an optimization in which STIBP need only be
+// enabled once.
+//
+// https://software.intel.com/security-software-guidance/deep-dives/deep-dive-single-thread-indirect-branch-predictors.
+template <typename CpuidIoProvider>
+inline bool HasStibp(CpuidIoProvider&& cpuid, bool always_on_mode) {
+  // The Intel way.
+  const bool intel_present = cpuid.template Read<CpuidExtendedFeatureFlagsD>().stibp();
+  if (intel_present && !always_on_mode) {  // Intel does not offer an "always on" mode.
+    return true;
+  }
+
+  // The AMD way.
+  if (CpuidSupports<CpuidExtendedAmdFeatureFlagsB>(cpuid)) {
+    const auto features = cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>();
+    if (features.stibp() && (!always_on_mode || features.stibp_always_on())) {
+      return true;
+    }
+  }
+  return false;
+}
+
+// Enables STIBP, which requires the feature to be supported.
+template <typename CpuidIoProvider, typename MsrIoProvider>
+inline void EnableStibp(CpuidIoProvider&& cpuid, MsrIoProvider&& msr) {
+  ZX_DEBUG_ASSERT(SpeculationControlMsr::IsSupported(cpuid));
+  SpeculationControlMsr::Get().ReadFrom(&msr).set_stibp(1).WriteTo(&msr);
+}
 
 }  // namespace arch
 

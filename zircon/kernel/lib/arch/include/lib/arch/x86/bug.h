@@ -265,6 +265,59 @@ inline bool CanMitigateX86SsbBug(CpuidIoProvider&& cpuid) {
   return MitigateX86SsbBug(cpuid, internal::NullMsrIo{});
 }
 
+// An architecturally prescribed mitigation for Spectre v2.
+enum class SpectreV2Mitigation {
+  // Enhanced/always-on IBRS (i.e., IBRS that can be enabled once without
+  // automatic disabling) is preferred alone.
+  kIbrs,
+
+  // IBPB and/or retpoline are recommended.
+  kIbpbRetpoline,
+
+  // IBPB and/or retpoline are recommended - and STIPB, though not preferred as
+  // a performant mitigation, is also present and may be used.
+  kIbpbRetpolineStibp,
+};
+
+// Returns the preferred Spectre v2 mitigation strategy.
+template <typename CpuidIoProvider, typename MsrIoProvider>
+inline SpectreV2Mitigation GetPreferredSpectreV2Mitigation(CpuidIoProvider&& cpuid,
+                                                           MsrIoProvider&& msr) {
+  switch (GetVendor(cpuid)) {
+    case Vendor::kUnknown:
+      break;
+    case Vendor::kIntel:
+      // https://software.intel.com/security-software-guidance/advisory-guidance/branch-target-injection
+      //
+      // If enhanced IBRS are supported, it should be used for mitigation
+      // instead of retpoline; else retpoline
+      if (HasIbrs(cpuid, msr, /*always_on_mode=*/true)) {
+        return SpectreV2Mitigation::kIbrs;
+      }
+      break;
+    case Vendor::kAmd: {
+      // [amd/ibc]: EXTENDED USAGE MODELS.
+      // AMD further offers a feature bit to indicate whether IBRS is a
+      // preffered mitigation strategy.
+      if (HasIbrs(cpuid, msr, /*always_on_mode=*/true) &&
+          CpuidSupports<CpuidExtendedAmdFeatureFlagsB>(cpuid) &&
+          cpuid.template Read<CpuidExtendedAmdFeatureFlagsB>().prefers_ibrs()) {
+        return SpectreV2Mitigation::kIbrs;
+      }
+      // [amd/ibc]: USAGE.
+      // Though not recommended, STIPB is still a viable mitigation strategy.
+      if (HasStibp(cpuid, /*always_on_mode=*/true)) {
+        return SpectreV2Mitigation::kIbpbRetpolineStibp;
+      }
+      break;
+    }
+  }
+
+  // Retpolines comprise an architecturally agnostic, pure software solution,
+  // which makes it a sensible default strategy.
+  return SpectreV2Mitigation::kIbpbRetpoline;
+}
+
 }  // namespace arch
 
 #endif  // ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_BUG_H_

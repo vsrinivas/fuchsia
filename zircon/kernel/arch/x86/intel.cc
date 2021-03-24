@@ -166,14 +166,6 @@ bool x86_intel_cpu_has_rsb_fallback(const cpu_id::CpuId* cpuid, MsrAccess* msr) 
          (microarch_config->x86_microarch == X86_MICROARCH_UNKNOWN);
 }
 
-bool x86_intel_cpu_has_enhanced_ibrs(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
-  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::ARCH_CAPABILITIES)) {
-    uint64_t arch_capabilities = msr->read_msr(X86_MSR_IA32_ARCH_CAPABILITIES);
-    return arch_capabilities & X86_ARCH_CAPABILITIES_IBRS_ALL;
-  }
-  return false;
-}
-
 void x86_intel_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate state) {
   if (cpu->ReadFeatures().HasFeature(cpu_id::Features::HYPERVISOR)) {
     return;

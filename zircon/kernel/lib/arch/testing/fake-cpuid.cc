@@ -153,4 +153,21 @@ FakeCpuidIo& FakeCpuidIo::Populate(uint32_t leaf, uint32_t subleaf, uint32_t eax
   return *this;
 }
 
+FakeCpuidIo& FakeCpuidIo::Populate(uint32_t leaf, uint32_t subleaf, CpuidIo::Register reg,
+                                   uint32_t value) {
+  ZX_ASSERT(reg <= CpuidIo::Register::kEdx);
+  const auto key = Key(leaf, subleaf);
+  if (auto it = map_.find(key); it == map_.end()) {
+    fbl::AllocChecker ac;
+    std::unique_ptr<Hashable> hashable(new (&ac) Hashable{});
+    ZX_ASSERT(ac.check());
+    hashable->key_ = key;
+    hashable->cpuid_.values_[reg] = value;
+    map_.insert(std::move(hashable));
+  } else {
+    it->cpuid_.values_[reg] = value;
+  }
+  return *this;
+}
+
 }  // namespace arch::testing

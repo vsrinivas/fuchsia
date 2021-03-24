@@ -48,7 +48,7 @@ TEST(FakeCpuidIoTests, Get) {
 
 TEST(FakeCpuidIoTests, Read) {
   arch::testing::FakeCpuidIo cpuid;
-  cpuid.Populate(0x0, 0x0, 0x0000'0014, 0x0, 0x0, 0x0);
+  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEax, 0x0000'0014);
 
   auto* io = cpuid.Get<arch::CpuidMaximumLeaf>();
   ASSERT_NE(nullptr, io);
@@ -66,7 +66,7 @@ TEST(FakeCpuidIoTests, PopulateOverwrites) {
   ASSERT_NE(nullptr, io);
 
   EXPECT_EQ(0x0000'0014u, io->values_[arch::CpuidIo::kEax]);
-  cpuid.Populate(0x0, 0x0, 0x0000'0020, 0x0, 0x0, 0x0);
+  cpuid.Populate(0x0, 0x0, arch::CpuidIo::kEax, 0x0000'0020);
   EXPECT_EQ(0x0000'0020u, io->values_[arch::CpuidIo::kEax]);
 }
 

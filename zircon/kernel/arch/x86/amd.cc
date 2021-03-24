@@ -33,14 +33,6 @@ void x86_amd_set_lfence_serializing(const cpu_id::CpuId* cpuid, MsrAccess* msr) 
   }
 }
 
-bool x86_amd_cpu_has_ibrs_always_on(const cpu_id::CpuId* cpuid) {
-  if (cpuid->ReadFeatures().HasFeature(cpu_id::Features::AMD_IBRS_ALWAYS_ON) &&
-      cpuid->ReadFeatures().HasFeature(cpu_id::Features::AMD_PREFER_IBRS)) {
-    return true;
-  }
-  return false;
-}
-
 void x86_amd_init_percpu_17h_zen1_quirks(cpu_id::CpuId* cpuid, MsrAccess* msr) {
   // See: Revision Guide for AMD Family 17h Models 00h-0Fh Processors, #55449
   auto processor_id = cpuid->ReadProcessorId();

@@ -65,7 +65,6 @@ bool g_should_ibpb_on_ctxt_switch;
 bool g_ras_fill_on_ctxt_switch;
 bool g_cpu_vulnerable_to_rsb_underflow;
 bool g_has_enhanced_ibrs;
-bool g_enhanced_ibrs_enabled;
 bool g_amd_retpoline;
 // True if we should disable all speculative execution mitigations.
 bool g_disable_spec_mitigations;
@@ -78,20 +77,6 @@ bool g_hypervisor_has_pv_ipi;
 static ktl::atomic<bool> g_cpuid_initialized;
 
 static enum x86_hypervisor_list get_hypervisor();
-
-namespace {
-
-void x86_cpu_ibrs(MsrAccess* msr) {
-  uint64_t value = msr->read_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL);
-  msr->write_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL, value | X86_SPEC_CTRL_IBRS);
-}
-
-void x86_cpu_stibp(MsrAccess* msr) {
-  uint64_t value = msr->read_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL);
-  msr->write_msr(/*index=*/X86_MSR_IA32_SPEC_CTRL, value | X86_SPEC_CTRL_STIBP);
-}
-
-}  // anonymous namespace
 
 void x86_feature_early_init_percpu(void) {
   if (g_cpuid_initialized.exchange(true)) {
@@ -237,20 +222,14 @@ void x86_cpu_feature_init() {
   g_has_ssbd = arch::CanMitigateX86SsbBug(cpuid);
   g_ssb_mitigated = !g_disable_spec_mitigations && g_has_ssb && g_has_ssbd &&
                     gBootOptions->x86_spec_store_bypass_disable;
+  g_has_ibpb = arch::HasIbpb(cpuid);
+  g_has_enhanced_ibrs = arch::HasIbrs(cpuid, msr, /*always_on_mode=*/true);
 
   if (x86_vendor == X86_VENDOR_INTEL) {
     g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid_old, &msr_old);
     g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid_old, &msr_old);
     g_l1d_flush_on_vmentry = ((x86_get_disable_spec_mitigations() == false)) && g_has_l1tf &&
                              x86_feature_test(X86_FEATURE_L1D_FLUSH);
-    g_has_ibpb = cpuid_old.ReadFeatures().HasFeature(cpu_id::Features::IBRS_IBPB);
-    g_has_enhanced_ibrs = g_has_spec_ctrl && x86_intel_cpu_has_enhanced_ibrs(&cpuid_old, &msr_old);
-  } else if (x86_vendor == X86_VENDOR_AMD) {
-    g_has_ibpb = cpuid_old.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBPB);
-    // Certain AMD CPUs may prefer modes where retpolines are not used and IBRS is enabled
-    // early in boot. This is similar to Intel's "Enhanced IBRS" but enumerated differently.
-    // See "Indirect Branch Control Extension" Revision 4.10.18, Extended Usage Models.
-    g_has_enhanced_ibrs = g_has_spec_ctrl && x86_amd_cpu_has_ibrs_always_on(&cpuid_old);
   }
   g_ras_fill_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false);
   g_cpu_vulnerable_to_rsb_underflow = (x86_get_disable_spec_mitigations() == false) &&
@@ -261,55 +240,57 @@ void x86_cpu_feature_init() {
   // not to attack the next process).
   // TODO(fxbug.dev/33667, fxbug.dev/12150): Should we have an individual knob for IBPB?
   g_should_ibpb_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false) && g_has_ibpb;
-  // Unconditionally enable Enhanced IBRS if it is supported, to comply with the architectural
-  // specification - Enhanced IBRS processors may not be retpoline-safe.
-  g_enhanced_ibrs_enabled = (x86_get_disable_spec_mitigations() == false) && g_has_enhanced_ibrs;
 }
 
 // Invoked on each CPU during boot, after platform init has taken place.
 void x86_cpu_feature_late_init_percpu(void) {
-  cpu_id::CpuId cpuid;
-  MsrAccess msr;
+  arch::BootCpuidIo cpuid;
+  hwreg::X86MsrIo msr;
 
   // Same reasoning as was done in x86_cpu_feature_init() for the boot CPU.
   if (x86_get_disable_spec_mitigations() == false && arch_curr_cpu_num() != 0) {
-    arch::DisableTsx(arch::BootCpuidIo{}, hwreg::X86MsrIo{});
+    arch::DisableTsx(cpuid, msr);
   }
 
-  // Spectre V2: If Enhanced IBRS is available and speculative mitigations are enabled, enable IBRS.
-  // x86_retpoline_select will take care of converting the retpoline thunks to appropriate versions
-  // for Enhanced IBRS CPUs.
-  // If Enhanced IBRS is not available but always-on STIBP is, enable it for added cross-hyperthread
-  // security.
-  if (x86_get_disable_spec_mitigations() == false) {
-    if (g_has_enhanced_ibrs) {
-      x86_cpu_ibrs(&msr);
-    } else if ((x86_vendor == X86_VENDOR_AMD) &&
-               cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_STIBP) &&
-               cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_STIBP_ALWAYS_ON)) {
-      x86_cpu_stibp(&msr);
+  // Spectre v2 hardware-related mitigations; retpolines may further be used,
+  // which is taken care of by the code-patching engine.
+  if (!x86_get_disable_spec_mitigations()) {
+    switch (arch::GetPreferredSpectreV2Mitigation(cpuid, msr)) {
+      case arch::SpectreV2Mitigation::kIbrs:
+        arch::EnableIbrs(cpuid, msr);
+        break;
+      case arch::SpectreV2Mitigation::kIbpbRetpoline:
+        break;
+      case arch::SpectreV2Mitigation::kIbpbRetpolineStibp:
+        // Enable STIPB for added cross-hyperthread security.
+        arch::EnableStibp(cpuid, msr);
+        break;
     }
   }
 
-  // Mitigate Spectre V4 (Speculative Store Bypass) if requested.
+  // Mitigate Spectre v4 (Speculative Store Bypass) if requested.
   if (x86_cpu_should_mitigate_ssb()) {
-    if (!arch::MitigateX86SsbBug(arch::BootCpuidIo{}, hwreg::X86MsrIo{})) {
+    if (!arch::MitigateX86SsbBug(cpuid, msr)) {
       printf("failed to mitigate SSB (Speculative Store Bypass) vulnerability\n");
     }
   }
 
+  // TODO(fxbug.dev/61093): Replace with newer lib/arch and hwreg counterparts.
+  cpu_id::CpuId cpuid_old;
+  MsrAccess msr_old;
+
   // Set up hardware-controlled performance states.
   if (gBootOptions->x86_hwp) {
-    x86::IntelHwpInit(&cpuid, &msr, gBootOptions->x86_hwp_policy);
+    x86::IntelHwpInit(&cpuid_old, &msr_old, gBootOptions->x86_hwp_policy);
   }
 
   // Enable/disable Turbo on the processor.
-  x86_cpu_set_turbo(&cpuid, &msr,
+  x86_cpu_set_turbo(&cpuid_old, &msr_old,
                     gBootOptions->x86_turbo ? Turbostate::ENABLED : Turbostate::DISABLED);
 
   // If we are running under a hypervisor and paravirtual EOI (PV_EOI) is available, enable it.
   if (x86_hypervisor_has_pv_eoi()) {
-    PvEoi::get()->Enable(&msr);
+    PvEoi::get()->Enable(&msr_old);
   }
 }
 
@@ -442,7 +423,6 @@ void x86_feature_debug(void) {
   print_property("ibpb_ctxt_switch", g_should_ibpb_on_ctxt_switch);
   print_property("ras_fill", g_ras_fill_on_ctxt_switch);
   print_property("enhanced_ibrs", g_has_enhanced_ibrs);
-  print_property("enhanced_ibrs_enabled", g_enhanced_ibrs_enabled);
 #ifdef KERNEL_RETPOLINE
   print_property("retpoline");
   print_property("amd_retpoline", g_amd_retpoline);
@@ -981,10 +961,6 @@ void x86_cpu_set_turbo(const cpu_id::CpuId* cpu, MsrAccess* msr, Turbostate stat
 
 extern "C" {
 
-void x86_cpu_ibpb(MsrAccess* msr) {
-  msr->write_msr(/*msr_index=*/X86_MSR_IA32_PRED_CMD, /*value=*/1);
-}
-
 void x86_cpu_maybe_l1d_flush(zx_status_t syscall_return) {
   if (x86_get_disable_spec_mitigations()) {
     return;
@@ -1011,7 +987,10 @@ void x86_cpu_maybe_l1d_flush(zx_status_t syscall_return) {
 }
 
 void x86_retpoline_select(const CodePatchInfo* patch) {
-  if (g_disable_spec_mitigations || g_enhanced_ibrs_enabled) {
+  const bool use_ibrs =
+      arch::GetPreferredSpectreV2Mitigation(arch::BootCpuidIo{}, hwreg::X86MsrIo{}) ==
+      arch::SpectreV2Mitigation::kIbrs;
+  if (g_disable_spec_mitigations || use_ibrs) {
     const size_t kSize = 3;
     extern char __x86_indirect_thunk_unsafe_r11;
     extern char __x86_indirect_thunk_unsafe_r11_end;

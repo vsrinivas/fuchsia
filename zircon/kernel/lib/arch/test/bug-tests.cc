@@ -229,4 +229,57 @@ TEST(BugTests, SsbMitigation) {
   }
 }
 
+TEST(BugTests, SpectreV2Mitigation) {
+  // Intel Core 2 6300.
+  // Does not have IBRS or STIPB
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelCore2_6300);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_EQ(arch::SpectreV2Mitigation::kIbpbRetpoline,
+              arch::GetPreferredSpectreV2Mitigation(cpuid, msr));
+  }
+
+  // Intel Xeon E5-2690 v4.
+  // Has IBRS; does not have an always-on mode.
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kIntelXeonE5_2690_V4);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_EQ(arch::SpectreV2Mitigation::kIbpbRetpoline,
+              arch::GetPreferredSpectreV2Mitigation(cpuid, msr));
+
+    // Suppose we perform a microcode update that enables the always-on
+    // mode...
+    MakeArchCapabilitiesAvailable(cpuid);
+    msr.Populate(arch::X86Msr::IA32_ARCH_CAPABILITIES, 0b10);  // IBRS_ALL.
+    EXPECT_EQ(arch::SpectreV2Mitigation::kIbrs, arch::GetPreferredSpectreV2Mitigation(cpuid, msr));
+  }
+
+  // AMD Ryzen 5 1500X.
+  // Does not have IBRS or STIBP.
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen5_1500x);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_EQ(arch::SpectreV2Mitigation::kIbpbRetpoline,
+              arch::GetPreferredSpectreV2Mitigation(cpuid, msr));
+  }
+
+  // AMD Ryzen 9 3950X.
+  // Has STIBP; does not have an always-on mode.
+  {
+    arch::testing::FakeCpuidIo cpuid(X86Microprocessor::kAmdRyzen9_3950x);
+    arch::testing::FakeMsrIo msr;
+    EXPECT_EQ(arch::SpectreV2Mitigation::kIbpbRetpoline,
+              arch::GetPreferredSpectreV2Mitigation(cpuid, msr));
+
+    // Suppose we perform a microcode update that enables the always-on
+    // mode...
+    uint32_t features = cpuid.Read<arch::CpuidExtendedAmdFeatureFlagsB>().reg_value() |
+                        uint32_t{1} << 17;  // STIBP_ALWAYS_ON
+    cpuid.Populate(arch::CpuidExtendedAmdFeatureFlagsB::kLeaf, 0, arch::CpuidIo::kEbx, features);
+
+    EXPECT_EQ(arch::SpectreV2Mitigation::kIbpbRetpolineStibp,
+              arch::GetPreferredSpectreV2Mitigation(cpuid, msr));
+  }
+}
+
 }  // namespace
