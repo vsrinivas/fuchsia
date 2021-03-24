@@ -20,6 +20,8 @@ use {
 
 type Result<T = (), E = anyhow::Error> = std::result::Result<T, E>;
 
+const REALM_COLLECTION_NAME: &str = "netemul";
+
 struct ManagedRealm {
     server_end: ServerEnd<ManagedRealmMarker>,
     realm: fuchsia_component_test::RealmInstance,
@@ -76,11 +78,6 @@ impl ManagedRealm {
                     ChildUses::Capabilities(caps) => {
                         for cap in caps {
                             match cap {
-                                // TODO(https://fxbug.dev/72047): rather than exposing the real
-                                // syslog to the realm, netemul-sandbox-v2 should offer a custom
-                                // LogSink service to the components under test that decorates the
-                                // logs with the name of the containing test realm before logging
-                                // them to syslog.
                                 fnetemul::Capability::LogSink(fnetemul::Empty {}) => {
                                     let _: &mut RealmBuilder =
                                         builder.add_route(CapabilityRoute {
@@ -103,11 +100,9 @@ impl ManagedRealm {
         }
         let name = format!("{}-{}", prefix, name.unwrap_or("realm".to_string()));
         info!("creating new ManagedRealm with name '{}'", name);
-        let realm = builder
-            .build()
-            .create_with_name(name)
-            .await
-            .context("error creating `RealmInstance`")?;
+        let mut realm = builder.build();
+        let () = realm.set_collection_name(REALM_COLLECTION_NAME);
+        let realm = realm.create_with_name(name).await.context("error creating `RealmInstance`")?;
         Ok(ManagedRealm { server_end, realm })
     }
 
@@ -117,11 +112,8 @@ impl ManagedRealm {
         while let Some(request) = stream.try_next().await.context("FIDL error")? {
             match request {
                 ManagedRealmRequest::GetMoniker { responder } => {
-                    let moniker = format!(
-                        "{}\\:{}",
-                        fuchsia_component_test::DEFAULT_COLLECTION_NAME,
-                        realm.root.child_name()
-                    );
+                    let moniker =
+                        format!("{}\\:{}", REALM_COLLECTION_NAME, realm.root.child_name());
                     let () = responder.send(&moniker).context("FIDL error")?;
                 }
                 ManagedRealmRequest::ConnectToService {
@@ -524,10 +516,7 @@ mod tests {
                     .get_moniker()
                     .await
                     .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
-                format!(
-                    "{}\\:set_realm_name0-test-realm-name",
-                    fuchsia_component_test::DEFAULT_COLLECTION_NAME,
-                ),
+                format!("{}\\:set_realm_name0-test-realm-name", REALM_COLLECTION_NAME),
             );
         })
         .await
@@ -559,11 +548,7 @@ mod tests {
                         .get_moniker()
                         .await
                         .expect("fuchsia.netemul/ManagedRealm.get_moniker call failed"),
-                    format!(
-                        "{}\\:auto_generated_realm_name{}-realm",
-                        fuchsia_component_test::DEFAULT_COLLECTION_NAME,
-                        i,
-                    ),
+                    format!("{}\\:auto_generated_realm_name{}-realm", REALM_COLLECTION_NAME, i),
                 );
             }
         })

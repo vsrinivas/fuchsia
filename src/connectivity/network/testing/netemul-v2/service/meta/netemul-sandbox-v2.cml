@@ -10,19 +10,21 @@
         runner: "elf",
         binary: "bin/netemul_sandbox_v2",
     },
+    collections: [
+        {
+            name: "netemul",
+            environment: "#fuchsia_component_test_env_with_registry",
+            durability: "transient",
+        },
+    ],
     capabilities: [
         { protocol: "fuchsia.netemul.Sandbox" },
     ],
-
-    // TODO(https://fxbug.dev/72047): rather than exposing the real syslog to
-    // the realm, netemul-sandbox-v2 should offer a custom LogSink service to
-    // the components under test that decorates the logs with the name of the
-    // containing test realm before logging them to syslog.
     offer: [
         {
             protocol: "fuchsia.logger.LogSink",
             from: "parent",
-            to: [ "#fuchsia_component_test_collection" ],
+            to: [ "#netemul" ],
         },
     ],
     expose: [
