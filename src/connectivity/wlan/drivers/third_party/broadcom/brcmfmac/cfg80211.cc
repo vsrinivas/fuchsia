@@ -5776,6 +5776,7 @@ static zx_status_t brcmf_config_dongle(struct brcmf_cfg80211_info* cfg) {
   if (err != ZX_OK) {
     goto default_conf_out;
   }
+
   err = brcmf_cfg80211_change_iface(cfg, ndev, wdev->iftype, nullptr);
   if (err != ZX_OK) {
     goto default_conf_out;

@@ -75,12 +75,11 @@ struct IovarMetadata {
  *    Else: Increase the kIovarInfoTableCount and add an entry for your new iovar in
  * kIovarInfoTable.
  */
-constexpr uint16_t kIovarInfoTableCount = 34;
 
 // The table initialized with information of all iovars. Note: passing std::nullopt to the second
 // field means that the size check is customized by handler functions, passing std::nullptr to the
 // third or the fourth field means that the handler is not supported.
-static const IovarMetadata kIovarInfoTable[kIovarInfoTableCount] = {
+static const IovarMetadata kIovarInfoTable[] = {
     {"allmulti", sizeof(uint32_t), &SimFirmware::IovarAllmultiSet, &SimFirmware::IovarAllmultiGet},
     {"arp_ol", sizeof(uint32_t), &SimFirmware::IovarArpolSet, &SimFirmware::IovarArpolGet},
     {"arpoe", sizeof(uint32_t), &SimFirmware::IovarArpoeSet, &SimFirmware::IovarArpoeGet},
@@ -91,6 +90,8 @@ static const IovarMetadata kIovarInfoTable[kIovarInfoTableCount] = {
     {"assoc_retry_max", sizeof(uint32_t), &SimFirmware::IovarAssocRetryMaxSet,
      &SimFirmware::IovarAssocRetryMaxGet},
     {"auth", sizeof(uint16_t), &SimFirmware::IovarAuthSet, &SimFirmware::IovarAuthGet},
+    {"bcn_timeout", sizeof(uint32_t), &SimFirmware::IovarBcnTimeoutSet,
+     &SimFirmware::IovarBcnTimeoutGet},
     {"bss", sizeof(brcmf_bss_ctrl), &SimFirmware::IovarBssSet, nullptr},
     {"cap", strlen(kFirmwareCap) + 1, nullptr, &SimFirmware::IovarCapGet},
     {"chanspec", sizeof(uint16_t), &SimFirmware::IovarChanspecSet, &SimFirmware::IovarChanspecGet},
@@ -1961,6 +1962,20 @@ zx_status_t SimFirmware::IovarWsecGet(uint16_t ifidx, void* value_out, size_t va
   return ZX_OK;
 }
 
+zx_status_t SimFirmware::IovarBcnTimeoutSet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
+                                            size_t value_len) {
+  auto bcn_timeout = reinterpret_cast<const uint32_t*>(value);
+  beacon_timeout_ = *bcn_timeout;
+  BRCMF_DBG(SIM, "set bcn timeout value: %u secs", beacon_timeout_);
+  return ZX_OK;
+}
+
+zx_status_t SimFirmware::IovarBcnTimeoutGet(uint16_t ifidx, void* value_out, size_t value_len) {
+  BRCMF_DBG(SIM, "get Beacon Timeout value: %u", beacon_timeout_);
+  memcpy(value_out, &beacon_timeout_, sizeof(uint32_t));
+  return ZX_OK;
+}
+
 zx_status_t SimFirmware::IovarWsecKeySet(uint16_t ifidx, int32_t bsscfgidx, const void* value,
                                          size_t value_len) {
   auto wk_req = reinterpret_cast<const brcmf_wsec_key_le*>(value);
@@ -2686,7 +2701,7 @@ void SimFirmware::RxDataFrame(std::shared_ptr<const simulation::SimDataFrame> da
 void SimFirmware::RestartBeaconWatchdog() {
   DisableBeaconWatchdog();
   assoc_state_.is_beacon_watchdog_active = true;
-  hw_.RequestCallback(std::bind(&SimFirmware::HandleBeaconTimeout, this), beacon_timeout_,
+  hw_.RequestCallback(std::bind(&SimFirmware::HandleBeaconTimeout, this), zx::sec(beacon_timeout_),
                       &assoc_state_.beacon_watchdog_id_);
 }
 
