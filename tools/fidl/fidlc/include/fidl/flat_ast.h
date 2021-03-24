@@ -521,6 +521,8 @@ struct Resource final : public Decl {
   // Set during construction.
   std::unique_ptr<TypeConstructor> subtype_ctor;
   std::vector<Property> properties;
+
+  const Property* LookupProperty(std::string_view name);
 };
 
 struct TypeAlias final : public Decl {

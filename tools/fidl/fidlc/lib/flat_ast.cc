@@ -964,6 +964,15 @@ bool TransportConstraint(Reporter* reporter, const raw::Attribute& attribute, co
   return true;
 }
 
+const Resource::Property* Resource::LookupProperty(std::string_view name) {
+  for (const Property& property : properties) {
+    if (property.name.data() == name.data()) {
+      return &property;
+    }
+  }
+  return nullptr;
+}
+
 Libraries::Libraries() {
   // clang-format off
   AddAttributeSchema("Discoverable", AttributeSchema({
@@ -4127,11 +4136,12 @@ bool Library::ResolveHandleSubtypeIdentifier(TypeConstructor* type_ctor, uint32_
   if (!resource->subtype_ctor || resource->subtype_ctor->name.full_name() != "uint32") {
     return Fail(ErrResourceMustBeUint32Derived, type_ctor->name.span(), resource->name);
   }
-  if (resource->properties.size() != 1 || resource->properties[0].name.data() != "subtype") {
-    return Fail(ErrResourceCanOnlyHaveSubtypeProperty, type_ctor->name.span(), resource->name);
+  auto subtype_property = resource->LookupProperty("subtype");
+  if (!subtype_property) {
+    return Fail(ErrResourceMissingSubtypeProperty, type_ctor->name.span(), resource->name);
   }
 
-  Decl* subtype_decl = LookupDeclByName(resource->properties[0].type_ctor->name);
+  Decl* subtype_decl = LookupDeclByName(subtype_property->type_ctor->name);
   if (!subtype_decl || subtype_decl->kind != Decl::Kind::kEnum) {
     return Fail(ErrResourceSubtypePropertyMustReferToEnum, type_ctor->name.span(), resource->name);
   }

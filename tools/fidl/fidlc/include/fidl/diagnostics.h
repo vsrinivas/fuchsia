@@ -301,8 +301,8 @@ constexpr ErrorDef<const flat::TypeTemplate *> ErrCannotBeNullable("{} cannot be
 constexpr ErrorDef<flat::Name> ErrHandleSubtypeNotResource(
     "handle subtype {} is not a defined resource");
 constexpr ErrorDef<flat::Name> ErrResourceMustBeUint32Derived("resource {} must be uint32");
-constexpr ErrorDef<flat::Name> ErrResourceCanOnlyHaveSubtypeProperty(
-    "resource {} expected to have exactly one property named subtype");
+constexpr ErrorDef<flat::Name> ErrResourceMissingSubtypeProperty(
+    "resource {} expected to have the subtype property, but it was missing");
 constexpr ErrorDef<flat::Name> ErrResourceSubtypePropertyMustReferToEnum(
     "resource {} expected to refer to enum for subtype");
 

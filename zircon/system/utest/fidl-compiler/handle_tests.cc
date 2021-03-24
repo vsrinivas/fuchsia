@@ -32,6 +32,7 @@ enum obj_type : uint32 {
 resource_definition handle : uint32 {
     properties {
         obj_type subtype;
+        uint32 rights;
     };
 };
 
@@ -71,6 +72,7 @@ enum obj_type : uint32 {
 resource_definition handle : uint32 {
     properties {
         obj_type subtype;
+        uint32 rights;
     };
 };
 
@@ -88,6 +90,67 @@ resource struct MyStruct {
   ASSERT_TRUE(h_type_ctor->handle_subtype_identifier.value().span()->data() == "VMO");
   EXPECT_EQ(3, h_type_ctor->handle_obj_type_resolved);
   ASSERT_NULL(h_type_ctor->handle_rights);
+}
+
+TEST(HandleTests, no_rights_in_resource) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+enum obj_type : uint32 {
+    NONE = 0;
+    VMO = 3;
+};
+
+resource_definition handle : uint32 {
+    properties {
+        obj_type subtype;
+    };
+};
+
+resource struct MyStruct {
+    handle:VMO h;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  EXPECT_TRUE(library.Compile());
+
+  auto h_type_ctor = library.LookupStruct("MyStruct")->members[0].type_ctor.get();
+
+  EXPECT_TRUE(h_type_ctor->handle_subtype_identifier.has_value());
+  ASSERT_TRUE(h_type_ctor->handle_subtype_identifier.value().span()->data() == "VMO");
+  EXPECT_EQ(3, h_type_ctor->handle_obj_type_resolved);
+  ASSERT_NULL(h_type_ctor->handle_rights);
+}
+
+// TODO(fxbug.dev/64629): Consider how we could validate resource_declaration without any use.
+TEST(HandleTests, no_subtype_in_resource) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kEnableHandleRights);
+
+  TestLibrary library(R"FIDL(
+library example;
+
+resource_definition handle : uint32 {
+    properties {
+        uint32 rights;
+    };
+};
+
+resource struct MyStruct {
+    handle:VMO h;
+};
+)FIDL",
+                      std::move(experimental_flags));
+
+  EXPECT_FALSE(library.Compile());
+  const auto& errors = library.errors();
+  ASSERT_EQ(errors.size(), 2);
+  ASSERT_ERR(errors[0], fidl::ErrResourceMissingSubtypeProperty);
+  ASSERT_ERR(errors[1], fidl::ErrCouldNotResolveHandleSubtype);
 }
 
 TEST(HandleTests, invalid_handle_rights_test) {
