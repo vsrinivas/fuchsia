@@ -227,8 +227,6 @@ async fn set_clock_from_rtc<R: Rtc, D: Diagnostics>(
 
 /// The top-level control loop for time synchronization.
 ///
-/// Checks for network connectivity before attempting any time updates.
-///
 /// Maintains the utc clock using updates received over the `fuchsia.time.external` protocols.
 async fn maintain_utc<R: 'static, T: 'static, D: 'static>(
     mut primary: PrimaryTrack<T>,

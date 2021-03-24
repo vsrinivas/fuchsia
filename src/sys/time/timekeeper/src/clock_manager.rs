@@ -278,22 +278,7 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
             }
 
             // Update the RTC clock if we have one.
-            // Note this only applies to primary so we don't include the track in our log messages.
-            if let Some(ref rtc) = self.rtc {
-                let estimate_utc = estimate_transform.synthetic(zx::Time::get_monotonic());
-                let utc_chrono = Utc.timestamp_nanos(estimate_utc.into_nanos());
-                let outcome = match rtc.set(estimate_utc).await {
-                    Err(err) => {
-                        error!("failed to update RTC and ZX_CLOCK_UTC to {}: {}", utc_chrono, err);
-                        WriteRtcOutcome::Failed
-                    }
-                    Ok(()) => {
-                        info!("updated RTC to {}", utc_chrono);
-                        WriteRtcOutcome::Succeeded
-                    }
-                };
-                self.diagnostics.record(Event::WriteRtc { outcome });
-            }
+            self.update_rtc(&estimate_transform).await;
         }
     }
 
@@ -357,6 +342,26 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
                 // Create a task to asynchronously increase error bound over time.
                 self.set_delayed_update_task(vec![], estimate_transform);
             }
+        }
+    }
+
+    /// Updates the real time clock to the supplied transform if an RTC is configured.
+    async fn update_rtc(&mut self, estimate_transform: &Transform) {
+        // Note RTC only applies to primary so we don't include the track in our log messages.
+        if let Some(ref rtc) = self.rtc {
+            let estimate_utc = estimate_transform.synthetic(zx::Time::get_monotonic());
+            let utc_chrono = Utc.timestamp_nanos(estimate_utc.into_nanos());
+            match rtc.set(estimate_utc).await {
+                Err(err) => {
+                    error!("failed to update RTC to {}: {}", utc_chrono, err);
+                    self.diagnostics.record(Event::WriteRtc { outcome: WriteRtcOutcome::Failed });
+                }
+                Ok(()) => {
+                    info!("updated RTC to {}", utc_chrono);
+                    self.diagnostics
+                        .record(Event::WriteRtc { outcome: WriteRtcOutcome::Succeeded });
+                }
+            };
         }
     }
 
