@@ -14,6 +14,7 @@ mod graphic_utils;
 mod portpicker;
 mod types;
 pub mod vdl_files;
+mod vdl_proto_parser;
 
 #[ffx_plugin("vdl.experimental")]
 pub fn emulator(cmd: EmulatorCommand) -> Result<()> {

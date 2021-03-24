@@ -4,6 +4,7 @@
 
 use crate::portpicker::{pick_unused_port, Port};
 use crate::types::{get_sdk_data_dir, read_env_path, HostTools, ImageFiles, SSHKeys, VDLArgs};
+use crate::vdl_proto_parser::get_emu_pid;
 use ansi_term::Colour::*;
 use anyhow::Result;
 use ffx_core::ffx_bail;
@@ -13,7 +14,7 @@ use std::env;
 use std::fs::{copy, File};
 use std::io::Write;
 use std::path::PathBuf;
-use std::process::Command;
+use std::process::{Command, Output};
 use std::str;
 use tempfile::{Builder, TempDir};
 
@@ -314,10 +315,9 @@ impl VDLFiles {
             Some(location) => PathBuf::from(location),
             None => PathBuf::new(),
         };
-        let vdl_output = match &start_command.vdl_output {
-            Some(location) => PathBuf::from(location),
-            None => self.output_proto.clone(),
-        };
+        if let Some(location) = &start_command.vdl_output {
+            self.output_proto = PathBuf::from(location);
+        }
 
         let (port_map, ssh_port) = self.resolve_portmap(&start_command);
 
@@ -353,7 +353,7 @@ impl VDLFiles {
             .arg("--host_port_map")
             .arg(&port_map)
             .arg("--output_launched_device_proto")
-            .arg(&vdl_output)
+            .arg(&self.output_proto)
             .arg("--emu_log")
             .arg(&emu_log)
             .arg("--package_server_log")
@@ -414,13 +414,44 @@ impl VDLFiles {
                     Yellow.paint(format!(
                     "\nNOTE: For --noninteractive launcher artifacts need to be manually cleaned using the `kill` subcommand: \n\
                     In Fuchsia Repo: \"fx vdl kill --launched-proto {}\"\n\
-                    In SDK: \"./fvdl --sdk kill --launched-proto {}\"", vdl_output.display(), vdl_output.display()
+                    In SDK: \"./fvdl --sdk kill --launched-proto {}\"", self.output_proto.display(), self.output_proto.display()
                     ))
                 );
         } else {
-            self.ssh_and_wait(vdl_args.tuntap, ssh_port)?;
+            // TODO(fxbug.dev/72190) Ensure we have a way for user to interact with emulator
+            // once SSH support goes away.
+            let pid = get_emu_pid(&self.output_proto).unwrap();
+
+            'keep_ssh: loop {
+                match Command::new("pgrep").arg("qemu").output() {
+                    Ok(out) => {
+                        // pgrep can no longer find any qemu pid process we think the emulator has
+                        // terminated, stop trying to ssh.
+                        if out.stdout.is_empty() {
+                            break 'keep_ssh;
+                        }
+                        if !str::from_utf8(&out.stdout)
+                            .unwrap()
+                            .lines()
+                            .any(|p| p == pid.to_string())
+                        {
+                            break 'keep_ssh;
+                        }
+                        let ssh_out = self.ssh_and_wait(vdl_args.tuntap, ssh_port)?;
+                        // If SSH process terminated successfully, we think user intend to end
+                        // SSH session as well as shutting down emulator, stop trying to ssh.
+                        // If SSH process terminated with a non-zerio exit status, we think the
+                        // user has issued "dm reboot", which reboots fuchsia and disconnects ssh,
+                        // but emulator should still be running.
+                        if ssh_out.status.success() {
+                            break 'keep_ssh;
+                        }
+                    }
+                    Err(_) => break 'keep_ssh,
+                }
+            }
             self.stop_vdl(&KillCommand {
-                launched_proto: Some(vdl_output.display().to_string()),
+                launched_proto: Some(self.output_proto.display().to_string()),
                 vdl_path: Some(vdl.display().to_string()),
             })?;
         }
@@ -428,13 +459,13 @@ impl VDLFiles {
     }
 
     /// SSH into the emulator and wait for exit signal.
-    fn ssh_and_wait(&self, tuntap: bool, ssh_port: Port) -> Result<()> {
+    fn ssh_and_wait(&self, tuntap: bool, ssh_port: Port) -> Result<Output, std::io::Error> {
         if tuntap {
             let device_addr = Command::new(&self.host_tools.device_finder)
                 .args(&["resolve", "-ipv4=false", "fuchsia-5254-0063-5e7a"])
                 .output()?;
             // Ref to SSH flags: http://man.openbsd.org/ssh_config
-            Command::new("ssh")
+            return Command::new("ssh")
                 .args(&[
                     "-o",
                     "StrictHostKeyChecking=no",
@@ -453,9 +484,9 @@ impl VDLFiles {
                     str::from_utf8(&device_addr.stdout).unwrap().trim_end_matches('\n'),
                 ])
                 .spawn()?
-                .wait_with_output()?;
+                .wait_with_output();
         } else {
-            Command::new("ssh")
+            return Command::new("ssh")
                 .args(&[
                     "-o",
                     "StrictHostKeyChecking=no",
@@ -470,9 +501,8 @@ impl VDLFiles {
                     &ssh_port.to_string(),
                 ])
                 .spawn()?
-                .wait_with_output()?;
+                .wait_with_output();
         }
-        Ok(())
     }
 
     pub fn stop_vdl(&self, kill_command: &KillCommand) -> Result<()> {
@@ -717,6 +747,17 @@ mod tests {
         let (port_map, ssh) = VDLFiles::new(true)?.resolve_portmap(start_command);
         assert_eq!(123, ssh);
         assert_eq!("hostfwd=tcp::123-:22,hostfwd=tcp::80-:8022,hostfwd=tcp::456-:222", port_map);
+        Ok(())
+    }
+
+    #[test]
+    #[serial]
+    fn test_pid_check() -> Result<()> {
+        let out = vec![51, 49, 51, 49, 54, 51, 55, 10, 51, 49, 51, 50, 50, 57, 51, 10];
+        let pid_match = 3132293;
+        let pid_no_match = 123;
+        assert!(str::from_utf8(&out).unwrap().lines().any(|p| p == pid_match.to_string()));
+        assert!(!str::from_utf8(&out).unwrap().lines().any(|p| p == pid_no_match.to_string()));
         Ok(())
     }
 }
