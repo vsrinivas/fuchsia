@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    anyhow::Error,
-    fidl::endpoints::ClientEnd,
-    fidl_fuchsia_ldsvc as fldsvc, fuchsia_async as fasync,
-    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Status, Task},
-    process_builder::ProcessBuilder,
-    std::ffi::CString,
-};
+use anyhow::{anyhow, Context, Error};
+use fidl::endpoints::ClientEnd;
+use fidl_fuchsia_ldsvc as fldsvc;
+use fuchsia_async as fasync;
+use fuchsia_zircon::{self as zx, AsHandleRef, Status, Task};
+use process_builder::{elf_load, elf_parse};
+use std::ffi::{CStr, CString};
 
 use crate::executive::*;
 use crate::types::*;
@@ -87,23 +86,67 @@ fn populate_initial_stack(
     return Ok(stack_pointer);
 }
 
+struct LoadedElf {
+    headers: elf_parse::Elf64Headers,
+    base: usize,
+    bias: usize,
+}
+
+fn load_elf(vmo: &zx::Vmo, vmar: &zx::Vmar) -> Result<LoadedElf, Error> {
+    let headers = elf_parse::Elf64Headers::from_vmo(&vmo).context("ELF parsing failed")?;
+    let elf_info = elf_load::loaded_elf_info(&headers);
+    // Allocate a vmar of the correct size, get the random location, then immediately destroy it.
+    // This randomizes the load address without loading into a sub-vmar and breaking mprotect.
+    // This is different from how Linux actually lays out the address space. We might need to
+    // rewrite it eventually.
+    let (temp_vmar, base) = vmar.allocate(0, elf_info.high - elf_info.low, zx::VmarFlags::empty()).context("Couldn't allocate temporary VMAR")?;
+    unsafe { temp_vmar.destroy()? }; // Not unsafe, the vmar is not in the current process
+    let bias = base.wrapping_sub(elf_info.low);
+    elf_load::map_elf_segments(&vmo, &headers, &vmar, vmar.info()?.base, bias).context("map_elf_segments failed")?;
+    Ok(LoadedElf { headers, base, bias })
+}
+
+// When it's time to implement execve, this should be changed to return an errno.
 pub async fn load_executable(
     job: &zx::Job,
     executable: zx::Vmo,
     loader_service: ClientEnd<fldsvc::LoaderMarker>,
     params: &ProcessParameters,
 ) -> Result<ProcessContext, Error> {
+    let loader_service = loader_service.into_proxy()?;
+
     job.set_name(&params.name)?;
+    let (process, root_vmar) = job.create_child_process(params.name.as_bytes())?;
 
-    let mut builder = ProcessBuilder::new(&params.name, &job, executable)?;
-    builder.set_loader_service(loader_service)?;
-    builder.set_min_stack_size(0x2000);
-    let mut built = builder.build().await?;
+    let main_elf = load_elf(&executable, &root_vmar).context("Main ELF failed to load")?;
+    let interp_elf = if let Some(interp_hdr) =
+        main_elf.headers.program_header_with_type(elf_parse::SegmentType::Interp)?
+    {
+        let mut interp = vec![0; interp_hdr.filesz as usize];
+        executable.read(&mut interp, interp_hdr.offset as u64)?;
+        let interp = CStr::from_bytes_with_nul(&interp)?.to_str()?;
+        let (status, interp_vmo) = loader_service.load_object(interp).await?;
+        zx::Status::ok(status)?;
+        let interp_vmo = interp_vmo.ok_or_else(|| anyhow!("didn't get a vmo back"))?;
+        Some(load_elf(&interp_vmo, &root_vmar).context("Interpreter ELF failed to load")?)
+    } else {
+        None
+    };
 
+    let entry_elf = (&interp_elf).as_ref().unwrap_or(&main_elf);
+    let entry = entry_elf.headers.file_header().entry.wrapping_add(entry_elf.bias);
+
+    let stack_size: usize = 0x4000;
+    let stack_vmo = zx::Vmo::create(stack_size as u64)?;
+    stack_vmo.set_name(CStr::from_bytes_with_nul(b"[stack]\0")?)?;
+    let stack_base = root_vmar.map(0, &stack_vmo, 0, stack_size, zx::VmarFlags::PERM_READ | zx::VmarFlags::PERM_WRITE).context("failed to map stack")?;
+    let stack = stack_base + stack_size - 8;
+
+    let exceptions = fasync::Channel::from_channel(process.create_exception_channel()?)?;
     let process = ProcessContext {
-        handle: built.process.duplicate_handle(zx::Rights::SAME_RIGHTS)?,
-        exceptions: fasync::Channel::from_channel(built.process.create_exception_channel()?)?,
-        mm: MemoryManager::new(built.root_vmar.duplicate_handle(zx::Rights::SAME_RIGHTS)?),
+        handle: process,
+        exceptions,
+        mm: MemoryManager::new(root_vmar),
         security: SecurityContext { uid: 3, gid: 3, euid: 3, egid: 3 },
     };
 
@@ -112,14 +155,15 @@ pub async fn load_executable(
         (AT_EUID, process.security.euid as u64),
         (AT_GID, process.security.gid as u64),
         (AT_EGID, process.security.egid as u64),
-        (AT_PHDR, (built.elf_base + built.elf_headers.file_header().phoff) as u64),
-        (AT_PHNUM, built.elf_headers.file_header().phnum as u64),
+        (AT_BASE, interp_elf.map_or(0, |interp| interp.base as u64)),
+        (AT_PHDR, main_elf.bias.wrapping_add(main_elf.headers.file_header().phoff) as u64),
+        (AT_PHNUM, main_elf.headers.file_header().phnum as u64),
         (AT_SECURE, 0),
     ];
-    built.stack =
-        populate_initial_stack(&built.stack_vmo, &params, auxv, built.stack_base, built.stack)?;
+    let stack = populate_initial_stack(&stack_vmo, &params, auxv, stack_base, stack)?;
 
-    built.start()?;
+    let main_thread = process.handle.create_thread("initial-thread".as_bytes())?;
+    process.handle.start(&main_thread, entry, stack, zx::Handle::invalid(), 0)?;
 
     Ok(process)
 }

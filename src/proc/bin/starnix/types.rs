@@ -253,6 +253,7 @@ pub const AT_NULL: u64 = 0;
 pub const AT_PHDR: u64 = 3;
 pub const AT_PHNUM: u64 = 5;
 pub const AT_PAGESZ: u64 = 6;
+pub const AT_BASE: u64 = 7;
 pub const AT_UID: u64 = 11;
 pub const AT_EUID: u64 = 12;
 pub const AT_GID: u64 = 13;
