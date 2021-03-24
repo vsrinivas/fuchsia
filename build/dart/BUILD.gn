@@ -83,3 +83,8 @@ if (current_toolchain == dart_toolchain) {
     expected_label = dart_toolchain
   }
 }
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
+}
