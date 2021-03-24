@@ -111,7 +111,7 @@ zx_status_t VnodeVmo::GetAttributes(fs::VnodeAttributes* attr) {
   attr->inode = ino_;
   attr->mode = V_TYPE_FILE | V_IRUSR;
   attr->content_size = length_;
-  attr->storage_size = fbl::round_up(attr->content_size, kMemfsBlksize);
+  attr->storage_size = fbl::round_up(attr->content_size, GetMemfsBlksize());
   attr->link_count = link_count_;
   attr->creation_time = create_time_;
   attr->modification_time = modify_time_;

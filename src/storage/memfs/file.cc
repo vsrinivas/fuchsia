@@ -81,7 +81,7 @@ zx_status_t VnodeFile::GetAttributes(fs::VnodeAttributes* attr) {
   attr->inode = ino_;
   attr->mode = V_TYPE_FILE | V_IRUSR | V_IWUSR | V_IRGRP | V_IROTH;
   attr->content_size = GetContentSize();
-  attr->storage_size = fbl::round_up(attr->content_size, kMemfsBlksize);
+  attr->storage_size = fbl::round_up(attr->content_size, GetMemfsBlksize());
   attr->link_count = link_count_;
   attr->creation_time = create_time_;
   attr->modification_time = modify_time_;
@@ -157,7 +157,7 @@ size_t VnodeFile::GetContentSize() const {
 }
 
 void VnodeFile::ZeroTail(size_t start, size_t end) {
-  constexpr size_t kPageSize = static_cast<size_t>(PAGE_SIZE);
+  const size_t kPageSize = static_cast<size_t>(zx_system_get_page_size());
   if (start % kPageSize != 0) {
     char buf[kPageSize];
     size_t ppage_size = kPageSize - (start % kPageSize);

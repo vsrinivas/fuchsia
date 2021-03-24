@@ -29,7 +29,10 @@
 
 namespace memfs {
 
-constexpr uint64_t kMemfsBlksize = PAGE_SIZE;
+inline uint64_t GetMemfsBlksize() {
+  static const uint64_t kSize = zx_system_get_page_size();
+  return kSize;
+}
 
 class Dnode;
 class Vfs;

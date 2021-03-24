@@ -30,7 +30,7 @@
 namespace memfs {
 namespace {
 
-constexpr size_t kPageSize = static_cast<size_t>(PAGE_SIZE);
+const size_t kPageSize = static_cast<size_t>(zx_system_get_page_size());
 
 zx_status_t CreateID(uint64_t* out_id) {
   zx::event id;
