@@ -156,6 +156,7 @@ protocol AudioCore {
     // TODO(fxbug.dev/13578): Move this to the hub, instead of FIDL API. Alternately,
     // simply remove; going forward, HermeticTestEnvironment accepts a
     // parameter that disables device settings writeback during testing.
+    [Transitional, Deprecated]
     EnableDeviceSettings(bool enabled);
 
     /// Set the Usage gain applied to Renderers. By default, the gain for all
