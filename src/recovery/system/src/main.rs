@@ -669,14 +669,13 @@ pub fn make_app_assistant() -> AssistantCreatorFunc {
     Box::new(make_app_assistant_fut)
 }
 
-const SAMPLE_BLOBFS: &'static str = "/dev/sys/platform/05:00:f/aml-raw_nand/nand/fvm/ftl/block/fvm/blobfs-p-1/block";
 const DEV_BLOCK: &'static str = "/dev/class/block";
 use anyhow::Context as _;
+use fidl::endpoints::Proxy;
 use fidl_fuchsia_device::ControllerProxy;
 use fs_management::{Blobfs, Filesystem};
-use std::fs;
 use fuchsia_zircon::{self as zx};
-use fidl::endpoints::Proxy;
+use std::fs;
 async fn connect_to_fdio_service(path: &str) -> Result<fidl::AsyncChannel, Error> {
     let (local, remote) = zx::Channel::create().context("Creating channel")?;
     fdio::service_connect(path, remote).context("Connecting to service")?;
@@ -686,16 +685,14 @@ async fn connect_to_fdio_service(path: &str) -> Result<fidl::AsyncChannel, Error
 async fn get_topo_path(channel: fidl::AsyncChannel) -> Option<String> {
     let controller = ControllerProxy::from_channel(channel);
     match controller.get_topological_path().await {
-        Ok(res) => {
-            match res {
-                Ok(path) => {
-                    println!("Returned path: {}", path);
-                    Some(path)
-                },
-                Err(errno) => {
-                    println!("Received topo_path error value: {}", errno);
-                    None
-                }
+        Ok(res) => match res {
+            Ok(path) => {
+                println!("Returned path: {}", path);
+                Some(path)
+            }
+            Err(errno) => {
+                println!("Received topo_path error value: {}", errno);
+                None
             }
         },
         Err(e) => {
@@ -722,14 +719,16 @@ async fn check_blobfs_health() {
                 match connect_to_fdio_service(path).await {
                     Ok(channel) => {
                         if let Some(topo_path) = get_topo_path(channel).await {
-                            if topo_path.contains("/fvm/blobfs-p-1/block") && !topo_path.contains("ramdisk") {
+                            if topo_path.contains("/fvm/blobfs-p-1/block")
+                                && !topo_path.contains("ramdisk")
+                            {
                                 println!("This is the expected blobfs, mount it! {}", topo_path);
                                 check_blobfs(&topo_path, true);
                             } else {
                                 println!("Not the fvm, skip");
                             }
                         }
-                    },
+                    }
                     Err(e) => {
                         println!("Error connected to service for path {}, {:#}", path, e);
                     }
@@ -740,10 +739,6 @@ async fn check_blobfs_health() {
             println!("Couldn't read block: {:#}", e);
         }
     }
-
-    // Check a sample path without readonly to see if it matches 
-    println!("Check sample path {}", SAMPLE_BLOBFS);
-    check_blobfs(SAMPLE_BLOBFS, false);
 }
 
 fn check_blobfs(path: &str, readonly: bool) {
@@ -756,17 +751,72 @@ fn check_blobfs(path: &str, readonly: bool) {
             match b.fsck() {
                 Ok(_) => {
                     println!("Blobfs-fsck OK");
-                },
+                }
                 Err(e) => println!("Error occurred during fsck() {:#}", e),
             }
             println!("Attempting to mount Blobfs");
             match b.mount("/fuchsia-blob-existing") {
-                Ok(_) => println!("Mount succeeded"),
+                Ok(_) => {
+                    println!("Mount succeeded");
+                    if let Err(e) = traverse_blobfs(b, "/fuchsia-blob-existing") {
+                        println!("Traverse blobfs had an unexpected error {:#}", e);
+                    }
+                }
                 Err(e) => println!("Mount failed: {:#}", e),
             }
         }
         Err(e) => println!("Mount failed: {:#}", e),
     }
+}
+
+use crypto::digest::Digest;
+use crypto::sha2::Sha256;
+use std::fs::DirEntry;
+use std::io::Read;
+fn read_entry(entry: Result<DirEntry, std::io::Error>) -> Result<(), Error> {
+    println!("Check: {:?}", entry);
+    let entry = entry.context("Error reading dir entry")?;
+    let path_buf = entry.path();
+    let path = path_buf.to_str().context("Error reading entry path")?;
+    println!(" path: {}", &path);
+
+    match fs::metadata(&path) {
+        Ok(metadata) => {
+            println!(" metadata: {:?}", metadata);
+        }
+        Err(error) => {
+            println!("  Error getting file metadata {:#}", error);
+        }
+    };
+    let mut f = File::open(path).context("Error opening file")?;
+    let mut buffer = Vec::new();
+
+    let bytes_read = f.read_to_end(&mut buffer)?;
+    println!("  bytes read: {}", bytes_read);
+
+    let mut hasher = Sha256::new();
+    hasher.input(&buffer[..bytes_read]);
+    let hex_val = hasher.result_str();
+    println!("  Sha256: {}", hex_val);
+    Ok(())
+}
+
+fn traverse_blobfs(_blobfs: Filesystem<Blobfs>, mount_path: &str) -> Result<(), Error> {
+    let mut error_count = 0;
+    let rd = fs::read_dir(mount_path)?;
+    for entry_res in rd {
+        if let Err(error) = read_entry(entry_res) {
+            println!("  Unexpected error reading dir entry: {:#}", error);
+            error_count += 1;
+        }
+    }
+    if error_count == 0 {
+        println!("No errors traversing blobs");
+    } else {
+        println!("WARNING!");
+        println!("There were {} errors traversing blobs", error_count);
+    }
+    Ok(())
 }
 
 fn main() -> Result<(), Error> {
