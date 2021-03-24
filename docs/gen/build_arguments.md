@@ -3897,7 +3897,7 @@ Path to the amlogic decoder firmware file. Overrides the default in the build.
 
 **Current value (from the default):** `""`
 
-From //src/media/drivers/amlogic_decoder/BUILD.gn:12
+From //src/media/drivers/amlogic_decoder/BUILD.gn:13
 
 ### arm_float_abi
 The ARM floating point mode. This is either the string "hard", "soft", or
