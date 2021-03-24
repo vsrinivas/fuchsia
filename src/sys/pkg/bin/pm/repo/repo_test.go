@@ -52,7 +52,7 @@ func TestInitRepoWithCreate_no_directory(t *testing.T) {
 	if err := os.RemoveAll(repoDir); err != nil {
 		t.Fatal(err)
 	}
-	r, err := New(repoDir)
+	r, err := New(repoDir, t.TempDir())
 	if err != nil {
 		t.Fatalf("Repo new returned error %v", err)
 	}
@@ -71,7 +71,7 @@ func TestInitRepoWithCreate_existing_directory(t *testing.T) {
 	repoDir := t.TempDir()
 	// The tempdir is not removed, so the repo directory already exists but is
 	// empty.
-	r, err := New(repoDir)
+	r, err := New(repoDir, t.TempDir())
 	if err != nil {
 		t.Fatalf("Repo new returned error %v", err)
 	}
@@ -91,7 +91,7 @@ func TestInitRepoWithCreate_file_at_target_path(t *testing.T) {
 	if err := ioutil.WriteFile(repoPath, []byte("foo"), 0o600); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := New(repoPath); err == nil {
+	if _, err := New(repoPath, t.TempDir()); err == nil {
 		t.Fatal("expected error, did not get one")
 	} else if !errors.Is(err, syscall.ENOTDIR) {
 		t.Fatalf("unexpected error: %#v", err)
@@ -100,7 +100,7 @@ func TestInitRepoWithCreate_file_at_target_path(t *testing.T) {
 
 func TestInitRepoNoCreate(t *testing.T) {
 	repoDir := t.TempDir()
-	r, err := New(repoDir)
+	r, err := New(repoDir, t.TempDir())
 	if err != nil {
 		t.Fatalf("Repo init returned error %v", err)
 	}
@@ -121,7 +121,7 @@ func TestInitRepoNoCreate(t *testing.T) {
 
 func TestAddPackage(t *testing.T) {
 	repoDir := t.TempDir()
-	r, err := New(repoDir)
+	r, err := New(repoDir, t.TempDir())
 	if err != nil {
 		t.Fatalf("Repo init returned error %v", err)
 	}
@@ -222,7 +222,8 @@ func TestAddPackage(t *testing.T) {
 
 func TestAddBlob(t *testing.T) {
 	repoDir := t.TempDir()
-	repo, err := New(repoDir)
+	blobsDir := t.TempDir()
+	repo, err := New(repoDir, blobsDir)
 	if err != nil {
 		t.Fatalf("Repo init returned error %v", err)
 	}
@@ -234,7 +235,7 @@ func TestAddBlob(t *testing.T) {
 	if want := int64(8193); n != want {
 		t.Fatalf("got %d, want %d", n, want)
 	}
-	blobs, err := os.Open(filepath.Join(repoDir, "repository", "blobs"))
+	blobs, err := os.Open(blobsDir)
 	if err != nil {
 		t.Fatalf("Couldn't open blobs directory for reading %v", err)
 	}
@@ -250,7 +251,7 @@ func TestAddBlob(t *testing.T) {
 		t.Fatalf("computed merkle: %s, filename: %s", res, files[0].Name())
 	}
 
-	blobPath := filepath.Join(repoDir, "repository", "blobs", res)
+	blobPath := filepath.Join(blobsDir, res)
 	b, err := ioutil.ReadFile(blobPath)
 	if err != nil {
 		t.Fatal(err)
@@ -349,7 +350,7 @@ func copyFile(src string, dest string) error {
 func TestLoadExistingRepo(t *testing.T) {
 	repoDir := t.TempDir()
 	// Create a test repo.
-	r, err := New(repoDir)
+	r, err := New(repoDir, t.TempDir())
 	if err != nil {
 		t.Fatalf("New: Repo init returned error: %v", err)
 	}
@@ -392,7 +393,7 @@ func TestLoadExistingRepo(t *testing.T) {
 	}
 
 	// Initiate a new repo using the folder containing existing metadata and keys.
-	r, err = New(newRepoDir)
+	r, err = New(newRepoDir, t.TempDir())
 	if err != nil {
 		t.Fatalf("New: failed to init new repo using existing metadata files: %v", err)
 	}

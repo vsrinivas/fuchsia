@@ -53,6 +53,7 @@ type TimeProvider interface {
 type Repo struct {
 	*tuf.Repo
 	path          string
+	blobsDir      string
 	encryptionKey []byte
 	timeProvider  TimeProvider
 }
@@ -70,7 +71,7 @@ func passphrase(role string, confirm bool) ([]byte, error) { return []byte{}, ni
 
 // New initializes a new Repo structure that may read/write repository data at
 // the given path.
-func New(path string) (*Repo, error) {
+func New(path, blobsDir string) (*Repo, error) {
 	info, err := os.Stat(path)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -88,10 +89,9 @@ func New(path string) (*Repo, error) {
 	if err != nil {
 		return nil, err
 	}
-	r := &Repo{repo, path, nil, &SystemTimeProvider{}}
+	r := &Repo{repo, path, blobsDir, nil, &SystemTimeProvider{}}
 
-	blobDir := filepath.Join(r.path, "repository", "blobs")
-	if err := os.MkdirAll(blobDir, os.ModePerm); err != nil {
+	if err := os.MkdirAll(blobsDir, os.ModePerm); err != nil {
 		return nil, err
 	}
 	if err := os.MkdirAll(r.stagedFilesPath(), os.ModePerm); err != nil {
@@ -180,8 +180,7 @@ func (r *Repo) AddPackage(name string, rd io.Reader, merkle string) error {
 		return NewAddErr(fmt.Sprintf("serializing %v", metadata), err)
 	}
 
-	blobDir := filepath.Join(r.path, "repository", "blobs")
-	blobPath := filepath.Join(blobDir, root)
+	blobPath := filepath.Join(r.blobsDir, root)
 
 	if err := linkOrCopy(blobPath, stagingPath); err != nil {
 		return NewAddErr("creating file in staging directory", err)
@@ -214,7 +213,7 @@ func cryptingWriter(dst io.Writer, key []byte) (io.WriteCloser, error) {
 // HasBlob returns true if the given merkleroot is already in the repository
 // blob store.
 func (r *Repo) HasBlob(root string) bool {
-	blobPath := filepath.Join(r.path, "repository", "blobs", root)
+	blobPath := filepath.Join(r.blobsDir, root)
 	fi, err := os.Stat(blobPath)
 	return err == nil && fi.Mode().IsRegular()
 }
@@ -224,10 +223,8 @@ func (r *Repo) HasBlob(root string) bool {
 // Addblob always returns the plaintext size of the blob that is added, even if
 // blob encryption is used.
 func (r *Repo) AddBlob(root string, rd io.Reader) (string, int64, error) {
-	blobDir := filepath.Join(r.path, "repository", "blobs")
-
 	if root != "" {
-		dstPath := filepath.Join(blobDir, root)
+		dstPath := filepath.Join(r.blobsDir, root)
 		if fi, err := os.Stat(dstPath); err == nil {
 			fileSize := fi.Size()
 
@@ -256,7 +253,7 @@ func (r *Repo) AddBlob(root string, rd io.Reader) (string, int64, error) {
 	}
 
 	var tree merkle.Tree
-	f, err := ioutil.TempFile(blobDir, "blob")
+	f, err := ioutil.TempFile(r.blobsDir, "blob")
 	if err != nil {
 		return "", 0, err
 	}
@@ -276,7 +273,7 @@ func (r *Repo) AddBlob(root string, rd io.Reader) (string, int64, error) {
 	}
 	f.Close()
 	root = hex.EncodeToString(tree.Root())
-	return root, n, os.Rename(f.Name(), filepath.Join(blobDir, root))
+	return root, n, os.Rename(f.Name(), filepath.Join(r.blobsDir, root))
 }
 
 // CommitUpdates finalizes the changes to the update repository that have been

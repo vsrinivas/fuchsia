@@ -75,7 +75,7 @@ func Run(cfg *build.Config, args []string, addrChan chan string) error {
 		return err
 	}
 
-	repo, err := repo.New(config.RepoDir)
+	repo, err := repo.New(config.RepoDir, filepath.Join(config.RepoDir, "repository", "blobs"))
 	if err != nil {
 		return err
 	}

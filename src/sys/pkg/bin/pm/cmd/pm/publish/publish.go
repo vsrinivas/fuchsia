@@ -121,7 +121,7 @@ func Run(cfg *build.Config, args []string) error {
 		return fmt.Errorf("repository path %q is not a directory", config.RepoDir)
 	}
 
-	repo, err := repo.New(config.RepoDir)
+	repo, err := repo.New(config.RepoDir, filepath.Join(config.RepoDir, "repository", "blobs"))
 	if err != nil {
 		return fmt.Errorf("error initializing repo: %s", err)
 	}

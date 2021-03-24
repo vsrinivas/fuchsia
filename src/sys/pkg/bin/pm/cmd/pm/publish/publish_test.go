@@ -143,7 +143,7 @@ func readDepfile(t *testing.T, depfilePath string) (string, []string) {
 }
 
 func assertHasTestPackage(t *testing.T, repoDir string) {
-	repo, err := repo.New(repoDir)
+	repo, err := repo.New(repoDir, filepath.Join(repoDir, "repository", "blobs"))
 	if err != nil {
 		t.Fatal(err)
 	}

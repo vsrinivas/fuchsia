@@ -24,7 +24,8 @@ func createTestPackage(t *testing.T, dir string) (*Repository, string) {
 
 	// Initialize a repo.
 	t.Logf("Creating repo at %s", dir)
-	pmRepo, err := repo.New(dir)
+	blobsDir := filepath.Join(dir, "blobs")
+	pmRepo, err := repo.New(dir, blobsDir)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -65,7 +66,7 @@ func createTestPackage(t *testing.T, dir string) (*Repository, string) {
 	if err = pmRepo.CommitUpdates(true); err != nil {
 		t.Fatalf("failed to commit updates to repo: %s", err)
 	}
-	pkgRepo, err := NewRepository(ctx, dir)
+	pkgRepo, err := NewRepository(ctx, dir, blobsDir)
 	if err != nil {
 		t.Fatalf("failed to read repo: %s", err)
 	}
@@ -192,7 +193,7 @@ func TestPublish(t *testing.T) {
 		t.Fatalf("package path should be %q, not %q", fullPkgName, actualPkgName)
 	}
 
-	pkgRepo, err = NewRepository(ctx, path.Dir(pkgRepo.Dir))
+	pkgRepo, err = NewRepository(ctx, path.Dir(pkgRepo.Dir), pkgRepo.BlobsDir)
 
 	// Confirm that the package is published and updated.
 	pkg, err = pkgRepo.OpenPackage(fullPkgName)

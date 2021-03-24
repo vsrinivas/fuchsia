@@ -20,7 +20,7 @@ import (
 func TestConfig(t *testing.T) {
 	repoDir := t.TempDir()
 
-	repo, err := repo.New(repoDir)
+	repo, err := repo.New(repoDir, t.TempDir())
 	if err != nil {
 		t.Fatal(err)
 	}

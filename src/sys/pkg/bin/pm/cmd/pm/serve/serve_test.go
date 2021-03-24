@@ -78,7 +78,7 @@ func TestServer(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repo, err := repo.New(repoDir)
+	repo, err := repo.New(repoDir, filepath.Join(repoDir, "repository", "blobs"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,7 +296,7 @@ func TestServeAuto(t *testing.T) {
 	portFileDir := t.TempDir()
 	portFile := filepath.Join(portFileDir, "port-file")
 	repoDir := t.TempDir()
-	repo, err := repo.New(repoDir)
+	repo, err := repo.New(repoDir, filepath.Join(repoDir, "repository", "blobs"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -443,7 +443,7 @@ func TestServeAutoIncremental(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	repo, err := repo.New(repoDir)
+	repo, err := repo.New(repoDir, filepath.Join(repoDir, "repository", "blobs"))
 	if err != nil {
 		t.Fatal(err)
 	}
