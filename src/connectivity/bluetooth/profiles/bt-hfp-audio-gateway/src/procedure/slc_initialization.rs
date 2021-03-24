@@ -340,6 +340,28 @@ impl SlcProcedureState for HfSupportedIndicatorsReceived {
 
     fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
         match update {
+            at::Command::BindTest {} => Box::new(AgSupportedIndicatorsReceived),
+            m => SlcErrorState::unexpected_hf(m),
+        }
+    }
+}
+
+struct AgSupportedIndicatorsReceived;
+
+impl SlcProcedureState for AgSupportedIndicatorsReceived {
+    fn request(&self) -> ProcedureRequest {
+        // TODO(fxb/71668) Stop using raw bytes.
+        let bind_test_resp = format!(
+            "+BIND:({},{})",
+            at::BluetoothHFIndicator::BatteryLevel as i64,
+            at::BluetoothHFIndicator::EnhancedSafety as i64
+        )
+        .into_bytes();
+        vec![at::Response::RawBytes(bind_test_resp), at::Response::Ok].into()
+    }
+
+    fn hf_update(&self, update: at::Command, _state: &mut SlcState) -> Box<dyn SlcProcedureState> {
+        match update {
             at::Command::BindRead {} => Box::new(ListSupportedGenericIndicatorsReceived),
             m => SlcErrorState::unexpected_hf(m),
         }
@@ -619,9 +641,15 @@ mod tests {
         };
         assert_matches!(slc_proc.hf_update(update9, &mut state), ProcedureRequest::SendMessages(_));
         // Optional
-        let update10 = at::Command::BindRead {};
+        let update10 = at::Command::BindTest {};
         assert_matches!(
             slc_proc.hf_update(update10, &mut state),
+            ProcedureRequest::SendMessages(_)
+        );
+        // Optional
+        let update11 = at::Command::BindRead {};
+        assert_matches!(
+            slc_proc.hf_update(update11, &mut state),
             ProcedureRequest::SendMessages(_)
         );
 
