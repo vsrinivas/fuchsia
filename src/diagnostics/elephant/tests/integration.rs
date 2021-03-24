@@ -1,6 +1,7 @@
 // Copyright 2021 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+use diagnostics_data::LifecycleType;
 use diagnostics_reader::{ArchiveReader, Lifecycle};
 use fidl_fuchsia_diagnostics_persist::DataPersistenceMarker;
 use fidl_fuchsia_sys::ComponentControllerEvent;
@@ -74,7 +75,10 @@ async fn event_count_sampler_test() {
             .await
             .unwrap()
             .into_iter()
-            .filter(|e| e.moniker.starts_with("test_component"))
+            .filter(|e| {
+                e.moniker.starts_with("test_component")
+                    && e.metadata.lifecycle_event_type == LifecycleType::DiagnosticsReady
+            })
             .collect::<Vec<_>>();
 
         if !results.is_empty() {
