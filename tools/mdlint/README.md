@@ -110,8 +110,8 @@ includes:
 
 ### Defining a new rule
 
-Each rule should be defined in its own file named `the_rule.go`. The convention
-is to follow the pattern:
+Each rule should be defined in its own file named `example_rule.go`. The
+convention is to follow the pattern:
 
 ```go
 package rules
@@ -122,19 +122,19 @@ import (
 
 func init() {
 	// or core.RegisterLintRuleOverEvents(...)
-	core.RegisterLintRuleOverTokens(theRuleName, newTheRule)
+	core.RegisterLintRuleOverTokens(exampleRuleName, newExampleRule)
 }
 
-const theRuleName = "the-rule-name"
+const exampleRuleName = "example-rule"
 
-type theRule struct {
+type exampleRule struct {
     ...
 }
 
-var _ core.LintRuleOverTokens = (*theRule)(nil) // or core.LintRuleOverEvents
+var _ core.LintRuleOverTokens = (*exampleRule)(nil) // or core.LintRuleOverEvents
 
-func newTheRule(reporter core.Reporter) core.LintRuleOverTokens {
-    return &theRule{ ... }
+func newExampleRule(reporter core.Reporter) core.LintRuleOverTokens {
+    return &exampleRule{ ... }
 }
 
 // followed by the implementation
@@ -146,7 +146,7 @@ Rules should be tested using sample Markdown documents, with the help of the
 provided testing utilities:
 
 ```go
-func TestTheRule(t *testing.T) {
+func TestExampleRule_firstCase(t *testing.T) {
 	ruleTestCase{
 		files: map[string]string{
 			"first.md": `Sample Markdown document
@@ -159,7 +159,7 @@ denotes an expected warning on a non-trimmed line.`,
 			"second.md": `Another Markdown document here.`,
 		},
 	// or runOverEvents
-	}.runOverTokens(t, newTheRule)
+	}.runOverTokens(t, newExampleRule)
 }
 ```
 
