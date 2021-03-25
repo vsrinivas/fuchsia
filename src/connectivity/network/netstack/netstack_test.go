@@ -592,7 +592,7 @@ func TestTCPEndpointMapConnect(t *testing.T) {
 	default:
 		t.Fatalf("got Connect(%#v) = %v, want %s", destination, err, &tcpip.ErrConnectStarted{})
 	}
-	if got, want := <-events, waiter.EventIn|waiter.EventOut|waiter.EventErr|waiter.EventHUp; got != want {
+	if got, want := <-events, waiter.ReadableEvents|waiter.WritableEvents|waiter.EventErr|waiter.EventHUp; got != want {
 		t.Fatalf("got event = %b, want %b", got, want)
 	}
 
