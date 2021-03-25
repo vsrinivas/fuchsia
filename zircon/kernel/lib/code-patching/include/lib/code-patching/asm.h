@@ -80,6 +80,30 @@ _.code_patching.end.reset
   .code_patching.range \start, \end, \ident
 .endm
 
+/// Gives a block of trap instructions of a given size.
+///
+/// Parameters
+///
+///   * size
+///     - Required: The size in bytes of the trap fill.
+.macro .code_patching.trap_fill size
+#if defined(__aarch64__)
+  .if (\size) % 4
+  .error ".code_patching.trap_fill size \size not a multiple of instruction size"
+  .endif
+
+  .rept (\size) / 4
+  brk #1
+  .endr
+#elif defined(__x86_64__)
+  .rept \size
+  int3
+  .endr
+#else
+#error "unknown architecture"
+#endif
+.endm
+
 /// Defines a blob of instructions to be patched. The blob is initially
 /// filled with trap instructions.
 ///
@@ -93,28 +117,28 @@ _.code_patching.end.reset
 ///       uint32_t), which corresponds to hard-coded details on how and when to
 ///       patch.
 ///
-.macro .code_patching.blob size, ident
+///   * default
+///     - Optional: A binary with which to fill the blob instead of a pure trap
+///       fill. The remainder of the blob will still be filled with traps.
+///       TODO(fxbug.dev/67615): Remove this option once code patching happens
+///       within physboot; at this point, pre-patched, trap-filled code will not be
+///       executed before it is patched.
+///
+.macro .code_patching.blob size, ident, default=
   // `\@` is a pseudo-variable holding the number of macros the assembler has
   // executed thus far; we leverage it to create unique(-enough) labels across
   // possibly many expansions of this macro.
   .L.code_patching.\@:
-#if defined(__aarch64__)
-  .if \size % 4
-  .error ".code_patching.blob size \size not a multiple of instruction size"
+  .ifb \default
+    .code_patching.trap_fill \size
+  .else
+     .L.code_patching.default.\@:
+     .incbin "\default"
+     .L.code_patching.default.\@.end:
+    .code_patching.trap_fill (\size - (.L.code_patching.default.\@.end - .L.code_patching.default.\@))
   .endif
-
-  .rept (\size) / 4
-  brk #1
-  .endr
-#elif defined(__x86_64__)
-  .rept \size
-  int3
-  .endr
-#else
-#error "unknown architecture"
-#endif
-  .L.code_patching.\@.end:
-  .code_patching.range .L.code_patching.\@, .L.code_patching.\@.end, \ident
+   .L.code_patching.\@.end:
+   .code_patching.range .L.code_patching.\@, .L.code_patching.\@.end, \ident
 .endm  // .code_patching.blob
 
 #endif  // clang-format on

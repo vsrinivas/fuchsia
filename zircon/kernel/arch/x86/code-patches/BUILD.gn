@@ -11,6 +11,7 @@ if (is_kernel) {
     sources = [ "code-patches.cc" ]
     public_deps = [ ":headers" ]
     deps = [
+      "//zircon/kernel/arch/x86/retpoline:headers",
       "//zircon/kernel/arch/x86/user-copy",
       "//zircon/kernel/lib/arch",
       "//zircon/kernel/lib/boot-options",

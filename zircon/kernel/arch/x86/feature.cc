@@ -985,26 +985,4 @@ void x86_cpu_maybe_l1d_flush(zx_status_t syscall_return) {
     }
   }
 }
-
-void x86_retpoline_select(const CodePatchInfo* patch) {
-  const bool use_ibrs =
-      arch::GetPreferredSpectreV2Mitigation(arch::BootCpuidIo{}, hwreg::X86MsrIo{}) ==
-      arch::SpectreV2Mitigation::kIbrs;
-  if (g_disable_spec_mitigations || use_ibrs) {
-    const size_t kSize = 3;
-    extern char __x86_indirect_thunk_unsafe_r11;
-    extern char __x86_indirect_thunk_unsafe_r11_end;
-    DEBUG_ASSERT(&__x86_indirect_thunk_unsafe_r11_end - &__x86_indirect_thunk_unsafe_r11 == kSize);
-    memcpy(patch->dest_addr, &__x86_indirect_thunk_unsafe_r11, kSize);
-  } else if (x86_vendor == X86_VENDOR_AMD) {
-    const size_t kSize = 6;
-    extern char __x86_indirect_thunk_amd_r11;
-    extern char __x86_indirect_thunk_amd_r11_end;
-    DEBUG_ASSERT(&__x86_indirect_thunk_amd_r11_end - &__x86_indirect_thunk_amd_r11 == kSize);
-    memcpy(patch->dest_addr, &__x86_indirect_thunk_amd_r11, kSize);
-    g_amd_retpoline = true;
-  } else {
-    // Default thunk is the generic x86 version.
-  }
-}
 }

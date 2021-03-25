@@ -1,0 +1,45 @@
+# Copyright 2021 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+import("//build/cpp/library_headers.gni")
+import("//zircon/kernel/lib/code-patching/code-patching.gni")
+
+group("retpoline") {
+  public_deps = [ ":headers" ]
+  deps = [ ":__x86_indirect_thunk_r11" ]
+}
+
+code_patching_hermetic_alternative("__x86_indirect_thunk_basic_r11") {
+  sources = [ "basic.S" ]
+  deps = [ "//zircon/kernel/lib/arch:headers" ]
+}
+
+code_patching_hermetic_alternative("__x86_indirect_thunk_unsafe_r11") {
+  sources = [ "unsafe.S" ]
+  deps = [ "//zircon/kernel/lib/arch:headers" ]
+}
+
+code_patching_hermetic_alternative("__x86_indirect_thunk_amd_r11") {
+  sources = [ "amd.S" ]
+  deps = [ "//zircon/kernel/lib/arch:headers" ]
+}
+
+code_patching_hermetic_stub("__x86_indirect_thunk_r11") {
+  default_alternative = "__x86_indirect_thunk_basic_r11"
+  deps = [
+    ":__x86_indirect_thunk_amd_r11",
+    ":__x86_indirect_thunk_basic_r11",
+    ":__x86_indirect_thunk_unsafe_r11",
+  ]
+}
+
+library_headers("headers") {
+  headers = [ "arch/x86/retpoline/selection.h" ]
+  public_deps = [
+    "//zircon/kernel/lib/arch:headers",
+    "//zircon/kernel/lib/boot-options:headers",
+  ]
+}

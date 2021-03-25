@@ -15,6 +15,7 @@
 #include <cstdio>
 
 #include <arch/code-patches/case-id.h>
+#include <arch/x86/retpoline/selection.h>
 #include <arch/x86/user-copy/selection.h>
 #include <hwreg/x86msr.h>
 
@@ -88,6 +89,13 @@ void ArchPatchCode(ktl::span<const code_patching::Directive> patches) {
         auto alternative = GetPatchAlternative(name);
         code_patching::Patch(insns, alternative);
         PrintCaseInfo(patch, "using user-copy alternative \"%V\"", name);
+        break;
+      }
+      case CASE_ID___X86_INDIRECT_THUNK_R11: {
+        ktl::string_view name = SelectX86RetpolineAlternative(cpuid, msr, *gBootOptions);
+        auto alternative = GetPatchAlternative(name);
+        code_patching::Patch(insns, alternative);
+        PrintCaseInfo(patch, "using retpoline alternative \"%V\"", name);
         break;
       }
       default:

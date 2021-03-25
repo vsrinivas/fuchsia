@@ -34,4 +34,12 @@
 // Note: the "__" is intentional as the function name has a leading underscore.
 #define CASE_ID__X86_COPY_TO_OR_FROM_USER 2
 
+// Addresses Branch Target Injection / Spectre Variant 2 attacks
+// (CVE-2017-5715) by "retpolines":
+// https://software.intel.com/security-software-guidance/advisory-guidance/branch-target-injection
+//
+// Note: the "___" is intentional as the function name has two leading
+// underscores.
+#define CASE_ID___X86_INDIRECT_THUNK_R11 3
+
 #endif  // ZIRCON_KERNEL_ARCH_X86_CODE_PATCHES_INCLUDE_ARCH_CODE_PATCHES_CASE_ID_H_

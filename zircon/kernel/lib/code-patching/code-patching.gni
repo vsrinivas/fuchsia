@@ -207,6 +207,14 @@ template("code_patching_hermetic_alternative") {
 #     - Type: string
 #     - Default: "arch/code-patches/case-id.h"
 #
+#   * default_alternative
+#     - Optional: the name of an alternative to default to instead of a trap
+#       fill.
+#       TODO(fxbug.dev/67615): Remove this option once code patching happens
+#       within physboot; at this point, pre-patched, trap-filled code will not
+#       be executed before it is patched.
+#     - Type: string
+#
 # Other parameters are as for source_set().
 #
 template("code_patching_hermetic_stub") {
@@ -226,6 +234,7 @@ template("code_patching_hermetic_stub") {
                              "case_id_header",
                              "output_name",
                              "deps",
+                             "default_alternative",
                            ])
     forward_variables_from(invoker,
                            [
@@ -263,6 +272,7 @@ template("code_patching_hermetic_stub") {
                              "testonly",
                              "output_name",
                              "case_id_header",
+                             "default_alternative",
                            ])
     if (!defined(output_name)) {
       output_name = main_target
@@ -278,6 +288,7 @@ template("code_patching_hermetic_stub") {
     outputs = [ gen_file ]
     sources = [ metadata_file ]
     deps = [ ":$metadata_target" ]
+
     depfile = "$gen_file.d"
     script = "//zircon/kernel/lib/code-patching/hermetic-stub.py"
     args = [
@@ -292,6 +303,13 @@ template("code_patching_hermetic_stub") {
       "--outfile",
       rebase_path(outputs[0], root_build_dir),
     ]
+
+    if (defined(default_alternative)) {
+      args += [
+        "--default",
+        default_alternative,
+      ]
+    }
   }
 }
 
