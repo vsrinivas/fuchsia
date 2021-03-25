@@ -666,7 +666,7 @@ library example;
 type O = struct {};
 
 type S = struct {
-  o box<O>:optional;
+  o box<O>;
 };
 )FIDL";
 
@@ -1615,7 +1615,7 @@ protocol P {};
 type Foo = resource struct {
   a1 array<uint8,4>;
   a2 array<B,4>;
-  a3 array<box<S>:optional,4>;
+  a3 array<box<S>,4>;
   b1 bytes:optional;
   b2 string:optional;
   v1 vector<E>:16;
@@ -1811,7 +1811,7 @@ alias Z = string:optional;
 type Foo = resource struct {
   a1 A;
   a2 array<B,4>;
-  a3 array<box<S>:optional,4>;
+  a3 array<box<S>,4>;
   b1 Y;
   b2 Z;
   v1 vector<E>:16;
@@ -1947,7 +1947,7 @@ alias Z = ZZ;
 type Foo = resource struct {
   a1 A;
   a2 array<B,4>;
-  a3 array<box<S>:optional,4>;
+  a3 array<box<S>,4>;
   b1 Y;
   b2 Z;
   v1 vector<E>:16;
@@ -2029,7 +2029,7 @@ using dep1;
 type Foo = resource struct {
   a1 dep1.A;
   a2 array<dep1.B,4>;
-  a3 array<box<dep1.S>:optional,4>;
+  a3 array<box<dep1.S>,4>;
   b1 dep1.Y;
   b2 dep1.Z;
   v1 vector<dep1.E>:16;
@@ -2131,7 +2131,7 @@ using dep2;
 type Foo = resource struct {
   a1 dep2.A;
   a2 array<dep2.B,4>;
-  a3 array<box<dep2.S>:optional,4>;
+  a3 array<box<dep2.S>,4>;
   b1 dep2.Y;
   b2 dep2.Z;
   v1 vector<dep2.E>:16;
@@ -2241,7 +2241,7 @@ alias ZZ = dep1.Z;
 type Foo = resource struct {
   a1 AA;
   a2 array<BB,4>;
-  a3 array<box<SS>:optional,4>;
+  a3 array<box<SS>,4>;
   b1 YY;
   b2 ZZ;
   v1 vector<EE>:16;

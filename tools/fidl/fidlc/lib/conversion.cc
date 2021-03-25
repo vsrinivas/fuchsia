@@ -21,10 +21,10 @@ std::string TypeConversion::Write(fidl::utils::Syntax syntax) {
 
   // Nullability is the first constraint.
   if (type_ctor_->nullability == types::Nullability::kNullable) {
-    // Special case: types whose underlying type resolves to "struct" need
-    // to be wrapped in "box<...>"
+    // Special case: nullable types whose underlying type resolves to "struct"
+    // need to be wrapped in "box<...>" instead of setting ":optional."
     if (underlying_type_.kind() == UnderlyingType::Kind::kStruct) {
-      id = "box<" + id + ">";
+      return prefix() + "box<" + id + ">";
     }
     constraints.emplace_back("optional");
   }
