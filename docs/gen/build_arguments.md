@@ -296,7 +296,7 @@ From //boards/arm64.gni:19
 
 From //build/board.gni:14
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy", "//src/storage/fshost:gpt_all"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy", "//src/storage/fshost:gpt_all"]`
 
 From //boards/x64.gni:19
 
@@ -352,7 +352,7 @@ From //build/board.gni:11
 
 **Current value for `target_cpu = "x64"`:** `["//src/power/thermd", "//src/power/thermd:config", "//garnet/packages/prod:drivers-support", "//src/hwinfo:default_board_config"]`
 
-From //boards/common/x64-common.gni:68
+From //boards/common/x64-common.gni:67
 
 **Overridden from the default:** `[]`
 
@@ -369,7 +369,7 @@ From //boards/arm64.gni:23
 
 From //build/board.gni:25
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
 
 From //boards/x64.gni:13
 
@@ -390,7 +390,7 @@ From //build/board.gni:28
 
 **Current value for `target_cpu = "x64"`:** `["//garnet/packages/prod:drivers-system", "//src/media/audio/bundles:virtual_audio_driver"]`
 
-From //boards/common/x64-common.gni:63
+From //boards/common/x64-common.gni:62
 
 **Overridden from the default:** `[]`
 
@@ -422,7 +422,7 @@ From //boards/arm64.gni:21
 
 From //build/board.gni:22
 
-**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/intel-serialio", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
+**Current value for `target_cpu = "x64"`:** `["//src/connectivity/ethernet/drivers/realtek-8111", "//src/devices/block/drivers/ahci", "//src/devices/block/drivers/mbr", "//src/devices/block/drivers/nvme", "//src/devices/block/drivers/pci-sdhci", "//src/devices/block/drivers/sdhci", "//src/devices/board/drivers/x86:platform-bus-x86", "//src/devices/bus/drivers/pci:bus-pci", "//src/devices/bus/drivers/pci:bus-pci.proxy", "//src/devices/i2c/drivers/intel-i2c", "//src/devices/rtc/drivers/intel-rtc", "//src/devices/serial/drivers/uart16550", "//src/devices/usb/drivers/xhci-rewrite:xhci", "//src/graphics/display/drivers/intel-i915", "//src/graphics/display/drivers/simple:simple.amd-kaveri", "//src/graphics/display/drivers/simple:simple.nv", "//src/media/audio/drivers/codecs/alc5514", "//src/media/audio/drivers/codecs/alc5663", "//src/media/audio/drivers/codecs/max98927", "//src/media/audio/drivers/intel-hda/codecs/hdmi:hdmi-audio-codec", "//src/media/audio/drivers/intel-hda/codecs/realtek:realtek-audio-codec", "//src/media/audio/drivers/intel-hda/controller:intel-hda", "//src/ui/input/drivers/i2c-hid", "//src/ui/input/drivers/pc-ps2", "//zircon/third_party/dev/ethernet/e1000", "//src/connectivity/ethernet/drivers/virtio:virtio_ethernet", "//src/devices/block/drivers/virtio:virtio_block", "//src/devices/block/drivers/virtio:virtio_scsi", "//src/devices/misc/drivers/virtio-rng:virtio_rng", "//src/devices/misc/drivers/virtio-socket:virtio_socket", "//src/devices/serial/drivers/virtio-console:virtio_console", "//src/graphics/drivers/misc:goldfish_driver_modules", "//src/graphics/display/drivers/goldfish-display", "//src/graphics/drivers/virtio:virtio_gpu", "//src/ui/input/drivers/virtio:virtio_input", "//src/graphics/display/drivers/simple:simple.bochs", "//src/graphics/display/drivers/simple:simple.intel", "//src/graphics/display/drivers/simple:simple.vmware", "//src/media/audio/drivers/intel-hda/codecs/qemu:qemu-audio-codec", "//src/devices/bin/acpidump", "//src/devices/pci/bin:bootfs", "//src/media/audio/bin/ihda", "//src/power/power-manager:base_config", "//src/security/policy/zxcrypt:null", "//boards/kernel_cmdline:serial-legacy"]`
 
 From //boards/x64.gni:14
 
@@ -756,13 +756,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/6b55b8adbaf378438743a99365aec171af786971/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/2dbd019bc2303a0463a396b5c47b4eb16a1a1e27/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/6b55b8adbaf378438743a99365aec171af786971/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/2dbd019bc2303a0463a396b5c47b4eb16a1a1e27/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -1448,7 +1448,7 @@ only useful on Chrome OS.
 
 **Current value (from the default):** `false`
 
-From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/899e18383fd732b47e6978db2b960a1b2a80179b/config.gni#12)
+From [//third_party/icu/config.gni:12](https://chromium.googlesource.com/chromium/deps/icu/+/12825ed8aae58df594373d335427f1dd3cae9fd3/config.gni#12)
 
 ### icu_major_version_number
 Contains the major version number of the ICU library, for dependencies that
@@ -1457,7 +1457,7 @@ is only useful in Fuchsia.
 
 **Current value (from the default):** `"68"`
 
-From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/899e18383fd732b47e6978db2b960a1b2a80179b/version.gni#9)
+From [//third_party/icu/version.gni:9](https://chromium.googlesource.com/chromium/deps/icu/+/12825ed8aae58df594373d335427f1dd3cae9fd3/version.gni#9)
 
 ### icu_use_data_file
 Tells icu to load an external data file rather than rely on the icudata
@@ -1465,7 +1465,7 @@ being linked directly into the binary.
 
 **Current value (from the default):** `true`
 
-From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/899e18383fd732b47e6978db2b960a1b2a80179b/config.gni#8)
+From [//third_party/icu/config.gni:8](https://chromium.googlesource.com/chromium/deps/icu/+/12825ed8aae58df594373d335427f1dd3cae9fd3/config.gni#8)
 
 ### include_devmgr_config_in_vbmeta
 If true, /config/devmgr config will be included into a vbmeta image
@@ -1967,7 +1967,7 @@ From //build/images/filesystem_limits.gni:31
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/common/x64-common.gni:75
+From //boards/common/x64-common.gni:74
 
 **Overridden from the default:** `"0"`
 
@@ -2002,7 +2002,7 @@ From //build/images/filesystem_limits.gni:34
 
 **Current value for `target_cpu = "x64"`:** `"16777216"`
 
-From //boards/common/x64-common.gni:76
+From //boards/common/x64-common.gni:75
 
 **Overridden from the default:** `"0"`
 
@@ -2122,13 +2122,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/6b55b8adbaf378438743a99365aec171af786971/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/2dbd019bc2303a0463a396b5c47b4eb16a1a1e27/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/6b55b8adbaf378438743a99365aec171af786971/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/2dbd019bc2303a0463a396b5c47b4eb16a1a1e27/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
