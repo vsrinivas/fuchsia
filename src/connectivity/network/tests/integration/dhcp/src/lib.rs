@@ -479,10 +479,23 @@ async fn acquire_dhcp_with_dhcpd_bound_device_dup_addr<E: netemul::Endpoint>(nam
         &mut [DhcpTestNetwork {
             name: DEFAULT_NETWORK_NAME,
             eps: &mut [
+                // Use two separate endpoints for the server so that its unicast responses to
+                // DEFAULT_CLIENT_WANT_ADDR actually reach the network. This is not a hack around
+                // Fuchsia behavior: Linux behaves the same way. On Linux, given an endpoint that
+                // is BINDTODEVICE, unicasting to an IP address bound to another endpoint on the
+                // same host WILL reach the network, rather than going through loopback. However,
+                // if the first endpoint is NOT BINDTODEVICE, the outgoing message will be sent via
+                // LOOPBACK.
                 DhcpTestEndpoint {
                     name: "server-ep",
                     env: DhcpTestEnv::Server,
-                    static_addrs: vec![DEFAULT_SERVER_ADDR, DEFAULT_CLIENT_WANT_ADDR],
+                    static_addrs: vec![DEFAULT_SERVER_ADDR],
+                    want_addr: None,
+                },
+                DhcpTestEndpoint {
+                    name: "server-ep2",
+                    env: DhcpTestEnv::Server,
+                    static_addrs: vec![DEFAULT_CLIENT_WANT_ADDR],
                     want_addr: None,
                 },
                 DhcpTestEndpoint {

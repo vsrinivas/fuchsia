@@ -10,7 +10,8 @@ use {
         configuration,
         protocol::{Message, SERVER_PORT},
         server::{
-            DataStore, Server, ServerAction, ServerDispatcher, ServerError, DEFAULT_STASH_ID,
+            DataStore, ResponseTarget, Server, ServerAction, ServerDispatcher, ServerError,
+            DEFAULT_STASH_ID,
         },
         stash::Stash,
     },
@@ -18,6 +19,7 @@ use {
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon::DurationNum,
     futures::{Future, SinkExt as _, StreamExt as _, TryFutureExt as _, TryStreamExt as _},
+    net_types::ethernet::Mac,
     std::{
         cell::RefCell,
         collections::HashMap,
@@ -162,6 +164,9 @@ trait SocketServerDispatcher: ServerDispatcher {
 
     fn create_socket(name: &str, src: Ipv4Addr) -> std::io::Result<Self::Socket>;
     fn dispatch_message(&mut self, msg: Message) -> Result<ServerAction, ServerError>;
+    fn create_sockets(
+        params: &configuration::ServerParameters,
+    ) -> std::io::Result<Vec<SocketWithId<Self::Socket>>>;
 }
 
 impl<DS: DataStore> SocketServerDispatcher for Server<DS> {
@@ -186,6 +191,39 @@ impl<DS: DataStore> SocketServerDispatcher for Server<DS> {
 
     fn dispatch_message(&mut self, msg: Message) -> Result<ServerAction, ServerError> {
         self.dispatch(msg)
+    }
+
+    fn create_sockets(
+        params: &configuration::ServerParameters,
+    ) -> std::io::Result<Vec<SocketWithId<Self::Socket>>> {
+        let configuration::ServerParameters { bound_device_names, .. } = params;
+        bound_device_names
+            .iter()
+            .map(|name| {
+                // TODO(fxbug.dev/73010): Replace with nix::if_nametoindex()
+                let iface_id = {
+                    let name = std::ffi::CString::new(name.clone()).map_err(|e| {
+                        std::io::Error::new(
+                            std::io::ErrorKind::InvalidInput,
+                            format!("name {} could not convert to cstring: {}", name, e),
+                        )
+                    })?;
+                    unsafe { libc::if_nametoindex(name.as_ptr()) }
+                };
+                if iface_id <= 0 {
+                    return Err(std::io::Error::new(
+                        std::io::ErrorKind::NotFound,
+                        format!(
+                            "interface {} not found: {}",
+                            name,
+                            std::io::Error::last_os_error()
+                        ),
+                    ));
+                }
+                let socket = Self::create_socket(name, Ipv4Addr::UNSPECIFIED)?;
+                Ok(SocketWithId { socket, iface_id: iface_id.into() })
+            })
+            .collect()
     }
 }
 
@@ -252,7 +290,7 @@ impl<S: SocketServerDispatcher> ServerDispatcherRuntime<S> {
         // parameters.
         let (abort_handle, abort_registration) = futures::future::AbortHandle::new_pair();
 
-        let sockets = create_sockets_from_params::<S>(params).map_err(|e| {
+        let sockets = S::create_sockets(params).map_err(|e| {
             let () = match e.raw_os_error() {
                 // A short-lived SoftAP interface may be, and frequently is, torn down prior to the
                 // full instantiation of its associated dhcpd component. Consequently, binding to
@@ -293,11 +331,10 @@ impl<S: SocketServerDispatcher> ServerDispatcherRuntime<S> {
     }
 }
 
-fn create_sockets_from_params<S: SocketServerDispatcher>(
-    params: &configuration::ServerParameters,
-) -> std::io::Result<Vec<S::Socket>> {
-    let configuration::ServerParameters { bound_device_names, .. } = params;
-    bound_device_names.iter().map(|name| S::create_socket(name, Ipv4Addr::UNSPECIFIED)).collect()
+#[derive(Debug, PartialEq)]
+struct SocketWithId<S> {
+    socket: S,
+    iface_id: u64,
 }
 
 /// Helper struct to handle buffer data from sockets.
@@ -325,7 +362,7 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
         &mut self,
         buf: &[u8],
         mut sender: std::net::SocketAddr,
-    ) -> Result<Option<(std::net::SocketAddr, Vec<u8>)>, Error> {
+    ) -> Result<Option<(std::net::SocketAddr, Vec<u8>, Option<Mac>)>, Error> {
         let msg = match Message::from_buffer(buf) {
             Ok(msg) => {
                 log::debug!("parsed message from {}: {:?}", sender, msg);
@@ -364,35 +401,87 @@ impl<'a, S: SocketServerDispatcher> MessageHandler<'a, S> {
 
                 let typ = message.get_dhcp_type();
                 // Check if server returned an explicit destination ip.
-                if let Some(addr) = dst {
-                    log::info!("sending {:?} to {}", typ, addr);
-
-                    sender.set_ip(IpAddr::V4(addr));
-                } else {
-                    log::info!("sending {:?} to {}", typ, message.chaddr);
-                }
-                let response_buffer = message.serialize();
-                Ok(Some((sender, response_buffer)))
+                let (addr, chaddr) = match dst {
+                    ResponseTarget::Broadcast => {
+                        log::info!("sending {:?} to {}", typ, Ipv4Addr::BROADCAST);
+                        (Ipv4Addr::BROADCAST, None)
+                    }
+                    ResponseTarget::Unicast(addr, None) => {
+                        log::info!("sending {:?} to {}", typ, addr);
+                        (addr, None)
+                    }
+                    ResponseTarget::Unicast(addr, Some(chaddr)) => {
+                        log::info!("sending {:?} to {}", typ, chaddr);
+                        (addr, Some(chaddr))
+                    }
+                };
+                sender.set_ip(IpAddr::V4(addr));
+                Ok(Some((sender, message.serialize(), chaddr)))
             }
         }
     }
 }
 
 async fn define_msg_handling_loop_future<DS: DataStore>(
-    sock: UdpSocket,
+    sock: SocketWithId<<Server<DS> as SocketServerDispatcher>::Socket>,
     server: &RefCell<ServerDispatcherRuntime<Server<DS>>>,
 ) -> Result<Void, Error> {
     let mut handler = MessageHandler::new(server);
     let mut buf = vec![0u8; BUF_SZ];
+    let proxy = fuchsia_component::client::connect_to_service::<
+        fidl_fuchsia_net_neighbor::ControllerMarker,
+    >()
+    .context("failed to connect to fuchsia.net.neighbor.Controller")?;
     loop {
+        let SocketWithId { socket, iface_id } = &sock;
         let (received, sender) =
-            sock.recv_from(&mut buf).await.context("failed to read from socket")?;
-        if let Some((dst, response)) = handler
+            socket.recv_from(&mut buf).await.context("failed to read from socket")?;
+        if let Some((dst, response, chaddr)) = handler
             .handle_from_sender(&buf[..received], sender)
             .context("failed to handle buffer")?
         {
-            sock.send_to(&response, dst).await.context("unable to send response")?;
-            log::info!("response sent to {}: {} bytes", dst, response.len());
+            if let Some(chaddr) = &chaddr {
+                if let IpAddr::V4(dst) = dst.ip() {
+                    let () = proxy
+                        .add_entry(
+                            *iface_id,
+                            &mut fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                                addr: dst.octets(),
+                            }),
+                            &mut fidl_fuchsia_net::MacAddress { octets: chaddr.bytes() },
+                        )
+                        .await
+                        .context("controller.add_entry() failed")?
+                        .map_err(|e| fuchsia_zircon::Status::from_raw(e))
+                        .context("failed to add static link resolution entry")?;
+                }
+            }
+            // Apply try operator to send_to() after the subsequent call to proxy.remove_entry(),
+            // so that we remove the static ARP entry regardless of whether the call to send_to()
+            // succeeds.
+            let sent = socket.send_to(&response, dst).await.context("unable to send response");
+            if let Some(_) = chaddr {
+                if let IpAddr::V4(dst) = dst.ip() {
+                    let () = proxy
+                        .remove_entry(
+                            *iface_id,
+                            &mut fidl_fuchsia_net::IpAddress::Ipv4(fidl_fuchsia_net::Ipv4Address {
+                                addr: dst.octets(),
+                            }),
+                        )
+                        .await
+                        .context("controller.remove_entry() failed")?
+                        .map_err(|e| fuchsia_zircon::Status::from_raw(e))
+                        .or_else(|e| match e {
+                            // If the entry no longer exists, we're content with that result.
+                            fuchsia_zircon::Status::NOT_FOUND => Ok(()),
+                            e => Err(e),
+                        })
+                        .context("failed to remove static link resolution entry")?;
+                }
+            }
+            let sent = sent?;
+            log::info!("response sent to {}: {} bytes", dst, sent);
         }
     }
 }
@@ -445,7 +534,7 @@ where
 }
 
 struct ServerSocketCollection<S> {
-    sockets: Vec<S>,
+    sockets: Vec<SocketWithId<S>>,
     abort_registration: futures::future::AbortRegistration,
 }
 
@@ -571,7 +660,22 @@ mod tests {
 
         fn dispatch_message(&mut self, mut msg: Message) -> Result<ServerAction, ServerError> {
             msg.op = dhcp::protocol::OpCode::BOOTREPLY;
-            Ok(ServerAction::SendResponse(msg, None))
+            Ok(ServerAction::SendResponse(msg, ResponseTarget::Broadcast))
+        }
+
+        fn create_sockets(
+            params: &configuration::ServerParameters,
+        ) -> std::io::Result<Vec<SocketWithId<Self::Socket>>> {
+            let configuration::ServerParameters { bound_device_names, .. } = params;
+            bound_device_names
+                .iter()
+                .map(String::as_str)
+                .enumerate()
+                .map(|(iface_id, name)| {
+                    let socket = Self::create_socket(name, Ipv4Addr::UNSPECIFIED)?;
+                    Ok(SocketWithId { socket, iface_id: iface_id as u64 })
+                })
+                .collect()
         }
     }
 
@@ -832,9 +936,12 @@ mod tests {
                 // Assert that the sockets that would be created are correct.
                 assert_eq!(
                     sockets,
-                    vec![CannedSocket {
-                        name: DEFAULT_DEVICE_NAME.to_string(),
-                        src: Ipv4Addr::UNSPECIFIED
+                    vec![SocketWithId {
+                        socket: CannedSocket {
+                            name: DEFAULT_DEVICE_NAME.to_string(),
+                            src: Ipv4Addr::UNSPECIFIED
+                        },
+                        iface_id: 0
                     }]
                 );
 
@@ -985,8 +1092,8 @@ mod tests {
 
     /// Test that a malformed message does not cause MessageHandler to return an
     /// error.
-    #[test]
-    fn test_handle_failed_parse() {
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_handle_failed_parse() {
         let server = RefCell::new(ServerDispatcherRuntime::new(CannedDispatcher::new()));
         let mut handler = MessageHandler::new(&server);
         matches::assert_matches!(

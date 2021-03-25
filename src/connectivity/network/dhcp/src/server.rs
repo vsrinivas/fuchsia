@@ -9,6 +9,7 @@ use crate::protocol::{
 };
 use anyhow::{Context as _, Error};
 use fuchsia_zircon::Status;
+use net_types::ethernet::Mac as MacAddr;
 use serde::{Deserialize, Serialize};
 use std::collections::{hash_map::Entry, BTreeSet, HashMap, HashSet};
 use std::convert::TryFrom;
@@ -83,9 +84,21 @@ pub const DEFAULT_STASH_ID: &str = "dhcpd";
 /// Implements `PartialEq` for test assertions.
 #[derive(Debug, PartialEq)]
 pub enum ServerAction {
-    SendResponse(Message, Option<Ipv4Addr>),
+    SendResponse(Message, ResponseTarget),
     AddressDecline(Ipv4Addr),
     AddressRelease(Ipv4Addr),
+}
+
+/// The destinations to which a response can be targeted. A `Broadcast`
+/// will be targeted to the IPv4 Broadcast address. A `Unicast` will be
+/// targeted to its `Ipv4Addr` associated value. If a `MacAddr` is supplied,
+/// the target may not yet have the `Ipv4Addr` assigned, so the response
+/// should be manually directed to the `MacAddr`, typically by updating the
+/// ARP cache.
+#[derive(Debug, PartialEq)]
+pub enum ResponseTarget {
+    Broadcast,
+    Unicast(Ipv4Addr, Option<MacAddr>),
 }
 
 /// A wrapper around the error types which can be returned by DHCP Server
@@ -260,49 +273,23 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
     /// This method calculates the destination address of the server response
     /// based on the conditions specified in -
     /// https://tools.ietf.org/html/rfc2131#section-4.1 Page 22, Paragraph 4.
-    fn get_destination_addr(&mut self, client_msg: &Message) -> Option<Ipv4Addr> {
+    fn get_destination(&mut self, client_msg: &Message, offered: Ipv4Addr) -> ResponseTarget {
         if !client_msg.giaddr.is_unspecified() {
-            Some(client_msg.giaddr)
+            ResponseTarget::Unicast(client_msg.giaddr, None)
         } else if !client_msg.ciaddr.is_unspecified() {
-            Some(client_msg.ciaddr)
+            ResponseTarget::Unicast(client_msg.ciaddr, None)
         } else if client_msg.bdcast_flag {
-            Some(Ipv4Addr::BROADCAST)
+            ResponseTarget::Broadcast
         } else {
-            client_msg.get_dhcp_type().ok().and_then(|typ| {
-                match typ {
-                    // TODO(fxbug.dev/35087): Revisit the first match arm.
-                    // Instead of returning BROADCAST address, server must update ARP table.
-                    //
-                    // Current Implementation =>
-                    // When client's message has unspecified `giaddr`, 'ciaddr' with
-                    // broadcast bit is not set, we broadcast the response on the subnet.
-                    //
-                    // Notice according to RFC 2131, Page 36, `yiaddr` in client request
-                    // is always unspecified, so don't rely on that.
-                    //
-                    // See https://tools.ietf.org/html/rfc2131#page-37
-                    //
-                    // Desired Implementation =>
-                    // Message should be unicast to client's mac address specified in `chaddr`.
-                    //
-                    // See https://tools.ietf.org/html/rfc2131#section-4.1 Page 22, Paragraph 4.
-                    MessageType::DHCPDISCOVER
-                    | MessageType::DHCPREQUEST
-                    | MessageType::DHCPINFORM => Some(Ipv4Addr::BROADCAST),
-                    MessageType::DHCPACK
-                    | MessageType::DHCPNAK
-                    | MessageType::DHCPOFFER
-                    | MessageType::DHCPDECLINE
-                    | MessageType::DHCPRELEASE => None,
-                }
-            })
+            ResponseTarget::Unicast(offered, Some(client_msg.chaddr))
         }
     }
 
     fn handle_discover(&mut self, disc: Message) -> Result<ServerAction, ServerError> {
+        let () = validate_discover(&disc)?;
         let client_id = ClientIdentifier::from(&disc);
         let offered_ip = self.get_addr(&disc)?;
-        let dest = self.get_destination_addr(&disc);
+        let dest = self.get_destination(&disc, offered_ip);
         let offer = self.build_offer(disc, offered_ip)?;
         match self.store_client_config(Ipv4Addr::from(offer.yiaddr), client_id, &offer.options) {
             Ok(()) => Ok(ServerAction::SendResponse(offer, dest)),
@@ -405,7 +392,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
             ))
         } else {
             let () = self.validate_requested_addr_with_client(&req, &requested_ip)?;
-            let dest = self.get_destination_addr(&req);
+            let dest = self.get_destination(&req, requested_ip);
             Ok(ServerAction::SendResponse(self.build_ack(req, requested_ip)?, dest))
         }
     }
@@ -454,7 +441,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
 
     fn handle_request_init_reboot(&mut self, req: Message) -> Result<ServerAction, ServerError> {
         let requested_ip =
-            get_requested_ip_addr(&req).ok_or(ServerError::NoRequestedAddrAtInitReboot)?;
+            *get_requested_ip_addr(&req).ok_or(ServerError::NoRequestedAddrAtInitReboot)?;
         if !is_in_subnet(&req, &self.params) {
             let error_msg = "client and server are in different subnets";
             let (nak, dest) = self.build_nak(req, error_msg)?;
@@ -464,20 +451,24 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         if !self.cache.contains_key(&client_id) {
             return Err(ServerError::UnknownClientId(client_id));
         }
-        if self.validate_requested_addr_with_client(&req, requested_ip).is_err() {
-            let error_msg = "requested ip is not assigned to client";
-            let (nak, dest) = self.build_nak(req, error_msg)?;
-            return Ok(ServerAction::SendResponse(nak, dest));
+        let validated = self.validate_requested_addr_with_client(&req, &requested_ip);
+        match validated {
+            Ok(()) => {
+                let dest = self.get_destination(&req, requested_ip);
+                Ok(ServerAction::SendResponse(self.build_ack(req, requested_ip)?, dest))
+            }
+            Err(e) => {
+                let (nak, dest) =
+                    self.build_nak(req, &format!("requested ip is not assigned to client: {}", e))?;
+                Ok(ServerAction::SendResponse(nak, dest))
+            }
         }
-        let dest = self.get_destination_addr(&req);
-        let requested_ip = *requested_ip;
-        Ok(ServerAction::SendResponse(self.build_ack(req, requested_ip)?, dest))
     }
 
     fn handle_request_renewing(&mut self, req: Message) -> Result<ServerAction, ServerError> {
         let client_ip = req.ciaddr;
         let () = self.validate_requested_addr_with_client(&req, &client_ip)?;
-        let dest = self.get_destination_addr(&req);
+        let dest = self.get_destination(&req, client_ip);
         Ok(ServerAction::SendResponse(self.build_ack(req, client_ip)?, dest))
     }
 
@@ -562,7 +553,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
     fn handle_inform(&mut self, inf: Message) -> Result<ServerAction, ServerError> {
         // When responding to an INFORM, the server must leave yiaddr zeroed.
         let yiaddr = Ipv4Addr::UNSPECIFIED;
-        let dest = self.get_destination_addr(&inf);
+        let dest = self.get_destination(&inf, inf.ciaddr);
         let ack = self.build_inform_ack(inf, yiaddr)?;
         Ok(ServerAction::SendResponse(ack, dest))
     }
@@ -657,7 +648,7 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         &self,
         req: Message,
         error: &str,
-    ) -> Result<(Message, Option<Ipv4Addr>), ServerError> {
+    ) -> Result<(Message, ResponseTarget), ServerError> {
         let options = vec![
             DhcpOption::DhcpMessageType(MessageType::DHCPNAK),
             DhcpOption::ServerIdentifier(self.get_server_ip(&req)?),
@@ -675,10 +666,11 @@ impl<DS: DataStore, TS: SystemTimeSource> Server<DS, TS> {
         // https://tools.ietf.org/html/rfc2131#section-4.3.2
         // Page 31, Paragraph 2-3.
         if nak.giaddr.is_unspecified() {
-            Ok((nak, Some(Ipv4Addr::BROADCAST)))
+            Ok((nak, ResponseTarget::Broadcast))
         } else {
             nak.bdcast_flag = true;
-            Ok((nak, None))
+            let giaddr = nak.giaddr;
+            Ok((nak, ResponseTarget::Unicast(giaddr, None)))
         }
     }
 
@@ -1216,6 +1208,52 @@ enum ClientState {
     Renewing,
 }
 
+// Cf. RFC 2131 Table 5: https://tools.ietf.org/html/rfc2131#page-37
+fn validate_discover(disc: &Message) -> Result<(), ServerError> {
+    use std::string::ToString as _;
+    if disc.op != OpCode::BOOTREQUEST {
+        return Err(ServerError::ClientMessageError(ProtocolError::InvalidField {
+            field: String::from("op"),
+            value: OpCode::BOOTREPLY.to_string(),
+            msg_type: MessageType::DHCPDISCOVER,
+        }));
+    }
+    if !disc.ciaddr.is_unspecified() {
+        return Err(ServerError::ClientMessageError(ProtocolError::InvalidField {
+            field: String::from("ciaddr"),
+            value: disc.ciaddr.to_string(),
+            msg_type: MessageType::DHCPDISCOVER,
+        }));
+    }
+    if !disc.yiaddr.is_unspecified() {
+        return Err(ServerError::ClientMessageError(ProtocolError::InvalidField {
+            field: String::from("yiaddr"),
+            value: disc.yiaddr.to_string(),
+            msg_type: MessageType::DHCPDISCOVER,
+        }));
+    }
+    if !disc.siaddr.is_unspecified() {
+        return Err(ServerError::ClientMessageError(ProtocolError::InvalidField {
+            field: String::from("siaddr"),
+            value: disc.siaddr.to_string(),
+            msg_type: MessageType::DHCPDISCOVER,
+        }));
+    }
+    // Do not check giaddr, because although a client will never set it, an
+    // intervening relay agent may have done.
+    if let Some(DhcpOption::ServerIdentifier(addr)) = disc.options.iter().find(|opt| match opt {
+        DhcpOption::ServerIdentifier(_) => true,
+        _ => false,
+    }) {
+        return Err(ServerError::ClientMessageError(ProtocolError::InvalidField {
+            field: String::from("ServerIdentifier"),
+            value: addr.to_string(),
+            msg_type: MessageType::DHCPDISCOVER,
+        }));
+    }
+    Ok(())
+}
+
 fn is_recipient(server_ips: &Vec<Ipv4Addr>, req: &Message) -> bool {
     if let Some(server_id) = get_server_id_from(&req) {
         server_ips.contains(&server_id)
@@ -1303,15 +1341,15 @@ pub mod tests {
         OptionCode, ProtocolError,
     };
     use crate::server::{
-        get_client_state, AddressPool, AddressPoolError, CachedConfig, ClientIdentifier,
-        ClientState, DataStore, ServerAction, ServerDispatcher, ServerError, ServerParameters,
-        SystemTimeSource,
+        get_client_state, validate_discover, AddressPool, AddressPoolError, CachedConfig,
+        ClientIdentifier, ClientState, DataStore, ResponseTarget, ServerAction, ServerDispatcher,
+        ServerError, ServerParameters, SystemTimeSource,
     };
     use anyhow::{Context as _, Error};
     use datastore::{ActionRecordingDataStore, DataStoreAction};
-    use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
     use fuchsia_zircon::Status;
     use net_declare::{fidl_ip_v4, std_ip_v4};
+    use net_types::ethernet::Mac as MacAddr;
     use rand::Rng;
     use std::cell::RefCell;
     use std::collections::{HashMap, HashSet};
@@ -1477,7 +1515,7 @@ pub mod tests {
         let octet4: u8 = rand::thread_rng().gen();
         let octet5: u8 = rand::thread_rng().gen();
         let octet6: u8 = rand::thread_rng().gen();
-        MacAddr { octets: [octet1, octet2, octet3, octet4, octet5, octet6] }
+        MacAddr::new([octet1, octet2, octet3, octet4, octet5, octet6])
     }
 
     fn extract_message(server_response: ServerAction) -> Message {
@@ -1551,7 +1589,7 @@ pub mod tests {
             op: OpCode::BOOTREQUEST,
             xid: rand::thread_rng().gen(),
             secs: 0,
-            bdcast_flag: false,
+            bdcast_flag: true,
             ciaddr: Ipv4Addr::UNSPECIFIED,
             yiaddr: Ipv4Addr::UNSPECIFIED,
             siaddr: Ipv4Addr::UNSPECIFIED,
@@ -1587,7 +1625,7 @@ pub mod tests {
             op: _,
             xid,
             secs: _,
-            bdcast_flag: _,
+            bdcast_flag,
             ciaddr: _,
             yiaddr: _,
             siaddr: _,
@@ -1601,7 +1639,7 @@ pub mod tests {
             op: OpCode::BOOTREPLY,
             xid: *xid,
             secs: 0,
-            bdcast_flag: false,
+            bdcast_flag: *bdcast_flag,
             ciaddr: Ipv4Addr::UNSPECIFIED,
             yiaddr: Ipv4Addr::UNSPECIFIED,
             siaddr: Ipv4Addr::UNSPECIFIED,
@@ -1726,7 +1764,10 @@ pub mod tests {
 
         assert_eq!(
             server.dispatch(disc),
-            Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
+            Ok(ServerAction::SendResponse(
+                expected_offer,
+                ResponseTarget::Unicast(expected_dest, None)
+            ))
         );
         matches::assert_matches!(
             server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
@@ -1736,78 +1777,23 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_ciaddr_when_giaddr_unspecified(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
-        let mut disc = new_test_discover();
-        disc.ciaddr = random_ipv4_generator();
-        let client_id = ClientIdentifier::from(&disc);
-
-        let offer_ip = random_ipv4_generator();
-
-        server.pool.available_addrs.insert(offer_ip);
-
-        let mut expected_offer = new_test_offer(&disc, &server);
-        expected_offer.yiaddr = offer_ip;
-
-        let expected_dest = disc.ciaddr;
-
-        assert_eq!(
-            server.dispatch(disc),
-            Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
-        );
-        matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
-            [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
-        );
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_broadcast_bit_set_returns_correct_offer_and_dest_broadcast_when_giaddr_and_ciaddr_unspecified(
-    ) -> Result<(), Error> {
-        let mut server = new_test_minimal_server()?;
-        let mut disc = new_test_discover();
-        disc.bdcast_flag = true;
-        let client_id = ClientIdentifier::from(&disc);
-
-        let offer_ip = random_ipv4_generator();
-
-        server.pool.available_addrs.insert(offer_ip);
-
-        let mut expected_offer = new_test_offer(&disc, &server);
-        expected_offer.yiaddr = offer_ip;
-        expected_offer.bdcast_flag = true;
-
-        assert_eq!(
-            server.dispatch(disc),
-            Ok(ServerAction::SendResponse(expected_offer, Some(Ipv4Addr::BROADCAST)))
-        );
-        matches::assert_matches!(
-            server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
-            [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
-        );
-        Ok(())
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_broadcast_when_giaddr_and_ciaddr_unspecified_and_broadcast_bit_unset(
+    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_broadcast_when_giaddr_unspecified(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server()?;
         let disc = new_test_discover();
         let client_id = ClientIdentifier::from(&disc);
 
         let offer_ip = random_ipv4_generator();
-
         server.pool.available_addrs.insert(offer_ip);
+        let expected_offer = {
+            let mut expected_offer = new_test_offer(&disc, &server);
+            expected_offer.yiaddr = offer_ip;
+            expected_offer
+        };
 
-        let mut expected_offer = new_test_offer(&disc, &server);
-        expected_offer.yiaddr = offer_ip;
-
-        // TODO(fxbug.dev/35087): Instead of returning BROADCAST address, server must update ARP table.
         assert_eq!(
             server.dispatch(disc),
-            Ok(ServerAction::SendResponse(expected_offer, Some(Ipv4Addr::BROADCAST)))
+            Ok(ServerAction::SendResponse(expected_offer, ResponseTarget::Broadcast))
         );
         matches::assert_matches!(
             server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
@@ -1817,29 +1803,31 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_giaddr_if_giaddr_ciaddr_broadcast_bit_is_set(
+    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_yiaddr_when_giaddr_and_ciaddr_unspecified_and_broadcast_bit_unset(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server()?;
-        let mut disc = new_test_discover();
-        disc.giaddr = random_ipv4_generator();
-        disc.ciaddr = random_ipv4_generator();
-        disc.bdcast_flag = true;
+        let disc = {
+            let mut disc = new_test_discover();
+            disc.bdcast_flag = false;
+            disc
+        };
+        let chaddr = disc.chaddr;
         let client_id = ClientIdentifier::from(&disc);
 
         let offer_ip = random_ipv4_generator();
-
         server.pool.available_addrs.insert(offer_ip);
-
-        let mut expected_offer = new_test_offer(&disc, &server);
-        expected_offer.yiaddr = offer_ip;
-        expected_offer.giaddr = disc.giaddr;
-        expected_offer.bdcast_flag = true;
-
-        let expected_dest = disc.giaddr;
+        let expected_offer = {
+            let mut expected_offer = new_test_offer(&disc, &server);
+            expected_offer.yiaddr = offer_ip;
+            expected_offer
+        };
 
         assert_eq!(
             server.dispatch(disc),
-            Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
+            Ok(ServerAction::SendResponse(
+                expected_offer,
+                ResponseTarget::Unicast(offer_ip, Some(chaddr))
+            ))
         );
         matches::assert_matches!(
             server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
@@ -1849,31 +1837,58 @@ pub mod tests {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_ciaddr_if_ciaddr_broadcast_bit_is_set(
+    async fn test_dispatch_with_discover_returns_correct_offer_and_dest_giaddr_if_giaddr_broadcast_bit_is_set(
     ) -> Result<(), Error> {
         let mut server = new_test_minimal_server()?;
-        let mut disc = new_test_discover();
-        disc.ciaddr = random_ipv4_generator();
-        disc.bdcast_flag = true;
+        let giaddr = random_ipv4_generator();
+        let disc = {
+            let mut disc = new_test_discover();
+            disc.giaddr = giaddr;
+            disc
+        };
         let client_id = ClientIdentifier::from(&disc);
 
         let offer_ip = random_ipv4_generator();
-
         server.pool.available_addrs.insert(offer_ip);
 
-        let mut expected_offer = new_test_offer(&disc, &server);
-        expected_offer.yiaddr = offer_ip;
-        expected_offer.bdcast_flag = true;
-
-        let expected_dest = disc.ciaddr;
+        let expected_offer = {
+            let mut expected_offer = new_test_offer(&disc, &server);
+            expected_offer.yiaddr = offer_ip;
+            expected_offer.giaddr = giaddr;
+            expected_offer
+        };
 
         assert_eq!(
             server.dispatch(disc),
-            Ok(ServerAction::SendResponse(expected_offer, Some(expected_dest)))
+            Ok(ServerAction::SendResponse(expected_offer, ResponseTarget::Unicast(giaddr, None)))
         );
         matches::assert_matches!(
             server.store.ok_or_else(|| anyhow::anyhow!("missing store"))?.actions().as_slice(),
             [DataStoreAction::StoreClientConfig {client_id: id, ..}] if *id == client_id
+        );
+        Ok(())
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_discover_returns_error_if_ciaddr_set() -> Result<(), Error> {
+        use std::string::ToString as _;
+        let mut server = new_test_minimal_server()?;
+        let ciaddr = random_ipv4_generator();
+        let disc = {
+            let mut disc = new_test_discover();
+            disc.ciaddr = ciaddr;
+            disc
+        };
+
+        server.pool.available_addrs.insert(random_ipv4_generator());
+
+        assert_eq!(
+            server.dispatch(disc),
+            Err(ServerError::ClientMessageError(ProtocolError::InvalidField {
+                field: String::from("ciaddr"),
+                value: ciaddr.to_string(),
+                msg_type: MessageType::DHCPDISCOVER
+            }))
         );
         Ok(())
     }
@@ -2222,7 +2237,7 @@ pub mod tests {
                 yiaddr: Ipv4Addr::UNSPECIFIED,
                 siaddr: Ipv4Addr::UNSPECIFIED,
                 giaddr: Ipv4Addr::UNSPECIFIED,
-                chaddr: MacAddr { octets: [0; 6] },
+                chaddr: MacAddr::new([0; 6]),
                 sname: String::new(),
                 file: String::new(),
                 options: vec![DhcpOption::DhcpMessageType(message_type),],
@@ -2250,9 +2265,23 @@ pub mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_dispatch_with_selecting_request_returns_correct_ack() -> Result<(), Error> {
+        test_selecting(true)
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_selecting_request_bdcast_unset_returns_unicast_ack(
+    ) -> Result<(), Error> {
+        test_selecting(false)
+    }
+
+    fn test_selecting(broadcast: bool) -> Result<(), Error> {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
         let requested_ip = random_ipv4_generator();
-        let req = new_test_request_selecting_state(&server, requested_ip);
+        let req = {
+            let mut req = new_test_request_selecting_state(&server, requested_ip);
+            req.bdcast_flag = broadcast;
+            req
+        };
 
         server.pool.allocated_addrs.insert(requested_ip);
 
@@ -2281,11 +2310,15 @@ pub mod tests {
 
         let mut expected_ack = new_test_ack(&req, &server);
         expected_ack.yiaddr = requested_ip;
-
-        assert_eq!(
-            server.dispatch(req),
-            Ok(ServerAction::SendResponse(expected_ack, Some(Ipv4Addr::BROADCAST)))
-        );
+        let expected_response = if broadcast {
+            Ok(ServerAction::SendResponse(expected_ack, ResponseTarget::Broadcast))
+        } else {
+            Ok(ServerAction::SendResponse(
+                expected_ack,
+                ResponseTarget::Unicast(requested_ip, Some(req.chaddr)),
+            ))
+        };
+        assert_eq!(server.dispatch(req), expected_response,);
         Ok(())
     }
 
@@ -2404,8 +2437,19 @@ pub mod tests {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_dispatch_with_init_boot_request_returns_correct_ack() -> Result<(), Error> {
+        test_init_reboot(true)
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_dispatch_with_init_boot_bdcast_unset_request_returns_correct_ack(
+    ) -> Result<(), Error> {
+        test_init_reboot(false)
+    }
+
+    fn test_init_reboot(broadcast: bool) -> Result<(), Error> {
         let (mut server, time_source) = new_test_minimal_server_with_time_source()?;
         let mut req = new_test_request();
+        req.bdcast_flag = broadcast;
 
         // For init-reboot, server and requested ip must be on the same subnet.
         // Hard-coding ip values here to achieve that.
@@ -2443,10 +2487,15 @@ pub mod tests {
         let mut expected_ack = new_test_ack(&req, &server);
         expected_ack.yiaddr = init_reboot_client_ip;
 
-        assert_eq!(
-            server.dispatch(req),
-            Ok(ServerAction::SendResponse(expected_ack, Some(Ipv4Addr::BROADCAST)))
-        );
+        let expected_response = if broadcast {
+            Ok(ServerAction::SendResponse(expected_ack, ResponseTarget::Broadcast))
+        } else {
+            Ok(ServerAction::SendResponse(
+                expected_ack,
+                ResponseTarget::Unicast(init_reboot_client_ip, Some(req.chaddr)),
+            ))
+        };
+        assert_eq!(server.dispatch(req), expected_response,);
         Ok(())
     }
 
@@ -2464,7 +2513,7 @@ pub mod tests {
             new_test_nak(&req, &server, "client and server are in different subnets".to_owned());
         assert_eq!(
             server.dispatch(req),
-            Ok(ServerAction::SendResponse(expected_nak, Some(Ipv4Addr::BROADCAST)))
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
         Ok(())
     }
@@ -2525,11 +2574,17 @@ pub mod tests {
             )?,
         );
 
-        let expected_nak =
-            new_test_nak(&req, &server, "requested ip is not assigned to client".to_owned());
+        let expected_nak = new_test_nak(
+            &req,
+            &server,
+            format!(
+                "requested ip is not assigned to client: {}",
+                ServerError::RequestedIpOfferIpMismatch(init_reboot_client_ip, server_cached_ip)
+            ),
+        );
         assert_eq!(
             server.dispatch(req),
-            Ok(ServerAction::SendResponse(expected_nak, Some(Ipv4Addr::BROADCAST)))
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
         Ok(())
     }
@@ -2556,12 +2611,15 @@ pub mod tests {
             )?,
         );
 
-        let expected_nak =
-            new_test_nak(&req, &server, "requested ip is not assigned to client".to_owned());
+        let expected_nak = new_test_nak(
+            &req,
+            &server,
+            format!("requested ip is not assigned to client: {}", ServerError::ExpiredClientConfig),
+        );
 
         assert_eq!(
             server.dispatch(req),
-            Ok(ServerAction::SendResponse(expected_nak, Some(Ipv4Addr::BROADCAST)))
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
         Ok(())
     }
@@ -2586,12 +2644,18 @@ pub mod tests {
             )?,
         );
 
-        let expected_nak =
-            new_test_nak(&req, &server, "requested ip is not assigned to client".to_owned());
+        let expected_nak = new_test_nak(
+            &req,
+            &server,
+            format!(
+                "requested ip is not assigned to client: {}",
+                ServerError::UnidentifiedRequestedIp(init_reboot_client_ip)
+            ),
+        );
 
         assert_eq!(
             server.dispatch(req),
-            Ok(ServerAction::SendResponse(expected_nak, Some(Ipv4Addr::BROADCAST)))
+            Ok(ServerAction::SendResponse(expected_nak, ResponseTarget::Broadcast))
         );
         Ok(())
     }
@@ -2637,7 +2701,10 @@ pub mod tests {
 
         assert_eq!(
             server.dispatch(req),
-            Ok(ServerAction::SendResponse(expected_ack, Some(expected_dest)))
+            Ok(ServerAction::SendResponse(
+                expected_ack,
+                ResponseTarget::Unicast(expected_dest, None)
+            ))
         );
         Ok(())
     }
@@ -3047,7 +3114,10 @@ pub mod tests {
 
         assert_eq!(
             server.dispatch(inform),
-            Ok(ServerAction::SendResponse(expected_ack, Some(expected_dest)))
+            Ok(ServerAction::SendResponse(
+                expected_ack,
+                ResponseTarget::Unicast(expected_dest, None)
+            ))
         );
         Ok(())
     }
@@ -3431,7 +3501,7 @@ pub mod tests {
                 pool_range_stop: Some(fidl_ip_v4!("192.168.0.254")),
                 ..fidl_fuchsia_net_dhcp::AddressPool::EMPTY
             });
-        let MacAddr { octets: mac } = random_mac_generator();
+        let mac = random_mac_generator().bytes();
         let duplicated_static_assignment =
             fidl_fuchsia_net_dhcp::Parameter::StaticallyAssignedAddrs(vec![
                 fidl_fuchsia_net_dhcp::StaticAssignment {
@@ -3595,7 +3665,7 @@ pub mod tests {
     async fn test_set_address_pool_fails_if_leases_present() -> Result<(), Error> {
         let mut server = new_test_minimal_server()?;
         server.cache.insert(
-            ClientIdentifier::from(MacAddr { octets: [1, 2, 3, 4, 5, 6] }),
+            ClientIdentifier::from(MacAddr::new([1, 2, 3, 4, 5, 6])),
             CachedConfig::default(),
         );
         assert_eq!(
@@ -3696,6 +3766,65 @@ pub mod tests {
                 DataStoreAction::Delete{ client_id: id2 },
             ] if id1 == id2 && id2 == &client_id && config == &client_config
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_validate_discover() -> Result<(), Error> {
+        use std::string::ToString as _;
+        let mut disc = new_test_discover();
+        disc.op = OpCode::BOOTREPLY;
+        assert_eq!(
+            validate_discover(&disc),
+            Err(ServerError::ClientMessageError(ProtocolError::InvalidField {
+                field: String::from("op"),
+                value: String::from("BOOTREPLY"),
+                msg_type: MessageType::DHCPDISCOVER
+            }))
+        );
+        disc = new_test_discover();
+        disc.ciaddr = random_ipv4_generator();
+        assert_eq!(
+            validate_discover(&disc),
+            Err(ServerError::ClientMessageError(ProtocolError::InvalidField {
+                field: String::from("ciaddr"),
+                value: disc.ciaddr.to_string(),
+                msg_type: MessageType::DHCPDISCOVER
+            }))
+        );
+        disc = new_test_discover();
+        disc.yiaddr = random_ipv4_generator();
+        assert_eq!(
+            validate_discover(&disc),
+            Err(ServerError::ClientMessageError(ProtocolError::InvalidField {
+                field: String::from("yiaddr"),
+                value: disc.yiaddr.to_string(),
+                msg_type: MessageType::DHCPDISCOVER
+            }))
+        );
+        disc = new_test_discover();
+        disc.siaddr = random_ipv4_generator();
+        assert_eq!(
+            validate_discover(&disc),
+            Err(ServerError::ClientMessageError(ProtocolError::InvalidField {
+                field: String::from("siaddr"),
+                value: disc.siaddr.to_string(),
+                msg_type: MessageType::DHCPDISCOVER
+            }))
+        );
+        disc = new_test_discover();
+        let server = random_ipv4_generator();
+        let () = disc.options.push(DhcpOption::ServerIdentifier(server));
+        assert_eq!(
+            validate_discover(&disc),
+            Err(ServerError::ClientMessageError(ProtocolError::InvalidField {
+                field: String::from("ServerIdentifier"),
+                value: server.to_string(),
+                msg_type: MessageType::DHCPDISCOVER
+            }))
+        );
+        disc = new_test_discover();
+        assert_eq!(validate_discover(&disc), Ok(()));
         Ok(())
     }
 }

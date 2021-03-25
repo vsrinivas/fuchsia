@@ -685,6 +685,7 @@
         {
             protocol: [
                 "fuchsia.net.NameLookup",
+                "fuchsia.net.neighbor.Controller",
                 "fuchsia.posix.socket.Provider",
                 "fuchsia.stash.SecureStore",
             ],

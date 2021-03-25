@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
+use net_types::ethernet::Mac as MacAddr;
 use num_derive::FromPrimitive;
 use serde::{Deserialize, Serialize};
 use std::convert::{TryFrom, TryInto};
@@ -70,6 +70,8 @@ pub enum ProtocolError {
     UnknownFidlOption,
     #[error("invalid utf-8 after buffer index: {}", _0)]
     Utf8(usize),
+    #[error("invalid protocol field {} = {} for message type {}", field, value, msg_type)]
+    InvalidField { field: String, value: String, msg_type: MessageType },
 }
 
 /// A DHCP protocol message as defined in RFC 2131.
@@ -195,15 +197,14 @@ impl Message {
             yiaddr: ip_addr_from_buf_at(buf, YIADDR_IDX)?,
             siaddr: ip_addr_from_buf_at(buf, SIADDR_IDX)?,
             giaddr: ip_addr_from_buf_at(buf, GIADDR_IDX)?,
-            chaddr: MacAddr {
-                octets: buf
-                    .get(CHADDR_IDX..CHADDR_IDX + CHADDR_LEN)
+            chaddr: MacAddr::new(
+                buf.get(CHADDR_IDX..CHADDR_IDX + CHADDR_LEN)
                     .ok_or(ProtocolError::InvalidBufferLength(buf.len()))?
                     .try_into()
                     .map_err(|std::array::TryFromSliceError { .. }| {
                         ProtocolError::InvalidBufferLength(buf.len())
                     })?,
-            },
+            ),
             sname: match overload {
                 Some(Overload::SName) | Some(Overload::Both) => String::from(""),
                 Some(Overload::File) | None => buf_to_msg_string(sname)?,
@@ -250,7 +251,7 @@ impl Message {
         buffer.extend_from_slice(&yiaddr.octets());
         buffer.extend_from_slice(&siaddr.octets());
         buffer.extend_from_slice(&giaddr.octets());
-        buffer.extend_from_slice(&chaddr.octets.as_ref());
+        buffer.extend_from_slice(&chaddr.bytes().as_ref());
         buffer.extend_from_slice(&[0u8; UNUSED_CHADDR_BYTES]);
         trunc_string_to_n_and_push(&sname, SNAME_LEN, &mut buffer);
         trunc_string_to_n_and_push(&file, FILE_LEN, &mut buffer);
@@ -279,7 +280,7 @@ impl Message {
 
 pub mod identifier {
     use super::{DhcpOption, Message, CHADDR_LEN};
-    use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
+    use net_types::ethernet::Mac as MacAddr;
     use std::convert::TryInto as _;
 
     const CLIENT_IDENTIFIER_ID: &'static str = "id";
@@ -349,17 +350,11 @@ pub mod identifier {
             match id_type {
                 CLIENT_IDENTIFIER_ID => Ok(Self { inner: ClientIdentifierInner::Id(id) }),
                 CLIENT_IDENTIFIER_CHADDR => Ok(Self {
-                    inner: ClientIdentifierInner::Chaddr(
-                        fidl_fuchsia_hardware_ethernet_ext::MacAddress {
-                            octets: id
-                                .get(..CHADDR_LEN)
-                                .ok_or(anyhow::anyhow!(
-                                    "client id had insufficient length: {:?}",
-                                    id
-                                ))?
-                                .try_into()?,
-                        },
-                    ),
+                    inner: ClientIdentifierInner::Chaddr(MacAddr::new(
+                        id.get(..CHADDR_LEN)
+                            .ok_or(anyhow::anyhow!("client id had insufficient length: {:?}", id))?
+                            .try_into()?,
+                    )),
                 }),
                 id_type => Err(anyhow::anyhow!("unrecognized client id type: {}", id_type)),
             }
@@ -368,10 +363,11 @@ pub mod identifier {
 
     impl std::fmt::Display for ClientIdentifier {
         fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+            use zerocopy::AsBytes as _;
             let (id_type, id) = match self {
                 Self { inner: ClientIdentifierInner::Id(v) } => (CLIENT_IDENTIFIER_ID, v.as_ref()),
                 Self { inner: ClientIdentifierInner::Chaddr(v) } => {
-                    (CLIENT_IDENTIFIER_CHADDR, &v.octets[..])
+                    (CLIENT_IDENTIFIER_CHADDR, &v.as_bytes()[..])
                 }
             };
             write!(f, "{}:{}", id_type, hex::encode(id))
@@ -393,6 +389,15 @@ pub mod identifier {
 pub enum OpCode {
     BOOTREQUEST = 1,
     BOOTREPLY = 2,
+}
+
+impl fmt::Display for OpCode {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            OpCode::BOOTREQUEST => write!(f, "BOOTREQUEST"),
+            OpCode::BOOTREPLY => write!(f, "BOOTREPLY"),
+        }
+    }
 }
 
 impl Into<u8> for OpCode {
@@ -2021,7 +2026,7 @@ mod tests {
             yiaddr: ip_v4!("192.168.1.1"),
             siaddr: Ipv4Addr::UNSPECIFIED,
             giaddr: Ipv4Addr::UNSPECIFIED,
-            chaddr: MacAddr { octets: [0; 6] },
+            chaddr: MacAddr::new([0; 6]),
             sname: String::from("relay.example.com"),
             file: String::from("boot.img"),
             options: Vec::new(),
@@ -2103,7 +2108,7 @@ mod tests {
                 yiaddr: ip_v4!("192.168.1.1"),
                 siaddr: Ipv4Addr::UNSPECIFIED,
                 giaddr: Ipv4Addr::UNSPECIFIED,
-                chaddr: MacAddr { octets: [0; 6] },
+                chaddr: MacAddr::new([0; 6]),
                 sname: "relay.example.com".to_string(),
                 file: "boot.img".to_string(),
                 options: vec![
@@ -2307,7 +2312,7 @@ mod tests {
             yiaddr: Ipv4Addr::UNSPECIFIED,
             siaddr: Ipv4Addr::UNSPECIFIED,
             giaddr: Ipv4Addr::UNSPECIFIED,
-            chaddr: MacAddr { octets: [0; 6] },
+            chaddr: MacAddr::new([0; 6]),
             sname: String::from(""),
             file: String::from(""),
             options: vec![DhcpOption::OptionOverload(overload)],
@@ -2346,7 +2351,7 @@ mod tests {
                 yiaddr: Ipv4Addr::UNSPECIFIED,
                 siaddr: Ipv4Addr::UNSPECIFIED,
                 giaddr: Ipv4Addr::UNSPECIFIED,
-                chaddr: MacAddr { octets: [0; 6] },
+                chaddr: MacAddr::new([0; 6]),
                 sname: String::from(""),
                 file: String::from(""),
                 options: vec![

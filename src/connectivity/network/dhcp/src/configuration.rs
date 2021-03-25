@@ -541,7 +541,7 @@ mod tests {
     fn test_static_assignments_try_from_fidl() -> Result<(), anyhow::Error> {
         use std::iter::FromIterator;
 
-        let fidl_fuchsia_hardware_ethernet_ext::MacAddress { octets: mac } = random_mac_generator();
+        let mac = random_mac_generator().bytes();
         let ip = random_ipv4_generator();
         let fields_present = vec![fidl_fuchsia_net_dhcp::StaticAssignment {
             host: Some(fidl_fuchsia_net::MacAddress { octets: mac.clone() }),
