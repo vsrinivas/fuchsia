@@ -97,6 +97,9 @@ before being sent, or when decoding a value after receiving it. Example
 constraints are vector bounds, handle constraints, and the valid encoding of a
 string as UTF-8.
 
+When validation fails, the bindings surface the error to user code, either by
+returning it directly or via an error callback.
+
 ## Result/error type {#result}
 
 For methods with error types specified:

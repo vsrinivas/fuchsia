@@ -314,7 +314,7 @@ the array.
 
 Strings are denoted as follows:
 
-*   **`string`** : non-nullable string (validation error
+*   **`string`** : non-nullable string ([validation error][lexicon-validate]
     occurs if null is encountered)
 *   **`string?`** : nullable string
 *   **`string:N, string:N?`** : string, and nullable string, respectively,
@@ -348,7 +348,7 @@ Strings are denoted as follows:
 Vectors are denoted as follows:
 
 *   **`vector<T>`** : non-nullable vector of element type
-    _T_ (validation error occurs if null is encountered)
+    _T_ ([validation error][lexicon-validate] occurs if null is encountered)
 *   **`vector<T>?`** : nullable vector of element type
     _T_
 *   **`vector<T>:N, vector<T>:N?`** : vector, and nullable vector, respectively,
@@ -503,7 +503,7 @@ FIDL declarations can either have **strict** or **flexible** behavior:
 *   Tables always have flexible behavior.
 
 For strict types only, serializing or deserializing a value that contains data
-not described in the declaration is a validation error.
+not described in the declaration is a [validation error][lexicon-validate].
 
 In this example:
 
@@ -817,3 +817,4 @@ for you that contains commonly used Zircon definitions.
 [union-compat]: /docs/development/languages/fidl/guides/compatibility/README.md#union
 [resource-compat]: /docs/development/languages/fidl/guides/compatibility/README.md#modifiers
 [bindings-reference]: /docs/reference/fidl/bindings/overview.md
+[lexicon-validate]: /docs/reference/fidl/language/lexicon.md#validate
