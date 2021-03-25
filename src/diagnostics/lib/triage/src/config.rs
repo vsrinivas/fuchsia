@@ -13,7 +13,7 @@ use {
     },
     anyhow::{bail, format_err, Context, Error},
     num_derive::FromPrimitive,
-    serde_derive::Deserialize,
+    serde::{Deserialize, Deserializer},
     std::{collections::HashMap, convert::TryFrom},
 };
 
@@ -36,7 +36,7 @@ pub enum Source {
 pub struct ConfigFileSchema {
     /// Map of named Selectors. Each Selector selects a value from Diagnostic data.
     #[serde(rename = "select")]
-    pub file_selectors: Option<HashMap<String, String>>,
+    pub file_selectors: Option<HashMap<String, SelectorEntry>>,
     /// Map of named Evals. Each Eval calculates a value.
     #[serde(rename = "eval")]
     pub file_evals: Option<HashMap<String, String>>,
@@ -47,6 +47,54 @@ pub struct ConfigFileSchema {
     /// should not trigger.
     #[serde(rename = "test")]
     pub file_tests: Option<TrialsSchema>,
+}
+
+/// A selector entry in the configuration file is either a single string
+/// or a vector or string selectors. Either case is converted to a vector
+/// with at least one element.
+#[derive(Debug)]
+pub struct SelectorEntry(Vec<String>);
+
+impl<'de> Deserialize<'de> for SelectorEntry {
+    fn deserialize<D>(d: D) -> Result<Self, D::Error>
+    where
+        D: Deserializer<'de>,
+    {
+        struct SelectorVec(std::marker::PhantomData<Vec<String>>);
+
+        impl<'de> serde::de::Visitor<'de> for SelectorVec {
+            type Value = Vec<String>;
+
+            fn expecting(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                f.write_str("either a single selector or an array of selectors")
+            }
+
+            fn visit_str<E>(self, value: &str) -> Result<Self::Value, E>
+            where
+                E: serde::de::Error,
+            {
+                Ok(vec![value.to_string()])
+            }
+
+            fn visit_seq<A>(self, mut value: A) -> Result<Self::Value, A::Error>
+            where
+                A: serde::de::SeqAccess<'de>,
+            {
+                let mut out = vec![];
+                while let Some(s) = value.next_element::<String>()? {
+                    out.push(s);
+                }
+                if out.is_empty() {
+                    use serde::de::Error;
+                    Err(A::Error::invalid_length(0, &"expected at least one selector"))
+                } else {
+                    Ok(out)
+                }
+            }
+        }
+
+        Ok(SelectorEntry(d.deserialize_any(SelectorVec(std::marker::PhantomData))?))
+    }
 }
 
 impl TryFrom<String> for ConfigFileSchema {
@@ -125,7 +173,11 @@ impl ParseResult {
             let file_actions = filter_actions(file_actions, &action_tag_directive);
             let mut file_metrics = HashMap::new();
             for (key, value) in file_selectors.into_iter() {
-                file_metrics.insert(key, Metric::Selector(SelectorString::try_from(value)?));
+                let mut selectors = vec![];
+                for v in value.0 {
+                    selectors.push(SelectorString::try_from(v)?);
+                }
+                file_metrics.insert(key, Metric::Selector(selectors));
             }
             for (key, value) in file_evals.into_iter() {
                 if file_metrics.contains_key(&key) {
@@ -145,8 +197,10 @@ impl ParseResult {
         let mut result = Vec::new();
         for (_, metric_set) in self.metrics.iter() {
             for (_, metric) in metric_set.iter() {
-                if let Metric::Selector(selector) = metric {
-                    result.push(selector.full_selector.to_owned());
+                if let Metric::Selector(selectors) = metric {
+                    for selector in selectors {
+                        result.push(selector.full_selector.to_owned());
+                    }
                 }
             }
         }
@@ -427,6 +481,54 @@ mod test {
     }
 
     #[test]
+    fn select_section_parsing() {
+        let config_result = ConfigFileSchema::try_from(
+            r#"
+        {
+            select: {
+                a: ["INSPECT:core:root:prop"],
+                b: "INSPECT:core:root:prop",
+                c: ["INSPECT:core:root:prop",
+                    "INSPECT:core:root:prop2",
+                    "INSPECT:core:root:prop3"],
+            }
+        }
+        "#
+            .to_string(),
+        );
+        assert_eq!(
+            3,
+            config_result.expect("parse json").file_selectors.expect("has selectors").len()
+        );
+
+        let config_result = ConfigFileSchema::try_from(
+            r#"
+        {
+            select: {
+                a: ["INSPECT:core:root:prop", 1],
+            }
+        }
+        "#
+            .to_string(),
+        );
+        assert!(format!("{}", config_result.expect_err("parsing should fail"))
+            .contains("expected a string"));
+
+        let config_result = ConfigFileSchema::try_from(
+            r#"
+        {
+            select: {
+                a: [],
+            }
+        }
+        "#
+            .to_string(),
+        );
+        assert!(format!("{}", config_result.expect_err("parsing should fail"))
+            .contains("expected at least one selector"));
+    }
+
+    #[test]
     fn all_selectors_works() {
         macro_rules! s {
             ($s:expr) => {
@@ -436,13 +538,20 @@ mod test {
         let file_map = hashmap![
             s!("file1") => s!(r#"{ select: {selector1: "INSPECT:name:path:label"}}"#),
             s!("file2") =>
-                s!(r#"{ select: {selector1: "INSPECT:word:stuff:identifier"}, eval: {e: "2+2"} }"#),
+                s!(r#"
+                    { select: {
+                        selector1: "INSPECT:word:stuff:identifier",
+                        selector2: ["INSPECT:a:b:c", "INSPECT:d:e:f"],
+                      },
+                      eval: {e: "2+2"} }"#),
         ];
         let parse = ParseResult::new(&file_map, &ActionTagDirective::AllowAll).unwrap();
         let selectors = parse.all_selectors();
-        assert_eq!(selectors.len(), 2);
+        assert_eq!(selectors.len(), 4);
         assert!(selectors.contains(&s!("INSPECT:name:path:label")));
         assert!(selectors.contains(&s!("INSPECT:word:stuff:identifier")));
+        assert!(selectors.contains(&s!("INSPECT:a:b:c")));
+        assert!(selectors.contains(&s!("INSPECT:d:e:f")));
         // Internal logic test: Make sure we're not returning eval entries.
         assert!(!selectors.contains(&s!("2+2")));
     }

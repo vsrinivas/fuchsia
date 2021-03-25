@@ -2,7 +2,10 @@
     select: {
         total: "INSPECT:bootstrap/fshost:root/data_stats/stats:total_bytes",
         used: "INSPECT:bootstrap/fshost:root/data_stats/stats:used_bytes",
-        foo_health: "INSPECT:foo.cmx:root/fuchsia.inspect.Health:status",
+        foo_health: [
+            "INSPECT:missing.cmx:root:not_found",
+            "INSPECT:foo.cmx:root/fuchsia.inspect.Health:status",
+        ],
     },
     eval: {
         c1: "other::m == 1", // JSON5: Comments work, don't need so many quotes.

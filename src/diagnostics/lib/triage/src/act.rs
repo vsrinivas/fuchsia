@@ -524,7 +524,7 @@ mod test {
         let data = vec![];
         let mut action_context = ActionContext::new(&metrics, &actions, &data, None);
         let selector =
-            Metric::Selector(SelectorString::try_from("INSPECT:foo:bar:baz".to_string())?);
+            Metric::Selector(vec![SelectorString::try_from("INSPECT:foo:bar:baz".to_string())?]);
         let true_value = Metric::Eval("1==1".to_string());
         let false_value = Metric::Eval("1==2".to_string());
         let five_value = Metric::Eval("5".to_string());

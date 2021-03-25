@@ -1,25 +1,22 @@
 {
     select: {
-        total_old: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes",
-        used_old: "INSPECT:archivist.cmx:root/data_stats/global_data/stats:used_bytes",
-        total: "INSPECT:bootstrap/fshost:root/data_stats/stats:total_bytes",
-        used: "INSPECT:bootstrap/fshost:root/data_stats/stats:used_bytes",
+        total: [
+            "INSPECT:bootstrap/fshost:root/data_stats/stats:total_bytes",
+            "INSPECT:archivist.cmx:root/data_stats/global_data/stats:total_bytes",
+        ],
+        used: [
+            "INSPECT:bootstrap/fshost:root/data_stats/stats:used_bytes",
+            "INSPECT:archivist.cmx:root/data_stats/global_data/stats:used_bytes",
+        ],
     },
     eval: {
         ratio: "used / total",
         disk98: "ratio > 0.98",
-        ratio_old: "used_old / total_old",
-        disk98_old: "ratio_old > 0.98",
     },
     act: {
         disk_full: {
             type: "Warning",
             trigger: "And(Not(Missing(disk98)), disk98)",
-            print: "Disk is >98% full",
-        },
-        disk_full_old: {
-            type: "Warning",
-            trigger: "And(Not(Missing(disk98_old)), disk98_old)",
             print: "Disk is >98% full",
         },
         disk: {
@@ -29,26 +26,6 @@
         },
     },
     test: {
-        is_full_old: {
-            yes: [
-                "disk_full_old",
-            ],
-            no: [],
-            values: {
-                total_old: 100,
-                used_old: 99,
-            },
-        },
-        not_full_old: {
-            yes: [],
-            no: [
-                "disk_full_old",
-            ],
-            values: {
-                total_old: 100,
-                used_old: 98,
-            },
-        },
         is_full: {
             yes: [
                 "disk_full",

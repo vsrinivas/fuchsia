@@ -20,10 +20,11 @@ use {
 /// The contents of a single Metric. Metrics produce a value for use in Actions or other Metrics.
 #[derive(Clone, Debug)]
 pub enum Metric {
-    /// Selector tells where to find a value in the Inspect data.
+    /// Selector tells where to find a value in the Inspect data. The
+    /// first non-empty option is returned.
     // Note: This can't be a fidl_fuchsia_diagnostics::Selector because it's not deserializable or
     // cloneable.
-    Selector(SelectorString),
+    Selector(Vec<SelectorString>),
     /// Eval contains an arithmetic expression,
     // TODO(cphoenix): Parse and validate this at load-time.
     Eval(String),
@@ -36,7 +37,9 @@ impl<'de> Deserialize<'de> for Metric {
     {
         let value = String::deserialize(deserializer)?;
         if SelectorString::is_selector(&value) {
-            Ok(Metric::Selector(SelectorString::try_from(value).map_err(serde::de::Error::custom)?))
+            Ok(Metric::Selector(vec![
+                SelectorString::try_from(value).map_err(serde::de::Error::custom)?
+            ]))
         } else {
             Ok(Metric::Eval(value))
         }
@@ -299,7 +302,16 @@ impl<'a> MetricState<'a> {
                         ))
                     }
                     Some(metric) => match metric {
-                        Metric::Selector(selector) => fetcher.fetch(selector),
+                        Metric::Selector(selectors) => {
+                            selectors.iter().fold(MetricValue::Vector(vec![]), |acc, next| {
+                                if let MetricValue::Vector(ref vals) = acc {
+                                    if vals.len() == 0 {
+                                        return fetcher.fetch(next);
+                                    }
+                                }
+                                acc
+                            })
+                        }
                         Metric::Eval(expression) => {
                             self.evaluate_value(real_namespace, &expression)
                         }

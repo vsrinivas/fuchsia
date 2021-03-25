@@ -463,16 +463,26 @@ mod test {
         static ref FOO_42_AB_7_TRIAL_FETCHER: TrialDataFetcher<'static> =
             TrialDataFetcher::new(&LOCAL_M);
         static ref LOCAL_F: Vec<DiagnosticData> = {
-            let s = r#"[{
+            let s = r#"[
+            {
                 "data_source": "Inspect",
                 "moniker": "bar.cmx",
                 "payload": { "root": { "bar": 99 }}
-            }]"#;
+            },
+            {
+                "data_source": "Inspect",
+                "moniker": "bar2.cmx",
+                "payload": { "root": { "bar": 90 }}
+            }
+
+            ]"#;
             vec![DiagnosticData::new("i".to_string(), Source::Inspect, s.to_string()).unwrap()]
         };
         static ref BAR_99_FILE_FETCHER: FileDataFetcher<'static> = FileDataFetcher::new(&LOCAL_F);
         static ref BAR_SELECTOR: SelectorString =
             SelectorString::try_from("INSPECT:bar.cmx:root:bar".to_owned()).unwrap();
+        static ref NEW_BAR_SELECTOR: SelectorString =
+            SelectorString::try_from("INSPECT:bar2.cmx:root:bar".to_owned()).unwrap();
         static ref WRONG_SELECTOR: SelectorString =
             SelectorString::try_from("INSPECT:bar.cmx:root:oops".to_owned()).unwrap();
     }
@@ -517,14 +527,31 @@ mod test {
     #[test]
     fn test_eval_with_file() {
         let mut file_map = HashMap::new();
-        file_map.insert("bar".to_owned(), Metric::Selector(BAR_SELECTOR.clone()));
+        file_map.insert("bar".to_owned(), Metric::Selector(vec![BAR_SELECTOR.clone()]));
         file_map.insert("bar_plus_one".to_owned(), Metric::Eval("bar+1".to_owned()));
         file_map.insert("oops_plus_one".to_owned(), Metric::Eval("oops+1".to_owned()));
+        file_map.insert(
+            "wrong_or_bar".to_owned(),
+            Metric::Selector(vec![WRONG_SELECTOR.clone(), BAR_SELECTOR.clone()]),
+        );
+        file_map.insert(
+            "wrong_or_wrong".to_owned(),
+            Metric::Selector(vec![WRONG_SELECTOR.clone(), WRONG_SELECTOR.clone()]),
+        );
+        file_map.insert(
+            "wrong_or_new_bar_or_bar".to_owned(),
+            Metric::Selector(vec![
+                WRONG_SELECTOR.clone(),
+                NEW_BAR_SELECTOR.clone(),
+                BAR_SELECTOR.clone(),
+            ]),
+        );
         let mut other_file_map = HashMap::new();
         other_file_map.insert("bar".to_owned(), Metric::Eval("42".to_owned()));
         let mut metrics = HashMap::new();
         metrics.insert("bar_file".to_owned(), file_map);
         metrics.insert("other_file".to_owned(), other_file_map);
+
         let file_state =
             MetricState::new(&metrics, Fetcher::FileData(BAR_99_FILE_FETCHER.clone()), None);
         assert_eq!(
@@ -551,6 +578,18 @@ mod test {
             file_state.evaluate_variable("other_file", variable!("bar_file::bar")),
             MetricValue::Vector(vec![MetricValue::Int(99)])
         );
+        assert_eq!(
+            file_state.evaluate_variable("bar_file", variable!("bar")),
+            file_state.evaluate_variable("bar_file", variable!("wrong_or_bar")),
+        );
+        assert_eq!(
+            file_state.evaluate_variable("bar_file", variable!("wrong_or_wrong")),
+            MetricValue::Vector(vec![]),
+        );
+        assert_eq!(
+            file_state.evaluate_variable("bar_file", variable!("wrong_or_new_bar_or_bar")),
+            MetricValue::Vector(vec![MetricValue::Int(90)])
+        );
         require_missing(
             file_state.evaluate_variable("other_file", variable!("bar_plus_one")),
             "Shouldn't have found bar_plus_one in other_file",
@@ -569,7 +608,7 @@ mod test {
     fn test_eval_with_trial() {
         let mut trial_map = HashMap::new();
         // The (broken) "foo" selector should be ignored in favor of the "foo" fetched value.
-        trial_map.insert("foo".to_owned(), Metric::Selector(BAR_SELECTOR.clone()));
+        trial_map.insert("foo".to_owned(), Metric::Selector(vec![BAR_SELECTOR.clone()]));
         trial_map.insert("foo_plus_one".to_owned(), Metric::Eval("foo+1".to_owned()));
         trial_map.insert("oops_plus_one".to_owned(), Metric::Eval("oops+1".to_owned()));
         trial_map.insert("ab_plus_one".to_owned(), Metric::Eval("a::b+1".to_owned()));
