@@ -94,6 +94,7 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
         Started,
         Finished(TestResult),
         StdoutMatch(&'static str),
+        AnyStdout,
     }
 
     let mut expectations = vec![
@@ -173,7 +174,34 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
                 TestEventMatch::Started,
                 TestEventMatch::Finished(TestResult::Passed),
             ],
-        )
+        ),
+        (
+            "TestCrashing",
+            vec![
+                TestEventMatch::Started,
+                TestEventMatch::StdoutMatch("panic: This will crash"),
+                TestEventMatch::StdoutMatch(" [recovered]"),
+                TestEventMatch::StdoutMatch("\tpanic: This will crash"),
+                TestEventMatch::StdoutMatch(""),
+                TestEventMatch::StdoutMatch(""),
+                // This test will print a stack trace, we avoid matching on it.
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::AnyStdout,
+                TestEventMatch::StdoutMatch("Test exited abnormally"),
+                TestEventMatch::Finished(TestResult::Failed),
+            ],
+        ),
     ]
     .into_iter()
     .collect::<HashMap<_, _>>();
@@ -183,11 +211,6 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
         let test_case = event
             .test_case_name()
             .unwrap_or_else(|| panic!("unexpected event {:?} without a test case", event));
-        // TODO(https://fxbug.dev/27019): Temporarily ignore output from the crashing test to soft
-        // transition go runtime changes.
-        if test_case == "TestCrashing" {
-            continue;
-        }
         let expect = expectations
             .get_mut(test_case.as_str())
             .unwrap_or_else(|| {
@@ -203,6 +226,9 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
             }
             TestEventMatch::StdoutMatch(msg) => {
                 assert_eq!(event, TestEvent::stdout_message(test_case, msg))
+            }
+            TestEventMatch::AnyStdout => {
+                matches::assert_matches!(event, TestEvent::StdoutMessage { .. })
             }
         }
     }
