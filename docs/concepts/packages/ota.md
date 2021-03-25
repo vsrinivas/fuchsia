@@ -54,9 +54,8 @@ information about Omaha, see [Omaha](https://github.com/google/omaha).
 
 ![Figure: Checking for updates with omaha-client](images/omcl.png)
 
-The diagram shows a simplified version of the update check process with `omaha-client`.
-There are policies that gate whether `omaha-client` can check for an update or apply an
-update.
+**Figure 1**. A simplified version of the update check process with `omaha-client`. There are
+policies that gate whether `omaha-client` can check for an update or apply an update.
 
 Once `omaha-client` gets the update package URL from the Omaha server, `omaha-client`
 tells the `system-updater` to start an update.
@@ -85,7 +84,7 @@ to start an update using the default update package (fuchsia-pkg://fuchsia.com/u
 
 ![Figure: Checking for updates with the system-update-checker](images/system-update-checker.png)
 
-The diagram shows a simplified version of the update check process of `system-update-checker`.
+**Figure 2**. A simplified version of the update check process with the `system-update-checker`.
 
 Note: There is currently no way to check bootloader-only updates because
 there is no [paver API] to read the firmware. An update is not triggered
@@ -110,12 +109,17 @@ The update process is divided in the following steps:
 * [Fetch update package](#fetch-update-package)
 * [Secondary garbage collection](#secondary-garbage-collection)
 * [Verify board matches](#verify-board)
+* [Verify epoch is supported](#verify-epoch)
 * [Fetch remaining packages](#fetch-reamaining-packages)
 * [Write images to block device](#write-images-block-device)
 * [Set alternate partition as active](#set-alternate-active)
 * [Reboot](#reboot)
 
-![Figure: Step 0: Initial state](images/staging-0.png)
+![Figure: Starting state diagram](images/starting-state.png)
+ 
+**Figure 3**. The device is currently running hypothetical OS version 1 (on slot A) and begins to
+update to hypothetical OS version 2 (to slot B). *Warning*: this may not be how the disk is
+partitioned in practice.
 
 ### Initial garbage collection {#initial-garbage-collection}
 
@@ -126,7 +130,11 @@ The `system-updater` instructs `pkg-cache` to perform garbage collection
 which deletes all BLOBs that aren’t referenced in either the static or dynamic
 indexes. This cleans up most of the BLOBs referenced by the old system.
 
-![Figure: Initial garbage collection](images/staging-1.png)
+![Figure: Initial garbage collection](images/initial-gc.png)
+
+**Figure 4**. The `system-updater` instructs `pkg-cache` to garbage collect all the blobs referenced
+by slot B. Since slot B currently references version 0, all of the version 0 blobs are garbage
+collected.
 
 ### Fetch update package {#fetch-update-package}
 
@@ -147,12 +155,10 @@ look like this:
 /zedboot.signed
 ```
 
-![Figure: Fetch update package](images/staging-2.png)
+![Figure: Fetch update package](images/resolve-update-pkg.png)
 
-Update packages contain an epoch file (`epoch.json`). If the epoch of the update
-package (the target epoch) is less than the epoch of the `system-updater`
-(the source epoch), the OTA fails. For additional context,
-see [RFC-0071](/docs/contribute/governance/rfcs/0071_ota_backstop.md).
+**Figure 5**. The `system-updater` instructs the `pkg-resolver` to resolve the version 2
+update package.
 
 Optionally, update packages may contain an `update-mode` file. This file
 determines whether the system update happens in Normal or ForceRecovery
@@ -169,7 +175,10 @@ After the old update package is no longer referenced by the dynamic index,
 another garbage collection is triggered to delete the old update package.
 This step frees up additional space for any new packages.
 
-![Figure: Secondary garbage collection (again)](images/staging-3.png)
+![Figure: Secondary garbage collection (again)](images/second-gc.png)
+
+**Figure 6**. The `system-updater` instructs `pkg-cache` to garbage collect the version 1
+update package to free up space.
 
 ### Verify board matches {#verify-board}
 
@@ -177,7 +186,22 @@ The current running system has a board file located in `/config/build-info/board
 The `system-updater` verifies that the board file on the system matches the board
 file in the update package.
 
-![Figure: Verify board matches](images/staging-4.png)
+![Figure: Verify board matches](images/verify-board.png)
+
+**Figure 7**. The `system-updater` verifies the board in the update package matches the board
+on slot A.
+
+### Verify epoch is supported {#verify-epoch}
+
+Update packages contain an epoch file (`epoch.json`). If the epoch of the update
+package (the target epoch) is less than the epoch of the `system-updater`
+(the source epoch), the OTA fails. For additional context,
+see [RFC-0071](/docs/contribute/governance/rfcs/0071_ota_backstop.md).
+
+![Figure: Verify epoch is supported](images/verify-epoch.png)
+
+**Figure 8**. The `system-updater` verifies the epoch in the update package is supported by
+comparing it to the epoch of the current OS.
 
 ### Fetch remaining packages {#fetch-reamaining-packages}
 
@@ -205,7 +229,10 @@ Once all packages have been feteched, a BlobFS sync is triggered to flush the
 BLOBs to persistent storage. This process ensures that all the necessary BLOBs
 for the system update are available in BlobFS.
 
-![Figure: Fetch remaining packages](images/staging-5.png)
+![Figure: Fetch remaining packages](images/resolve-packages.png)
+
+**Figure 9**. The `system-updater` instructs the pkg-resolver to resolve the version 2
+packages referenced in `packages.json`.
 
 ### Write images to block device {#write-images-block-device}
 
@@ -239,7 +266,9 @@ Finally, the `system-updater` instructs the paver to write the recovery
 ZBI and its vbmeta. Like the bootloader and firmware, the final
 location does not depend on if the device supports [ABR](/docs/glossary.md#ABR).
 
-![Figure: Write images to block device](images/staging-6.png)
+![Figure: Write images to block device](images/write-images.png)
+
+**Figure 10**. The `system-updater` writes the version 2 images to slot B via the paver.
 
 ### Set alternate partition as active {#set-alternate-active}
 
@@ -278,14 +307,19 @@ tries which are defined in [`data.h`][kAbrMaxPriority].
 If the device doesn’t support ABR, this check is skipped since there is no alternate partition. Instead,
 there is an active partition that is written to for every update.
 
-![Figure: Set alternate partition as active](images/staging-7.png)
+![Figure: Set alternate partition as active](images/modify-boot-metadata.png)
+
+**Figure 11**. The `system-updater` sets slot B to Active, so that the device boots into slot B
+on the next boot.
 
 ### Reboot {#reboot}
 
 Depending on the update configuration, the device may or may not reboot. After the device
 reboots, the device boots into the new slot.
 
-![Figure: Reboot](images/staging-8.png)
+![Figure: Reboot](images/reboot.png)
+
+**Figure 12**. The device reboots into slot B and begins running version 2.
 
 ## Verifying an update {#verifying-update}
 
