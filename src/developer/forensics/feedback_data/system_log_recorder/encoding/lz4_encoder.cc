@@ -25,18 +25,19 @@ std::string Lz4Encoder::Encode(const std::string& msg) {
     return "";
   }
 
+  const size_t msg_size = std::min(msg.size(), kMaxEncodeSize);
+
   // lz4 forces us to output separately (1) the size of the encoded message and (2) the encoded
   // message itself.
-  const size_t max_encoded_size = LZ4_compressBound((int)msg.size());
+  const size_t max_encoded_size = LZ4_compressBound((int)msg_size);
   std::vector<char> encoded(max_encoded_size);
 
   // Make a copy that will stay in memory for LZ4 to use
-  char* chunk_copy_ptr = ring_.Write(msg.data(), msg.size());
+  char* chunk_copy_ptr = ring_.Write(msg.data(), msg_size);
 
   // Encode message.
   const int encoded_size = LZ4_compress_fast_continue(stream_, chunk_copy_ptr, encoded.data(),
-                                                      (int)msg.size(), (int)max_encoded_size, 0);
-
+                                                      (int)msg_size, (int)max_encoded_size, 0);
   FX_CHECK((size_t)encoded_size <= kMaxChunkSize);
 
   if (encoded_size <= 0) {

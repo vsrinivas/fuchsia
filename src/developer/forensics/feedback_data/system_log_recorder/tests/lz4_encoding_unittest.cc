@@ -172,6 +172,23 @@ TEST(EncodingTest, TestEncodeDecodeMsgBlock) {
   EXPECT_EQ(decoded, original_message);
 }
 
+TEST(EncodingTest, TestLargeStrings) {
+  // Choose encoder and decoder.
+  auto encoder = Lz4Encoder();
+  auto decoder = Lz4Decoder();
+
+  constexpr size_t kExtraBytes = 32;
+  const auto str_orig = GenerateRandomData(0, kMaxChunkSize + kExtraBytes);
+
+  std::string block;
+  block += encoder.Encode(str_orig);
+
+  auto decoded = decoder.Decode(block);
+
+  // Test contents.
+  EXPECT_EQ(decoded, std::string(str_orig.data(), kMaxEncodeSize));
+}
+
 }  // namespace
 }  // namespace system_log_recorder
 }  // namespace feedback_data

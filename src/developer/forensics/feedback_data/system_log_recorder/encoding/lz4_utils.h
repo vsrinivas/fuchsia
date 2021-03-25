@@ -19,6 +19,12 @@ namespace system_log_recorder {
 constexpr size_t kMaxChunkSize = ::forensics::feedback_data::kMaxWriteSizeInBytes;
 static_assert(LZ4_COMPRESSBOUND(kMaxChunkSize) > 0, "The chunk size is invalid!");
 
+// The maximum number of bytes that can safely be encoded by the LZ4 encoder. This was computed
+// using the LZ4_COMPRESSBOUND formula.
+constexpr size_t kMaxEncodeSize = 16305;
+static_assert(LZ4_COMPRESSBOUND(kMaxEncodeSize) == kMaxChunkSize,
+              "The chunk size isn't the same as the compress bound of the max encode size");
+
 // Due to EncodeSize() limitations, enforce that the encode size fits in 2 bytes.
 static_assert(LZ4_COMPRESSBOUND(kMaxChunkSize) < UINT16_MAX,
               "The encoded chunk size could not fit in 2 bytes!");
