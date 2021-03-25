@@ -42,7 +42,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
 
   // Search for a payload of type ZBI_TYPE_STORAGE_RAMDISK.
   auto it = zbi.begin();
-  while (it != zbi.end() && (*it).header->type != ZBI_TYPE_STORAGE_RAMDISK) {
+  while (it != zbi.end() && it->header->type != ZBI_TYPE_STORAGE_RAMDISK) {
     ++it;
   }
 
@@ -59,7 +59,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks) {
     return 1;
   }
 
-  const auto length = zbitl::UncompressedLength(*(*it).header);
+  const auto length = zbitl::UncompressedLength(*it->header);
   fbl::AllocChecker ac;
   auto payload = Allocation::New(ac, length);
   if (!ac.check()) {

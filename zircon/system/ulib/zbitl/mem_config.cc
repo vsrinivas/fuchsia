@@ -244,20 +244,20 @@ fitx::result<std::string_view, size_t> MemRangeTable::size() const {
   size_t count = 0;
   for (auto it = view.begin(); it != view.end(); ++it) {
     // Ignore items that are not memory ranges.
-    if (!IsMemRangeType((*it).header->type)) {
+    if (!IsMemRangeType(it->header->type)) {
       continue;
     }
 
     // Validate the memory range.
     if (fitx::result<std::string_view> result =
-            ValidateMemRangePayload((*it).header->type, (*it).payload);
+            ValidateMemRangePayload(it->header->type, it->payload);
         result.is_error()) {
       view.ignore_error();  // ignore any iteration error
       return result.take_error();
     }
 
     // Count the number of items.
-    count += MemRangeElementCount((*it).header->type, (*it).payload);
+    count += MemRangeElementCount(it->header->type, it->payload);
   }
 
   // Return any error encountered.

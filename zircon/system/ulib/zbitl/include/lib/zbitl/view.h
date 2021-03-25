@@ -470,14 +470,14 @@ class View {
                  header_error.is_error()) {
         Fail(header_error.error_value());
       } else {
-        header_ = header_type(header.value());
+        value_.header = header_type(header.value());
         offset_ += static_cast<uint32_t>(sizeof(zbi_header_t));
-        if (auto payload = Traits::Payload(view_->storage(), offset_, header_->length);
+        if (auto payload = Traits::Payload(view_->storage(), offset_, value_.header->length);
             payload.is_error()) {
           Fail("cannot extract payload view", std::move(payload.error_value()));
         } else {
-          offset_ += ZBI_ALIGN(header_->length);
-          payload_ = std::move(payload.value());
+          offset_ += ZBI_ALIGN(value_.header->length);
+          value_.payload = std::move(payload.value());
         }
       }
       return *this;
@@ -489,9 +489,14 @@ class View {
       return old;
     }
 
-    View::value_type operator*() const {
+    const View::value_type& operator*() const {
       Assert(__func__);
-      return {header_, payload_};
+      return value_;
+    }
+
+    const View::value_type* operator->() const {
+      Assert(__func__);
+      return &value_;
     }
 
     uint32_t item_offset() const {
@@ -500,7 +505,7 @@ class View {
 
     uint32_t payload_offset() const {
       Assert(__func__);
-      return offset_ - ZBI_ALIGN(header_->length);
+      return offset_ - ZBI_ALIGN(value_.header->length);
     }
 
     View& view() const {
@@ -536,11 +541,10 @@ class View {
     // from a particular view from a default-constructed iterator from nowhere.
     static constexpr uint32_t kEnd_ = std::numeric_limits<uint32_t>::max();
 
-    // These are left uninitialized until a successful increment sets them.
-    // They are only examined by a dereference, which is invalid without
+    // This is left uninitialized until a successful increment sets it.
+    // It is only examined by a dereference, which is invalid without
     // a successful increment.
-    header_type header_{};
-    payload_type payload_;
+    value_type value_{};
 
     // This is called only by begin() and end().
     friend class View;
@@ -671,7 +675,7 @@ class View {
   fitx::result<typename Traits::error_type> EditHeader(const iterator& item,
                                                        const zbi_header_t& header) {
     item.Assert(__func__);
-    if (auto result = WriteHeader(header, item.item_offset(), item.header_->length);
+    if (auto result = WriteHeader(header, item.item_offset(), item.value_.header->length);
         result.error_value()) {
       return result.take_error();
     }
@@ -684,10 +688,10 @@ class View {
   template <typename T = Traits, typename = std::enable_if_t<T::CanWrite()>>
   fitx::result<typename Traits::error_type> EditHeader(iterator& item, const zbi_header_t& header) {
     item.Assert(__func__);
-    auto result = WriteHeader(header, item.item_offset(), item.header_->length);
+    auto result = WriteHeader(header, item.item_offset(), item.value_.header->length);
     if constexpr (header_type::kCopy) {
       if (result.is_ok()) {
-        item.header_.stored_ = result.value();
+        item.value_.header.stored_ = result.value();
       }
     }
     if (result.is_error()) {

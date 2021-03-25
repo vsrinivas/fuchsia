@@ -334,7 +334,7 @@ void TestCopyCreation(TestDataZbiType type, ItemCopyMode mode) {
 
   size_t idx = 0;
   for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
-    const zbi_header_t header = *((*it).header);
+    const zbi_header_t header = *it->header;
 
     const size_t created_size = get_size(header);
     auto result = do_copy(it);
@@ -400,7 +400,7 @@ void TestCopyCreationByByteRange(TestDataZbiType type) {
 
   size_t idx = 0;
   for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
-    uint32_t payload_size = (*it).header->length;
+    uint32_t payload_size = it->header->length;
     // We pick a `to_offset` of `idx` for want of a value of zero along with
     // varying, non-zero, non-random values.
     uint32_t to_offset = static_cast<uint32_t>(idx);
@@ -630,7 +630,7 @@ void TestCopying(TestDataZbiType type, ItemCopyMode mode) {
 
   size_t idx = 0;
   for (auto it = view.begin(); it != view.end(); ++it, ++idx) {
-    const zbi_header_t header = *((*it).header);
+    const zbi_header_t header = *it->header;
     const size_t copy_size = get_size(header);
 
     typename DestTestTraits::Context copy_context;
@@ -699,7 +699,7 @@ void TestCopyingByByteRange(TestDataZbiType type) {
     // varying, non-zero, non-random values.
     uint32_t to_offset = static_cast<uint32_t>(idx);
 
-    uint32_t payload_size = (*it).header->length;
+    uint32_t payload_size = it->header->length;
 
     typename DestTestTraits::Context copy_context;
     ASSERT_NO_FATAL_FAILURE(DestTestTraits::Create(to_offset + payload_size, &copy_context));

@@ -97,14 +97,14 @@ class Image : public View<Storage> {
       return fitx::error{
           Error{"cannot read header", new_item_offset, std::move(result.error_value())}};
     } else {
-      it.header_ = header_type(std::move(result).value());
+      it.value_.header = header_type(std::move(result).value());
     }
 
     if (auto result = Traits::Payload(this->storage(), it.payload_offset(), new_header.length);
         result.is_error()) {
       return fitx::error{Error{"cannot determine payload", it.payload_offset()}};
     } else {
-      it.payload_ = result.value();
+      it.value_.payload = result.value();
     }
 
     return fitx::ok(it);

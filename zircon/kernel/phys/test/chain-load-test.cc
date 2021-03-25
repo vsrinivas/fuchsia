@@ -52,7 +52,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   size_t items = 0;
   for (auto it = zbi.begin(); it != zbi.end(); ++it) {
     ++items;
-    if ((*it).header->type == kLoadType) {
+    if (it->header->type == kLoadType) {
       loadit = it;
       rest = ++it;
       break;
@@ -72,7 +72,7 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
     return 1;
   }
 
-  const auto length = zbitl::UncompressedLength(*(*loadit).header);
+  const auto length = zbitl::UncompressedLength(*loadit->header);
   auto load_buffer_size = BootZbi::SuggestedAllocation(length);
   load_buffer_size.size += rest_size_bytes;
   auto load_buffer = Allocate(load_buffer_size, "payload");
@@ -87,8 +87,8 @@ int TestMain(void* zbi_ptr, arch::EarlyTicks ticks) {
   }
 
   BootZbi::InputZbi load_zbi(zbitl::AsBytes(load_buffer.data()));
-  printf("ZBI payload item of %u bytes decompressed into %zu of %u bytes\n",
-         (*loadit).header->length, load_zbi.size_bytes(), length);
+  printf("ZBI payload item of %u bytes decompressed into %zu of %u bytes\n", loadit->header->length,
+         load_zbi.size_bytes(), length);
 
   BootZbi boot;
   if (auto result = boot.Init(load_zbi); result.is_error()) {
