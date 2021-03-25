@@ -341,7 +341,9 @@ impl CachedSessionStream {
                 let earliest_chunk_ts = stream
                     .filter_map(|e| e.ok())
                     .filter_map(|e| match e.data {
-                        LogData::TargetLog(data) => Some(data.metadata.timestamp),
+                        LogData::TargetLog(data) | LogData::SymbolizedTargetLog(data, _) => {
+                            Some(data.metadata.timestamp)
+                        }
                         _ => None,
                     })
                     .next()
@@ -391,14 +393,18 @@ impl CachedSessionStream {
                     }
 
                     match &entry.data {
-                        LogData::TargetLog(data) => {
+                        LogData::TargetLog(data) | LogData::SymbolizedTargetLog(data, _) => {
                             if let Some(min_ts) = self.start_target_timestamp {
                                 if data.metadata.timestamp < min_ts {
                                     continue;
                                 }
                             }
                         }
-                        _ => {}
+                        _ => {
+                            if self.start_target_timestamp.is_some() {
+                                continue;
+                            }
+                        }
                     }
 
                     return Ok(Some(Ok(entry)));
