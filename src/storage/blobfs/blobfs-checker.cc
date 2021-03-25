@@ -26,36 +26,37 @@
 
 namespace blobfs {
 
-zx_status_t BlobfsChecker::CheckBackupSuperblock() {
+bool BlobfsChecker::CheckBackupSuperblock() {
   if ((blobfs_->Info().flags & kBlobFlagFVM) == 0 ||
       blobfs_->Info().oldest_revision < kBlobfsRevisionBackupSuperblock)
-    return ZX_OK;
+    return true;
   auto superblock_or = blobfs_->ReadBackupSuperblock();
   if (superblock_or.is_error()) {
-    FX_LOGS(ERROR) << "could not read backup superblock";
-    return superblock_or.status_value();
+    FX_LOGS(ERROR) << "could not read backup superblock: " << superblock_or.status_value();
+    return false;
   }
   if (zx_status_t status =
           CheckSuperblock(superblock_or.value().get(), TotalBlocks(*superblock_or.value()));
       status != ZX_OK) {
-    FX_LOGS(ERROR) << "bad backup superblock";
-    return status;
+    FX_LOGS(ERROR) << "bad backup superblock: " << status;
+    return false;
   }
-  return ZX_OK;
+  return true;
 }
 
-void BlobfsChecker::TraverseInodeBitmap() {
+bool BlobfsChecker::TraverseInodeBitmap() {
+  bool valid = true;
   for (unsigned n = 0; n < blobfs_->info_.inode_count; n++) {
     auto inode = blobfs_->GetNode(n);
     ZX_ASSERT_MSG(inode.is_ok(), "Failed to get node %u: status=%d", n, inode.status_value());
     if (inode->header.IsAllocated()) {
       alloc_inodes_++;
       if (inode->header.IsExtentContainer()) {
-        // TODO(smklein): sanity check these containers.
+        // Extent containers need no validation since we're going to validate the data of all blobs.
         continue;
       }
 
-      bool valid = true;
+      bool blob_valid = true;
 
       auto extents = AllocatedExtentIterator::Create(blobfs_->GetNodeFinder(), n);
       ZX_ASSERT_MSG(extents.is_ok(), "Failed to create extent iterator for inode %u: status=%d", n,
@@ -67,13 +68,13 @@ void BlobfsChecker::TraverseInodeBitmap() {
         if (status != ZX_OK) {
           FX_LOGS(ERROR) << "check: Failed to acquire extent " << extents->ExtentIndex()
                          << " within inode " << n << ": " << *inode.value();
-          valid = false;
+          blob_valid = false;
           break;
         }
         if (extent->Length() == 0) {
           FX_LOGS(ERROR) << "check: Found zero-length extent at idx " << extents->ExtentIndex()
                          << " within inode " << n << ": " << *inode.value();
-          valid = false;
+          blob_valid = false;
           break;
         }
 
@@ -86,42 +87,46 @@ void BlobfsChecker::TraverseInodeBitmap() {
                          << "). "
                             "Not fully allocated in block bitmap; first unset @"
                          << first_unset;
-          valid = false;
+          blob_valid = false;
         }
         inode_blocks_ += extent->Length();
       }
 
-      if (valid && blobfs_->LoadAndVerifyBlob(n) != ZX_OK) {
-        FX_LOGS(ERROR) << "check: detected inode " << n << " with bad state";
-        valid = false;
+      if (blob_valid) {
+        if (zx_status_t status = blobfs_->LoadAndVerifyBlob(n); status != ZX_OK) {
+          FX_LOGS(ERROR) << "check: detected inode " << n << " with bad state: " << status;
+          blob_valid = false;
+        }
       }
-      if (!valid) {
-        error_blobs_++;
+      if (!blob_valid) {
+        valid = false;
       }
     }
   }
+  return valid;
 }
 
-void BlobfsChecker::TraverseBlockBitmap() {
+bool BlobfsChecker::TraverseBlockBitmap() {
   for (uint64_t n = 0; n < blobfs_->info_.data_block_count; n++) {
     if (blobfs_->CheckBlocksAllocated(n, n + 1)) {
       alloc_blocks_++;
     }
   }
+  return true;
 }
 
-zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
-  zx_status_t status = ZX_OK;
+bool BlobfsChecker::CheckAllocatedCounts() const {
+  bool valid = true;
   if (alloc_blocks_ != blobfs_->info_.alloc_block_count) {
     FX_LOGS(ERROR) << "check: incorrect allocated block count " << blobfs_->info_.alloc_block_count
                    << " (should be " << alloc_blocks_ << ")";
-    status = ZX_ERR_BAD_STATE;
+    valid = false;
   }
 
   if (alloc_blocks_ < kStartBlockMinimum) {
     FX_LOGS(ERROR) << "check: allocated blocks (" << alloc_blocks_ << ") are less than minimum ("
                    << kStartBlockMinimum << ")";
-    status = ZX_ERR_BAD_STATE;
+    valid = false;
   }
 
   if (inode_blocks_ + kStartBlockMinimum != alloc_blocks_) {
@@ -129,28 +134,27 @@ zx_status_t BlobfsChecker::CheckAllocatedCounts() const {
                    << ") do not match inode allocated blocks "
                       "("
                    << inode_blocks_ + kStartBlockMinimum << ")";
-    status = ZX_ERR_BAD_STATE;
+    valid = false;
   }
 
   if (alloc_inodes_ != blobfs_->info_.alloc_inode_count) {
     FX_LOGS(ERROR) << "check: incorrect allocated inode count " << blobfs_->info_.alloc_inode_count
                    << " (should be " << alloc_inodes_ << ")";
-    status = ZX_ERR_BAD_STATE;
+    valid = false;
   }
-
-  if (error_blobs_) {
-    status = ZX_ERR_BAD_STATE;
-  }
-
-  return status;
+  return valid;
 }
 
-zx_status_t BlobfsChecker::Check() {
-  if (zx_status_t status = CheckBackupSuperblock(); status != ZX_OK)
-    return status;
-  TraverseInodeBitmap();
-  TraverseBlockBitmap();
-  return CheckAllocatedCounts();
+bool BlobfsChecker::Check() {
+  bool valid = true;
+  FX_LOGS(INFO) << "Checking backup superblock...";
+  valid &= CheckBackupSuperblock();
+  FX_LOGS(INFO) << "Verifying inodes and blob data...";
+  valid &= TraverseInodeBitmap();
+  FX_LOGS(INFO) << "Checking allocation counts...";
+  valid &= TraverseBlockBitmap();
+  valid &= CheckAllocatedCounts();
+  return valid;
 }
 
 BlobfsChecker::BlobfsChecker(std::unique_ptr<Blobfs> blobfs, Options options)
