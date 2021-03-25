@@ -109,8 +109,8 @@ static ktl::span<zbi_mem_range_t> get_memory_ranges(ktl::span<std::byte> zbi) {
   // Get the total number of memory ranges in the ZBI.
   size_t num_ranges = 0;
   if (auto result = range_table.size(); result.is_error()) {
-    printf("get_memory_ranges: failed to get number of memory ranges: ");
-    zbitl::PrintViewError(result.error_value());
+    printf("get_memory_ranges: failed to get number of memory ranges: %*s\n",
+           static_cast<int>(result.error_value().size()), result.error_value().data());
     panic("Failed to count memory ranges in ZBI.");
   } else {
     num_ranges = result.value();
@@ -129,8 +129,8 @@ static ktl::span<zbi_mem_range_t> get_memory_ranges(ktl::span<std::byte> zbi) {
   }
   ZX_ASSERT(n == num_ranges);
   if (auto result = range_table.take_error(); result.is_error()) {
-    printf("get_memory_ranges: failed to enumerate memory ranges: ");
-    zbitl::PrintViewError(result.error_value());
+    printf("get_memory_ranges: failed to enumerate memory ranges: %*s\n",
+           static_cast<int>(result.error_value().size()), result.error_value().data());
     panic("Failed to iterate over memory ranges in ZBI.");
   }
 

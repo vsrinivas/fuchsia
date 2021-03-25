@@ -57,12 +57,12 @@ class MemRangeTable {
   // O(n) in the number of entries in the ZBI, but more efficient than
   // iterating over every entry, which would be O(n + m) where "m" is the
   // number of ranges.
-  fitx::result<zbitl::View<ByteView>::Error, size_t> size() const;
+  fitx::result<std::string_view, size_t> size() const;
 
   // Return any error encountered during ZBI iteration.
   //
   // Must always be called prior to object destruction.
-  fitx::result<zbitl::View<ByteView>::Error> take_error();
+  fitx::result<std::string_view> take_error();
 
   class iterator {
    public:
@@ -106,7 +106,11 @@ class MemRangeTable {
   };
 
  private:
+  // Parent view.
   View<ByteView> view_;
+
+  // Any error we locally encountered during iteration.
+  fitx::result<std::string_view> error_ = fitx::ok();
 };
 
 // Takes an iterator yielding a sorted list of zbi_mem_range_t items, and merges

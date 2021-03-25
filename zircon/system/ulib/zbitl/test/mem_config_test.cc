@@ -21,7 +21,7 @@
 
 namespace {
 
-// GMock matcher to determine if a given zbitl::View result was successful,
+// GMock matcher to determine if a given result was successful,
 // printing the error if not.
 //
 // Can be used as: EXPECT_THAT(view.operation(), IsOk());
@@ -29,7 +29,7 @@ MATCHER(IsOk, "") {
   if (arg.is_ok()) {
     return true;
   }
-  *result_listener << "had error: " << zbitl::ViewErrorString(arg.error_value());
+  *result_listener << "had error: " << arg.error_value();
   return false;
 }
 
@@ -161,12 +161,12 @@ TEST(MemRangeIterator, BadZbi) {
   // Expect an error.
   auto error = container.take_error();
   ASSERT_TRUE(error.is_error());
-  EXPECT_EQ(error.error_value().zbi_error, "bad crc32 field in item without CRC");
+  EXPECT_EQ(error.error_value(), "bad crc32 field in item without CRC");
 
   // Expect size() to return an error.
   auto size_error = container.size();
   ASSERT_TRUE(size_error.is_error());
-  EXPECT_EQ(size_error.error_value().zbi_error, "bad crc32 field in item without CRC");
+  EXPECT_EQ(size_error.error_value(), "bad crc32 field in item without CRC");
 }
 
 TEST(MemRangeIterator, RequireErrorToBeCalled) {
@@ -360,6 +360,25 @@ TEST(MemRangeIterator, SizeDuringIteration) {
   ++it;
   EXPECT_EQ(it, container.end());
   EXPECT_TRUE(container.take_error().is_ok());
+}
+
+TEST(MemRangeIterator, InvalidPayload) {
+  // Construct a ZBI with a ZBI_TYPE_MEM_CONFIG payload, with a spare byte at the end.
+  ZbiMemoryImage zbi = CreateImage();
+  AppendPayload(zbi, ZBI_TYPE_MEM_CONFIG,
+                JoinBytes(
+                    zbi_mem_range_t{
+                        .paddr = 0x1000,
+                        .length = 0x1000,
+                    },
+                    uint8_t{0x0}));
+
+  // Ensure we encounter an error during iteration.
+  zbitl::MemRangeTable container{AsView(zbi)};
+  EXPECT_TRUE(container.size().is_error());
+  std::vector<zbi_mem_range_t> ranges(container.begin(), container.end());
+  ASSERT_TRUE(container.take_error().is_error());
+  ASSERT_EQ(ranges.size(), 0u);
 }
 
 TEST(MemRangeIterator, EfiRealData) {

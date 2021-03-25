@@ -21,14 +21,13 @@ namespace {
 
 using ZbiView = zbitl::View<zbitl::ByteView>;
 
-// Ensure that the given ZbiView result is not an error.
+// Ensure that the given result is not an error.
 //
 // If an error, panic.
-void AssertNoError(fitx::result<ZbiView::Error> result) {
+void AssertNoError(fitx::result<std::string_view> result) {
   if (unlikely(result.is_error())) {
     ZX_PANIC("Error while scanning memory ranges: %.*s\n",
-             static_cast<int>(result.error_value().zbi_error.size()),
-             result.error_value().zbi_error.data());
+             static_cast<int>(result.error_value().size()), result.error_value().data());
   }
 }
 

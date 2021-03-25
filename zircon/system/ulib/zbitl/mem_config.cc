@@ -24,9 +24,11 @@ namespace {
 using zbitl::internal::ToMemRange;
 
 // Reinterpret the given ByteView as span of type T.
+//
+// If the sizeof(T) doesn't evenly divide the size of the byte view,
+// a span covering all complete instances of T will be returned.
 template <typename T>
 inline cpp20::span<const T> AsSpan(ByteView bytes) {
-  ZX_ASSERT(bytes.size() % sizeof(T) == 0);
   return {reinterpret_cast<const T*>(bytes.data()), bytes.size() / sizeof(T)};
 }
 
@@ -91,6 +93,49 @@ const efi_memory_descriptor* GetEfiEntry(ByteView payload, size_t n) {
   return reinterpret_cast<const efi_memory_descriptor*>(&payload[offset]);
 }
 
+// Return "true" if the given payload type is a memory range table type.
+size_t IsMemRangeType(uint32_t type) {
+  switch (type) {
+    case ZBI_TYPE_E820_TABLE:
+    case ZBI_TYPE_MEM_CONFIG:
+    case ZBI_TYPE_EFI_MEMORY_MAP:
+      return true;
+    default:
+      return false;
+  }
+}
+// Perform basic validation on the given ZBI payload, assuming it
+// is encoded as the given type.
+//
+// Return fitx::ok() if the payload was valid, otherwise a std::string_view
+// describing the error.
+fitx::result<std::string_view> ValidateMemRangePayload(uint32_t type, ByteView payload) {
+  switch (type) {
+    case ZBI_TYPE_E820_TABLE:
+      if (payload.size() % sizeof(e820entry_t) != 0) {
+        return fitx::error("Invalid size for E820 table");
+      };
+      break;
+    case ZBI_TYPE_MEM_CONFIG:
+      if (payload.size() % sizeof(zbi_mem_range_t) != 0) {
+        return fitx::error("Invalid size for MemConfig table");
+      }
+      break;
+    case ZBI_TYPE_EFI_MEMORY_MAP: {
+      size_t num_entries;
+      size_t entry_size;
+      if (!ParseEfiPayload(payload, &num_entries, &entry_size)) {
+        return fitx::error("Could not parse EFI memory map");
+      }
+      break;
+    }
+    default:
+      return fitx::error("Unknown memory table type");
+  }
+
+  return fitx::ok();
+}
+
 // Get the number of memory ranges in the given ZBI payload, assuming it
 // is encoded as the given type.
 size_t MemRangeElementCount(uint32_t type, ByteView payload) {
@@ -120,7 +165,7 @@ zbi_mem_range_t MemRangeElement(uint32_t type, ByteView payload, size_t n) {
       return ToMemRange(*descriptor);
     }
     default:
-      ZX_PANIC("Attempted to get element of non-memory payload type %" PRIx32 "\n", type);
+      ZX_PANIC("Unknown payload type %#" PRIx32 "\n", type);
   }
 }
 
@@ -180,6 +225,9 @@ MemRangeTable::iterator MemRangeTable::end() {
 }
 
 MemRangeTable::iterator MemRangeTable::begin() {
+  // Clear any pending error.
+  error_ = fitx::ok();
+
   // If we have a default-constructed ZBI, just return an empty iterator.
   if (view_.storage().empty()) {
     return end();
@@ -189,17 +237,32 @@ MemRangeTable::iterator MemRangeTable::begin() {
   return MemRangeTable::iterator(this);
 }
 
-fitx::result<zbitl::View<ByteView>::Error, size_t> MemRangeTable::size() const {
+fitx::result<std::string_view, size_t> MemRangeTable::size() const {
   // We create a new view to avoid setting or clearing any pending error in `view_`.
   zbitl::View view(view_.storage());
 
   size_t count = 0;
-  for (const auto& item : view) {
-    count += MemRangeElementCount(item.header->type, item.payload);
+  for (auto it = view.begin(); it != view.end(); ++it) {
+    // Ignore items that are not memory ranges.
+    if (!IsMemRangeType((*it).header->type)) {
+      continue;
+    }
+
+    // Validate the memory range.
+    if (fitx::result<std::string_view> result =
+            ValidateMemRangePayload((*it).header->type, (*it).payload);
+        result.is_error()) {
+      view.ignore_error();  // ignore any iteration error
+      return result.take_error();
+    }
+
+    // Count the number of items.
+    count += MemRangeElementCount((*it).header->type, (*it).payload);
   }
 
+  // Return any error encountered.
   if (auto status = view.take_error(); status.is_error()) {
-    return status.take_error();
+    return fitx::error(status.error_value().zbi_error);
   }
   return fitx::ok(count);
 }
@@ -243,12 +306,31 @@ MemRangeTable::iterator& MemRangeTable::iterator::operator++() {
 
   // Keep searching until we find a valid payload.
   while (it_ != parent_->view_.end()) {
-    size_t zbi_item_size = MemRangeElementCount((**it_).header->type, (**it_).payload);
-    if (zbi_item_size > 0) {
-      offset_ = 0;
-      return *this;
+    uint32_t type = (**it_).header->type;
+
+    // Ignore items that are non memory range tables.
+    if (!IsMemRangeType(type)) {
+      ++(*it_);
+      continue;
     }
-    ++(*it_);
+
+    // If the item is invalid, record an error and stop iterating.
+    if (fitx::result<std::string_view> result = ValidateMemRangePayload(type, (**it_).payload);
+        result.is_error()) {
+      parent_->error_ = result;
+      break;
+    }
+
+    // Skip over empty payloads.
+    size_t zbi_item_size = MemRangeElementCount((**it_).header->type, (**it_).payload);
+    if (zbi_item_size == 0) {
+      ++(*it_);
+      continue;
+    }
+
+    // Found an item.
+    offset_ = 0;
+    return *this;
   }
 
   // Exhausted all ZBI items. Move to an end state.
@@ -263,8 +345,20 @@ MemRangeTable::iterator MemRangeTable::iterator::operator++(int) {
   return old;
 }
 
-fitx::result<zbitl::View<ByteView>::Error> MemRangeTable::take_error() {
-  return view_.take_error();
+fitx::result<std::string_view> MemRangeTable::take_error() {
+  // Clear out the the underlying zbitl::View's error and also our own.
+  fitx::result<View<ByteView>::Error> view_error = view_.take_error();
+  fitx::result<std::string_view> table_error = error_;
+  error_ = fitx::ok();
+
+  // Return any error encountered by the the underlying zbitl::View
+  // implementation first.
+  if (view_error.is_error()) {
+    return fitx::error(view_error.error_value().zbi_error);
+  }
+
+  // Otherwise, return our own.
+  return table_error;
 }
 
 // Convert a zbi_mem_range_t memory type into a human-readable string.
