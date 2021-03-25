@@ -157,6 +157,7 @@ impl ComponentTreeStats {
         for (moniker, stats) in self.tree.lock().await.iter() {
             let stats_guard = stats.lock().await;
             if stats_guard.is_measuring {
+                // TODO(fxbug.dev/73169): unify diagnostics and component manager monikers.
                 let key = match moniker {
                     ExtendedMoniker::ComponentManager => moniker.to_string(),
                     ExtendedMoniker::ComponentInstance(m) => {
