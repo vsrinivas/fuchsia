@@ -290,3 +290,10 @@ protocol Baz {};
 [Discoverable]
 protocol Qux {};
 // [END service-hub-2]
+
+// [START boolean-enum]
+enum FileType {
+    UNKNOWN = 0;
+    GIF = 1;
+};
+// [END boolean-enum]

@@ -367,6 +367,19 @@ If a negative value has no meaning, use an unsigned type.  As a rule of thumb if
 you're unsure, use 32-bit values for small quantities and 64-bit values for
 large ones.
 
+### Avoid booleans if more states are possible
+
+When adding a boolean field, consider using an enum instead if the field could
+be extended to represent additional states in the future. For example a boolean
+`is_gif` field might be better represented by
+
+```fidl
+{%includecode gerrit_repo="fuchsia/fuchsia" gerrit_path="examples/fidl/fuchsia.examples.docs/api_rubric.test.fidl" region_tag="boolean-enum" %}
+
+```
+
+The enum may then be extended with `JPEG = 2` if required.
+
 ### How should I represent errors?
 
 Select the appropriate error type for your use case and be consistent about how
