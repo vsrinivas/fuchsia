@@ -5,6 +5,10 @@
 import("//build/zircon/migrated_targets.gni")
 
 zx_library("fit") {
+  host = true
+  static = true
+  kernel = true
+
   sdk = "source"
   sdk_publishable = true
   sdk_headers = [
@@ -21,9 +25,7 @@ zx_library("fit") {
     "lib/fit/utility_internal.h",
   ]
   sdk_migrated = true
-  host = true
-  static = true
-  public_configs = [ "//build/config/zircon:no_maybe_uninitialized" ]
+
   sources = []
   public_deps = [ "//sdk/lib/stdcompat" ]
 }

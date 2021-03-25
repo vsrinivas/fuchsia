@@ -21,6 +21,7 @@
 #include "arch/x86/registers.h"
 
 #include <inttypes.h>
+#include <lib/fit/defer.h>
 #include <string.h>
 #include <trace.h>
 #include <zircon/compiler.h>
@@ -32,7 +33,6 @@
 #include <arch/x86/mmu.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/proc_trace.h>
-#include <fbl/auto_call.h>
 #include <kernel/auto_lock.h>
 #include <kernel/spinlock.h>
 #include <kernel/thread.h>
@@ -394,7 +394,7 @@ static void read_xsave_state_info(void) {
   }
 
   /* if we bail, set everything to unsupported */
-  auto ac = fbl::MakeAutoCall([]() {
+  auto ac = fit::defer([]() {
     xsave_supported = false;
     xsaves_supported = false;
     xsaveopt_supported = false;

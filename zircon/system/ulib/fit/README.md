@@ -2,19 +2,14 @@ libfit
 ======
 
 FIT is a lean library of portable C++ abstractions for control flow and
-memory management beyond what is offered by the C++ 14 standard library.
+memory management beyond what is offered by the C++ 17 standard library.
 
-FIT is intended to facilitate the implementation of Fuchsia SDK libraries and
-their clients.  Some of its features are intended to simplify asynchronous
-event-driven programs as the C++ 14 standard library has some limitations in
-that regard.  Such programs are very common on Fuchsia due to the prevalence of
-asynchronous inter-process communication throughout the operating system.
-
-FIT only depends on the C++ language and standard library.  It offers essential
-enhancements to the C++ standard library rather than attempting to replace it or
-become a framework for writing applications.  FIT can be thought of as an
-"annex" that expresses a few ideas we wish the C++ standard library might itself
-implement someday.
+FIT only depends on the C++ language and standard library, including the
+`stdcompat` library to provide some C++ 17 library features.  It offers
+essential enhancements to the C++ standard library rather than attempting to
+replace it or become a framework for writing applications.  FIT can be thought
+of as an "annex" that expresses a few ideas we wish the C++ standard library
+might itself implement someday.
 
 FIT is lean.
 
@@ -54,7 +49,7 @@ Specifically prohibited features:
 - Features that introduce dependencies on libraries other than the C and C++
   standard library.
 - Features that only work on certain operating systems.
-- Collection classes where the C++ 14 standard library already offers an
+- Collection classes where the C++ 17 standard library already offers an
   adequate (if not perfect) alternative.
 - Classes that impose an implementation burden on clients such as event loops,
   dispatchers, frameworks, and other glue code.
@@ -128,15 +123,3 @@ These sections explain why certain features are in FIT.
   taking advantage of the underlying value's null state (if there is one).
 - So we introduce fit::nullable to handle both cases systematically while
   still hewing close to the semantics of std::optional.
-
-### fit::promise, fit::future, fit::executor, etc.
-
-- When writing asynchronous event-driven programs, it's convenient to be able
-  to stage a sequence of asynchronous tasks.  This tends to be challenging
-  to implement in a callback-driven manner due to object lifetime issues,
-  so we would like an alternative pattern that is easier to apply correctly,
-  such as by expressing asynchronous logic as a compositions of futures.
-- The C++ 14 standard library offers `std::future` but it is tied to a
-  thread-based execution model.  Awaiting a future requires blocking, which
-  is bad for event loops.
-- So libfit offers a family of APIs that work better with event loops.

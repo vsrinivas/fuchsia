@@ -187,6 +187,7 @@ zx_library("x86") {
     "//zircon/kernel/object",
     "//zircon/kernel/platform/pc",
     "//zircon/system/ulib/bitmap",
+    "//zircon/system/ulib/fit",
     "//zircon/system/ulib/pretty",
   ]
   public_deps = [
