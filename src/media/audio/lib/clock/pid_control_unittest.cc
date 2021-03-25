@@ -283,5 +283,28 @@ TEST_F(PidControlTest, RealWorld) {
   SmoothlyChaseToClockRate(-950, 55);
 }
 
+// Ignore TuneForError if its timestamp is less than that of Start or a previous TuneForError.
+TEST_F(PidControlTest, PastTimestampsAreIgnored) {
+  auto control =
+      PidControl({.proportional_factor = 1.0, .integral_factor = 1.0, .derivative_factor = 1.0});
+
+  control.Start(zx::time(100));
+  ASSERT_EQ(control.Read(), 0);
+
+  // This TuneForError in the past should be ignored; pid should read the same as previously.
+  control.TuneForError(zx::time(50), -1000.0);
+  EXPECT_EQ(control.Read(), 0);
+
+  // curr_err_=20, dur=10: accum_err+=200 (now 200)
+  // prev_err=0; delta_err=20; err_rate=20/10=2
+  control.TuneForError(zx::time(110), 20.0);
+  // We  expect error 20+200+2
+  EXPECT_EQ(control.Read(), 222);
+
+  // This TuneForError in the past should be ignored; pid should read the same as previously.
+  control.TuneForError(zx::time(105), -1000.0);
+  EXPECT_EQ(control.Read(), 222);
+}
+
 }  // namespace
 }  // namespace media::audio::clock

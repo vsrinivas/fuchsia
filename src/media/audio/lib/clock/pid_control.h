@@ -12,12 +12,6 @@ namespace media::audio::clock {
 // PidControl implements a PID (proportional-integral-derivative) feedback control based on a set of
 // coefficients and a sequence of TuneForError calls that inform PidControl of measured errors at
 // certain points in time.
-//
-// Note: "time" must advance monotonically and be independent of the output variable. As long as
-// they are used consistently across Start() and TuneForError(), the units for "time" can be any
-// 64-bit value (zx_time_t, audio frames, etc).
-//
-// TODO(fxbug.dev/60531): Once we have another client, templatize PidControl for "time" type.
 class PidControl {
   friend class PidControlTest;
 

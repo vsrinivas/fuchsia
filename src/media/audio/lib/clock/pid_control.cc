@@ -17,19 +17,15 @@ void PidControl::Start(zx::time start_time) {
 
 double PidControl::Read() const { return total_pid_contribution_; }
 
-// Factor in the most current error reading
+// Factor in the most current error reading. If at/before the previous time, ignore it.
 void PidControl::TuneForError(zx::time time_of_error, double error) {
-  // If our previous update was at this time, ignore it.
-  // This occurs if Start then TuneForError are called, with the same zx::time.
-  if (time_of_error == tune_time_) {
+  if (time_of_error <= tune_time_) {
+    FX_LOGS_FIRST_N(WARNING, 100) << __func__ << " ignored, time (" << time_of_error.get()
+                                  << ") should exceed previous update (" << tune_time_.get() << ")";
+
     return;
   }
-  FX_CHECK(time_of_error > tune_time_)
-      << "Time for tuning (" << time_of_error.get() << ") is earlier than previous update ("
-      << tune_time_.get() << ")";
 
-  // TODO(fxbug.dev/47778): normalize from 1ns units to 10ns, if accum_error_ becomes so large that
-  // lost precision impacts accuracy (as a double, accum_error_ has 54 bits of precision).
   auto duration = static_cast<double>((time_of_error - tune_time_).get());
   tune_time_ = time_of_error;
 
