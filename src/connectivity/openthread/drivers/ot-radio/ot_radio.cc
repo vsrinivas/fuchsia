@@ -398,7 +398,7 @@ zx_status_t OtRadioDevice::RadioThread() {
         ReadRadioPacket();
 
         interrupt_is_asserted_ = IsInterruptAsserted();
-      } while (interrupt_is_asserted_ || inbound_allowance_ == 0);
+      } while (interrupt_is_asserted_ && inbound_allowance_ != 0);
     } else if (packet.key == PORT_KEY_TX_TO_RADIO) {
       spinel_framer_->SendPacketToRadio(spi_tx_buffer_, spi_tx_buffer_len_);
     }
