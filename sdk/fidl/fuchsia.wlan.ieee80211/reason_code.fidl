@@ -77,9 +77,12 @@ enum ReasonCode : uint16 {
 
     RESERVED_67_TO_127 = 67;
 
-    /// Use reserved value 128 to indicate when MLME lost the link. This is usually
-    /// caused by loss of signal with the AP.
+    /// Reserved values we will use for our own purposes.
+    /// -----
+    /// MLME lost the link, usually caused by loss of signal with the AP.
     MLME_LINK_FAILED = 128;
+    /// Driver detected a lack of rx frames.
+    FW_RX_STALLED = 129;
 
-    RESERVED_129_TO_65535 = 129;
+    RESERVED_130_TO_65535 = 130;
 };
