@@ -55,29 +55,95 @@ const ERROR_BOUND_UPDATE: u64 = 100_000_000; // 100ms
 /// The interval at which the error bound will be refreshed while no other events are in progress.
 const ERROR_REFRESH_INTERVAL: zx::Duration = zx::Duration::from_minutes(6);
 
-/// Describes at a high level how a clock will be slewed in order to correct time.
-#[derive(Clone, Debug, PartialEq)]
-struct SlewParameters {
-    /// Additional clock rate adjustment to execute the slew, in parts per million.
-    slew_rate_adjust: i32,
-    /// Monotonic duration for which the slew is to be maintained.
-    duration: zx::Duration,
+/// Describes how a correction will be made to a clock.
+enum ClockCorrection {
+    Step(Step),
+    MaxDurationSlew(Slew),
+    NominalRateSlew(Slew),
 }
 
-impl SlewParameters {
-    /// Returns the total correction achieved by the slew.
-    fn correction(&self) -> zx::Duration {
-        zx::Duration::from_nanos(
-            (self.duration.into_nanos() * self.slew_rate_adjust as i64) / MILLION,
-        )
+impl ClockCorrection {
+    /// Create a `ClockCorrection` to transition a clock from `initial_transform` to
+    /// `final_transform` starting at a monotonic time of `start_time` and using standard policy for
+    /// the rates and durations. Error bounds are calculated based on `final_transform`.
+    fn for_transition(
+        start_time: zx::Time,
+        initial_transform: &Transform,
+        final_transform: &Transform,
+    ) -> Self {
+        let difference = final_transform.difference(&initial_transform, start_time);
+        let difference_nanos = difference.into_nanos();
+        let difference_abs = zx::Duration::from_nanos(difference_nanos.abs());
+        let sign = if difference_nanos < 0 { -1 } else { 1 };
+
+        if difference_abs < NOMINAL_RATE_MAX_ERROR {
+            let rate = (NOMINAL_RATE_CORRECTION_PPM * sign) as i32;
+            let duration = (difference_abs * MILLION) / NOMINAL_RATE_CORRECTION_PPM;
+            ClockCorrection::NominalRateSlew(Slew::new(rate, duration, start_time, final_transform))
+        } else if difference_abs < MAX_RATE_MAX_ERROR {
+            // Round rate up to the next greater PPM such that duration will be slightly under
+            // MAX_SLEW_DURATION rather that slightly over MAX_SLEW_DURATION.
+            let rate =
+                (((difference_nanos * MILLION) / MAX_SLEW_DURATION.into_nanos()) + sign) as i32;
+            let duration = (difference * MILLION) / rate;
+            ClockCorrection::MaxDurationSlew(Slew::new(rate, duration, start_time, final_transform))
+        } else {
+            ClockCorrection::Step(Step::new(difference, start_time, final_transform))
+        }
+    }
+
+    /// Returns the total clock change made by this `ClockCorrection`.
+    fn difference(&self) -> zx::Duration {
+        match self {
+            ClockCorrection::Step(step) => step.difference,
+            ClockCorrection::NominalRateSlew(slew) | ClockCorrection::MaxDurationSlew(slew) => {
+                zx::Duration::from_nanos(
+                    (slew.duration.into_nanos() * slew.slew_rate_adjust as i64) / MILLION,
+                )
+            }
+        }
+    }
+
+    /// Returns the strategy corresponding to this `ClockCorrection`.
+    fn strategy(&self) -> ClockCorrectionStrategy {
+        match self {
+            ClockCorrection::Step(_) => ClockCorrectionStrategy::Step,
+            ClockCorrection::NominalRateSlew(_) => ClockCorrectionStrategy::NominalRateSlew,
+            ClockCorrection::MaxDurationSlew(_) => ClockCorrectionStrategy::MaxDurationSlew,
+        }
     }
 }
 
-impl Default for SlewParameters {
-    fn default() -> SlewParameters {
-        // Default lets clock correction strategies that don't require a slew generate a
-        // null-like value.
-        SlewParameters { slew_rate_adjust: 0, duration: zx::Duration::from_nanos(0) }
+/// Describes in detail how a clock will be stepped in order to correct time.
+#[derive(PartialEq)]
+struct Step {
+    /// Change in clock value being made.
+    difference: zx::Duration,
+    /// UTC time after the step.
+    utc: zx::Time,
+    /// Rate adjust in PPM after the step.
+    rate_adjust_ppm: i32,
+    /// Error bound after the step.
+    error_bound: u64,
+}
+
+impl Step {
+    /// Returns a step to move onto the supplied transform at the supplied monotonic time.
+    fn new(difference: zx::Duration, start_time: zx::Time, final_transform: &Transform) -> Self {
+        Step {
+            difference,
+            utc: final_transform.synthetic(start_time),
+            rate_adjust_ppm: final_transform.rate_adjust_ppm,
+            error_bound: final_transform.error_bound(start_time),
+        }
+    }
+
+    /// Returns a zx::ClockUpdate describing the update to make to a clock to implement this `Step`.
+    fn clock_update(&self) -> zx::ClockUpdate {
+        zx::ClockUpdate::new()
+            .value(self.utc)
+            .rate_adjust(self.rate_adjust_ppm)
+            .error_bounds(self.error_bound)
     }
 }
 
@@ -90,28 +156,31 @@ struct Slew {
     slew_rate_adjust: i32,
     /// Monotonic duration for which the slew is to be maintained.
     duration: zx::Duration,
-    /// Error bound at start of the slew
+    /// Error bound at start of the slew.
     start_error_bound: u64,
-    /// Error bound at completion of the slew
+    /// Error bound at completion of the slew.
     end_error_bound: u64,
 }
 
 impl Slew {
     /// Returns a fully defined slew to achieve the supplied parameters, calculating error bounds
-    /// using the supplied transform assuming the slew starts at the supplied monotonic time.
-    fn new(parameters: SlewParameters, start_time: zx::Time, final_transform: &Transform) -> Self {
-        // TODO(jsankey): This is currently an intermediate step to simplify review, in the final
-        // state we'll accept two different transforms and calculate the transition between them,
-        // removing the need for SlewParameters.
-        let absolute_slew_correction_nanos = parameters.correction().into_nanos().abs() as u64;
+    /// using the supplied transform and assuming the slew starts at the supplied monotonic time.
+    fn new(
+        slew_rate_adjust: i32,
+        duration: zx::Duration,
+        start_time: zx::Time,
+        final_transform: &Transform,
+    ) -> Self {
+        let absolute_slew_correction_nanos =
+            (duration.into_nanos() * slew_rate_adjust as i64).abs() / MILLION;
         Slew {
             base_rate_adjust: final_transform.rate_adjust_ppm,
-            slew_rate_adjust: parameters.slew_rate_adjust,
-            duration: parameters.duration,
+            slew_rate_adjust,
+            duration,
             // The initial error bound is the estimate error bound plus the entire correction.
             start_error_bound: final_transform.error_bound(start_time)
-                + absolute_slew_correction_nanos,
-            end_error_bound: final_transform.error_bound(start_time + parameters.duration),
+                + absolute_slew_correction_nanos as u64,
+            end_error_bound: final_transform.error_bound(start_time + duration),
         }
     }
 
@@ -308,31 +377,28 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
             task.cancel().await;
         };
 
-        let mono = zx::Time::get_monotonic();
         let current_transform = Transform::from(self.clock.as_ref());
+        let mono = zx::Time::get_monotonic();
 
-        let correction = estimate_transform.difference(&current_transform, mono);
-        let (strategy, slew_params) = determine_strategy(correction);
-        self.diagnostics.record(Event::ClockCorrection { track, correction, strategy });
-
-        match strategy {
-            ClockCorrectionStrategy::NominalRateSlew | ClockCorrectionStrategy::MaxDurationSlew => {
-                let slew = Slew::new(slew_params, mono, estimate_transform);
+        let correction =
+            ClockCorrection::for_transition(mono, &current_transform, estimate_transform);
+        self.record_clock_correction(correction.difference(), correction.strategy());
+        match correction {
+            ClockCorrection::MaxDurationSlew(slew) | ClockCorrection::NominalRateSlew(slew) => {
                 let mut updates = slew.clock_updates();
-
                 // The first update is guaranteed to be immediate.
-                let (_, update, reason) = updates.remove(0);
-                self.update_clock(update);
+                let (_, clock_update, reason) = updates.remove(0);
+                self.update_clock(clock_update);
                 self.record_clock_update(reason);
+
                 info!("started {:?} {:?} with {} scheduled updates", track, slew, updates.len());
 
                 // Create a task to asynchronously apply all the remaining updates and then increase
                 // error bound over time.
                 self.set_delayed_update_task(updates, estimate_transform);
             }
-            ClockCorrectionStrategy::Step => {
-                let clock_update = estimate_transform.jump_to(mono);
-                self.update_clock(clock_update);
+            ClockCorrection::Step(step) => {
+                self.update_clock(step.clock_update());
                 self.record_clock_update(ClockUpdateReason::TimeStep);
 
                 let utc_chrono =
@@ -342,7 +408,7 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
                 // Create a task to asynchronously increase error bound over time.
                 self.set_delayed_update_task(vec![], estimate_transform);
             }
-        }
+        };
     }
 
     /// Updates the real time clock to the supplied transform if an RTC is configured.
@@ -417,6 +483,11 @@ impl<T: TimeSource, R: Rtc, D: 'static + Diagnostics> ClockManager<T, R, D> {
     fn record_clock_update(&self, reason: ClockUpdateReason) {
         self.diagnostics.record(Event::UpdateClock { track: self.track, reason });
     }
+
+    /// Records a correction to the clock with diagnostics.
+    fn record_clock_correction(&self, correction: zx::Duration, strategy: ClockCorrectionStrategy) {
+        self.diagnostics.record(Event::ClockCorrection { track: self.track, correction, strategy });
+    }
 }
 
 /// Applies an update to the supplied clock, panicking with a comprehensible error on failure.
@@ -426,35 +497,6 @@ fn update_clock(clock: &Arc<zx::Clock>, track: &Track, update: zx::ClockUpdate) 
         // serious bug in the generation of a time update). There isn't anything Timekeeper
         // could do to gracefully handle them.
         panic!("Failed to apply update to {:?} clock: {}", track, status);
-    }
-}
-
-/// Determines the strategy that should be used to apply the supplied correction and instructions
-/// for performing a slew. `Slew` will be set to default in the strategies that do not require
-/// slewing.
-fn determine_strategy(correction: zx::Duration) -> (ClockCorrectionStrategy, SlewParameters) {
-    let correction_nanos = correction.into_nanos();
-    let correction_abs = zx::Duration::from_nanos(correction_nanos.abs());
-    let sign = if correction_nanos < 0 { -1 } else { 1 };
-
-    if correction_abs < NOMINAL_RATE_MAX_ERROR {
-        let rate = NOMINAL_RATE_CORRECTION_PPM * sign;
-        let duration = (correction_abs * MILLION) / NOMINAL_RATE_CORRECTION_PPM;
-        (
-            ClockCorrectionStrategy::NominalRateSlew,
-            SlewParameters { slew_rate_adjust: rate as i32, duration },
-        )
-    } else if correction_abs < MAX_RATE_MAX_ERROR {
-        // Round rate up to the next greater PPM such that duration will be slightly under
-        // MAX_SLEW_DURATION rather that slightly over MAX_SLEW_DURATION.
-        let rate = ((correction_nanos * MILLION) / MAX_SLEW_DURATION.into_nanos()) + sign;
-        let duration = (correction * MILLION) / rate;
-        (
-            ClockCorrectionStrategy::MaxDurationSlew,
-            SlewParameters { slew_rate_adjust: rate as i32, duration },
-        )
-    } else {
-        (ClockCorrectionStrategy::Step, SlewParameters::default())
     }
 }
 
@@ -472,7 +514,7 @@ mod tests {
         fuchsia_async as fasync, fuchsia_zircon as zx,
         futures::FutureExt,
         lazy_static::lazy_static,
-        test_util::{assert_geq, assert_gt, assert_leq, assert_lt},
+        test_util::{assert_geq, assert_gt, assert_leq, assert_lt, assert_near},
         zx::DurationNum,
     };
 
@@ -483,6 +525,8 @@ mod tests {
     const SAMPLE_SPACING: zx::Duration = zx::Duration::from_millis(100);
     const OFFSET: zx::Duration = zx::Duration::from_seconds(1111_000);
     const OFFSET_2: zx::Duration = zx::Duration::from_seconds(2222_000);
+    const BASE_RATE: i32 = -9;
+    const BASE_RATE_2: i32 = 2;
     const STD_DEV: zx::Duration = zx::Duration::from_millis(88);
     const BACKSTOP_TIME: zx::Time = zx::Time::from_nanos(222222 * NANOS_PER_SECOND);
     const ERROR_GROWTH_PPM: u32 = 30;
@@ -528,68 +572,109 @@ mod tests {
     fn create_transform(
         monotonic: zx::Time,
         synthetic: zx::Time,
+        rate_adjust_ppm: i32,
         std_dev: zx::Duration,
     ) -> Transform {
         Transform {
             monotonic_offset: monotonic.into_nanos(),
             synthetic_offset: synthetic.into_nanos(),
-            rate_adjust_ppm: 0,
+            rate_adjust_ppm,
             error_bound_at_offset: 2 * std_dev.into_nanos() as u64,
             error_bound_growth_ppm: ERROR_GROWTH_PPM,
         }
     }
 
     #[fuchsia::test]
-    fn determine_strategy_fn() {
-        for sign in vec![-1, 1] {
-            let (strategy, slew_params) = determine_strategy((sign * 5).micros());
-            assert_eq!(strategy, ClockCorrectionStrategy::NominalRateSlew);
-            assert_eq!(
-                slew_params,
-                SlewParameters { slew_rate_adjust: (sign * 20) as i32, duration: 250.millis() }
-            );
+    fn clock_correction_for_transition_nominal_rate_slew() {
+        let mono = zx::Time::get_monotonic();
+        // Note the initial transform has a reference point before monotonic_ref and has been
+        // running since then with a small rate adjustment.
+        let initial_transform =
+            create_transform(mono - 1.minute(), mono - 1.minute() + OFFSET, BASE_RATE, 0.nanos());
+        let final_transform =
+            create_transform(mono, mono + OFFSET + 50.millis(), BASE_RATE_2, STD_DEV);
 
-            let (strategy, slew_params) = determine_strategy((sign * 5).millis());
-            assert_eq!(strategy, ClockCorrectionStrategy::NominalRateSlew);
-            assert_eq!(
-                slew_params,
-                SlewParameters { slew_rate_adjust: (sign * 20) as i32, duration: 250.seconds() }
-            );
-            assert_eq!(slew_params.correction(), (sign * 5).millis());
+        let correction =
+            ClockCorrection::for_transition(mono, &initial_transform, &final_transform);
+        let expected_difference =
+            zx::Duration::from_nanos(1.minute().into_nanos() * -BASE_RATE as i64 / MILLION)
+                + 50.millis();
+        assert_eq!(correction.difference(), expected_difference);
 
-            let (strategy, slew_params) = determine_strategy((sign * 500).millis());
-            assert_eq!(strategy, ClockCorrectionStrategy::MaxDurationSlew);
-            assert_eq!(
-                slew_params,
-                SlewParameters {
-                    slew_rate_adjust: (sign * 93) as i32,
-                    duration: 5376344086021.nanos()
-                }
-            );
+        // The values chosen for rates and offset differences mean this is a nominal rate slew.
+        let expected_duration = (expected_difference * MILLION) / NOMINAL_RATE_CORRECTION_PPM;
+        let expected_start_error_bound =
+            final_transform.error_bound(mono) + expected_difference.into_nanos() as u64;
+        let expected_end_error_bound = final_transform.error_bound(mono + expected_duration);
 
-            let (strategy, slew_params) = determine_strategy((sign * 2).seconds());
-            assert_eq!(strategy, ClockCorrectionStrategy::Step);
-            assert_eq!(slew_params, SlewParameters::default());
+        assert_eq!(correction.strategy(), ClockCorrectionStrategy::NominalRateSlew);
+        match correction {
+            ClockCorrection::NominalRateSlew(slew) => {
+                assert_eq!(slew.base_rate_adjust, BASE_RATE_2);
+                assert_eq!(slew.slew_rate_adjust, NOMINAL_RATE_CORRECTION_PPM as i32);
+                assert_eq!(slew.total_rate_adjust(), slew.slew_rate_adjust + slew.base_rate_adjust);
+                assert_eq!(slew.duration, expected_duration);
+                assert_eq!(slew.start_error_bound, expected_start_error_bound);
+                assert_eq!(slew.end_error_bound, expected_end_error_bound);
+            }
+            _ => panic!("incorrect clock correction type returned"),
         }
     }
 
     #[fuchsia::test]
-    fn slew_new_fn() {
-        // Manually create a transform defining the error bounds.
-        let monotonic_ref = zx::Time::get_monotonic();
-        let transform = create_transform(monotonic_ref, monotonic_ref + OFFSET, STD_DEV);
+    fn clock_correction_for_transition_max_duration_slew() {
+        let mono = zx::Time::get_monotonic();
+        let initial_transform = create_transform(mono, mono + OFFSET, BASE_RATE, STD_DEV);
+        let final_transform =
+            create_transform(mono, mono + OFFSET - 500.millis(), BASE_RATE, STD_DEV);
 
-        let slew_params = SlewParameters { slew_rate_adjust: -50, duration: 10.seconds() };
-        let error_bound_at_ref = transform.error_bound(monotonic_ref);
-        let error_bound_at_end = transform.error_bound(monotonic_ref + slew_params.duration);
+        let correction =
+            ClockCorrection::for_transition(mono, &initial_transform, &final_transform);
+        let expected_difference = (-500).millis();
+        // Note there is a slight loss of precision in converting from a difference to a rate for
+        // a duration.
+        assert_near!(correction.difference().into_nanos(), expected_difference.into_nanos(), 10);
 
-        let slew = Slew::new(slew_params.clone(), monotonic_ref, &transform);
-        assert_eq!(slew.base_rate_adjust, 0);
-        assert_eq!(slew.slew_rate_adjust, slew_params.slew_rate_adjust);
-        assert_eq!(slew.total_rate_adjust(), slew.slew_rate_adjust + slew.base_rate_adjust);
-        assert_eq!(slew.duration, slew_params.duration);
-        assert_eq!(slew.start_error_bound, error_bound_at_ref + 500_000 /* slew correction */);
-        assert_eq!(slew.end_error_bound, error_bound_at_end);
+        // The value chosen for offset difference means this is a max duration slew.
+        let expected_duration = 5376344086021.nanos();
+        let expected_rate = -93;
+        let expected_start_error_bound =
+            final_transform.error_bound(mono) + correction.difference().into_nanos().abs() as u64;
+        let expected_end_error_bound = final_transform.error_bound(mono + expected_duration);
+
+        assert_eq!(correction.strategy(), ClockCorrectionStrategy::MaxDurationSlew);
+        match correction {
+            ClockCorrection::MaxDurationSlew(slew) => {
+                assert_eq!(slew.base_rate_adjust, BASE_RATE);
+                assert_eq!(slew.slew_rate_adjust, expected_rate);
+                assert_eq!(slew.total_rate_adjust(), slew.slew_rate_adjust + slew.base_rate_adjust);
+                assert_eq!(slew.duration, expected_duration);
+                assert_eq!(slew.start_error_bound, expected_start_error_bound);
+                assert_eq!(slew.end_error_bound, expected_end_error_bound);
+            }
+            _ => panic!("incorrect clock correction type returned"),
+        }
+    }
+
+    #[fuchsia::test]
+    fn clock_correction_for_transition_step() {
+        let mono = zx::Time::get_monotonic();
+        let initial_transform =
+            create_transform(mono - 1.minute(), mono - 1.minute() + OFFSET, 0, 0.nanos());
+        let final_transform =
+            create_transform(mono, mono + OFFSET + 1.hour(), BASE_RATE_2, STD_DEV);
+
+        let correction =
+            ClockCorrection::for_transition(mono, &initial_transform, &final_transform);
+        let expected_difference = 1.hour();
+        assert_eq!(correction.difference(), expected_difference);
+        assert_eq!(correction.strategy(), ClockCorrectionStrategy::Step);
+        match correction {
+            ClockCorrection::Step(step) => {
+                assert_eq!(step.clock_update(), final_transform.jump_to(mono));
+            }
+            _ => panic!("incorrect clock correction type returned"),
+        };
     }
 
     #[fuchsia::test]
