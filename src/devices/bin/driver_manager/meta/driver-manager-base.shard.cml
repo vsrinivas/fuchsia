@@ -1,16 +1,4 @@
 {
-    collections: [
-        {
-            name: "drivers",
-            environment: "#driver-env",
-            durability: "transient",
-        },
-        {
-            name: "driver_hosts",
-            environment: "#driver_host-env",
-            durability: "transient",
-        },
-    ],
     capabilities: [
         // Device tree
         {
@@ -70,28 +58,7 @@
         {
             // The Realm protocol is required to start components.
             protocol: "fuchsia.sys2.Realm",
-            from: "framework",
-        },
-    ],
-    offer: [
-        {
-            protocol: [
-                "fuchsia.boot.WriteOnlyLog",
-                "fuchsia.logger.LogSink",
-                "fuchsia.tracing.provider.Registry",
-            ],
             from: "parent",
-            to: [ "#driver_hosts" ],
-        },
-        {
-            protocol: [
-                "fuchsia.boot.Items",
-                "fuchsia.boot.RootResource",
-                "fuchsia.logger.LogSink",
-                "fuchsia.tracing.provider.Registry",
-            ],
-            from: "parent",
-            to: [ "#drivers" ],
         },
     ],
     expose: [
@@ -110,30 +77,9 @@
             ],
             from: "self",
         },
-    ],
-    environments: [
         {
-            name: "driver-env",
-            extends: "realm",
-            runners: [
-                {
-                    runner: "driver",
-                    from: "self",
-                },
-            ],
-            resolvers: [
-                {
-                    resolver: "base_resolver",
-                    scheme: "fuchsia-pkg",
-                    from: "parent",
-                },
-            ],
-            __stop_timeout_ms: 1000,
-        },
-        {
-            name: "driver_host-env",
-            extends: "realm",
-            __stop_timeout_ms: 2000,
+            runner: "driver",
+            from: "self",
         },
     ],
 }

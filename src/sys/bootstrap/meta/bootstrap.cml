@@ -94,6 +94,18 @@
             url: "fuchsia-boot:///#meta/virtual-console.cm",
         },
     ],
+    collections: [
+        {
+            name: "driver_hosts",
+            environment: "#driver_host-env",
+            durability: "transient",
+        },
+        {
+            name: "drivers",
+            environment: "#driver-env",
+            durability: "transient",
+        },
+    ],
     offer: [
         {
             protocol: [
@@ -167,9 +179,31 @@
             to: [ "#driver_manager" ],
         },
         {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+            to: [ "#driver_manager" ],
+        },
+        {
             protocol: [ "fuchsia.power.manager.DriverManagerRegistration" ],
             from: "#power_manager",
             to: [ "#driver_manager" ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.WriteOnlyLog",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#driver_hosts" ],
+        },
+        {
+            protocol: [
+                "fuchsia.boot.Items",
+                "fuchsia.boot.RootResource",
+                "fuchsia.tracing.provider.Registry",
+            ],
+            from: "parent",
+            to: [ "#drivers" ],
         },
         {
             protocol: [ "fuchsia.kernel.Stats" ],
@@ -617,7 +651,9 @@
                 "#console-launcher",
                 "#decompressor",
                 "#device_name_provider",
+                "#driver_hosts",
                 "#driver_manager",
+                "#drivers",
                 "#fshost",
                 "#live_usb",
                 "#netsvc",
@@ -878,6 +914,33 @@
 
             // 1 minute
             __stop_timeout_ms: 60000,
+        },
+        {
+            name: "driver_host-env",
+            extends: "realm",
+
+            // 2 seconds
+            __stop_timeout_ms: 2000,
+        },
+        {
+            name: "driver-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "driver",
+                    from: "#driver_manager",
+                },
+            ],
+            resolvers: [
+                {
+                    resolver: "base_resolver",
+                    scheme: "fuchsia-pkg",
+                    from: "#base_resolver",
+                },
+            ],
+
+            // 1 second
+            __stop_timeout_ms: 1000,
         },
     ],
 }

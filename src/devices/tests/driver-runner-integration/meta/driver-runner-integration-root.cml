@@ -10,6 +10,18 @@
             environment: "#driver_manager-env",
         },
     ],
+    collections: [
+        {
+            name: "driver_hosts",
+            environment: "#driver_host-env",
+            durability: "transient",
+        },
+        {
+            name: "drivers",
+            environment: "#driver-env",
+            durability: "transient",
+        },
+    ],
     offer: [
         {
             protocol: [
@@ -26,6 +38,19 @@
             to: [ "#driver_manager" ],
         },
         {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+            to: [ "#driver_manager" ],
+        },
+        {
+            protocol: [ "fuchsia.logger.LogSink" ],
+            from: "parent",
+            to: [
+                "#driver_hosts",
+                "#drivers",
+            ],
+        },
+        {
             directory: "boot",
             from: "parent",
             to: [ "#driver_manager" ],
@@ -38,6 +63,26 @@
 
             // 1 minute
             __stop_timeout_ms: 60000,
+        },
+        {
+            name: "driver_host-env",
+            extends: "realm",
+
+            // 2 seconds
+            __stop_timeout_ms: 2000,
+        },
+        {
+            name: "driver-env",
+            extends: "realm",
+            runners: [
+                {
+                    runner: "driver",
+                    from: "#driver_manager",
+                },
+            ],
+
+            // 1 second
+            __stop_timeout_ms: 1000,
         },
     ],
 }
