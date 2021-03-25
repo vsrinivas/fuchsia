@@ -54,4 +54,5 @@ table Target {
     // Contains the string used for the board in `fx set`, for example
     // `fx set core.x64` would make this value "x64".
     8: string:fuchsia.buildinfo.MAX_STRING_LENGTH board_config;
+    9: string:256 serial_number;
 };

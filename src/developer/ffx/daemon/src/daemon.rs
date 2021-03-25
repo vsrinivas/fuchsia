@@ -690,23 +690,18 @@ mod test {
         }
 
         pub async fn send_fastboot_discovery_event(&mut self, t: Target) {
-            let nodename =
-                t.nodename().await.expect("Should not send fastboot discovery for unnamed node.");
-            let serial =
-                t.serial().await.expect("Should not send fastboot discovery for unnamed node.");
-            let nodename_clone = nodename.clone();
+            let this_serial = t.serial().await.expect("fastboot target must have serial.");
             self.event_queue
                 .push(DaemonEvent::WireTraffic(WireTrafficType::Fastboot(TargetInfo {
-                    nodename: Some(nodename.clone()),
-                    serial: Some(serial.clone()),
+                    serial: Some(this_serial.clone()),
                     ..Default::default()
                 })))
                 .await
                 .unwrap();
             self.event_queue
                 .wait_for(None, move |e| match e {
-                    DaemonEvent::NewTarget(TargetInfo { nodename, .. }) => {
-                        nodename.map(|n| n == nodename_clone).unwrap_or(false)
+                    DaemonEvent::NewTarget(TargetInfo { serial, .. }) => {
+                        serial.map(|s| s == this_serial).unwrap_or(false)
                     }
                     _ => false,
                 })
@@ -820,12 +815,11 @@ mod test {
     }
 
     async fn spawn_daemon_server_with_fake_fastboot_target(
-        nodename: &str,
         stream: DaemonRequestStream,
     ) -> (TargetControl, Arc<Ascendd>) {
         let mut res = spawn_daemon_server_with_target_ctrl_for_fastboot(stream).await;
         let ascendd = Arc::new(create_ascendd().await.unwrap());
-        let fake_target = Target::new_with_serial(Some(nodename.to_string()), "florp");
+        let fake_target = Target::new_with_serial("florp");
         res.send_fastboot_discovery_event(fake_target).await;
         (res, ascendd)
     }
@@ -979,7 +973,7 @@ mod test {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_get_ssh_address() -> Result<()> {
         let (daemon_proxy, stream) = fidl::endpoints::create_proxy_and_stream::<DaemonMarker>()?;
-        let _ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let (mut _ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
         let timeout = std::i64::MAX;
         let r = daemon_proxy.get_ssh_address(Some("foobar"), timeout).await?;
 
@@ -1162,7 +1156,7 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, fastboot_server_end) = fidl::endpoints::create_proxy::<FastbootMarker>()?;
-        let _ctrl = spawn_daemon_server_with_fake_target("foobar", stream).await;
+        let (mut _ctrl, _ascendd) = spawn_daemon_server_with_fake_target("foobar", stream).await;
         let got = daemon_proxy.get_fastboot(None, fastboot_server_end).await?;
         match got {
             Err(FastbootError::NonFastbootDevice) => Ok(()),
@@ -1175,7 +1169,7 @@ mod test {
         let (daemon_proxy, stream) =
             fidl::endpoints::create_proxy_and_stream::<DaemonMarker>().unwrap();
         let (_, remote_server_end) = fidl::endpoints::create_proxy::<RemoteControlMarker>()?;
-        let _ctrl = spawn_daemon_server_with_fake_fastboot_target("foobar", stream).await;
+        let (mut _ctrl, _ascendd) = spawn_daemon_server_with_fake_fastboot_target(stream).await;
         let got = daemon_proxy.get_remote_control(None, remote_server_end).await?;
         match got {
             Err(DaemonError::TargetInFastboot) => Ok(()),

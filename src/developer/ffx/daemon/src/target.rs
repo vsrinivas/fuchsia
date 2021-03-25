@@ -425,8 +425,8 @@ impl TargetInner {
         Self { addrs: RwLock::new(entries), ..Self::new(nodename) }
     }
 
-    pub fn new_with_serial(nodename: Option<String>, serial: &str) -> Self {
-        Self { serial: RwLock::new(Some(serial.to_string())), ..Self::new(nodename) }
+    pub fn new_with_serial(serial: &str) -> Self {
+        Self { serial: RwLock::new(Some(serial.to_string())), ..Self::new(None) }
     }
 
     pub fn id(&self) -> u64 {
@@ -640,19 +640,16 @@ impl Target {
         Self::from_inner(inner)
     }
 
-    pub fn new_with_serial<S>(nodename: Option<S>, serial: &str) -> Self
-    where
-        S: Into<String>,
-    {
-        let inner = Arc::new(TargetInner::new_with_serial(nodename.map(Into::into), serial));
+    pub fn new_with_serial(serial: &str) -> Self {
+        let inner = Arc::new(TargetInner::new_with_serial(serial));
         Self::from_inner(inner)
     }
 
     pub fn from_target_info(mut t: TargetInfo) -> Self {
         if let Some(s) = t.serial {
-            Self::new_with_serial(t.nodename, &s)
+            Self::new_with_serial(&s)
         } else {
-            Self::new_with_addrs(t.nodename, t.addresses.drain(..).collect())
+            Self::new_with_addrs(t.nodename.take(), t.addresses.drain(..).collect())
         }
     }
 
@@ -958,6 +955,9 @@ impl Target {
                 None
             };
 
+        if let Some(serial) = identify.serial_number {
+            target.inner.serial.write().await.replace(serial);
+        }
         if let Some(t) = identify.boot_timestamp_nanos {
             target.inner.boot_timestamp_nanos.write().await.replace(t);
         }
@@ -966,9 +966,6 @@ impl Target {
             for addr in addrs.iter().map(|addr| TargetAddr::from(addr.clone())) {
                 taddrs.insert(addr.into());
             }
-        }
-        if let Some(serial) = identify.serial_number {
-            target.inner.serial.write().await.replace(serial);
         }
         Ok(target)
     }
@@ -986,7 +983,6 @@ impl Target {
             },
             Err(e) => return Err(RcsConnectionError::FidlConnectionError(e)),
         };
-
         let target = Target::from_identify(identify)
             .await
             .map_err(|e| RcsConnectionError::TargetError(e))?;
@@ -1025,10 +1021,11 @@ impl EventSynthesizer<DaemonEvent> for Target {
 #[async_trait]
 impl ToFidlTarget for Target {
     async fn to_fidl_target(self) -> bridge::Target {
-        let (addrs, last_response, rcs_state, build_config) = futures::join!(
+        let (addrs, last_response, rcs_state, serial_number, build_config) = futures::join!(
             self.addrs(),
             self.last_response(),
             self.rcs_state(),
+            self.serial(),
             self.build_config()
         );
 
@@ -1038,6 +1035,7 @@ impl ToFidlTarget for Target {
 
         bridge::Target {
             nodename: self.nodename().await,
+            serial_number,
             addresses: Some(addrs.iter().map(|a| a.into()).collect()),
             age_ms: Some(
                 match Utc::now().signed_duration_since(last_response).num_milliseconds() {
@@ -1448,23 +1446,34 @@ impl TargetCollection {
         let new_ips =
             new_target.addrs().await.iter().map(|addr| addr.ip.clone()).collect::<Vec<IpAddr>>();
         let new_port = new_target.ssh_port().await;
+        let new_serial = new_target.serial().await;
 
         let mut inner = self.inner.write().await;
 
+        // An unnamed match is an index pointing to a target that either matches
+        // by serial number or by an address.
         let mut unnamed_match = None;
 
         // Look for an unnamed match by index, so we can move it if found.
         for (i, unnamed_target) in inner.unnamed.iter().enumerate() {
             // Look for an unnamed target with a matching ID
             if unnamed_target.has_id(new_target.ids().await.iter()).await {
-                unnamed_match = Some(i);
+                unnamed_match.replace(i);
                 break;
             }
 
             // Or a matching address
             if unnamed_target.addrs().await.iter().any(|addr| new_ips.contains(&addr.ip)) {
-                unnamed_match = Some(i);
+                unnamed_match.replace(i);
                 break;
+            }
+
+            // Or a matching serial
+            if let Some(ref serial) = new_serial {
+                if unnamed_target.serial().await.map(|s| s == *serial).unwrap_or(false) {
+                    unnamed_match.replace(i);
+                    break;
+                }
             }
         }
 
@@ -1483,9 +1492,14 @@ impl TargetCollection {
         };
 
         // If we haven't yet found a target, try to find one from the named set
-        // by ID, nodename, or address.
+        // by ID, nodename, serial, or address.
         if to_update.is_none() {
             for (_, named_target) in inner.named.iter() {
+                let serials_match =
+                    match (named_target.serial().await.as_ref(), new_serial.as_ref()) {
+                        (Some(s), Some(other_s)) => s == other_s,
+                        _ => false,
+                    };
                 if named_target.has_id(new_ids.iter()).await
                     || new_nodename == named_target.nodename().await
                     || (
@@ -1497,6 +1511,7 @@ impl TargetCollection {
                                 .iter()
                                 .any(|addr| new_ips.contains(&addr.ip))
                     )
+                    || serials_match
                 {
                     to_update.replace(named_target);
                     break;
@@ -1507,6 +1522,9 @@ impl TargetCollection {
         if let Some(to_update) = to_update {
             if let Some(config) = new_target.build_config().await {
                 to_update.inner.build_config.write().await.replace(config);
+            }
+            if let Some(serial) = new_target.serial().await {
+                to_update.inner.serial.write().await.replace(serial);
             }
             futures::join!(
                 to_update.update_last_response(new_target.last_response().await),
@@ -1528,17 +1546,22 @@ impl TargetCollection {
             new_target.drop_unscoped_link_local_addrs().await;
             let result = new_target.clone();
 
-            if let Some(name) = new_target.nodename().await {
-                inner.named.insert(name, new_target);
+            let (new_target_name, new_target_serial) =
+                futures::join!(new_target.nodename(), new_target.serial());
 
+            if let Some(ref name) = new_target_name {
+                inner.named.insert(name.clone(), new_target);
+            } else {
+                inner.unnamed.push(new_target);
+            }
+
+            if new_target_name.is_some() || new_target_serial.is_some() {
                 let info = result.target_info().await;
                 if let Some(e) = self.events.read().await.as_ref() {
                     e.push(DaemonEvent::NewTarget(info))
                         .await
                         .unwrap_or_else(|e| log::warn!("unable to push new target event: {}", e));
                 }
-            } else {
-                inner.unnamed.push(new_target);
             }
 
             log::info!(
@@ -1614,13 +1637,13 @@ impl TargetCollection {
         // the compiler claiming a temporary value is borrowed whilst still in
         // use. It is unclear why this needs to be done in two statements, but
         // without it the compiler will complain.
-        let targets = &self.inner.read().await.named;
+        let inner = &self.inner.read().await;
+        let targets_iter = inner.named.values().chain(inner.unnamed.iter());
         let targets = futures::future::join_all(
-            targets
-                .iter()
-                .map(|(nodename, t)| async move {
+            targets_iter
+                .map(|t| async move {
                     (
-                        nodename,
+                        t.nodename().await,
                         t.clone(),
                         t.inner.state.lock().await.connection_state.is_connected(),
                     )
@@ -1695,6 +1718,7 @@ mod test {
 
     const DEFAULT_PRODUCT_CONFIG: &str = "core";
     const DEFAULT_BOARD_CONFIG: &str = "x64";
+    const TEST_SERIAL: &'static str = "test-serial";
 
     async fn clone_target(t: &Target) -> Target {
         let inner = Arc::new(TargetInner::clone(&t.inner));
@@ -1862,6 +1886,7 @@ mod test {
                                 addr: IpAddress::Ipv4(Ipv4Address { addr: [192, 168, 0, 1] }),
                                 prefix_len: 24,
                             }];
+                            let serial = String::from(TEST_SERIAL);
                             let nodename = if nodename_response.len() == 0 {
                                 None
                             } else {
@@ -1870,6 +1895,7 @@ mod test {
                             responder
                                 .send(&mut Ok(rcs::IdentifyHostResponse {
                                     nodename,
+                                    serial_number: Some(serial),
                                     addresses: Some(result),
                                     product_config: Some(DEFAULT_PRODUCT_CONFIG.to_owned()),
                                     board_config: Some(DEFAULT_BOARD_CONFIG.to_owned()),
@@ -1941,6 +1967,7 @@ mod test {
                         board_config: DEFAULT_BOARD_CONFIG.to_string()
                     }
                 );
+                assert_eq!(t.serial().await.unwrap(), String::from(TEST_SERIAL));
             }
             Err(_) => assert!(false),
         }
@@ -2658,14 +2685,13 @@ mod test {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_target_match_serial() {
-        let t =
-            Target::new_with_serial(Some("turritopsis-dohrnii-is-an-immortal-jellyfish"), "florp");
+        let string = "turritopsis-dohrnii-is-an-immortal-jellyfish";
+        let t = Target::new_with_serial(string);
         let tc = TargetCollection::new();
         tc.merge_insert(clone_target(&t).await).await;
-        assert_eq!(
-            t.nodename().await.unwrap(),
-            tc.get("flor").await.unwrap().nodename().await.unwrap()
-        );
+        let found_target = tc.get(string).await.expect("target serial should match");
+        assert_eq!(string, found_target.serial().await.expect("target should have serial number"));
+        assert!(found_target.nodename().await.is_none());
     }
 
     #[test]
