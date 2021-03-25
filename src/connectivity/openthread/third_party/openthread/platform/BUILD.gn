@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//third_party/openthread/ot_version.gni")
+
 source_set("platform") {
   sources = [
     "alarm.cc",
@@ -38,4 +40,11 @@ source_set("platform") {
     "//zircon/system/ulib/service:service-llcpp",
     "//zircon/system/ulib/svc",
   ]
+
+  # This is a temporary flag added just to enable soft-transition.
+  # This allows for compilation work both before and after update
+  # of third_party/openthread
+  if (openthread_version == "after_update_on_20210324") {
+    defines = [ "OPENTHREAD_LIB_POST_UPDATE_20210324" ]
+  }
 }
