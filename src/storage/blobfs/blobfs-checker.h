@@ -31,20 +31,20 @@ class BlobfsChecker {
   // Check validates the blobfs filesystem provided when the Checker was
   // constructed. It walks each of the inode and block allocation bitmaps
   // only once.
-  zx_status_t Check();
+  // Returns true if the filesystem is valid.
+  bool Check();
 
  private:
   std::unique_ptr<Blobfs> blobfs_;
   uint32_t alloc_inodes_ = 0;
   uint32_t alloc_blocks_ = 0;
-  uint32_t error_blobs_ = 0;
   uint32_t inode_blocks_ = 0;
   const Options options_;
 
-  zx_status_t CheckBackupSuperblock();
-  void TraverseInodeBitmap();
-  void TraverseBlockBitmap();
-  zx_status_t CheckAllocatedCounts() const;
+  bool CheckBackupSuperblock();
+  bool TraverseInodeBitmap();
+  bool TraverseBlockBitmap();
+  bool CheckAllocatedCounts() const;
 };
 
 #ifdef __Fuchsia__
