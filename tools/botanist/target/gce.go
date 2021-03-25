@@ -97,7 +97,28 @@ func (s *gceSerial) Read(b []byte) (int, error) {
 }
 
 func (s *gceSerial) Write(b []byte) (int, error) {
-	return s.in.Write(b)
+	// Chunk out writes to 128 bytes or less. SSH connections to GCE do not
+	// seem to properly handle longer messages.
+	maxChunkSize := 128
+	numChunks := len(b) / maxChunkSize
+	if len(b)%maxChunkSize != 0 {
+		numChunks++
+	}
+	bytesWritten := 0
+	for i := 0; i < numChunks; i++ {
+		start := i * maxChunkSize
+		end := start + maxChunkSize
+		if end > len(b) {
+			end = len(b)
+		}
+		n, err := s.in.Write(b[start:end])
+		bytesWritten += n
+		if err != nil {
+			return bytesWritten, err
+		}
+		time.Sleep(100 * time.Millisecond)
+	}
+	return bytesWritten, nil
 }
 
 func (s *gceSerial) Close() error {
