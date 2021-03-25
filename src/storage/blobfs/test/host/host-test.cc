@@ -206,7 +206,7 @@ TEST(BlobfsHostTest, WriteBlobWithPaddedFormatIsCorrect) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Check(), ZX_OK);
+  EXPECT_TRUE(checker.Check());
 }
 
 TEST(BlobfsHostTest, WriteBlobWithCompactFormatAndSharedBlockIsCorrect) {
@@ -223,7 +223,7 @@ TEST(BlobfsHostTest, WriteBlobWithCompactFormatAndSharedBlockIsCorrect) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Check(), ZX_OK);
+  EXPECT_TRUE(checker.Check());
 }
 
 TEST(BlobfsHostTest, WriteBlobWithCompactFormatAndBlockIsNotSharedIsCorrect) {
@@ -239,7 +239,7 @@ TEST(BlobfsHostTest, WriteBlobWithCompactFormatAndBlockIsNotSharedIsCorrect) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Check(), ZX_OK);
+  EXPECT_TRUE(checker.Check());
 }
 
 TEST(BlobfsHostTest, WriteCompressedBlobWithCompactFormatAndSharedBlockIsCorrect) {
@@ -254,7 +254,7 @@ TEST(BlobfsHostTest, WriteCompressedBlobWithCompactFormatAndSharedBlockIsCorrect
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Check(), ZX_OK);
+  EXPECT_TRUE(checker.Check());
 }
 
 TEST(BlobfsHostTest, WriteCompressedBlobWithPaddedFormatIsCorrect) {
@@ -269,7 +269,7 @@ TEST(BlobfsHostTest, WriteCompressedBlobWithPaddedFormatIsCorrect) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Check(), ZX_OK);
+  EXPECT_TRUE(checker.Check());
 }
 
 TEST(BlobfsHostTest, WriteEmptyBlobWithCompactFormatIsCorrect) {
@@ -282,7 +282,7 @@ TEST(BlobfsHostTest, WriteEmptyBlobWithCompactFormatIsCorrect) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Check(), ZX_OK);
+  EXPECT_TRUE(checker.Check());
 }
 
 void CheckBlobContents(File& blob, fbl::Span<const uint8_t> contents) {
@@ -350,7 +350,7 @@ TEST(BlobfsHostTest, VisitBlobsVisitsAllBlobsAndProvidesTheCorrectContents) {
 
   // Check that the blob can be read back and verified.
   BlobfsChecker checker(std::move(blobfs), {.repair = false});
-  EXPECT_EQ(checker.Check(), ZX_OK);
+  EXPECT_TRUE(checker.Check());
 }
 
 TEST(BlobfsHostTest, VisitBlobsForwardsVisitorErrors) {
@@ -457,7 +457,7 @@ TEST(BlobfsHostTest, CreateBlobfsWithNullBlobPassesFsck) {
   ASSERT_TRUE(blobfs);
   AddUncompressedBlob(/*data_size=*/0, *blobfs);
   BlobfsChecker checker(std::move(blobfs));
-  ASSERT_EQ(checker.Check(), ZX_OK);
+  EXPECT_TRUE(checker.Check());
 }
 
 }  // namespace

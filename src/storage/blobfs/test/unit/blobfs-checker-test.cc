@@ -146,7 +146,7 @@ class BlobfsCheckerPagedTest : public BlobfsCheckerTest {
 
 void RunTestEmpty(BlobfsCheckerTest* t) {
   BlobfsChecker checker(t->get_fs_unique());
-  ASSERT_EQ(checker.Check(), ZX_OK);
+  EXPECT_TRUE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestEmpty) { RunTestEmpty(this); }
@@ -163,7 +163,7 @@ void RunTestNonEmpty(BlobfsCheckerTest* t) {
   EXPECT_EQ(t->Sync(), ZX_OK);
 
   BlobfsChecker checker(t->get_fs_unique());
-  ASSERT_EQ(checker.Check(), ZX_OK);
+  EXPECT_TRUE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestNonEmpty) { RunTestNonEmpty(this); }
@@ -183,7 +183,7 @@ void RunTestInodeWithUnallocatedBlock(BlobfsCheckerTest* t) {
   t->get_fs()->GetAllocator()->FreeBlocks(e);
 
   BlobfsChecker checker(t->get_fs_unique());
-  ASSERT_EQ(checker.Check(), ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestInodeWithUnallocatedBlock) { RunTestInodeWithUnallocatedBlock(this); }
@@ -205,7 +205,7 @@ void RunTestAllocatedBlockCountTooHigh(BlobfsCheckerTest* t) {
   ASSERT_EQ(t->UpdateSuperblock(superblock), ZX_OK);
 
   BlobfsChecker checker(t->get_fs_unique());
-  ASSERT_EQ(checker.Check(), ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestAllocatedBlockCountTooHigh) {
@@ -230,7 +230,7 @@ void RunTestAllocatedBlockCountTooLow(BlobfsCheckerTest* t) {
   t->UpdateSuperblock(superblock);
 
   BlobfsChecker checker(t->get_fs_unique());
-  ASSERT_EQ(checker.Check(), ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestAllocatedBlockCountTooLow) { RunTestAllocatedBlockCountTooLow(this); }
@@ -243,7 +243,7 @@ void RunTestFewerThanMinimumBlocksAllocated(BlobfsCheckerTest* t) {
   Extent e(0, 1);
   t->get_fs()->GetAllocator()->FreeBlocks(e);
   BlobfsChecker checker(t->get_fs_unique());
-  ASSERT_EQ(checker.Check(), ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestFewerThanMinimumBlocksAllocated) {
@@ -265,7 +265,7 @@ void RunTestAllocatedInodeCountTooHigh(BlobfsCheckerTest* t) {
   t->UpdateSuperblock(superblock);
 
   BlobfsChecker checker(t->get_fs_unique());
-  ASSERT_EQ(checker.Check(), ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestAllocatedInodeCountTooHigh) {
@@ -290,7 +290,7 @@ void RunTestAllocatedInodeCountTooLow(BlobfsCheckerTest* t) {
   t->UpdateSuperblock(superblock);
 
   BlobfsChecker checker(t->get_fs_unique());
-  ASSERT_EQ(checker.Check(), ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestAllocatedInodeCountTooLow) { RunTestAllocatedInodeCountTooLow(this); }
@@ -316,7 +316,7 @@ void RunTestCorruptBlobs(BlobfsCheckerTest* t) {
   EXPECT_EQ(t->Sync(), ZX_OK);
 
   BlobfsChecker checker(t->get_fs_unique());
-  ASSERT_EQ(checker.Check(), ZX_ERR_BAD_STATE);
+  EXPECT_FALSE(checker.Check());
 }
 
 TEST_F(BlobfsCheckerTest, TestCorruptBlobs) { RunTestCorruptBlobs(this); }
