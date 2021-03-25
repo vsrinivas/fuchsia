@@ -29,10 +29,7 @@ if (current_toolchain == default_toolchain) {
       rebase_path("//integration/.git"),
     ]
 
-    sources = [
-      "//integration/.git/HEAD",
-      "//integration/.git/index",
-    ]
+    sources = [ "//integration/.git/HEAD" ]
 
     inputs =
         [ "//src/developer/ffx/core/version/build/gn_write_version_info.sh" ]
