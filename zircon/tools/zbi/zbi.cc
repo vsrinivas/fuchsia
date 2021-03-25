@@ -1512,6 +1512,17 @@ Extracted items use the file names shown below:\n\
       } else if (auto ext = TypeExtension(header_.type); ext != nullptr && !strcmp(ext, ".txt")) {
         writer.Key(key);
         EmitJsonCmdline(writer);
+      } else if (ZBI_IS_KERNEL_BOOTITEM(header_.type) && !payload_.empty() &&
+                 payload_.front().iov_len >= sizeof(zbi_kernel_t)) {
+        zbi_kernel_t khdr;
+        memcpy(&khdr, payload_.front().iov_base, sizeof(khdr));
+        writer.Key(key);
+        writer.StartObject();
+        writer.Key("entry");
+        writer.Uint64(khdr.entry);
+        writer.Key("reserve_memory_size");
+        writer.Uint64(khdr.reserve_memory_size);
+        writer.EndObject();
       }
     }
   }
