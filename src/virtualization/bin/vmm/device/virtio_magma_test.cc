@@ -4,6 +4,7 @@
 
 #include "src/graphics/lib/magma/include/virtio/virtio_magma.h"
 
+#include <drm_fourcc.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/zx/socket.h>
@@ -29,16 +30,31 @@ static const uint32_t kMockVfdId = 42;
 class WaylandImporterMock : public fuchsia::virtualization::hardware::VirtioWaylandImporter {
  public:
   // |fuchsia::virtualization::hardware::VirtioWaylandImporter|
-  void Import(zx::vmo vmo, ImportCallback callback) override {
-    EXPECT_EQ(zx_object_get_info(vmo.get(), ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr),
-              ZX_OK);
+  using VirtioImage = fuchsia::virtualization::hardware::VirtioImage;
+
+  void ImportImage(VirtioImage image, ImportImageCallback callback) override {
+    EXPECT_EQ(
+        zx_object_get_info(image.vmo.get(), ZX_INFO_HANDLE_VALID, nullptr, 0, nullptr, nullptr),
+        ZX_OK);
     zx_info_handle_basic_t handle_info{};
-    EXPECT_EQ(zx_object_get_info(vmo.get(), ZX_INFO_HANDLE_BASIC, &handle_info, sizeof(handle_info),
-                                 nullptr, nullptr),
+    EXPECT_EQ(zx_object_get_info(image.vmo.get(), ZX_INFO_HANDLE_BASIC, &handle_info,
+                                 sizeof(handle_info), nullptr, nullptr),
               ZX_OK);
     EXPECT_EQ(handle_info.type, ZX_OBJ_TYPE_VMO);
+    image_ = std::make_unique<VirtioImage>();
+    std::swap(*image_, image);
     callback(kMockVfdId);
   }
+  void ExportImage(uint32_t vfd_id, ExportImageCallback callback) override {
+    EXPECT_EQ(kMockVfdId, vfd_id);
+    if (vfd_id == kMockVfdId) {
+      callback(ZX_OK, std::move(image_));
+    } else {
+      callback(ZX_ERR_NOT_FOUND, {});
+    }
+  }
+
+  std::unique_ptr<VirtioImage> image_;
 };
 
 class VirtioMagmaTest : public TestWithDevice {
@@ -54,27 +70,41 @@ class VirtioMagmaTest : public TestWithDevice {
     ASSERT_EQ(zx::vmar::root_self()->allocate(kAllocateFlags, 0u, kVirtioMagmaVmarSize, &vmar,
                                               &vmar_addr),
               ZX_OK);
+
     fuchsia::virtualization::hardware::StartInfo start_info;
-    zx_status_t status = LaunchDevice(kVirtioMagmaUrl, out_queue_.end(), &start_info);
-    ASSERT_EQ(ZX_OK, status);
+    {
+      std::unique_ptr<sys::testing::EnvironmentServices> env_services = CreateServices();
+      env_services->AllowParentService("fuchsia.vulkan.loader.Loader");
+      env_services->AllowParentService("fuchsia.sysmem.Allocator");
+      ASSERT_EQ(ZX_OK, LaunchDevice(kVirtioMagmaUrl, out_queue_.end(), &start_info,
+                                    std::move(env_services)));
+    }
 
     // Start device execution.
     ASSERT_EQ(wayland_importer_mock_loop_.StartThread(), ZX_OK);
     services_->Connect(magma_.NewRequest());
-    magma_->Start(
-        std::move(start_info), std::move(vmar),
-        wayland_importer_mock_binding_.NewBinding(wayland_importer_mock_loop_.dispatcher()),
-        &status);
-    if (status == ZX_ERR_NOT_FOUND) {
-      ADD_FAILURE() << "Failed to start VirtioMagma because no GPU devices were found.";
+
+    {
+      zx_status_t status;
+      magma_->Start(
+          std::move(start_info), std::move(vmar),
+          wayland_importer_mock_binding_.NewBinding(wayland_importer_mock_loop_.dispatcher()),
+          [&](zx_status_t start_status) {
+            status = start_status;
+            QuitLoop();
+          });
+      RunLoop();
+      if (status == ZX_ERR_NOT_FOUND) {
+        ADD_FAILURE() << "Failed to start VirtioMagma because no GPU devices were found.";
+      }
+      ASSERT_EQ(ZX_OK, status);
     }
-    ASSERT_EQ(ZX_OK, status);
 
     // Configure device queues.
     out_queue_.Configure(0, kDescriptorSize);
-    status = magma_->ConfigureQueue(0, out_queue_.size(), out_queue_.desc(), out_queue_.avail(),
-                                    out_queue_.used());
-    ASSERT_EQ(ZX_OK, status);
+    magma_->ConfigureQueue(0, out_queue_.size(), out_queue_.desc(), out_queue_.avail(),
+                           out_queue_.used(), [&] { QuitLoop(); });
+    RunLoop();
   }
 
   std::optional<VirtioQueueFake::UsedElement> NextUsed(VirtioQueueFake* queue) {
@@ -96,7 +126,7 @@ class VirtioMagmaTest : public TestWithDevice {
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
-    ASSERT_EQ(magma_->NotifyQueue(0), ZX_OK);
+    magma_->NotifyQueue(0);
     auto used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
     EXPECT_EQ(used_elem->id, descriptor_id);
@@ -119,7 +149,7 @@ class VirtioMagmaTest : public TestWithDevice {
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
-    ASSERT_EQ(magma_->NotifyQueue(0), ZX_OK);
+    magma_->NotifyQueue(0);
     auto used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
     EXPECT_EQ(used_elem->id, descriptor_id);
@@ -140,7 +170,7 @@ class VirtioMagmaTest : public TestWithDevice {
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
-    ASSERT_EQ(magma_->NotifyQueue(0), ZX_OK);
+    magma_->NotifyQueue(0);
     auto used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
     EXPECT_EQ(used_elem->id, descriptor_id);
@@ -165,7 +195,7 @@ class VirtioMagmaTest : public TestWithDevice {
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
-    ASSERT_EQ(magma_->NotifyQueue(0), ZX_OK);
+    magma_->NotifyQueue(0);
     auto used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
     EXPECT_EQ(used_elem->id, descriptor_id);
@@ -188,7 +218,7 @@ class VirtioMagmaTest : public TestWithDevice {
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
-    ASSERT_EQ(magma_->NotifyQueue(0), ZX_OK);
+    magma_->NotifyQueue(0);
     auto used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
     EXPECT_EQ(used_elem->id, descriptor_id);
@@ -215,7 +245,7 @@ class VirtioMagmaTest : public TestWithDevice {
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
-    ASSERT_EQ(magma_->NotifyQueue(0), ZX_OK);
+    magma_->NotifyQueue(0);
     auto used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
     EXPECT_EQ(used_elem->id, descriptor_id);
@@ -225,10 +255,45 @@ class VirtioMagmaTest : public TestWithDevice {
     EXPECT_EQ(response.hdr.flags, 0u);
   }
 
+  void CreateImage(uint64_t connection, magma_buffer_t* image_out) {
+    virtio_magma_virt_create_image_ctrl_t request = {.hdr.type = VIRTIO_MAGMA_CMD_VIRT_CREATE_IMAGE,
+                                                     .connection = connection};
+    magma_image_create_info_t create_image = {
+        .drm_format = DRM_FORMAT_ARGB8888,
+        .drm_format_modifiers = {DRM_FORMAT_MOD_INVALID},
+        .width = 1920,
+        .height = 1080,
+    };
+
+    std::vector<uint8_t> request_buffer(sizeof(request) + sizeof(create_image));
+    memcpy(request_buffer.data(), &request, sizeof(request));
+    memcpy(request_buffer.data() + sizeof(request), &create_image, sizeof(create_image));
+
+    virtio_magma_virt_create_image_resp_t response{};
+    uint16_t descriptor_id{};
+    void* response_ptr;
+    ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                  .AppendReadableDescriptor(request_buffer.data(), request_buffer.size())
+                  .AppendWritableDescriptor(&response_ptr, sizeof(response))
+                  .Build(&descriptor_id),
+              ZX_OK);
+    magma_->NotifyQueue(0);
+    auto used_elem = NextUsed(&out_queue_);
+    EXPECT_TRUE(used_elem);
+    EXPECT_EQ(used_elem->id, descriptor_id);
+    EXPECT_EQ(used_elem->len, sizeof(response));
+    memcpy(&response, response_ptr, sizeof(response));
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_VIRT_CREATE_IMAGE);
+    EXPECT_EQ(response.hdr.flags, 0u);
+    ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
+    EXPECT_NE(response.image_out, 0u);
+    *image_out = response.image_out;
+  }
+
  protected:
   // Note: use of sync can be problematic here if the test environment needs to handle
   // some incoming FIDL requests.
-  fuchsia::virtualization::hardware::VirtioMagmaSyncPtr magma_;
+  fuchsia::virtualization::hardware::VirtioMagmaPtr magma_;
   VirtioQueueFake out_queue_;
   WaylandImporterMock wayland_importer_mock_;
   fidl::Binding<fuchsia::virtualization::hardware::VirtioWaylandImporter>
@@ -252,7 +317,7 @@ TEST_F(VirtioMagmaTest, HandleQuery) {
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
-    ASSERT_EQ(magma_->NotifyQueue(0), ZX_OK);
+    magma_->NotifyQueue(0);
 
     auto used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
@@ -284,7 +349,7 @@ TEST_F(VirtioMagmaTest, HandleConnectionMethod) {
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
-    ASSERT_EQ(magma_->NotifyQueue(0), ZX_OK);
+    magma_->NotifyQueue(0);
 
     auto used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
@@ -299,20 +364,20 @@ TEST_F(VirtioMagmaTest, HandleConnectionMethod) {
   ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
 }
 
-TEST_F(VirtioMagmaTest, HandleExport) {
+TEST_F(VirtioMagmaTest, HandleImportExport) {
   magma_device_t device{};
   ASSERT_NO_FATAL_FAILURE(ImportDevice(&device));
   uint64_t connection{};
   ASSERT_NO_FATAL_FAILURE(CreateConnection(device, &connection));
 
-  magma_buffer_t buffer{};
-  ASSERT_NO_FATAL_FAILURE(CreateBuffer(connection, &buffer));
+  magma_buffer_t image{};
+  ASSERT_NO_FATAL_FAILURE(CreateImage(connection, &image));
 
-  {  // Export the buffer
+  {
     virtio_magma_export_ctrl_t request{};
     request.hdr.type = VIRTIO_MAGMA_CMD_EXPORT;
     request.connection = connection;
-    request.buffer = buffer;
+    request.buffer = image;
     virtio_magma_export_resp_t response{};
     uint16_t descriptor_id{};
     void* response_ptr;
@@ -321,7 +386,7 @@ TEST_F(VirtioMagmaTest, HandleExport) {
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
-    ASSERT_EQ(magma_->NotifyQueue(0), ZX_OK);
+    magma_->NotifyQueue(0);
 
     auto used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
@@ -333,8 +398,33 @@ TEST_F(VirtioMagmaTest, HandleExport) {
     EXPECT_EQ(response.buffer_handle_out, kMockVfdId);
     ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
   }
+  {
+    virtio_magma_import_ctrl_t request{};
+    request.hdr.type = VIRTIO_MAGMA_CMD_IMPORT;
+    request.connection = connection;
+    request.buffer_handle = kMockVfdId;
+    virtio_magma_import_resp_t response{};
+    uint16_t descriptor_id{};
+    void* response_ptr;
+    ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                  .AppendReadableDescriptor(&request, sizeof(request))
+                  .AppendWritableDescriptor(&response_ptr, sizeof(response))
+                  .Build(&descriptor_id),
+              ZX_OK);
+    magma_->NotifyQueue(0);
 
-  ASSERT_NO_FATAL_FAILURE(ReleaseBuffer(connection, buffer));
+    auto used_elem = NextUsed(&out_queue_);
+    EXPECT_TRUE(used_elem);
+    EXPECT_EQ(used_elem->id, descriptor_id);
+    EXPECT_EQ(used_elem->len, sizeof(response));
+    memcpy(&response, response_ptr, sizeof(response));
+    EXPECT_EQ(response.hdr.type, VIRTIO_MAGMA_RESP_IMPORT);
+    EXPECT_EQ(response.hdr.flags, 0u);
+    EXPECT_NE(response.buffer_out, 0u);
+    ASSERT_EQ(static_cast<magma_status_t>(response.result_return), MAGMA_STATUS_OK);
+  }
+
+  ASSERT_NO_FATAL_FAILURE(ReleaseBuffer(connection, image));
   ASSERT_NO_FATAL_FAILURE(ReleaseConnection(connection));
   ASSERT_NO_FATAL_FAILURE(ReleaseDevice(device));
 }
@@ -366,7 +456,7 @@ TEST_F(VirtioMagmaTest, InternalMapAndUnmap) {
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
-    ASSERT_EQ(magma_->NotifyQueue(0), ZX_OK);
+    magma_->NotifyQueue(0);
 
     auto used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);
@@ -393,7 +483,7 @@ TEST_F(VirtioMagmaTest, InternalMapAndUnmap) {
                   .AppendWritableDescriptor(&response_ptr, sizeof(response))
                   .Build(&descriptor_id),
               ZX_OK);
-    ASSERT_EQ(magma_->NotifyQueue(0), ZX_OK);
+    magma_->NotifyQueue(0);
 
     auto used_elem = NextUsed(&out_queue_);
     EXPECT_TRUE(used_elem);

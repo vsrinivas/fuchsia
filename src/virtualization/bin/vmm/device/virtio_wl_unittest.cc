@@ -571,17 +571,43 @@ TEST_F(VirtioWlTest, Hup) {
   EXPECT_EQ(header->vfd_id, 1u);
 }
 
-TEST_F(VirtioWlTest, Import) {
+TEST_F(VirtioWlTest, ImportExportImage) {
   ASSERT_EQ(CreateConnection(1u), ZX_OK);
   RunLoopUntilIdle();
   ASSERT_EQ(channels_.size(), 1u);
   fuchsia::virtualization::hardware::VirtioWaylandImporterSyncPtr importer;
   ASSERT_EQ(wl_->GetImporter(importer.NewRequest()), ZX_OK);
-  zx::vmo vmo;
-  ASSERT_EQ(zx::vmo::create(kImportVmoSize, 0u, &vmo), ZX_OK);
+
+  virtio_wl_ctrl_vfd_new_t* new_vfd_cmd;
+  uint16_t descriptor_id;
+  ASSERT_EQ(DescriptorChainBuilder(in_queue_)
+                .AppendWritableDescriptor(&new_vfd_cmd, sizeof(virtio_wl_ctrl_vfd_new_t))
+                .Build(&descriptor_id),
+            ZX_OK);
+
   uint32_t vfd_id = 0;
-  ASSERT_EQ(importer->Import(std::move(vmo), &vfd_id), ZX_OK);
-  ASSERT_NE(vfd_id, 0u);
+  uint64_t koid = 0;
+  {
+    fuchsia::virtualization::hardware::VirtioImage image;
+    ASSERT_EQ(zx::vmo::create(kImportVmoSize, 0u, &image.vmo), ZX_OK);
+    zx_info_handle_basic_t info;
+    ASSERT_EQ(image.vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr),
+              ZX_OK);
+    koid = info.koid;
+    ASSERT_EQ(importer->ImportImage(std::move(image), &vfd_id), ZX_OK);
+    ASSERT_NE(vfd_id, 0u);
+  }
+  {
+    std::unique_ptr<fuchsia::virtualization::hardware::VirtioImage> image;
+    zx_status_t result;
+    ASSERT_EQ(importer->ExportImage(vfd_id, &result, &image), ZX_OK);
+    ASSERT_TRUE(image);
+    EXPECT_EQ(result, ZX_OK);
+    zx_info_handle_basic_t info;
+    ASSERT_EQ(image->vmo.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr),
+              ZX_OK);
+    EXPECT_EQ(koid, info.koid);
+  }
 }
 
 }  // namespace

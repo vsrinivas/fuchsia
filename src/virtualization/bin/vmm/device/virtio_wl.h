@@ -31,6 +31,8 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
                  public fuchsia::virtualization::hardware::VirtioWayland,
                  public fuchsia::virtualization::hardware::VirtioWaylandImporter {
  public:
+  using VirtioImage = fuchsia::virtualization::hardware::VirtioImage;
+
   class Vfd {
    public:
     Vfd() = default;
@@ -77,6 +79,9 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
     //
     // Returns ZX_ERR_NOT_SUPPORTED if duplication is not supported.
     virtual zx_status_t Duplicate(zx::handle* handle) { return ZX_ERR_NOT_SUPPORTED; }
+
+    // Returns the VirtioImage associated with this VFD.
+    virtual VirtioWl::VirtioImage* GetImage() { return nullptr; }
   };
 
   explicit VirtioWl(sys::ComponentContext* context);
@@ -100,7 +105,8 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
                        request) override;
 
   // |fuchsia::virtualization::hardware::VirtioWaylandImporter|
-  void Import(zx::vmo vmo, ImportCallback callback) override;
+  void ImportImage(VirtioImage image, ImportImageCallback callback) override;
+  void ExportImage(uint32_t vfd_id, ExportImageCallback callback) override;
 
  private:
   void HandleCommand(VirtioChain* chain);
@@ -132,7 +138,7 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
   std::unordered_map<uint32_t, zx_signals_t> ready_vfds_;
   uint32_t next_vfd_id_ = VIRTWL_NEXT_VFD_ID_BASE;
 
-  // A pending VFD is a zircon handle that will will be converted into a VFD
+  // A pending VFD is a zircon handle or image that will will be converted into a VFD
   // by sending a NEW_VFD command back to the guest.
   struct PendingVfd {
     // The handle to turn into a VFD.
@@ -150,6 +156,10 @@ class VirtioWl : public DeviceBase<VirtioWl, fuchsia::virtualization::hardware::
     // a RECV command. This is because the VFD ids in that RECV command will
     // not be valid until _all_ the VFDs are created.
     VirtioChain payload;
+
+    // Images may be imported from and exported to VirtioMagma.
+    // The image contains the VMO handle and other opaque parameters.
+    std::unique_ptr<VirtioImage> image;
   };
   std::deque<PendingVfd> pending_vfds_;
 

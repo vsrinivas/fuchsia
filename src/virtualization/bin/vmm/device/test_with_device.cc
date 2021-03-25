@@ -69,15 +69,38 @@ zx_status_t TestWithDevice::LaunchDevice(
 }
 
 zx_status_t TestWithDevice::WaitOnInterrupt() {
-  zx::time deadline = zx::deadline_after(zx::sec(10));
+  std::optional<zx_status_t> opt_status;
   zx_signals_t signals = VirtioQueue::InterruptAction::TRY_INTERRUPT << kDeviceInterruptShift;
-  zx_signals_t pending;
-  zx_status_t status = event_.wait_one(signals, deadline, &pending);
+
+  async::Wait wait(event_.get(), signals, 0 /*options*/,
+                   [&](async_dispatcher_t* dispatcher, async::Wait* wait, zx_status_t status,
+                       const zx_packet_signal_t* signal) {
+                     opt_status = status;
+                     QuitLoop();
+                   });
+
+  zx_status_t status = wait.Begin(dispatcher());
   if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Wait Begin failed: " << status;
     return status;
   }
-  if (!(pending & signals)) {
-    return ZX_ERR_BAD_STATE;
+
+  if (RunLoopWithTimeout(zx::sec(10))) {
+    FX_LOGS(ERROR) << "Run loop timed out";
+    return ZX_ERR_TIMED_OUT;
   }
-  return event_.signal(pending, 0);
+
+  if (!opt_status) {
+    FX_LOGS(ERROR) << "Optional status not available";
+    return ZX_ERR_INTERNAL;
+  }
+
+  if (opt_status != ZX_OK) {
+    FX_LOGS(ERROR) << "Optional status: " << status;
+    return opt_status.value();
+  }
+
+  event_.signal(signals, 0);
+
+  return ZX_OK;
 }

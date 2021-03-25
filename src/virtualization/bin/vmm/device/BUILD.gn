@@ -257,6 +257,7 @@ source_set("virtio_magma_lib") {
     ":virtio",
     "//src/graphics/lib/magma/include:magma_abi",
     "//src/graphics/lib/magma/include/virtio",
+    "//zircon/system/ulib/syslog",
   ]
   public_deps = [ ":virtio_magma_generic" ]
 

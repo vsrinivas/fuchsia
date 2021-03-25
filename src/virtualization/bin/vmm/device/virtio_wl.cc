@@ -29,6 +29,7 @@ class Memory : public VirtioWl::Vfd {
  public:
   Memory(zx::vmo vmo, uintptr_t addr, uint64_t size, zx::vmar* vmar)
       : handle_(vmo.release()), addr_(addr), size_(size), vmar_(vmar) {}
+
   ~Memory() override { vmar_->unmap(addr_, size_); }
 
   // Create a memory instance by mapping |vmo| into |vmar|. Returns a valid
@@ -55,6 +56,16 @@ class Memory : public VirtioWl::Vfd {
     return std::make_unique<Memory>(std::move(vmo), addr, size, vmar);
   }
 
+  // Create a memory instance with a VirtioImage.
+  static std::unique_ptr<Memory> Create(std::unique_ptr<VirtioWl::VirtioImage> image, zx::vmo vmo,
+                                        zx::vmar* vmar, uint32_t map_flags) {
+    auto memory = Create(std::move(vmo), vmar, map_flags);
+    if (memory) {
+      memory->image_ = std::move(image);
+    }
+    return memory;
+  }
+
   // |VirtioWl::Vfd|
   zx_status_t Duplicate(zx::handle* handle) override {
     return handle_.duplicate(ZX_RIGHT_SAME_RIGHTS, handle);
@@ -63,11 +74,14 @@ class Memory : public VirtioWl::Vfd {
   uintptr_t addr() const { return addr_; }
   uint64_t size() const { return size_; }
 
+  VirtioWl::VirtioImage* GetImage() override { return image_.get(); }
+
  private:
   zx::handle handle_;
   const uintptr_t addr_;
   const uint64_t size_;
   zx::vmar* const vmar_;
+  std::unique_ptr<VirtioWl::VirtioImage> image_;
 };
 
 // Vfd type that holds a wayland dispatcher connection.
@@ -209,27 +223,63 @@ void VirtioWl::GetImporter(
   importer_bindings_.AddBinding(this, std::move(request));
 }
 
-void VirtioWl::Import(zx::vmo vmo, ImportCallback callback) {
-  TRACE_DURATION("machina", "VirtioWl::Import");
+void VirtioWl::ImportImage(VirtioImage image, ImportImageCallback callback) {
+  TRACE_DURATION("machina", "VirtioWl::ImportImage");
   auto deferred = fit::defer(
-      [&]() { callback(fuchsia::virtualization::hardware::kVirtioWaylandInvalidVfdId); });
+      [&]() { callback(fuchsia::virtualization::hardware::VIRTIO_WAYLAND_INVALID_VFD_ID); });
   zx_info_handle_basic_t handle_basic_info{};
-  zx_status_t status = zx_object_get_info(vmo.get(), ZX_INFO_HANDLE_BASIC, &handle_basic_info,
+  zx_status_t status = image.vmo.get_info(ZX_INFO_HANDLE_BASIC, &handle_basic_info,
                                           sizeof(handle_basic_info), nullptr, nullptr);
   if (status != ZX_OK || handle_basic_info.type != ZX_OBJ_TYPE_VMO) {
-    FX_LOGS(ERROR) << "failed to import VMO";
+    FX_LOGS(ERROR) << "Image VMO failed handle type check";
     return;
   }
+
   uint32_t vfd_id = next_vfd_id_++;
   PendingVfd pending_vfd{};
-  pending_vfd.handle_info.handle = vmo.release();
+
+  status =
+      zx_handle_duplicate(image.vmo.get(), ZX_RIGHT_SAME_RIGHTS, &pending_vfd.handle_info.handle);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Failed to duplicate image VMO";
+    return;
+  }
+
   pending_vfd.handle_info.type = handle_basic_info.type;
   pending_vfd.handle_info.rights = handle_basic_info.rights;
   pending_vfd.vfd_id = vfd_id;
+  pending_vfd.image = std::make_unique<VirtioImage>(std::move(image));
+
   pending_vfds_.push_back(std::move(pending_vfd));
   DispatchPendingEvents();
   deferred.cancel();
   callback(vfd_id);
+}
+
+void VirtioWl::ExportImage(uint32_t vfd_id, ExportImageCallback callback) {
+  TRACE_DURATION("machina", "VirtioWl::ExportImage");
+
+  auto iter = vfds_.find(vfd_id);
+  if (iter == vfds_.end()) {
+    FX_LOGS(ERROR) << "VFD not found " << vfd_id;
+    callback(ZX_ERR_NOT_FOUND, {});
+    return;
+  }
+
+  std::unique_ptr<Vfd>& vfd = iter->second;
+
+  auto image = std::make_unique<VirtioWl::VirtioImage>();
+
+  zx_status_t status = vfd->GetImage()->vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &image->vmo);
+  if (status != ZX_OK) {
+    FX_LOGS(ERROR) << "Duplicate failed";
+    callback(ZX_ERR_INTERNAL, {});
+    return;
+  }
+
+  image->info = vfd->GetImage()->info;
+
+  callback(ZX_OK, std::move(image));
 }
 
 void VirtioWl::Ready(uint32_t negotiated_features, ReadyCallback callback) {
@@ -873,12 +923,19 @@ bool VirtioWl::CreatePendingVfds() {
         if (it->handle_info.rights & ZX_RIGHT_WRITE) {
           map_flags |= ZX_VM_PERM_WRITE;
         }
-        std::unique_ptr<Memory> vfd =
-            Memory::Create(zx::vmo(it->handle_info.handle), &vmar_, map_flags);
+
+        std::unique_ptr<Memory> vfd;
+        if (it->image) {
+          vfd = Memory::Create(std::move(it->image), zx::vmo(it->handle_info.handle), &vmar_,
+                               map_flags);
+        } else {
+          vfd = Memory::Create(zx::vmo(it->handle_info.handle), &vmar_, map_flags);
+        }
         if (!vfd) {
           FX_LOGS(ERROR) << "Failed to create memory instance for VMO";
           break;
         }
+
         new_vfd_cmd->hdr.type = VIRTIO_WL_CMD_VFD_NEW;
         new_vfd_cmd->hdr.flags = 0;
         new_vfd_cmd->pfn = vfd->addr() / PAGE_SIZE;

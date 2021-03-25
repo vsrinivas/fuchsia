@@ -145,7 +145,7 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
     close(fd);
   }
 
-  void ExportTest(uint32_t flags, uint64_t specified_modifier, uint64_t expected_modifier) {
+  void ImportExportTest(uint32_t flags, uint64_t specified_modifier, uint64_t expected_modifier) {
     int fd = 0;
     uint64_t buffer_id = 0;
 
@@ -184,35 +184,60 @@ class MagmaImageTestFormats : public MagmaImageTest, public testing::WithParamIn
     }
 
     EXPECT_GT(fd, 0);
+
+    // Import into a new connection
+    TearDown();
+    SetUp();
+
+    {
+      magma_buffer_t image;
+      magma_handle_t handle = fd;
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_import(connection_, handle, &image));
+
+      magma_image_info_t image_info = {};
+      ASSERT_EQ(MAGMA_STATUS_OK, magma_virt_get_image_info(connection_, image, &image_info));
+
+      EXPECT_EQ(expected_modifier, image_info.drm_format_modifier);
+      if (expected_modifier == DRM_FORMAT_MOD_LINEAR) {
+        EXPECT_EQ(kWidth * 4, image_info.plane_strides[0]);
+      }
+      EXPECT_EQ(0u, image_info.plane_offsets[0]);
+
+      EXPECT_EQ(buffer_id, magma_get_buffer_id(image));
+
+      MapAndCompare(image);
+
+      magma_release_buffer(connection_, image);
+    }
   }
 };
 
-TEST_P(MagmaImageTestFormats, ExportLinear) {
+TEST_P(MagmaImageTestFormats, ImportExportLinear) {
   constexpr uint32_t kFlags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE;
   constexpr uint64_t kSpecifiedModifier = DRM_FORMAT_MOD_LINEAR;
   constexpr uint64_t kExpectedModifier = DRM_FORMAT_MOD_LINEAR;
-  ExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
+  ImportExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
 }
 
-TEST_P(MagmaImageTestFormats, ExportPresentableLinear) {
+TEST_P(MagmaImageTestFormats, ImportExportPresentableLinear) {
   constexpr uint32_t kFlags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE;
   constexpr uint64_t kSpecifiedModifier = DRM_FORMAT_MOD_LINEAR;
   constexpr uint64_t kExpectedModifier = DRM_FORMAT_MOD_LINEAR;
-  ExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
+  ImportExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
 }
 
-TEST_P(MagmaImageTestFormats, ExportIntel) {
+TEST_P(MagmaImageTestFormats, ImportExportIntel) {
   constexpr uint32_t kFlags = 0;
   constexpr uint64_t kSpecifiedModifier = DRM_FORMAT_MOD_INVALID;
   constexpr uint64_t kExpectedModifier = I915_FORMAT_MOD_Y_TILED;
-  ExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
+  ImportExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
 }
 
-TEST_P(MagmaImageTestFormats, ExportPresentableIntel) {
+TEST_P(MagmaImageTestFormats, ImportExportPresentableIntel) {
   constexpr uint32_t kFlags = MAGMA_IMAGE_CREATE_FLAGS_PRESENTABLE;
   constexpr uint64_t kSpecifiedModifier = DRM_FORMAT_MOD_INVALID;
   constexpr uint64_t kExpectedModifier = I915_FORMAT_MOD_Y_TILED;
-  ExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
+  ImportExportTest(kFlags, kSpecifiedModifier, kExpectedModifier);
 }
 
 INSTANTIATE_TEST_SUITE_P(MagmaImageTestFormats, MagmaImageTestFormats,

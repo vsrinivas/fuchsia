@@ -160,12 +160,24 @@ protocol VirtioRng {
     Start(StartInfo start_info) -> ();
 };
 
-const uint32 kVirtioWaylandInvalidVfdId = 0;
+/// Sufficient to contain the opaque image info.
+const uint32 VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE = 128;
 
-// Provides an interface to import VMOs into the wayland device.
+/// VirtioImages are shared with VirtioMagma, enabling guest clients to allocate
+/// GBM and Vulkan compatible images and share them with Sommelier as dma-bufs.
+/// An image corresponds to a single buffer collection, and also contains some
+/// opaque image info needed by VirtioMagma.
+resource struct VirtioImage {
+    zx.handle:VMO vmo;
+    bytes:VIRTIO_WAYLAND_MAX_IMAGE_INFO_SIZE info;
+};
+
+const uint32 VIRTIO_WAYLAND_INVALID_VFD_ID = 0;
+
+// Provides an interface to import images into the wayland device.
 protocol VirtioWaylandImporter {
-    // Import a VMO into Wayland for use as a VFD.
-    Import(zx.handle:VMO vmo) -> (uint32 vfd_id);
+    ImportImage(VirtioImage image) -> (uint32 vfd_id);
+    ExportImage(uint32 vfd_id) -> (zx.status status, VirtioImage? image);
 };
 
 [Discoverable]
