@@ -72,13 +72,13 @@ func (s sortableMessages) Less(i, j int) bool {
 		return false
 	}
 
-	if byLnNo := s[i].tok.ln - s[j].tok.ln; byLnNo < 0 {
+	if byLnNo := s[i].tok.Ln - s[j].tok.Ln; byLnNo < 0 {
 		return true
 	} else if byLnNo > 0 {
 		return false
 	}
 
-	if byColNo := s[i].tok.col - s[j].tok.col; byColNo < 0 {
+	if byColNo := s[i].tok.Col - s[j].tok.Col; byColNo < 0 {
 		return true
 	} else if byColNo > 0 {
 		return false
@@ -138,9 +138,9 @@ func (r *RootReporter) messagesToFindingsJSON() []findingJSON {
 			Category:  fmt.Sprintf("mdlint/%s", msg.category),
 			Message:   msg.content,
 			Path:      msg.tok.Doc.filename,
-			StartLine: msg.tok.ln,
-			StartChar: msg.tok.col - 1,
-			EndLine:   msg.tok.ln + numLines,
+			StartLine: msg.tok.Ln,
+			StartChar: msg.tok.Col - 1,
+			EndLine:   msg.tok.Ln + numLines,
 			EndChar:   numCharsOnLastLine,
 		})
 	}
@@ -150,7 +150,7 @@ func (r *RootReporter) messagesToFindingsJSON() []findingJSON {
 func numLinesAndCharsOnLastLine(tok Token) (int, int) {
 	var (
 		numLines           int
-		numCharsOnLastLine = tok.col - 1
+		numCharsOnLastLine = tok.Col - 1
 	)
 	for _, r := range tok.Content {
 		if r == '\n' {
@@ -186,8 +186,8 @@ func (r *RootReporter) printAsPrettyPrint(writer io.Writer) error {
 			}
 		}
 		var (
-			explanation = fmt.Sprintf("%s:%d:%d: %s", msg.tok.Doc.filename, msg.tok.ln, msg.tok.col, msg.content)
-			lineFromDoc = msg.tok.Doc.lines[msg.tok.ln-1]
+			explanation = fmt.Sprintf("%s:%d:%d: %s", msg.tok.Doc.filename, msg.tok.Ln, msg.tok.Col, msg.content)
+			lineFromDoc = msg.tok.Doc.lines[msg.tok.Ln-1]
 			squiggle    = makeSquiggle(lineFromDoc, msg.tok)
 		)
 		for _, line := range []string{explanation, "\n", lineFromDoc, "\n", squiggle, "\n"} {
@@ -215,7 +215,7 @@ func makeSquiggle(line string, tok Token) string {
 		squiggle bytes.Buffer
 	)
 	for _, r := range line {
-		if col == tok.col {
+		if col == tok.Col {
 			break
 		}
 		if isSeparatorSpace(r) {

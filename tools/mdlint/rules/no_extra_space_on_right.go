@@ -9,9 +9,7 @@ import (
 )
 
 func init() {
-	core.RegisterLintRuleOverTokens(noExtraSpaceOnRightName, func(reporter core.Reporter) core.LintRuleOverTokens {
-		return &noExtraSpaceOnRight{reporter: reporter}
-	})
+	core.RegisterLintRuleOverTokens(noExtraSpaceOnRightName, newNoExtraSpaceOnRight)
 }
 
 const noExtraSpaceOnRightName = "no-extra-space-on-right"
@@ -24,6 +22,10 @@ type noExtraSpaceOnRight struct {
 }
 
 var _ core.LintRuleOverTokens = (*noExtraSpaceOnRight)(nil)
+
+func newNoExtraSpaceOnRight(reporter core.Reporter) core.LintRuleOverTokens {
+	return &noExtraSpaceOnRight{reporter: reporter}
+}
 
 func (rule *noExtraSpaceOnRight) OnNext(tok core.Token) {
 	if rule.lastTok.Kind == core.Space && tok.Kind == core.Newline {

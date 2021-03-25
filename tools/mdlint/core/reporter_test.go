@@ -21,22 +21,22 @@ func TestMessagesToFindingsJSON(t *testing.T) {
 		Doc:     &doc,
 		Kind:    Text,
 		Content: "1234",
-		ln:      10, // i.e. 10th line
-		col:     1,  // i.e. first character
+		Ln:      10, // i.e. 10th line
+		Col:     1,  // i.e. first character
 	}, "%s, %s!", "Hello", "World")
 	rootReporter.Warnf(Token{
 		Doc:     &doc,
 		Kind:    Text,
 		Content: "```this one\nspans\nmultiple lines\n123456```",
-		ln:      2, // i.e. 2nd line
-		col:     5, // i.e. fifth character
+		Ln:      2, // i.e. 2nd line
+		Col:     5, // i.e. fifth character
 	}, "%d%d!", 4, 2)
 	ruleReporter.Warnf(Token{
 		Doc:     &doc,
 		Kind:    Text,
 		Content: "1",
-		ln:      30, // i.e. 30th line
-		col:     17, // i.e. seventeeth character
+		Ln:      30, // i.e. 30th line
+		Col:     17, // i.e. seventeeth character
 	}, "no format")
 
 	expected := []findingJSON{

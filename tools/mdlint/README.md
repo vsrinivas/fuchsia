@@ -121,10 +121,8 @@ import (
 )
 
 func init() {
-    // or core.RegisterLintRuleOverEvents(...)
-	core.RegisterLintRuleOverTokens(theRuleName, func(reporter core.Reporter) core.LintRuleOverTokens {
-		return &theRule{ ... }
-	})
+	// or core.RegisterLintRuleOverEvents(...)
+	core.RegisterLintRuleOverTokens(theRuleName, newTheRule)
 }
 
 const theRuleName = "the-rule-name"
@@ -135,5 +133,27 @@ type theRule struct {
 
 var _ core.LintRuleOverTokens = (*theRule)(nil) // or core.LintRuleOverEvents
 
+func newTheRule(reporter core.Reporter) core.LintRuleOverTokens {
+    return &theRule{ ... }
+}
+
 // followed by the implementation
+```
+
+### Testing a rule
+
+Rules should be tested using sample Markdown documents, with the help of the
+provided testing utilities:
+
+```go
+func TestTheRule(t *testing.T) {
+	ruleTestCase{
+		input: `Sample Markdown document
+
+Use a «marker» to denote expected warnings.
+
+You can place markers on whitespace, for instance« »
+denotes an expected warning on a non-trimmed line.`,
+	}.runOverTokens(t, newTheRule)
+}
 ```

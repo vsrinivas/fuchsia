@@ -165,8 +165,8 @@ func (ex tokenizerTestCase) runTestTokenization(t *testing.T, inputNum int) {
 			}
 
 			// Verify position.
-			if actual.ln != ln || actual.col != col {
-				t.Errorf("%d: expecting position %d:%d, found position %d:%d", tokenNum, ln, col, actual.ln, actual.col)
+			if actual.Ln != ln || actual.Col != col {
+				t.Errorf("%d: expecting position %d:%d, found position %d:%d", tokenNum, ln, col, actual.Ln, actual.Col)
 			}
 			if actual.Kind == Newline {
 				ln, col = ln+1, 1

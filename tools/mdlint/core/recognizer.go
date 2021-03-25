@@ -161,8 +161,8 @@ func (r *recognizer) OnNext(tok Token) {
 					Doc:     tok.Doc,
 					Kind:    Text,
 					Content: tok.Content[1:],
-					ln:      tok.ln,
-					col:     tok.col + 1,
+					Ln:      tok.Ln,
+					Col:     tok.Col + 1,
 				})
 			} else {
 				r.rule.OnLinkByXref(r.accTokens[0])

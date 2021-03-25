@@ -177,12 +177,16 @@ type Token struct {
 	Kind    TokenKind
 	Content string
 
-	// ln, col are 1-based
-	ln, col int
+	// Ln indicates the line number of the start of the token, starting at 1.
+	Ln int
+
+	// Col indicates the column number of the start of the token, in number of
+	// runes, starting at 1.
+	Col int
 }
 
 func (tok Token) String() string {
-	return fmt.Sprintf("%s(%d:%d:%s)", tok.Kind, tok.ln, tok.col, strconv.Quote(tok.Content))
+	return fmt.Sprintf("%s(%d:%d:%s)", tok.Kind, tok.Ln, tok.Col, strconv.Quote(tok.Content))
 }
 
 type tokenizer struct {
@@ -241,8 +245,8 @@ func (t *tokenizer) newToken(kind TokenKind) Token {
 		Doc:     t.doc,
 		Kind:    kind,
 		Content: content,
-		ln:      t.context.ln,
-		col:     t.context.col,
+		Ln:      t.context.ln,
+		Col:     t.context.col,
 	}
 	t.context.col += len(content)
 	return tok
