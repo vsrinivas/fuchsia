@@ -624,6 +624,22 @@ void main(List<String> args) {
     expect(results[10].label, equals('Memory Bandwidth Usage'));
     expect(results[10].values[0], _closeTo(50.00));
     expect(results[10].values[1], _closeTo(75.00));
+
+    final resultsExcludingBandwidth =
+        memoryMetricsProcessor(model, {'exclude_bandwidth': true});
+    expect(resultsExcludingBandwidth.length, 4);
+    expect(resultsExcludingBandwidth[0].label, equals('Total System Memory'));
+    expect(resultsExcludingBandwidth[0].values[0], _closeTo(940612736));
+    expect(resultsExcludingBandwidth[0].values[1], _closeTo(990612736));
+    expect(resultsExcludingBandwidth[1].label, equals('VMO Memory'));
+    expect(resultsExcludingBandwidth[1].values[0], _closeTo(781942784));
+    expect(resultsExcludingBandwidth[1].values[1], _closeTo(781942785));
+    expect(resultsExcludingBandwidth[2].label, equals('MMU Overhead Memory'));
+    expect(resultsExcludingBandwidth[2].values[0], _closeTo(77529088));
+    expect(resultsExcludingBandwidth[2].values[1], _closeTo(77529089));
+    expect(resultsExcludingBandwidth[3].label, equals('IPC Memory'));
+    expect(resultsExcludingBandwidth[3].values[0], _closeTo(49152));
+    expect(resultsExcludingBandwidth[3].values[1], _closeTo(49152));
   });
 
   test('Custom registry', () async {
