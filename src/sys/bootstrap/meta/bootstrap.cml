@@ -101,8 +101,13 @@
             durability: "transient",
         },
         {
-            name: "drivers",
-            environment: "#driver-env",
+            name: "boot-drivers",
+            environment: "#boot-driver-env",
+            durability: "transient",
+        },
+        {
+            name: "pkg-drivers",
+            environment: "#pkg-driver-env",
             durability: "transient",
         },
     ],
@@ -203,7 +208,12 @@
                 "fuchsia.tracing.provider.Registry",
             ],
             from: "parent",
-            to: [ "#drivers" ],
+            to: [ "#boot-drivers" ],
+        },
+        {
+            protocol: [ "fuchsia.tracing.provider.Registry" ],
+            from: "parent",
+            to: [ "#pkg-drivers" ],
         },
         {
             protocol: [ "fuchsia.kernel.Stats" ],
@@ -648,15 +658,16 @@
             from: "#archivist",
             to: [
                 "#base_resolver",
+                "#boot-drivers",
                 "#console-launcher",
                 "#decompressor",
                 "#device_name_provider",
                 "#driver_hosts",
                 "#driver_manager",
-                "#drivers",
                 "#fshost",
                 "#live_usb",
                 "#netsvc",
+                "#pkg-drivers",
                 "#power_manager",
                 "#pwrbtn-monitor",
                 "#svchost",
@@ -923,8 +934,21 @@
             __stop_timeout_ms: 2000,
         },
         {
-            name: "driver-env",
+            name: "boot-driver-env",
             extends: "realm",
+            runners: [
+                {
+                    runner: "driver",
+                    from: "#driver_manager",
+                },
+            ],
+
+            // 1 second
+            __stop_timeout_ms: 1000,
+        },
+        {
+            name: "pkg-driver-env",
+            extends: "none",
             runners: [
                 {
                     runner: "driver",

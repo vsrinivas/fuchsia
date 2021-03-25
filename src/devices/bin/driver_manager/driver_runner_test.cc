@@ -251,12 +251,12 @@ class DriverRunnerTest : public gtest::TestLoopFixture {
 
   zx::status<zx::channel> StartRootDriver(std::string url, DriverRunner* driver_runner) {
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {
-      EXPECT_EQ("drivers", collection.name);
+      EXPECT_EQ("boot-drivers", collection.name);
       EXPECT_EQ("driver-0", decl.name());
       EXPECT_EQ("fuchsia-boot:///#meta/root-driver.cm", decl.url());
     });
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ("drivers", child.collection);
+      EXPECT_EQ("boot-drivers", child.collection);
       EXPECT_EQ("driver-0", child.name);
       EXPECT_EQ(ZX_OK, driver_dir_binding_.Bind(std::move(exposed_dir), loop_.dispatcher()));
     });
@@ -449,12 +449,12 @@ TEST_F(DriverRunnerTest, StartSecondDriver_NewDriverHost) {
     EXPECT_EQ("false", entries[1].value->str());
 
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {
-      EXPECT_EQ("drivers", collection.name);
+      EXPECT_EQ("boot-drivers", collection.name);
       EXPECT_EQ("driver-2", decl.name());
       EXPECT_EQ("fuchsia-boot:///#meta/second-driver.cm", decl.url());
     });
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ("drivers", child.collection);
+      EXPECT_EQ("boot-drivers", child.collection);
       EXPECT_EQ("driver-2", child.name);
       EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
     });
@@ -512,12 +512,12 @@ TEST_F(DriverRunnerTest, StartSecondDriver_SameDriverHost) {
     EXPECT_EQ("false", entries[1].value->str());
 
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {
-      EXPECT_EQ("drivers", collection.name);
+      EXPECT_EQ("boot-drivers", collection.name);
       EXPECT_EQ("driver-2", decl.name());
       EXPECT_EQ("fuchsia-boot:///#meta/second-driver.cm", decl.url());
     });
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ("drivers", child.collection);
+      EXPECT_EQ("boot-drivers", child.collection);
       EXPECT_EQ("driver-2", child.name);
       EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
     });
@@ -589,12 +589,12 @@ TEST_F(DriverRunnerTest, StartSecondDriver_UseProperties) {
     EXPECT_EQ("false", entries[1].value->str());
 
     realm().SetCreateChildHandler([](fsys::CollectionRef collection, fsys::ChildDecl decl) {
-      EXPECT_EQ("drivers", collection.name);
+      EXPECT_EQ("boot-drivers", collection.name);
       EXPECT_EQ("driver-2", decl.name());
       EXPECT_EQ("fuchsia-boot:///#meta/second-driver.cm", decl.url());
     });
     realm().SetBindChildHandler([this](fsys::ChildRef child, auto exposed_dir) {
-      EXPECT_EQ("drivers", child.collection);
+      EXPECT_EQ("boot-drivers", child.collection);
       EXPECT_EQ("driver-2", child.name);
       EXPECT_EQ(ZX_OK, driver_dir_binding().Bind(std::move(exposed_dir), loop().dispatcher()));
     });

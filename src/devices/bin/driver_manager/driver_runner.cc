@@ -72,6 +72,11 @@ void UnbindAndReset(std::optional<fidl::ServerBindingRef<T>>& ref) {
   }
 }
 
+std::string DriverCollection(std::string_view url) {
+  constexpr auto scheme = "fuchsia-boot://";
+  return url.compare(0, strlen(scheme), scheme) == 0 ? "boot-drivers" : "pkg-drivers";
+}
+
 }  // namespace
 
 class EventHandler : public fdf::DriverHost::AsyncEventHandler {
@@ -384,7 +389,7 @@ zx::status<> DriverRunner::StartRootDriver(std::string_view url) {
 
 zx::status<> DriverRunner::StartDriver(Node* node, std::string_view url) {
   auto driver_name = "driver-" + std::to_string(NextId());
-  auto create_result = CreateComponent(driver_name, std::string(url), "drivers");
+  auto create_result = CreateComponent(driver_name, std::string(url), DriverCollection(url));
   if (create_result.is_error()) {
     return create_result.take_error();
   }
