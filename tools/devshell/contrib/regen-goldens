@@ -20,7 +20,7 @@
 ##
 ## Supported tools:
 ##   fidlc, fidldoc, fidlgen_dart, fidlgen_go, fidlgen_hlcpp, fidlgen_libfuzzer,
-##   fidlgen_llcpp, fidlgen_rust, fidlgen_syzkaller
+##   fidlgen_llcpp, fidlgen_rust, fidlgen_syzkaller, gidl_llcpp
 
 set -eo pipefail
 
@@ -38,6 +38,7 @@ readonly all_tools=(
     "fidlgen_llcpp"
     "fidlgen_rust"
     "fidlgen_syzkaller"
+    "gidl_llcpp"
 )
 
 tools=()

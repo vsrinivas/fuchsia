@@ -1,0 +1,107 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// This file contains FIDL definitions used in GIDL goldens.
+
+library conformance;
+
+struct GoldenBoolStruct {
+    bool v;
+};
+
+struct GoldenIntStruct {
+    int16 v;
+};
+
+struct GoldenUintStruct {
+    uint16 v;
+};
+
+struct GoldenFloatStruct {
+    float32 v;
+};
+
+struct GoldenDoubleStruct {
+    float64 v;
+};
+
+struct GoldenStringStruct {
+    string v;
+};
+
+struct GoldenNullableStringStruct {
+    string? v;
+};
+
+enum GoldenEnum : uint16 {
+    A = 1;
+};
+
+struct GoldenEnumStruct {
+    GoldenEnum v;
+};
+
+bits GoldenBits : uint16 {
+    A = 1;
+};
+
+struct GoldenBitsStruct {
+    GoldenBits v;
+};
+
+table GoldenTable {
+    1: int16 v;
+};
+
+struct GoldenTableStruct {
+    GoldenTable v;
+};
+
+union GoldenUnion {
+    1: int16 v;
+};
+
+struct GoldenUnionStruct {
+    GoldenUnion v;
+};
+
+struct GoldenNullableUnionStruct {
+    GoldenUnion? v;
+};
+
+struct GoldenByteArrayStruct {
+    array<byte>:4 v;
+};
+
+struct GoldenStructArrayStruct {
+    array<GoldenIntStruct>:2 v;
+};
+
+struct GoldenByteVectorStruct {
+    vector<byte> v;
+};
+
+struct GoldenNullableByteVectorStruct {
+    vector<byte>? v;
+};
+
+struct GoldenStructVectorStruct {
+    vector<GoldenIntStruct> v;
+};
+
+struct GoldenNullableStruct {
+    GoldenBoolStruct? v;
+};
+
+resource struct GoldenHandleBasicRightsStruct {
+    handle:<EVENT, RIGHTS_BASIC> v;
+};
+
+resource struct GoldenNullableHandleStruct {
+    handle? v;
+};
+
+struct GoldenStringWithMaxSize2 {
+    string:2 s;
+};

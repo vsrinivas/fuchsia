@@ -45,7 +45,7 @@ TEST(Conformance, {{ .Name }}_Encode) {
 	{{ .ValueBuild }}
 	const auto expected_bytes = {{ .Bytes }};
 	const auto expected_handles = {{ .Handles }};
-	auto obj = {{ .ValueVar }};
+	alignas(FIDL_ALIGNMENT) auto obj = {{ .ValueVar }};
 	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(
 		&obj, expected_bytes, expected_handles, {{ .CheckHandleRights }}));
 }

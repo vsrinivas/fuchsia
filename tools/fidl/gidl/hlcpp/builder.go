@@ -339,12 +339,12 @@ func BuildBytes(bytes []byte) string {
 	var builder strings.Builder
 	builder.WriteString("std::vector<uint8_t>{")
 	for i, b := range bytes {
-		builder.WriteString(fmt.Sprintf("0x%02x,", b))
-		if i%8 == 7 {
+		if i%8 == 0 {
 			builder.WriteString("\n")
 		}
+		builder.WriteString(fmt.Sprintf("0x%02x,", b))
 	}
-	builder.WriteString("}")
+	builder.WriteString("\n}")
 	return builder.String()
 }
 
