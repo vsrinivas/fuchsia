@@ -15,10 +15,7 @@ use fidl_fuchsia_input_report as hid_input_report;
 use fuchsia_async::{self as fasync, Time, TimeoutExt};
 use fuchsia_zircon::{self as zx, Duration};
 use futures::TryFutureExt;
-use input_synthesis::{
-    keymaps::QWERTY_MAP,
-    usages::{input3_key_to_hid_usage, key_to_hid_usage},
-};
+use input_synthesis::{keymaps::QWERTY_MAP, usages::input3_key_to_hid_usage};
 use std::{
     collections::{HashMap, HashSet},
     fs::{self, DirEntry},
@@ -75,18 +72,6 @@ pub struct Modifiers {
 }
 
 impl Modifiers {
-    pub(crate) fn from_pressed_keys(pressed_keys: &HashSet<fidl_fuchsia_ui_input2::Key>) -> Self {
-        Self {
-            shift: pressed_keys.contains(&fidl_fuchsia_ui_input2::Key::LeftShift)
-                || pressed_keys.contains(&fidl_fuchsia_ui_input2::Key::RightShift),
-            alt: pressed_keys.contains(&fidl_fuchsia_ui_input2::Key::LeftAlt)
-                || pressed_keys.contains(&fidl_fuchsia_ui_input2::Key::RightAlt),
-            control: pressed_keys.contains(&fidl_fuchsia_ui_input2::Key::LeftCtrl)
-                || pressed_keys.contains(&fidl_fuchsia_ui_input2::Key::RightCtrl),
-            caps_lock: pressed_keys.contains(&fidl_fuchsia_ui_input2::Key::CapsLock),
-        }
-    }
-
     pub(crate) fn from_pressed_keys_3(pressed_keys: &HashSet<fidl_fuchsia_input::Key>) -> Self {
         Self {
             shift: pressed_keys.contains(&fidl_fuchsia_input::Key::LeftShift)
@@ -520,7 +505,7 @@ pub(crate) struct InputReportHandler {
     touch_scale: Option<TouchScale>,
     cursor_position: IntPoint,
     pressed_mouse_buttons: HashSet<u8>,
-    pressed_keys: HashSet<fidl_fuchsia_ui_input2::Key>,
+    pressed_keys: HashSet<fidl_fuchsia_input::Key>,
     raw_contacts: HashSet<touch::RawContact>,
     pressed_consumer_control_buttons: HashSet<hid_input_report::ConsumerControlButton>,
 }
@@ -653,10 +638,10 @@ impl InputReportHandler {
             event_time: u64,
             device_id: &DeviceId,
             phase: keyboard::Phase,
-            key: fidl_fuchsia_ui_input2::Key,
+            key: fidl_fuchsia_input::Key,
             modifiers: &Modifiers,
         ) -> Event {
-            let hid_usage = key_to_hid_usage(key);
+            let hid_usage = input3_key_to_hid_usage(key);
             let hid_usage_size = hid_usage as usize;
             let code_point = code_point_from_usage(hid_usage_size, modifiers.shift);
             let keyboard_event =
@@ -668,14 +653,14 @@ impl InputReportHandler {
             }
         }
 
-        let pressed_keys: HashSet<fidl_fuchsia_ui_input2::Key> =
-            if let Some(ref pressed_keys) = keyboard.pressed_keys {
+        let pressed_keys: HashSet<fidl_fuchsia_input::Key> =
+            if let Some(ref pressed_keys) = keyboard.pressed_keys3 {
                 HashSet::from_iter(pressed_keys.iter().map(|key| *key))
             } else {
                 HashSet::new()
             };
 
-        let modifiers = Modifiers::from_pressed_keys(&pressed_keys);
+        let modifiers = Modifiers::from_pressed_keys_3(&pressed_keys);
 
         let newly_pressed = pressed_keys.difference(&self.pressed_keys).map(|key| {
             create_keyboard_event(event_time, device_id, keyboard::Phase::Pressed, *key, &modifiers)
@@ -1412,8 +1397,8 @@ mod test_data {
     }
     pub fn hello_world_keyboard_reports() -> Vec<fidl_fuchsia_input_report::InputReport> {
         use {
+            fidl_fuchsia_input::Key::*,
             fidl_fuchsia_input_report::{InputReport, KeyboardInputReport},
-            fidl_fuchsia_ui_input2::Key::*,
         };
         vec![
             InputReport {
@@ -1423,8 +1408,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![LeftShift]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![LeftShift]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1437,8 +1421,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![LeftShift, H]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![LeftShift, H]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1451,8 +1434,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![LeftShift]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![LeftShift]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1465,8 +1447,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1479,8 +1460,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![E]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![E]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1493,8 +1473,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1507,8 +1486,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![L]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![L]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1521,8 +1499,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1535,8 +1512,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![L]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![L]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1549,8 +1525,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1563,8 +1538,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![O]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![O]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1577,8 +1551,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1591,8 +1564,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![Space]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![Space]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1605,8 +1577,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1619,8 +1590,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![LeftShift]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![LeftShift]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1633,8 +1603,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![LeftShift, W]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![LeftShift, W]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1647,8 +1616,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![W]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![W]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1661,8 +1629,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1675,8 +1642,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![O]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![O]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1689,8 +1655,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1703,8 +1668,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![R]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![R]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1717,8 +1681,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1731,8 +1694,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![L]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![L]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1745,8 +1707,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1759,8 +1720,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![D]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![D]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1773,8 +1733,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1787,8 +1746,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![Enter]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![Enter]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
@@ -1801,8 +1759,7 @@ mod test_data {
                 sensor: None,
                 touch: None,
                 keyboard: Some(KeyboardInputReport {
-                    pressed_keys: Some(vec![]),
-                    pressed_keys3: None,
+                    pressed_keys3: Some(vec![]),
                     ..KeyboardInputReport::EMPTY
                 }),
                 consumer_control: None,
