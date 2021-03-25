@@ -12,10 +12,12 @@ group("tests") {
   if (select_variant + [
         "coverage",
         "profile",
+        "rustcoverage",
       ] -
       [
         "coverage",
         "profile",
+        "rustcoverage",
       ] == select_variant) {
     # WARNING: Only tests that are NOT end to end (E2E) product tests must be
     # added to this target.

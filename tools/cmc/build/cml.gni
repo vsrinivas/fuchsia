@@ -49,8 +49,17 @@ template("cm") {
   input_manifest = invoker.manifest
 
   # for the profile variant we need to inject a use clause for DebugData.
-  needs_debugdata =
-      select_variant + [ "profile" ] - [ "profile" ] != select_variant
+  needs_debugdata = select_variant + [
+                      "coverage",
+                      "profile",
+                      "rustcoverage",
+                    ] -
+                    [
+                      "coverage",
+                      "profile",
+                      "rustcoverage",
+                    ] != select_variant
+
   if (needs_debugdata) {
     cmc_merge("${target_name}_merge") {
       sources = [

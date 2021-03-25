@@ -1177,6 +1177,14 @@ declare_args() {
     },
 
     {
+      configs = [ "//build/config/profile:rustcoverage" ]
+      tags = [
+        "instrumented",
+        "profile",
+      ]
+    },
+
+    {
       configs = [ "//build/config/sanitizers:ubsan" ]
 
       # The vptr instrumentation requires RTTI.  If -fno-rtti is passed then
@@ -1357,6 +1365,17 @@ declare_args() {
       select_variant = [
         {
           variant = "coverage"
+          host = true
+        },
+      ]
+    },
+
+    {
+      name = "host_rustcoverage"
+      select_variant = []
+      select_variant = [
+        {
+          variant = "rustcoverage"
           host = true
         },
       ]

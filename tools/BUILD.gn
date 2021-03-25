@@ -117,10 +117,12 @@ group("e2e_tests") {
   if (select_variant + [
         "coverage",
         "profile",
+        "rustcoverage",
       ] -
       [
         "coverage",
         "profile",
+        "rustcoverage",
       ] == select_variant) {
     deps += [ "//tools/bootserver_old/tests($host_toolchain)" ]
   }
