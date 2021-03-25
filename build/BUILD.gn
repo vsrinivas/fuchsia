@@ -9,6 +9,7 @@ group("tests") {
   deps = [
     "dart:tests",
     "fidl:tests",
+    "python:tests",
     "sdk:tests",
     "tools:tests",
     "tracer:tests",

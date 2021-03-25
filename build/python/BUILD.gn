@@ -10,6 +10,7 @@ import("//build/testing/host_test_data.gni")
 
 # A regular copy() doesn't work properly with directories.
 action("copy_lib") {
+  # TODO(https://fxbug.dev/73140): fix hermeticity of copy_tree.py
   hermetic_deps = false
   script = "//build/copy_tree.py"
   args = [
@@ -56,4 +57,9 @@ group("interpreter") {
     ":exe",
     ":lib",
   ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "tests:py_host_test_with_lib($host_toolchain)" ]
 }

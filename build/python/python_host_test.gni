@@ -18,6 +18,10 @@ import("//build/testing/host_test_data.gni")
 #     - Optional: Other files that are used in the test.
 #     - Type: list(path)
 #
+#   * libraries
+#     - Optional: Paths to directories of libraries this test imports.
+#     - Type: list(string)
+#
 #   * extra_args
 #     - Optional: Additional arguments to pass to the test.
 #     - Type: list(string)
@@ -30,6 +34,48 @@ template("python_host_test") {
   assert(defined(invoker.main_source), "main_source is required")
   _target_dir = get_label_info(target_name, "dir")
   _out_dir = "${root_out_dir}/test_data/${_target_dir}"
+
+  # Copy directories of libraries to _out_dir so they can be imported directly.
+  _lib_deps = []
+  if (defined(invoker.libraries)) {
+    foreach(_lib_path, invoker.libraries) {
+      _lib_name = get_path_info(_lib_path, "name")
+      _copy_target_name = "${target_name}_${_lib_name}_copy"
+
+      action(_copy_target_name) {
+        # TODO(https://fxbug.dev/73140): fix hermeticity of copy_tree.py
+        hermetic_deps = false
+        script = "//build/copy_tree.py"
+        args = [
+          rebase_path(_lib_path, root_build_dir),
+          rebase_path("${_out_dir}/${_lib_name}", root_build_dir),
+          rebase_path("${_out_dir}/${_lib_name}.stamp", root_build_dir),
+
+          # The .pyc files may be produced while this action is running,
+          # so we don't want to try to copy them while the're being written.
+          "--ignore_pattern",
+          "__pycache__",
+          "--ignore_pattern",
+          "*.pyc.*",
+          "--ignore_pattern",
+          "*.pyc",
+        ]
+        outputs = [
+          "${_out_dir}/${_lib_name}",
+          "${_out_dir}/${_lib_name}.stamp",
+        ]
+      }
+
+      # Host-side tests must depend on host_test_data to have them available at
+      # runtime.
+      _lib_target_name = "${target_name}_${_lib_name}_lib"
+      _lib_deps += [ ":${_lib_target_name}" ]
+      host_test_data(_lib_target_name) {
+        sources = [ "${_out_dir}/${_lib_name}" ]
+        deps = [ ":${_copy_target_name}" ]
+      }
+    }
+  }
 
   _host_test_data_target = "${target_name}_test_data"
   host_test_data(_host_test_data_target) {
@@ -44,6 +90,7 @@ template("python_host_test") {
     if (defined(invoker.sources)) {
       sources += invoker.sources
     }
+
     outputs = [ "${_out_dir}/{{source_file_part}}" ]
   }
 
@@ -54,9 +101,9 @@ template("python_host_test") {
       args += invoker.extra_args
     }
     deps = [
-      ":${_host_test_data_target}",
-      "//build/python:interpreter",
-    ]
+             ":${_host_test_data_target}",
+             "//build/python:interpreter",
+           ] + _lib_deps
     forward_variables_from(invoker, [ "visibility" ])
   }
 }
