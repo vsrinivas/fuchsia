@@ -811,12 +811,6 @@ impl HostDispatcher {
         // TODO(fxbug.dev/66615): Make sure that the bt-host device is left in a well-known state if
         // any of these operations fails.
 
-        let config = self.state.read().config_settings.clone();
-        host_device
-            .apply_config(config)
-            .await
-            .context(format!("{:?}: failed to configure bt-host device", dbg_ids))?;
-
         let address = host_device.address();
         assign_host_data(host_device.clone(), self.clone(), &address)
             .await
@@ -824,6 +818,12 @@ impl HostDispatcher {
         try_restore_bonds(host_device.clone(), self.clone(), &address)
             .await
             .map_err(|e| e.as_failure())?;
+
+        let config = self.state.read().config_settings.clone();
+        host_device
+            .apply_config(config)
+            .await
+            .context(format!("{:?}: failed to configure bt-host device", dbg_ids))?;
 
         // Assign the name that is currently assigned to the HostDispatcher as the local name.
         let fut = host_device.set_name(self.state.read().name.clone());
