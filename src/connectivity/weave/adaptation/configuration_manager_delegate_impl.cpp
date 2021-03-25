@@ -366,10 +366,13 @@ zx_status_t ConfigurationManagerDelegateImpl::GetPrivateKeyForSigning(
 
   err = device_info_->ReadConfigValueStr(kDeviceInfoConfigKey_PrivateKeyPath, path, sizeof(path),
                                          &out_len);
-  if (err != WEAVE_NO_ERROR) {
-    FX_LOGS(INFO) << "No private key found";
+  if (err == WEAVE_DEVICE_ERROR_CONFIG_NOT_FOUND) {
     return ZX_ERR_NOT_FOUND;
+  } else if (err != WEAVE_NO_ERROR) {
+    FX_LOGS(ERROR) << "Failed to read private key.";
+    return ZX_ERR_INTERNAL;
   }
+
   full_path.append(path);
   if (!files::ReadFileToVector(full_path.string(), signing_key)) {
     return ZX_ERR_INTERNAL;
