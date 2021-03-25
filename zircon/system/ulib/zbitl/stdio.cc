@@ -51,17 +51,6 @@ fitx::result<error_type> StorageTraits<FILE*>::EnsureCapacity(FILE* f, uint32_t 
   return fitx::ok();
 }
 
-fitx::result<error_type, zbi_header_t> StorageTraits<FILE*>::Header(FILE* f, uint32_t offset) {
-  zbi_header_t header;
-  if (fseek(f, offset, SEEK_SET) != 0) {
-    return fitx::error{errno};
-  }
-  if (fread(&header, sizeof(header), 1, f) != 1) {
-    return fitx::error{ferror(f) ? errno : ESPIPE};
-  }
-  return fitx::ok(header);
-}
-
 fitx::result<error_type> StorageTraits<FILE*>::Read(FILE* f, payload_type offset, void* buffer,
                                                     uint32_t length) {
   if (fseek(f, offset, SEEK_SET) != 0) {

@@ -16,21 +16,11 @@
 #include <zircon/limits.h>
 
 #include <efi/boot-services.h>
-#include <fbl/span.h>
 
 namespace zbitl {
 namespace {
 
 using zbitl::internal::ToMemRange;
-
-// Reinterpret the given ByteView as span of type T.
-//
-// If the sizeof(T) doesn't evenly divide the size of the byte view,
-// a span covering all complete instances of T will be returned.
-template <typename T>
-inline cpp20::span<const T> AsSpan(ByteView bytes) {
-  return {reinterpret_cast<const T*>(bytes.data()), bytes.size() / sizeof(T)};
-}
 
 // Ensure the given payload is a valid EFI memory table.
 //
@@ -155,9 +145,9 @@ size_t MemRangeElementCount(uint32_t type, ByteView payload) {
 zbi_mem_range_t MemRangeElement(uint32_t type, ByteView payload, size_t n) {
   switch (type) {
     case ZBI_TYPE_E820_TABLE:
-      return ToMemRange(AsSpan<e820entry_t>(payload)[n]);
+      return ToMemRange(AsSpan<const e820entry_t>(payload)[n]);
     case ZBI_TYPE_MEM_CONFIG:
-      return AsSpan<zbi_mem_range_t>(payload)[n];
+      return AsSpan<const zbi_mem_range_t>(payload)[n];
     case ZBI_TYPE_EFI_MEMORY_MAP: {
       const efi_memory_descriptor* descriptor = GetEfiEntry(payload, n);
       // Calling code should ensure that it only requests valid entries.

@@ -23,22 +23,43 @@ namespace zbitl {
 
 using ByteView = cpp20::span<const std::byte>;
 
-inline ByteView AsBytes(const void* ptr, size_t len) {
-  return {reinterpret_cast<const std::byte*>(ptr), len};
+// The byte alignment that storage backends are expected to have.
+constexpr size_t kStorageAlignment = __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+
+// Whether a type is Plain Ol' Data and has unique object representations.
+template <typename T>
+constexpr bool is_uniquely_representable_pod_v = std::is_trivial_v<T>&&
+    std::is_standard_layout_v<T>&& std::has_unique_object_representations_v<T>;
+
+// It is expected that `payload` is `kStorageAlignment`-aligned in the
+// following AsSpan methods (see StorageTraits below), along with `T` itself.
+// This ensures that `payload` is `alignof(T)`-aligned as well, which in
+// particular means that it is safe to reinterpret a `U*` as a `T*`.
+template <typename T, typename U>
+inline cpp20::span<T> AsSpan(U* payload, size_t len) {
+  static_assert(alignof(T) <= kStorageAlignment);
+  if constexpr (sizeof(U) % sizeof(T) != 0) {
+    ZX_ASSERT(len * sizeof(U) % sizeof(T) == 0);
+  }
+  return {reinterpret_cast<T*>(payload), (len * sizeof(U)) / sizeof(T)};
+}
+
+template <typename T, typename U>
+inline cpp20::span<T> AsSpan(const U& payload) {
+  if constexpr (is_uniquely_representable_pod_v<std::decay_t<U>>) {
+    return AsSpan<T>(&payload, 1);
+  } else {
+    return AsSpan<T>(std::data(payload), std::size(payload));
+  }
+}
+
+inline ByteView AsBytes(const void* payload, size_t len) {
+  return {reinterpret_cast<const std::byte*>(payload), len};
 }
 
 template <typename T>
 inline ByteView AsBytes(const T& payload) {
-  static_assert(std::has_unique_object_representations_v<T>);
-  return AsBytes(&payload, sizeof(payload));
-}
-
-// Specialization for cpp20::span<any type> as Storage.  Its payload_type is the
-// same type as Storage, just yielding the subspan of the original whole-ZBI
-// span.
-template <typename T, size_t Extent>
-inline ByteView AsBytes(cpp20::span<T, Extent> payload) {
-  return cpp20::as_bytes(payload);
+  return AsSpan<const std::byte>(payload);
 }
 
 /// The zbitl::StorageTraits template must be specialized for each type used as
@@ -48,6 +69,8 @@ inline ByteView AsBytes(cpp20::span<T, Extent> payload) {
 /// empty error_type.  It also serves to document the API for StorageTraits
 /// specializations.
 ///
+/// The underlying storage memory is expected to be
+/// `kStorageAlignment`-aligned.
 template <typename Storage>
 struct StorageTraits {
   static_assert(std::is_same_v<std::tuple<>, Storage>, "missing StorageTraits specialization");
@@ -83,16 +106,6 @@ struct StorageTraits {
   /// (possibly larger), for specializations where such an operation is
   /// sensible.
   static fitx::result<error_type> EnsureCapacity(Storage& zbi, uint32_t capacity) {
-    return fitx::error<error_type>{};
-  }
-
-  /// This fetches the item (or container) header at the given offset.  The
-  /// return type can use either plain `zbi_header_t` or it can use
-  /// `std::reference_wrapper<const zbi_header_t>`.  The former case is for
-  /// remote access to storage, where fetching the header has to copy it.  The
-  /// latter case is for in-memory storage, where the header can just be
-  /// accessed in place via a direct pointer.
-  static fitx::result<error_type, zbi_header_t> Header(Storage& zbi, uint32_t offset) {
     return fitx::error<error_type>{};
   }
 
@@ -141,8 +154,20 @@ struct StorageTraits {
   // valid until the next use of the same Storage object.  So it could
   // e.g. point into a cache that's repurposed by this or other calls made
   // later using the same object.
-  static fitx::result<error_type, ByteView> Read(Storage& zbi, payload_type payload,
-                                                 uint32_t length) {
+  //
+  // One may attempt to read the data out in any particular form, parameterized
+  // by `T`, provided that `alignof(T) <= kStorageAlignment`. The offset
+  // associated with `payload` is expected to be `alignof(T)`-aligned, though
+  // that is an invariant that the caller must keep track of.
+  //
+  // `LowLocality` gives whether there is an expectation that adjacent data
+  // will subsequently be read; if true, the amortized cost of the read might
+  // be determined to be too high and storage backends might decide to perform
+  // the read differently or not implement the method at all in this case.
+  template <typename T, bool LowLocality>
+  static std::enable_if_t<(alignof(T) <= kStorageAlignment),
+                          fitx::result<error_type, cpp20::span<const T>>>
+  Read(Storage& zbi, payload_type payload, uint32_t length) {
     return fitx::error<error_type>{};
   }
 
@@ -236,12 +261,6 @@ struct StorageTraits<std::basic_string_view<T>> {
                  static_cast<typename Storage::size_type>(std::numeric_limits<uint32_t>::max()))));
   }
 
-  static fitx::result<error_type, std::reference_wrapper<const zbi_header_t>> Header(
-      Storage& zbi, uint32_t offset) {
-    return fitx::ok(std::ref(
-        *reinterpret_cast<const zbi_header_t*>(zbi.substr(offset, sizeof(zbi_header_t)).data())));
-  }
-
   static fitx::result<error_type, payload_type> Payload(Storage& zbi, uint32_t offset,
                                                         uint32_t length) {
     auto payload = zbi.substr(offset, length);
@@ -249,10 +268,12 @@ struct StorageTraits<std::basic_string_view<T>> {
     return fitx::ok(std::move(payload));
   }
 
-  static fitx::result<error_type, ByteView> Read(Storage& zbi, payload_type payload,
-                                                 uint32_t length) {
+  template <typename U, bool LowLocality>
+  static std::enable_if_t<(alignof(U) <= kStorageAlignment),
+                          fitx::result<error_type, cpp20::span<const U>>>
+  Read(Storage& zbi, payload_type payload, uint32_t length) {
     ZX_DEBUG_ASSERT(payload.size() == length);
-    return fitx::ok(AsBytes(payload.data(), payload.size()));
+    return fitx::ok(AsSpan<const U>(payload));
   }
 };
 
@@ -279,12 +300,6 @@ struct StorageTraits<cpp20::span<T, Extent>> {
     return fitx::ok();
   }
 
-  static fitx::result<error_type, std::reference_wrapper<const zbi_header_t>> Header(
-      Storage& zbi, uint32_t offset) {
-    return fitx::ok(std::ref(
-        *reinterpret_cast<const zbi_header_t*>(zbi.subspan(offset, sizeof(zbi_header_t)).data())));
-  }
-
   static fitx::result<error_type, payload_type> Payload(Storage& zbi, uint32_t offset,
                                                         uint32_t length) {
     auto payload = [&]() {
@@ -300,11 +315,12 @@ struct StorageTraits<cpp20::span<T, Extent>> {
     return fitx::ok(payload_type{reinterpret_cast<T*>(payload.data()), payload.size() / sizeof(T)});
   }
 
-  static fitx::result<error_type, ByteView> Read(Storage& zbi, payload_type payload,
-                                                 uint32_t length) {
-    auto bytes = AsBytes(cpp20::as_bytes(payload));
-    ZX_DEBUG_ASSERT(bytes.size() == length);
-    return fitx::ok(bytes);
+  template <typename U, bool LowLocality>
+  static std::enable_if_t<(alignof(U) <= kStorageAlignment),
+                          fitx::result<error_type, cpp20::span<const U>>>
+  Read(Storage& zbi, payload_type payload, uint32_t length) {
+    ZX_DEBUG_ASSERT(cpp20::as_bytes(payload).size() == length);
+    return fitx::ok(AsSpan<const U>(payload));
   }
 
   template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>

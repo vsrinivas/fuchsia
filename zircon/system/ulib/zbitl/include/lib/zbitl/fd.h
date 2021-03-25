@@ -31,8 +31,6 @@ class StorageTraits<fbl::unique_fd> {
 
   static fitx::result<error_type> EnsureCapacity(fbl::unique_fd& fd, uint32_t capacity_bytes);
 
-  static fitx::result<error_type, zbi_header_t> Header(const fbl::unique_fd&, uint32_t offset);
-
   static fitx::result<error_type, payload_type> Payload(const fbl::unique_fd&, uint32_t offset,
                                                         uint32_t length) {
     return fitx::ok(offset);

@@ -17,16 +17,6 @@
 
 namespace zbitl {
 
-template <typename T>
-inline cpp20::span<T> AsSpan(const fbl::Array<T>& array) {
-  return {array.data(), array.size()};
-}
-
-template <typename T>
-inline ByteView AsBytes(const fbl::Array<T>& array) {
-  return cpp20::as_bytes(AsSpan(array));
-}
-
 // fbl::Array<T> works like std::span<T> + std::unique_ptr<T[]>.
 template <typename T>
 class StorageTraits<fbl::Array<T>> {
@@ -42,7 +32,7 @@ class StorageTraits<fbl::Array<T>> {
   static std::string_view error_string(error_type error) { return "out of memory"; }
 
   static fitx::result<error_type, uint32_t> Capacity(const Storage& storage) {
-    auto span = AsSpan(storage);
+    auto span = AsSpan<T>(storage);
     return SpanTraits::Capacity(span).take_value();
   }
 
@@ -63,27 +53,23 @@ class StorageTraits<fbl::Array<T>> {
     return fitx::ok();
   }
 
-  static fitx::result<error_type, std::reference_wrapper<const zbi_header_t>> Header(
-      const Storage& storage, uint32_t offset) {
-    auto span = AsSpan(storage);
-    return SpanTraits::Header(span, offset).take_value();
-  }
-
   static fitx::result<error_type, payload_type> Payload(const Storage& storage, uint32_t offset,
                                                         uint32_t length) {
-    auto span = AsSpan(storage);
+    auto span = AsSpan<T>(storage);
     return SpanTraits::Payload(span, offset, length).take_value();
   }
 
-  static fitx::result<error_type, ByteView> Read(const Storage& storage, payload_type payload,
-                                                 uint32_t length) {
-    auto span = AsSpan(storage);
-    return SpanTraits::Read(span, payload, length).take_value();
+  template <typename U, bool LowLocality>
+  static std::enable_if_t<(alignof(U) <= kStorageAlignment),
+                          fitx::result<error_type, cpp20::span<const U>>>
+  Read(const Storage& storage, payload_type payload, uint32_t length) {
+    auto span = AsSpan<T>(storage);
+    return SpanTraits::template Read<U, LowLocality>(span, payload, length).take_value();
   }
 
   template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
   static fitx::result<error_type> Write(Storage& storage, uint32_t offset, ByteView data) {
-    auto span = AsSpan(storage);
+    auto span = AsSpan<T>(storage);
     auto result = SpanTraits::Write(span, offset, data);
     ZX_DEBUG_ASSERT(result.is_ok());
     return fitx::ok();
@@ -91,7 +77,7 @@ class StorageTraits<fbl::Array<T>> {
 
   template <typename S = T, typename = std::enable_if_t<!std::is_const_v<S>>>
   static fitx::result<error_type, void*> Write(Storage& storage, uint32_t offset, uint32_t length) {
-    auto span = AsSpan(storage);
+    auto span = AsSpan<T>(storage);
     return SpanTraits::Write(span, offset, length).take_value();
   }
 

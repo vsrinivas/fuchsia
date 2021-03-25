@@ -43,12 +43,12 @@ struct FblArrayTestTraits {
 
   static void Read(const storage_type& storage, payload_type payload, size_t size,
                    Bytes* contents) {
-    auto span = zbitl::AsSpan(storage);
+    auto span = zbitl::AsSpan<T>(storage);
     ASSERT_NO_FATAL_FAILURE(SpanTraits::Read(span, payload, size, contents));
   }
 
   static void Write(storage_type& storage, uint32_t offset, const Bytes& data) {
-    auto span = zbitl::AsSpan(storage);
+    auto span = zbitl::AsSpan<T>(storage);
     ASSERT_NO_FATAL_FAILURE(SpanTraits::Write(span, offset, data));
   }
 

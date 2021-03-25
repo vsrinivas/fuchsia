@@ -45,19 +45,6 @@ fitx::result<error_type> StorageTraits<fbl::unique_fd>::EnsureCapacity(fbl::uniq
   return fitx::ok();
 }
 
-fitx::result<error_type, zbi_header_t> StorageTraits<fbl::unique_fd>::Header(
-    const fbl::unique_fd& fd, uint32_t offset) {
-  zbi_header_t header;
-  ssize_t n = pread(fd.get(), &header, sizeof(header), offset);
-  if (n < 0) {
-    return fitx::error{errno};
-  }
-  if (static_cast<size_t>(n) < sizeof(header)) {
-    return fitx::error{ESPIPE};
-  }
-  return fitx::ok(header);
-}
-
 fitx::result<error_type> StorageTraits<fbl::unique_fd>::Read(const fbl::unique_fd& fd, off_t offset,
                                                              void* buffer, uint32_t length) {
   auto p = static_cast<std::byte*>(buffer);

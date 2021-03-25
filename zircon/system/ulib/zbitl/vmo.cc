@@ -44,16 +44,6 @@ fitx::result<zx_status_t> StorageTraits<zx::vmo>::EnsureCapacity(const zx::vmo& 
   return fitx::ok();
 }
 
-fitx::result<zx_status_t, zbi_header_t> StorageTraits<zx::vmo>::Header(const zx::vmo& vmo,
-                                                                       uint32_t offset) {
-  zbi_header_t header;
-  zx_status_t status = vmo.read(&header, offset, sizeof(header));
-  if (status != ZX_OK) {
-    return fitx::error{status};
-  }
-  return fitx::ok(header);
-}
-
 fitx::result<zx_status_t> StorageTraits<zx::vmo>::Read(const zx::vmo& vmo, payload_type payload,
                                                        void* buffer, uint32_t length) {
   zx_status_t status = vmo.read(buffer, payload, length);

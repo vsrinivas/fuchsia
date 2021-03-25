@@ -121,8 +121,6 @@ struct StorageTraits<zx::vmo> {
   // ZX_PROP_VMO_CONTENT_SIZE to the new capacity value if so.
   static fitx::result<error_type> EnsureCapacity(const zx::vmo&, uint32_t capacity_bytes);
 
-  static fitx::result<error_type, zbi_header_t> Header(const zx::vmo&, uint32_t offset);
-
   static fitx::result<error_type, payload_type> Payload(const zx::vmo&, uint32_t offset,
                                                         uint32_t length) {
     return fitx::ok(offset);
@@ -189,10 +187,6 @@ struct StorageTraits<zx::unowned_vmo> {
     return Owned::EnsureCapacity(*vmo, capacity_bytes);
   }
 
-  static auto Header(const zx::unowned_vmo& vmo, uint32_t offset) {
-    return Owned::Header(*vmo, offset);
-  }
-
   static auto Payload(const zx::unowned_vmo& vmo, uint32_t offset, uint32_t length) {
     return Owned::Payload(*vmo, offset, length);
   }
@@ -240,21 +234,28 @@ class StorageTraits<MapUnownedVmo> {
     return Owned::EnsureCapacity(zbi.vmo(), capacity_bytes);
   }
 
-  static auto Header(const MapUnownedVmo& zbi, uint32_t offset) {
-    return Owned::Header(zbi.vmo(), offset);
-  }
-
   static auto Payload(const MapUnownedVmo& zbi, uint32_t offset, uint32_t length) {
     return Owned::Payload(zbi.vmo(), offset, length);
   }
 
-  static fitx::result<error_type, ByteView> Read(MapUnownedVmo& zbi, payload_type payload,
-                                                 uint32_t length) {
+  // If the locality of subsequent reads is low (i.e., if `LowLocality` is
+  // true), then mapping the pages containing the data (especially when small)
+  // is deemed too high a cost and this method is left unimplemented. In that
+  // case, the unbuffered `Read()` is recommended instead.
+  template <typename T, bool LowLocality>
+  static std::enable_if_t<(alignof(T) <= kStorageAlignment) && !LowLocality,
+                          fitx::result<error_type, cpp20::span<const T>>>
+  Read(MapUnownedVmo& zbi, payload_type payload, uint32_t length) {
     auto result = Map(zbi, payload, length, false);
     if (result.is_error()) {
       return result.take_error();
     }
-    return fitx::ok(ByteView{static_cast<std::byte*>(result.value()), length});
+    return fitx::ok(AsSpan<const T>(static_cast<const std::byte*>(result.value()), length));
+  }
+
+  static fitx::result<error_type> Read(const MapUnownedVmo& zbi, payload_type payload, void* buffer,
+                                       uint32_t length) {
+    return Owned::Read(zbi.vmo(), payload, buffer, length);
   }
 
   static auto Write(const MapUnownedVmo& zbi, uint32_t offset, ByteView data) {

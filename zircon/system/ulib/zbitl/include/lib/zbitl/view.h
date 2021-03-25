@@ -159,13 +159,66 @@ class View {
     static constexpr bool CanCreate() { return SfinaeCreate(0); }
 
     // Whether the one-shot variation of Traits::Read() is defined.
-    static constexpr bool CanOneShotRead() { return SfinaeOneShotRead(0); }
+    template <typename U, bool LowLocality>
+    static constexpr bool CanOneShotRead() {
+      return SfinaeOneShotRead<U, LowLocality>(0);
+    }
 
     // Whether the unbuffered variation of Traits::Read() is defined.
     static constexpr bool CanUnbufferedRead() { return SfinaeUnbufferedRead(0); }
 
     // Whether the unbuffered variation of Traits::Write() is defined.
     static constexpr bool CanUnbufferedWrite() { return SfinaeUnbufferedWrite(0); }
+
+    // This fetches the item (or container) header at the given offset.  The
+    // return type can use either plain `zbi_header_t` or it can use
+    // `std::reference_wrapper<const zbi_header_t>`.  The former case is for
+    // remote access to storage, where fetching the header has to copy it.  The
+    // latter case is for in-memory storage, where the header can just be
+    // accessed in place via a direct pointer.
+    template <typename T = Traits>
+    static fitx::result<
+        error_type,
+        std::conditional_t<T::template CanOneShotRead<zbi_header_t, /*LowLocality=*/true>(),
+                           std::reference_wrapper<const zbi_header_t>, zbi_header_t>>
+    Header(Storage& storage, uint32_t offset) {
+      payload_type payload;
+      if (auto result = Base::Payload(storage, offset, sizeof(zbi_header_t)); result.is_error()) {
+        return result.take_error();
+      } else {
+        payload = std::move(result).value();
+      }
+
+      // `LowLocality = true`, as we are only reading a single header here.
+      if constexpr (T::template CanOneShotRead<zbi_header_t, /*LowLocality=*/true>()) {
+        auto result = Base::template Read<zbi_header_t, true>(storage, payload, sizeof(zbi_header_t));
+        if (result.is_error()) {
+          return result.take_error();
+        }
+        auto header = std::move(result).value();
+        ZX_DEBUG_ASSERT(header.size() == 1);  // We expect a span of one zbi_header_t.
+        return fitx::ok(std::ref(header.front()));
+      } else if constexpr (T::CanUnbufferedRead()) {
+        zbi_header_t header;
+        if (auto result = Base::Read(storage, payload, &header, sizeof(header));
+            result.is_error()) {
+          return result.take_error();
+        }
+        return fitx::ok(header);
+      } else {
+        zbi_header_t header;
+        size_t bytes_read = 0;
+        auto read = [header_bytes = AsSpan<std::byte>(header)](auto bytes) mutable {
+          memcpy(header_bytes.data(), bytes.data(), bytes.size());
+          header_bytes = header_bytes.subspan(bytes.size());
+        };
+        if (auto result = Base::Read(storage, payload, sizeof(header), read); result.is_error()) {
+          return result.take_error();
+        }
+        ZX_DEBUG_ASSERT(bytes_read == sizeof(zbi_header_t));
+        return fitx::ok(header);
+      }
+    }
 
     // Gives an 'example' value of a type convertible to storage& that can be
     // used within a decltype context.
@@ -212,14 +265,18 @@ class View {
     static constexpr bool SfinaeCreate(...) { return false; }
 
     // SFINAE check for one-shot Traits::Read method.
-    template <typename T = Traits,
-              typename = decltype(T::Read(storage_declval(), std::declval<payload_type>(), 0))>
+    template <typename U, bool LowLocality, typename T = Traits,
+              typename = decltype(T::template Read<U, LowLocality>(
+                  storage_declval(), std::declval<payload_type>(), 0))>
     static constexpr bool SfinaeOneShotRead(int ignored) {
       return true;
     }
 
     // This overload is chosen only if SFINAE detected a missing a one-shot Read method.
-    static constexpr bool SfinaeOneShotRead(...) { return false; }
+    template <typename U, bool LowLocality>
+    static constexpr bool SfinaeOneShotRead(...) {
+      return false;
+    }
 
     // SFINAE check for unbuffered Traits::Read method.
     template <typename T = Traits,
@@ -1037,7 +1094,7 @@ class View {
     // Reading directly into buffer has no extra copies for a receiver that can
     // do unbuffered writes.
     using CopyTraits = typename View<std::decay_t<CopyStorage>>::Traits;
-    return Traits::CanOneShotRead() ||
+    return Traits::template CanOneShotRead<std::byte, /*LowLocality=*/false>() ||
            (Traits::CanUnbufferedRead() && CopyTraits::CanUnbufferedWrite());
   }
 
@@ -1080,8 +1137,9 @@ class View {
   template <typename Callback>
   auto Read(payload_type payload, uint32_t length, Callback&& callback)
       -> fitx::result<typename Traits::error_type, decltype(callback(ByteView{}))> {
-    if constexpr (Traits::CanOneShotRead()) {
-      if (auto result = Traits::Read(storage(), payload, length); result.is_error()) {
+    if constexpr (Traits::template CanOneShotRead<std::byte, /*LowLocality=*/false>()) {
+      if (auto result = Traits::template Read<std::byte, false>(storage(), payload, length);
+          result.is_error()) {
         return result.take_error();
       } else {
         return fitx::ok(callback(result.value()));
@@ -1200,10 +1258,12 @@ class View {
     constexpr std::string_view kZbiErrorCorruptedOrBadData =
         "bad or corrupted data: uncompressed length not as expected";
 
-    if constexpr (Traits::CanOneShotRead()) {
+    if constexpr (Traits::template CanOneShotRead<std::byte, /*LowLocality=*/false>()) {
       // All the data is on hand in one shot.  Fetch it first.
       ByteView compressed_data;
-      if (auto result = Traits::Read(storage(), payload, compressed_size); result.is_error()) {
+      if (auto result =
+              Traits::template Read<std::byte, false>(storage(), payload, compressed_size);
+          result.is_error()) {
         return fitx::error{ErrorType{
             .zbi_error = "cannot read compressed payload",
             .read_offset = it.item_offset(),
