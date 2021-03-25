@@ -4,6 +4,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/unification/global_variables.gni")
+
 source_set("platform") {
   sources = [
     "boot-options.cc",
@@ -11,11 +13,16 @@ source_set("platform") {
     "halt_helper.cc",
     "hw_reboot_reason.cc",
     "power.cc",
+
+    # TODO(fxbug.dev/67615): delete once code-patching is migrated to physboot.
+    "code-patches.cc",
   ]
   deps = [
+    "//zircon/kernel/arch/$zircon_cpu/code-patches",
     "//zircon/kernel/dev/pdev/hw_watchdog",
     "//zircon/kernel/lib/boot-options",
     "//zircon/kernel/lib/cmdline",
+    "//zircon/kernel/lib/code-patching:headers",
     "//zircon/kernel/lib/console",
     "//zircon/kernel/lib/counters",
     "//zircon/kernel/lib/crashlog",

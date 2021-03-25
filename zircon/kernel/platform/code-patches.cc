@@ -1,4 +1,4 @@
-// Copyright 2017 The Fuchsia Authors
+// Copyright 2021 The Fuchsia Authors
 //
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
@@ -20,12 +20,8 @@ ktl::span<const code_patching::Directive> GetPatchDirectives() {
   return {__start_code_patches, static_cast<size_t>(__stop_code_patches - __start_code_patches)};
 }
 
-void apply_startup_code_patches(uint level) {
-  // TODO(67615): This is the v2 patching that will incrementally eat the v1
-  // patching.
-  ArchPatchCode(GetPatchDirectives());
-}
+void ApplyPatches(uint level) { ArchPatchCode(GetPatchDirectives()); }
 
 }  // namespace
 
-LK_INIT_HOOK(code_patching, apply_startup_code_patches, LK_INIT_LEVEL_PLATFORM_PREVM)
+LK_INIT_HOOK(code_patching, ApplyPatches, LK_INIT_LEVEL_PLATFORM_PREVM)

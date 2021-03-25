@@ -237,7 +237,6 @@ group("deprecated_zx_wrapper_allowlist") {
     "//zircon/kernel/lib/boot-options/*",
     "//zircon/kernel/lib/cbuf/*",
     "//zircon/kernel/lib/cmdline/*",
-    "//zircon/kernel/lib/code_patching/*",
     "//zircon/kernel/lib/console/*",
     "//zircon/kernel/lib/counters/*",
     "//zircon/kernel/lib/crashlog/*",
