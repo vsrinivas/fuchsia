@@ -4,7 +4,7 @@
         "src/lib/vulkan/test-application.shard.cmx"
     ],
     "program": {
-        "binary": "test/device_tests"
+        "binary": "bin/device_tests"
     },
     "sandbox": {
         "features": [
