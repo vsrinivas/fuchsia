@@ -159,7 +159,7 @@ TEST_F(FlutterEmbedderTests, HittestLegacyEmbeddingWithOverlay) {
   }));
 }
 
-TEST_F(FlutterEmbedderTests, BasicPlatformViewEmbedding) {
+TEST_F(FlutterEmbedderTests, DISABLED_BasicPlatformViewEmbedding) {
   RunAppWithArgs(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -172,7 +172,7 @@ TEST_F(FlutterEmbedderTests, BasicPlatformViewEmbedding) {
       }));
 }
 
-TEST_F(FlutterEmbedderTests, HittestPlatformViewEmbedding) {
+TEST_F(FlutterEmbedderTests, DISABLED_HittestPlatformViewEmbedding) {
   RunAppWithArgs(kParentViewUrl);
 
   // Take screenshot until we see the child-view's embedded color.
@@ -191,7 +191,7 @@ TEST_F(FlutterEmbedderTests, HittestPlatformViewEmbedding) {
   }));
 }
 
-TEST_F(FlutterEmbedderTests, HittestDisabledPlatformViewEmbedding) {
+TEST_F(FlutterEmbedderTests, DISABLED_HittestDisabledPlatformViewEmbedding) {
   RunAppWithArgs(kParentViewUrl, {"--no-hitTestable"});
 
   // Take screenshots until we see the child-view's embedded color.
@@ -212,7 +212,7 @@ TEST_F(FlutterEmbedderTests, HittestDisabledPlatformViewEmbedding) {
       }));
 }
 
-TEST_F(FlutterEmbedderTests, BasicPlatformViewEmbeddingWithOverlay) {
+TEST_F(FlutterEmbedderTests, DISABLED_BasicPlatformViewEmbeddingWithOverlay) {
   RunAppWithArgs(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
@@ -228,7 +228,7 @@ TEST_F(FlutterEmbedderTests, BasicPlatformViewEmbeddingWithOverlay) {
       }));
 }
 
-TEST_F(FlutterEmbedderTests, HittestPlatformViewEmbeddingWithOverlay) {
+TEST_F(FlutterEmbedderTests, DISABLED_HittestPlatformViewEmbeddingWithOverlay) {
   RunAppWithArgs(kParentViewUrl, {"--showOverlay"});
 
   // Take screenshot until we see the child-view's embedded color.
