@@ -123,9 +123,7 @@ impl Puppet {
         info!("Sent message");
         loop {
             let log_entry = self.logs.next().await.unwrap();
-            let has_msg = log_entry.msg().unwrap().contains(
-                &format!("[test_file.cc(9001)] {}test_log", "test_log_".repeat(110)).to_owned(),
-            );
+            let has_msg = log_entry.msg().unwrap().contains(&"test_log_".repeat(110).to_owned());
             if has_msg {
                 break;
             }
