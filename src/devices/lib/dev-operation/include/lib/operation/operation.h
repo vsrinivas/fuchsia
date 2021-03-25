@@ -6,17 +6,15 @@
 #define SRC_DEVICES_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_OPERATION_H_
 
 #include <lib/ddk/debug.h>
+#include <lib/operation/helpers/algorithm.h>
+#include <lib/operation/helpers/intrusive_double_list.h>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include <mutex>
 #include <optional>
 #include <tuple>
 #include <utility>
-
-#include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
-#include <fbl/intrusive_double_list.h>
-#include <fbl/mutex.h>
 
 namespace operation {
 
@@ -121,7 +119,7 @@ class OperationBase {
   OperationType* operation() const { return operation_; }
 
   static constexpr size_t OperationSize(size_t parent_op_size) {
-    return fbl::round_up(parent_op_size, kAlignment) + sizeof(NodeType);
+    return operation::round_up(parent_op_size, kAlignment) + sizeof(NodeType);
   }
 
   size_t size() const { return node_offset_ + sizeof(NodeType); }
@@ -142,7 +140,7 @@ class OperationBase {
  protected:
   OperationBase(OperationType* operation, size_t parent_op_size, bool allow_destruct = true)
       : operation_(operation),
-        node_offset_(fbl::round_up(parent_op_size, kAlignment)),
+        node_offset_(operation::round_up(parent_op_size, kAlignment)),
         allow_destruct_(allow_destruct) {
     ZX_DEBUG_ASSERT(operation != nullptr);
   }
@@ -284,7 +282,7 @@ class BorrowedOperation : public OperationBase<D, OperationTraits, CallbackTrait
 // It is strongly recommended to use operation::OperationPool and operation::OperationQueue to
 // avoid ownership pitfalls.
 template <typename T, typename OperationTraits, typename CallbackTraits, typename Storage>
-class OperationNode : public fbl::DoublyLinkedListable<
+class OperationNode : public operation::DoublyLinkedListable<
                           OperationNode<T, OperationTraits, CallbackTraits, Storage>*> {
  public:
   using OperationType = typename OperationTraits::OperationType;
@@ -318,7 +316,7 @@ class OperationNode : public fbl::DoublyLinkedListable<
 // Specialized version for when complete_cb is not required.
 template <typename T, typename OperationTraits, typename Storage>
 class OperationNode<T, OperationTraits, void, Storage>
-    : public fbl::DoublyLinkedListable<OperationNode<T, OperationTraits, void, Storage>*> {
+    : public operation::DoublyLinkedListable<OperationNode<T, OperationTraits, void, Storage>*> {
  public:
   using OperationType = typename OperationTraits::OperationType;
 
@@ -343,7 +341,8 @@ class OperationNode<T, OperationTraits, void, Storage>
 // Specialized version for when no additional storage is required.
 template <typename T, typename OperationTraits, typename CallbackTraits>
 class OperationNode<T, OperationTraits, CallbackTraits, void>
-    : public fbl::DoublyLinkedListable<OperationNode<T, OperationTraits, CallbackTraits, void>*> {
+    : public operation::DoublyLinkedListable<
+          OperationNode<T, OperationTraits, CallbackTraits, void>*> {
  public:
   using OperationType = typename OperationTraits::OperationType;
   using CallbackType = typename CallbackTraits::CallbackType;
@@ -374,7 +373,7 @@ class OperationNode<T, OperationTraits, CallbackTraits, void>
 // complete_cb is not required.
 template <typename T, typename OperationTraits>
 class OperationNode<T, OperationTraits, void, void>
-    : public fbl::DoublyLinkedListable<OperationNode<T, OperationTraits, void, void>*> {
+    : public operation::DoublyLinkedListable<OperationNode<T, OperationTraits, void, void>*> {
  public:
   using OperationType = typename OperationTraits::OperationType;
 
@@ -393,7 +392,7 @@ class OperationNode<T, OperationTraits, void, void>
   const zx_off_t node_offset_;
 };
 
-// Convenience queue wrapper around fbl::DoublyLinkedList<T>.
+// Convenience queue wrapper around operation::DoublyLinkedList<T>.
 // The class is thread-safe.
 template <typename OpType, typename OperationTraits, typename CallbackTraits, typename Storage>
 class BaseQueue {
@@ -410,20 +409,20 @@ class BaseQueue {
   ~BaseQueue() { Release(); }
 
   BaseQueue(BaseQueue&& other) {
-    fbl::AutoLock al(&other.lock_);
+    std::lock_guard<std::mutex> al(other.lock_);
     queue_.swap(other.queue_);
   }
 
   BaseQueue& operator=(BaseQueue&& other) {
-    fbl::AutoLock al1(&lock_);
-    fbl::AutoLock al2(&other.lock_);
+    std::lock_guard<std::mutex> al1(lock_);
+    std::lock_guard<std::mutex> al2(other.lock_);
     queue_.clear();
     queue_.swap(other.queue_);
     return *this;
   }
 
   void push(OpType op) {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard<std::mutex> al(lock_);
     auto* node = op.node();
     queue_.push_front(node);
     // Must prevent Complete/Release from being called in destructor.
@@ -431,7 +430,7 @@ class BaseQueue {
   }
 
   void push_next(OpType op) {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard<std::mutex> al(lock_);
     auto* node = op.node();
     queue_.push_back(node);
     // Must prevent Complete/Release from being called in destructor.
@@ -439,7 +438,7 @@ class BaseQueue {
   }
 
   std::optional<OpType> pop() {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard<std::mutex> al(lock_);
     auto* node = queue_.pop_back();
     if (node) {
       return std::move(node->operation());
@@ -448,7 +447,7 @@ class BaseQueue {
   }
 
   std::optional<OpType> pop_last() {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard<std::mutex> al(lock_);
     auto* node = queue_.pop_front();
     if (node) {
       return std::move(node->operation());
@@ -457,20 +456,20 @@ class BaseQueue {
   }
 
   bool erase(OpType* op) {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard<std::mutex> al(lock_);
     auto* node = op->node();
     bool erased = queue_.erase(*node) != nullptr;
     return erased;
   }
 
   bool is_empty() {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard<std::mutex> al(lock_);
     return queue_.is_empty();
   }
 
   // Releases all ops stored in the queue.
   void Release() {
-    fbl::AutoLock al(&lock_);
+    std::lock_guard<std::mutex> al(lock_);
     while (!queue_.is_empty()) {
       // Transform back into operation to force correct destructor to run.
       __UNUSED auto op = queue_.pop_back()->operation();
@@ -478,8 +477,8 @@ class BaseQueue {
   }
 
  protected:
-  fbl::Mutex lock_;
-  fbl::DoublyLinkedList<NodeType*> queue_ __TA_GUARDED(lock_);
+  std::mutex lock_;
+  operation::DoublyLinkedList<NodeType*> queue_ __TA_GUARDED(lock_);
 };
 
 template <typename D, typename OperationTraits, typename Storage = void>
@@ -517,7 +516,7 @@ class OperationPool : protected BaseQueue<OpType, OperationTraits, void, Storage
   using BaseClass::Release;
 };
 
-// Convenience list wrapper around fbl::DoublyLinkedList<T>.
+// Convenience list wrapper around operation::DoublyLinkedList<T>.
 // The class is not thread-safe.
 template <typename OpType, typename OperationTraits, typename CallbackTraits, typename Storage>
 class BaseList {
@@ -622,7 +621,7 @@ class BaseList {
   }
 
  protected:
-  fbl::DoublyLinkedList<NodeType*> list_;
+  operation::DoublyLinkedList<NodeType*> list_;
   size_t size_ = 0;
 };
 

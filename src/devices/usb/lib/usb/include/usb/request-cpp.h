@@ -353,7 +353,7 @@ class RequestPool : operation::OperationPool<Request<Storage>, OperationTraits, 
   // or null if no such request exists.
   // The request is not re-initialized in any way and should be set accordingly by the user.
   std::optional<Request<Storage>> Get(size_t length) {
-    fbl::AutoLock al(&this->lock_);
+    std::lock_guard<std::mutex> al(this->lock_);
     auto node = this->queue_.erase_if([length](const auto& node) {
       auto request = node.operation();
       const size_t size = request.alloc_size();

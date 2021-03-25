@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/operation/helpers/alloc_checker.h>
 #include <lib/operation/operation.h>
 
 #include <memory>
@@ -18,7 +19,7 @@ struct TestOpTraits {
   using OperationType = TestOp;
 
   static OperationType* Alloc(size_t op_size) {
-    fbl::AllocChecker ac;
+    operation::AllocChecker ac;
     std::unique_ptr<uint8_t[]> raw;
     if constexpr (alignof(OperationType) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
       raw = std::unique_ptr<uint8_t[]>(

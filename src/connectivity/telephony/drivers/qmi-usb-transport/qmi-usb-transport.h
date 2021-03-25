@@ -5,6 +5,7 @@
 #ifndef SRC_CONNECTIVITY_TELEPHONY_DRIVERS_QMI_USB_TRANSPORT_QMI_USB_TRANSPORT_H_
 #define SRC_CONNECTIVITY_TELEPHONY_DRIVERS_QMI_USB_TRANSPORT_QMI_USB_TRANSPORT_H_
 
+#include <fbl/mutex.h>
 #include <fuchsia/hardware/ethernet/c/banjo.h>
 #include <fuchsia/hardware/ethernet/cpp/banjo.h>
 #include <fuchsia/hardware/telephony/transport/llcpp/fidl.h>

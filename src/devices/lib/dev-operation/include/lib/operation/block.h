@@ -6,6 +6,7 @@
 #define SRC_DEVICES_LIB_DEV_OPERATION_INCLUDE_LIB_OPERATION_BLOCK_H_
 
 #include <fuchsia/hardware/block/c/banjo.h>
+#include <lib/operation/helpers/alloc_checker.h>
 #include <lib/operation/operation.h>
 
 #include <memory>
@@ -99,7 +100,7 @@ struct OperationTraits {
   using OperationType = block_op_t;
 
   static OperationType* Alloc(size_t op_size) {
-    fbl::AllocChecker ac;
+    operation::AllocChecker ac;
     std::unique_ptr<uint8_t[]> raw;
     if constexpr (alignof(OperationType) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
       raw = std::unique_ptr<uint8_t[]>(

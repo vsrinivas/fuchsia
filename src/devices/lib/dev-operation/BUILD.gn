@@ -14,12 +14,18 @@ group("tests") {
 
 zx_library("dev-operation") {
   sdk = "source"
-  sdk_headers = [ "lib/operation/operation.h" ]
-  sources = []
-  deps = [
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/zx",
+  sdk_headers = [
+    "lib/operation/operation.h",
+    "lib/operation/helpers/algorithm.h",
+    "lib/operation/helpers/alloc_checker.h",
+    "lib/operation/helpers/intrusive_container_node_utils.h",
+    "lib/operation/helpers/intrusive_container_utils.h",
+    "lib/operation/helpers/intrusive_double_list.h",
+    "lib/operation/helpers/intrusive_pointer_traits.h",
+    "lib/operation/helpers/macros.h",
   ]
+  sources = [ "alloc_checker.cc" ]
+  deps = [ "//zircon/public/lib/zx" ]
 }
 
 test("operation-test-bin") {
@@ -35,7 +41,6 @@ test("operation-test-bin") {
     "//sdk/lib/fdio",
     "//src/devices/testing/no_ddk",
     "//src/lib/ddk",
-    "//zircon/public/lib/fbl",
     "//zircon/public/lib/zxtest",
   ]
 }

@@ -5,6 +5,8 @@
 #include "qmi-usb-transport.h"
 
 #include <endian.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
 #include <lib/ddk/debug.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/zx/channel.h>
