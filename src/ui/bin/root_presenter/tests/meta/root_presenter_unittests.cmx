@@ -4,7 +4,6 @@
             "injected-services": {
                 "fuchsia.hardware.display.Provider": "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx",
                 "fuchsia.tracing.provider.Registry": "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
-                "fuchsia.ui.focus.FocusChainListenerRegistry": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx",
                 "fuchsia.ui.scenic.Scenic": "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
             }
         }
@@ -27,7 +26,8 @@
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
-            "fuchsia.ui.focus.FocusChainListenerRegistry",
+            "fuchsia.ui.input.InputDeviceRegistry",
+            "fuchsia.ui.pointerinjector.Registry",
             "fuchsia.ui.scenic.Scenic"
         ]
     }

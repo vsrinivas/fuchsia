@@ -91,10 +91,6 @@ class App : public fuchsia::ui::policy::Presenter,
   const inspect::Inspector* inspector() { return inspector_.inspector(); }
 
  private:
-  void PresentViewInternal(
-      fuchsia::ui::views::ViewHolderToken view_holder_token, fuchsia::ui::views::ViewRef view_ref,
-      fidl::InterfaceRequest<fuchsia::ui::policy::Presentation> presentation_request);
-
   // |DeviceListenerRegistry|
   void RegisterMediaButtonsListener(
       fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) override;
