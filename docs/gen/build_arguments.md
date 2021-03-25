@@ -47,7 +47,7 @@ It will be set below and passed to other toolchains through toolchain_args
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1518
+From //build/config/BUILDCONFIG.gn:1537
 
 ### always_zedboot
 Build boot images that prefer Zedboot over local boot (only for EFI).
@@ -756,13 +756,13 @@ From //build/config/clang/crash_diagnostics.gni:7
 
 **Current value (from the default):** `"fuchsia"`
 
-From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/2dbd019bc2303a0463a396b5c47b4eb16a1a1e27/build/crashpad_buildconfig.gni#22)
+From [//third_party/crashpad/build/crashpad_buildconfig.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/d4c3de1afa52c3f9aa19c603929d6f896788fd2a/build/crashpad_buildconfig.gni#22)
 
 ### crashpad_use_boringssl_for_http_transport_socket
 
 **Current value (from the default):** `true`
 
-From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/2dbd019bc2303a0463a396b5c47b4eb16a1a1e27/util/net/tls.gni#22)
+From [//third_party/crashpad/util/net/tls.gni:22](https://chromium.googlesource.com/crashpad/crashpad/+/d4c3de1afa52c3f9aa19c603929d6f896788fd2a/util/net/tls.gni#22)
 
 ### current_cpu
 
@@ -1073,7 +1073,7 @@ This is just added to [`known_variants`](#known_variants).
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1286
+From //build/config/BUILDCONFIG.gn:1294
 
 ### extract_minfs_metadata_on_corruption
 If extract_minfs_metadata_on_corruption is true, fshost extracts minfs metadata on finding it
@@ -1715,6 +1715,9 @@ Each element of the list is one variant, which is a scope defining:
   configs = ["//build/config/profile"]
   tags = ["instrumented", "profile"]
 }, {
+  configs = ["//build/config/profile:rustcoverage"]
+  tags = ["instrumented", "profile"]
+}, {
   configs = ["//build/config/sanitizers:ubsan"]
   remove_common_configs = ["//build/config:no_rtti"]
   tags = ["instrumented", "instrumentation-runtime", "kernel-excluded", "ubsan"]
@@ -2013,14 +2016,14 @@ Configuration file for MbedTLS.
 
 **Current value (from the default):** `"mbedtls-config.h"`
 
-From [//third_party/openthread/third_party/mbedtls/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/third_party/mbedtls/BUILD.gn#30)
+From [//third_party/openthread/third_party/mbedtls/BUILD.gn:30](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/third_party/mbedtls/BUILD.gn#30)
 
 ### mbedtls_deps
 Extra dependencies for MbedTLS
 
 **Current value (from the default):** `["../../src/core:libopenthread_core_config"]`
 
-From [//third_party/openthread/third_party/mbedtls/BUILD.gn:33](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/third_party/mbedtls/BUILD.gn#33)
+From [//third_party/openthread/third_party/mbedtls/BUILD.gn:33](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/third_party/mbedtls/BUILD.gn#33)
 
 ### meta_package_labels
 A list of labels for meta packages to be included in the monolith.
@@ -2122,13 +2125,13 @@ From //build/images/fvm.gni:64
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/2dbd019bc2303a0463a396b5c47b4eb16a1a1e27/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:31](https://chromium.googlesource.com/crashpad/crashpad/+/d4c3de1afa52c3f9aa19c603929d6f896788fd2a/third_party/mini_chromium/mini_chromium/build/platform.gni#31)
 
 ### mini_chromium_is_chromeos_lacros
 
 **Current value (from the default):** `false`
 
-From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/2dbd019bc2303a0463a396b5c47b4eb16a1a1e27/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
+From [//third_party/crashpad/third_party/mini_chromium/mini_chromium/build/platform.gni:30](https://chromium.googlesource.com/crashpad/crashpad/+/d4c3de1afa52c3f9aa19c603929d6f896788fd2a/third_party/mini_chromium/mini_chromium/build/platform.gni#30)
 
 ### msd_arm_enable_all_cores
 Enable all 8 cores, which is faster but emits more heat.
@@ -2195,419 +2198,419 @@ Enable assertions.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openthread/etc/gn/openthread.gni:82](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#82)
+From [//third_party/openthread/etc/gn/openthread.gni:82](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#82)
 
 ### openthread_config_backbone_router_enable
 Enable backbone router functionality
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:85](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#85)
+From [//third_party/openthread/etc/gn/openthread.gni:85](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#85)
 
 ### openthread_config_border_agent_enable
 Enable border agent support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:88](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#88)
+From [//third_party/openthread/etc/gn/openthread.gni:88](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#88)
 
 ### openthread_config_border_router_enable
 Enable border router support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:91](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#91)
+From [//third_party/openthread/etc/gn/openthread.gni:91](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#91)
 
 ### openthread_config_channel_manager_enable
 Enable channel manager support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:94](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#94)
+From [//third_party/openthread/etc/gn/openthread.gni:94](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#94)
 
 ### openthread_config_channel_monitor_enable
 Enable channel monitor support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:97](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#97)
+From [//third_party/openthread/etc/gn/openthread.gni:97](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#97)
 
 ### openthread_config_child_supervision_enable
 Enable child supervision support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:100](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#100)
+From [//third_party/openthread/etc/gn/openthread.gni:100](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#100)
 
 ### openthread_config_coap_api_enable
 Enable coap api support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:103](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#103)
+From [//third_party/openthread/etc/gn/openthread.gni:103](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#103)
 
 ### openthread_config_coap_observe_api_enable
 Enable coap observe (RFC7641) api support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:109](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#109)
+From [//third_party/openthread/etc/gn/openthread.gni:109](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#109)
 
 ### openthread_config_coap_secure_api_enable
 Enable secure coap api support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:106](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#106)
+From [//third_party/openthread/etc/gn/openthread.gni:106](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#106)
 
 ### openthread_config_commissioner_enable
 Enable commissioner support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:112](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#112)
+From [//third_party/openthread/etc/gn/openthread.gni:112](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#112)
 
 ### openthread_config_deps
 Extra deps for OpenThread configuration.
 
 **Current value (from the default):** `[]`
 
-From [//third_party/openthread/etc/gn/openthread.gni:38](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#38)
+From [//third_party/openthread/etc/gn/openthread.gni:38](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#38)
 
 ### openthread_config_dhcp6_client_enable
 Enable DHCP6 client support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:118](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#118)
+From [//third_party/openthread/etc/gn/openthread.gni:118](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#118)
 
 ### openthread_config_dhcp6_server_enable
 Enable DHCP6 server support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:121](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#121)
+From [//third_party/openthread/etc/gn/openthread.gni:121](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#121)
 
 ### openthread_config_diag_enable
 Enable diagnostic support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:124](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#124)
+From [//third_party/openthread/etc/gn/openthread.gni:124](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#124)
 
 ### openthread_config_dns_client_enable
 Enable DNS client support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:127](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#127)
+From [//third_party/openthread/etc/gn/openthread.gni:127](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#127)
 
 ### openthread_config_dua_enable
 Enable Domain Unicast Address feature for Thread 1.2
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:133](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#133)
+From [//third_party/openthread/etc/gn/openthread.gni:133](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#133)
 
 ### openthread_config_ecdsa_enable
 Enable ECDSA support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:130](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#130)
+From [//third_party/openthread/etc/gn/openthread.gni:130](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#130)
 
 ### openthread_config_enable_builtin_mbedtls_management
 
 **Current value (from the default):** `true`
 
-From [//third_party/openthread/etc/gn/openthread.gni:218](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#218)
+From [//third_party/openthread/etc/gn/openthread.gni:218](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#218)
 
 ### openthread_config_file
 OpenThread config header.
 
 **Current value (from the default):** `"<openthread-config-android.h>"`
 
-From [//third_party/openthread/etc/gn/openthread.gni:35](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#35)
+From [//third_party/openthread/etc/gn/openthread.gni:35](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#35)
 
 ### openthread_config_full_logs
 Enable full logs
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:205](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#205)
+From [//third_party/openthread/etc/gn/openthread.gni:205](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#205)
 
 ### openthread_config_heap_external_enable
 Enable external heap support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:139](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#139)
+From [//third_party/openthread/etc/gn/openthread.gni:139](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#139)
 
 ### openthread_config_ip6_fragmentation_enable
 Enable ipv6 fragmentation support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:142](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#142)
+From [//third_party/openthread/etc/gn/openthread.gni:142](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#142)
 
 ### openthread_config_ip6_slaac_enable
 Enable support for adding of auto-configured SLAAC addresses by OpenThread
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:193](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#193)
+From [//third_party/openthread/etc/gn/openthread.gni:193](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#193)
 
 ### openthread_config_jam_detection_enable
 Enable jam detection support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:145](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#145)
+From [//third_party/openthread/etc/gn/openthread.gni:145](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#145)
 
 ### openthread_config_joiner_enable
 Enable joiner support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:148](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#148)
+From [//third_party/openthread/etc/gn/openthread.gni:148](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#148)
 
 ### openthread_config_legacy_enable
 Enable legacy network support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:151](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#151)
+From [//third_party/openthread/etc/gn/openthread.gni:151](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#151)
 
 ### openthread_config_link_metrics_enable
 Enable link metrics
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:154](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#154)
+From [//third_party/openthread/etc/gn/openthread.gni:154](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#154)
 
 ### openthread_config_link_raw_enable
 Enable link raw service
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:157](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#157)
+From [//third_party/openthread/etc/gn/openthread.gni:157](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#157)
 
 ### openthread_config_log_level_dynamic_enable
 Enable dynamic log level control
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:160](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#160)
+From [//third_party/openthread/etc/gn/openthread.gni:160](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#160)
 
 ### openthread_config_log_output
 Log output: none, debug_uart, app, platform
 
 **Current value (from the default):** `""`
 
-From [//third_party/openthread/etc/gn/openthread.gni:79](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#79)
+From [//third_party/openthread/etc/gn/openthread.gni:79](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#79)
 
 ### openthread_config_mac_csl_receiver_enable
 Enable csl receiver
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:115](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#115)
+From [//third_party/openthread/etc/gn/openthread.gni:115](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#115)
 
 ### openthread_config_mac_filter_enable
 Enable mac filter support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:163](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#163)
+From [//third_party/openthread/etc/gn/openthread.gni:163](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#163)
 
 ### openthread_config_message_use_heap
 Enable use built-in heap for message buffers
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:166](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#166)
+From [//third_party/openthread/etc/gn/openthread.gni:166](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#166)
 
 ### openthread_config_mle_long_routes_enable
 Enable MLE long routes extension (experimental, breaks Thread conformance]
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:169](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#169)
+From [//third_party/openthread/etc/gn/openthread.gni:169](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#169)
 
 ### openthread_config_mlr_enable
 Enable Multicast Listener Registration feature for Thread 1.2
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:136](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#136)
+From [//third_party/openthread/etc/gn/openthread.gni:136](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#136)
 
 ### openthread_config_multiple_instance_enable
 Enable multiple instances
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:175](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#175)
+From [//third_party/openthread/etc/gn/openthread.gni:175](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#175)
 
 ### openthread_config_ncp_spi_enable
 Enable NCP SPI support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:211](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#211)
+From [//third_party/openthread/etc/gn/openthread.gni:211](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#211)
 
 ### openthread_config_ncp_uart_enable
 Enable NCP UART support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:214](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#214)
+From [//third_party/openthread/etc/gn/openthread.gni:214](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#214)
 
 ### openthread_config_otns_enable
 Enable OTNS support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:208](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#208)
+From [//third_party/openthread/etc/gn/openthread.gni:208](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#208)
 
 ### openthread_config_platform_netif_enable
 Enable platform netif support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:178](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#178)
+From [//third_party/openthread/etc/gn/openthread.gni:178](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#178)
 
 ### openthread_config_platform_udp_enable
 Enable platform UDP support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:181](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#181)
+From [//third_party/openthread/etc/gn/openthread.gni:181](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#181)
 
 ### openthread_config_reference_device_enable
 Enable Thread Test Harness reference device support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:184](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#184)
+From [//third_party/openthread/etc/gn/openthread.gni:184](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#184)
 
 ### openthread_config_sntp_client_enable
 Enable SNTP Client support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:196](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#196)
+From [//third_party/openthread/etc/gn/openthread.gni:196](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#196)
 
 ### openthread_config_thread_version
 Thread version: 1.1, 1.2
 
 **Current value (from the default):** `""`
 
-From [//third_party/openthread/etc/gn/openthread.gni:76](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#76)
+From [//third_party/openthread/etc/gn/openthread.gni:76](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#76)
 
 ### openthread_config_time_sync_enable
 Enable the time synchronization service feature
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:199](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#199)
+From [//third_party/openthread/etc/gn/openthread.gni:199](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#199)
 
 ### openthread_config_tmf_netdata_service_enable
 Enable support for injecting Service entries into the Thread Network Data
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:187](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#187)
+From [//third_party/openthread/etc/gn/openthread.gni:187](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#187)
 
 ### openthread_config_tmf_network_diag_mtd_enable
 Enable TMF network diagnostics on MTDs
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:172](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#172)
+From [//third_party/openthread/etc/gn/openthread.gni:172](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#172)
 
 ### openthread_config_udp_forward_enable
 Enable UDP forward support
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:202](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#202)
+From [//third_party/openthread/etc/gn/openthread.gni:202](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#202)
 
 ### openthread_core_config_deps
 Extra deps for OpenThread core configuration.
 
 **Current value (from the default):** `[]`
 
-From [//third_party/openthread/etc/gn/openthread.gni:50](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#50)
+From [//third_party/openthread/etc/gn/openthread.gni:50](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#50)
 
 ### openthread_core_config_platform_check_file
 OpenThread platform-specific config check header
 
 **Current value (from the default):** `""`
 
-From [//third_party/openthread/etc/gn/openthread.gni:47](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#47)
+From [//third_party/openthread/etc/gn/openthread.gni:47](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#47)
 
 ### openthread_enable_core_config_args
 Configure OpenThread via GN arguments.
 
 **Current value (from the default):** `true`
 
-From [//third_party/openthread/etc/gn/openthread.gni:70](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#70)
+From [//third_party/openthread/etc/gn/openthread.gni:70](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#70)
 
 ### openthread_external_mbedtls
 Use external mbedtls. If blank, internal mbedtls will be used.
 
 **Current value (from the default):** `""`
 
-From [//third_party/openthread/etc/gn/openthread.gni:56](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#56)
+From [//third_party/openthread/etc/gn/openthread.gni:56](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#56)
 
 ### openthread_external_platform
 Use external platform.
 
 **Current value (from the default):** `""`
 
-From [//third_party/openthread/etc/gn/openthread.gni:53](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#53)
+From [//third_party/openthread/etc/gn/openthread.gni:53](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#53)
 
 ### openthread_package_name
 Package name for OpenThread.
 
 **Current value (from the default):** `"OPENTHREAD"`
 
-From [//third_party/openthread/etc/gn/openthread.gni:62](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#62)
+From [//third_party/openthread/etc/gn/openthread.gni:62](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#62)
 
 ### openthread_package_version
 Package version for OpenThread.
 
 **Current value (from the default):** `"1.0.0"`
 
-From [//third_party/openthread/etc/gn/openthread.gni:65](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#65)
+From [//third_party/openthread/etc/gn/openthread.gni:65](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#65)
 
 ### openthread_posix
 Enable building for POSIX platforms.
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:59](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#59)
+From [//third_party/openthread/etc/gn/openthread.gni:59](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#59)
 
 ### openthread_project_core_config_file
 OpenThread project-specific core config header
 
 **Current value (from the default):** `""`
 
-From [//third_party/openthread/etc/gn/openthread.gni:44](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#44)
+From [//third_party/openthread/etc/gn/openthread.gni:44](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#44)
 
 ### openthread_project_include_dirs
 Include directories for project specific configs.
 
 **Current value (from the default):** `[]`
 
-From [//third_party/openthread/etc/gn/openthread.gni:41](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#41)
+From [//third_party/openthread/etc/gn/openthread.gni:41](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#41)
 
 ### openthread_settings_ram
 Enable volatile-only storage of settings
 
 **Current value (from the default):** `false`
 
-From [//third_party/openthread/etc/gn/openthread.gni:190](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/etc/gn/openthread.gni#190)
+From [//third_party/openthread/etc/gn/openthread.gni:190](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/etc/gn/openthread.gni#190)
 
 ### optimize
 * `none`: really unoptimized, usually only build-tested and not run
@@ -3068,7 +3071,7 @@ is satisfied if any of the strings matches against the candidate string.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1508
+From //build/config/BUILDCONFIG.gn:1527
 
 ### select_variant_canonical
 *This should never be set as a build argument.*
@@ -3077,7 +3080,7 @@ See //build/toolchain/clang_toolchain.gni for details.
 
 **Current value (from the default):** `[]`
 
-From //build/config/BUILDCONFIG.gn:1513
+From //build/config/BUILDCONFIG.gn:1532
 
 ### select_variant_shortcuts
 List of short names for commonly-used variant selectors.  Normally this
@@ -3107,6 +3110,12 @@ a list that can be spliced into [`select_variant`](#select_variant).
   variant = "coverage"
 }]
 }, {
+  name = "host_rustcoverage"
+  select_variant = [{
+  host = true
+  variant = "rustcoverage"
+}]
+}, {
   name = "host_profile"
   select_variant = [{
   host = true
@@ -3115,7 +3124,7 @@ a list that can be spliced into [`select_variant`](#select_variant).
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1332
+From //build/config/BUILDCONFIG.gn:1340
 
 ### shaderc_enable_spvc_parser
 Enables using the parsing built into spvc instead spirv-cross
@@ -3201,7 +3210,7 @@ Platform portability header for spinel.
 
 **Current value (from the default):** `"\"spinel_platform.h\""`
 
-From [//third_party/openthread/src/lib/spinel/BUILD.gn:32](https://fuchsia.googlesource.com/third_party/openthread/+/7e19f43cca493cd6a7f89768f9ee2d132b94177b/src/lib/spinel/BUILD.gn#32)
+From [//third_party/openthread/src/lib/spinel/BUILD.gn:32](https://fuchsia.googlesource.com/third_party/openthread/+/ee996f49f2d7ab97e4e04ab0c083e9238b902da7/src/lib/spinel/BUILD.gn#32)
 
 ### sysmgr_golden_warn_override
 Used by config_package().
@@ -3412,7 +3421,7 @@ From //build/config/sanitizers/sanitizer_default_options.gni:47
 }]
 ```
 
-From //build/config/BUILDCONFIG.gn:1316
+From //build/config/BUILDCONFIG.gn:1324
 
 ### universe_package_labels
 If you add package labels to this variable, the packages will be included
@@ -3565,7 +3574,7 @@ git clone "sso://fuchsia.googlesource.com/third_party/ffmpeg" third_party/ffmpeg
 
 **Current value (from the default):** `true`
 
-From //src/media/lib/ffmpeg/BUILD.gn:37
+From //src/media/lib/ffmpeg/BUILD.gn:38
 
 ### use_swiftshader_vulkan_icd_on_host
 
