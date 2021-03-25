@@ -114,6 +114,7 @@ async fn record_trace<'a, L: LineWaiter<'a>, W: Write>(
             ..TerminateOptions::EMPTY
         })
         .await?;
+    write!(writer, "Trace saved to {}. Use ui.perfetto.dev to visualize it.\n", &opts.output)?;
 
     Ok(())
 }
