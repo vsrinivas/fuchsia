@@ -56,7 +56,6 @@ pub type UILifecycleFactory =
 #[derive(Clone)]
 pub struct SessionManager {
     state: Arc<Mutex<SessionManagerState>>,
-    ui_lifecycle_factory: Arc<UILifecycleFactory>,
 }
 
 impl SessionManager {
@@ -65,10 +64,10 @@ impl SessionManager {
     /// # Parameters
     /// - `realm`: The realm in which sessions will be launched.
     /// - `scenic_lifecycle`: Proxy to the scenic lifecycle service.
-    pub fn new(realm: fsys::RealmProxy, ui_lifecycle_factory: Arc<UILifecycleFactory>) -> Self {
+    pub fn new(realm: fsys::RealmProxy) -> Self {
         let state =
             SessionManagerState { session_url: None, session_exposed_dir_channel: None, realm };
-        SessionManager { state: Arc::new(Mutex::new(state)), ui_lifecycle_factory }
+        SessionManager { state: Arc::new(Mutex::new(state)) }
     }
 
     /// Launch the session specified in the session manager startup configuration, if any.
@@ -374,12 +373,6 @@ impl SessionManager {
 
     /// Handles calls to Restarter.Restart().
     async fn handle_restart_request(&mut self) -> Result<(), RestartError> {
-        if let Some(scenic_lifecycle) = (&self.ui_lifecycle_factory)() {
-            if let Err(error) = scenic_lifecycle.terminate() {
-                eprintln!("{:?}", error);
-                return Err(RestartError::NotRunning);
-            }
-        }
         let mut state = self.state.lock().await;
         if let Some(ref session_url) = state.session_url {
             startup::launch_session(&session_url, &state.realm)
@@ -415,13 +408,10 @@ mod tests {
             ElementManagerMarker, ElementManagerRequest, ElementSpec, LaunchConfiguration,
             LauncherMarker, LauncherProxy, RestartError, RestarterMarker, RestarterProxy,
         },
-        fidl_fuchsia_sys2 as fsys, fidl_fuchsia_ui_lifecycle as fui_lifecycle,
+        fidl_fuchsia_sys2 as fsys,
         fuchsia_async as fasync,
         futures::prelude::*,
-        lazy_static::lazy_static,
         matches::assert_matches,
-        std::sync::{mpsc::sync_channel, Arc},
-        test_util::Counter,
     };
 
     /// Spawns a local `fidl_fuchsia_sys2::Realm` server, and returns a proxy to the spawned server.
@@ -504,7 +494,7 @@ mod tests {
             };
         });
 
-        let session_manager = SessionManager::new(realm, Arc::new(|| None));
+        let session_manager = SessionManager::new(realm);
         let (launcher, _restarter) = serve_session_manager_services(session_manager);
 
         assert!(launcher
@@ -539,7 +529,7 @@ mod tests {
             };
         });
 
-        let session_manager = SessionManager::new(realm, Arc::new(|| None));
+        let session_manager = SessionManager::new(realm);
         let (launcher, restarter) = serve_session_manager_services(session_manager);
 
         assert!(launcher
@@ -557,10 +547,6 @@ mod tests {
     /// Verifies that scenic is shut down on restart.
     #[fasync::run_until_stalled(test)]
     async fn test_restart_scenic() {
-        lazy_static! {
-            static ref CALL_COUNT: Counter = Counter::new(0);
-        }
-
         let session_url = "session";
 
         let realm = spawn_realm_server(move |realm_request| {
@@ -581,17 +567,7 @@ mod tests {
             };
         });
 
-        let (sender, receiver) = sync_channel(1);
-        let ui_lifecycle_factory = move || {
-            let (ui_lifecycle_proxy, ui_lifecycle_stream) =
-                create_proxy_and_stream::<fui_lifecycle::LifecycleControllerMarker>()
-                    .expect("Failed to create UI LifecycleControllerMarker proxy and stream");
-
-            sender.send(ui_lifecycle_stream).unwrap();
-            Some(ui_lifecycle_proxy)
-        };
-
-        let session_manager = SessionManager::new(realm, Arc::new(ui_lifecycle_factory));
+        let session_manager = SessionManager::new(realm);
         let (launcher, restarter) = serve_session_manager_services(session_manager);
 
         assert!(launcher
@@ -604,20 +580,6 @@ mod tests {
             .is_ok());
 
         assert!(restarter.restart().await.expect("could not call Restart").is_ok());
-
-        let mut ui_lifecycle_stream = receiver.recv().unwrap();
-        let ui_lifcycle_fut = async {
-            while let Some(request) = ui_lifecycle_stream.try_next().await.unwrap() {
-                match request {
-                    fui_lifecycle::LifecycleControllerRequest::Terminate { .. } => {
-                        CALL_COUNT.inc();
-                    }
-                }
-            }
-        };
-
-        ui_lifcycle_fut.await;
-        assert_eq!(CALL_COUNT.get(), 1);
     }
 
     /// Verifies that Launcher.Restart return an error if there is no running existing session.
@@ -627,7 +589,7 @@ mod tests {
             assert!(false);
         });
 
-        let session_manager = SessionManager::new(realm, Arc::new(|| None));
+        let session_manager = SessionManager::new(realm);
         let (_launcher, restarter) = serve_session_manager_services(session_manager);
 
         assert_eq!(
