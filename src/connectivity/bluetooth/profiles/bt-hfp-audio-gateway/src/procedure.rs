@@ -75,7 +75,7 @@ const CIND_TEST_RESPONSE_BYTES: &[u8] = b"+CIND: \
 pub enum ProcedureError {
     #[error("Unexpected AG procedural update: {:?}", .0)]
     UnexpectedAg(AgUpdate),
-    #[error("Unparseabled HF procedural update: {:?}", .0)]
+    #[error("Unparsable HF procedural update: {:?}", .0)]
     UnparsableHf(at::DeserializeError),
     #[error("Unexpected HF procedural update: {:?}", .0)]
     UnexpectedHf(at::Command),
