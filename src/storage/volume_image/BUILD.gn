@@ -67,6 +67,7 @@ source_set("volume-descriptor-test") {
 test("storage-volume-image-test") {
   deps = [
     ":volume-descriptor-test",
+    "adapter:adapter-tests",
     "ftl:tests",
     "fvm:fvm-test",
     "serialization:tests",
@@ -105,6 +106,7 @@ fuchsia_component("storage-volume-image-test-component") {
   deps = [
     ":serialization-schemas",
     ":storage-volume-image-test",
+    "adapter:adapter-test-images",
   ]
   testonly = true
 }
@@ -128,6 +130,7 @@ group("tests") {
     ":storage-volume-image-integration-test($host_toolchain)",
     ":storage-volume-image-test($host_toolchain)",
     ":storage-volume-image-tests",
+    "adapter:tests",
     "fvm:tests",
   ]
 }

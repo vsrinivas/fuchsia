@@ -19,12 +19,10 @@ source_set("fvm-descriptor") {
   public_deps = [
     ":options",
     "//sdk/lib/fit-promise",
+    "//src/storage/fvm",
     "//src/storage/volume_image:partition",
   ]
-  deps = [
-    "//src/storage/fvm",
-    "//src/storage/volume_image/utils:block-utils",
-  ]
+  deps = [ "//src/storage/volume_image/utils:block-utils" ]
 }
 
 source_set("fvm-image-extend") {

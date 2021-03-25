@@ -6,6 +6,7 @@
 
 #include <cstdint>
 #include <functional>
+#include <iostream>
 #include <limits>
 #include <optional>
 #include <string>
@@ -242,7 +243,6 @@ fit::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& writer) co
       if (fill_value_it != mapping.options.end()) {
         fill_value = static_cast<uint8_t>(fill_value_it->second);
       }
-
       for (uint64_t slice = 0; slice < slice_count; ++slice) {
         auto slice_data_view = fbl::Span<uint8_t>(slice_buffer);
         if (slice < data_slice_count) {
@@ -260,14 +260,13 @@ fit::result<void, std::string> FvmDescriptor::WriteBlockImage(Writer& writer) co
               mapping.target > vslice_offset ? mapping.target - vslice_offset : 0;
 
           // Check if the extent data does not end in slice boundary.
-          const uint64_t data_vslice_end = mapping.target + mapping.count;
-          const uint64_t vslice_end = vslice_offset + options_.slice_size;
-          uint64_t data_length = data_vslice_end < vslice_end
-                                     ? data_vslice_end - data_vslice_start
-                                     : options_.slice_size - data_vslice_start;
+          const uint64_t data_vslice_end = mapping.target + mapping.count - vslice_offset;
+          const uint64_t vslice_end = vslice_offset + options_.slice_size - vslice_offset;
+          uint64_t data_length = data_vslice_end < vslice_end ? data_vslice_end - data_vslice_start
+                                                              : vslice_end - data_vslice_start;
           slice_data_view = slice_data_view.subspan(data_vslice_start, data_length);
-          auto read_result =
-              partition.reader()->Read(slice_offset + data_vslice_start, slice_data_view);
+          auto read_result = partition.reader()->Read(
+              mapping.source + slice_offset + data_vslice_start, slice_data_view);
           if (read_result.is_error()) {
             return read_result.take_error_result();
           }

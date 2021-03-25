@@ -1,0 +1,147 @@
+# Copyright 2021 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//src/storage/testing/isolated_devmgr.gni")
+import("//src/sys/build/fuchsia_component.gni")
+import("//src/sys/build/fuchsia_test_package.gni")
+
+source_set("options") {
+  public = [ "adapter_options.h" ]
+}
+
+source_set("blobfs-partition") {
+  sources = [ "blobfs_partition.cc" ]
+  public = [ "blobfs_partition.h" ]
+  public_deps = [
+    ":options",
+    "//src/storage/volume_image:partition",
+    "//src/storage/volume_image/fvm:options",
+    "//src/storage/volume_image/utils:io-interfaces",
+    "//zircon/public/lib/fit",
+  ]
+  deps = [
+    "//src/storage/blobfs",
+    "//src/storage/fvm",
+    "//src/storage/volume_image/utils:block-utils",
+  ]
+}
+
+test_blob_image_label = ":test-blobfs-image-gen($default_toolchain)"
+test_blob_image_path =
+    get_label_info(test_blob_image_label, "target_out_dir") + "/test_blobfs.blk"
+test_files = [
+  "test_data/file1.ext1",
+  "test_data/file2.ext2",
+  "test_data/file3.ext3",
+]
+
+compiled_action("test-blobfs-image-gen") {
+  testonly = true
+  visibility = [ ":*" ]
+  tool = "//zircon/tools/blobfs"
+  inputs = test_files
+  outputs = [ test_blob_image_path ]
+  args = [
+    rebase_path(test_blob_image_path, root_build_dir),
+    "create",
+  ]
+
+  foreach(test_file, test_files) {
+    args += [
+      "--blob",
+      rebase_path(test_file, root_build_dir),
+    ]
+  }
+}
+
+config("test-image-path") {
+  if (is_host) {
+    output_path =
+        rebase_path(get_label_info("host-test-images", "root_out_dir"),
+                    root_build_dir)
+    defines = [ "STORAGE_VOLUME_IMAGE_ADAPTER_TEST_IMAGE_PATH=\"$output_path/adapter_test_images/\"" ]
+  } else {
+    defines = [
+      "STORAGE_VOLUME_IMAGE_ADAPTER_TEST_IMAGE_PATH=\"pkg/data/test_images/\"",
+    ]
+  }
+}
+
+host_test_data("host-test-images") {
+  sources = [ test_blob_image_path ]
+  deps = [ ":test-blobfs-image-gen($default_toolchain)" ]
+  outputs = [ "$root_out_dir/adapter_test_images/{{source_file_part}}" ]
+}
+
+resource("adapter-test-images") {
+  testonly = true
+  sources = [ "$target_out_dir/test_blobfs.blk" ]
+  outputs = [ "data/test_images/{{source_file_part}}" ]
+  deps = [ ":test-blobfs-image-gen" ]
+}
+
+source_set("adapter-tests") {
+  testonly = true
+  sources = [ "blobfs_partition_test.cc" ]
+  deps = [
+    ":blobfs-partition",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/storage/blobfs",
+    "//src/storage/fvm",
+    "//src/storage/volume_image/utils:block-utils",
+    "//src/storage/volume_image/utils:fd-io",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ ":test-image-path" ]
+
+  if (is_host) {
+    deps += [ ":host-test-images" ]
+  }
+}
+
+test("adapter-integration-test") {
+  sources = [ "adapter_integration_test.cc" ]
+  configs += [ ":test-image-path" ]
+  deps = [
+    ":blobfs-partition",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/storage/blobfs",
+    "//src/storage/fvm",
+    "//src/storage/testing:storage_driver_test_support",
+    "//src/storage/volume_image/fvm:fvm-descriptor",
+    "//src/storage/volume_image/utils:block-utils",
+    "//src/storage/volume_image/utils:fd-io",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fs-management",
+  ]
+}
+
+storage_isolated_devmgr_unittest_v2_component(
+    "adapter-integration-test-component") {
+  component_name = "adapter-integration-test"
+  executable_path = "test/adapter-integration-test"
+  deps = [
+    ":adapter-integration-test",
+    ":adapter-test-images",
+  ]
+}
+
+fuchsia_test_package("storage-volume-image-adapter-integration-tests") {
+  test_specs = {
+    log_settings = {
+      max_severity = "ERROR"
+    }
+  }
+  test_components = [ ":adapter-integration-test-component" ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ ":storage-volume-image-adapter-integration-tests" ]
+}
