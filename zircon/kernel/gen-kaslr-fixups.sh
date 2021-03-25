@@ -148,7 +148,7 @@ $3 ~ /^R_AARCH64_ADR_/ || $3 ~ /^R_AARCH64_.*ABS_L/ {
         # As a special case, ignore known GOT cases the compiler generates in
         # the sancov.module_ctor_trace_pc_guard function.
         if ($0 ~ /__(start|stop)___sancov_guards/) {
-           if (type == "R_X86_64_GOTPCRELX") {
+           if (type == "R_X86_64_GOTPCRELX" || type == "R_X86_64_REX_GOTPCRELX") {
                # On x86 it got relaxed away so there is no fixup to do here.
                next
            }
