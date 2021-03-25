@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::{channel::mpsc, SinkExt, TryStreamExt},
     std::convert::TryInto,
-    tracing::error,
+    tracing::{error, warn},
 };
 
 #[async_trait]
@@ -82,13 +82,17 @@ impl EventStreamServer {
             stream.try_next().await.map_err(|e| EventError::Fidl("EventStream stream", e))?
         {
             match request {
-                fsys::EventStreamRequest::OnEvent { event, .. } => {
-                    if let Ok(event) = event.try_into() {
+                fsys::EventStreamRequest::OnEvent { event, .. } => match event.try_into() {
+                    Ok(event) => {
                         self.send(event).await;
                     }
-                }
+                    Err(err) => {
+                        warn!(?err, "Failed to interpret event");
+                    }
+                },
             }
         }
+        warn!("EventSource stream server closed");
         Ok(())
     }
 
