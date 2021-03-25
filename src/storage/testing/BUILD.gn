@@ -27,7 +27,6 @@ fuchsia_package("storage-isolated-devmgr") {
   deps = [
     ":isolated-devmgr-component",
     ":storage_drivers",
-    "//src/lib/isolated_devmgr/v2_component:driver-manager-test",
   ]
 }
 

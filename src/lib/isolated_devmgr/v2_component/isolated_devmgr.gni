@@ -4,12 +4,59 @@
 
 import("//src/sys/build/fuchsia_component.gni")
 
+# Produces a (testonly) component with an isolated driver manager to launch drivers. The component
+# name will always be `isolated-devmgr`.
+#
+# Example Usage:
+#
+# ```
+# isolated_devmgr_v2_component("my-component") {
+#   package_name = "my-package"
+# }
+#
+# fuchsia_package("my-package") {
+#   deps = [ ":my-component" ]
+# }
+# ```
+# The above component will be accessible when building test realms (via CML or dynamically) as
+# `fuchsia-pkg://fuchsia.com/my-package#meta/isolated-devmgr.cm`
+#
+# `isolated_devmgr_v2_component` may depend on any number of `driver_module()` targets to ensure
+# that any `fuchsia_package()` that includes them will include the same drivers.
+#
+# ```
+# driver_module("my_driver") {
+#   ...
+# }
+#
+# isolated_devmgr_v2_component("my-component") {
+#   deps = [ ":my_driver" ]
+#   ...
+# }
+# ```
+#
+# The Isolated Device Manager defined above will be able to read my_driver under the path
+# "my_driver.so".
+#
+# Parameters
+#
+#   package_name (required)
+#     The name of the package in which this component will run.
+#     Type: string
+#
+#   deps
+#   visibility
 template("isolated_devmgr_v2_component") {
+  assert(defined(invoker.package_name),
+         "the package_name where the IsolateDevMgr will run must be defined")
   package_name = invoker.package_name
   manifest_path = "${target_gen_dir}/meta/isolated-devmgr.cml"
   generated_file(manifest_path) {
     contents = {
-      include = [ "sdk/lib/diagnostics/syslog/client.shard.cml" ]
+      include = [
+        "sdk/lib/diagnostics/inspect/client.shard.cml",
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+      ]
       program = {
         runner = "elf"
         binary = "bin/support"
@@ -67,10 +114,11 @@ template("isolated_devmgr_v2_component") {
     manifest = manifest_path
     deps = []
     if (defined(invoker.deps)) {
-      devmgr_args = invoker.deps
+      deps += invoker.deps
     }
     deps += [
       ":$manifest_path",
+      "//src/lib/isolated_devmgr/v2_component:driver-manager-test",
       "//src/lib/isolated_devmgr/v2_component:support",
     ]
   }
