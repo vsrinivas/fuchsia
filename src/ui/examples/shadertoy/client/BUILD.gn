@@ -37,7 +37,7 @@ executable("bin") {
   include_dirs = [ "//lib" ]
 }
 
-fuchsia_package_with_single_component("client") {
+fuchsia_package_with_single_component("shadertoy_client") {
   manifest = "meta/shadertoy_client.cmx"
   deps = [ ":bin" ]
 }
