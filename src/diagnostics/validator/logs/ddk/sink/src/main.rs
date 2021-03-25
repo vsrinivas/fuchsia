@@ -109,7 +109,7 @@ impl Puppet {
     async fn test_file_line(&mut self) -> Result<(), Error> {
         let test_file = "test_file.cc".to_string();
         let test_line_32 = 9001;
-        let long_test_log = "test_log_".repeat(60);
+        let long_test_log = "test_log_".repeat(1000);
         let record = Record {
             arguments: vec![Argument {
                 name: "message".to_string(),
@@ -124,7 +124,7 @@ impl Puppet {
         loop {
             let log_entry = self.logs.next().await.unwrap();
             let has_msg = log_entry.msg().unwrap().contains(
-                &format!("[test_file.cc(9001)] {}tes...", "test_log_".repeat(11)).to_owned(),
+                &format!("[test_file.cc(9001)] {}test_log", "test_log_".repeat(110)).to_owned(),
             );
             if has_msg {
                 break;

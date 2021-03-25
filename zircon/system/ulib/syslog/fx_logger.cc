@@ -154,7 +154,7 @@ zx_status_t fx_logger::VLogWriteToSocket(fx_log_severity_t severity, const char*
     std::unique_ptr<syslog_backend::LogBuffer> buf_ptr =
         std::make_unique<syslog_backend::LogBuffer>();
     syslog_backend::LogBuffer& buffer = *buf_ptr;
-    constexpr size_t kFormatStringLength = 128;
+    constexpr size_t kFormatStringLength = 1024;
     char fmt_string[kFormatStringLength];
     fmt_string[kFormatStringLength - 1] = 0;
     int n = kFormatStringLength;
