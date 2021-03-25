@@ -17,6 +17,7 @@ if (is_kernel) {
       "//zircon/kernel/lib/boot-options",
       "//zircon/kernel/lib/code-patching",
       "//zircon/kernel/lib/ktl",
+      "//zircon/kernel/lib/libc/string/arch/x86:headers",
       "//zircon/system/ulib/hwreg",
     ]
   }

@@ -4,43 +4,98 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
+import("//build/cpp/library_headers.gni")
+import("//build/test.gni")
 import("//build/zircon/migrated_targets.gni")
+import("//src/sys/build/fuchsia_unittest_package.gni")
+import("//zircon/kernel/lib/code-patching/code-patching.gni")
 
-source_set("x86") {
-  sources = [
-    "memcpy.S",
-    "memset.S",
-  ]
-  deps = [ "//zircon/kernel/lib/code_patching:headers" ]
+library_headers("headers") {
+  headers = [ "arch/x86/cstring/selection.h" ]
+  if (is_kernel) {
+    public_deps = [ "//zircon/kernel/lib/arch:headers" ]
+  } else {
+    public_deps = [ "//zircon/kernel/lib/arch" ]
+  }
+}
 
-  if (toolchain.environment != "kernel") {
-    # TODO(mcgrathr): Make the assembly compatible with phys.
-    # For now, just use the C.
-    sources = []
+# Only kernel code is expected to be patched.
+if (toolchain.environment == "kernel") {
+  group("x86") {
+    deps = [
+      ":__unsanitized_memcpy",
+      ":__unsanitized_memset",
+    ]
+  }
+
+  code_patching_hermetic_alternative("memcpy_movsq") {
+    sources = [ "memcpy-movsq.S" ]
+    deps = [ "//zircon/kernel/lib/arch:headers" ]
+  }
+
+  code_patching_hermetic_alternative("memcpy_movsb") {
+    sources = [ "memcpy-movsb.S" ]
+    deps = [ "//zircon/kernel/lib/arch:headers" ]
+  }
+
+  code_patching_hermetic_stub("__unsanitized_memcpy") {
+    aliases = [ "memcpy" ]
+    default_alternative = "memcpy_movsq"
+    deps = [
+      ":memcpy_movsb",
+      ":memcpy_movsq",
+    ]
+  }
+
+  code_patching_hermetic_alternative("memset_stosq") {
+    sources = [ "memset-stosq.S" ]
+    deps = [ "//zircon/kernel/lib/arch:headers" ]
+  }
+
+  code_patching_hermetic_alternative("memset_stosb") {
+    sources = [ "memset-stosb.S" ]
+    deps = [ "//zircon/kernel/lib/arch:headers" ]
+  }
+
+  code_patching_hermetic_stub("__unsanitized_memset") {
+    aliases = [ "memset" ]
+    default_alternative = "memset_stosq"
+    deps = [
+      ":memset_stosb",
+      ":memset_stosq",
+    ]
+  }
+} else if (is_kernel) {  # The phys environments
+  # TODO(mcgrathr): Make the assembly compatible with phys.
+  # For now, just use the C.
+  source_set("x86") {
     sources = [
       "//zircon/kernel/lib/libc/string/memcpy.c",
       "//zircon/kernel/lib/libc/string/memset.c",
     ]
-    deps = []
     deps = [ "//zircon/kernel/lib/libc:headers" ]
   }
-}
+} else {
+  fuchsia_unittest_package("tests") {
+    component_name = "x86-cstring-tests"
+    package_name = component_name
+    deps = [ ":x86-cstring-tests" ]
+  }
 
-# Depended upon by //zircon/kernel:code-patching.
-source_set("code-patching") {
-  sources = [ "selector.cc" ]
-  deps = [
-    "//zircon/kernel/lib/arch",
-    "//zircon/kernel/lib/code_patching:headers",
-  ]
-}
-
-source_set("tests") {
-  # TODO(mcgrathr): Make this optional somehow and enable testonly taint.
-  # testonly = true
-  sources = [ "tests.cc" ]
-  deps = [
-    "//zircon/kernel/lib/arch",
-    "//zircon/kernel/lib/unittest",
-  ]
+  test("x86-cstring-tests") {
+    sources = [
+      "alternative-tests.cc",
+      "memcpy-movsb.S",
+      "memcpy-movsq.S",
+      "memset-stosb.S",
+      "memset-stosq.S",
+      "selection-tests.cc",
+    ]
+    deps = [
+      ":headers",
+      "//src/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+      "//zircon/kernel/lib/arch/testing",
+    ]
+  }
 }

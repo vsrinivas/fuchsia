@@ -207,6 +207,11 @@ template("code_patching_hermetic_alternative") {
 #     - Type: string
 #     - Default: "arch/code-patches/case-id.h"
 #
+#   * aliases
+#     - Optional: A list of weak symbols to define as aliases to the associated
+#       function.
+#     - Type: list(string)
+#
 #   * default_alternative
 #     - Optional: the name of an alternative to default to instead of a trap
 #       fill.
@@ -234,6 +239,7 @@ template("code_patching_hermetic_stub") {
                              "case_id_header",
                              "output_name",
                              "deps",
+                             "aliases",
                              "default_alternative",
                            ])
     forward_variables_from(invoker,
@@ -272,6 +278,7 @@ template("code_patching_hermetic_stub") {
                              "testonly",
                              "output_name",
                              "case_id_header",
+                             "aliases",
                              "default_alternative",
                            ])
     if (!defined(output_name)) {
@@ -303,6 +310,15 @@ template("code_patching_hermetic_stub") {
       "--outfile",
       rebase_path(outputs[0], root_build_dir),
     ]
+
+    if (defined(aliases)) {
+      foreach(alias, aliases) {
+        args += [
+          "--aliases",
+          alias,
+        ]
+      }
+    }
 
     if (defined(default_alternative)) {
       args += [

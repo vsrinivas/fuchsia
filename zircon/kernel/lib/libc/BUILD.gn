@@ -65,7 +65,6 @@ source_set("tests") {
   if (toolchain.environment == "kernel") {
     sources = [ "atomic_tests.cc" ]
     deps = [
-      "string:tests",
       "//zircon/kernel/lib/ktl:headers",
       "//zircon/kernel/lib/unittest",
     ]

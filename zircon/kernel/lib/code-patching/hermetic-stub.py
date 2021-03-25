@@ -33,6 +33,13 @@ STUB_CONTENTS = string.Template(
 .end_function
 """)
 
+ALIAS = string.Template(
+    """
+.weak $alias
+.hidden $alias
+$alias = $function_name
+""")
+
 
 def main():
     parser = argparse.ArgumentParser(
@@ -46,6 +53,12 @@ def main():
         "--metadata-file",
         metavar="FILE",
         help="a JSON file of hermetic patch alternative metadata")
+    parser.add_argument(
+        "--aliases",
+        type=str,
+        action="append",
+        help="Symbol names to alias to the function as",
+        default=[])
     # TODO(fxbug.dev/67615): Remove this option once code patching happens
     # within physboot; at this point, pre-patched, trap-filled code will not be
     # executed before it is patched.
@@ -91,6 +104,8 @@ def main():
                 default=default_alternative or "",
                 size=max_size,
             ))
+        for alias in args.aliases:
+            stub.write(ALIAS.substitute(alias=alias, function_name=args.name))
 
 
 if __name__ == "__main__":

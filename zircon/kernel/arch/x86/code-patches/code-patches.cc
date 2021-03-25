@@ -15,6 +15,7 @@
 #include <cstdio>
 
 #include <arch/code-patches/case-id.h>
+#include <arch/x86/cstring/selection.h>
 #include <arch/x86/retpoline/selection.h>
 #include <arch/x86/user-copy/selection.h>
 #include <hwreg/x86msr.h>
@@ -96,6 +97,20 @@ void ArchPatchCode(ktl::span<const code_patching::Directive> patches) {
         auto alternative = GetPatchAlternative(name);
         code_patching::Patch(insns, alternative);
         PrintCaseInfo(patch, "using retpoline alternative \"%V\"", name);
+        break;
+      }
+      case CASE_ID___UNSANITIZED_MEMCPY: {
+        ktl::string_view name = SelectX86MemcpyAlternative(cpuid);
+        auto alternative = GetPatchAlternative(name);
+        code_patching::Patch(insns, alternative);
+        PrintCaseInfo(patch, "using memcpy alternative \"%V\"", name);
+        break;
+      }
+      case CASE_ID___UNSANITIZED_MEMSET: {
+        ktl::string_view name = SelectX86MemsetAlternative(cpuid);
+        auto alternative = GetPatchAlternative(name);
+        code_patching::Patch(insns, alternative);
+        PrintCaseInfo(patch, "using memset alternative \"%V\"", name);
         break;
       }
       default:

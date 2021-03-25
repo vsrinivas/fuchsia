@@ -42,4 +42,11 @@
 // underscores.
 #define CASE_ID___X86_INDIRECT_THUNK_R11 3
 
+// Relates to the optimizations available for C string utilities.
+//
+// Note: the "___" is intentional as the function name has two leading
+// underscores.
+#define CASE_ID___UNSANITIZED_MEMCPY 4
+#define CASE_ID___UNSANITIZED_MEMSET 5
+
 #endif  // ZIRCON_KERNEL_ARCH_X86_CODE_PATCHES_INCLUDE_ARCH_CODE_PATCHES_CASE_ID_H_

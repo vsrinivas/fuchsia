@@ -5,13 +5,8 @@
 // https://opensource.org/licenses/MIT
 
 #include <lib/code-patching/code-patches.h>
-#include <lib/code_patching.h>
 
-#include <arch/ops.h>
 #include <lk/init.h>
-
-extern const CodePatchInfo __start_code_patch_table[];
-extern const CodePatchInfo __stop_code_patch_table[];
 
 // TODO(68585): While v2 code-patching remains in the kernel, the .code-patches
 // section will be allocated and the directives within can be accessed directly.
@@ -26,11 +21,6 @@ ktl::span<const code_patching::Directive> GetPatchDirectives() {
 }
 
 void apply_startup_code_patches(uint level) {
-  for (const CodePatchInfo* patch = __start_code_patch_table; patch < __stop_code_patch_table;
-       ++patch) {
-    patch->apply_func(patch);
-    arch_sync_cache_range((vaddr_t)patch->dest_addr, patch->dest_size);
-  }
   // TODO(67615): This is the v2 patching that will incrementally eat the v1
   // patching.
   ArchPatchCode(GetPatchDirectives());

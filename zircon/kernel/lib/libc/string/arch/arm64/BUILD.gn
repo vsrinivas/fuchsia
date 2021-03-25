@@ -26,8 +26,3 @@ source_set("arm64") {
     ]
   }
 }
-
-group("tests") {
-  # TODO: testonly = true
-  deps = []
-}

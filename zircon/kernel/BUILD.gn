@@ -330,7 +330,7 @@ if (is_kernel) {
     ]
   }
 
-  code_patching_hermetic_embedding("code-patching-embedding") {
+  code_patching_hermetic_embedding("code-patches") {
     deps = [ "top" ]
   }
 
@@ -357,8 +357,7 @@ if (is_kernel) {
     configs += [ ":kernel_defsym" ]
 
     deps = [
-      ":code-patching",
-      ":code-patching-embedding",
+      ":code-patches",
       ":test",  # TODO: make optional, add testonly taint
       "top",
 
@@ -398,14 +397,6 @@ if (is_kernel) {
       "debugcommands",
       "tests",
     ]
-  }
-
-  # Aggregates code-patching selection logic across the kernel.
-  group("code-patching") {
-    deps = []
-    if (current_cpu == "x64") {
-      deps += [ "lib/libc/string/arch/x86:code-patching" ]
-    }
   }
 
   # Extract the raw binary image (no ELF headers) of the kernel proper.
@@ -631,7 +622,10 @@ if (is_kernel) {
     ]
 
     if (current_cpu == "x64") {
-      deps += [ "arch/x86/user-copy:tests" ]
+      deps += [
+        "arch/x86/user-copy:tests",
+        "lib/libc/string/arch/x86:tests",
+      ]
     }
 
     # Don't let any test ZBIs roll up into the overall product image.
