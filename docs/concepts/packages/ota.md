@@ -1,107 +1,136 @@
-# System updates
+# OTA updates
 
-System updates, otherwise known as Over-The-Air updates (OTAs), are a mechanism for monolithic OS
-updates on Fuchsia. This doc aims to centralize the most up-to-date information about the OTA flow.
+Over-The-Air updates (OTAs) are a mechanism for operating system updates on
+Fuchsia. This document details how OTA updates work on Fuchsia.
 
-## Phase 1: Checking for an update
-All system updates need to start somewhere. The two entry points into this process are omaha-client
-and the system-update-checker. On any given system, only one of these components may be running.
+The update process is divided into the following phases:
 
-### Update checks with omaha-client
-First, let’s describe systems which use omaha-client. During boot, omaha-client starts up and begins
-periodic update checks. During these checks, omaha-client polls the Omaha server to check for
+* [Checking for an update](#checking-for-update)
+* [Staging an update](#staging-update)
+* [Verifying an update](#verifying-update)
+
+## Checking for an update {#checking-for-update}
+
+The two entry points for the operating system update process are the `omaha-client`
+and the `system-update-checker` components.
+
+Both the `omaha-client` and `system-update-checker` serve the same
+purpose, to find out if there is an operating system update and start the update.
+
+Note: Omaha is an update availability management protocol. For more
+information about Omaha, see [Omaha](https://github.com/google/omaha).
+
+Generally, products should use `omaha-client` if they want to
+use Omaha to determine update availability. Products should use
+`system-update-checker` if they don’t want to use Omaha and instead
+want to check for updates directly from package repositories.
+
+On any given Fuchsia system, only one of these components may be running:
+
+* [Update checks with omaha-client](#update-omaha)
+* [Update checks with system-update-checker](#update-system)
+
+### Update checks with omaha-client {#update-omaha}
+
+During the boot process, `omaha-client` starts up and begins periodic update
+checks. During these checks, `omaha-client` polls the Omaha server to check for
 updates.
 
-Omaha is an update availability management protocol. We’re not going to dive into the specifics of
-the Omaha server here (though you can read more about it [here](https://github.com/google/omaha)).
 The benefits of using Omaha are:
 
-* It allows for fractional rollout. For example, we can choose to update 10% of a fleet.
-  Specifically, only 10% of devices will get the “Yes, here’s the update pkg” when polling Omaha.
-  The remaining 90% will get “No”.
-  * Moving forward, we can keep updating more devices in the fleet (e.g. 20%, 50%, etc) until all
-    devices are up to date.
-  * Alternatively, we can choose to continue updating only the original 10% of devices, without
-    touching the 90%.
-* It allows for different update channels. For example, test devices can get updates from the
-  test channel and get the newest (possibly unstable) software. Whereas production devices can
-  get updates from the production channel and get the most stable software. Channel information can
+Note: Omaha is an update availability management protocol. For more
+information about Omaha, see [Omaha](https://github.com/google/omaha).
+
+* It allows for a fractional rollout of system updates across a fleet of
+  Fuchsia devices. For example, it can be configured that only 10% of the
+  fleet of devices gets updated. This means that only 10% of these devices
+  will see that there is an available update while polling Omaha. The
+  remaining 90% of devices would not see an update available.
+* It allows for different update channels. For example, test devices can get
+  updates from the test channel and get the newest (possibly unstable)
+  software. This allows production devices to get updates from the production
+  channel and get the most stable software. Channel information can
   be optionally given to Omaha along with product and version.
 
 ![Figure: Checking for updates with omaha-client](images/omcl.png)
 
-The diagram above shows a simplified version of the update check process with omaha-client.
-In practice, there are policies that gate whether omaha-client can check for an update or apply an
+The diagram shows a simplified version of the update check process with `omaha-client`.
+There are policies that gate whether `omaha-client` can check for an update or apply an
 update.
 
-Once omaha-client gets the update package URL from the omaha server, omaha-client tells the
-system-updater to start an update.
+Once `omaha-client` gets the update package URL from the Omaha server, `omaha-client`
+tells the `system-updater` to start an update.
 
-### Update checks with system-update-checker
-Devices that don’t use omaha-client will instead use the system-update-checker. Depending on how
-it's [configured], the system-update-checker regularly polls for an update package. These checks
-default to disabled if no auto_update is specified.
+### Update checks with system-update-checker {#update-system}
 
-To check if an update is available, the system-update-checker checks these conditions:
+Devices that don’t use `omaha-client` use the `system-update-checker`. Depending
+on how it is [configured], the `system-update-checker` regularly polls for
+an update package. These checks default to disabled if no `auto_update` is
+specified.
 
-* Is the hash of the currently running system image (found at /pkgfs/system/meta) different from
-  the hash of system image (found in packages.json) in the update package?
+To check if an update is available, the `system-update-checker` checks the
+following conditions:
+
+* Is the hash of the currently running system image (located in `/pkgfs/system/meta`) different from
+  the hash of system image (found in `packages.json`) in the update package?
 * If the system image isn’t different, is the vbmeta that’s currently running on the system
   different from the vbmeta of the update package?
 * If there is no vbmeta, is the ZBI that’s currently running on the system different from the ZBI
   of the update package?
 
-If _any_ of these answers are “yes”, then the system-update-checker knows the update package has
-changed*. Once the system-update-checker realizes the update package has changed, the
-system-update-checker tells the system-updater to start an update using the default update package
-(fuchsia-pkg://fuchsia.com/update).
+If any of these answers are yes, then the `system-update-checker` knows the
+update package has changed. Once the system-update-checker realizes the update
+package has changed, the `system-update-checker` triggers the `system-updater`
+to start an update using the default update package (fuchsia-pkg://fuchsia.com/update).
 
 ![Figure: Checking for updates with the system-update-checker](images/system-update-checker.png)
 
-The diagram above shows a simplified version of the update check process the system-update-checker.
+The diagram shows a simplified version of the update check process of `system-update-checker`.
 
-To short-circuit the checks to the vbmeta or ZBI, the update checker saves the update hash if no
-update is required after performing the vbmeta and ZBI checks. On subsequent checks for an update,
-the hash of the update package we just fetched is checked against the last known hash. If the hashes
- are the same, no update is triggered. If the hashes are different, the vbmeta and ZBI is then
- checked for changes to determine if an update is necessary.
+Note: There is currently no way to check bootloader-only updates because
+there is no [paver API] to read the firmware. An update is not triggered
+even though the update package has changed. Until this is fixed, you
+should use `update force-install <update-pkg-url>` to force an update.
 
-*There is currently no way to check bootloader-only updates because there is no [paver API] to read
-the firmware. An update will not be triggered even though the update package has changed. Until
-this is fixed, developers should use `update force-install <update-pkg-url>` to force an update in
-this situation.
+If no update is required, the update checker saves the last known update
+package hash. On subsequent checks for an update, the hash
+of the update package that is fetched is checked against the last known
+hash. If the hashes are the same, no update is triggered. If the hashes
+are different, the vbmeta and ZBI are  checked for changes to determine
+if an update is necessary.
 
-### Why have both omaha-client and the system-update-checker?
-Both the omaha-client and system-update-checker serve the same role: to find out if we have an
-update and kick off the update process. If both components serve the same role, then why do we have
-both?
+## Staging an update {#staging-update}
 
-We know we want to use Omaha to manage updates for some products. However, we are also an
-open-source project that needs to be able to update. In order to support both use cases, we need two
-different components. Products should use omaha-client if they want to use Omaha to determine update availability. Products should use system-update-checker if they don’t want to use Omaha, and instead
-want to check for updates directly from package repositories.
+Regardless if an update was triggered by `omaha-client` or `system-update-checker`,
+or even a forced update check, an update needs to be written to disk.
 
-## Phase 2: Staging an update
-Regardless of how we got here (e.g. a request from omaha-client, the system-update-checker, or a
-forced update check by the user), it’s time to stage an update (e.g. write it to disk). In this
-section, we'll consider a hypothetical update from version 1 to version 2. Without loss of
-generality, assume we are writing an update to the B partition.
+The update process is divided in the following steps:
+
+* [Initial garbage collection](#initial-garbage-collection)
+* [Fetch update package](#fetch-update-package)
+* [Secondary garbage collection](#secondary-garbage-collection)
+* [Verify board matches](#verify-board)
+* [Fetch remaining packages](#fetch-reamaining-packages)
+* [Write images to block device](#write-images-block-device)
+* [Set alternate partition as active](#set-alternate-active)
+* [Reboot](#reboot)
 
 ![Figure: Step 0: Initial state](images/staging-0.png)
 
+### Initial garbage collection {#initial-garbage-collection}
 
-### Step 1: Garbage collection
-First, the system-updater tells the pkg-cache to do garbage collection (delete all blobs that aren’t
-referenced in either the static or dynamic index). This step cleans up most of the blobs referenced
-by the old system.
+Note: This does not garbage collect the old update package because the old
+update package is referenced in the dynamic index.
 
-Note this does NOT garbage collect the old update package because the old update package is
-referenced in the dynamic index.
+The `system-updater` instructs `pkg-cache` to perform garbage collection
+which deletes all BLOBs that aren’t referenced in either the static or dynamic
+indexes. This cleans up most of the BLOBs referenced by the old system.
 
-![Figure: Step 1: Garbage collection](images/staging-1.png)
+![Figure: Initial garbage collection](images/staging-1.png)
 
-### Step 2: Fetch update package
-Then, the system-updater fetches the [update package], using the provided update package URL.
+### Fetch update package {#fetch-update-package}
+
+The `system-updater` fetches the [update package], using the provided update package URL.
 The dynamic index is then updated to reference the new update package. A sample update package may
 look like this:
 
@@ -118,43 +147,42 @@ look like this:
 /zedboot.signed
 ```
 
-#### Mode
-Update packages may optionally contain an update-mode file. This file controls whether the system
-update happens in Normal or ForceRecovery mode. If the update-mode file is not present, the
-system-updater defaults to the Normal mode.
+![Figure: Fetch update package](images/staging-2.png)
 
-At a high level, when the mode is ForceRecovery, the system-updater writes an image to recovery,
-marks slots A and B as unbootable, then boots to recovery. For simplicity, we won’t discuss the
-nuances of ForceRecovery in this doc (see the [code] for more info).
+Update packages contain an epoch file (`epoch.json`). If the epoch of the update
+package (the target epoch) is less than the epoch of the `system-updater`
+(the source epoch), the OTA fails. For additional context,
+see [RFC-0071](/docs/contribute/governance/rfcs/0071_ota_backstop.md).
 
-The rest of this document assumes the system update is happening in Normal mode.
+Optionally, update packages may contain an `update-mode` file. This file
+determines whether the system update happens in Normal or ForceRecovery
+mode. If the update-mode file is not present, the `system-updater`
+defaults to the Normal mode.
 
-#### Epoch
-Update packages also contain an epoch file. If the epoch of the update package (AKA the target
-epoch) is less than the epoch of the system-updater (AKA the source epoch), the OTA will fail. For
-more context, see [RFC-0071](/docs/contribute/governance/rfcs/0071_ota_backstop.md).
+When the mode is ForceRecovery, the `system-updater` writes an image to recovery,
+marks slots A and B as unbootable, then boots to recovery. For more information,
+see the [implementation of ForceRecovery][recovery-mode-code].
 
-The rest of this document assumes the system is updating to a supported epoch.
+### Secondary garbage collection {#secondary-garbage-collection}
 
-![Figure: Step 2: Fetch update package](images/staging-2.png)
+After the old update package is no longer referenced by the dynamic index,
+another garbage collection is triggered to delete the old update package.
+This step frees up additional space for any new packages.
 
-### Step 3: Garbage collection (again)
-Now that the old update package is no longer referenced by the dynamic index, we trigger another
-garbage collection to delete the old update package. We do this because we want to free up as much
-space as possible before we fetch the rest of the new packages.
+![Figure: Secondary garbage collection (again)](images/staging-3.png)
 
-![Figure: Step 3: Garbage collection (again)](images/staging-3.png)
+### Verify board matches {#verify-board}
 
-### Step 4: Verify board matches
-The current running system has a board file at /config/build-info/board. At this point, the
-system-updater will verify the board file on the system matches the board file in the update
-package.
+The current running system has a board file located in `/config/build-info/board`.
+The `system-updater` verifies that the board file on the system matches the board
+file in the update package.
 
-![Figure: Step 4: Verify board matches](images/staging-4.png)
+![Figure: Verify board matches](images/staging-4.png)
 
-### Step 5: Fetch remaining packages
-Next, the system-updater parses the packages.json file in the update package. Packages.json is in
-the form:
+### Fetch remaining packages {#fetch-reamaining-packages}
+
+The system-updater parses the `packages.json` file in the update package.
+The `packages.json` looks like the following:
 
 ```json
 {
@@ -167,47 +195,68 @@ the form:
 }
 ```
 
-The system-updater then tells the pkg-resolver to resolve all the URLs. When fetching packages, the
-package management system ensures we only fetch the blobs we [need]...that is, we only fetch blobs
-that have changed or that aren’t currently on the system. Note the package management system
-fetches entire blobs, as opposed to diff of whatever might currently be on the system.
+The `system-updater` instructs the `pkg-resolver` to resolve all the package URLs.
+When fetching packages, the package management system only fetches BLOBs that
+are required for an update. This means that only BLOBs that don't exist or need
+to be updated on the system. The package management system fetches entire BLOBs,
+as opposed to a diff of whatever might currently be on the system.
 
-Once we fetch all packages, we trigger a BlobFs sync to flush to persistent storage and ensure we’ve
-got all the blobs we need for the new system version in blobfs.
+Once all packages have been feteched, a BlobFS sync is triggered to flush the
+BLOBs to persistent storage. This process ensures that all the necessary BLOBs
+for the system update are available in BlobFS.
 
-![Figure: Step 5: Fetch remaining packages](images/staging-5.png)
+![Figure: Fetch remaining packages](images/staging-5.png)
 
-### Step 6: Write images to block device
-First, the system-updater figures out which images we want to write to the block device. There’s
-some [magic] behind the scenes that we won’t go over here. There’s also two kinds of images: assets
-and firmware. For simplicity, we won’t discuss the difference in detail here, though feel free to
-check out the [source code] if you are curious.
+### Write images to block device {#write-images-block-device}
 
-Then, the system-updater tells the paver to write the bootloader and firmware. Where we write these
-images does NOT depend on whether the device supports ABR ([these paver APIs don’t even take in a
-configuration]). To prevent flash wear, we only write to a partition if the image we’re writing is
-different from the image already on the block device.
+The `system-updater` determines which images need to be written to the block
+device. There are two kinds of images, assets and firmware.
 
-Next, the system-updater tells the paver to write the fuchsia zbi and its vbmeta. Where we write
-these images depends on whether the device supports ABR ([the paver API for this takes in a
-configuration to write to]). If the device supports ABR, we’ll write the fuchsia zbi and its vbmeta
-to the slot that’s not currently booted (e.g. the “alternate” slot). Otherwise, we’ll write them to
-both the A and B partitions (if a B partition exists).
+Note: For more information on how this works, see the [`update.rs`][update-rs] file.
+To see the difference between assests and firmware images, see the [`paver.rs`][image-types] file.
 
-Finally, the system-updater tells the paver to write the recovery zbi and its vbmeta. Like the
-bootloader and firmware, where we write recovery does NOT depend on if the device supports ABR.
+Then, the `system-updater` instructs the paver to write the bootloader and
+firmware. The final location of these images does not depend on whether
+the device supports [ABR](/docs/glossary.md#ABR). To prevent flash wear,
+the image is only written to a partition if the image is different from the
+image that already exists on the block device.
 
-![Figure: Step 6: Write images to block device](images/staging-6.png)
+Note: To see more information on how the Fuchsia paver works for the bootloader,
+see [`fuchsia.paver`][fuchsia-paver-booloader].
 
-### Step 7: Set alternate partition as active
-If the device supports ABR, the system-updater will use the paver to set the alternate partition as
-active. That way, the device will boot into the alternate partition on the next boot. This is
-important because we just wrote the new version to the alternate partition!
+Then, the `system-updater` instructs the paver to write the Fuchsia ZBI and its
+vbmeta. The final location of these images depends on whether the device
+supports [ABR](/docs/glossary.md#ABR). If the device supports
+[ABR](/docs/glossary.md#ABR), the paver writes the Fuchsia ZBI and
+its vbmeta to the slot that’s not currently booted (the alternate slot).
+Otherwise, the paver writes them to both the A and B partitions (if a B
+partition exists).
 
-There are a couple of ways we can refer to slot state: Active, Inactive, Bootable, Unbootable,
-Current, Alternate, Healthy/Successful, etc. [Under the hood], what it really comes down to is 3
-pieces of metadata we store for each kernel slot, that we can use to reason about which “state” the
-slot is in. For example, BEFORE we mark B as active in the example, the metadata might look like:
+Note: To see more information on how the Fuchsia paver works for assets,
+see [`fuchsia.paver`][fuchsia-paver-assets].
+
+Finally, the `system-updater` instructs the paver to write the recovery
+ZBI and its vbmeta. Like the bootloader and firmware, the final
+location does not depend on if the device supports [ABR](/docs/glossary.md#ABR).
+
+![Figure: Write images to block device](images/staging-6.png)
+
+### Set alternate partition as active {#set-alternate-active}
+
+If the device supports ABR, the `system-updater` uses the paver to set the
+alternate partition as active. That way, the device boots into the alternate
+partition on the next boot.
+
+There are a several ways to refer to the slot state. For example, the internal
+paver uses `Successful` while the [FIDL service] uses `Healthy`, while other
+cases may use Active, Inactive, Bootable, Unbootable, Current, Alternate, etc...
+
+Note: For more information on how this is implemented, see
+[`data.h`][abr-slot-data].
+
+The important metadata is 3 pieces of information that is stored for each kernel
+slot. This information helps determine the state of each kernel slot. For
+example, before slot B is marked as active, the metadata might look like:
 
 |     Metadata    | Slot A | Slot B |
 |:---------------:|:------:|:------:|
@@ -215,7 +264,7 @@ slot is in. For example, BEFORE we mark B as active in the example, the metadata
 | Tries Remaining |    0   |    0   |
 |     Healthy*    |    1   |    0   |
 
-AFTER we mark B as active, the metadata would then look like:
+After slot B is marked as active, the metadata would look like:
 
 |     Metadata    | Slot A | Slot B |
 |:---------------:|:------:|:------:|
@@ -223,39 +272,48 @@ AFTER we mark B as active, the metadata would then look like:
 | Tries Remaining |    0   |**7**** |
 |     Healthy     |    1   |    0   |
 
-If the device doesn’t support ABR, we skip this since there is no alternate partition. Instead,
-there is an active partition that we write to on every update.
+Note: These numbers are based on hardcoded values for priority and remaining
+tries which are defined in [`data.h`][kAbrMaxPriority].
 
-*The paver internally calls this “[Successful]”, but the [FIDL service] uses “Healthy”. To be
-consistent with the FIDL, here we will use “Healthy”.
+If the device doesn’t support ABR, this check is skipped since there is no alternate partition. Instead,
+there is an active partition that is written to for every update.
 
-**These numbers are based on the [hardcoded] maxes for priority and tries remaining (at the time
-this doc is written).
+![Figure: Set alternate partition as active](images/staging-7.png)
 
-![Figure: Step 7: Set alternate partition as active](images/staging-7.png)
+### Reboot {#reboot}
 
-### Step 8: Reboot (or wait for reboot)
-Depending on the update configuration, the device may or may not reboot. After the device eventually
-reboots, we’ll boot into the new slot. More on this in the next section.
+Depending on the update configuration, the device may or may not reboot. After the device
+reboots, the device boots into the new slot.
 
-![Figure: Step 8: Reboot (or wait for reboot)](images/staging-8.png)
+![Figure: Reboot](images/staging-8.png)
 
+## Verifying an update {#verifying-update}
 
-## Phase 3: Committing an update
-Without loss of generality, assume we just wrote the update to the B partition (as in the example).
-But how confident are we that the newly updated system will work? Surely, we’d like to make sure
-slot B works before giving up on the blobs in slot A. In this phase, we address these questions.
+The system commits an update once that update is verified by the system.
 
-### Rebooting into the updated version
-On the next boot, the bootloader first needs to [figure out] which slot to boot into. The bootloader
-determines we should boot into B because Slot B has a higher priority and tries remaining >0 (see
-"Staging an update" for context). Then, the bootloader verifies the ZBI of B matches the vbmeta of
-B, and finally boots into B.
+The system verifies the update in the following way:
 
-After early boot, fshost launches pkgfs using the new system-image package (that is, the system
-image package that was referenced in the packages.json we used while staging the update). The
-system-image package has a static_packages file in it that lists the base packages for the new
-system. e.g.
+* [Rebooting into the update version](#reboot-update)
+* [Committing the update](#commiting-update)
+
+### Rebooting into the updated version {#reboot-update}
+
+Note: In this example, it is assumed that the update is written to partition B.
+
+On the next boot, the bootloader needs to determine which slot to boot into.
+In this example, the bootloader determines to boot into slot B because
+slot B has a higher priority and more than 0 tries remaining (see
+[Set alternate partition as active](#set-alternate-active)). Then, the
+bootloader verifies the ZBI of B matches the vbmeta of B, and finally boots into
+slot B.
+
+Note: For more information on how the bootloader determines the slot to boot
+into, see [`flow.c`][flow-c].
+
+After early boot, `fshost` launches `pkgfs` using the new system-image package.
+This is the system image package that is referenced in the `packages.json`
+while staging the update. The system-image package has a `static_packages` file
+in it that lists the base packages for the new system. For example:
 
 ```
 pkg-resolver/0 = new-version-hash-pkg-resolver
@@ -266,19 +324,23 @@ bar/0 = new-version-hash-bar
 // because it's impossible for it to refer to its own hash.
 ```
 
-Pkgfs then loads all these packages as base packages. The packages appear in
-/pkgfs/{packages, versions}, and then we consider them “installed” or “activated”. At this point,
-we can start appmgr, which starts the pkg-resolver, pkg-cache, netstack, etc.
+`pkgfs` then loads all these packages as base packages. The packages appear in
+`/pkgfs/{packages, versions}`, which indicate that the packages are installed
+or activated. Then, `appmgr` starts which then starts the `pkg-resolver`,
+`pkg-cache`, `netstack`, etc...
 
-### Committing the update
-At this point, we launch the system-update-committer, which is the component responsible for
-committing the update. On launch, the system-update-committer verifies the new update is good by
-running various checks. For example, it asks BlobFs to arbitrarily read 1MiB of data. If the system
-is already committed on boot, we skip the checks. Depending on how the system is [configured](https://fuchsia-review.googlesource.com/c/fuchsia/+/501423),
-the system-update-committer may trigger a reboot if the checks fail.
+### Committing the update {#commiting-update}
 
-After the update is verified, we’ll first mark the current partition (slot B) as healthy. Using the
-example from the “Staging an update” section, the boot metadata might now look like:
+The `system-update-committer` component runs various checks to verify if the
+new update was successful. For example, it instructs BlobFs to arbitrarily
+read 1MiB of data. If the system is already committed on boot, these checks are
+skipped. If the check fails and depending on how the system is configured, the
+`system-update-committer` may trigger a reboot.
+
+After the update is verified, the current partition (slot B) is marked as
+`Healthy`. Using the example described in
+[Set alternate partition as active](#set-alternate-active), the boot
+metadata may now look like:
 
 |     Metadata    | Slot A | Slot B |
 |:---------------:|:------:|:------:|
@@ -286,8 +348,8 @@ example from the “Staging an update” section, the boot metadata might now lo
 | Tries Remaining |  **7** |  **0** |
 |     Healthy     |  **0** |  **1** |
 
-Then, we'll mark the alternate partition (slot A) as unbootable. Now, the boot metadata might now
-look like:
+Then, the alternate partition (slot A) is marked as unbootable. Now, the
+boot metadata may look like:
 
 |     Metadata    | Slot A | Slot B |
 |:---------------:|:------:|:------:|
@@ -295,27 +357,26 @@ look like:
 | Tries Remaining |  **0** |    0   |
 |     Healthy     |    0   |    1   |
 
-Once all of this happens, we consider the update committed. This means:
+After this, the update is considered committed. This means:
 
-* We will always boot into slot B until the next system update.
-* We are “giving up” on falling back to slot A (one might call this the [point of no return]).
-  * We won’t boot into A again until the next system update overwrites slot A.
-  * The blobs referenced by slot A are now able to be garbage collected.
-* Subsequent system updates are now allowed. When the update checker discovers a new update,
-  the whole process starts over again.
+* The system always boots into slot B until the next system update.
+* The system gives up booting into slot A until the next system update
+  overwrites slot A.
+* The BLOBs referenced by slot A are now able to be garbage collected.
+* Subsequent system updates are now allowed. When the update checker
+  discovers a new update, the whole update process starts again.
 
 [configured]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/pkg/bin/system-update-checker/BUILD.gn;l=114;drc=50245a9ce68f3b877e165b004175e2a4fc12eaef
 [paver API]: https://fuchsia.dev/reference/fidl/fuchsia.paver#DataSink
 [update package]: /docs/concepts/packages/update_pkg.md
-[code]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/pkg/bin/system-updater/src/update.rs;l=429;drc=202c37fa01f75c431f61ca824b4d2f7c2ec82178
+[recovery-mode-code]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/pkg/bin/system-updater/src/update.rs;l=429;drc=202c37fa01f75c431f61ca824b4d2f7c2ec82178
 [need]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/pkg/bin/pkg-resolver/src/cache.rs;l=275;drc=c557680c2d1d59f4ec4f31981b08610bec7c8514
-[magic]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/pkg/bin/system-updater/src/update.rs;l=507;drc=202c37fa01f75c431f61ca824b4d2f7c2ec82178
-[source code]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/pkg/bin/system-updater/src/update/paver.rs;l=200;drc=216f7ea082148714bac1e95299c1bc8b087dc1d8
-[these paver APIs don’t even take in a configuration]: https://fuchsia.dev/reference/fidl/fuchsia.paver#fuchsia.paver/DynamicDataSink.WriteBootloader
-[the paver API for this takes in a configuration to write to]: https://fuchsia.dev/reference/fidl/fuchsia.paver#fuchsia.paver/DynamicDataSink.WriteAsset
-[Under the hood]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/firmware/lib/abr/include/lib/abr/data.h;l=32;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94
+[update-rs]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/pkg/bin/system-updater/src/update.rs;l=507;drc=202c37fa01f75c431f61ca824b4d2f7c2ec82178
+[image-types]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/sys/pkg/bin/system-updater/src/update/paver.rs;l=200;drc=216f7ea082148714bac1e95299c1bc8b087dc1d8
+[fuchsia-paver-booloader]: https://fuchsia.dev/reference/fidl/fuchsia.paver#fuchsia.paver/DynamicDataSink.WriteBootloader
+[fuchsia-paver-assets]: https://fuchsia.dev/reference/fidl/fuchsia.paver#fuchsia.paver/DynamicDataSink.WriteAsset
+[abr-slot-data]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/firmware/lib/abr/include/lib/abr/data.h;l=32;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94
 [Successful]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/firmware/lib/abr/include/lib/abr/data.h;l=43;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94
 [FIDL service]: https://fuchsia.dev/reference/fidl/fuchsia.paver#fuchsia.paver/BootManager.SetActiveConfigurationHealthy
-[hardcoded]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/firmware/lib/abr/include/lib/abr/data.h;l=28;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94
-[figure out]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/firmware/lib/abr/flow.c;l=197;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94
-[point of no return]: https://www.youtube.com/watch?v=2v8YragSIuI
+[kAbrMaxPriority]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/firmware/lib/abr/include/lib/abr/data.h;l=28;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94
+[flow-c]: https://cs.opensource.google/fuchsia/fuchsia/+/master:src/firmware/lib/abr/flow.c;l=197;drc=bea16aa2d8a0bbc293a82ed44e03525ebe13bc94

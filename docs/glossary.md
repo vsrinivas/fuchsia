@@ -25,6 +25,19 @@ created by the compiler interfaces with the system through the ABI. Changes to
 the system ABI may require you to recompile your source code to account for the
 changes in the ABI.
 
+### **ABR** {#ABR}
+
+Fuchsia uses a bootloader A/B/R slot logic. This logic is not required to boot
+Zircon or run a basic Fuchsia system, but it is required to take full
+advantage of Fuchsia's over-the-air (OTA) update features.
+
+The term slot is used to refer to a set of partitions that update together. If
+an update fails, the partitions fall back together. This works because there
+are two copies of each partition on disk. By convention, the slots used for
+normal updates are denoted A and B, and the corresponding partitions are
+labeled with a suffix of "_a" or "_b". The slot used for recovery is denoted
+R which is chosen when neither A nor B is bootable.
+
 ### **Agent** {#agent}
 
 A [Modular](/docs/concepts/modular/overview.md) concept that is being
