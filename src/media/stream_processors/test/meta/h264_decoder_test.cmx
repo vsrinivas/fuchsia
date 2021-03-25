@@ -15,7 +15,8 @@
     ],
     "program": {
         "args": [
-            "--test-threads=1"
+            "--test-threads=1",
+            "--nocapture"
         ],
         "binary": "bin/h264_decoder_test"
     },

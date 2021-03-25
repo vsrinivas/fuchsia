@@ -180,16 +180,52 @@ pub struct VideoFrameHasher {
 impl OutputValidator for VideoFrameHasher {
     async fn validate(&self, output: &[Output]) -> Result<(), anyhow::Error> {
         let mut hasher = Sha256::default();
+        let mut frame_ordinal = 0;
+
+        if let Some(per_frame_bytes) = &self.expected_digest.per_frame_bytes {
+            let packet_count = output
+                .iter()
+                .filter(|item| {
+                    if let Output::Packet(ref _packet) = item {
+                        return true;
+                    }
+                    false
+                })
+                .count();
+            if per_frame_bytes.len() != packet_count {
+                return Err(FatalError(format!(
+                    "per_frame_bytes.len() != output.len() - {} vs {}",
+                    per_frame_bytes.len(),
+                    output.len()
+                ))
+                .into());
+            }
+        }
 
         output
             .iter()
             .map(|output| {
                 if let Output::Packet(ref packet) = output {
                     packet_display_data(packet)?.for_each(|b| hasher.update(&[b]));
+                    let tmp_hasher = hasher.clone();
+                    let frame_digest = tmp_hasher.finish().bytes();
+                    if let Some(per_frame_bytes) = &self.expected_digest.per_frame_bytes {
+                        if per_frame_bytes[frame_ordinal] != frame_digest {
+                            return Err(FatalError(format!(
+                                "frame_ordinal {} digest mismatch - expected {}; got {}",
+                                frame_ordinal,
+                                encode(per_frame_bytes[frame_ordinal]),
+                                encode(frame_digest)
+                            ))
+                            .into());
+                        }
+                    }
+
+                    frame_ordinal += 1;
                 }
                 Ok(())
             })
-            .collect::<Result<(), Error>>()?;
+            .collect::<Result<(), anyhow::Error>>()?;
 
         let digest = hasher.finish().bytes();
         if self.expected_digest.bytes != digest {

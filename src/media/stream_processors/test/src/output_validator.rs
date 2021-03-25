@@ -200,10 +200,11 @@ impl OutputValidator for BytesValidator {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Clone)]
 pub struct ExpectedDigest {
     pub label: &'static str,
     pub bytes: <<Sha256 as Hasher>::Digest as Digest>::Bytes,
+    pub per_frame_bytes: Option<Vec<<<Sha256 as Hasher>::Digest as Digest>::Bytes>>,
 }
 
 impl ExpectedDigest {
@@ -215,6 +216,28 @@ impl ExpectedDigest {
                 .as_slice()
                 .try_into()
                 .expect("Taking 32 bytes from compile-time test hash"),
+            per_frame_bytes: None,
+        }
+    }
+    pub fn new_with_per_frame_digest(
+        label: &'static str,
+        hex: impl AsRef<[u8]>,
+        per_frame_hexen: Vec<impl AsRef<[u8]>>,
+    ) -> Self {
+        Self {
+            per_frame_bytes: Some(
+                per_frame_hexen
+                    .into_iter()
+                    .map(|per_frame_hex| {
+                        decode(per_frame_hex)
+                            .expect("Decoding static compile-time test hash as valid hex")
+                            .as_slice()
+                            .try_into()
+                            .expect("Taking 32 bytes from compile-time test hash")
+                    })
+                    .collect(),
+            ),
+            ..Self::new(label, hex)
         }
     }
 }
