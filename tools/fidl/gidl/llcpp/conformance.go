@@ -58,16 +58,27 @@ TEST(Conformance, {{ .Name }}_Encode) {
 {{- if .FuchsiaOnly }}
 #ifdef __Fuchsia__
 {{- end }}
+
 TEST(Conformance, {{ .Name }}_Decode) {
 	{{- if .HandleDefs }}
 	const std::vector<zx_handle_info_t> handle_defs = {{ .HandleDefs }};
+	std::vector<zx_koid_t> handle_koids;
+	for (zx_handle_info_t def : handle_defs) {
+		zx_info_handle_basic_t info;
+		ZX_ASSERT(ZX_OK == zx_object_get_info(def.handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr));
+		handle_koids.push_back(info.koid);
+	}
 	{{- end }}
 	[[maybe_unused]] fidl::FidlAllocator<ZX_CHANNEL_MAX_MSG_BYTES> allocator;
 	{{ .ValueBuild }}
 	auto bytes = {{ .Bytes }};
 	auto handles = {{ .Handles }};
 	auto obj = {{ .ValueVar }};
-	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles)));
+	auto equality_check = [&]({{ .ValueType }}& {{ .EqualityInputVar }}) -> bool {
+		{{ .EqualityBuild }}
+		return {{ .EqualityValue }};
+	};
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&obj, std::move(bytes), std::move(handles), std::move(equality_check)));
 }
 {{- if .FuchsiaOnly }}
 #endif  // __Fuchsia__
@@ -133,8 +144,11 @@ type encodeSuccessCase struct {
 }
 
 type decodeSuccessCase struct {
-	Name, HandleDefs, ValueBuild, ValueVar, Bytes, Handles string
-	FuchsiaOnly                                            bool
+	Name, HandleDefs                               string
+	ValueBuild, ValueVar, ValueType                string
+	EqualityInputVar, EqualityBuild, EqualityValue string
+	Bytes, Handles                                 string
+	FuchsiaOnly                                    bool
 }
 
 type encodeFailureCase struct {
@@ -220,19 +234,25 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, schema gidlm
 		}
 		handleDefs := libhlcpp.BuildHandleInfoDefs(decodeSuccess.HandleDefs)
 		valueBuild, valueVar := libllcpp.BuildValueAllocator("allocator", decodeSuccess.Value, decl, libllcpp.HandleReprInfo)
+		equalityInputVar := "actual"
+		equalityBuild, EqualityValue := libllcpp.BuildEqualityCheck(equalityInputVar, decodeSuccess.Value, decl, "handle_koids")
 		fuchsiaOnly := decl.IsResourceType() || len(decodeSuccess.HandleDefs) > 0
 		for _, encoding := range decodeSuccess.Encodings {
 			if !wireFormatSupported(encoding.WireFormat) {
 				continue
 			}
 			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-				Name:        testCaseName(decodeSuccess.Name, encoding.WireFormat),
-				HandleDefs:  handleDefs,
-				ValueBuild:  valueBuild,
-				ValueVar:    valueVar,
-				Bytes:       libhlcpp.BuildBytes(encoding.Bytes),
-				Handles:     libhlcpp.BuildRawHandleInfos(encoding.Handles),
-				FuchsiaOnly: fuchsiaOnly,
+				Name:             testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				HandleDefs:       handleDefs,
+				ValueBuild:       valueBuild,
+				ValueVar:         valueVar,
+				ValueType:        libllcpp.ConformanceType(gidlir.TypeFromValue(decodeSuccess.Value)),
+				EqualityInputVar: equalityInputVar,
+				EqualityBuild:    equalityBuild,
+				EqualityValue:    EqualityValue,
+				Bytes:            libhlcpp.BuildBytes(encoding.Bytes),
+				Handles:          libhlcpp.BuildRawHandleInfos(encoding.Handles),
+				FuchsiaOnly:      fuchsiaOnly,
 			})
 		}
 	}

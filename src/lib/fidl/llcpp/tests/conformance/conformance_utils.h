@@ -129,9 +129,11 @@ bool EncodeFailure(FidlType* value, zx_status_t expected_error_code) {
 }
 
 // Verifies that |bytes| decodes to an object that is the same as |value|.
-template <typename FidlType>
+// EqualityCheck is a callable with the signature |bool EqualityCheck(FidlType& actual)|
+// that performs deep equality and compares handles based on koid, type and rights.
+template <typename FidlType, typename EqualityCheck>
 bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes,
-                   std::vector<zx_handle_info_t> handle_infos) {
+                   std::vector<zx_handle_info_t> handle_infos, EqualityCheck equality_check) {
   static_assert(fidl::IsFidlType<FidlType>::value, "FIDL type required");
   fidl::DecodedMessage<FidlType> decoded(bytes.data(), static_cast<uint32_t>(bytes.size()),
                                          handle_infos.data(),
@@ -141,10 +143,7 @@ bool DecodeSuccess(FidlType* value, std::vector<uint8_t> bytes,
               << "): " << decoded.error() << std::endl;
     return false;
   }
-  // TODO(fxbug.dev/7958): For now we are only checking that fidl::Decode succeeds.
-  // We need deep equality on FIDL objects to verify that
-  // |decode_result.message| is the same as |value|.
-  return true;
+  return equality_check(*decoded.PrimaryObject());
 }
 
 // Verifies that |bytes| fails to decode as |FidlType|, with the expected error

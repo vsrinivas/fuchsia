@@ -211,6 +211,7 @@ success("GoldenByteVectorStruct") {
     },
 }
 success("GoldenByteNullableVectorStructNonNull") {
+    // TODO(fxbug.dev/73159) Remove the denylist
     bindings_denylist = [llcpp,rust,hlcpp],
     value = GoldenNullableByteVectorStruct {
         v: [1, 2, 3, 4],
@@ -224,6 +225,8 @@ success("GoldenByteNullableVectorStructNonNull") {
     },
 }
 success("GoldenNullableByteVectorStructNull") {
+    // TODO(fxbug.dev/73159) Remove the denylist
+    bindings_denylist = [llcpp,rust,hlcpp],
     value = GoldenNullableByteVectorStruct {
         v: null,
     },

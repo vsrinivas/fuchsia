@@ -90,9 +90,9 @@ func (a *allocatorBuilder) visit(value interface{}, decl gidlmixer.Declaration) 
 	case gidlir.RawFloat:
 		switch decl.(*gidlmixer.FloatDecl).Subtype() {
 		case fidlgen.Float32:
-			return fmt.Sprintf("([] { uint32_t u = %#b; float f; memcpy(&f, &u, 4); return f; })()", value)
+			return fmt.Sprintf("([] { uint32_t u = %#b; float f; memcpy(&f, &u, sizeof(float)); return f; })()", value)
 		case fidlgen.Float64:
-			return fmt.Sprintf("([] { uint64_t u = %#b; double d; memcpy(&d, &u, 8); return d; })()", value)
+			return fmt.Sprintf("([] { uint64_t u = %#b; double d; memcpy(&d, &u, sizeof(double)); return d; })()", value)
 		}
 	case string:
 		if !isPointer {

@@ -34,6 +34,7 @@ go_library("gopkg") {
     "llcpp/conformance.go",
     "llcpp/lib/allocator_builder.go",
     "llcpp/lib/common.go",
+    "llcpp/lib/equality_builder.go",
     "llcpp/lib/unowned_builder.go",
     "main.go",
     "mixer/mixer.go",
