@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_IN_PLACE_INTERNAL_H_
-#define LIB_FIT_IN_PLACE_INTERNAL_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_IN_PLACE_INTERNAL_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_IN_PLACE_INTERNAL_H_
 
 #include <cstddef>
 
@@ -80,4 +80,4 @@ static constexpr const in_place_index_t<Index>& in_place_index =
 
 }  // namespace fit
 
-#endif  // LIB_FIT_IN_PLACE_INTERNAL_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_IN_PLACE_INTERNAL_H_

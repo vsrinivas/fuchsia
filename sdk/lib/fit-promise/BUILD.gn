@@ -14,7 +14,36 @@ zx_library("fit-promise") {
   sdk_publishable = true
   sdk_migrated = true
 
-  sdk_headers = [ "lib/fit/do-not-include.h" ]
+  sdk_headers = [
+    "lib/fit/barrier.h",
+    "lib/fit/bridge.h",
+    "lib/fit/bridge_internal.h",
+    "lib/fit/in_place_internal.h",
+    "lib/fit/promise.h",
+    "lib/fit/promise_internal.h",
+    "lib/fit/result.h",
+    "lib/fit/scheduler.h",
+    "lib/fit/scope.h",
+    "lib/fit/sequencer.h",
+    "lib/fit/single_threaded_executor.h",
+  ]
 
-  public_deps = [ "//zircon/system/ulib/fit" ]
+  sources = [
+    "barrier.cc",
+    "promise.cc",
+    "scheduler.cc",
+    "scope.cc",
+    "sequencer.cc",
+    "single_threaded_executor.cc",
+  ]
+
+  public_deps = [
+    "//sdk/lib/stdcompat",
+    "//zircon/system/ulib/fit",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [ "tests" ]
 }

@@ -55,6 +55,7 @@ zx_library("async-cpp") {
 
     # <lib/async/cpp/executor.h> has many lib/fit includes.
     # <lib/async/cpp/task.h> has #include <lib/fit/function.h>.
+    "//sdk/lib/fit-promise:headers",
     "//zircon/system/ulib/fit:headers",
   ]
   sources = [

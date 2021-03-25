@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <condition_variable>
-#include <mutex>
-
 #include <lib/fit/single_threaded_executor.h>
 #include <lib/fit/thread_safety.h>
+
+#include <condition_variable>
+#include <mutex>
 
 namespace fit {
 

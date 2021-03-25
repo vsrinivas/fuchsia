@@ -2,10 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_PROMISE_INTERNAL_H_
-#define LIB_FIT_PROMISE_INTERNAL_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_PROMISE_INTERNAL_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_PROMISE_INTERNAL_H_
 
 #include <assert.h>
+#include <lib/fit/function.h>
+#include <lib/fit/nullable.h>
+#include <lib/fit/traits.h>
 #include <lib/stdcompat/optional.h>
 #include <lib/stdcompat/type_traits.h>
 
@@ -13,11 +16,7 @@
 #include <type_traits>
 #include <utility>
 
-#include "function.h"
-#include "nullable.h"
 #include "result.h"
-#include "traits.h"
-#include "utility_internal.h"
 
 namespace fit {
 
@@ -699,4 +698,4 @@ inline promise_impl<Continuation> make_promise_with_continuation(Continuation co
 
 }  // namespace fit
 
-#endif  // LIB_FIT_PROMISE_INTERNAL_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_PROMISE_INTERNAL_H_

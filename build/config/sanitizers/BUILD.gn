@@ -85,6 +85,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//garnet/bin/setui/*",
     "//garnet/bin/trace/*",
     "//garnet/bin/trace/tests/*",
+    "//sdk/lib/fit-promise/*",
     "//src/cobalt/bin/system-metrics/*",
     "//src/connectivity/bluetooth/profiles/bt-a2dp-sink/*",
     "//src/connectivity/bluetooth/profiles/bt-a2dp/*",

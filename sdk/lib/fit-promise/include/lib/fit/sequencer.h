@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_SEQUENCER_H_
-#define LIB_FIT_SEQUENCER_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SEQUENCER_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SEQUENCER_H_
 
 #include <assert.h>
+#include <lib/fit/thread_safety.h>
 
 #include <mutex>
 
 #include "bridge.h"
-#include "thread_safety.h"
 
 namespace fit {
 
@@ -81,4 +81,4 @@ class sequencer final {
 
 }  // namespace fit
 
-#endif  // LIB_FIT_SEQUENCER_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SEQUENCER_H_

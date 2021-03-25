@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_BRIDGE_INTERNAL_H_
-#define LIB_FIT_BRIDGE_INTERNAL_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_INTERNAL_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_INTERNAL_H_
+
+#include <lib/fit/thread_safety.h>
 
 #include <atomic>
 #include <mutex>
@@ -13,7 +15,6 @@
 
 #include "promise.h"
 #include "result.h"
-#include "thread_safety.h"
 
 namespace fit {
 namespace internal {
@@ -394,4 +395,4 @@ class consumer;
 
 }  // namespace fit
 
-#endif  // LIB_FIT_BRIDGE_INTERNAL_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_INTERNAL_H_

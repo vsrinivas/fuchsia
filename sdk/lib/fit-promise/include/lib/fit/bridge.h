@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_BRIDGE_H_
-#define LIB_FIT_BRIDGE_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_H_
 
 #include "bridge_internal.h"
 
@@ -459,4 +459,4 @@ inline consumer<typename Promise::value_type, typename Promise::error_type> sche
 
 }  // namespace fit
 
-#endif  // LIB_FIT_BRIDGE_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_BRIDGE_H_

@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_FIT_TEST_EXAMPLES_PROMISE_EXAMPLE1_H_
-#define ZIRCON_SYSTEM_ULIB_FIT_TEST_EXAMPLES_PROMISE_EXAMPLE1_H_
+#ifndef LIB_FIT_PROMISE_TESTS_EXAMPLES_PROMISE_EXAMPLE1_H_
+#define LIB_FIT_PROMISE_TESTS_EXAMPLES_PROMISE_EXAMPLE1_H_
 
 namespace promise_example1 {
 void run();
 }  // namespace promise_example1
 
-#endif  // ZIRCON_SYSTEM_ULIB_FIT_TEST_EXAMPLES_PROMISE_EXAMPLE1_H_
+#endif  // LIB_FIT_PROMISE_TESTS_EXAMPLES_PROMISE_EXAMPLE1_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_SCHEDULER_H_
-#define LIB_FIT_SCHEDULER_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCHEDULER_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCHEDULER_H_
 
 #include <map>
 #include <queue>
@@ -150,4 +150,4 @@ class scheduler final {
 }  // namespace subtle
 }  // namespace fit
 
-#endif  // LIB_FIT_SCHEDULER_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCHEDULER_H_

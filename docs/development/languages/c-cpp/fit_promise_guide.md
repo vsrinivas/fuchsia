@@ -4,7 +4,7 @@ Welcome! You probably dislike writing code in C++ that describes multi-step
 asynchronous operations.
 
 `fit::promise<>`
-[[1](/zircon/system/ulib/fit/include/lib/fit/promise.h)]
+[[1](/sdk/lib/fit-promise/include/lib/fit/promise.h)]
 makes this a bit easier. This guide covers common problems in asynchronous
 control flow programming and offers common usage patterns that solve those
 problems in the `fit::promise<>` library.
@@ -68,7 +68,7 @@ In order to run the promise, it must be scheduled it on an implementation of
 which schedules callbacks on an `async_dispatcher_t`. For the purposes of
 testing and exploration, there is also `fit::single_threaded_executor` and its
 associated method `fit::run_single_threaded()`
-[[3](/zircon/system/ulib/fit/include/lib/fit/single_threaded_executor.h#72)]
+[[3](/sdk/lib/fit-promise/include/lib/fit/single_threaded_executor.h#72)]
 which is used here.
 
 ```cpp
@@ -407,14 +407,14 @@ auto a = fit::make_promise([] {
 Have you seen an error message like this?
 
 ```
-../../zircon/system/ulib/fit/include/lib/fit/promise_internal.h:342:5: error: static_assert failed "The provided handler's last argument was expected to be of type V& or const V& where V is the prior result's value type and E is the prior result's error type.  Please refer to the combinator's documentation for
+../../sdk/lib/fit-promise/include/lib/fit/promise_internal.h:342:5: error: static_assert failed "The provided handler's last argument was expected to be of type V& or const V& where V is the prior result's value type and E is the prior result's error type.  Please refer to the combinator's documentation for
  a list of supported handler function signatures."
 ```
 
 or:
 
 ```
-../../zircon/system/ulib/fit/include/lib/fit/promise.h:288:5: error: static_assert failed due to requirement '::fit::internal::is_continuation<fit::internal::and_then_continuation<fit::promise_impl<fit::function_impl<16, false, fit::result<fuchsia::modular::storymodel::StoryModel, void> (fit::context &)> >, (lambda at ../../src/modular/bin/sessionmgr/story/model/ledger_story_model_storage.cc:222:17)>, void>::value' "Continuation type is invalid.  A continuation is a callable object with this signature: fit::result<V, E>(fit::context&)."
+../../sdk/lib/fit-promise/include/lib/fit/promise.h:288:5: error: static_assert failed due to requirement '::fit::internal::is_continuation<fit::internal::and_then_continuation<fit::promise_impl<fit::function_impl<16, false, fit::result<fuchsia::modular::storymodel::StoryModel, void> (fit::context &)> >, (lambda at ../../src/modular/bin/sessionmgr/story/model/ledger_story_model_storage.cc:222:17)>, void>::value' "Continuation type is invalid.  A continuation is a callable object with this signature: fit::result<V, E>(fit::context&)."
 ```
 
 This most likely means that one of the continuation functions has a signature

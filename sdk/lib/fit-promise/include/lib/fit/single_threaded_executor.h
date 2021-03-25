@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
-#define LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
 
 #include <utility>
 
@@ -81,4 +81,4 @@ static typename promise_impl<Continuation>::result_type run_single_threaded(
 
 }  // namespace fit
 
-#endif  // LIB_FIT_SINGLE_THREADED_EXECUTOR_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SINGLE_THREADED_EXECUTOR_H_

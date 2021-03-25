@@ -1,3 +1,13 @@
 {
-  "pkg/fit-promise/include/lib/fit/do-not-include.h": "27bfbbb009ef1a7bb13244b4deb242d9"
+  "pkg/fit-promise/include/lib/fit/barrier.h": "7a98c961fb72439e238fb7de745a1808",
+  "pkg/fit-promise/include/lib/fit/bridge.h": "56e952d952015528f1c3fee2101732f0",
+  "pkg/fit-promise/include/lib/fit/bridge_internal.h": "b88722a4e7a6cf9764a392b6a37e1899",
+  "pkg/fit-promise/include/lib/fit/in_place_internal.h": "750bf38d2cae0c6728e93e2e0ab8f58c",
+  "pkg/fit-promise/include/lib/fit/promise.h": "ba3e152351c4661ca6c3ff085fbcc0db",
+  "pkg/fit-promise/include/lib/fit/promise_internal.h": "e110d2ebe1cd6b3cf524cdc040986142",
+  "pkg/fit-promise/include/lib/fit/result.h": "4fb676a322cd39bedac54188200d1864",
+  "pkg/fit-promise/include/lib/fit/scheduler.h": "b31aa1289a4bc33d226b0efeb55abdbb",
+  "pkg/fit-promise/include/lib/fit/scope.h": "a398f3121ad52790123a52562265f42a",
+  "pkg/fit-promise/include/lib/fit/sequencer.h": "4bcfe190a01338718434b979ceb1cbe0",
+  "pkg/fit-promise/include/lib/fit/single_threaded_executor.h": "c74cb4b8a8d0b90e592e1130a24d118b"
 }

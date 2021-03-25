@@ -2,17 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_PROMISE_H_
-#define LIB_FIT_PROMISE_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_PROMISE_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_PROMISE_H_
 
 #include <assert.h>
+#include <lib/fit/function.h>
 #include <lib/stdcompat/variant.h>
 
 #include <tuple>
 #include <type_traits>
 #include <utility>
 
-#include "function.h"
 #include "promise_internal.h"
 #include "result.h"
 
@@ -1584,4 +1584,4 @@ inline void swap(suspended_task& a, suspended_task& b) { a.swap(b); }
 
 }  // namespace fit
 
-#endif  // LIB_FIT_PROMISE_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_PROMISE_H_

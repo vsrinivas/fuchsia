@@ -2,16 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_FIT_SCOPE_H_
-#define LIB_FIT_SCOPE_H_
+#ifndef LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCOPE_H_
+#define LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCOPE_H_
 
 #include <assert.h>
+#include <lib/fit/thread_safety.h>
 
 #include <atomic>
 #include <mutex>
 
 #include "promise.h"
-#include "thread_safety.h"
 
 namespace fit {
 
@@ -268,4 +268,4 @@ class scope final {
 
 }  // namespace fit
 
-#endif  // LIB_FIT_SCOPE_H_
+#endif  // LIB_FIT_PROMISE_INCLUDE_LIB_FIT_SCOPE_H_
