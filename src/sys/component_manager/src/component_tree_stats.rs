@@ -23,7 +23,7 @@ use {
     std::{
         collections::{BTreeMap, VecDeque},
         convert::{TryFrom, TryInto},
-        ops::{AddAssign, Deref},
+        ops::{AddAssign, Deref, DerefMut},
         sync::{Arc, Weak},
         time::Duration,
     },
@@ -107,7 +107,7 @@ impl ComponentTreeStats {
     pub fn hooks(self: &Arc<Self>) -> Vec<HooksRegistration> {
         vec![HooksRegistration::new(
             "ComponentTreeStats",
-            vec![EventType::Started, EventType::Stopped],
+            vec![EventType::Started],
             Arc::downgrade(self) as Weak<dyn Hook>,
         )]
     }
@@ -156,7 +156,7 @@ impl ComponentTreeStats {
         let mut task_count = 0;
         for (moniker, stats) in self.tree.lock().await.iter() {
             let stats_guard = stats.lock().await;
-            if stats_guard.is_ready() {
+            if stats_guard.is_measuring {
                 let child = node.create_child(moniker.to_string());
                 task_count += stats_guard.write_inspect_to(&child);
                 node.record(child);
@@ -194,11 +194,33 @@ impl ComponentTreeStats {
 
     async fn measure(self: &Arc<Self>) {
         let start = zx::Time::get_monotonic();
+
+        // Copy the stats and release the lock.
+        let stats =
+            self.tree.lock().await.iter().map(|(k, v)| (k.clone(), v.clone())).collect::<Vec<_>>();
         let mut aggregated = Measurement::empty(start);
-        let stats = self.tree.lock().await.values().cloned().collect::<Vec<_>>();
-        for stat in stats {
-            aggregated += &stat.lock().await.measure();
+        let mut to_remove = Vec::new();
+        for (moniker, stat) in stats.into_iter() {
+            let mut stat_guard = stat.lock().await;
+            aggregated += &stat_guard.measure();
+            stat_guard.clean_stale();
+            if !stat_guard.is_alive() {
+                to_remove.push(moniker);
+            }
         }
+
+        // Lock the tree so that we ensure no modifications are made while we are deleting
+        let mut stats = self.tree.lock().await;
+        for moniker in to_remove {
+            // Ensure that they are still not alive (if a component restarted it might as well
+            // be alive again).
+            if let Some(stat) = stats.get(&moniker) {
+                if !stat.lock().await.is_alive() {
+                    stats.remove(&moniker);
+                }
+            }
+        }
+
         self.totals.lock().await.update(aggregated);
         self.processing_times.insert((zx::Time::get_monotonic() - start).into_nanos());
     }
@@ -231,9 +253,6 @@ impl Hook for ComponentTreeStats {
                 if let Some(EventPayload::Started { runtime, .. }) = event.result.as_ref().ok() {
                     self.on_component_started(target_moniker, runtime).await;
                 }
-            }
-            EventType::Stopped => {
-                self.tree.lock().await.remove(&target_moniker);
             }
             _ => {}
         }
@@ -285,66 +304,77 @@ impl AggregatedStats {
 }
 
 struct ComponentStats {
-    parent_task: Option<TaskInfo>,
-    component_task: Option<TaskInfo>,
+    tasks: Vec<TaskInfo>,
     _task: Option<fasync::Task<()>>,
+    is_measuring: bool,
 }
 
 impl ComponentStats {
     /// Creates a new `ComponentStats` awaiting the component tasks not ready to take measurements
     /// yet.
     pub fn pending(task: fasync::Task<()>) -> Self {
-        Self { parent_task: None, component_task: None, _task: Some(task) }
+        Self { tasks: Vec::new(), _task: Some(task), is_measuring: false }
     }
 
     /// Creates a new `ComponentStats` and starts taking measurements.
     pub fn ready(tasks: ComponentTasks) -> Self {
-        Self {
-            component_task: tasks.component_task.and_then(|task| task.try_into().ok()),
-            parent_task: tasks.parent_task.and_then(|task| task.try_into().ok()),
-            _task: None,
+        // TODO(fxbug.dev/56570): use parent task.
+        let mut ready_tasks = vec![];
+        if let Some(task) = tasks.component_task.and_then(|task| task.try_into().ok()) {
+            ready_tasks.push(task);
         }
-    }
-
-    /// Whether or not the stats are ready to provide measurements or not.
-    pub fn is_ready(&self) -> bool {
-        self.parent_task.is_some() || self.component_task.is_some()
+        Self { tasks: ready_tasks, is_measuring: true, _task: None }
     }
 
     /// Start reading CPU stats.
     pub fn start_measuring(&mut self, tasks: ComponentTasks) {
-        self.component_task = tasks.component_task.and_then(|task| task.try_into().ok());
-        self.parent_task = tasks.parent_task.and_then(|task| task.try_into().ok());
-        self.measure();
+        if let Some(task) = tasks.component_task.and_then(|task| task.try_into().ok()) {
+            self.tasks.push(task);
+            self.measure();
+        }
+        self.is_measuring = true;
     }
 
     /// Takes a runtime info measurement and records it. Drops old ones if the maximum amount is
     /// exceeded.
     pub fn measure(&mut self) -> Measurement {
         let mut result = Measurement::default();
-        if let Some(task) = &mut self.component_task {
+        for task in self.tasks.iter_mut() {
             task.measure().map(|measurement| {
                 result += measurement;
             });
         }
 
-        // TODO(fxbug.dev/56570): use this.
-        if let Some(_) = self.parent_task {}
-
         result
+    }
+
+    /// A `ComponentStats` is alive when:
+    /// - It has not started measuring yet: this means we are still waiting for the diagnostics
+    ///   data to arrive from the runner, or
+    /// - Any of its tasks are alive.
+    pub fn is_alive(&self) -> bool {
+        !self.is_measuring || self.tasks.iter().any(|task| task.is_alive())
+    }
+
+    /// Removes all tasks that are not alive.
+    pub fn clean_stale(&mut self) {
+        self.tasks.retain(|task| task.is_alive());
     }
 
     /// Writes the stats to inspect under the given node. Returns the number of tasks that were
     /// written.
     pub fn write_inspect_to(&self, node: &inspect::Node) -> u64 {
         let mut task_count = 0;
-        if let Some(task) = &self.component_task {
+        for task in &self.tasks {
             task.write_inspect_to(&node);
             task_count += 1;
         }
-        // TODO(fxbug.dev/56570): use this.
-        if let Some(_) = &self.parent_task {}
         task_count
+    }
+
+    #[cfg(test)]
+    fn total_measurements(&self) -> usize {
+        self.tasks.iter().map(|task| task.measurements.len()).sum()
     }
 }
 
@@ -389,10 +419,26 @@ struct TaskInfo {
     koid: zx::Koid,
     task: DiagnosticsTask,
     measurements: MeasurementsQueue,
+    should_drop_old_measurements: bool,
+    post_invalidation_measurements: usize,
 }
 
 impl TaskInfo {
+    /// Take a new measurement. If the handle of this task is invalid, then it keeps track of how
+    /// many measurements would have been done. When the maximum amount allowed is hit, then it
+    /// drops the oldest measurement.
     pub fn measure(&mut self) -> Option<&Measurement> {
+        if self.handle_is_invalid() {
+            if self.should_drop_old_measurements {
+                self.measurements.pop_front();
+            } else {
+                self.post_invalidation_measurements += 1;
+                self.should_drop_old_measurements = self.post_invalidation_measurements
+                    + self.measurements.len()
+                    >= COMPONENT_CPU_MAX_SAMPLES;
+            }
+            return None;
+        }
         if let Ok(runtime_info) = self.get_runtime_info() {
             let measurement = runtime_info.into();
             self.measurements.insert(measurement);
@@ -401,6 +447,14 @@ impl TaskInfo {
         None
     }
 
+    /// A task is alive when:
+    /// - Its handle is valid, or
+    /// - There's at least one measurement saved.
+    pub fn is_alive(&self) -> bool {
+        return !self.handle_is_invalid() || !self.measurements.is_empty();
+    }
+
+    /// Writes the task measurements under the given inspect node `parent`.
     pub fn write_inspect_to(&self, parent: &inspect::Node) {
         let node = parent.create_child(self.koid.raw_koid().to_string());
         let samples = node.create_child("@samples");
@@ -413,6 +467,17 @@ impl TaskInfo {
         }
         node.record(samples);
         parent.record(node);
+    }
+
+    fn handle_is_invalid(&self) -> bool {
+        match &self.task {
+            DiagnosticsTask::Job(job) => job.as_handle_ref().is_invalid(),
+            DiagnosticsTask::Process(process) => process.as_handle_ref().is_invalid(),
+            DiagnosticsTask::Thread(thread) => thread.as_handle_ref().is_invalid(),
+            TaskUnknown!() => {
+                unreachable!("only jobs, threads and processes are tasks");
+            }
+        }
     }
 
     fn get_runtime_info(&self) -> Result<zx::TaskRuntimeInfo, zx::Status> {
@@ -438,7 +503,13 @@ impl TryFrom<DiagnosticsTask> for TaskInfo {
                 unreachable!("only jobs, threads and processes are tasks");
             }
         }?;
-        Ok(Self { koid: info.koid, task, measurements: MeasurementsQueue::new() })
+        Ok(Self {
+            koid: info.koid,
+            task,
+            measurements: MeasurementsQueue::new(),
+            should_drop_old_measurements: false,
+            post_invalidation_measurements: 0,
+        })
     }
 }
 
@@ -450,6 +521,12 @@ impl Deref for MeasurementsQueue {
     type Target = VecDeque<Measurement>;
     fn deref(&self) -> &Self::Target {
         &self.values
+    }
+}
+
+impl DerefMut for MeasurementsQueue {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.values
     }
 }
 
@@ -481,6 +558,91 @@ mod tests {
         fuchsia_inspect::testing::{assert_inspect_tree, AnyProperty},
         moniker::AbsoluteMoniker,
     };
+
+    #[fuchsia::test]
+    async fn rotates_measurements_per_task() {
+        // Set up test
+        let job_dup = fuchsia_runtime::job_default()
+            .duplicate_handle(zx::Rights::SAME_RIGHTS)
+            .expect("duplicate default job");
+        let mut task: TaskInfo = DiagnosticsTask::Job(job_dup).try_into().unwrap();
+        assert!(task.is_alive());
+
+        // Take three measurements.
+        task.measure();
+        assert_eq!(task.measurements.len(), 1);
+        task.measure();
+        assert_eq!(task.measurements.len(), 2);
+        task.measure();
+        assert!(task.is_alive());
+        assert_eq!(task.measurements.len(), 3);
+
+        // Invalidate the handle
+        let job = zx::Job::from(zx::Handle::invalid());
+        task.task = DiagnosticsTask::Job(job);
+
+        // Allow MAX-N (N=3 here) measurements to be taken until we start dropping.
+        for i in 3..COMPONENT_CPU_MAX_SAMPLES {
+            task.measure();
+            assert_eq!(task.measurements.len(), 3);
+            assert_eq!(task.post_invalidation_measurements, i - 2);
+        }
+
+        task.measure(); // 1 dropped, 2 left
+        assert!(task.is_alive());
+        assert_eq!(task.measurements.len(), 2);
+        task.measure(); // 2 dropped, 1 left
+        assert!(task.is_alive());
+        assert_eq!(task.measurements.len(), 1);
+
+        // Take one last measure.
+        task.measure(); // 3 dropped, 0 left
+        assert!(!task.is_alive());
+        assert_eq!(task.measurements.len(), 0);
+    }
+
+    #[fuchsia::test]
+    async fn components_are_deleted_when_all_tasks_are_gone() {
+        let inspector = inspect::Inspector::new();
+        let stats = ComponentTreeStats::new(inspector.root().create_child("cpu_stats")).await;
+        let job_dup = fuchsia_runtime::job_default()
+            .duplicate_handle(zx::Rights::SAME_RIGHTS)
+            .expect("duplicate default job");
+        let moniker: AbsoluteMoniker = vec!["a:0"].into();
+        let moniker: ExtendedMoniker = moniker.into();
+        stats.tree.lock().await.insert(
+            moniker.clone(),
+            Arc::new(Mutex::new(ComponentStats::ready(ComponentTasks {
+                component_task: Some(DiagnosticsTask::Job(job_dup)),
+                ..ComponentTasks::EMPTY
+            }))),
+        );
+        for _ in 0..=COMPONENT_CPU_MAX_SAMPLES {
+            stats.measure().await;
+        }
+        assert_eq!(stats.tree.lock().await.len(), 2);
+        assert_eq!(
+            stats.tree.lock().await.get(&moniker).unwrap().lock().await.total_measurements(),
+            COMPONENT_CPU_MAX_SAMPLES
+        );
+
+        // Invalidate the handle, to simulate that the component stopped.
+        for task in stats.tree.lock().await.get(&moniker).unwrap().lock().await.tasks.iter_mut() {
+            let job = zx::Job::from(zx::Handle::invalid());
+            task.task = DiagnosticsTask::Job(job);
+        }
+
+        for i in 0..COMPONENT_CPU_MAX_SAMPLES {
+            stats.measure().await;
+            assert_eq!(
+                stats.tree.lock().await.get(&moniker).unwrap().lock().await.total_measurements(),
+                COMPONENT_CPU_MAX_SAMPLES - i,
+            );
+        }
+        stats.measure().await;
+        assert!(stats.tree.lock().await.get(&moniker).is_none());
+        assert_eq!(stats.tree.lock().await.len(), 1);
+    }
 
     #[fuchsia::test]
     async fn total_holds_sum_of_stats() {
@@ -732,131 +894,115 @@ mod tests {
             }
         });
 
-        // Verify that after stopping the instance the data is gone.
+        // Verify that after stopping the instance the data is still there.
         let component = test.model.look_up(&moniker).await.unwrap();
         ActionSet::register(component, StopAction::new()).await.expect("stopped");
 
-        assert!(stats.tree.lock().await.get(&extended_moniker).is_none());
-        assert_inspect_tree!(test.builtin_environment.inspector, root: {
-            cpu_stats: {
-                processing_times_ns: AnyProperty,
-                "@total": {
-                    "0": {
-                        timestamp: AnyProperty,
-                        cpu_time: AnyProperty,
-                        queue_time: AnyProperty,
-                    }
-                },
-                recent_usage: {
-                    recent_cpu_time: AnyProperty,
-                    recent_queue_time: AnyProperty,
-                    recent_timestamp: AnyProperty,
-                },
-                measurements: {
-                    components: {
+        assert!(stats.tree.lock().await.get(&extended_moniker).is_some());
+        assert_inspect_tree!(test.builtin_environment.inspector, root: contains {
+            cpu_stats: contains {
+                measurements: contains {
+                    components: contains {
                         "<component_manager>": {
                             koid.to_string() => {
-                                "@samples": {
-                                    "0": {
-                                        timestamp: AnyProperty,
-                                        cpu_time: AnyProperty,
-                                        queue_time: AnyProperty,
+                                "@samples": contains {
+                                    "0": contains {
                                     }
                                 }
                             }
                         },
                         "/": {
                             koid.to_string() => {
-                                "@samples": {
-                                    "0": {
-                                        timestamp: AnyProperty,
-                                        cpu_time: AnyProperty,
-                                        queue_time: AnyProperty,
-                                    }
-                                }
-                            }
-                        }
-                    },
-                    inspect_stats: {
-                        current_size: 4096u64,
-                        maximum_size: 262144u64,
-                        total_dynamic_children: 0u64,
-                    },
-                    task_count: 2u64,
-                }
-            },
-            inspect_stats: {
-                current_size: 4096u64,
-                maximum_size: 262144u64,
-                total_dynamic_children: 0u64,
-            }
-        });
-
-        // Verify that after restarting the instance the data is back.
-        test.bind_instance(&moniker).await.expect("bind instance a success");
-        assert_inspect_tree!(test.builtin_environment.inspector, root: {
-            cpu_stats: {
-                processing_times_ns: AnyProperty,
-                "@total": {
-                    "0": {
-                        timestamp: AnyProperty,
-                        cpu_time: AnyProperty,
-                        queue_time: AnyProperty,
-                    }
-                },
-                recent_usage: {
-                    recent_cpu_time: AnyProperty,
-                    recent_queue_time: AnyProperty,
-                    recent_timestamp: AnyProperty,
-                },
-                measurements: {
-                    components: {
-                        "<component_manager>": {
-                            koid.to_string() => {
-                                "@samples": {
-                                    "0": {
-                                        timestamp: AnyProperty,
-                                        cpu_time: AnyProperty,
-                                        queue_time: AnyProperty,
-                                    }
-                                }
-                            }
-                        },
-                        "/": {
-                            koid.to_string() => {
-                                "@samples": {
-                                    "0": {
-                                        timestamp: AnyProperty,
-                                        cpu_time: AnyProperty,
-                                        queue_time: AnyProperty,
+                                "@samples": contains {
+                                    "0": contains {
                                     }
                                 }
                             }
                         },
                         "/a:0": {
-                            koid.to_string() => {
-                                "@samples": {
-                                    "0": {
-                                        timestamp: AnyProperty,
-                                        cpu_time: AnyProperty,
-                                        queue_time: AnyProperty,
+                            koid.to_string() => contains {
+                                "@samples": contains {
+                                    "0": contains {
                                     }
                                 }
                             }
                         }
-                    },
-                    inspect_stats: {
-                        current_size: 4096u64,
-                        maximum_size: 262144u64,
-                        total_dynamic_children: 0u64,
-                    },
-                    task_count: 3u64,
+                    }
                 }
-            },
-            inspect_stats: {
-                current_size: 4096u64,
-                maximum_size: 262144u64,
-                total_dynamic_children: 0u64,
+            }
+        });
+
+        // Verify that after invalidating and an mmediate restart the data stays there if
+        // there was no measurement in between.
+        for task in
+            stats.tree.lock().await.get(&extended_moniker).unwrap().lock().await.tasks.iter_mut()
+        {
+            let job = zx::Job::from(zx::Handle::invalid());
+            task.task = DiagnosticsTask::Job(job);
+        }
+        assert_inspect_tree!(test.builtin_environment.inspector, root: contains {
+            cpu_stats: contains {
+                measurements: contains {
+                    components: contains {
+                        "<component_manager>": {
+                            koid.to_string() => {
+                                "@samples": {
+                                    "0": contains {
+                                    }
+                                }
+                            }
+                        },
+                        "/": {
+                            koid.to_string() => {
+                                "@samples": {
+                                    "0": contains {
+                                    }
+                                }
+                            }
+                        },
+                        "/a:0": {
+                            koid.to_string() => contains {
+                                "@samples": {
+                                    "0": contains {
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        });
+
+        // If a measurement happens, the single sample is now gone and the data is deleted.
+        // For the rotation verification see previous tests.
+        stats.measure().await;
+
+        assert_inspect_tree!(test.builtin_environment.inspector, root: contains {
+            cpu_stats: contains {
+                measurements: contains {
+                    components: contains {
+                        "<component_manager>": {
+                            koid.to_string() => {
+                                "@samples": {
+                                    "0": contains {
+                                    },
+                                    "1": contains {
+                                    }
+                                }
+                            }
+                        },
+                        "/": {
+                            koid.to_string() => {
+                                "@samples": {
+                                    "0": contains {
+                                    },
+                                    "1": contains {
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
             }
         });
     }
