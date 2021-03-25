@@ -27,14 +27,19 @@ class OS {
   // Wrapper around GetInfo for fetching singular info objects.
   template <typename T>
   zx_status_t GetInfo(zx_handle_t parent, zx_koid_t parent_koid,
-                      unsigned int kind, const char* kind_name, T& info_object) {
+                      unsigned int kind, const char* kind_name,
+                      T& info_object) {
     zx_status_t status = GetInfo(parent, kind, &info_object, sizeof(T), nullptr,
                                  nullptr);
 
     if (status != ZX_OK) {
-      FX_LOGS(ERROR) << "zx_object_get_info(" << parent_koid << ", "
-                     << kind_name << ", ...) failed: "
-                     << zx_status_get_string(status) << " (" << status << ")";
+      // ZX_ERR_BAD_STATE is returned when a process is already destroyed. This
+      // is not exceptional; pass through the error code but don't spam logs.
+      if (status != ZX_ERR_BAD_STATE) {
+        FX_LOGS(ERROR) << "zx_object_get_info(" << parent_koid << ", "
+                       << kind_name << ", ...) failed: "
+                       << zx_status_get_string(status) << " (" << status << ")";
+      }
     }
 
     return status;
