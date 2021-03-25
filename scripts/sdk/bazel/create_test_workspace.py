@@ -82,7 +82,7 @@ def create_test_workspace(sdk, output, workspace_info):
 
     if workspace_info.with_cc:
         # Generate tests to verify that headers compile fine.
-        for target, files in workspace_info.headers.items():
+        for target, files in list(workspace_info.headers.items()):
             if not files:
                 continue
             dir = os.path.join(output, 'headers', target[2:])

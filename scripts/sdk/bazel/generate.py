@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -148,8 +148,7 @@ class BazelBuilder(Frontend):
 
     def install_cc_prebuilt_library_atom(self, atom):
         name = sanitize(atom['name'])
-        include_paths = map(
-            lambda h: os.path.relpath(h, atom['include_dir']), atom['headers'])
+        include_paths = [os.path.relpath(h, atom['include_dir']) for h in atom['headers']]
         self.workspace_info.headers['//pkg/' + name] = include_paths
 
         if not self.install:
@@ -192,8 +191,7 @@ class BazelBuilder(Frontend):
 
     def install_cc_source_library_atom(self, atom):
         name = sanitize(atom['name'])
-        include_paths = map(
-            lambda h: os.path.relpath(h, atom['include_dir']), atom['headers'])
+        include_paths = [os.path.relpath(h, atom['include_dir']) for h in atom['headers']]
         self.workspace_info.headers['//pkg/' + name] = include_paths
 
         if not self.install:
@@ -246,7 +244,7 @@ class BazelBuilder(Frontend):
         if 'files' in atom:
             self.copy_files(atom['files'], atom['root'], 'tools')
         if 'target_files' in atom:
-            for files in atom['target_files'].itervalues():
+            for files in atom['target_files'].values():
                 self.copy_files(files, atom['root'], 'tools')
 
     def install_fidl_library_atom(self, atom):

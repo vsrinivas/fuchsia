@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 #
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
@@ -111,7 +111,7 @@ def print_yaml(o, out):
             out.write('%s:\n' % k)
             for item in val:
                 print_yaml_item(item, out)
-        elif isinstance(val, (str, unicode)):
+        elif isinstance(val, str):
             out.write('%s: %s\n' % (k, val))
 
 

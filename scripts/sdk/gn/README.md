@@ -42,7 +42,7 @@ The above instructions is not what is run during testing and CQ. The GN build st
 1. Run the generate script:
 
    ```sh
-   $ scripts/sdk/gn/generate.py \
+   $ prebuilt/third_party/python3/linux-x64/bin/python3.8 scripts/sdk/gn/generate.py \
        --archive out/default/sdk/archive/core.tar.gz \
        --output gn_sdk_dir
    ```
@@ -65,7 +65,7 @@ $ gn_sdk_dir/bin/femu.sh
 To test the generator, run the `test_generate.py` script.
 
 ```sh
-$ scripts/sdk/gn/test_generate.py
+$ prebuilt/third_party/python3/linux-x64/bin/python3.8 scripts/sdk/gn/test_generate.py
 ```
 
 This runs the generator against the `testdata` directory and compares the output
@@ -76,7 +76,7 @@ needed to exercise your new code, then run the `update_golden.py` script to fix
 the `golden` files.
 
 ```sh
-$ scripts/sdk/gn/update_golden.py
+$ prebuilt/third_party/python3/linux-x64/bin/python3.8 scripts/sdk/gn/update_golden.py
 ```
 
 Commit your changes to the generator, `testdata` contents, and `golden` contents
@@ -104,7 +104,7 @@ directory (assuming the current directory is $FUCHSIA_DIR):
 1. Generate the test workspace into a temporary directory:
 
    ```sh
-   $ scripts/sdk/gn/generate.py \
+   $ prebuilt/third_party/python3/linux-x64/bin/python3.8 scripts/sdk/gn/generate.py \
     --archive out/temp/idk.tar.gz \
     --output out/temp/gn_sdk_dir/ \
     --tests out/temp/test_workspace
@@ -113,5 +113,5 @@ directory (assuming the current directory is $FUCHSIA_DIR):
 1. Run the `run.py` file in the test workspace:
 
    ```sh
-   $ out/temp/test_workspace/run.py
+   $ prebuilt/third_party/python3/linux-x64/bin/python3.8 out/temp/test_workspace/run.py
    ```

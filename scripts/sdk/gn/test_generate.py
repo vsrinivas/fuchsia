@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2020 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -71,7 +71,7 @@ class GNGenerateTest(unittest.TestCase):
             os.path.join(
                 SCRIPT_DIR, 'testdata', '.jiri_root', 'update_history',
                 'latest'))
-        if cmp(prebuilt_results, EXPECTED_PREBUILTS) != 0:
+        if prebuilt_results != EXPECTED_PREBUILTS:
             self.fail(
                 "Expected output %s but returned %s instead" %
                 (EXPECTED_PREBUILTS, prebuilt_results))

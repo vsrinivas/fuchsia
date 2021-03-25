@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -7,7 +7,7 @@ import argparse
 import json
 import os
 import sys
-import urlparse
+import urllib.parse
 
 
 def sanitize_name(name):
@@ -16,11 +16,11 @@ def sanitize_name(name):
 
 
 def get_atom_domain(id):
-    return urlparse.urlparse(id).netloc
+    return urllib.parse.urlparse(id).netloc
 
 
 def get_atom_name(id):
-    return urlparse.urlparse(id).path[1:]
+    return urllib.parse.urlparse(id).path[1:]
 
 
 def get_atom_id(id):

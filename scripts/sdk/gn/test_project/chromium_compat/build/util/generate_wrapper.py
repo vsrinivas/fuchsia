@@ -111,7 +111,7 @@ def CreateArgumentParser():
         '--output-directory', help='Path to the output directory.')
     parser.add_argument(
         '--script-language',
-        choices=SCRIPT_TEMPLATES.keys(),
+        choices=list(SCRIPT_TEMPLATES.keys()),
         help='Language in which the wrapper script will be written.')
     parser.add_argument(
         'executable_args',

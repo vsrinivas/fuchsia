@@ -24,18 +24,16 @@ def main():
     all_files = []
     # List the files in the meta directory itself.
     for root, dirs, files in os.walk(args.meta):
-        all_files += map(
-            lambda f: os.path.relpath(os.path.join(root, f), args.meta), files)
+        all_files += [os.path.relpath(os.path.join(root, f), args.meta) for f in files]
     # Add the files outside of the meta directory, which are listed in
     # meta/contents.
     with open(os.path.join(args.meta, 'meta', 'contents')) as contents_file:
-        all_files += map(lambda l: l.strip().split('=', 1)[0],
-                         contents_file.readlines())
+        all_files += [l.strip().split('=', 1)[0] for l in contents_file.readlines()]
 
     has_errors = False
     for file in args.files:
         if file not in all_files:
-            print('Missing ' + file)
+            print('Missing %s' % file)
             has_errors = True
     if has_errors:
         print('Known files:')

@@ -1,4 +1,4 @@
-#!/usr/bin/env python2.7
+#!/usr/bin/env python3.8
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
@@ -95,7 +95,7 @@ def _get_files(element_meta):
     arch_files = {}
     if type == 'cc_prebuilt_library':
         common_files.update(element_meta['headers'])
-        for arch, binaries in element_meta['binaries'].iteritems():
+        for arch, binaries in element_meta['binaries'].items():
             contents = set()
             contents.add(binaries['link'])
             if 'dist' in binaries:
@@ -119,7 +119,7 @@ def _get_files(element_meta):
         common_files.update(element_meta['resources'])
         arch_files.update(element_meta['binaries'])
     elif type == 'sysroot':
-        for arch, version in element_meta['versions'].iteritems():
+        for arch, version in element_meta['versions'].items():
             contents = set()
             contents.update(version['headers'])
             contents.update(version['link_libs'])
@@ -184,7 +184,7 @@ def _copy_element(element, source_dir, dest_dir):
     meta = _get_meta(element, source_dir)
     common_files, arch_files = _get_files(meta)
     files = common_files
-    for more_files in arch_files.itervalues():
+    for more_files in arch_files.values():
         files.update(more_files)
     _copy_files(files, source_dir, dest_dir)
     # Copy the metadata file as well.
@@ -356,7 +356,7 @@ def main():
             # Common files should not vary.
             if not _copy_identical_files(first_common, first_dir, second_common,
                                          second_dir, out_dir):
-                print('Error: different common files for ' + element)
+                print('Error: different common files for %s' % (element))
                 has_errors = True
                 continue
 
@@ -367,9 +367,7 @@ def main():
                     if not _copy_identical_files(first_arch[arch], first_dir,
                                                  second_arch[arch], second_dir,
                                                  out_dir):
-                        print(
-                            'Error: different %s files for %s' %
-                            (arch, element))
+                        print('Error: different %s files for %s' % (arch, element))
                         has_errors = True
                         continue
                 elif arch in first_arch:
@@ -378,7 +376,7 @@ def main():
                     _copy_files(second_arch[arch], second_dir, out_dir)
 
             if not _write_meta(element, first_dir, second_dir, out_dir):
-                print('Error: unable to merge meta for ' + element)
+                print('Error: unable to merge meta for %s' % (element))
                 has_errors = True
 
         if not _write_manifest(first_dir, second_dir, out_dir):
