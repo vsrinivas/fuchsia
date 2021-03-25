@@ -22,7 +22,7 @@ import("//tools/cmc/build/expect_includes.gni")
 #
 #   unstable_features (optional)
 #     [list of strings] The set of unstable CML features to allow.
-#     The set of features is allowlisted here: //src/sys/build/unstable_features/BUILD.gn
+#     The set of features is allowlisted here: //tools/cmc/build/unstable_features/BUILD.gn
 #     where each feature name is represented by a group of the same name.
 #
 #   deps (optional)
