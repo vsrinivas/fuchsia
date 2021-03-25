@@ -15,7 +15,8 @@ class SecondProtocol_TestBase
 
   using Interface = ::fidl_test_service::SecondProtocol::Interface;
   virtual void MethodOnSecond(
-      Interface::MethodOnSecondCompleter::Sync& completer) override {
+      ::fidl::WireInterface<::fidl_test_service::SecondProtocol>::
+          MethodOnSecondCompleter::Sync& completer) override {
     NotImplemented_("MethodOnSecond", completer);
   }
 };
@@ -29,7 +30,8 @@ class FirstProtocol_TestBase
 
   using Interface = ::fidl_test_service::FirstProtocol::Interface;
   virtual void MethodOnFirst(
-      Interface::MethodOnFirstCompleter::Sync& completer) override {
+      ::fidl::WireInterface<::fidl_test_service::FirstProtocol>::
+          MethodOnFirstCompleter::Sync& completer) override {
     NotImplemented_("MethodOnFirst", completer);
   }
 };

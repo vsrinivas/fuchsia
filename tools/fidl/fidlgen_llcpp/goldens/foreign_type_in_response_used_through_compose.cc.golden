@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace fidl_test_foreigntypeinresponseusedthroughcompose {
-namespace {
 
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 7703637629648977298lu;
 
@@ -14,16 +13,17 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_foreigntypeinresponseusedthroughcompose_TopGetFooResponseTable;
-
-}  // namespace
 #ifdef __Fuchsia__
 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::ResultOf::GetFoo::
     GetFoo(::fidl::UnownedClientEnd<
            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
                _client) {
-  ::fidl::OwnedEncodedMessage<GetFooRequest> _request(zx_txid_t(0));
-  _request.GetOutgoingMessage().Call<GetFooResponse>(_client, bytes_.data(),
-                                                     bytes_.size());
+  ::fidl::OwnedEncodedMessage<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest>
+      _request(zx_txid_t(0));
+  _request.GetOutgoingMessage()
+      .Call<::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                GetFooResponse>(_client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -33,9 +33,13 @@ extern "C" const fidl_type_t
                ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>
                _client,
            zx_time_t _deadline) {
-  ::fidl::OwnedEncodedMessage<GetFooRequest> _request(zx_txid_t(0));
-  _request.GetOutgoingMessage().Call<GetFooResponse>(_client, bytes_.data(),
-                                                     bytes_.size(), _deadline);
+  ::fidl::OwnedEncodedMessage<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest>
+      _request(zx_txid_t(0));
+  _request.GetOutgoingMessage()
+      .Call<::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                GetFooResponse>(_client, bytes_.data(), bytes_.size(),
+                                _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -48,21 +52,27 @@ extern "C" const fidl_type_t
                        _client,
                    uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ::fidl::OwnedEncodedMessage<GetFooRequest> _request(zx_txid_t(0));
-  _request.GetOutgoingMessage().Call<GetFooResponse>(_client, _response_bytes,
-                                                     _response_byte_capacity);
+  ::fidl::OwnedEncodedMessage<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest>
+      _request(zx_txid_t(0));
+  _request.GetOutgoingMessage()
+      .Call<::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                GetFooResponse>(_client, _response_bytes,
+                                _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
 #endif
 
+}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
 #ifdef __Fuchsia__
 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::ResultOf::GetFoo
-Top::ClientImpl::GetFoo_Sync() {
+fidl::internal::WireClientImpl<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::GetFoo_Sync() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::GetFoo(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(
+    return ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::ResultOf::
+        GetFoo(::fidl::UnownedClientEnd<
+               ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(
             _channel->handle()));
   }
   return ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::ResultOf::
@@ -73,13 +83,16 @@ Top::ClientImpl::GetFoo_Sync() {
 #ifdef __Fuchsia__
 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::UnownedResultOf::
     GetFoo
-    Top::ClientImpl::GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
+    fidl::internal::WireClientImpl<
+        ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+        GetFoo_Sync(::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return UnownedResultOf::GetFoo(
-        ::fidl::UnownedClientEnd<
-            ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(
-            _channel->handle()),
-        _response_buffer.data, _response_buffer.capacity);
+    return ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+        UnownedResultOf::GetFoo(
+            ::fidl::UnownedClientEnd<
+                ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>(
+                _channel->handle()),
+            _response_buffer.data, _response_buffer.capacity);
   }
   return ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
       UnownedResultOf::GetFoo(
@@ -90,22 +103,35 @@ Top::ClientImpl::GetFoo_Sync() {
 #ifdef __Fuchsia__
 ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
     GetFooResponseContext::GetFooResponseContext()
-    : ::fidl::internal::ResponseContext(GetFooResponse::Type,
-                                        kTop_GetFoo_Ordinal) {}
+    : ::fidl::internal::ResponseContext(
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+              GetFooResponse::Type,
+          kTop_GetFoo_Ordinal) {}
 
 void ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
     GetFooResponseContext::OnReply(uint8_t* reply) {
-  OnReply(reinterpret_cast<GetFooResponse*>(reply));
+  OnReply(reinterpret_cast<::fidl_test_foreigntypeinresponseusedthroughcompose::
+                               Top::GetFooResponse*>(reply));
 }
 
-::fidl::Result Top::ClientImpl::GetFoo(
-    ::fit::callback<void(GetFooResponse* response)> _cb) {
-  class ResponseContext final : public GetFooResponseContext {
+::fidl::Result fidl::internal::WireClientImpl<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+    GetFoo(::fit::callback<
+           void(::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                    GetFooResponse* response)>
+               _cb) {
+  class ResponseContext final
+      : public ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+            GetFooResponseContext {
    public:
-    ResponseContext(::fit::callback<void(GetFooResponse* response)> cb)
+    ResponseContext(::fit::callback<
+                    void(::fidl_test_foreigntypeinresponseusedthroughcompose::
+                             Top::GetFooResponse* response)>
+                        cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(GetFooResponse* response) override {
+    void OnReply(::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+                     GetFooResponse* response) override {
       cb_(response);
 
       delete this;
@@ -114,38 +140,47 @@ void ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(GetFooResponse* response)> cb_;
+    ::fit::callback<void(::fidl_test_foreigntypeinresponseusedthroughcompose::
+                             Top::GetFooResponse* response)>
+        cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  GetFooRequest::OwnedEncodedMessage _request(_context->Txid());
+  ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest::
+      OwnedEncodedMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-::fidl::Result Top::ClientImpl::GetFoo(GetFooResponseContext* _context) {
+::fidl::Result fidl::internal::WireClientImpl<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+    GetFoo(::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
+               GetFooResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  GetFooRequest::OwnedEncodedMessage _request(_context->Txid());
+  ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest::
+      OwnedEncodedMessage _request(_context->Txid());
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 #endif
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> Top::ClientImpl::DispatchEvent(
-    fidl_incoming_msg_t* msg) {
+std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
+    ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+    DispatchEvent(fidl_incoming_msg_t* msg) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
 #endif
 
+namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 #ifdef __Fuchsia__
 namespace methods {
 
 void TopDispatchGetFoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
-  ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::Interface::
-      GetFooCompleter::Sync completer(txn);
+  ::fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::
+                            Top>::GetFooCompleter::Sync completer(txn);
   reinterpret_cast<
       ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::Interface*>(
       interface)
@@ -157,7 +192,7 @@ void TopDispatchGetFoo(void* interface, void* bytes, ::fidl::Transaction* txn) {
 namespace entries {
 
 ::fidl::internal::MethodEntry Top[] = {
-    {kTop_GetFoo_Ordinal,
+    {::fidl_test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal,
      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest::
          Type,
      methods::TopDispatchGetFoo},
@@ -174,7 +209,9 @@ namespace entries {
           sizeof(entries::Top) / sizeof(::fidl::internal::MethodEntry));
 }
 #endif
+}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
 
+namespace fidl_test_foreigntypeinresponseusedthroughcompose {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult Top::Dispatch(Interface* impl, fidl_incoming_msg_t* msg,
                                      ::fidl::Transaction* txn) {
@@ -186,41 +223,52 @@ namespace entries {
   }
   return dispatch_result;
 }
-
-::fidl::DispatchResult Top::Interface::dispatch_message(
-    fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return Top::Dispatch(this, msg, txn);
+}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose
+::fidl::DispatchResult
+fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+    dispatch_message(fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
+  return ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::Dispatch(
+      this, msg, txn);
 }
 #endif
 
 #ifdef __Fuchsia__
-::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
-    ::bottom::wire::Foo foo) {
-  ::fidl::OwnedEncodedMessage<GetFooResponse> _response{foo};
-  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+::fidl::Result
+fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+    GetFooCompleterBase::Reply(::bottom::wire::Foo foo) {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse>
+      _response{foo};
+  return ::fidl::WireInterface<
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+      GetFooCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
 
 #ifdef __Fuchsia__
-::fidl::Result Top::Interface::GetFooCompleterBase::Reply(
-    ::fidl::BufferSpan _buffer, ::bottom::wire::Foo foo) {
-  GetFooResponse::UnownedEncodedMessage _response(_buffer.data,
-                                                  _buffer.capacity, foo);
+::fidl::Result
+fidl::WireInterface<::fidl_test_foreigntypeinresponseusedthroughcompose::Top>::
+    GetFooCompleterBase::Reply(::fidl::BufferSpan _buffer,
+                               ::bottom::wire::Foo foo) {
+  ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse::
+      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, foo);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
 
 void ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooRequest::
     _InitHeader(zx_txid_t _txid) {
-  fidl_init_txn_header(&_hdr, _txid, kTop_GetFoo_Ordinal);
+  fidl_init_txn_header(
+      &_hdr, _txid,
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal);
 }
 
 void ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::GetFooResponse::
     _InitHeader() {
-  fidl_init_txn_header(&_hdr, 0, kTop_GetFoo_Ordinal);
+  fidl_init_txn_header(
+      &_hdr, 0,
+      ::fidl_test_foreigntypeinresponseusedthroughcompose::kTop_GetFoo_Ordinal);
 }
 
 #ifdef __Fuchsia__
 #endif
-
-}  // namespace fidl_test_foreigntypeinresponseusedthroughcompose

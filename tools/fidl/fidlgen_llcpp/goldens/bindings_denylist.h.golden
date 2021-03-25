@@ -30,6 +30,7 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 
@@ -149,14 +150,16 @@ class OnlyLibfuzzerAndDeps final {
                      sizeof(LibfuzzerNeedsNonemptyProtocolResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL LibfuzzerNeedsNonemptyProtocolResponse _response{};
-        message_.Encode<LibfuzzerNeedsNonemptyProtocolResponse>(&_response);
+        message_.Encode<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                            LibfuzzerNeedsNonemptyProtocolResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             LibfuzzerNeedsNonemptyProtocolResponse* response)
           : message_(bytes, byte_size,
                      sizeof(LibfuzzerNeedsNonemptyProtocolResponse), nullptr, 0,
                      0) {
-        message_.Encode<LibfuzzerNeedsNonemptyProtocolResponse>(response);
+        message_.Encode<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                            LibfuzzerNeedsNonemptyProtocolResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -187,7 +190,8 @@ class OnlyLibfuzzerAndDeps final {
      public:
       explicit OwnedEncodedMessage() : message_(bytes_.data(), bytes_.size()) {}
       explicit OwnedEncodedMessage(
-          LibfuzzerNeedsNonemptyProtocolResponse* response)
+          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+              LibfuzzerNeedsNonemptyProtocolResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -225,11 +229,13 @@ class OnlyLibfuzzerAndDeps final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<LibfuzzerNeedsNonemptyProtocolResponse>();
+        Decode<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                   LibfuzzerNeedsNonemptyProtocolResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<LibfuzzerNeedsNonemptyProtocolResponse>();
+        Decode<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                   LibfuzzerNeedsNonemptyProtocolResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -238,8 +244,9 @@ class OnlyLibfuzzerAndDeps final {
 
       LibfuzzerNeedsNonemptyProtocolResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<LibfuzzerNeedsNonemptyProtocolResponse*>(
-            bytes());
+        return reinterpret_cast<
+            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                LibfuzzerNeedsNonemptyProtocolResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -416,23 +423,39 @@ class OnlyLibfuzzerAndDeps final {
           const LibfuzzerNeedsNonemptyProtocol&) = delete;
       ~LibfuzzerNeedsNonemptyProtocol() = default;
 
-      LibfuzzerNeedsNonemptyProtocolResponse* Unwrap() {
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocolResponse*
+          Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<LibfuzzerNeedsNonemptyProtocolResponse*>(
-            bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                LibfuzzerNeedsNonemptyProtocolResponse*>(bytes_.data());
       }
-      const LibfuzzerNeedsNonemptyProtocolResponse* Unwrap() const {
+      const ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocolResponse*
+          Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const LibfuzzerNeedsNonemptyProtocolResponse*>(
-            bytes_.data());
+        return reinterpret_cast<
+            const ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                LibfuzzerNeedsNonemptyProtocolResponse*>(bytes_.data());
       }
 
-      LibfuzzerNeedsNonemptyProtocolResponse& value() { return *Unwrap(); }
-      const LibfuzzerNeedsNonemptyProtocolResponse& value() const {
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocolResponse&
+          value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocolResponse&
+          value() const {
         return *Unwrap();
       }
 
-      LibfuzzerNeedsNonemptyProtocolResponse* operator->() { return &value(); }
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocolResponse*
+          operator->() {
+        return &value();
+      }
       const LibfuzzerNeedsNonemptyProtocolResponse* operator->() const {
         return &value();
       }
@@ -473,13 +496,15 @@ class OnlyLibfuzzerAndDeps final {
 
       LibfuzzerNeedsNonemptyProtocolResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<LibfuzzerNeedsNonemptyProtocolResponse*>(
-            bytes_);
+        return reinterpret_cast<
+            ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                LibfuzzerNeedsNonemptyProtocolResponse*>(bytes_);
       }
       const LibfuzzerNeedsNonemptyProtocolResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const LibfuzzerNeedsNonemptyProtocolResponse*>(
-            bytes_);
+        return reinterpret_cast<
+            const ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                LibfuzzerNeedsNonemptyProtocolResponse*>(bytes_);
       }
 
       LibfuzzerNeedsNonemptyProtocolResponse& value() { return *Unwrap(); }
@@ -521,83 +546,19 @@ class OnlyLibfuzzerAndDeps final {
     }
   };
 
-  class SyncClient final {
-   public:
-    SyncClient() = default;
-
-    explicit SyncClient(::fidl::ClientEnd<OnlyLibfuzzerAndDeps> client_end)
-        : client_end_(std::move(client_end)) {}
-
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::fidl::ClientEnd<OnlyLibfuzzerAndDeps>& client_end() const {
-      return client_end_;
-    }
-    ::fidl::ClientEnd<OnlyLibfuzzerAndDeps>& client_end() {
-      return client_end_;
-    }
-
-    const ::zx::channel& channel() const { return client_end_.channel(); }
-    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-    // Allocates 32 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::LibfuzzerNeedsNonemptyProtocol LibfuzzerNeedsNonemptyProtocol() {
-      return ResultOf::LibfuzzerNeedsNonemptyProtocol(this->client_end());
-    }
-
-   private:
-    ::fidl::ClientEnd<OnlyLibfuzzerAndDeps> client_end_;
-  };
+  using SyncClient =
+      fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 
 #ifdef __Fuchsia__
-  class AsyncEventHandler;
+  using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
   class LibfuzzerNeedsNonemptyProtocolResponseContext;
-  class ClientImpl;
+  using ClientImpl = ::fidl::internal::WireClientImpl<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 #endif
 
-  // Pure-virtual interface to be implemented by a server.
-  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-  // and |fidl::ServerEnd<SomeProtocol>|).
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using _EnclosingProtocol = OnlyLibfuzzerAndDeps;
-
-    class LibfuzzerNeedsNonemptyProtocolCompleterBase
-        : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply();
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using LibfuzzerNeedsNonemptyProtocolCompleter =
-        ::fidl::Completer<LibfuzzerNeedsNonemptyProtocolCompleterBase>;
-
-    virtual void LibfuzzerNeedsNonemptyProtocol(
-        LibfuzzerNeedsNonemptyProtocolCompleter::Sync& _completer) = 0;
-
-   private:
-    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn) final;
-  };
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
@@ -627,9 +588,98 @@ class OnlyLibfuzzerAndDeps final {
 
 #endif
 
-  class EventSender;
-  class WeakEventSender;
+  using EventSender = ::fidl::WireEventSender<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
+  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 };
+}  // namespace fidl_test_bindingsdenylist
+template <>
+class ::fidl::WireSyncClient<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+          client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>&
+  client_end() const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>&
+  client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::ResultOf::
+      LibfuzzerNeedsNonemptyProtocol
+      LibfuzzerNeedsNonemptyProtocol() {
+    return ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::ResultOf::
+        LibfuzzerNeedsNonemptyProtocol(this->client_end());
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+      client_end_;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps;
+
+  class LibfuzzerNeedsNonemptyProtocolCompleterBase
+      : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply();
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using LibfuzzerNeedsNonemptyProtocolCompleter =
+      ::fidl::Completer<LibfuzzerNeedsNonemptyProtocolCompleterBase>;
+
+  virtual void LibfuzzerNeedsNonemptyProtocol(
+      LibfuzzerNeedsNonemptyProtocolCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+namespace fidl_test_bindingsdenylist {
 namespace wire {
 
 constexpr uint32_t AllBindings = 0u;
@@ -676,35 +726,44 @@ static_assert(
 namespace fidl_test_bindingsdenylist {
 
 #ifdef __Fuchsia__
-class OnlyLibfuzzerAndDeps::AsyncEventHandler
-    : public OnlyLibfuzzerAndDeps::EventHandlerInterface {
+}  // namespace fidl_test_bindingsdenylist
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    : public ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          EventHandlerInterface {
  public:
-  AsyncEventHandler() = default;
+  WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+namespace fidl_test_bindingsdenylist {
 
-class OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocolResponseContext
+class ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+    LibfuzzerNeedsNonemptyProtocolResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   LibfuzzerNeedsNonemptyProtocolResponseContext();
 
-  virtual void OnReply(
-      OnlyLibfuzzerAndDeps::LibfuzzerNeedsNonemptyProtocolResponse*
-          message) = 0;
+  virtual void OnReply(::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                           LibfuzzerNeedsNonemptyProtocolResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
-
-class OnlyLibfuzzerAndDeps::ClientImpl final
-    : private ::fidl::internal::ClientBase {
+}  // namespace fidl_test_bindingsdenylist
+template <>
+class ::fidl::internal::WireClientImpl<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+    final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of
   // |OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol()|. Allocates 16 bytes
   // of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result LibfuzzerNeedsNonemptyProtocol(
-      ::fit::callback<void(LibfuzzerNeedsNonemptyProtocolResponse* response)>
+      ::fit::callback<
+          void(::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+                   LibfuzzerNeedsNonemptyProtocolResponse* response)>
           _cb);
 
   // Asynchronous variant of
@@ -713,48 +772,69 @@ class OnlyLibfuzzerAndDeps::ClientImpl final
   // |_context| is given unsafely to the binding until |OnError| or |OnReply|
   // are called on it.
   ::fidl::Result LibfuzzerNeedsNonemptyProtocol(
-      LibfuzzerNeedsNonemptyProtocolResponseContext* _context);
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
+          LibfuzzerNeedsNonemptyProtocolResponseContext* _context);
 
   // Synchronous variant of
   // |OnlyLibfuzzerAndDeps.LibfuzzerNeedsNonemptyProtocol()|. Allocates 32 bytes
   // of message buffer on the stack. No heap allocation necessary.
-  ResultOf::LibfuzzerNeedsNonemptyProtocol
-  LibfuzzerNeedsNonemptyProtocol_Sync();
+  ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::ResultOf::
+      LibfuzzerNeedsNonemptyProtocol
+      LibfuzzerNeedsNonemptyProtocol_Sync();
 
-  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+  ::fidl::WireAsyncEventHandler<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>*
+  event_handler() const {
+    return event_handler_.get();
+  }
 
  private:
-  friend class ::fidl::Client<OnlyLibfuzzerAndDeps>;
-  friend class ::fidl::internal::ControlBlock<OnlyLibfuzzerAndDeps>;
+  friend class ::fidl::Client<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
+  friend class ::fidl::internal::ControlBlock<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 
-  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+  explicit WireClientImpl(
+      std::shared_ptr<::fidl::WireAsyncEventHandler<
+          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>>
+          event_handler)
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  std::shared_ptr<::fidl::WireAsyncEventHandler<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>>
+      event_handler_;
 };
+namespace fidl_test_bindingsdenylist {
 #endif
 
+}  // namespace fidl_test_bindingsdenylist
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the OnlyLibfuzzerAndDeps protocol, and can send events in that protocol.
-class OnlyLibfuzzerAndDeps::EventSender {
+template <>
+class ::fidl::WireEventSender<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
  public:
   // Constructs an event sender with an invalid channel.
-  EventSender() = default;
+  WireEventSender() = default;
 
-  explicit EventSender(
+  explicit WireEventSender(
       ::fidl::ServerEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
           server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<OnlyLibfuzzerAndDeps>& server_end() const {
+  const ::fidl::ServerEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>&
+  server_end() const {
     return server_end_;
   }
-  ::fidl::ServerEnd<OnlyLibfuzzerAndDeps>& server_end() { return server_end_; }
+  ::fidl::ServerEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>&
+  server_end() {
+    return server_end_;
+  }
 
   const ::zx::channel& channel() const { return server_end_.channel(); }
   ::zx::channel& channel() { return server_end_.channel(); }
@@ -763,22 +843,26 @@ class OnlyLibfuzzerAndDeps::EventSender {
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::fidl::ServerEnd<OnlyLibfuzzerAndDeps> server_end_;
+  ::fidl::ServerEnd<::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>
+      server_end_;
 };
 
-class OnlyLibfuzzerAndDeps::WeakEventSender {
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps> {
  public:
  private:
-  friend class ::fidl::ServerBindingRef<OnlyLibfuzzerAndDeps>;
+  friend class ::fidl::ServerBindingRef<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>;
 
-  explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<OnlyLibfuzzerAndDeps>>
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>>
           binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<OnlyLibfuzzerAndDeps>>
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<
+      ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps>>
       binding_;
 };
 #endif
-
-}  // namespace fidl_test_bindingsdenylist

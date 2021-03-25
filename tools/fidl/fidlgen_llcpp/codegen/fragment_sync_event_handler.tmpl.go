@@ -6,6 +6,7 @@ package codegen
 
 const fragmentSyncEventHandlerTmpl = `
 {{- define "EventHandlerHandleOneEventMethodDefinition" }}
+{{ EnsureNamespace . }}
 ::fidl::Result {{ .Name }}::SyncEventHandler::HandleOneEvent(
     ::fidl::UnownedClientEnd<{{ . }}> client_end) {
   zx_status_t status = client_end.channel()->wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
@@ -17,8 +18,8 @@ const fragmentSyncEventHandlerTmpl = `
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
     {{- range .Events }}
-    if ({{ .Name }}Response::MaxNumHandles >= x) {
-      x = {{ .Name }}Response::MaxNumHandles;
+    if ({{ .WireResponse }}::MaxNumHandles >= x) {
+      x = {{ .WireResponse }}::MaxNumHandles;
     }
     {{- end }}
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
@@ -57,14 +58,14 @@ const fragmentSyncEventHandlerTmpl = `
   switch (hdr->ordinal) {
   {{- range .Methods }}
     {{- if not .HasRequest }}
-    case {{ .OrdinalName }}: {
+    case {{ .Protocol.Namespace }}::{{ .OrdinalName }}: {
       const char* error_message;
-      zx_status_t status = fidl_decode_etc({{ .Name }}Response::Type, read_bytes, actual_bytes,
+      zx_status_t status = fidl_decode_etc({{ .WireResponse }}::Type, read_bytes, actual_bytes,
                                            read_handles, actual_handles, &error_message);
       if (status != ZX_OK) {
         return ::fidl::Result(status, error_message);
       }
-      {{ .Name }}(reinterpret_cast<{{ .Name }}Response*>(read_bytes));
+      {{ .Name }}(reinterpret_cast<{{ .WireResponse }}*>(read_bytes));
       return ::fidl::Result(ZX_OK, nullptr);
     }
     {{- end }}

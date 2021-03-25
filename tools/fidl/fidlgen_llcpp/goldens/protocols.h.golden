@@ -30,6 +30,7 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/handle.h>
@@ -835,12 +836,14 @@ class Transitional final {
           : message_(_bytes, _byte_size, sizeof(RequestResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL RequestResponse _response{y};
-        message_.Encode<RequestResponse>(&_response);
+        message_.Encode<::fidl_test_protocols::Transitional::RequestResponse>(
+            &_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             RequestResponse* response)
           : message_(bytes, byte_size, sizeof(RequestResponse), nullptr, 0, 0) {
-        message_.Encode<RequestResponse>(response);
+        message_.Encode<::fidl_test_protocols::Transitional::RequestResponse>(
+            response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -871,7 +874,8 @@ class Transitional final {
      public:
       explicit OwnedEncodedMessage(int64_t y)
           : message_(bytes_.data(), bytes_.size(), y) {}
-      explicit OwnedEncodedMessage(RequestResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::Transitional::RequestResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -909,11 +913,11 @@ class Transitional final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<RequestResponse>();
+        Decode<::fidl_test_protocols::Transitional::RequestResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<RequestResponse>();
+        Decode<::fidl_test_protocols::Transitional::RequestResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -922,7 +926,8 @@ class Transitional final {
 
       RequestResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<RequestResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::Transitional::RequestResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -955,7 +960,7 @@ class Transitional final {
     static constexpr bool HasPointer = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = RequestResponse;
+    using ResponseType = ::fidl_test_protocols::Transitional::RequestResponse;
 
     class UnownedEncodedMessage final {
      public:
@@ -1214,12 +1219,14 @@ class Transitional final {
       UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, int64_t x)
           : message_(_bytes, _byte_size, sizeof(EventResponse), nullptr, 0, 0) {
         FIDL_ALIGNDECL EventResponse _response{x};
-        message_.Encode<EventResponse>(&_response);
+        message_.Encode<::fidl_test_protocols::Transitional::EventResponse>(
+            &_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             EventResponse* response)
           : message_(bytes, byte_size, sizeof(EventResponse), nullptr, 0, 0) {
-        message_.Encode<EventResponse>(response);
+        message_.Encode<::fidl_test_protocols::Transitional::EventResponse>(
+            response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1250,7 +1257,8 @@ class Transitional final {
      public:
       explicit OwnedEncodedMessage(int64_t x)
           : message_(bytes_.data(), bytes_.size(), x) {}
-      explicit OwnedEncodedMessage(EventResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::Transitional::EventResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -1288,11 +1296,11 @@ class Transitional final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<EventResponse>();
+        Decode<::fidl_test_protocols::Transitional::EventResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<EventResponse>();
+        Decode<::fidl_test_protocols::Transitional::EventResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -1301,7 +1309,8 @@ class Transitional final {
 
       EventResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<EventResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::Transitional::EventResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -1318,7 +1327,8 @@ class Transitional final {
    public:
     EventHandlerInterface() = default;
     virtual ~EventHandlerInterface() = default;
-    virtual void Event(EventResponse* event) {}
+    virtual void Event(
+        ::fidl_test_protocols::Transitional::EventResponse* event) {}
   };
 
   class SyncEventHandler : public EventHandlerInterface {
@@ -1358,19 +1368,31 @@ class Transitional final {
       Request* operator=(const Request&) = delete;
       ~Request() = default;
 
-      RequestResponse* Unwrap() {
+      ::fidl_test_protocols::Transitional::RequestResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<RequestResponse*>(bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_protocols::Transitional::RequestResponse*>(
+            bytes_.data());
       }
-      const RequestResponse* Unwrap() const {
+      const ::fidl_test_protocols::Transitional::RequestResponse* Unwrap()
+          const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const RequestResponse*>(bytes_.data());
+        return reinterpret_cast<
+            const ::fidl_test_protocols::Transitional::RequestResponse*>(
+            bytes_.data());
       }
 
-      RequestResponse& value() { return *Unwrap(); }
-      const RequestResponse& value() const { return *Unwrap(); }
+      ::fidl_test_protocols::Transitional::RequestResponse& value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_protocols::Transitional::RequestResponse& value()
+          const {
+        return *Unwrap();
+      }
 
-      RequestResponse* operator->() { return &value(); }
+      ::fidl_test_protocols::Transitional::RequestResponse* operator->() {
+        return &value();
+      }
       const RequestResponse* operator->() const { return &value(); }
 
       RequestResponse& operator*() { return value(); }
@@ -1416,11 +1438,14 @@ class Transitional final {
 
       RequestResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<RequestResponse*>(bytes_);
+        return reinterpret_cast<
+            ::fidl_test_protocols::Transitional::RequestResponse*>(bytes_);
       }
       const RequestResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const RequestResponse*>(bytes_);
+        return reinterpret_cast<
+            const ::fidl_test_protocols::Transitional::RequestResponse*>(
+            bytes_);
       }
 
       RequestResponse& value() { return *Unwrap(); }
@@ -1498,120 +1523,17 @@ class Transitional final {
     }
   };
 
-  class SyncClient final {
-   public:
-    SyncClient() = default;
-
-    explicit SyncClient(::fidl::ClientEnd<Transitional> client_end)
-        : client_end_(std::move(client_end)) {}
-
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::fidl::ClientEnd<Transitional>& client_end() const {
-      return client_end_;
-    }
-    ::fidl::ClientEnd<Transitional>& client_end() { return client_end_; }
-
-    const ::zx::channel& channel() const { return client_end_.channel(); }
-    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::Request Request(int64_t x) {
-      return ResultOf::Request(this->client_end(), x);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::Request Request(::fidl::BufferSpan _request_buffer,
-                                     int64_t x,
-                                     ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::Request(
-          this->client_end(), _request_buffer.data, _request_buffer.capacity, x,
-          _response_buffer.data, _response_buffer.capacity);
-    }
-
-    // Allocates 24 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::OneWay OneWay(int64_t x) {
-      return ResultOf::OneWay(this->client_end(), x);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::OneWay OneWay(::fidl::BufferSpan _request_buffer,
-                                   int64_t x) {
-      return UnownedResultOf::OneWay(this->client_end(), _request_buffer.data,
-                                     _request_buffer.capacity, x);
-    }
-
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the
-    // corresponding virtual method defined in |SyncEventHandler|. The return
-    // status of the handler function is folded with any transport-level errors
-    // and returned.
-    ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(client_end_);
-    }
-
-   private:
-    ::fidl::ClientEnd<Transitional> client_end_;
-  };
+  using SyncClient = fidl::WireSyncClient<::fidl_test_protocols::Transitional>;
 
 #ifdef __Fuchsia__
-  class AsyncEventHandler;
+  using AsyncEventHandler =
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>;
   class RequestResponseContext;
-  class ClientImpl;
+  using ClientImpl =
+      ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>;
 #endif
 
-  // Pure-virtual interface to be implemented by a server.
-  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-  // and |fidl::ServerEnd<SomeProtocol>|).
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using _EnclosingProtocol = Transitional;
-
-    class RequestCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply(int64_t y);
-      ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using RequestCompleter = ::fidl::Completer<RequestCompleterBase>;
-
-    virtual void Request(int64_t x, RequestCompleter::Sync& _completer) {
-      _completer.Close(ZX_ERR_NOT_SUPPORTED);
-    }
-
-    using OneWayCompleter = ::fidl::Completer<>;
-
-    virtual void OneWay(int64_t x, OneWayCompleter::Sync& _completer) {
-      _completer.Close(ZX_ERR_NOT_SUPPORTED);
-    }
-
-   private:
-    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn) final;
-  };
+  using Interface = ::fidl::WireInterface<::fidl_test_protocols::Transitional>;
 
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
@@ -1641,10 +1563,133 @@ class Transitional final {
 
 #endif
 
-  class EventSender;
-  class WeakEventSender;
+  using EventSender =
+      ::fidl::WireEventSender<::fidl_test_protocols::Transitional>;
+  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
+      ::fidl_test_protocols::Transitional>;
+};
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::WireSyncClient<::fidl_test_protocols::Transitional> final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_protocols::Transitional> client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_protocols::Transitional>& client_end()
+      const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_protocols::Transitional>& client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_protocols::Transitional::ResultOf::Request Request(int64_t x) {
+    return ::fidl_test_protocols::Transitional::ResultOf::Request(
+        this->client_end(), x);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::Transitional::UnownedResultOf::Request Request(
+      ::fidl::BufferSpan _request_buffer, int64_t x,
+      ::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_protocols::Transitional::UnownedResultOf::Request(
+        this->client_end(), _request_buffer.data, _request_buffer.capacity, x,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+
+  // Allocates 24 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_protocols::Transitional::ResultOf::OneWay OneWay(int64_t x) {
+    return ::fidl_test_protocols::Transitional::ResultOf::OneWay(
+        this->client_end(), x);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::Transitional::UnownedResultOf::OneWay OneWay(
+      ::fidl::BufferSpan _request_buffer, int64_t x) {
+    return ::fidl_test_protocols::Transitional::UnownedResultOf::OneWay(
+        this->client_end(), _request_buffer.data, _request_buffer.capacity, x);
+  }
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method defined in |SyncEventHandler|. The return
+  // status of the handler function is folded with any transport-level errors
+  // and returned.
+  ::fidl::Result HandleOneEvent(
+      ::fidl_test_protocols::Transitional::SyncEventHandler& event_handler) {
+    return event_handler.HandleOneEvent(client_end_);
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_protocols::Transitional> client_end_;
 };
 
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_protocols::Transitional>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_protocols::Transitional;
+
+  class RequestCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply(int64_t y);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t y);
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using RequestCompleter = ::fidl::Completer<RequestCompleterBase>;
+
+  virtual void Request(int64_t x, RequestCompleter::Sync& _completer) {
+    _completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+  using OneWayCompleter = ::fidl::Completer<>;
+
+  virtual void OneWay(int64_t x, OneWayCompleter::Sync& _completer) {
+    _completer.Close(ZX_ERR_NOT_SUPPORTED);
+  }
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+namespace fidl_test_protocols {
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodARequestTable;
 
@@ -1838,12 +1883,14 @@ class ChannelProtocol final {
           : message_(_bytes, _byte_size, sizeof(EventAResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL EventAResponse _response{a, b};
-        message_.Encode<EventAResponse>(&_response);
+        message_.Encode<::fidl_test_protocols::ChannelProtocol::EventAResponse>(
+            &_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             EventAResponse* response)
           : message_(bytes, byte_size, sizeof(EventAResponse), nullptr, 0, 0) {
-        message_.Encode<EventAResponse>(response);
+        message_.Encode<::fidl_test_protocols::ChannelProtocol::EventAResponse>(
+            response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1874,7 +1921,8 @@ class ChannelProtocol final {
      public:
       explicit OwnedEncodedMessage(int64_t a, int64_t b)
           : message_(bytes_.data(), bytes_.size(), a, b) {}
-      explicit OwnedEncodedMessage(EventAResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::ChannelProtocol::EventAResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -1912,11 +1960,11 @@ class ChannelProtocol final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<EventAResponse>();
+        Decode<::fidl_test_protocols::ChannelProtocol::EventAResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<EventAResponse>();
+        Decode<::fidl_test_protocols::ChannelProtocol::EventAResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -1925,7 +1973,8 @@ class ChannelProtocol final {
 
       EventAResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<EventAResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::ChannelProtocol::EventAResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -1962,12 +2011,16 @@ class ChannelProtocol final {
           : message_(_bytes, _byte_size, sizeof(MethodBResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL MethodBResponse _response{result};
-        message_.Encode<MethodBResponse>(&_response);
+        message_
+            .Encode<::fidl_test_protocols::ChannelProtocol::MethodBResponse>(
+                &_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             MethodBResponse* response)
           : message_(bytes, byte_size, sizeof(MethodBResponse), nullptr, 0, 0) {
-        message_.Encode<MethodBResponse>(response);
+        message_
+            .Encode<::fidl_test_protocols::ChannelProtocol::MethodBResponse>(
+                response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -1998,7 +2051,8 @@ class ChannelProtocol final {
      public:
       explicit OwnedEncodedMessage(int64_t result)
           : message_(bytes_.data(), bytes_.size(), result) {}
-      explicit OwnedEncodedMessage(MethodBResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::ChannelProtocol::MethodBResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -2036,11 +2090,11 @@ class ChannelProtocol final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<MethodBResponse>();
+        Decode<::fidl_test_protocols::ChannelProtocol::MethodBResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<MethodBResponse>();
+        Decode<::fidl_test_protocols::ChannelProtocol::MethodBResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -2049,7 +2103,8 @@ class ChannelProtocol final {
 
       MethodBResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<MethodBResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::ChannelProtocol::MethodBResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -2084,7 +2139,8 @@ class ChannelProtocol final {
     static constexpr bool HasPointer = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = MethodBResponse;
+    using ResponseType =
+        ::fidl_test_protocols::ChannelProtocol::MethodBResponse;
 
     class UnownedEncodedMessage final {
      public:
@@ -2214,13 +2270,17 @@ class ChannelProtocol final {
           : message_(_bytes, _byte_size, sizeof(TakeHandleResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL TakeHandleResponse _response{};
-        message_.Encode<TakeHandleResponse>(&_response);
+        message_
+            .Encode<::fidl_test_protocols::ChannelProtocol::TakeHandleResponse>(
+                &_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             TakeHandleResponse* response)
           : message_(bytes, byte_size, sizeof(TakeHandleResponse), nullptr, 0,
                      0) {
-        message_.Encode<TakeHandleResponse>(response);
+        message_
+            .Encode<::fidl_test_protocols::ChannelProtocol::TakeHandleResponse>(
+                response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -2250,7 +2310,8 @@ class ChannelProtocol final {
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage() : message_(bytes_.data(), bytes_.size()) {}
-      explicit OwnedEncodedMessage(TakeHandleResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -2288,11 +2349,11 @@ class ChannelProtocol final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<TakeHandleResponse>();
+        Decode<::fidl_test_protocols::ChannelProtocol::TakeHandleResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<TakeHandleResponse>();
+        Decode<::fidl_test_protocols::ChannelProtocol::TakeHandleResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -2301,7 +2362,9 @@ class ChannelProtocol final {
 
       TakeHandleResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<TakeHandleResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse*>(
+            bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -2480,13 +2543,17 @@ class ChannelProtocol final {
           : message_(_bytes, _byte_size, sizeof(MutateSocketResponse), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
         FIDL_ALIGNDECL MutateSocketResponse _response{b};
-        message_.Encode<MutateSocketResponse>(&_response);
+        message_.Encode<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse>(
+            &_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             MutateSocketResponse* response)
           : message_(bytes, byte_size, sizeof(MutateSocketResponse), handles_,
                      std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0) {
-        message_.Encode<MutateSocketResponse>(response);
+        message_.Encode<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse>(
+            response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -2519,7 +2586,9 @@ class ChannelProtocol final {
      public:
       explicit OwnedEncodedMessage(::zx::socket& b)
           : message_(bytes_.data(), bytes_.size(), b) {}
-      explicit OwnedEncodedMessage(MutateSocketResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse*
+              response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -2557,11 +2626,11 @@ class ChannelProtocol final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<MutateSocketResponse>();
+        Decode<::fidl_test_protocols::ChannelProtocol::MutateSocketResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<MutateSocketResponse>();
+        Decode<::fidl_test_protocols::ChannelProtocol::MutateSocketResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -2575,7 +2644,9 @@ class ChannelProtocol final {
 
       MutateSocketResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<MutateSocketResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse*>(
+            bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -2609,7 +2680,8 @@ class ChannelProtocol final {
     static constexpr bool HasPointer = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = MutateSocketResponse;
+    using ResponseType =
+        ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse;
     void _CloseHandles();
 
     class UnownedEncodedMessage final {
@@ -2731,7 +2803,8 @@ class ChannelProtocol final {
    public:
     EventHandlerInterface() = default;
     virtual ~EventHandlerInterface() = default;
-    virtual void EventA(EventAResponse* event) {}
+    virtual void EventA(
+        ::fidl_test_protocols::ChannelProtocol::EventAResponse* event) {}
   };
 
   class SyncEventHandler : public EventHandlerInterface {
@@ -2787,19 +2860,31 @@ class ChannelProtocol final {
       MethodB* operator=(const MethodB&) = delete;
       ~MethodB() = default;
 
-      MethodBResponse* Unwrap() {
+      ::fidl_test_protocols::ChannelProtocol::MethodBResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<MethodBResponse*>(bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_protocols::ChannelProtocol::MethodBResponse*>(
+            bytes_.data());
       }
-      const MethodBResponse* Unwrap() const {
+      const ::fidl_test_protocols::ChannelProtocol::MethodBResponse* Unwrap()
+          const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const MethodBResponse*>(bytes_.data());
+        return reinterpret_cast<
+            const ::fidl_test_protocols::ChannelProtocol::MethodBResponse*>(
+            bytes_.data());
       }
 
-      MethodBResponse& value() { return *Unwrap(); }
-      const MethodBResponse& value() const { return *Unwrap(); }
+      ::fidl_test_protocols::ChannelProtocol::MethodBResponse& value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_protocols::ChannelProtocol::MethodBResponse& value()
+          const {
+        return *Unwrap();
+      }
 
-      MethodBResponse* operator->() { return &value(); }
+      ::fidl_test_protocols::ChannelProtocol::MethodBResponse* operator->() {
+        return &value();
+      }
       const MethodBResponse* operator->() const { return &value(); }
 
       MethodBResponse& operator*() { return value(); }
@@ -2826,19 +2911,31 @@ class ChannelProtocol final {
       TakeHandle* operator=(const TakeHandle&) = delete;
       ~TakeHandle() = default;
 
-      TakeHandleResponse* Unwrap() {
+      ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<TakeHandleResponse*>(bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse*>(
+            bytes_.data());
       }
-      const TakeHandleResponse* Unwrap() const {
+      const ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse* Unwrap()
+          const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const TakeHandleResponse*>(bytes_.data());
+        return reinterpret_cast<
+            const ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse*>(
+            bytes_.data());
       }
 
-      TakeHandleResponse& value() { return *Unwrap(); }
-      const TakeHandleResponse& value() const { return *Unwrap(); }
+      ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse& value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse& value()
+          const {
+        return *Unwrap();
+      }
 
-      TakeHandleResponse* operator->() { return &value(); }
+      ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse* operator->() {
+        return &value();
+      }
       const TakeHandleResponse* operator->() const { return &value(); }
 
       TakeHandleResponse& operator*() { return value(); }
@@ -2869,19 +2966,31 @@ class ChannelProtocol final {
         }
       }
 
-      MutateSocketResponse* Unwrap() {
+      ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<MutateSocketResponse*>(bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse*>(
+            bytes_.data());
       }
-      const MutateSocketResponse* Unwrap() const {
+      const ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse*
+      Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const MutateSocketResponse*>(bytes_.data());
+        return reinterpret_cast<const ::fidl_test_protocols::ChannelProtocol::
+                                    MutateSocketResponse*>(bytes_.data());
       }
 
-      MutateSocketResponse& value() { return *Unwrap(); }
-      const MutateSocketResponse& value() const { return *Unwrap(); }
+      ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse& value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse&
+      value() const {
+        return *Unwrap();
+      }
 
-      MutateSocketResponse* operator->() { return &value(); }
+      ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse*
+      operator->() {
+        return &value();
+      }
       const MutateSocketResponse* operator->() const { return &value(); }
 
       MutateSocketResponse& operator*() { return value(); }
@@ -2929,11 +3038,14 @@ class ChannelProtocol final {
 
       MethodBResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<MethodBResponse*>(bytes_);
+        return reinterpret_cast<
+            ::fidl_test_protocols::ChannelProtocol::MethodBResponse*>(bytes_);
       }
       const MethodBResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const MethodBResponse*>(bytes_);
+        return reinterpret_cast<
+            const ::fidl_test_protocols::ChannelProtocol::MethodBResponse*>(
+            bytes_);
       }
 
       MethodBResponse& value() { return *Unwrap(); }
@@ -2966,11 +3078,15 @@ class ChannelProtocol final {
 
       TakeHandleResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<TakeHandleResponse*>(bytes_);
+        return reinterpret_cast<
+            ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse*>(
+            bytes_);
       }
       const TakeHandleResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const TakeHandleResponse*>(bytes_);
+        return reinterpret_cast<
+            const ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse*>(
+            bytes_);
       }
 
       TakeHandleResponse& value() { return *Unwrap(); }
@@ -3007,11 +3123,14 @@ class ChannelProtocol final {
 
       MutateSocketResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<MutateSocketResponse*>(bytes_);
+        return reinterpret_cast<
+            ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse*>(
+            bytes_);
       }
       const MutateSocketResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const MutateSocketResponse*>(bytes_);
+        return reinterpret_cast<const ::fidl_test_protocols::ChannelProtocol::
+                                    MutateSocketResponse*>(bytes_);
       }
 
       MutateSocketResponse& value() { return *Unwrap(); }
@@ -3119,199 +3238,21 @@ class ChannelProtocol final {
     }
   };
 
-  class SyncClient final {
-   public:
-    SyncClient() = default;
-
-    explicit SyncClient(::fidl::ClientEnd<ChannelProtocol> client_end)
-        : client_end_(std::move(client_end)) {}
-
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::fidl::ClientEnd<ChannelProtocol>& client_end() const {
-      return client_end_;
-    }
-    ::fidl::ClientEnd<ChannelProtocol>& client_end() { return client_end_; }
-
-    const ::zx::channel& channel() const { return client_end_.channel(); }
-    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-    // Allocates 32 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::MethodA MethodA(int64_t a, int64_t b) {
-      return ResultOf::MethodA(this->client_end(), a, b);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::MethodA MethodA(::fidl::BufferSpan _request_buffer,
-                                     int64_t a, int64_t b) {
-      return UnownedResultOf::MethodA(this->client_end(), _request_buffer.data,
-                                      _request_buffer.capacity, a, b);
-    }
-
-    // Allocates 56 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::MethodB MethodB(int64_t a, int64_t b) {
-      return ResultOf::MethodB(this->client_end(), a, b);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::MethodB MethodB(::fidl::BufferSpan _request_buffer,
-                                     int64_t a, int64_t b,
-                                     ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::MethodB(
-          this->client_end(), _request_buffer.data, _request_buffer.capacity, a,
-          b, _response_buffer.data, _response_buffer.capacity);
-    }
-
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::TakeHandle TakeHandle(::zx::handle h) {
-      return ResultOf::TakeHandle(this->client_end(), h);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::TakeHandle TakeHandle(
-        ::fidl::BufferSpan _request_buffer, ::zx::handle h,
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::TakeHandle(
-          this->client_end(), _request_buffer.data, _request_buffer.capacity, h,
-          _response_buffer.data, _response_buffer.capacity);
-    }
-
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::MutateSocket MutateSocket(::zx::socket a) {
-      return ResultOf::MutateSocket(this->client_end(), a);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::MutateSocket MutateSocket(
-        ::fidl::BufferSpan _request_buffer, ::zx::socket a,
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::MutateSocket(
-          this->client_end(), _request_buffer.data, _request_buffer.capacity, a,
-          _response_buffer.data, _response_buffer.capacity);
-    }
-
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the
-    // corresponding virtual method defined in |SyncEventHandler|. The return
-    // status of the handler function is folded with any transport-level errors
-    // and returned.
-    ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(client_end_);
-    }
-
-   private:
-    ::fidl::ClientEnd<ChannelProtocol> client_end_;
-  };
+  using SyncClient =
+      fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol>;
 
 #ifdef __Fuchsia__
-  class AsyncEventHandler;
+  using AsyncEventHandler =
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>;
   class MethodBResponseContext;
   class TakeHandleResponseContext;
   class MutateSocketResponseContext;
-  class ClientImpl;
+  using ClientImpl =
+      ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>;
 #endif
 
-  // Pure-virtual interface to be implemented by a server.
-  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-  // and |fidl::ServerEnd<SomeProtocol>|).
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using _EnclosingProtocol = ChannelProtocol;
-
-    using MethodACompleter = ::fidl::Completer<>;
-
-    virtual void MethodA(int64_t a, int64_t b,
-                         MethodACompleter::Sync& _completer) = 0;
-
-    class MethodBCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply(int64_t result);
-      ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t result);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using MethodBCompleter = ::fidl::Completer<MethodBCompleterBase>;
-
-    virtual void MethodB(int64_t a, int64_t b,
-                         MethodBCompleter::Sync& _completer) = 0;
-
-    class TakeHandleCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply();
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using TakeHandleCompleter = ::fidl::Completer<TakeHandleCompleterBase>;
-
-    virtual void TakeHandle(::zx::handle h,
-                            TakeHandleCompleter::Sync& _completer) = 0;
-
-    class MutateSocketCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply(::zx::socket b);
-      ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::zx::socket b);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using MutateSocketCompleter = ::fidl::Completer<MutateSocketCompleterBase>;
-
-    virtual void MutateSocket(::zx::socket a,
-                              MutateSocketCompleter::Sync& _completer) = 0;
-
-   private:
-    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn) final;
-  };
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>;
 
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
@@ -3341,10 +3282,218 @@ class ChannelProtocol final {
 
 #endif
 
-  class EventSender;
-  class WeakEventSender;
+  using EventSender =
+      ::fidl::WireEventSender<::fidl_test_protocols::ChannelProtocol>;
+  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
+      ::fidl_test_protocols::ChannelProtocol>;
+};
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::WireSyncClient<::fidl_test_protocols::ChannelProtocol> final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_protocols::ChannelProtocol> client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_protocols::ChannelProtocol>& client_end()
+      const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_protocols::ChannelProtocol>& client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_protocols::ChannelProtocol::ResultOf::MethodA MethodA(int64_t a,
+                                                                    int64_t b) {
+    return ::fidl_test_protocols::ChannelProtocol::ResultOf::MethodA(
+        this->client_end(), a, b);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MethodA MethodA(
+      ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b) {
+    return ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MethodA(
+        this->client_end(), _request_buffer.data, _request_buffer.capacity, a,
+        b);
+  }
+
+  // Allocates 56 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_protocols::ChannelProtocol::ResultOf::MethodB MethodB(int64_t a,
+                                                                    int64_t b) {
+    return ::fidl_test_protocols::ChannelProtocol::ResultOf::MethodB(
+        this->client_end(), a, b);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MethodB MethodB(
+      ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
+      ::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MethodB(
+        this->client_end(), _request_buffer.data, _request_buffer.capacity, a,
+        b, _response_buffer.data, _response_buffer.capacity);
+  }
+
+  // Allocates 40 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_protocols::ChannelProtocol::ResultOf::TakeHandle TakeHandle(
+      ::zx::handle h) {
+    return ::fidl_test_protocols::ChannelProtocol::ResultOf::TakeHandle(
+        this->client_end(), h);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::TakeHandle
+  TakeHandle(::fidl::BufferSpan _request_buffer, ::zx::handle h,
+             ::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::TakeHandle(
+        this->client_end(), _request_buffer.data, _request_buffer.capacity, h,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+
+  // Allocates 48 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_protocols::ChannelProtocol::ResultOf::MutateSocket MutateSocket(
+      ::zx::socket a) {
+    return ::fidl_test_protocols::ChannelProtocol::ResultOf::MutateSocket(
+        this->client_end(), a);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MutateSocket
+  MutateSocket(::fidl::BufferSpan _request_buffer, ::zx::socket a,
+               ::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::
+        MutateSocket(this->client_end(), _request_buffer.data,
+                     _request_buffer.capacity, a, _response_buffer.data,
+                     _response_buffer.capacity);
+  }
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method defined in |SyncEventHandler|. The return
+  // status of the handler function is folded with any transport-level errors
+  // and returned.
+  ::fidl::Result HandleOneEvent(
+      ::fidl_test_protocols::ChannelProtocol::SyncEventHandler& event_handler) {
+    return event_handler.HandleOneEvent(client_end_);
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_protocols::ChannelProtocol> client_end_;
 };
 
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_protocols::ChannelProtocol;
+
+  using MethodACompleter = ::fidl::Completer<>;
+
+  virtual void MethodA(int64_t a, int64_t b,
+                       MethodACompleter::Sync& _completer) = 0;
+
+  class MethodBCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply(int64_t result);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, int64_t result);
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using MethodBCompleter = ::fidl::Completer<MethodBCompleterBase>;
+
+  virtual void MethodB(int64_t a, int64_t b,
+                       MethodBCompleter::Sync& _completer) = 0;
+
+  class TakeHandleCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply();
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using TakeHandleCompleter = ::fidl::Completer<TakeHandleCompleterBase>;
+
+  virtual void TakeHandle(::zx::handle h,
+                          TakeHandleCompleter::Sync& _completer) = 0;
+
+  class MutateSocketCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply(::zx::socket b);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::zx::socket b);
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using MutateSocketCompleter = ::fidl::Completer<MutateSocketCompleterBase>;
+
+  virtual void MutateSocket(::zx::socket a,
+                            MutateSocketCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+namespace fidl_test_protocols {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseRequestTable;
 
@@ -3543,13 +3692,15 @@ class WithAndWithoutRequestResponse final {
           : message_(_bytes, _byte_size, sizeof(NoRequestEmptyResponseResponse),
                      nullptr, 0, 0) {
         FIDL_ALIGNDECL NoRequestEmptyResponseResponse _response{};
-        message_.Encode<NoRequestEmptyResponseResponse>(&_response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            NoRequestEmptyResponseResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             NoRequestEmptyResponseResponse* response)
           : message_(bytes, byte_size, sizeof(NoRequestEmptyResponseResponse),
                      nullptr, 0, 0) {
-        message_.Encode<NoRequestEmptyResponseResponse>(response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            NoRequestEmptyResponseResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -3579,7 +3730,9 @@ class WithAndWithoutRequestResponse final {
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage() : message_(bytes_.data(), bytes_.size()) {}
-      explicit OwnedEncodedMessage(NoRequestEmptyResponseResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestEmptyResponseResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -3617,11 +3770,13 @@ class WithAndWithoutRequestResponse final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<NoRequestEmptyResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   NoRequestEmptyResponseResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<NoRequestEmptyResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   NoRequestEmptyResponseResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -3630,7 +3785,9 @@ class WithAndWithoutRequestResponse final {
 
       NoRequestEmptyResponseResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<NoRequestEmptyResponseResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestEmptyResponseResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -3797,13 +3954,15 @@ class WithAndWithoutRequestResponse final {
           : message_(_bytes, _byte_size, sizeof(NoRequestWithResponseResponse),
                      nullptr, 0, 0) {
         FIDL_ALIGNDECL NoRequestWithResponseResponse _response{ret};
-        message_.Encode<NoRequestWithResponseResponse>(&_response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            NoRequestWithResponseResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             NoRequestWithResponseResponse* response)
           : message_(bytes, byte_size, sizeof(NoRequestWithResponseResponse),
                      nullptr, 0, 0) {
-        message_.Encode<NoRequestWithResponseResponse>(response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            NoRequestWithResponseResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -3834,7 +3993,9 @@ class WithAndWithoutRequestResponse final {
      public:
       explicit OwnedEncodedMessage(const ::fidl::StringView& ret)
           : message_(bytes_.data(), bytes_.size(), ret) {}
-      explicit OwnedEncodedMessage(NoRequestWithResponseResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              NoRequestWithResponseResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -3872,11 +4033,13 @@ class WithAndWithoutRequestResponse final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<NoRequestWithResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   NoRequestWithResponseResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<NoRequestWithResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   NoRequestWithResponseResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -3885,7 +4048,9 @@ class WithAndWithoutRequestResponse final {
 
       NoRequestWithResponseResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<NoRequestWithResponseResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestWithResponseResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -3915,7 +4080,8 @@ class WithAndWithoutRequestResponse final {
     static constexpr bool HasPointer = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = NoRequestWithResponseResponse;
+    using ResponseType = ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        NoRequestWithResponseResponse;
 
     class UnownedEncodedMessage final {
      public:
@@ -4181,13 +4347,15 @@ class WithAndWithoutRequestResponse final {
           : message_(_bytes, _byte_size,
                      sizeof(WithRequestEmptyResponseResponse), nullptr, 0, 0) {
         FIDL_ALIGNDECL WithRequestEmptyResponseResponse _response{};
-        message_.Encode<WithRequestEmptyResponseResponse>(&_response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            WithRequestEmptyResponseResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             WithRequestEmptyResponseResponse* response)
           : message_(bytes, byte_size, sizeof(WithRequestEmptyResponseResponse),
                      nullptr, 0, 0) {
-        message_.Encode<WithRequestEmptyResponseResponse>(response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            WithRequestEmptyResponseResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -4217,7 +4385,9 @@ class WithAndWithoutRequestResponse final {
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage() : message_(bytes_.data(), bytes_.size()) {}
-      explicit OwnedEncodedMessage(WithRequestEmptyResponseResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestEmptyResponseResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -4255,11 +4425,13 @@ class WithAndWithoutRequestResponse final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<WithRequestEmptyResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   WithRequestEmptyResponseResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<WithRequestEmptyResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   WithRequestEmptyResponseResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -4268,7 +4440,9 @@ class WithAndWithoutRequestResponse final {
 
       WithRequestEmptyResponseResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<WithRequestEmptyResponseResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestEmptyResponseResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -4443,13 +4617,15 @@ class WithAndWithoutRequestResponse final {
           : message_(_bytes, _byte_size,
                      sizeof(WithRequestWithResponseResponse), nullptr, 0, 0) {
         FIDL_ALIGNDECL WithRequestWithResponseResponse _response{ret};
-        message_.Encode<WithRequestWithResponseResponse>(&_response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            WithRequestWithResponseResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             WithRequestWithResponseResponse* response)
           : message_(bytes, byte_size, sizeof(WithRequestWithResponseResponse),
                      nullptr, 0, 0) {
-        message_.Encode<WithRequestWithResponseResponse>(response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            WithRequestWithResponseResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -4480,7 +4656,9 @@ class WithAndWithoutRequestResponse final {
      public:
       explicit OwnedEncodedMessage(const ::fidl::StringView& ret)
           : message_(bytes_.data(), bytes_.size(), ret) {}
-      explicit OwnedEncodedMessage(WithRequestWithResponseResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              WithRequestWithResponseResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -4518,11 +4696,13 @@ class WithAndWithoutRequestResponse final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<WithRequestWithResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   WithRequestWithResponseResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<WithRequestWithResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   WithRequestWithResponseResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -4531,7 +4711,9 @@ class WithAndWithoutRequestResponse final {
 
       WithRequestWithResponseResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<WithRequestWithResponseResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestWithResponseResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -4568,7 +4750,8 @@ class WithAndWithoutRequestResponse final {
     static constexpr bool HasPointer = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = WithRequestWithResponseResponse;
+    using ResponseType = ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        WithRequestWithResponseResponse;
 
     class UnownedEncodedMessage final {
      public:
@@ -4700,13 +4883,15 @@ class WithAndWithoutRequestResponse final {
           : message_(_bytes, _byte_size, sizeof(OnEmptyResponseResponse),
                      nullptr, 0, 0) {
         FIDL_ALIGNDECL OnEmptyResponseResponse _response{};
-        message_.Encode<OnEmptyResponseResponse>(&_response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            OnEmptyResponseResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             OnEmptyResponseResponse* response)
           : message_(bytes, byte_size, sizeof(OnEmptyResponseResponse), nullptr,
                      0, 0) {
-        message_.Encode<OnEmptyResponseResponse>(response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            OnEmptyResponseResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -4736,7 +4921,9 @@ class WithAndWithoutRequestResponse final {
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage() : message_(bytes_.data(), bytes_.size()) {}
-      explicit OwnedEncodedMessage(OnEmptyResponseResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              OnEmptyResponseResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -4774,11 +4961,13 @@ class WithAndWithoutRequestResponse final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<OnEmptyResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   OnEmptyResponseResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<OnEmptyResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   OnEmptyResponseResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -4787,7 +4976,9 @@ class WithAndWithoutRequestResponse final {
 
       OnEmptyResponseResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<OnEmptyResponseResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                OnEmptyResponseResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -4827,13 +5018,15 @@ class WithAndWithoutRequestResponse final {
           : message_(_bytes, _byte_size, sizeof(OnWithResponseResponse),
                      nullptr, 0, 0) {
         FIDL_ALIGNDECL OnWithResponseResponse _response{ret};
-        message_.Encode<OnWithResponseResponse>(&_response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            OnWithResponseResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             OnWithResponseResponse* response)
           : message_(bytes, byte_size, sizeof(OnWithResponseResponse), nullptr,
                      0, 0) {
-        message_.Encode<OnWithResponseResponse>(response);
+        message_.Encode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                            OnWithResponseResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -4864,7 +5057,9 @@ class WithAndWithoutRequestResponse final {
      public:
       explicit OwnedEncodedMessage(const ::fidl::StringView& ret)
           : message_(bytes_.data(), bytes_.size(), ret) {}
-      explicit OwnedEncodedMessage(OnWithResponseResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::WithAndWithoutRequestResponse::
+              OnWithResponseResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -4902,11 +5097,13 @@ class WithAndWithoutRequestResponse final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<OnWithResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   OnWithResponseResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<OnWithResponseResponse>();
+        Decode<::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   OnWithResponseResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -4915,7 +5112,9 @@ class WithAndWithoutRequestResponse final {
 
       OnWithResponseResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<OnWithResponseResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                OnWithResponseResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -4932,8 +5131,12 @@ class WithAndWithoutRequestResponse final {
    public:
     EventHandlerInterface() = default;
     virtual ~EventHandlerInterface() = default;
-    virtual void OnEmptyResponse(OnEmptyResponseResponse* event) {}
-    virtual void OnWithResponse(OnWithResponseResponse* event) {}
+    virtual void OnEmptyResponse(
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            OnEmptyResponseResponse* event) {}
+    virtual void OnWithResponse(
+        ::fidl_test_protocols::WithAndWithoutRequestResponse::
+            OnWithResponseResponse* event) {}
   };
 
   class SyncEventHandler : public EventHandlerInterface {
@@ -4994,20 +5197,39 @@ class WithAndWithoutRequestResponse final {
       NoRequestEmptyResponse* operator=(const NoRequestEmptyResponse&) = delete;
       ~NoRequestEmptyResponse() = default;
 
-      NoRequestEmptyResponseResponse* Unwrap() {
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestEmptyResponseResponse*
+          Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<NoRequestEmptyResponseResponse*>(bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestEmptyResponseResponse*>(bytes_.data());
       }
-      const NoRequestEmptyResponseResponse* Unwrap() const {
+      const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestEmptyResponseResponse*
+          Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const NoRequestEmptyResponseResponse*>(
-            bytes_.data());
+        return reinterpret_cast<
+            const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestEmptyResponseResponse*>(bytes_.data());
       }
 
-      NoRequestEmptyResponseResponse& value() { return *Unwrap(); }
-      const NoRequestEmptyResponseResponse& value() const { return *Unwrap(); }
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestEmptyResponseResponse&
+          value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestEmptyResponseResponse&
+          value() const {
+        return *Unwrap();
+      }
 
-      NoRequestEmptyResponseResponse* operator->() { return &value(); }
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestEmptyResponseResponse*
+          operator->() {
+        return &value();
+      }
       const NoRequestEmptyResponseResponse* operator->() const {
         return &value();
       }
@@ -5039,20 +5261,39 @@ class WithAndWithoutRequestResponse final {
       NoRequestWithResponse* operator=(const NoRequestWithResponse&) = delete;
       ~NoRequestWithResponse() = default;
 
-      NoRequestWithResponseResponse* Unwrap() {
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestWithResponseResponse*
+          Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<NoRequestWithResponseResponse*>(bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestWithResponseResponse*>(bytes_.data());
       }
-      const NoRequestWithResponseResponse* Unwrap() const {
+      const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestWithResponseResponse*
+          Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const NoRequestWithResponseResponse*>(
-            bytes_.data());
+        return reinterpret_cast<
+            const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestWithResponseResponse*>(bytes_.data());
       }
 
-      NoRequestWithResponseResponse& value() { return *Unwrap(); }
-      const NoRequestWithResponseResponse& value() const { return *Unwrap(); }
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestWithResponseResponse&
+          value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestWithResponseResponse&
+          value() const {
+        return *Unwrap();
+      }
 
-      NoRequestWithResponseResponse* operator->() { return &value(); }
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestWithResponseResponse*
+          operator->() {
+        return &value();
+      }
       const NoRequestWithResponseResponse* operator->() const {
         return &value();
       }
@@ -5101,23 +5342,39 @@ class WithAndWithoutRequestResponse final {
           delete;
       ~WithRequestEmptyResponse() = default;
 
-      WithRequestEmptyResponseResponse* Unwrap() {
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestEmptyResponseResponse*
+          Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<WithRequestEmptyResponseResponse*>(
-            bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestEmptyResponseResponse*>(bytes_.data());
       }
-      const WithRequestEmptyResponseResponse* Unwrap() const {
+      const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestEmptyResponseResponse*
+          Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const WithRequestEmptyResponseResponse*>(
-            bytes_.data());
+        return reinterpret_cast<
+            const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestEmptyResponseResponse*>(bytes_.data());
       }
 
-      WithRequestEmptyResponseResponse& value() { return *Unwrap(); }
-      const WithRequestEmptyResponseResponse& value() const {
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestEmptyResponseResponse&
+          value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestEmptyResponseResponse&
+          value() const {
         return *Unwrap();
       }
 
-      WithRequestEmptyResponseResponse* operator->() { return &value(); }
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestEmptyResponseResponse*
+          operator->() {
+        return &value();
+      }
       const WithRequestEmptyResponseResponse* operator->() const {
         return &value();
       }
@@ -5151,21 +5408,39 @@ class WithAndWithoutRequestResponse final {
           delete;
       ~WithRequestWithResponse() = default;
 
-      WithRequestWithResponseResponse* Unwrap() {
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestWithResponseResponse*
+          Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<WithRequestWithResponseResponse*>(
-            bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestWithResponseResponse*>(bytes_.data());
       }
-      const WithRequestWithResponseResponse* Unwrap() const {
+      const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestWithResponseResponse*
+          Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const WithRequestWithResponseResponse*>(
-            bytes_.data());
+        return reinterpret_cast<
+            const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestWithResponseResponse*>(bytes_.data());
       }
 
-      WithRequestWithResponseResponse& value() { return *Unwrap(); }
-      const WithRequestWithResponseResponse& value() const { return *Unwrap(); }
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestWithResponseResponse&
+          value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestWithResponseResponse&
+          value() const {
+        return *Unwrap();
+      }
 
-      WithRequestWithResponseResponse* operator->() { return &value(); }
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestWithResponseResponse*
+          operator->() {
+        return &value();
+      }
       const WithRequestWithResponseResponse* operator->() const {
         return &value();
       }
@@ -5217,11 +5492,15 @@ class WithAndWithoutRequestResponse final {
 
       NoRequestEmptyResponseResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<NoRequestEmptyResponseResponse*>(bytes_);
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestEmptyResponseResponse*>(bytes_);
       }
       const NoRequestEmptyResponseResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const NoRequestEmptyResponseResponse*>(bytes_);
+        return reinterpret_cast<
+            const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestEmptyResponseResponse*>(bytes_);
       }
 
       NoRequestEmptyResponseResponse& value() { return *Unwrap(); }
@@ -5257,11 +5536,15 @@ class WithAndWithoutRequestResponse final {
 
       NoRequestWithResponseResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<NoRequestWithResponseResponse*>(bytes_);
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestWithResponseResponse*>(bytes_);
       }
       const NoRequestWithResponseResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const NoRequestWithResponseResponse*>(bytes_);
+        return reinterpret_cast<
+            const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                NoRequestWithResponseResponse*>(bytes_);
       }
 
       NoRequestWithResponseResponse& value() { return *Unwrap(); }
@@ -5314,12 +5597,15 @@ class WithAndWithoutRequestResponse final {
 
       WithRequestEmptyResponseResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<WithRequestEmptyResponseResponse*>(bytes_);
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestEmptyResponseResponse*>(bytes_);
       }
       const WithRequestEmptyResponseResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const WithRequestEmptyResponseResponse*>(
-            bytes_);
+        return reinterpret_cast<
+            const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestEmptyResponseResponse*>(bytes_);
       }
 
       WithRequestEmptyResponseResponse& value() { return *Unwrap(); }
@@ -5360,11 +5646,15 @@ class WithAndWithoutRequestResponse final {
 
       WithRequestWithResponseResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<WithRequestWithResponseResponse*>(bytes_);
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestWithResponseResponse*>(bytes_);
       }
       const WithRequestWithResponseResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const WithRequestWithResponseResponse*>(bytes_);
+        return reinterpret_cast<
+            const ::fidl_test_protocols::WithAndWithoutRequestResponse::
+                WithRequestWithResponseResponse*>(bytes_);
       }
 
       WithRequestWithResponseResponse& value() { return *Unwrap(); }
@@ -5497,250 +5787,22 @@ class WithAndWithoutRequestResponse final {
     }
   };
 
-  class SyncClient final {
-   public:
-    SyncClient() = default;
-
-    explicit SyncClient(
-        ::fidl::ClientEnd<WithAndWithoutRequestResponse> client_end)
-        : client_end_(std::move(client_end)) {}
-
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::fidl::ClientEnd<WithAndWithoutRequestResponse>& client_end() const {
-      return client_end_;
-    }
-    ::fidl::ClientEnd<WithAndWithoutRequestResponse>& client_end() {
-      return client_end_;
-    }
-
-    const ::zx::channel& channel() const { return client_end_.channel(); }
-    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::NoRequestNoResponse NoRequestNoResponse() {
-      return ResultOf::NoRequestNoResponse(this->client_end());
-    }
-
-    // Allocates 32 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse() {
-      return ResultOf::NoRequestEmptyResponse(this->client_end());
-    }
-
-    // Allocates 16 bytes of request buffer on the stack. Response is
-    // heap-allocated.
-    ResultOf::NoRequestWithResponse NoRequestWithResponse() {
-      return ResultOf::NoRequestWithResponse(this->client_end());
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::NoRequestWithResponse NoRequestWithResponse(
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::NoRequestWithResponse(
-          this->client_end(), _response_buffer.data, _response_buffer.capacity);
-    }
-
-    // Request is heap-allocated.
-    ResultOf::WithRequestNoResponse WithRequestNoResponse(
-        ::fidl::StringView arg) {
-      return ResultOf::WithRequestNoResponse(this->client_end(), arg);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::WithRequestNoResponse WithRequestNoResponse(
-        ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg) {
-      return UnownedResultOf::WithRequestNoResponse(
-          this->client_end(), _request_buffer.data, _request_buffer.capacity,
-          arg);
-    }
-
-    // Allocates 16 bytes of response buffer on the stack. Request is
-    // heap-allocated.
-    ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
-        ::fidl::StringView arg) {
-      return ResultOf::WithRequestEmptyResponse(this->client_end(), arg);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse(
-        ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::WithRequestEmptyResponse(
-          this->client_end(), _request_buffer.data, _request_buffer.capacity,
-          arg, _response_buffer.data, _response_buffer.capacity);
-    }
-
-    // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::WithRequestWithResponse WithRequestWithResponse(
-        ::fidl::StringView arg) {
-      return ResultOf::WithRequestWithResponse(this->client_end(), arg);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::WithRequestWithResponse WithRequestWithResponse(
-        ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::WithRequestWithResponse(
-          this->client_end(), _request_buffer.data, _request_buffer.capacity,
-          arg, _response_buffer.data, _response_buffer.capacity);
-    }
-
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the
-    // corresponding virtual method defined in |SyncEventHandler|. The return
-    // status of the handler function is folded with any transport-level errors
-    // and returned.
-    ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(client_end_);
-    }
-
-   private:
-    ::fidl::ClientEnd<WithAndWithoutRequestResponse> client_end_;
-  };
+  using SyncClient = fidl::WireSyncClient<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
 #ifdef __Fuchsia__
-  class AsyncEventHandler;
+  using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
   class NoRequestEmptyResponseResponseContext;
   class NoRequestWithResponseResponseContext;
   class WithRequestEmptyResponseResponseContext;
   class WithRequestWithResponseResponseContext;
-  class ClientImpl;
+  using ClientImpl = ::fidl::internal::WireClientImpl<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 #endif
 
-  // Pure-virtual interface to be implemented by a server.
-  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-  // and |fidl::ServerEnd<SomeProtocol>|).
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using _EnclosingProtocol = WithAndWithoutRequestResponse;
-
-    using NoRequestNoResponseCompleter = ::fidl::Completer<>;
-
-    virtual void NoRequestNoResponse(
-        NoRequestNoResponseCompleter::Sync& _completer) = 0;
-
-    class NoRequestEmptyResponseCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply();
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using NoRequestEmptyResponseCompleter =
-        ::fidl::Completer<NoRequestEmptyResponseCompleterBase>;
-
-    virtual void NoRequestEmptyResponse(
-        NoRequestEmptyResponseCompleter::Sync& _completer) = 0;
-
-    class NoRequestWithResponseCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply(::fidl::StringView ret);
-      ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::fidl::StringView ret);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using NoRequestWithResponseCompleter =
-        ::fidl::Completer<NoRequestWithResponseCompleterBase>;
-
-    virtual void NoRequestWithResponse(
-        NoRequestWithResponseCompleter::Sync& _completer) = 0;
-
-    using WithRequestNoResponseCompleter = ::fidl::Completer<>;
-
-    virtual void WithRequestNoResponse(
-        ::fidl::StringView arg,
-        WithRequestNoResponseCompleter::Sync& _completer) = 0;
-
-    class WithRequestEmptyResponseCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply();
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using WithRequestEmptyResponseCompleter =
-        ::fidl::Completer<WithRequestEmptyResponseCompleterBase>;
-
-    virtual void WithRequestEmptyResponse(
-        ::fidl::StringView arg,
-        WithRequestEmptyResponseCompleter::Sync& _completer) = 0;
-
-    class WithRequestWithResponseCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply(::fidl::StringView ret);
-      ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::fidl::StringView ret);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using WithRequestWithResponseCompleter =
-        ::fidl::Completer<WithRequestWithResponseCompleterBase>;
-
-    virtual void WithRequestWithResponse(
-        ::fidl::StringView arg,
-        WithRequestWithResponseCompleter::Sync& _completer) = 0;
-
-   private:
-    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn) final;
-  };
+  using Interface = ::fidl::WireInterface<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
@@ -5770,10 +5832,290 @@ class WithAndWithoutRequestResponse final {
 
 #endif
 
-  class EventSender;
-  class WeakEventSender;
+  using EventSender = ::fidl::WireEventSender<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
+  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
+};
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::WireSyncClient<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>
+    final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>
+          client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>&
+  client_end() const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>&
+  client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+      NoRequestNoResponse
+      NoRequestNoResponse() {
+    return ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+        NoRequestNoResponse(this->client_end());
+  }
+
+  // Allocates 32 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+      NoRequestEmptyResponse
+      NoRequestEmptyResponse() {
+    return ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+        NoRequestEmptyResponse(this->client_end());
+  }
+
+  // Allocates 16 bytes of request buffer on the stack. Response is
+  // heap-allocated.
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+      NoRequestWithResponse
+      NoRequestWithResponse() {
+    return ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+        NoRequestWithResponse(this->client_end());
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+      NoRequestWithResponse
+      NoRequestWithResponse(::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        UnownedResultOf::NoRequestWithResponse(this->client_end(),
+                                               _response_buffer.data,
+                                               _response_buffer.capacity);
+  }
+
+  // Request is heap-allocated.
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+      WithRequestNoResponse
+      WithRequestNoResponse(::fidl::StringView arg) {
+    return ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+        WithRequestNoResponse(this->client_end(), arg);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+      WithRequestNoResponse
+      WithRequestNoResponse(::fidl::BufferSpan _request_buffer,
+                            ::fidl::StringView arg) {
+    return ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        UnownedResultOf::WithRequestNoResponse(this->client_end(),
+                                               _request_buffer.data,
+                                               _request_buffer.capacity, arg);
+  }
+
+  // Allocates 16 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+      WithRequestEmptyResponse
+      WithRequestEmptyResponse(::fidl::StringView arg) {
+    return ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+        WithRequestEmptyResponse(this->client_end(), arg);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+      WithRequestEmptyResponse
+      WithRequestEmptyResponse(::fidl::BufferSpan _request_buffer,
+                               ::fidl::StringView arg,
+                               ::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        UnownedResultOf::WithRequestEmptyResponse(
+            this->client_end(), _request_buffer.data, _request_buffer.capacity,
+            arg, _response_buffer.data, _response_buffer.capacity);
+  }
+
+  // Request is heap-allocated. Response is heap-allocated.
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+      WithRequestWithResponse
+      WithRequestWithResponse(::fidl::StringView arg) {
+    return ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+        WithRequestWithResponse(this->client_end(), arg);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+      WithRequestWithResponse
+      WithRequestWithResponse(::fidl::BufferSpan _request_buffer,
+                              ::fidl::StringView arg,
+                              ::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_protocols::WithAndWithoutRequestResponse::
+        UnownedResultOf::WithRequestWithResponse(
+            this->client_end(), _request_buffer.data, _request_buffer.capacity,
+            arg, _response_buffer.data, _response_buffer.capacity);
+  }
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method defined in |SyncEventHandler|. The return
+  // status of the handler function is folded with any transport-level errors
+  // and returned.
+  ::fidl::Result HandleOneEvent(
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::SyncEventHandler&
+          event_handler) {
+    return event_handler.HandleOneEvent(client_end_);
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>
+      client_end_;
 };
 
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol =
+      ::fidl_test_protocols::WithAndWithoutRequestResponse;
+
+  using NoRequestNoResponseCompleter = ::fidl::Completer<>;
+
+  virtual void NoRequestNoResponse(
+      NoRequestNoResponseCompleter::Sync& _completer) = 0;
+
+  class NoRequestEmptyResponseCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply();
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using NoRequestEmptyResponseCompleter =
+      ::fidl::Completer<NoRequestEmptyResponseCompleterBase>;
+
+  virtual void NoRequestEmptyResponse(
+      NoRequestEmptyResponseCompleter::Sync& _completer) = 0;
+
+  class NoRequestWithResponseCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply(::fidl::StringView ret);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::fidl::StringView ret);
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using NoRequestWithResponseCompleter =
+      ::fidl::Completer<NoRequestWithResponseCompleterBase>;
+
+  virtual void NoRequestWithResponse(
+      NoRequestWithResponseCompleter::Sync& _completer) = 0;
+
+  using WithRequestNoResponseCompleter = ::fidl::Completer<>;
+
+  virtual void WithRequestNoResponse(
+      ::fidl::StringView arg,
+      WithRequestNoResponseCompleter::Sync& _completer) = 0;
+
+  class WithRequestEmptyResponseCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply();
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using WithRequestEmptyResponseCompleter =
+      ::fidl::Completer<WithRequestEmptyResponseCompleterBase>;
+
+  virtual void WithRequestEmptyResponse(
+      ::fidl::StringView arg,
+      WithRequestEmptyResponseCompleter::Sync& _completer) = 0;
+
+  class WithRequestWithResponseCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply(::fidl::StringView ret);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer, ::fidl::StringView ret);
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using WithRequestWithResponseCompleter =
+      ::fidl::Completer<WithRequestWithResponseCompleterBase>;
+
+  virtual void WithRequestWithResponse(
+      ::fidl::StringView arg,
+      WithRequestWithResponseCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+namespace fidl_test_protocols {
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxResponseAsStructRequestTable;
 
@@ -5828,13 +6170,17 @@ class WithErrorSyntax final {
           : message_(_bytes, _byte_size, sizeof(ResponseAsStructResponse),
                      nullptr, 0, 0) {
         FIDL_ALIGNDECL ResponseAsStructResponse _response{result};
-        message_.Encode<ResponseAsStructResponse>(&_response);
+        message_.Encode<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse>(
+            &_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             ResponseAsStructResponse* response)
           : message_(bytes, byte_size, sizeof(ResponseAsStructResponse),
                      nullptr, 0, 0) {
-        message_.Encode<ResponseAsStructResponse>(response);
+        message_.Encode<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse>(
+            response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -5867,7 +6213,9 @@ class WithErrorSyntax final {
           ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result&
               result)
           : message_(bytes_.data(), bytes_.size(), result) {}
-      explicit OwnedEncodedMessage(ResponseAsStructResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse*
+              response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -5905,11 +6253,13 @@ class WithErrorSyntax final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<ResponseAsStructResponse>();
+        Decode<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<ResponseAsStructResponse>();
+        Decode<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -5918,7 +6268,9 @@ class WithErrorSyntax final {
 
       ResponseAsStructResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<ResponseAsStructResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse*>(
+            bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -5946,7 +6298,8 @@ class WithErrorSyntax final {
     static constexpr bool HasPointer = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = ResponseAsStructResponse;
+    using ResponseType =
+        ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse;
 
     class UnownedEncodedMessage final {
      public:
@@ -6088,13 +6441,17 @@ class WithErrorSyntax final {
           : message_(_bytes, _byte_size, sizeof(ErrorAsPrimitiveResponse),
                      nullptr, 0, 0) {
         FIDL_ALIGNDECL ErrorAsPrimitiveResponse _response{result};
-        message_.Encode<ErrorAsPrimitiveResponse>(&_response);
+        message_.Encode<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse>(
+            &_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             ErrorAsPrimitiveResponse* response)
           : message_(bytes, byte_size, sizeof(ErrorAsPrimitiveResponse),
                      nullptr, 0, 0) {
-        message_.Encode<ErrorAsPrimitiveResponse>(response);
+        message_.Encode<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse>(
+            response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -6127,7 +6484,9 @@ class WithErrorSyntax final {
           ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result&
               result)
           : message_(bytes_.data(), bytes_.size(), result) {}
-      explicit OwnedEncodedMessage(ErrorAsPrimitiveResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse*
+              response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -6165,11 +6524,13 @@ class WithErrorSyntax final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<ErrorAsPrimitiveResponse>();
+        Decode<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<ErrorAsPrimitiveResponse>();
+        Decode<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -6178,7 +6539,9 @@ class WithErrorSyntax final {
 
       ErrorAsPrimitiveResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<ErrorAsPrimitiveResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse*>(
+            bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -6206,7 +6569,8 @@ class WithErrorSyntax final {
     static constexpr bool HasPointer = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = ErrorAsPrimitiveResponse;
+    using ResponseType =
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse;
 
     class UnownedEncodedMessage final {
      public:
@@ -6347,13 +6711,17 @@ class WithErrorSyntax final {
           : message_(_bytes, _byte_size, sizeof(ErrorAsEnumResponse), nullptr,
                      0, 0) {
         FIDL_ALIGNDECL ErrorAsEnumResponse _response{result};
-        message_.Encode<ErrorAsEnumResponse>(&_response);
+        message_.Encode<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse>(
+            &_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             ErrorAsEnumResponse* response)
           : message_(bytes, byte_size, sizeof(ErrorAsEnumResponse), nullptr, 0,
                      0) {
-        message_.Encode<ErrorAsEnumResponse>(response);
+        message_.Encode<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse>(
+            response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -6386,7 +6754,8 @@ class WithErrorSyntax final {
           ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result&
               result)
           : message_(bytes_.data(), bytes_.size(), result) {}
-      explicit OwnedEncodedMessage(ErrorAsEnumResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -6424,11 +6793,11 @@ class WithErrorSyntax final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<ErrorAsEnumResponse>();
+        Decode<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<ErrorAsEnumResponse>();
+        Decode<::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -6437,7 +6806,9 @@ class WithErrorSyntax final {
 
       ErrorAsEnumResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<ErrorAsEnumResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse*>(
+            bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -6465,7 +6836,8 @@ class WithErrorSyntax final {
     static constexpr bool HasPointer = false;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = ErrorAsEnumResponse;
+    using ResponseType =
+        ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse;
 
     class UnownedEncodedMessage final {
      public:
@@ -6604,19 +6976,33 @@ class WithErrorSyntax final {
       ResponseAsStruct* operator=(const ResponseAsStruct&) = delete;
       ~ResponseAsStruct() = default;
 
-      ResponseAsStructResponse* Unwrap() {
+      ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse*
+      Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<ResponseAsStructResponse*>(bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse*>(
+            bytes_.data());
       }
-      const ResponseAsStructResponse* Unwrap() const {
+      const ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse*
+      Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const ResponseAsStructResponse*>(bytes_.data());
+        return reinterpret_cast<const ::fidl_test_protocols::WithErrorSyntax::
+                                    ResponseAsStructResponse*>(bytes_.data());
       }
 
-      ResponseAsStructResponse& value() { return *Unwrap(); }
-      const ResponseAsStructResponse& value() const { return *Unwrap(); }
+      ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse&
+      value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse&
+      value() const {
+        return *Unwrap();
+      }
 
-      ResponseAsStructResponse* operator->() { return &value(); }
+      ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse*
+      operator->() {
+        return &value();
+      }
       const ResponseAsStructResponse* operator->() const { return &value(); }
 
       ResponseAsStructResponse& operator*() { return value(); }
@@ -6642,19 +7028,33 @@ class WithErrorSyntax final {
       ErrorAsPrimitive* operator=(const ErrorAsPrimitive&) = delete;
       ~ErrorAsPrimitive() = default;
 
-      ErrorAsPrimitiveResponse* Unwrap() {
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse*
+      Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<ErrorAsPrimitiveResponse*>(bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse*>(
+            bytes_.data());
       }
-      const ErrorAsPrimitiveResponse* Unwrap() const {
+      const ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse*
+      Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const ErrorAsPrimitiveResponse*>(bytes_.data());
+        return reinterpret_cast<const ::fidl_test_protocols::WithErrorSyntax::
+                                    ErrorAsPrimitiveResponse*>(bytes_.data());
       }
 
-      ErrorAsPrimitiveResponse& value() { return *Unwrap(); }
-      const ErrorAsPrimitiveResponse& value() const { return *Unwrap(); }
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse&
+      value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse&
+      value() const {
+        return *Unwrap();
+      }
 
-      ErrorAsPrimitiveResponse* operator->() { return &value(); }
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse*
+      operator->() {
+        return &value();
+      }
       const ErrorAsPrimitiveResponse* operator->() const { return &value(); }
 
       ErrorAsPrimitiveResponse& operator*() { return value(); }
@@ -6680,19 +7080,32 @@ class WithErrorSyntax final {
       ErrorAsEnum* operator=(const ErrorAsEnum&) = delete;
       ~ErrorAsEnum() = default;
 
-      ErrorAsEnumResponse* Unwrap() {
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<ErrorAsEnumResponse*>(bytes_.data());
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse*>(
+            bytes_.data());
       }
-      const ErrorAsEnumResponse* Unwrap() const {
+      const ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse*
+      Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const ErrorAsEnumResponse*>(bytes_.data());
+        return reinterpret_cast<
+            const ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse*>(
+            bytes_.data());
       }
 
-      ErrorAsEnumResponse& value() { return *Unwrap(); }
-      const ErrorAsEnumResponse& value() const { return *Unwrap(); }
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse& value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse& value()
+          const {
+        return *Unwrap();
+      }
 
-      ErrorAsEnumResponse* operator->() { return &value(); }
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse*
+      operator->() {
+        return &value();
+      }
       const ErrorAsEnumResponse* operator->() const { return &value(); }
 
       ErrorAsEnumResponse& operator*() { return value(); }
@@ -6725,11 +7138,14 @@ class WithErrorSyntax final {
 
       ResponseAsStructResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<ResponseAsStructResponse*>(bytes_);
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse*>(
+            bytes_);
       }
       const ResponseAsStructResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const ResponseAsStructResponse*>(bytes_);
+        return reinterpret_cast<const ::fidl_test_protocols::WithErrorSyntax::
+                                    ResponseAsStructResponse*>(bytes_);
       }
 
       ResponseAsStructResponse& value() { return *Unwrap(); }
@@ -6760,11 +7176,14 @@ class WithErrorSyntax final {
 
       ErrorAsPrimitiveResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<ErrorAsPrimitiveResponse*>(bytes_);
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse*>(
+            bytes_);
       }
       const ErrorAsPrimitiveResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const ErrorAsPrimitiveResponse*>(bytes_);
+        return reinterpret_cast<const ::fidl_test_protocols::WithErrorSyntax::
+                                    ErrorAsPrimitiveResponse*>(bytes_);
       }
 
       ErrorAsPrimitiveResponse& value() { return *Unwrap(); }
@@ -6795,11 +7214,15 @@ class WithErrorSyntax final {
 
       ErrorAsEnumResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<ErrorAsEnumResponse*>(bytes_);
+        return reinterpret_cast<
+            ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse*>(
+            bytes_);
       }
       const ErrorAsEnumResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const ErrorAsEnumResponse*>(bytes_);
+        return reinterpret_cast<
+            const ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse*>(
+            bytes_);
       }
 
       ErrorAsEnumResponse& value() { return *Unwrap(); }
@@ -6879,192 +7302,21 @@ class WithErrorSyntax final {
     }
   };
 
-  class SyncClient final {
-   public:
-    SyncClient() = default;
-
-    explicit SyncClient(::fidl::ClientEnd<WithErrorSyntax> client_end)
-        : client_end_(std::move(client_end)) {}
-
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::fidl::ClientEnd<WithErrorSyntax>& client_end() const {
-      return client_end_;
-    }
-    ::fidl::ClientEnd<WithErrorSyntax>& client_end() { return client_end_; }
-
-    const ::zx::channel& channel() const { return client_end_.channel(); }
-    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-    // Allocates 80 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::ResponseAsStruct ResponseAsStruct() {
-      return ResultOf::ResponseAsStruct(this->client_end());
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::ResponseAsStruct ResponseAsStruct(
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ResponseAsStruct(
-          this->client_end(), _response_buffer.data, _response_buffer.capacity);
-    }
-
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::ErrorAsPrimitive ErrorAsPrimitive() {
-      return ResultOf::ErrorAsPrimitive(this->client_end());
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive(
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ErrorAsPrimitive(
-          this->client_end(), _response_buffer.data, _response_buffer.capacity);
-    }
-
-    // Allocates 64 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::ErrorAsEnum ErrorAsEnum() {
-      return ResultOf::ErrorAsEnum(this->client_end());
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::ErrorAsEnum ErrorAsEnum(
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::ErrorAsEnum(
-          this->client_end(), _response_buffer.data, _response_buffer.capacity);
-    }
-
-   private:
-    ::fidl::ClientEnd<WithErrorSyntax> client_end_;
-  };
+  using SyncClient =
+      fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax>;
 
 #ifdef __Fuchsia__
-  class AsyncEventHandler;
+  using AsyncEventHandler =
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>;
   class ResponseAsStructResponseContext;
   class ErrorAsPrimitiveResponseContext;
   class ErrorAsEnumResponseContext;
-  class ClientImpl;
+  using ClientImpl =
+      ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>;
 #endif
 
-  // Pure-virtual interface to be implemented by a server.
-  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-  // and |fidl::ServerEnd<SomeProtocol>|).
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using _EnclosingProtocol = WithErrorSyntax;
-
-    class ResponseAsStructCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply(
-          ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result
-              result);
-      ::fidl::Result ReplySuccess(int64_t a, int64_t b, int64_t c);
-      ::fidl::Result ReplyError(uint32_t error);
-      ::fidl::Result Reply(
-          ::fidl::BufferSpan _buffer,
-          ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result
-              result);
-      ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t a,
-                                  int64_t b, int64_t c);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using ResponseAsStructCompleter =
-        ::fidl::Completer<ResponseAsStructCompleterBase>;
-
-    virtual void ResponseAsStruct(
-        ResponseAsStructCompleter::Sync& _completer) = 0;
-
-    class ErrorAsPrimitiveCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply(
-          ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result
-              result);
-      ::fidl::Result ReplySuccess();
-      ::fidl::Result ReplyError(uint32_t error);
-      ::fidl::Result Reply(
-          ::fidl::BufferSpan _buffer,
-          ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result
-              result);
-      ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using ErrorAsPrimitiveCompleter =
-        ::fidl::Completer<ErrorAsPrimitiveCompleterBase>;
-
-    virtual void ErrorAsPrimitive(
-        ErrorAsPrimitiveCompleter::Sync& _completer) = 0;
-
-    class ErrorAsEnumCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply(
-          ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result
-              result);
-      ::fidl::Result ReplySuccess();
-      ::fidl::Result ReplyError(::fidl_test_protocols::wire::ErrorEnun error);
-      ::fidl::Result Reply(
-          ::fidl::BufferSpan _buffer,
-          ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result
-              result);
-      ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using ErrorAsEnumCompleter = ::fidl::Completer<ErrorAsEnumCompleterBase>;
-
-    virtual void ErrorAsEnum(ErrorAsEnumCompleter::Sync& _completer) = 0;
-
-   private:
-    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn) final;
-  };
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>;
 
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
@@ -7094,11 +7346,204 @@ class WithErrorSyntax final {
 
 #endif
 
-  class EventSender;
-  class WeakEventSender;
+  using EventSender =
+      ::fidl::WireEventSender<::fidl_test_protocols::WithErrorSyntax>;
+  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
+      ::fidl_test_protocols::WithErrorSyntax>;
+};
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::WireSyncClient<::fidl_test_protocols::WithErrorSyntax> final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_protocols::WithErrorSyntax> client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_protocols::WithErrorSyntax>& client_end()
+      const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_protocols::WithErrorSyntax>& client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Allocates 80 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_protocols::WithErrorSyntax::ResultOf::ResponseAsStruct
+  ResponseAsStruct() {
+    return ::fidl_test_protocols::WithErrorSyntax::ResultOf::ResponseAsStruct(
+        this->client_end());
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ResponseAsStruct
+  ResponseAsStruct(::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::
+        ResponseAsStruct(this->client_end(), _response_buffer.data,
+                         _response_buffer.capacity);
+  }
+
+  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsPrimitive
+  ErrorAsPrimitive() {
+    return ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsPrimitive(
+        this->client_end());
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive
+  ErrorAsPrimitive(::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::
+        ErrorAsPrimitive(this->client_end(), _response_buffer.data,
+                         _response_buffer.capacity);
+  }
+
+  // Allocates 64 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsEnum ErrorAsEnum() {
+    return ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsEnum(
+        this->client_end());
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ErrorAsEnum
+  ErrorAsEnum(::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ErrorAsEnum(
+        this->client_end(), _response_buffer.data, _response_buffer.capacity);
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_protocols::WithErrorSyntax> client_end_;
 };
 
-}  // namespace fidl_test_protocols
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_protocols::WithErrorSyntax;
+
+  class ResponseAsStructCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply(
+        ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result
+            result);
+    ::fidl::Result ReplySuccess(int64_t a, int64_t b, int64_t c);
+    ::fidl::Result ReplyError(uint32_t error);
+    ::fidl::Result Reply(
+        ::fidl::BufferSpan _buffer,
+        ::fidl_test_protocols::wire::WithErrorSyntax_ResponseAsStruct_Result
+            result);
+    ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t a,
+                                int64_t b, int64_t c);
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using ResponseAsStructCompleter =
+      ::fidl::Completer<ResponseAsStructCompleterBase>;
+
+  virtual void ResponseAsStruct(
+      ResponseAsStructCompleter::Sync& _completer) = 0;
+
+  class ErrorAsPrimitiveCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply(
+        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result
+            result);
+    ::fidl::Result ReplySuccess();
+    ::fidl::Result ReplyError(uint32_t error);
+    ::fidl::Result Reply(
+        ::fidl::BufferSpan _buffer,
+        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result
+            result);
+    ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer);
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using ErrorAsPrimitiveCompleter =
+      ::fidl::Completer<ErrorAsPrimitiveCompleterBase>;
+
+  virtual void ErrorAsPrimitive(
+      ErrorAsPrimitiveCompleter::Sync& _completer) = 0;
+
+  class ErrorAsEnumCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply(
+        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result result);
+    ::fidl::Result ReplySuccess();
+    ::fidl::Result ReplyError(::fidl_test_protocols::wire::ErrorEnun error);
+    ::fidl::Result Reply(
+        ::fidl::BufferSpan _buffer,
+        ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result result);
+    ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer);
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using ErrorAsEnumCompleter = ::fidl::Completer<ErrorAsEnumCompleterBase>;
+
+  virtual void ErrorAsEnum(ErrorAsEnumCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
 namespace fidl {
 
 template <>
@@ -7609,51 +8054,62 @@ static_assert(
 namespace fidl_test_protocols {
 
 #ifdef __Fuchsia__
-class Transitional::AsyncEventHandler
-    : public Transitional::EventHandlerInterface {
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>
+    : public ::fidl_test_protocols::Transitional::EventHandlerInterface {
  public:
-  AsyncEventHandler() = default;
+  WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+namespace fidl_test_protocols {
 
-class Transitional::RequestResponseContext
+class ::fidl_test_protocols::Transitional::RequestResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   RequestResponseContext();
 
-  virtual void OnReply(Transitional::RequestResponse* message) = 0;
+  virtual void OnReply(
+      ::fidl_test_protocols::Transitional::RequestResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
-
-class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::internal::WireClientImpl<::fidl_test_protocols::Transitional>
+    final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Transitional.Request()|.
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  ::fidl::Result Request(int64_t x,
-                         ::fit::callback<void(RequestResponse* response)> _cb);
+  ::fidl::Result Request(
+      int64_t x,
+      ::fit::callback<
+          void(::fidl_test_protocols::Transitional::RequestResponse* response)>
+          _cb);
 
   // Asynchronous variant of |Transitional.Request()|.
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result Request(::fidl::BufferSpan _request_buffer, int64_t x,
-                         RequestResponseContext* _context);
+  ::fidl::Result Request(
+      ::fidl::BufferSpan _request_buffer, int64_t x,
+      ::fidl_test_protocols::Transitional::RequestResponseContext* _context);
 
   // Synchronous variant of |Transitional.Request()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ResultOf::Request Request_Sync(int64_t x);
+  ::fidl_test_protocols::Transitional::ResultOf::Request Request_Sync(
+      int64_t x);
 
   // Synchronous variant of |Transitional.Request()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  UnownedResultOf::Request Request_Sync(::fidl::BufferSpan _request_buffer,
-                                        int64_t x,
-                                        ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_protocols::Transitional::UnownedResultOf::Request Request_Sync(
+      ::fidl::BufferSpan _request_buffer, int64_t x,
+      ::fidl::BufferSpan _response_buffer);
 
   // Allocates 24 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -7662,39 +8118,54 @@ class Transitional::ClientImpl final : private ::fidl::internal::ClientBase {
   // Caller provides the backing storage for FIDL message via request buffer.
   ::fidl::Result OneWay(::fidl::BufferSpan _request_buffer, int64_t x);
 
-  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+  ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>*
+  event_handler() const {
+    return event_handler_.get();
+  }
 
  private:
-  friend class ::fidl::Client<Transitional>;
-  friend class ::fidl::internal::ControlBlock<Transitional>;
+  friend class ::fidl::Client<::fidl_test_protocols::Transitional>;
+  friend class ::fidl::internal::ControlBlock<
+      ::fidl_test_protocols::Transitional>;
 
-  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+  explicit WireClientImpl(
+      std::shared_ptr<
+          ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>>
+          event_handler)
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  std::shared_ptr<
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::Transitional>>
+      event_handler_;
 };
+namespace fidl_test_protocols {
 #endif
 
+}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Transitional protocol, and can send events in that protocol.
-class Transitional::EventSender {
+template <>
+class ::fidl::WireEventSender<::fidl_test_protocols::Transitional> {
  public:
   // Constructs an event sender with an invalid channel.
-  EventSender() = default;
+  WireEventSender() = default;
 
-  explicit EventSender(
+  explicit WireEventSender(
       ::fidl::ServerEnd<::fidl_test_protocols::Transitional> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<Transitional>& server_end() const {
+  const ::fidl::ServerEnd<::fidl_test_protocols::Transitional>& server_end()
+      const {
     return server_end_;
   }
-  ::fidl::ServerEnd<Transitional>& server_end() { return server_end_; }
+  ::fidl::ServerEnd<::fidl_test_protocols::Transitional>& server_end() {
+    return server_end_;
+  }
 
   const ::zx::channel& channel() const { return server_end_.channel(); }
   ::zx::channel& channel() { return server_end_.channel(); }
@@ -7708,10 +8179,12 @@ class Transitional::EventSender {
   zx_status_t Event(::fidl::BufferSpan _buffer, int64_t x) const;
 
  private:
-  ::fidl::ServerEnd<Transitional> server_end_;
+  ::fidl::ServerEnd<::fidl_test_protocols::Transitional> server_end_;
 };
 
-class Transitional::WeakEventSender {
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::Transitional> {
  public:
   zx_status_t Event(int64_t x) const {
     if (auto _binding = binding_.lock()) {
@@ -7729,136 +8202,166 @@ class Transitional::WeakEventSender {
   }
 
  private:
-  friend class ::fidl::ServerBindingRef<Transitional>;
+  friend class ::fidl::ServerBindingRef<::fidl_test_protocols::Transitional>;
 
-  explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<Transitional>> binding)
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_protocols::Transitional>>
+          binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<Transitional>> binding_;
+  std::weak_ptr<
+      ::fidl::internal::AsyncServerBinding<::fidl_test_protocols::Transitional>>
+      binding_;
 };
 #endif
 
+namespace fidl_test_protocols {
+
 #ifdef __Fuchsia__
-class ChannelProtocol::AsyncEventHandler
-    : public ChannelProtocol::EventHandlerInterface {
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>
+    : public ::fidl_test_protocols::ChannelProtocol::EventHandlerInterface {
  public:
-  AsyncEventHandler() = default;
+  WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+namespace fidl_test_protocols {
 
-class ChannelProtocol::MethodBResponseContext
+class ::fidl_test_protocols::ChannelProtocol::MethodBResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   MethodBResponseContext();
 
-  virtual void OnReply(ChannelProtocol::MethodBResponse* message) = 0;
+  virtual void OnReply(
+      ::fidl_test_protocols::ChannelProtocol::MethodBResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
 
-class ChannelProtocol::TakeHandleResponseContext
+class ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   TakeHandleResponseContext();
 
-  virtual void OnReply(ChannelProtocol::TakeHandleResponse* message) = 0;
+  virtual void OnReply(
+      ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
 
-class ChannelProtocol::MutateSocketResponseContext
+class ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   MutateSocketResponseContext();
 
-  virtual void OnReply(ChannelProtocol::MutateSocketResponse* message) = 0;
+  virtual void OnReply(
+      ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse*
+          message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
-
-class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>
+    final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |ChannelProtocol.MethodB()|.
   // Allocates 32 bytes of request buffer on the stack. The callback is stored
   // on the heap.
-  ::fidl::Result MethodB(int64_t a, int64_t b,
-                         ::fit::callback<void(MethodBResponse* response)> _cb);
+  ::fidl::Result MethodB(
+      int64_t a, int64_t b,
+      ::fit::callback<void(
+          ::fidl_test_protocols::ChannelProtocol::MethodBResponse* response)>
+          _cb);
 
   // Asynchronous variant of |ChannelProtocol.MethodB()|.
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result MethodB(::fidl::BufferSpan _request_buffer, int64_t a,
-                         int64_t b, MethodBResponseContext* _context);
+  ::fidl::Result MethodB(
+      ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
+      ::fidl_test_protocols::ChannelProtocol::MethodBResponseContext* _context);
 
   // Synchronous variant of |ChannelProtocol.MethodB()|.
   // Allocates 56 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ResultOf::MethodB MethodB_Sync(int64_t a, int64_t b);
+  ::fidl_test_protocols::ChannelProtocol::ResultOf::MethodB MethodB_Sync(
+      int64_t a, int64_t b);
 
   // Synchronous variant of |ChannelProtocol.MethodB()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  UnownedResultOf::MethodB MethodB_Sync(::fidl::BufferSpan _request_buffer,
-                                        int64_t a, int64_t b,
-                                        ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MethodB MethodB_Sync(
+      ::fidl::BufferSpan _request_buffer, int64_t a, int64_t b,
+      ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of |ChannelProtocol.TakeHandle()|.
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::Result TakeHandle(
-      ::zx::handle h, ::fit::callback<void(TakeHandleResponse* response)> _cb);
+      ::zx::handle h,
+      ::fit::callback<void(
+          ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse* response)>
+          _cb);
 
   // Asynchronous variant of |ChannelProtocol.TakeHandle()|.
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result TakeHandle(::fidl::BufferSpan _request_buffer, ::zx::handle h,
-                            TakeHandleResponseContext* _context);
+  ::fidl::Result TakeHandle(
+      ::fidl::BufferSpan _request_buffer, ::zx::handle h,
+      ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext*
+          _context);
 
   // Synchronous variant of |ChannelProtocol.TakeHandle()|.
   // Allocates 40 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ResultOf::TakeHandle TakeHandle_Sync(::zx::handle h);
+  ::fidl_test_protocols::ChannelProtocol::ResultOf::TakeHandle TakeHandle_Sync(
+      ::zx::handle h);
 
   // Synchronous variant of |ChannelProtocol.TakeHandle()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  UnownedResultOf::TakeHandle TakeHandle_Sync(
-      ::fidl::BufferSpan _request_buffer, ::zx::handle h,
-      ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::TakeHandle
+  TakeHandle_Sync(::fidl::BufferSpan _request_buffer, ::zx::handle h,
+                  ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of |ChannelProtocol.MutateSocket()|.
   // Allocates 24 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::Result MutateSocket(
       ::zx::socket a,
-      ::fit::callback<void(MutateSocketResponse* response)> _cb);
+      ::fit::callback<void(::fidl_test_protocols::ChannelProtocol::
+                               MutateSocketResponse* response)>
+          _cb);
 
   // Asynchronous variant of |ChannelProtocol.MutateSocket()|.
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result MutateSocket(::fidl::BufferSpan _request_buffer,
-                              ::zx::socket a,
-                              MutateSocketResponseContext* _context);
+  ::fidl::Result MutateSocket(
+      ::fidl::BufferSpan _request_buffer, ::zx::socket a,
+      ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext*
+          _context);
 
   // Synchronous variant of |ChannelProtocol.MutateSocket()|.
   // Allocates 48 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ResultOf::MutateSocket MutateSocket_Sync(::zx::socket a);
+  ::fidl_test_protocols::ChannelProtocol::ResultOf::MutateSocket
+  MutateSocket_Sync(::zx::socket a);
 
   // Synchronous variant of |ChannelProtocol.MutateSocket()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  UnownedResultOf::MutateSocket MutateSocket_Sync(
-      ::fidl::BufferSpan _request_buffer, ::zx::socket a,
-      ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_protocols::ChannelProtocol::UnownedResultOf::MutateSocket
+  MutateSocket_Sync(::fidl::BufferSpan _request_buffer, ::zx::socket a,
+                    ::fidl::BufferSpan _response_buffer);
 
   // Allocates 32 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -7868,39 +8371,54 @@ class ChannelProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
   ::fidl::Result MethodA(::fidl::BufferSpan _request_buffer, int64_t a,
                          int64_t b);
 
-  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+  ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>*
+  event_handler() const {
+    return event_handler_.get();
+  }
 
  private:
-  friend class ::fidl::Client<ChannelProtocol>;
-  friend class ::fidl::internal::ControlBlock<ChannelProtocol>;
+  friend class ::fidl::Client<::fidl_test_protocols::ChannelProtocol>;
+  friend class ::fidl::internal::ControlBlock<
+      ::fidl_test_protocols::ChannelProtocol>;
 
-  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+  explicit WireClientImpl(
+      std::shared_ptr<
+          ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>>
+          event_handler)
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  std::shared_ptr<
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::ChannelProtocol>>
+      event_handler_;
 };
+namespace fidl_test_protocols {
 #endif
 
+}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the ChannelProtocol protocol, and can send events in that protocol.
-class ChannelProtocol::EventSender {
+template <>
+class ::fidl::WireEventSender<::fidl_test_protocols::ChannelProtocol> {
  public:
   // Constructs an event sender with an invalid channel.
-  EventSender() = default;
+  WireEventSender() = default;
 
-  explicit EventSender(
+  explicit WireEventSender(
       ::fidl::ServerEnd<::fidl_test_protocols::ChannelProtocol> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<ChannelProtocol>& server_end() const {
+  const ::fidl::ServerEnd<::fidl_test_protocols::ChannelProtocol>& server_end()
+      const {
     return server_end_;
   }
-  ::fidl::ServerEnd<ChannelProtocol>& server_end() { return server_end_; }
+  ::fidl::ServerEnd<::fidl_test_protocols::ChannelProtocol>& server_end() {
+    return server_end_;
+  }
 
   const ::zx::channel& channel() const { return server_end_.channel(); }
   ::zx::channel& channel() { return server_end_.channel(); }
@@ -7914,10 +8432,12 @@ class ChannelProtocol::EventSender {
   zx_status_t EventA(::fidl::BufferSpan _buffer, int64_t a, int64_t b) const;
 
  private:
-  ::fidl::ServerEnd<ChannelProtocol> server_end_;
+  ::fidl::ServerEnd<::fidl_test_protocols::ChannelProtocol> server_end_;
 };
 
-class ChannelProtocol::WeakEventSender {
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::ChannelProtocol> {
  public:
   zx_status_t EventA(int64_t a, int64_t b) const {
     if (auto _binding = binding_.lock()) {
@@ -7936,86 +8456,101 @@ class ChannelProtocol::WeakEventSender {
   }
 
  private:
-  friend class ::fidl::ServerBindingRef<ChannelProtocol>;
+  friend class ::fidl::ServerBindingRef<::fidl_test_protocols::ChannelProtocol>;
 
-  explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<ChannelProtocol>>
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_protocols::ChannelProtocol>>
           binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<ChannelProtocol>> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<
+      ::fidl_test_protocols::ChannelProtocol>>
+      binding_;
 };
 #endif
 
+namespace fidl_test_protocols {
+
 #ifdef __Fuchsia__
-class WithAndWithoutRequestResponse::AsyncEventHandler
-    : public WithAndWithoutRequestResponse::EventHandlerInterface {
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>
+    : public ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          EventHandlerInterface {
  public:
-  AsyncEventHandler() = default;
+  WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+namespace fidl_test_protocols {
 
-class WithAndWithoutRequestResponse::NoRequestEmptyResponseResponseContext
+class ::fidl_test_protocols::WithAndWithoutRequestResponse::
+    NoRequestEmptyResponseResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   NoRequestEmptyResponseResponseContext();
 
-  virtual void OnReply(
-      WithAndWithoutRequestResponse::NoRequestEmptyResponseResponse*
-          message) = 0;
+  virtual void OnReply(::fidl_test_protocols::WithAndWithoutRequestResponse::
+                           NoRequestEmptyResponseResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
 
-class WithAndWithoutRequestResponse::NoRequestWithResponseResponseContext
+class ::fidl_test_protocols::WithAndWithoutRequestResponse::
+    NoRequestWithResponseResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   NoRequestWithResponseResponseContext();
 
-  virtual void OnReply(
-      WithAndWithoutRequestResponse::NoRequestWithResponseResponse*
-          message) = 0;
+  virtual void OnReply(::fidl_test_protocols::WithAndWithoutRequestResponse::
+                           NoRequestWithResponseResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
 
-class WithAndWithoutRequestResponse::WithRequestEmptyResponseResponseContext
+class ::fidl_test_protocols::WithAndWithoutRequestResponse::
+    WithRequestEmptyResponseResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   WithRequestEmptyResponseResponseContext();
 
-  virtual void OnReply(
-      WithAndWithoutRequestResponse::WithRequestEmptyResponseResponse*
-          message) = 0;
+  virtual void OnReply(::fidl_test_protocols::WithAndWithoutRequestResponse::
+                           WithRequestEmptyResponseResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
 
-class WithAndWithoutRequestResponse::WithRequestWithResponseResponseContext
+class ::fidl_test_protocols::WithAndWithoutRequestResponse::
+    WithRequestWithResponseResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   WithRequestWithResponseResponseContext();
 
-  virtual void OnReply(
-      WithAndWithoutRequestResponse::WithRequestWithResponseResponse*
-          message) = 0;
+  virtual void OnReply(::fidl_test_protocols::WithAndWithoutRequestResponse::
+                           WithRequestWithResponseResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
-
-class WithAndWithoutRequestResponse::ClientImpl final
-    : private ::fidl::internal::ClientBase {
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::internal::WireClientImpl<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse>
+    final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Allocates 16
   // bytes of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result NoRequestEmptyResponse(
-      ::fit::callback<void(NoRequestEmptyResponseResponse* response)> _cb);
+      ::fit::callback<
+          void(::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   NoRequestEmptyResponseResponse* response)>
+          _cb);
 
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Caller provides
@@ -8023,18 +8558,24 @@ class WithAndWithoutRequestResponse::ClientImpl final
   // |_context| is given unsafely to the binding until |OnError| or |OnReply|
   // are called on it.
   ::fidl::Result NoRequestEmptyResponse(
-      NoRequestEmptyResponseResponseContext* _context);
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestEmptyResponseResponseContext* _context);
 
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestEmptyResponse()|. Allocates 32
   // bytes of message buffer on the stack. No heap allocation necessary.
-  ResultOf::NoRequestEmptyResponse NoRequestEmptyResponse_Sync();
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+      NoRequestEmptyResponse
+      NoRequestEmptyResponse_Sync();
 
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Allocates 16 bytes
   // of request buffer on the stack. The callback is stored on the heap.
   ::fidl::Result NoRequestWithResponse(
-      ::fit::callback<void(NoRequestWithResponseResponse* response)> _cb);
+      ::fit::callback<
+          void(::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   NoRequestWithResponseResponse* response)>
+          _cb);
 
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Caller provides
@@ -8042,25 +8583,32 @@ class WithAndWithoutRequestResponse::ClientImpl final
   // |_context| is given unsafely to the binding until |OnError| or |OnReply|
   // are called on it.
   ::fidl::Result NoRequestWithResponse(
-      NoRequestWithResponseResponseContext* _context);
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          NoRequestWithResponseResponseContext* _context);
 
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Allocates 16 bytes
   // of request buffer on the stack. Response is heap-allocated.
-  ResultOf::NoRequestWithResponse NoRequestWithResponse_Sync();
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+      NoRequestWithResponse
+      NoRequestWithResponse_Sync();
 
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.NoRequestWithResponse()|. Caller provides
   // the backing storage for FIDL message via request and response buffers.
-  UnownedResultOf::NoRequestWithResponse NoRequestWithResponse_Sync(
-      ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+      NoRequestWithResponse
+      NoRequestWithResponse_Sync(::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. The request and
   // callback are allocated on the heap.
   ::fidl::Result WithRequestEmptyResponse(
       ::fidl::StringView arg,
-      ::fit::callback<void(WithRequestEmptyResponseResponse* response)> _cb);
+      ::fit::callback<
+          void(::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   WithRequestEmptyResponseResponse* response)>
+          _cb);
 
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Caller provides
@@ -8069,27 +8617,34 @@ class WithAndWithoutRequestResponse::ClientImpl final
   // are called on it.
   ::fidl::Result WithRequestEmptyResponse(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-      WithRequestEmptyResponseResponseContext* _context);
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestEmptyResponseResponseContext* _context);
 
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Allocates 16
   // bytes of response buffer on the stack. Request is heap-allocated.
-  ResultOf::WithRequestEmptyResponse WithRequestEmptyResponse_Sync(
-      ::fidl::StringView arg);
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+      WithRequestEmptyResponse
+      WithRequestEmptyResponse_Sync(::fidl::StringView arg);
 
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestEmptyResponse()|. Caller provides
   // the backing storage for FIDL message via request and response buffers.
-  UnownedResultOf::WithRequestEmptyResponse WithRequestEmptyResponse_Sync(
-      ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-      ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+      WithRequestEmptyResponse
+      WithRequestEmptyResponse_Sync(::fidl::BufferSpan _request_buffer,
+                                    ::fidl::StringView arg,
+                                    ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. The request and
   // callback are allocated on the heap.
   ::fidl::Result WithRequestWithResponse(
       ::fidl::StringView arg,
-      ::fit::callback<void(WithRequestWithResponseResponse* response)> _cb);
+      ::fit::callback<
+          void(::fidl_test_protocols::WithAndWithoutRequestResponse::
+                   WithRequestWithResponseResponse* response)>
+          _cb);
 
   // Asynchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Caller provides
@@ -8098,20 +8653,24 @@ class WithAndWithoutRequestResponse::ClientImpl final
   // are called on it.
   ::fidl::Result WithRequestWithResponse(
       ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-      WithRequestWithResponseResponseContext* _context);
+      ::fidl_test_protocols::WithAndWithoutRequestResponse::
+          WithRequestWithResponseResponseContext* _context);
 
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Request is
   // heap-allocated. Response is heap-allocated.
-  ResultOf::WithRequestWithResponse WithRequestWithResponse_Sync(
-      ::fidl::StringView arg);
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::ResultOf::
+      WithRequestWithResponse
+      WithRequestWithResponse_Sync(::fidl::StringView arg);
 
   // Synchronous variant of
   // |WithAndWithoutRequestResponse.WithRequestWithResponse()|. Caller provides
   // the backing storage for FIDL message via request and response buffers.
-  UnownedResultOf::WithRequestWithResponse WithRequestWithResponse_Sync(
-      ::fidl::BufferSpan _request_buffer, ::fidl::StringView arg,
-      ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_protocols::WithAndWithoutRequestResponse::UnownedResultOf::
+      WithRequestWithResponse
+      WithRequestWithResponse_Sync(::fidl::BufferSpan _request_buffer,
+                                   ::fidl::StringView arg,
+                                   ::fidl::BufferSpan _response_buffer);
 
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
@@ -8124,41 +8683,58 @@ class WithAndWithoutRequestResponse::ClientImpl final
   ::fidl::Result WithRequestNoResponse(::fidl::BufferSpan _request_buffer,
                                        ::fidl::StringView arg);
 
-  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+  ::fidl::WireAsyncEventHandler<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>*
+  event_handler() const {
+    return event_handler_.get();
+  }
 
  private:
-  friend class ::fidl::Client<WithAndWithoutRequestResponse>;
-  friend class ::fidl::internal::ControlBlock<WithAndWithoutRequestResponse>;
+  friend class ::fidl::Client<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
+  friend class ::fidl::internal::ControlBlock<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
-  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+  explicit WireClientImpl(
+      std::shared_ptr<::fidl::WireAsyncEventHandler<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>>
+          event_handler)
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  std::shared_ptr<::fidl::WireAsyncEventHandler<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>>
+      event_handler_;
 };
+namespace fidl_test_protocols {
 #endif
 
+}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the WithAndWithoutRequestResponse protocol, and can send events in that
 // protocol.
-class WithAndWithoutRequestResponse::EventSender {
+template <>
+class ::fidl::WireEventSender<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse> {
  public:
   // Constructs an event sender with an invalid channel.
-  EventSender() = default;
+  WireEventSender() = default;
 
-  explicit EventSender(
+  explicit WireEventSender(
       ::fidl::ServerEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>
           server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<WithAndWithoutRequestResponse>& server_end() const {
+  const ::fidl::ServerEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>&
+  server_end() const {
     return server_end_;
   }
-  ::fidl::ServerEnd<WithAndWithoutRequestResponse>& server_end() {
+  ::fidl::ServerEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>&
+  server_end() {
     return server_end_;
   }
 
@@ -8177,10 +8753,13 @@ class WithAndWithoutRequestResponse::EventSender {
                              ::fidl::StringView ret) const;
 
  private:
-  ::fidl::ServerEnd<WithAndWithoutRequestResponse> server_end_;
+  ::fidl::ServerEnd<::fidl_test_protocols::WithAndWithoutRequestResponse>
+      server_end_;
 };
 
-class WithAndWithoutRequestResponse::WeakEventSender {
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::WithAndWithoutRequestResponse> {
  public:
   zx_status_t OnEmptyResponse() const {
     if (auto _binding = binding_.lock()) {
@@ -8207,166 +8786,209 @@ class WithAndWithoutRequestResponse::WeakEventSender {
   }
 
  private:
-  friend class ::fidl::ServerBindingRef<WithAndWithoutRequestResponse>;
+  friend class ::fidl::ServerBindingRef<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>;
 
-  explicit WeakEventSender(
-      std::weak_ptr<
-          ::fidl::internal::AsyncServerBinding<WithAndWithoutRequestResponse>>
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>>
           binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<
-      ::fidl::internal::AsyncServerBinding<WithAndWithoutRequestResponse>>
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<
+      ::fidl_test_protocols::WithAndWithoutRequestResponse>>
       binding_;
 };
 #endif
 
+namespace fidl_test_protocols {
+
 #ifdef __Fuchsia__
-class WithErrorSyntax::AsyncEventHandler
-    : public WithErrorSyntax::EventHandlerInterface {
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>
+    : public ::fidl_test_protocols::WithErrorSyntax::EventHandlerInterface {
  public:
-  AsyncEventHandler() = default;
+  WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+namespace fidl_test_protocols {
 
-class WithErrorSyntax::ResponseAsStructResponseContext
+class ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   ResponseAsStructResponseContext();
 
-  virtual void OnReply(WithErrorSyntax::ResponseAsStructResponse* message) = 0;
+  virtual void OnReply(
+      ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse*
+          message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
 
-class WithErrorSyntax::ErrorAsPrimitiveResponseContext
+class ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   ErrorAsPrimitiveResponseContext();
 
-  virtual void OnReply(WithErrorSyntax::ErrorAsPrimitiveResponse* message) = 0;
+  virtual void OnReply(
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse*
+          message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
 
-class WithErrorSyntax::ErrorAsEnumResponseContext
+class ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   ErrorAsEnumResponseContext();
 
-  virtual void OnReply(WithErrorSyntax::ErrorAsEnumResponse* message) = 0;
+  virtual void OnReply(
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
-
-class WithErrorSyntax::ClientImpl final : private ::fidl::internal::ClientBase {
+}  // namespace fidl_test_protocols
+template <>
+class ::fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>
+    final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::Result ResponseAsStruct(
-      ::fit::callback<void(ResponseAsStructResponse* response)> _cb);
+      ::fit::callback<void(::fidl_test_protocols::WithErrorSyntax::
+                               ResponseAsStructResponse* response)>
+          _cb);
 
   // Asynchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result ResponseAsStruct(ResponseAsStructResponseContext* _context);
+  ::fidl::Result ResponseAsStruct(
+      ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext*
+          _context);
 
   // Synchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
   // Allocates 80 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ResultOf::ResponseAsStruct ResponseAsStruct_Sync();
+  ::fidl_test_protocols::WithErrorSyntax::ResultOf::ResponseAsStruct
+  ResponseAsStruct_Sync();
 
   // Synchronous variant of |WithErrorSyntax.ResponseAsStruct()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  UnownedResultOf::ResponseAsStruct ResponseAsStruct_Sync(
-      ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ResponseAsStruct
+  ResponseAsStruct_Sync(::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|.
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::Result ErrorAsPrimitive(
-      ::fit::callback<void(ErrorAsPrimitiveResponse* response)> _cb);
+      ::fit::callback<void(::fidl_test_protocols::WithErrorSyntax::
+                               ErrorAsPrimitiveResponse* response)>
+          _cb);
 
   // Asynchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|.
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result ErrorAsPrimitive(ErrorAsPrimitiveResponseContext* _context);
+  ::fidl::Result ErrorAsPrimitive(
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext*
+          _context);
 
   // Synchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|.
   // Allocates 64 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ResultOf::ErrorAsPrimitive ErrorAsPrimitive_Sync();
+  ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsPrimitive
+  ErrorAsPrimitive_Sync();
 
   // Synchronous variant of |WithErrorSyntax.ErrorAsPrimitive()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  UnownedResultOf::ErrorAsPrimitive ErrorAsPrimitive_Sync(
-      ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ErrorAsPrimitive
+  ErrorAsPrimitive_Sync(::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|.
   // Allocates 16 bytes of request buffer on the stack. The callback is stored
   // on the heap.
   ::fidl::Result ErrorAsEnum(
-      ::fit::callback<void(ErrorAsEnumResponse* response)> _cb);
+      ::fit::callback<void(::fidl_test_protocols::WithErrorSyntax::
+                               ErrorAsEnumResponse* response)>
+          _cb);
 
   // Asynchronous variant of |WithErrorSyntax.ErrorAsEnum()|.
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
-  ::fidl::Result ErrorAsEnum(ErrorAsEnumResponseContext* _context);
+  ::fidl::Result ErrorAsEnum(
+      ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext*
+          _context);
 
   // Synchronous variant of |WithErrorSyntax.ErrorAsEnum()|.
   // Allocates 64 bytes of message buffer on the stack. No heap allocation
   // necessary.
-  ResultOf::ErrorAsEnum ErrorAsEnum_Sync();
+  ::fidl_test_protocols::WithErrorSyntax::ResultOf::ErrorAsEnum
+  ErrorAsEnum_Sync();
 
   // Synchronous variant of |WithErrorSyntax.ErrorAsEnum()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  UnownedResultOf::ErrorAsEnum ErrorAsEnum_Sync(
-      ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_protocols::WithErrorSyntax::UnownedResultOf::ErrorAsEnum
+  ErrorAsEnum_Sync(::fidl::BufferSpan _response_buffer);
 
-  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+  ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>*
+  event_handler() const {
+    return event_handler_.get();
+  }
 
  private:
-  friend class ::fidl::Client<WithErrorSyntax>;
-  friend class ::fidl::internal::ControlBlock<WithErrorSyntax>;
+  friend class ::fidl::Client<::fidl_test_protocols::WithErrorSyntax>;
+  friend class ::fidl::internal::ControlBlock<
+      ::fidl_test_protocols::WithErrorSyntax>;
 
-  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+  explicit WireClientImpl(
+      std::shared_ptr<
+          ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>>
+          event_handler)
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  std::shared_ptr<
+      ::fidl::WireAsyncEventHandler<::fidl_test_protocols::WithErrorSyntax>>
+      event_handler_;
 };
+namespace fidl_test_protocols {
 #endif
 
+}  // namespace fidl_test_protocols
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the WithErrorSyntax protocol, and can send events in that protocol.
-class WithErrorSyntax::EventSender {
+template <>
+class ::fidl::WireEventSender<::fidl_test_protocols::WithErrorSyntax> {
  public:
   // Constructs an event sender with an invalid channel.
-  EventSender() = default;
+  WireEventSender() = default;
 
-  explicit EventSender(
+  explicit WireEventSender(
       ::fidl::ServerEnd<::fidl_test_protocols::WithErrorSyntax> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<WithErrorSyntax>& server_end() const {
+  const ::fidl::ServerEnd<::fidl_test_protocols::WithErrorSyntax>& server_end()
+      const {
     return server_end_;
   }
-  ::fidl::ServerEnd<WithErrorSyntax>& server_end() { return server_end_; }
+  ::fidl::ServerEnd<::fidl_test_protocols::WithErrorSyntax>& server_end() {
+    return server_end_;
+  }
 
   const ::zx::channel& channel() const { return server_end_.channel(); }
   ::zx::channel& channel() { return server_end_.channel(); }
@@ -8375,21 +8997,24 @@ class WithErrorSyntax::EventSender {
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::fidl::ServerEnd<WithErrorSyntax> server_end_;
+  ::fidl::ServerEnd<::fidl_test_protocols::WithErrorSyntax> server_end_;
 };
 
-class WithErrorSyntax::WeakEventSender {
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_protocols::WithErrorSyntax> {
  public:
  private:
-  friend class ::fidl::ServerBindingRef<WithErrorSyntax>;
+  friend class ::fidl::ServerBindingRef<::fidl_test_protocols::WithErrorSyntax>;
 
-  explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<WithErrorSyntax>>
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_protocols::WithErrorSyntax>>
           binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<WithErrorSyntax>> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<
+      ::fidl_test_protocols::WithErrorSyntax>>
+      binding_;
 };
 #endif
-
-}  // namespace fidl_test_protocols

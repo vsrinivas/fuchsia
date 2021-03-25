@@ -40,14 +40,14 @@ const fragmentSyncRequestCallerAllocateTmpl = `
   ) {
   {{- end }}
   {{- if .RequestArgs -}}
-  ::fidl::UnownedEncodedMessage<{{ .Name }}Request> _request(
+  ::fidl::UnownedEncodedMessage<{{ .WireRequest }}> _request(
     _request_bytes, _request_byte_capacity, 0
   {{- else -}}
-  ::fidl::OwnedEncodedMessage<{{ .Name }}Request> _request(zx_txid_t(0)
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
   {{- end -}}
     {{- .RequestArgs | CommaParamNames -}});
   {{- if .HasResponse }}
-  _request.GetOutgoingMessage().Call<{{ .Name }}Response>(_client, _response_bytes,
+  _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(_client, _response_bytes,
                                                           _response_byte_capacity);
   {{- else }}
   _request.GetOutgoingMessage().Write(_client);

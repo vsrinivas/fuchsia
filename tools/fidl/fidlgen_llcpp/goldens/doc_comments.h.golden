@@ -30,6 +30,7 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 
@@ -935,12 +936,14 @@ class Interface final {
           : message_(_bytes, _byte_size, sizeof(OnEventResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL OnEventResponse _response{};
-        message_.Encode<OnEventResponse>(&_response);
+        message_.Encode<::fidl_test_doccomments::Interface::OnEventResponse>(
+            &_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             OnEventResponse* response)
           : message_(bytes, byte_size, sizeof(OnEventResponse), nullptr, 0, 0) {
-        message_.Encode<OnEventResponse>(response);
+        message_.Encode<::fidl_test_doccomments::Interface::OnEventResponse>(
+            response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -970,7 +973,8 @@ class Interface final {
     class OwnedEncodedMessage final {
      public:
       explicit OwnedEncodedMessage() : message_(bytes_.data(), bytes_.size()) {}
-      explicit OwnedEncodedMessage(OnEventResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_doccomments::Interface::OnEventResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -1008,11 +1012,11 @@ class Interface final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<OnEventResponse>();
+        Decode<::fidl_test_doccomments::Interface::OnEventResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<OnEventResponse>();
+        Decode<::fidl_test_doccomments::Interface::OnEventResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -1021,7 +1025,8 @@ class Interface final {
 
       OnEventResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<OnEventResponse*>(bytes());
+        return reinterpret_cast<
+            ::fidl_test_doccomments::Interface::OnEventResponse*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -1041,7 +1046,8 @@ class Interface final {
     // event comment #1
     //
     // event comment #3
-    virtual void OnEvent(OnEventResponse* event) {}
+    virtual void OnEvent(
+        ::fidl_test_doccomments::Interface::OnEventResponse* event) {}
   };
 
   class SyncEventHandler : public EventHandlerInterface {
@@ -1119,72 +1125,16 @@ class Interface final {
     }
   };
 
-  class SyncClient final {
-   public:
-    SyncClient() = default;
-
-    explicit SyncClient(::fidl::ClientEnd<Interface> client_end)
-        : client_end_(std::move(client_end)) {}
-
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::fidl::ClientEnd<Interface>& client_end() const {
-      return client_end_;
-    }
-    ::fidl::ClientEnd<Interface>& client_end() { return client_end_; }
-
-    const ::zx::channel& channel() const { return client_end_.channel(); }
-    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-    // method comment #1
-    //
-    // method comment #3
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::Method Method() { return ResultOf::Method(this->client_end()); }
-
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the
-    // corresponding virtual method defined in |SyncEventHandler|. The return
-    // status of the handler function is folded with any transport-level errors
-    // and returned.
-    ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(client_end_);
-    }
-
-   private:
-    ::fidl::ClientEnd<Interface> client_end_;
-  };
+  using SyncClient = fidl::WireSyncClient<::fidl_test_doccomments::Interface>;
 
 #ifdef __Fuchsia__
-  class AsyncEventHandler;
-  class ClientImpl;
+  using AsyncEventHandler =
+      ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>;
+  using ClientImpl =
+      ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>;
 #endif
 
-  // Pure-virtual interface to be implemented by a server.
-  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-  // and |fidl::ServerEnd<SomeProtocol>|).
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using _EnclosingProtocol = Interface;
-
-    using MethodCompleter = ::fidl::Completer<>;
-
-    // method comment #1
-    //
-    // method comment #3
-    virtual void Method(MethodCompleter::Sync& _completer) = 0;
-
-   private:
-    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn) final;
-  };
+  using Interface = ::fidl::WireInterface<::fidl_test_doccomments::Interface>;
 
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
@@ -1214,9 +1164,87 @@ class Interface final {
 
 #endif
 
-  class EventSender;
-  class WeakEventSender;
+  using EventSender =
+      ::fidl::WireEventSender<::fidl_test_doccomments::Interface>;
+  using WeakEventSender =
+      ::fidl::internal::WireWeakEventSender<::fidl_test_doccomments::Interface>;
 };
+}  // namespace fidl_test_doccomments
+template <>
+class ::fidl::WireSyncClient<::fidl_test_doccomments::Interface> final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_doccomments::Interface> client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_doccomments::Interface>& client_end()
+      const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_doccomments::Interface>& client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // method comment #1
+  //
+  // method comment #3
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_doccomments::Interface::ResultOf::Method Method() {
+    return ::fidl_test_doccomments::Interface::ResultOf::Method(
+        this->client_end());
+  }
+
+  // Handle all possible events defined in this protocol.
+  // Blocks to consume exactly one message from the channel, then call the
+  // corresponding virtual method defined in |SyncEventHandler|. The return
+  // status of the handler function is folded with any transport-level errors
+  // and returned.
+  ::fidl::Result HandleOneEvent(
+      ::fidl_test_doccomments::Interface::SyncEventHandler& event_handler) {
+    return event_handler.HandleOneEvent(client_end_);
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_doccomments::Interface> client_end_;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_doccomments::Interface>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_doccomments::Interface;
+
+  using MethodCompleter = ::fidl::Completer<>;
+
+  // method comment #1
+  //
+  // method comment #3
+  virtual void Method(MethodCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+namespace fidl_test_doccomments {
 
 // service comment #1
 //
@@ -1388,14 +1416,19 @@ static_assert(
 namespace fidl_test_doccomments {
 
 #ifdef __Fuchsia__
-class Interface::AsyncEventHandler : public Interface::EventHandlerInterface {
+}  // namespace fidl_test_doccomments
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>
+    : public ::fidl_test_doccomments::Interface::EventHandlerInterface {
  public:
-  AsyncEventHandler() = default;
+  WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
-
-class Interface::ClientImpl final : private ::fidl::internal::ClientBase {
+namespace fidl_test_doccomments {}  // namespace fidl_test_doccomments
+template <>
+class ::fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface> final
+    : private ::fidl::internal::ClientBase {
  public:
   // method comment #1
   //
@@ -1405,37 +1438,54 @@ class Interface::ClientImpl final : private ::fidl::internal::ClientBase {
   // necessary.
   ::fidl::Result Method();
 
-  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+  ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>*
+  event_handler() const {
+    return event_handler_.get();
+  }
 
  private:
-  friend class ::fidl::Client<Interface>;
-  friend class ::fidl::internal::ControlBlock<Interface>;
+  friend class ::fidl::Client<::fidl_test_doccomments::Interface>;
+  friend class ::fidl::internal::ControlBlock<
+      ::fidl_test_doccomments::Interface>;
 
-  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+  explicit WireClientImpl(
+      std::shared_ptr<
+          ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>>
+          event_handler)
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  std::shared_ptr<
+      ::fidl::WireAsyncEventHandler<::fidl_test_doccomments::Interface>>
+      event_handler_;
 };
+namespace fidl_test_doccomments {
 #endif
 
+}  // namespace fidl_test_doccomments
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Interface protocol, and can send events in that protocol.
-class Interface::EventSender {
+template <>
+class ::fidl::WireEventSender<::fidl_test_doccomments::Interface> {
  public:
   // Constructs an event sender with an invalid channel.
-  EventSender() = default;
+  WireEventSender() = default;
 
-  explicit EventSender(
+  explicit WireEventSender(
       ::fidl::ServerEnd<::fidl_test_doccomments::Interface> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<Interface>& server_end() const { return server_end_; }
-  ::fidl::ServerEnd<Interface>& server_end() { return server_end_; }
+  const ::fidl::ServerEnd<::fidl_test_doccomments::Interface>& server_end()
+      const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<::fidl_test_doccomments::Interface>& server_end() {
+    return server_end_;
+  }
 
   const ::zx::channel& channel() const { return server_end_.channel(); }
   ::zx::channel& channel() { return server_end_.channel(); }
@@ -1449,10 +1499,12 @@ class Interface::EventSender {
   zx_status_t OnEvent() const;
 
  private:
-  ::fidl::ServerEnd<Interface> server_end_;
+  ::fidl::ServerEnd<::fidl_test_doccomments::Interface> server_end_;
 };
 
-class Interface::WeakEventSender {
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_doccomments::Interface> {
  public:
   // event comment #1
   //
@@ -1465,14 +1517,16 @@ class Interface::WeakEventSender {
   }
 
  private:
-  friend class ::fidl::ServerBindingRef<Interface>;
+  friend class ::fidl::ServerBindingRef<::fidl_test_doccomments::Interface>;
 
-  explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<Interface>> binding)
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_doccomments::Interface>>
+          binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<Interface>> binding_;
+  std::weak_ptr<
+      ::fidl::internal::AsyncServerBinding<::fidl_test_doccomments::Interface>>
+      binding_;
 };
 #endif
-
-}  // namespace fidl_test_doccomments

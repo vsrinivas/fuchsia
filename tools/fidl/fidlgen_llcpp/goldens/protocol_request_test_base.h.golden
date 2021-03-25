@@ -14,21 +14,25 @@ class Parent_TestBase : public ::fidl_test_protocolrequest::Parent::Interface {
 
   using Interface = ::fidl_test_protocolrequest::Parent::Interface;
   virtual void GetChild(
-      Interface::GetChildCompleter::Sync& completer) override {
+      ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
+          GetChildCompleter::Sync& completer) override {
     NotImplemented_("GetChild", completer);
   }
   virtual void GetChildRequest(
-      Interface::GetChildRequestCompleter::Sync& completer) override {
+      ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
+          GetChildRequestCompleter::Sync& completer) override {
     NotImplemented_("GetChildRequest", completer);
   }
   virtual void TakeChild(
       ::fidl::ClientEnd<::fidl_test_protocolrequest::Child> c,
-      Interface::TakeChildCompleter::Sync& completer) override {
+      ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
+          TakeChildCompleter::Sync& completer) override {
     NotImplemented_("TakeChild", completer);
   }
   virtual void TakeChildRequest(
       ::fidl::ServerEnd<::fidl_test_protocolrequest::Child> r,
-      Interface::TakeChildRequestCompleter::Sync& completer) override {
+      ::fidl::WireInterface<::fidl_test_protocolrequest::Parent>::
+          TakeChildRequestCompleter::Sync& completer) override {
     NotImplemented_("TakeChildRequest", completer);
   }
 };

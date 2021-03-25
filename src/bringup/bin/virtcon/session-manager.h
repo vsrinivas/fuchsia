@@ -16,8 +16,8 @@ namespace virtcon {
 // This is the class that accepts virtcon session's from virtcon's FIDL and manages
 // the sessions until they are closed.
 // This class is not thread safe.
-class SessionManager final : public fuchsia_virtualconsole::SessionManager::Interface {
-  using Interface::CreateSession;
+class SessionManager final : public fidl::WireInterface<fuchsia_virtualconsole::SessionManager> {
+  using fidl::WireInterface<fuchsia_virtualconsole::SessionManager>::CreateSession;
 
  public:
   // Create a SessionManager. The pointers to `dispatcher` and `color_scheme` are unowned and

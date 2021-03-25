@@ -14,21 +14,22 @@ const fragmentEventSenderTmpl = `
 {{- end }}
 
 {{- define "EventSenderDeclaration" }}
-{{ EnsureNamespace . }}
+{{ EnsureNamespace "::" }}
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the {{ .Name }} protocol, and can send events in that protocol.
-class {{ .Name }}::EventSender {
+template<>
+class {{ .WireEventSender }} {
  public:
   // Constructs an event sender with an invalid channel.
-  EventSender() = default;
+  WireEventSender() = default;
 
-  explicit EventSender(::fidl::ServerEnd<{{ . }}> server_end)
+  explicit WireEventSender(::fidl::ServerEnd<{{ . }}> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<{{ .Name }}>& server_end() const { return server_end_; }
-  ::fidl::ServerEnd<{{ .Name }}>& server_end() { return server_end_; }
+  const ::fidl::ServerEnd<{{ . }}>& server_end() const { return server_end_; }
+  ::fidl::ServerEnd<{{ . }}>& server_end() { return server_end_; }
 
   const ::zx::channel& channel() const { return server_end_.channel(); }
   ::zx::channel& channel() { return server_end_.channel(); }
@@ -54,10 +55,11 @@ class {{ .Name }}::EventSender {
 {{ "" }}
   {{- end }}
  private:
-  ::fidl::ServerEnd<{{ .Name }}> server_end_;
+  ::fidl::ServerEnd<{{ . }}> server_end_;
 };
 
-class {{ .Name }}::WeakEventSender {
+template<>
+class {{ .WireWeakEventSender }} {
 {{- $protocol := . }}
  public:
   {{- range .Events }}
@@ -87,23 +89,24 @@ class {{ .Name }}::WeakEventSender {
 {{ "" }}
   {{- end }}
  private:
-  friend class ::fidl::ServerBindingRef<{{ .Name }}>;
+  friend class ::fidl::ServerBindingRef<{{ . }}>;
 
-  explicit WeakEventSender(std::weak_ptr<::fidl::internal::AsyncServerBinding<{{ .Name }}>> binding)
+  explicit WireWeakEventSender(std::weak_ptr<::fidl::internal::AsyncServerBinding<{{ . }}>> binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<{{ .Name }}>> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<{{ . }}>> binding_;
 };
 #endif
 {{- end }}
 
 {{- define "EventSenderDefinition" }}
+{{ EnsureNamespace "" }}
 #ifdef __Fuchsia__
   {{- range .Events }}
     {{- /* Managed */}}
-zx_status_t {{ .Protocol.Name }}::EventSender::
+zx_status_t {{ $.WireEventSender.NoLeading }}::
 {{- template "SendEventManagedMethodSignature" . }} {
-  ::fidl::OwnedEncodedMessage<{{ .Name }}Response> _response{
+  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
       {{- .ResponseArgs | ParamNames -}}
   };
   _response.Write(server_end_);
@@ -112,9 +115,9 @@ zx_status_t {{ .Protocol.Name }}::EventSender::
     {{- /* Caller-allocated */}}
     {{- if .ResponseArgs }}
 {{ "" }}
-zx_status_t {{ .Protocol.Name }}::EventSender::
+zx_status_t {{ $.WireEventSender.NoLeading }}::
 {{- template "SendEventCallerAllocateMethodSignature" . }} {
-  ::fidl::UnownedEncodedMessage<{{ .Name }}Response> _response(
+  ::fidl::UnownedEncodedMessage<{{ .WireResponse }}> _response(
       _buffer.data, _buffer.capacity
       {{- .ResponseArgs | CommaParamNames -}}
   );

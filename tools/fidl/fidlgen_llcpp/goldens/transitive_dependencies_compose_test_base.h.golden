@@ -14,7 +14,9 @@ class Top_TestBase
                                ::fidl::CompleterBase& completer) = 0;
 
   using Interface = ::fidl_test_transitivedependenciescompose::Top::Interface;
-  virtual void GetFoo(Interface::GetFooCompleter::Sync& completer) override {
+  virtual void GetFoo(
+      ::fidl::WireInterface<::fidl_test_transitivedependenciescompose::Top>::
+          GetFooCompleter::Sync& completer) override {
     NotImplemented_("GetFoo", completer);
   }
 };

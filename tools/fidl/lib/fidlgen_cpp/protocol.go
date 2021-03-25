@@ -107,6 +107,42 @@ type unifiedMessagingDetails struct {
 	ResponseDecoder DeclVariant
 }
 
+var WireSyncClient = NewDeclVariant("WireSyncClient", fidlNs)
+var WireClient = NewDeclVariant("WireClient", fidlNs)
+var WireSyncEventHandler = NewDeclVariant("WireSyncEventHandler", fidlNs)
+var WireAsyncEventHandler = NewDeclVariant("WireAsyncEventHandler", fidlNs)
+var WireInterface = NewDeclVariant("WireInterface", fidlNs)
+var WireRawChannelInterface = NewDeclVariant("WireRawChannelInterface", fidlNs)
+var WireEventSender = NewDeclVariant("WireEventSender", fidlNs)
+var WireWeakEventSender = NewDeclVariant("WireWeakEventSender", fidlNs.Append("internal"))
+var WireClientImpl = NewDeclVariant("WireClientImpl", fidlNs.Append("internal"))
+
+type wireTypeNames struct {
+	WireSyncClient          DeclVariant
+	WireClient              DeclVariant
+	WireSyncEventHandler    DeclVariant
+	WireAsyncEventHandler   DeclVariant
+	WireInterface           DeclVariant
+	WireRawChannelInterface DeclVariant
+	WireEventSender         DeclVariant
+	WireWeakEventSender     DeclVariant
+	WireClientImpl          DeclVariant
+}
+
+func newWireTypeNames(d DeclName) wireTypeNames {
+	return wireTypeNames{
+		WireSyncClient:          WireSyncClient.Template(d.Wire),
+		WireClient:              WireClient.Template(d.Wire),
+		WireSyncEventHandler:    WireSyncEventHandler.Template(d.Wire),
+		WireAsyncEventHandler:   WireAsyncEventHandler.Template(d.Wire),
+		WireInterface:           WireInterface.Template(d.Wire),
+		WireRawChannelInterface: WireRawChannelInterface.Template(d.Wire),
+		WireEventSender:         WireEventSender.Template(d.Wire),
+		WireWeakEventSender:     WireWeakEventSender.Template(d.Wire),
+		WireClientImpl:          WireClientImpl.Template(d.Wire),
+	}
+}
+
 // protocolInner contains information about a Protocol that should be
 // filled out by the compiler.
 type protocolInner struct {
@@ -122,6 +158,7 @@ type protocolInner struct {
 	DiscoverableName string
 
 	hlMessaging hlMessagingDetails
+	wireTypeNames
 
 	// ClientAllocation is the allocation behavior of the client when receiving
 	// FIDL events over this protocol.
@@ -137,20 +174,25 @@ type Protocol struct {
 
 	// OneWayMethods contains the list of one-way (i.e. fire-and-forget) methods
 	// in the protocol.
-	OneWayMethods []Method
+	OneWayMethods []*Method
 
 	// TwoWayMethods contains the list of two-way (i.e. has both request and
 	// response) methods in the protocol.
-	TwoWayMethods []Method
+	TwoWayMethods []*Method
 
 	// ClientMethods contains the list of client-initiated methods (i.e. any
 	// interaction that is not an event). It is the union of one-way and two-way
 	// methods.
-	ClientMethods []Method
+	ClientMethods []*Method
 
 	// Events contains the list of events (i.e. initiated by servers)
 	// in the protocol.
-	Events []Method
+	Events []*Method
+
+	// Templated names for wire helper types.
+
+	// Synchronous event handler for wire types.
+	WireSyncEventHandler DeclVariant
 }
 
 func (Protocol) Kind() declKind {
@@ -174,9 +216,10 @@ func (p Protocol) WireType() string {
 func newProtocol(inner protocolInner) Protocol {
 	type kinds []methodKind
 
-	filterBy := func(kinds kinds) []Method {
-		var out []Method
-		for _, m := range inner.Methods {
+	filterBy := func(kinds kinds) []*Method {
+		var out []*Method
+		for i := 0; i < len(inner.Methods); i++ {
+			m := &inner.Methods[i]
 			k := m.methodKind()
 			for _, want := range kinds {
 				if want == k {
@@ -188,11 +231,12 @@ func newProtocol(inner protocolInner) Protocol {
 	}
 
 	return Protocol{
-		protocolInner: inner,
-		OneWayMethods: filterBy(kinds{oneWayMethod}),
-		TwoWayMethods: filterBy(kinds{twoWayMethod}),
-		ClientMethods: filterBy(kinds{oneWayMethod, twoWayMethod}),
-		Events:        filterBy(kinds{eventMethod}),
+		protocolInner:        inner,
+		OneWayMethods:        filterBy(kinds{oneWayMethod}),
+		TwoWayMethods:        filterBy(kinds{twoWayMethod}),
+		ClientMethods:        filterBy(kinds{oneWayMethod, twoWayMethod}),
+		Events:               filterBy(kinds{eventMethod}),
+		WireSyncEventHandler: inner.DeclName.Wire.Nest("SyncEventHandler"),
 	}
 }
 
@@ -261,12 +305,37 @@ func (m message) HasPointer() bool {
 	return m.Depth > 0
 }
 
+type wireMethod struct {
+	WireCompleter       DeclVariant
+	WireCompleterBase   DeclVariant
+	WireRequest         DeclVariant
+	WireResponse        DeclVariant
+	WireResponseContext DeclVariant
+	WireResultOf        DeclVariant
+	WireUnownedResultOf DeclVariant
+}
+
+func newWireMethod(name string, wireTypes wireTypeNames, marker DeclVariant) wireMethod {
+	m := marker.Nest(name)
+	i := wireTypes.WireInterface.Nest(name)
+	return wireMethod{
+		WireCompleter:       i.AppendName("Completer"),
+		WireCompleterBase:   i.AppendName("CompleterBase"),
+		WireRequest:         m.AppendName("Request"),
+		WireResponse:        m.AppendName("Response"),
+		WireResponseContext: m.AppendName("ResponseContext"),
+		WireResultOf:        marker.Nest("ResultOf").Nest(name),
+		WireUnownedResultOf: marker.Nest("UnownedResultOf").Nest(name),
+	}
+}
+
 // methodInner contains information about a Method that should be filled out by
 // the compiler.
 type methodInner struct {
 	protocolName DeclName
 	request      messageInner
 	response     messageInner
+	wireMethod
 
 	fidlgen.Attributes
 	Name         string
@@ -289,9 +358,11 @@ type Method struct {
 	CallbackType         string
 	ResponseHandlerType  string
 	ResponderType        string
+	WireResult           DeclVariant
+	WireUnownedResult    DeclVariant
 	// Protocol is a reference to the containing protocol, for the
 	// convenience of golang templates.
-	Protocol DeclName
+	Protocol *Protocol
 }
 
 type messageDirection int
@@ -340,7 +411,9 @@ func newMethod(inner methodInner) Method {
 		CallbackType:        callbackType,
 		ResponseHandlerType: fmt.Sprintf("%s_%s_ResponseHandler", inner.protocolName.Natural.Name(), inner.Name),
 		ResponderType:       fmt.Sprintf("%s_%s_Responder", inner.protocolName.Natural.Name(), inner.Name),
-		Protocol:            inner.protocolName,
+		WireResult:          inner.protocolName.Wire.Nest("ResultOf").Nest(inner.Name),
+		WireUnownedResult:   inner.protocolName.Wire.Nest("UnownedResultOf").Nest(inner.Name),
+		Protocol:            nil,
 	}
 	return m
 }
@@ -399,6 +472,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		Wire:    NewDeclVariant(codingTableName, protocolName.Wire.Namespace()),
 		Natural: NewDeclVariant(codingTableName, protocolName.Natural.Namespace().Append("_internal")),
 	}
+	wireTypeNames := newWireTypeNames(protocolName)
 	methods := []Method{}
 	for _, v := range val.Methods {
 		name := changeIfReserved(v.Name)
@@ -425,6 +499,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 				TypeShape:   v.ResponseTypeShapeV1,
 				CodingTable: responseCodingTable,
 			},
+			wireMethod:   newWireMethod(name, wireTypeNames, protocolName.Wire),
 			Attributes:   v.Attributes,
 			Name:         name,
 			Ordinal:      v.Ordinal,
@@ -450,6 +525,7 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		Attributes:       val.Attributes,
 		DeclName:         protocolName,
 		hlMessaging:      compileHlMessagingDetails(protocolName),
+		wireTypeNames:    wireTypeNames,
 		DiscoverableName: val.GetServiceName(),
 		SyncEventAllocation: computeAllocation(
 			maxResponseSize, 0, messageDirectionResponse.queryBoundedness(
@@ -458,6 +534,9 @@ func (c *compiler) compileProtocol(val fidlgen.Protocol) Protocol {
 		FuzzingName: fuzzingName,
 		TestBase:    protocolName.AppendName("_TestBase").AppendNamespace("testing"),
 	})
+	for i := 0; i < len(methods); i++ {
+		methods[i].Protocol = &r
+	}
 	return r
 }
 

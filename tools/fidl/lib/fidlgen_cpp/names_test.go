@@ -39,4 +39,7 @@ func TestDeclVariant(t *testing.T) {
 	n := v.Nest("Quux")
 	assertEqual(t, n.String(), "::foo::bar::Baz::Quux")
 	assertEqual(t, n.Unqualified(), "Quux")
+
+	tmpl := v.Template(NewDeclVariant("World", Namespace([]string{"hello"})))
+	assertEqual(t, tmpl.String(), "::foo::bar::Baz<::hello::World>")
 }

@@ -15,13 +15,15 @@ class TestProtocol_TestBase
 
   using Interface = ::fidl_test_union::TestProtocol::Interface;
   virtual void StrictXUnionHenceResponseMayBeStackAllocated(
-      Interface::StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync&
-          completer) override {
+      ::fidl::WireInterface<::fidl_test_union::TestProtocol>::
+          StrictXUnionHenceResponseMayBeStackAllocatedCompleter::Sync&
+              completer) override {
     NotImplemented_("StrictXUnionHenceResponseMayBeStackAllocated", completer);
   }
   virtual void FlexibleXUnionHenceResponseMustBeHeapAllocated(
-      Interface::FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync&
-          completer) override {
+      ::fidl::WireInterface<::fidl_test_union::TestProtocol>::
+          FlexibleXUnionHenceResponseMustBeHeapAllocatedCompleter::Sync&
+              completer) override {
     NotImplemented_("FlexibleXUnionHenceResponseMustBeHeapAllocated",
                     completer);
   }

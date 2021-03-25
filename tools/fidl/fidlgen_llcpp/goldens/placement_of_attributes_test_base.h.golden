@@ -16,7 +16,9 @@ class ExampleProtocol_TestBase
   using Interface =
       ::fidl_test_placementofattributes::ExampleProtocol::Interface;
   virtual void Method(::exampleusing::wire::Empty arg,
-                      Interface::MethodCompleter::Sync& completer) override {
+                      ::fidl::WireInterface<
+                          ::fidl_test_placementofattributes::ExampleProtocol>::
+                          MethodCompleter::Sync& completer) override {
     NotImplemented_("Method", completer);
   }
 };

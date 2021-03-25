@@ -30,6 +30,7 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 
@@ -251,59 +252,16 @@ class SecondProtocol final {
     }
   };
 
-  class SyncClient final {
-   public:
-    SyncClient() = default;
-
-    explicit SyncClient(::fidl::ClientEnd<SecondProtocol> client_end)
-        : client_end_(std::move(client_end)) {}
-
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::fidl::ClientEnd<SecondProtocol>& client_end() const {
-      return client_end_;
-    }
-    ::fidl::ClientEnd<SecondProtocol>& client_end() { return client_end_; }
-
-    const ::zx::channel& channel() const { return client_end_.channel(); }
-    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::MethodOnSecond MethodOnSecond() {
-      return ResultOf::MethodOnSecond(this->client_end());
-    }
-
-   private:
-    ::fidl::ClientEnd<SecondProtocol> client_end_;
-  };
+  using SyncClient = fidl::WireSyncClient<::fidl_test_service::SecondProtocol>;
 
 #ifdef __Fuchsia__
-  class AsyncEventHandler;
-  class ClientImpl;
+  using AsyncEventHandler =
+      ::fidl::WireAsyncEventHandler<::fidl_test_service::SecondProtocol>;
+  using ClientImpl =
+      ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>;
 #endif
 
-  // Pure-virtual interface to be implemented by a server.
-  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-  // and |fidl::ServerEnd<SomeProtocol>|).
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using _EnclosingProtocol = SecondProtocol;
-
-    using MethodOnSecondCompleter = ::fidl::Completer<>;
-
-    virtual void MethodOnSecond(MethodOnSecondCompleter::Sync& _completer) = 0;
-
-   private:
-    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn) final;
-  };
+  using Interface = ::fidl::WireInterface<::fidl_test_service::SecondProtocol>;
 
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
@@ -333,10 +291,72 @@ class SecondProtocol final {
 
 #endif
 
-  class EventSender;
-  class WeakEventSender;
+  using EventSender =
+      ::fidl::WireEventSender<::fidl_test_service::SecondProtocol>;
+  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
+      ::fidl_test_service::SecondProtocol>;
+};
+}  // namespace fidl_test_service
+template <>
+class ::fidl::WireSyncClient<::fidl_test_service::SecondProtocol> final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_service::SecondProtocol> client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_service::SecondProtocol>& client_end()
+      const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_service::SecondProtocol>& client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_service::SecondProtocol::ResultOf::MethodOnSecond
+  MethodOnSecond() {
+    return ::fidl_test_service::SecondProtocol::ResultOf::MethodOnSecond(
+        this->client_end());
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_service::SecondProtocol> client_end_;
 };
 
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_service::SecondProtocol>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_service::SecondProtocol;
+
+  using MethodOnSecondCompleter = ::fidl::Completer<>;
+
+  virtual void MethodOnSecond(MethodOnSecondCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+namespace fidl_test_service {
 extern "C" const fidl_type_t
     fidl_test_service_FirstProtocolMethodOnFirstRequestTable;
 
@@ -536,59 +556,16 @@ class FirstProtocol final {
     }
   };
 
-  class SyncClient final {
-   public:
-    SyncClient() = default;
-
-    explicit SyncClient(::fidl::ClientEnd<FirstProtocol> client_end)
-        : client_end_(std::move(client_end)) {}
-
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::fidl::ClientEnd<FirstProtocol>& client_end() const {
-      return client_end_;
-    }
-    ::fidl::ClientEnd<FirstProtocol>& client_end() { return client_end_; }
-
-    const ::zx::channel& channel() const { return client_end_.channel(); }
-    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation
-    // necessary.
-    ResultOf::MethodOnFirst MethodOnFirst() {
-      return ResultOf::MethodOnFirst(this->client_end());
-    }
-
-   private:
-    ::fidl::ClientEnd<FirstProtocol> client_end_;
-  };
+  using SyncClient = fidl::WireSyncClient<::fidl_test_service::FirstProtocol>;
 
 #ifdef __Fuchsia__
-  class AsyncEventHandler;
-  class ClientImpl;
+  using AsyncEventHandler =
+      ::fidl::WireAsyncEventHandler<::fidl_test_service::FirstProtocol>;
+  using ClientImpl =
+      ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol>;
 #endif
 
-  // Pure-virtual interface to be implemented by a server.
-  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-  // and |fidl::ServerEnd<SomeProtocol>|).
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using _EnclosingProtocol = FirstProtocol;
-
-    using MethodOnFirstCompleter = ::fidl::Completer<>;
-
-    virtual void MethodOnFirst(MethodOnFirstCompleter::Sync& _completer) = 0;
-
-   private:
-    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn) final;
-  };
+  using Interface = ::fidl::WireInterface<::fidl_test_service::FirstProtocol>;
 
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
@@ -618,9 +595,71 @@ class FirstProtocol final {
 
 #endif
 
-  class EventSender;
-  class WeakEventSender;
+  using EventSender =
+      ::fidl::WireEventSender<::fidl_test_service::FirstProtocol>;
+  using WeakEventSender =
+      ::fidl::internal::WireWeakEventSender<::fidl_test_service::FirstProtocol>;
 };
+}  // namespace fidl_test_service
+template <>
+class ::fidl::WireSyncClient<::fidl_test_service::FirstProtocol> final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_service::FirstProtocol> client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_service::FirstProtocol>& client_end()
+      const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_service::FirstProtocol>& client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Allocates 16 bytes of message buffer on the stack. No heap allocation
+  // necessary.
+  ::fidl_test_service::FirstProtocol::ResultOf::MethodOnFirst MethodOnFirst() {
+    return ::fidl_test_service::FirstProtocol::ResultOf::MethodOnFirst(
+        this->client_end());
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_service::FirstProtocol> client_end_;
+};
+
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_service::FirstProtocol>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_service::FirstProtocol;
+
+  using MethodOnFirstCompleter = ::fidl::Completer<>;
+
+  virtual void MethodOnFirst(MethodOnFirstCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+namespace fidl_test_service {
 
 class SingleMemberService final {
   SingleMemberService() = default;
@@ -1002,53 +1041,72 @@ static_assert(
 namespace fidl_test_service {
 
 #ifdef __Fuchsia__
-class SecondProtocol::AsyncEventHandler
-    : public SecondProtocol::EventHandlerInterface {
+}  // namespace fidl_test_service
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_service::SecondProtocol>
+    : public ::fidl_test_service::SecondProtocol::EventHandlerInterface {
  public:
-  AsyncEventHandler() = default;
+  WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
-
-class SecondProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
+namespace fidl_test_service {}  // namespace fidl_test_service
+template <>
+class ::fidl::internal::WireClientImpl<::fidl_test_service::SecondProtocol>
+    final : private ::fidl::internal::ClientBase {
  public:
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result MethodOnSecond();
 
-  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+  ::fidl::WireAsyncEventHandler<::fidl_test_service::SecondProtocol>*
+  event_handler() const {
+    return event_handler_.get();
+  }
 
  private:
-  friend class ::fidl::Client<SecondProtocol>;
-  friend class ::fidl::internal::ControlBlock<SecondProtocol>;
+  friend class ::fidl::Client<::fidl_test_service::SecondProtocol>;
+  friend class ::fidl::internal::ControlBlock<
+      ::fidl_test_service::SecondProtocol>;
 
-  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+  explicit WireClientImpl(
+      std::shared_ptr<
+          ::fidl::WireAsyncEventHandler<::fidl_test_service::SecondProtocol>>
+          event_handler)
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  std::shared_ptr<
+      ::fidl::WireAsyncEventHandler<::fidl_test_service::SecondProtocol>>
+      event_handler_;
 };
+namespace fidl_test_service {
 #endif
 
+}  // namespace fidl_test_service
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the SecondProtocol protocol, and can send events in that protocol.
-class SecondProtocol::EventSender {
+template <>
+class ::fidl::WireEventSender<::fidl_test_service::SecondProtocol> {
  public:
   // Constructs an event sender with an invalid channel.
-  EventSender() = default;
+  WireEventSender() = default;
 
-  explicit EventSender(
+  explicit WireEventSender(
       ::fidl::ServerEnd<::fidl_test_service::SecondProtocol> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<SecondProtocol>& server_end() const {
+  const ::fidl::ServerEnd<::fidl_test_service::SecondProtocol>& server_end()
+      const {
     return server_end_;
   }
-  ::fidl::ServerEnd<SecondProtocol>& server_end() { return server_end_; }
+  ::fidl::ServerEnd<::fidl_test_service::SecondProtocol>& server_end() {
+    return server_end_;
+  }
 
   const ::zx::channel& channel() const { return server_end_.channel(); }
   ::zx::channel& channel() { return server_end_.channel(); }
@@ -1057,71 +1115,97 @@ class SecondProtocol::EventSender {
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::fidl::ServerEnd<SecondProtocol> server_end_;
+  ::fidl::ServerEnd<::fidl_test_service::SecondProtocol> server_end_;
 };
 
-class SecondProtocol::WeakEventSender {
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_service::SecondProtocol> {
  public:
  private:
-  friend class ::fidl::ServerBindingRef<SecondProtocol>;
+  friend class ::fidl::ServerBindingRef<::fidl_test_service::SecondProtocol>;
 
-  explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<SecondProtocol>>
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_service::SecondProtocol>>
           binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<SecondProtocol>> binding_;
+  std::weak_ptr<
+      ::fidl::internal::AsyncServerBinding<::fidl_test_service::SecondProtocol>>
+      binding_;
 };
 #endif
 
+namespace fidl_test_service {
+
 #ifdef __Fuchsia__
-class FirstProtocol::AsyncEventHandler
-    : public FirstProtocol::EventHandlerInterface {
+}  // namespace fidl_test_service
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_service::FirstProtocol>
+    : public ::fidl_test_service::FirstProtocol::EventHandlerInterface {
  public:
-  AsyncEventHandler() = default;
+  WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
-
-class FirstProtocol::ClientImpl final : private ::fidl::internal::ClientBase {
+namespace fidl_test_service {}  // namespace fidl_test_service
+template <>
+class ::fidl::internal::WireClientImpl<::fidl_test_service::FirstProtocol> final
+    : private ::fidl::internal::ClientBase {
  public:
   // Allocates 16 bytes of message buffer on the stack. No heap allocation
   // necessary.
   ::fidl::Result MethodOnFirst();
 
-  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+  ::fidl::WireAsyncEventHandler<::fidl_test_service::FirstProtocol>*
+  event_handler() const {
+    return event_handler_.get();
+  }
 
  private:
-  friend class ::fidl::Client<FirstProtocol>;
-  friend class ::fidl::internal::ControlBlock<FirstProtocol>;
+  friend class ::fidl::Client<::fidl_test_service::FirstProtocol>;
+  friend class ::fidl::internal::ControlBlock<
+      ::fidl_test_service::FirstProtocol>;
 
-  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+  explicit WireClientImpl(
+      std::shared_ptr<
+          ::fidl::WireAsyncEventHandler<::fidl_test_service::FirstProtocol>>
+          event_handler)
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  std::shared_ptr<
+      ::fidl::WireAsyncEventHandler<::fidl_test_service::FirstProtocol>>
+      event_handler_;
 };
+namespace fidl_test_service {
 #endif
 
+}  // namespace fidl_test_service
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the FirstProtocol protocol, and can send events in that protocol.
-class FirstProtocol::EventSender {
+template <>
+class ::fidl::WireEventSender<::fidl_test_service::FirstProtocol> {
  public:
   // Constructs an event sender with an invalid channel.
-  EventSender() = default;
+  WireEventSender() = default;
 
-  explicit EventSender(
+  explicit WireEventSender(
       ::fidl::ServerEnd<::fidl_test_service::FirstProtocol> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<FirstProtocol>& server_end() const {
+  const ::fidl::ServerEnd<::fidl_test_service::FirstProtocol>& server_end()
+      const {
     return server_end_;
   }
-  ::fidl::ServerEnd<FirstProtocol>& server_end() { return server_end_; }
+  ::fidl::ServerEnd<::fidl_test_service::FirstProtocol>& server_end() {
+    return server_end_;
+  }
 
   const ::zx::channel& channel() const { return server_end_.channel(); }
   ::zx::channel& channel() { return server_end_.channel(); }
@@ -1130,21 +1214,24 @@ class FirstProtocol::EventSender {
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::fidl::ServerEnd<FirstProtocol> server_end_;
+  ::fidl::ServerEnd<::fidl_test_service::FirstProtocol> server_end_;
 };
 
-class FirstProtocol::WeakEventSender {
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_service::FirstProtocol> {
  public:
  private:
-  friend class ::fidl::ServerBindingRef<FirstProtocol>;
+  friend class ::fidl::ServerBindingRef<::fidl_test_service::FirstProtocol>;
 
-  explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<FirstProtocol>>
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_service::FirstProtocol>>
           binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<FirstProtocol>> binding_;
+  std::weak_ptr<
+      ::fidl::internal::AsyncServerBinding<::fidl_test_service::FirstProtocol>>
+      binding_;
 };
 #endif
-
-}  // namespace fidl_test_service

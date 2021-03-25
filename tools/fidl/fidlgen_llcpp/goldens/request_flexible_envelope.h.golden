@@ -30,6 +30,7 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 
@@ -321,14 +322,16 @@ class Protocol final {
                      sizeof(RequestStrictResponseFlexibleResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL RequestStrictResponseFlexibleResponse _response{f};
-        message_.Encode<RequestStrictResponseFlexibleResponse>(&_response);
+        message_.Encode<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexibleResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             RequestStrictResponseFlexibleResponse* response)
           : message_(bytes, byte_size,
                      sizeof(RequestStrictResponseFlexibleResponse), nullptr, 0,
                      0) {
-        message_.Encode<RequestStrictResponseFlexibleResponse>(response);
+        message_.Encode<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestStrictResponseFlexibleResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -361,7 +364,8 @@ class Protocol final {
           ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo& f)
           : message_(bytes_.data(), bytes_.size(), f) {}
       explicit OwnedEncodedMessage(
-          RequestStrictResponseFlexibleResponse* response)
+          ::fidl_test_requestflexibleenvelope::Protocol::
+              RequestStrictResponseFlexibleResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -399,11 +403,13 @@ class Protocol final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<RequestStrictResponseFlexibleResponse>();
+        Decode<::fidl_test_requestflexibleenvelope::Protocol::
+                   RequestStrictResponseFlexibleResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<RequestStrictResponseFlexibleResponse>();
+        Decode<::fidl_test_requestflexibleenvelope::Protocol::
+                   RequestStrictResponseFlexibleResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -412,7 +418,8 @@ class Protocol final {
 
       RequestStrictResponseFlexibleResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<RequestStrictResponseFlexibleResponse*>(
+        return reinterpret_cast<::fidl_test_requestflexibleenvelope::Protocol::
+                                    RequestStrictResponseFlexibleResponse*>(
             bytes());
       }
 
@@ -451,7 +458,8 @@ class Protocol final {
     static constexpr bool HasPointer = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = RequestStrictResponseFlexibleResponse;
+    using ResponseType = ::fidl_test_requestflexibleenvelope::Protocol::
+        RequestStrictResponseFlexibleResponse;
 
     class UnownedEncodedMessage final {
      public:
@@ -598,14 +606,16 @@ class Protocol final {
                      sizeof(RequestFlexibleResponseStrictResponse), nullptr, 0,
                      0) {
         FIDL_ALIGNDECL RequestFlexibleResponseStrictResponse _response{f};
-        message_.Encode<RequestFlexibleResponseStrictResponse>(&_response);
+        message_.Encode<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrictResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             RequestFlexibleResponseStrictResponse* response)
           : message_(bytes, byte_size,
                      sizeof(RequestFlexibleResponseStrictResponse), nullptr, 0,
                      0) {
-        message_.Encode<RequestFlexibleResponseStrictResponse>(response);
+        message_.Encode<::fidl_test_requestflexibleenvelope::Protocol::
+                            RequestFlexibleResponseStrictResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -638,7 +648,8 @@ class Protocol final {
           ::fidl_test_requestflexibleenvelope::wire::StrictFoo& f)
           : message_(bytes_.data(), bytes_.size(), f) {}
       explicit OwnedEncodedMessage(
-          RequestFlexibleResponseStrictResponse* response)
+          ::fidl_test_requestflexibleenvelope::Protocol::
+              RequestFlexibleResponseStrictResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -676,11 +687,13 @@ class Protocol final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<RequestFlexibleResponseStrictResponse>();
+        Decode<::fidl_test_requestflexibleenvelope::Protocol::
+                   RequestFlexibleResponseStrictResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<RequestFlexibleResponseStrictResponse>();
+        Decode<::fidl_test_requestflexibleenvelope::Protocol::
+                   RequestFlexibleResponseStrictResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -689,7 +702,8 @@ class Protocol final {
 
       RequestFlexibleResponseStrictResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<RequestFlexibleResponseStrictResponse*>(
+        return reinterpret_cast<::fidl_test_requestflexibleenvelope::Protocol::
+                                    RequestFlexibleResponseStrictResponse*>(
             bytes());
       }
 
@@ -728,7 +742,8 @@ class Protocol final {
     static constexpr bool HasPointer = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = RequestFlexibleResponseStrictResponse;
+    using ResponseType = ::fidl_test_requestflexibleenvelope::Protocol::
+        RequestFlexibleResponseStrictResponse;
 
     class UnownedEncodedMessage final {
      public:
@@ -880,23 +895,39 @@ class Protocol final {
           const RequestStrictResponseFlexible&) = delete;
       ~RequestStrictResponseFlexible() = default;
 
-      RequestStrictResponseFlexibleResponse* Unwrap() {
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestStrictResponseFlexibleResponse*
+          Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<RequestStrictResponseFlexibleResponse*>(
+        return reinterpret_cast<::fidl_test_requestflexibleenvelope::Protocol::
+                                    RequestStrictResponseFlexibleResponse*>(
             bytes_.data());
       }
-      const RequestStrictResponseFlexibleResponse* Unwrap() const {
+      const ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestStrictResponseFlexibleResponse*
+          Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const RequestStrictResponseFlexibleResponse*>(
-            bytes_.data());
+        return reinterpret_cast<
+            const ::fidl_test_requestflexibleenvelope::Protocol::
+                RequestStrictResponseFlexibleResponse*>(bytes_.data());
       }
 
-      RequestStrictResponseFlexibleResponse& value() { return *Unwrap(); }
-      const RequestStrictResponseFlexibleResponse& value() const {
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestStrictResponseFlexibleResponse&
+          value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestStrictResponseFlexibleResponse&
+          value() const {
         return *Unwrap();
       }
 
-      RequestStrictResponseFlexibleResponse* operator->() { return &value(); }
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestStrictResponseFlexibleResponse*
+          operator->() {
+        return &value();
+      }
       const RequestStrictResponseFlexibleResponse* operator->() const {
         return &value();
       }
@@ -933,23 +964,39 @@ class Protocol final {
           const RequestFlexibleResponseStrict&) = delete;
       ~RequestFlexibleResponseStrict() = default;
 
-      RequestFlexibleResponseStrictResponse* Unwrap() {
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestFlexibleResponseStrictResponse*
+          Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<RequestFlexibleResponseStrictResponse*>(
+        return reinterpret_cast<::fidl_test_requestflexibleenvelope::Protocol::
+                                    RequestFlexibleResponseStrictResponse*>(
             bytes_.data());
       }
-      const RequestFlexibleResponseStrictResponse* Unwrap() const {
+      const ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestFlexibleResponseStrictResponse*
+          Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const RequestFlexibleResponseStrictResponse*>(
-            bytes_.data());
+        return reinterpret_cast<
+            const ::fidl_test_requestflexibleenvelope::Protocol::
+                RequestFlexibleResponseStrictResponse*>(bytes_.data());
       }
 
-      RequestFlexibleResponseStrictResponse& value() { return *Unwrap(); }
-      const RequestFlexibleResponseStrictResponse& value() const {
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestFlexibleResponseStrictResponse&
+          value() {
+        return *Unwrap();
+      }
+      const ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestFlexibleResponseStrictResponse&
+          value() const {
         return *Unwrap();
       }
 
-      RequestFlexibleResponseStrictResponse* operator->() { return &value(); }
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestFlexibleResponseStrictResponse*
+          operator->() {
+        return &value();
+      }
       const RequestFlexibleResponseStrictResponse* operator->() const {
         return &value();
       }
@@ -992,12 +1039,15 @@ class Protocol final {
 
       RequestStrictResponseFlexibleResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<RequestStrictResponseFlexibleResponse*>(bytes_);
+        return reinterpret_cast<::fidl_test_requestflexibleenvelope::Protocol::
+                                    RequestStrictResponseFlexibleResponse*>(
+            bytes_);
       }
       const RequestStrictResponseFlexibleResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const RequestStrictResponseFlexibleResponse*>(
-            bytes_);
+        return reinterpret_cast<
+            const ::fidl_test_requestflexibleenvelope::Protocol::
+                RequestStrictResponseFlexibleResponse*>(bytes_);
       }
 
       RequestStrictResponseFlexibleResponse& value() { return *Unwrap(); }
@@ -1040,12 +1090,15 @@ class Protocol final {
 
       RequestFlexibleResponseStrictResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<RequestFlexibleResponseStrictResponse*>(bytes_);
+        return reinterpret_cast<::fidl_test_requestflexibleenvelope::Protocol::
+                                    RequestFlexibleResponseStrictResponse*>(
+            bytes_);
       }
       const RequestFlexibleResponseStrictResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const RequestFlexibleResponseStrictResponse*>(
-            bytes_);
+        return reinterpret_cast<
+            const ::fidl_test_requestflexibleenvelope::Protocol::
+                RequestFlexibleResponseStrictResponse*>(bytes_);
       }
 
       RequestFlexibleResponseStrictResponse& value() { return *Unwrap(); }
@@ -1123,147 +1176,20 @@ class Protocol final {
     }
   };
 
-  class SyncClient final {
-   public:
-    SyncClient() = default;
-
-    explicit SyncClient(::fidl::ClientEnd<Protocol> client_end)
-        : client_end_(std::move(client_end)) {}
-
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::fidl::ClientEnd<Protocol>& client_end() const {
-      return client_end_;
-    }
-    ::fidl::ClientEnd<Protocol>& client_end() { return client_end_; }
-
-    const ::zx::channel& channel() const { return client_end_.channel(); }
-    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-    // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible(
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) {
-      return ResultOf::RequestStrictResponseFlexible(this->client_end(), s);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::RequestStrictResponseFlexible
-    RequestStrictResponseFlexible(
-        ::fidl::BufferSpan _request_buffer,
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::RequestStrictResponseFlexible(
-          this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
-          _response_buffer.data, _response_buffer.capacity);
-    }
-
-    // Request is heap-allocated. Response is heap-allocated.
-    ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict(
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) {
-      return ResultOf::RequestFlexibleResponseStrict(this->client_end(), s);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::RequestFlexibleResponseStrict
-    RequestFlexibleResponseStrict(
-        ::fidl::BufferSpan _request_buffer,
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-        ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::RequestFlexibleResponseStrict(
-          this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
-          _response_buffer.data, _response_buffer.capacity);
-    }
-
-   private:
-    ::fidl::ClientEnd<Protocol> client_end_;
-  };
+  using SyncClient =
+      fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>;
 
 #ifdef __Fuchsia__
-  class AsyncEventHandler;
+  using AsyncEventHandler = ::fidl::WireAsyncEventHandler<
+      ::fidl_test_requestflexibleenvelope::Protocol>;
   class RequestStrictResponseFlexibleResponseContext;
   class RequestFlexibleResponseStrictResponseContext;
-  class ClientImpl;
+  using ClientImpl = ::fidl::internal::WireClientImpl<
+      ::fidl_test_requestflexibleenvelope::Protocol>;
 #endif
 
-  // Pure-virtual interface to be implemented by a server.
-  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-  // and |fidl::ServerEnd<SomeProtocol>|).
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using _EnclosingProtocol = Protocol;
-
-    class RequestStrictResponseFlexibleCompleterBase
-        : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply(
-          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
-      ::fidl::Result Reply(
-          ::fidl::BufferSpan _buffer,
-          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using RequestStrictResponseFlexibleCompleter =
-        ::fidl::Completer<RequestStrictResponseFlexibleCompleterBase>;
-
-    virtual void RequestStrictResponseFlexible(
-        ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-        RequestStrictResponseFlexibleCompleter::Sync& _completer) = 0;
-
-    class RequestFlexibleResponseStrictCompleterBase
-        : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply(
-          ::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
-      ::fidl::Result Reply(
-          ::fidl::BufferSpan _buffer,
-          ::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using RequestFlexibleResponseStrictCompleter =
-        ::fidl::Completer<RequestFlexibleResponseStrictCompleterBase>;
-
-    virtual void RequestFlexibleResponseStrict(
-        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-        RequestFlexibleResponseStrictCompleter::Sync& _completer) = 0;
-
-   private:
-    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn) final;
-  };
+  using Interface =
+      ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>;
 
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
@@ -1293,11 +1219,168 @@ class Protocol final {
 
 #endif
 
-  class EventSender;
-  class WeakEventSender;
+  using EventSender =
+      ::fidl::WireEventSender<::fidl_test_requestflexibleenvelope::Protocol>;
+  using WeakEventSender = ::fidl::internal::WireWeakEventSender<
+      ::fidl_test_requestflexibleenvelope::Protocol>;
+};
+}  // namespace fidl_test_requestflexibleenvelope
+template <>
+class ::fidl::WireSyncClient<::fidl_test_requestflexibleenvelope::Protocol>
+    final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_requestflexibleenvelope::Protocol>
+          client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_requestflexibleenvelope::Protocol>&
+  client_end() const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_requestflexibleenvelope::Protocol>&
+  client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Request is heap-allocated. Response is heap-allocated.
+  ::fidl_test_requestflexibleenvelope::Protocol::ResultOf::
+      RequestStrictResponseFlexible
+      RequestStrictResponseFlexible(
+          ::fidl_test_requestflexibleenvelope::wire::StrictFoo s) {
+    return ::fidl_test_requestflexibleenvelope::Protocol::ResultOf::
+        RequestStrictResponseFlexible(this->client_end(), s);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_requestflexibleenvelope::Protocol::UnownedResultOf::
+      RequestStrictResponseFlexible
+      RequestStrictResponseFlexible(
+          ::fidl::BufferSpan _request_buffer,
+          ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
+          ::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_requestflexibleenvelope::Protocol::UnownedResultOf::
+        RequestStrictResponseFlexible(
+            this->client_end(), _request_buffer.data, _request_buffer.capacity,
+            s, _response_buffer.data, _response_buffer.capacity);
+  }
+
+  // Request is heap-allocated. Response is heap-allocated.
+  ::fidl_test_requestflexibleenvelope::Protocol::ResultOf::
+      RequestFlexibleResponseStrict
+      RequestFlexibleResponseStrict(
+          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s) {
+    return ::fidl_test_requestflexibleenvelope::Protocol::ResultOf::
+        RequestFlexibleResponseStrict(this->client_end(), s);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_requestflexibleenvelope::Protocol::UnownedResultOf::
+      RequestFlexibleResponseStrict
+      RequestFlexibleResponseStrict(
+          ::fidl::BufferSpan _request_buffer,
+          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
+          ::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_requestflexibleenvelope::Protocol::UnownedResultOf::
+        RequestFlexibleResponseStrict(
+            this->client_end(), _request_buffer.data, _request_buffer.capacity,
+            s, _response_buffer.data, _response_buffer.capacity);
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_requestflexibleenvelope::Protocol> client_end_;
 };
 
-}  // namespace fidl_test_requestflexibleenvelope
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_requestflexibleenvelope::Protocol>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_requestflexibleenvelope::Protocol;
+
+  class RequestStrictResponseFlexibleCompleterBase
+      : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply(
+        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
+    ::fidl::Result Reply(
+        ::fidl::BufferSpan _buffer,
+        ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo f);
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using RequestStrictResponseFlexibleCompleter =
+      ::fidl::Completer<RequestStrictResponseFlexibleCompleterBase>;
+
+  virtual void RequestStrictResponseFlexible(
+      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
+      RequestStrictResponseFlexibleCompleter::Sync& _completer) = 0;
+
+  class RequestFlexibleResponseStrictCompleterBase
+      : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply(
+        ::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
+    ::fidl::Result Reply(
+        ::fidl::BufferSpan _buffer,
+        ::fidl_test_requestflexibleenvelope::wire::StrictFoo f);
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using RequestFlexibleResponseStrictCompleter =
+      ::fidl::Completer<RequestFlexibleResponseStrictCompleterBase>;
+
+  virtual void RequestFlexibleResponseStrict(
+      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
+      RequestFlexibleResponseStrictCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
 namespace fidl {
 
 template <>
@@ -1385,44 +1468,56 @@ static_assert(offsetof(::fidl_test_requestflexibleenvelope::Protocol::
 namespace fidl_test_requestflexibleenvelope {
 
 #ifdef __Fuchsia__
-class Protocol::AsyncEventHandler : public Protocol::EventHandlerInterface {
+}  // namespace fidl_test_requestflexibleenvelope
+template <>
+class ::fidl::WireAsyncEventHandler<
+    ::fidl_test_requestflexibleenvelope::Protocol>
+    : public ::fidl_test_requestflexibleenvelope::Protocol::
+          EventHandlerInterface {
  public:
-  AsyncEventHandler() = default;
+  WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+namespace fidl_test_requestflexibleenvelope {
 
-class Protocol::RequestStrictResponseFlexibleResponseContext
+class ::fidl_test_requestflexibleenvelope::Protocol::
+    RequestStrictResponseFlexibleResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   RequestStrictResponseFlexibleResponseContext();
 
-  virtual void OnReply(
-      Protocol::RequestStrictResponseFlexibleResponse* message) = 0;
+  virtual void OnReply(::fidl_test_requestflexibleenvelope::Protocol::
+                           RequestStrictResponseFlexibleResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
 
-class Protocol::RequestFlexibleResponseStrictResponseContext
+class ::fidl_test_requestflexibleenvelope::Protocol::
+    RequestFlexibleResponseStrictResponseContext
     : public ::fidl::internal::ResponseContext {
  public:
   RequestFlexibleResponseStrictResponseContext();
 
-  virtual void OnReply(
-      Protocol::RequestFlexibleResponseStrictResponse* message) = 0;
+  virtual void OnReply(::fidl_test_requestflexibleenvelope::Protocol::
+                           RequestFlexibleResponseStrictResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
-
-class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
+}  // namespace fidl_test_requestflexibleenvelope
+template <>
+class ::fidl::internal::WireClientImpl<
+    ::fidl_test_requestflexibleenvelope::Protocol>
+    final : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|.
   // The request and callback are allocated on the heap.
   ::fidl::Result RequestStrictResponseFlexible(
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fit::callback<void(RequestStrictResponseFlexibleResponse* response)>
+      ::fit::callback<void(::fidl_test_requestflexibleenvelope::Protocol::
+                               RequestStrictResponseFlexibleResponse* response)>
           _cb);
 
   // Asynchronous variant of |Protocol.RequestStrictResponseFlexible()|.
@@ -1432,27 +1527,32 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   ::fidl::Result RequestStrictResponseFlexible(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      RequestStrictResponseFlexibleResponseContext* _context);
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestStrictResponseFlexibleResponseContext* _context);
 
   // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|.
   // Request is heap-allocated. Response is heap-allocated.
-  ResultOf::RequestStrictResponseFlexible RequestStrictResponseFlexible_Sync(
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s);
+  ::fidl_test_requestflexibleenvelope::Protocol::ResultOf::
+      RequestStrictResponseFlexible
+      RequestStrictResponseFlexible_Sync(
+          ::fidl_test_requestflexibleenvelope::wire::StrictFoo s);
 
   // Synchronous variant of |Protocol.RequestStrictResponseFlexible()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  UnownedResultOf::RequestStrictResponseFlexible
-  RequestStrictResponseFlexible_Sync(
-      ::fidl::BufferSpan _request_buffer,
-      ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
-      ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_requestflexibleenvelope::Protocol::UnownedResultOf::
+      RequestStrictResponseFlexible
+      RequestStrictResponseFlexible_Sync(
+          ::fidl::BufferSpan _request_buffer,
+          ::fidl_test_requestflexibleenvelope::wire::StrictFoo s,
+          ::fidl::BufferSpan _response_buffer);
 
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // The request and callback are allocated on the heap.
   ::fidl::Result RequestFlexibleResponseStrict(
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fit::callback<void(RequestFlexibleResponseStrictResponse* response)>
+      ::fit::callback<void(::fidl_test_requestflexibleenvelope::Protocol::
+                               RequestFlexibleResponseStrictResponse* response)>
           _cb);
 
   // Asynchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
@@ -1462,54 +1562,75 @@ class Protocol::ClientImpl final : private ::fidl::internal::ClientBase {
   ::fidl::Result RequestFlexibleResponseStrict(
       ::fidl::BufferSpan _request_buffer,
       ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      RequestFlexibleResponseStrictResponseContext* _context);
+      ::fidl_test_requestflexibleenvelope::Protocol::
+          RequestFlexibleResponseStrictResponseContext* _context);
 
   // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // Request is heap-allocated. Response is heap-allocated.
-  ResultOf::RequestFlexibleResponseStrict RequestFlexibleResponseStrict_Sync(
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s);
+  ::fidl_test_requestflexibleenvelope::Protocol::ResultOf::
+      RequestFlexibleResponseStrict
+      RequestFlexibleResponseStrict_Sync(
+          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s);
 
   // Synchronous variant of |Protocol.RequestFlexibleResponseStrict()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  UnownedResultOf::RequestFlexibleResponseStrict
-  RequestFlexibleResponseStrict_Sync(
-      ::fidl::BufferSpan _request_buffer,
-      ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
-      ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_requestflexibleenvelope::Protocol::UnownedResultOf::
+      RequestFlexibleResponseStrict
+      RequestFlexibleResponseStrict_Sync(
+          ::fidl::BufferSpan _request_buffer,
+          ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo s,
+          ::fidl::BufferSpan _response_buffer);
 
-  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+  ::fidl::WireAsyncEventHandler<::fidl_test_requestflexibleenvelope::Protocol>*
+  event_handler() const {
+    return event_handler_.get();
+  }
 
  private:
-  friend class ::fidl::Client<Protocol>;
-  friend class ::fidl::internal::ControlBlock<Protocol>;
+  friend class ::fidl::Client<::fidl_test_requestflexibleenvelope::Protocol>;
+  friend class ::fidl::internal::ControlBlock<
+      ::fidl_test_requestflexibleenvelope::Protocol>;
 
-  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+  explicit WireClientImpl(std::shared_ptr<::fidl::WireAsyncEventHandler<
+                              ::fidl_test_requestflexibleenvelope::Protocol>>
+                              event_handler)
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  std::shared_ptr<::fidl::WireAsyncEventHandler<
+      ::fidl_test_requestflexibleenvelope::Protocol>>
+      event_handler_;
 };
+namespace fidl_test_requestflexibleenvelope {
 #endif
 
+}  // namespace fidl_test_requestflexibleenvelope
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Protocol protocol, and can send events in that protocol.
-class Protocol::EventSender {
+template <>
+class ::fidl::WireEventSender<::fidl_test_requestflexibleenvelope::Protocol> {
  public:
   // Constructs an event sender with an invalid channel.
-  EventSender() = default;
+  WireEventSender() = default;
 
-  explicit EventSender(
+  explicit WireEventSender(
       ::fidl::ServerEnd<::fidl_test_requestflexibleenvelope::Protocol>
           server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<Protocol>& server_end() const { return server_end_; }
-  ::fidl::ServerEnd<Protocol>& server_end() { return server_end_; }
+  const ::fidl::ServerEnd<::fidl_test_requestflexibleenvelope::Protocol>&
+  server_end() const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<::fidl_test_requestflexibleenvelope::Protocol>&
+  server_end() {
+    return server_end_;
+  }
 
   const ::zx::channel& channel() const { return server_end_.channel(); }
   ::zx::channel& channel() { return server_end_.channel(); }
@@ -1518,20 +1639,25 @@ class Protocol::EventSender {
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::fidl::ServerEnd<Protocol> server_end_;
+  ::fidl::ServerEnd<::fidl_test_requestflexibleenvelope::Protocol> server_end_;
 };
 
-class Protocol::WeakEventSender {
+template <>
+class ::fidl::internal::WireWeakEventSender<
+    ::fidl_test_requestflexibleenvelope::Protocol> {
  public:
  private:
-  friend class ::fidl::ServerBindingRef<Protocol>;
+  friend class ::fidl::ServerBindingRef<
+      ::fidl_test_requestflexibleenvelope::Protocol>;
 
-  explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<Protocol>> binding)
+  explicit WireWeakEventSender(
+      std::weak_ptr<::fidl::internal::AsyncServerBinding<
+          ::fidl_test_requestflexibleenvelope::Protocol>>
+          binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<Protocol>> binding_;
+  std::weak_ptr<::fidl::internal::AsyncServerBinding<
+      ::fidl_test_requestflexibleenvelope::Protocol>>
+      binding_;
 };
 #endif
-
-}  // namespace fidl_test_requestflexibleenvelope

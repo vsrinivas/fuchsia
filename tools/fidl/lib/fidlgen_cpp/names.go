@@ -43,7 +43,12 @@ func (ns Namespace) Namespace() Namespace {
 
 // String returns the fully qualified namespace including leading ::.
 func (ns Namespace) String() string {
-	return "::" + strings.Join(ns, "::")
+	return "::" + ns.NoLeading()
+}
+
+// NoLeading returns the fully qualified namespace without the leading ::.
+func (ns Namespace) NoLeading() string {
+	return strings.Join(ns, "::")
 }
 
 // Append returns a new namespace with an additional component.
@@ -63,6 +68,8 @@ func (ns Namespace) DropLastComponent() Namespace {
 	copy(new, ns)
 	return Namespace(new)
 }
+
+var fidlNs Namespace = Namespace([]string{"fidl"})
 
 // name represents a declaration name within a namespace.
 // In the case of a nested class all of the containing classes are part of the name.
@@ -115,6 +122,12 @@ func (d DeclVariant) String() string {
 	return d.namespace.String() + "::" + d.name.String()
 }
 
+// NoLeading returns the fully qualified name without the leading ::
+// but including namespace and nested classes.
+func (d DeclVariant) NoLeading() string {
+	return d.namespace.NoLeading() + "::" + d.name.String()
+}
+
 // Name returns the name within the namespace, including nested classes.
 func (d DeclVariant) Name() string {
 	return d.name.String()
@@ -163,6 +176,15 @@ func (d DeclVariant) AppendNamespace(part string) DeclVariant {
 func (d DeclVariant) Nest(nested string) DeclVariant {
 	return DeclVariant{
 		name:      d.name.Nest(nested),
+		namespace: d.namespace,
+	}
+}
+
+// Template returns a new DeclVariant where existing decl is used a template with the supplied
+// one as its argument.
+func (d DeclVariant) Template(arg DeclVariant) DeclVariant {
+	return DeclVariant{
+		name:      d.name.Append(fmt.Sprintf("<%s>", arg)),
 		namespace: d.namespace,
 	}
 }

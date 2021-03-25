@@ -42,18 +42,18 @@ void ::fidl_test_handles::wire::Handles::_CloseHandles() {
 }
 #endif  // __Fuchsia__
 
-namespace fidl_test_handles {
-namespace {}  // namespace
-
+namespace fidl_test_handles {}  // namespace fidl_test_handles
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> SomeProtocol::ClientImpl::DispatchEvent(
-    fidl_incoming_msg_t* msg) {
+std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
+    ::fidl_test_handles::SomeProtocol>::DispatchEvent(fidl_incoming_msg_t*
+                                                          msg) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
 #endif
 
+namespace fidl_test_handles {
 #ifdef __Fuchsia__
 namespace methods {}  // namespace methods
 
@@ -69,7 +69,9 @@ namespace entries {
   return ::fidl::DispatchResult::kNotFound;
 }
 #endif
+}  // namespace fidl_test_handles
 
+namespace fidl_test_handles {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult SomeProtocol::Dispatch(Interface* impl,
                                               fidl_incoming_msg_t* msg,
@@ -79,14 +81,13 @@ namespace entries {
       {::fidl::UnbindInfo::kUnexpectedMessage, ZX_ERR_NOT_SUPPORTED});
   return ::fidl::DispatchResult::kNotFound;
 }
-
-::fidl::DispatchResult SomeProtocol::Interface::dispatch_message(
+}  // namespace fidl_test_handles
+::fidl::DispatchResult
+fidl::WireInterface<::fidl_test_handles::SomeProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return SomeProtocol::Dispatch(this, msg, txn);
+  return ::fidl_test_handles::SomeProtocol::Dispatch(this, msg, txn);
 }
 #endif
 
 #ifdef __Fuchsia__
 #endif
-
-}  // namespace fidl_test_handles

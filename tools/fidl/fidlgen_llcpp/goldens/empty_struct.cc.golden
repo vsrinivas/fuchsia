@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace fidl_test_emptystruct {
-namespace {
 
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Send_Ordinal =
     2183815705502904104lu;
@@ -31,13 +30,13 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendAndReceiveResponseTable;
-
-}  // namespace
 #ifdef __Fuchsia__
 ::fidl_test_emptystruct::EmptyProtocol::ResultOf::Send::Send(
     ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> _client,
     ::fidl_test_emptystruct::wire::Empty& e) {
-  ::fidl::OwnedEncodedMessage<SendRequest> _request(zx_txid_t(0), e);
+  ::fidl::OwnedEncodedMessage<
+      ::fidl_test_emptystruct::EmptyProtocol::SendRequest>
+      _request(zx_txid_t(0), e);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -49,8 +48,9 @@ extern "C" const fidl_type_t
     ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol> _client,
     uint8_t* _request_bytes, uint32_t _request_byte_capacity,
     ::fidl_test_emptystruct::wire::Empty& e) {
-  ::fidl::UnownedEncodedMessage<SendRequest> _request(
-      _request_bytes, _request_byte_capacity, 0, e);
+  ::fidl::UnownedEncodedMessage<
+      ::fidl_test_emptystruct::EmptyProtocol::SendRequest>
+      _request(_request_bytes, _request_byte_capacity, 0, e);
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
@@ -63,9 +63,12 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>
             _client,
         ::fidl_test_emptystruct::wire::Empty& e) {
-  ::fidl::OwnedEncodedMessage<SendAndReceiveRequest> _request(zx_txid_t(0), e);
-  _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
-      _client, bytes_.data(), bytes_.size());
+  ::fidl::OwnedEncodedMessage<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveRequest>
+      _request(zx_txid_t(0), e);
+  _request.GetOutgoingMessage()
+      .Call<::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse>(
+          _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -75,9 +78,12 @@ extern "C" const fidl_type_t
         ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>
             _client,
         ::fidl_test_emptystruct::wire::Empty& e, zx_time_t _deadline) {
-  ::fidl::OwnedEncodedMessage<SendAndReceiveRequest> _request(zx_txid_t(0), e);
-  _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
-      _client, bytes_.data(), bytes_.size(), _deadline);
+  ::fidl::OwnedEncodedMessage<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveRequest>
+      _request(zx_txid_t(0), e);
+  _request.GetOutgoingMessage()
+      .Call<::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse>(
+          _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -92,20 +98,24 @@ extern "C" const fidl_type_t
         ::fidl_test_emptystruct::wire::Empty& e, uint8_t* _response_bytes,
         uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ::fidl::UnownedEncodedMessage<SendAndReceiveRequest> _request(
-      _request_bytes, _request_byte_capacity, 0, e);
-  _request.GetOutgoingMessage().Call<SendAndReceiveResponse>(
-      _client, _response_bytes, _response_byte_capacity);
+  ::fidl::UnownedEncodedMessage<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveRequest>
+      _request(_request_bytes, _request_byte_capacity, 0, e);
+  _request.GetOutgoingMessage()
+      .Call<::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse>(
+          _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
 #endif
 
+}  // namespace fidl_test_emptystruct
 #ifdef __Fuchsia__
-::fidl::Result EmptyProtocol::ClientImpl::Send(
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::Send(
     ::fidl_test_emptystruct::wire::Empty e) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = ResultOf::Send(
+    auto _res = ::fidl_test_emptystruct::EmptyProtocol::ResultOf::Send(
         ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
             _channel->handle()),
         e);
@@ -116,11 +126,12 @@ extern "C" const fidl_type_t
 #endif
 
 #ifdef __Fuchsia__
-::fidl::Result EmptyProtocol::ClientImpl::Send(
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::Send(
     ::fidl::BufferSpan _request_buffer,
     ::fidl_test_emptystruct::wire::Empty e) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = UnownedResultOf::Send(
+    auto _res = ::fidl_test_emptystruct::EmptyProtocol::UnownedResultOf::Send(
         ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, e);
@@ -132,10 +143,10 @@ extern "C" const fidl_type_t
 
 #ifdef __Fuchsia__
 ::fidl_test_emptystruct::EmptyProtocol::ResultOf::SendAndReceive
-EmptyProtocol::ClientImpl::SendAndReceive_Sync(
-    ::fidl_test_emptystruct::wire::Empty e) {
+fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
+    SendAndReceive_Sync(::fidl_test_emptystruct::wire::Empty e) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::SendAndReceive(
+    return ::fidl_test_emptystruct::EmptyProtocol::ResultOf::SendAndReceive(
         ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
             _channel->handle()),
         e);
@@ -147,15 +158,17 @@ EmptyProtocol::ClientImpl::SendAndReceive_Sync(
 
 #ifdef __Fuchsia__
 ::fidl_test_emptystruct::EmptyProtocol::UnownedResultOf::SendAndReceive
-EmptyProtocol::ClientImpl::SendAndReceive_Sync(
-    ::fidl::BufferSpan _request_buffer, ::fidl_test_emptystruct::wire::Empty e,
-    ::fidl::BufferSpan _response_buffer) {
+fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
+    SendAndReceive_Sync(::fidl::BufferSpan _request_buffer,
+                        ::fidl_test_emptystruct::wire::Empty e,
+                        ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return UnownedResultOf::SendAndReceive(
-        ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
-            _channel->handle()),
-        _request_buffer.data, _request_buffer.capacity, e,
-        _response_buffer.data, _response_buffer.capacity);
+    return ::fidl_test_emptystruct::EmptyProtocol::UnownedResultOf::
+        SendAndReceive(
+            ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>(
+                _channel->handle()),
+            _request_buffer.data, _request_buffer.capacity, e,
+            _response_buffer.data, _response_buffer.capacity);
   }
   return ::fidl_test_emptystruct::EmptyProtocol::UnownedResultOf::
       SendAndReceive(
@@ -166,24 +179,34 @@ EmptyProtocol::ClientImpl::SendAndReceive_Sync(
 #ifdef __Fuchsia__
 ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext::
     SendAndReceiveResponseContext()
-    : ::fidl::internal::ResponseContext(SendAndReceiveResponse::Type,
-                                        kEmptyProtocol_SendAndReceive_Ordinal) {
-}
+    : ::fidl::internal::ResponseContext(
+          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse::Type,
+          kEmptyProtocol_SendAndReceive_Ordinal) {}
 
 void ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext::
     OnReply(uint8_t* reply) {
-  OnReply(reinterpret_cast<SendAndReceiveResponse*>(reply));
+  OnReply(reinterpret_cast<
+          ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse*>(
+      reply));
 }
 
-::fidl::Result EmptyProtocol::ClientImpl::SendAndReceive(
-    ::fidl_test_emptystruct::wire::Empty e,
-    ::fit::callback<void(SendAndReceiveResponse* response)> _cb) {
-  class ResponseContext final : public SendAndReceiveResponseContext {
+::fidl::Result fidl::internal::
+    WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::SendAndReceive(
+        ::fidl_test_emptystruct::wire::Empty e,
+        ::fit::callback<void(::fidl_test_emptystruct::EmptyProtocol::
+                                 SendAndReceiveResponse* response)>
+            _cb) {
+  class ResponseContext final : public ::fidl_test_emptystruct::EmptyProtocol::
+                                    SendAndReceiveResponseContext {
    public:
-    ResponseContext(::fit::callback<void(SendAndReceiveResponse* response)> cb)
+    ResponseContext(
+        ::fit::callback<void(::fidl_test_emptystruct::EmptyProtocol::
+                                 SendAndReceiveResponse* response)>
+            cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(SendAndReceiveResponse* response) override {
+    void OnReply(::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse*
+                     response) override {
       cb_(response);
 
       delete this;
@@ -192,42 +215,55 @@ void ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext::
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(SendAndReceiveResponse* response)> cb_;
+    ::fit::callback<void(
+        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse*
+            response)>
+        cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  SendAndReceiveRequest::OwnedEncodedMessage _request(_context->Txid(), e);
+  ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveRequest::
+      OwnedEncodedMessage _request(_context->Txid(), e);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-::fidl::Result EmptyProtocol::ClientImpl::SendAndReceive(
-    ::fidl::BufferSpan _request_buffer, ::fidl_test_emptystruct::wire::Empty e,
-    SendAndReceiveResponseContext* _context) {
+::fidl::Result fidl::internal::
+    WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::SendAndReceive(
+        ::fidl::BufferSpan _request_buffer,
+        ::fidl_test_emptystruct::wire::Empty e,
+        ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext*
+            _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  SendAndReceiveRequest::UnownedEncodedMessage _request(
-      _request_buffer.data, _request_buffer.capacity, _context->Txid(), e);
+  ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveRequest::
+      UnownedEncodedMessage _request(
+          _request_buffer.data, _request_buffer.capacity, _context->Txid(), e);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 #endif
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
-    fidl_incoming_msg_t* msg) {
+std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
+    ::fidl_test_emptystruct::EmptyProtocol>::DispatchEvent(fidl_incoming_msg_t*
+                                                               msg) {
   if (event_handler_ != nullptr) {
     fidl_message_header_t* hdr =
         reinterpret_cast<fidl_message_header_t*>(msg->bytes);
     switch (hdr->ordinal) {
-      case kEmptyProtocol_Receive_Ordinal: {
+      case ::fidl_test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
         const char* error_message;
-        zx_status_t status =
-            fidl_decode_etc(ReceiveResponse::Type, msg->bytes, msg->num_bytes,
-                            msg->handles, msg->num_handles, &error_message);
+        zx_status_t status = fidl_decode_etc(
+            ::fidl_test_emptystruct::EmptyProtocol::ReceiveResponse::Type,
+            msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
+            &error_message);
         if (status != ZX_OK) {
           return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
         }
-        event_handler_->Receive(reinterpret_cast<ReceiveResponse*>(msg->bytes));
+        event_handler_->Receive(
+            reinterpret_cast<
+                ::fidl_test_emptystruct::EmptyProtocol::ReceiveResponse*>(
+                msg->bytes));
         return std::nullopt;
       }
       default:
@@ -240,6 +276,7 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
 }
 #endif
 
+namespace fidl_test_emptystruct {
 ::fidl::Result EmptyProtocol::SyncEventHandler::HandleOneEvent(
     ::fidl::UnownedClientEnd<::fidl_test_emptystruct::EmptyProtocol>
         client_end) {
@@ -251,8 +288,10 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (ReceiveResponse::MaxNumHandles >= x) {
-      x = ReceiveResponse::MaxNumHandles;
+    if (::fidl_test_emptystruct::EmptyProtocol::ReceiveResponse::
+            MaxNumHandles >= x) {
+      x = ::fidl_test_emptystruct::EmptyProtocol::ReceiveResponse::
+          MaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
       x = ZX_CHANNEL_MAX_MSG_HANDLES;
@@ -289,15 +328,18 @@ std::optional<::fidl::UnbindInfo> EmptyProtocol::ClientImpl::DispatchEvent(
     return ::fidl::Result(status, ::fidl::kErrorInvalidHeader);
   }
   switch (hdr->ordinal) {
-    case kEmptyProtocol_Receive_Ordinal: {
+    case ::fidl_test_emptystruct::kEmptyProtocol_Receive_Ordinal: {
       const char* error_message;
-      zx_status_t status =
-          fidl_decode_etc(ReceiveResponse::Type, read_bytes, actual_bytes,
-                          read_handles, actual_handles, &error_message);
+      zx_status_t status = fidl_decode_etc(
+          ::fidl_test_emptystruct::EmptyProtocol::ReceiveResponse::Type,
+          read_bytes, actual_bytes, read_handles, actual_handles,
+          &error_message);
       if (status != ZX_OK) {
         return ::fidl::Result(status, error_message);
       }
-      Receive(reinterpret_cast<ReceiveResponse*>(read_bytes));
+      Receive(reinterpret_cast<
+              ::fidl_test_emptystruct::EmptyProtocol::ReceiveResponse*>(
+          read_bytes));
       return ::fidl::Result(ZX_OK, nullptr);
     }
     default: {
@@ -315,8 +357,8 @@ void EmptyProtocolDispatchSend(void* interface, void* bytes,
   auto message =
       reinterpret_cast<::fidl_test_emptystruct::EmptyProtocol::SendRequest*>(
           bytes);
-  ::fidl_test_emptystruct::EmptyProtocol::Interface::SendCompleter::Sync
-      completer(txn);
+  ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::SendCompleter::
+      Sync completer(txn);
   reinterpret_cast<::fidl_test_emptystruct::EmptyProtocol::Interface*>(
       interface)
       ->Send(std::move(message->e), completer);
@@ -326,8 +368,8 @@ void EmptyProtocolDispatchSendAndReceive(void* interface, void* bytes,
                                          ::fidl::Transaction* txn) {
   auto message = reinterpret_cast<
       ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveRequest*>(bytes);
-  ::fidl_test_emptystruct::EmptyProtocol::Interface::SendAndReceiveCompleter::
-      Sync completer(txn);
+  ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::
+      SendAndReceiveCompleter::Sync completer(txn);
   reinterpret_cast<::fidl_test_emptystruct::EmptyProtocol::Interface*>(
       interface)
       ->SendAndReceive(std::move(message->e), completer);
@@ -338,10 +380,10 @@ void EmptyProtocolDispatchSendAndReceive(void* interface, void* bytes,
 namespace entries {
 
 ::fidl::internal::MethodEntry EmptyProtocol[] = {
-    {kEmptyProtocol_Send_Ordinal,
+    {::fidl_test_emptystruct::kEmptyProtocol_Send_Ordinal,
      ::fidl_test_emptystruct::EmptyProtocol::SendRequest::Type,
      methods::EmptyProtocolDispatchSend},
-    {kEmptyProtocol_SendAndReceive_Ordinal,
+    {::fidl_test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal,
      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveRequest::Type,
      methods::EmptyProtocolDispatchSendAndReceive},
 };
@@ -370,65 +412,78 @@ namespace entries {
   }
   return dispatch_result;
 }
-
-::fidl::DispatchResult EmptyProtocol::Interface::dispatch_message(
+}  // namespace fidl_test_emptystruct
+::fidl::DispatchResult
+fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return EmptyProtocol::Dispatch(this, msg, txn);
+  return ::fidl_test_emptystruct::EmptyProtocol::Dispatch(this, msg, txn);
+}
+#endif
+namespace fidl_test_emptystruct {}  // namespace fidl_test_emptystruct
+#ifdef __Fuchsia__
+::fidl::Result fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::
+    SendAndReceiveCompleterBase::Reply(::fidl_test_emptystruct::wire::Empty e) {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse>
+      _response{e};
+  return ::fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::
+      SendAndReceiveCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
 
 #ifdef __Fuchsia__
-::fidl::Result EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
-    ::fidl_test_emptystruct::wire::Empty e) {
-  ::fidl::OwnedEncodedMessage<SendAndReceiveResponse> _response{e};
-  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
-}
-#endif
-
-#ifdef __Fuchsia__
-::fidl::Result EmptyProtocol::Interface::SendAndReceiveCompleterBase::Reply(
-    ::fidl::BufferSpan _buffer, ::fidl_test_emptystruct::wire::Empty e) {
-  SendAndReceiveResponse::UnownedEncodedMessage _response(_buffer.data,
-                                                          _buffer.capacity, e);
+::fidl::Result fidl::WireInterface<::fidl_test_emptystruct::EmptyProtocol>::
+    SendAndReceiveCompleterBase::Reply(::fidl::BufferSpan _buffer,
+                                       ::fidl_test_emptystruct::wire::Empty e) {
+  ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse::
+      UnownedEncodedMessage _response(_buffer.data, _buffer.capacity, e);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
 
 void ::fidl_test_emptystruct::EmptyProtocol::SendRequest::_InitHeader(
     zx_txid_t _txid) {
-  fidl_init_txn_header(&_hdr, _txid, kEmptyProtocol_Send_Ordinal);
+  fidl_init_txn_header(&_hdr, _txid,
+                       ::fidl_test_emptystruct::kEmptyProtocol_Send_Ordinal);
 }
 
 void ::fidl_test_emptystruct::EmptyProtocol::ReceiveResponse::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0, kEmptyProtocol_Receive_Ordinal);
+  fidl_init_txn_header(&_hdr, 0,
+                       ::fidl_test_emptystruct::kEmptyProtocol_Receive_Ordinal);
 }
 
 void ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveRequest::_InitHeader(
     zx_txid_t _txid) {
-  fidl_init_txn_header(&_hdr, _txid, kEmptyProtocol_SendAndReceive_Ordinal);
+  fidl_init_txn_header(
+      &_hdr, _txid,
+      ::fidl_test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal);
 }
 
 void ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse::
     _InitHeader() {
-  fidl_init_txn_header(&_hdr, 0, kEmptyProtocol_SendAndReceive_Ordinal);
+  fidl_init_txn_header(
+      &_hdr, 0, ::fidl_test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal);
 }
 
 #ifdef __Fuchsia__
-zx_status_t EmptyProtocol::EventSender::Receive(
+zx_status_t
+fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol>::Receive(
     ::fidl_test_emptystruct::wire::Empty e) const {
-  ::fidl::OwnedEncodedMessage<ReceiveResponse> _response{e};
+  ::fidl::OwnedEncodedMessage<
+      ::fidl_test_emptystruct::EmptyProtocol::ReceiveResponse>
+      _response{e};
   _response.Write(server_end_);
   return _response.status();
 }
 
-zx_status_t EmptyProtocol::EventSender::Receive(
+zx_status_t
+fidl::WireEventSender<::fidl_test_emptystruct::EmptyProtocol>::Receive(
     ::fidl::BufferSpan _buffer, ::fidl_test_emptystruct::wire::Empty e) const {
-  ::fidl::UnownedEncodedMessage<ReceiveResponse> _response(_buffer.data,
-                                                           _buffer.capacity, e);
+  ::fidl::UnownedEncodedMessage<
+      ::fidl_test_emptystruct::EmptyProtocol::ReceiveResponse>
+      _response(_buffer.data, _buffer.capacity, e);
   _response.Write(server_end_);
   return _response.status();
 }
 
 #endif
-
-}  // namespace fidl_test_emptystruct

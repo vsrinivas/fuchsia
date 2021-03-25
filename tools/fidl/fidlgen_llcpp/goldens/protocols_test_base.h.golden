@@ -14,12 +14,14 @@ class Transitional_TestBase
                                ::fidl::CompleterBase& completer) = 0;
 
   using Interface = ::fidl_test_protocols::Transitional::Interface;
-  virtual void Request(int64_t x,
-                       Interface::RequestCompleter::Sync& completer) override {
+  virtual void Request(
+      int64_t x, ::fidl::WireInterface<::fidl_test_protocols::Transitional>::
+                     RequestCompleter::Sync& completer) override {
     NotImplemented_("Request", completer);
   }
-  virtual void OneWay(int64_t x,
-                      Interface::OneWayCompleter::Sync& completer) override {
+  virtual void OneWay(
+      int64_t x, ::fidl::WireInterface<::fidl_test_protocols::Transitional>::
+                     OneWayCompleter::Sync& completer) override {
     NotImplemented_("OneWay", completer);
   }
 };
@@ -32,22 +34,28 @@ class ChannelProtocol_TestBase
                                ::fidl::CompleterBase& completer) = 0;
 
   using Interface = ::fidl_test_protocols::ChannelProtocol::Interface;
-  virtual void MethodA(int64_t a, int64_t b,
-                       Interface::MethodACompleter::Sync& completer) override {
+  virtual void MethodA(
+      int64_t a, int64_t b,
+      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
+          MethodACompleter::Sync& completer) override {
     NotImplemented_("MethodA", completer);
   }
-  virtual void MethodB(int64_t a, int64_t b,
-                       Interface::MethodBCompleter::Sync& completer) override {
+  virtual void MethodB(
+      int64_t a, int64_t b,
+      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
+          MethodBCompleter::Sync& completer) override {
     NotImplemented_("MethodB", completer);
   }
   virtual void TakeHandle(
       ::zx::handle h,
-      Interface::TakeHandleCompleter::Sync& completer) override {
+      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
+          TakeHandleCompleter::Sync& completer) override {
     NotImplemented_("TakeHandle", completer);
   }
   virtual void MutateSocket(
       ::zx::socket a,
-      Interface::MutateSocketCompleter::Sync& completer) override {
+      ::fidl::WireInterface<::fidl_test_protocols::ChannelProtocol>::
+          MutateSocketCompleter::Sync& completer) override {
     NotImplemented_("MutateSocket", completer);
   }
 };
@@ -62,30 +70,42 @@ class WithAndWithoutRequestResponse_TestBase
   using Interface =
       ::fidl_test_protocols::WithAndWithoutRequestResponse::Interface;
   virtual void NoRequestNoResponse(
-      Interface::NoRequestNoResponseCompleter::Sync& completer) override {
+      ::fidl::WireInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+          NoRequestNoResponseCompleter::Sync& completer) override {
     NotImplemented_("NoRequestNoResponse", completer);
   }
   virtual void NoRequestEmptyResponse(
-      Interface::NoRequestEmptyResponseCompleter::Sync& completer) override {
+      ::fidl::WireInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+          NoRequestEmptyResponseCompleter::Sync& completer) override {
     NotImplemented_("NoRequestEmptyResponse", completer);
   }
   virtual void NoRequestWithResponse(
-      Interface::NoRequestWithResponseCompleter::Sync& completer) override {
+      ::fidl::WireInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+          NoRequestWithResponseCompleter::Sync& completer) override {
     NotImplemented_("NoRequestWithResponse", completer);
   }
   virtual void WithRequestNoResponse(
       ::fidl::StringView arg,
-      Interface::WithRequestNoResponseCompleter::Sync& completer) override {
+      ::fidl::WireInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+          WithRequestNoResponseCompleter::Sync& completer) override {
     NotImplemented_("WithRequestNoResponse", completer);
   }
   virtual void WithRequestEmptyResponse(
       ::fidl::StringView arg,
-      Interface::WithRequestEmptyResponseCompleter::Sync& completer) override {
+      ::fidl::WireInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+          WithRequestEmptyResponseCompleter::Sync& completer) override {
     NotImplemented_("WithRequestEmptyResponse", completer);
   }
   virtual void WithRequestWithResponse(
       ::fidl::StringView arg,
-      Interface::WithRequestWithResponseCompleter::Sync& completer) override {
+      ::fidl::WireInterface<
+          ::fidl_test_protocols::WithAndWithoutRequestResponse>::
+          WithRequestWithResponseCompleter::Sync& completer) override {
     NotImplemented_("WithRequestWithResponse", completer);
   }
 };
@@ -99,15 +119,18 @@ class WithErrorSyntax_TestBase
 
   using Interface = ::fidl_test_protocols::WithErrorSyntax::Interface;
   virtual void ResponseAsStruct(
-      Interface::ResponseAsStructCompleter::Sync& completer) override {
+      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
+          ResponseAsStructCompleter::Sync& completer) override {
     NotImplemented_("ResponseAsStruct", completer);
   }
   virtual void ErrorAsPrimitive(
-      Interface::ErrorAsPrimitiveCompleter::Sync& completer) override {
+      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
+          ErrorAsPrimitiveCompleter::Sync& completer) override {
     NotImplemented_("ErrorAsPrimitive", completer);
   }
   virtual void ErrorAsEnum(
-      Interface::ErrorAsEnumCompleter::Sync& completer) override {
+      ::fidl::WireInterface<::fidl_test_protocols::WithErrorSyntax>::
+          ErrorAsEnumCompleter::Sync& completer) override {
     NotImplemented_("ErrorAsEnum", completer);
   }
 };

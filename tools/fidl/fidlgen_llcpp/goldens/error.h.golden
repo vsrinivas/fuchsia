@@ -30,6 +30,7 @@
 #include <lib/fidl/llcpp/service_handler_interface.h>
 #include <lib/fidl/llcpp/sync_call.h>
 #include <lib/fidl/llcpp/transaction.h>
+#include <lib/fidl/llcpp/wire_messaging.h>
 #include <lib/fidl/txn_header.h>
 #include <lib/zx/channel.h>
 
@@ -297,12 +298,12 @@ class Example final {
                             ::fidl_test_error::wire::Example_foo_Result& result)
           : message_(_bytes, _byte_size, sizeof(fooResponse), nullptr, 0, 0) {
         FIDL_ALIGNDECL fooResponse _response{result};
-        message_.Encode<fooResponse>(&_response);
+        message_.Encode<::fidl_test_error::Example::fooResponse>(&_response);
       }
       UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size,
                             fooResponse* response)
           : message_(bytes, byte_size, sizeof(fooResponse), nullptr, 0, 0) {
-        message_.Encode<fooResponse>(response);
+        message_.Encode<::fidl_test_error::Example::fooResponse>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -334,7 +335,8 @@ class Example final {
       explicit OwnedEncodedMessage(
           ::fidl_test_error::wire::Example_foo_Result& result)
           : message_(bytes_.data(), bytes_.size(), result) {}
-      explicit OwnedEncodedMessage(fooResponse* response)
+      explicit OwnedEncodedMessage(
+          ::fidl_test_error::Example::fooResponse* response)
           : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -372,11 +374,11 @@ class Example final {
                      uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles,
                                               handle_actual) {
-        Decode<fooResponse>();
+        Decode<::fidl_test_error::Example::fooResponse>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg)
           : ::fidl::internal::IncomingMessage(msg) {
-        Decode<fooResponse>();
+        Decode<::fidl_test_error::Example::fooResponse>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -385,7 +387,8 @@ class Example final {
 
       fooResponse* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<fooResponse*>(bytes());
+        return reinterpret_cast<::fidl_test_error::Example::fooResponse*>(
+            bytes());
       }
 
       // Release the ownership of the decoded message. That means that the
@@ -418,7 +421,7 @@ class Example final {
     static constexpr bool HasPointer = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = fooResponse;
+    using ResponseType = ::fidl_test_error::Example::fooResponse;
 
     class UnownedEncodedMessage final {
      public:
@@ -551,19 +554,23 @@ class Example final {
       foo* operator=(const foo&) = delete;
       ~foo() = default;
 
-      fooResponse* Unwrap() {
+      ::fidl_test_error::Example::fooResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<fooResponse*>(bytes_.data());
+        return reinterpret_cast<::fidl_test_error::Example::fooResponse*>(
+            bytes_.data());
       }
-      const fooResponse* Unwrap() const {
+      const ::fidl_test_error::Example::fooResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const fooResponse*>(bytes_.data());
+        return reinterpret_cast<const ::fidl_test_error::Example::fooResponse*>(
+            bytes_.data());
       }
 
-      fooResponse& value() { return *Unwrap(); }
-      const fooResponse& value() const { return *Unwrap(); }
+      ::fidl_test_error::Example::fooResponse& value() { return *Unwrap(); }
+      const ::fidl_test_error::Example::fooResponse& value() const {
+        return *Unwrap();
+      }
 
-      fooResponse* operator->() { return &value(); }
+      ::fidl_test_error::Example::fooResponse* operator->() { return &value(); }
       const fooResponse* operator->() const { return &value(); }
 
       fooResponse& operator*() { return value(); }
@@ -595,11 +602,13 @@ class Example final {
 
       fooResponse* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<fooResponse*>(bytes_);
+        return reinterpret_cast<::fidl_test_error::Example::fooResponse*>(
+            bytes_);
       }
       const fooResponse* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const fooResponse*>(bytes_);
+        return reinterpret_cast<const ::fidl_test_error::Example::fooResponse*>(
+            bytes_);
       }
 
       fooResponse& value() { return *Unwrap(); }
@@ -643,91 +652,17 @@ class Example final {
     }
   };
 
-  class SyncClient final {
-   public:
-    SyncClient() = default;
-
-    explicit SyncClient(::fidl::ClientEnd<Example> client_end)
-        : client_end_(std::move(client_end)) {}
-
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::fidl::ClientEnd<Example>& client_end() const { return client_end_; }
-    ::fidl::ClientEnd<Example>& client_end() { return client_end_; }
-
-    const ::zx::channel& channel() const { return client_end_.channel(); }
-    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-
-    // Allocates 48 bytes of response buffer on the stack. Request is
-    // heap-allocated.
-    ResultOf::foo foo(::fidl::StringView s) {
-      return ResultOf::foo(this->client_end(), s);
-    }
-
-    // Caller provides the backing storage for FIDL message via request and
-    // response buffers.
-    UnownedResultOf::foo foo(::fidl::BufferSpan _request_buffer,
-                             ::fidl::StringView s,
-                             ::fidl::BufferSpan _response_buffer) {
-      return UnownedResultOf::foo(
-          this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
-          _response_buffer.data, _response_buffer.capacity);
-    }
-
-   private:
-    ::fidl::ClientEnd<Example> client_end_;
-  };
+  using SyncClient = fidl::WireSyncClient<::fidl_test_error::Example>;
 
 #ifdef __Fuchsia__
-  class AsyncEventHandler;
+  using AsyncEventHandler =
+      ::fidl::WireAsyncEventHandler<::fidl_test_error::Example>;
   class fooResponseContext;
-  class ClientImpl;
+  using ClientImpl =
+      ::fidl::internal::WireClientImpl<::fidl_test_error::Example>;
 #endif
 
-  // Pure-virtual interface to be implemented by a server.
-  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-  // and |fidl::ServerEnd<SomeProtocol>|).
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using _EnclosingProtocol = Example;
-
-    class fooCompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors
-      // during the reply, such as encoding or writing to the transport. Note
-      // that any error will automatically lead to the destruction of the
-      // binding, after which the |on_unbound| callback will be triggered with a
-      // detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can
-      // be safely ignored.
-      ::fidl::Result Reply(::fidl_test_error::wire::Example_foo_Result result);
-      ::fidl::Result ReplySuccess(int64_t y);
-      ::fidl::Result ReplyError(uint32_t error);
-      ::fidl::Result Reply(::fidl::BufferSpan _buffer,
-                           ::fidl_test_error::wire::Example_foo_Result result);
-      ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t y);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using fooCompleter = ::fidl::Completer<fooCompleterBase>;
-
-    virtual void foo(::fidl::StringView s, fooCompleter::Sync& _completer) = 0;
-
-   private:
-    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn) final;
-  };
+  using Interface = ::fidl::WireInterface<::fidl_test_error::Example>;
 
   // Attempts to dispatch the incoming message to a handler function in the
   // server implementation. If there is no matching handler, it returns false,
@@ -757,11 +692,100 @@ class Example final {
 
 #endif
 
-  class EventSender;
-  class WeakEventSender;
+  using EventSender = ::fidl::WireEventSender<::fidl_test_error::Example>;
+  using WeakEventSender =
+      ::fidl::internal::WireWeakEventSender<::fidl_test_error::Example>;
+};
+}  // namespace fidl_test_error
+template <>
+class ::fidl::WireSyncClient<::fidl_test_error::Example> final {
+ public:
+  WireSyncClient() = default;
+
+  explicit WireSyncClient(
+      ::fidl::ClientEnd<::fidl_test_error::Example> client_end)
+      : client_end_(std::move(client_end)) {}
+
+  ~WireSyncClient() = default;
+  WireSyncClient(WireSyncClient&&) = default;
+  WireSyncClient& operator=(WireSyncClient&&) = default;
+
+  const ::fidl::ClientEnd<::fidl_test_error::Example>& client_end() const {
+    return client_end_;
+  }
+  ::fidl::ClientEnd<::fidl_test_error::Example>& client_end() {
+    return client_end_;
+  }
+
+  const ::zx::channel& channel() const { return client_end_.channel(); }
+  ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+
+  // Allocates 48 bytes of response buffer on the stack. Request is
+  // heap-allocated.
+  ::fidl_test_error::Example::ResultOf::foo foo(::fidl::StringView s) {
+    return ::fidl_test_error::Example::ResultOf::foo(this->client_end(), s);
+  }
+
+  // Caller provides the backing storage for FIDL message via request and
+  // response buffers.
+  ::fidl_test_error::Example::UnownedResultOf::foo foo(
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+      ::fidl::BufferSpan _response_buffer) {
+    return ::fidl_test_error::Example::UnownedResultOf::foo(
+        this->client_end(), _request_buffer.data, _request_buffer.capacity, s,
+        _response_buffer.data, _response_buffer.capacity);
+  }
+
+ private:
+  ::fidl::ClientEnd<::fidl_test_error::Example> client_end_;
 };
 
-}  // namespace fidl_test_error
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template <>
+class ::fidl::WireInterface<::fidl_test_error::Example>
+    : public ::fidl::internal::IncomingMessageDispatcher {
+ public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is
+  // defined.
+  using _EnclosingProtocol = ::fidl_test_error::Example;
+
+  class fooCompleterBase : public ::fidl::CompleterBase {
+   public:
+    // In the following methods, the return value indicates internal errors
+    // during the reply, such as encoding or writing to the transport. Note that
+    // any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed
+    // reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be
+    // safely ignored.
+    ::fidl::Result Reply(::fidl_test_error::wire::Example_foo_Result result);
+    ::fidl::Result ReplySuccess(int64_t y);
+    ::fidl::Result ReplyError(uint32_t error);
+    ::fidl::Result Reply(::fidl::BufferSpan _buffer,
+                         ::fidl_test_error::wire::Example_foo_Result result);
+    ::fidl::Result ReplySuccess(::fidl::BufferSpan _buffer, int64_t y);
+
+   protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using fooCompleter = ::fidl::Completer<fooCompleterBase>;
+
+  virtual void foo(::fidl::StringView s, fooCompleter::Sync& _completer) = 0;
+
+ private:
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
 namespace fidl {
 
 template <>
@@ -808,79 +832,102 @@ static_assert(offsetof(::fidl_test_error::Example::fooResponse, result) == 16);
 namespace fidl_test_error {
 
 #ifdef __Fuchsia__
-class Example::AsyncEventHandler : public Example::EventHandlerInterface {
+}  // namespace fidl_test_error
+template <>
+class ::fidl::WireAsyncEventHandler<::fidl_test_error::Example>
+    : public ::fidl_test_error::Example::EventHandlerInterface {
  public:
-  AsyncEventHandler() = default;
+  WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
+namespace fidl_test_error {
 
-class Example::fooResponseContext : public ::fidl::internal::ResponseContext {
+class ::fidl_test_error::Example::fooResponseContext
+    : public ::fidl::internal::ResponseContext {
  public:
   fooResponseContext();
 
-  virtual void OnReply(Example::fooResponse* message) = 0;
+  virtual void OnReply(::fidl_test_error::Example::fooResponse* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
-
-class Example::ClientImpl final : private ::fidl::internal::ClientBase {
+}  // namespace fidl_test_error
+template <>
+class ::fidl::internal::WireClientImpl<::fidl_test_error::Example> final
+    : private ::fidl::internal::ClientBase {
  public:
   // Asynchronous variant of |Example.foo()|.
   // The request and callback are allocated on the heap.
-  ::fidl::Result foo(::fidl::StringView s,
-                     ::fit::callback<void(fooResponse* response)> _cb);
+  ::fidl::Result foo(
+      ::fidl::StringView s,
+      ::fit::callback<void(::fidl_test_error::Example::fooResponse* response)>
+          _cb);
 
   // Asynchronous variant of |Example.foo()|.
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
   ::fidl::Result foo(::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
-                     fooResponseContext* _context);
+                     ::fidl_test_error::Example::fooResponseContext* _context);
 
   // Synchronous variant of |Example.foo()|.
   // Allocates 48 bytes of response buffer on the stack. Request is
   // heap-allocated.
-  ResultOf::foo foo_Sync(::fidl::StringView s);
+  ::fidl_test_error::Example::ResultOf::foo foo_Sync(::fidl::StringView s);
 
   // Synchronous variant of |Example.foo()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  UnownedResultOf::foo foo_Sync(::fidl::BufferSpan _request_buffer,
-                                ::fidl::StringView s,
-                                ::fidl::BufferSpan _response_buffer);
+  ::fidl_test_error::Example::UnownedResultOf::foo foo_Sync(
+      ::fidl::BufferSpan _request_buffer, ::fidl::StringView s,
+      ::fidl::BufferSpan _response_buffer);
 
-  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+  ::fidl::WireAsyncEventHandler<::fidl_test_error::Example>* event_handler()
+      const {
+    return event_handler_.get();
+  }
 
  private:
-  friend class ::fidl::Client<Example>;
-  friend class ::fidl::internal::ControlBlock<Example>;
+  friend class ::fidl::Client<::fidl_test_error::Example>;
+  friend class ::fidl::internal::ControlBlock<::fidl_test_error::Example>;
 
-  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+  explicit WireClientImpl(
+      std::shared_ptr<::fidl::WireAsyncEventHandler<::fidl_test_error::Example>>
+          event_handler)
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(
       fidl_incoming_msg_t* msg) override;
 
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  std::shared_ptr<::fidl::WireAsyncEventHandler<::fidl_test_error::Example>>
+      event_handler_;
 };
+namespace fidl_test_error {
 #endif
 
+}  // namespace fidl_test_error
 #ifdef __Fuchsia__
 // |EventSender| owns a server endpoint of a channel speaking
 // the Example protocol, and can send events in that protocol.
-class Example::EventSender {
+template <>
+class ::fidl::WireEventSender<::fidl_test_error::Example> {
  public:
   // Constructs an event sender with an invalid channel.
-  EventSender() = default;
+  WireEventSender() = default;
 
-  explicit EventSender(::fidl::ServerEnd<::fidl_test_error::Example> server_end)
+  explicit WireEventSender(
+      ::fidl::ServerEnd<::fidl_test_error::Example> server_end)
       : server_end_(std::move(server_end)) {}
 
   // The underlying server channel endpoint, which may be replaced at run-time.
-  const ::fidl::ServerEnd<Example>& server_end() const { return server_end_; }
-  ::fidl::ServerEnd<Example>& server_end() { return server_end_; }
+  const ::fidl::ServerEnd<::fidl_test_error::Example>& server_end() const {
+    return server_end_;
+  }
+  ::fidl::ServerEnd<::fidl_test_error::Example>& server_end() {
+    return server_end_;
+  }
 
   const ::zx::channel& channel() const { return server_end_.channel(); }
   ::zx::channel& channel() { return server_end_.channel(); }
@@ -889,20 +936,23 @@ class Example::EventSender {
   bool is_valid() const { return server_end_.is_valid(); }
 
  private:
-  ::fidl::ServerEnd<Example> server_end_;
+  ::fidl::ServerEnd<::fidl_test_error::Example> server_end_;
 };
 
-class Example::WeakEventSender {
+template <>
+class ::fidl::internal::WireWeakEventSender<::fidl_test_error::Example> {
  public:
  private:
-  friend class ::fidl::ServerBindingRef<Example>;
+  friend class ::fidl::ServerBindingRef<::fidl_test_error::Example>;
 
-  explicit WeakEventSender(
-      std::weak_ptr<::fidl::internal::AsyncServerBinding<Example>> binding)
+  explicit WireWeakEventSender(
+      std::weak_ptr<
+          ::fidl::internal::AsyncServerBinding<::fidl_test_error::Example>>
+          binding)
       : binding_(std::move(binding)) {}
 
-  std::weak_ptr<::fidl::internal::AsyncServerBinding<Example>> binding_;
+  std::weak_ptr<
+      ::fidl::internal::AsyncServerBinding<::fidl_test_error::Example>>
+      binding_;
 };
 #endif
-
-}  // namespace fidl_test_error

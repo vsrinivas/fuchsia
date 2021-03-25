@@ -23,7 +23,6 @@ void ::fidl_test_nullable::wire::StructWithNullableHandle::_CloseHandles() {
 #endif  // __Fuchsia__
 
 namespace fidl_test_nullable {
-namespace {
 
 [[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_Ordinal =
     1238508415331800925lu;
@@ -31,15 +30,15 @@ namespace {
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddRequestTable;
 
 extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
-
-}  // namespace
 #ifdef __Fuchsia__
 ::fidl_test_nullable::SimpleProtocol::ResultOf::Add::Add(
     ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> _client,
     int32_t a, int32_t b) {
-  ::fidl::OwnedEncodedMessage<AddRequest> _request(zx_txid_t(0), a, b);
-  _request.GetOutgoingMessage().Call<AddResponse>(_client, bytes_.data(),
-                                                  bytes_.size());
+  ::fidl::OwnedEncodedMessage<::fidl_test_nullable::SimpleProtocol::AddRequest>
+      _request(zx_txid_t(0), a, b);
+  _request.GetOutgoingMessage()
+      .Call<::fidl_test_nullable::SimpleProtocol::AddResponse>(
+          _client, bytes_.data(), bytes_.size());
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -47,9 +46,11 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
 ::fidl_test_nullable::SimpleProtocol::ResultOf::Add::Add(
     ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol> _client,
     int32_t a, int32_t b, zx_time_t _deadline) {
-  ::fidl::OwnedEncodedMessage<AddRequest> _request(zx_txid_t(0), a, b);
-  _request.GetOutgoingMessage().Call<AddResponse>(_client, bytes_.data(),
-                                                  bytes_.size(), _deadline);
+  ::fidl::OwnedEncodedMessage<::fidl_test_nullable::SimpleProtocol::AddRequest>
+      _request(zx_txid_t(0), a, b);
+  _request.GetOutgoingMessage()
+      .Call<::fidl_test_nullable::SimpleProtocol::AddResponse>(
+          _client, bytes_.data(), bytes_.size(), _deadline);
   status_ = _request.status();
   error_ = _request.error();
 }
@@ -61,20 +62,24 @@ extern "C" const fidl_type_t fidl_test_nullable_SimpleProtocolAddResponseTable;
     uint8_t* _request_bytes, uint32_t _request_byte_capacity, int32_t a,
     int32_t b, uint8_t* _response_bytes, uint32_t _response_byte_capacity)
     : bytes_(_response_bytes) {
-  ::fidl::UnownedEncodedMessage<AddRequest> _request(
-      _request_bytes, _request_byte_capacity, 0, a, b);
-  _request.GetOutgoingMessage().Call<AddResponse>(_client, _response_bytes,
-                                                  _response_byte_capacity);
+  ::fidl::UnownedEncodedMessage<
+      ::fidl_test_nullable::SimpleProtocol::AddRequest>
+      _request(_request_bytes, _request_byte_capacity, 0, a, b);
+  _request.GetOutgoingMessage()
+      .Call<::fidl_test_nullable::SimpleProtocol::AddResponse>(
+          _client, _response_bytes, _response_byte_capacity);
   status_ = _request.status();
   error_ = _request.error();
 }
 #endif
 
+}  // namespace fidl_test_nullable
 #ifdef __Fuchsia__
 ::fidl_test_nullable::SimpleProtocol::ResultOf::Add
-SimpleProtocol::ClientImpl::Add_Sync(int32_t a, int32_t b) {
+fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add_Sync(
+    int32_t a, int32_t b) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return ResultOf::Add(
+    return ::fidl_test_nullable::SimpleProtocol::ResultOf::Add(
         ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>(
             _channel->handle()),
         a, b);
@@ -86,11 +91,11 @@ SimpleProtocol::ClientImpl::Add_Sync(int32_t a, int32_t b) {
 
 #ifdef __Fuchsia__
 ::fidl_test_nullable::SimpleProtocol::UnownedResultOf::Add
-SimpleProtocol::ClientImpl::Add_Sync(::fidl::BufferSpan _request_buffer,
-                                     int32_t a, int32_t b,
-                                     ::fidl::BufferSpan _response_buffer) {
+fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add_Sync(
+    ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
+    ::fidl::BufferSpan _response_buffer) {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    return UnownedResultOf::Add(
+    return ::fidl_test_nullable::SimpleProtocol::UnownedResultOf::Add(
         ::fidl::UnownedClientEnd<::fidl_test_nullable::SimpleProtocol>(
             _channel->handle()),
         _request_buffer.data, _request_buffer.capacity, a, b,
@@ -103,22 +108,33 @@ SimpleProtocol::ClientImpl::Add_Sync(::fidl::BufferSpan _request_buffer,
 
 #ifdef __Fuchsia__
 ::fidl_test_nullable::SimpleProtocol::AddResponseContext::AddResponseContext()
-    : ::fidl::internal::ResponseContext(AddResponse::Type,
-                                        kSimpleProtocol_Add_Ordinal) {}
+    : ::fidl::internal::ResponseContext(
+          ::fidl_test_nullable::SimpleProtocol::AddResponse::Type,
+          kSimpleProtocol_Add_Ordinal) {}
 
 void ::fidl_test_nullable::SimpleProtocol::AddResponseContext::OnReply(
     uint8_t* reply) {
-  OnReply(reinterpret_cast<AddResponse*>(reply));
+  OnReply(reinterpret_cast<::fidl_test_nullable::SimpleProtocol::AddResponse*>(
+      reply));
 }
 
-::fidl::Result SimpleProtocol::ClientImpl::Add(
-    int32_t a, int32_t b, ::fit::callback<void(AddResponse* response)> _cb) {
-  class ResponseContext final : public AddResponseContext {
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add(
+    int32_t a, int32_t b,
+    ::fit::callback<
+        void(::fidl_test_nullable::SimpleProtocol::AddResponse* response)>
+        _cb) {
+  class ResponseContext final
+      : public ::fidl_test_nullable::SimpleProtocol::AddResponseContext {
    public:
-    ResponseContext(::fit::callback<void(AddResponse* response)> cb)
+    ResponseContext(
+        ::fit::callback<
+            void(::fidl_test_nullable::SimpleProtocol::AddResponse* response)>
+            cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply(AddResponse* response) override {
+    void OnReply(
+        ::fidl_test_nullable::SimpleProtocol::AddResponse* response) override {
       cb_(response);
 
       delete this;
@@ -127,35 +143,42 @@ void ::fidl_test_nullable::SimpleProtocol::AddResponseContext::OnReply(
     void OnError() override { delete this; }
 
    private:
-    ::fit::callback<void(AddResponse* response)> cb_;
+    ::fit::callback<void(
+        ::fidl_test_nullable::SimpleProtocol::AddResponse* response)>
+        cb_;
   };
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  AddRequest::OwnedEncodedMessage _request(_context->Txid(), a, b);
+  ::fidl_test_nullable::SimpleProtocol::AddRequest::OwnedEncodedMessage
+      _request(_context->Txid(), a, b);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-::fidl::Result SimpleProtocol::ClientImpl::Add(
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add(
     ::fidl::BufferSpan _request_buffer, int32_t a, int32_t b,
-    AddResponseContext* _context) {
+    ::fidl_test_nullable::SimpleProtocol::AddResponseContext* _context) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
 
-  AddRequest::UnownedEncodedMessage _request(
-      _request_buffer.data, _request_buffer.capacity, _context->Txid(), a, b);
+  ::fidl_test_nullable::SimpleProtocol::AddRequest::UnownedEncodedMessage
+      _request(_request_buffer.data, _request_buffer.capacity, _context->Txid(),
+               a, b);
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 #endif
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> SimpleProtocol::ClientImpl::DispatchEvent(
-    fidl_incoming_msg_t* msg) {
+std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
+    ::fidl_test_nullable::SimpleProtocol>::DispatchEvent(fidl_incoming_msg_t*
+                                                             msg) {
   FidlHandleInfoCloseMany(msg->handles, msg->num_handles);
   return ::fidl::UnbindInfo{::fidl::UnbindInfo::kUnexpectedMessage,
                             ZX_ERR_NOT_SUPPORTED};
 }
 #endif
 
+namespace fidl_test_nullable {
 #ifdef __Fuchsia__
 namespace methods {
 
@@ -164,8 +187,8 @@ void SimpleProtocolDispatchAdd(void* interface, void* bytes,
   auto message =
       reinterpret_cast<::fidl_test_nullable::SimpleProtocol::AddRequest*>(
           bytes);
-  ::fidl_test_nullable::SimpleProtocol::Interface::AddCompleter::Sync completer(
-      txn);
+  ::fidl::WireInterface<
+      ::fidl_test_nullable::SimpleProtocol>::AddCompleter::Sync completer(txn);
   reinterpret_cast<::fidl_test_nullable::SimpleProtocol::Interface*>(interface)
       ->Add(std::move(message->a), std::move(message->b), completer);
 }
@@ -175,7 +198,7 @@ void SimpleProtocolDispatchAdd(void* interface, void* bytes,
 namespace entries {
 
 ::fidl::internal::MethodEntry SimpleProtocol[] = {
-    {kSimpleProtocol_Add_Ordinal,
+    {::fidl_test_nullable::kSimpleProtocol_Add_Ordinal,
      ::fidl_test_nullable::SimpleProtocol::AddRequest::Type,
      methods::SimpleProtocolDispatchAdd},
 };
@@ -191,7 +214,9 @@ namespace entries {
                                     sizeof(::fidl::internal::MethodEntry));
 }
 #endif
+}  // namespace fidl_test_nullable
 
+namespace fidl_test_nullable {
 #ifdef __Fuchsia__
 ::fidl::DispatchResult SimpleProtocol::Dispatch(Interface* impl,
                                                 fidl_incoming_msg_t* msg,
@@ -204,36 +229,42 @@ namespace entries {
   }
   return dispatch_result;
 }
-
-::fidl::DispatchResult SimpleProtocol::Interface::dispatch_message(
+}  // namespace fidl_test_nullable
+::fidl::DispatchResult
+fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return SimpleProtocol::Dispatch(this, msg, txn);
+  return ::fidl_test_nullable::SimpleProtocol::Dispatch(this, msg, txn);
 }
 #endif
 
 #ifdef __Fuchsia__
-::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(int32_t sum) {
-  ::fidl::OwnedEncodedMessage<AddResponse> _response{sum};
-  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+::fidl::Result fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>::
+    AddCompleterBase::Reply(int32_t sum) {
+  ::fidl::OwnedEncodedMessage<::fidl_test_nullable::SimpleProtocol::AddResponse>
+      _response{sum};
+  return ::fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>::
+      AddCompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
 
 #ifdef __Fuchsia__
-::fidl::Result SimpleProtocol::Interface::AddCompleterBase::Reply(
-    ::fidl::BufferSpan _buffer, int32_t sum) {
-  AddResponse::UnownedEncodedMessage _response(_buffer.data, _buffer.capacity,
-                                               sum);
+::fidl::Result fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>::
+    AddCompleterBase::Reply(::fidl::BufferSpan _buffer, int32_t sum) {
+  ::fidl_test_nullable::SimpleProtocol::AddResponse::UnownedEncodedMessage
+      _response(_buffer.data, _buffer.capacity, sum);
   return CompleterBase::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
 
 void ::fidl_test_nullable::SimpleProtocol::AddRequest::_InitHeader(
     zx_txid_t _txid) {
-  fidl_init_txn_header(&_hdr, _txid, kSimpleProtocol_Add_Ordinal);
+  fidl_init_txn_header(&_hdr, _txid,
+                       ::fidl_test_nullable::kSimpleProtocol_Add_Ordinal);
 }
 
 void ::fidl_test_nullable::SimpleProtocol::AddResponse::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0, kSimpleProtocol_Add_Ordinal);
+  fidl_init_txn_header(&_hdr, 0,
+                       ::fidl_test_nullable::kSimpleProtocol_Add_Ordinal);
 }
 
 #ifdef __Fuchsia__
@@ -246,4 +277,3 @@ void ::fidl_test_nullable::wire::SimpleUnion::SizeAndOffsetAssertionHelper() {
   static_assert(offsetof(SimpleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-}  // namespace fidl_test_nullable

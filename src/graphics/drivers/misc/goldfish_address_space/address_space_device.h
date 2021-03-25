@@ -32,8 +32,9 @@ using ChildDriverType = ddk::Device<AddressSpaceChildDriver, ddk::Messageable>;
 class AddressSpaceDevice
     : public DeviceType,
       public ddk::GoldfishAddressSpaceProtocol<AddressSpaceDevice, ddk::base_protocol>,
-      public fuchsia_hardware_goldfish::AddressSpaceDevice::RawChannelInterface {
-  using Interface::OpenChildDriver;
+      public fidl::WireRawChannelInterface<fuchsia_hardware_goldfish::AddressSpaceDevice> {
+  using fidl::WireRawChannelInterface<
+      fuchsia_hardware_goldfish::AddressSpaceDevice>::OpenChildDriver;
 
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);

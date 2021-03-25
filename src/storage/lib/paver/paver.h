@@ -22,9 +22,9 @@
 
 namespace paver {
 
-class Paver : public fuchsia_paver::Paver::RawChannelInterface {
-  using Interface::FindSysconfig;
-  using Interface::UseBlockDevice;
+class Paver : public fidl::WireRawChannelInterface<fuchsia_paver::Paver> {
+  using fidl::WireRawChannelInterface<fuchsia_paver::Paver>::FindSysconfig;
+  using fidl::WireRawChannelInterface<fuchsia_paver::Paver>::UseBlockDevice;
 
  public:
   void FindDataSink(zx::channel data_sink, FindDataSinkCompleter::Sync& completer) override;

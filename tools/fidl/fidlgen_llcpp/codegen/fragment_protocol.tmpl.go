@@ -61,7 +61,7 @@ class {{ .Name }} final {
   {{- range .Methods }}
 
     {{- if .HasResponse }}
-  struct {{ .Name }}Response final {
+  struct {{ .WireResponse.Unqualified }} final {
     FIDL_ALIGNDECL
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
@@ -70,12 +70,12 @@ class {{ .Name }} final {
         {{- end }}
 
     {{- if .ResponseArgs }}
-    explicit {{ .Name }}Response({{ .ResponseArgs | MessagePrototype }})
+    explicit {{ .WireResponse.Unqualified }}({{ .ResponseArgs | MessagePrototype }})
     {{ .ResponseArgs | InitMessage }} {
       _InitHeader();
     }
     {{- end }}
-    {{ .Name }}Response() {
+    {{ .WireResponse.Unqualified }}() {
       _InitHeader();
     }
 
@@ -101,27 +101,27 @@ class {{ .Name }} final {
      public:
       UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size
         {{- .ResponseArgs | CommaMessagePrototype }})
-          : message_(_bytes, _byte_size, sizeof({{ .Name }}Response),
+          : message_(_bytes, _byte_size, sizeof({{ .WireResponse.Unqualified }}),
       {{- if gt .Response.MaxHandles 0 }}
         handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
       {{- else }}
         nullptr, 0, 0
       {{- end }}
         ) {
-        FIDL_ALIGNDECL {{ .Name }}Response _response{
+        FIDL_ALIGNDECL {{ .WireResponse.Unqualified }} _response{
           {{- .ResponseArgs | ParamNames -}}
         };
-        message_.Encode<{{ .Name }}Response>(&_response);
+        message_.Encode<{{ .WireResponse }}>(&_response);
       }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}Response* response)
-          : message_(bytes, byte_size, sizeof({{ .Name }}Response),
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .WireResponse.Unqualified }}* response)
+          : message_(bytes, byte_size, sizeof({{ .WireResponse.Unqualified }}),
       {{- if gt .Response.MaxHandles 0 }}
         handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
       {{- else }}
         nullptr, 0, 0
       {{- end }}
         ) {
-        message_.Encode<{{ .Name }}Response>(response);
+        message_.Encode<{{ .WireResponse }}>(response);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -154,7 +154,7 @@ class {{ .Name }} final {
       explicit OwnedEncodedMessage({{ .ResponseArgs | MessagePrototype }})
         : message_(bytes_.data(), bytes_.size()
           {{- .ResponseArgs | CommaParamNames }}) {}
-      explicit OwnedEncodedMessage({{ .Name }}Response* response)
+      explicit OwnedEncodedMessage({{ .WireResponse }}* response)
         : message_(bytes_.data(), bytes_.size(), response) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -186,10 +186,10 @@ class {{ .Name }} final {
       DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-        Decode<{{ .Name }}Response>();
+        Decode<{{ .WireResponse }}>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg) : ::fidl::internal::IncomingMessage(msg) {
-        Decode<{{ .Name }}Response>();
+        Decode<{{ .WireResponse }}>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -203,9 +203,9 @@ class {{ .Name }} final {
       }
       {{- end }}
 
-      {{ .Name }}Response* PrimaryObject() {
+      {{ .WireResponse.Unqualified }}* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<{{ .Name }}Response*>(bytes());
+        return reinterpret_cast<{{ .WireResponse }}*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the handles won't be closed
@@ -220,7 +220,7 @@ class {{ .Name }} final {
     {{- end }}
 
     {{- if .HasRequest }}
-  struct {{ .Name }}Request final {
+  struct {{ .WireRequest.Unqualified }} final {
     FIDL_ALIGNDECL
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
@@ -229,12 +229,12 @@ class {{ .Name }} final {
         {{- end }}
 
     {{- if .RequestArgs }}
-    explicit {{ .Name }}Request(zx_txid_t _txid {{- .RequestArgs | CommaMessagePrototype }})
+    explicit {{ .WireRequest.Unqualified }}(zx_txid_t _txid {{- .RequestArgs | CommaMessagePrototype }})
     {{ .RequestArgs | InitMessage }} {
       _InitHeader(_txid);
     }
     {{- end }}
-    explicit {{ .Name }}Request(zx_txid_t _txid) {
+    explicit {{ .WireRequest.Unqualified }}(zx_txid_t _txid) {
       _InitHeader(_txid);
     }
 
@@ -255,7 +255,7 @@ class {{ .Name }} final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
 
         {{- if and .HasResponse .ResponseArgs }}
-    using ResponseType = {{ .Name }}Response;
+    using ResponseType = {{ .WireResponse }};
         {{- end }}
 
     {{- if .Request.IsResource }}
@@ -266,27 +266,27 @@ class {{ .Name }} final {
      public:
       UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid
         {{- .RequestArgs | CommaMessagePrototype }})
-          : message_(_bytes, _byte_size, sizeof({{ .Name }}Request),
+          : message_(_bytes, _byte_size, sizeof({{ .WireRequest.Unqualified }}),
       {{- if gt .Request.MaxHandles 0 }}
         handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
       {{- else }}
         nullptr, 0, 0
       {{- end }}
         ) {
-        FIDL_ALIGNDECL {{ .Name }}Request _request(_txid
+        FIDL_ALIGNDECL {{ .WireRequest.Unqualified }} _request(_txid
             {{- .RequestArgs | CommaParamNames -}}
         );
-        message_.Encode<{{ .Name }}Request>(&_request);
+        message_.Encode<{{ .WireRequest.Unqualified }}>(&_request);
       }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .Name }}Request* request)
-          : message_(bytes, byte_size, sizeof({{ .Name }}Request),
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .WireRequest.Unqualified }}* request)
+          : message_(bytes, byte_size, sizeof({{ .WireRequest.Unqualified }}),
       {{- if gt .Request.MaxHandles 0 }}
         handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
       {{- else }}
         nullptr, 0, 0
       {{- end }}
         ) {
-        message_.Encode<{{ .Name }}Request>(request);
+        message_.Encode<{{ .WireRequest.Unqualified }}>(request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -320,7 +320,7 @@ class {{ .Name }} final {
         {{- .RequestArgs | CommaMessagePrototype }})
         : message_(bytes_.data(), bytes_.size(), _txid
           {{- .RequestArgs | CommaParamNames }}) {}
-      explicit OwnedEncodedMessage({{ .Name }}Request* request)
+      explicit OwnedEncodedMessage({{ .WireRequest.Unqualified }}* request)
         : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -352,10 +352,10 @@ class {{ .Name }} final {
       DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-        Decode<{{ .Name }}Request>();
+        Decode<{{ .WireRequest.Unqualified }}>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg) : ::fidl::internal::IncomingMessage(msg) {
-        Decode<{{ .Name }}Request>();
+        Decode<{{ .WireRequest.Unqualified }}>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -369,9 +369,9 @@ class {{ .Name }} final {
       }
       {{- end }}
 
-      {{ .Name }}Request* PrimaryObject() {
+      {{ .WireRequest.Unqualified }}* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<{{ .Name }}Request*>(bytes());
+        return reinterpret_cast<{{ .WireRequest.Unqualified }}*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the handles won't be closed
@@ -397,7 +397,7 @@ class {{ .Name }} final {
       {{- range .DocComments }}
     //{{ . }}
       {{- end }}
-    virtual void {{ .Name }}({{ .Name }}Response* event) {}
+    virtual void {{ .Name }}({{ .WireResponse }}* event) {}
     {{- end }}
   };
   {{- if .Events }}
@@ -454,23 +454,23 @@ class {{ .Name }} final {
       {{- end }}
       {{- if .HasResponse }}
 
-      {{ .Name }}Response* Unwrap() {
+      {{ .WireResponse }}* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<{{ .Name }}Response*>(bytes_.data());
+        return reinterpret_cast<{{ .WireResponse }}*>(bytes_.data());
       }
-      const {{ .Name }}Response* Unwrap() const {
+      const {{ .WireResponse }}* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const {{ .Name }}Response*>(bytes_.data());
+        return reinterpret_cast<const {{ .WireResponse }}*>(bytes_.data());
       }
 
-      {{ .Name }}Response& value() { return *Unwrap(); }
-      const {{ .Name }}Response& value() const { return *Unwrap(); }
+      {{ .WireResponse }}& value() { return *Unwrap(); }
+      const {{ .WireResponse }}& value() const { return *Unwrap(); }
 
-      {{ .Name }}Response* operator->() { return &value(); }
-      const {{ .Name }}Response* operator->() const { return &value(); }
+      {{ .WireResponse }}* operator->() { return &value(); }
+      const {{ .WireResponse.Unqualified }}* operator->() const { return &value(); }
 
-      {{ .Name }}Response& operator*() { return value(); }
-      const {{ .Name }}Response& operator*() const { return value(); }
+      {{ .WireResponse.Unqualified }}& operator*() { return value(); }
+      const {{ .WireResponse.Unqualified }}& operator*() const { return value(); }
       {{- end }}
 
      private:
@@ -515,23 +515,23 @@ class {{ .Name }} final {
       {{- end }}
       {{- if .HasResponse }}
 
-      {{ .Name }}Response* Unwrap() {
+      {{ .WireResponse.Unqualified }}* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<{{ .Name }}Response*>(bytes_);
+        return reinterpret_cast<{{ .WireResponse }}*>(bytes_);
       }
-      const {{ .Name }}Response* Unwrap() const {
+      const {{ .WireResponse.Unqualified }}* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<const {{ .Name }}Response*>(bytes_);
+        return reinterpret_cast<const {{ .WireResponse }}*>(bytes_);
       }
 
-      {{ .Name }}Response& value() { return *Unwrap(); }
-      const {{ .Name }}Response& value() const { return *Unwrap(); }
+      {{ .WireResponse.Unqualified }}& value() { return *Unwrap(); }
+      const {{ .WireResponse.Unqualified }}& value() const { return *Unwrap(); }
 
-      {{ .Name }}Response* operator->() { return &value(); }
-      const {{ .Name }}Response* operator->() const { return &value(); }
+      {{ .WireResponse.Unqualified }}* operator->() { return &value(); }
+      const {{ .WireResponse.Unqualified }}* operator->() const { return &value(); }
 
-      {{ .Name }}Response& operator*() { return value(); }
-      const {{ .Name }}Response& operator*() const { return value(); }
+      {{ .WireResponse.Unqualified }}& operator*() { return value(); }
+      const {{ .WireResponse.Unqualified }}& operator*() const { return value(); }
 
      private:
       uint8_t* bytes_;
@@ -581,178 +581,15 @@ class {{ .Name }} final {
     {{- end }}
   };
 
-  class SyncClient final {
-   public:
-    SyncClient() = default;
-
-    explicit SyncClient(::fidl::ClientEnd<{{ .Name }}> client_end)
-        : client_end_(std::move(client_end)) {}
-
-    ~SyncClient() = default;
-    SyncClient(SyncClient&&) = default;
-    SyncClient& operator=(SyncClient&&) = default;
-
-    const ::fidl::ClientEnd<{{ .Name }}>& client_end() const { return client_end_; }
-    ::fidl::ClientEnd<{{ .Name }}>& client_end() { return client_end_; }
-
-    const ::zx::channel& channel() const { return client_end_.channel(); }
-    ::zx::channel* mutable_channel() { return &client_end_.channel(); }
-{{ "" }}
-    {{- /* Client-calling functions do not apply to events. */}}
-    {{- range .ClientMethods -}}
-      {{- range .DocComments }}
-    //{{ . }}
-      {{- end }}
-    //{{ template "ClientAllocationComment" . }}
-    ResultOf::{{ .Name }} {{ .Name }}({{ .RequestArgs | Params }}) {
-      return ResultOf::{{ .Name }}(this->client_end()
-        {{- .RequestArgs | CommaParamNames -}});
-    }
-{{ "" }}
-      {{- if or .RequestArgs .ResponseArgs }}
-        {{- range .DocComments }}
-    //{{ . }}
-        {{- end }}
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::{{ .Name }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }}) {
-      return UnownedResultOf::{{ .Name }}(this->client_end()
-        {{- if .RequestArgs -}}
-          , _request_buffer.data, _request_buffer.capacity
-        {{- end -}}
-          {{- .RequestArgs | CommaParamNames -}}
-        {{- if .HasResponse -}}
-          , _response_buffer.data, _response_buffer.capacity
-        {{- end -}});
-    }
-      {{- end }}
-{{ "" }}
-    {{- end }}
-    {{- if .Events }}
-    // Handle all possible events defined in this protocol.
-    // Blocks to consume exactly one message from the channel, then call the corresponding virtual
-    // method defined in |SyncEventHandler|. The return status of the handler function is folded with
-    // any transport-level errors and returned.
-    ::fidl::Result HandleOneEvent(SyncEventHandler& event_handler) {
-      return event_handler.HandleOneEvent(client_end_);
-    }
-    {{- end }}
-   private:
-     ::fidl::ClientEnd<{{ .Name }}> client_end_;
-  };
+  using SyncClient = fidl::WireSyncClient<{{ . }}>;
 
 {{ template "ClientForwardDeclaration" . }}
 
-{{ "" }}
-  // Pure-virtual interface to be implemented by a server.
-  // This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
-  // and |fidl::ServerEnd<SomeProtocol>|).
-  class Interface : public ::fidl::internal::IncomingMessageDispatcher {
-   public:
-    Interface() = default;
-    virtual ~Interface() = default;
-
-    // The marker protocol type within which this |Interface| class is defined.
-    using _EnclosingProtocol = {{ $protocol.Name }};
-
-{{ "" }}
-    {{- range .Methods }}
-      {{- if .HasRequest }}
-        {{- if .HasResponse }}
-    class {{ .Name }}CompleterBase : public ::fidl::CompleterBase {
-     public:
-      // In the following methods, the return value indicates internal errors during
-      // the reply, such as encoding or writing to the transport.
-      // Note that any error will automatically lead to the destruction of the binding,
-      // after which the |on_unbound| callback will be triggered with a detailed reason.
-      //
-      // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
-      //
-      // Because the reply status is identical to the unbinding status, it can be safely ignored.
-      ::fidl::Result {{ template "ReplyManagedMethodSignature" . }};
-          {{- if .Result }}
-      ::fidl::Result {{ template "ReplyManagedResultSuccessMethodSignature" . }};
-      ::fidl::Result {{ template "ReplyManagedResultErrorMethodSignature" . }};
-          {{- end }}
-          {{- if .ResponseArgs }}
-      ::fidl::Result {{ template "ReplyCallerAllocateMethodSignature" . }};
-            {{- if .Result }}
-      ::fidl::Result {{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }};
-            {{- end }}
-          {{- end }}
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using {{ .Name }}Completer = ::fidl::Completer<{{ .Name }}CompleterBase>;
-        {{- else }}
-    using {{ .Name }}Completer = ::fidl::Completer<>;
-        {{- end }}
-
-{{ "" }}
-        {{- range .DocComments }}
-    //{{ . }}
-        {{- end }}
-    virtual void {{ .Name }}(
-        {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
-        {{- if .Transitional -}}
-          {{ .Name }}Completer::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
-        {{- else -}}
-          {{ .Name }}Completer::Sync& _completer) = 0;
-        {{- end }}
-{{ "" }}
-      {{- end }}
-    {{- end }}
-
-   private:
-    {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
-    ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
-                                            ::fidl::Transaction* txn) final;
-  };
-
-{{ "" }}
+  using Interface = {{ .WireInterface }};
   {{- if .ShouldEmitTypedChannelCascadingInheritance }}
-  // Pure-virtual interface to be implemented by a server.
-  // Implementing this interface is discouraged since it uses raw |zx::channel|s
-  // instead of |fidl::ClientEnd| and |fidl::ServerEnd|. Consider implementing
-  // |{{ .Name }}::Interface| instead.
-  // TODO(fxbug.dev/65212): Remove this interface after all users have
-  // migrated to the typed channels API.
-  class FIDL_DEPRECATED_USE_TYPED_CHANNELS RawChannelInterface : public Interface {
-   public:
-    RawChannelInterface() = default;
-    virtual ~RawChannelInterface() = default;
-
-    // The marker protocol type within which this |RawChannelInterface| class is defined.
-    using Interface::_EnclosingProtocol;
-
-    {{- range .ClientMethods }}
-    using Interface::{{ .Name }}Completer;
-
-{{ "" }}
-      {{- if .ShouldEmitTypedChannelCascadingInheritance }}
-    virtual void {{ .Name }}(
-        {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
-        {{ .Name }}Completer::Sync& _completer) final {
-      {{ .Name }}({{ template "ForwardMessageParamsUnwrapTypedChannels" .RequestArgs }}
-        {{- if .RequestArgs }}, {{ end -}} _completer);
-    }
-
-    // TODO(fxbug.dev/65212): Overriding this method is discouraged since it
-    // uses raw channels instead of |fidl::ClientEnd| and |fidl::ServerEnd|.
-    // Please move to overriding the typed channel overload above instead.
-    virtual void {{ .Name }}(
-      {{- .RequestArgs | ParamsNoTypedChannels }}{{ if .RequestArgs }}, {{ end -}}
-        {{- if .Transitional -}}
-          {{ .Name }}Completer::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
-        {{- else -}}
-          {{ .Name }}Completer::Sync& _completer) = 0;
-        {{- end }}
-{{ "" }}
-      {{- end }}
-    {{- end }}
-  };
+  using RawChannelInterface = {{ .WireRawChannelInterface }};
   {{- end }}
+
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
   // If there is no matching handler, it returns false, leaving the message and transaction intact.
@@ -775,9 +612,185 @@ class {{ .Name }} final {
 
 #endif
 
-  class EventSender;
-  class WeakEventSender;
+  using EventSender = {{ .WireEventSender }};
+  using WeakEventSender = {{ .WireWeakEventSender }};
 };
+
+{{- EnsureNamespace "::" }}
+template<>
+class {{ .WireSyncClient }} final {
+  public:
+   WireSyncClient() = default;
+
+   explicit WireSyncClient(::fidl::ClientEnd<{{ . }}> client_end)
+       : client_end_(std::move(client_end)) {}
+
+   ~WireSyncClient() = default;
+   WireSyncClient(WireSyncClient&&) = default;
+   WireSyncClient& operator=(WireSyncClient&&) = default;
+
+   const ::fidl::ClientEnd<{{ . }}>& client_end() const { return client_end_; }
+   ::fidl::ClientEnd<{{ . }}>& client_end() { return client_end_; }
+
+   const ::zx::channel& channel() const { return client_end_.channel(); }
+   ::zx::channel* mutable_channel() { return &client_end_.channel(); }
+{{ "" }}
+   {{- /* Client-calling functions do not apply to events. */}}
+   {{- range .ClientMethods -}}
+     {{- range .DocComments }}
+   //{{ . }}
+     {{- end }}
+   //{{ template "ClientAllocationComment" . }}
+   {{ .WireResult }} {{ .Name }}({{ .RequestArgs | Params }}) {
+     return {{ .WireResult }}(this->client_end()
+       {{- .RequestArgs | CommaParamNames -}});
+   }
+{{ "" }}
+     {{- if or .RequestArgs .ResponseArgs }}
+       {{- range .DocComments }}
+   //{{ . }}
+       {{- end }}
+   // Caller provides the backing storage for FIDL message via request and response buffers.
+   {{ .WireUnownedResult }} {{ .Name }}({{ template "SyncRequestCallerAllocateMethodArguments" . }}) {
+     return {{ .WireUnownedResult }}(this->client_end()
+       {{- if .RequestArgs -}}
+         , _request_buffer.data, _request_buffer.capacity
+       {{- end -}}
+         {{- .RequestArgs | CommaParamNames -}}
+       {{- if .HasResponse -}}
+         , _response_buffer.data, _response_buffer.capacity
+       {{- end -}});
+   }
+     {{- end }}
+{{ "" }}
+   {{- end }}
+   {{- if .Events }}
+   // Handle all possible events defined in this protocol.
+   // Blocks to consume exactly one message from the channel, then call the corresponding virtual
+   // method defined in |SyncEventHandler|. The return status of the handler function is folded with
+   // any transport-level errors and returned.
+   ::fidl::Result HandleOneEvent({{ .WireSyncEventHandler  }}& event_handler) {
+     return event_handler.HandleOneEvent(client_end_);
+   }
+   {{- end }}
+  private:
+    ::fidl::ClientEnd<{{ . }}> client_end_;
+};
+
+
+{{ "" }}
+// Pure-virtual interface to be implemented by a server.
+// This interface uses typed channels (i.e. |fidl::ClientEnd<SomeProtocol>|
+// and |fidl::ServerEnd<SomeProtocol>|).
+template<>
+class {{ .WireInterface }}  : public ::fidl::internal::IncomingMessageDispatcher {
+  public:
+  WireInterface() = default;
+  virtual ~WireInterface() = default;
+
+  // The marker protocol type within which this |WireInterface| class is defined.
+  using _EnclosingProtocol = {{ . }};
+
+{{ "" }}
+  {{- range .Methods }}
+    {{- if .HasRequest }}
+      {{- if .HasResponse }}
+  class {{ .WireCompleterBase.Unqualified }} : public ::fidl::CompleterBase {
+    public:
+    // In the following methods, the return value indicates internal errors during
+    // the reply, such as encoding or writing to the transport.
+    // Note that any error will automatically lead to the destruction of the binding,
+    // after which the |on_unbound| callback will be triggered with a detailed reason.
+    //
+    // See //zircon/system/ulib/fidl/include/lib/fidl/llcpp/server.h.
+    //
+    // Because the reply status is identical to the unbinding status, it can be safely ignored.
+    ::fidl::Result {{ template "ReplyManagedMethodSignature" . }};
+        {{- if .Result }}
+    ::fidl::Result {{ template "ReplyManagedResultSuccessMethodSignature" . }};
+    ::fidl::Result {{ template "ReplyManagedResultErrorMethodSignature" . }};
+        {{- end }}
+        {{- if .ResponseArgs }}
+    ::fidl::Result {{ template "ReplyCallerAllocateMethodSignature" . }};
+          {{- if .Result }}
+    ::fidl::Result {{ template "ReplyCallerAllocateResultSuccessMethodSignature" . }};
+          {{- end }}
+        {{- end }}
+
+    protected:
+    using ::fidl::CompleterBase::CompleterBase;
+  };
+
+  using {{ .WireCompleter.Unqualified }} = ::fidl::Completer<{{ .WireCompleterBase.Unqualified }}>;
+      {{- else }}
+  using {{ .WireCompleter.Unqualified }} = ::fidl::Completer<>;
+      {{- end }}
+
+{{ "" }}
+      {{- range .DocComments }}
+  //{{ . }}
+      {{- end }}
+  virtual void {{ .Name }}(
+      {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
+      {{- if .Transitional -}}
+        {{ .WireCompleter.Unqualified }}::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+      {{- else -}}
+        {{ .WireCompleter.Unqualified }}::Sync& _completer) = 0;
+      {{- end }}
+{{ "" }}
+    {{- end }}
+  {{- end }}
+
+  private:
+  {{- /* Note that this implementation is snake_case to avoid name conflicts. */}}
+  ::fidl::DispatchResult dispatch_message(fidl_incoming_msg_t* msg,
+                                          ::fidl::Transaction* txn) final;
+};
+
+{{ "" }}
+{{- if .ShouldEmitTypedChannelCascadingInheritance }}
+// Pure-virtual interface to be implemented by a server.
+// Implementing this interface is discouraged since it uses raw |zx::channel|s
+// instead of |fidl::ClientEnd| and |fidl::ServerEnd|. Consider implementing
+// |{{ .WireInterface }}| instead.
+// TODO(fxbug.dev/65212): Remove this interface after all users have
+// migrated to the typed channels API.
+template<>
+  class FIDL_DEPRECATED_USE_TYPED_CHANNELS {{ .WireRawChannelInterface }} : public {{ .WireInterface }} {
+   public:
+    WireRawChannelInterface() = default;
+    virtual ~WireRawChannelInterface() = default;
+
+    // The marker protocol type within which this |RawChannelInterface| class is defined.
+    using {{ .WireInterface }}::_EnclosingProtocol;
+
+    {{- range .ClientMethods }}
+    using {{ .WireCompleter }};
+
+{{ "" }}
+      {{- if .ShouldEmitTypedChannelCascadingInheritance }}
+    virtual void {{ .Name }}(
+        {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
+        {{ .WireCompleter }}::Sync& _completer) final {
+      {{ .Name }}({{ template "ForwardMessageParamsUnwrapTypedChannels" .RequestArgs }}
+        {{- if .RequestArgs }}, {{ end -}} _completer);
+    }
+
+    // TODO(fxbug.dev/65212): Overriding this method is discouraged since it
+    // uses raw channels instead of |fidl::ClientEnd| and |fidl::ServerEnd|.
+    // Please move to overriding the typed channel overload above instead.
+    virtual void {{ .Name }}(
+      {{- .RequestArgs | ParamsNoTypedChannels }}{{ if .RequestArgs }}, {{ end -}}
+        {{- if .Transitional -}}
+          {{ .WireCompleter }}::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+        {{- else -}}
+          {{ .WireCompleter }}::Sync& _completer) = 0;
+        {{- end }}
+{{ "" }}
+      {{- end }}
+    {{- end }}
+  };
+  {{- end }}
 {{- end }}
 
 {{- define "ProtocolTraits" -}}
@@ -787,25 +800,25 @@ class {{ .Name }} final {
 {{- if .HasRequest }}
 
 template <>
-struct IsFidlType<{{ $protocol }}::{{ .Name }}Request> : public std::true_type {};
+struct IsFidlType<{{ .WireRequest }}> : public std::true_type {};
 template <>
-struct IsFidlMessage<{{ $protocol }}::{{ .Name }}Request> : public std::true_type {};
-static_assert(sizeof({{ $protocol }}::{{ .Name }}Request)
-    == {{ $protocol }}::{{ .Name }}Request::PrimarySize);
+struct IsFidlMessage<{{ .WireRequest }}> : public std::true_type {};
+static_assert(sizeof({{ .WireRequest }})
+    == {{ .WireRequest }}::PrimarySize);
 {{- range $index, $param := .RequestArgs }}
-static_assert(offsetof({{ $protocol }}::{{ $method.Name }}Request, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $method.WireRequest }}, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
 {{- if .HasResponse }}
 
 template <>
-struct IsFidlType<{{ $protocol }}::{{ .Name }}Response> : public std::true_type {};
+struct IsFidlType<{{ .WireResponse }}> : public std::true_type {};
 template <>
-struct IsFidlMessage<{{ $protocol }}::{{ .Name }}Response> : public std::true_type {};
-static_assert(sizeof({{ $protocol }}::{{ .Name }}Response)
-    == {{ $protocol }}::{{ .Name }}Response::PrimarySize);
+struct IsFidlMessage<{{ .WireResponse }}> : public std::true_type {};
+static_assert(sizeof({{ .WireResponse }})
+    == {{ .WireResponse }}::PrimarySize);
 {{- range $index, $param := .ResponseArgs }}
-static_assert(offsetof({{ $protocol }}::{{ $method.Name }}Response, {{ $param.Name }}) == {{ $param.Offset }});
+static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $param.Offset }});
 {{- end }}
 {{- end }}
 {{- end }}
@@ -813,7 +826,7 @@ static_assert(offsetof({{ $protocol }}::{{ $method.Name }}Response, {{ $param.Na
 
 {{- define "ProtocolDefinition" }}
 {{ EnsureNamespace . }}
-namespace {
+
 {{ $protocol := . -}}
 
 {{- range .Methods }}
@@ -824,8 +837,6 @@ extern "C" const fidl_type_t {{ .Request.CodingTable.Name }};
 {{ EnsureNamespace .Response.CodingTable }}
 extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
 {{- end }}
-
-}  // namespace
 
 {{- /* Client-calling functions do not apply to events. */}}
 {{- range .ClientMethods -}}
@@ -885,12 +896,12 @@ extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
 {{ "" }}
     {{- if .HasRequest }}
 {{ "" }}
-    void {{ .Protocol }}::{{ .Name }}Request::_InitHeader(zx_txid_t _txid) {
-      fidl_init_txn_header(&_hdr, _txid, {{ .OrdinalName }});
+    void {{ .WireRequest }}::_InitHeader(zx_txid_t _txid) {
+      fidl_init_txn_header(&_hdr, _txid, {{ .Protocol.Namespace }}::{{ .OrdinalName }});
     }
       {{- if .Request.IsResource }}
 
-    void {{ .Protocol }}::{{ .Name }}Request::_CloseHandles() {
+    void {{ .WireRequest }}::_CloseHandles() {
       {{- range .RequestArgs }}
         {{- CloseHandles . false false }}
       {{- end }}
@@ -899,12 +910,12 @@ extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
     {{- end }}
     {{- if .HasResponse }}
 {{ "" }}
-    void {{ .Protocol }}::{{ .Name }}Response::_InitHeader() {
-      fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
+    void {{ .WireResponse }}::_InitHeader() {
+      fidl_init_txn_header(&_hdr, 0, {{ .Protocol.Namespace }}::{{ .OrdinalName }});
     }
       {{- if .Response.IsResource }}
 
-    void {{ .Protocol }}::{{ .Name }}Response::_CloseHandles() {
+    void {{ .WireResponse }}::_CloseHandles() {
       {{- range .ResponseArgs }}
           {{- CloseHandles . false false }}
       {{- end }}

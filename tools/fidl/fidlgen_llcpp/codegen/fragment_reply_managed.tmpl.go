@@ -10,14 +10,15 @@ Reply({{ .ResponseArgs | Params }})
 {{- end }}
 
 {{- define "ReplyManagedMethodDefinition" }}
+{{ EnsureNamespace "" }}
 #ifdef __Fuchsia__
 ::fidl::Result
-{{ .Protocol.Name }}::Interface::{{ .Name }}CompleterBase::
+{{ .WireCompleterBase.NoLeading }}::
     {{- template "ReplyManagedMethodSignature" . }} {
-  ::fidl::OwnedEncodedMessage<{{ .Name }}Response> _response{
+  ::fidl::OwnedEncodedMessage<{{ .WireResponse }}> _response{
     {{- .ResponseArgs | ParamNames -}}
   };
-  return CompleterBase::SendReply(&_response.GetOutgoingMessage());
+  return {{ .WireCompleterBase }}::SendReply(&_response.GetOutgoingMessage());
 }
 #endif
 {{- end }}
@@ -27,9 +28,10 @@ ReplySuccess({{ .Result.ValueMembers | Params }})
 {{- end }}
 
 {{- define "ReplyManagedResultSuccessMethodDefinition" }}
+{{ EnsureNamespace "" }}
 #ifdef __Fuchsia__
 ::fidl::Result
-{{ .Protocol.Name }}::Interface::{{ .Name }}CompleterBase::
+{{ .WireCompleterBase.NoLeading }}::
     {{- template "ReplyManagedResultSuccessMethodSignature" . }} {
   {{ .Result.ValueStructDecl }} _response;
   {{- range .Result.ValueMembers }}
@@ -46,9 +48,10 @@ ReplyError({{ .Result.ErrorDecl }} error)
 {{- end }}
 
 {{- define "ReplyManagedResultErrorMethodDefinition" }}
+{{ EnsureNamespace "" }}
 #ifdef __Fuchsia__
 ::fidl::Result
-{{ .Protocol.Name }}::Interface::{{ .Name }}CompleterBase::
+{{ .WireCompleterBase.NoLeading }}::
     {{- template "ReplyManagedResultErrorMethodSignature" . }} {
   return Reply({{ .Result.ResultDecl }}::WithErr(::fidl::unowned_ptr(&error)));
 }

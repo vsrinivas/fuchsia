@@ -13,8 +13,10 @@ class Example_TestBase : public ::fidl_test_error::Example::Interface {
                                ::fidl::CompleterBase& completer) = 0;
 
   using Interface = ::fidl_test_error::Example::Interface;
-  virtual void foo(::fidl::StringView s,
-                   Interface::fooCompleter::Sync& completer) override {
+  virtual void foo(
+      ::fidl::StringView s,
+      ::fidl::WireInterface<::fidl_test_error::Example>::fooCompleter::Sync&
+          completer) override {
     NotImplemented_("foo", completer);
   }
 };

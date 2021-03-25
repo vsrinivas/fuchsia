@@ -11,10 +11,10 @@ const fragmentSyncRequestManagedTmpl = `
     ::fidl::UnownedClientEnd<{{ .Protocol }}> _client
     {{- .RequestArgs | CommaMessagePrototype }})
    {
-  ::fidl::OwnedEncodedMessage<{{ .Name }}Request> _request(zx_txid_t(0)
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
     {{- .RequestArgs | CommaParamNames -}});
   {{- if .HasResponse }}
-  _request.GetOutgoingMessage().Call<{{ .Name }}Response>(
+  _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(
       _client,
       bytes_.data(),
       bytes_.size());
@@ -31,9 +31,9 @@ const fragmentSyncRequestManagedTmpl = `
     {{- .RequestArgs | CommaMessagePrototype -}}
     , zx_time_t _deadline)
    {
-  ::fidl::OwnedEncodedMessage<{{ .Name }}Request> _request(zx_txid_t(0)
+  ::fidl::OwnedEncodedMessage<{{ .WireRequest }}> _request(zx_txid_t(0)
     {{- .RequestArgs | CommaParamNames -}});
-  _request.GetOutgoingMessage().Call<{{ .Name }}Response>(
+  _request.GetOutgoingMessage().Call<{{ .WireResponse }}>(
       _client,
       bytes_.data(),
       bytes_.size(),

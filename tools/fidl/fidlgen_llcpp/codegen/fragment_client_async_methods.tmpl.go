@@ -15,7 +15,7 @@ The request and callback are allocated on the heap.
 {{- end }}
 
 {{- define "ClientAsyncRequestManagedCallbackSignature" -}}
-::fit::callback<void ({{ .Name }}Response* response)>
+::fit::callback<void ({{ .WireResponse }}* response)>
 {{- end }}
 
 {{- define "ClientAsyncRequestManagedMethodArguments" -}}
@@ -23,26 +23,26 @@ The request and callback are allocated on the heap.
 {{- end }}
 
 {{- define "ClientAsyncRequestCallerAllocateMethodArguments" -}}
-{{ template "CallerBufferParams" .RequestArgs }}{{ if .RequestArgs }}, {{ end }}{{ .Name }}ResponseContext* _context
+{{ template "CallerBufferParams" .RequestArgs }}{{ if .RequestArgs }}, {{ end }}{{ .WireResponseContext }}* _context
 {{- end }}
 
 {{- define "ClientAsyncRequestManagedMethodDefinition" }}
 #ifdef __Fuchsia__
-{{ .Protocol }}::{{ .Name }}ResponseContext::{{ .Name }}ResponseContext()
-    : ::fidl::internal::ResponseContext({{ .Name }}Response::Type, {{ .OrdinalName }}) {}
+{{ .WireResponseContext }}::{{ .WireResponseContext.Unqualified }}()
+    : ::fidl::internal::ResponseContext({{ .WireResponse }}::Type, {{ .OrdinalName }}) {}
 
-void {{ .Protocol }}::{{ .Name }}ResponseContext::OnReply(uint8_t* reply) {
-  OnReply(reinterpret_cast<{{ .Name }}Response*>(reply));
+void {{ .WireResponseContext }}::OnReply(uint8_t* reply) {
+  OnReply(reinterpret_cast<{{ .WireResponse }}*>(reply));
 }
 
-::fidl::Result {{ .Protocol.Name }}::ClientImpl::{{ .Name }}(
+::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}(
     {{ template "ClientAsyncRequestManagedMethodArguments" . }}) {
-  class ResponseContext final : public {{ .Name }}ResponseContext {
+  class ResponseContext final : public {{ .WireResponseContext }} {
    public:
     ResponseContext({{ template "ClientAsyncRequestManagedCallbackSignature" . }} cb)
         : cb_(std::move(cb)) {}
 
-    void OnReply({{ .Name }}Response* response) override {
+    void OnReply({{ .WireResponse }}* response) override {
       cb_(response);
       {{ if and .HasResponse .Response.IsResource }}
       response->_CloseHandles();
@@ -60,18 +60,18 @@ void {{ .Protocol }}::{{ .Name }}ResponseContext::OnReply(uint8_t* reply) {
 
   auto* _context = new ResponseContext(std::move(_cb));
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
-  {{ .Name }}Request::OwnedEncodedMessage _request(_context->Txid()
+  {{ .WireRequest }}::OwnedEncodedMessage _request(_context->Txid()
   {{- .RequestArgs | CommaParamNames -}}
   );
   return _request.GetOutgoingMessage().Write(this, _context);
 }
 
-::fidl::Result {{ .Protocol.Name }}::ClientImpl::{{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }}) {
+::fidl::Result {{ .Protocol.WireClientImpl.NoLeading }}::{{ .Name }}({{ template "ClientAsyncRequestCallerAllocateMethodArguments" . }}) {
   ::fidl::internal::ClientBase::PrepareAsyncTxn(_context);
   {{ if .RequestArgs }}
-  {{ .Name }}Request::UnownedEncodedMessage _request(_request_buffer.data, _request_buffer.capacity, _context->Txid()
+  {{ .WireRequest }}::UnownedEncodedMessage _request(_request_buffer.data, _request_buffer.capacity, _context->Txid()
   {{- else }}
-  {{ .Name }}Request::OwnedEncodedMessage _request(_context->Txid()
+  {{ .WireRequest }}::OwnedEncodedMessage _request(_context->Txid()
   {{- end }}
   {{- .RequestArgs | CommaParamNames -}}
   );

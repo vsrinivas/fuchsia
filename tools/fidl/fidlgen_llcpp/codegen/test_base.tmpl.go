@@ -29,7 +29,7 @@ class {{ .TestBase.Name }} : public {{ . }}::Interface {
     {{- if .HasRequest }}
     virtual void {{ .Name }}(
         {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
-        Interface::{{ .Name }}Completer::Sync& completer) override { NotImplemented_("{{ .Name }}", completer); }
+        {{ .WireCompleter }}::Sync& completer) override { NotImplemented_("{{ .Name }}", completer); }
     {{- end }}
   {{- end }}
 };

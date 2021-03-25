@@ -14,7 +14,6 @@ void ::fidl_test_doccomments::wire::StrictUnion::
 }
 
 namespace fidl_test_doccomments {
-namespace {
 
 [[maybe_unused]] constexpr uint64_t kInterface_Method_Ordinal =
     6649887292072346213lu;
@@ -28,22 +27,23 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceMethodResponseTable;
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventRequestTable;
 
 extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
-
-}  // namespace
 #ifdef __Fuchsia__
 ::fidl_test_doccomments::Interface::ResultOf::Method::Method(
     ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> _client) {
-  ::fidl::OwnedEncodedMessage<MethodRequest> _request(zx_txid_t(0));
+  ::fidl::OwnedEncodedMessage<::fidl_test_doccomments::Interface::MethodRequest>
+      _request(zx_txid_t(0));
   _request.GetOutgoingMessage().Write(_client);
   status_ = _request.status();
   error_ = _request.error();
 }
 #endif
 
+}  // namespace fidl_test_doccomments
 #ifdef __Fuchsia__
-::fidl::Result Interface::ClientImpl::Method() {
+::fidl::Result
+fidl::internal::WireClientImpl<::fidl_test_doccomments::Interface>::Method() {
   if (auto _channel = ::fidl::internal::ClientBase::GetChannel()) {
-    auto _res = ResultOf::Method(
+    auto _res = ::fidl_test_doccomments::Interface::ResultOf::Method(
         ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface>(
             _channel->handle()));
     return ::fidl::Result(_res.status(), _res.error());
@@ -53,21 +53,26 @@ extern "C" const fidl_type_t fidl_test_doccomments_InterfaceOnEventEventTable;
 #endif
 
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
-    fidl_incoming_msg_t* msg) {
+std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
+    ::fidl_test_doccomments::Interface>::DispatchEvent(fidl_incoming_msg_t*
+                                                           msg) {
   if (event_handler_ != nullptr) {
     fidl_message_header_t* hdr =
         reinterpret_cast<fidl_message_header_t*>(msg->bytes);
     switch (hdr->ordinal) {
-      case kInterface_OnEvent_Ordinal: {
+      case ::fidl_test_doccomments::kInterface_OnEvent_Ordinal: {
         const char* error_message;
-        zx_status_t status =
-            fidl_decode_etc(OnEventResponse::Type, msg->bytes, msg->num_bytes,
-                            msg->handles, msg->num_handles, &error_message);
+        zx_status_t status = fidl_decode_etc(
+            ::fidl_test_doccomments::Interface::OnEventResponse::Type,
+            msg->bytes, msg->num_bytes, msg->handles, msg->num_handles,
+            &error_message);
         if (status != ZX_OK) {
           return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
         }
-        event_handler_->OnEvent(reinterpret_cast<OnEventResponse*>(msg->bytes));
+        event_handler_->OnEvent(
+            reinterpret_cast<
+                ::fidl_test_doccomments::Interface::OnEventResponse*>(
+                msg->bytes));
         return std::nullopt;
       }
       default:
@@ -80,6 +85,7 @@ std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
 }
 #endif
 
+namespace fidl_test_doccomments {
 ::fidl::Result Interface::SyncEventHandler::HandleOneEvent(
     ::fidl::UnownedClientEnd<::fidl_test_doccomments::Interface> client_end) {
   zx_status_t status = client_end.channel()->wait_one(
@@ -90,8 +96,9 @@ std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
   }
   constexpr uint32_t kHandleAllocSize = ([]() constexpr {
     uint32_t x = 0;
-    if (OnEventResponse::MaxNumHandles >= x) {
-      x = OnEventResponse::MaxNumHandles;
+    if (::fidl_test_doccomments::Interface::OnEventResponse::MaxNumHandles >=
+        x) {
+      x = ::fidl_test_doccomments::Interface::OnEventResponse::MaxNumHandles;
     }
     if (x > ZX_CHANNEL_MAX_MSG_HANDLES) {
       x = ZX_CHANNEL_MAX_MSG_HANDLES;
@@ -128,15 +135,17 @@ std::optional<::fidl::UnbindInfo> Interface::ClientImpl::DispatchEvent(
     return ::fidl::Result(status, ::fidl::kErrorInvalidHeader);
   }
   switch (hdr->ordinal) {
-    case kInterface_OnEvent_Ordinal: {
+    case ::fidl_test_doccomments::kInterface_OnEvent_Ordinal: {
       const char* error_message;
-      zx_status_t status =
-          fidl_decode_etc(OnEventResponse::Type, read_bytes, actual_bytes,
-                          read_handles, actual_handles, &error_message);
+      zx_status_t status = fidl_decode_etc(
+          ::fidl_test_doccomments::Interface::OnEventResponse::Type, read_bytes,
+          actual_bytes, read_handles, actual_handles, &error_message);
       if (status != ZX_OK) {
         return ::fidl::Result(status, error_message);
       }
-      OnEvent(reinterpret_cast<OnEventResponse*>(read_bytes));
+      OnEvent(reinterpret_cast<
+              ::fidl_test_doccomments::Interface::OnEventResponse*>(
+          read_bytes));
       return ::fidl::Result(ZX_OK, nullptr);
     }
     default: {
@@ -151,8 +160,8 @@ namespace methods {
 
 void InterfaceDispatchMethod(void* interface, void* bytes,
                              ::fidl::Transaction* txn) {
-  ::fidl_test_doccomments::Interface::Interface::MethodCompleter::Sync
-      completer(txn);
+  ::fidl::WireInterface<
+      ::fidl_test_doccomments::Interface>::MethodCompleter::Sync completer(txn);
   reinterpret_cast<::fidl_test_doccomments::Interface::Interface*>(interface)
       ->Method(completer);
 }
@@ -162,7 +171,7 @@ void InterfaceDispatchMethod(void* interface, void* bytes,
 namespace entries {
 
 ::fidl::internal::MethodEntry Interface[] = {
-    {kInterface_Method_Ordinal,
+    {::fidl_test_doccomments::kInterface_Method_Ordinal,
      ::fidl_test_doccomments::Interface::MethodRequest::Type,
      methods::InterfaceDispatchMethod},
 };
@@ -191,25 +200,33 @@ namespace entries {
   }
   return dispatch_result;
 }
-
-::fidl::DispatchResult Interface::Interface::dispatch_message(
+}  // namespace fidl_test_doccomments
+::fidl::DispatchResult
+fidl::WireInterface<::fidl_test_doccomments::Interface>::dispatch_message(
     fidl_incoming_msg_t* msg, ::fidl::Transaction* txn) {
-  return Interface::Dispatch(this, msg, txn);
+  return ::fidl_test_doccomments::Interface::Dispatch(this, msg, txn);
 }
 #endif
+namespace fidl_test_doccomments {
 
 void ::fidl_test_doccomments::Interface::MethodRequest::_InitHeader(
     zx_txid_t _txid) {
-  fidl_init_txn_header(&_hdr, _txid, kInterface_Method_Ordinal);
+  fidl_init_txn_header(&_hdr, _txid,
+                       ::fidl_test_doccomments::kInterface_Method_Ordinal);
 }
 
 void ::fidl_test_doccomments::Interface::OnEventResponse::_InitHeader() {
-  fidl_init_txn_header(&_hdr, 0, kInterface_OnEvent_Ordinal);
+  fidl_init_txn_header(&_hdr, 0,
+                       ::fidl_test_doccomments::kInterface_OnEvent_Ordinal);
 }
 
+}  // namespace fidl_test_doccomments
 #ifdef __Fuchsia__
-zx_status_t Interface::EventSender::OnEvent() const {
-  ::fidl::OwnedEncodedMessage<OnEventResponse> _response{};
+zx_status_t fidl::WireEventSender<::fidl_test_doccomments::Interface>::OnEvent()
+    const {
+  ::fidl::OwnedEncodedMessage<
+      ::fidl_test_doccomments::Interface::OnEventResponse>
+      _response{};
   _response.Write(server_end_);
   return _response.status();
 }
@@ -233,5 +250,3 @@ void ::fidl_test_doccomments::wire::FlexibleUnion::
   static_assert(offsetof(FlexibleUnion, envelope_) ==
                 offsetof(fidl_xunion_t, envelope));
 }
-
-}  // namespace fidl_test_doccomments

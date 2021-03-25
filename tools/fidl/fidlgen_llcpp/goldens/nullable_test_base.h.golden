@@ -15,7 +15,8 @@ class SimpleProtocol_TestBase
 
   using Interface = ::fidl_test_nullable::SimpleProtocol::Interface;
   virtual void Add(int32_t a, int32_t b,
-                   Interface::AddCompleter::Sync& completer) override {
+                   ::fidl::WireInterface<::fidl_test_nullable::SimpleProtocol>::
+                       AddCompleter::Sync& completer) override {
     NotImplemented_("Add", completer);
   }
 };

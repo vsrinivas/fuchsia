@@ -8,39 +8,43 @@ const fragmentClientTmpl = `
 {{- define "ClientForwardDeclaration" }}
 
 #ifdef __Fuchsia__
-  class AsyncEventHandler;
+  using AsyncEventHandler = {{ .WireAsyncEventHandler }};
   {{- range .TwoWayMethods }}
-  class {{ .Name }}ResponseContext;
+  class {{ .WireResponseContext.Unqualified }};
   {{- end }}
-  class ClientImpl;
+  using ClientImpl = {{ .WireClientImpl }};
 #endif
 {{- end }}
 
 {{- define "ClientDeclaration" }}
-{{ EnsureNamespace . }}
-{{- $outer := . }}
 #ifdef __Fuchsia__
-class {{ .Name }}::AsyncEventHandler : public {{ .Name }}::EventHandlerInterface {
+{{ PushNamespace }}
+{{- EnsureNamespace "" }}
+template<>
+class {{ .WireAsyncEventHandler }} : public {{ . }}::EventHandlerInterface {
  public:
-  AsyncEventHandler() = default;
+  WireAsyncEventHandler() = default;
 
   virtual void Unbound(::fidl::UnbindInfo info) {}
 };
 
+{{- EnsureNamespace . }}
 {{- range .TwoWayMethods }}
 {{ "" }}
-class {{ $outer.Name }}::{{ .Name }}ResponseContext : public ::fidl::internal::ResponseContext {
+class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
  public:
-  {{ .Name }}ResponseContext();
+  {{ .WireResponseContext.Unqualified }}();
 
-  virtual void OnReply({{ $outer.Name }}::{{ .Name }}Response* message) = 0;
+  virtual void OnReply({{ .WireResponse }}* message) = 0;
 
  private:
   void OnReply(uint8_t* reply) override;
 };
 {{- end }}
 
-class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
+{{- EnsureNamespace "" }}
+template<>
+class {{ .WireClientImpl }} final : private ::fidl::internal::ClientBase {
  public:
   {{- /* Generate both sync and async flavors for two-way methods. */}}
   {{- range .TwoWayMethods }}
@@ -52,7 +56,7 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
     {{- if .DocComments }}
   //
     {{- end }}
-  // Asynchronous variant of |{{ $outer.Name }}.{{ .Name }}()|.
+  // Asynchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // {{ template "AsyncClientAllocationComment" . }}
   ::fidl::Result {{ .Name }}({{ template "ClientAsyncRequestManagedMethodArguments" . }});
 {{ "" }}
@@ -64,7 +68,7 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
     {{- if .DocComments }}
   //
     {{- end }}
-  // Asynchronous variant of |{{ $outer.Name }}.{{ .Name }}()|.
+  // Asynchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // Caller provides the backing storage for FIDL message via request buffer.
   // Ownership of |_context| is given unsafely to the binding until |OnError|
   // or |OnReply| are called on it.
@@ -78,9 +82,9 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
     {{- if .DocComments }}
   //
     {{- end }}
-  // Synchronous variant of |{{ $outer.Name }}.{{ .Name }}()|.
+  // Synchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // {{- template "ClientAllocationComment" . }}
-  ResultOf::{{ .Name }} {{ .Name }}_Sync({{ .RequestArgs | Params }});
+  {{ .WireResultOf }} {{ .Name }}_Sync({{ .RequestArgs | Params }});
 
     {{- /* Sync caller-allocate flavor */}}
     {{- if or .RequestArgs .ResponseArgs }}
@@ -91,10 +95,10 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
       {{- if .DocComments }}
   //
       {{- end }}
-  // Synchronous variant of |{{ $outer.Name }}.{{ .Name }}()|.
+  // Synchronous variant of |{{ $.Name }}.{{ .Name }}()|.
   // Caller provides the backing storage for FIDL message via request and
   // response buffers.
-  UnownedResultOf::{{ .Name }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}(
+  {{ .WireUnownedResultOf }} {{ .Name }}{{ if .HasResponse }}_Sync{{ end }}(
       {{- template "SyncRequestCallerAllocateMethodArguments" . }});
     {{- end }}
 {{ "" }}
@@ -127,39 +131,41 @@ class {{ .Name }}::ClientImpl final : private ::fidl::internal::ClientBase {
 {{ "" }}
   {{- end }}
 
-  AsyncEventHandler* event_handler() const { return event_handler_.get(); }
+  {{ .WireAsyncEventHandler }}* event_handler() const { return event_handler_.get(); }
 
  private:
-  friend class ::fidl::Client<{{ .Name }}>;
-  friend class ::fidl::internal::ControlBlock<{{ .Name }}>;
+  friend class ::fidl::Client<{{ . }}>;
+  friend class ::fidl::internal::ControlBlock<{{ . }}>;
 
-  explicit ClientImpl(std::shared_ptr<AsyncEventHandler> event_handler)
+  explicit WireClientImpl(std::shared_ptr<{{ .WireAsyncEventHandler }}> event_handler)
       : event_handler_(std::move(event_handler)) {}
 
   std::optional<::fidl::UnbindInfo> DispatchEvent(fidl_incoming_msg_t* msg) override;
 
-  std::shared_ptr<AsyncEventHandler> event_handler_;
+  std::shared_ptr<{{ .WireAsyncEventHandler }}> event_handler_;
 };
+{{ PopNamespace }}
 #endif
 {{- end }}
 
 {{- define "ClientDispatchDefinition" }}
+{{ EnsureNamespace ""}}
 #ifdef __Fuchsia__
-std::optional<::fidl::UnbindInfo> {{ .Name }}::ClientImpl::DispatchEvent(fidl_incoming_msg_t* msg) {
+std::optional<::fidl::UnbindInfo> {{ .WireClientImpl.NoLeading }}::DispatchEvent(fidl_incoming_msg_t* msg) {
   {{- if .Events }}
   if (event_handler_ != nullptr) {
     fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
     switch (hdr->ordinal) {
     {{- range .Events }}
-      case {{ .OrdinalName }}:
+      case {{ .Protocol.Namespace }}::{{ .OrdinalName }}:
       {
         const char* error_message;
-        zx_status_t status = fidl_decode_etc({{ .Name }}Response::Type, msg->bytes, msg->num_bytes,
+        zx_status_t status = fidl_decode_etc({{ .WireResponse }}::Type, msg->bytes, msg->num_bytes,
                                              msg->handles, msg->num_handles, &error_message);
         if (status != ZX_OK) {
           return ::fidl::UnbindInfo{::fidl::UnbindInfo::kDecodeError, status};
         }
-        event_handler_->{{ .Name }}(reinterpret_cast<{{ .Name }}Response*>(msg->bytes));
+        event_handler_->{{ .Name }}(reinterpret_cast<{{ .WireResponse }}*>(msg->bytes));
         return std::nullopt;
       }
     {{- end }}

@@ -16,6 +16,8 @@ const fragmentSyncServerTmpl = `
 {{- end }}
 
 {{- define "SyncServerTryDispatchMethodDefinition" }}
+{{ PushNamespace }}
+{{ EnsureNamespace . }}
 #ifdef __Fuchsia__
 namespace methods {
 {{- range .Methods }}
@@ -24,9 +26,9 @@ namespace methods {
 void {{ .Protocol.Name }}Dispatch{{ .Name }}(void* interface, void* bytes,
     ::fidl::Transaction* txn) {
   {{- if .RequestArgs }}
-  auto message = reinterpret_cast<{{ .Protocol }}::{{ .Name }}Request*>(bytes);
+  auto message = reinterpret_cast<{{ .WireRequest }}*>(bytes);
   {{- end }}
-  {{ .Protocol }}::Interface::{{ .Name }}Completer::Sync completer(txn);
+  {{ .WireCompleter }}::Sync completer(txn);
   reinterpret_cast<{{ .Protocol }}::Interface*>(interface)
       ->{{ .Name }}({{ template "SyncServerDispatchMoveParams" .RequestArgs }}{{ if .RequestArgs }},{{ end }}
                     completer);
@@ -40,7 +42,7 @@ namespace entries {
 
 ::fidl::internal::MethodEntry {{ .Name }}[] = {
 {{- range .ClientMethods }}
-  { {{ .OrdinalName }}, {{ .Protocol }}::{{ .Name }}Request::Type,
+  { {{ .Protocol.Namespace }}::{{ .OrdinalName }}, {{ .WireRequest }}::Type,
     methods::{{ .Protocol.Name }}Dispatch{{ .Name }} },
 {{- end }}
 };
@@ -58,9 +60,12 @@ namespace entries {
   {{- end }}
 }
 #endif
+{{ PopNamespace }}
 {{- end }}
 
 {{- define "SyncServerDispatchMethodDefinition" }}
+{{ PushNamespace }}
+{{ EnsureNamespace . }}
 #ifdef __Fuchsia__
 ::fidl::DispatchResult {{ .Name }}::Dispatch{{ template "SyncServerDispatchMethodSignature" }} {
   {{- if .ClientMethods }}
@@ -77,11 +82,13 @@ namespace entries {
   {{- end }}
 }
 
-::fidl::DispatchResult {{ .Name }}::Interface::dispatch_message(fidl_incoming_msg_t* msg,
+{{- EnsureNamespace "::" }}
+::fidl::DispatchResult {{ .WireInterface.NoLeading }}::dispatch_message(fidl_incoming_msg_t* msg,
                                                          ::fidl::Transaction* txn) {
-  return {{ .Name }}::Dispatch(this, msg, txn);
+  return {{ . }}::Dispatch(this, msg, txn);
 }
 #endif
+{{ PopNamespace }}
 
 {{- end }}
 `
