@@ -124,6 +124,13 @@ enum ReasonCode : uint16 {
     MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS = 64;
     MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS = 65;
     MESH_CHANNEL_SWITCH_UNSPECIFIED = 66;
+
+    /// Reserved values we will use for our own purposes.
+    /// -----
+    /// MLME lost the link, usually caused by loss of signal with the AP.
+    MLME_LINK_FAILED = 128;
+    /// Driver detected a lack of rx frames.
+    FW_RX_STALLED = 129;
 };
 
 /// 802.11 status codes.  These values are common throughout the standard.

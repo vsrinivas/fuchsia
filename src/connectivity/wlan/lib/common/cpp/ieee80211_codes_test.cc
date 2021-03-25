@@ -43,11 +43,11 @@ TEST(ConvertReasonCode, ReservedCodesMapAsExpected) {
             ConvertReasonCode(static_cast<uint16_t>(68)));
   ASSERT_EQ(wlan_ieee80211::ReasonCode::RESERVED_67_TO_127,
             ConvertReasonCode(static_cast<uint16_t>(127)));
-  ASSERT_EQ(wlan_ieee80211::ReasonCode::RESERVED_129_TO_65535,
-            ConvertReasonCode(static_cast<uint16_t>(129)));
-  ASSERT_EQ(wlan_ieee80211::ReasonCode::RESERVED_129_TO_65535,
+  ASSERT_EQ(wlan_ieee80211::ReasonCode::RESERVED_130_TO_65535,
             ConvertReasonCode(static_cast<uint16_t>(130)));
-  ASSERT_EQ(wlan_ieee80211::ReasonCode::RESERVED_129_TO_65535,
+  ASSERT_EQ(wlan_ieee80211::ReasonCode::RESERVED_130_TO_65535,
+            ConvertReasonCode(static_cast<uint16_t>(131)));
+  ASSERT_EQ(wlan_ieee80211::ReasonCode::RESERVED_130_TO_65535,
             ConvertReasonCode(static_cast<uint16_t>(65535)));
 }
 
@@ -58,6 +58,8 @@ TEST(ConvertReasonCode, DefinedCodesMapToEnumAsExpected) {
             ConvertReasonCode(static_cast<uint16_t>(66)));
   ASSERT_EQ(wlan_ieee80211::ReasonCode::MLME_LINK_FAILED,
             ConvertReasonCode(static_cast<uint16_t>(128)));
+  ASSERT_EQ(wlan_ieee80211::ReasonCode::FW_RX_STALLED,
+            ConvertReasonCode(static_cast<uint16_t>(129)));
 }
 
 }  // namespace
