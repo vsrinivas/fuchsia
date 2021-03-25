@@ -121,6 +121,7 @@ if (is_fuchsia) {
 
       # <lib/fidl/llcpp/sync_call.h> has #include <lib/fit/result.h>.
       # <lib/fidl/llcpp/types.h> has #include <lib/fit/function.h>
+      "//sdk/lib/fit-promise:headers",
       "//zircon/system/ulib/fit:headers",
 
       # <lib/fidl/llcpp/async_binding.h> has #include <lib/sync/completion.h>
@@ -134,6 +135,7 @@ if (is_fuchsia) {
     ]
     deps = [
       ":fidl",
+      "//sdk/lib/fit-promise",
       "//src/zircon/lib/zircon",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/fbl",

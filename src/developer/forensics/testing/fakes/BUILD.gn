@@ -176,8 +176,8 @@ source_set("privacy_settings") {
   ]
 
   deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/fit",
   ]
 }
 

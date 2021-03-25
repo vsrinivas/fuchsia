@@ -49,6 +49,7 @@ src:../../zircon/system/ulib/fit/include/lib/fit/thread_checker.h
 src:../../zircon/system/ulib/fit/include/lib/fit/thread_safety.h
 src:../../zircon/system/ulib/fit/include/lib/fit/traits.h
 src:../../zircon/system/ulib/fit/include/lib/fit/utility_internal.h
+src:../../sdk/lib/fit-promise/include/lib/fit/do-not-include.h
 src:../../zircon/system/ulib/async/ops.c
 src:../../zircon/system/ulib/async/include/lib/async/dispatcher.h
 src:../../zircon/system/ulib/async/include/lib/async/irq.h
@@ -211,7 +212,6 @@ src:../../sdk/lib/fidl/cpp/service_connector.h
 src:../../sdk/lib/fidl/cpp/service_handler_base.h
 src:../../sdk/lib/fidl/cpp/thread_safe_binding_set.h
 src:../../sdk/lib/fidl/cpp/type_converter.h
-src:../../sdk/lib/fit-promise/include/lib/fit/do-not-include.h
 src:../../zircon/system/ulib/inspect/health.cc
 src:../../zircon/system/ulib/inspect/hierarchy.cc
 src:../../zircon/system/ulib/inspect/inspector.cc

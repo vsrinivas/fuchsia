@@ -102,6 +102,7 @@ source_set("story_storage") {
     ":watcher_list",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit-promise",
     "//src/lib/fsl",
     "//src/modular/bin/sessionmgr/storage:encode_module_path",
     "//src/modular/lib/async/cpp:future",

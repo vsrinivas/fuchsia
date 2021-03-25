@@ -31,8 +31,8 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit-promise",
     "//src/camera/lib/fake_stream",
-    "//zircon/public/lib/fit",
   ]
 }
 

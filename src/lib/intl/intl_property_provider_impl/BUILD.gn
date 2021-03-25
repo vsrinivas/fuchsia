@@ -45,6 +45,7 @@ source_set("intl_property_provider_impl") {
     ":fidl",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.settings",
+    "//sdk/lib/fit-promise",
   ]
 }
 
@@ -85,6 +86,7 @@ source_set("locale_util") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/lib/fit-promise",
     "//third_party/icu",
   ]
 }

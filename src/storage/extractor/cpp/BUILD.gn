@@ -64,9 +64,9 @@ static_library("disk_extractor") {
     "minfs_extractor.cc",
   ]
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//src/storage/extractor/c:disk_extractor",
     "//src/storage/minfs",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zxc",
   ]
   if (is_fuchsia) {

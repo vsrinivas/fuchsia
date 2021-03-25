@@ -124,6 +124,7 @@ executable("reporter_unittest_exe") {
   sources = [ "reporter_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/fit-promise",
     "//src/developer/forensics/last_reboot:reporter",
     "//src/developer/forensics/testing:gpretty_printers",
     "//src/developer/forensics/testing:gtest_with_syslog_main",

@@ -38,6 +38,7 @@ source_set("operation") {
 
   public_deps = [
     ":future",
+    "//sdk/lib/fit-promise",
     "//zircon/public/lib/async-cpp",
   ]
 

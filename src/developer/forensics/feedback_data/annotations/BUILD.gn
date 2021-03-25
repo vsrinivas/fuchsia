@@ -30,6 +30,7 @@ source_set("annotation_providers") {
     ":product_info_provider",
     ":types",
     ":utils",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
@@ -39,7 +40,6 @@ source_set("annotation_providers") {
     "//src/lib/fxl",
     "//src/lib/timekeeper",
     "//src/lib/timekeeper:system",
-    "//zircon/public/lib/fit",
   ]
 }
 
@@ -63,12 +63,12 @@ source_set("board_info_provider") {
 
   deps = [
     ":utils",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fit",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
   ]
 }
 
@@ -121,13 +121,13 @@ source_set("last_reboot_info_provider") {
 
   deps = [
     ":utils",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils:time",
     "//src/developer/forensics/utils/fit",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
   ]
 }
 
@@ -152,12 +152,12 @@ source_set("product_info_provider") {
   deps = [
     ":utils",
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fit",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
   ]
 }
 

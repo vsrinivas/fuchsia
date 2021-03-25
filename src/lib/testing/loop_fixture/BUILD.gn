@@ -51,6 +51,7 @@ executable("loop_fixture_unittests") {
 
   deps = [
     ":loop_fixture",
+    "//sdk/lib/fit-promise",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/fxl/test:test_settings",

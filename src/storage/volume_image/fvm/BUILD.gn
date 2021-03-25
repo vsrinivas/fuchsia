@@ -18,8 +18,8 @@ source_set("fvm-descriptor") {
   public = [ "fvm_descriptor.h" ]
   public_deps = [
     ":options",
+    "//sdk/lib/fit-promise",
     "//src/storage/volume_image:partition",
-    "//zircon/public/lib/fit",
   ]
   deps = [
     "//src/storage/fvm",
@@ -45,6 +45,7 @@ source_set("fvm-sparse-image") {
   public = [ "fvm_sparse_image.h" ]
   public_deps = [
     ":fvm-descriptor",
+    "//sdk/lib/fit-promise",
     "//src/storage/fvm",
     "//src/storage/volume_image/utils:compression-interfaces",
     "//src/storage/volume_image/utils:io-interfaces",

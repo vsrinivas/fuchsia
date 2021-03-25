@@ -20,6 +20,7 @@ static_library("transaction") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//zircon/public/lib/fbl",
     "//zircon/system/ulib/storage/buffer",
     "//zircon/system/ulib/storage/operation",
@@ -39,10 +40,7 @@ static_library("transaction") {
       "writeback.cc",
     ]
 
-    public_deps += [
-      "//zircon/public/lib/fit",
-      "//zircon/system/ulib/block-client",
-    ]
+    public_deps += [ "//zircon/system/ulib/block-client" ]
 
     deps += [
       "//sdk/lib/fdio",

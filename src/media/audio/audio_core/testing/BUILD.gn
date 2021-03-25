@@ -29,7 +29,10 @@ source_set("testing") {
     "threading_model_fixture.h",
   ]
 
-  public_deps = [ "//zircon/system/ulib/fzl" ]
+  public_deps = [
+    "//sdk/lib/fit-promise",
+    "//zircon/system/ulib/fzl",
+  ]
 
   deps = [
     "//garnet/public/lib/gtest",

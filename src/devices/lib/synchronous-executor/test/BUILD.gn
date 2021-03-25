@@ -11,6 +11,7 @@ test("synchronous-executor-test") {
   sources = [ "executor-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/fit-promise",
     "//src/devices/lib/synchronous-executor",
     "//src/devices/testing/fake-object",
     "//zircon/public/lib/fbl",

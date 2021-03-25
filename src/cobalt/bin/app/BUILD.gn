@@ -85,6 +85,7 @@ source_set("lib") {
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
+  deps = [ "//sdk/lib/fit-promise" ]
 }
 
 executable("app") {

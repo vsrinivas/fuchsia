@@ -36,11 +36,11 @@ static_library("shared") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//src/developer/debug/shared/logging",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
     "//third_party/curl:libcurl",
-    "//zircon/public/lib/fit",
   ]
 
   if (is_host) {

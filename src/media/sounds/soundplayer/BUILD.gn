@@ -49,6 +49,7 @@ source_set("source") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.media.sounds",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",

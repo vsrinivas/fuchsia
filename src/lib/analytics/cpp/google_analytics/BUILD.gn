@@ -22,7 +22,7 @@ static_library("google_analytics") {
     "general_parameters.h",
   ]
 
-  public_deps = [ "//zircon/public/lib/fit" ]
+  public_deps = [ "//sdk/lib/fit-promise" ]
 
   deps = [
     "//sdk/lib/syslog/cpp",

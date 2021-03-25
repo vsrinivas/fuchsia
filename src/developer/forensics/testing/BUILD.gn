@@ -51,6 +51,7 @@ source_set("gpretty_printers") {
     "//garnet/public/lib/fostr/fidl/fuchsia.mem",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.mem",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",

@@ -36,6 +36,7 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.modular",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/modular/lib/async/cpp:future",
     "//third_party/rapidjson",

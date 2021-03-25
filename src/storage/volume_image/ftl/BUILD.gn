@@ -13,8 +13,8 @@ source_set("raw-nand-image-utils") {
     "//src/storage/volume_image/utils:io-interfaces",
   ]
   deps = [
+    "//sdk/lib/fit-promise",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
   ]
 }
 
@@ -22,8 +22,8 @@ source_set("ftl-image-internal") {
   sources = [ "ftl_image_internal.cc" ]
   public = [ "ftl_image_internal.h" ]
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
   ]
   deps = [
     ":raw-nand-image-utils",
@@ -36,9 +36,9 @@ source_set("ftl-raw-nand-image-writer") {
   public = [ "ftl_raw_nand_image_writer.h" ]
   public_deps = [
     ":raw-nand-options",
+    "//sdk/lib/fit-promise",
     "//src/storage/volume_image/utils:io-interfaces",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
   ]
   deps = [
     ":ftl-image-internal",
@@ -52,9 +52,9 @@ source_set("ftl-image") {
   public = [ "ftl_image.h" ]
   public_deps = [
     ":raw-nand-options",
+    "//sdk/lib/fit-promise",
     "//src/storage/volume_image:partition",
     "//src/storage/volume_image/utils:io-interfaces",
-    "//zircon/public/lib/fit",
   ]
   deps = [
     ":ftl-image-internal",

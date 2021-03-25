@@ -8,7 +8,7 @@ import("//src/sys/build/components.gni")
 source_set("options") {
   sources = [ "options.cc" ]
   public = [ "options.h" ]
-  public_deps = [ "//zircon/public/lib/fit" ]
+  public_deps = [ "//sdk/lib/fit-promise" ]
 }
 
 source_set("volume-descriptor") {
@@ -17,8 +17,8 @@ source_set("volume-descriptor") {
   public_deps = [
     ":options",
     "utils:guid",
+    "//sdk/lib/fit-promise",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fit",
   ]
 }
 
@@ -26,8 +26,8 @@ source_set("address-descriptor") {
   sources = [ "address_descriptor.cc" ]
   public = [ "address_descriptor.h" ]
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [ "//third_party/rapidjson" ]

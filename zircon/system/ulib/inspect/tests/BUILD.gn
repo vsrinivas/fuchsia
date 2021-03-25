@@ -29,6 +29,7 @@ test("inspect") {
   ]
 
   deps = [
+    "//sdk/lib/fit-promise",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/pretty",
     "//zircon/public/lib/zxtest",

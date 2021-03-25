@@ -48,6 +48,7 @@ source_set("src") {
     "encoding:encoder",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.process.lifecycle",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data:archive_accessor",
     "//src/developer/forensics/utils:logs",

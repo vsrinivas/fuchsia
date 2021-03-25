@@ -62,6 +62,7 @@ source_set("graph") {
 
   deps = [
     "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

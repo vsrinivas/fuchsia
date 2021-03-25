@@ -32,8 +32,8 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.camera3",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit-promise",
     "//src/camera/lib/fake_legacy_stream",
     "//src/camera/lib/fake_stream",
-    "//zircon/public/lib/fit",
   ]
 }

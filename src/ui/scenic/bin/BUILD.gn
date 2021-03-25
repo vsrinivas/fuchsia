@@ -23,6 +23,7 @@ executable("bin") {
 
   deps = [
     ":base_deps",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//src/ui/lib/display:hdcp_client",

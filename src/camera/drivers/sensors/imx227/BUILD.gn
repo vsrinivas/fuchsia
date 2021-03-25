@@ -45,6 +45,7 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//src/devices/bus/lib/device-protocol-pdev",
     "//src/devices/i2c/lib/device-protocol-i2c-channel",
     "//zircon/public/lib/zx",

@@ -99,12 +99,14 @@ source_set("fake_netstack") {
   deps = [
     "//sdk/fidl/fuchsia.netstack",
     "//src/lib/inet",
-    "//zircon/public/lib/fit",
     "//zircon/system/ulib/async:async-cpp",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]
-  public_deps = [ "//sdk/fidl/fuchsia.netstack" ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/fit-promise",
+  ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings
   configs += [ "//build/config:Wno-conversion" ]
@@ -163,6 +165,7 @@ source_set("lib") {
     ":guest_console",
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.sysinfo",
+    "//sdk/lib/fit-promise",
   ]
   public_deps = [
     ":fake_netstack",

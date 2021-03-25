@@ -14,9 +14,9 @@ source_set("vmo_store") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
     "//zircon/system/ulib/fzl",
   ]
 }

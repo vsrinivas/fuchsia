@@ -13,6 +13,7 @@ zx_library("gpt") {
     "gpt/guid.h",
   ]
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//src/lib/uuid",
     "//zircon/public/lib/fbl",
   ]

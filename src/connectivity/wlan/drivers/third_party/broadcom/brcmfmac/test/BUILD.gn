@@ -42,9 +42,9 @@ source_set("device_inspect_utils") {
   sources = [ "device_inspect_test_utils.cc" ]
   public = [ "device_inspect_test_utils.h" ]
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/inspect/testing/cpp",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/inspect",
-    "//zircon/system/ulib/fit",
     "//zircon/system/ulib/inspect",
     "//zircon/system/ulib/zx",
   ]

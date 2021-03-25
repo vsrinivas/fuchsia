@@ -17,6 +17,7 @@ source_set("archive_accessor") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.diagnostics",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fidl:oneshot_ptr",
@@ -24,7 +25,6 @@ source_set("archive_accessor") {
     "//src/lib/fxl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [
@@ -127,6 +127,7 @@ source_set("datastore") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/feedback_data/annotations:annotation_providers",
     "//src/developer/forensics/feedback_data/annotations:types",
@@ -134,7 +135,6 @@ source_set("datastore") {
     "//src/developer/forensics/utils:previous_boot_file",
     "//src/developer/forensics/utils/cobalt",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 
@@ -256,10 +256,10 @@ source_set("metadata") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//src/developer/forensics/feedback_data/annotations:types",
     "//src/developer/forensics/feedback_data/attachments:types",
     "//src/developer/forensics/utils:utc_time_provider",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [

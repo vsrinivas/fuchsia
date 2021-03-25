@@ -33,13 +33,13 @@ static_library("journal") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/storage/vfs/cpp/transaction",
   ]
 
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
     "//zircon/third_party/ulib/cksum",
   ]
 
@@ -122,6 +122,7 @@ test("journal-unit") {
   ]
   deps = [
     ":journal",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/inspect/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/storage/vfs/cpp/metrics:metrics-cobalt",

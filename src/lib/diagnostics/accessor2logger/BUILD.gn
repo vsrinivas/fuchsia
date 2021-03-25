@@ -11,6 +11,7 @@ source_set("accessor2logger") {
   public_deps = [
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.logger",
+    "//sdk/lib/fit-promise",
   ]
   deps = [
     "//src/lib/fsl",

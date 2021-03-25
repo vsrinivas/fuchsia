@@ -33,6 +33,7 @@ source_set("driver") {
     "//sdk/banjo/fuchsia.hardware.network.device",
     "//sdk/banjo/fuchsia.hardware.serial",
     "//sdk/fidl/fuchsia.hardware.network:fuchsia.hardware.network_llcpp",
+    "//sdk/lib/fit-promise",
     "//src/connectivity/ppp/lib/common",
     "//src/connectivity/ppp/lib/hdlc:frame",
     "//src/devices/lib/driver",

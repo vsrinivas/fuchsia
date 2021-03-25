@@ -28,13 +28,13 @@ static_library("cpp") {
 
   public_deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/fit-promise",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fit",
   ]
 
   deps = [
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
   ]
 
@@ -106,7 +106,6 @@ static_library("cpp") {
 
       # <fs/tracked_remote_dir.h> has #include <lib/async/cpp/wait.h>.
       "//zircon/public/lib/async-cpp",
-      "//zircon/public/lib/fit",
       "//zircon/public/lib/zx",
 
       # <fs/trace.h> has #include <lib/trace/event.h>.

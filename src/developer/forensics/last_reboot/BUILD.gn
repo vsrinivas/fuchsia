@@ -133,11 +133,11 @@ source_set("reporter") {
     ":reboot_reason",
     "//sdk/fidl/fuchsia.cobalt",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/cobalt",
     "//src/developer/forensics/utils/fidl:oneshot_ptr",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [

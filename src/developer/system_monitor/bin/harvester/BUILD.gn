@@ -62,6 +62,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.sysinfo",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/developer/memory/metrics",

@@ -15,8 +15,8 @@ zx_library("synchronous-executor") {
   shared = false
   sources = [ "executor.cc" ]
   deps = [
+    "//sdk/lib/fit-promise",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]

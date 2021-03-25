@@ -5,6 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_H_
 #define SRC_DEVELOPER_DEBUG_SHARED_MESSAGE_LOOP_H_
 
+#include <lib/fit/promise.h>
+
 #include <deque>
 #include <functional>
 #include <limits>
@@ -13,7 +15,6 @@
 #include <string>
 #include <vector>
 
-#include "lib/fit/promise.h"
 #include "src/developer/debug/shared/logging/file_line_function.h"
 #include "src/lib/fxl/macros.h"
 

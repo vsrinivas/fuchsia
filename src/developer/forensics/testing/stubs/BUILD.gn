@@ -77,9 +77,9 @@ source_set("crash_reporter") {
   ]
 
   deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//zircon/public/lib/fit",
   ]
 }
 
@@ -100,9 +100,9 @@ source_set("data_provider") {
   ]
 
   deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//zircon/public/lib/fit",
   ]
 }
 
@@ -141,9 +141,9 @@ source_set("diagnostics") {
   ]
 
   deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
-    "//zircon/public/lib/fit",
   ]
 }
 

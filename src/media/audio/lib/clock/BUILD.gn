@@ -45,9 +45,9 @@ source_set("utils") {
   deps = [ "//sdk/lib/syslog/cpp" ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//src/media/audio/lib/timeline",
     "//zircon/public/lib/affine",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 }

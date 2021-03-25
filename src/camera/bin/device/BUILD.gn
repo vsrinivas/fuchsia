@@ -43,9 +43,9 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
-    "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/trace",
   ]

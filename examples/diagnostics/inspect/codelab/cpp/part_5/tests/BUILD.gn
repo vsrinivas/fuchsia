@@ -14,6 +14,7 @@ executable("integration_test") {
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.diagnostics",
     "//sdk/fidl/fuchsia.io",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fsl",

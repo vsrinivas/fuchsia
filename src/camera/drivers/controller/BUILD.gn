@@ -63,6 +63,7 @@ source_set("source") {
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/fidl/fuchsia.sysmem:fuchsia.sysmem_c",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/camera/drivers/controller/configs",
     "//src/camera/lib/format_conversion",

@@ -13,6 +13,7 @@ executable("netstack_intermediary") {
 
   deps = [
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/connectivity/network/testing/netemul/lib/fidl:network",

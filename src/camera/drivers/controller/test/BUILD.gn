@@ -34,6 +34,7 @@ executable("controller_unittest_bin") {
     ":constants",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.hardware.camera",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/camera/drivers/controller:source",
     "//src/camera/drivers/controller/sherlock:config",

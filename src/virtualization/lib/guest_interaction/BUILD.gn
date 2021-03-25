@@ -264,6 +264,7 @@ executable("guest_discovery_service_bin") {
     ":proto",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",

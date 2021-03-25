@@ -12,6 +12,8 @@ source_set("client") {
     "network_device_client.h",
   ]
 
+  deps = [ "//sdk/lib/fit-promise" ]
+
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.network",
     "//src/lib/fxl",
@@ -30,6 +32,7 @@ executable("cpp-test") {
   deps = [
     ":client",
     "//sdk/fidl/fuchsia.net.tun",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",

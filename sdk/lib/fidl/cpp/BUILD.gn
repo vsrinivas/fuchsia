@@ -52,6 +52,7 @@ sdk_source_set("cpp") {
 
   public_deps = [
     ":cpp_sync",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl",
@@ -133,6 +134,7 @@ sdk_source_set("cpp_base") {
   public_configs = [ "//sdk/config" ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
     "//zircon/public/lib/fidl_base",
     "//zircon/public/lib/fit",

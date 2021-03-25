@@ -76,13 +76,13 @@ source_set("crash_register") {
   public_deps = [
     ":product",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils/fit",
     "//third_party/rapidjson",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [
@@ -113,12 +113,12 @@ source_set("crash_reporter") {
     ":reporting_policy_watcher",
     ":snapshot_manager",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/utils:errors",
     "//src/developer/forensics/utils:utc_time_provider",
     "//src/developer/forensics/utils/fidl:device_id_provider_ptr",
-    "//src/developer/forensics/utils/fit",
     "//src/lib/timekeeper",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
@@ -298,6 +298,7 @@ source_set("report_util") {
     ":product",
     ":report",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fit-promise",
     "//src/developer/forensics/utils:errors",
   ]
 
@@ -338,12 +339,12 @@ source_set("snapshot_manager") {
   public_deps = [
     ":annotation_map",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/utils:sized_data",
     "//src/developer/forensics/utils:storage_size",
     "//src/lib/timekeeper",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 

@@ -16,11 +16,11 @@ source_set("fit") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils:errors",
     "//src/lib/fxl",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fit",
   ]
 }

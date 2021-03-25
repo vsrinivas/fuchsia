@@ -33,10 +33,11 @@ source_set("frame") {
 
   deps = [
     ":fcs",
+    "//sdk/lib/fit-promise",
     "//src/connectivity/ppp/lib/common",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
   ]
+  public_deps = [ "//sdk/lib/fit-promise" ]
 }
 
 source_set("frame-test") {

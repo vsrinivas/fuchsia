@@ -11,6 +11,8 @@ source_set("internal_buffer") {
     "//sdk/fidl/fuchsia.sysmem",
     "//src/media/lib/memory_barriers",
     "//zircon/public/lib/fbl",
+    "//zircon/system/ulib/fit",
     "//zircon/system/ulib/syslog",
   ]
+  deps = [ "//sdk/lib/fit-promise" ]
 }

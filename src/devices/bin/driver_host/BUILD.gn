@@ -52,6 +52,7 @@ source_set("common") {
     "//sdk/fidl/fuchsia.io2:fuchsia.io2_llcpp",
     "//sdk/fidl/fuchsia.scheduler:fuchsia.scheduler_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit-promise",
     "//src/devices/lib/log",
     "//src/lib/ddk",
     "//zircon/system/ulib/fidl:fidl-llcpp",

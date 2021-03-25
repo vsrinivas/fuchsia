@@ -18,6 +18,7 @@ zx_library("service-llcpp") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/stdcompat",
     "//zircon/public/lib/zx",
   ]

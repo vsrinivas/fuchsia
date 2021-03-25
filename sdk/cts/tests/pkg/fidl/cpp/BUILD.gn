@@ -87,6 +87,7 @@ cts_source_set("test_sources") {
     "//sdk/lib/fidl/cpp/test:collision_test",
     "//sdk/lib/fidl/cpp/test:fidl_test",
     "//sdk/lib/fidl/cpp/test:fidl_test_handles",
+    "//sdk/lib/fit-promise",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-loop",
     "//zircon/system/ulib/async-loop:async-loop-cpp",

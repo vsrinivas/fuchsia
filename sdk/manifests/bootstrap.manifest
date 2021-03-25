@@ -6,6 +6,7 @@ sdk://pkg/async
 sdk://pkg/async-cpp
 sdk://pkg/fdio
 sdk://pkg/fit
+sdk://pkg/fit-promise
 sdk://pkg/stdcompat
 sdk://pkg/sync
 sdk://pkg/sysroot

@@ -53,6 +53,7 @@ static_library("core_dev_tools") {
 
   deps = [
     ":testable_internals",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/developer/debug/shared",
     "//src/developer/debug/zxdb/common",

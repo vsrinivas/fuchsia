@@ -21,6 +21,7 @@ source_set("lib") {
     "//src/lib/files",
     "//zircon/system/ulib/fzl",
   ]
+  public_deps = [ "//sdk/lib/fit-promise" ]
 }
 
 source_set("stream_configs") {

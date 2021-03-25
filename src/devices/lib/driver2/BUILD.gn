@@ -37,6 +37,7 @@ source_set("llcpp") {
     "//sdk/fidl/fuchsia.driver.framework:fuchsia.driver.framework_llcpp",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit-promise",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/zxc",
     "//zircon/system/ulib/inspect",

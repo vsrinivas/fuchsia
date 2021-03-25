@@ -22,7 +22,7 @@ source_set("zxtest") {
     "zxtest/inspect.h",
   ]
   deps = [
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit-promise",
     "//zircon/public/lib/zxtest",
   ]
   public_deps = [ "//zircon/system/ulib/inspect" ]

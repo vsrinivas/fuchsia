@@ -345,6 +345,7 @@ executable("virtio_net_bin") {
     ":virtio",
     "//sdk/fidl/fuchsia.hardware.ethernet:fuchsia.hardware.ethernet",
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/fit-promise",
     "//zircon/public/lib/async-cpp",
   ]
 

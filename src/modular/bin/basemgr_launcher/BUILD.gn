@@ -25,6 +25,7 @@ executable("basemgr_launcher_bin") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//zircon/system/ulib/async-default",
   ]

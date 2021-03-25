@@ -23,6 +23,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.exception",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.sys.internal",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/sys/cpp",
     "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
     "//src/developer/forensics/utils/fidl:oneshot_ptr",
@@ -32,8 +33,8 @@ source_set("lib") {
     "//third_party/crashpad/snapshot",
     "//third_party/crashpad/third_party/mini_chromium/mini_chromium/base",
     "//third_party/crashpad/util",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+    "//zircon/system/ulib/fit",
   ]
 
   deps = [

@@ -56,6 +56,7 @@ executable("channel_provider_unittest_exe") {
   sources = [ "channel_provider_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data/annotations:channel_provider",
@@ -67,7 +68,6 @@ executable("channel_provider_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 }
@@ -165,6 +165,7 @@ executable("datastore_unittest_exe") {
   deps = [
     "//sdk/fidl/fuchsia.hwinfo",
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/lib/fit-promise",
     "//src/developer/forensics/feedback_data:constants",
     "//src/developer/forensics/feedback_data:datastore",
     "//src/developer/forensics/feedback_data:device_id_provider",
@@ -191,7 +192,6 @@ executable("datastore_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 }
@@ -330,6 +330,7 @@ executable("metadata_unittest_exe") {
   sources = [ "metadata_unittest.cc" ]
 
   deps = [
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/syslog/cpp:backend_legacy",
     "//src/developer/forensics/feedback_data:constants",
@@ -343,7 +344,6 @@ executable("metadata_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fit",
   ]
 }
 

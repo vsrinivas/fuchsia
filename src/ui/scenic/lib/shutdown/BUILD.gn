@@ -10,7 +10,10 @@ source_set("shutdown") {
     "shutdown_manager.h",
   ]
 
-  public_deps = [ "//src/lib/fxl" ]
+  public_deps = [
+    "//sdk/lib/fit-promise",
+    "//src/lib/fxl",
+  ]
 
   deps = [ "//zircon/public/lib/async-cpp" ]
 }

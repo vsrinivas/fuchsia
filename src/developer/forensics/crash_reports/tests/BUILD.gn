@@ -48,6 +48,7 @@ executable("crash_register_unittest_exe") {
 
   deps = [
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/lib/fit-promise",
     "//src/developer/forensics/crash_reports:crash_register",
     "//src/developer/forensics/crash_reports/info",
     "//src/developer/forensics/testing:gtest_with_syslog_main",
@@ -59,7 +60,6 @@ executable("crash_register_unittest_exe") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 }
@@ -79,6 +79,7 @@ executable("crash_reporter_unittest_exe") {
     "//sdk/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.time",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit-promise",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/crash_reports:constants",
     "//src/developer/forensics/crash_reports:crash_reporter",
