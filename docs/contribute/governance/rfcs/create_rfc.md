@@ -23,7 +23,7 @@ The metadata of an RFC defines many values that are used to populate the RFC
 information for the [RFC overview][rfc-overview].
 
 To identify your RFC, you need to edit the
-[docs/governance/rfcs/_rfcs.yaml][rfc-yaml] to include information about your RFC.
+[docs/contribute/governance/rfcs/_rfcs.yaml][rfc-yaml] to include information about your RFC.
 
 <p>For your RFC, you need to include the following information:</p>
 
