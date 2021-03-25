@@ -157,7 +157,7 @@ std::optional<::fidl::UnbindInfo> {{ .WireClientImpl.NoLeading }}::DispatchEvent
     fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
     switch (hdr->ordinal) {
     {{- range .Events }}
-      case {{ .Protocol.Namespace }}::{{ .OrdinalName }}:
+      case {{ .OrdinalName }}:
       {
         const char* error_message;
         zx_status_t status = fidl_decode_etc({{ .WireResponse }}::Type, msg->bytes, msg->num_bytes,

@@ -14,7 +14,6 @@ void ::fidl_test_error::wire::Example_foo_Result::
 }
 
 namespace fidl_test_error {
-
 [[maybe_unused]] constexpr uint64_t kExample_foo_Ordinal =
     6333213382893778862lu;
 
@@ -96,8 +95,8 @@ fidl::internal::WireClientImpl<::fidl_test_error::Example>::foo_Sync(
 #ifdef __Fuchsia__
 ::fidl_test_error::Example::fooResponseContext::fooResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl_test_error::Example::fooResponse::Type, kExample_foo_Ordinal) {
-}
+          ::fidl_test_error::Example::fooResponse::Type,
+          ::fidl_test_error::kExample_foo_Ordinal) {}
 
 void ::fidl_test_error::Example::fooResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<::fidl_test_error::Example::fooResponse*>(reply));

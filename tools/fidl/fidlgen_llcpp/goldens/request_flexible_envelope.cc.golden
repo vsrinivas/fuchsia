@@ -33,7 +33,6 @@ void ::fidl_test_requestflexibleenvelope::wire::FlexibleFoo::
 }
 
 namespace fidl_test_requestflexibleenvelope {
-
 [[maybe_unused]] constexpr uint64_t
     kProtocol_RequestStrictResponseFlexible_Ordinal = 4346871690266280218lu;
 
@@ -42,6 +41,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_requestflexibleenvelope_ProtocolRequestStrictResponseFlexibleResponseTable;
+
 [[maybe_unused]] constexpr uint64_t
     kProtocol_RequestFlexibleResponseStrict_Ordinal = 4374294377437089654lu;
 
@@ -215,7 +215,8 @@ extern "C" const fidl_type_t
     : ::fidl::internal::ResponseContext(
           ::fidl_test_requestflexibleenvelope::Protocol::
               RequestStrictResponseFlexibleResponse::Type,
-          kProtocol_RequestStrictResponseFlexible_Ordinal) {}
+          ::fidl_test_requestflexibleenvelope::
+              kProtocol_RequestStrictResponseFlexible_Ordinal) {}
 
 void ::fidl_test_requestflexibleenvelope::Protocol::
     RequestStrictResponseFlexibleResponseContext::OnReply(uint8_t* reply) {
@@ -332,7 +333,8 @@ fidl::internal::WireClientImpl<::fidl_test_requestflexibleenvelope::Protocol>::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_requestflexibleenvelope::Protocol::
               RequestFlexibleResponseStrictResponse::Type,
-          kProtocol_RequestFlexibleResponseStrict_Ordinal) {}
+          ::fidl_test_requestflexibleenvelope::
+              kProtocol_RequestFlexibleResponseStrict_Ordinal) {}
 
 void ::fidl_test_requestflexibleenvelope::Protocol::
     RequestFlexibleResponseStrictResponseContext::OnReply(uint8_t* reply) {

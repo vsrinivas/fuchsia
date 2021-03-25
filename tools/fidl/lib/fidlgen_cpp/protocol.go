@@ -352,7 +352,7 @@ type methodInner struct {
 type Method struct {
 	methodInner
 	NameInLowerSnakeCase string
-	OrdinalName          string
+	OrdinalName          NameVariants
 	Request              message
 	Response             message
 	CallbackType         string
@@ -399,11 +399,15 @@ func newMethod(inner methodInner) Method {
 	if inner.HasResponse {
 		callbackType = changeIfReserved(fidlgen.Identifier(inner.Name + "Callback"))
 	}
+	ordinalName := fmt.Sprintf("k%s_%s_Ordinal", inner.protocolName.Natural.Name(), inner.Name)
 
 	m := Method{
 		methodInner:          inner,
 		NameInLowerSnakeCase: fidlgen.ToSnakeCase(inner.Name),
-		OrdinalName:          fmt.Sprintf("k%s_%s_Ordinal", inner.protocolName.Natural.Name(), inner.Name),
+		OrdinalName: NameVariants{
+			Natural: inner.protocolName.Natural.Namespace().Append("internal").Member(ordinalName),
+			Wire:    inner.protocolName.Wire.Namespace().Member(ordinalName),
+		},
 		Request: newMessage(inner.request,
 			inner.RequestArgs, messageDirectionRequest.queryBoundedness),
 		Response: newMessage(inner.response,

@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace fidl_test_service {
-
 [[maybe_unused]] constexpr uint64_t kSecondProtocol_MethodOnSecond_Ordinal =
     6118813307380259369lu;
 
@@ -117,7 +116,6 @@ void ::fidl_test_service::SecondProtocol::MethodOnSecondRequest::_InitHeader(
 #endif
 
 namespace fidl_test_service {
-
 [[maybe_unused]] constexpr uint64_t kFirstProtocol_MethodOnFirst_Ordinal =
     6590661047173168036lu;
 

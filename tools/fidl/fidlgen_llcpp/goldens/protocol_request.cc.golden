@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace fidl_test_protocolrequest {
-
 [[maybe_unused]] constexpr uint64_t kParent_GetChild_Ordinal =
     7929845654914578302lu;
 
@@ -14,6 +13,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentGetChildResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kParent_GetChildRequest_Ordinal =
     1819029190665166744lu;
 
@@ -22,6 +22,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentGetChildRequestResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kParent_TakeChild_Ordinal =
     374110854839013230lu;
 
@@ -30,6 +31,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocolrequest_ParentTakeChildResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kParent_TakeChildRequest_Ordinal =
     1574820689302890956lu;
 
@@ -215,7 +217,7 @@ extern "C" const fidl_type_t
     GetChildResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocolrequest::Parent::GetChildResponse::Type,
-          kParent_GetChild_Ordinal) {}
+          ::fidl_test_protocolrequest::kParent_GetChild_Ordinal) {}
 
 void ::fidl_test_protocolrequest::Parent::GetChildResponseContext::OnReply(
     uint8_t* reply) {
@@ -308,7 +310,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocolrequest::Parent>::
     GetChildRequestResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocolrequest::Parent::GetChildRequestResponse::Type,
-          kParent_GetChildRequest_Ordinal) {}
+          ::fidl_test_protocolrequest::kParent_GetChildRequest_Ordinal) {}
 
 void ::fidl_test_protocolrequest::Parent::GetChildRequestResponseContext::
     OnReply(uint8_t* reply) {
@@ -637,7 +639,6 @@ void ::fidl_test_protocolrequest::Parent::TakeChildRequestRequest::
 #ifdef __Fuchsia__
 #endif
 
-namespace fidl_test_protocolrequest {}  // namespace fidl_test_protocolrequest
 #ifdef __Fuchsia__
 std::optional<::fidl::UnbindInfo> fidl::internal::WireClientImpl<
     ::fidl_test_protocolrequest::Child>::DispatchEvent(fidl_incoming_msg_t*

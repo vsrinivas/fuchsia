@@ -117,7 +117,6 @@ void ::fidl_test_union::wire::OlderSimpleUnion::SizeAndOffsetAssertionHelper() {
 }
 
 namespace fidl_test_union {
-
 [[maybe_unused]] constexpr uint64_t
     kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal =
         8393311445612289086lu;
@@ -127,6 +126,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_union_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable;
+
 [[maybe_unused]] constexpr uint64_t
     kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal =
         6296412872266712530lu;
@@ -290,7 +290,9 @@ extern "C" const fidl_type_t
     : ::fidl::internal::ResponseContext(
           ::fidl_test_union::TestProtocol::
               StrictXUnionHenceResponseMayBeStackAllocatedResponse::Type,
-          kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal) {}
+          ::fidl_test_union::
+              kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal) {
+}
 
 void ::fidl_test_union::TestProtocol::
     StrictXUnionHenceResponseMayBeStackAllocatedResponseContext::OnReply(
@@ -399,7 +401,8 @@ void ::fidl_test_union::TestProtocol::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_union::TestProtocol::
               FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse::Type,
-          kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal) {
+          ::fidl_test_union::
+              kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal) {
 }
 
 void ::fidl_test_union::TestProtocol::

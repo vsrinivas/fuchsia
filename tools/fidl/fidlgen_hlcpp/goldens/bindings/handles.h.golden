@@ -398,8 +398,7 @@ class SomeProtocol_Sync;
 using SomeProtocolSyncPtr = ::fidl::SynchronousInterfacePtr<SomeProtocol>;
 class SomeProtocol_SyncProxy;
 
-namespace internal {}  // namespace internal
-#endif                 // __Fuchsia__
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 class SomeProtocol {
  public:

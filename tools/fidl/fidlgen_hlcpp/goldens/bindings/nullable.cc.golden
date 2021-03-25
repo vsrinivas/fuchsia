@@ -472,7 +472,7 @@ SimpleProtocol::~SimpleProtocol() = default;
 const fidl_type_t* ::fidl::test::nullable::SimpleProtocol_RequestDecoder::
     GetType(uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kSimpleProtocol_Add_Ordinal:
+    case ::fidl::test::nullable::internal::kSimpleProtocol_Add_Ordinal:
       *out_needs_response = true;
       return &::fidl::test::nullable::_internal::
           fidl_test_nullable_SimpleProtocolAddRequestTable;
@@ -484,7 +484,7 @@ const fidl_type_t* ::fidl::test::nullable::SimpleProtocol_RequestDecoder::
 
 const fidl_type_t* SimpleProtocol_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::kSimpleProtocol_Add_Ordinal:
+    case ::fidl::test::nullable::internal::kSimpleProtocol_Add_Ordinal:
       return &::fidl::test::nullable::_internal::
           fidl_test_nullable_SimpleProtocolAddResponseTable;
     default:
@@ -535,7 +535,8 @@ SimpleProtocol_Add_ResponseHandler(SimpleProtocol::AddCallback&& callback) {
 
 }  // namespace
 void SimpleProtocol_Proxy::Add(int32_t a, int32_t b, AddCallback callback) {
-  ::fidl::Encoder _encoder(internal::kSimpleProtocol_Add_Ordinal);
+  ::fidl::Encoder _encoder(
+      ::fidl::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
   controller_->Send(&::fidl::test::nullable::_internal::
                         fidl_test_nullable_SimpleProtocolAddRequestTable,
                     ::fidl::test::nullable::SimpleProtocol_RequestEncoder::Add(
@@ -559,7 +560,8 @@ class SimpleProtocol_Add_Responder final {
       : response_(std::move(response)) {}
 
   void operator()(int32_t sum) {
-    ::fidl::Encoder _encoder(internal::kSimpleProtocol_Add_Ordinal);
+    ::fidl::Encoder _encoder(
+        ::fidl::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
     response_.Send(&::fidl::test::nullable::_internal::
                        fidl_test_nullable_SimpleProtocolAddResponseTable,
                    ::fidl::test::nullable::SimpleProtocol_ResponseEncoder::Add(
@@ -600,7 +602,7 @@ zx_status_t SimpleProtocol_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kSimpleProtocol_Add_Ordinal: {
+    case ::fidl::test::nullable::internal::kSimpleProtocol_Add_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->Add(::fidl::DecodeAs<int32_t>(&decoder, 16),
                  ::fidl::DecodeAs<int32_t>(&decoder, 20),
@@ -622,7 +624,8 @@ SimpleProtocol_SyncProxy::~SimpleProtocol_SyncProxy() = default;
 
 zx_status_t SimpleProtocol_SyncProxy::Add(int32_t a, int32_t b,
                                           int32_t* out_sum) {
-  ::fidl::Encoder _encoder(internal::kSimpleProtocol_Add_Ordinal);
+  ::fidl::Encoder _encoder(
+      ::fidl::test::nullable::internal::kSimpleProtocol_Add_Ordinal);
   ::fidl::IncomingMessageBuffer buffer_;
   ::fidl::HLCPPIncomingMessage response_ = buffer_.CreateEmptyIncomingMessage();
   zx_status_t status_ =

@@ -180,8 +180,7 @@ class Child_Sync;
 using ChildSyncPtr = ::fidl::SynchronousInterfacePtr<Child>;
 class Child_SyncProxy;
 
-namespace internal {}  // namespace internal
-#endif                 // __Fuchsia__
+#endif  // __Fuchsia__
 #ifdef __Fuchsia__
 class Parent {
  public:

@@ -526,7 +526,7 @@ Interface::~Interface() = default;
 const fidl_type_t* ::fidl::test::doccomments::Interface_RequestDecoder::GetType(
     uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kInterface_Method_Ordinal:
+    case ::fidl::test::doccomments::internal::kInterface_Method_Ordinal:
       *out_needs_response = false;
       return &::fidl::test::doccomments::_internal::
           fidl_test_doccomments_InterfaceMethodRequestTable;
@@ -538,7 +538,7 @@ const fidl_type_t* ::fidl::test::doccomments::Interface_RequestDecoder::GetType(
 
 const fidl_type_t* Interface_ResponseDecoder::GetType(uint64_t ordinal) {
   switch (ordinal) {
-    case internal::kInterface_OnEvent_Ordinal:
+    case ::fidl::test::doccomments::internal::kInterface_OnEvent_Ordinal:
       return &::fidl::test::doccomments::_internal::
           fidl_test_doccomments_InterfaceOnEventEventTable;
     default:
@@ -560,7 +560,7 @@ Interface_Proxy::~Interface_Proxy() = default;
 zx_status_t Interface_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
   zx_status_t status = ZX_OK;
   switch (message.ordinal()) {
-    case internal::kInterface_OnEvent_Ordinal: {
+    case ::fidl::test::doccomments::internal::kInterface_OnEvent_Ordinal: {
       if (!OnEvent) {
         status = ZX_OK;
         break;
@@ -590,7 +590,8 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 }
 
 void Interface_Proxy::Method() {
-  ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
+  ::fidl::Encoder _encoder(
+      ::fidl::test::doccomments::internal::kInterface_Method_Ordinal);
   controller_->Send(
       &::fidl::test::doccomments::_internal::
           fidl_test_doccomments_InterfaceMethodRequestTable,
@@ -636,7 +637,7 @@ zx_status_t Interface_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kInterface_Method_Ordinal: {
+    case ::fidl::test::doccomments::internal::kInterface_Method_Ordinal: {
       impl_->Method();
       break;
     }
@@ -648,7 +649,8 @@ zx_status_t Interface_Stub::Dispatch_(
   return status;
 }
 void Interface_Stub::OnEvent() {
-  ::fidl::Encoder _encoder(internal::kInterface_OnEvent_Ordinal);
+  ::fidl::Encoder _encoder(
+      ::fidl::test::doccomments::internal::kInterface_OnEvent_Ordinal);
   sender_()->Send(
       &::fidl::test::doccomments::_internal::
           fidl_test_doccomments_InterfaceOnEventEventTable,
@@ -661,7 +663,8 @@ Interface_SyncProxy::Interface_SyncProxy(::zx::channel channel)
 Interface_SyncProxy::~Interface_SyncProxy() = default;
 
 zx_status_t Interface_SyncProxy::Method() {
-  ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
+  ::fidl::Encoder _encoder(
+      ::fidl::test::doccomments::internal::kInterface_Method_Ordinal);
   return proxy_.Send(
       &::fidl::test::doccomments::_internal::
           fidl_test_doccomments_InterfaceMethodRequestTable,

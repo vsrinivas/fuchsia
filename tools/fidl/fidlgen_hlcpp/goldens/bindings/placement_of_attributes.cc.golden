@@ -513,7 +513,8 @@ const fidl_type_t* ::fidl::test::placementofattributes::
     ExampleProtocol_RequestDecoder::GetType(uint64_t ordinal,
                                             bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kExampleProtocol_Method_Ordinal:
+    case ::fidl::test::placementofattributes::internal::
+        kExampleProtocol_Method_Ordinal:
       *out_needs_response = false;
       return &::fidl::test::placementofattributes::_internal::
           fidl_test_placementofattributes_ExampleProtocolMethodRequestTable;
@@ -555,7 +556,8 @@ zx_status_t ExampleProtocol_Proxy::Dispatch_(
 }
 
 void ExampleProtocol_Proxy::Method(::exampleusing::Empty arg) {
-  ::fidl::Encoder _encoder(internal::kExampleProtocol_Method_Ordinal);
+  ::fidl::Encoder _encoder(::fidl::test::placementofattributes::internal::
+                               kExampleProtocol_Method_Ordinal);
   controller_->Send(
       &::fidl::test::placementofattributes::_internal::
           fidl_test_placementofattributes_ExampleProtocolMethodRequestTable,
@@ -603,7 +605,8 @@ zx_status_t ExampleProtocol_Stub::Dispatch_(
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kExampleProtocol_Method_Ordinal: {
+    case ::fidl::test::placementofattributes::internal::
+        kExampleProtocol_Method_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->Method(::fidl::DecodeAs<::exampleusing::Empty>(&decoder, 16));
       break;
@@ -622,7 +625,8 @@ ExampleProtocol_SyncProxy::ExampleProtocol_SyncProxy(::zx::channel channel)
 ExampleProtocol_SyncProxy::~ExampleProtocol_SyncProxy() = default;
 
 zx_status_t ExampleProtocol_SyncProxy::Method(::exampleusing::Empty arg) {
-  ::fidl::Encoder _encoder(internal::kExampleProtocol_Method_Ordinal);
+  ::fidl::Encoder _encoder(::fidl::test::placementofattributes::internal::
+                               kExampleProtocol_Method_Ordinal);
   return proxy_.Send(
       &::fidl::test::placementofattributes::_internal::
           fidl_test_placementofattributes_ExampleProtocolMethodRequestTable,

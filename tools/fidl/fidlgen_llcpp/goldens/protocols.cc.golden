@@ -25,7 +25,6 @@ void ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsPrimitive_Result::
 }
 
 namespace fidl_test_protocols {
-
 [[maybe_unused]] constexpr uint64_t kTransitional_Request_Ordinal =
     7121112290509197032lu;
 
@@ -34,6 +33,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalRequestResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kTransitional_OneWay_Ordinal =
     1124136612964114085lu;
 
@@ -41,6 +41,7 @@ extern "C" const fidl_type_t fidl_test_protocols_TransitionalOneWayRequestTable;
 
 extern "C" const fidl_type_t
     fidl_test_protocols_TransitionalOneWayResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kTransitional_Event_Ordinal =
     6033576734966581606lu;
 
@@ -156,7 +157,7 @@ fidl::internal::WireClientImpl<
     RequestResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::Transitional::RequestResponse::Type,
-          kTransitional_Request_Ordinal) {}
+          ::fidl_test_protocols::kTransitional_Request_Ordinal) {}
 
 void ::fidl_test_protocols::Transitional::RequestResponseContext::OnReply(
     uint8_t* reply) {
@@ -481,7 +482,6 @@ zx_status_t fidl::WireEventSender<::fidl_test_protocols::Transitional>::Event(
 #endif
 
 namespace fidl_test_protocols {
-
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodA_Ordinal =
     565531679656837166lu;
 
@@ -490,6 +490,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodAResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_EventA_Ordinal =
     5963604044179602938lu;
 
@@ -498,6 +499,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolEventAEventTable;
+
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MethodB_Ordinal =
     6746905632127147242lu;
 
@@ -506,6 +508,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolMethodBResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_TakeHandle_Ordinal =
     875219241480379432lu;
 
@@ -514,6 +517,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_ChannelProtocolTakeHandleResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kChannelProtocol_MutateSocket_Ordinal =
     9065806117349865322lu;
 
@@ -756,7 +760,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
     MethodBResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::ChannelProtocol::MethodBResponse::Type,
-          kChannelProtocol_MethodB_Ordinal) {}
+          ::fidl_test_protocols::kChannelProtocol_MethodB_Ordinal) {}
 
 void ::fidl_test_protocols::ChannelProtocol::MethodBResponseContext::OnReply(
     uint8_t* reply) {
@@ -851,7 +855,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
     TakeHandleResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::ChannelProtocol::TakeHandleResponse::Type,
-          kChannelProtocol_TakeHandle_Ordinal) {}
+          ::fidl_test_protocols::kChannelProtocol_TakeHandle_Ordinal) {}
 
 void ::fidl_test_protocols::ChannelProtocol::TakeHandleResponseContext::OnReply(
     uint8_t* reply) {
@@ -948,7 +952,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::ChannelProtocol>::
     MutateSocketResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::ChannelProtocol::MutateSocketResponse::Type,
-          kChannelProtocol_MutateSocket_Ordinal) {}
+          ::fidl_test_protocols::kChannelProtocol_MutateSocket_Ordinal) {}
 
 void ::fidl_test_protocols::ChannelProtocol::MutateSocketResponseContext::
     OnReply(uint8_t* reply) {
@@ -1352,7 +1356,6 @@ fidl::WireEventSender<::fidl_test_protocols::ChannelProtocol>::EventA(
 #endif
 
 namespace fidl_test_protocols {
-
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestNoResponse_Ordinal =
         7699066378708085668lu;
@@ -1362,6 +1365,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestNoResponseResponseTable;
+
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal =
         4641225961522096302lu;
@@ -1371,6 +1375,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestEmptyResponseResponseTable;
+
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal =
         4935493674668456948lu;
@@ -1380,6 +1385,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseNoRequestWithResponseResponseTable;
+
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestNoResponse_Ordinal =
         8985942600963248509lu;
@@ -1389,6 +1395,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestNoResponseResponseTable;
+
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal =
         7344052883704365182lu;
@@ -1398,6 +1405,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestEmptyResponseResponseTable;
+
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal =
         2103802322332450033lu;
@@ -1407,6 +1415,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseWithRequestWithResponseResponseTable;
+
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_OnEmptyResponse_Ordinal =
         1323081535741489193lu;
@@ -1416,6 +1425,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_WithAndWithoutRequestResponseOnEmptyResponseEventTable;
+
 [[maybe_unused]] constexpr uint64_t
     kWithAndWithoutRequestResponse_OnWithResponse_Ordinal =
         1691906546593908418lu;
@@ -1736,7 +1746,8 @@ extern "C" const fidl_type_t
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
               NoRequestEmptyResponseResponse::Type,
-          kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal) {}
+          ::fidl_test_protocols::
+              kWithAndWithoutRequestResponse_NoRequestEmptyResponse_Ordinal) {}
 
 void ::fidl_test_protocols::WithAndWithoutRequestResponse::
     NoRequestEmptyResponseResponseContext::OnReply(uint8_t* reply) {
@@ -1844,7 +1855,8 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
               NoRequestWithResponseResponse::Type,
-          kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal) {}
+          ::fidl_test_protocols::
+              kWithAndWithoutRequestResponse_NoRequestWithResponse_Ordinal) {}
 
 void ::fidl_test_protocols::WithAndWithoutRequestResponse::
     NoRequestWithResponseResponseContext::OnReply(uint8_t* reply) {
@@ -1991,7 +2003,9 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
               WithRequestEmptyResponseResponse::Type,
-          kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal) {}
+          ::fidl_test_protocols::
+              kWithAndWithoutRequestResponse_WithRequestEmptyResponse_Ordinal) {
+}
 
 void ::fidl_test_protocols::WithAndWithoutRequestResponse::
     WithRequestEmptyResponseResponseContext::OnReply(uint8_t* reply) {
@@ -2107,7 +2121,8 @@ void ::fidl_test_protocols::WithAndWithoutRequestResponse::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::WithAndWithoutRequestResponse::
               WithRequestWithResponseResponse::Type,
-          kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal) {}
+          ::fidl_test_protocols::
+              kWithAndWithoutRequestResponse_WithRequestWithResponse_Ordinal) {}
 
 void ::fidl_test_protocols::WithAndWithoutRequestResponse::
     WithRequestWithResponseResponseContext::OnReply(uint8_t* reply) {
@@ -2690,7 +2705,6 @@ void ::fidl_test_protocols::wire::WithErrorSyntax_ErrorAsEnum_Result::
 }
 
 namespace fidl_test_protocols {
-
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ResponseAsStruct_Ordinal =
     4000554951765344912lu;
 
@@ -2699,6 +2713,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxResponseAsStructResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsPrimitive_Ordinal =
     3421672554503271630lu;
 
@@ -2707,6 +2722,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_protocols_WithErrorSyntaxErrorAsPrimitiveResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kWithErrorSyntax_ErrorAsEnum_Ordinal =
     627496610701472780lu;
 
@@ -2895,7 +2911,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponse::
               Type,
-          kWithErrorSyntax_ResponseAsStruct_Ordinal) {}
+          ::fidl_test_protocols::kWithErrorSyntax_ResponseAsStruct_Ordinal) {}
 
 void ::fidl_test_protocols::WithErrorSyntax::ResponseAsStructResponseContext::
     OnReply(uint8_t* reply) {
@@ -2991,7 +3007,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponse::
               Type,
-          kWithErrorSyntax_ErrorAsPrimitive_Ordinal) {}
+          ::fidl_test_protocols::kWithErrorSyntax_ErrorAsPrimitive_Ordinal) {}
 
 void ::fidl_test_protocols::WithErrorSyntax::ErrorAsPrimitiveResponseContext::
     OnReply(uint8_t* reply) {
@@ -3083,7 +3099,7 @@ fidl::internal::WireClientImpl<::fidl_test_protocols::WithErrorSyntax>::
     ErrorAsEnumResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponse::Type,
-          kWithErrorSyntax_ErrorAsEnum_Ordinal) {}
+          ::fidl_test_protocols::kWithErrorSyntax_ErrorAsEnum_Ordinal) {}
 
 void ::fidl_test_protocols::WithErrorSyntax::ErrorAsEnumResponseContext::
     OnReply(uint8_t* reply) {

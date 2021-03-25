@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace fidl_test_transitivedependenciescompose {
-
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 3210163844600846111lu;
 
 extern "C" const fidl_type_t
@@ -96,7 +95,7 @@ fidl::internal::WireClientImpl<::fidl_test_transitivedependenciescompose::Top>::
     GetFooResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl_test_transitivedependenciescompose::Top::GetFooResponse::Type,
-          kTop_GetFoo_Ordinal) {}
+          ::fidl_test_transitivedependenciescompose::kTop_GetFoo_Ordinal) {}
 
 void ::fidl_test_transitivedependenciescompose::Top::GetFooResponseContext::
     OnReply(uint8_t* reply) {

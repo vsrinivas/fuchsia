@@ -825,13 +825,12 @@ static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $par
 {{- end }}
 
 {{- define "ProtocolDefinition" }}
-{{ EnsureNamespace . }}
-
 {{ $protocol := . -}}
 
 {{- range .Methods }}
+{{ EnsureNamespace .OrdinalName }}
 [[maybe_unused]]
-constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu; {{/* TODO: Make a NameVariants for OrdinalName */}}
+constexpr uint64_t {{ .OrdinalName.Name }} = {{ .Ordinal }}lu;
 {{ EnsureNamespace .Request.CodingTable }}
 extern "C" const fidl_type_t {{ .Request.CodingTable.Name }};
 {{ EnsureNamespace .Response.CodingTable }}
@@ -897,7 +896,7 @@ extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
     {{- if .HasRequest }}
 {{ "" }}
     void {{ .WireRequest }}::_InitHeader(zx_txid_t _txid) {
-      fidl_init_txn_header(&_hdr, _txid, {{ .Protocol.Namespace }}::{{ .OrdinalName }});
+      fidl_init_txn_header(&_hdr, _txid, {{ .OrdinalName }});
     }
       {{- if .Request.IsResource }}
 
@@ -911,7 +910,7 @@ extern "C" const fidl_type_t {{ .Response.CodingTable.Name }};
     {{- if .HasResponse }}
 {{ "" }}
     void {{ .WireResponse }}::_InitHeader() {
-      fidl_init_txn_header(&_hdr, 0, {{ .Protocol.Namespace }}::{{ .OrdinalName }});
+      fidl_init_txn_header(&_hdr, 0, {{ .OrdinalName }});
     }
       {{- if .Response.IsResource }}
 

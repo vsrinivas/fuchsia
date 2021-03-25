@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace fidl_test_emptystruct {
-
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Send_Ordinal =
     2183815705502904104lu;
 
@@ -14,6 +13,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolSendResponseTable;
+
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_Receive_Ordinal =
     5025214662316626400lu;
 
@@ -22,6 +22,7 @@ extern "C" const fidl_type_t
 
 extern "C" const fidl_type_t
     fidl_test_emptystruct_EmptyProtocolReceiveEventTable;
+
 [[maybe_unused]] constexpr uint64_t kEmptyProtocol_SendAndReceive_Ordinal =
     6253929606062814577lu;
 
@@ -181,7 +182,7 @@ fidl::internal::WireClientImpl<::fidl_test_emptystruct::EmptyProtocol>::
     SendAndReceiveResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponse::Type,
-          kEmptyProtocol_SendAndReceive_Ordinal) {}
+          ::fidl_test_emptystruct::kEmptyProtocol_SendAndReceive_Ordinal) {}
 
 void ::fidl_test_emptystruct::EmptyProtocol::SendAndReceiveResponseContext::
     OnReply(uint8_t* reply) {

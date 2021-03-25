@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace fidl_test_bindingsdenylist {
-
 [[maybe_unused]] constexpr uint64_t
     kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal =
         2054945783954685224lu;
@@ -79,7 +78,8 @@ extern "C" const fidl_type_t
     : ::fidl::internal::ResponseContext(
           ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
               LibfuzzerNeedsNonemptyProtocolResponse::Type,
-          kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal) {}
+          ::fidl_test_bindingsdenylist::
+              kOnlyLibfuzzerAndDeps_LibfuzzerNeedsNonemptyProtocol_Ordinal) {}
 
 void ::fidl_test_bindingsdenylist::OnlyLibfuzzerAndDeps::
     LibfuzzerNeedsNonemptyProtocolResponseContext::OnReply(uint8_t* reply) {

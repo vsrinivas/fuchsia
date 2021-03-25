@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace fidl_test_inheritance {
-
 [[maybe_unused]] constexpr uint64_t ksuper_foo_Ordinal = 4999045011615110827lu;
 
 extern "C" const fidl_type_t fidl_test_inheritance_superfooRequestTable;
@@ -90,7 +89,7 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::super>::foo_Sync(
 ::fidl_test_inheritance::super::fooResponseContext::fooResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl_test_inheritance::super::fooResponse::Type,
-          ksuper_foo_Ordinal) {}
+          ::fidl_test_inheritance::ksuper_foo_Ordinal) {}
 
 void ::fidl_test_inheritance::super::fooResponseContext::OnReply(
     uint8_t* reply) {
@@ -243,7 +242,6 @@ void ::fidl_test_inheritance::super::fooResponse::_InitHeader() {
 #endif
 
 namespace fidl_test_inheritance {
-
 [[maybe_unused]] constexpr uint64_t ksub_foo_Ordinal = 4999045011615110827lu;
 
 extern "C" const fidl_type_t fidl_test_inheritance_subfooRequestTable;
@@ -324,7 +322,8 @@ fidl::internal::WireClientImpl<::fidl_test_inheritance::sub>::foo_Sync(
 #ifdef __Fuchsia__
 ::fidl_test_inheritance::sub::fooResponseContext::fooResponseContext()
     : ::fidl::internal::ResponseContext(
-          ::fidl_test_inheritance::sub::fooResponse::Type, ksub_foo_Ordinal) {}
+          ::fidl_test_inheritance::sub::fooResponse::Type,
+          ::fidl_test_inheritance::ksub_foo_Ordinal) {}
 
 void ::fidl_test_inheritance::sub::fooResponseContext::OnReply(uint8_t* reply) {
   OnReply(reinterpret_cast<::fidl_test_inheritance::sub::fooResponse*>(reply));

@@ -5,7 +5,6 @@
 #include <memory>
 
 namespace fidl_test_foreigntypeinresponseusedthroughcompose {
-
 [[maybe_unused]] constexpr uint64_t kTop_GetFoo_Ordinal = 7703637629648977298lu;
 
 extern "C" const fidl_type_t
@@ -106,7 +105,8 @@ fidl::internal::WireClientImpl<
     : ::fidl::internal::ResponseContext(
           ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
               GetFooResponse::Type,
-          kTop_GetFoo_Ordinal) {}
+          ::fidl_test_foreigntypeinresponseusedthroughcompose::
+              kTop_GetFoo_Ordinal) {}
 
 void ::fidl_test_foreigntypeinresponseusedthroughcompose::Top::
     GetFooResponseContext::OnReply(uint8_t* reply) {

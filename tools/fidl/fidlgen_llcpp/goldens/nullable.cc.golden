@@ -23,7 +23,6 @@ void ::fidl_test_nullable::wire::StructWithNullableHandle::_CloseHandles() {
 #endif  // __Fuchsia__
 
 namespace fidl_test_nullable {
-
 [[maybe_unused]] constexpr uint64_t kSimpleProtocol_Add_Ordinal =
     1238508415331800925lu;
 
@@ -110,7 +109,7 @@ fidl::internal::WireClientImpl<::fidl_test_nullable::SimpleProtocol>::Add_Sync(
 ::fidl_test_nullable::SimpleProtocol::AddResponseContext::AddResponseContext()
     : ::fidl::internal::ResponseContext(
           ::fidl_test_nullable::SimpleProtocol::AddResponse::Type,
-          kSimpleProtocol_Add_Ordinal) {}
+          ::fidl_test_nullable::kSimpleProtocol_Add_Ordinal) {}
 
 void ::fidl_test_nullable::SimpleProtocol::AddResponseContext::OnReply(
     uint8_t* reply) {

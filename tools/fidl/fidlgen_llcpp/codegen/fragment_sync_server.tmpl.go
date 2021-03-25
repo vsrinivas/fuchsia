@@ -42,7 +42,7 @@ namespace entries {
 
 ::fidl::internal::MethodEntry {{ .Name }}[] = {
 {{- range .ClientMethods }}
-  { {{ .Protocol.Namespace }}::{{ .OrdinalName }}, {{ .WireRequest }}::Type,
+  { {{ .OrdinalName }}, {{ .WireRequest }}::Type,
     methods::{{ .Protocol.Name }}Dispatch{{ .Name }} },
 {{- end }}
 };

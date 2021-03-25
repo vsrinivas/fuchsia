@@ -34,7 +34,6 @@ void ::fidl_test_placementofattributes::wire::ExampleUnion::
 }
 
 namespace fidl_test_placementofattributes {
-
 [[maybe_unused]] constexpr uint64_t kExampleProtocol_Method_Ordinal =
     2341079615635566980lu;
 

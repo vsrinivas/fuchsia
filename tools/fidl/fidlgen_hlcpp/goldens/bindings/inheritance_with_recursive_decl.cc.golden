@@ -26,7 +26,8 @@ Parent::~Parent() = default;
 const fidl_type_t* ::fidl::test::inheritancewithrecursivedecl::
     Parent_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kParent_First_Ordinal:
+    case ::fidl::test::inheritancewithrecursivedecl::internal::
+        kParent_First_Ordinal:
       *out_needs_response = false;
       return &::fidl::test::inheritancewithrecursivedecl::_internal::
           fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable;
@@ -68,7 +69,8 @@ zx_status_t Parent_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 void Parent_Proxy::First(
     ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>
         request) {
-  ::fidl::Encoder _encoder(internal::kParent_First_Ordinal);
+  ::fidl::Encoder _encoder(::fidl::test::inheritancewithrecursivedecl::
+                               internal::kParent_First_Ordinal);
   controller_->Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
           fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable,
@@ -113,7 +115,8 @@ zx_status_t Parent_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kParent_First_Ordinal: {
+    case ::fidl::test::inheritancewithrecursivedecl::internal::
+        kParent_First_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->First(::fidl::DecodeAs<::fidl::InterfaceRequest<
                        ::fidl::test::inheritancewithrecursivedecl::Parent>>(
@@ -136,7 +139,8 @@ Parent_SyncProxy::~Parent_SyncProxy() = default;
 zx_status_t Parent_SyncProxy::First(
     ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>
         request) {
-  ::fidl::Encoder _encoder(internal::kParent_First_Ordinal);
+  ::fidl::Encoder _encoder(::fidl::test::inheritancewithrecursivedecl::
+                               internal::kParent_First_Ordinal);
   return proxy_.Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
           fidl_test_inheritancewithrecursivedecl_ParentFirstRequestTable,
@@ -166,11 +170,13 @@ Child::~Child() = default;
 const fidl_type_t* ::fidl::test::inheritancewithrecursivedecl::
     Child_RequestDecoder::GetType(uint64_t ordinal, bool* out_needs_response) {
   switch (ordinal) {
-    case internal::kChild_First_Ordinal:
+    case ::fidl::test::inheritancewithrecursivedecl::internal::
+        kChild_First_Ordinal:
       *out_needs_response = false;
       return &::fidl::test::inheritancewithrecursivedecl::_internal::
           fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable;
-    case internal::kChild_Second_Ordinal:
+    case ::fidl::test::inheritancewithrecursivedecl::internal::
+        kChild_Second_Ordinal:
       *out_needs_response = false;
       return &::fidl::test::inheritancewithrecursivedecl::_internal::
           fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable;
@@ -212,7 +218,8 @@ zx_status_t Child_Proxy::Dispatch_(::fidl::HLCPPIncomingMessage message) {
 void Child_Proxy::First(
     ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>
         request) {
-  ::fidl::Encoder _encoder(internal::kChild_First_Ordinal);
+  ::fidl::Encoder _encoder(::fidl::test::inheritancewithrecursivedecl::
+                               internal::kChild_First_Ordinal);
   controller_->Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
           fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable,
@@ -223,7 +230,8 @@ void Child_Proxy::First(
 void Child_Proxy::Second(
     ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>
         request) {
-  ::fidl::Encoder _encoder(internal::kChild_Second_Ordinal);
+  ::fidl::Encoder _encoder(::fidl::test::inheritancewithrecursivedecl::
+                               internal::kChild_Second_Ordinal);
   controller_->Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
           fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable,
@@ -269,14 +277,16 @@ zx_status_t Child_Stub::Dispatch_(::fidl::HLCPPIncomingMessage message,
   }
   uint64_t ordinal = message.ordinal();
   switch (ordinal) {
-    case internal::kChild_First_Ordinal: {
+    case ::fidl::test::inheritancewithrecursivedecl::internal::
+        kChild_First_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->First(::fidl::DecodeAs<::fidl::InterfaceRequest<
                        ::fidl::test::inheritancewithrecursivedecl::Parent>>(
           &decoder, 16));
       break;
     }
-    case internal::kChild_Second_Ordinal: {
+    case ::fidl::test::inheritancewithrecursivedecl::internal::
+        kChild_Second_Ordinal: {
       ::fidl::Decoder decoder(std::move(message));
       impl_->Second(::fidl::DecodeAs<::fidl::InterfaceRequest<
                         ::fidl::test::inheritancewithrecursivedecl::Parent>>(
@@ -299,7 +309,8 @@ Child_SyncProxy::~Child_SyncProxy() = default;
 zx_status_t Child_SyncProxy::First(
     ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>
         request) {
-  ::fidl::Encoder _encoder(internal::kChild_First_Ordinal);
+  ::fidl::Encoder _encoder(::fidl::test::inheritancewithrecursivedecl::
+                               internal::kChild_First_Ordinal);
   return proxy_.Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
           fidl_test_inheritancewithrecursivedecl_ChildFirstRequestTable,
@@ -310,7 +321,8 @@ zx_status_t Child_SyncProxy::First(
 zx_status_t Child_SyncProxy::Second(
     ::fidl::InterfaceRequest<::fidl::test::inheritancewithrecursivedecl::Parent>
         request) {
-  ::fidl::Encoder _encoder(internal::kChild_Second_Ordinal);
+  ::fidl::Encoder _encoder(::fidl::test::inheritancewithrecursivedecl::
+                               internal::kChild_Second_Ordinal);
   return proxy_.Send(
       &::fidl::test::inheritancewithrecursivedecl::_internal::
           fidl_test_inheritancewithrecursivedecl_ChildSecondRequestTable,

@@ -58,7 +58,7 @@ const fragmentSyncEventHandlerTmpl = `
   switch (hdr->ordinal) {
   {{- range .Methods }}
     {{- if not .HasRequest }}
-    case {{ .Protocol.Namespace }}::{{ .OrdinalName }}: {
+    case {{ .OrdinalName }}: {
       const char* error_message;
       zx_status_t status = fidl_decode_etc({{ .WireResponse }}::Type, read_bytes, actual_bytes,
                                            read_handles, actual_handles, &error_message);
