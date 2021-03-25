@@ -13,5 +13,6 @@ fuchsia_package("components-routing-failed-example") {
     ":echo-realm",
     "echo_client",
     "echo_server",
+    "//src/sys/component_manager:component-manager-for-examples-cmp",
   ]
 }

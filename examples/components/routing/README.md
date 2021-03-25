@@ -23,7 +23,7 @@ $ fx build
 Provide the `echo_realm` component's URL to `run` as an argument to `component_manager`:
 
 ```bash
-$ fx shell 'run fuchsia-pkg://fuchsia.com/component_manager#meta/component_manager.cmx fuchsia-pkg://fuchsia.com/components-routing-example#meta/echo_realm.cm'
+$ fx shell 'run fuchsia-pkg://fuchsia.com/components-routing-example#meta/component_manager_for_examples.cmx fuchsia-pkg://fuchsia.com/components-routing-example#meta/echo_realm.cm'
 ```
 
 This will run the component in an instance of component manager as a v1
