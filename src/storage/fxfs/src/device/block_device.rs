@@ -4,7 +4,7 @@
 
 use {
     crate::device::{
-        buffer::Buffer,
+        buffer::{Buffer, BufferRef, MutableBufferRef},
         buffer_allocator::{BufferAllocator, BufferSource},
         Device,
     },
@@ -113,26 +113,32 @@ impl Device for BlockDevice {
         self.remote.block_size()
     }
 
-    async fn read(&self, offset: u64, buffer: &mut Buffer<'_>) -> Result<(), Error> {
+    fn block_count(&self) -> u64 {
+        self.remote.block_count()
+    }
+
+    async fn read(&self, offset: u64, buffer: MutableBufferRef<'_>) -> Result<(), Error> {
+        assert_eq!(offset % self.block_size() as u64, 0);
         self.remote
             .read_at(
                 MutableBufferSlice::new_with_vmo_id(
                     self.buffer_source().vmoid(),
                     buffer.range().start as u64,
-                    buffer.size() as u64,
+                    buffer.len() as u64,
                 ),
                 offset,
             )
             .await
     }
 
-    async fn write(&self, offset: u64, buffer: &Buffer<'_>) -> Result<(), Error> {
+    async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error> {
+        assert_eq!(offset % self.block_size() as u64, 0);
         self.remote
             .write_at(
                 BufferSlice::new_with_vmo_id(
                     self.buffer_source().vmoid(),
                     buffer.range().start as u64,
-                    buffer.size() as u64,
+                    buffer.len() as u64,
                 ),
                 offset,
             )
@@ -140,12 +146,8 @@ impl Device for BlockDevice {
     }
 
     async fn close(self) -> Result<(), Error> {
-        let source = self
-            .allocator
-            .take_buffer_source()
-            .into_any()
-            .downcast::<VmoBufferSource>()
-            .unwrap();
+        let source =
+            self.allocator.take_buffer_source().into_any().downcast::<VmoBufferSource>().unwrap();
         self.remote.detach_vmo(source.take_vmoid()).await
     }
 }
@@ -176,18 +178,6 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn test_allocate_block_aligned_buffers() {
-        let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)));
-
-        {
-            let buf = device.allocate_buffer(2000);
-            assert_eq!(buf.size(), 2048);
-        }
-
-        device.close().await.expect("Close failed");
-    }
-
-    #[fasync::run_singlethreaded(test)]
     async fn test_read_write_buffer() {
         let device = BlockDevice::new(Box::new(FakeBlockClient::new(1024, 1024)));
 
@@ -196,12 +186,12 @@ mod tests {
             let mut buf2 = device.allocate_buffer(8192);
             buf1.as_mut_slice().fill(0xaa as u8);
             buf2.as_mut_slice().fill(0xbb as u8);
-            device.write(65536, &buf1).await.expect("Write failed");
-            device.write(65536 + 8192, &buf2).await.expect("Write failed");
+            device.write(65536, buf1.as_ref()).await.expect("Write failed");
+            device.write(65536 + 8192, buf2.as_ref()).await.expect("Write failed");
         }
         {
             let mut buf = device.allocate_buffer(16384);
-            device.read(65536, &mut buf).await.expect("Read failed");
+            device.read(65536, buf.as_mut()).await.expect("Read failed");
             assert_eq!(buf.as_slice()[..8192], vec![0xaa as u8; 8192]);
             assert_eq!(buf.as_slice()[8192..], vec![0xbb as u8; 8192]);
         }
