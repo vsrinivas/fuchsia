@@ -116,6 +116,22 @@ type Declaration interface {
 	conforms(value interface{}, ctx context) error
 }
 
+// Assert that wrappers conform to the Declaration interface.
+var _ = []Declaration{
+	(*BoolDecl)(nil),
+	(*IntegerDecl)(nil),
+	(*FloatDecl)(nil),
+	(*StringDecl)(nil),
+	(*HandleDecl)(nil),
+	(*BitsDecl)(nil),
+	(*EnumDecl)(nil),
+	(*StructDecl)(nil),
+	(*TableDecl)(nil),
+	(*UnionDecl)(nil),
+	(*ArrayDecl)(nil),
+	(*VectorDecl)(nil),
+}
+
 // context stores the external information needed to determine if a value
 // conforms to a declaration.
 type context struct {
@@ -128,22 +144,6 @@ type context struct {
 	ignoreWrongHandleType bool
 }
 
-// Assert that wrappers conform to the Declaration interface.
-var _ = []Declaration{
-	&BoolDecl{},
-	&IntegerDecl{},
-	&FloatDecl{},
-	&StringDecl{},
-	&HandleDecl{},
-	&BitsDecl{},
-	&EnumDecl{},
-	&StructDecl{},
-	&TableDecl{},
-	&UnionDecl{},
-	&ArrayDecl{},
-	&VectorDecl{},
-}
-
 type PrimitiveDeclaration interface {
 	Declaration
 
@@ -153,9 +153,9 @@ type PrimitiveDeclaration interface {
 
 // Assert that wrappers conform to the PrimitiveDeclaration interface.
 var _ = []PrimitiveDeclaration{
-	&BoolDecl{},
-	&IntegerDecl{},
-	&FloatDecl{},
+	(*BoolDecl)(nil),
+	(*IntegerDecl)(nil),
+	(*FloatDecl)(nil),
 }
 
 type NamedDeclaration interface {
@@ -169,11 +169,11 @@ type NamedDeclaration interface {
 
 // Assert that wrappers conform to the NamedDeclaration interface.
 var _ = []NamedDeclaration{
-	&BitsDecl{},
-	&EnumDecl{},
-	&StructDecl{},
-	&TableDecl{},
-	&UnionDecl{},
+	(*BitsDecl)(nil),
+	(*EnumDecl)(nil),
+	(*StructDecl)(nil),
+	(*TableDecl)(nil),
+	(*UnionDecl)(nil),
 }
 
 type RecordDeclaration interface {
@@ -193,9 +193,9 @@ type RecordDeclaration interface {
 
 // Assert that wrappers conform to the RecordDeclaration interface.
 var _ = []RecordDeclaration{
-	&StructDecl{},
-	&TableDecl{},
-	&UnionDecl{},
+	(*StructDecl)(nil),
+	(*TableDecl)(nil),
+	(*UnionDecl)(nil),
 }
 
 type ListDeclaration interface {
@@ -207,8 +207,8 @@ type ListDeclaration interface {
 
 // Assert that wrappers conform to the ListDeclaration interface.
 var _ = []ListDeclaration{
-	&ArrayDecl{},
-	&VectorDecl{},
+	(*ArrayDecl)(nil),
+	(*VectorDecl)(nil),
 }
 
 // Helper struct for implementing IsNullable on types that are never nullable.

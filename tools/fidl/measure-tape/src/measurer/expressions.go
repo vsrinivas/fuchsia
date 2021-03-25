@@ -51,8 +51,6 @@ type ExpressionFormatter interface {
 	CaseMult(lhs, rhs Expression) string
 }
 
-var _ Expression = (*exprImpl)(nil)
-
 // expr represents a Expression as a union, discriminated by a expressionKind.
 //
 // Nothing about expr is exported, and their construction is also
@@ -68,6 +66,8 @@ type exprImpl struct {
 	nullable bool
 	lhs, rhs Expression
 }
+
+var _ Expression = (*exprImpl)(nil)
 
 type expressionKind int
 
