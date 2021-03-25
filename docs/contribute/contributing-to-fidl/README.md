@@ -329,6 +329,23 @@ fx_build_dir=$(cat .fx-build-dir) \
     fx ninja -C $fx_build_dir $fidlc_tests_target && ./$fx_build_dir/$fidlc_tests_target --gtest_filter 'EnumsTests.*'
 ```
 
+<!-- TODO(fxbug.dev/70247): update post migration -->
+During the migration for FTP-050, the `fidl-compiler` test exercises test cases
+for both the old and new syntax. This temporary state contains a number of
+different "flavors" of tests:
+
+* (1) Success tests that can run in either syntax: these tests are specified
+  using the old syntax, but use `ASSERT_COMPILED_AND_CONVERT` to compile and
+  check the result. This method will also convert into the new syntax and check
+  that the IR from the new syntax matches the IR from the old syntax.
+* (2) Success or failure tests that only run in one syntax: these are unchanged
+  from before. Tests that somehow only apply to one syntax or the other fall in
+  this category.
+* (3) Failure tests that run in either syntax: unfortunately, two copies must be
+  made in this scenario, for example `FooTest.SomeErrorOld` for the old syntax
+  and `FooTest.SomeError` for the corresponding new syntax test. These should
+  ideally be located next to each other in the same file.
+
 #### `fidlc` debugging
 
 To easily run tests in a debug build, set your environment slightly differently:

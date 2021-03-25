@@ -14,6 +14,8 @@ void JSONGenerator::Generate(const flat::Decl* decl) { Generate(decl->name); }
 void JSONGenerator::Generate(SourceSpan value) { EmitString(value.data()); }
 
 void JSONGenerator::Generate(NameSpan value) {
+  if (omit_locations_)
+    return;
   GenerateObject([&]() {
     GenerateObjectMember("filename", value.filename, Position::kFirst);
     GenerateObjectMember("line", (uint32_t)value.position.line);

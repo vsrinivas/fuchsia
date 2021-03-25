@@ -329,24 +329,6 @@ type t2 = resource struct {
   EXPECT_EQ(type_decl->resourceness, fidl::types::Resourceness::kResource);
 }
 
-TEST(NewSyntaxTests, TypeDeclOfTableLayout) {
-  fidl::ExperimentalFlags experimental_flags;
-  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
-  TestLibrary library(R"FIDL(
-library example;
-type TypeDecl = table {
-    1: field1 uint16;
-    2: reserved;
-    3: field2 uint16;
-};
-)FIDL",
-                      std::move(experimental_flags));
-  ASSERT_COMPILED(library);
-  auto type_decl = library.LookupTable("TypeDecl");
-  ASSERT_NOT_NULL(type_decl);
-  EXPECT_EQ(type_decl->members.size(), 3);
-}
-
 TEST(NewSyntaxTests, TypeDeclOfTableLayoutWithResourceness) {
   fidl::ExperimentalFlags experimental_flags;
   experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);

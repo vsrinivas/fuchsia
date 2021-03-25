@@ -26,6 +26,19 @@
     ASSERT_ERR(library_ref.errors()[0], (error)); \
   }
 
+#define ASSERT_COMPILED_AND_CONVERT(library)        \
+  {                                                 \
+    TestLibrary& library_ref = (library);           \
+    if (!library_ref.CompileAndCheckConversion()) { \
+      const auto& errors = library_ref.errors();    \
+      EXPECT_EQ(errors.size(), 0);                  \
+      for (const auto& error : errors) {            \
+        EXPECT_STR_EQ("", error->err.msg.data());   \
+      }                                             \
+      FAIL("stopping test, compilation failed");    \
+    }                                               \
+  }
+
 #define ASSERT_ERR(actual_err, err_def, ...) \
   ASSERT_STR_EQ(actual_err->err.msg.data(), err_def.msg.data(), ##__VA_ARGS__)
 

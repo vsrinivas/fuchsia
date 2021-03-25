@@ -21,7 +21,7 @@ table Foo {
     1: int64 x;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(TableTests, ReservedFields) {
@@ -32,7 +32,7 @@ table Foo {
     1: reserved;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(TableTests, ReservedAndPopulatedFields) {
@@ -40,15 +40,15 @@ TEST(TableTests, ReservedAndPopulatedFields) {
 library fidl.test.tables;
 
 table Foo {
-    1: reserved;
-    2: int64 x;
+    1: int64 x;
+    2: reserved;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(TableTests, ManyReservedFields) {
-  TestLibrary library(R"FIDL(
+  TestLibrary library("test.fidl", R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -57,7 +57,7 @@ table Foo {
     3: reserved;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(TableTests, OutOfOrderFields) {
@@ -70,20 +70,20 @@ table Foo {
     2: reserved;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, EmptyTables) {
+TEST(TableTests, AllowEmptyTables) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, OrdinalsRequired) {
+TEST(TableTests, MissingOrdinalsOld) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -94,11 +94,25 @@ table Foo {
   ASSERT_ERRORED(library, fidl::ErrExpectedOrdinalOrCloseBrace);
 }
 
-TEST(TableTests, DuplicateFieldNames) {
+TEST(TableTests, MissingOrdinals) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
-table Duplicates {
+type Foo = table {
+    x int64;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrMissingOrdinalBeforeType)
+}
+
+TEST(TableTests, DuplicateFieldNamesOld) {
+  TestLibrary library(R"FIDL(
+library fidl.test.tables;
+
+table Foo {
     1: string field;
     2: uint32 field;
 };
@@ -106,11 +120,26 @@ table Duplicates {
   ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldName);
 }
 
-TEST(TableTests, DuplicateOrdinals) {
-  auto library = TestLibrary(R"FIDL(
+TEST(TableTests, DuplicateFieldNames) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
-table Duplicates {
+type Foo = table {
+    1: field string;
+    2: field uint32;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldName);
+}
+
+TEST(TableTests, DuplicateOrdinalsOld) {
+  TestLibrary library(R"FIDL(
+library fidl.test.tables;
+
+table Foo {
     1: string foo;
     1: uint32 bar;
 };
@@ -118,8 +147,24 @@ table Duplicates {
   ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldOrdinal);
 }
 
-TEST(TableTests, AttributesOnFields) {
+TEST(TableTests, DuplicateOrdinals) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
   TestLibrary library(R"FIDL(
+library fidl.test.tables;
+
+type Foo = table {
+    1: foo string;
+    1: bar uint32;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrDuplicateTableFieldOrdinal);
+}
+
+// TODO(fxbug.dev/72924): implement attributes
+TEST(TableTests, AttributesOnFields) {
+  TestLibrary library("test.fidl", R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -132,6 +177,7 @@ table Foo {
   ASSERT_COMPILED(library);
 }
 
+// TODO(fxbug.dev/72924): implement attributes
 TEST(TableTests, AttributesOnTables) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
@@ -145,7 +191,8 @@ table Foo {
   ASSERT_COMPILED(library);
 }
 
-TEST(TableTests, AttribtuesOnReserved) {
+// TODO(fxbug.dev/72924): implement attributes
+TEST(TableTests, AttributesOnReserved) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -172,11 +219,11 @@ table Foo {
     4: struct member;
 };
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, OptionalTablesInStructs) {
-  auto library = TestLibrary(R"FIDL(
+TEST(TableTests, OptionalInStructOld) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -190,9 +237,26 @@ struct OptionalTableContainer {
   ASSERT_ERRORED(library, fidl::ErrCannotBeNullable);
 }
 
-TEST(TableTests, OptionalTablesInUnions) {
-  // Optional tables in (static) unions are invalid.
-  auto library = TestLibrary(R"FIDL(
+TEST(TableTests, OptionalInStruct) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library fidl.test.tables;
+
+type Foo = table {
+    1: t int64;
+};
+
+type OptionalTableContainer = struct {
+    foo Foo:optional;
+};
+)FIDL",
+                      experimental_flags);
+  ASSERT_ERRORED(library, fidl::ErrCannotBeNullable);
+}
+
+TEST(TableTests, OptionalInUnionOld) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -206,7 +270,26 @@ union OptionalTableContainer {
   ASSERT_ERRORED(library, fidl::ErrNullableUnionMember);
 }
 
-TEST(TableTests, TablesInTables) {
+TEST(TableTests, OptionalInUnion) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library fidl.test.tables;
+
+type Foo = table {
+    1: t int64;
+};
+
+type OptionalTableContainer = union {
+    1: foo Foo:optional;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  // NOTE(fxbug.dev/72924): same error is used for tables and unions
+  ASSERT_ERRORED(library, fidl::ErrNullableOrdinaledMember);
+}
+
+TEST(TableTests, TableInTable) {
   TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
@@ -219,7 +302,7 @@ table Bar {
 };
 
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
 TEST(TableTests, TablesInUnions) {
@@ -235,11 +318,11 @@ flexible union OptionalTableContainer {
 };
 
 )FIDL");
-  ASSERT_COMPILED(library);
+  ASSERT_COMPILED_AND_CONVERT(library);
 }
 
-TEST(TableTests, OptionalTableFields) {
-  auto library = TestLibrary(R"FIDL(
+TEST(TableTests, OptionalTableMemberOld) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -249,8 +332,23 @@ table Foo {
   ASSERT_ERRORED(library, fidl::ErrNullableTableMember);
 }
 
-TEST(TableTests, DefaultNotAllowed) {
-  auto library = TestLibrary(R"FIDL(
+TEST(TableTests, OptionalTableMember) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library fidl.test.tables;
+
+type Foo = table {
+    1: t int64:optional;
+};
+)FIDL",
+                      std::move(experimental_flags));
+  // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
+  ASSERT_ERRORED(library, fidl::ErrNullableOrdinaledMember);
+}
+
+TEST(TableTests, DefaultNotAllowedOld) {
+  TestLibrary library(R"FIDL(
 library fidl.test.tables;
 
 table Foo {
@@ -261,8 +359,28 @@ table Foo {
   ASSERT_ERRORED(library, fidl::ErrDefaultsOnTablesNotSupported);
 }
 
-TEST(TableTests, MustBeDense) {
-  auto library = TestLibrary(R"FIDL(
+TEST(TableTests, DefaultNotAllowed) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library fidl.test.tables;
+
+type Foo = table {
+    1: t int64 = 1;
+};
+
+)FIDL",
+                      std::move(experimental_flags));
+  // NOTE(fxbug.dev/72924): we lose the default specific error in the new syntax.
+  EXPECT_FALSE(library.Compile());
+  ASSERT_EQ(library.errors().size(), 2);
+  ASSERT_ERR(library.errors()[0], fidl::ErrUnexpectedTokenOfKind);
+  // TODO(fxbug.dev/72924): this error doesn't make any sense
+  ASSERT_ERR(library.errors()[1], fidl::ErrMissingOrdinalBeforeType);
+}
+
+TEST(TableTests, MustBeDenseOld) {
+  TestLibrary library(R"FIDL(
 library example;
 
 table Example {
@@ -272,7 +390,24 @@ table Example {
 
 )FIDL");
   ASSERT_ERRORED(library, fidl::ErrNonDenseOrdinal);
-  ASSERT_SUBSTR(library.errors().at(0)->msg.c_str(), "2");
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "2");
+}
+
+TEST(TableTests, MustBeDense) {
+  fidl::ExperimentalFlags experimental_flags;
+  experimental_flags.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+  TestLibrary library(R"FIDL(
+library example;
+
+type Example = table {
+    1: first int64;
+    3: third int64;
+};
+
+)FIDL",
+                      std::move(experimental_flags));
+  ASSERT_ERRORED(library, fidl::ErrNonDenseOrdinal);
+  ASSERT_SUBSTR(library.errors()[0]->msg.c_str(), "2");
 }
 
 }  // namespace

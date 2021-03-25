@@ -5,6 +5,9 @@
 #ifndef ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_
 #define ZIRCON_SYSTEM_UTEST_FIDL_COMPILER_TEST_LIBRARY_H_
 
+#include <fstream>
+
+#include <fidl/converter.h>
 #include <fidl/flat_ast.h>
 #include <fidl/json_generator.h>
 #include <fidl/lexer.h>
@@ -86,7 +89,10 @@ class TestLibrary final {
   }
 
   void AddSource(const std::string& filename, const std::string& raw_source_code) {
-    auto source_file = MakeSourceFile(filename, raw_source_code);
+    AddSource(MakeSourceFile(filename, raw_source_code));
+  }
+
+  void AddSource(std::unique_ptr<fidl::SourceFile> source_file) {
     all_sources_.push_back(source_file.get());
     all_sources_of_all_libraries_->push_back(std::move(source_file));
   }
@@ -120,6 +126,77 @@ class TestLibrary final {
         return false;
     }
     return library_->Compile();
+  }
+
+  // This method should be used in place of Compile for TestLibraries that
+  // work in either syntax. It assumes that the library's source files are
+  // specified in the old syntax.
+  // This will compile the library, then run fidlconv on each file and compile the result,
+  // and check that the two libraries result in the same IR.
+  bool CompileAndCheckConversion() {
+    assert(!experimental_flags_.IsFlagEnabled(fidl::ExperimentalFlags::Flag::kAllowNewSyntax) &&
+           "CompileAndCheckConversion accepts FIDL files in the old syntax - did you mean to use "
+           "Compile()?");
+    // this assumption lets us simply instantiate a new root typespace for the second compilation
+    // rather than figure out how to make a copy of the initial typespace before it gets modified
+    // during the first compilation.
+    assert(typespace_ == &owned_shared_.typespace &&
+           "Only compilation starting from the root typespace is supported for CompileAndCheckConversion");
+
+    if (!Compile())
+      return false;
+
+    // Convert each file to the new syntax.
+    std::vector<std::unique_ptr<fidl::SourceFile>> converted_files;
+    for (auto source_file : all_sources_) {
+      fidl::Lexer lexer(*source_file, reporter_);
+      fidl::Parser parser(&lexer, reporter_, experimental_flags_);
+      auto ast = parser.Parse();
+      assert(parser.Success());
+
+      fidl::conv::ConvertingTreeVisitor converter =
+          fidl::conv::ConvertingTreeVisitor(fidl::utils::Syntax::kNew, library_.get());
+      converter.OnFile(ast);
+      auto converted = std::make_unique<fidl::SourceFile>(std::string(source_file->filename()),
+                                                          *converter.converted_output());
+      converted_files.push_back(std::move(converted));
+      // TODO(fxbug.dev/72918): format the file and compare it to expected result
+      // (if provided)
+    }
+
+    // instantiate library to be compiled in the new syntax - it should have all the same data as
+    // the old library, but with a fresh typespace
+    auto fresh_typespace = fidl::flat::Typespace::RootTypes(reporter_);
+    TestLibrary new_syntax_lib;
+    new_syntax_lib.reporter_ = reporter_;
+    new_syntax_lib.lints_ = lints_;
+    new_syntax_lib.all_libraries_ = all_libraries_;
+    new_syntax_lib.all_sources_of_all_libraries_ = all_sources_of_all_libraries_;
+    new_syntax_lib.experimental_flags_ = experimental_flags_;
+    new_syntax_lib.experimental_flags_.SetFlag(fidl::ExperimentalFlags::Flag::kAllowNewSyntax);
+    new_syntax_lib.typespace_ = &fresh_typespace;
+
+    for (auto& source : converted_files) {
+      new_syntax_lib.AddSource(std::move(source));
+    }
+    if (!new_syntax_lib.Compile())
+      return false;
+
+    // Compare the IR of the two compiled libraries.
+    auto from_old = GenerateJSON();
+    auto from_new = new_syntax_lib.GenerateJSON();
+    if (from_new != from_old) {
+      std::ofstream output_from_new("fidl_json_from_new_syntax.txt");
+      output_from_new << from_new;
+      output_from_new.close();
+
+      std::ofstream output_from_old("fidl_json_from_old_syntax.txt");
+      output_from_old << from_old;
+      output_from_old.close();
+      return false;
+    }
+
+    return true;
   }
 
   // TODO(pascallouis): remove, this does not use a library.
@@ -160,7 +237,7 @@ class TestLibrary final {
   }
 
   std::string GenerateJSON() {
-    auto json_generator = fidl::JSONGenerator(library_.get());
+    auto json_generator = fidl::JSONGenerator(library_.get(), true);
     auto out = json_generator.Produce();
     return out.str();
   }

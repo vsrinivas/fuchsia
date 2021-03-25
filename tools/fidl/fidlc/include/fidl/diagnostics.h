@@ -30,7 +30,7 @@ constexpr ErrorDef<std::string> ErrInvalidLibraryNameComponent("Invalid library 
 constexpr ErrorDef<std::string> ErrDuplicateAttribute("duplicate attribute with name '{}'");
 
 // start new_syntax
-// TODO(fxbug.dev/65978): remove when new syntax fully implemented.
+// TODO(fxbug.dev/70247): remove when new syntax fully implemented.
 constexpr ErrorDef ErrMisplacedSyntaxVersion(
     "syntax declaration must be at the top of the file, preceding the library declaration");
 constexpr ErrorDef ErrRemoveSyntaxVersion(
@@ -50,6 +50,8 @@ constexpr ErrorDef ErrUnnecessaryConstraintBrackets(
 constexpr ErrorDef ErrEmptyTypeParameterList("no type parameters specified");
 // end new_syntax
 
+// TODO(fxbug.dev/65978): This is a misnomer in the new syntax: the ordinal comes
+// before the member name, not the type.
 constexpr ErrorDef ErrMissingOrdinalBeforeType("missing ordinal before type");
 constexpr ErrorDef ErrOrdinalOutOfBound("ordinal out-of-bound");
 constexpr ErrorDef ErrOrdinalsMustStartAtOne("ordinals must start at 1");
