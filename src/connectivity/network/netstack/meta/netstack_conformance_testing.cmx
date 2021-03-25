@@ -1,0 +1,22 @@
+{
+    "include": [
+        "sdk/lib/diagnostics/syslog/client.shard.cmx"
+    ],
+    "program": {
+        "args": [
+            "--no-opaque-iids"
+        ],
+        "binary": "bin/netstack"
+    },
+    "sandbox": {
+        "features": [
+            "isolated-cache-storage"
+        ],
+        "services": [
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.device.NameProvider",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.stash.SecureStore"
+        ]
+    }
+}

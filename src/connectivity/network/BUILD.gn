@@ -8,6 +8,9 @@ declare_args() {
   # When set as a GN argument, requires that sysmgr_config_warn_override be set
   # to true to avoid build failures. See that flag's documentation for details.
   use_netstack3 = false
+
+  # If true, uses a netstack tailored for network conformance testing.
+  conformance_testing_netstack = false
 }
 
 group("config") {
@@ -15,6 +18,11 @@ group("config") {
     deps = [
       "netstack3",
       "netstack3/sysmgr:config",
+    ]
+  } else if (conformance_testing_netstack) {
+    deps = [
+      "netstack:netstack-conformance-testing",
+      "netstack/sysmgr:config",
     ]
   } else {
     deps = [

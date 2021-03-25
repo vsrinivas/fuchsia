@@ -184,6 +184,10 @@ func Main() {
 	var cobaltClientTimerPeriod, socketStatsTimerPeriod time.Duration
 	flags.DurationVar(&cobaltClientTimerPeriod, "cobalt-scheduling-interval", time.Minute, "set the interval at which metrics will be sent to Cobalt")
 	flags.DurationVar(&socketStatsTimerPeriod, "socket-stats-sampling-interval", time.Minute, "set the interval at which socket stats will be sampled")
+
+	noOpaqueIID := false
+	flags.BoolVar(&noOpaqueIID, "no-opaque-iids", false, "disable opaque IIDs")
+
 	if err := flags.Parse(os.Args[1:]); err != nil {
 		panic(err)
 	}
@@ -210,9 +214,24 @@ func Main() {
 
 	_ = syslog.Infof("starting...")
 
-	secretKeyForOpaqueIID, err := getSecretKeyForOpaqueIID(appCtx)
-	if err != nil {
-		panic(fmt.Sprintf("failed to get secret key for opaque IIDs: %s", err))
+	var opaqueIIDOpts ipv6.OpaqueInterfaceIdentifierOptions
+	if !noOpaqueIID {
+		secretKeyForOpaqueIID, err := getSecretKeyForOpaqueIID(appCtx)
+		if err != nil {
+			panic(fmt.Sprintf("failed to get secret key for opaque IIDs: %s", err))
+		}
+		opaqueIIDOpts = ipv6.OpaqueInterfaceIdentifierOptions{
+			NICNameFromID: func(nicID tcpip.NICID, nicName string) string {
+				// As of writing, Netstack creates NICs with names so we return the name
+				// the NIC was created with. Just in case, we have a default NIC name
+				// format for NICs that were not created with a name.
+				if nicName != "" {
+					return nicName
+				}
+				return fmt.Sprintf("opaqueIIDNIC%d", nicID)
+			},
+			SecretKey: secretKeyForOpaqueIID,
+		}
 	}
 
 	tempIIDSeed, err := newSecretKey(header.IIDSize)
@@ -256,19 +275,8 @@ func Main() {
 				},
 				AutoGenLinkLocal: true,
 				NDPDisp:          ndpDisp,
-				OpaqueIIDOpts: ipv6.OpaqueInterfaceIdentifierOptions{
-					NICNameFromID: func(nicID tcpip.NICID, nicName string) string {
-						// As of writing, Netstack creates NICs with names so we return the name
-						// the NIC was created with. Just in case, we have a default NIC name
-						// format for NICs that were not created with a name.
-						if nicName != "" {
-							return nicName
-						}
-						return fmt.Sprintf("opaqueIIDNIC%d", nicID)
-					},
-					SecretKey: secretKeyForOpaqueIID,
-				},
-				TempIIDSeed: tempIIDSeed,
+				OpaqueIIDOpts:    opaqueIIDOpts,
+				TempIIDSeed:      tempIIDSeed,
 				MLD: ipv6.MLDOptions{
 					Enabled: true,
 				},
