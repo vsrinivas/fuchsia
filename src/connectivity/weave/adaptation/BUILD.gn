@@ -78,5 +78,6 @@ config("adaptation_config") {
     "EXTERNAL_THREADSTACKMANAGERIMPL_HEADER=\"thread_stack_manager_impl.h\"",
     "EXTERNAL_WEAVEDEVICEPLATFORMEVENT_HEADER=\"weave_device_platform_event.h\"",
     "WEAVE_DEVICE_PLATFORM_CONFIG_INCLUDE=\"weave_device_platform_config.h\"",
+    "WARM_PLATFORM_CONFIG_INCLUDE=\"warm_platform_config.h\"",
   ]
 }
