@@ -1,0 +1,167 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.interfaces.admin;
+
+using zx;
+
+struct Empty {
+};
+
+/// Information about the preferred lifetime of an IP address.
+union PreferredLifetimeInfo {
+    /// The end of the preferred lifetime of the address.
+    ///
+    /// The address should *not* be considered deprecated if `zx.time` is in
+    /// the past. `preferred_lifetime_end` is exchanged as a means to inform
+    /// the deadline where deprecation is expected to happen.
+    ///
+    /// Refers to the preferred lifetime of the address, as defined in
+    /// [RFC 4862, section 2](https://tools.ietf.org/html/rfc4862#section-2).
+    ///
+    /// Must be greater than 0. If `zx.time.INFINITE`, the preferred lifetime
+    /// does not expire.
+    1: zx.time preferred_lifetime_end;
+
+    /// Set if the address is deprecated.
+    ///
+    /// When deprecated, the address should no longer be used for initiating
+    /// new connection unless explicitly requested, or if no other
+    /// non-deprecated addresses are assigned (as described in
+    /// [RFC 4862, section 1](https://tools.ietf.org/html/rfc4862#section-1)).
+    ///
+    /// Once deprecated, an address can became undeprecated if its preferred
+    /// lifetime is extended.
+    ///
+    /// This field is used to signal that the address should be deprecated.
+    2: Empty deprecated;
+};
+
+/// Properties of an IP address.
+table AddressProperties {
+    /// Information about the preferred lifetime of the address.
+    ///
+    /// If not set, interpreted as
+    /// `PreferredLifetimeInfo.preferred_lifetime_end = zx.time.INFINITE`.
+    1: PreferredLifetimeInfo preferred_lifetime_info;
+
+    /// The end of the valid lifetime of the address.
+    ///
+    /// The address should *not* be considered invalid if `zx.time` is in the
+    /// past. `valid_lifetime_end` is exchanged as a means to inform the
+    /// deadline where invalidation is expected to happen.
+    ///
+    /// Refers to the valid lifetime of the address, as defined in
+    /// [RFC 4862, section 2](https://tools.ietf.org/html/rfc4862#section-2).
+    ///
+    /// Must be greater than 0. If `zx.time.INFINITE`, the valid lifetime does
+    /// not expire.
+    ///
+    /// If not set, interpreted as `zx.time.INFINITE`.
+    2: zx.time valid_lifetime_end;
+};
+
+/// Assignment state of an IP address.
+enum AddressAssignmentState {
+    /// Address assignment is in progress, e.g. Duplicate Address Detection
+    /// is being performed. The address cannot be used when in this state
+    /// (cannot bind to it yet or receive packets destined to it).
+    ///
+    /// The Duplicate Address Detection mechanism is described in
+    /// [RFC 4862, section 5.4](https://tools.ietf.org/html/rfc4862#section-5.4)
+    TENTATIVE = 0;
+
+    /// The address is assigned to an interface.
+    ASSIGNED = 1;
+
+    /// The address is unavailable, e.g. if the interface holding the address
+    /// is offline.
+    UNAVAILABLE = 2;
+};
+
+/// Reasons from IP address removal.
+enum AddressRemovalReason {
+    /// Duplicate Address Detection failed.
+    ///
+    /// A neighbor was found to hold the address.
+    DAD_FAILED = 1;
+
+    /// The address is already assigned on a local interface.
+    ALREADY_ASSIGNED = 2;
+
+    /// The address was removed from the interface.
+    REMOVED = 3;
+};
+
+/// Offers state information about an IP address.
+///
+/// Closing the channel will cause the IP address to be removed from the
+/// interface.
+protocol AddressStateProvider {
+    /// Push an update when the address properties change.
+    ///
+    /// The client pushes updates on address properties changes, such as the
+    /// address becoming deprecated, or the preferred and valid lifetimes being
+    /// updated as a result of extending the address' lifetime. The server is
+    /// expected to cache address properties.
+    ///
+    /// + request `address_properties` the updated properties of the address.
+    UpdateAddressProperties(AddressProperties address_properties) -> ();
+
+    /// Hanging get for address assignment state.
+    ///
+    /// The server does not keep a queue of assignment states, it returns the
+    /// latest state if it differs from the last one observed.
+    ///
+    /// The first call will always immediately return the current assignment
+    /// state. Subsequent calls will block until the returned value differs
+    /// from the last observed value.
+    ///
+    /// It is invalid to call `WatchAssignmentState` while a previous call is
+    /// still pending. Doing so will cause the channel to be closed.
+    ///
+    /// - response `assignment_state` the assignment state of the address.
+    WatchAddressAssignmentState() -> (AddressAssignmentState assignment_state);
+
+    /// Event to signal that the address was removed.
+    ///
+    /// The channel is closed after sending this event. The event is always
+    /// sent prior to channel closure by the server.
+    ///
+    /// - response `error` the removal reason.
+    -> OnAddressRemoved(AddressRemovalReason error);
+};
+
+/// Address assignment parameters.
+resource table AddressParameters {
+    /// The initial properties of the address.
+    ///
+    /// If not set, interpreted as an empty `AddressProperties`.
+    1: AddressProperties intial_properties;
+
+    /// True if the address is temporary.
+    ///
+    /// A temporary address is intended to be used for a short period of time
+    /// (hours to days), and its lifetime may not be extended, as detailed in
+    /// [RFC 4941](https://tools.ietf.org/html/rfc4941).
+    ///
+    /// Both temporary and non-temporary addresses have preferred and valid
+    /// lifetimes, but temporary addresses may not be renewed beyond their
+    /// initial lifetime.
+    ///
+    /// Information used in source address selection; temporary addresses are
+    /// preferred over non-temporary addresses if both types are available, as
+    /// detailed in
+    /// [RFC 6724, section 5](https://tools.ietf.org/html/rfc6724#section-5).
+    ///
+    /// If not set, interpreted as false.
+    2: bool temporary;
+
+    /// A handle to an `AddressStateProvider` channel.
+    ///
+    /// Used for exchanging state information about the address.
+    ///
+    /// Optional field.
+    3: request<AddressStateProvider> address_state_provider;
+};
