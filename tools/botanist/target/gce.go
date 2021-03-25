@@ -15,6 +15,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"net"
 	"os"
 	"os/exec"
 	"os/user"
@@ -141,6 +142,7 @@ type GCEConfig struct {
 type GCETarget struct {
 	config      GCEConfig
 	currentUser string
+	ipv4        net.IP
 	loggerCtx   context.Context
 	opts        Options
 	pubkeyPath  string
@@ -190,7 +192,7 @@ func NewGCETarget(ctx context.Context, config GCEConfig, opts Options) (*GCETarg
 		if err := retry.Retry(ctx, expBackoff, g.createInstance, nil); err != nil {
 			return nil, err
 		}
-		logger.Infof(ctx, "successfully created the GCE instance")
+		logger.Infof(ctx, "successfully created GCE instance: Name: %s, Zone: %s", g.config.InstanceName, g.config.Zone)
 	} else {
 		// The instance has already been created, so add the SSH key to it.
 		logger.Infof(ctx, "adding the SSH public key to GCE instance %s", g.config.InstanceName)
@@ -346,6 +348,19 @@ func generatePublicKey(pkeyFile string) (string, error) {
 	defer f.Close()
 	_, err = f.Write(ssh.MarshalAuthorizedKey(pubkey))
 	return f.Name(), err
+}
+
+func (g *GCETarget) Address() net.IP {
+	if g.ipv4 == nil {
+		fqdn := fmt.Sprintf("%s.%s.c.%s.internal", g.config.InstanceName, g.config.Zone, g.config.CloudProject)
+		addr, err := net.ResolveIPAddr("ip4", fqdn)
+		if err != nil {
+			logger.Infof(g.loggerCtx, "failed to resolve IPv4 of instance %s: %s", g.config.InstanceName, err)
+			return nil
+		}
+		g.ipv4 = addr.IP
+	}
+	return g.ipv4
 }
 
 func (g *GCETarget) Nodename() string {
