@@ -68,6 +68,7 @@ void A11yFocusManager::SetA11yFocus(zx_koid_t koid, uint32_t node_id,
           focused_node_in_view_map_[koid] = node_id;
           currently_focused_view_ = koid;
           UpdateHighlights();
+          focus_highlight_manager_->UpdateMagnificationHighlights(currently_focused_view_);
           UpdateInspectProperties();
           callback(true);
         }

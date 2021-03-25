@@ -235,8 +235,10 @@ class Magnifier::Interaction : public input::GestureDetector::Interaction {
   fxl::WeakPtrFactory<Interaction> weak_ptr_factory_;
 };  // namespace a11y
 
-Magnifier::Magnifier() : gesture_detector_(this, kDragThreshold), reset_taps_(this) {}
-
+Magnifier::Magnifier(FocusHighlightManager* focus_highlight_manager)
+    : gesture_detector_(this, kDragThreshold),
+      reset_taps_(this),
+      focus_highlight_manager_(focus_highlight_manager) {}
 Magnifier::~Magnifier() = default;
 
 void Magnifier::RegisterHandler(
@@ -274,6 +276,7 @@ void Magnifier::OnContestStarted(std::unique_ptr<ContestMember> contest_member) 
 
 void Magnifier::HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent& event) {
   gesture_detector_.OnPointerEvent(ToPointerEvent(event));
+  koid_ = event.viewref_koid();
 }
 
 std::string Magnifier::DebugName() const { return "Magnifier"; }
@@ -347,17 +350,23 @@ void Magnifier::UpdateTransform() {
       }
     }
 
-    handler_->SetClipSpaceTransform(
-        transition_progress_ * current_state_->magnified_translation.x,
-        transition_progress_ * current_state_->magnified_translation.y,
-        1 + transition_progress_ * (current_state_->magnified_scale - 1),
-        handler_scope_.MakeScoped([this] {
-          update_in_progress_ = false;
-          if (update_pending_) {
-            update_pending_ = false;
-            UpdateTransform();
-          }
-        }));
+    auto translation_x = transition_progress_ * current_state_->magnified_translation.x;
+    auto translation_y = transition_progress_ * current_state_->magnified_translation.y;
+
+    auto scale = 1 + transition_progress_ * (current_state_->magnified_scale - 1);
+    handler_->SetClipSpaceTransform(translation_x, translation_y, scale,
+                                    handler_scope_.MakeScoped([this] {
+                                      update_in_progress_ = false;
+                                      if (update_pending_) {
+                                        update_pending_ = false;
+                                        UpdateTransform();
+                                      }
+                                    }));
+
+    if (focus_highlight_manager_ && draw_highlight_) {
+      focus_highlight_manager_->HighlightMagnificationViewport(koid_, scale, translation_x,
+                                                               translation_y);
+    }
   }
 }
 
@@ -369,12 +378,15 @@ void Magnifier::UpdateIfActive(const ControlState* state) {
 
 void Magnifier::TransitionIntoZoom(ControlState* state) {
   state->transition_rate = kTransitionRate;
+  draw_highlight_ = true;
   UpdateIfActive(state);
 }
 
 void Magnifier::TransitionOutOfZoom(ControlState* state) {
   state->transition_rate = -kTransitionRate;
+  draw_highlight_ = false;
   UpdateIfActive(state);
+  focus_highlight_manager_->ClearMagnificationHighlights();
 }
 
 bool Magnifier::is_magnified(const ControlState* state) const {

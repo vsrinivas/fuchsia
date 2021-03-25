@@ -49,4 +49,20 @@ MockFocusHighlightManager::GetHighlightedNode() const {
   return highlighted_node_;
 }
 
+std::optional<zx_koid_t> MockFocusHighlightManager::GetMagnificationHighlightKoid() const {
+  return magnification_koid_;
+}
+
+std::optional<float> MockFocusHighlightManager::GetMagnificationHighlightScale() const {
+  return magnification_scale_;
+}
+
+std::optional<float> MockFocusHighlightManager::GetMagnificationHighlightTranslationX() const {
+  return magnification_translation_x_;
+}
+
+std::optional<float> MockFocusHighlightManager::GetMagnificationHighlightTranslationY() const {
+  return magnification_translation_y_;
+}
+
 }  // namespace accessibility_test

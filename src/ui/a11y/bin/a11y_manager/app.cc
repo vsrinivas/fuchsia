@@ -25,6 +25,7 @@ App::App(sys::ComponentContext* context, a11y::ViewManager* view_manager,
       color_transform_manager_(color_transform_manager),
       gesture_listener_registry_(gesture_listener_registry),
       screen_reader_context_factory_(screen_reader_context_factory),
+      magnifier_(view_manager),
       inspect_node_(std::move(inspect_node)),
       inspect_property_intl_property_provider_disconnected_(
           inspect_node_.CreateBool(kIntlPropertyProviderDisconnectedInspectName, false)) {
@@ -124,6 +125,13 @@ void App::FinishSetUp() {
 
 void App::SetState(A11yManagerState state) {
   state_ = state;
+
+  // We need semantics if the magnifier is enabled, because the magnifier
+  // requires the bounds and transform of the root node of the focused view to
+  // draw the viewport highlight.
+  view_manager_->SetSemanticsEnabled(state_.screen_reader_enabled() || state_.magnifier_enabled());
+  view_manager_->SetAnnotationsEnabled(state_.screen_reader_enabled() ||
+                                       state_.magnifier_enabled());
   UpdateScreenReaderState();
   UpdateMagnifierState();
   UpdateColorTransformState();
@@ -139,22 +147,20 @@ void App::SetState(A11yManagerState state) {
 }
 
 void App::UpdateScreenReaderState() {
-  // If this is used elsewhere, it should be moved into its own function.
-  view_manager_->SetSemanticsEnabled(state_.screen_reader_enabled());
-  view_manager_->SetAnnotationsEnabled(state_.screen_reader_enabled());
-
   if (state_.screen_reader_enabled()) {
     if (!screen_reader_) {
       screen_reader_ = InitializeScreenReader();
     }
   } else {
     screen_reader_.reset();
+    view_manager_->ClearFocusHighlights();
   }
 }
 
 void App::UpdateMagnifierState() {
   if (!state_.magnifier_enabled()) {
     magnifier_.ZoomOutIfMagnified();
+    view_manager_->ClearMagnificationHighlights();
   }
 }
 

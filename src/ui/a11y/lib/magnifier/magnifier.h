@@ -15,6 +15,7 @@
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/ui/input/gesture_detector.h"
+#include "src/ui/a11y/lib/annotation/focus_highlight_manager.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_handler.h"
@@ -39,7 +40,7 @@ class Magnifier : public fuchsia::accessibility::Magnifier,
   static constexpr float kMinScale = 1, kMaxScale = 20;
   static constexpr float kDefaultScale = 4;
 
-  Magnifier();
+  explicit Magnifier(FocusHighlightManager* focus_highlight_manager);
   ~Magnifier() override;
 
   // |fuchsia::accessibility::Magnifier|
@@ -169,6 +170,19 @@ class Magnifier : public fuchsia::accessibility::Magnifier,
 
   // This should be last as destroying it can trigger cleanup actions that depend on other state.
   std::unique_ptr<ContestMember> contest_member_;
+
+  // Used to draw magnification viewport highlight.
+  FocusHighlightManager* focus_highlight_manager_;
+
+  // The koid of the current view, which is used to draw the viewport highlight.
+  zx_koid_t koid_;
+
+  // Indicates whether to draw the viewport highlight.
+  // This state is necessary to avoid a race condition when transitioning out
+  // of zoom where we clear highlights before the transition is complete, in
+  // which case we would re-draw the magnification highlight (and it would
+  // never be cleared).
+  bool draw_highlight_ = false;
 };
 
 }  // namespace a11y

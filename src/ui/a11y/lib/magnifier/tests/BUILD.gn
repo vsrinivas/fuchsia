@@ -21,6 +21,7 @@ executable("magnifier_tests") {
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//src/ui/a11y/lib/annotation/tests/mocks",
     "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/gesture_manager/arena/tests/mocks",
     "//src/ui/a11y/lib/magnifier",
