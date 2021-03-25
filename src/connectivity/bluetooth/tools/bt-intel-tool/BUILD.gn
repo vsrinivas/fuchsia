@@ -27,7 +27,7 @@ executable("bin") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.bluetooth:fuchsia.hardware.bluetooth_c_client",
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
     "//zircon/system/ulib/fzl",
   ]
 }

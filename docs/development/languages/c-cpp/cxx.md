@@ -224,7 +224,7 @@ to be lean and space-efficient.
 
  * [`<functional>`](https://en.cppreference.com/w/cpp/header/functional)
 
-   See [`<lib/fit/function.h>`](/zircon/system/ulib/fit/include/lib/fit/function.h)
+   See [`<lib/fit/function.h>`](/sdk/lib/fit/include/lib/fit/function.h)
    for a homegrown alternative.
 
  * [`<memory_resource>`](https://en.cppreference.com/w/cpp/header/memory_resource)

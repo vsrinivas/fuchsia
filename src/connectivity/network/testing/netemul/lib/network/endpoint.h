@@ -7,7 +7,7 @@
 
 #include <fuchsia/netemul/network/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <zircon/system/ulib/fit/include/lib/fit/function.h>
+#include <lib/fit/function.h>
 
 #include <memory>
 

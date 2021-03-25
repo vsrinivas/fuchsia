@@ -53,10 +53,10 @@ static_library("common") {
 
   public_deps = [
     ":version",
+    "//sdk/lib/fit",
     "//src/developer/debug/shared",
     "//src/lib/containers/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
   ]
 }
 

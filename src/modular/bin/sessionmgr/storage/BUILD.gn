@@ -115,8 +115,8 @@ source_set("watcher_list") {
   sources = [ "watcher_list.h" ]
 
   public_deps = [
+    "//sdk/lib/fit",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
   ]
 }
 
@@ -149,9 +149,9 @@ executable("watcher_list_unittest") {
 
   deps = [
     ":watcher_list",
+    "//sdk/lib/fit",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fit",
   ]
 }
 

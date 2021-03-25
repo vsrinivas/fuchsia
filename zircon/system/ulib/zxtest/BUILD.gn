@@ -36,8 +36,8 @@ zx_library("zxtest") {
     "zxtest-main.cc",
   ]
   public_deps = [
+    "//sdk/lib/fit:headers",
     "//src/zircon/lib/zircon:headers",
-    "//zircon/system/ulib/fit:headers",
 
     # Needed for cpp17::string_view.
     "//sdk/lib/stdcompat",
@@ -46,8 +46,8 @@ zx_library("zxtest") {
     "//zircon/system/ulib/fbl:headers",
   ]
   deps = [
+    "//sdk/lib/fit",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fit",
   ]
   if (is_fuchsia) {
     sources += [ "death-statement.cc" ]
@@ -57,7 +57,7 @@ zx_library("zxtest") {
       "//src/zircon/lib/zircon:headers",
 
       # Needed for <lib/zx/*>, death-statements.h
-      "//zircon/system/ulib/fit:headers",
+      "//sdk/lib/fit:headers",
       "//zircon/system/ulib/zx:headers",
     ]
 

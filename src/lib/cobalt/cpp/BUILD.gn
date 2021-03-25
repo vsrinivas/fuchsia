@@ -12,10 +12,10 @@ source_set("cobalt_logger") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [

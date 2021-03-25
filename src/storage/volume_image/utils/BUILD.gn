@@ -10,9 +10,9 @@ source_set("compression-interfaces") {
     "decompressor.h",
   ]
   public_deps = [
+    "//sdk/lib/fit",
     "//sdk/lib/fit-promise",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
   ]
 }
 
@@ -62,9 +62,9 @@ source_set("guid-test") {
   sources = [ "guid_test.cc" ]
   deps = [
     ":guid",
+    "//sdk/lib/fit",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
   ]
 
   # This double checks that the resulting guids are compatible with our existing guids.
@@ -124,9 +124,9 @@ source_set("fd-io-test") {
   deps = [
     ":fd-io",
     ":fd-test-helper",
+    "//sdk/lib/fit",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
   ]
 }
 

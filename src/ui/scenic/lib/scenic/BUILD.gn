@@ -22,11 +22,11 @@ source_set("scenic") {
     "//sdk/fidl/fuchsia.ui.policy.accessibility",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.scenic.internal",
+    "//sdk/lib/fit",
     "//src/lib/fxl",
     "//src/ui/lib/escher",
     "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling:present2_info",
-    "//zircon/public/lib/fit",
     "//zircon/system/ulib/inspect",
   ]
 

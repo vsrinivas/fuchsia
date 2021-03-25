@@ -16,10 +16,10 @@ source_set("util") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [

@@ -162,6 +162,7 @@ zx_library("x86") {
     "cpuid",
     "retpoline",
     "user-copy",
+    "//sdk/lib/fit",
     "//zircon/kernel/dev/hw_rng",
     "//zircon/kernel/dev/iommu/dummy",
     "//zircon/kernel/dev/iommu/intel",
@@ -187,7 +188,6 @@ zx_library("x86") {
     "//zircon/kernel/object",
     "//zircon/kernel/platform/pc",
     "//zircon/system/ulib/bitmap",
-    "//zircon/system/ulib/fit",
     "//zircon/system/ulib/pretty",
   ]
   public_deps = [

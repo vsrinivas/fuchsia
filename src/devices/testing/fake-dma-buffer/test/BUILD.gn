@@ -19,10 +19,10 @@ test("fake-dma-buffer-test-bin") {
   sources = [ "fake-dma-buffer-test.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//src/devices/lib/mmio",
     "//src/devices/testing/fake-dma-buffer",
     "//src/lib/ddk",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]

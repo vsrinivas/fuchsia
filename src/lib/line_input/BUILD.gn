@@ -14,8 +14,8 @@ static_library("line_input") {
 
   deps = []
   public_deps = [
+    "//sdk/lib/fit",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
   ]
 
   configs += [

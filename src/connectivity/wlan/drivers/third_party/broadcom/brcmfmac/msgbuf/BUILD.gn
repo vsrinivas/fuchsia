@@ -19,10 +19,10 @@ source_set("msgbuf") {
     "msgbuf_proto.h",
   ]
   deps = [
+    "//sdk/lib/fit",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:util",
     "//src/connectivity/wlan/lib/common/cpp:common",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
   ]

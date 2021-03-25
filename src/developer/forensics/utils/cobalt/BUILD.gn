@@ -21,12 +21,12 @@ source_set("cobalt") {
   public_deps = [
     ":metrics_registry",
     "//sdk/fidl/fuchsia.cobalt",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/cobalt/bin/utils:status_utils",
     "//src/lib/backoff:backoff",
     "//src/lib/timekeeper",
     "//src/lib/timekeeper:system",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [

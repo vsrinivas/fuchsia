@@ -19,8 +19,8 @@ source_set("vmo") {
   ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zxc",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/explicit-memory",

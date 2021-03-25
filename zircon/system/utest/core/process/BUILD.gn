@@ -12,7 +12,7 @@ source_set("process") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/mini-process",

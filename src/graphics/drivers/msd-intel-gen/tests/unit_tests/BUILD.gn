@@ -77,7 +77,7 @@ group("test_deps") {
     "$magma_build_root/tests/mock:mmio",
     "$msd_intel_gen_build_root/src",
     "$msd_intel_gen_build_root/tests/mock",
+    "//sdk/lib/fit",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fit",
   ]
 }

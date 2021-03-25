@@ -29,11 +29,11 @@ source_set("cmx") {
 
   deps = [
     "//garnet/public/lib/json",
+    "//sdk/lib/fit",
     "//src/lib/cmx/facet_parser:cmx_facet_parser",
     "//src/lib/fxl",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fit",
     "//zircon/system/ulib/trace",
   ]
 }

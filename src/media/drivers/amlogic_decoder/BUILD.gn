@@ -167,7 +167,7 @@ if (target_cpu == "arm64") {
       "//sdk/banjo/fuchsia.hardware.tee",
       "//sdk/fidl/fuchsia.hardware.mediacodec:fuchsia.hardware.mediacodec_llcpp",
       "//sdk/fidl/fuchsia.tee",
-      "//sdk/lib/fit-promise",
+      "//sdk/lib/fit",
       "//sdk/lib/fit-promise",
       "//src/devices/bus/lib/device-protocol-pdev",
       "//src/devices/lib/driver",

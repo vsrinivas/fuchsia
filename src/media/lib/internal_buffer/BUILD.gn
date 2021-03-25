@@ -9,9 +9,9 @@ source_set("internal_buffer") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/lib/fit",
     "//src/media/lib/memory_barriers",
     "//zircon/public/lib/fbl",
-    "//zircon/system/ulib/fit",
     "//zircon/system/ulib/syslog",
   ]
   deps = [ "//sdk/lib/fit-promise" ]

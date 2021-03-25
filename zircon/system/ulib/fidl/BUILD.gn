@@ -36,9 +36,9 @@ zx_library("fidl_base") {
     "walker.cc",
   ]
   deps = [
+    "//sdk/lib/fit",
     "//sdk/lib/stdcompat",
     "//src/zircon/lib/zircon",
-    "//zircon/system/ulib/fit",
   ]
 
   all_dependent_configs = [ ":fidl-tracing-config" ]
@@ -121,8 +121,8 @@ if (is_fuchsia) {
 
       # <lib/fidl/llcpp/sync_call.h> has #include <lib/fit/result.h>.
       # <lib/fidl/llcpp/types.h> has #include <lib/fit/function.h>
+      "//sdk/lib/fit:headers",
       "//sdk/lib/fit-promise:headers",
-      "//zircon/system/ulib/fit:headers",
 
       # <lib/fidl/llcpp/async_binding.h> has #include <lib/sync/completion.h>
       "//zircon/system/ulib/sync:headers",
@@ -135,11 +135,11 @@ if (is_fuchsia) {
     ]
     deps = [
       ":fidl",
+      "//sdk/lib/fit",
       "//sdk/lib/fit-promise",
       "//src/zircon/lib/zircon",
       "//zircon/system/ulib/async",
       "//zircon/system/ulib/fbl",
-      "//zircon/system/ulib/fit",
       "//zircon/system/ulib/sync",
       "//zircon/system/ulib/zxc",
     ]
@@ -175,9 +175,9 @@ if (is_fuchsia) {
     ]
     deps = [
       ":fidl_base",
+      "//sdk/lib/fit",
       "//src/zircon/lib/zircon",
       "//zircon/system/ulib/fbl",
-      "//zircon/system/ulib/fit",
       "//zircon/system/ulib/zxc",
     ]
   }

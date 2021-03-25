@@ -125,8 +125,8 @@ executable("stub_exception_handler_exe") {
   sources = [ "stub_exception_handler.cc" ]
 
   deps = [
+    "//sdk/lib/fit",
     "//src/developer/forensics/exceptions/fidl:fuchsia.exception.internal",
-    "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

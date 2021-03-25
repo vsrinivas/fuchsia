@@ -1,3 +1,4 @@
+# Copyright 2020 The Fuchsia Authors
 #
 # Use of this source code is governed by a MIT-style
 # license that can be found in the LICENSE file or at
@@ -78,8 +79,8 @@ executable("devicetree-extract") {
   deps = [
     "//sdk/fidl/fuchsia.boot",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxc",
   ]

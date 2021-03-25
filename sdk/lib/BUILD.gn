@@ -8,6 +8,7 @@ group("tests") {
   deps = [
     "fdio:tests",
     "file-lock:tests",
+    "fit:tests",
     "fit-promise:tests",
     "procfs:tests",
     "stdcompat:tests",

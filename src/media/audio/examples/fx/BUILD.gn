@@ -12,12 +12,12 @@ executable("bin") {
   deps = [
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.scheduler",
+    "//sdk/lib/fit",
     "//sdk/lib/media/cpp",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//src/lib/fsl",
     "//src/media/audio/lib/wav",
-    "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
     "//zircon/system/ulib/audio-utils",

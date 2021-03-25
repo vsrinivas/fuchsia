@@ -38,8 +38,8 @@ zx_library("fit-promise") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit",
     "//sdk/lib/stdcompat",
-    "//zircon/system/ulib/fit",
   ]
 }
 

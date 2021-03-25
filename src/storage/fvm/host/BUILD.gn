@@ -39,6 +39,7 @@ static_library("host") {
     "//zircon/system/ulib/fs-management",
   ]
   deps = [
+    "//sdk/lib/fit",
     "//src/lib/digest",
     "//src/lib/storage/vfs/cpp",
     "//src/lib/storage/vfs/cpp/transaction",
@@ -47,7 +48,6 @@ static_library("host") {
     "//src/storage/minfs",
     "//third_party/boringssl",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
     "//zircon/third_party/ulib/cksum",
     "//zircon/third_party/ulib/lz4",
@@ -70,8 +70,8 @@ if (current_toolchain == host_toolchain) {
 
     deps = [
       ":host",
+      "//sdk/lib/fit",
       "//src/storage/fvm",
-      "//zircon/public/lib/fit",
       "//zircon/public/lib/zxtest",
     ]
   }

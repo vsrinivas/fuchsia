@@ -266,7 +266,7 @@ template("zx_library") {
     # In practice, this means it is common for targets to list these headers
     # groups in their public_deps, as in:
     #
-    #    public_deps = [ "//zircon/system/ulib/fit:headers" ]
+    #    public_deps = [ "//sdk/lib/fit:headers" ]
     #
     # However, these groups do not mix well with the Fuchsia build, and
     # especially with sdk_source_set() or sdk_static_library().

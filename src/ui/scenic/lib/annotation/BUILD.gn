@@ -13,8 +13,8 @@ source_set("annotation_registry") {
   public_deps = [
     "//sdk/fidl/fuchsia.ui.annotation",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fit",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [

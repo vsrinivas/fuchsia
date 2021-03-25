@@ -232,6 +232,7 @@ source_set("gfx") {
     "//sdk/fidl/fuchsia.ui.scenic.internal",
     "//sdk/fidl/fuchsia.ui.views",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
@@ -246,7 +247,6 @@ source_set("gfx") {
     "//src/ui/scenic/lib/scenic:take_screenshot_delegate_deprecated",
     "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zxc",
   ]
 
@@ -276,10 +276,10 @@ source_set("object_linker") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/scenic/util",
-    "//zircon/public/lib/fit",
   ]
 
   # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

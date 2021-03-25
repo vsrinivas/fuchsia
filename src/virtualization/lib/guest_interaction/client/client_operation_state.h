@@ -6,8 +6,8 @@
 #define SRC_VIRTUALIZATION_LIB_GUEST_INTERACTION_CLIENT_CLIENT_OPERATION_STATE_H_
 
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fit/function.h>
 #include <lib/syslog/cpp/macros.h>
-#include <zircon/system/ulib/fit/include/lib/fit/function.h>
 
 #include <grpc/support/log.h>
 

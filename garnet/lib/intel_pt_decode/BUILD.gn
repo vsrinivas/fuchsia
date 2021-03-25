@@ -12,9 +12,9 @@ source_set("intel_pt_decode") {
   deps = [
     "third_party/simple-pt:reader",
     "//garnet/lib/debugger_utils",
+    "//sdk/lib/fit",
     "//src/lib/fxl",
     "//third_party/processor-trace/libipt",
-    "//zircon/public/lib/fit",
   ]
 
   if (!is_fuchsia) {

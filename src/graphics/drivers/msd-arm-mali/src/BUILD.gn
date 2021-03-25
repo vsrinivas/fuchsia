@@ -78,6 +78,7 @@ source_set("src") {
   # libdriver.so.
   deps = [
     "../include",
+    "//sdk/lib/fit",
     "//src/graphics/lib/magma/include:msd_abi",
     "//src/graphics/lib/magma/src/magma_util:macros",
     "//src/graphics/lib/magma/src/magma_util:registers",
@@ -91,7 +92,6 @@ source_set("src") {
     "//src/graphics/lib/magma/src/magma_util/platform:semaphore",
     "//src/graphics/lib/magma/src/magma_util/platform:trace",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
   ]
 
   public_deps = [

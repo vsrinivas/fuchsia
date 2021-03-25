@@ -27,8 +27,8 @@ test("trace-reader-test") {
     "records_tests.cc",
   ]
   deps = [
+    "//sdk/lib/fit",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/trace-engine:trace-engine-headers-for-reader",
     "//zircon/system/ulib/trace-reader",

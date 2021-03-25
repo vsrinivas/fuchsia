@@ -106,7 +106,7 @@ source_set("allocator") {
 
   public_deps = [
     ":macros",
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
   ]
 }
 

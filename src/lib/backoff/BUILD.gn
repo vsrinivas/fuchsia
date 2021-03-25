@@ -12,8 +12,8 @@ source_set("backoff") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 

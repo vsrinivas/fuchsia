@@ -27,8 +27,8 @@ zx_library("usb") {
     "//src/lib/ddk",
 
     # <usb/request-cpp.h> has  #include <lib/operation/operation.h>.
+    "//sdk/lib/fit",
     "//src/devices/lib/dev-operation",
-    "//zircon/public/lib/fit",
   ]
   deps = [
     "//sdk/banjo/ddk.hw.physiter",

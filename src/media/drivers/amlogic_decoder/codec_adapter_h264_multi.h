@@ -8,6 +8,7 @@
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/bti.h>
 
 #include <fbl/macros.h>
@@ -15,7 +16,6 @@
 #include "amlogic_codec_adapter.h"
 #include "h264_multi_decoder.h"
 #include "video_decoder.h"
-#include "zircon/system/ulib/fit/include/lib/fit/defer.h"
 
 class AmlogicVideo;
 class DeviceCtx;

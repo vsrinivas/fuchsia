@@ -40,12 +40,12 @@ source_set("test_sources") {
     ":fidl.test.coding_llcpp",
     "//sdk/lib/fdio",
     "//sdk/lib/fidl/cpp:cpp_base",
+    "//sdk/lib/fit",
     "//zircon/public/lib/async",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-llcpp",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
@@ -101,8 +101,8 @@ if (is_fuchsia) {
       "handle_closing_tests.cc",
     ]
     public_deps = [
+      "//sdk/lib/fit",
       "//zircon/public/lib/fidl",
-      "//zircon/public/lib/fit",
       "//zircon/public/lib/zx",
       "//zircon/public/lib/zxtest",
     ]

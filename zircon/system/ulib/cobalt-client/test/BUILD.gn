@@ -19,8 +19,8 @@ source_set("collector-test") {
   include_dirs = [ "../include/" ]
   deps = [
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp",
+    "//sdk/lib/fit",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/async-default",
@@ -43,7 +43,7 @@ source_set("metrics-test") {
   ]
   include_dirs = [ "../include/" ]
   deps = [
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/cobalt-client:cobalt-collector",

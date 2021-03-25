@@ -45,9 +45,9 @@ zx_library("watchdog") {
   ]
   host = true
   deps = [
+    "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zxc",
   ]
 

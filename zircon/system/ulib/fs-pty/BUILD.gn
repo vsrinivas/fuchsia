@@ -21,9 +21,9 @@ zx_library("fs-pty") {
   public_deps = [
     "//sdk/fidl/fuchsia.hardware.pty:fuchsia.hardware.pty_llcpp",
     "//sdk/fidl/fuchsia.io:fuchsia.io_llcpp",
+    "//sdk/lib/fit",
     "//src/lib/storage/vfs/cpp",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 

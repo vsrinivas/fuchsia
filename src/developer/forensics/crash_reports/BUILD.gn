@@ -126,9 +126,9 @@ source_set("crash_reporter") {
 
   deps = [
     ":constants",
+    "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/developer/forensics/utils/cobalt",
-    "//zircon/public/lib/fit",
   ]
 }
 
@@ -206,10 +206,10 @@ source_set("network_watcher") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.netstack",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/backoff",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [ "//sdk/lib/syslog/cpp" ]
@@ -274,10 +274,10 @@ source_set("reporting_policy_watcher") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.settings",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/backoff",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 
@@ -375,10 +375,10 @@ source_set("store") {
 
   deps = [
     ":report_util",
+    "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
     "//src/lib/fxl",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fit",
   ]
 }

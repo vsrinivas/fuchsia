@@ -16,7 +16,7 @@ group("tests") {
 source_set("lib") {
   visibility = [ ":*" ]
   public = [ "hanging_get_helper.h" ]
-  public_deps = [ "//zircon/public/lib/fit" ]
+  public_deps = [ "//sdk/lib/fit" ]
 }
 
 executable("hanging_get_helper_unittest_bin") {

@@ -8,10 +8,10 @@ executable("gpt") {
   deps = [
     "//sdk/fidl/fuchsia.hardware.block:fuchsia.hardware.block_c",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//src/storage/gpt",
     "//zircon/public/lib/cksum",
     "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/fdio-caller",
     "//zircon/system/ulib/fzl",

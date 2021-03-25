@@ -66,6 +66,7 @@ source_set("client_lib") {
   deps = [
     ":common",
     ":proto",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//third_party/grpc:grpc++",
@@ -224,6 +225,7 @@ executable("server_daemon_test") {
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp/testing:enclosing_environment",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl",

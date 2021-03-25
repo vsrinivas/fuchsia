@@ -16,9 +16,9 @@ executable("speak_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.tts",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//zircon/public/lib/fit",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",
   ]

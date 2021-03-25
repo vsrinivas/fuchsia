@@ -52,8 +52,8 @@ zx_library("memfs") {
   sources = [ "memfs-local.cc" ]
   public_deps = [
     # <lib/memfs/memfs.h> has #include <lib/async/dispatcher.h>.
+    "//sdk/lib/fit",
     "//zircon/public/lib/async",
-    "//zircon/public/lib/fit",
 
     # <lib/memfs/memfs.h> has #include <lib/sync/completion.h>.
     "//zircon/public/lib/sync",

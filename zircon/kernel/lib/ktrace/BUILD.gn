@@ -36,6 +36,7 @@ config("suppress-warning.config") {
 
     # TODO(fxbug.dev/44971): Referenced in environment configs.
     "//build/config/*",
+    "//sdk/lib/fit/*",
     "//sdk/lib/stdcompat/*",
     "//third_party/zstd/*",
     "//zircon/kernel/*",

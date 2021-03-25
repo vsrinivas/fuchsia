@@ -83,10 +83,10 @@ driver_package("ge2d") {
 source_set("ge2d_on_device_test") {
   sources = [ "ge2d_on_device_test.cc" ]
   deps = [
+    "//sdk/lib/fit",
     "//src/camera/drivers/hw_accel/ge2d:lib",
     "//src/camera/drivers/test_utils",
     "//src/lib/ddk",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zxtest",

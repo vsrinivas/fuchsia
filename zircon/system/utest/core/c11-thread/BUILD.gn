@@ -10,7 +10,7 @@ source_set("c11-thread") {
   sources = [ "thread.cc" ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/public/lib/zxtest",
   ]

@@ -21,8 +21,8 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.hardware.ram.metrics",
     "//sdk/fidl/fuchsia.sysmem",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//src/devices/lib/amlogic",
-    "//zircon/public/lib/fit",
   ]
 }
 

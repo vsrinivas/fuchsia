@@ -142,9 +142,9 @@ test("service_tests") {
     ":test_main",
     "//sdk/fidl/fuchsia.wlan.ieee80211",
     "//sdk/fidl/fuchsia.wlan.mlme",
+    "//sdk/lib/fit",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fit",
   ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]
@@ -157,10 +157,10 @@ test("timer_manager_tests") {
 
   deps = [
     ":test_main",
+    "//sdk/lib/fit",
     "//src/connectivity/wlan/lib/mlme/cpp:mlme",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fit",
   ]
 
   configs += [ "//src/connectivity/wlan/lib/mlme/cpp:wlan_mlme_config" ]

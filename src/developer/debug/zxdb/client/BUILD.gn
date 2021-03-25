@@ -133,6 +133,7 @@ static_library("client") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit",
     "//src/developer/debug/ipc:client",
     "//src/developer/debug/shared",
     "//src/developer/debug/third_party/libunwindstack",
@@ -145,7 +146,6 @@ static_library("client") {
     "//src/lib/llvm:LLVMAArch64Disassembler",
     "//src/lib/llvm:LLVMX86Desc",
     "//src/lib/llvm:LLVMX86Disassembler",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [

@@ -58,9 +58,9 @@ test("ums-block") {
   deps = [
     ":block",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zxtest",
   ]
 }
@@ -79,9 +79,9 @@ test("ums") {
   deps = [
     ":block",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/fake_ddk",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zxtest",
   ]
 }

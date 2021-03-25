@@ -7,8 +7,8 @@
 
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
+#include <lib/fit/function.h>
 #include <zircon/status.h>
-#include <zircon/system/ulib/fit/include/lib/fit/function.h>
 
 #include <filesystem>
 

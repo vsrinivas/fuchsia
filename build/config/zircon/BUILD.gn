@@ -545,6 +545,7 @@ config("Wno-conversion") {
   cflags_cc = [ "-Wno-conversion" ]
   cflags_c = cflags_cc
   visibility = [
+    "//sdk/lib/fit/*",
     "//third_party/lz4/*",
     "//tools/fidl/fidlc/*",
     "//zircon/kernel/arch/x86/*",
@@ -564,7 +565,6 @@ config("Wno-conversion") {
     "//zircon/system/ulib/elf-psabi/*",
     "//zircon/system/ulib/elfload/*",
     "//zircon/system/ulib/fidl/*",
-    "//zircon/system/ulib/fit/*",
     "//zircon/system/ulib/gfx/*",
     "//zircon/system/ulib/hwreg/*",
     "//zircon/system/ulib/ldmsg/*",

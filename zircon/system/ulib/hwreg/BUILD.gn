@@ -29,7 +29,7 @@ zx_library("hwreg") {
     }
   } else {
     sources += [ "asm.cc" ]
-    deps = [ "//zircon/system/ulib/fit" ]
+    deps = [ "//sdk/lib/fit" ]
   }
 }
 

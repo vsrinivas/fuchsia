@@ -14,9 +14,9 @@ source_set("hdcp_service") {
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.ui.display",
+    "//sdk/lib/fit",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
   deps = [

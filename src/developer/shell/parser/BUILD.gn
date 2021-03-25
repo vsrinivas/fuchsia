@@ -22,9 +22,9 @@ static_library("parser") {
   ]
 
   deps = [
+    "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//third_party/icu",
-    "//zircon/public/lib/fit",
   ]
 
   public_deps = [ "//sdk/lib/syslog/cpp" ]
@@ -40,8 +40,8 @@ test("parser_tests_bin") {
 
   deps = [
     ":parser",
+    "//sdk/lib/fit",
     "//src/lib/fxl/test:gtest_main",
-    "//zircon/public/lib/fit",
   ]
 }
 

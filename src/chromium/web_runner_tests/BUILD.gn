@@ -34,8 +34,8 @@ source_set("test_server") {
   ]
 
   deps = [
+    "//sdk/lib/fit",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
   ]
 }
 
@@ -66,13 +66,13 @@ executable("web_runner_integration_tests_bin") {
     ":web_context",
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.sys",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp/testing:unit",
     "//sdk/lib/syslog/cpp",
     "//src/chromium/web_engine/meta/shards:web_engine_feature_network",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fit",
   ]
 
   data_deps = [ "//src/fonts:downstream_test_deps($default_toolchain)" ]
@@ -92,6 +92,7 @@ executable("web_runner_pixel_tests_bin") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
     "//sdk/lib/ui/scenic/cpp",
@@ -104,7 +105,6 @@ executable("web_runner_pixel_tests_bin") {
     "//src/lib/ui/base_view",
     "//src/ui/testing/views",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fit",
   ]
 
   data_deps = [ "//src/fonts:downstream_test_deps($default_toolchain)" ]

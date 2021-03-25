@@ -26,13 +26,13 @@ zx_library("fidl-async-cpp") {
     "llcpp_channel_transaction.cc",
   ]
   deps = [
+    "//sdk/lib/fit",
     "//zircon/public/lib/async",
     "//zircon/public/lib/fidl",
     "//zircon/public/lib/fidl-llcpp",
-    "//zircon/public/lib/fit",
   ]
   public_deps = [
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
 
     # <lib/fidl-async/cpp/channel_transaction.h> has #include <lib/zx/channel.h>.
     "//zircon/public/lib/zx",

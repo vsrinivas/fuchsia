@@ -46,7 +46,7 @@ test("zxtest") {
 
     deps += [
       "//sdk/lib/fdio",
-      "//zircon/public/lib/fit",
+      "//sdk/lib/fit",
       "//zircon/public/lib/zx",
     ]
   }

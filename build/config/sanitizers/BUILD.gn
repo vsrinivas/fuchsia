@@ -86,6 +86,7 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//garnet/bin/trace/*",
     "//garnet/bin/trace/tests/*",
     "//sdk/lib/fit-promise/*",
+    "//sdk/lib/fit/test/*",
     "//src/cobalt/bin/system-metrics/*",
     "//src/connectivity/bluetooth/profiles/bt-a2dp-sink/*",
     "//src/connectivity/bluetooth/profiles/bt-a2dp/*",
@@ -127,7 +128,6 @@ sanitizer_extra_options("suppress-lsan.DO-NOT-USE-THIS") {
     "//tools/vboot_reference/*",
     "//vendor/*",
     "//zircon/system/ulib/elf-search/test/*",
-    "//zircon/system/ulib/fit/test/*",
     "//zircon/system/ulib/lazy_init/test/*",
   ]
 

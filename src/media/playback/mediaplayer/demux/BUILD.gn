@@ -19,8 +19,8 @@ source_set("demux") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 

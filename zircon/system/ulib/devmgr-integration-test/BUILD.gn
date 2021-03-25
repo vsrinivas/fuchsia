@@ -27,7 +27,7 @@ zx_library("devmgr-integration-test") {
     "//zircon/public/lib/fbl",
 
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/fit/function.h>.
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
 
     # <lib/devmgr-integration-test/fixture.h> has #include <lib/zx/channel.h>.
     "//zircon/public/lib/zx",

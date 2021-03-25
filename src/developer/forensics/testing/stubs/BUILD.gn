@@ -224,8 +224,8 @@ source_set("network_reachability_provider") {
   ]
 
   deps = [
+    "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
-    "//zircon/public/lib/fit",
   ]
 }
 

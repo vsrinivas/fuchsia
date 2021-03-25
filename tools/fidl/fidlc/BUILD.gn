@@ -60,14 +60,14 @@ zx_library("fidl") {
     "lib/virtual_source_file.cc",
   ]
   public_deps = [
+    "//sdk/lib/fit:headers",
     "//zircon/system/ulib/cmdline:headers",
-    "//zircon/system/ulib/fit:headers",
     "//zircon/third_party/ulib/safemath",
   ]
   deps = [
     ":json_schema",
+    "//sdk/lib/fit",
     "//zircon/system/ulib/cmdline",
-    "//zircon/system/ulib/fit",
   ]
   deps += [ "//third_party/boringssl" ]
 

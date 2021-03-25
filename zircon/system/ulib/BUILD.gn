@@ -37,7 +37,6 @@ group("tests") {
     "fdio-caller:tests",
     "ffl:tests",
     "fidl-async:tests",
-    "fit:tests",
     "fs-pty:tests",
     "ftl:tests",
     "ftl-mtd:tests",

@@ -49,6 +49,7 @@ source_set("network_service") {
   deps = [
     ":ethertap",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/fbl",

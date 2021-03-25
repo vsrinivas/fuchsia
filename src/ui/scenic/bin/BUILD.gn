@@ -63,6 +63,7 @@ executable("bin") {
 source_set("base_deps") {
   public_deps = [
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
@@ -71,7 +72,6 @@ source_set("base_deps") {
     "//src/ui/scenic/lib/scenic/util",
     "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/fit",
     "//zircon/system/ulib/trace-provider:trace-provider-with-fdio",
   ]
 }

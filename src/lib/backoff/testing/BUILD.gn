@@ -11,8 +11,8 @@ source_set("testing") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit",
     "//src/lib/backoff",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [

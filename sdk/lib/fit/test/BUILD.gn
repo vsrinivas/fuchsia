@@ -28,7 +28,7 @@ test("fit-unittest") {
   }
   sources = [ "thread_checker_tests.cc" ]
   deps = [
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
     "//zircon/public/lib/zxtest",
   ]
   configs += [ ":shadow" ]
@@ -61,7 +61,7 @@ test("fit") {
     "utility_internal_tests.cc",
   ]
   deps = [
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
     "//zircon/public/lib/zxtest",
   ]
   configs += [ ":shadow" ]

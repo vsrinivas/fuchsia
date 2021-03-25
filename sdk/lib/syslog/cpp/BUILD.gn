@@ -33,7 +33,7 @@ sdk_source_set("cpp") {
     "macros.h",
   ]
 
-  public_deps = [ "//zircon/public/lib/fit" ]
+  public_deps = [ "//sdk/lib/fit" ]
 
   public_configs = [ "//sdk/config" ]
 }
@@ -62,7 +62,7 @@ sdk_source_set("cpp-macros") {
     "macros.h",
   ]
 
-  public_deps = [ "//zircon/public/lib/fit" ]
+  public_deps = [ "//sdk/lib/fit" ]
 
   public_configs = [ "//sdk/config" ]
 }
@@ -205,9 +205,9 @@ sdk_source_set("backend_fuchsia_compat") {
     "//sdk/fidl/fuchsia.diagnostics.stream",
     "//sdk/fidl/fuchsia.logger:fuchsia.logger",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//sdk/lib/stdcompat",
     "//sdk/lib/syslog/streams/cpp:streams-encoder",
-    "//zircon/public/lib/fit",
   ]
 
   data_deps = [ "//sdk/lib/diagnostics/syslog:client_includes" ]

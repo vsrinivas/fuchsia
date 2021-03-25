@@ -116,9 +116,9 @@ static_library("fxl") {
     ":functional",
     ":memory",
     ":strings",
+    "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/files",
-    "//zircon/public/lib/fit",
   ]
   configs += [
     # TODO(fxbug.dev/58162): delete the below and fix compiler warnings

@@ -32,7 +32,7 @@ test("affine") {
   ]
   deps = [
     "//sdk/lib/fdio",
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
     "//zircon/public/lib/zxtest",
     "//zircon/system/ulib/affine",
   ]

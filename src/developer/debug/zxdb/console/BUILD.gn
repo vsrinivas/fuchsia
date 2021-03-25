@@ -191,13 +191,13 @@ static_library("console") {
 
   deps = []
   public_deps = [
+    "//sdk/lib/fit",
     "//src/developer/debug/zxdb/client",
     "//src/developer/debug/zxdb/debug_adapter",
     "//src/developer/debug/zxdb/expr",
     "//src/lib/analytics/cpp/core_dev_tools",
     "//src/lib/fxl",
     "//src/lib/line_input",
-    "//zircon/public/lib/fit",
     "//zircon/system/ulib/cmdline",
   ]
 

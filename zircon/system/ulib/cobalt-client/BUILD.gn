@@ -38,7 +38,7 @@ source_set("cobalt-collector") {
   public_deps = [
     ":cobalt-types-internal",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp",
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
     "//zircon/public/lib/zx",
   ]
   deps = [ "//sdk/lib/fdio" ]
@@ -87,7 +87,7 @@ zx_library("in-memory-logger") {
   deps = [
     ":cobalt-types-internal",
     "//sdk/fidl/fuchsia.cobalt:fuchsia.cobalt_llcpp",
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
     "//zircon/public/lib/zx",
   ]
 }

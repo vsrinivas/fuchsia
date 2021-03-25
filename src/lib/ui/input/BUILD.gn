@@ -17,7 +17,7 @@ source_set("input") {
     "//sdk/fidl/fuchsia.math",
     "//sdk/fidl/fuchsia.ui.input",
     "//sdk/lib/fidl/cpp",
-    "//zircon/public/lib/fit",
+    "//sdk/lib/fit",
     "//zircon/system/ulib/hid",
   ]
 

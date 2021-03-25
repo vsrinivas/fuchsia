@@ -73,9 +73,9 @@ source_set("output_sink") {
   sources = [ "output_sink.cc" ]
   public_configs = [ ":local_header_include_config" ]
   public_deps = [
+    "//sdk/lib/fit",
     "//src/media/lib/codec_impl",
     "//src/media/lib/mpsc_queue",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 

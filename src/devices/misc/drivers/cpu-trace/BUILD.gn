@@ -84,10 +84,10 @@ test("perf-mon-tests-bin") {
     ":perf-mon",
     "//sdk/fidl/fuchsia.perfmon.cpu:fuchsia.perfmon.cpu_llcpp",
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//src/devices/lib/driver",
     "//src/devices/testing/fake-bti",
     "//src/devices/testing/no_ddk",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxtest",
   ]

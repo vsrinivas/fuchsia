@@ -89,10 +89,10 @@ static_library("minfs") {
     "//zircon/system/ulib/storage/buffer",
   ]
   deps = [
+    "//sdk/lib/fit",
     "//sdk/lib/syslog/cpp",
     "//src/lib/storage/vfs/cpp",
     "//src/storage/fvm",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/safemath",
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zxc",

@@ -64,12 +64,12 @@ executable("decryptor_adapter_tests_bin") {
 
   deps = [
     "//sdk/fidl/fuchsia.sysmem",
+    "//sdk/lib/fit",
     "//sdk/lib/inspect/testing/cpp",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/lib/codec_impl",
     "//third_party/googletest:gtest",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
     "//zircon/system/ulib/async-loop:async-loop-cpp",
     "//zircon/system/ulib/async-loop:async-loop-default",

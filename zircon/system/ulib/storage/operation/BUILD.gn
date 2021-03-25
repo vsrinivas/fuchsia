@@ -28,7 +28,7 @@ zx_library("operation") {
     ]
     deps += [
       "//sdk/lib/fdio",
-      "//zircon/public/lib/fit",
+      "//sdk/lib/fit",
       "//zircon/public/lib/zx",
       "//zircon/system/ulib/range",
     ]

@@ -49,6 +49,7 @@ if (is_host) {
 
     deps = [
       ":session_proto",
+      "//sdk/lib/fit",
       "//src/developer/debug/ipc:client",
       "//src/developer/debug/zxdb/client",
       "//src/developer/debug/zxdb/common",
@@ -59,7 +60,6 @@ if (is_host) {
       "//third_party/protobuf:protobuf_full",
       "//third_party/rapidjson",
       "//zircon/public/lib/fidl_base",
-      "//zircon/public/lib/fit",
     ]
 
     public_deps = [

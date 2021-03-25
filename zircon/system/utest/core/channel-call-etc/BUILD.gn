@@ -9,8 +9,8 @@ source_set("channel-call-etc") {
   sources = [ "call_etc.cc" ]
   deps = [
     "//sdk/lib/fdio",
+    "//sdk/lib/fit",
     "//zircon/system/ulib/fbl",
-    "//zircon/system/ulib/fit",
     "//zircon/system/ulib/mini-process",
     "//zircon/system/ulib/vdso-code-header",
     "//zircon/system/ulib/zx",

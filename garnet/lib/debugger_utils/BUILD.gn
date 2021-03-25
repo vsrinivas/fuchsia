@@ -43,7 +43,7 @@ static_library("debugger_utils") {
     "//zircon/public/lib/zircon-internal",
   ]
 
-  deps = [ "//zircon/public/lib/fit" ]
+  deps = [ "//sdk/lib/fit" ]
 
   if (is_fuchsia) {
     deps += [ "//zircon/system/ulib/inspector" ]

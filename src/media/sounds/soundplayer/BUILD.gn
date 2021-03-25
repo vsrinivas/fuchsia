@@ -41,9 +41,9 @@ source_set("source") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit",
     "//third_party/ogg",
     "//third_party/opus",
-    "//zircon/public/lib/fit",
   ]
 
   deps = [

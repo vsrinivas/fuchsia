@@ -20,9 +20,9 @@ source_set("printer") {
   deps = [
     "//garnet/lib/debugger_utils",
     "//garnet/lib/intel_pt_decode",
+    "//sdk/lib/fit",
     "//src/lib/fxl",
     "//third_party/processor-trace/libipt",
-    "//zircon/public/lib/fit",
   ]
 
   if (!is_fuchsia) {

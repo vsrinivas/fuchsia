@@ -150,9 +150,9 @@ executable("test_suite") {
   ]
 
   deps = [
+    "//sdk/lib/fit",
     "//src/developer/debug/shared",
     "//src/lib/fxl",
-    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
   ]
 }

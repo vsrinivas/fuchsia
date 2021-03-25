@@ -18,11 +18,11 @@ source_set("cmx_facet_parser") {
   ]
 
   deps = [
+    "//sdk/lib/fit",
     "//src/lib/fxl",
     "//src/lib/json_parser",
     "//src/lib/pkg_url",
     "//third_party/rapidjson",
-    "//zircon/public/lib/fit",
     "//zircon/system/ulib/trace",
   ]
 }

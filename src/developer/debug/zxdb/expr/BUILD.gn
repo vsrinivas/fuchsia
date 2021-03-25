@@ -96,11 +96,11 @@ static_library("expr") {
   ]
 
   public_deps = [
+    "//sdk/lib/fit",
     "//src/developer/debug/zxdb/common",
     "//src/developer/debug/zxdb/symbols",
     "//src/lib/fxl",
     "//third_party/double-conversion",
-    "//zircon/public/lib/fit",
   ]
 }
 

@@ -18,7 +18,7 @@ sdk_source_set("cpp") {
     "file-lock.h",
   ]
 
-  deps = [ "//zircon/public/lib/fit" ]
+  deps = [ "//sdk/lib/fit" ]
 
   include_base = "//sdk"
 

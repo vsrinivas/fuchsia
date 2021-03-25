@@ -26,6 +26,7 @@ executable("unittests") {
 
   deps = [
     "//garnet/public/lib/gtest:gtest",
+    "//sdk/lib/fit",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fsl:fsl",
     "//src/lib/fxl/test:gtest_main",
@@ -35,6 +36,5 @@ executable("unittests") {
     "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//src/ui/scenic/lib/utils",
     "//third_party/googletest:gmock",
-    "//zircon/system/ulib/fit",
   ]
 }
