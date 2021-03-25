@@ -22,8 +22,11 @@
 #include <fbl/auto_call.h>
 #include <fbl/string_piece.h>
 
+#include "lib/zx/status.h"
 #include "src/lib/storage/vfs/cpp/debug.h"
 #include "src/lib/storage/vfs/cpp/vfs_types.h"
+#include "zircon/assert.h"
+#include "zircon/errors.h"
 
 #ifdef __Fuchsia__
 #include <lib/fidl-utils/bind.h>
@@ -447,23 +450,24 @@ zx_status_t Directory::AppendDirent(DirArgs* args) {
 //  'offs': Offset info about where in the directory this direntry is located.
 //          Since 'func' may create / remove surrounding dirents, it is responsible for
 //          updating the offset information to access the next dirent.
-zx_status_t Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
+zx::status<bool> Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
   DirentBuffer dirent_buffer;
   Dirent* de = &dirent_buffer.dirent;
 
   args->offs.off = 0;
   args->offs.off_prev = 0;
-  while (args->offs.off + kMinfsDirentSize < kMinfsMaxDirectorySize) {
+  while (args->offs.off + kMinfsDirentSize < kMinfsMaxDirectorySize &&
+         args->offs.off < GetSize()) {
     FX_LOGS(DEBUG) << "Reading dirent at offset " << args->offs.off;
     size_t r;
     zx_status_t status =
         ReadInternal(args->transaction, de, kMinfsMaxDirentSize, args->offs.off, &r);
     if (status != ZX_OK) {
-      return status;
+      return zx::error(status);
     }
     status = ValidateDirent(de, r, args->offs.off);
     if (status != ZX_OK) {
-      return status;
+      return zx::error(status);
     }
 
     switch ((status = func(fbl::RefPtr<Directory>(this), de, args))) {
@@ -473,17 +477,17 @@ zx_status_t Directory::ForEachDirent(DirArgs* args, const DirentCallback func) {
         GetMutableInode()->seq_num++;
         InodeSync(args->transaction, kMxFsSyncMtime);
         args->transaction->PinVnode(fbl::RefPtr(this));
-        return ZX_OK;
+        return zx::ok(true);
       case kDirIteratorDone:
-        return ZX_OK;
+        return zx::ok(true);
       default:
         // All errors. The callback should not be returning any other non-error (positive) values.
         ZX_DEBUG_ASSERT(status < 0);
-        return status;
+        return zx::error(status);
     }
   }
 
-  return ZX_ERR_NOT_FOUND;
+  return zx::ok(false);
 }
 
 fs::VnodeProtocolSet Directory::GetProtocols() const { return fs::VnodeProtocol::kDirectory; }
@@ -516,8 +520,10 @@ zx_status_t Directory::LookupInternal(fbl::RefPtr<fs::Vnode>* out, fbl::StringPi
   auto get_metrics = fbl::MakeAutoCall(
       [&ticker, &success, this]() { Vfs()->UpdateLookupMetrics(success, ticker.End()); });
 
-  if (zx_status_t status = ForEachDirent(&args, DirentCallbackFind); status != ZX_OK) {
-    return status;
+  if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind); found_or.is_error()) {
+    return found_or.error_value();
+  } else if (!found_or.value()) {
+    return ZX_ERR_NOT_FOUND;
   }
   fbl::RefPtr<VnodeMinfs> vn;
   if (zx_status_t status = Vfs()->VnodeGet(&vn, args.ino); status != ZX_OK) {
@@ -633,10 +639,13 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
   args.name = name;
 
   // Ensure file does not exist.
-  zx_status_t status;
   {
     TRACE_DURATION("minfs", "Directory::Create::ExistenceCheck");
-    if ((status = ForEachDirent(&args, DirentCallbackFind)) != ZX_ERR_NOT_FOUND) {
+    zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind);
+    if (found_or.is_error()) {
+      return found_or.error_value();
+    }
+    if (found_or.value()) {
       return ZX_ERR_ALREADY_EXISTS;
     }
   }
@@ -650,12 +659,12 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
     TRACE_DURATION("minfs", "Directory::Create::SpaceCheck");
     args.type = type;
     args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
-    status = ForEachDirent(&args, DirentCallbackFindSpace);
-    if (status == ZX_ERR_NOT_FOUND) {
-      return ZX_ERR_NO_SPACE;
+    zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFindSpace);
+    if (found_or.is_error()) {
+      return found_or.error_value();
     }
-    if (status != ZX_OK) {
-      return status;
+    if (!found_or.value()) {
+      return ZX_ERR_NO_SPACE;
     }
   }
 
@@ -670,6 +679,7 @@ zx_status_t Directory::Create(fbl::StringPiece name, uint32_t mode, fbl::RefPtr<
   blk_t reserve_blocks = reserve_blocks_or.value() + 1;
 
   ZX_DEBUG_ASSERT(reserve_blocks <= Vfs()->Limits().GetMaximumMetaDataBlocks());
+  zx_status_t status;
 
   // In addition to reserve_blocks, reserve 1 inode for the vnode to be created.
   std::unique_ptr<Transaction> transaction;
@@ -734,9 +744,12 @@ zx_status_t Directory::Unlink(fbl::StringPiece name, bool must_be_dir) {
   args.type = must_be_dir ? kMinfsTypeDir : 0;
   args.transaction = transaction.get();
 
-  status = ForEachDirent(&args, DirentCallbackUnlink);
-  if (status != ZX_OK) {
-    return status;
+  zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackUnlink);
+  if (found_or.is_error()) {
+    return found_or.error_value();
+  }
+  if (!found_or.value()) {
+    return ZX_ERR_NOT_FOUND;
   }
   transaction->PinVnode(fbl::RefPtr(this));
   Vfs()->CommitTransaction(std::move(transaction));
@@ -788,15 +801,17 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   }
   auto newdir = fbl::RefPtr<Directory>::Downcast(newdir_minfs);
 
-  zx_status_t status;
   fbl::RefPtr<VnodeMinfs> oldvn = nullptr;
 
   // Acquire the 'oldname' node (it must exist).
   DirArgs args;
   args.name = oldname;
-  if ((status = ForEachDirent(&args, DirentCallbackFind)) < 0) {
-    return status;
+  if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind); found_or.is_error()) {
+    return found_or.error_value();
+  } else if (!found_or.value()) {
+    return ZX_ERR_NOT_FOUND;
   }
+  zx_status_t status;
   if ((status = Vfs()->VnodeGet(&oldvn, args.ino)) < 0) {
     return status;
   }
@@ -823,12 +838,11 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   args.type = oldvn->IsDirectory() ? kMinfsTypeDir : kMinfsTypeFile;
   args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(newname.length())));
 
-  status = newdir->ForEachDirent(&args, DirentCallbackFindSpace);
-  if (status == ZX_ERR_NOT_FOUND) {
+  if (zx::status<bool> found_or = newdir->ForEachDirent(&args, DirentCallbackFindSpace);
+      found_or.is_error()) {
+    return found_or.error_value();
+  } else if (!found_or.value()) {
     return ZX_ERR_NO_SPACE;
-  }
-  if (status != ZX_OK) {
-    return status;
   }
 
   DirectoryOffset append_offs = args.offs;
@@ -850,15 +864,15 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
   args.transaction = transaction.get();
   args.name = newname;
   args.ino = oldvn->GetIno();
-  status = newdir->ForEachDirent(&args, DirentCallbackAttemptRename);
-  if (status == ZX_ERR_NOT_FOUND) {
+  if (zx::status<bool> found_or = newdir->ForEachDirent(&args, DirentCallbackAttemptRename);
+      found_or.is_error()) {
+    return found_or.error_value();
+  } else if (!found_or.value()) {
     // If 'newname' does not exist, create it.
     args.offs = append_offs;
     if ((status = newdir->AppendDirent(&args)) != ZX_OK) {
       return status;
     }
-  } else if (status != ZX_OK) {
-    return status;
   }
 
   // Update the oldvn's entry for '..' if (1) it was a directory, and (2) it moved to a new
@@ -871,8 +885,11 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
     auto vn = fbl::RefPtr<Directory>::Downcast(vn_fs);
     args.name = "..";
     args.ino = newdir->GetIno();
-    if ((status = vn->ForEachDirent(&args, DirentCallbackUpdateInode)) < 0) {
-      return status;
+    if (zx::status<bool> found_or = vn->ForEachDirent(&args, DirentCallbackUpdateInode);
+        found_or.is_error()) {
+      return found_or.error_value();
+    } else if (!found_or.value()) {
+      return ZX_ERR_NOT_FOUND;
     }
   }
 
@@ -882,8 +899,11 @@ zx_status_t Directory::Rename(fbl::RefPtr<fs::Vnode> _newdir, fbl::StringPiece o
 
   // finally, remove oldname from its original position
   args.name = oldname;
-  if ((status = ForEachDirent(&args, DirentCallbackForceUnlink)) != ZX_OK) {
-    return status;
+  if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackForceUnlink);
+      found_or.is_error()) {
+    return found_or.error_value();
+  } else if (!found_or.value()) {
+    return ZX_ERR_NOT_FOUND;
   }
   transaction->PinVnode(oldvn);
   transaction->PinVnode(newdir);
@@ -909,21 +929,20 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
   // The destination should not exist
   DirArgs args;
   args.name = name;
-  zx_status_t status;
-  if ((status = ForEachDirent(&args, DirentCallbackFind)) != ZX_ERR_NOT_FOUND) {
-    return (status == ZX_OK) ? ZX_ERR_ALREADY_EXISTS : status;
+  if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFind); found_or.is_error()) {
+    return found_or.error_value();
+  } else if (found_or.value()) {
+    return ZX_ERR_ALREADY_EXISTS;
   }
 
   // Ensure that we have enough space to write the new vnode's direntry
   // before updating any other metadata.
   args.type = kMinfsTypeFile;  // We can't hard link directories
   args.reclen = static_cast<uint32_t>(DirentSize(static_cast<uint8_t>(name.length())));
-  status = ForEachDirent(&args, DirentCallbackFindSpace);
-  if (status == ZX_ERR_NOT_FOUND) {
+  if (zx::status<bool> found_or = ForEachDirent(&args, DirentCallbackFindSpace); found_or.is_error()) {
+    return found_or.error_value();
+  } else if (!found_or.value()) {
     return ZX_ERR_NO_SPACE;
-  }
-  if (status != ZX_OK) {
-    return status;
   }
 
   // Reserve potential blocks to write a new direntry.
@@ -933,6 +952,7 @@ zx_status_t Directory::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targe
     return reserved_blocks_or.error_value();
   }
 
+  zx_status_t status;
   std::unique_ptr<Transaction> transaction;
   if ((status = Vfs()->BeginTransaction(0, reserved_blocks_or.value(), &transaction)) != ZX_OK) {
     return status;

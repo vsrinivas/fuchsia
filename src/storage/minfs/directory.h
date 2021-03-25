@@ -94,7 +94,9 @@ class Directory final : public VnodeMinfs, public fbl::Recyclable<Directory> {
   using DirentCallback = zx_status_t (*)(fbl::RefPtr<Directory>, Dirent*, DirArgs*);
 
   // Enumerates directories.
-  zx_status_t ForEachDirent(DirArgs* args, DirentCallback func);
+  // On success returns true if the exit was a result of the callback, and false if the listing was
+  // exhausted with no action taken.
+  zx::status<bool> ForEachDirent(DirArgs* args, DirentCallback func);
 
   // Directory callback functions.
   //
