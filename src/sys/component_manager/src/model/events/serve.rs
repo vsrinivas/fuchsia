@@ -69,7 +69,7 @@ pub async fn serve_event_source_sync(
                                 responder.send(&mut Ok(()))?;
 
                                 // Serve the event_stream over FIDL asynchronously
-                                serve_event_stream(event_stream, stream).await?;
+                                serve_event_stream(event_stream, stream).await;
                             }
                             Err(e) => {
                                 info!("Error subscribing to events: {:?}", e);
@@ -98,7 +98,7 @@ pub async fn serve_event_source_sync(
 pub async fn serve_event_stream(
     mut event_stream: EventStream,
     client_end: ClientEnd<fsys::EventStreamMarker>,
-) -> Result<(), fidl::Error> {
+) {
     let listener = client_end.into_proxy().expect("cannot create proxy from client_end");
     // Track sync event handlers here so they're automatically dropped if this event stream is dropped.
     let mut handlers = FuturesUnordered::new();
@@ -112,7 +112,13 @@ pub async fn serve_event_stream(
                     Some(event) => {
                         // Create the basic Event FIDL object.
                         // This will begin serving the Handler protocol asynchronously.
-                        let (opt_fut, event_fidl_object) = create_event_fidl_object(event).await?;
+                        let (opt_fut, event_fidl_object) = match create_event_fidl_object(event).await {
+                            Err(e) => {
+                                warn!("Failed to create event object: {:?}", e);
+                                continue;
+                            }
+                            Ok(res) => res,
+                        };
                         if let Some(fut) = opt_fut {
                             handlers.push(fut);
                         }
@@ -132,7 +138,6 @@ pub async fn serve_event_stream(
             _ = handlers.select_next_some() => {},
         }
     }
-    Ok(())
 }
 
 async fn maybe_create_event_result(

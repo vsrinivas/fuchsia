@@ -21,7 +21,6 @@ use {
     fidl::endpoints::{create_endpoints, ServerEnd},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     futures::lock::Mutex,
-    log::warn,
     moniker::{AbsoluteMoniker, ExtendedMoniker},
     std::{
         collections::HashMap,
@@ -105,9 +104,7 @@ impl EventStreamProvider {
         let (client_end, server_end) = create_endpoints::<fsys::EventStreamMarker>().unwrap();
         event_streams.push(EventStreamAttachment { name: stream_name, server_end });
         Ok(fasync::Task::spawn(async move {
-            if let Err(e) = serve_event_stream(event_stream, client_end).await {
-                warn!("{}", e);
-            }
+            serve_event_stream(event_stream, client_end).await;
         }))
     }
 
