@@ -19,11 +19,13 @@ import (
 	"os"
 	"os/exec"
 	"os/user"
+	"strings"
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/bootserver"
 	"go.fuchsia.dev/fuchsia/tools/lib/logger"
 	"go.fuchsia.dev/fuchsia/tools/lib/retry"
+	"go.fuchsia.dev/fuchsia/tools/serial"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -234,6 +236,14 @@ func NewGCETarget(ctx context.Context, config GCEConfig, opts Options) (*GCETarg
 		return nil, err
 	}
 	logger.Infof(ctx, "successfully connected to serial")
+
+	// If we're running a non-bringup configuration, we need to provision an SSH key.
+	if !opts.Netboot {
+		if err := g.provisionSSHKey(ctx); err != nil {
+			return nil, err
+		}
+	}
+
 	return g, nil
 }
 
@@ -247,6 +257,36 @@ func logErrors(ctx context.Context, functionName string, errs <-chan error) {
 			return
 		}
 	}
+}
+
+// Provisions an SSH key over the serial connection.
+func (g *GCETarget) provisionSSHKey(ctx context.Context) error {
+	if g.serial == nil {
+		return fmt.Errorf("serial is not connected")
+	}
+	// TODO(https://fxbug.dev/72872): Remove this delay once pkgfs startup
+	// time is reduced.
+	for i := 0; i < 14; i++ {
+		logger.Infof(g.loggerCtx, "waiting 30 more seconds for instance to boot")
+		time.Sleep(30 * time.Second)
+	}
+	logger.Infof(g.loggerCtx, "provisioning SSH key over serial")
+	p, err := ioutil.ReadFile(g.pubkeyPath)
+	if err != nil {
+		return err
+	}
+	pubkey := string(p)
+	pubkey = strings.TrimSuffix(pubkey, "\n")
+	pubkey = fmt.Sprintf("\"%s %s\"", pubkey, g.currentUser)
+	cmds := []serial.Command{
+		{[]string{"/pkgfs/packages/sshd-host/0/bin/hostkeygen"}, 0},
+		{[]string{"echo", pubkey, ">", "/data/ssh/authorized_keys"}, 0},
+	}
+	if err := serial.RunCommands(ctx, g.serial, cmds); err != nil {
+		return err
+	}
+	logger.Infof(g.loggerCtx, "successfully provisioned SSH key")
+	return nil
 }
 
 func (g *GCETarget) connectToSerial() error {
