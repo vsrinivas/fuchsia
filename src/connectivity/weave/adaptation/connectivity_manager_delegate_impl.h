@@ -23,6 +23,7 @@ class NL_DLL_EXPORT ConnectivityManagerDelegateImpl : public ConnectivityManager
   bool IsServiceTunnelConnected() override;
   bool IsServiceTunnelRestricted() override;
   void OnPlatformEvent(const WeaveDeviceEvent* event) override;
+  std::optional<std::string> GetWiFiInterfaceName() override;
 
  private:
   // Initializes the service tunnel agent in OpenWeave. This function primarily
@@ -51,6 +52,8 @@ class NL_DLL_EXPORT ConnectivityManagerDelegateImpl : public ConnectivityManager
 
   fuchsia::net::interfaces::StatePtr state_;
   fuchsia::net::interfaces::WatcherPtr watcher_;
+
+  std::optional<std::string> wlan_interface_name_ = std::nullopt;
 
   std::unordered_set<int> routable_v4_interfaces;
   std::unordered_set<int> routable_v6_interfaces;

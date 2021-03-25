@@ -18,6 +18,9 @@
 
 #include <Weave/Support/FlagUtils.hpp>
 
+#include <optional>
+#include <string>
+
 namespace nl {
 namespace Weave {
 namespace DeviceLayer {
@@ -84,6 +87,8 @@ class NL_DLL_EXPORT ConnectivityManagerImpl final
     bool HaveIPv6InternetConnectivity(void);
     // Returns the current service tunnel mode.
     ServiceTunnelMode GetServiceTunnelMode(void);
+    // Gets the wifi interface name, if available.
+    virtual std::optional<std::string> GetWiFiInterfaceName() = 0;
 
     enum Flags {
       kFlag_HaveIPv4InternetConnectivity = 0x0001,
@@ -109,6 +114,9 @@ class NL_DLL_EXPORT ConnectivityManagerImpl final
   // Gets the delegate currently in use. This may return nullptr if no delegate
   // was set on this class.
   Delegate* GetDelegate();
+
+  // Gets the wifi interface name, if available.
+  std::optional<std::string> GetWiFiInterfaceName();
 
  private:
   // ===== Members that implement the ConnectivityManager abstract interface.

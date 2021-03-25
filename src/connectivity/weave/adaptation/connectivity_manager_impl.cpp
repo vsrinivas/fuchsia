@@ -74,6 +74,10 @@ bool ConnectivityManagerImpl::Delegate::HaveIPv6InternetConnectivity(void) {
   return ::nl::GetFlag(flags_, kFlag_HaveIPv6InternetConnectivity);
 }
 
+std::optional<std::string> ConnectivityManagerImpl::GetWiFiInterfaceName() {
+  return delegate_->GetWiFiInterfaceName();
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl

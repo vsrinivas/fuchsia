@@ -50,6 +50,7 @@ class ConnectivityManagerTestDelegate : public ConnectivityManagerImpl::Delegate
   bool IsServiceTunnelConnected() { return false; }
   bool IsServiceTunnelRestricted() { return false; }
   void OnPlatformEvent(const WeaveDeviceEvent* event) {}
+  std::optional<std::string> GetWiFiInterfaceName() { return std::nullopt; }
 };
 
 // Provide a TSM delegate that overrides InitThreadStack to be an no-op. This is because TSM

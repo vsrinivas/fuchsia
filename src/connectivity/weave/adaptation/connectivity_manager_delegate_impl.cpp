@@ -301,6 +301,10 @@ void ConnectivityManagerDelegateImpl::OnInterfaceEvent(fuchsia::net::interfaces:
   watcher_->Watch(fit::bind_member(this, &ConnectivityManagerDelegateImpl::OnInterfaceEvent));
 }
 
+std::optional<std::string> ConnectivityManagerDelegateImpl::GetWiFiInterfaceName() {
+  return wlan_interface_name_;
+}
+
 }  // namespace DeviceLayer
 }  // namespace Weave
 }  // namespace nl
