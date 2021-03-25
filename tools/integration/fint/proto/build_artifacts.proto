@@ -19,11 +19,11 @@ message BuildArtifacts {
   // All targets that were passed to Ninja.
   repeated string built_targets = 2;
 
-  // Names of images produced by the build. We use a struct to avoid needing to
-  // maintain a copy of the images.json schema here.
+  // Images produced by the build. We use a struct to avoid needing to maintain
+  // a copy of the images.json schema here.
   repeated google.protobuf.Struct built_images = 3;
 
-  // Names of archives produced by the build. We use a struct to avoid needing to
+  // Archives produced by the build. We use a struct to avoid needing to
   // maintain a copy of the images.json schema here.
   repeated google.protobuf.Struct built_archives = 4;
 }
