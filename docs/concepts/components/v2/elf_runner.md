@@ -73,6 +73,34 @@ The ELF Runner monitors the process it started for the program binary of the
 component. If this process exits, the ELF runner will terminate the component's
 execution context, which includes the component's job and all subprocesses.
 
+### Forwarding stdout and stderr streams
+
+The stdout and stderr streams of ELF components can be routed to the
+[LogSink service][logsink]. By default, the ELF runner doesn't route these
+streams to any output sink. Therefore, any write to these streams, such as `printf`,
+is lost and can be considered a no-op. If your component prints diagnostics
+messages to either of these streams, you should forward the streams to the
+[LogSink service][logsink].
+
+
+To enable this feature, add the following to your manifest file:
+
+```json5
+{
+    include: [ "sdk/lib/diagnostics/syslog/elf_stdio.shard.cml" ],
+    ...
+}
+```
+
+After including this shard, all writes to stdout are logged as INFO messages,
+and all writes to stderr are logged as WARN messages. Messages are split
+by newlines and decoded as UTF-8 strings. Invalid byte sequences are converted
+to the U+FFFD replacement character, which usually looks like `�`.
+
+Note: There are known issues where messages from `ZX_ASSERT_...` in C/C++
+components and `Error` objects returned in `main` in Rust components are lost.
+For more information, see [fxb-72178] and [fxb-72764] respectively.
+
 [use]: /docs/glossary.md#use
 [capability-routing]: component_manifests.md#capability-routing
 [cml-shards]: component_manifests.md#include
@@ -82,6 +110,9 @@ execution context, which includes the component's job and all subprocesses.
 [lifecycle]: lifecycle.md
 [program-loading]: /docs/concepts/booting/program_loading.md
 [job-set-critical]: /docs/reference/syscalls/job_set_critical.md
+[fxb-72178]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=72178
+[fxb-72764]: https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=72764
+[logsink]: /docs/development/diagnostics/logs/recording.md#logsinksyslog
 
 <!-- TODO: the component manifest link describes v1 manifests -->
 [glossary-component-manifests]: /docs/glossary.md#component-manifest
