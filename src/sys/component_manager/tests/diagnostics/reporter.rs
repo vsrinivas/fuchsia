@@ -45,32 +45,39 @@ async fn main() {
             start_timestamp_nanos: AnyProperty,
             status: "OK"
         },
-        cpu_stats: {
-            measurements: contains {
-                "/archivist:0": {
-                    archivist_job_koid.to_string() => {
-                        "@samples": {
-                            "0": {
-                                timestamp: AnyProperty,
-                                cpu_time: AnyProperty,
-                                queue_time: AnyProperty,
+        cpu_stats: contains {
+            measurements: {
+                task_count: 3u64,
+                inspect_stats: {
+                    current_size: 4096u64,
+                    maximum_size: 262144u64,
+                    total_dynamic_children: 0u64,
+                },
+                components: contains {
+                    "/archivist:0": {
+                        archivist_job_koid.to_string() => {
+                            "@samples": {
+                                "0": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: AnyProperty,
+                                    queue_time: AnyProperty,
+                                }
                             }
                         }
-                    }
-                },
-                "/reporter:0": {
-                    reporter_job_koid.to_string() => {
-                        "@samples": {
-                            "0": {
-                                timestamp: AnyProperty,
-                                cpu_time: AnyProperty,
-                                queue_time: AnyProperty,
+                    },
+                    "/reporter:0": {
+                        reporter_job_koid.to_string() => {
+                            "@samples": {
+                                "0": {
+                                    timestamp: AnyProperty,
+                                    cpu_time: AnyProperty,
+                                    queue_time: AnyProperty,
+                                }
                             }
                         }
-                    }
-                },
+                    },
+                }
             },
-            processing_times_ns: AnyProperty,
         },
         inspect_stats: {
             current_size: 4096u64,
