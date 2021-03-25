@@ -66,7 +66,6 @@ async fn test_pair() -> Result<(), Error> {
     };
 
     let r = future::try_join3(make_request, run_host, run_access).await.map(|_: ((), (), ())| ());
-    println!("{:?}", r);
     r
 }
 

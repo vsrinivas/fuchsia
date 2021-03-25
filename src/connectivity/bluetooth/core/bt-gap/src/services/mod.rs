@@ -5,8 +5,6 @@
 pub mod access;
 pub mod bootstrap;
 pub mod configuration;
-mod control;
+pub mod control;
 pub mod host_watcher;
 pub mod pairing;
-
-pub use self::control::start_control_service;

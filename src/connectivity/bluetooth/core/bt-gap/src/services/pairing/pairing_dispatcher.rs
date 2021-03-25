@@ -89,7 +89,7 @@ impl PairingDispatcher {
         input: InputCapability,
         output: OutputCapability,
     ) -> (PairingDispatcher, PairingDispatcherHandle) {
-        let (hosts_added, handle) = PairingDispatcherHandle::new();
+        let (hosts_added, handle) = PairingDispatcherHandle::new(upstream.clone());
 
         let dispatcher = PairingDispatcher {
             input,
@@ -262,12 +262,14 @@ impl PairingDispatcher {
 pub struct PairingDispatcherHandle {
     /// Add a host to the PairingDispatcher
     add_hosts: mpsc::Sender<(HostId, HostProxy)>,
+    /// Upstream handle, to determine when we've closed
+    upstream: PairingDelegate,
 }
 
 impl PairingDispatcherHandle {
-    pub fn new() -> (mpsc::Receiver<(HostId, HostProxy)>, Self) {
+    pub fn new(upstream: PairingDelegate) -> (mpsc::Receiver<(HostId, HostProxy)>, Self) {
         let (add_hosts, hosts_receiver) = mpsc::channel(0);
-        (hosts_receiver, Self { add_hosts })
+        (hosts_receiver, Self { add_hosts, upstream })
     }
 
     /// Add a new Host identified by `id` to this PairingDispatcher, so the dispatcher will handle
@@ -282,6 +284,11 @@ impl PairingDispatcherHandle {
             }
         })
         .detach();
+    }
+
+    /// Is the upstream channel this dispatcher routes to closed?
+    pub fn is_closed(&self) -> bool {
+        self.upstream.is_closed()
     }
 }
 

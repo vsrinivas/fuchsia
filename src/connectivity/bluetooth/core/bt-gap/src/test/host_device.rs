@@ -64,7 +64,6 @@ async fn host_device_set_local_name() -> Result<(), Error> {
 
     refresh_host(host.clone(), server.clone(), info.read().clone()).await;
     let host_name = host.info().local_name.clone();
-    println!("name: {:?}", host_name);
     assert!(host_name == Some(expected_name));
     Ok(())
 }

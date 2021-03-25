@@ -164,8 +164,6 @@ struct HostDispatcherState {
     appearance: Appearance,
     discovery: DiscoveryState,
     discoverable: Option<Weak<HostDiscoverableSession>>,
-    input: InputCapability,
-    output: OutputCapability,
     config_settings: build_config::Config,
     peers: HashMap<PeerId, Inspectable<Peer>>,
 
@@ -175,7 +173,6 @@ struct HostDispatcherState {
     // them along a clone of this channel to GAS
     gas_channel_sender: mpsc::Sender<LocalServiceDelegateRequest>,
 
-    pairing_delegate: Option<PairingDelegate>,
     pairing_dispatcher: Option<PairingDispatcherHandle>,
 
     event_listeners: Vec<Weak<ControlControlHandle>>,
@@ -213,64 +210,26 @@ impl HostDispatcherState {
     }
 
     /// Used to set the pairing delegate. If there is a prior pairing delegate connected to the
-    /// host it will fail. It checks if the existing stored connection is closed, and will
-    /// overwrite it if so.
-    pub fn set_pairing_delegate(&mut self, delegate: sys::PairingDelegateProxy) {
-        self.inspect.has_pairing_delegate.set(true.to_property());
-        let assign = match &self.pairing_delegate {
-            None => true,
-            Some(delegate) => delegate.is_closed(),
-        };
-        if assign {
-            self.set_pairing_delegate_internal(
-                Some(PairingDelegate::Sys(delegate)),
-                self.input,
-                self.output,
-            );
-        } else {
-            info!("Failed to set PairingDelegate; another Delegate is active");
-        }
-    }
-
-    /// Used to set the pairing delegate. If there is a prior pairing delegate connected to the
-    /// host it will fail. It checks if the existing stored connection is closed, and will
-    /// overwrite it if so.
-    pub fn set_control_pairing_delegate(
+    /// host, check if the existing stored connection is closed:
+    ///  * if it is closed, overwrite it and succeed
+    ///  * if it is still active, fail
+    /// If there is no prior delegate, this will always succeed
+    /// Returns `true` if the delegate was set successfully, otherwise false
+    fn set_pairing_delegate(
         &mut self,
-        delegate: Option<control::PairingDelegateProxy>,
-    ) -> bool {
-        self.inspect.has_pairing_delegate.set(delegate.is_some().to_property());
-        match delegate {
-            Some(delegate) => {
-                let assign = match &self.pairing_delegate {
-                    None => true,
-                    Some(delegate) => delegate.is_closed(),
-                };
-                if assign {
-                    self.set_pairing_delegate_internal(
-                        Some(PairingDelegate::Control(delegate)),
-                        self.input,
-                        self.output,
-                    );
-                }
-                assign
-            }
-            None => {
-                self.pairing_delegate = None;
-                self.set_pairing_delegate_internal(None, self.input, self.output);
-                false
-            }
-        }
-    }
-
-    fn set_pairing_delegate_internal(
-        &mut self,
-        delegate: Option<PairingDelegate>,
+        delegate: PairingDelegate,
         input: InputCapability,
         output: OutputCapability,
-    ) {
-        match delegate {
-            Some(delegate) => {
+    ) -> bool {
+        match self.pairing_dispatcher.as_ref() {
+            Some(dispatcher) if !dispatcher.is_closed() => {
+                warn!("Failed to set PairingDelegate; another Delegate is active");
+                false
+            }
+            _ => {
+                self.inspect.input_capability.set(&input.debug());
+                self.inspect.output_capability.set(&output.debug());
+                self.inspect.has_pairing_delegate.set(true.to_property());
                 let (dispatcher, handle) = PairingDispatcher::new(delegate, input, output);
                 for host in self.host_devices.values() {
                     handle.add_host(host.id(), host.proxy().clone());
@@ -278,21 +237,20 @@ impl HostDispatcherState {
                 // Old pairing dispatcher dropped; this drops all host pairings
                 self.pairing_dispatcher = Some(handle);
                 // Spawn handling of the new pairing requests
+                // TODO(fxbug.dev/72961) - We should avoid detach() here, and consider a more
+                // explicit way to track this task
                 fasync::Task::spawn(dispatcher.run()).detach();
+                true
             }
-            // Old pairing dispatcher dropped; this drops all host pairings
-            None => self.pairing_dispatcher = None,
         }
     }
 
-    /// Set the IO capabilities of the system
-    pub fn set_io_capability(&mut self, input: InputCapability, output: OutputCapability) {
-        self.input = input;
-        self.output = output;
-        self.inspect.input_capability.set(&input.debug());
-        self.inspect.output_capability.set(&output.debug());
-
-        self.set_pairing_delegate_internal(self.pairing_delegate.clone(), self.input, self.output);
+    /// Clear the currently active pairing delegate. After this call there will be no active
+    /// delegate. In progress pairings are terminated.
+    fn clear_pairing_delegate(&mut self) {
+        // Old pairing dispatcher dropped; this drops all host pairings
+        self.pairing_dispatcher = None;
+        self.inspect.has_pairing_delegate.set(false.to_property());
     }
 
     /// Return the active id. If the ID is currently not set,
@@ -389,15 +347,12 @@ impl HostDispatcher {
             host_devices: HashMap::new(),
             name,
             appearance,
-            input: InputCapability::None,
-            output: OutputCapability::None,
             config_settings: build_config::load_default(),
             peers: HashMap::new(),
             gas_channel_sender,
             stash,
             discovery: DiscoveryState::NotDiscovering,
             discoverable: None,
-            pairing_delegate: None,
             pairing_dispatcher: None,
             event_listeners: vec![],
             watch_peers_publisher,
@@ -452,15 +407,25 @@ impl HostDispatcher {
         self.state.write().set_active_host(host)
     }
 
-    pub fn set_pairing_delegate(&self, delegate: sys::PairingDelegateProxy) {
-        self.state.write().set_pairing_delegate(delegate)
+    /// Used to set the pairing delegate. If there is a prior pairing delegate connected to the
+    /// host, check if the existing stored connection is closed:
+    ///  * if it is closed, overwrite it and succeed
+    ///  * if it is still active, fail
+    /// If there is no prior delegate, this will always succeed
+    /// Returns `true` if the delegate was set successfully, otherwise false
+    pub fn set_pairing_delegate(
+        &self,
+        delegate: PairingDelegate,
+        input: InputCapability,
+        output: OutputCapability,
+    ) -> bool {
+        self.state.write().set_pairing_delegate(delegate, input, output)
     }
 
-    pub fn set_control_pairing_delegate(
-        &self,
-        delegate: Option<control::PairingDelegateProxy>,
-    ) -> bool {
-        self.state.write().set_control_pairing_delegate(delegate)
+    /// Clear the currently active pairing delegate. After this call there will be no active
+    /// delegate. In progress pairings are terminated.
+    pub fn clear_pairing_delegate(&self) {
+        self.state.write().clear_pairing_delegate();
     }
 
     pub async fn apply_sys_settings(&self, new_settings: sys::Settings) -> build_config::Config {
@@ -656,10 +621,6 @@ impl HostDispatcher {
             }
             None => eprintln!("Failed to spawn, no active host"),
         }
-    }
-
-    pub fn set_io_capability(&self, input: InputCapability, output: OutputCapability) {
-        self.state.write().set_io_capability(input, output);
     }
 
     pub fn add_event_listener(&self, handle: Weak<ControlControlHandle>) {

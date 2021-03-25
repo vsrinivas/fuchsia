@@ -19,9 +19,11 @@ use {
 use crate::{
     host_device::HostDiscoverableSession,
     host_dispatcher::*,
+    services::pairing::PairingDelegate,
     types::{self, status_response},
 };
 
+#[derive(Default)]
 struct ControlSession {
     /// Token held when the control client has requested discovery.
     /// Disables discovery request when dropped.
@@ -29,23 +31,34 @@ struct ControlSession {
     /// Token held when the control client has requested discoverability.
     /// Disables discoverability when dropped.
     _discoverable_token: Option<Arc<HostDiscoverableSession>>,
+    delegate: Option<PairingDelegate>,
+    // Cached pairing options set via this session. Since Control allows setting IO capabilities
+    // separately to pairing delegate, we cache all three locally and then update the host
+    // dispatchers pairing dispatcher whenever we have all three.
+    input: Option<fsys::InputCapability>,
+    output: Option<fsys::OutputCapability>,
 }
 
 impl ControlSession {
-    fn new() -> ControlSession {
-        ControlSession { _discovery_token: None, _discoverable_token: None }
+    // Set the pairing delegate if we have all the required settings
+    // Returns true if the pairing delegate was successfully set
+    fn maybe_set_pairing_delegate(&self, hd: HostDispatcher) -> bool {
+        if let (Some(delegate), Some(input), Some(output)) =
+            (&self.delegate, self.input, self.output)
+        {
+            hd.set_pairing_delegate(delegate.clone(), input, output)
+        } else {
+            false
+        }
     }
 }
 
 /// Build the ControlImpl to interact with fidl messages
 /// State is stored in the HostDispatcher object
-pub async fn start_control_service(
-    hd: HostDispatcher,
-    mut stream: ControlRequestStream,
-) -> Result<(), Error> {
+pub async fn run(hd: HostDispatcher, mut stream: ControlRequestStream) -> Result<(), Error> {
     let event_listener = Arc::new(stream.control_handle());
     hd.add_event_listener(Arc::downgrade(&event_listener));
-    let mut session = ControlSession::new();
+    let mut session = ControlSession::default();
 
     while let Some(event) = stream.next().await {
         handler(hd.clone(), &mut session, event?).await?;
@@ -71,7 +84,7 @@ async fn handle_disconnect(hd: HostDispatcher, device_id: &str) -> types::Result
     hd.disconnect(parse_peer_id(device_id)?).await.map_err(types::Error::from)
 }
 
-fn input_cap_to_sys(ioc: fctrl::InputCapabilityType) -> fsys::InputCapability {
+pub(crate) fn input_cap_to_sys(ioc: fctrl::InputCapabilityType) -> fsys::InputCapability {
     match ioc {
         fctrl::InputCapabilityType::None => fsys::InputCapability::None,
         fctrl::InputCapabilityType::Confirmation => fsys::InputCapability::Confirmation,
@@ -79,7 +92,7 @@ fn input_cap_to_sys(ioc: fctrl::InputCapabilityType) -> fsys::InputCapability {
     }
 }
 
-fn output_cap_to_sys(ioc: fctrl::OutputCapabilityType) -> fsys::OutputCapability {
+pub(crate) fn output_cap_to_sys(ioc: fctrl::OutputCapabilityType) -> fsys::OutputCapability {
     match ioc {
         fctrl::OutputCapabilityType::None => fsys::OutputCapability::None,
         fctrl::OutputCapabilityType::Display => fsys::OutputCapability::Display,
@@ -116,7 +129,9 @@ async fn handler(
             responder.send(&mut resp)
         }
         ControlRequest::SetIoCapabilities { input, output, control_handle: _ } => {
-            hd.set_io_capability(input_cap_to_sys(input), output_cap_to_sys(output));
+            session.input = Some(input_cap_to_sys(input));
+            session.output = Some(output_cap_to_sys(output));
+            let _ignore_result = session.maybe_set_pairing_delegate(hd);
             Ok(())
         }
         ControlRequest::Forget { device_id, responder } => {
@@ -137,18 +152,25 @@ async fn handler(
             responder.send(is_available)
         }
         ControlRequest::SetPairingDelegate { delegate, responder } => {
-            let status = match delegate.map(|d| d.into_proxy()) {
-                Some(Ok(proxy)) => hd.set_control_pairing_delegate(Some(proxy)),
-                Some(Err(err)) => {
+            match delegate.map(|d| d.into_proxy()).transpose() {
+                Err(err) => {
                     warn!(
                         "Invalid Pairing Delegate passed to SetPairingDelegate - ignoring: {}",
                         err
                     );
-                    false
+                    responder.send(false)
                 }
-                None => hd.set_control_pairing_delegate(None),
-            };
-            responder.send(status)
+                Ok(None) => {
+                    hd.clear_pairing_delegate();
+                    session.delegate = None;
+                    responder.send(true)
+                }
+                Ok(Some(delegate)) => {
+                    session.delegate = Some(PairingDelegate::Control(delegate));
+                    let success = session.maybe_set_pairing_delegate(hd);
+                    responder.send(success)
+                }
+            }
         }
         ControlRequest::GetAdapters { responder } => {
             let mut adapters: Vec<_> =

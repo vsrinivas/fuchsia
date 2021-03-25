@@ -19,7 +19,7 @@ use {
     std::{collections::HashMap, mem, sync::Arc},
 };
 
-use crate::{host_dispatcher::*, watch_peers::PeerWatcher};
+use crate::{host_dispatcher::*, services::pairing::PairingDelegate, watch_peers::PeerWatcher};
 
 #[derive(Default)]
 struct AccessSession {
@@ -76,8 +76,10 @@ async fn handler(
             );
             match delegate.into_proxy() {
                 Ok(proxy) => {
-                    hd.set_io_capability(input, output);
-                    hd.set_pairing_delegate(proxy);
+                    // Attempt to set the pairing delagate for the HostDispatcher. The
+                    // HostDispatcher will reject if there is currently an active delegate; in this
+                    // case `proxy` will be dropped, closing the channel.
+                    let _ = hd.set_pairing_delegate(PairingDelegate::Sys(proxy), input, output);
                 }
                 Err(err) => {
                     warn!(
