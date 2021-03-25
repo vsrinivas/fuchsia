@@ -38,6 +38,40 @@ async fn read_v2_components_inspect() {
     });
 }
 
+#[fuchsia::test]
+async fn read_v2_components_single_selector() {
+    let _test_app_a = ScopedInstance::new_with_name(
+        "child_a".to_string(),
+        "coll".to_string(),
+        TEST_COMPONENT.to_string(),
+    )
+    .await
+    .expect("Failed to create dynamic component");
+    let _test_app_b = ScopedInstance::new_with_name(
+        "child_b".to_string(),
+        "coll".to_string(),
+        TEST_COMPONENT.to_string(),
+    )
+    .await
+    .expect("Failed to create dynamic component");
+
+    let data = ArchiveReader::new()
+        .add_selector("driver/coll\\:child_a:root")
+        .snapshot::<Inspect>()
+        .await
+        .expect("got inspect data");
+
+    // Only inspect from child_a should be reported
+    assert_eq!(data.len(), 1);
+    assert_inspect_tree!(data[0].payload.as_ref().unwrap(), root: {
+        "fuchsia.inspect.Health": {
+            status: "OK",
+            start_timestamp_nanos: AnyProperty,
+        }
+    });
+    assert_eq!(data[0].moniker, "driver/coll\\:child_a");
+}
+
 // This test verifies that Archivist knows about logging from this component.
 #[fuchsia::test]
 async fn log_attribution() {
