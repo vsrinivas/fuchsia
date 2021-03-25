@@ -25,8 +25,11 @@
 // to the mock-i2c style fakes.
 class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
  public:
+  static constexpr uint64_t kDefaultHighMemoryAddress = (1llu << 32);
+  static constexpr uint32_t kDefaultLowMemoryAddress = (1u << 10);
+  static constexpr uint16_t kDefaultIoAddress = 0x10;
   // By default, pciroot won't populate an ecam unless it's called with Create().
-  FakePciroot(uint8_t bus_start = 0, uint8_t bus_end = 0)
+  explicit FakePciroot(uint8_t bus_start = 0, uint8_t bus_end = 0)
       : proto_({&pciroot_protocol_ops_, this}),
         ecam_(bus_start, bus_end),
         info_{
@@ -56,8 +59,8 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     return info_;
   }
   FakeEcam& ecam() { return ecam_; }
-  uint8_t bus_start() { return info_.start_bus_num; }
-  uint8_t bus_end() { return info_.end_bus_num; }
+  uint8_t bus_start() const { return info_.start_bus_num; }
+  uint8_t bus_end() const { return info_.end_bus_num; }
   zx::bti& bti() { return bti_; }
   zx::resource& resource() { return resource_; }
   auto& legacy_irqs() { return legacy_irqs_; }
@@ -66,17 +69,36 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
 
   // Protocol methods.
   zx_status_t PcirootGetBti(uint32_t bdf, uint32_t index, zx::bti* bti) {
+    if (!enable_get_bti_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     return bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, bti);
   }
 
-  zx_status_t PcirootConnectSysmem(zx::channel connection) { return ZX_ERR_NOT_SUPPORTED; }
+  zx_status_t PcirootConnectSysmem(zx::channel connection) {
+    if (!enable_connect_sysmem_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   zx_status_t PcirootGetPciPlatformInfo(pci_platform_info_t* out_info) {
+    if (!enable_get_pci_platform_info_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     *out_info = info();
     return ZX_OK;
   }
 
-  bool PcirootDriverShouldProxyConfig(void) { return false; }
+  bool PcirootDriverShouldProxyConfig() { return enable_driver_should_proxy_config_; }
   zx_status_t PcirootConfigRead8(const pci_bdf_t* address, uint16_t offset, uint8_t* value) {
+    if (!enable_config_read_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -85,6 +107,10 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     return ZX_OK;
   }
   zx_status_t PcirootConfigRead16(const pci_bdf_t* address, uint16_t offset, uint16_t* value) {
+    if (!enable_config_read_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -93,6 +119,10 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     return ZX_OK;
   }
   zx_status_t PcirootConfigRead32(const pci_bdf_t* address, uint16_t offset, uint32_t* value) {
+    if (!enable_config_read_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -101,6 +131,10 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     return ZX_OK;
   }
   zx_status_t PcirootConfigWrite8(const pci_bdf_t* address, uint16_t offset, uint8_t value) {
+    if (!enable_config_write_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -108,6 +142,10 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     return ZX_OK;
   }
   zx_status_t PcirootConfigWrite16(const pci_bdf_t* address, uint16_t offset, uint16_t value) {
+    if (!enable_config_write_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -115,6 +153,10 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     return ZX_OK;
   }
   zx_status_t PcirootConfigWrite32(const pci_bdf_t* address, uint16_t offset, uint32_t value) {
+    if (!enable_config_write_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     if (address->bus_id < info_.start_bus_num || address->bus_id > info_.end_bus_num) {
       return ZX_ERR_NOT_SUPPORTED;
     }
@@ -124,6 +166,10 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
 
   zx_status_t PcirootAllocateMsi(uint32_t requested_irqs, bool can_target_64bit,
                                  zx::msi* out_allocation) {
+    if (!enable_allocate_msi_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     return zx_msi_allocate(ZX_HANDLE_INVALID, requested_irqs,
                            out_allocation->reset_and_get_address());
   }
@@ -131,6 +177,10 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   zx_status_t PcirootGetAddressSpace(zx_paddr_t in_base, size_t size, pci_address_space_t type,
                                      bool low, uint64_t* out_base, zx::resource* resource,
                                      zx::eventpair* eventpair) {
+    if (!enable_get_address_space_) {
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+
     zx_rsrc_kind_t kind =
         (type == PCI_ADDRESS_SPACE_MEMORY) ? ZX_RSRC_KIND_MMIO : ZX_RSRC_KIND_IOPORT;
     if (in_base) {
@@ -138,7 +188,15 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     } else {
       if (type == PCI_ADDRESS_SPACE_MEMORY) {
       }
-      *out_base = (type == PCI_ADDRESS_SPACE_MEMORY) ? 0x1000 : 0x10;
+      if (type == PCI_ADDRESS_SPACE_MEMORY) {
+        if (low) {
+          *out_base = kDefaultLowMemoryAddress;
+        } else {
+          *out_base = kDefaultHighMemoryAddress;
+        }
+      } else {
+        *out_base = kDefaultIoAddress;
+      }
     }
 
     ZX_ASSERT(zx::resource::create(resource_, kind, *out_base, size, "fake", 5, resource) == ZX_OK);
@@ -147,6 +205,17 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
     allocation_eps_.push_back(std::move(local_ep));
     return ZX_OK;
   }
+
+  void enable_get_bti(bool enable) { enable_get_bti_ = enable; }
+  void enable_connect_sysmem(bool enable) { enable_connect_sysmem_ = enable; }
+  void enable_get_pci_platform_info(bool enable) { enable_get_pci_platform_info_ = enable; }
+  void enable_driver_should_proxy_config(bool enable) {
+    enable_driver_should_proxy_config_ = enable;
+  }
+  void enable_config_read(bool enable) { enable_config_read_ = enable; }
+  void enable_config_write(bool enable) { enable_config_write_ = enable; }
+  void enable_allocate_msi(bool enable) { enable_allocate_msi_ = enable; }
+  void enable_get_address_space(bool enable) { enable_get_address_space_ = enable; }
 
  private:
   pciroot_protocol_t proto_;
@@ -158,6 +227,16 @@ class FakePciroot : public ddk::PcirootProtocol<FakePciroot> {
   zx::channel sysmem_;
   std::vector<pci_legacy_irq_t> legacy_irqs_;
   std::vector<pci_irq_routing_entry_t> routing_entries_;
+
+  // Switches so tests can test error paths of PCIRoot usage.
+  bool enable_get_bti_ = true;
+  bool enable_connect_sysmem_ = true;
+  bool enable_get_pci_platform_info_ = true;
+  bool enable_driver_should_proxy_config_ = false;
+  bool enable_config_read_ = true;
+  bool enable_config_write_ = true;
+  bool enable_allocate_msi_ = true;
+  bool enable_get_address_space_ = true;
 };
 
 #endif  // SRC_DEVICES_BUS_DRIVERS_PCI_TEST_FAKES_FAKE_PCIROOT_H_
