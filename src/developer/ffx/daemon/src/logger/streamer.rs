@@ -203,8 +203,43 @@ impl TargetLogDirectory {
         TargetSessionDirectory::new(self.clone(), timestamp_millis)
     }
 
+    // Note that we need a different implementation here due to fxbug.dev/72876#c5.
+    // TODO(jwing): revisit this with a longer-term solution.
+    async fn sort_sessions(&self) -> Result<Vec<PathBuf>> {
+        let mut reader = read_dir(self.root.as_path()).await?;
+        let mut result: Vec<(i64, _)> = vec![];
+        while let Some(dir_ent) = reader.try_next().await? {
+            let first_chunk_path = dir_ent.path().join("1");
+
+            if first_chunk_path.exists().await {
+                let f = LogFile::new(
+                    first_chunk_path.clone(),
+                    TargetSessionDirectory::new(
+                        self.clone(),
+                        dir_ent
+                            .path()
+                            .file_name()
+                            .unwrap()
+                            .to_string_lossy()
+                            .to_string()
+                            .parse()?,
+                    ),
+                );
+
+                let log_entry = f.stream_entries().await?.next().await;
+                if let Some(ent) = log_entry {
+                    result.push((ent?.timestamp.into(), dir_ent));
+                }
+            }
+        }
+
+        result.sort_by_key(|tup| tup.0);
+
+        Ok(result.iter().map(|tup| tup.1.path()).collect())
+    }
+
     pub async fn clean_sessions(&self, max_sessions: usize) -> Result<()> {
-        let entries = sort_directory(&self.root).await?;
+        let entries = self.sort_sessions().await?;
         if entries.len() > max_sessions {
             let end = entries.len() - max_sessions;
             let entries_to_remove = &entries[..end];
@@ -873,7 +908,7 @@ mod test {
         LogEntry {
             data: LogData::TargetLog(make_target_log(ts, msg)),
             version: 1,
-            timestamp: Timestamp::from(0),
+            timestamp: Timestamp::from(ts),
         }
     }
 
@@ -1431,13 +1466,13 @@ mod test {
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_cleans_old_sessions() -> Result<()> {
+    async fn test_cleans_old_sessions_ignoring_boot_time() -> Result<()> {
         let temp = tempdir()?;
         let root: PathBuf = temp.path().to_path_buf().into();
 
-        let log = make_valid_log(TIMESTAMP, "log".to_string());
-        let log2 = make_valid_log(TIMESTAMP, "log2".to_string());
-        let log3 = make_valid_log(TIMESTAMP, "log3".to_string());
+        let oldest_log = make_valid_log(TIMESTAMP, "log".to_string());
+        let second_oldest_log = make_valid_log(TIMESTAMP + 1, "log2".to_string());
+        let newest_log = make_valid_log(TIMESTAMP + 2, "log3".to_string());
         {
             let streamer = setup_default_streamer_with_temp_and_boot_time(
                 &temp,
@@ -1448,32 +1483,32 @@ mod test {
             )
             .await
             .unwrap();
-            streamer.append_logs(vec![log.clone()]).await.unwrap();
+            streamer.append_logs(vec![oldest_log.clone()]).await.unwrap();
         }
 
         {
             let streamer = setup_default_streamer_with_temp_and_boot_time(
                 &temp,
-                BOOT_TIME_NANOS + 2_000_000,
+                BOOT_TIME_NANOS - 2_000_000,
                 LARGE_MAX_LOG_SIZE,
                 LARGE_MAX_SESSION_SIZE,
                 DEFAULT_MAX_SESSIONS,
             )
             .await
             .unwrap();
-            streamer.append_logs(vec![log2.clone()]).await.unwrap();
+            streamer.append_logs(vec![second_oldest_log.clone()]).await.unwrap();
         }
 
         let streamer = setup_default_streamer_with_temp_and_boot_time(
             &temp,
-            BOOT_TIME_NANOS + 3_000_000,
+            BOOT_TIME_NANOS - 3_000_000,
             LARGE_MAX_LOG_SIZE,
             LARGE_MAX_SESSION_SIZE,
             DEFAULT_MAX_SESSIONS,
         )
         .await
         .unwrap();
-        streamer.append_logs(vec![log3.clone()]).await.unwrap();
+        streamer.append_logs(vec![newest_log.clone()]).await.unwrap();
 
         streamer.clean_sessions_for_target().await?;
 
@@ -1486,21 +1521,24 @@ mod test {
         let mut session2 = root.clone();
         session2.push(FAKE_DIR_NAME);
         session2.push(NODENAME);
-        session2.push((BOOT_TIME_MILLIS + 2).to_string());
+        session2.push((BOOT_TIME_MILLIS - 2).to_string());
         assert!(!session2.exists().await);
 
-        let results = collect_default_logs_for_session(&root, BOOT_TIME_MILLIS + 3).await.unwrap();
+        let results = collect_default_logs_for_session(&root, BOOT_TIME_MILLIS - 3).await.unwrap();
         assert_eq!(results.len(), 1, "{:?}", results);
         let mut values = results.values().collect::<Vec<_>>();
         values.sort();
         assert_eq!(
             serde_json::from_str::<LogEntry>(values.get(0).unwrap()).unwrap(),
-            log3,
+            newest_log,
             "{:?}",
             results
         );
-        verify_logs(streamer.stream_entries(StreamMode::SnapshotAll, None).await?, vec![log3])
-            .await;
+        verify_logs(
+            streamer.stream_entries(StreamMode::SnapshotAll, None).await?,
+            vec![newest_log],
+        )
+        .await;
         Ok(())
     }
 }

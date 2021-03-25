@@ -41,11 +41,9 @@ impl std::str::FromStr for TimeFormat {
 #[argh(
     subcommand,
     name = "log",
-    description = "",
+    description = "Display logs from a target device",
     note = "\
-Display logs from a target device
-
-Note that filters must be provided to the top-level `target log` command,
+Filters must be provided to the top-level `target log` command,
 *not* to the sub-command (see examples above)
 
 The `--moniker` argument expects a component selector. See this page for
