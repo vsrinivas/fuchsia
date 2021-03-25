@@ -7,6 +7,7 @@ use {
     futures::{channel::mpsc, prelude::*},
     pretty_assertions::assert_eq,
     regex::Regex,
+    std::collections::HashMap,
     test_executor::GroupByTestCase,
     test_executor::{DisabledTestHandling, TestEvent, TestResult},
 };
@@ -86,66 +87,133 @@ async fn launch_and_run_sample_test_helper(parallel: Option<u16>) {
     .await
     .unwrap();
 
-    let mut expected_events = vec![
-        TestEvent::test_case_started("TestFailing"),
-        TestEvent::stdout_message("TestFailing", "    sample_go_test.go:25: This will fail"),
-        TestEvent::test_case_finished("TestFailing", TestResult::Failed),
-        TestEvent::test_case_started("TestPassing"),
-        TestEvent::test_case_started("TestPrefix"),
-        TestEvent::stdout_message("TestPrefix", "Testing that given two tests where one test is prefix of another can execute independently."),
-        TestEvent::test_case_finished("TestPrefix", TestResult::Passed),
-        TestEvent::stdout_message("TestPassing", "This test will pass"),
-        TestEvent::stdout_message("TestPassing", "It will also print this line"),
-        TestEvent::stdout_message("TestPassing", "And this line"),
-        TestEvent::test_case_finished("TestPassing", TestResult::Passed),
-        TestEvent::test_case_started("TestCrashing"),
-        TestEvent::stdout_message("TestCrashing", "Test exited abnormally"),
-        TestEvent::test_case_finished("TestCrashing", TestResult::Failed),
-        TestEvent::test_case_started("TestSkipped"),
-        TestEvent::stdout_message("TestSkipped", "    sample_go_test.go:33: Skipping this test"),
-        TestEvent::test_case_finished("TestSkipped", TestResult::Skipped),
-        TestEvent::test_case_started("TestSubtests"),
-        TestEvent::stdout_message("TestSubtests", "=== RUN   TestSubtests/Subtest1"),
-        TestEvent::stdout_message("TestSubtests", "=== RUN   TestSubtests/Subtest2"),
-        TestEvent::stdout_message("TestSubtests", "=== RUN   TestSubtests/Subtest3"),
-        TestEvent::stdout_message("TestSubtests", "    --- PASS: TestSubtests/Subtest1"),
-        TestEvent::stdout_message("TestSubtests", "    --- PASS: TestSubtests/Subtest2"),
-        TestEvent::stdout_message("TestSubtests", "    --- PASS: TestSubtests/Subtest3"),
-        TestEvent::test_case_finished("TestSubtests", TestResult::Passed),
-        TestEvent::test_case_started("TestPrefixExtra"),
-        TestEvent::stdout_message("TestPrefixExtra", "Testing that given two tests where one test is prefix of another can execute independently."),
-        TestEvent::test_case_finished("TestPrefixExtra", TestResult::Passed),
-        TestEvent::test_case_started("TestPrintMultiline"),
-        TestEvent::stdout_message("TestPrintMultiline", "This test will print the msg in multi-line."),
-        TestEvent::test_case_finished("TestPrintMultiline", TestResult::Passed),
-        TestEvent::test_case_started("TestCustomArg"),
-        TestEvent::test_case_finished("TestCustomArg", TestResult::Passed),
-        TestEvent::test_case_started("TestCustomArg2"),
-        TestEvent::test_case_finished("TestCustomArg2", TestResult::Passed),
-        TestEvent::test_finished(),
-    ];
-    assert_eq!(events.last(), Some(&TestEvent::test_finished()));
+    assert_eq!(events.pop(), Some(TestEvent::test_finished()));
 
-    // check logs order
-    let passed_test_logs: Vec<&TestEvent> = events
-        .iter()
-        .filter(|x| match x {
-            TestEvent::StdoutMessage { test_case_name, msg: _ } => test_case_name == "TestPassing",
-            _ => false,
-        })
-        .collect();
-    assert_eq!(
-        passed_test_logs,
-        vec![
-            &TestEvent::stdout_message("TestPassing", "This test will pass"),
-            &TestEvent::stdout_message("TestPassing", "It will also print this line"),
-            &TestEvent::stdout_message("TestPassing", "And this line")
-        ]
-    );
+    #[derive(Debug)]
+    enum TestEventMatch {
+        Started,
+        Finished(TestResult),
+        StdoutMatch(&'static str),
+    }
 
-    expected_events.sort();
-    events.sort();
-    assert_eq!(events, expected_events);
+    let mut expectations = vec![
+        (
+            "TestFailing",
+            vec![
+                TestEventMatch::Started,
+                TestEventMatch::StdoutMatch("    sample_go_test.go:25: This will fail"),
+                TestEventMatch::Finished(TestResult::Failed),
+            ],
+        ),
+        (
+            "TestPassing",
+            vec![
+                TestEventMatch::Started,
+                TestEventMatch::StdoutMatch("This test will pass"),
+                TestEventMatch::StdoutMatch("It will also print this line"),
+                TestEventMatch::StdoutMatch("And this line"),
+                TestEventMatch::Finished(TestResult::Passed),
+            ],
+        ),
+        (
+            "TestPrefix",
+            vec![
+                TestEventMatch::Started,
+                TestEventMatch::StdoutMatch("Testing that given two tests where one test is prefix of another can execute independently."),
+                TestEventMatch::Finished(TestResult::Passed),
+            ],
+        ),
+        (
+            "TestSkipped",
+            vec![
+                TestEventMatch::Started,
+                TestEventMatch::StdoutMatch("    sample_go_test.go:33: Skipping this test"),
+                TestEventMatch::Finished(TestResult::Skipped),
+            ],
+        ),
+        (
+            "TestSubtests",
+            vec![
+                TestEventMatch::Started,
+                TestEventMatch::StdoutMatch("=== RUN   TestSubtests/Subtest1"),
+                TestEventMatch::StdoutMatch("=== RUN   TestSubtests/Subtest2"),
+                TestEventMatch::StdoutMatch("=== RUN   TestSubtests/Subtest3"),
+                TestEventMatch::StdoutMatch("    --- PASS: TestSubtests/Subtest1"),
+                TestEventMatch::StdoutMatch("    --- PASS: TestSubtests/Subtest2"),
+                TestEventMatch::StdoutMatch("    --- PASS: TestSubtests/Subtest3"),
+                TestEventMatch::Finished(TestResult::Passed),
+            ],
+        ),
+        (
+            "TestPrefixExtra",
+            vec![
+                TestEventMatch::Started,
+                TestEventMatch::StdoutMatch("Testing that given two tests where one test is prefix of another can execute independently."),
+                TestEventMatch::Finished(TestResult::Passed),
+            ],
+        ),
+        (
+            "TestPrintMultiline",
+            vec![
+                TestEventMatch::Started,
+                TestEventMatch::StdoutMatch("This test will print the msg in multi-line."),
+                TestEventMatch::Finished(TestResult::Passed),
+            ],
+        ),
+        (
+            "TestCustomArg",
+            vec![
+                TestEventMatch::Started,
+                TestEventMatch::Finished(TestResult::Passed),
+            ],
+        ),
+        (
+            "TestCustomArg2",
+            vec![
+                TestEventMatch::Started,
+                TestEventMatch::Finished(TestResult::Passed),
+            ],
+        )
+    ]
+    .into_iter()
+    .collect::<HashMap<_, _>>();
+
+    // Walk through all the events and match against expectations based on test case.
+    for event in events {
+        let test_case = event
+            .test_case_name()
+            .unwrap_or_else(|| panic!("unexpected event {:?} without a test case", event));
+        // TODO(https://fxbug.dev/27019): Temporarily ignore output from the crashing test to soft
+        // transition go runtime changes.
+        if test_case == "TestCrashing" {
+            continue;
+        }
+        let expect = expectations
+            .get_mut(test_case.as_str())
+            .unwrap_or_else(|| {
+                panic!("test case {} from event {:?} not covered by expectations", test_case, event)
+            })
+            .drain(0..1)
+            .next()
+            .unwrap_or_else(|| panic!("unexpected event {:?}", event));
+        match expect {
+            TestEventMatch::Started => assert_eq!(event, TestEvent::test_case_started(test_case)),
+            TestEventMatch::Finished(result) => {
+                assert_eq!(event, TestEvent::test_case_finished(test_case, result))
+            }
+            TestEventMatch::StdoutMatch(msg) => {
+                assert_eq!(event, TestEvent::stdout_message(test_case, msg))
+            }
+        }
+    }
+
+    // Check that we have no leftovers in expectations:
+    let leftovers = expectations
+        .into_iter()
+        .map(|(test, expect)| expect.into_iter().map(move |e| (test, e)))
+        .flatten()
+        .collect::<Vec<_>>();
+    assert!(leftovers.is_empty(), "leftover expectations: {:?}", leftovers);
 }
 
 #[fuchsia_async::run_singlethreaded(test)]

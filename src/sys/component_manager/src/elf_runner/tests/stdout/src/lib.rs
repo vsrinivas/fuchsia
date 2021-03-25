@@ -44,15 +44,28 @@ async fn test_components_logs_to_stdout() {
     for (component, message_assertions) in get_all_test_components().iter() {
         start_child_component_and_wait_for_exit(&realm, &component).await;
 
-        // Golang prints a message to stdout indicating that stdin handle can't
-        // be cloned. Let's skip that message here before continuing our tests.
+        // Golang prints messages to stdout and stderr when it finds it's missing any of the stdio
+        // handles. Ignore messages that come from the runtime so we can match on our expectations.
         // TODO(fxbug.dev/69588): Remove this workaround.
-        if component.moniker.ends_with("go") && component.moniker.contains("stdout") {
-            subscription.by_ref().next().await;
-        }
+        let is_go = component.moniker.ends_with("go");
 
-        let messages =
-            subscription.by_ref().take(message_assertions.len()).collect::<Vec<_>>().await;
+        let messages = subscription
+            .by_ref()
+            .filter(|log| {
+                futures::future::ready(
+                    !(is_go
+                        && log
+                            .payload
+                            .as_ref()
+                            .and_then(|p| p.get_property("message"))
+                            .and_then(|s| s.string())
+                            .map(|s| s.starts_with("runtime") || s.starts_with("syscall"))
+                            .unwrap_or(false)),
+                )
+            })
+            .take(message_assertions.len())
+            .collect::<Vec<_>>()
+            .await;
         assert_all_have_attribution(&messages, &component);
 
         for message_assertion in message_assertions.iter() {
@@ -159,7 +172,13 @@ fn assert_all_have_attribution(messages: &[Data<Logs>], component: &Component) {
             && msg.metadata.component_url == component.url
     };
 
-    assert!(messages.iter().all(check_attribution));
+    assert!(
+        messages.iter().all(check_attribution),
+        "Messages found without attribution of moniker='{}' and url='{}' in log: {:?}",
+        component.moniker,
+        component.url,
+        messages
+    );
 }
 
 #[track_caller]
@@ -170,5 +189,11 @@ fn assert_any_has_content(messages: &[Data<Logs>], payload: &str, severity: Seve
                 == payload
     };
 
-    assert!(messages.iter().any(check_content));
+    assert!(
+        messages.iter().any(check_content),
+        "Message with payload='{}' and severity={} not found in logs: {:?}",
+        payload,
+        severity,
+        messages
+    );
 }
