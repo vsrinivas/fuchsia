@@ -8,6 +8,7 @@
 #define ZIRCON_KERNEL_LIB_ARCH_INCLUDE_LIB_ARCH_X86_DESCRIPTOR_H_
 
 #include <hwreg/bitfields.h>
+#include <stddef.h>
 
 namespace arch {
 
@@ -190,17 +191,28 @@ struct SegmentSelector {
 // Pointer/limit to the system GDT and IDT.
 //
 // If user mode alignment checks are enabled the struct needs to be aligned
-// such that (ptr % 4 == 2), which can be done using `PaddedGdtRegister64`
+// such that (ptr % 4 == 2), which can be done using `AlignedGdtRegister64`
 // below. Privileged mode users or users with alignment checks disabled need
 // not worry. (c.f., [intel/vol3] Section 3.5.1 Segment Descriptor Tables)
 //
 // [intel/vol3]: Figure 2-6. Memory Management Registers
-// [amd/vol2]: Figure 4-8. GDTR and IDTR Format—Long Mode.
+// [amd/vol2]: Figure 4-8. GDTR and IDTR Format-Long Mode.
 struct GdtRegister64 {
   uint16_t limit;  // Size of the GDT in bytes, minus one.
   uint64_t base;   // Pointer to the GDT.
 } __PACKED __ALIGNED(2);
 static_assert(sizeof(GdtRegister64) == 10);
+
+// Wrapper around GdtRegister64 to ensure the inner GdtRegister64 is correctly
+// aligned as described above.
+struct AlignedGdtRegister64 {
+  uint8_t padding[6];
+  GdtRegister64 reg;
+
+  AlignedGdtRegister64() = default;
+  AlignedGdtRegister64(GdtRegister64 reg): reg(reg) {} // NOLINT
+} __PACKED __ALIGNED(8);
+static_assert(offsetof(AlignedGdtRegister64, reg) % 4 == 2);
 
 // x86-64 Task State Segment.
 //

@@ -60,10 +60,10 @@ void ArchSetUp() {
                              .set_limit(sizeof(arch::TaskStateSegment64) - 1);
 
   // Install the new GDT.
-  arch::GdtRegister64 gdt_reg = {
+  arch::AlignedGdtRegister64 gdt_reg{{
       .limit = sizeof(g_physboot_gdt) - 1,
       .base = reinterpret_cast<uint64_t>(&g_physboot_gdt),
-  };
+  }};
   arch::LoadGdt(gdt_reg);
 
   // Activate the new GDT.

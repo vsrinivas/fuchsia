@@ -34,6 +34,9 @@ inline void LoadGdt(const GdtRegister64& gdt) {
                        : "memory"  // Ensure compiler writes out changes to GDT.
   );
 }
+inline void LoadGdt(const AlignedGdtRegister64& gdt) {
+  LoadGdt(gdt.reg);
+}
 
 // Activate the given code selector and data selector.
 //
