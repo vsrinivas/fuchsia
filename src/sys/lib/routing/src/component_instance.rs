@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::{capability_source::NamespaceCapabilities, error::ComponentInstanceError},
+    crate::error::ComponentInstanceError,
     moniker::{AbsoluteMoniker, ChildMoniker},
     std::fmt,
     std::{
@@ -80,23 +80,23 @@ impl<C: ComponentInstanceInterface> Default for WeakComponentInstanceInterface<C
 
 /// A `ComponentManagerInstance` or a type implementing `ComponentInstanceInterface`.
 #[derive(Debug, Clone)]
-pub enum ExtendedInstanceInterface<C: ComponentInstanceInterface> {
+pub enum ExtendedInstanceInterface<C: ComponentInstanceInterface, T: TopInstanceInterface> {
     Component(Arc<C>),
-    AboveRoot(Arc<ComponentManagerInstance>),
+    AboveRoot(Arc<T>),
 }
 
 /// A `ComponentManagerInstance` or a type implementing `ComponentInstanceInterface`,
 /// as a weak pointer.
 #[derive(Debug)]
-pub enum WeakExtendedInstanceInterface<C: ComponentInstanceInterface> {
+pub enum WeakExtendedInstanceInterface<C: ComponentInstanceInterface, T: TopInstanceInterface> {
     Component(WeakComponentInstanceInterface<C>),
-    AboveRoot(Weak<ComponentManagerInstance>),
+    AboveRoot(Weak<T>),
 }
 
-impl<C: ComponentInstanceInterface> WeakExtendedInstanceInterface<C> {
+impl<C: ComponentInstanceInterface, T: TopInstanceInterface> WeakExtendedInstanceInterface<C, T> {
     /// Attempts to upgrade this `WeakExtendedInstanceInterface<C>` into an
     /// `ExtendedInstanceInterface<C>`, if the original extended instance has not been destroyed.
-    pub fn upgrade(&self) -> Result<ExtendedInstanceInterface<C>, ComponentInstanceError> {
+    pub fn upgrade(&self) -> Result<ExtendedInstanceInterface<C, T>, ComponentInstanceError> {
         match self {
             WeakExtendedInstanceInterface::Component(p) => {
                 Ok(ExtendedInstanceInterface::Component(p.upgrade()?))
@@ -110,16 +110,5 @@ impl<C: ComponentInstanceInterface> WeakExtendedInstanceInterface<C> {
     }
 }
 
-/// A special instance identified with component manager. This is stored with the root component
-/// instance.
-#[derive(Debug)]
-pub struct ComponentManagerInstance {
-    /// The list of capabilities offered from component manager's namespace.
-    pub namespace_capabilities: NamespaceCapabilities,
-}
-
-impl ComponentManagerInstance {
-    pub fn new(namespace_capabilities: NamespaceCapabilities) -> Self {
-        Self { namespace_capabilities }
-    }
-}
+/// A special instance identified with the top of the tree, i.e. component manager's instance.
+pub trait TopInstanceInterface: Sized {}

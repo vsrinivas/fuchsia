@@ -32,6 +32,7 @@ use {
         fuchsia_boot_resolver, fuchsia_pkg_resolver,
         model::{
             binding::Binder,
+            component::ComponentManagerInstance,
             environment::{DebugRegistry, Environment, RunnerRegistry},
             error::ModelError,
             event_logger::EventLogger,
@@ -205,15 +206,18 @@ impl BuiltinEnvironmentBuilder {
         };
 
         let runtime_config = Arc::new(runtime_config);
+        let top_instance =
+            Arc::new(ComponentManagerInstance::new(runtime_config.namespace_capabilities.clone()));
         let params = ModelParams {
             root_component_url: root_component_url.as_str().to_owned(),
             root_environment: Environment::new_root(
+                &top_instance,
                 RunnerRegistry::new(runner_map),
                 self.resolvers,
                 DebugRegistry::default(),
             ),
             runtime_config: Arc::clone(&runtime_config),
-            namespace_capabilities: runtime_config.namespace_capabilities.clone(),
+            top_instance,
         };
         let model = Model::new(params).await?;
 
@@ -341,6 +345,8 @@ pub struct BuiltinEnvironment {
     pub num_threads: usize,
     pub out_dir_contents: OutDirContents,
     pub inspector: Inspector,
+
+    _service_fs_task: Option<fasync::Task<()>>,
 }
 
 impl BuiltinEnvironment {
@@ -701,6 +707,7 @@ impl BuiltinEnvironment {
             num_threads,
             out_dir_contents,
             inspector,
+            _service_fs_task: None,
         })
     }
 
@@ -722,7 +729,11 @@ impl BuiltinEnvironment {
             let event_source = self.event_source_factory.create_for_debug().await?;
             service_fs.dir("svc").add_fidl_service(move |stream| {
                 let event_source = event_source.clone();
-                event_source.serve(stream);
+                // TODO(geb): Practically speaking, calling detach() here isn't a problem because
+                // the builtin environment is never dropped. However, ideally, the task would be
+                // stored in the BuiltinEnvironment. But it is not easy to do that here since this
+                // callback is not async, so we can't grab a Mutex.
+                event_source.serve(stream).detach();
             });
         }
 
@@ -737,7 +748,7 @@ impl BuiltinEnvironment {
     }
 
     /// Bind ServiceFs to a provided channel
-    async fn bind_service_fs(&self, channel: zx::Channel) -> Result<(), ModelError> {
+    async fn bind_service_fs(&mut self, channel: zx::Channel) -> Result<(), ModelError> {
         let mut service_fs = self.create_service_fs().await?;
 
         // Bind to the channel
@@ -750,15 +761,14 @@ impl BuiltinEnvironment {
         });
 
         // Start up ServiceFs
-        fasync::Task::spawn(async move {
+        self._service_fs_task = Some(fasync::Task::spawn(async move {
             service_fs.collect::<()>().await;
-        })
-        .detach();
+        }));
         Ok(())
     }
 
     /// Bind ServiceFs to the outgoing directory of this component, if it exists.
-    pub async fn bind_service_fs_to_out(&self) -> Result<(), ModelError> {
+    pub async fn bind_service_fs_to_out(&mut self) -> Result<(), ModelError> {
         if let Some(handle) = fuchsia_runtime::take_startup_handle(
             fuchsia_runtime::HandleType::DirectoryRequest.into(),
         ) {
@@ -774,7 +784,7 @@ impl BuiltinEnvironment {
 
     /// Bind ServiceFs to a new channel and return the Hub directory.
     /// Used mainly by integration tests.
-    pub async fn bind_service_fs_for_hub(&self) -> Result<DirectoryProxy, ModelError> {
+    pub async fn bind_service_fs_for_hub(&mut self) -> Result<DirectoryProxy, ModelError> {
         // Create a channel that ServiceFs will operate on
         let (service_fs_proxy, service_fs_server_end) = create_proxy::<DirectoryMarker>().unwrap();
 
@@ -831,7 +841,7 @@ impl BuiltinEnvironment {
         self.stop_notifier.wait_for_root_stop().await;
     }
 
-    pub async fn run_root(&self) -> Result<(), Error> {
+    pub async fn run_root(&mut self) -> Result<(), Error> {
         match self.out_dir_contents {
             OutDirContents::None => {
                 info!("Field `out_dir_contents` is set to None.");

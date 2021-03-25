@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
         channel,
         model::{
             actions::{ActionSet, ShutdownAction},
@@ -74,7 +74,7 @@ impl SystemController {
 impl Hook for SystemController {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::Builtin { capability },
+            source: CapabilitySource::Builtin { capability, .. },
             capability_provider,
         }) = &event.result
         {
@@ -149,20 +149,18 @@ impl CapabilityProvider for SystemControllerCapabilityProvider {
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<SystemControllerMarker>::new(server_end);
         let stream: SystemControllerRequestStream =
             server_end.into_stream().map_err(ModelError::stream_creation_error)?;
-        fasync::Task::spawn(async move {
+        Ok(fasync::Task::spawn(async move {
             let result = self.open_async(stream).await;
             if let Err(e) = result {
                 warn!("SystemController.open failed: {}", e);
             }
         })
-        .detach();
-
-        Ok(())
+        .into())
     }
 }
 
@@ -225,7 +223,7 @@ mod tests {
             endpoints::create_endpoints::<fsys::SystemControllerMarker>()
                 .expect("failed creating channel endpoints");
         let mut server_channel = server_channel.into_channel();
-        sys_controller
+        let _provider_task = sys_controller
             .open(0, 0, PathBuf::new(), &mut server_channel)
             .await
             .expect("failed to open capability");
@@ -247,9 +245,11 @@ mod tests {
 
         // Ask the SystemController to shut down the system and wait to be
         // notified that the root component stopped.
-        let completion = test.builtin_environment.wait_for_root_stop();
+        let builtin_environment = test.builtin_environment.lock().await;
+        let completion = builtin_environment.wait_for_root_stop();
         controller_proxy.shutdown().await.expect("shutdown request failed");
         completion.await;
+        drop(builtin_environment);
 
         // Check state bits to confirm root component looks shut down
         root_component_info.check_is_shut_down(&test.runner).await;
@@ -312,7 +312,7 @@ mod tests {
                 endpoints::create_endpoints::<fsys::SystemControllerMarker>()
                     .expect("failed creating channel endpoints");
             let mut server_channel = server_channel.into_channel();
-            sys_controller
+            let _provider_task = sys_controller
                 .open(0, 0, PathBuf::new(), &mut server_channel)
                 .await
                 .expect("failed to open capability");
@@ -328,7 +328,8 @@ mod tests {
 
             // Ask the SystemController to shut down the system and wait to be
             // notified that the room component stopped.
-            let _completion = test.builtin_environment.wait_for_root_stop();
+            let builtin_environment = test.builtin_environment.lock().await;
+            let _completion = builtin_environment.wait_for_root_stop();
             controller_proxy.shutdown().await.expect("shutdown request failed");
         });
 

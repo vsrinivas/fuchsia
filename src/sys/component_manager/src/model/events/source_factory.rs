@@ -116,7 +116,7 @@ impl Hook for EventSourceFactory {
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
             Ok(EventPayload::CapabilityRouted {
-                source: CapabilitySource::Builtin { capability },
+                source: CapabilitySource::Builtin { capability, .. },
                 capability_provider,
             }) => {
                 let mut capability_provider = capability_provider.lock().await;

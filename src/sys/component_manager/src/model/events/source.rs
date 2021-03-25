@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::CapabilityProvider,
+        capability::{CapabilityProvider, OptionalTask},
         channel,
         model::{
             error::ModelError,
@@ -136,11 +136,10 @@ impl EventSource {
     }
 
     /// Serves a `EventSource` FIDL protocol.
-    pub fn serve(self, stream: fsys::EventSourceRequestStream) {
+    pub fn serve(self, stream: fsys::EventSourceRequestStream) -> fasync::Task<()> {
         fasync::Task::spawn(async move {
             serve_event_source_sync(self, stream).await;
         })
-        .detach();
     }
 }
 
@@ -152,12 +151,11 @@ impl CapabilityProvider for EventSource {
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let server_end = channel::take_channel(server_end);
         let stream = ServerEnd::<fsys::EventSourceMarker>::new(server_end)
             .into_stream()
             .expect("could not convert channel into stream");
-        self.serve(stream);
-        Ok(())
+        Ok(self.serve(stream).into())
     }
 }

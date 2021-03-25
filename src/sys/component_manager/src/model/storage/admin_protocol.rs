@@ -12,7 +12,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, ComponentCapability},
+        capability::{CapabilityProvider, CapabilitySource, ComponentCapability, OptionalTask},
         channel,
         model::{
             component::{BindReason, WeakComponentInstance},
@@ -69,32 +69,31 @@ impl CapabilityProvider for StorageAdminProtocolProvider {
         open_mode: u32,
         in_relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let server_end = channel::take_channel(server_end);
         if (flags & (OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE))
             != (OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE)
         {
             warn!("open request for the storage admin protocol rejected: access denied");
-            return Ok(());
+            return Ok(None.into());
         }
         if 0 == (open_mode & MODE_TYPE_SERVICE) {
             warn!("open request for the storage admin protocol rejected: incorrect mode");
-            return Ok(());
+            return Ok(None.into());
         }
         if in_relative_path != PathBuf::from("") {
             warn!("open request for the storage admin protocol rejected: invalid path");
-            return Ok(());
+            return Ok(None.into());
         }
         let storage_decl = self.storage_decl.clone();
         let component = self.component.clone();
         let storage_admin = self.storage_admin.clone();
-        fasync::Task::spawn(async move {
+        Ok(fasync::Task::spawn(async move {
             if let Err(e) = storage_admin.serve(storage_decl, component, server_end).await {
                 warn!("failed to serve storage admin protocol: {:?}", e);
             }
         })
-        .detach();
-        Ok(())
+        .into())
     }
 }
 

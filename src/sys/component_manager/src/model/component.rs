@@ -25,11 +25,13 @@ use {
         },
     },
     ::routing::component_instance::{
-        ComponentInstanceInterface, ComponentManagerInstance, ExtendedInstanceInterface,
+        ComponentInstanceInterface, ExtendedInstanceInterface, TopInstanceInterface,
         WeakComponentInstanceInterface, WeakExtendedInstanceInterface,
     },
     clonable_error::ClonableError,
-    cm_rust::{self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl},
+    cm_rust::{
+        self, CapabilityDecl, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, UseDecl,
+    },
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_component_runner as fcrunner,
     fidl_fuchsia_io::{self as fio, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
@@ -57,8 +59,9 @@ use {
 };
 
 pub type WeakComponentInstance = WeakComponentInstanceInterface<ComponentInstance>;
-pub type ExtendedInstance = ExtendedInstanceInterface<ComponentInstance>;
-pub type WeakExtendedInstance = WeakExtendedInstanceInterface<ComponentInstance>;
+pub type ExtendedInstance = ExtendedInstanceInterface<ComponentInstance, ComponentManagerInstance>;
+pub type WeakExtendedInstance =
+    WeakExtendedInstanceInterface<ComponentInstance, ComponentManagerInstance>;
 
 /// Describes the reason a component instance is being requested to start.
 #[derive(Clone, Debug, Hash, PartialEq, Eq)]
@@ -158,6 +161,32 @@ impl TryFrom<fsys::Package> for Package {
 
 pub const DEFAULT_KILL_TIMEOUT: Duration = Duration::from_secs(1);
 
+/// The list of declarations for capabilities from component manager's namespace.
+pub type NamespaceCapabilities = Vec<CapabilityDecl>;
+
+/// A special instance identified with component manager, at the top of the tree.
+#[derive(Debug)]
+pub struct ComponentManagerInstance {
+    /// The list of capabilities offered from component manager's namespace.
+    pub namespace_capabilities: NamespaceCapabilities,
+
+    /// Tasks owned by component manager's instance.
+    tasks: Mutex<Vec<fasync::Task<()>>>,
+}
+
+impl ComponentManagerInstance {
+    pub fn new(namespace_capabilities: NamespaceCapabilities) -> Self {
+        Self { namespace_capabilities, tasks: Mutex::new(vec![]) }
+    }
+
+    // Adds a task to the list of tasks owned by component manager.
+    pub async fn add_task(&self, task: fasync::Task<()>) {
+        self.tasks.lock().await.push(task);
+    }
+}
+
+impl TopInstanceInterface for ComponentManagerInstance {}
+
 /// Models a component instance, possibly with links to children.
 pub struct ComponentInstance {
     /// The registry for resolving component URLs within the component instance.
@@ -182,6 +211,8 @@ pub struct ComponentInstance {
     execution: Mutex<ExecutionState>,
     /// Actions on the instance that must eventually be completed.
     actions: Mutex<ActionSet>,
+    /// Tasks owned by this component instance.
+    tasks: Mutex<Vec<fasync::Task<()>>>,
 }
 
 impl ComponentInstance {
@@ -224,6 +255,7 @@ impl ComponentInstance {
             execution: Mutex::new(ExecutionState::new()),
             actions: Mutex::new(ActionSet::new()),
             hooks,
+            tasks: Mutex::new(vec![]),
         })
     }
 
@@ -250,6 +282,11 @@ impl ComponentInstance {
     /// Gets the context, if it exists, or returns a '`ContextNotFound` error.
     pub fn try_get_context(&self) -> Result<Arc<ModelContext>, ModelError> {
         self.context.upgrade()
+    }
+
+    /// Adds a task to the list of tasks owned by this component instance.
+    pub async fn add_task(&self, task: fasync::Task<()>) {
+        self.tasks.lock().await.push(task);
     }
 
     /// Locks and returns a lazily resolved and populated `ResolvedInstanceState`. Does not
@@ -1788,6 +1825,8 @@ pub mod tests {
 
         let mut event_source = test
             .builtin_environment
+            .lock()
+            .await
             .event_source_factory
             .create_for_debug()
             .await

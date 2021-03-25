@@ -64,7 +64,7 @@ fn main() -> Result<(), Error> {
     let num_threads = runtime_config.num_threads;
 
     let fut = async move {
-        let builtin_environment = match build_environment(runtime_config).await {
+        let mut builtin_environment = match build_environment(runtime_config).await {
             Ok(environment) => environment,
             Err(error) => {
                 error!("Component manager setup failed: {:?}", error);

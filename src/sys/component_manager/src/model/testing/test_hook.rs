@@ -325,14 +325,14 @@ impl HubInjectionTestHook {
 impl Hook for HubInjectionTestHook {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::Framework { capability, scope_moniker },
+            source: CapabilitySource::Framework { capability, component },
             capability_provider,
         }) = &event.result
         {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
                 .on_scoped_framework_capability_routed_async(
-                    scope_moniker.clone(),
+                    component.moniker.clone(),
                     capability,
                     capability_provider.take(),
                 )
@@ -364,9 +364,10 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let (client_chan, mut server_chan) = zx::Channel::create().unwrap();
-        self.intercepted_capability
+        let task = self
+            .intercepted_capability
             .open(flags, open_mode, PathBuf::new(), &mut server_chan)
             .await?;
 
@@ -386,8 +387,7 @@ impl CapabilityProvider for HubInjectionCapabilityProvider {
             pfsPath::validate_and_split(relative_path).expect("failed to split and validate path");
         let server_end = channel::take_channel(server_end);
         dir.open(ExecutionScope::new(), flags, open_mode, path, ServerEnd::new(server_end));
-
-        Ok(())
+        Ok(task)
     }
 }
 

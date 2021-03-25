@@ -3,18 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    crate::component_instance::{ComponentInstanceInterface, WeakComponentInstanceInterface},
+    crate::component_instance::{
+        ComponentInstanceInterface, TopInstanceInterface, WeakComponentInstanceInterface,
+        WeakExtendedInstanceInterface,
+    },
     cm_rust::{
-        CapabilityDecl, CapabilityName, CapabilityPath, CapabilityTypeName, DirectoryDecl,
-        ExposeDecl, ExposeDirectoryDecl, ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl,
+        CapabilityName, CapabilityPath, CapabilityTypeName, DirectoryDecl, ExposeDecl,
+        ExposeDirectoryDecl, ExposeProtocolDecl, ExposeResolverDecl, ExposeRunnerDecl,
         ExposeSource, OfferDecl, OfferDirectoryDecl, OfferEventDecl, OfferProtocolDecl,
         OfferResolverDecl, OfferRunnerDecl, OfferSource, OfferStorageDecl, ProtocolDecl,
         RegistrationSource, ResolverDecl, RunnerDecl, StorageDecl, UseDecl, UseDirectoryDecl,
         UseEventDecl, UseProtocolDecl, UseSource, UseStorageDecl,
     },
     from_enum::FromEnum,
-    moniker::AbsoluteMoniker,
-    std::fmt,
+    std::{fmt, sync::Weak},
     thiserror::Error,
 };
 
@@ -26,24 +28,23 @@ pub enum Error {
     InvalidBuiltinCapability {},
 }
 
-/// The list of declarations for capabilities from component manager's namespace.
-pub type NamespaceCapabilities = Vec<CapabilityDecl>;
-
 /// Describes the source of a capability, as determined by `find_capability_source`
 #[derive(Debug)]
-pub enum CapabilitySourceInterface<C: ComponentInstanceInterface> {
+pub enum CapabilitySourceInterface<C: ComponentInstanceInterface, T: TopInstanceInterface> {
     /// This capability originates from the component instance for the given Realm.
     /// point.
     Component { capability: ComponentCapability, component: WeakComponentInstanceInterface<C> },
     /// This capability originates from "framework". It's implemented by component manager and is
     /// scoped to the realm of the source.
-    Framework { capability: InternalCapability, scope_moniker: AbsoluteMoniker },
-    /// This capability originates from the parent of the root component, and is
-    /// built in to component manager.
-    Builtin { capability: InternalCapability },
-    /// This capability originates from the parent of the root component, and is
-    /// offered from component manager's namespace.
-    Namespace { capability: ComponentCapability },
+    Framework { capability: InternalCapability, component: WeakComponentInstanceInterface<C> },
+    /// This capability originates from the parent of the root component, and is built in to
+    /// component manager. `top_instance` is the instance at the top of the tree, i.e.  the
+    /// instance representing component manager.
+    Builtin { capability: InternalCapability, top_instance: Weak<T> },
+    /// This capability originates from the parent of the root component, and is offered from
+    /// component manager's namespace. `top_instance` is the instance at the top of the tree, i.e.
+    /// the instance representing component manager.
+    Namespace { capability: ComponentCapability, top_instance: Weak<T> },
     /// This capability is provided by the framework based on some other capability.
     Capability {
         source_capability: ComponentCapability,
@@ -51,48 +52,56 @@ pub enum CapabilitySourceInterface<C: ComponentInstanceInterface> {
     },
 }
 
-impl<C: ComponentInstanceInterface> CapabilitySourceInterface<C> {
-    /// Returns whether the given CapabilitySourceInterface can be available in a component's namespace.
+impl<C: ComponentInstanceInterface, T: TopInstanceInterface> CapabilitySourceInterface<C, T> {
+    /// Returns whether the given CapabilitySourceInterface can be available in a component's
+    /// namespace.
     pub fn can_be_in_namespace(&self) -> bool {
         match self {
-            CapabilitySourceInterface::Component { capability, .. } => {
-                capability.can_be_in_namespace()
-            }
-            CapabilitySourceInterface::Framework { capability, .. } => {
-                capability.can_be_in_namespace()
-            }
-            CapabilitySourceInterface::Builtin { capability } => capability.can_be_in_namespace(),
-            CapabilitySourceInterface::Namespace { capability } => capability.can_be_in_namespace(),
-            CapabilitySourceInterface::Capability { .. } => true,
+            Self::Component { capability, .. } => capability.can_be_in_namespace(),
+            Self::Framework { capability, .. } => capability.can_be_in_namespace(),
+            Self::Builtin { capability, .. } => capability.can_be_in_namespace(),
+            Self::Namespace { capability, .. } => capability.can_be_in_namespace(),
+            Self::Capability { .. } => true,
         }
     }
 
     pub fn source_name(&self) -> Option<&CapabilityName> {
         match self {
-            CapabilitySourceInterface::Component { capability, .. } => capability.source_name(),
-            CapabilitySourceInterface::Framework { capability, .. } => {
-                Some(capability.source_name())
-            }
-            CapabilitySourceInterface::Builtin { capability } => Some(capability.source_name()),
-            CapabilitySourceInterface::Namespace { capability } => capability.source_name(),
-            CapabilitySourceInterface::Capability { .. } => None,
+            Self::Component { capability, .. } => capability.source_name(),
+            Self::Framework { capability, .. } => Some(capability.source_name()),
+            Self::Builtin { capability, .. } => Some(capability.source_name()),
+            Self::Namespace { capability, .. } => capability.source_name(),
+            Self::Capability { .. } => None,
         }
     }
 
     pub fn type_name(&self) -> CapabilityTypeName {
         match self {
-            CapabilitySourceInterface::Component { capability, .. } => capability.type_name(),
-            CapabilitySourceInterface::Framework { capability, .. } => capability.type_name(),
-            CapabilitySourceInterface::Builtin { capability } => capability.type_name(),
-            CapabilitySourceInterface::Namespace { capability } => capability.type_name(),
-            CapabilitySourceInterface::Capability { source_capability, .. } => {
-                source_capability.type_name()
+            Self::Component { capability, .. } => capability.type_name(),
+            Self::Framework { capability, .. } => capability.type_name(),
+            Self::Builtin { capability, .. } => capability.type_name(),
+            Self::Namespace { capability, .. } => capability.type_name(),
+            Self::Capability { source_capability, .. } => source_capability.type_name(),
+        }
+    }
+
+    pub fn source_instance(&self) -> WeakExtendedInstanceInterface<C, T> {
+        match self {
+            Self::Component { component, .. }
+            | Self::Framework { component, .. }
+            | Self::Capability { component, .. } => {
+                WeakExtendedInstanceInterface::Component(component.clone())
+            }
+            Self::Builtin { top_instance, .. } | Self::Namespace { top_instance, .. } => {
+                WeakExtendedInstanceInterface::AboveRoot(top_instance.clone())
             }
         }
     }
 }
 
-impl<C: ComponentInstanceInterface> fmt::Display for CapabilitySourceInterface<C> {
+impl<C: ComponentInstanceInterface, T: TopInstanceInterface> fmt::Display
+    for CapabilitySourceInterface<C, T>
+{
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
@@ -102,8 +111,8 @@ impl<C: ComponentInstanceInterface> fmt::Display for CapabilitySourceInterface<C
                     format!("{} '{}'", capability, component.moniker)
                 }
                 CapabilitySourceInterface::Framework { capability, .. } => capability.to_string(),
-                CapabilitySourceInterface::Builtin { capability } => capability.to_string(),
-                CapabilitySourceInterface::Namespace { capability } => capability.to_string(),
+                CapabilitySourceInterface::Builtin { capability, .. } => capability.to_string(),
+                CapabilitySourceInterface::Namespace { capability, .. } => capability.to_string(),
                 CapabilitySourceInterface::Capability { source_capability, .. } =>
                     format!("{}", source_capability),
             }
@@ -111,7 +120,9 @@ impl<C: ComponentInstanceInterface> fmt::Display for CapabilitySourceInterface<C
     }
 }
 
-impl<C: ComponentInstanceInterface> Clone for CapabilitySourceInterface<C> {
+impl<C: ComponentInstanceInterface, T: TopInstanceInterface> Clone
+    for CapabilitySourceInterface<C, T>
+{
     fn clone(&self) -> Self {
         match self {
             CapabilitySourceInterface::Component { capability, component } => {
@@ -120,17 +131,23 @@ impl<C: ComponentInstanceInterface> Clone for CapabilitySourceInterface<C> {
                     component: component.clone(),
                 }
             }
-            CapabilitySourceInterface::Framework { capability, scope_moniker } => {
+            CapabilitySourceInterface::Framework { capability, component } => {
                 CapabilitySourceInterface::Framework {
                     capability: capability.clone(),
-                    scope_moniker: scope_moniker.clone(),
+                    component: component.clone(),
                 }
             }
-            CapabilitySourceInterface::Builtin { capability } => {
-                CapabilitySourceInterface::Builtin { capability: capability.clone() }
+            CapabilitySourceInterface::Builtin { capability, top_instance } => {
+                CapabilitySourceInterface::Builtin {
+                    capability: capability.clone(),
+                    top_instance: top_instance.clone(),
+                }
             }
-            CapabilitySourceInterface::Namespace { capability } => {
-                CapabilitySourceInterface::Namespace { capability: capability.clone() }
+            CapabilitySourceInterface::Namespace { capability, top_instance } => {
+                CapabilitySourceInterface::Namespace {
+                    capability: capability.clone(),
+                    top_instance: top_instance.clone(),
+                }
             }
             CapabilitySourceInterface::Capability { source_capability, component } => {
                 CapabilitySourceInterface::Capability {

@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
         channel,
         model::{
             error::ModelError,
@@ -94,7 +94,7 @@ impl Hook for WorkScheduler {
             .unwrap_instance_moniker_or(ModelError::UnexpectedComponentManagerMoniker)?;
         match &event.result {
             Ok(EventPayload::CapabilityRouted {
-                source: CapabilitySource::Builtin { capability },
+                source: CapabilitySource::Builtin { capability, .. },
                 capability_provider,
             }) => {
                 let mut capability_provider = capability_provider.lock().await;
@@ -103,13 +103,13 @@ impl Hook for WorkScheduler {
                     .await?;
             }
             Ok(EventPayload::CapabilityRouted {
-                source: CapabilitySource::Framework { capability, scope_moniker },
+                source: CapabilitySource::Framework { capability, component },
                 capability_provider,
             }) => {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_scoped_framework_capability_routed_async(
-                        scope_moniker.clone(),
+                        component.moniker.clone(),
                         &capability,
                         capability_provider.take(),
                     )
@@ -172,20 +172,19 @@ impl CapabilityProvider for WorkSchedulerControlCapabilityProvider {
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsys::WorkSchedulerControlMarker>::new(server_end);
         let stream: fsys::WorkSchedulerControlRequestStream =
             server_end.into_stream().map_err(ModelError::stream_creation_error)?;
-        fasync::Task::spawn(async move {
+        Ok(fasync::Task::spawn(async move {
             let result = self.open_async(stream).await;
             if let Err(e) = result {
                 // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
                 warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
             }
         })
-        .detach();
-        Ok(())
+        .into())
     }
 }
 
@@ -241,21 +240,20 @@ impl CapabilityProvider for WorkSchedulerCapabilityProvider {
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fsys::WorkSchedulerMarker>::new(server_end);
         let stream: fsys::WorkSchedulerRequestStream =
             server_end.into_stream().map_err(ModelError::stream_creation_error)?;
         let work_scheduler = self.work_scheduler.clone();
         let scope_moniker = self.scope_moniker.clone();
-        fasync::Task::spawn(async move {
+        Ok(fasync::Task::spawn(async move {
             let result = Self::open_async(work_scheduler, scope_moniker, stream).await;
             if let Err(e) = result {
                 // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
                 warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
             }
         })
-        .detach();
-        Ok(())
+        .into())
     }
 }

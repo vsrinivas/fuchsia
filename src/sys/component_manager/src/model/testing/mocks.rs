@@ -7,7 +7,9 @@ use {
         builtin::runner::BuiltinRunnerFactory,
         model::{
             binding::Binder,
-            component::{BindReason, ComponentInstance, WeakComponentInstance},
+            component::{
+                BindReason, ComponentInstance, ComponentManagerInstance, WeakComponentInstance,
+            },
             environment::{DebugRegistry, Environment, RunnerRegistry},
             error::ModelError,
             policy::ScopedPolicyChecker,
@@ -382,11 +384,13 @@ impl Runner for MockRunner {
 }
 
 /// A fake `Binder` implementation that always returns `Ok(())` in a `BoxFuture`.
-pub struct FakeBinder;
+pub struct FakeBinder {
+    top_instance: Arc<ComponentManagerInstance>,
+}
 
 impl FakeBinder {
-    pub fn new() -> Arc<dyn Binder> {
-        Arc::new(Self {})
+    pub fn new(top_instance: Arc<ComponentManagerInstance>) -> Arc<dyn Binder> {
+        Arc::new(Self { top_instance })
     }
 }
 
@@ -400,7 +404,12 @@ impl Binder for FakeBinder {
         let resolver = ResolverRegistry::new();
         let root_component_url = "test:///root".to_string();
         Ok(ComponentInstance::new_root(
-            Environment::new_root(RunnerRegistry::default(), resolver, DebugRegistry::default()),
+            Environment::new_root(
+                &self.top_instance,
+                RunnerRegistry::default(),
+                resolver,
+                DebugRegistry::default(),
+            ),
             Weak::new(),
             Weak::new(),
             root_component_url,

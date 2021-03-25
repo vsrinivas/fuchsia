@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
         channel,
         model::{
             addable_directory::AddableDirectoryWithResult,
@@ -57,7 +57,7 @@ impl CapabilityProvider for HubCapabilityProvider {
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let mut relative_path = relative_path
             .to_str()
             .ok_or_else(|| ModelError::path_is_not_utf8(relative_path.clone()))?
@@ -67,8 +67,7 @@ impl CapabilityProvider for HubCapabilityProvider {
             ModelError::open_directory_error(self.abs_moniker.clone(), relative_path)
         })?;
         self.hub.open(&self.abs_moniker, flags, open_mode, dir_path, server_end).await?;
-
-        Ok(())
+        Ok(None.into())
     }
 }
 
@@ -510,7 +509,7 @@ impl Hub {
         // If this is a scoped framework directory capability, then check the source path
         if let CapabilitySource::Framework {
             capability: InternalCapability::Directory(source_name),
-            scope_moniker,
+            component,
         } = source
         {
             if source_name.str() != "hub" {
@@ -520,8 +519,10 @@ impl Hub {
             // Set the capability provider, if not already set.
             let mut capability_provider = capability_provider.lock().await;
             if capability_provider.is_none() {
-                *capability_provider =
-                    Some(Box::new(HubCapabilityProvider::new(scope_moniker.clone(), self.clone())))
+                *capability_provider = Some(Box::new(HubCapabilityProvider::new(
+                    component.moniker.clone(),
+                    self.clone(),
+                )))
             }
         }
         Ok(())
@@ -661,7 +662,7 @@ mod tests {
     async fn start_component_manager_with_hub(
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
-    ) -> (Arc<Model>, Arc<BuiltinEnvironment>, DirectoryProxy) {
+    ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, DirectoryProxy) {
         start_component_manager_with_hub_and_hooks(root_component_url, components, vec![]).await
     }
 
@@ -669,7 +670,7 @@ mod tests {
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
         additional_hooks: Vec<HooksRegistration>,
-    ) -> (Arc<Model>, Arc<BuiltinEnvironment>, DirectoryProxy) {
+    ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let decls = components.iter().map(|c| (c.name, c.decl.clone())).collect();
         let TestModelResult { model, builtin_environment, mock_runner, .. } =
@@ -684,8 +685,12 @@ mod tests {
             }
         }
 
-        let hub_proxy =
-            builtin_environment.bind_service_fs_for_hub().await.expect("unable to bind service_fs");
+        let hub_proxy = builtin_environment
+            .lock()
+            .await
+            .bind_service_fs_for_hub()
+            .await
+            .expect("unable to bind service_fs");
 
         model.root.hooks.install(additional_hooks).await;
 

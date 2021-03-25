@@ -393,11 +393,12 @@ impl EventRegistry {
         match routing::route_event(event_decl, component).await? {
             CapabilitySource::Framework {
                 capability: InternalCapability::Event(source_name),
-                scope_moniker,
-            } => Ok((source_name, scope_moniker.into())),
-            CapabilitySource::Builtin { capability: InternalCapability::Event(source_name) }
-                if source_name == "capability_ready".into() =>
-            {
+                component,
+            } => Ok((source_name, component.moniker.into())),
+            CapabilitySource::Builtin {
+                capability: InternalCapability::Event(source_name),
+                ..
+            } if source_name == "capability_ready".into() => {
                 Ok((source_name, ExtendedMoniker::ComponentManager))
             }
             _ => unreachable!(),

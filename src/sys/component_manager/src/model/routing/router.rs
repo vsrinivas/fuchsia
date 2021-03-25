@@ -569,7 +569,7 @@ where
         match use_.source() {
             UseSource::Framework => Ok(UseResult::Source(CapabilitySource::Framework {
                 capability: sources.framework_source(use_.source_name().clone())?,
-                scope_moniker: target.abs_moniker.clone(),
+                component: target.as_weak(),
             })),
             UseSource::Capability(_) => {
                 sources.capability_source()?;
@@ -579,20 +579,22 @@ where
                 }))
             }
             UseSource::Parent => match target.try_get_parent()? {
-                ExtendedInstance::AboveRoot(cm_component) => {
+                ExtendedInstance::AboveRoot(top_instance) => {
                     if sources.is_namespace_supported() {
                         if let Some(capability) = sources.find_namespace_source(
                             use_.source_name(),
-                            &cm_component.namespace_capabilities,
+                            &top_instance.namespace_capabilities,
                             visitor,
                         )? {
                             return Ok(UseResult::Source(CapabilitySource::Namespace {
                                 capability,
+                                top_instance: Arc::downgrade(&top_instance),
                             }));
                         }
                     }
                     Ok(UseResult::Source(CapabilitySource::Builtin {
                         capability: sources.builtin_source(use_.source_name().clone())?,
+                        top_instance: Arc::downgrade(&top_instance),
                     }))
                 }
                 ExtendedInstance::Component(parent_component) => {
@@ -666,20 +668,22 @@ where
                 }))
             }
             RegistrationSource::Parent => match target.try_get_parent()? {
-                ExtendedInstance::AboveRoot(cm_component) => {
+                ExtendedInstance::AboveRoot(top) => {
                     if sources.is_namespace_supported() {
                         if let Some(capability) = sources.find_namespace_source(
                             registration.source_name(),
-                            &cm_component.namespace_capabilities,
+                            &top.namespace_capabilities,
                             visitor,
                         )? {
                             return Ok(RegistrationResult::Source(CapabilitySource::Namespace {
                                 capability,
+                                top_instance: Arc::downgrade(&top),
                             }));
                         }
                     }
                     Ok(RegistrationResult::Source(CapabilitySource::Builtin {
                         capability: sources.builtin_source(registration.source_name().clone())?,
+                        top_instance: Arc::downgrade(&top),
                     }))
                 }
                 ExtendedInstance::Component(parent_component) => {
@@ -785,7 +789,7 @@ where
                 OfferSource::Framework => {
                     return Ok(OfferResult::Source(CapabilitySource::Framework {
                         capability: sources.framework_source(offer.source_name().clone())?,
-                        scope_moniker: target.abs_moniker.clone(),
+                        component: target.as_weak(),
                     }))
                 }
                 OfferSource::Capability(_) => {
@@ -797,20 +801,22 @@ where
                 }
                 OfferSource::Parent => {
                     let parent_component = match target.try_get_parent()? {
-                        ExtendedInstance::AboveRoot(cm_component) => {
+                        ExtendedInstance::AboveRoot(top_instance) => {
                             if sources.is_namespace_supported() {
                                 if let Some(capability) = sources.find_namespace_source(
                                     offer.source_name(),
-                                    &cm_component.namespace_capabilities,
+                                    &top_instance.namespace_capabilities,
                                     visitor,
                                 )? {
                                     return Ok(OfferResult::Source(CapabilitySource::Namespace {
                                         capability,
+                                        top_instance: Arc::downgrade(&top_instance),
                                     }));
                                 }
                             }
                             return Ok(OfferResult::Source(CapabilitySource::Builtin {
                                 capability: sources.builtin_source(offer.source_name().clone())?,
+                                top_instance: Arc::downgrade(&top_instance),
                             }));
                         }
                         ExtendedInstance::Component(component) => component,
@@ -933,7 +939,7 @@ where
                 ExposeSource::Framework => {
                     return Ok(ExposeResult::Source(CapabilitySource::Framework {
                         capability: sources.framework_source(expose.source_name().clone())?,
-                        scope_moniker: target.abs_moniker.clone(),
+                        component: target.as_weak(),
                     }))
                 }
                 ExposeSource::Capability(_) => {

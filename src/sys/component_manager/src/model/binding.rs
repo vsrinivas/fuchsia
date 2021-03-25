@@ -155,7 +155,7 @@ mod tests {
             CapabilityPath, ComponentDecl, RegistrationSource, RunnerDecl, RunnerRegistration,
         },
         fidl_fuchsia_component_runner as fcrunner, fuchsia_async as fasync,
-        futures::{join, prelude::*},
+        futures::{join, lock::Mutex, prelude::*},
         matches::assert_matches,
         moniker::PartialMoniker,
         std::{collections::HashSet, convert::TryFrom},
@@ -163,14 +163,14 @@ mod tests {
 
     async fn new_model(
         components: Vec<(&'static str, ComponentDecl)>,
-    ) -> (Arc<Model>, Arc<BuiltinEnvironment>, Arc<MockRunner>) {
+    ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, Arc<MockRunner>) {
         new_model_with(components, vec![]).await
     }
 
     async fn new_model_with(
         components: Vec<(&'static str, ComponentDecl)>,
         additional_hooks: Vec<HooksRegistration>,
-    ) -> (Arc<Model>, Arc<BuiltinEnvironment>, Arc<MockRunner>) {
+    ) -> (Arc<Model>, Arc<Mutex<BuiltinEnvironment>>, Arc<MockRunner>) {
         let TestModelResult { model, builtin_environment, mock_runner, .. } =
             TestEnvironmentBuilder::new().set_components(components).build().await;
         model.root.hooks.install(additional_hooks).await;
@@ -214,6 +214,8 @@ mod tests {
 
         let events = vec![EventSubscription::new(EventType::Started.into(), EventMode::Sync)];
         let mut event_source = builtin_environment
+            .lock()
+            .await
             .event_source_factory
             .create_for_debug()
             .await
@@ -548,6 +550,8 @@ mod tests {
             EventType::Started.into(),
         ];
         let mut event_source = builtin_environment
+            .lock()
+            .await
             .event_source_factory
             .create_for_debug()
             .await

@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
         channel,
         config::RuntimeConfig,
         model::{
@@ -58,7 +58,7 @@ impl CapabilityProvider for RealmCapabilityProvider {
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let server_end = channel::take_channel(server_end);
         let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
             .into_stream()
@@ -69,14 +69,13 @@ impl CapabilityProvider for RealmCapabilityProvider {
         // These operations should all work, even if the component is not running.
         let model = host.model.upgrade().ok_or(ModelError::ModelNotAvailable)?;
         let component = WeakComponentInstance::from(&model.look_up(&scope_moniker).await?);
-        fasync::Task::spawn(async move {
+        Ok(fasync::Task::spawn(async move {
             if let Err(e) = host.serve(component, stream).await {
                 // TODO: Set an epitaph to indicate this was an unexpected error.
                 warn!("serve failed: {:?}", e);
             }
         })
-        .detach();
-        Ok(())
+        .into())
     }
 }
 
@@ -357,14 +356,14 @@ impl RealmCapabilityHost {
 impl Hook for RealmCapabilityHost {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::Framework { capability, scope_moniker },
+            source: CapabilitySource::Framework { capability, component },
             capability_provider,
         }) = &event.result
         {
             let mut capability_provider = capability_provider.lock().await;
             *capability_provider = self
                 .on_scoped_framework_capability_routed_async(
-                    scope_moniker.clone(),
+                    component.moniker.clone(),
                     &capability,
                     capability_provider.take(),
                 )
@@ -398,6 +397,7 @@ mod tests {
         fidl_fidl_examples_echo as echo,
         fidl_fuchsia_io::MODE_TYPE_SERVICE,
         fuchsia_async as fasync,
+        futures::lock::Mutex,
         io_util::OPEN_RIGHT_READABLE,
         moniker::AbsoluteMoniker,
         std::collections::HashSet,
@@ -408,7 +408,7 @@ mod tests {
     struct RealmCapabilityTest {
         // This field is never read, but must be kept around for the below tests to function
         // properly. Without it things like the `Realm` service cannot be mocked for the test.
-        _builtin_environment: Option<Arc<BuiltinEnvironment>>,
+        _builtin_environment: Option<Arc<Mutex<BuiltinEnvironment>>>,
 
         mock_runner: Arc<MockRunner>,
         component: Option<Arc<ComponentInstance>>,
@@ -445,6 +445,8 @@ mod tests {
                 None
             } else {
                 let mut event_source = builtin_environment
+                    .lock()
+                    .await
                     .event_source_factory
                     .create_for_debug()
                     .await
@@ -473,7 +475,8 @@ mod tests {
                 endpoints::create_proxy_and_stream::<fsys::RealmMarker>().unwrap();
             {
                 let component = WeakComponentInstance::from(&component);
-                let realm_capability_host = builtin_environment.realm_capability_host.clone();
+                let realm_capability_host =
+                    builtin_environment.lock().await.realm_capability_host.clone();
                 fasync::Task::spawn(async move {
                     realm_capability_host
                         .serve(component, stream)

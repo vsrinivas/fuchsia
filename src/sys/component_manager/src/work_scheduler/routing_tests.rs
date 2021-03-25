@@ -4,9 +4,15 @@
 
 use {
     crate::{
-        model::testing::mocks::ManagedNamespace,
-        model::testing::{routing_test_helpers::*, test_helpers::*},
-        model::{binding::Binder, testing::mocks::FakeBinder},
+        model::{
+            binding::Binder,
+            component::ComponentManagerInstance,
+            testing::{
+                mocks::{FakeBinder, ManagedNamespace},
+                routing_test_helpers::*,
+                test_helpers::*,
+            },
+        },
         work_scheduler::WorkScheduler,
     },
     cm_rust::{
@@ -29,7 +35,8 @@ struct BindingWorkScheduler {
 
 impl BindingWorkScheduler {
     async fn new() -> Self {
-        let binder = FakeBinder::new();
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let binder = FakeBinder::new(top_instance);
         let work_scheduler = WorkScheduler::new(binder.clone()).await;
         Self { work_scheduler, _binder: binder }
     }

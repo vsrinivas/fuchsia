@@ -107,7 +107,7 @@ impl<R: ResourceCapability + Send + Sync> BuiltinCapability for R {
 impl<B: 'static + BuiltinCapability + Send + Sync> Hook for B {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::Builtin { capability },
+            source: CapabilitySource::Builtin { capability, .. },
             capability_provider,
         }) = &event.result
         {
@@ -141,11 +141,11 @@ impl<B: 'static + BuiltinCapability + Sync + Send> CapabilityProvider
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<B::Marker>::new(server_end);
         let stream = server_end.into_stream().map_err(ModelError::stream_creation_error)?;
-        fasync::Task::spawn(async move {
+        Ok(fasync::Task::spawn(async move {
             if let Some(capability) = self.capability.upgrade() {
                 if let Err(err) = capability.serve(stream).await {
                     warn!("{}::open failed: {}", B::NAME, err);
@@ -154,7 +154,6 @@ impl<B: 'static + BuiltinCapability + Sync + Send> CapabilityProvider
                 warn!("{} has been dropped", B::NAME);
             }
         })
-        .detach();
-        Ok(())
+        .into())
     }
 }

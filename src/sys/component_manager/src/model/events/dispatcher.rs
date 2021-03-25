@@ -239,7 +239,10 @@ mod tests {
         futures::StreamExt,
         matches::assert_matches,
         moniker::AbsoluteMoniker,
-        std::{convert::TryInto, sync::Arc},
+        std::{
+            convert::TryInto,
+            sync::{Arc, Weak},
+        },
     };
 
     struct EventDispatcherFactory {
@@ -302,6 +305,7 @@ mod tests {
                     capability: InternalCapability::Protocol(
                         "fuchsia.sys2.MyAwesomeProtocol".try_into().unwrap(),
                     ),
+                    top_instance: Weak::new(),
                 },
                 capability_provider: empty_capability_provider,
             }),

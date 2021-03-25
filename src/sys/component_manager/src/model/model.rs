@@ -3,17 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::capability::NamespaceCapabilities,
     crate::config::RuntimeConfig,
     crate::model::{
         actions::{ActionKey, DiscoverAction},
         binding::Binder,
-        component::{BindReason, ComponentInstance},
+        component::{BindReason, ComponentInstance, ComponentManagerInstance},
         context::ModelContext,
         environment::Environment,
         error::ModelError,
     },
-    ::routing::component_instance::ComponentManagerInstance,
     moniker::AbsoluteMoniker,
     std::sync::Arc,
 };
@@ -28,8 +26,8 @@ pub struct ModelParams {
     pub root_environment: Environment,
     /// Global runtime configuration for the component_manager.
     pub runtime_config: Arc<RuntimeConfig>,
-    /// The namespace capabilities offered by component manager
-    pub namespace_capabilities: NamespaceCapabilities,
+    /// The instance at the top of the tree, representing component manager.
+    pub top_instance: Arc<ComponentManagerInstance>,
 }
 
 /// The component model holds authoritative state about a tree of component instances, including
@@ -39,22 +37,20 @@ pub struct ModelParams {
 pub struct Model {
     pub root: Arc<ComponentInstance>,
     _context: Arc<ModelContext>,
-    _component_manager: Arc<ComponentManagerInstance>,
+    _top_instance: Arc<ComponentManagerInstance>,
 }
 
 impl Model {
     /// Creates a new component model and initializes its topology.
     pub async fn new(params: ModelParams) -> Result<Arc<Model>, ModelError> {
-        let component_manager =
-            Arc::new(ComponentManagerInstance::new(params.namespace_capabilities));
         let context = Arc::new(ModelContext::new(params.runtime_config).await?);
         let root = ComponentInstance::new_root(
             params.root_environment,
             Arc::downgrade(&context),
-            Arc::downgrade(&component_manager),
+            Arc::downgrade(&params.top_instance),
             params.root_component_url,
         );
-        Ok(Arc::new(Model { root, _context: context, _component_manager: component_manager }))
+        Ok(Arc::new(Model { root, _context: context, _top_instance: params.top_instance }))
     }
 
     /// Looks up a component by absolute moniker. The component instance in the component will be

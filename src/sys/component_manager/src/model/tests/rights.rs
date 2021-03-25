@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource, InternalCapability},
+        capability::{CapabilityProvider, CapabilitySource, InternalCapability, OptionalTask},
         channel,
         model::{
             error::ModelError,
@@ -374,14 +374,14 @@ impl CapabilityProvider for MockFrameworkDirectoryProvider {
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let relative_path = relative_path.to_str().unwrap();
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<fio::NodeMarker>::new(server_end);
         self.test_dir_proxy
             .open(flags, open_mode, relative_path, server_end)
             .expect("failed to open test dir");
-        Ok(())
+        Ok(None.into())
     }
 }
 

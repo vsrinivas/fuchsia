@@ -4,14 +4,20 @@
 
 use {
     crate::model::{
-        component::{ComponentInstance, WeakComponentInstance},
+        component::{
+            ComponentInstance, ComponentManagerInstance, ExtendedInstance, WeakExtendedInstance,
+        },
         error::ModelError,
         resolver::{ResolvedComponent, Resolver, ResolverError, ResolverRegistry},
     },
     async_trait::async_trait,
     cm_rust::{CapabilityName, EnvironmentDecl, RegistrationSource, RunnerRegistration},
     fidl_fuchsia_sys2 as fsys,
-    std::{collections::HashMap, sync::Arc, time::Duration},
+    std::{
+        collections::HashMap,
+        sync::{Arc, Weak},
+        time::Duration,
+    },
 };
 
 /// A realm's environment, populated from a component's [`EnvironmentDecl`].
@@ -24,7 +30,7 @@ pub struct Environment {
     /// Would be `None` for root environment.
     name: Option<String>,
     /// The parent that created or inherited the environment.
-    parent: Option<WeakComponentInstance>,
+    parent: WeakExtendedInstance,
     /// The extension mode of this environment.
     extends: EnvironmentExtends,
     /// The runners available in this environment.
@@ -58,11 +64,11 @@ impl From<fsys::EnvironmentExtends> for EnvironmentExtends {
 }
 
 impl Environment {
-    /// Creates a new empty environment without a parent.
+    /// Creates a new empty environment parented to component manager.
     pub fn empty() -> Environment {
         Environment {
             name: None,
-            parent: None,
+            parent: WeakExtendedInstance::AboveRoot(Weak::new()),
             extends: EnvironmentExtends::None,
             runner_registry: RunnerRegistry::default(),
             resolver_registry: ResolverRegistry::new(),
@@ -71,19 +77,20 @@ impl Environment {
         }
     }
 
-    /// Creates a new root environment with a resolver registry and no parent.
+    /// Creates a new root environment with a resolver registry, parented to component manager.
     pub fn new_root(
+        top_instance: &Arc<ComponentManagerInstance>,
         runner_registry: RunnerRegistry,
         resolver_registry: ResolverRegistry,
         debug_registry: DebugRegistry,
     ) -> Environment {
         Environment {
             name: None,
-            parent: None,
+            parent: WeakExtendedInstance::AboveRoot(Arc::downgrade(top_instance)),
             extends: EnvironmentExtends::None,
             runner_registry,
             resolver_registry,
-            debug_registry: debug_registry,
+            debug_registry,
             stop_timeout: DEFAULT_STOP_TIMEOUT,
         }
     }
@@ -92,7 +99,7 @@ impl Environment {
     pub fn from_decl(parent: &Arc<ComponentInstance>, env_decl: &EnvironmentDecl) -> Environment {
         Environment {
             name: Some(env_decl.name.clone()),
-            parent: Some(parent.into()),
+            parent: WeakExtendedInstance::Component(parent.into()),
             extends: env_decl.extends.into(),
             runner_registry: RunnerRegistry::from_decl(&env_decl.runners),
             resolver_registry: ResolverRegistry::from_decl(&env_decl.resolvers, parent),
@@ -113,7 +120,7 @@ impl Environment {
     pub fn new_inheriting(parent: &Arc<ComponentInstance>) -> Environment {
         Environment {
             name: None,
-            parent: Some(parent.into()),
+            parent: WeakExtendedInstance::Component(parent.into()),
             extends: EnvironmentExtends::Realm,
             runner_registry: RunnerRegistry::default(),
             resolver_registry: ResolverRegistry::new(),
@@ -127,19 +134,23 @@ impl Environment {
     }
 
     /// Returns the runner registered to `name` and the component that created the environment the
-    /// runner was registered to (`None` for component manager). Returns `None` if there
-    /// was no match.
+    /// runner was registered to. Returns `None` if there was no match.
     pub fn get_registered_runner(
         &self,
         name: &CapabilityName,
-    ) -> Result<Option<(Option<Arc<ComponentInstance>>, RunnerRegistration)>, ModelError> {
-        let parent = self.parent.as_ref().map(|p| p.upgrade()).transpose()?;
+    ) -> Result<Option<(ExtendedInstance, RunnerRegistration)>, ModelError> {
+        let parent = self.parent.upgrade()?;
         match self.runner_registry.get_runner(name) {
             Some(reg) => Ok(Some((parent, reg.clone()))),
             None => match self.extends {
-                EnvironmentExtends::Realm => {
-                    parent.unwrap().environment.get_registered_runner(name)
-                }
+                EnvironmentExtends::Realm => match parent {
+                    ExtendedInstance::Component(parent) => {
+                        parent.environment.get_registered_runner(name)
+                    }
+                    ExtendedInstance::AboveRoot(_) => {
+                        unreachable!("root env can't extend")
+                    }
+                },
                 EnvironmentExtends::None => {
                     return Ok(None);
                 }
@@ -153,15 +164,19 @@ impl Environment {
     pub fn get_debug_capability(
         &self,
         name: &CapabilityName,
-    ) -> Result<
-        Option<(Option<Arc<ComponentInstance>>, Option<String>, DebugRegistration)>,
-        ModelError,
-    > {
-        let parent = self.parent.as_ref().map(|p| p.upgrade()).transpose()?;
+    ) -> Result<Option<(ExtendedInstance, Option<String>, DebugRegistration)>, ModelError> {
+        let parent = self.parent.upgrade()?;
         match self.debug_registry.get_capability(name) {
             Some(reg) => Ok(Some((parent, self.name.clone(), reg.clone()))),
             None => match self.extends {
-                EnvironmentExtends::Realm => parent.unwrap().environment.get_debug_capability(name),
+                EnvironmentExtends::Realm => match parent {
+                    ExtendedInstance::Component(parent) => {
+                        parent.environment.get_debug_capability(name)
+                    }
+                    ExtendedInstance::AboveRoot(_) => {
+                        unreachable!("root env can't extend")
+                    }
+                },
                 EnvironmentExtends::None => {
                     return Ok(None);
                 }
@@ -173,7 +188,7 @@ impl Environment {
         &self.name
     }
 
-    pub fn parent(&self) -> &Option<WeakComponentInstance> {
+    pub fn parent(&self) -> &WeakExtendedInstance {
         &self.parent
     }
 }
@@ -181,18 +196,17 @@ impl Environment {
 #[async_trait]
 impl Resolver for Environment {
     async fn resolve(&self, component_url: &str) -> Result<ResolvedComponent, ResolverError> {
+        let parent = self.parent.upgrade().map_err(|_| ResolverError::SchemeNotRegistered)?;
         match self.resolver_registry.resolve(component_url).await {
             Err(ResolverError::SchemeNotRegistered) => match &self.extends {
-                EnvironmentExtends::Realm => {
-                    self.parent
-                        .as_ref()
-                        .unwrap()
-                        .upgrade()
-                        .map_err(|_| ResolverError::SchemeNotRegistered)?
-                        .environment
-                        .resolve(component_url)
-                        .await
-                }
+                EnvironmentExtends::Realm => match parent {
+                    ExtendedInstance::Component(parent) => {
+                        parent.environment.resolve(component_url).await
+                    }
+                    ExtendedInstance::AboveRoot(_) => {
+                        unreachable!("root env can't extend")
+                    }
+                },
                 EnvironmentExtends::None => Err(ResolverError::SchemeNotRegistered),
             },
             result => result,
@@ -303,7 +317,7 @@ mod tests {
                 .stop_timeout(1234)
                 .build(),
         );
-        assert_matches!(environment.parent, Some(_));
+        assert_matches!(environment.parent, WeakExtendedInstance::Component(_));
 
         let environment = Environment::from_decl(
             &component,
@@ -312,7 +326,7 @@ mod tests {
                 .extends(fsys::EnvironmentExtends::Realm)
                 .build(),
         );
-        assert_matches!(environment.parent, Some(_));
+        assert_matches!(environment.parent, WeakExtendedInstance::Component(_));
 
         let environment = Environment::from_decl(
             &component,
@@ -392,15 +406,17 @@ mod tests {
             registry
         };
 
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(
+                &top_instance,
                 RunnerRegistry::new(runners),
                 resolvers,
                 debug_registry,
             ),
-            namespace_capabilities: vec![],
+            top_instance,
         })
         .await
         .unwrap();
@@ -409,12 +425,12 @@ mod tests {
 
         let registered_runner =
             component.environment.get_registered_runner(&"test".into()).unwrap();
-        assert_matches!(registered_runner.as_ref(), Some((None, r)) if r == &runner_reg);
+        assert_matches!(registered_runner, Some((ExtendedInstance::AboveRoot(_), r)) if r == runner_reg);
         assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
 
         let debug_capability =
             component.environment.get_debug_capability(&"target_name".into()).unwrap();
-        assert_matches!(debug_capability.as_ref(), Some((None, None, d)) if d == &debug_reg);
+        assert_matches!(debug_capability, Some((ExtendedInstance::AboveRoot(_), None, d)) if d == debug_reg);
         assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
 
         Ok(())
@@ -480,15 +496,17 @@ mod tests {
             registry
         };
 
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(
+                &top_instance,
                 RunnerRegistry::new(runners),
                 resolvers,
                 DebugRegistry::default(),
             ),
-            namespace_capabilities: vec![],
+            top_instance,
         })
         .await?;
         let component = model.bind(&vec!["a:0", "b:0"].into(), &BindReason::Eager).await?;
@@ -496,16 +514,14 @@ mod tests {
 
         let registered_runner =
             component.environment.get_registered_runner(&"test".into()).unwrap();
-        assert_matches!(registered_runner.as_ref(), Some((Some(_), r)) if r == &runner_reg);
-        let parent_moniker = &registered_runner.unwrap().0.unwrap().abs_moniker;
-        assert_eq!(parent_moniker, &AbsoluteMoniker::root());
+        assert_matches!(registered_runner, Some((ExtendedInstance::Component(c), r))
+            if r == runner_reg && c.abs_moniker == AbsoluteMoniker::root());
         assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
 
         let debug_capability =
             component.environment.get_debug_capability(&"target_name".into()).unwrap();
-        assert_matches!(debug_capability.as_ref(), Some((Some(_), Some(_), d)) if d == &debug_reg);
-        let parent_moniker = &debug_capability.unwrap().0.unwrap().abs_moniker;
-        assert_eq!(parent_moniker, &AbsoluteMoniker::root());
+        assert_matches!(debug_capability, Some((ExtendedInstance::Component(c), Some(_), d))
+            if d == debug_reg && c.abs_moniker == AbsoluteMoniker::root());
         assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
 
         Ok(())
@@ -573,15 +589,17 @@ mod tests {
             registry
         };
 
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(
+                &top_instance,
                 RunnerRegistry::new(runners),
                 resolvers,
                 DebugRegistry::default(),
             ),
-            namespace_capabilities: vec![],
+            top_instance,
         })
         .await?;
         // Add instance to collection.
@@ -598,17 +616,14 @@ mod tests {
 
         let registered_runner =
             component.environment.get_registered_runner(&"test".into()).unwrap();
-        assert_matches!(registered_runner.as_ref(), Some((Some(_), r)) if r == &runner_reg);
-        let parent_moniker = &registered_runner.unwrap().0.unwrap().abs_moniker;
-        assert_eq!(parent_moniker, &AbsoluteMoniker::root());
+        assert_matches!(registered_runner, Some((ExtendedInstance::Component(c), r))
+            if r == runner_reg && c.abs_moniker == AbsoluteMoniker::root());
         assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
 
         let debug_capability =
             component.environment.get_debug_capability(&"target_name".into()).unwrap();
-        assert_matches!(debug_capability.as_ref(), Some((Some(_), Some(n), d)) if d == &debug_reg
-            && n == "env_a");
-        let parent_moniker = &debug_capability.unwrap().0.unwrap().abs_moniker;
-        assert_eq!(parent_moniker, &AbsoluteMoniker::root());
+        assert_matches!(debug_capability, Some((ExtendedInstance::Component(c), Some(n), d))
+            if d == debug_reg && n == "env_a" && c.abs_moniker == AbsoluteMoniker::root());
         assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
 
         Ok(())
@@ -663,15 +678,17 @@ mod tests {
             registry
         };
 
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(
+                &top_instance,
                 RunnerRegistry::new(runners),
                 resolvers,
                 debug_registry,
             ),
-            namespace_capabilities: vec![],
+            top_instance,
         })
         .await
         .unwrap();
@@ -681,12 +698,12 @@ mod tests {
 
         let registered_runner =
             component.environment.get_registered_runner(&"test".into()).unwrap();
-        assert_matches!(registered_runner.as_ref(), Some((None, r)) if r == &runner_reg);
+        assert_matches!(registered_runner, Some((ExtendedInstance::AboveRoot(_), r)) if r == runner_reg);
         assert_matches!(component.environment.get_registered_runner(&"foo".into()), Ok(None));
 
         let debug_capability =
             component.environment.get_debug_capability(&"target_name".into()).unwrap();
-        assert_matches!(debug_capability.as_ref(), Some((None, None, d)) if d == &debug_reg);
+        assert_matches!(debug_capability, Some((ExtendedInstance::AboveRoot(_), None, d)) if d == debug_reg);
         assert_matches!(component.environment.get_debug_capability(&"foo".into()), Ok(None));
 
         Ok(())
@@ -726,15 +743,17 @@ mod tests {
             registry.register("test".to_string(), Box::new(resolver));
             registry
         };
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
         let model = Model::new(ModelParams {
             runtime_config: Arc::new(RuntimeConfig::default()),
             root_component_url: "test:///root".to_string(),
             root_environment: Environment::new_root(
+                &top_instance,
                 RunnerRegistry::default(),
                 registry,
                 DebugRegistry::default(),
             ),
-            namespace_capabilities: vec![],
+            top_instance,
         })
         .await?;
         assert_matches!(

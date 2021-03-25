@@ -13,10 +13,11 @@ use {
     crate::{
         capability::{
             CapabilityProvider, CapabilitySource, ComponentCapability, InternalCapability,
+            OptionalTask,
         },
         channel,
         model::{
-            component::{BindReason, ComponentInstance, WeakComponentInstance},
+            component::{BindReason, ComponentInstance, ExtendedInstance, WeakComponentInstance},
             environment::DebugRegistration,
             error::ModelError,
             events::{filter::EventFilter, mode_set::EventModeSet},
@@ -180,7 +181,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let capability = Arc::new(Mutex::new(Some(channel::take_channel(server_end))));
         // Start the source component, if necessary
         let path = self.path.to_path_buf().attach(relative_path);
@@ -217,7 +218,7 @@ impl CapabilityProvider for DefaultComponentCapabilityProvider {
                 return Err(e);
             }
         }
-        Ok(())
+        Ok(None.into())
     }
 }
 
@@ -293,7 +294,19 @@ pub async fn open_capability_at_source(
 
     // If a hook in the component tree gave a capability provider, then use it.
     if let Some(capability_provider) = capability_provider {
-        capability_provider.open(flags, open_mode, relative_path, server_chan).await?;
+        if let Some(task) =
+            capability_provider.open(flags, open_mode, relative_path, server_chan).await?.take()
+        {
+            let source_instance = source.source_instance().upgrade()?;
+            match source_instance {
+                ExtendedInstance::AboveRoot(top) => {
+                    top.add_task(task).await;
+                }
+                ExtendedInstance::Component(component) => {
+                    component.add_task(task).await;
+                }
+            }
+        }
         Ok(())
     } else {
         // TODO(fsamuel): This is a temporary hack. If a global path-based framework capability
@@ -308,9 +321,9 @@ pub async fn open_capability_at_source(
                     source
                 );
             }
-            CapabilitySource::Framework { capability, scope_moniker: m } => {
+            CapabilitySource::Framework { capability, component } => {
                 return Err(RoutingError::capability_from_framework_not_found(
-                    &m,
+                    &component.moniker,
                     capability.source_name().to_string(),
                 )
                 .into());
@@ -322,14 +335,14 @@ pub async fn open_capability_at_source(
                 )
                 .into());
             }
-            CapabilitySource::Builtin { capability } => {
+            CapabilitySource::Builtin { capability, .. } => {
                 return Err(ModelError::from(
                     RoutingError::capability_from_component_manager_not_found(
                         capability.source_name().to_string(),
                     ),
                 ));
             }
-            CapabilitySource::Namespace { capability } => match capability.source_path() {
+            CapabilitySource::Namespace { capability, .. } => match capability.source_path() {
                 Some(p) => p.clone(),
                 _ => {
                     return Err(ModelError::from(
@@ -415,10 +428,10 @@ pub async fn route_protocol(
         // Find the component instance in which the debug capability was registered with the environment.
         let (env_component_instance, env_name, registration_decl) =
             match target.environment.get_debug_capability(&use_decl.source_name)? {
-                Some((Some(env_component_instance), env_name, reg)) => {
+                Some((ExtendedInstance::Component(env_component_instance), env_name, reg)) => {
                     (env_component_instance, env_name, reg)
                 }
-                Some((None, _, _)) => {
+                Some((ExtendedInstance::AboveRoot(_), _, _)) => {
                     // Root environment.
                     return Err(RoutingError::UseFromRootEnvironmentNotAllowed {
                         moniker: target.abs_moniker.clone(),
@@ -768,7 +781,7 @@ pub async fn route_storage_backing_directory(
             capability.source_path().expect("directory has no source path?").clone(),
             Some(component.upgrade()?),
         ),
-        CapabilitySource::Namespace { capability } => {
+        CapabilitySource::Namespace { capability, .. } => {
             (capability.source_path().expect("directory has no source path?").clone(), None)
         }
         _ => unreachable!("not valid sources"),
@@ -799,13 +812,14 @@ pub async fn route_runner(
     // Find the component instance in which the runner was registered with the environment.
     let (env_component_instance, registration_decl) =
         match target.environment.get_registered_runner(&runner)? {
-            Some((Some(env_component_instance), registration_decl)) => {
+            Some((ExtendedInstance::Component(env_component_instance), registration_decl)) => {
                 (env_component_instance, registration_decl)
             }
-            Some((None, reg)) => {
+            Some((ExtendedInstance::AboveRoot(top_instance), reg)) => {
                 // Root environment.
                 return Ok(CapabilitySource::Builtin {
                     capability: InternalCapability::Runner(reg.source_name.clone()),
+                    top_instance: Arc::downgrade(&top_instance),
                 });
             }
             None => {

@@ -6,22 +6,20 @@ use {
     crate::{
         capability::{
             CapabilityProvider, CapabilitySource, ComponentCapability, InternalCapability,
+            OptionalTask,
         },
         channel,
         config::{CapabilityAllowlistKey, CapabilityAllowlistSource},
         framework::REALM_SERVICE,
         model::{
-            actions::{ActionSet, DestroyAction, ShutdownAction},
+            actions::{ActionSet, DeleteChildAction, DestroyAction, ShutdownAction},
             error::ModelError,
             events::{event::EventMode, registry::EventSubscription},
             hooks::{Event, EventPayload, EventType, Hook, HooksRegistration},
             resolver::ResolverError,
             rights,
             routing::{self, RoutingError},
-            testing::{
-                routing_test_helpers::capability_util::connect_to_svc_in_namespace,
-                routing_test_helpers::*, test_helpers::*,
-            },
+            testing::{routing_test_helpers::*, test_helpers::*},
         },
     },
     anyhow::Error,
@@ -70,21 +68,20 @@ async fn use_framework_service() {
             _open_mode: u32,
             _relative_path: PathBuf,
             server_end: &mut zx::Channel,
-        ) -> Result<(), ModelError> {
+        ) -> Result<OptionalTask, ModelError> {
             let server_end = channel::take_channel(server_end);
             let stream = ServerEnd::<fsys::RealmMarker>::new(server_end)
                 .into_stream()
                 .expect("could not convert channel into stream");
             let scope_moniker = self.scope_moniker.clone();
             let host = self.host.clone();
-            fasync::Task::spawn(async move {
+            Ok(fasync::Task::spawn(async move {
                 if let Err(e) = host.serve(scope_moniker, stream).await {
                     // TODO: Set an epitaph to indicate this was an unexpected error.
                     warn!("serve_realm failed: {}", e);
                 }
             })
-            .detach();
-            Ok(())
+            .into())
         }
     }
 
@@ -92,14 +89,14 @@ async fn use_framework_service() {
     impl Hook for MockRealmCapabilityHost {
         async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
             if let Ok(EventPayload::CapabilityRouted {
-                source: CapabilitySource::Framework { capability, scope_moniker },
+                source: CapabilitySource::Framework { capability, component },
                 capability_provider,
             }) = &event.result
             {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_scoped_framework_capability_routed_async(
-                        scope_moniker.clone(),
+                        component.moniker.clone(),
                         &capability,
                         capability_provider.take(),
                     )
@@ -354,7 +351,7 @@ async fn capability_requested_event_at_parent() {
     .unwrap();
 
     let namespace_b = test.bind_and_get_namespace(vec!["b:0"].into()).await;
-    let _echo_proxy = connect_to_svc_in_namespace::<echo::EchoMarker>(
+    let _echo_proxy = capability_util::connect_to_svc_in_namespace::<echo::EchoMarker>(
         &namespace_b,
         &"/svc/hippo".try_into().unwrap(),
     )
@@ -1799,6 +1796,40 @@ async fn use_directory_with_subdir_from_grandparent() {
         },
     )
     .await;
+}
+
+#[fuchsia::test]
+async fn destroying_instance_kills_framework_service_task() {
+    let components = vec![
+        ("a", ComponentDeclBuilder::new().add_lazy_child("b").build()),
+        (
+            "b",
+            ComponentDeclBuilder::new()
+                .use_(UseDecl::Protocol(UseProtocolDecl {
+                    source: UseSource::Framework,
+                    source_name: "fuchsia.sys2.Realm".into(),
+                    target_path: CapabilityPath::try_from("/svc/fuchsia.sys2.Realm").unwrap(),
+                }))
+                .build(),
+        ),
+    ];
+    let test = RoutingTest::new("a", components).await;
+
+    // Connect to `Realm`, which is a framework service.
+    let namespace = test.bind_and_get_namespace(vec!["b:0"].into()).await;
+    let proxy = capability_util::connect_to_svc_in_namespace::<fsys::RealmMarker>(
+        &namespace,
+        &"/svc/fuchsia.sys2.Realm".try_into().unwrap(),
+    )
+    .await;
+
+    // Destroy `b`. This should cause the task hosted for `Realm` to be cancelled.
+    let root = test.model.look_up(&vec![].into()).await.unwrap();
+    ActionSet::register(root.clone(), DeleteChildAction::new("b:0".into()))
+        .await
+        .expect("destroy failed");
+    let mut event_stream = proxy.take_event_stream();
+    assert_matches!(event_stream.next().await, None);
 }
 
 ///   a

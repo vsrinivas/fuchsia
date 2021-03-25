@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        capability::{CapabilityProvider, CapabilitySource},
+        capability::{CapabilityProvider, CapabilitySource, OptionalTask},
         channel,
         model::{
             error::ModelError,
@@ -294,8 +294,8 @@ fn maybe_create_capability_routed_payload(
                 ..fsys::FrameworkCapability::EMPTY
             })
         }
-        CapabilitySource::Framework { scope_moniker, .. } => {
-            let scope_moniker = RelativeMoniker::from_absolute(scope, &scope_moniker);
+        CapabilitySource::Framework { component, .. } => {
+            let scope_moniker = RelativeMoniker::from_absolute(scope, &component.moniker);
             fsys::CapabilitySource::Framework(fsys::FrameworkCapability {
                 scope_moniker: Some(scope_moniker.to_string()),
                 ..fsys::FrameworkCapability::EMPTY
@@ -418,14 +418,14 @@ impl CapabilityProvider for ExternalCapabilityProvider {
         open_mode: u32,
         relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let server_end = channel::take_channel(server_end);
         let path_str = relative_path.to_str().expect("Relative path must be valid unicode");
         self.proxy
             .open(server_end, flags, open_mode, path_str)
             .await
             .expect("failed to invoke CapabilityProvider::Open over FIDL");
-        Ok(())
+        Ok(None.into())
     }
 }
 

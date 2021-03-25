@@ -118,7 +118,7 @@ impl GlobalPolicyChecker {
         capability_source: &'a CapabilitySource,
     ) -> Result<CapabilityAllowlistKey, ModelError> {
         Ok(match &capability_source {
-            CapabilitySource::Namespace { capability } => CapabilityAllowlistKey {
+            CapabilitySource::Namespace { capability, .. } => CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentManager,
                 source_name: capability
                     .source_name()
@@ -128,9 +128,7 @@ impl GlobalPolicyChecker {
                 capability: capability.type_name(),
             },
             CapabilitySource::Component { capability, component } => CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(
-                    component.upgrade()?.abs_moniker.clone(),
-                ),
+                source_moniker: ExtendedMoniker::ComponentInstance(component.moniker.clone()),
                 source_name: capability
                     .source_name()
                     .ok_or(PolicyError::InvalidCapabilitySource)?
@@ -138,14 +136,14 @@ impl GlobalPolicyChecker {
                 source: CapabilityAllowlistSource::Self_,
                 capability: capability.type_name(),
             },
-            CapabilitySource::Builtin { capability } => CapabilityAllowlistKey {
+            CapabilitySource::Builtin { capability, .. } => CapabilityAllowlistKey {
                 source_moniker: ExtendedMoniker::ComponentManager,
                 source_name: capability.source_name().clone(),
                 source: CapabilityAllowlistSource::Self_,
                 capability: capability.type_name(),
             },
-            CapabilitySource::Framework { capability, scope_moniker } => CapabilityAllowlistKey {
-                source_moniker: ExtendedMoniker::ComponentInstance(scope_moniker.clone()),
+            CapabilitySource::Framework { capability, component } => CapabilityAllowlistKey {
+                source_moniker: ExtendedMoniker::ComponentInstance(component.moniker.clone()),
                 source_name: capability.source_name().clone(),
                 source: CapabilityAllowlistSource::Framework,
                 capability: capability.type_name(),
@@ -290,7 +288,10 @@ mod tests {
             capability::{ComponentCapability, InternalCapability},
             config::{JobPolicyAllowlists, SecurityPolicy},
             model::{
-                component::{ComponentInstance, WeakComponentInstance, WeakExtendedInstance},
+                component::{
+                    ComponentInstance, ComponentManagerInstance, WeakComponentInstance,
+                    WeakExtendedInstance,
+                },
                 context::WeakModelContext,
                 environment::{DebugRegistry, Environment, RunnerRegistry},
                 hooks::Hooks,
@@ -302,7 +303,12 @@ mod tests {
         fidl_fuchsia_sys2 as fsys,
         matches::assert_matches,
         moniker::ChildMoniker,
-        std::{collections::HashMap, collections::HashSet, iter::FromIterator, sync::Arc},
+        std::{
+            collections::HashMap,
+            collections::HashSet,
+            iter::FromIterator,
+            sync::{Arc, Weak},
+        },
     };
 
     /// Creates a RuntimeConfig based on the capability allowlist entries provided during
@@ -535,9 +541,26 @@ mod tests {
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
 
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let component = ComponentInstance::new(
+            Arc::new(Environment::new_root(
+                &top_instance,
+                RunnerRegistry::default(),
+                ResolverRegistry::new(),
+                DebugRegistry::default(),
+            )),
+            vec!["foo:0", "bar:0"].into(),
+            "test:///bar".into(),
+            fsys::StartupMode::Lazy,
+            WeakModelContext::default(),
+            WeakExtendedInstance::Component(WeakComponentInstance::default()),
+            Arc::new(Hooks::new(None)),
+        );
+        let weak_component = component.as_weak();
+
         let event_capability = CapabilitySource::Framework {
             capability: InternalCapability::Event(CapabilityName::from("running")),
-            scope_moniker: AbsoluteMoniker::from(vec!["foo:0", "bar:0"]),
+            component: weak_component,
         };
         let valid_path_0 = AbsoluteMoniker::from(vec!["foo:0", "bar:0"]);
         let valid_path_1 = AbsoluteMoniker::from(vec!["foo:0", "bar:0", "baz:0"]);
@@ -585,6 +608,7 @@ mod tests {
                 name: "fuchsia.kernel.RootResource".into(),
                 source_path: "/svc/fuchsia.kernel.RootResource".parse().unwrap(),
             }),
+            top_instance: Weak::new(),
         };
         let valid_path_0 = AbsoluteMoniker::from(vec!["root:0"]);
         let valid_path_1 = AbsoluteMoniker::from(vec!["root:0", "bootstrap:0"]);
@@ -636,8 +660,10 @@ mod tests {
 
         // Create a fake component instance.
         let resolver = ResolverRegistry::new();
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
         let component = ComponentInstance::new(
             Arc::new(Environment::new_root(
+                &top_instance,
                 RunnerRegistry::default(),
                 resolver,
                 DebugRegistry::default(),
@@ -703,8 +729,10 @@ mod tests {
 
         // Create a fake component instance.
         let resolver = ResolverRegistry::new();
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
         let component = ComponentInstance::new(
             Arc::new(Environment::new_root(
+                &top_instance,
                 RunnerRegistry::default(),
                 resolver,
                 DebugRegistry::default(),
@@ -771,8 +799,10 @@ mod tests {
 
         // Create a fake component instance.
         let resolver = ResolverRegistry::new();
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
         let component = ComponentInstance::new(
             Arc::new(Environment::new_root(
+                &top_instance,
                 RunnerRegistry::default(),
                 resolver,
                 DebugRegistry::default(),
@@ -858,6 +888,7 @@ mod tests {
 
         let dir_capability = CapabilitySource::Builtin {
             capability: InternalCapability::Directory(CapabilityName::from("hub")),
+            top_instance: Weak::new(),
         };
         let valid_path_0 = AbsoluteMoniker::from(vec!["root:0"]);
         let valid_path_1 = AbsoluteMoniker::from(vec!["root:0", "core:0"]);
@@ -898,9 +929,9 @@ mod tests {
             ],
         );
         let global_policy_checker = GlobalPolicyChecker::new(config_builder.build());
-
         let dir_capability = CapabilitySource::Builtin {
             capability: InternalCapability::Directory(CapabilityName::from("hub")),
+            top_instance: Weak::new(),
         };
         let valid_path_0 = AbsoluteMoniker::from(vec!["root:1"]);
         let valid_path_1 = AbsoluteMoniker::from(vec!["root:5", "core:3"]);

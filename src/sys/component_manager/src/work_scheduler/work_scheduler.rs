@@ -165,7 +165,9 @@ mod time_tests {
     use {
         super::WorkScheduler,
         crate::{
-            model::{binding::Binder, testing::mocks::FakeBinder},
+            model::{
+                binding::Binder, component::ComponentManagerInstance, testing::mocks::FakeBinder,
+            },
             work_scheduler::{
                 dispatcher::{Dispatcher, Error},
                 work_item::WorkItem,
@@ -280,7 +282,8 @@ mod time_tests {
         fn new() -> Self {
             let executor = Executor::new_with_fake_time().unwrap();
             executor.set_fake_time(Time::from_nanos(0));
-            let binder = FakeBinder::new();
+            let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+            let binder = FakeBinder::new(top_instance);
             let work_scheduler = WorkScheduler::new_raw(binder.clone());
             block_on(async {
                 let mut delegate = work_scheduler.delegate.lock().await;
@@ -769,6 +772,7 @@ mod connect_tests {
         crate::{
             capability::{CapabilitySource, InternalCapability},
             model::{
+                component::ComponentManagerInstance,
                 hooks::{Event, EventPayload, Hooks},
                 testing::mocks::FakeBinder,
             },
@@ -779,13 +783,17 @@ mod connect_tests {
         fuchsia_zircon as zx,
         futures::lock::Mutex,
         moniker::AbsoluteMoniker,
-        std::{path::PathBuf, sync::Arc},
+        std::{
+            path::PathBuf,
+            sync::{Arc, Weak},
+        },
     };
 
     #[fuchsia::test]
     async fn connect_to_work_scheduler_control_service() -> Result<(), Error> {
         // Retain `Arc` to keep `Binder` alive throughout test.
-        let binder = FakeBinder::new();
+        let top_instance = Arc::new(ComponentManagerInstance::new(vec![]));
+        let binder = FakeBinder::new(top_instance);
 
         let work_scheduler = WorkScheduler::new(binder).await;
         let hooks = Hooks::new(None);
@@ -796,6 +804,7 @@ mod connect_tests {
             capability: InternalCapability::Protocol(
                 WORK_SCHEDULER_CONTROL_CAPABILITY_NAME.clone(),
             ),
+            top_instance: Weak::new(),
         };
 
         let (client, mut server) = zx::Channel::create()?;
@@ -811,9 +820,11 @@ mod connect_tests {
         hooks.dispatch(&event).await?;
 
         let capability_provider = capability_provider.lock().await.take();
-        if let Some(capability_provider) = capability_provider {
-            capability_provider.open(0, 0, PathBuf::new(), &mut server).await?;
-        }
+        let _provider_task = if let Some(capability_provider) = capability_provider {
+            capability_provider.open(0, 0, PathBuf::new(), &mut server).await?.take()
+        } else {
+            None
+        };
 
         let work_scheduler_control = ClientEnd::<WorkSchedulerControlMarker>::new(client)
             .into_proxy()

@@ -37,7 +37,7 @@ use {
     fidl_fuchsia_sys2 as fsys, files_async, fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjLocal},
     fuchsia_zircon::{self as zx, AsHandleRef, Koid},
-    futures::{channel::mpsc::Receiver, StreamExt, TryStreamExt},
+    futures::{channel::mpsc::Receiver, lock::Mutex, StreamExt, TryStreamExt},
     moniker::{AbsoluteMoniker, PartialMoniker},
     std::collections::HashSet,
     std::convert::TryFrom,
@@ -684,7 +684,7 @@ pub fn make_index_file(index: component_id_index::Index) -> anyhow::Result<Named
 /// Contains test model and ancillary objects.
 pub struct TestModelResult {
     pub model: Arc<Model>,
-    pub builtin_environment: Arc<BuiltinEnvironment>,
+    pub builtin_environment: Arc<Mutex<BuiltinEnvironment>>,
     pub mock_runner: Arc<MockRunner>,
 }
 
@@ -730,7 +730,7 @@ impl TestEnvironmentBuilder {
         self.runtime_config.root_component_url =
             Some(Url::new(format!("test:///{}", self.root_component)).unwrap());
 
-        let builtin_environment = Arc::new(
+        let builtin_environment = Arc::new(Mutex::new(
             BuiltinEnvironmentBuilder::new()
                 .add_resolver("test".to_string(), Box::new(mock_resolver))
                 .add_runner(TEST_RUNNER_NAME.into(), mock_runner.clone())
@@ -738,19 +738,16 @@ impl TestEnvironmentBuilder {
                 .build()
                 .await
                 .expect("builtin environment setup failed"),
-        );
-        TestModelResult {
-            model: builtin_environment.model.clone(),
-            builtin_environment,
-            mock_runner,
-        }
+        ));
+        let model = builtin_environment.lock().await.model.clone();
+        TestModelResult { model, builtin_environment, mock_runner }
     }
 }
 
 /// A test harness for tests that wish to register or verify actions.
 pub struct ActionsTest {
     pub model: Arc<Model>,
-    pub builtin_environment: Arc<BuiltinEnvironment>,
+    pub builtin_environment: Arc<Mutex<BuiltinEnvironment>>,
     pub test_hook: Arc<TestHook>,
     pub realm_proxy: Option<fsys::RealmProxy>,
     pub runner: Arc<MockRunner>,
@@ -795,6 +792,8 @@ impl ActionsTest {
             );
             fasync::Task::spawn(async move {
                 builtin_environment_inner
+                    .lock()
+                    .await
                     .realm_capability_host
                     .serve(component, stream)
                     .await

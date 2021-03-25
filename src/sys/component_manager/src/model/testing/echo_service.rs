@@ -39,20 +39,18 @@ impl CapabilityProvider for EchoCapabilityProvider {
         _open_mode: u32,
         _relative_path: PathBuf,
         server_end: &mut zx::Channel,
-    ) -> Result<(), ModelError> {
+    ) -> Result<OptionalTask, ModelError> {
         let server_end = channel::take_channel(server_end);
         let server_end = ServerEnd::<EchoMarker>::new(server_end);
         let mut stream: EchoRequestStream = server_end.into_stream().unwrap();
-        fasync::Task::spawn(async move {
+        Ok(fasync::Task::spawn(async move {
             while let Some(EchoRequest::EchoString { value, responder }) =
                 stream.try_next().await.unwrap()
             {
                 responder.send(value.as_ref().map(|s| &**s)).unwrap();
             }
         })
-        .detach();
-
-        Ok(())
+        .into())
     }
 }
 
@@ -89,7 +87,7 @@ impl EchoService {
 impl Hook for EchoService {
     async fn on(self: Arc<Self>, event: &Event) -> Result<(), ModelError> {
         if let Ok(EventPayload::CapabilityRouted {
-            source: CapabilitySource::Builtin { capability },
+            source: CapabilitySource::Builtin { capability, .. },
             capability_provider,
         }) = &event.result
         {

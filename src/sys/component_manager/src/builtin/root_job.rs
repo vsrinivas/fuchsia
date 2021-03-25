@@ -66,6 +66,7 @@ mod tests {
         futures::lock::Mutex,
         moniker::AbsoluteMoniker,
         std::path::PathBuf,
+        std::sync::Weak,
     };
 
     #[fuchsia::test]
@@ -92,6 +93,7 @@ mod tests {
         let provider = Arc::new(Mutex::new(None));
         let source = CapabilitySource::Builtin {
             capability: InternalCapability::Protocol(ROOT_JOB_CAPABILITY_NAME.clone()),
+            top_instance: Weak::new(),
         };
 
         let event = Event::new_for_test(
@@ -102,9 +104,11 @@ mod tests {
         hooks.dispatch(&event).await?;
 
         let (client, mut server) = zx::Channel::create()?;
-        if let Some(provider) = provider.lock().await.take() {
-            provider.open(0, 0, PathBuf::new(), &mut server).await?;
-        }
+        let _provider_task = if let Some(provider) = provider.lock().await.take() {
+            provider.open(0, 0, PathBuf::new(), &mut server).await?.take()
+        } else {
+            None
+        };
 
         let client = ClientEnd::<fkernel::RootJobMarker>::new(client)
             .into_proxy()

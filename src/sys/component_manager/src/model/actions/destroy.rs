@@ -286,6 +286,8 @@ pub mod tests {
         let events = vec![event_type.into()];
         let mut event_source = test
             .builtin_environment
+            .lock()
+            .await
             .event_source_factory
             .create_for_debug()
             .await
