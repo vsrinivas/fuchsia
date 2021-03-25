@@ -3,8 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/config.gni")
-import("//build/package.gni")
-import("//build/test/test_package.gni")
+import("//src/sys/build/components.gni")
 
 source_set("lib") {
   testonly = true
@@ -62,7 +61,7 @@ source_set("lib") {
 
 executable("bin") {
   testonly = true
-  output_name = "run_test_component"
+  output_name = "run-test-component"
 
   sources = [ "main.cc" ]
 
@@ -92,23 +91,20 @@ group("run-test-component") {
   ]
 }
 
-package("run-test-component-pkg") {
+# Deprecated binary name
+resource("bin-deprecated") {
+  testonly = true
+  data_deps = [ ":bin" ]
+  sources = [ "$root_out_dir/run-test-component" ]
+  outputs = [ "bin/run_test_component" ]
+}
+
+fuchsia_shell_package("run-test-component-pkg") {
   testonly = true
   package_name = "run_test_component"
-
-  deps = [ ":bin" ]
-
-  binaries = [
-    {
-      # Deprecated binary name
-      name = "run_test_component"
-      shell = true
-    },
-    {
-      name = "run-test-component"
-      source = "run_test_component"
-      shell = true
-    },
+  deps = [
+    ":bin",
+    ":bin-deprecated",
   ]
 }
 
@@ -134,48 +130,35 @@ executable("test_bin") {
   ]
 }
 
-test_package("run_test_component_unittests") {
-  deps = [ ":test_bin" ]
-
-  tests = [
-    {
-      name = "run_test_component_unittests"
-    },
+resource("valid_max_severity") {
+  testonly = true
+  sources = [
+    "test_configs/max_severity/valid1.json",
+    "test_configs/max_severity/valid2.json",
+    "test_configs/max_severity/valid3.json",
   ]
+  outputs = [ "data/max_severity/valid/{{source_file_part}}" ]
+}
 
-  resources = [
-    {
-      path = "test_configs/max_severity/valid1.json"
-      dest = "max_severity/valid/1.json"
-    },
-    {
-      path = "test_configs/max_severity/valid2.json"
-      dest = "max_severity/valid/2.json"
-    },
-    {
-      path = "test_configs/max_severity/valid3.json"
-      dest = "max_severity/valid/3.json"
-    },
-    {
-      path = "test_configs/max_severity/no_url.json"
-      dest = "max_severity/no_url/no_url.json"
-    },
-    {
-      path = "test_configs/max_severity/invalid_url.json"
-      dest = "max_severity/invalid_url/invalid_url.json"
-    },
-    {
-      path = "test_configs/max_severity/no_severity.json"
-      dest = "max_severity/no_severity/no_severity.json"
-    },
-    {
-      path = "test_configs/max_severity/invalid_severity.json"
-      dest = "max_severity/invalid_severity/invalid_severity.json"
-    },
-    {
-      path = "test_configs/max_severity/url_conflict.json"
-      dest = "max_severity/url_conflict/url_conflict.json"
-    },
+resource("invalid_max_severity") {
+  testonly = true
+  sources = [
+    "test_configs/max_severity/invalid_severity.json",
+    "test_configs/max_severity/invalid_url.json",
+    "test_configs/max_severity/no_severity.json",
+    "test_configs/max_severity/no_url.json",
+    "test_configs/max_severity/url_conflict.json",
+  ]
+  outputs =
+      [ "data/max_severity/{{source_name_part}}/{{source_name_part}}.json" ]
+}
+
+fuchsia_unittest_package("run_test_component_unittests") {
+  manifest = "meta/run_test_component_unittests.cmx"
+  deps = [
+    ":invalid_max_severity",
+    ":test_bin",
+    ":valid_max_severity",
   ]
 }
 

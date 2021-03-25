@@ -229,8 +229,6 @@ TEST(RunTest, ParseArgs) {
 
   {
     std::vector<std::string> expected_urls = {
-        "fuchsia-pkg://fuchsia.com/run_test_component_unittests#meta/"
-        "run_test_component_unittests.cmx",
         "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/coverage_component.cmx",
         "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/logging_component.cmx",
         "fuchsia-pkg://fuchsia.com/run_test_component_test#meta/component_to_test_standard_out.cmx",
@@ -243,22 +241,6 @@ TEST(RunTest, ParseArgs) {
     EXPECT_FALSE(result.error) << result.error_msg;
     EXPECT_EQ(expected_urls.size(), result.matching_urls.size());
     EXPECT_THAT(result.matching_urls, ::testing::UnorderedElementsAreArray(expected_urls));
-    EXPECT_EQ("", result.realm_label);
-    EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
-  }
-
-  {
-    auto expected_url =
-        "fuchsia-pkg://fuchsia.com/run_test_component_unittests#meta/"
-        "run_test_component_unittests.cmx";
-
-    std::vector<const char*> argv = {kBinName, "run_test_component_unittests"};
-    auto argc = argv.size();
-    auto result = ParseArgs(env_services, argc, argv.data());
-    EXPECT_FALSE(result.error) << result.error_msg;
-    ASSERT_EQ(1u, result.matching_urls.size());
-    EXPECT_EQ(result.matching_urls[0], expected_url);
-    EXPECT_EQ(expected_url, result.launch_info.url);
     EXPECT_EQ("", result.realm_label);
     EXPECT_EQ(FX_LOG_TRACE, result.min_log_severity);
   }
