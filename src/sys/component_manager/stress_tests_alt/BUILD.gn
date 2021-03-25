@@ -8,9 +8,9 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//src/sys/build/components.gni")
 
-rustc_test("dynamic_child_stressor_bin") {
+rustc_test("stressor_bin") {
   testonly = true
-  name = "dynamic_child_stressor"
+  name = "stressor"
   edition = "2018"
   deps = [
     "//garnet/lib/rust/files_async",
@@ -38,19 +38,68 @@ rustc_test("dynamic_child_stressor_bin") {
   ]
 }
 
-fuchsia_component("dynamic_child_stressor") {
+rustc_binary("unreliable_echo_server_bin") {
   testonly = true
-  manifest = "meta/dynamic_child_stressor.cml"
-  deps = [ ":dynamic_child_stressor_bin" ]
+  name = "unreliable_echo_server"
+  edition = "2018"
+  source_root = "unreliable_echo_server.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:rand",
+  ]
+
+  sources = [ "unreliable_echo_server.rs" ]
 }
 
-fuchsia_component("dynamic_child_component") {
-  manifest = "meta/dynamic_child_component.cml"
+rustc_binary("unreliable_echo_client_bin") {
+  testonly = true
+  name = "unreliable_echo_client"
+  edition = "2018"
+  source_root = "unreliable_echo_client.rs"
+  deps = [
+    "//examples/components/routing/fidl:echo-rustc",
+    "//src/lib/fuchsia-async",
+    "//src/lib/fuchsia-component",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:rand",
+  ]
+
+  sources = [ "unreliable_echo_client.rs" ]
+}
+
+fuchsia_component("stressor") {
+  testonly = true
+  manifest = "meta/stressor.cml"
+  deps = [ ":stressor_bin" ]
+}
+
+fuchsia_component("no_binary") {
+  testonly = true
+  manifest = "meta/no_binary.cml"
+}
+
+fuchsia_component("unreliable_echo_client") {
+  testonly = true
+  deps = [ ":unreliable_echo_client_bin" ]
+  manifest = "meta/unreliable_echo_client.cml"
+}
+
+fuchsia_component("unreliable_echo_server") {
+  testonly = true
+  deps = [ ":unreliable_echo_server_bin" ]
+  manifest = "meta/unreliable_echo_server.cml"
 }
 
 fuchsia_test_package("component-manager-stress-tests-alt") {
-  deps = [ ":dynamic_child_component" ]
-  test_components = [ ":dynamic_child_stressor" ]
+  deps = [
+    ":no_binary",
+    ":unreliable_echo_client",
+    ":unreliable_echo_server",
+  ]
+  test_components = [ ":stressor" ]
   test_specs = {
     environments = [
       {

@@ -40,7 +40,7 @@ impl TreeStressorEnvironment {
         for _ in 0..10 {
             let actor_seed = rng.gen::<u128>();
             let actor_rng = SmallRng::from_seed(actor_seed.to_le_bytes());
-            let tree_actor = Arc::new(Mutex::new(TreeActor::new(actor_rng, component_limit)));
+            let tree_actor = Arc::new(Mutex::new(TreeActor::new(actor_rng, component_limit).await));
             tree_actors.push(tree_actor);
         }
 

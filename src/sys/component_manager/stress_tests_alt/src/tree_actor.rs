@@ -16,8 +16,12 @@ pub struct TreeActor {
 }
 
 impl TreeActor {
-    pub fn new(rng: SmallRng, component_limit: usize) -> Self {
+    pub async fn new(rng: SmallRng, component_limit: usize) -> Self {
         let hub = Hub::from_namespace().expect("Could not open hub from namespace");
+        let hub = hub
+            .child_hub("dynamic_children_root")
+            .await
+            .expect("Could not open root of dynamic children topology");
         Self { rng, _component_limit: component_limit, hub }
     }
 }

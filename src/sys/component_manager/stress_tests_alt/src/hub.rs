@@ -15,9 +15,12 @@ use {
     std::path::Path,
 };
 
-const COLLECTION_NAME: &'static str = "children";
-const TREE_COMPONENT_URL: &'static str =
-    "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/dynamic_child_component.cm";
+const COLLECTION_NAME: &'static str = "dynamic_children";
+const ECHO_CLIENT_URL: &'static str =
+    "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/unreliable_echo_client.cm";
+
+const NO_BINARY_URL: &'static str =
+    "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/no_binary.cm";
 
 const HUB_RIGHTS: u32 = fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_WRITABLE;
 
@@ -74,9 +77,11 @@ impl Hub {
         let name = format!("C{}", rng.gen::<u64>());
         let parent_realm_svc = self.connect_to_exposed_protocol::<fsys::RealmMarker>().await?;
 
+        let url = if rng.gen_bool(0.5) { ECHO_CLIENT_URL } else { NO_BINARY_URL };
+
         let decl = fsys::ChildDecl {
             name: Some(name.clone()),
-            url: Some(TREE_COMPONENT_URL.to_string()),
+            url: Some(url.to_string()),
             startup: Some(fsys::StartupMode::Lazy),
             ..fsys::ChildDecl::EMPTY
         };
@@ -157,8 +162,9 @@ impl Hub {
                 // Pick a random child and delete it
                 let child_name = child_names.choose(rng).unwrap();
 
-                // Remove collection name ("children:") from child name
-                let child_name = child_name[9..].to_string();
+                // Remove collection name from child name
+                let prefix = format!("{}:", COLLECTION_NAME);
+                let child_name = child_name.strip_prefix(&prefix).unwrap();
 
                 self.delete_child(child_name).await.context("Could not delete random child")
             } else {

@@ -1,0 +1,52 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+        "src/sys/test_runners/rust/default.shard.cml",
+    ],
+    program: {
+        binary: "bin/stressor",
+    },
+    children: [
+        {
+            name: "unreliable_echo_server",
+            url: "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/unreliable_echo_server.cm",
+        },
+        {
+            name: "dynamic_children_root",
+            url: "fuchsia-pkg://fuchsia.com/component-manager-stress-tests-alt#meta/no_binary.cm",
+            startup: "eager",
+        },
+    ],
+    use: [
+        {
+            directory: "hub",
+            from: "framework",
+            rights: [ "r*" ],
+            path: "/hub",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fidl.examples.routing.echo.Echo",
+            from: "#unreliable_echo_server",
+            to: [ "#dynamic_children_root" ],
+        },
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#dynamic_children_root",
+                "#unreliable_echo_server",
+            ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.sys2.Realm",
+            from: "framework",
+        },
+    ],
+}
