@@ -71,6 +71,17 @@ SECTIONS {
 
   .rodata : {
     *(.rodata*)
+
+    /*
+     * Provide the link-time load address, required for relocation calculations.
+     *
+     * The C expression `_DYNAMIC - _GLOBAL_OFFSET_TABLE_[0]` should
+     * theoretically give us this, but LLD doesn't always provide
+     * a _GLOBAL_OFFSET_TABLE_ on ARM64.
+     */
+    . = ALIGN(8);
+    PROVIDE_HIDDEN(kLinkTimeLoadAddress = .);
+    QUAD(PHYS_LOAD_ADDRESS);
   } :load
 
   /*

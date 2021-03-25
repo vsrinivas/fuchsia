@@ -45,6 +45,7 @@ extern "C" [[noreturn]] void PhysMain(void*, arch::EarlyTicks) PHYS_SINGLETHREAD
 
 // These are defined by the linker script.
 extern "C" __LOCAL const char PHYS_LOAD_ADDRESS[];  // Address this file was loaded into memory.
+extern "C" const uint64_t kLinkTimeLoadAddress;     // Address this file was linked at.
 extern "C" __LOCAL const char _end[];               // End of the image, including ".bss"
 
 // Apply any relocations to our binary.
@@ -56,9 +57,7 @@ inline void ApplyRelocations() {
 #if defined(ZX_STATIC_PIE)
   // If we are position-independent, apply any simple fixups required.
   static_pie::ApplyDynamicRelocationsToSelf(
-      // Assume we were linked at address 0.
-      /*link_address=*/0,
-      // Relocate to PHYS_LOAD_ADDRESS.
+      /*link_address=*/kLinkTimeLoadAddress,
       /*load_address=*/reinterpret_cast<uintptr_t>(PHYS_LOAD_ADDRESS));
 #endif
 }
