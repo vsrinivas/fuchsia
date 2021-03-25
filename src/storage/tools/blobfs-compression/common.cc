@@ -5,6 +5,8 @@
 #include <stdarg.h>
 #include <stdio.h>
 #include <string.h>
+#include <sys/stat.h>
+
 #include <vector>
 
 #include "blobfs-compression.h"
@@ -62,6 +64,38 @@ class ProgressWriter {
   int refresh_hz_;
 };
 
+// Validate command line |options| used for compressing.
+zx_status_t ValidateCliOptions(const CompressionCliOptionStruct& options) {
+  if (options.source_file.empty()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Check source file.
+  if (!options.source_file_fd.is_valid()) {
+    fprintf(stderr, "Failed to open '%s'.\n", options.source_file.c_str());
+    return ZX_ERR_BAD_PATH;
+  }
+  {
+    struct stat info;
+    if (fstat(options.source_file_fd.get(), &info) < 0) {
+      fprintf(stderr, "stat(%s) failed: %s\n", options.source_file.c_str(), strerror(errno));
+      return ZX_ERR_BAD_STATE;
+    }
+    if (!S_ISREG(info.st_mode)) {
+      fprintf(stderr, "%s is not a regular file\n", options.source_file.c_str());
+      return ZX_ERR_NOT_FILE;
+    }
+  }
+
+  // Check compressed output file (can be empty).
+  if (!options.compressed_file.empty() && !options.compressed_file_fd.is_valid()) {
+    fprintf(stderr, "Failed to open '%s': %s\n", options.compressed_file.c_str(), strerror(errno));
+    return ZX_ERR_BAD_PATH;
+  }
+
+  return ZX_OK;
+}
+
 // Returns 0 if the compression runs successfully; otherwise non-zero values.
 // This method reads |src_sz| from |src|, compresses it using the compression
 // |params|, and then writes the compressed bytes to |dest_write_buf| and the
@@ -71,20 +105,14 @@ class ProgressWriter {
 // However, even if |dest_write_buf| is set to nullptr, there will still be
 // temporary RAM consumption for storing compressed data due to current internal
 // compression API design.
-zx_status_t BlobfsCompress(const uint8_t* src,
-                   const size_t src_sz,
-                   uint8_t* dest_write_buf,
-                   size_t* out_compressed_size,
-                   CompressionParams params) {
+zx_status_t BlobfsCompress(const uint8_t* src, const size_t src_sz, uint8_t* dest_write_buf,
+                           size_t* out_compressed_size, CompressionParams params) {
   ChunkedCompressor compressor(params);
 
   ProgressWriter progress;
-  compressor.SetProgressCallback([&](size_t bytes_read,
-                                     size_t bytes_total,
-                                     size_t bytes_written) {
+  compressor.SetProgressCallback([&](size_t bytes_read, size_t bytes_total, size_t bytes_written) {
     progress.Update("%2.0f%% (%lu bytes written)\n",
-                    static_cast<double>(bytes_read)
-                        / static_cast<double>(bytes_total) * 100,
+                    static_cast<double>(bytes_read) / static_cast<double>(bytes_total) * 100,
                     bytes_written);
   });
 
@@ -99,11 +127,8 @@ zx_status_t BlobfsCompress(const uint8_t* src,
     dest_write_buf = output_buffer.data();
   }
 
-  const auto compression_status = compressor.Compress(src,
-                                                      src_sz,
-                                                      dest_write_buf,
-                                                      output_limit,
-                                                      &compressed_size);
+  const auto compression_status =
+      compressor.Compress(src, src_sz, dest_write_buf, output_limit, &compressed_size);
   if (compression_status != chunked_compression::kStatusOk) {
     return ToZxStatus(compression_status);
   }
@@ -114,9 +139,7 @@ zx_status_t BlobfsCompress(const uint8_t* src,
   } else {
     saving_ratio = 0;
   }
-  progress.Final("Wrote %lu bytes (%.2f%% space saved).\n",
-                 compressed_size,
-                 saving_ratio * 100);
+  progress.Final("Wrote %lu bytes (%.2f%% space saved).\n", compressed_size, saving_ratio * 100);
 
   *out_compressed_size = compressed_size;
   return ZX_OK;
