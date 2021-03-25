@@ -488,13 +488,29 @@ CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
   // dimensions are 320x180.  A the bottom of the buffer only .25 of the last
   // 16 height macroblock row is meant to be displayed.
   //
+  // TODO(dustingreen): Need to plumb video size separately from buffer size so
+  // we can display (for example) a video at 320x180 instead of the buffer's
+  // 320x192.  The extra pixels look like don't-care pixels that just let
+  // themselves float essentially (re. past-the-boundary behavior of those
+  // pixels).  Such pixels aren't meant to be displayed and look strange.
+  // Presumably the difference is the buffer needing to be a whole macroblock in
+  // width/height (%16==0) vs. the video dimensions being allowed to not use all
+  // of the last macroblock.
+  //
   // This decoder produces NV12.
+
+  // Fairly arbitrary.  The client should set a higher value if the client needs
+  // to camp on more frames than this.
+  constexpr uint32_t kDefaultPacketCountForClient = 2;
+
+  uint32_t per_packet_buffer_bytes = min_stride_ * height_ * 3 / 2;
 
   auto config = std::make_unique<fuchsia::media::StreamOutputConstraints>();
 
   config->set_stream_lifetime_ordinal(stream_lifetime_ordinal);
 
   auto* constraints = config->mutable_buffer_constraints();
+  auto* default_settings = constraints->mutable_default_settings();
 
   // For the moment, there will be only one StreamOutputConstraints, and it'll
   // need output buffers configured for it.
@@ -503,12 +519,41 @@ CodecAdapterH264::CoreCodecBuildNewOutputConstraints(
   constraints->set_buffer_constraints_version_ordinal(
       new_output_buffer_constraints_version_ordinal);
 
+  // 0 is intentionally invalid - the client must fill out this field.
+  default_settings->set_buffer_lifetime_ordinal(0);
+  default_settings->set_buffer_constraints_version_ordinal(
+      new_output_buffer_constraints_version_ordinal);
+  default_settings->set_packet_count_for_server(min_buffer_count_[kOutputPort]);
+  default_settings->set_packet_count_for_client(kDefaultPacketCountForClient);
+  // Packed NV12 (no extra padding, min UV offset, min stride).
+  default_settings->set_per_packet_buffer_bytes(per_packet_buffer_bytes);
+  default_settings->set_single_buffer_mode(false);
+
+  // For the moment, let's tell the client to allocate this exact size.
+  constraints->set_per_packet_buffer_bytes_min(per_packet_buffer_bytes);
+  constraints->set_per_packet_buffer_bytes_recommended(per_packet_buffer_bytes);
+  constraints->set_per_packet_buffer_bytes_max(per_packet_buffer_bytes);
+
+  // The hardware only needs min_buffer_count_ buffers - more aren't better.
+  constraints->set_packet_count_for_server_min(min_buffer_count_[kOutputPort]);
+  constraints->set_packet_count_for_server_recommended(min_buffer_count_[kOutputPort]);
+  constraints->set_packet_count_for_server_recommended_max(min_buffer_count_[kOutputPort]);
+  constraints->set_packet_count_for_server_max(min_buffer_count_[kOutputPort]);
+  constraints->set_packet_count_for_client_min(0);
   // Ensure that if the client allocates its max + the server max that it won't go over the hardware
   // limit (max_buffer_count).
   if (max_buffer_count_[kOutputPort] <= min_buffer_count_[kOutputPort]) {
     events_->onCoreCodecFailCodec("Impossible for client to satisfy buffer counts");
     return nullptr;
   }
+  constraints->set_packet_count_for_client_max(
+      (max_buffer_count_[kOutputPort] - min_buffer_count_[kOutputPort]) / 2);
+
+  // False because it's not required and not encouraged for a video decoder
+  // output to allow single buffer mode.
+  constraints->set_single_buffer_mode_allowed(false);
+
+  constraints->set_is_physically_contiguous_required(true);
 
   return config;
 }
@@ -519,6 +564,13 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
     const fuchsia::media::StreamBufferPartialSettings& partial_settings) {
   fuchsia::sysmem::BufferCollectionConstraints result;
 
+  // For now, we didn't report support for single_buffer_mode, and CodecImpl
+  // will have failed the codec already by this point if the client tried to
+  // use single_buffer_mode.
+  //
+  // TODO(dustingreen): Support single_buffer_mode on input (only).
+  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() ||
+                  !partial_settings.single_buffer_mode());
   // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to
   // have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());

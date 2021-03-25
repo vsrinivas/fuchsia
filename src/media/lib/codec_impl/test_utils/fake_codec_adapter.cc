@@ -29,6 +29,14 @@ constexpr uint32_t kInputMinBufferCountForCamping = 1;
 constexpr uint32_t kOutputMinBufferCountForCamping = 5;
 
 constexpr uint32_t kPerPacketBufferBytesMin = kBytesPerRow * kCodedHeight;
+constexpr uint32_t kPacketCountForServerMin = 1;
+constexpr uint32_t kPacketCountForServerRecommended = 1;
+constexpr uint32_t kPacketCountForServerMax = 1;
+constexpr uint32_t kPacketCountForClientMin = 1;
+constexpr uint32_t kPacketCountForClientMax = 1;
+
+constexpr uint32_t kPacketCountForServerDefault = kPacketCountForServerRecommended;
+constexpr uint32_t kPacketCountForClientDefault = 1;
 
 }  // namespace
 
@@ -147,7 +155,23 @@ FakeCodecAdapter::CoreCodecBuildNewOutputConstraints(
   result.set_stream_lifetime_ordinal(stream_lifetime_ordinal);
   result.set_buffer_constraints_action_required(buffer_constraints_action_required);
   result.mutable_buffer_constraints()
-      ->set_buffer_constraints_version_ordinal(new_output_buffer_constraints_version_ordinal);
+      ->set_buffer_constraints_version_ordinal(new_output_buffer_constraints_version_ordinal)
+      .set_per_packet_buffer_bytes_min(kPerPacketBufferBytesMin)
+      .set_packet_count_for_server_min(kPacketCountForServerMin)
+      .set_packet_count_for_server_recommended(kPacketCountForServerRecommended)
+      .set_packet_count_for_server_recommended_max(kPacketCountForServerMax)
+      .set_packet_count_for_server_max(kPacketCountForServerMax)
+      .set_packet_count_for_client_min(kPacketCountForClientMin)
+      .set_packet_count_for_client_max(kPacketCountForClientMax)
+      .set_single_buffer_mode_allowed(false)
+      .set_is_physically_contiguous_required(false);
+  result.mutable_buffer_constraints()
+      ->mutable_default_settings()
+      ->set_buffer_constraints_version_ordinal(new_output_buffer_constraints_version_ordinal)
+      .set_packet_count_for_server(kPacketCountForServerDefault)
+      .set_packet_count_for_client(kPacketCountForClientDefault)
+      .set_per_packet_buffer_bytes(kPerPacketBufferBytesMin)
+      .set_single_buffer_mode(false);
   return std::make_unique<const fuchsia::media::StreamOutputConstraints>(std::move(result));
 }
 

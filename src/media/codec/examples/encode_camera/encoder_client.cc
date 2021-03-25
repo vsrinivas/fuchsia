@@ -12,9 +12,9 @@
 
 namespace {
 constexpr uint64_t kInputBufferLifetimeOrdinal = 1;
-constexpr uint32_t kInputMinBufferCountForCamping = 1;
 constexpr uint32_t kMinOutputBufferSize = 100 * 4096;
-constexpr uint32_t kOutputMinBufferCountForCamping = 1;
+constexpr uint32_t kMinOutputPacketsForClient = 1;
+constexpr uint32_t kMinOutputBufferCount = 1;
 constexpr char kH264MimeType[] = "video/h264";
 constexpr char kH265MimeType[] = "video/h265";
 }  // namespace
@@ -188,9 +188,15 @@ void EncoderClient::OnInputConstraints(fuchsia::media::StreamBufferConstraints i
   BindAndSyncBufferCollectionToken(
       input_buffer_collection_, std::move(input_buffers_token_),
       [this](fuchsia::sysmem::BufferCollectionTokenHandle codec_sysmem_token) mutable {
+        constexpr uint32_t kMinInputPacketsForClient = 1;
+
+        uint32_t packet_count_for_client =
+            std::max(kMinInputPacketsForClient, input_constraints_->packet_count_for_client_min());
+        uint32_t packet_count_for_server = input_constraints_->packet_count_for_server_min();
         ConfigurePortBufferCollection(
             input_buffer_collection_, std::move(codec_sysmem_token), false,
             kInputBufferLifetimeOrdinal, input_constraints_->buffer_constraints_version_ordinal(),
+            packet_count_for_server, packet_count_for_client,
             [this](auto result) { OnInputBuffersReady(std::move(result)); });
       });
 }
@@ -249,20 +255,27 @@ void EncoderClient::ConfigurePortBufferCollection(
     fuchsia::sysmem::BufferCollectionPtr& buffer_collection,
     fuchsia::sysmem::BufferCollectionTokenHandle token, bool is_output,
     uint64_t new_buffer_lifetime_ordinal, uint64_t buffer_constraints_version_ordinal,
+    uint32_t packet_count_for_server, uint32_t packet_count_for_client,
     ConfigurePortBufferCollectionCallback callback) {
+  uint32_t packet_count = packet_count_for_server + packet_count_for_client;
+
   fuchsia::media::StreamBufferPartialSettings settings;
   settings.set_buffer_lifetime_ordinal(new_buffer_lifetime_ordinal);
   settings.set_buffer_constraints_version_ordinal(buffer_constraints_version_ordinal);
+  settings.set_single_buffer_mode(false);
+  settings.set_packet_count_for_server(packet_count_for_server);
+  settings.set_packet_count_for_client(packet_count_for_client);
 
   settings.set_sysmem_token(std::move(token));
 
   fuchsia::sysmem::BufferCollectionConstraints constraints;
   constraints.usage.cpu = fuchsia::sysmem::cpuUsageReadOften | fuchsia::sysmem::cpuUsageWriteOften;
-  constraints.min_buffer_count_for_camping = is_output ? kOutputMinBufferCountForCamping : kInputMinBufferCountForCamping;
+  constraints.min_buffer_count_for_camping = packet_count_for_client;
 
   if (is_output) {
     constraints.has_buffer_memory_constraints = true;
     constraints.buffer_memory_constraints.min_size_bytes = kMinOutputBufferSize;
+    constraints.min_buffer_count = kMinOutputBufferCount;
   }
 
   if (is_output) {
@@ -274,14 +287,16 @@ void EncoderClient::ConfigurePortBufferCollection(
   buffer_collection->SetConstraints(true, std::move(constraints));
 
   buffer_collection->WaitForBuffersAllocated(
-      [callback = std::move(callback)](
+      [packet_count, callback = std::move(callback)](
           zx_status_t allocate_status,
           fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info) mutable {
         if (allocate_status != ZX_OK) {
           callback(fit::error(allocate_status));
           return;
         }
-        callback(fit::ok(std::pair(std::move(buffer_collection_info), buffer_collection_info.buffer_count)));
+
+        auto negotiated_packet_count = std::max(packet_count, buffer_collection_info.buffer_count);
+        callback(fit::ok(std::pair(std::move(buffer_collection_info), negotiated_packet_count)));
       });
 }
 
@@ -307,13 +322,26 @@ void EncoderClient::OnOutputConstraints(
         //
         const fuchsia::media::StreamBufferConstraints& buffer_constraints =
             last_output_constraints_->buffer_constraints();
+        ZX_ASSERT(buffer_constraints.has_packet_count_for_server_min());
+        ZX_ASSERT(buffer_constraints.has_packet_count_for_server_recommended());
+        // Use min; if decode gets stuck using min, we want to notice that.
+        uint32_t packet_count_for_server = buffer_constraints.packet_count_for_server_min();
+        uint32_t packet_count_for_client =
+            std::max(kMinOutputPacketsForClient, buffer_constraints.packet_count_for_client_min());
+        if (packet_count_for_client > buffer_constraints.packet_count_for_client_max()) {
+          FatalError(
+              "server can't accomodate "
+              "kMinExtraOutputPacketsForClient - not "
+              "using server - exiting");
+        }
 
         current_output_buffer_lifetime_ordinal_ = new_output_buffer_lifetime_ordinal;
 
         ConfigurePortBufferCollection(
             output_buffer_collection_, std::move(codec_sysmem_token), true,
             new_output_buffer_lifetime_ordinal,
-            buffer_constraints.buffer_constraints_version_ordinal(),
+            buffer_constraints.buffer_constraints_version_ordinal(), packet_count_for_server,
+            packet_count_for_client,
             [this](auto result) { OnOutputBuffersReady(std::move(result)); });
       });
 }

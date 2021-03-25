@@ -90,6 +90,8 @@ void FidlVideoRenderer::ConfigureConnectors() {
   // configure the allocator(s).
   ConfigureInputToUseSysmemVmos(this,
                                 0,                  // max_aggregate_payload_size
+                                kPacketDemand - 1,  // max_payload_count
+                                0,                  // max_payload_size
                                 VmoAllocation::kVmoPerBuffer,
                                 0);  // map_flags
 }

@@ -418,6 +418,7 @@ void Node::ConfigureInputToProvideVmos(VmoAllocation vmo_allocation, zx_vm_optio
 
 void Node::ConfigureInputToUseSysmemVmos(ServiceProvider* service_provider,
                                          uint64_t max_aggregate_payload_size,
+                                         uint32_t max_payload_count, uint64_t max_payload_size,
                                          VmoAllocation vmo_allocation, zx_vm_option_t map_flags,
                                          AllocateCallback allocate_callback, size_t input_index) {
   FIT_DCHECK_IS_THREAD_VALID(thread_checker_);
@@ -428,8 +429,8 @@ void Node::ConfigureInputToUseSysmemVmos(ServiceProvider* service_provider,
   PayloadConfig& config = input.payload_config();
   config.mode_ = PayloadMode::kUsesSysmemVmos;
   config.max_aggregate_payload_size_ = max_aggregate_payload_size;
-  config.max_payload_count_ = 0;
-  config.max_payload_size_ = 0;
+  config.max_payload_count_ = max_payload_count;
+  config.max_payload_size_ = max_payload_size;
   config.vmo_allocation_ = vmo_allocation;
   config.map_flags_ = map_flags;
 
@@ -576,7 +577,7 @@ void Node::ConfigureOutputToProvideVmos(
 
 void Node::ConfigureOutputToUseSysmemVmos(
     ServiceProvider* service_provider, uint64_t max_aggregate_payload_size,
-    VmoAllocation vmo_allocation,
+    uint32_t max_payload_count, uint64_t max_payload_size, VmoAllocation vmo_allocation,
     zx_vm_option_t map_flags,
     std::shared_ptr<fuchsia::sysmem::ImageFormatConstraints> video_constraints,
     size_t output_index) {
@@ -588,8 +589,8 @@ void Node::ConfigureOutputToUseSysmemVmos(
   PayloadConfig& config = output.payload_config();
   config.mode_ = PayloadMode::kUsesSysmemVmos;
   config.max_aggregate_payload_size_ = max_aggregate_payload_size;
-  config.max_payload_count_ = 0;
-  config.max_payload_size_ = 0;
+  config.max_payload_count_ = max_payload_count;
+  config.max_payload_size_ = max_payload_size;
   config.vmo_allocation_ = vmo_allocation;
   config.map_flags_ = map_flags;
   config.output_video_constraints_ = std::move(video_constraints);

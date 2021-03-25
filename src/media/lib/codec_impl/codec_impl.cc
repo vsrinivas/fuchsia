@@ -1919,16 +1919,43 @@ bool CodecImpl::ValidatePartialBufferSettingsVsConstraintsLocked(
     const fuchsia::media::StreamBufferConstraints& constraints) {
   // Most of the constraints will be handled by telling sysmem about them, not
   // via the client, so there's not a ton to validate here.
-  if (partial_settings.has_single_buffer_mode()) {
-    if (partial_settings.single_buffer_mode()) {
+  if ((partial_settings.has_single_buffer_mode() && partial_settings.single_buffer_mode()) &&
+      !constraints.single_buffer_mode_allowed()) {
+    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientConstraintsFailure);
+    FailLocked("single_buffer_mode && !single_buffer_mode_allowed");
+    return false;
+  }
+  bool packet_count_needed =
+      partial_settings.has_single_buffer_mode() && partial_settings.single_buffer_mode();
+  ZX_DEBUG_ASSERT(partial_settings.sysmem_token().is_valid());
+  if (packet_count_needed) {
+    if (!partial_settings.has_packet_count_for_server()) {
       LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientConstraintsFailure);
-      FailLocked("single_buffer_mode (deprecated; obsolete)");
+      FailLocked("missing packet_count_for_server with single_buffer_mode true");
       return false;
-    } else {
-      LOG(WARNING, "has_single_buffer_mode() (set to false) seen - client should stop setting this, even to false (deprecated; obsolete)");
+    }
+    if (!partial_settings.has_packet_count_for_client()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientConstraintsFailure);
+      FailLocked("missing packet_count_for_client with single_buffer_mode true");
+      return false;
     }
   }
-  ZX_DEBUG_ASSERT(partial_settings.sysmem_token().is_valid());
+  // if needed or provided anyway
+  if (partial_settings.has_packet_count_for_server()) {
+    if (partial_settings.packet_count_for_server() > constraints.packet_count_for_server_max()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientConstraintsFailure);
+      FailLocked("packet_count_for_server > packet_count_for_server_max");
+      return false;
+    }
+  }
+  // if needed or provided anyway
+  if (partial_settings.has_packet_count_for_client()) {
+    if (partial_settings.packet_count_for_client() > constraints.packet_count_for_client_max()) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_ClientConstraintsFailure);
+      FailLocked("packet_count_for_client > packet_count_for_client_max");
+      return false;
+    }
+  }
   return true;
 }
 
@@ -2818,10 +2845,40 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     usage.video = 0;
   }
 
-  if (buffer_collection_constraints->min_buffer_count_for_camping < 1) {
-    LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
-    FailLocked("Core codec set min_buffer_count_for_camping to 0; must set to at least 1.");
-    return false;
+  bool is_single_buffer_mode =
+      partial_settings.has_single_buffer_mode() && partial_settings.single_buffer_mode();
+
+  if (is_single_buffer_mode) {
+    if (buffer_collection_constraints->min_buffer_count_for_camping != 0) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
+      FailLocked(
+          "Core codec set min_buffer_count_for_camping non-zero when single_buffer_mode true -- "
+          "min_buffer_count_for_camping: %lu ",
+          buffer_collection_constraints->min_buffer_count_for_camping);
+      return false;
+    }
+    if (buffer_collection_constraints->min_buffer_count_for_dedicated_slack != 0 ||
+        buffer_collection_constraints->min_buffer_count_for_shared_slack != 0) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
+      FailLocked(
+          "Core codec set slack with single_buffer_mode - "
+          "min_buffer_count_for_dedicated_slack: %lu "
+          "min_buffer_count_for_shared_slack: %lu",
+          buffer_collection_constraints->min_buffer_count_for_dedicated_slack,
+          buffer_collection_constraints->min_buffer_count_for_shared_slack);
+      return false;
+    }
+    if (buffer_collection_constraints->max_buffer_count != 1) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
+      FailLocked("Core codec must specify max_buffer_count 1 when single_buffer_mode");
+      return false;
+    }
+  } else {
+    if (buffer_collection_constraints->min_buffer_count_for_camping < 1) {
+      LogEvent(media_metrics::StreamProcessorEvents2MetricDimensionEvent_UnreachableError);
+      FailLocked("Core codec set min_buffer_count_for_camping to 0 when !single_buffer_mode.");
+      return false;
+    }
   }
 
   if (!buffer_collection_constraints->has_buffer_memory_constraints) {
@@ -3693,8 +3750,17 @@ uint64_t CodecImpl::PortSettings::buffer_constraints_version_ordinal() {
 }
 
 uint32_t CodecImpl::PortSettings::packet_count() {
+  // Asking before we have buffer_collection_info_ would potentially get the
+  // wrong answer.
   ZX_DEBUG_ASSERT(buffer_collection_info_);
-  return buffer_collection_info_->buffer_count;
+  uint32_t packet_count_for_server = partial_settings_->has_packet_count_for_server()
+                                         ? partial_settings_->packet_count_for_server()
+                                         : 0;
+  uint32_t packet_count_for_client = partial_settings_->has_packet_count_for_client()
+                                         ? partial_settings_->packet_count_for_client()
+                                         : 0;
+  return std::max(packet_count_for_server + packet_count_for_client,
+                  buffer_collection_info_->buffer_count);
 }
 
 uint32_t CodecImpl::PortSettings::buffer_count() {
@@ -3899,6 +3965,19 @@ CodecImpl::CoreCodecBuildNewInputConstraints() {
       codec_adapter_->CoreCodecBuildNewInputConstraints();
   ZX_DEBUG_ASSERT(constraints);
   ZX_DEBUG_ASSERT(constraints->has_buffer_constraints_version_ordinal());
+
+  // StreamProcessor guarantees that these default settings as-is (except buffer_lifetime_ordinal)
+  // will satisfy the constraints indicated by the other fields of StreamBufferConstraints.
+  ZX_DEBUG_ASSERT(constraints->has_default_settings());
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_buffer_lifetime_ordinal() &&
+                  constraints->default_settings().buffer_lifetime_ordinal() == 0);
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_buffer_constraints_version_ordinal());
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_packet_count_for_server());
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_packet_count_for_client());
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_per_packet_buffer_bytes());
+  ZX_DEBUG_ASSERT(constraints->default_settings().has_single_buffer_mode() &&
+                  constraints->default_settings().single_buffer_mode() == false);
+
   return constraints;
 }
 // Caller must ensure that this is called only on one thread at a time, only

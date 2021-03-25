@@ -239,6 +239,11 @@ CodecAdapterFfmpegDecoder::CoreCodecGetBufferCollectionConstraints(
 
   fuchsia::sysmem::BufferCollectionConstraints result;
 
+  // We reported single_buffer_mode_allowed false (or un-set), and CodecImpl
+  // will have failed the codec already by this point if the client tried to
+  // use single_buffer_mode true.
+  ZX_DEBUG_ASSERT(!partial_settings.has_single_buffer_mode() ||
+                  !partial_settings.single_buffer_mode());
   // The CodecImpl won't hand us the sysmem token, so we shouldn't expect to
   // have the token here.
   ZX_DEBUG_ASSERT(!partial_settings.has_sysmem_token());

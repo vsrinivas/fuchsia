@@ -235,6 +235,33 @@ class CodecAdapterSW : public CodecAdapter {
     auto* constraints = config->mutable_buffer_constraints();
     constraints->set_buffer_constraints_version_ordinal(
         new_output_buffer_constraints_version_ordinal);
+    // For the moment, let's just force the client to allocate this exact size.
+    constraints->set_per_packet_buffer_bytes_min(per_packet_buffer_bytes);
+    constraints->set_per_packet_buffer_bytes_recommended(per_packet_buffer_bytes);
+    constraints->set_per_packet_buffer_bytes_max(per_packet_buffer_bytes);
+
+    // For the moment, let's just force the client to set this exact number of
+    // frames for the codec.
+    constraints->set_packet_count_for_server_min(kMinOutputBufferCountForCamping);
+    constraints->set_packet_count_for_server_recommended(kOutputPacketCountForServerRecommended);
+    constraints->set_packet_count_for_server_recommended_max(kMaxOutputPacketCountForServer);
+    constraints->set_packet_count_for_server_max(kMaxOutputPacketCountForServer);
+
+    constraints->set_packet_count_for_client_min(kMinOutputPacketCountForClient);
+    constraints->set_packet_count_for_client_max(kMaxOutputPacketCountForClient);
+
+    constraints->set_single_buffer_mode_allowed(false);
+    constraints->set_is_physically_contiguous_required(false);
+
+    // 0 is intentionally invalid - the client must fill out this field.
+    auto* default_settings = constraints->mutable_default_settings();
+    default_settings->set_buffer_lifetime_ordinal(0);
+    default_settings->set_buffer_constraints_version_ordinal(
+        new_output_buffer_constraints_version_ordinal);
+    default_settings->set_packet_count_for_server(kOutputPacketCountForServerRecommended);
+    default_settings->set_packet_count_for_client(kDefaultOutputPacketCountForClient);
+    default_settings->set_per_packet_buffer_bytes(per_packet_buffer_bytes);
+    default_settings->set_single_buffer_mode(false);
 
     return config;
   }
