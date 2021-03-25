@@ -885,15 +885,13 @@ class InlineLayoutReference final : public LayoutReference {
 
 class NamedLayoutReference final : public LayoutReference {
  public:
-  // TODO(fxbug.dev/65978): Use identifier instead.
   explicit NamedLayoutReference(SourceElement const& element,
-                                std::unique_ptr<TypeConstructor> type_ctor_old)
-      : LayoutReference(element, Kind::kNamed), type_ctor_old(std::move(type_ctor_old)) {}
+                                std::unique_ptr<CompoundIdentifier> identifier)
+      : LayoutReference(element, Kind::kNamed), identifier(std::move(identifier)) {}
 
   void Accept(TreeVisitor* visitor) const;
 
-  // TODO(fxbug.dev/65978): Use identifier instead.
-  std::unique_ptr<TypeConstructor> type_ctor_old;
+  std::unique_ptr<CompoundIdentifier> identifier;
 };
 
 class TypeParameter : public SourceElement {

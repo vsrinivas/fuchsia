@@ -517,22 +517,17 @@ std::unique_ptr<raw::Using> Parser::ParseUsing(std::unique_ptr<raw::AttributeLis
                                       std::move(maybe_type_ctor));
 }
 
-std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructorOf(
-    ASTScope& scope, std::unique_ptr<raw::CompoundIdentifier> identifier, bool new_syntax) {
+std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
+  ASTScope scope(this);
+  auto identifier = ParseCompoundIdentifier();
+  if (!Ok())
+    return Fail();
+
   std::unique_ptr<raw::TypeConstructor> maybe_arg_type_ctor;
   std::unique_ptr<raw::Constant> handle_rights;
   std::unique_ptr<raw::Constant> maybe_size;
   std::unique_ptr<raw::Identifier> handle_subtype_identifier;
   auto nullability = types::Nullability::kNonnullable;
-
-  // The new syntax parses constraints as part of the "layout" AST node, not
-  // as part of the type constructor.
-  if (new_syntax) {
-    return std::make_unique<raw::TypeConstructor>(
-        scope.GetSourceElement(), std::move(identifier), std::move(maybe_arg_type_ctor),
-        std::move(handle_subtype_identifier), std::move(handle_rights), std::move(maybe_size),
-        nullability);
-  }
 
   if (MaybeConsumeToken(OfKind(Token::Kind::kLeftAngle))) {
     if (!Ok())
@@ -582,14 +577,6 @@ std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructorOf(
       scope.GetSourceElement(), std::move(identifier), std::move(maybe_arg_type_ctor),
       std::move(handle_subtype_identifier), std::move(handle_rights), std::move(maybe_size),
       nullability);
-}
-
-std::unique_ptr<raw::TypeConstructor> Parser::ParseTypeConstructor() {
-  ASTScope scope(this);
-  auto identifier = ParseCompoundIdentifier();
-  if (!Ok())
-    return Fail();
-  return ParseTypeConstructorOf(scope, std::move(identifier), false);
 }
 
 std::unique_ptr<raw::BitsMember> Parser::ParseBitsMember() {
@@ -1712,7 +1699,8 @@ std::unique_ptr<raw::File> Parser::ParseFile() {
 }
 
 template <typename T, typename Fn, Token::Kind ClosingToken>
-std::vector<std::unique_ptr<T>> Parser::ParseCommaSeparatedList(Fn parse_element, size_t* items_seen) {
+std::vector<std::unique_ptr<T>> Parser::ParseCommaSeparatedList(Fn parse_element,
+                                                                size_t* items_seen) {
   std::vector<std::unique_ptr<T>> items;
   size_t seen = 0;
 
@@ -1789,8 +1777,8 @@ std::unique_ptr<raw::TypeParameter> Parser::ParseTypeParameter() {
     if (type_ctor->type_ref->kind == raw::LayoutReference::Kind::kNamed &&
         type_ctor->parameters == nullptr && type_ctor->constraints == nullptr) {
       auto named_ref = static_cast<raw::NamedLayoutReference*>(type_ctor->type_ref.get());
-      return std::make_unique<raw::AmbiguousTypeParameter>(
-          scope.GetSourceElement(), std::move(named_ref->type_ctor_old->identifier));
+      return std::make_unique<raw::AmbiguousTypeParameter>(scope.GetSourceElement(),
+                                                           std::move(named_ref->identifier));
     }
     return std::make_unique<raw::TypeTypeParameter>(scope.GetSourceElement(), std::move(type_ctor));
   }
@@ -2021,14 +2009,8 @@ std::unique_ptr<raw::LayoutReference> Parser::ParseLayoutReference() {
     case Token::Kind::kSemicolon: {
       ValidateModifiers</* none */>(modifiers, identifier->start_);
 
-      // TODO(fxbug.dev/65978): This will currently parse <...> type parameter spans, even though
-      //  the new design deals with them separately.  This will be a placeholder until we move to
-      //  using the "identifier" argument as noted below.
-      auto type_ctor_old = ParseTypeConstructorOf(scope, std::move(identifier), true);
-
-      // TODO(fxbug.dev/65978): Use identifier instead.
       return std::make_unique<raw::NamedLayoutReference>(scope.GetSourceElement(),
-                                                         std::move(type_ctor_old));
+                                                         std::move(identifier));
     }
     default: {
       return Fail();

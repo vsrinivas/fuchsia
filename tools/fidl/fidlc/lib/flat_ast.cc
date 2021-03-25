@@ -2141,14 +2141,17 @@ std::unique_ptr<TypeConstructor> Library::ConsumeTypeConstructorNew(
     return type_ctor;
   }
 
-  // TODO(fxbug.dev/65978): Rewrite once using identifier, instead of type_ctor_old, on type_ref.
   auto named_ref = static_cast<raw::NamedLayoutReference*>(raw_type_ctor->type_ref.get());
-  SourceSpan span = named_ref->type_ctor_old->identifier->span();
-  auto last_name_component = named_ref->type_ctor_old->identifier->components.back()->span().data();
-  if (!ConsumeTypeConstructor(std::move(named_ref->type_ctor_old), span, fidl::utils::Syntax::kNew,
-                              &type_ctor)) {
+  SourceSpan span = named_ref->identifier->span();
+  auto last_name_component = named_ref->identifier->components.back()->span().data();
+  auto name = CompileCompoundIdentifier(named_ref->identifier.get());
+  if (!name)
     return nullptr;
-  }
+
+  // Initialize the typector with just a name. The other parameters are filled in below.
+  type_ctor = std::make_unique<TypeConstructor>(std::move(name.value()), nullptr, std::nullopt,
+                                                nullptr, nullptr, types::Nullability::kNonnullable,
+                                                fidl::utils::Syntax::kNew);
 
   // TODO(fxbug.dev/71536): this mess will get fixed once the new flat AST lands.
   // Are there type parameters?
@@ -2312,7 +2315,7 @@ void Library::ConsumeTypeDecl(std::unique_ptr<raw::TypeDecl> type_decl) {
   auto& type_ref = type_decl->type_ctor->type_ref;
   if (type_ref->kind == raw::LayoutReference::Kind::kNamed) {
     auto named_ref = static_cast<raw::NamedLayoutReference*>(type_ref.get());
-    Fail(ErrNewTypesNotAllowed, name, named_ref->type_ctor_old->span().data());
+    Fail(ErrNewTypesNotAllowed, name, named_ref->span().data());
     return;
   }
 
