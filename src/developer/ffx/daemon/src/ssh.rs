@@ -53,22 +53,26 @@ mod test {
     use {
         super::build_ssh_command,
         crate::target::TargetAddr,
+        serial_test::serial,
         std::net::{IpAddr, Ipv4Addr},
     };
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[serial]
     async fn test_empty_command_vec_produces_error() {
         let result = build_ssh_command(Vec::new(), None, vec![]).await;
         assert!(result.is_err(), "empty command vec should produce an error");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[serial]
     async fn test_no_ips_produces_error() {
         let result = build_ssh_command(Vec::new(), None, vec!["ls"]).await;
         assert!(result.is_err(), "target with no IP's should produce an error");
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[serial]
     async fn test_ssh_default_port() {
         let key_path = std::env::current_exe().unwrap();
         let key_path = key_path.to_str().take().unwrap();
@@ -82,12 +86,14 @@ mod test {
         // Port falls back to config:
         let result = build_ssh_command(addrs, None, vec!["ls"]).await.unwrap();
         let dbgstr = format!("{:?}", result);
+        let search_string = &format!("\"-i\" \"{}\"", key_path);
 
-        assert!(dbgstr.contains(&format!("\"-i\" \"{}\"", key_path)), "{}", dbgstr);
+        assert!(dbgstr.contains(search_string), "`{}` not found in `{}`", search_string, dbgstr);
         assert!(dbgstr.contains(&ip.to_string()), "{}", dbgstr);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[serial]
     async fn test_ssh_with_env_port() {
         let key_path = std::env::current_exe().unwrap();
         let key_path = key_path.to_str().take().unwrap();
@@ -101,12 +107,13 @@ mod test {
         // Port falls back to config:
         let result = build_ssh_command(addrs, None, vec!["ls"]).await.unwrap();
         let dbgstr = format!("{:?}", result);
-
-        assert!(dbgstr.contains(&format!("\"-p\" \"1234\" \"-i\" \"{}\"", key_path)), "{}", dbgstr);
+        let search_string = &format!("\"-p\" \"1234\" \"-i\" \"{}\"", key_path);
+        assert!(dbgstr.contains(search_string), "`{}` not found in `{}`", search_string, dbgstr);
         assert!(dbgstr.contains(&ip.to_string()), "{}", dbgstr);
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
+    #[serial]
     async fn test_ssh_with_target_configured_port() {
         let key_path = std::env::current_exe().unwrap();
         let key_path = key_path.to_str().take().unwrap();
@@ -121,7 +128,8 @@ mod test {
         let result = build_ssh_command(addrs, Some(456), vec!["ls"]).await.unwrap();
         let dbgstr = format!("{:?}", result);
 
-        assert!(dbgstr.contains(&format!("\"-p\" \"456\" \"-i\" \"{}\"", key_path)), "{}", dbgstr);
+        let search_string = &format!("\"-p\" \"456\" \"-i\" \"{}\"", key_path);
+        assert!(dbgstr.contains(search_string), "`{}` not found in `{}`", search_string, dbgstr);
         assert!(dbgstr.contains(&ip.to_string()), "{}", dbgstr);
     }
 }
