@@ -217,7 +217,7 @@ TEST(SincSamplerTest, SamplingValues_DC_Unity) {
   // Mix the first half of the destination
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
                                   &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
   EXPECT_EQ(source_offset.Floor(), dest_offset);
   auto first_half_dest = dest_offset;
@@ -226,7 +226,7 @@ TEST(SincSamplerTest, SamplingValues_DC_Unity) {
   source_offset -= Fixed(kSourceLen);
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
                                   &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
 
   // The "seam" between buffers should be invisible
@@ -265,7 +265,7 @@ TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
   // Mix the first half of the destination
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
                                   &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
   auto first_half_dest = dest_offset;
 
@@ -273,7 +273,7 @@ TEST(SincSamplerTest, SamplingValues_DC_DownSample) {
   source_offset -= Fixed(kSourceLen);
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
                                   &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
 
   // The "seam" between buffers should be invisible
@@ -312,7 +312,7 @@ TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
   // Mix the first half of the destination
   source_is_consumed = mixer->Mix(dest.get(), kDestLen / 2, &dest_offset, source.get(), kSourceLen,
                                   &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
   EXPECT_EQ(Fixed(source_offset * 4).Floor(), dest_offset);
   auto first_half_dest = dest_offset;
@@ -321,7 +321,7 @@ TEST(SincSamplerTest, SamplingValues_DC_UpSample) {
   source_offset -= Fixed(kSourceLen);
   source_is_consumed = mixer->Mix(dest.get(), kDestLen, &dest_offset, source.get(), kSourceLen,
                                   &source_offset, do_not_accum);
-  EXPECT_TRUE(source_is_consumed) << std::hex << source_offset.raw_value();
+  EXPECT_TRUE(source_is_consumed) << ffl::String::DecRational << source_offset;
   EXPECT_GE(source_offset + mixer->pos_filter_width(), Fixed(kSourceLen));
 
   // The two samples before and after the "seam" between buffers should be invisible

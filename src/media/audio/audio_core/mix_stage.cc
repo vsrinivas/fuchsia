@@ -572,8 +572,8 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
                      << prev_running_dest_frame << ", actual " << dest_frame << ")";
       FX_LOGS(DEBUG) << "Updated source [" << (source_clock.is_client_clock() ? "Client" : "Device")
                      << (source_clock.is_adjustable() ? "Adjustable" : "Fixed")
-                     << "] position from " << prev_running_source_frame.raw_value() << " to "
-                     << info.next_source_frame.raw_value();
+                     << "] position from " << ffl::String::DecRational << prev_running_source_frame
+                     << " to " << info.next_source_frame;
     }
 
     // If source/dest clocks are the same, they're always in-sync, but above we will still reset our
@@ -590,10 +590,9 @@ void MixStage::ReconcileClocksAndSetStepSize(Mixer::SourceInfo& info,
   auto mono_now_from_source = zx::time{
       info.clock_mono_to_frac_source_frames.ApplyInverse(info.next_source_frame.raw_value())};
 
-  FX_LOGS(TRACE) << "Dest " << dest_frame << ", source " << std::hex
-                 << info.next_source_frame.raw_value() << ", mono_now_from_dest "
-                 << mono_now_from_dest.get() << ", mono_now_from_source "
-                 << mono_now_from_source.get();
+  FX_LOGS(TRACE) << "Dest " << dest_frame << ", source " << ffl::String::DecRational
+                 << info.next_source_frame << ", mono_now_from_dest " << mono_now_from_dest.get()
+                 << ", mono_now_from_source " << mono_now_from_source.get();
 
   // Convert both positions to monotonic time and get the delta -- this is source position error
   info.source_pos_error = mono_now_from_source - mono_now_from_dest;

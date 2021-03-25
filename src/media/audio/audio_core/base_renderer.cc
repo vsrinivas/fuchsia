@@ -190,8 +190,8 @@ bool BaseRenderer::ValidateConfig() {
   }
 
   FX_LOGS(DEBUG) << " threshold_set_: " << pts_continuity_threshold_set_
-                 << ", thres_frac_frame_: " << std::hex
-                 << pts_continuity_threshold_frac_frame_.raw_value();
+                 << ", thres_frac_frame_: " << ffl::String::DecRational
+                 << pts_continuity_threshold_frac_frame_;
 
   // Compute the number of fractional frames per reference clock tick.
   // Later we reconcile the actual reference clock with CLOCK_MONOTONIC
@@ -437,11 +437,10 @@ void BaseRenderer::SendPacket(fuchsia::media::StreamPacket packet, SendPacketCal
   }
 
   uint32_t frame_offset = packet.payload_offset / frame_size;
-  FX_LOGS(TRACE) << " [pkt " << std::hex << std::setw(8) << packet_ffpts.raw_value() << ", now "
-                 << std::setw(8) << next_frac_frame_pts_.raw_value() << "] => " << std::setw(8)
-                 << start_pts.raw_value() << " - " << std::setw(8)
-                 << start_pts.raw_value() + pts_to_frac_frames_.Apply(frame_count) << ", offset "
-                 << std::setw(7) << pts_to_frac_frames_.Apply(frame_offset);
+  FX_LOGS(TRACE) << " [pkt " << ffl::String::DecRational << packet_ffpts << ", now "
+                 << next_frac_frame_pts_ << "] => " << start_pts << " - "
+                 << Fixed(start_pts + Fixed::FromRaw(pts_to_frac_frames_.Apply(frame_count)))
+                 << ", offset " << Fixed::FromRaw(pts_to_frac_frames_.Apply(frame_offset));
 
   // Regardless of timing, capture this data to file.
   auto packet_buff = reinterpret_cast<uint8_t*>(payload_buffer->start()) + packet.payload_offset;
@@ -642,7 +641,7 @@ void BaseRenderer::Play(int64_t _reference_time, int64_t media_time, PlayCallbac
   }
 
   FX_LOGS(DEBUG) << "Actual: (ref: " << reference_time.get() << ", media: " << media_time << ")";
-  FX_LOGS(DEBUG) << "frac_frame_media_time:" << std::hex << frac_frame_media_time.raw_value();
+  FX_LOGS(DEBUG) << "frac_frame_media_time: " << ffl::String::DecRational << frac_frame_media_time;
 
   // If the user requested a callback, invoke it now.
   if (callback != nullptr) {

@@ -21,8 +21,7 @@ void Filter::DisplayTable(const CoefficientTable& filter_coefficients) {
                 << ", length 0x" << std::hex << side_length_;
 
   FX_LOGS(INFO) << " **************************************************************";
-  FX_LOGS(INFO) << " *** Displaying filter coefficient data for length 0x" << std::hex
-                << side_length_ << "  ***";
+  FX_LOGS(INFO) << " *** Displaying filter coefficient data for length " << side_length_ << "  ***";
   FX_LOGS(INFO) << " **************************************************************";
 
   char str[256];
@@ -65,7 +64,7 @@ float Filter::ComputeSampleFromTable(const CoefficientTable& filter_coefficients
                                      int64_t frac_offset, float* center) {
   FX_DCHECK(frac_offset <= frac_size_) << frac_offset;
   if constexpr (kTraceComputation) {
-    FX_LOGS(INFO) << "For frac_offset " << std::hex << frac_offset << " ("
+    FX_LOGS(INFO) << "For frac_offset 0x" << std::hex << frac_offset << " ("
                   << (static_cast<double>(frac_offset) / static_cast<double>(frac_size_)) << "):";
   }
 

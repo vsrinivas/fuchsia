@@ -461,13 +461,12 @@ void AudioDriver::ClockRecoveryUpdate(fuchsia::hardware::audio::RingBufferPositi
 
   if constexpr (kPositionNotificationDisplayInterval > 0) {
     if (position_notification_count_ % kPositionNotificationDisplayInterval == 0) {
-      FX_LOGS(INFO) << std::hex << static_cast<void*>(this) << std::dec
-                    << (owner_->is_output() ? " Output" : " Input ") << " notification #"
-                    << position_notification_count_ << " [" << info.timestamp << ", "
-                    << std::setw(6) << info.position << "] run_pos_bytes " << running_pos_bytes_
-                    << ", run_time " << (actual_mono_time - mono_start_time_).get()
-                    << ", predicted_mono " << predicted_mono_time.get() << ", curr_err "
-                    << curr_error.get();
+      FX_LOGS(INFO) << static_cast<void*>(this) << (owner_->is_output() ? " Output" : " Input ")
+                    << " notification #" << position_notification_count_ << " [" << info.timestamp
+                    << ", " << std::setw(6) << info.position << "] run_pos_bytes "
+                    << running_pos_bytes_ << ", run_time "
+                    << (actual_mono_time - mono_start_time_).get() << ", predicted_mono "
+                    << predicted_mono_time.get() << ", curr_err " << curr_error.get();
     }
   }
 

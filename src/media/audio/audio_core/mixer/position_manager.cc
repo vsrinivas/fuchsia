@@ -19,36 +19,25 @@ PositionManager::PositionManager(int32_t num_source_chans, int32_t num_dest_chan
 
 void PositionManager::Display(const PositionManager& pos_mgr) {
   FX_LOGS(INFO) << "Channels: source " << pos_mgr.num_source_chans_ << ", dest "
-                << pos_mgr.num_dest_chans_ << ".          Width: pos 0x" << std::hex
-                << pos_mgr.frac_positive_length_ << ", neg 0x" << pos_mgr.frac_negative_length_;
+                << pos_mgr.num_dest_chans_ << ".   Filter Length: pos " << ffl::String::DecRational
+                << Fixed::FromRaw(pos_mgr.frac_positive_length_) << ", neg "
+                << Fixed::FromRaw(pos_mgr.frac_negative_length_);
 
-  FX_LOGS(INFO) << "Source:   len " << pos_mgr.source_frames_ << ", to 0x" << std::hex
-                << pos_mgr.frac_source_end_ << " (" << std::dec
-                << (pos_mgr.frac_source_end_ >> Fixed::Format::FractionalBits) << "). Dest: len "
+  FX_LOGS(INFO) << "Source:   len " << pos_mgr.source_frames_ << ", to " << ffl::String::DecRational
+                << Fixed::FromRaw(pos_mgr.frac_source_end_) << ". Dest: len "
                 << pos_mgr.dest_frames_;
 
-  FX_LOGS(INFO) << "Rate:     frac_step_size 0x" << std::hex << pos_mgr.frac_step_size_
-                << ", rate_mod " << std::dec << pos_mgr.rate_modulo_ << ", denom "
-                << pos_mgr.denominator_;
+  FX_LOGS(INFO) << "Rate:     frac_step_size " << ffl::String::DecRational
+                << Fixed(pos_mgr.frac_step_size_) << ", rate_mod " << pos_mgr.rate_modulo_
+                << ", denom " << pos_mgr.denominator_;
 
   DisplayUpdate(pos_mgr);
 }
 
 void PositionManager::DisplayUpdate(const PositionManager& pos_mgr) {
-  auto offset = pos_mgr.frac_source_offset_;
-  if (pos_mgr.frac_source_offset_ < 0) {
-    offset = -offset;
-  }
-  auto offset_integer = offset >> Fixed::Format::FractionalBits;
-  auto offset_fraction = offset & Fixed::Format::FractionalMask;
-  if (pos_mgr.frac_source_offset_ < 0) {
-    offset_fraction = -offset_fraction;
-  }
-
-  FX_LOGS(INFO) << "Position: frac_source_offset " << std::hex
-                << (pos_mgr.frac_source_offset_ >= 0 ? " " : "-") << "0x" << offset_integer << ":"
-                << offset_fraction << ", dest_offset 0x" << pos_mgr.dest_offset_ << ", pos_mod 0x"
-                << pos_mgr.source_pos_modulo_;
+  FX_LOGS(INFO) << "Position: frac_source_offset " << ffl::String::DecRational
+                << Fixed::FromRaw(pos_mgr.frac_source_offset_) << ": dest_offset "
+                << pos_mgr.dest_offset_ << ", pos_mod " << pos_mgr.source_pos_modulo_;
 }
 
 // static
@@ -100,18 +89,19 @@ void PositionManager::SetSourceValues(const void* source_void_ptr, int64_t sourc
 void PositionManager::CheckSourcePositions(int64_t source_frames, int64_t frac_source_offset,
                                            int64_t frac_pos_filter_length) {
   FX_CHECK(source_frames > 0) << "Source buffer must have at least one frame";
-  FX_CHECK(frac_pos_filter_length > 0) << "Mixer lookahead frac_pos_filter_length (0x" << std::hex
-                                       << frac_pos_filter_length << ") cannot be negative";
+  FX_CHECK(frac_pos_filter_length > 0)
+      << "Mixer lookahead frac_pos_filter_length (" << ffl::String::DecRational
+      << Fixed::FromRaw(frac_pos_filter_length) << ") must be positive";
 
   // "Source offset" can be negative but only within bounds of frac_pos_filter_length.
   FX_CHECK(frac_source_offset + frac_pos_filter_length > 0)
-      << "frac_source_offset (0x" << std::hex << frac_source_offset
-      << ") must be greater than -pos_length (0x" << -frac_pos_filter_length << ")";
+      << "frac_source_offset (" << ffl::String::DecRational << Fixed::FromRaw(frac_source_offset)
+      << ") must be greater than -pos_length (" << Fixed::FromRaw(-frac_pos_filter_length) << ")";
 
   // Source_offset cannot exceed source_frames.
   FX_CHECK(((frac_source_offset - 1) >> Fixed::Format::FractionalBits) < source_frames)
-      << "frac_source_offset: 0x" << std::hex << frac_source_offset << ", source_frames_count: 0x"
-      << source_frames;
+      << "frac_source_offset: " << ffl::String::DecRational << Fixed::FromRaw(frac_source_offset)
+      << ", source_frames_count: " << source_frames;
 }
 
 void PositionManager::SetRateValues(int64_t frac_step_size, uint64_t rate_modulo,
