@@ -4,7 +4,6 @@
 
 #include "src/ui/a11y/lib/semantics/tests/semantics_integration_test_fixture.h"
 
-#include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fidl/cpp/binding.h>
@@ -27,17 +26,98 @@ namespace {
 
 constexpr zx::duration kTimeout = zx::sec(60);
 
+// Services to inject into the test environment that we want to re-create for each test case
+constexpr size_t kNumInjectedServices = 15;
+constexpr std::array<std::pair<const char*, const char*>, kNumInjectedServices> kInjectedServices =
+    {{
+        // clang-format off
+    {
+      "fuchsia.accessibility.ColorTransform",
+      "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx"
+    }, {
+      "fuchsia.accessibility.Magnifier",
+      "fuchsia-pkg://fuchsia.com/a11y-manager#meta/a11y-manager.cmx"
+    }, {
+      "fuchsia.feedback.LastRebootInfoProvider",
+      "fuchsia-pkg://fuchsia.com/fake-last-reboot-info-provider#meta/fake_last_reboot_info_provider.cmx"
+    }, {
+      "fuchsia.fonts.Provider",
+      "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx"
+    }, {
+      "fuchsia.hardware.display.Provider",
+      "fuchsia-pkg://fuchsia.com/fake-hardware-display-controller-provider#meta/hdcp.cmx"
+    }, {
+      "fuchsia.intl.PropertyProvider",
+      "fuchsia-pkg://fuchsia.com/intl-services-small#meta/intl_services.cmx"
+    }, {
+      "fuchsia.settings.Intl",
+      "fuchsia-pkg://fuchsia.com/setui_service#meta/setui_service.cmx"
+    }, {
+      "fuchsia.stash.Store",
+      "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx"
+    }, {
+      "fuchsia.ui.input.accessibility.PointerEventRegistry",
+      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"
+    }, {
+      "fuchsia.ui.input.ImeService",
+      "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
+    }, {
+      "fuchsia.ui.input.ImeVisibilityService",
+      "fuchsia-pkg://fuchsia.com/ime_service#meta/ime_service.cmx"
+    }, {
+      "fuchsia.ui.pointerinjector.Registry",
+      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
+    }, {
+      "fuchsia.ui.policy.accessibility.PointerEventRegistry",
+      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
+    }, {
+      "fuchsia.ui.scenic.Scenic",
+      "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"
+    }, {
+      "fuchsia.ui.policy.Presenter",
+      "fuchsia-pkg://fuchsia.com/root_presenter#meta/root_presenter.cmx"
+    },
+        // clang-format on
+    }};
+
 }  // namespace
 
 SemanticsIntegrationTest::SemanticsIntegrationTest(const std::string& environment_label)
     : environment_label_(environment_label),
-      component_context_(sys::ComponentContext::CreateAndServeOutgoingDirectory()),
+      component_context_provider_(),
       view_manager_(std::make_unique<a11y::SemanticTreeServiceFactory>(),
                     std::make_unique<MockViewSemanticsFactory>(),
                     std::make_unique<MockAnnotationViewFactory>(),
-                    std::make_unique<a11y::A11ySemanticsEventManager>(), component_context_.get(),
-                    component_context_->outgoing()->debug_dir()),
-      scenic_(component_context_->svc()->Connect<fuchsia::ui::scenic::Scenic>()) {
+                    std::make_unique<a11y::A11ySemanticsEventManager>(),
+                    component_context_provider_.context(),
+                    component_context_provider_.context()->outgoing()->debug_dir()) {}
+
+void SemanticsIntegrationTest::SetUp() {
+  TestWithEnvironment::SetUp();
+
+  // This is done in |SetUp| as opposed to the constructor to allow subclasses the opportunity to
+  // override |CreateServices()|.
+  auto services = TestWithEnvironment::CreateServices();
+  services->AddService(semantics_manager_bindings_.GetHandler(&view_manager_));
+
+  // Add test-specific launchable services.
+  for (const auto& service_info : kInjectedServices) {
+    zx_status_t status =
+        services->AddServiceWithLaunchInfo({.url = service_info.second}, service_info.first);
+    ASSERT_EQ(status, ZX_OK) << service_info.first;
+  }
+
+  services->AllowParentService("fuchsia.logger.LogSink");
+  services->AllowParentService("fuchsia.posix.socket.Provider");
+  services->AllowParentService("fuchsia.tracing.provider.Registry");
+
+  CreateServices(services);
+
+  environment_ = CreateNewEnclosingEnvironment(environment_label_, std::move(services),
+                                               {.inherit_parent_services = true});
+  WaitForEnclosingEnvToStart(environment_.get());
+
+  scenic_ = environment()->ConnectToService<fuchsia::ui::scenic::Scenic>();
   scenic_.set_error_handler([](zx_status_t status) {
     FAIL() << "Lost connection to Scenic: " << zx_status_get_string(status);
   });
@@ -47,23 +127,10 @@ SemanticsIntegrationTest::SemanticsIntegrationTest(const std::string& environmen
   RunLoopWithTimeout(kTimeout);
 }
 
-void SemanticsIntegrationTest::SetUp() {
-  TestWithEnvironment::SetUp();
-  // This is done in |SetUp| as opposed to the constructor to allow subclasses the opportunity to
-  // override |CreateServices()|.
-  auto services = TestWithEnvironment::CreateServices();
-  services->AddService(semantics_manager_bindings_.GetHandler(&view_manager_));
-
-  CreateServices(services);
-
-  environment_ = CreateNewEnclosingEnvironment(environment_label_, std::move(services),
-                                               {.inherit_parent_services = true});
-}
-
 fuchsia::ui::views::ViewToken SemanticsIntegrationTest::CreatePresentationViewToken() {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-  auto presenter = real_services()->Connect<fuchsia::ui::policy::Presenter>();
+  auto presenter = environment()->ConnectToService<fuchsia::ui::policy::Presenter>();
   presenter.set_error_handler(
       [](zx_status_t status) { FAIL() << "presenter: " << zx_status_get_string(status); });
   presenter->PresentView(std::move(view_holder_token), nullptr);

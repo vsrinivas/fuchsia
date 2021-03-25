@@ -8,7 +8,8 @@ Vulkan loader service.
 
 To run all of the semantics tests, build with a configuration such as
 ```
-fx set core.<board> --with //src/ui/a11y/bundles:tests --with-base //topaz/bundles:buildbot
+fx set core.<board> --with //src/flutter --with //src/ui/a11y/bundles:tests \
+  --with-base //topaz/bundles:buildbot
 ```
 
 And run the tests using

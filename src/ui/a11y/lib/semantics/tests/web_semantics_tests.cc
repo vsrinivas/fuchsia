@@ -24,9 +24,32 @@ class WebSemanticsTest : public SemanticsIntegrationTest {
 
   // |SemanticsIntegrationTest|
   void CreateServices(std::unique_ptr<sys::testing::EnvironmentServices>& services) override {
-    services->AddServiceWithLaunchInfo(
-        {.url = "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx"},
-        "fuchsia.web.ContextProvider");
+    // Additional services to inject into the test environment that we want to re-create for each
+    // test case
+    constexpr size_t kNumInjectedServices = 2;
+    constexpr std::array<std::pair<const char*, const char*>, kNumInjectedServices>
+        kInjectedServices = {{
+            // clang-format off
+            {
+              "fuchsia.memorypressure.Provider",
+              "fuchsia-pkg://fuchsia.com/memory_monitor#meta/memory_monitor.cmx"
+            }, {
+              "fuchsia.web.ContextProvider",
+              "fuchsia-pkg://fuchsia.com/web_engine#meta/context_provider.cmx"
+            },
+            // clang-format on
+        }};
+    // Add test-specific services.
+    for (const auto& service_info : kInjectedServices) {
+      zx_status_t status =
+          services->AddServiceWithLaunchInfo({.url = service_info.second}, service_info.first);
+      ASSERT_EQ(status, ZX_OK) << service_info.first;
+    }
+
+    services->AllowParentService("fuchsia.netstack.Netstack");
+    services->AllowParentService("fuchsia.net.interfaces.State");
+    services->AllowParentService("fuchsia.sysmem.Allocator");
+    services->AllowParentService("fuchsia.vulkan.loader.Loader");
   }
 
   // Render the given page.  Can only be called once per test case.

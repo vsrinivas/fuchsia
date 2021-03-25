@@ -9,6 +9,7 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 
 #include <memory>
@@ -69,7 +70,7 @@ class SemanticsIntegrationTest : public sys::testing::TestWithEnvironment {
 
  private:
   const std::string environment_label_;
-  std::unique_ptr<sys::ComponentContext> const component_context_;
+  sys::testing::ComponentContextProvider component_context_provider_;
 
   a11y::ViewManager view_manager_;
   fidl::BindingSet<fuchsia::accessibility::semantics::SemanticsManager> semantics_manager_bindings_;

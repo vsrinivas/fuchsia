@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/feedback/cpp/fidl.h>
+#include <lib/sys/cpp/termination_reason.h>
 #include <lib/syslog/cpp/macros.h>
 
 #include <gtest/gtest.h>
@@ -28,7 +30,12 @@ class FlutterSemanticsTests : public SemanticsIntegrationTest {
 
     scenic::EmbeddedViewInfo flutter_runner =
         scenic::LaunchComponentAndCreateView(environment()->launcher_ptr(), kClientUrl);
-    flutter_runner.controller.events().OnTerminated = [](auto...) { FAIL(); };
+    flutter_runner.controller.events().OnTerminated = [](int64_t return_code,
+                                                         fuchsia::sys::TerminationReason reason) {
+      FX_LOGS(ERROR) << "Flutter Runner terminated: return_code=" << return_code
+                     << " reason=" << sys::HumanReadableTerminationReason(reason);
+      FAIL();
+    };
 
     view_ref_koid_ = fsl::GetKoid(flutter_runner.view_ref.reference.get());
 
