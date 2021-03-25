@@ -341,6 +341,18 @@
             protocol: "fuchsia.feedback.LastRebootInfoProvider",
             path: "/svc_for_sys/fuchsia.feedback.LastRebootInfoProvider",
         },
+        {
+            protocol: "fuchsia.stash.Store",
+            path: "/svc_for_sys/fuchsia.stash.Store",
+        },
+        {
+            protocol: "fuchsia.stash.Store2",
+            path: "/svc_for_sys/fuchsia.stash.Store2",
+        },
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            path: "/svc_for_sys/fuchsia.stash.SecureStore",
+        },
 
         // From archivist
         {

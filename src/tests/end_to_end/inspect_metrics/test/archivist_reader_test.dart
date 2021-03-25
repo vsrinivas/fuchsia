@@ -9,7 +9,7 @@ import 'package:sl4f/sl4f.dart' as sl4f;
 import 'util.dart';
 
 const String fshostPath = 'bootstrap/fshost:root/data_stats';
-const String stashPath = 'stash_secure.cmx:root';
+const String stashPath = 'core/stash_secure:root';
 
 void main() {
   sl4f.Sl4f sl4fDriver;

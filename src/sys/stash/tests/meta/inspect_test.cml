@@ -1,0 +1,60 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+{
+    include: [
+        // FIXME(fxbug.dev/60072): build complains that I need to include this shard, but not
+        // sure why since this component doesn't have a program.
+        "sdk/lib/diagnostics/syslog/client.shard.cml",
+    ],
+    children: [
+        {
+            name: "stash",
+            url: "fuchsia-pkg://fuchsia.com/stash-integration-tests#meta/stash.cm",
+            startup: "eager",
+        },
+        {
+            name: "stash_secure",
+            url: "fuchsia-pkg://fuchsia.com/stash-integration-tests#meta/stash_secure.cm",
+            startup: "eager",
+        },
+        {
+            name: "test",
+            url: "fuchsia-pkg://fuchsia.com/stash-integration-tests#meta/inspect_test_exec.cm",
+        },
+    ],
+    offer: [
+        {
+            protocol: "fuchsia.logger.LogSink",
+            from: "parent",
+            to: [
+                "#stash",
+                "#stash_secure",
+                "#test",
+            ],
+        },
+
+        // to #stash
+        {
+            storage: "data",
+            from: "parent",
+            to: [
+                "#stash",
+                "#stash_secure",
+            ],
+        },
+
+        // to #test
+        {
+            protocol: "fuchsia.diagnostics.ArchiveAccessor",
+            from: "parent",
+            to: [ "#test" ],
+        },
+    ],
+    expose: [
+        {
+            protocol: "fuchsia.test.Suite",
+            from: "#test",
+        },
+    ],
+}

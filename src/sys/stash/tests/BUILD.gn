@@ -9,13 +9,23 @@ group("tests") {
   deps = [ ":stash-integration-tests" ]
 }
 
-fuchsia_unittest_package("stash-integration-tests") {
-  manifest = "meta/inspect_test.cmx"
+fuchsia_component("inspect_test_exec") {
+  testonly = true
+  deps = [ "inspect:inspect_test" ]
+  manifest = "meta/inspect_test_exec.cml"
+}
+
+fuchsia_component("inspect_test") {
+  testonly = true
+  manifest = "meta/inspect_test.cml"
+}
+
+fuchsia_test_package("stash-integration-tests") {
+  test_components = [ ":inspect_test" ]
+
   deps = [
-    "inspect:inspect_test",
-    "//src/sys/stash:stash_cmp",
-    "//src/sys/stash:stash_secure",
+    ":inspect_test_exec",
+    "//src/sys/stash:stash_secure_v2",
+    "//src/sys/stash:stash_v2",
   ]
-  test_specs = {
-  }
 }

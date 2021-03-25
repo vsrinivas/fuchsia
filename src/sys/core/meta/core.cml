@@ -49,6 +49,18 @@
             url: "fuchsia-pkg://fuchsia.com/sampler#meta/sampler.cm",
         },
         {
+            name: "stash",
+            url: "fuchsia-pkg://fuchsia.com/stash#meta/stash.cm",
+        },
+        {
+            name: "stash2",
+            url: "fuchsia-pkg://fuchsia.com/stash#meta/stash2.cm",
+        },
+        {
+            name: "stash_secure",
+            url: "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cm",
+        },
+        {
             name: "test_manager",
             url: "fuchsia-pkg://fuchsia.com/test_manager#meta/test_manager.cm",
             environment: "#universe-resolver-env",
@@ -189,6 +201,21 @@
         {
             protocol: "fuchsia.thermal.test.TemperatureLogger",
             from: "#temperature-logger",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: "fuchsia.stash.Store",
+            from: "#stash",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: "fuchsia.stash.Store2",
+            from: "#stash2",
+            to: [ "#appmgr" ],
+        },
+        {
+            protocol: "fuchsia.stash.SecureStore",
+            from: "#stash_secure",
             to: [ "#appmgr" ],
         },
         {
@@ -338,6 +365,9 @@
                 "#remote-control",
                 "#sampler",
                 "#session-manager",
+                "#stash",
+                "#stash2",
+                "#stash_secure",
                 "#system-metrics-logger",
                 "#system-update-committer",
                 "#temperature-logger",
@@ -679,6 +709,9 @@
             to: [
                 "#dhcpd",
                 "#last_reboot",
+                "#stash",
+                "#stash2",
+                "#stash_secure",
             ],
         },
         {

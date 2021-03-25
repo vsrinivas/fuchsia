@@ -1,3 +1,7 @@
+// Copyright 2021 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+//
 // This component ID index assigns instance IDs to component instances.
 // A component's instance ID is used to key its storage directory.
 //
@@ -137,33 +141,15 @@
         },
         {
             instance_id: "ea59eb01e52454f12fab0b571008d2ba8518ae12508f46a3f3f0350b7bbea40f",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/stash#meta/stash2.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/stash2",
         },
         {
             instance_id: "946b2f9dbe2ee352b033a635b1c79fc680ef62f9c1b36a39e46404f95b58e6d5",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/stash",
         },
         {
             instance_id: "c1a6d0aebbf7c092c53e8e696636af8ec0629ff39b7f2e548430b0034d809da4",
-            appmgr_moniker: {
-                url: "fuchsia-pkg://fuchsia.com/stash#meta/stash_secure.cmx",
-                realm_path: [
-                    "app",
-                    "sys",
-                ],
-            },
+            moniker: "/core/stash_secure",
         },
         {
             instance_id: "8285f9d54645ea6baa7fd7b7905c7ae89a9daf8d5172be43b2587b166fd021af",

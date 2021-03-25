@@ -1,7 +1,13 @@
 {
     select: {
-        status: "INSPECT:stash.cmx:root/fuchsia.inspect.Health:status",
-        is_secure: "INSPECT:stash.cmx:root:secure_mode",
+        status: [
+            "INSPECT:core/stash:root/fuchsia.inspect.Health:status",
+            "INSPECT:stash.cmx:root/fuchsia.inspect.Health:status",
+        ],
+        is_secure: [
+            "INSPECT:core/stash:root:secure_mode",
+            "INSPECT:stash.cmx:root:secure_mode",
+        ],
     },
     act: {
         unhealthy: {
