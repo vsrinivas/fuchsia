@@ -28,6 +28,13 @@ impl Errno {
         self.0
     }
 }
+impl fmt::Display for Errno {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // TODO(tbodt): Return the string name of the error (would be nice to be able to do this
+        // without typing them all twice.)
+        write!(f, "error {}", self.0)
+    }
+}
 
 pub const EPERM: Errno = Errno(1);
 pub const ENOENT: Errno = Errno(2);
@@ -215,6 +222,7 @@ pub type syscall_number_t = u64;
 
 pub const SYS_WRITE: syscall_number_t = 1;
 pub const SYS_FSTAT: syscall_number_t = 5;
+pub const SYS_MMAP: syscall_number_t = 9;
 pub const SYS_MPROTECT: syscall_number_t = 10;
 pub const SYS_BRK: syscall_number_t = 12;
 pub const SYS_WRITEV: syscall_number_t = 20;
@@ -288,3 +296,13 @@ pub struct iovec {
 }
 
 pub const UIO_MAXIOV: u32 = 1024;
+
+pub const PROT_READ: i32 = 0x1;
+pub const PROT_WRITE: i32 = 0x2;
+pub const PROT_EXEC: i32 = 0x4;
+pub const PROT_NONE: i32 = 0;
+
+pub const MAP_SHARED: i32 = 0x1;
+pub const MAP_PRIVATE: i32 = 0x2;
+pub const MAP_FIXED: i32 = 0x10;
+pub const MAP_ANONYMOUS: i32 = 0x20;

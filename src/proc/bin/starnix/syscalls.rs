@@ -2,8 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fuchsia_zircon::{self as zx, AsHandleRef, Task};
+use log::info;
 use std::convert::TryInto;
-use {fuchsia_zircon::Task, log::info, zerocopy::AsBytes};
+use std::ffi::CStr;
+use zerocopy::AsBytes;
 
 use crate::executive::*;
 use crate::types::*;
@@ -53,6 +56,74 @@ pub fn sys_mprotect(
 pub fn sys_brk(ctx: &ThreadContext, addr: UserAddress) -> Result<SyscallResult, Errno> {
     // info!("brk: addr={}", addr);
     Ok(ctx.process.mm.set_program_break(addr).map_err(Errno::from)?.into())
+}
+
+pub fn sys_mmap(
+    ctx: &ThreadContext,
+    addr: UserAddress,
+    length: usize,
+    prot: i32,
+    flags: i32,
+    fd: i32,
+    offset: usize,
+) -> Result<SyscallResult, Errno> {
+    info!(
+        "mmap({:#x}, {:#x}, {:#x}, {:#x}, {}, {:#x})",
+        addr.ptr(),
+        length,
+        prot,
+        flags,
+        fd,
+        offset
+    );
+    // These are the flags that are currently supported.
+    if prot & !(PROT_READ | PROT_WRITE | PROT_EXEC) != 0 {
+        return Err(EINVAL);
+    }
+    if flags & !(MAP_PRIVATE | MAP_ANONYMOUS) != 0 {
+        return Err(EINVAL);
+    }
+
+    if flags & (MAP_PRIVATE | MAP_SHARED) == 0
+        || flags & (MAP_PRIVATE | MAP_SHARED) == MAP_PRIVATE | MAP_SHARED
+    {
+        return Err(EINVAL);
+    }
+    if length == 0 {
+        return Err(EINVAL);
+    }
+
+    let mut zx_flags = zx::VmarFlags::ALLOW_FAULTS;
+    if addr.ptr() != 0 {
+        zx_flags |= zx::VmarFlags::SPECIFIC;
+    }
+    if prot & PROT_READ != 0 {
+        zx_flags |= zx::VmarFlags::PERM_READ;
+    }
+    if prot & PROT_WRITE != 0 {
+        zx_flags |= zx::VmarFlags::PERM_WRITE;
+    }
+    if prot & PROT_EXEC != 0 {
+        zx_flags |= zx::VmarFlags::PERM_EXECUTE;
+    }
+
+    let vmo = zx::Vmo::create(length as u64).map_err(|s| match s {
+        zx::Status::NO_MEMORY => ENOMEM,
+        _ => impossible_error(s),
+    })?;
+    vmo.set_name(CStr::from_bytes_with_nul(b"starnix-anon\0").unwrap()).map_err(impossible_error)?;
+
+    let addr = ctx.process.mm.root_vmar.map(addr.ptr(), &vmo, 0, length, zx_flags).map_err(
+        |s| match s {
+            zx::Status::INVALID_ARGS => EINVAL,
+            zx::Status::ACCESS_DENIED => EACCES, // or EPERM?
+            zx::Status::NOT_SUPPORTED => ENODEV,
+            zx::Status::BUFFER_TOO_SMALL => panic!("faults should have been allowed!"),
+            zx::Status::NO_MEMORY => ENOMEM,
+            _ => impossible_error(s),
+        },
+    )?;
+    Ok(addr.into())
 }
 
 pub fn sys_writev(
@@ -192,3 +263,11 @@ pub fn sys_unknown(
     // TODO: We should send SIGSYS once we have signals.
     Err(ENOSYS)
 }
+
+// Call this when you get an error that should "never" happen, i.e. if it does that means the
+// kernel was updated to produce some other error after this match was written.
+// TODO(tbodt): find a better way to handle this than a panic.
+pub fn impossible_error(status: zx::Status) -> Errno {
+    panic!("encountered impossible error: {}", status);
+}
+

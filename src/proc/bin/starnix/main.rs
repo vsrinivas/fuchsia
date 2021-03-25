@@ -38,33 +38,36 @@ pub fn decode_syscall(
     syscall_number: syscall_number_t,
 ) -> Result<SyscallResult, Errno> {
     let regs = ctx.registers;
+    let args = (regs.rdi, regs.rsi, regs.rdx, regs.r10, regs.r8, regs.r9);
     match syscall_number {
-        SYS_WRITE => {
-            sys_write(ctx, regs.rdi as i32, UserAddress::from(regs.rsi), regs.rdx as usize)
-        }
-        SYS_FSTAT => sys_fstat(ctx, regs.rdi as i32, UserAddress::from(regs.rsi)),
-        SYS_MPROTECT => {
-            sys_mprotect(ctx, UserAddress::from(regs.rdi), regs.rsi as usize, regs.rdx as i32)
-        }
-        SYS_BRK => sys_brk(ctx, UserAddress::from(regs.rdi)),
-        SYS_WRITEV => {
-            sys_writev(ctx, regs.rdi as i32, UserAddress::from(regs.rsi), regs.rdx as i32)
-        }
-        SYS_ACCESS => sys_access(ctx, UserAddress::from(regs.rdi), regs.rsi as i32),
-        SYS_EXIT => sys_exit(ctx, regs.rdi as i32),
-        SYS_UNAME => sys_uname(ctx, UserAddress::from(regs.rdi)),
-        SYS_READLINK => sys_readlink(
+        SYS_WRITE => sys_write(ctx, args.0 as i32, UserAddress::from(args.1), args.2 as usize),
+        SYS_FSTAT => sys_fstat(ctx, args.0 as i32, UserAddress::from(args.1)),
+        SYS_MMAP => sys_mmap(
             ctx,
-            UserAddress::from(regs.rdi),
-            UserAddress::from(regs.rsi),
-            regs.rdx as usize,
+            UserAddress::from(args.0),
+            args.1 as usize,
+            args.2 as i32,
+            args.3 as i32,
+            args.4 as i32,
+            args.5 as usize,
         ),
+        SYS_MPROTECT => {
+            sys_mprotect(ctx, UserAddress::from(args.0), args.1 as usize, args.2 as i32)
+        }
+        SYS_BRK => sys_brk(ctx, UserAddress::from(args.0)),
+        SYS_WRITEV => sys_writev(ctx, args.0 as i32, UserAddress::from(args.1), args.2 as i32),
+        SYS_ACCESS => sys_access(ctx, UserAddress::from(args.0), args.1 as i32),
+        SYS_EXIT => sys_exit(ctx, args.0 as i32),
+        SYS_UNAME => sys_uname(ctx, UserAddress::from(args.0)),
+        SYS_READLINK => {
+            sys_readlink(ctx, UserAddress::from(args.0), UserAddress::from(args.1), args.2 as usize)
+        }
         SYS_GETUID => sys_getuid(ctx),
         SYS_GETGID => sys_getgid(ctx),
         SYS_GETEUID => sys_geteuid(ctx),
         SYS_GETEGID => sys_getegid(ctx),
-        SYS_ARCH_PRCTL => sys_arch_prctl(ctx, regs.rdi as i32, UserAddress::from(regs.rsi)),
-        SYS_EXIT_GROUP => sys_exit_group(ctx, regs.rdi as i32),
+        SYS_ARCH_PRCTL => sys_arch_prctl(ctx, args.0 as i32, UserAddress::from(args.1)),
+        SYS_EXIT_GROUP => sys_exit_group(ctx, args.0 as i32),
         _ => sys_unknown(ctx, syscall_number),
     }
 }
@@ -113,6 +116,7 @@ async fn run_process(process: Arc<ProcessContext>) -> Result<(), Error> {
                 ctx.registers.rax = rv.value();
             }
             Err(errno) => {
+                info!("syscall {} failed with {}", syscall_number, errno);
                 ctx.registers.rax = (-errno.value()) as u64;
             }
         }

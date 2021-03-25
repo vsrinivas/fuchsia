@@ -141,6 +141,7 @@ multiconst!(zx_vm_option_t, [
     ZX_VM_CAN_MAP_EXECUTE       = 1 << 9;
     ZX_VM_MAP_RANGE             = 1 << 10;
     ZX_VM_REQUIRE_NON_RESIZABLE = 1 << 11;
+    ZX_VM_ALLOW_FAULTS          = 1 << 12;
 ]);
 
 // matches ///zircon/system/public/zircon/errors.h
