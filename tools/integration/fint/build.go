@@ -8,7 +8,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"os"
 	"sort"
 
 	"go.fuchsia.dev/fuchsia/tools/build"
@@ -51,20 +50,18 @@ func Build(ctx context.Context, staticSpec *fintpb.Static, contextSpec *fintpb.C
 		return nil, err
 	}
 
-	runner := &runner.SubprocessRunner{}
 	targets, artifacts, err := constructNinjaTargets(modules, staticSpec, platform)
 	if err != nil {
 		return nil, err
 	}
 
 	ninjaPath := thirdPartyPrebuilt(contextSpec.CheckoutDir, platform, "ninja")
-	cmd := []string{ninjaPath, "-C", contextSpec.BuildDir}
-	cmd = append(cmd, targets...)
-	if err := runner.Run(ctx, cmd, os.Stdout, os.Stderr); err != nil {
-		// TODO(https://fxbug.dev/67861): Capture and emit the Ninja error
-		// message in the artifacts.
-		return nil, err
+	runner := &runner.SubprocessRunner{}
+	if msg, err := runNinja(ctx, runner, ninjaPath, contextSpec.BuildDir, targets); err != nil {
+		artifacts.FailureSummary = msg
+		return artifacts, err
 	}
+
 	return artifacts, nil
 }
 

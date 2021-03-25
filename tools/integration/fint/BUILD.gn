@@ -64,6 +64,8 @@ go_library("fint_lib") {
     "build.go",
     "build_test.go",
     "common.go",
+    "ninja.go",
+    "ninja_test.go",
     "parse.go",
     "parse_test.go",
     "set.go",
