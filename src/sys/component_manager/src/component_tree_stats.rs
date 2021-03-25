@@ -19,7 +19,7 @@ use {
     fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Task},
     futures::{lock::Mutex, FutureExt},
     log::warn,
-    moniker::ExtendedMoniker,
+    moniker::{AbsoluteMoniker, ExtendedMoniker},
     std::{
         collections::{BTreeMap, VecDeque},
         convert::{TryFrom, TryInto},
@@ -157,7 +157,17 @@ impl ComponentTreeStats {
         for (moniker, stats) in self.tree.lock().await.iter() {
             let stats_guard = stats.lock().await;
             if stats_guard.is_measuring {
-                let child = node.create_child(moniker.to_string());
+                let key = match moniker {
+                    ExtendedMoniker::ComponentManager => moniker.to_string(),
+                    ExtendedMoniker::ComponentInstance(m) => {
+                        if *m == AbsoluteMoniker::root() {
+                            "<root>".to_string()
+                        } else {
+                            m.to_string().replacen("/", "", 1)
+                        }
+                    }
+                };
+                let child = node.create_child(key);
                 task_count += stats_guard.write_inspect_to(&child);
                 node.record(child);
             }
@@ -679,10 +689,10 @@ mod tests {
         let get_properties = |hierarchy: &DiagnosticsHierarchy, index: usize| {
             let index_str = format!("{}", index);
             let res = Values {
-                a_cpu_time: get_property(&hierarchy, "/a:0", "cpu_time", index),
-                a_queue_time: get_property(&hierarchy, "/a:0", "queue_time", index),
-                root_queue_time: get_property(&hierarchy, "/", "queue_time", index),
-                root_cpu_time: get_property(&hierarchy, "/", "cpu_time", index),
+                a_cpu_time: get_property(&hierarchy, "a:0", "cpu_time", index),
+                a_queue_time: get_property(&hierarchy, "a:0", "queue_time", index),
+                root_queue_time: get_property(&hierarchy, "<root>", "queue_time", index),
+                root_cpu_time: get_property(&hierarchy, "<root>", "cpu_time", index),
                 cm_queue_time: get_property(&hierarchy, "<component_manager>", "queue_time", index),
                 cm_cpu_time: get_property(&hierarchy, "<component_manager>", "cpu_time", index),
                 total_cpu_time: *hierarchy
@@ -856,7 +866,7 @@ mod tests {
                                 }
                             }
                         },
-                        "/": {
+                        "<root>": {
                             koid.to_string() => {
                                 "@samples": {
                                     "0": {
@@ -867,7 +877,7 @@ mod tests {
                                 }
                             }
                         },
-                        "/a:0": {
+                        "a:0": {
                             koid.to_string() => {
                                 "@samples": {
                                     "0": {
@@ -911,7 +921,7 @@ mod tests {
                                 }
                             }
                         },
-                        "/": {
+                        "<root>": {
                             koid.to_string() => {
                                 "@samples": contains {
                                     "0": contains {
@@ -919,7 +929,7 @@ mod tests {
                                 }
                             }
                         },
-                        "/a:0": {
+                        "a:0": {
                             koid.to_string() => contains {
                                 "@samples": contains {
                                     "0": contains {
@@ -952,7 +962,7 @@ mod tests {
                                 }
                             }
                         },
-                        "/": {
+                        "<root>": {
                             koid.to_string() => {
                                 "@samples": {
                                     "0": contains {
@@ -960,7 +970,7 @@ mod tests {
                                 }
                             }
                         },
-                        "/a:0": {
+                        "a:0": {
                             koid.to_string() => contains {
                                 "@samples": {
                                     "0": contains {
@@ -991,7 +1001,7 @@ mod tests {
                                 }
                             }
                         },
-                        "/": {
+                        "<root>": {
                             koid.to_string() => {
                                 "@samples": {
                                     "0": contains {

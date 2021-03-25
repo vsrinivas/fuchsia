@@ -53,8 +53,9 @@ async fn main() {
                     maximum_size: 262144u64,
                     total_dynamic_children: 0u64,
                 },
-                components: contains {
-                    "/archivist:0": {
+                components: {
+                    "<component_manager>": contains {},
+                    "archivist:0": {
                         archivist_job_koid.to_string() => {
                             "@samples": {
                                 "0": {
@@ -65,7 +66,7 @@ async fn main() {
                             }
                         }
                     },
-                    "/reporter:0": {
+                    "reporter:0": {
                         reporter_job_koid.to_string() => {
                             "@samples": {
                                 "0": {
