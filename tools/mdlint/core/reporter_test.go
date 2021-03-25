@@ -12,7 +12,7 @@ import (
 
 func TestMessagesToFindingsJSON(t *testing.T) {
 	var (
-		doc          = Doc{filename: "path/to/the/file.md"}
+		doc          = Doc{Filename: "path/to/the/file.md"}
 		rootReporter RootReporter
 		ruleReporter = rootReporter.ForRule("some-rule")
 	)

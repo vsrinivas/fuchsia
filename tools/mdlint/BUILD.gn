@@ -27,6 +27,7 @@ go_library("gopkg") {
     "rules/no_extra_space_on_right_test.go",
     "rules/testutils_test.go",
     "rules/verify_internal_links.go",
+    "rules/verify_internal_links_test.go",
   ]
 }
 

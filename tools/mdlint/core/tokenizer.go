@@ -62,7 +62,7 @@ const runesBufLen = 8
 // content of a token while a line is being read, we need to either lookup the
 // content in the accumulated lines, or in the accumulated line buffer.
 type Doc struct {
-	filename string
+	Filename string
 
 	stream *bufio.Reader
 
@@ -81,7 +81,7 @@ type Doc struct {
 
 func newDoc(filename string, stream io.Reader) *Doc {
 	return &Doc{
-		filename: filename,
+		Filename: filename,
 		stream:   bufio.NewReader(stream),
 		ln:       1,
 		col:      1,

@@ -10,10 +10,12 @@ import (
 
 func TestNoExtraSpaceOnRight(t *testing.T) {
 	ruleTestCase{
-		input: `example
+		files: map[string]string{
+			"example.md": `example
 
 markdown here«  »
 
 and then this.`,
+		},
 	}.runOverTokens(t, newNoExtraSpaceOnRight)
 }

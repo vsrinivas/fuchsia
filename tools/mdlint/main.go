@@ -84,6 +84,25 @@ const (
 	exitOnError   = 1
 )
 
+func processAllDocs(rules core.LintRuleOverTokens, filenames []string) error {
+	rules.OnStart()
+	defer rules.OnEnd()
+
+	for _, filename := range filenames {
+		if err := func() error {
+			file, err := os.Open(filename)
+			if err != nil {
+				return err
+			}
+			defer file.Close()
+			return core.ProcessSingleDoc(filename, file, rules)
+		}(); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func main() {
 	flag.Usage = printUsage
 	flag.Parse()
@@ -101,18 +120,10 @@ func main() {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(exitOnError)
 	}
-	for _, filename := range filenames {
-		if err := func() error {
-			file, err := os.Open(filename)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-			return core.ProcessSingleDoc(filename, file, rules)
-		}(); err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			os.Exit(exitOnError)
-		}
+
+	if err := processAllDocs(rules, filenames); err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(exitOnError)
 	}
 
 	if reporter.HasMessages() {

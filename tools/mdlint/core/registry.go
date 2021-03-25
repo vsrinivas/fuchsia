@@ -26,6 +26,29 @@ func AllRuleNames() []string {
 	return names
 }
 
+// CombineRules combines rules over tokens and rules over events into a single
+// rule over tokens.
+//
+// To accomplish this combination, dedicated one-to-many rules bridge between
+// the returned rule and the provided rules. Additionally, the token stream is
+// recognized and turned into an event stream so as to drive all rules over
+// events.
+func CombineRules(rulesOverTokens []LintRuleOverTokens, rulesOverEvents []LintRuleOverEvents) LintRuleOverTokens {
+	// combining all rules into a single rule over tokens
+	//
+	// - oneToManyOverTokens rule over
+	//   - all rules over tokens
+	//   - a recognizer bridging to a
+	//     - oneToManyOverEvents rule over
+	//       - all rules over events
+	return oneToManyOverTokens(append(
+		rulesOverTokens,
+		&recognizer{
+			rule: oneToManyOverEvents(
+				rulesOverEvents),
+		}))
+}
+
 // InstantiateRules instantiates all `enabledRules`.
 func InstantiateRules(rootReporter *RootReporter, enabledRules []string) LintRuleOverTokens {
 	var (
@@ -45,16 +68,7 @@ func InstantiateRules(rootReporter *RootReporter, enabledRules []string) LintRul
 			rulesOverEvents = append(rulesOverEvents, overEvents)
 		}
 	}
-
-	// combining all rules into a single rule over tokens
-	//
-	// - oneToManyOverTokens rule over
-	//   - all rules over tokens
-	//   - a recognizer bridging to a
-	//     - oneToManyOverEvents rule over
-	//       - all rules over events
-	rulesOverTokens = append(rulesOverTokens, &recognizer{rule: oneToManyOverEvents(rulesOverEvents)})
-	return oneToManyOverTokens(rulesOverTokens)
+	return CombineRules(rulesOverTokens, rulesOverEvents)
 }
 
 // RegisterLintRuleOverTokens registers a lint rule over tokens. This meant to

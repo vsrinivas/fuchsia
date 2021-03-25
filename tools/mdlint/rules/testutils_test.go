@@ -15,7 +15,7 @@ import (
 )
 
 type ruleTestCase struct {
-	input string
+	files map[string]string
 }
 
 type warning struct {
@@ -25,6 +25,10 @@ type warning struct {
 
 type warningRecorder struct {
 	actual []warning
+
+	// toks is a parallel array to actual recording the tokens which were warned
+	// on.
+	toks []core.Token
 }
 
 var _ core.Reporter = (*warningRecorder)(nil)
@@ -35,42 +39,71 @@ func (r *warningRecorder) Warnf(tok core.Token, format string, a ...interface{})
 		Col:        tok.Col,
 		TokContent: tok.Content,
 	})
+	r.toks = append(r.toks, tok)
 }
 
 func (ex ruleTestCase) runOverTokens(t *testing.T, instantiator func(core.Reporter) core.LintRuleOverTokens) {
 	var (
-		recorder        = &warningRecorder{}
-		rule            = instantiator(recorder)
-		input, expected = splitMarkdownAndExpectations(ex.input)
+		recorder    = &warningRecorder{}
+		rule        = instantiator(recorder)
+		allExpected = make(map[string][]warning)
+		allActual   = make(map[string][]warning)
 	)
-	if err := core.ProcessSingleDoc("filename", strings.NewReader(input), rule); err != nil {
-		t.Fatalf("error when processing doc: %s", err)
+
+	// 1. Process all files, purposefully in any order.
+	rule.OnStart()
+	for filename, filecontent := range ex.files {
+		input, expected := splitMarkdownAndExpectations(filecontent)
+		if err := core.ProcessSingleDoc(filename, strings.NewReader(input), rule); err != nil {
+			t.Fatalf("error when processing doc: %s", err)
+		}
+		allExpected[filename] = expected
 	}
-	var (
-		numExpected = len(expected)
-		numActual   = len(recorder.actual)
-		i           int
-	)
-	if numExpected != numActual {
-		t.Errorf("expected %d warning(s), found %d warning(s)", numExpected, numActual)
+	rule.OnEnd()
+
+	// 2. Organize all actual by filename.
+	for i, singleActual := range recorder.actual {
+		filename := recorder.toks[i].Doc.Filename
+		allActual[filename] = append(allActual[filename], singleActual)
 	}
-	for ; i < numExpected && i < numActual; i++ {
-		if diff := cmp.Diff(expected[i], recorder.actual[i]); diff != "" {
-			t.Errorf("#%d: expected at %d:%d (`%s`), found at %d:%d (`%s`)", i,
-				expected[i].Ln, expected[i].Col, expected[i].TokContent,
-				recorder.actual[i].Ln, recorder.actual[i].Col, recorder.actual[i].TokContent)
+
+	// 3. Verify all expected against all actual.
+	for filename := range ex.files {
+		var (
+			expected = allExpected[filename]
+			actual   = allActual[filename]
+
+			numExpected = len(expected)
+			numActual   = len(actual)
+			i           int
+		)
+		if numExpected != numActual {
+			t.Errorf("expected %d warning(s), found %d warning(s)", numExpected, numActual)
+		}
+		for ; i < numExpected && i < numActual; i++ {
+			if diff := cmp.Diff(expected[i], recorder.actual[i]); diff != "" {
+				t.Errorf("#%d: expected at %d:%d (`%s`), found at %d:%d (`%s`)", i,
+					expected[i].Ln, expected[i].Col, expected[i].TokContent,
+					actual[i].Ln, actual[i].Col, actual[i].TokContent)
+			}
+		}
+		for ; i < numExpected || i < numActual; i++ {
+			if i < numExpected {
+				t.Errorf("#%d: expected at %d:%d (`%s`), none found", i,
+					expected[i].Ln, expected[i].Col, expected[i].TokContent)
+			}
+			if i < numActual {
+				t.Errorf("#%d: found at %d:%d (`%s`), none expected", i,
+					actual[i].Ln, actual[i].Col, actual[i].TokContent)
+			}
 		}
 	}
-	for ; i < numExpected || i < numActual; i++ {
-		if i < numExpected {
-			t.Errorf("#%d: expected at %d:%d (`%s`), none found", i,
-				expected[i].Ln, expected[i].Col, expected[i].TokContent)
-		}
-		if i < numActual {
-			t.Errorf("#%d: found at %d:%d (`%s`), none expected", i,
-				recorder.actual[i].Ln, recorder.actual[i].Col, recorder.actual[i].TokContent)
-		}
-	}
+}
+
+func (ex ruleTestCase) runOverEvents(t *testing.T, instantiator func(core.Reporter) core.LintRuleOverEvents) {
+	ex.runOverTokens(t, func(reporter core.Reporter) core.LintRuleOverTokens {
+		return core.CombineRules(nil, []core.LintRuleOverEvents{instantiator(reporter)})
+	})
 }
 
 func splitMarkdownAndExpectations(raw string) (string, []warning) {

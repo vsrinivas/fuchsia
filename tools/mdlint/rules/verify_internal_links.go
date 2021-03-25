@@ -9,9 +9,7 @@ import (
 )
 
 func init() {
-	core.RegisterLintRuleOverEvents(verifyInternalLinksName, func(reporter core.Reporter) core.LintRuleOverEvents {
-		return &verifyInternalLinks{reporter: reporter}
-	})
+	core.RegisterLintRuleOverEvents(verifyInternalLinksName, newVerifyInternalLinks)
 }
 
 const verifyInternalLinksName = "verify-internal-links"
@@ -25,6 +23,10 @@ type verifyInternalLinks struct {
 }
 
 var _ core.LintRuleOverEvents = (*verifyInternalLinks)(nil)
+
+func newVerifyInternalLinks(reporter core.Reporter) core.LintRuleOverEvents {
+	return &verifyInternalLinks{reporter: reporter}
+}
 
 func (rule *verifyInternalLinks) OnDocStart(doc *core.Doc) {
 	rule.byXref = nil

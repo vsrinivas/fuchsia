@@ -148,12 +148,22 @@ provided testing utilities:
 ```go
 func TestTheRule(t *testing.T) {
 	ruleTestCase{
-		input: `Sample Markdown document
+		files: map[string]string{
+			"first.md": `Sample Markdown document
 
 Use a «marker» to denote expected warnings.
 
 You can place markers on whitespace, for instance« »
 denotes an expected warning on a non-trimmed line.`,
+
+			"second.md": `Another Markdown document here.`,
+		},
+	// or runOverEvents
 	}.runOverTokens(t, newTheRule)
 }
 ```
+
+In multi-files tests, we rely non the non-deterministic iteration order of maps
+to ensure that rules do not rely on a specific file order for their correctness.
+Consider running new tests multiple times using the `go test` flag `count` to
+verify the robustness of your rule.

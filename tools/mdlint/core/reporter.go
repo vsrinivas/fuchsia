@@ -66,7 +66,7 @@ func (s sortableMessages) Len() int {
 }
 
 func (s sortableMessages) Less(i, j int) bool {
-	if byFilename := strings.Compare(s[i].tok.Doc.filename, s[j].tok.Doc.filename); byFilename < 0 {
+	if byFilename := strings.Compare(s[i].tok.Doc.Filename, s[j].tok.Doc.Filename); byFilename < 0 {
 		return true
 	} else if byFilename > 0 {
 		return false
@@ -137,7 +137,7 @@ func (r *RootReporter) messagesToFindingsJSON() []findingJSON {
 		findings = append(findings, findingJSON{
 			Category:  fmt.Sprintf("mdlint/%s", msg.category),
 			Message:   msg.content,
-			Path:      msg.tok.Doc.filename,
+			Path:      msg.tok.Doc.Filename,
 			StartLine: msg.tok.Ln,
 			StartChar: msg.tok.Col - 1,
 			EndLine:   msg.tok.Ln + numLines,
@@ -186,7 +186,7 @@ func (r *RootReporter) printAsPrettyPrint(writer io.Writer) error {
 			}
 		}
 		var (
-			explanation = fmt.Sprintf("%s:%d:%d: %s", msg.tok.Doc.filename, msg.tok.Ln, msg.tok.Col, msg.content)
+			explanation = fmt.Sprintf("%s:%d:%d: %s", msg.tok.Doc.Filename, msg.tok.Ln, msg.tok.Col, msg.content)
 			lineFromDoc = msg.tok.Doc.lines[msg.tok.Ln-1]
 			squiggle    = makeSquiggle(lineFromDoc, msg.tok)
 		)
