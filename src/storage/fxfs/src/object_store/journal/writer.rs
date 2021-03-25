@@ -80,9 +80,14 @@ impl<OH> JournalWriter<OH> {
         if let Some(ref handle) = self.handle {
             let to_do = self.buf.len() - self.buf.len() % self.block_size;
             if to_do > 0 {
-                handle.write(self.offset, &self.buf[..to_do]).await?;
+                // TODO(jfsulliv): This is horribly inefficient. We should reuse the transfer
+                // buffer. Doing so will require picking an appropriate size up front, and forcing
+                // flush as we fill it up.
+                let mut buf = handle.allocate_buffer(to_do);
+                buf.as_mut_slice()[..to_do].copy_from_slice(self.buf.drain(..to_do).as_slice());
+                buf.as_mut_slice()[to_do..].fill(0u8);
+                handle.write(self.offset, buf.as_ref()).await?;
                 self.offset += to_do as u64;
-                self.buf.drain(..to_do);
             }
         }
         Ok(())
@@ -143,6 +148,7 @@ mod tests {
     use {
         super::JournalWriter,
         crate::{
+            object_handle::ObjectHandle,
             object_store::journal::{fletcher64, Checksum, JournalCheckpoint, RESET_XOR},
             testing::fake_object::{FakeObject, FakeObjectHandle},
         },
@@ -157,20 +163,20 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_write_single_record_and_pad() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
-        let handle = FakeObjectHandle::new(object.clone());
-        let mut writer = JournalWriter::new(Some(handle), TEST_BLOCK_SIZE);
+        let mut writer =
+            JournalWriter::new(Some(FakeObjectHandle::new(object.clone())), TEST_BLOCK_SIZE);
         writer.write_record(&4u32);
         writer.pad_to_block().expect("pad_to_block failed");
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
 
-        let object = object.lock().unwrap();
-        let mut buf = vec![0; object.get_size() as usize];
+        let handle = FakeObjectHandle::new(object.clone());
+        let mut buf = handle.allocate_buffer(object.lock().unwrap().get_size() as usize);
         assert_eq!(buf.len(), TEST_BLOCK_SIZE);
-        object.read(0, &mut buf).expect("read failed");
-        let value: u32 = deserialize_from(&*buf).expect("deserialize_from failed");
+        handle.read(0, buf.as_mut()).await.expect("read failed");
+        let value: u32 = deserialize_from(buf.as_slice()).expect("deserialize_from failed");
         assert_eq!(value, 4u32);
         let (payload, checksum_slice) =
-            &buf[..].split_at(buf.len() - std::mem::size_of::<Checksum>());
+            buf.as_slice().split_at(buf.len() - std::mem::size_of::<Checksum>());
         let checksum = LittleEndian::read_u64(checksum_slice);
         assert_eq!(checksum, fletcher64(payload, 0));
         assert_eq!(
@@ -182,8 +188,8 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_journal_file_checkpoint() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
-        let handle = FakeObjectHandle::new(object.clone());
-        let mut writer = JournalWriter::new(Some(handle), TEST_BLOCK_SIZE);
+        let mut writer =
+            JournalWriter::new(Some(FakeObjectHandle::new(object.clone())), TEST_BLOCK_SIZE);
         writer.write_record(&4u32);
         let checkpoint = writer.journal_file_checkpoint();
         assert_eq!(checkpoint.checksum, 0);
@@ -191,11 +197,11 @@ mod tests {
         writer.pad_to_block().expect("pad_to_block failed");
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
 
-        let object = object.lock().unwrap();
-        let mut buf = vec![0; object.get_size() as usize];
+        let handle = FakeObjectHandle::new(object.clone());
+        let mut buf = handle.allocate_buffer(object.lock().unwrap().get_size() as usize);
         assert_eq!(buf.len(), TEST_BLOCK_SIZE);
-        object.read(0, &mut buf).expect("read failed");
-        let value: u64 = deserialize_from(&buf[checkpoint.file_offset as usize..])
+        handle.read(0, buf.as_mut()).await.expect("read failed");
+        let value: u64 = deserialize_from(&buf.as_slice()[checkpoint.file_offset as usize..])
             .expect("deserialize_from failed");
         assert_eq!(value, 17);
     }
@@ -203,20 +209,25 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_handle() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
-        let handle = FakeObjectHandle::new(object.clone());
         let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE);
-        writer.set_handle(handle, TEST_BLOCK_SIZE as u64 * 5, 12345, false);
+        writer.set_handle(
+            FakeObjectHandle::new(object.clone()),
+            TEST_BLOCK_SIZE as u64 * 5,
+            12345,
+            false,
+        );
         writer.write_record(&12);
         writer.pad_to_block().expect("pad_to_block failed");
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
 
-        let object = object.lock().unwrap();
-        let mut buf = vec![0; object.get_size() as usize];
+        let handle = FakeObjectHandle::new(object.clone());
+        let mut buf = handle.allocate_buffer(object.lock().unwrap().get_size() as usize);
         assert_eq!(buf.len(), TEST_BLOCK_SIZE * 6);
-        object.read(0, &mut buf).expect("read failed");
-        let (first_5_blocks, last_block) = &buf[..].split_at(TEST_BLOCK_SIZE * 5);
+        handle.read(0, buf.as_mut()).await.expect("read failed");
+        let (first_5_blocks, last_block) = buf.as_slice().split_at(TEST_BLOCK_SIZE * 5);
         assert_eq!(first_5_blocks, &vec![0u8; TEST_BLOCK_SIZE * 5]);
-        let value: u64 = deserialize_from(*last_block).expect("deserialize_from failed");
+        let value: u64 =
+            deserialize_from(&last_block[..TEST_BLOCK_SIZE]).expect("deserialize_from failed");
         assert_eq!(value, 12);
         let (payload, checksum_slice) =
             last_block.split_at(last_block.len() - std::mem::size_of::<Checksum>());
@@ -231,20 +242,25 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_set_reset() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
-        let handle = FakeObjectHandle::new(object.clone());
         let mut writer = JournalWriter::new(None, TEST_BLOCK_SIZE);
-        writer.set_handle(handle, TEST_BLOCK_SIZE as u64 * 5, 12345, true);
+        writer.set_handle(
+            FakeObjectHandle::new(object.clone()),
+            TEST_BLOCK_SIZE as u64 * 5,
+            12345,
+            true,
+        );
         writer.write_record(&12);
         writer.pad_to_block().expect("pad_to_block failed");
         writer.maybe_flush_buffer().await.expect("flush_buffer failed");
 
-        let object = object.lock().unwrap();
-        let mut buf = vec![0; object.get_size() as usize];
+        let handle = FakeObjectHandle::new(object.clone());
+        let mut buf = handle.allocate_buffer(object.lock().unwrap().get_size() as usize);
         assert_eq!(buf.len(), TEST_BLOCK_SIZE * 6);
-        object.read(0, &mut buf).expect("read failed");
-        let (first_5_blocks, last_block) = &buf[..].split_at(TEST_BLOCK_SIZE * 5);
+        handle.read(0, buf.as_mut()).await.expect("read failed");
+        let (first_5_blocks, last_block) = buf.as_slice().split_at(TEST_BLOCK_SIZE * 5);
         assert_eq!(first_5_blocks, &vec![0u8; TEST_BLOCK_SIZE * 5]);
-        let value: u64 = deserialize_from(*last_block).expect("deserialize_from failed");
+        let value: u64 =
+            deserialize_from(&last_block[..TEST_BLOCK_SIZE]).expect("deserialize_from failed");
         assert_eq!(value, 12);
         let (payload, checksum_slice) =
             last_block.split_at(last_block.len() - std::mem::size_of::<Checksum>());

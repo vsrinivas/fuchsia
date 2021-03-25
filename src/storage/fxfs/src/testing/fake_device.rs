@@ -2,41 +2,71 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {crate::object_store, anyhow::Error, std::sync::Mutex};
+use {
+    crate::device::{
+        buffer::{Buffer, BufferRef, MutableBufferRef},
+        buffer_allocator::{BufferAllocator, MemBufferSource},
+        Device,
+    },
+    anyhow::Error,
+    async_trait::async_trait,
+    std::sync::Mutex,
+};
 
 pub struct FakeDevice {
-    block_size: u64,
+    allocator: BufferAllocator,
     data: Mutex<Vec<u8>>,
 }
 
+const TRANSFER_HEAP_SIZE: usize = 16 * 1024 * 1024;
+
 impl FakeDevice {
-    pub fn new(block_size: u64) -> Self {
-        Self { block_size, data: Mutex::new(Vec::new()) }
+    pub fn new(block_count: u64, block_size: u32) -> Self {
+        let allocator = BufferAllocator::new(
+            block_size as usize,
+            Box::new(MemBufferSource::new(TRANSFER_HEAP_SIZE)),
+        );
+        Self {
+            allocator,
+            data: Mutex::new(vec![0 as u8; block_count as usize * block_size as usize]),
+        }
     }
 }
 
-impl object_store::device::Device for FakeDevice {
-    fn block_size(&self) -> u64 {
-        self.block_size
+#[async_trait]
+impl Device for FakeDevice {
+    fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
+        self.allocator.allocate_buffer(size)
     }
-    fn read(&self, offset: u64, buf: &mut [u8]) -> Result<(), Error> {
-        assert!(offset % self.block_size == 0);
-        assert!(buf.len() % self.block_size as usize == 0);
-        let required_len = offset as usize + buf.len();
+
+    fn block_size(&self) -> u32 {
+        self.allocator.block_size() as u32
+    }
+
+    fn block_count(&self) -> u64 {
+        self.data.lock().unwrap().len() as u64 / self.block_size() as u64
+    }
+
+    async fn read(&self, offset: u64, mut buffer: MutableBufferRef<'_>) -> Result<(), Error> {
+        let offset = offset as usize;
+        assert_eq!(offset % self.allocator.block_size(), 0);
         let data = self.data.lock().unwrap();
-        assert!(data.len() >= required_len);
-        buf.copy_from_slice(&data[offset as usize..offset as usize + buf.len()]);
+        let size = buffer.len();
+        assert!(offset + size <= data.len());
+        buffer.as_mut_slice().copy_from_slice(&data[offset..offset + size]);
         Ok(())
     }
 
-    fn write(&self, offset: u64, buf: &[u8]) -> Result<(), Error> {
-        assert!(buf.len() % self.block_size as usize == 0);
-        let end = offset as usize + buf.len();
+    async fn write(&self, offset: u64, buffer: BufferRef<'_>) -> Result<(), Error> {
+        let offset = offset as usize;
+        assert_eq!(offset % self.allocator.block_size(), 0);
         let mut data = self.data.lock().unwrap();
-        if data.len() < end {
-            data.resize(end, 0);
-        }
-        data[offset as usize..end].copy_from_slice(buf);
+        assert!(offset + buffer.len() <= data.len());
+        data[offset..offset + buffer.len()].copy_from_slice(buffer.as_slice());
+        Ok(())
+    }
+
+    async fn close(self) -> Result<(), Error> {
         Ok(())
     }
 }

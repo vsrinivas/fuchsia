@@ -4,7 +4,6 @@
 
 mod allocator;
 mod constants;
-pub mod device;
 pub mod filesystem;
 mod journal;
 mod merge;
@@ -15,6 +14,10 @@ pub use record::ObjectType;
 
 use {
     crate::{
+        device::{
+            buffer::{Buffer, BufferRef, MutableBufferRef},
+            Device,
+        },
         errors::FxfsError,
         lsm_tree::{
             types::{Item, ItemRef, LayerIterator},
@@ -22,7 +25,6 @@ use {
         },
         object_handle::{ObjectHandle, ObjectHandleExt},
         object_store::{
-            device::Device,
             filesystem::{ApplyMutations, Filesystem},
             record::DEFAULT_DATA_ATTRIBUTE_ID,
             record::{
@@ -98,7 +100,7 @@ impl ObjectStore {
             parent_store,
             store_object_id,
             device: device,
-            block_size,
+            block_size: block_size.into(),
             allocator: Arc::downgrade(allocator),
             filesystem: Arc::downgrade(filesystem),
             store_info: Mutex::new(store_info),
@@ -162,7 +164,13 @@ impl ObjectStore {
         // transaction i.e.  this function should take transaction as an arg.
         let mut serialized_info = Vec::new();
         serialize_into(&mut serialized_info, &StoreInfo::default())?;
-        handle.write(0u64, &serialized_info).await?;
+        // TODO(jfsulliv): we should consider preallocating the maximum serialized_info can be and
+        // then write directly to the buffer.
+        {
+            let mut buf = self.device.allocate_buffer(serialized_info.len());
+            buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
+            handle.write(0u64, buf.as_ref()).await?;
+        }
 
         Ok(Self::new_empty(
             Some(self.clone()),
@@ -304,7 +312,9 @@ impl ObjectStore {
             // transaction to write.
             serialize_into(&mut serialized_info, &*store_info)?;
         }
-        handle.write(0u64, &serialized_info).await?;
+        let mut buf = self.device.allocate_buffer(serialized_info.len());
+        buf.as_mut_slice()[..serialized_info.len()].copy_from_slice(&serialized_info[..]);
+        handle.write(0u64, buf.as_ref()).await?;
 
         let mut transaction = Transaction::new();
         transaction.add(self.store_object_id(), Mutation::TreeCompact);
@@ -414,7 +424,7 @@ impl StoreObjectHandle {
         &self,
         transaction: &mut Transaction,
         mut offset: u64,
-        buf: &[u8],
+        buf: BufferRef<'_>,
     ) -> Result<(), Error> {
         let mut aligned = round_down(offset, self.block_size)
             ..round_up(offset + buf.len() as u64, self.block_size);
@@ -454,7 +464,7 @@ impl StoreObjectHandle {
             assert!(len > 0);
             self.write_at(
                 offset,
-                &buf[buf_offset..buf_offset + len],
+                buf.subslice(buf_offset..buf_offset + len),
                 device_range.start + offset % self.block_size,
             )
             .await?;
@@ -474,18 +484,24 @@ impl StoreObjectHandle {
         Ok(())
     }
 
-    async fn write_at(&self, offset: u64, buf: &[u8], mut device_offset: u64) -> Result<(), Error> {
+    async fn write_at(
+        &self,
+        offset: u64,
+        buf: BufferRef<'_>,
+        mut device_offset: u64,
+    ) -> Result<(), Error> {
         // Deal with alignment.
         let start_align = (offset % self.block_size) as usize;
         let start_offset = offset - start_align as u64;
         let remainder = if start_align > 0 {
             let (head, remainder) =
                 buf.split_at(min(self.block_size as usize - start_align, buf.len()));
-            let mut align_buf = vec![0; self.block_size as usize];
-            self.read(start_offset, align_buf.as_mut_slice()).await?;
-            &mut align_buf[start_align..(start_align + head.len())].copy_from_slice(head);
+            let mut align_buf = self.store.device.allocate_buffer(self.block_size as usize);
+            self.read(start_offset, align_buf.as_mut()).await?;
+            align_buf.as_mut_slice()[start_align..(start_align + head.len())]
+                .copy_from_slice(head.as_slice());
             device_offset -= start_align as u64;
-            self.store.device.write(device_offset, &align_buf)?;
+            self.store.device.write(device_offset, align_buf.as_ref()).await?;
             device_offset += self.block_size;
             remainder
         } else {
@@ -495,13 +511,13 @@ impl StoreObjectHandle {
             let end = offset + buf.len() as u64;
             let end_align = (end % self.block_size) as usize;
             let (whole_blocks, tail) = remainder.split_at(remainder.len() - end_align);
-            self.store.device.write(device_offset, whole_blocks)?;
+            self.store.device.write(device_offset, whole_blocks).await?;
             device_offset += whole_blocks.len() as u64;
             if tail.len() > 0 {
-                let mut align_buf = vec![0; self.block_size as usize];
-                self.read(end - end_align as u64, align_buf.as_mut_slice()).await?;
-                align_buf[..tail.len()].copy_from_slice(tail);
-                self.store.device.write(device_offset, &align_buf)?;
+                let mut align_buf = self.store.device.allocate_buffer(self.block_size as usize);
+                self.read(end - end_align as u64, align_buf.as_mut()).await?;
+                &align_buf.as_mut_slice()[..tail.len()].copy_from_slice(tail.as_slice());
+                self.store.device.write(device_offset, align_buf.as_ref()).await?;
             }
         }
         Ok(())
@@ -570,7 +586,11 @@ impl ObjectHandle for StoreObjectHandle {
         return self.object_id;
     }
 
-    async fn read(&self, mut offset: u64, mut buf: &mut [u8]) -> Result<usize, Error> {
+    fn allocate_buffer(&self, size: usize) -> Buffer<'_> {
+        self.store.device.allocate_buffer(size)
+    }
+
+    async fn read(&self, mut offset: u64, mut buf: MutableBufferRef<'_>) -> Result<usize, Error> {
         if buf.len() == 0 || offset >= *self.size.lock().unwrap() {
             return Ok(0);
         }
@@ -585,7 +605,7 @@ impl ObjectHandle for StoreObjectHandle {
             )))
             .await?;
         let to_do = min(buf.len() as u64, *self.size.lock().unwrap() - offset) as usize;
-        buf = &mut buf[..to_do];
+        buf = buf.subslice_mut(0..to_do);
         let mut start_align = (offset % self.block_size) as usize;
         let end_align = ((offset + to_do as u64) % self.block_size) as usize;
         while let Some(ItemRef {
@@ -599,10 +619,10 @@ impl ObjectHandle for StoreObjectHandle {
             if extent_key.range.start > offset {
                 // Zero everything up to the start of the extent.
                 let to_zero = min(extent_key.range.start - offset, buf.len() as u64) as usize;
-                for i in &mut buf[..to_zero] {
+                for i in &mut buf.as_mut_slice()[..to_zero] {
                     *i = 0;
                 }
-                buf = &mut buf[to_zero..];
+                buf = buf.subslice_mut(to_zero..);
                 if buf.is_empty() {
                     break;
                 }
@@ -619,12 +639,13 @@ impl ObjectHandle for StoreObjectHandle {
                 // Deal with starting alignment by reading the existing contents into an alignment
                 // buffer.
                 if start_align > 0 {
-                    let mut align_buf = vec![0; self.block_size as usize];
-                    self.store.device.read(device_offset, &mut align_buf)?;
+                    let mut align_buf = self.store.device.allocate_buffer(self.block_size as usize);
+                    self.store.device.read(device_offset, align_buf.as_mut()).await?;
                     let to_copy = min(self.block_size as usize - start_align, buf.len());
-                    buf[..to_copy]
-                        .copy_from_slice(&mut align_buf[start_align..(start_align + to_copy)]);
-                    buf = &mut buf[to_copy..];
+                    buf.as_mut_slice()[..to_copy].copy_from_slice(
+                        &align_buf.as_slice()[start_align..(start_align + to_copy)],
+                    );
+                    buf = buf.subslice_mut(to_copy..);
                     if buf.is_empty() {
                         break;
                     }
@@ -635,8 +656,11 @@ impl ObjectHandle for StoreObjectHandle {
 
                 let to_copy = min(buf.len() - end_align, (extent_key.range.end - offset) as usize);
                 if to_copy > 0 {
-                    self.store.device.read(device_offset, &mut buf[..to_copy])?;
-                    buf = &mut buf[to_copy..];
+                    self.store
+                        .device
+                        .read(device_offset, buf.reborrow().subslice_mut(..to_copy))
+                        .await?;
+                    buf = buf.subslice_mut(to_copy..);
                     if buf.is_empty() {
                         break;
                     }
@@ -647,10 +671,10 @@ impl ObjectHandle for StoreObjectHandle {
                 // Deal with end alignment, again by reading the exsting contents into an alignment
                 // buffer.
                 if offset < extent_key.range.end && end_align > 0 {
-                    let mut align_buf = vec![0; self.block_size as usize];
-                    self.store.device.read(device_offset, &mut align_buf)?;
-                    buf.copy_from_slice(&align_buf[..end_align]);
-                    buf = &mut [];
+                    let mut align_buf = self.store.device.allocate_buffer(self.block_size as usize);
+                    self.store.device.read(device_offset, align_buf.as_mut()).await?;
+                    buf.as_mut_slice().copy_from_slice(&align_buf.as_slice()[..end_align]);
+                    buf = buf.subslice_mut(0..0);
                     break;
                 }
                 offset
@@ -669,11 +693,11 @@ impl ObjectHandle for StoreObjectHandle {
             ))
             .await?;
         }
-        buf.fill(0);
+        buf.as_mut_slice().fill(0);
         Ok(to_do)
     }
 
-    async fn write(&self, offset: u64, buf: &[u8]) -> Result<(), Error> {
+    async fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error> {
         if self.options.overwrite {
             panic!("Not supported");
         } else {
@@ -706,7 +730,11 @@ impl ObjectHandle for StoreObjectHandle {
                 // no need to support overwrite mode here, and it would be difficult since we'd need
                 // to transactionalize zeroing the tail of the last block with the other metadata
                 // changes, which we don't currently have a way to do.
-                self.write_cow(&mut transaction, length, &vec![0 as u8; to_zero as usize]).await?;
+                // TODO(csuter): This is allocating a small buffer that we'll just end up copying.
+                // Is there a better way?
+                let mut buf = self.allocate_buffer(to_zero as usize);
+                buf.as_mut_slice().fill(0);
+                self.write_cow(&mut transaction, length, buf.as_ref()).await?;
             }
         }
         transaction.add(
@@ -732,10 +760,10 @@ impl ObjectHandle for StoreObjectHandle {
 mod tests {
     use {
         crate::{
+            device::Device,
             object_handle::ObjectHandle,
             object_store::{
                 allocator::Allocator,
-                device::Device,
                 filesystem::{ApplyMutations, Filesystem, ObjectManager, ObjectSync},
                 journal::JournalCheckpoint,
                 transaction::{Mutation, Transaction},
@@ -837,7 +865,7 @@ mod tests {
     }
 
     async fn test_filesystem_and_store() -> (Arc<FakeFilesystem>, Arc<ObjectStore>) {
-        let device = Arc::new(FakeDevice::new(512));
+        let device = Arc::new(FakeDevice::new(1024, 512));
         let allocator = Arc::new(FakeAllocator(Mutex::new(0)));
         let filesystem = FakeFilesystem::new(device, allocator.clone());
         let parent_store = ObjectStore::new_empty(
@@ -860,7 +888,11 @@ mod tests {
             .await
             .expect("create_object failed");
         store.filesystem().commit_transaction(transaction).await;
-        object.write(TEST_DATA_OFFSET, TEST_DATA).await.expect("write failed");
+        {
+            let mut buf = object.allocate_buffer(TEST_DATA.len());
+            buf.as_mut_slice().copy_from_slice(TEST_DATA);
+            object.write(TEST_DATA_OFFSET, buf.as_ref()).await.expect("write failed");
+        }
         object.truncate(TEST_OBJECT_SIZE).await.expect("truncate failed");
         (fs, object)
     }
@@ -868,32 +900,32 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_zero_buf_len_read() {
         let (_fs, object) = test_filesystem_and_object().await;
-        let mut buf = [0u8; 0];
-        assert_eq!(object.read(0, &mut buf).await.expect("read failed"), 0);
+        let mut buf = object.allocate_buffer(0);
+        assert_eq!(object.read(0u64, buf.as_mut()).await.expect("read failed"), 0);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_beyond_eof_read() {
         let (_fs, object) = test_filesystem_and_object().await;
-        let mut buf = [123u8; TEST_DATA.len() * 2];
-        assert_eq!(object.read(TEST_OBJECT_SIZE, &mut buf).await.expect("read failed"), 0);
-        assert_eq!(object.read(TEST_OBJECT_SIZE - 2, &mut buf).await.expect("read failed"), 2);
-        assert_eq!(&buf[0..2], &[0, 0]);
+        let mut buf = object.allocate_buffer(TEST_DATA.len() * 2);
+        buf.as_mut_slice().fill(123u8);
+        assert_eq!(object.read(TEST_OBJECT_SIZE, buf.as_mut()).await.expect("read failed"), 0);
+        assert_eq!(object.read(TEST_OBJECT_SIZE - 2, buf.as_mut()).await.expect("read failed"), 2);
+        assert_eq!(&buf.as_slice()[0..2], &[0, 0]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_sparse() {
         let (_fs, object) = test_filesystem_and_object().await;
         // Deliberately read 1 byte into the object and not right to eof.
-        let mut buf = [123u8; TEST_OBJECT_SIZE as usize - 2];
-        assert_eq!(
-            object.read(1, &mut buf).await.expect("read failed"),
-            TEST_OBJECT_SIZE as usize - 2
-        );
-        let mut expected = [0; TEST_OBJECT_SIZE as usize - 2];
+        let len = TEST_OBJECT_SIZE as usize - 2;
+        let mut buf = object.allocate_buffer(len);
+        buf.as_mut_slice().fill(123u8);
+        assert_eq!(object.read(1u64, buf.as_mut()).await.expect("read failed"), len);
+        let mut expected = vec![0; len];
         let offset = TEST_DATA_OFFSET as usize - 1;
         &mut expected[offset..offset + TEST_DATA.len()].copy_from_slice(TEST_DATA);
-        assert_eq!(buf, expected);
+        assert_eq!(buf.as_slice()[..len], expected[..]);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -903,19 +935,20 @@ mod tests {
         object.store().flush(false).await.expect("flush failed");
 
         // Write more test data to the first block fo the file.
-        object.write(0, TEST_DATA).await.expect("write failed");
+        let mut buf = object.allocate_buffer(TEST_DATA.len());
+        buf.as_mut_slice().copy_from_slice(TEST_DATA);
+        object.write(0u64, buf.as_ref()).await.expect("write failed");
 
-        let mut buf = [123u8; TEST_OBJECT_SIZE as usize - 2];
-        assert_eq!(
-            object.read(1, &mut buf).await.expect("read failed"),
-            TEST_OBJECT_SIZE as usize - 2
-        );
+        let len = TEST_OBJECT_SIZE as usize - 2;
+        let mut buf = object.allocate_buffer(len);
+        buf.as_mut_slice().fill(123u8);
+        assert_eq!(object.read(1u64, buf.as_mut()).await.expect("read failed"), len);
 
-        let mut expected = [0; TEST_OBJECT_SIZE as usize - 2];
+        let mut expected = vec![0u8; len];
         let offset = TEST_DATA_OFFSET as usize - 1;
         &mut expected[offset..offset + TEST_DATA.len()].copy_from_slice(TEST_DATA);
         &mut expected[..TEST_DATA.len() - 1].copy_from_slice(&TEST_DATA[1..]);
-        assert_eq!(buf, expected);
+        assert_eq!(buf.as_slice()[..len], expected[..]);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -923,29 +956,38 @@ mod tests {
         let (_fs, object) = test_filesystem_and_object().await;
 
         // Arrange for there to be <extent><deleted-extent><extent>.
-        object.write(0, TEST_DATA).await.expect("write failed"); // This adds an extent at 0..512.
+        let mut buf = object.allocate_buffer(TEST_DATA.len());
+        buf.as_mut_slice().copy_from_slice(TEST_DATA);
+        object.write(0, buf.as_ref()).await.expect("write failed"); // This adds an extent at 0..512.
         object.truncate(3).await.expect("truncate failed"); // This deletes 512..1024.
-        object.write(1500, b"foo").await.expect("write failed"); // This adds 1024..1536.
+        let data = b"foo";
+        let mut buf = object.allocate_buffer(data.len());
+        buf.as_mut_slice().copy_from_slice(data);
+        object.write(1500, buf.as_ref()).await.expect("write failed"); // This adds 1024..1536.
 
         const LEN1: usize = 1501;
-        let mut buf = [123u8; LEN1];
-        assert_eq!(object.read(1, &mut buf).await.expect("read failed"), LEN1);
+        let mut buf = object.allocate_buffer(LEN1);
+        buf.as_mut_slice().fill(123u8);
+        assert_eq!(object.read(1u64, buf.as_mut()).await.expect("read failed"), LEN1);
         let mut expected = [0; LEN1];
         &mut expected[0..2].copy_from_slice(&TEST_DATA[1..3]);
         &mut expected[1499..].copy_from_slice(b"fo");
-        assert_eq!(buf, expected);
+        assert_eq!(buf.as_slice(), expected);
 
         // Also test a read that ends midway through the deleted extent.
         const LEN2: usize = 600;
-        let mut buf = [123u8; LEN2];
-        assert_eq!(object.read(1, &mut buf[0..600]).await.expect("read failed"), LEN2);
-        assert_eq!(buf, &expected[..LEN2]);
+        let mut buf = object.allocate_buffer(LEN2);
+        buf.as_mut_slice().fill(123u8);
+        assert_eq!(object.read(1u64, buf.as_mut()).await.expect("read failed"), LEN2);
+        assert_eq!(buf.as_slice(), &expected[..LEN2]);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_read_whole_blocks_with_multiple_objects() {
         let (_fs, object) = test_filesystem_and_object().await;
-        object.write(0, &[0xaf; 512]).await.expect("write failed");
+        let mut buffer = object.allocate_buffer(512);
+        buffer.as_mut_slice().fill(0xaf);
+        object.write(0, buffer.as_ref()).await.expect("write failed");
 
         let store = object.store();
         let mut transaction = Transaction::new();
@@ -954,18 +996,23 @@ mod tests {
             .await
             .expect("create_object failed");
         store.filesystem().commit_transaction(transaction).await;
-        object2.write(0, &[0xef; 512]).await.expect("write failed");
+        let mut ef_buffer = object.allocate_buffer(512);
+        ef_buffer.as_mut_slice().fill(0xef);
+        object2.write(0, ef_buffer.as_ref()).await.expect("write failed");
 
-        object.write(512, &[0xaf; 512]).await.expect("write failed");
+        let mut buffer = object.allocate_buffer(512);
+        buffer.as_mut_slice().fill(0xaf);
+        object.write(512, buffer.as_ref()).await.expect("write failed");
         object.truncate(1536).await.expect("truncate failed");
-        object2.write(512, &[0xef; 512]).await.expect("write failed");
+        object2.write(512, ef_buffer.as_ref()).await.expect("write failed");
 
-        let mut buf = [123u8; 2048];
-        assert_eq!(object.read(0, &mut buf).await.expect("read failed"), 1536);
-        assert_eq!(&buf[..1024], &[0xaf; 1024]);
-        assert_eq!(&buf[1024..1536], &[0; 512]);
-        assert_eq!(object2.read(0, &mut buf).await.expect("read failed"), 1024);
-        assert_eq!(&buf[..1024], &[0xef; 1024]);
+        let mut buffer = object.allocate_buffer(2048);
+        buffer.as_mut_slice().fill(123);
+        assert_eq!(object.read(0, buffer.as_mut()).await.expect("read failed"), 1536);
+        assert_eq!(&buffer.as_slice()[..1024], &[0xaf; 1024]);
+        assert_eq!(&buffer.as_slice()[1024..1536], &[0; 512]);
+        assert_eq!(object2.read(0, buffer.as_mut()).await.expect("read failed"), 1024);
+        assert_eq!(&buffer.as_slice()[..1024], &[0xef; 1024]);
     }
 }
 

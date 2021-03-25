@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::device::buffer::{Buffer, BufferRef, MutableBufferRef},
     anyhow::{bail, Error},
     async_trait::async_trait,
 };
@@ -13,9 +14,17 @@ pub trait ObjectHandle: Send + Sync {
     /// object is contained in, but not necessarily unique within the entire system.
     fn object_id(&self) -> u64;
 
-    async fn read(&self, offset: u64, buf: &mut [u8]) -> Result<usize, Error>;
+    /// Allocates a buffer for doing I/O (read and write) for the object.
+    fn allocate_buffer(&self, size: usize) -> Buffer<'_>;
 
-    async fn write(&self, offset: u64, buf: &[u8]) -> Result<(), Error>;
+    /// Fills |buf| with |len| bytes read from |offset| on the underlying device.
+    /// The remainder of |buf| will be zeroed (so it is prudent to make |buf| as close in size to
+    /// |len| as possible, for example by taking a buf.subslice().)
+    /// |buf.size()| must be at least |len| bytes.
+    async fn read(&self, offset: u64, buf: MutableBufferRef<'_>) -> Result<usize, Error>;
+
+    /// Writes |buf| to the device at |offset|.
+    async fn write(&self, offset: u64, buf: BufferRef<'_>) -> Result<(), Error>;
 
     // Returns the size of the object.
     fn get_size(&self) -> u64;
@@ -39,8 +48,10 @@ impl<T: ObjectHandle> ObjectHandleExt for T {
         if size > limit as u64 {
             bail!("Object too big ({} > {})", size, limit);
         }
-        let mut buf = vec![0; size as usize];
-        self.read(0, &mut buf[..]).await?;
-        Ok(buf.into())
+        let mut buf = self.allocate_buffer(size as usize);
+        self.read(0u64, buf.as_mut()).await?;
+        let mut vec = vec![0; size as usize];
+        vec.copy_from_slice(&buf.as_slice());
+        Ok(vec.into())
     }
 }

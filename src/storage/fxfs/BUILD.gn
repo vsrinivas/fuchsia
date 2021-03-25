@@ -35,7 +35,6 @@ fxfs_sources = [
   "src/object_store/allocator.rs",
   "src/object_store/allocator/merge.rs",
   "src/object_store/constants.rs",
-  "src/object_store/device.rs",
   "src/object_store/filesystem.rs",
   "src/object_store/journal.rs",
   "src/object_store/journal/reader.rs",

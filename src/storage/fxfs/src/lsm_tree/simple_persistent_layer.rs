@@ -61,15 +61,19 @@ impl<'iter, K: Key, V: Value> LayerIterator<K, V> for Iterator<'iter, K, V> {
                 self.item = None;
                 return Ok(());
             }
-            let mut buf = vec![0u8; self.layer.block_size as usize];
-            self.layer.object_handle.read(self.pos, &mut buf[..]).await?;
+            // TODO(jfsulliv): Reuse this transfer buffer.
+            let bs = self.layer.block_size as usize;
+            let mut buf = self.layer.object_handle.allocate_buffer(bs);
+            self.layer.object_handle.read(self.pos, buf.as_mut()).await?;
+            let mut vec = vec![0u8; bs];
+            vec.copy_from_slice(&buf.as_slice()[..bs]);
             log::debug!(
                 "pos={}, object size={}, object id={}",
                 self.pos,
                 self.layer.object_handle.get_size(),
                 self.layer.object_handle.object_id()
             );
-            let mut reader = std::io::Cursor::new(buf.into());
+            let mut reader = std::io::Cursor::new(vec.into());
             self.item_count = reader.read_u16::<LittleEndian>()?;
             if self.item_count == 0 {
                 bail!("Read block with zero item count");
@@ -192,7 +196,12 @@ impl<'a> SimplePersistentLayerWriter<'a> {
             return Ok(());
         }
         LittleEndian::write_u16(&mut self.buf[0..2], self.item_count);
-        self.object_handle.write(self.offset, &self.buf[..len]).await?;
+        // TODO(jfsulliv): Buffer directly into the transfer buffer.
+        // TODO(jfsulliv): Be more efficient by writing only aligned chunks of data.
+        let mut buf = self.object_handle.allocate_buffer(len);
+        // TODO(csuter): Consider making BufferRef implement AsRef<[u8]> to make this a bit tidier.
+        buf.as_mut_slice().copy_from_slice(&self.buf[..len]);
+        self.object_handle.write(self.offset, buf.as_ref()).await?;
         log::debug!("wrote {} items, {} bytes", self.item_count, len);
         self.buf.drain(..len - 2); // 2 bytes are used for the next item count.
         self.item_count = 0;

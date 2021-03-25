@@ -18,14 +18,14 @@ use {
 /// preceding block as an input to the next block so that merely copying a block to a different
 /// location will cause a checksum failure.  The serialization of a single record *must* fit within
 /// a single block.
-pub struct JournalReader<OH> {
+pub struct JournalReader<OH: ObjectHandle> {
     // The handle of the journal file that we are reading.
     handle: OH,
 
     // The block size for the journal file.
     block_size: u64,
 
-    // A buffer containing the currently buffered data.
+    // The currently buffered data.
     buf: Vec<u8>,
 
     // The range within the buffer containing outstanding data.
@@ -143,19 +143,22 @@ impl<OH: ObjectHandle> JournalReader<OH> {
         self.buf_range = 0..self.buf_range.end - self.buf_range.start;
 
         while self.buf_range.end - self.buf_range.start < bs {
-            // Read the next block's worth.
             self.buf.resize(self.buf_range.end + bs, 0);
+            assert!(self.buf_range.end <= bs);
             let last_read_checksum = self.last_read_checksum();
-            let slice = &mut self.buf[self.buf_range.end..];
-            if self.handle.read(self.read_offset as u64, slice).await? != bs {
+
+            // Read the next block's worth, verify its checksum, and append it to |buf|.
+            let mut buffer = self.handle.allocate_buffer(bs);
+            assert!(self.read_offset % bs as u64 == 0);
+            if self.handle.read(self.read_offset as u64, buffer.as_mut()).await? != bs {
                 // This shouldn't happen -- it shouldn't be possible to read to the end
                 // of the journal file.
                 bail!("unexpected end of journal file");
             }
+            self.buf.as_mut_slice()[self.buf_range.end..].copy_from_slice(buffer.as_slice());
 
-            // Now check the checksum.
             let (contents_slice, checksum_slice) =
-                slice.split_at(bs - std::mem::size_of::<Checksum>());
+                buffer.as_slice().split_at(bs - std::mem::size_of::<Checksum>());
             let stored_checksum = LittleEndian::read_u64(checksum_slice);
             let computed_checksum = fletcher64(contents_slice, last_read_checksum);
             if stored_checksum != computed_checksum {
@@ -168,7 +171,7 @@ impl<OH: ObjectHandle> JournalReader<OH> {
                     // do push the checksum.
                     self.found_reset = true;
                     self.checksums.push(stored_checksum);
-                    self.read_offset += self.block_size;
+                    self.read_offset += bs as u64;
                 } else {
                     self.bad_checksum = true;
                 }
@@ -251,8 +254,12 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_read_single_record() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
+        let handle = FakeObjectHandle::new(object.clone());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
-        object.lock().unwrap().write(0, &[0; TEST_BLOCK_SIZE as usize * 2]).expect("write failed");
+        let len = TEST_BLOCK_SIZE as usize * 2;
+        let mut buf = handle.allocate_buffer(len);
+        buf.as_mut_slice().fill(0u8);
+        handle.write(0, buf.as_ref()).await.expect("write failed");
         write_items(FakeObjectHandle::new(object.clone()), &[4u32]).await;
 
         let mut reader = JournalReader::new(
@@ -274,7 +281,11 @@ mod tests {
         );
         assert_eq!(reader.journal_file_checkpoint(), JournalCheckpoint::default());
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
-        object.lock().unwrap().write(0, &[0; TEST_BLOCK_SIZE as usize * 2]).expect("write failed");
+        let handle = FakeObjectHandle::new(object.clone());
+        let len = TEST_BLOCK_SIZE as usize * 2;
+        let mut buf = handle.allocate_buffer(len);
+        buf.as_mut_slice().fill(0u8);
+        handle.write(0, buf.as_ref()).await.expect("write failed");
         write_items(FakeObjectHandle::new(object.clone()), &[4u32, 7u32]).await;
 
         assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(4u32));
@@ -296,7 +307,11 @@ mod tests {
         );
         assert_eq!(reader.read_offset(), 0);
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
-        object.lock().unwrap().write(0, &[0; TEST_BLOCK_SIZE as usize * 2]).expect("write failed");
+        let handle = FakeObjectHandle::new(object.clone());
+        let len = TEST_BLOCK_SIZE as usize * 2;
+        let mut buf = handle.allocate_buffer(len);
+        buf.as_mut_slice().fill(0u8);
+        handle.write(0, buf.as_ref()).await.expect("write failed");
         write_items(FakeObjectHandle::new(object.clone()), &[4u32, 7u32]).await;
         assert_eq!(reader.deserialize().await.expect("deserialize failed"), ReadResult::Some(4u32));
         assert_eq!(reader.read_offset(), TEST_BLOCK_SIZE);
@@ -306,7 +321,11 @@ mod tests {
     async fn test_skip_to_end_of_block() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
-        object.lock().unwrap().write(0, &[0; TEST_BLOCK_SIZE as usize * 3]).expect("write failed");
+        let handle = FakeObjectHandle::new(object.clone());
+        let len = TEST_BLOCK_SIZE as usize * 3;
+        let mut buf = handle.allocate_buffer(len);
+        buf.as_mut_slice().fill(0u8);
+        handle.write(0, buf.as_ref()).await.expect("write failed");
         let mut writer = JournalWriter::new(
             Some(FakeObjectHandle::new(object.clone())),
             TEST_BLOCK_SIZE as usize,
@@ -330,7 +349,11 @@ mod tests {
     async fn test_handle() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
-        object.lock().unwrap().write(0, &[0; TEST_BLOCK_SIZE as usize * 3]).expect("write failed");
+        let handle = FakeObjectHandle::new(object.clone());
+        let len = TEST_BLOCK_SIZE as usize * 3;
+        let mut buf = handle.allocate_buffer(len);
+        buf.as_mut_slice().fill(0u8);
+        handle.write(0, buf.as_ref()).await.expect("write failed");
         let mut reader = JournalReader::new(
             FakeObjectHandle::new(object.clone()),
             TEST_BLOCK_SIZE,
@@ -343,7 +366,11 @@ mod tests {
     async fn test_item_spanning_block() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
-        object.lock().unwrap().write(0, &[0; TEST_BLOCK_SIZE as usize * 3]).expect("write failed");
+        let handle = FakeObjectHandle::new(object.clone());
+        let len = TEST_BLOCK_SIZE as usize * 3;
+        let mut buf = handle.allocate_buffer(len);
+        buf.as_mut_slice().fill(0u8);
+        handle.write(0, buf.as_ref()).await.expect("write failed");
         let mut writer = JournalWriter::new(
             Some(FakeObjectHandle::new(object.clone())),
             TEST_BLOCK_SIZE as usize,
@@ -378,7 +405,11 @@ mod tests {
     async fn test_reset() {
         let object = Arc::new(Mutex::new(FakeObject::new()));
         // Make the journal file a minimum of two blocks since reading to EOF is an error.
-        object.lock().unwrap().write(0, &[0; TEST_BLOCK_SIZE as usize * 3]).expect("write failed");
+        let handle = FakeObjectHandle::new(object.clone());
+        let len = TEST_BLOCK_SIZE as usize * 3;
+        let mut buf = handle.allocate_buffer(len);
+        buf.as_mut_slice().fill(0u8);
+        handle.write(0, buf.as_ref()).await.expect("write failed");
         write_items(FakeObjectHandle::new(object.clone()), &[4u32, 7u32]).await;
 
         let mut reader = JournalReader::new(
