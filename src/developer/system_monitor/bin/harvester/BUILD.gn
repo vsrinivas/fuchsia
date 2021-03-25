@@ -22,8 +22,6 @@ source_set("lib") {
     "dockyard_proxy.h",
     "dockyard_proxy_grpc.cc",
     "dockyard_proxy_grpc.h",
-    "fidl.cc",
-    "fidl.h",
     "fuchsia_clock.cc",
     "fuchsia_clock.h",
     "gather_category.cc",
@@ -63,7 +61,6 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.kernel",
     "//sdk/fidl/fuchsia.kernel:fuchsia.kernel_c",
     "//sdk/fidl/fuchsia.sysinfo",
-    "//sdk/fidl/fuchsia.systemmonitor",
     "//sdk/lib/fdio",
     "//sdk/lib/sys/cpp",
     "//sdk/lib/syslog/cpp",
@@ -115,10 +112,6 @@ package("system_monitor_harvester") {
     {
       path = rebase_path("meta/system_monitor_harvester.cmx")
       dest = "system_monitor_harvester.cmx"
-    },
-    {
-      path = rebase_path("meta/system_monitor_harvester_fidl.cmx")
-      dest = "system_monitor_harvester_fidl.cmx"
     },
   ]
 }

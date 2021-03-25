@@ -1,6 +1,5 @@
 # Components
 fuchsia-pkg://fuchsia.com/system_monitor_harvester#meta/system_monitor_harvester.cmx
-fuchsia-pkg://fuchsia.com/system_monitor_harvester#meta/system_monitor_harvester_fidl.cmx
 # Component Tests
 fuchsia-pkg://fuchsia.com/component-manager-tests#meta/component_manager_boot_env_tests.cmx
 fuchsia-pkg://fuchsia.com/loadbench#meta/loadbench.cmx

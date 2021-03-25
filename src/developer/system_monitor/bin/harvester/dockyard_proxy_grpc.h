@@ -35,13 +35,13 @@ dockyard_proto::LogBatch BuildLogBatch(
 class DockyardProxyGrpc : public DockyardProxy {
  public:
   DockyardProxyGrpc(std::shared_ptr<grpc::Channel> channel,
-                    std::shared_ptr<FuchsiaClock> clock)
+                    std::unique_ptr<FuchsiaClock> clock)
       : stub_(dockyard_proto::Dockyard::NewStub(channel)),
         clock_(std::move(clock)) {}
 
   explicit DockyardProxyGrpc(
       std::unique_ptr<dockyard_proto::Dockyard::StubInterface> stub,
-      std::shared_ptr<FuchsiaClock> clock)
+      std::unique_ptr<FuchsiaClock> clock)
       : stub_(std::move(stub)), clock_(std::move(clock)) {}
 
   // |DockyardProxy|.
@@ -74,7 +74,7 @@ class DockyardProxyGrpc : public DockyardProxy {
  private:
   // A local stub for the remote Dockyard instance.
   std::unique_ptr<dockyard_proto::Dockyard::StubInterface> stub_;
-  std::shared_ptr<harvester::FuchsiaClock> clock_;
+  std::unique_ptr<harvester::FuchsiaClock> clock_;
 
   // The dockyard_path_to_id_ may be accessed by multiple threads.
   std::mutex dockyard_path_to_id_mutex_;
