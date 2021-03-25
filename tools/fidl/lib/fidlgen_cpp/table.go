@@ -15,7 +15,7 @@ type TableFrameItem *TableMember
 type Table struct {
 	fidlgen.Attributes
 	fidlgen.Resourceness
-	DeclName
+	NameVariants
 	CodingTableType string
 	Members         []TableMember
 	InlineSize      int
@@ -81,12 +81,12 @@ func (c *compiler) compileTableMember(val fidlgen.TableMember, index int) TableM
 }
 
 func (c *compiler) compileTable(val fidlgen.Table) Table {
-	name := c.compileDeclName(val.Name)
+	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Table{
 		Attributes:      val.Attributes,
 		Resourceness:    val.Resourceness,
-		DeclName:        name,
+		NameVariants:    name,
 		CodingTableType: codingTableType,
 		Members:         nil,
 		InlineSize:      val.TypeShapeV1.InlineSize,

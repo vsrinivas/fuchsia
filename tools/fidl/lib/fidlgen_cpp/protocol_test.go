@@ -12,22 +12,30 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgentest"
 )
 
+var exampleName = NameVariants{
+	Natural: MakeName("fidl::test::Protocol"),
+	Wire:    MakeName("fidl_test::Protocol"),
+}
 var exampleProtocol = newProtocol(protocolInner{
+	NameVariants: exampleName,
 	Methods: []Method{
 		newMethod(methodInner{
-			Name:        "OneWay",
-			HasRequest:  true,
-			HasResponse: false,
+			Name:         "OneWay",
+			HasRequest:   true,
+			HasResponse:  false,
+			protocolName: exampleName,
 		}),
 		newMethod(methodInner{
-			Name:        "TwoWay",
-			HasRequest:  true,
-			HasResponse: true,
+			Name:         "TwoWay",
+			HasRequest:   true,
+			HasResponse:  true,
+			protocolName: exampleName,
 		}),
 		newMethod(methodInner{
-			Name:        "Event",
-			HasRequest:  false,
-			HasResponse: true,
+			Name:         "Event",
+			HasRequest:   false,
+			HasResponse:  true,
+			protocolName: exampleName,
 		}),
 	},
 })

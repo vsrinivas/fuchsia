@@ -45,13 +45,13 @@ func (c *compiler) compileConstant(val fidlgen.Constant, t *Type, typ fidlgen.Ty
 		if len(ci.Member) > 0 {
 			member := changeIfReserved(ci.Member)
 			ci.Member = ""
-			dn := c.compileDeclName(ci.Encode())
+			dn := c.compileNameVariants(ci.Encode())
 			return ConstantValue{
 				Natural: dn.Natural.String() + "::" + member,
 				Wire:    dn.Wire.String() + "::" + member,
 			}
 		} else {
-			dn := c.compileDeclName(val.Identifier)
+			dn := c.compileNameVariants(val.Identifier)
 			return ConstantValue{Natural: dn.Natural.String(), Wire: dn.Wire.String()}
 		}
 	case fidlgen.LiteralConstant:
@@ -59,8 +59,8 @@ func (c *compiler) compileConstant(val fidlgen.Constant, t *Type, typ fidlgen.Ty
 		return ConstantValue{Natural: lit, Wire: lit}
 	case fidlgen.BinaryOperator:
 		return ConstantValue{
-			Natural: fmt.Sprintf("static_cast<%s>(%s)", t.TypeName.Natural, val.Value),
-			Wire:    fmt.Sprintf("static_cast<%s>(%s)", t.TypeName.Wire, val.Value),
+			Natural: fmt.Sprintf("static_cast<%s>(%s)", t.NameVariants.Natural, val.Value),
+			Wire:    fmt.Sprintf("static_cast<%s>(%s)", t.NameVariants.Wire, val.Value),
 		}
 		// return ConstantValue{Natural: naturalVal, Wire: wireVal}
 	default:
@@ -70,7 +70,7 @@ func (c *compiler) compileConstant(val fidlgen.Constant, t *Type, typ fidlgen.Ty
 
 type Const struct {
 	fidlgen.Attributes
-	DeclName
+	NameVariants
 	Extern    bool
 	Decorator string
 	Type      Type
@@ -84,15 +84,15 @@ func (Const) Kind() declKind {
 var _ Kinded = (*Const)(nil)
 
 func (c *compiler) compileConst(val fidlgen.Const) Const {
-	n := c.compileDeclName(val.Name)
+	n := c.compileNameVariants(val.Name)
 	v := Const{Attributes: val.Attributes,
-		DeclName: n,
+		NameVariants: n,
 	}
 	if val.Type.Kind == fidlgen.StringType {
 		v.Extern = true
 		v.Decorator = "const"
 		v.Type = Type{
-			TypeName: PrimitiveTypeName("char*"),
+			NameVariants: PrimitiveNameVariants("char*"),
 		}
 		v.Value = c.compileConstant(val.Value, nil, val.Type)
 	} else {

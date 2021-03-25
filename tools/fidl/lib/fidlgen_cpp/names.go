@@ -13,6 +13,10 @@ import (
 	"go.fuchsia.dev/fuchsia/tools/fidl/lib/fidlgen"
 )
 
+var zxNs Namespace = NewNamespace("zx")
+var fidlNs Namespace = NewNamespace("fidl")
+var internalNs Namespace = fidlNs.Append("internal")
+
 type variant string
 
 const (
@@ -36,6 +40,10 @@ func UseWire() string {
 // Namespace represents a C++ namespace.
 type Namespace []string
 
+func NewNamespace(ns string) Namespace {
+	return Namespace(strings.Split(ns, "::"))
+}
+
 // Namespace is implemented to satisfy the Namespaced interface.
 func (ns Namespace) Namespace() Namespace {
 	return ns
@@ -43,6 +51,9 @@ func (ns Namespace) Namespace() Namespace {
 
 // String returns the fully qualified namespace including leading ::.
 func (ns Namespace) String() string {
+	if len(ns) == 0 {
+		return ""
+	}
 	return "::" + ns.NoLeading()
 }
 
@@ -69,143 +80,28 @@ func (ns Namespace) DropLastComponent() Namespace {
 	return Namespace(new)
 }
 
-var fidlNs Namespace = Namespace([]string{"fidl"})
-
-// name represents a declaration name within a namespace.
-// In the case of a nested class all of the containing classes are part of the name.
-type name []string
-
-// String returns the name of the declaration within its namespace, including any nesting parent classes.
-func (n name) String() string {
-	return strings.Join(n, "::")
+// Member creates a named declaration within the namespace
+func (ns Namespace) Member(name string) Name {
+	return Name{name: stringNamePart(name), ns: ns}
 }
 
-// Unqualified return the unqualified declaration name.
-func (n name) Unqualified() string {
-	return n[len(n)-1]
+type NameVariants struct {
+	Natural Name
+	Wire    Name
 }
 
-// Prepend returns a new name with a prefix prepended.
-func (n name) Prepend(prefix string) name {
-	var newName name = make([]string, len(n))
-	copy(newName, n)
-	newName[len(n)-1] = prefix + n[len(n)-1]
-	return newName
-}
-
-// Append returns a new name with a suffix appended.
-func (n name) Append(suffix string) name {
-	var newName name = make([]string, len(n))
-	copy(newName, n)
-	newName[len(n)-1] = n[len(n)-1] + suffix
-	return newName
-}
-
-// Nest returns a new name for a class nested inside the existing name.
-func (n name) Nest(nested string) name {
-	return name(append(n, nested))
-}
-
-// DeclVariant represents the name of a C++ declaration within a namespace.
-type DeclVariant struct {
-	name      name
-	namespace Namespace
-}
-
-// NewDeclVariant creates a new DeclVariant with a name and a namespace.
-func NewDeclVariant(n string, namespace Namespace) DeclVariant {
-	return DeclVariant{name: name([]string{n}), namespace: namespace}
-}
-
-// String returns the fully qualified name including leading ::, namespace and nested classes.
-func (d DeclVariant) String() string {
-	return d.namespace.String() + "::" + d.name.String()
-}
-
-// NoLeading returns the fully qualified name without the leading ::
-// but including namespace and nested classes.
-func (d DeclVariant) NoLeading() string {
-	return d.namespace.NoLeading() + "::" + d.name.String()
-}
-
-// Name returns the name within the namespace, including nested classes.
-func (d DeclVariant) Name() string {
-	return d.name.String()
-}
-
-// Unqualified return the unqualified declaration name.
-func (d DeclVariant) Unqualified() string {
-	return d.name.Unqualified()
-}
-
-// Namespace returns the DeclVariant's namespace.
-func (d DeclVariant) Namespace() Namespace {
-	return d.namespace
-}
-
-// Type returns a TypeVariant for this DeclVariant.
-func (d DeclVariant) Type() TypeVariant {
-	return TypeVariant(d.String())
-}
-
-// AppendName returns a new DeclVariant with an suffix appended to the name portion.
-func (d DeclVariant) AppendName(suffix string) DeclVariant {
-	return DeclVariant{
-		name:      d.name.Append(suffix),
-		namespace: d.namespace,
-	}
-}
-
-// PrependName returns a new DeclVariant with an prefix prepended to the name portion.
-func (d DeclVariant) PrependName(prefix string) DeclVariant {
-	return DeclVariant{
-		name:      d.name.Prepend(prefix),
-		namespace: d.namespace,
-	}
-}
-
-// AppendNamespace returns a new DeclVariant with an additional C++ namespace component appended.
-func (d DeclVariant) AppendNamespace(part string) DeclVariant {
-	return DeclVariant{
-		name:      d.name,
-		namespace: d.namespace.Append(part),
-	}
-}
-
-// Nest returns a new DeclVariant for a class nested inside the existing declaration.
-func (d DeclVariant) Nest(nested string) DeclVariant {
-	return DeclVariant{
-		name:      d.name.Nest(nested),
-		namespace: d.namespace,
-	}
-}
-
-// Template returns a new DeclVariant where existing decl is used a template with the supplied
-// one as its argument.
-func (d DeclVariant) Template(arg DeclVariant) DeclVariant {
-	return DeclVariant{
-		name:      d.name.Append(fmt.Sprintf("<%s>", arg)),
-		namespace: d.namespace,
-	}
-}
-
-type DeclName struct {
-	Natural DeclVariant
-	Wire    DeclVariant
-}
-
-// CommonDeclName returns a DeclName with the same DeclVariant for both Wire and Natural variants.
-func CommonDeclName(decl DeclVariant) DeclName {
-	return DeclName{
+// CommonNameVariants returns a NameVariants with the same Name for both Wire and Natural variants.
+func CommonNameVariants(decl Name) NameVariants {
+	return NameVariants{
 		Natural: decl,
 		Wire:    decl,
 	}
 }
 
-func (dn DeclName) String() string {
+func (dn NameVariants) String() string {
 	switch currentVariant {
 	case noVariant:
-		fmt.Printf("Called DeclName.String() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
+		fmt.Printf("Called NameVariants.String() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
 		debug.PrintStack()
 		os.Exit(1)
 	case naturalVariant:
@@ -216,10 +112,10 @@ func (dn DeclName) String() string {
 	panic("not reached")
 }
 
-func (dn DeclName) Name() string {
+func (dn NameVariants) Name() string {
 	switch currentVariant {
 	case noVariant:
-		fmt.Printf("Called DeclName.Name() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
+		fmt.Printf("Called NameVariants.Name() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
 		debug.PrintStack()
 		os.Exit(1)
 	case naturalVariant:
@@ -230,10 +126,10 @@ func (dn DeclName) Name() string {
 	panic("not reached")
 }
 
-func (dn DeclName) Namespace() Namespace {
+func (dn NameVariants) Namespace() Namespace {
 	switch currentVariant {
 	case noVariant:
-		fmt.Printf("Called DeclName.Namespace() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
+		fmt.Printf("Called NameVariants.Namespace() on %s/%s when currentVariant isn't set.\n", dn.Natural, dn.Wire)
 		debug.PrintStack()
 		os.Exit(1)
 	case naturalVariant:
@@ -244,151 +140,262 @@ func (dn DeclName) Namespace() Namespace {
 	panic("not reached")
 }
 
-// TypeName turns a DeclName into a TypeName.
-func (dn DeclName) TypeName() TypeName {
-	return TypeName{
-		Natural: dn.Natural.Type(),
-		Wire:    dn.Wire.Type(),
-	}
-}
-
-// AppendName returns a new DeclName with an suffix appended to the name portions.
-func (dn DeclName) AppendName(suffix string) DeclName {
-	return DeclName{
+// AppendName returns a new NameVariants with an suffix appended to the name portions.
+func (dn NameVariants) AppendName(suffix string) NameVariants {
+	return NameVariants{
 		Natural: dn.Natural.AppendName(suffix),
 		Wire:    dn.Wire.AppendName(suffix),
 	}
 }
 
-// PrependName returns a new DeclName with an prefix prepended to the name portions.
-func (dn DeclName) PrependName(prefix string) DeclName {
-	return DeclName{
+// PrependName returns a new NameVariants with an prefix prepended to the name portions.
+func (dn NameVariants) PrependName(prefix string) NameVariants {
+	return NameVariants{
 		Natural: dn.Natural.PrependName(prefix),
 		Wire:    dn.Wire.PrependName(prefix),
 	}
 }
 
-// AppendNamespace returns a new DeclName with additional C++ namespace components appended.
-func (dn DeclName) AppendNamespace(c string) DeclName {
-	return DeclName{
+// AppendNamespace returns a new NameVariants with additional C++ namespace components appended.
+func (dn NameVariants) AppendNamespace(c string) NameVariants {
+	return NameVariants{
 		Natural: dn.Natural.AppendNamespace(c),
 		Wire:    dn.Wire.AppendNamespace(c),
 	}
 }
 
-// DeclVariantFunc is a function that operates over a DeclVariant.
-type DeclVariantFunc func(DeclVariant) DeclVariant
+// NameVariantsForHandle returns the C++ name for a handle type
+func NameVariantsForHandle(t fidlgen.HandleSubtype) NameVariants {
+	return CommonNameVariants(zxNs.Member(string(t)))
+}
 
-func (dn DeclName) MapNatural(f DeclVariantFunc) DeclName {
-	return DeclName{
-		Natural: f(dn.Natural),
-		Wire:    dn.Wire,
+// PrimitiveNameVariants returns a NameVariants for a primitive type, common across all bindings.
+func PrimitiveNameVariants(primitive string) NameVariants {
+	return CommonNameVariants(MakeName(primitive))
+}
+
+// namePart represents part of non-namespace part of a name.
+// It's implemented by three types: stringNamePart, nestedNamePart and templateNamePart.
+// These form a tree to hold the structure of a name so that it can be accessed and manipulated safely.
+// For example in fidl::WireInterface<fuchsia_library::Protocol>::ProtocolMethod this would be:
+//   WireInterface<fuchsia_library::Protocol>::ProtocolMethod
+//   |-nestedNP---------------------------------------------|
+//   |-templateNP---------------------------|  |-stringNP---|
+//   |-stringNP---|-Name--------------------|
+// TODO(ianloic): rename to idPart
+type namePart interface {
+	// String returns the full name.
+	String() string
+	// Self returns how the type refers to itself, like in constructor & destructor names.
+	// For a nested name like "Foo::Bar::Baz" this would be "Baz".
+	// For a template name like "Foo::Bar<Baz>" this would be "Bar".
+	Self() string
+
+	// Nest returns a new name for a class nested inside the existing name.
+	Nest(name string) namePart
+	// Template returns a new name with this name being an template applied to the |args|.
+	Template(args string) namePart
+	// PrependName returns a new name with a prefix prepended.
+	PrependName(prefix string) namePart
+	// AppendName returns a new name with a suffix appended.
+	AppendName(suffix string) namePart
+}
+
+type stringNamePart string
+
+var _ namePart = (*stringNamePart)(nil)
+
+func (n stringNamePart) String() string {
+	return string(n)
+}
+
+func (n stringNamePart) Self() string {
+	return string(n)
+}
+
+func (n stringNamePart) Nest(name string) namePart {
+	return newNestedNamePart(n, stringNamePart(name))
+}
+
+func (n stringNamePart) Template(args string) namePart {
+	return newTemplateNamePart(n, args)
+}
+
+func (n stringNamePart) PrependName(prefix string) namePart {
+	return stringNamePart(prefix + string(n))
+}
+
+func (n stringNamePart) AppendName(suffix string) namePart {
+	return stringNamePart(string(n) + suffix)
+}
+
+type nestedNamePart struct {
+	left  namePart
+	right namePart
+}
+
+var _ namePart = (*nestedNamePart)(nil)
+
+func newNestedNamePart(left, right namePart) namePart {
+	return nestedNamePart{left, right}
+}
+
+func (n nestedNamePart) String() string {
+	return fmt.Sprintf("%s::%s", n.left, n.right)
+}
+
+func (n nestedNamePart) Self() string {
+	return n.right.Self()
+}
+
+func (n nestedNamePart) Nest(name string) namePart {
+	return nestedNamePart{n.left, n.right.Nest(name)}
+}
+
+func (n nestedNamePart) Template(args string) namePart {
+	return newTemplateNamePart(n, args)
+}
+
+func (n nestedNamePart) PrependName(prefix string) namePart {
+	return nestedNamePart{n.left, n.right.PrependName(prefix)}
+}
+
+func (n nestedNamePart) AppendName(suffix string) namePart {
+	return nestedNamePart{n.left, n.right.AppendName(suffix)}
+}
+
+type templateNamePart struct {
+	template namePart
+	args     string
+}
+
+var _ namePart = (*templateNamePart)(nil)
+
+func newTemplateNamePart(template namePart, args string) namePart {
+	return templateNamePart{template, args}
+}
+
+func (n templateNamePart) String() string {
+	return fmt.Sprintf("%s<%s>", n.template, n.args)
+}
+
+func (n templateNamePart) Self() string {
+	return n.template.Self()
+}
+
+func (n templateNamePart) Nest(name string) namePart {
+	return nestedNamePart{n, stringNamePart(name)}
+}
+
+func (n templateNamePart) Template(args string) namePart {
+	panic(fmt.Sprintf("Can't make a template of a template: %s", n))
+}
+
+func (n templateNamePart) PrependName(prefix string) namePart {
+	panic(fmt.Sprintf("Can't prepend to the name of a template: %s", n))
+}
+
+func (n templateNamePart) AppendName(suffix string) namePart {
+	panic(fmt.Sprintf("Can't append to the name of a template: %s", n))
+}
+
+// Name holds a C++ qualified identifier.
+// See: https://en.cppreference.com/w/cpp/language/identifiers#Qualified_identifiers
+// It consists of a Namespace and a namePart.
+// TODO(ianloic): move this to the top of the file since it's the most important type.
+type Name struct {
+	name namePart
+	ns   Namespace
+}
+
+// MakeName takes a string with a :: separated name and makes a Name treating the last component
+// as the local name and the preceding components as the namespace.
+// This should only be used with string literals for creating well-known, simple names.
+func MakeName(name string) Name {
+	i := strings.LastIndex(name, "::")
+	if i == -1 {
+		return Name{name: stringNamePart(name)}
+	}
+	if i == 0 {
+		panic(fmt.Sprintf("Don't call MakeName with leading double-colons: %v", name))
+	}
+	return Name{
+		name: stringNamePart(name[i+2:]),
+		ns:   NewNamespace(name[0:i]),
 	}
 }
 
-func (dn DeclName) MapWire(f DeclVariantFunc) DeclName {
-	return DeclName{
-		Natural: dn.Natural,
-		Wire:    f(dn.Wire),
+// String returns the full name with a leading :: if the name has a namespace.
+func (n Name) String() string {
+	ns := n.ns.String()
+	if len(ns) > 0 {
+		ns = ns + "::"
 	}
+	return ns + n.name.String()
 }
 
-func (dn DeclName) Member(member string) MemberName {
-	return MemberName{decl: dn, member: member}
+// Name returns the portion of the name that comes after the namespace.
+func (n Name) Name() string {
+	return n.name.String()
 }
 
-type MemberName struct {
-	decl   DeclName
-	member string
+// Self returns how the type refers to itself, like in constructor & destructor names.
+// For a nested name like "Foo::Bar::Baz" this would be "Baz".
+// For a template name like "Foo::Bar<Baz>" this would be "Bar".
+func (n Name) Self() string {
+	return n.name.Self()
 }
 
-func (mn MemberName) Decl() DeclName { return mn.decl }
-
-func (mn MemberName) Name() string { return mn.member }
-
-// TypeVariant is implemented by something that can be a type name for a particular binding style.
-type TypeVariant string
-
-// WithTemplate wraps a TypeVariant with a template application.
-func (name TypeVariant) WithTemplate(template string) TypeVariant {
-	return TypeVariant(fmt.Sprintf("%s<%s>", template, name))
-}
-
-// WithArrayTemplate wraps a TypeVariant with a template application that takes an integer.
-func (name TypeVariant) WithArrayTemplate(template string, arg int) TypeVariant {
-	return TypeVariant(fmt.Sprintf("%s<%s, %v>", template, name, arg))
-}
-
-// TypeName is the name of a type for wire and natural types.
-type TypeName struct {
-	Natural TypeVariant
-	Wire    TypeVariant
-}
-
-func (tn TypeName) String() string {
-	switch currentVariant {
-	case noVariant:
-		fmt.Printf("Called TypeName.String() on %s/%s when currentVariant isn't set.\n", tn.Natural, tn.Wire)
-		debug.PrintStack()
-		os.Exit(1)
-	case naturalVariant:
-		return string(tn.Natural)
-	case wireVariant:
-		return string(tn.Wire)
+// TODO(ianloic): probably make this the default
+func (n Name) NoLeading() string {
+	ns := n.ns.NoLeading()
+	if len(ns) > 0 {
+		ns = ns + "::"
 	}
-	panic("not reached")
+	return ns + n.name.String()
 }
 
-// TypeNameForHandle returns the C++ name for a handle type
-func TypeNameForHandle(t fidlgen.HandleSubtype) TypeName {
-	return CommonTypeName(TypeVariant(fmt.Sprintf("::zx::%s", t)))
+// Namespace returns the namespace portion of the name.
+func (n Name) Namespace() Namespace {
+	return n.ns
 }
 
-// CommonTypeName returns a TypeName with same name for both natural and wire types.
-func CommonTypeName(name TypeVariant) TypeName {
-	return TypeName{
-		Natural: name,
-		Wire:    name,
+// Nest returns a new name for a class nested inside the existing name.
+func (n Name) Nest(name string) Name {
+	return Name{name: n.name.Nest(name), ns: n.ns}
+}
+
+// Template returns a new name with this name being an template applied to the |arg|.
+func (n Name) Template(arg Name) Name {
+	return Name{name: n.name.Template(arg.String()), ns: n.ns}
+}
+
+// ArrayTemplate returns a new name with this name being an template applied to the |arg| with a |count|.
+func (n Name) ArrayTemplate(arg Name, count int) Name {
+	return Name{name: n.name.Template(fmt.Sprintf("%s, %d", arg.String(), count)), ns: n.ns}
+}
+
+// PrependName returns a new name with a prefix prepended to the last part of the name.
+func (n Name) PrependName(prefix string) Name {
+	return Name{name: n.name.PrependName(prefix), ns: n.ns}
+}
+
+// AppendName returns a new name with a suffix appended to the last part of the name.
+func (n Name) AppendName(suffix string) Name {
+	return Name{name: n.name.AppendName(suffix), ns: n.ns}
+}
+
+// AppendNamespace returns a new name with an additional namespace component added.
+func (n Name) AppendNamespace(part string) Name {
+	return Name{name: n.name, ns: n.ns.Append(part)}
+}
+
+// MakeTupleName returns a Name for a std::tuple of the supplied names.
+func MakeTupleName(members []Name) Name {
+	t := MakeName("std::tuple")
+	a := []string{}
+	for _, m := range members {
+		a = append(a, m.String())
 	}
-}
-
-// PrimitiveTypeName returns a TypeName for a primitive type, common across all bindings.
-func PrimitiveTypeName(primitive string) TypeName {
-	return TypeName{
-		Natural: TypeVariant(primitive),
-		Wire:    TypeVariant(primitive),
-	}
-}
-
-// WithTemplates wraps type names with template applications.
-func (tn TypeName) WithTemplates(natural, wire string) TypeName {
-	return TypeName{
-		Natural: tn.Natural.WithTemplate(natural),
-		Wire:    tn.Wire.WithTemplate(wire),
-	}
-}
-
-// WithArrayTemplates wraps type names with templates applications that take integers.
-func (tn TypeName) WithArrayTemplates(natural, wire string, arg int) TypeName {
-	return TypeName{
-		Natural: tn.Natural.WithArrayTemplate(natural, arg),
-		Wire:    tn.Wire.WithArrayTemplate(wire, arg),
-	}
-}
-
-// TypeVariantFunc is a function that operates over a TypeVariant.
-type TypeVariantFunc func(TypeVariant) TypeVariant
-
-func (tn TypeName) MapNatural(f TypeVariantFunc) TypeName {
-	return TypeName{
-		Natural: f(tn.Natural),
-		Wire:    tn.Wire,
-	}
-}
-
-func (tn TypeName) MapWire(f TypeVariantFunc) TypeName {
-	return TypeName{
-		Natural: tn.Natural,
-		Wire:    f(tn.Wire),
-	}
+	return Name{name: t.name.Template(strings.Join(a, ", ")), ns: t.ns}
 }

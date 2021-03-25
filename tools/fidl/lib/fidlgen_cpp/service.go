@@ -15,7 +15,7 @@ import (
 
 type Service struct {
 	fidlgen.Attributes
-	DeclName
+	NameVariants
 	ServiceName string
 	Members     []ServiceMember
 }
@@ -28,16 +28,16 @@ var _ Kinded = (*Service)(nil)
 
 type ServiceMember struct {
 	fidlgen.Attributes
-	ProtocolType DeclName
+	ProtocolType NameVariants
 	Name         string
 	MethodName   string
 }
 
 func (c *compiler) compileService(val fidlgen.Service) Service {
 	s := Service{
-		Attributes:  val.Attributes,
-		DeclName:    c.compileDeclName(val.Name),
-		ServiceName: val.GetServiceName(),
+		Attributes:   val.Attributes,
+		NameVariants: c.compileNameVariants(val.Name),
+		ServiceName:  val.GetServiceName(),
 	}
 
 	for _, v := range val.Members {
@@ -49,7 +49,7 @@ func (c *compiler) compileService(val fidlgen.Service) Service {
 func (c *compiler) compileServiceMember(val fidlgen.ServiceMember) ServiceMember {
 	return ServiceMember{
 		Attributes:   val.Attributes,
-		ProtocolType: c.compileDeclName(val.Type.Identifier),
+		ProtocolType: c.compileNameVariants(val.Type.Identifier),
 		Name:         string(val.Name),
 		MethodName:   changeIfReserved(val.Name),
 	}

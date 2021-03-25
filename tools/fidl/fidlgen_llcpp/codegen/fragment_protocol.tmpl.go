@@ -61,7 +61,7 @@ class {{ .Name }} final {
   {{- range .Methods }}
 
     {{- if .HasResponse }}
-  struct {{ .WireResponse.Unqualified }} final {
+  struct {{ .WireResponse.Self }} final {
     FIDL_ALIGNDECL
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
@@ -70,12 +70,12 @@ class {{ .Name }} final {
         {{- end }}
 
     {{- if .ResponseArgs }}
-    explicit {{ .WireResponse.Unqualified }}({{ .ResponseArgs | MessagePrototype }})
+    explicit {{ .WireResponse.Self }}({{ .ResponseArgs | MessagePrototype }})
     {{ .ResponseArgs | InitMessage }} {
       _InitHeader();
     }
     {{- end }}
-    {{ .WireResponse.Unqualified }}() {
+    {{ .WireResponse.Self }}() {
       _InitHeader();
     }
 
@@ -101,20 +101,20 @@ class {{ .Name }} final {
      public:
       UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size
         {{- .ResponseArgs | CommaMessagePrototype }})
-          : message_(_bytes, _byte_size, sizeof({{ .WireResponse.Unqualified }}),
+          : message_(_bytes, _byte_size, sizeof({{ .WireResponse.Self }}),
       {{- if gt .Response.MaxHandles 0 }}
         handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
       {{- else }}
         nullptr, 0, 0
       {{- end }}
         ) {
-        FIDL_ALIGNDECL {{ .WireResponse.Unqualified }} _response{
+        FIDL_ALIGNDECL {{ .WireResponse.Self }} _response{
           {{- .ResponseArgs | ParamNames -}}
         };
         message_.Encode<{{ .WireResponse }}>(&_response);
       }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .WireResponse.Unqualified }}* response)
-          : message_(bytes, byte_size, sizeof({{ .WireResponse.Unqualified }}),
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .WireResponse.Self }}* response)
+          : message_(bytes, byte_size, sizeof({{ .WireResponse.Self }}),
       {{- if gt .Response.MaxHandles 0 }}
         handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
       {{- else }}
@@ -203,7 +203,7 @@ class {{ .Name }} final {
       }
       {{- end }}
 
-      {{ .WireResponse.Unqualified }}* PrimaryObject() {
+      {{ .WireResponse.Self }}* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<{{ .WireResponse }}*>(bytes());
       }
@@ -220,7 +220,7 @@ class {{ .Name }} final {
     {{- end }}
 
     {{- if .HasRequest }}
-  struct {{ .WireRequest.Unqualified }} final {
+  struct {{ .WireRequest.Self }} final {
     FIDL_ALIGNDECL
         {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
@@ -229,12 +229,12 @@ class {{ .Name }} final {
         {{- end }}
 
     {{- if .RequestArgs }}
-    explicit {{ .WireRequest.Unqualified }}(zx_txid_t _txid {{- .RequestArgs | CommaMessagePrototype }})
+    explicit {{ .WireRequest.Self }}(zx_txid_t _txid {{- .RequestArgs | CommaMessagePrototype }})
     {{ .RequestArgs | InitMessage }} {
       _InitHeader(_txid);
     }
     {{- end }}
-    explicit {{ .WireRequest.Unqualified }}(zx_txid_t _txid) {
+    explicit {{ .WireRequest.Self }}(zx_txid_t _txid) {
       _InitHeader(_txid);
     }
 
@@ -266,27 +266,27 @@ class {{ .Name }} final {
      public:
       UnownedEncodedMessage(uint8_t* _bytes, uint32_t _byte_size, zx_txid_t _txid
         {{- .RequestArgs | CommaMessagePrototype }})
-          : message_(_bytes, _byte_size, sizeof({{ .WireRequest.Unqualified }}),
+          : message_(_bytes, _byte_size, sizeof({{ .WireRequest.Self }}),
       {{- if gt .Request.MaxHandles 0 }}
         handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
       {{- else }}
         nullptr, 0, 0
       {{- end }}
         ) {
-        FIDL_ALIGNDECL {{ .WireRequest.Unqualified }} _request(_txid
+        FIDL_ALIGNDECL {{ .WireRequest.Self }} _request(_txid
             {{- .RequestArgs | CommaParamNames -}}
         );
-        message_.Encode<{{ .WireRequest.Unqualified }}>(&_request);
+        message_.Encode<{{ .WireRequest.Self }}>(&_request);
       }
-      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .WireRequest.Unqualified }}* request)
-          : message_(bytes, byte_size, sizeof({{ .WireRequest.Unqualified }}),
+      UnownedEncodedMessage(uint8_t* bytes, uint32_t byte_size, {{ .WireRequest.Self }}* request)
+          : message_(bytes, byte_size, sizeof({{ .WireRequest.Self }}),
       {{- if gt .Request.MaxHandles 0 }}
         handles_, std::min(ZX_CHANNEL_MAX_MSG_HANDLES, MaxNumHandles), 0
       {{- else }}
         nullptr, 0, 0
       {{- end }}
         ) {
-        message_.Encode<{{ .WireRequest.Unqualified }}>(request);
+        message_.Encode<{{ .WireRequest.Self }}>(request);
       }
       UnownedEncodedMessage(const UnownedEncodedMessage&) = delete;
       UnownedEncodedMessage(UnownedEncodedMessage&&) = delete;
@@ -320,7 +320,7 @@ class {{ .Name }} final {
         {{- .RequestArgs | CommaMessagePrototype }})
         : message_(bytes_.data(), bytes_.size(), _txid
           {{- .RequestArgs | CommaParamNames }}) {}
-      explicit OwnedEncodedMessage({{ .WireRequest.Unqualified }}* request)
+      explicit OwnedEncodedMessage({{ .WireRequest.Self }}* request)
         : message_(bytes_.data(), bytes_.size(), request) {}
       OwnedEncodedMessage(const OwnedEncodedMessage&) = delete;
       OwnedEncodedMessage(OwnedEncodedMessage&&) = delete;
@@ -352,10 +352,10 @@ class {{ .Name }} final {
       DecodedMessage(uint8_t* bytes, uint32_t byte_actual, zx_handle_info_t* handles = nullptr,
                       uint32_t handle_actual = 0)
           : ::fidl::internal::IncomingMessage(bytes, byte_actual, handles, handle_actual) {
-        Decode<{{ .WireRequest.Unqualified }}>();
+        Decode<{{ .WireRequest.Self }}>();
       }
       DecodedMessage(fidl_incoming_msg_t* msg) : ::fidl::internal::IncomingMessage(msg) {
-        Decode<{{ .WireRequest.Unqualified }}>();
+        Decode<{{ .WireRequest.Self }}>();
       }
       DecodedMessage(const DecodedMessage&) = delete;
       DecodedMessage(DecodedMessage&&) = delete;
@@ -369,9 +369,9 @@ class {{ .Name }} final {
       }
       {{- end }}
 
-      {{ .WireRequest.Unqualified }}* PrimaryObject() {
+      {{ .WireRequest.Self }}* PrimaryObject() {
         ZX_DEBUG_ASSERT(ok());
-        return reinterpret_cast<{{ .WireRequest.Unqualified }}*>(bytes());
+        return reinterpret_cast<{{ .WireRequest.Self }}*>(bytes());
       }
 
       // Release the ownership of the decoded message. That means that the handles won't be closed
@@ -467,10 +467,10 @@ class {{ .Name }} final {
       const {{ .WireResponse }}& value() const { return *Unwrap(); }
 
       {{ .WireResponse }}* operator->() { return &value(); }
-      const {{ .WireResponse.Unqualified }}* operator->() const { return &value(); }
+      const {{ .WireResponse.Self }}* operator->() const { return &value(); }
 
-      {{ .WireResponse.Unqualified }}& operator*() { return value(); }
-      const {{ .WireResponse.Unqualified }}& operator*() const { return value(); }
+      {{ .WireResponse.Self }}& operator*() { return value(); }
+      const {{ .WireResponse.Self }}& operator*() const { return value(); }
       {{- end }}
 
      private:
@@ -515,23 +515,23 @@ class {{ .Name }} final {
       {{- end }}
       {{- if .HasResponse }}
 
-      {{ .WireResponse.Unqualified }}* Unwrap() {
+      {{ .WireResponse.Self }}* Unwrap() {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<{{ .WireResponse }}*>(bytes_);
       }
-      const {{ .WireResponse.Unqualified }}* Unwrap() const {
+      const {{ .WireResponse.Self }}* Unwrap() const {
         ZX_DEBUG_ASSERT(ok());
         return reinterpret_cast<const {{ .WireResponse }}*>(bytes_);
       }
 
-      {{ .WireResponse.Unqualified }}& value() { return *Unwrap(); }
-      const {{ .WireResponse.Unqualified }}& value() const { return *Unwrap(); }
+      {{ .WireResponse.Self }}& value() { return *Unwrap(); }
+      const {{ .WireResponse.Self }}& value() const { return *Unwrap(); }
 
-      {{ .WireResponse.Unqualified }}* operator->() { return &value(); }
-      const {{ .WireResponse.Unqualified }}* operator->() const { return &value(); }
+      {{ .WireResponse.Self }}* operator->() { return &value(); }
+      const {{ .WireResponse.Self }}* operator->() const { return &value(); }
 
-      {{ .WireResponse.Unqualified }}& operator*() { return value(); }
-      const {{ .WireResponse.Unqualified }}& operator*() const { return value(); }
+      {{ .WireResponse.Self }}& operator*() { return value(); }
+      const {{ .WireResponse.Self }}& operator*() const { return value(); }
 
      private:
       uint8_t* bytes_;
@@ -695,7 +695,7 @@ class {{ .WireInterface }}  : public ::fidl::internal::IncomingMessageDispatcher
   {{- range .Methods }}
     {{- if .HasRequest }}
       {{- if .HasResponse }}
-  class {{ .WireCompleterBase.Unqualified }} : public ::fidl::CompleterBase {
+  class {{ .WireCompleterBase.Self }} : public ::fidl::CompleterBase {
     public:
     // In the following methods, the return value indicates internal errors during
     // the reply, such as encoding or writing to the transport.
@@ -721,9 +721,9 @@ class {{ .WireInterface }}  : public ::fidl::internal::IncomingMessageDispatcher
     using ::fidl::CompleterBase::CompleterBase;
   };
 
-  using {{ .WireCompleter.Unqualified }} = ::fidl::Completer<{{ .WireCompleterBase.Unqualified }}>;
+  using {{ .WireCompleter.Self }} = ::fidl::Completer<{{ .WireCompleterBase.Self }}>;
       {{- else }}
-  using {{ .WireCompleter.Unqualified }} = ::fidl::Completer<>;
+  using {{ .WireCompleter.Self }} = ::fidl::Completer<>;
       {{- end }}
 
 {{ "" }}
@@ -733,9 +733,9 @@ class {{ .WireInterface }}  : public ::fidl::internal::IncomingMessageDispatcher
   virtual void {{ .Name }}(
       {{- .RequestArgs | Params }}{{ if .RequestArgs }}, {{ end -}}
       {{- if .Transitional -}}
-        {{ .WireCompleter.Unqualified }}::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
+        {{ .WireCompleter.Self }}::Sync& _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
       {{- else -}}
-        {{ .WireCompleter.Unqualified }}::Sync& _completer) = 0;
+        {{ .WireCompleter.Self }}::Sync& _completer) = 0;
       {{- end }}
 {{ "" }}
     {{- end }}
@@ -831,7 +831,7 @@ static_assert(offsetof({{ $method.WireResponse }}, {{ $param.Name }}) == {{ $par
 
 {{- range .Methods }}
 [[maybe_unused]]
-constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu; {{/* TODO: Make a DeclName for OrdinalName */}}
+constexpr uint64_t {{ .OrdinalName }} = {{ .Ordinal }}lu; {{/* TODO: Make a NameVariants for OrdinalName */}}
 {{ EnsureNamespace .Request.CodingTable }}
 extern "C" const fidl_type_t {{ .Request.CodingTable.Name }};
 {{ EnsureNamespace .Response.CodingTable }}

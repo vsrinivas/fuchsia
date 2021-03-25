@@ -14,7 +14,7 @@ type Union struct {
 	fidlgen.Attributes
 	fidlgen.Strictness
 	fidlgen.Resourceness
-	DeclName
+	NameVariants
 	CodingTableType string
 	Members         []UnionMember
 	InlineSize      int
@@ -64,13 +64,13 @@ func (c *compiler) compileUnionMember(val fidlgen.UnionMember) UnionMember {
 }
 
 func (c *compiler) compileUnion(val fidlgen.Union) Union {
-	name := c.compileDeclName(val.Name)
+	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Union{
 		Attributes:      val.Attributes,
 		Strictness:      val.Strictness,
 		Resourceness:    val.Resourceness,
-		DeclName:        name,
+		NameVariants:    name,
 		CodingTableType: codingTableType,
 		InlineSize:      val.TypeShapeV1.InlineSize,
 		MaxHandles:      val.TypeShapeV1.MaxHandles,
@@ -87,9 +87,9 @@ func (c *compiler) compileUnion(val fidlgen.Union) Union {
 
 	if val.MethodResult != nil {
 		result := Result{
-			ResultDecl:      r.DeclName,
-			ValueStructDecl: r.Members[0].Type.TypeName,
-			ErrorDecl:       r.Members[1].Type.TypeName,
+			ResultDecl:      r.NameVariants,
+			ValueStructDecl: r.Members[0].Type.NameVariants,
+			ErrorDecl:       r.Members[1].Type.NameVariants,
 		}
 		c.resultForStruct[val.MethodResult.ValueType.Identifier] = &result
 		c.resultForUnion[val.Name] = &result

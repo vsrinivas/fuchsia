@@ -28,7 +28,7 @@ The request and callback are allocated on the heap.
 
 {{- define "ClientAsyncRequestManagedMethodDefinition" }}
 #ifdef __Fuchsia__
-{{ .WireResponseContext }}::{{ .WireResponseContext.Unqualified }}()
+{{ .WireResponseContext }}::{{ .WireResponseContext.Self }}()
     : ::fidl::internal::ResponseContext({{ .WireResponse }}::Type, {{ .OrdinalName }}) {}
 
 void {{ .WireResponseContext }}::OnReply(uint8_t* reply) {

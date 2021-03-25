@@ -10,7 +10,7 @@ const fragmentClientTmpl = `
 #ifdef __Fuchsia__
   using AsyncEventHandler = {{ .WireAsyncEventHandler }};
   {{- range .TwoWayMethods }}
-  class {{ .WireResponseContext.Unqualified }};
+  class {{ .WireResponseContext.Self }};
   {{- end }}
   using ClientImpl = {{ .WireClientImpl }};
 #endif
@@ -33,7 +33,7 @@ class {{ .WireAsyncEventHandler }} : public {{ . }}::EventHandlerInterface {
 {{ "" }}
 class {{ .WireResponseContext }} : public ::fidl::internal::ResponseContext {
  public:
-  {{ .WireResponseContext.Unqualified }}();
+  {{ .WireResponseContext.Self }}();
 
   virtual void OnReply({{ .WireResponse }}* message) = 0;
 

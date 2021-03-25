@@ -9,9 +9,9 @@ package fidlgen_cpp
 // WireNoTypedChannels returns the LLCPP declaration when the relevant
 // API would like to opt out of typed channels.
 // TODO(fxbug.dev/65212): Uses of this method should be be replaced by WireDecl.
-func (t *Type) WireNoTypedChannels() TypeVariant {
+func (t *Type) WireNoTypedChannels() Name {
 	if t.Kind == TypeKinds.Protocol || t.Kind == TypeKinds.Request {
-		return TypeVariant("::zx::channel")
+		return MakeName("zx::channel")
 	}
 	return t.Wire
 }
@@ -40,7 +40,7 @@ func (m *Method) ShouldEmitTypedChannelCascadingInheritance() bool {
 func (p Protocol) ShouldEmitTypedChannelCascadingInheritance() bool {
 	// Note: using the "natural" domain object name, so the migration
 	// to the wire namespace would not interfere with this check.
-	if !rawChannelInterfaceAllowed[p.DeclName.Wire.String()] {
+	if !rawChannelInterfaceAllowed[p.NameVariants.Wire.String()] {
 		return false
 	}
 	for _, m := range p.Methods {

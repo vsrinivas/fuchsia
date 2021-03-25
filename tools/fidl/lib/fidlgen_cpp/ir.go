@@ -80,7 +80,7 @@ type typeKinds struct {
 var TypeKinds = namespacedEnum(typeKinds{}).(typeKinds)
 
 type Type struct {
-	TypeName
+	NameVariants
 
 	WirePointer bool
 
@@ -160,11 +160,11 @@ type Root struct {
 // Holds information about error results on methods
 type Result struct {
 	ValueMembers    []Parameter
-	ResultDecl      DeclName
-	ErrorDecl       TypeName
-	ValueDecl       TypeVariant
-	ValueStructDecl TypeName
-	ValueTupleDecl  TypeVariant
+	ResultDecl      NameVariants
+	ErrorDecl       NameVariants
+	ValueDecl       Name
+	ValueStructDecl NameVariants
+	ValueTupleDecl  Name
 }
 
 func (r Result) ValueArity() int {
@@ -185,10 +185,10 @@ var primitiveTypes = map[fidlgen.PrimitiveSubtype]string{
 	fidlgen.Float64: "double",
 }
 
-// TypeNameForPrimitive returns the C++ name of a FIDL primitive type.
-func TypeNameForPrimitive(val fidlgen.PrimitiveSubtype) TypeName {
+// NameVariantsForPrimitive returns the C++ name of a FIDL primitive type.
+func NameVariantsForPrimitive(val fidlgen.PrimitiveSubtype) NameVariants {
 	if t, ok := primitiveTypes[val]; ok {
-		return PrimitiveTypeName(t)
+		return PrimitiveNameVariants(t)
 	}
 	panic(fmt.Sprintf("unknown primitive type: %v", val))
 }
@@ -248,7 +248,7 @@ func (c *compiler) isInExternalLibrary(ci fidlgen.CompoundIdentifier) bool {
 	return false
 }
 
-func (c *compiler) compileDeclName(eci fidlgen.EncodedCompoundIdentifier) DeclName {
+func (c *compiler) compileNameVariants(eci fidlgen.EncodedCompoundIdentifier) NameVariants {
 	ci := fidlgen.ParseCompoundIdentifier(eci)
 	if ci.Member != fidlgen.Identifier("") {
 		panic(fmt.Sprintf("unexpected compound identifier with member: %v", eci))
@@ -261,14 +261,14 @@ func (c *compiler) compileDeclName(eci fidlgen.EncodedCompoundIdentifier) DeclNa
 	declType := declInfo.Type
 	switch declType {
 	case fidlgen.ConstDeclType, fidlgen.BitsDeclType, fidlgen.EnumDeclType, fidlgen.StructDeclType, fidlgen.TableDeclType, fidlgen.UnionDeclType:
-		return DeclName{
-			Natural: NewDeclVariant(name, naturalNamespace(ci.Library)),
-			Wire:    NewDeclVariant(name, wireNamespace(ci.Library)),
+		return NameVariants{
+			Natural: naturalNamespace(ci.Library).Member(name),
+			Wire:    wireNamespace(ci.Library).Member(name),
 		}
 	case fidlgen.ProtocolDeclType, fidlgen.ServiceDeclType:
-		return DeclName{
-			Natural: NewDeclVariant(name, naturalNamespace(ci.Library)),
-			Wire:    NewDeclVariant(name, unifiedNamespace(ci.Library)),
+		return NameVariants{
+			Natural: naturalNamespace(ci.Library).Member(name),
+			Wire:    unifiedNamespace(ci.Library).Member(name),
 		}
 	}
 	panic("Unknown decl type: " + string(declType))
@@ -288,7 +288,8 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 	switch val.Kind {
 	case fidlgen.ArrayType:
 		t := c.compileType(*val.ElementType)
-		r.TypeName = t.TypeName.WithArrayTemplates("::std::array", "::fidl::Array", *val.ElementCount)
+		r.NameVariants.Natural = MakeName("std::array").ArrayTemplate(t.Natural, *val.ElementCount)
+		r.NameVariants.Wire = MakeName("fidl::Array").ArrayTemplate(t.Wire, *val.ElementCount)
 		r.WirePointer = t.WirePointer
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
@@ -298,9 +299,12 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.ElementCount = *val.ElementCount
 	case fidlgen.VectorType:
 		t := c.compileType(*val.ElementType)
-		r.TypeName = t.TypeName.WithTemplates(
-			map[bool]string{true: "::fidl::VectorPtr", false: "::std::vector"}[val.Nullable],
-			"::fidl::VectorView")
+		if val.Nullable {
+			r.NameVariants.Natural = MakeName("fidl::VectorPtr").Template(t.Natural)
+		} else {
+			r.NameVariants.Natural = MakeName("std::vector").Template(t.Natural)
+		}
+		r.NameVariants.Wire = MakeName("fidl::VectorView").Template(t.Wire)
 		r.WireFamily = FamilyKinds.Vector
 		r.WirePointer = t.WirePointer
 		r.NeedsDtor = true
@@ -308,41 +312,46 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 		r.IsResource = t.IsResource
 		r.ElementType = &t
 	case fidlgen.StringType:
-		r.Wire = TypeVariant("::fidl::StringView")
+		r.Wire = MakeName("fidl::StringView")
 		r.WireFamily = FamilyKinds.String
 		if val.Nullable {
-			r.Natural = TypeVariant("::fidl::StringPtr")
+			r.Natural = MakeName("fidl::StringPtr")
 		} else {
-			r.Natural = TypeVariant("::std::string")
+			r.Natural = MakeName("std::string")
 		}
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.String
 	case fidlgen.HandleType:
 		c.handleTypes[val.HandleSubtype] = struct{}{}
-		r.TypeName = TypeNameForHandle(val.HandleSubtype)
+		r.NameVariants = NameVariantsForHandle(val.HandleSubtype)
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Handle
 		r.IsResource = true
 	case fidlgen.RequestType:
-		r.TypeName = c.compileDeclName(val.RequestSubtype).TypeName().WithTemplates("::fidl::InterfaceRequest", "::fidl::ServerEnd")
+		p := c.compileNameVariants(val.RequestSubtype)
+		r.NameVariants = NameVariants{
+			Natural: MakeName("fidl::InterfaceRequest").Template(p.Natural),
+			Wire:    MakeName("fidl::ServerEnd").Template(p.Wire),
+		}
 		r.WireFamily = FamilyKinds.Reference
 		r.NeedsDtor = true
 		r.Kind = TypeKinds.Request
 		r.IsResource = true
 	case fidlgen.PrimitiveType:
-		r.TypeName = TypeNameForPrimitive(val.PrimitiveSubtype)
+		r.NameVariants = NameVariantsForPrimitive(val.PrimitiveSubtype)
 		r.WireFamily = FamilyKinds.TrivialCopy
 		r.Kind = TypeKinds.Primitive
 	case fidlgen.IdentifierType:
-		name := c.compileDeclName(val.Identifier).TypeName()
+		name := c.compileNameVariants(val.Identifier)
 		declInfo, ok := c.decls[val.Identifier]
 		if !ok {
 			panic(fmt.Sprintf("unknown identifier: %v", val.Identifier))
 		}
 		declType := declInfo.Type
 		if declType == fidlgen.ProtocolDeclType {
-			r.TypeName = name.WithTemplates("::fidl::InterfaceHandle", "::fidl::ClientEnd")
+			r.NameVariants.Natural = MakeName("fidl::InterfaceHandle").Template(name.Natural)
+			r.NameVariants.Wire = MakeName("fidl::ClientEnd").Template(name.Wire)
 			r.WireFamily = FamilyKinds.Reference
 			r.NeedsDtor = true
 			r.Kind = TypeKinds.Protocol
@@ -380,18 +389,15 @@ func (c *compiler) compileType(val fidlgen.Type) Type {
 			}
 
 			if val.Nullable {
-				r.TypeName = name.MapNatural(func(n TypeVariant) TypeVariant {
-					return n.WithTemplate("::std::unique_ptr")
-				}).MapWire(func(n TypeVariant) TypeVariant {
-					if declType == fidlgen.UnionDeclType {
-						return n
-					} else {
-						return n.WithTemplate("::fidl::ObjectView")
-					}
-				})
+				r.NameVariants.Natural = MakeName("std::unique_ptr").Template(name.Natural)
+				if declType == fidlgen.UnionDeclType {
+					r.NameVariants.Wire = name.Wire
+				} else {
+					r.NameVariants.Wire = MakeName("fidl::ObjectView").Template(name.Wire)
+				}
 				r.NeedsDtor = true
 			} else {
-				r.TypeName = name
+				r.NameVariants = name
 				r.NeedsDtor = true
 			}
 		}

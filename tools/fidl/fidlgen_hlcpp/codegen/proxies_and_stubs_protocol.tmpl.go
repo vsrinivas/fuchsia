@@ -180,7 +180,7 @@ class {{ .Proxy.Name }} final : public ::fidl::internal::Proxy, public {{ .Name 
 
 class {{ .Stub.Name }} final : public ::fidl::internal::Stub, public {{ .EventSender }} {
  public:
-  typedef class {{ . }} {{ .InterfaceAliasForStub.Unqualified }};
+  typedef class {{ . }} {{ .InterfaceAliasForStub.Self }};
   explicit {{ .Stub.Name }}({{ .InterfaceAliasForStub }}* impl);
   ~{{ .Stub.Name }}() override;
 

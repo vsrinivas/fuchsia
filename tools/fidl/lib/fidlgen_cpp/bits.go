@@ -11,10 +11,10 @@ import (
 type Bits struct {
 	fidlgen.Attributes
 	fidlgen.Strictness
-	DeclName
-	Type     TypeName
+	NameVariants
+	Type     NameVariants
 	Mask     string
-	MaskName DeclName
+	MaskName NameVariants
 	Members  []BitsMember
 }
 
@@ -31,14 +31,14 @@ type BitsMember struct {
 }
 
 func (c *compiler) compileBits(val fidlgen.Bits) Bits {
-	name := c.compileDeclName(val.Name)
+	name := c.compileNameVariants(val.Name)
 	r := Bits{
-		Attributes: val.Attributes,
-		Strictness: val.Strictness,
-		DeclName:   name,
-		Type:       c.compileType(val.Type).TypeName,
-		Mask:       val.Mask,
-		MaskName:   name.AppendName("Mask"),
+		Attributes:   val.Attributes,
+		Strictness:   val.Strictness,
+		NameVariants: name,
+		Type:         c.compileType(val.Type).NameVariants,
+		Mask:         val.Mask,
+		MaskName:     name.AppendName("Mask"),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, BitsMember{

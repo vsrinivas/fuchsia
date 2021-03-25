@@ -5,7 +5,6 @@
 package fidlgen_cpp
 
 import (
-	"fmt"
 	"sort"
 	"strings"
 
@@ -15,7 +14,7 @@ import (
 type Struct struct {
 	fidlgen.Attributes
 	fidlgen.Resourceness
-	DeclName
+	NameVariants
 	CodingTableType string
 	Members         []StructMember
 	InlineSize      int
@@ -80,12 +79,12 @@ func (c *compiler) compileStructMember(val fidlgen.StructMember) StructMember {
 }
 
 func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
-	name := c.compileDeclName(val.Name)
+	name := c.compileNameVariants(val.Name)
 	codingTableType := c.compileCodingTableType(val.Name)
 	r := Struct{
 		Attributes:      val.Attributes,
 		Resourceness:    val.Resourceness,
-		DeclName:        name,
+		NameVariants:    name,
 		CodingTableType: codingTableType,
 		Members:         []StructMember{},
 		InlineSize:      val.TypeShapeV1.InlineSize,
@@ -104,15 +103,15 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 
 	result := c.resultForStruct[val.Name]
 	if result != nil {
-		memberTypeDecls := []string{}
+		memberTypeNames := []Name{}
 		for _, m := range r.Members {
-			memberTypeDecls = append(memberTypeDecls, string(m.Type.Natural))
+			memberTypeNames = append(memberTypeNames, m.Type.Natural)
 			result.ValueMembers = append(result.ValueMembers, m.AsParameter())
 		}
-		result.ValueTupleDecl = TypeVariant(fmt.Sprintf("::std::tuple<%s>", strings.Join(memberTypeDecls, ", ")))
+		result.ValueTupleDecl = MakeTupleName(memberTypeNames)
 
 		if len(r.Members) == 0 {
-			result.ValueDecl = TypeVariant("void")
+			result.ValueDecl = MakeName("void")
 		} else if len(r.Members) == 1 {
 			result.ValueDecl = r.Members[0].Type.Natural
 		} else {
@@ -136,11 +135,11 @@ func (c *compiler) compileStruct(val fidlgen.Struct) Struct {
 		// e.g. ::fidl::test::dangerous::struct::types::camel::Interface gives an
 		// "expected unqualified-id" error because of "struct".
 		// There isn't an easily accessible dangerous identifiers list to replace identifiers.
-		if strings.Contains(string(member.Type.Natural), "::fidl::test::dangerous::") {
+		if strings.Contains(member.Type.Natural.String(), "::fidl::test::dangerous::") {
 			memcpyCompatibleDepMap = nil
 			break
 		}
-		memcpyCompatibleDepMap[string(member.Type.Natural)] = struct{}{}
+		memcpyCompatibleDepMap[member.Type.Natural.String()] = struct{}{}
 	}
 	for decl := range memcpyCompatibleDepMap {
 		r.FullDeclMemcpyCompatibleDeps = append(r.FullDeclMemcpyCompatibleDeps, decl)

@@ -11,9 +11,9 @@ import (
 type Enum struct {
 	fidlgen.Attributes
 	fidlgen.Strictness
-	DeclName
+	NameVariants
 	Enum    fidlgen.Enum
-	Type    TypeName
+	Type    NameVariants
 	Members []EnumMember
 }
 
@@ -34,13 +34,13 @@ type EnumMember struct {
 }
 
 func (c *compiler) compileEnum(val fidlgen.Enum) Enum {
-	name := c.compileDeclName(val.Name)
+	name := c.compileNameVariants(val.Name)
 	r := Enum{
-		Attributes: val.Attributes,
-		Strictness: val.Strictness,
-		DeclName:   name,
-		Enum:       val,
-		Type:       TypeNameForPrimitive(val.Type),
+		Attributes:   val.Attributes,
+		Strictness:   val.Strictness,
+		NameVariants: name,
+		Enum:         val,
+		Type:         NameVariantsForPrimitive(val.Type),
 	}
 	for _, v := range val.Members {
 		r.Members = append(r.Members, EnumMember{
