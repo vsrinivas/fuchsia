@@ -42,14 +42,14 @@ static void start_zircon(uint64_t entry, void* bootdata) {
       "movl $0, %%ebp \n"
       "cli \n"
       "jmp *%[entry] \n" ::[entry] "a"(entry),
-      [ bootdata ] "S"(bootdata), "b"(0), "D"(0));
+      [bootdata] "S"(bootdata), "b"(0), "D"(0));
 #elif defined(__aarch64__)
   __asm__(
       "mov x0, %[zbi]\n"  // Argument register.
       "mov x29, xzr\n"    // Clear FP.
       "mov x30, xzr\n"    // Clear LR.
       "br %[entry]\n" ::[entry] "r"(entry),
-      [ zbi ] "r"(bootdata)
+      [zbi] "r"(bootdata)
       : "x0", "x29", "x30");
 #else
 #error "add code for other arches here"
@@ -116,6 +116,19 @@ static int header_check(void* image, size_t sz, uint64_t* _entry, size_t* _flen,
 
   if (klen > (sz - (sizeof(zbi_header_t) * 2))) {
     printf("boot: invalid zircon kernel header (bad klen)\n");
+    return -1;
+  }
+  // TODO(fxbug.dev/32255): Eventually the fixed-position case can be removed.
+
+  const uint64_t kFixedLoadAddress = 0x100000;
+  const uint64_t image_len = (2 * sizeof(zbi_header_t)) + klen;
+  if (entry > kFixedLoadAddress && entry - kFixedLoadAddress < image_len) {
+    printf("detected fixed-position kernel: entry address %#" PRIx64 "\n", entry);
+  } else if (entry < kFixedLoadAddress && entry < image_len) {
+    printf("detected position-independent kernel: entry offset %#" PRIx64 "\n", entry);
+    entry += kernel_zone_base;
+  } else {
+    printf("boot: invalid entry address %#" PRIx64 "\n", entry);
     return -1;
   }
   if (_entry) {
